@@ -11,6 +11,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -182,6 +183,13 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Dual PIC created...");
         }
 
+        RealTimeClock realTimeClock = new(state, ioPortDispatcher, dualPic,
+            pauseHandler, configuration.FailOnUnhandledPort, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("RTC/CMOS created...");
+        }
+
         CallbackHandler callbackHandler = new(state, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -314,13 +322,13 @@ public class Spice86DependencyInjection : IDisposable {
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
             functionHandlerProvider, stack, state, a20Gate, biosDataArea, dualPic,
             ioPortDispatcher, configuration.InitializeDOS is not false, loggerService);
-        var rtc = new Clock(loggerService);
 
-        SystemClockInt1AHandler systemClockInt1AHandler = new(memory,
-            functionHandlerProvider, stack,
-            state, loggerService, timerInt8Handler, rtc);
+        SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea,
+            realTimeClock, functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
             functionHandlerProvider, stack, state, loggerService);
+        RtcInt70Handler rtcInt70Handler = new(memory, functionHandlerProvider, stack, state,
+            dualPic, biosDataArea, ioPortDispatcher, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("BIOS interrupt handlers created...");
@@ -472,6 +480,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
             interruptInstaller.InstallInterruptHandler(systemClockInt1AHandler);
             interruptInstaller.InstallInterruptHandler(systemBiosInt13Handler);
+            interruptInstaller.InstallInterruptHandler(rtcInt70Handler);
             mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
             InstallDefaultInterruptHandlers(interruptInstaller, dualPic, biosDataArea, loggerService);
