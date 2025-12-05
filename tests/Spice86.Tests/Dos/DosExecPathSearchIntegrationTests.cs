@@ -22,17 +22,18 @@ public class DosExecPathSearchIntegrationTests {
     }
     /// <summary>
     /// Tests the actual INSECTS.EXE scenario where it needs to find BRUN30.EXE via PATH.
-    /// This reproduces the real-world use case described in the issue.
+    /// This reproduces the real-world use case described in the issue where both executables
+    /// are in the same directory initially, demonstrating that BRUN30.EXE can be found via PATH
+    /// when it's in a subdirectory.
     /// </summary>
     [Fact]
     public void InsectsExe_CanFindBrun30InPath() {
-        // Create test directory structure matching the real scenario:
+        // Create test directory structure (both files initially in same directory):
         //   rootDir/
-        //     INSECTS.EXE       <- QuickBasic program
-        //     INSECTS.001       <- Data file
-        //     INSECTS.002       <- Data file
+        //     INSECTS.EXE       <- QuickBasic program (current directory)
+        //     BRUN30.EXE        <- Initially in same directory
         //     RUNTIME/
-        //       BRUN30.EXE      <- QuickBasic runtime (to be found via PATH)
+        //       BRUN30.EXE      <- Also placed here for PATH search test
         string rootDir = Path.Combine(Path.GetTempPath(), "Spice86Test_Insects_" + Guid.NewGuid().ToString("N")[..8]);
         string runtimeSubdir = Path.Combine(rootDir, "RUNTIME");
         Directory.CreateDirectory(rootDir);
@@ -41,17 +42,21 @@ public class DosExecPathSearchIntegrationTests {
         try {
             _output.WriteLine($"Test directory: {rootDir}");
             
-            // Create BRUN30.EXE in RUNTIME subdirectory
-            // This is the Microsoft QuickBasic runtime that INSECTS.EXE needs
-            string brun30Path = Path.Combine(runtimeSubdir, "BRUN30.EXE");
-            CreateBrun30Stub(brun30Path);
-            _output.WriteLine($"Created BRUN30.EXE at: {brun30Path}");
-
-            // Create a stub INSECTS.EXE that will try to load BRUN30.EXE
-            // In reality, INSECTS.EXE is compiled with QuickBasic and depends on BRUN30.EXE
+            // Create INSECTS.EXE from embedded binary data
             string insectsPath = Path.Combine(rootDir, "INSECTS.EXE");
-            CreateInsectsStub(insectsPath);
+            File.WriteAllBytes(insectsPath, GetInsectsExeData());
             _output.WriteLine($"Created INSECTS.EXE at: {insectsPath}");
+
+            // Create BRUN30.EXE from embedded binary data in both locations:
+            // 1. In the same directory as INSECTS.EXE (simulating real scenario)
+            string brun30SameDirPath = Path.Combine(rootDir, "BRUN30.EXE");
+            File.WriteAllBytes(brun30SameDirPath, GetBrun30ExeData());
+            _output.WriteLine($"Created BRUN30.EXE at: {brun30SameDirPath}");
+            
+            // 2. In RUNTIME subdirectory (for PATH search test)
+            string brun30RuntimePath = Path.Combine(runtimeSubdir, "BRUN30.EXE");
+            File.WriteAllBytes(brun30RuntimePath, GetBrun30ExeData());
+            _output.WriteLine($"Created BRUN30.EXE at: {brun30RuntimePath}");
 
             // Setup emulator - C: drive will be mounted to rootDir
             _output.WriteLine("Setting up emulator...");
@@ -68,18 +73,26 @@ public class DosExecPathSearchIntegrationTests {
             Spice86DependencyInjection di = creator.Create();
             _output.WriteLine("Emulator created successfully");
             
-            // Add C:\RUNTIME to PATH - this simulates having BRUN30.EXE in a PATH directory
+            // First test: BRUN30.EXE should be found in current directory
+            _output.WriteLine("Test 1: Attempting to EXEC BRUN30.EXE (should find in current directory)...");
+            DosExecResult result1 = di.Machine.Dos.ProcessManager.Exec("BRUN30.EXE", null);
+            _output.WriteLine($"EXEC result: Success={result1.Success}, ErrorCode={result1.ErrorCode}");
+            result1.Success.Should().BeTrue("BRUN30.EXE should be found in current directory");
+            
+            // Now remove BRUN30.EXE from current directory
+            File.Delete(brun30SameDirPath);
+            _output.WriteLine("Removed BRUN30.EXE from current directory");
+            
+            // Add C:\RUNTIME to PATH
             string currentPath = di.Machine.Dos.ProcessManager.EnvironmentVariables["PATH"];
             di.Machine.Dos.ProcessManager.EnvironmentVariables["PATH"] = $"{currentPath};C:\\RUNTIME";
             _output.WriteLine($"PATH set to: {di.Machine.Dos.ProcessManager.EnvironmentVariables["PATH"]}");
             
-            // Try to exec BRUN30.EXE - this is what INSECTS.EXE would do internally
-            _output.WriteLine("Attempting to EXEC BRUN30.EXE...");
-            DosExecResult result = di.Machine.Dos.ProcessManager.Exec("BRUN30.EXE", null);
-            
-            // Verify that BRUN30.EXE was found via PATH
-            _output.WriteLine($"EXEC result: Success={result.Success}, ErrorCode={result.ErrorCode}");
-            result.Success.Should().BeTrue("BRUN30.EXE should be found in C:\\RUNTIME via PATH, just like in FreeDOS");
+            // Second test: BRUN30.EXE should now be found via PATH in C:\RUNTIME
+            _output.WriteLine("Test 2: Attempting to EXEC BRUN30.EXE (should find via PATH in C:\\RUNTIME)...");
+            DosExecResult result2 = di.Machine.Dos.ProcessManager.Exec("BRUN30.EXE", null);
+            _output.WriteLine($"EXEC result: Success={result2.Success}, ErrorCode={result2.ErrorCode}");
+            result2.Success.Should().BeTrue("BRUN30.EXE should be found in C:\\RUNTIME via PATH, just like in FreeDOS");
         } finally {
             if (Directory.Exists(rootDir)) {
                 Directory.Delete(rootDir, true);
@@ -148,29 +161,52 @@ public class DosExecPathSearchIntegrationTests {
     }
 
     /// <summary>
-    /// Creates a stub INSECTS.EXE for testing.
-    /// This simulates the QuickBasic program that would load BRUN30.EXE.
+    /// Gets the binary data for INSECTS.EXE.
     /// </summary>
-    /// <param name="path">Path where INSECTS.EXE should be created.</param>
-    private void CreateInsectsStub(string path) {
-        // Create a minimal EXE that represents INSECTS.EXE
-        // In reality, INSECTS.EXE would try to load BRUN30.EXE, but for testing
-        // we just need a valid executable
-        CreateStubExe(path);
+    /// <returns>Binary data for INSECTS.EXE as a byte array.</returns>
+    /// <remarks>
+    /// This is a partial representation of INSECTS.EXE from the hex dump provided.
+    /// The actual file is larger, but this contains enough of the MZ header and
+    /// initial code to be loaded by the DOS emulator.
+    /// SHA256: 5cc13abea04493717e59dcf980ca290ca706d7e0fd2bc26d62c946643a49a6f1
+    /// </remarks>
+    private static byte[] GetInsectsExeData() {
+        // Hex dump of INSECTS.EXE (partial - contains MZ header and initial code)
+        string hexData = "4D5A50005E00070020000000FFFFF50AE70BACEE0000F50A1E00000000001A0000001C000000260000003400000036000000380000003A000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001500A5094C9A00000000004000000000627A494E534543545320F50AAA0950186255444F0000F50A501800000000000000001400A609A609A809AC0900028840BB0100CD3E5B9090BBFFFFCD3E329090BB64008BD333C98BC1CD3E8D9090BBBE42BA0300CD3E8C9090BBC242CD3E369090BB5C00BA5D0033C98BC1CD3E879090BB6C00BA6B00CD3E889090BB5842BA6600CD3E3A9090BB5C00BA5D00CD3E849090BB6C00BA6B00CD3E85909033DBBA0100B9FFFFCD3E869090BBFA42CD3E369090BB1443CD3E369090BB4043CD3E369090BB6843CD3E369090BBA243CD3E369090BB5C00BA570033C98BC1CD3E879090BB6A00BA6600CD3E889090BB0A3FCD3E3A9090BB5C00BA5700CD3E849090BB6A00BA6600CD3E85909033DBBA0100B9FFFFCD3E869090BBFA42CD3E369090BB1443CD3E369090BB4043CD3E369090BBC243CD3E369090BBFC43CD3E369090BB5C00BA570033C98BC1CD3E879090BB6A00BA6600CD3E889090BB703FCD3E3A9090BB5C00BA5700CD3E849090BB6A00BA6600CD3E85909033DBBA0100B9FFFFCD3E869090BB1C44CD3E369090BB1443CD3E369090BB4043CD3E369090BB6843CD3E369090BBA243CD3E369090BB5C00BA570033C98BC1CD3E879090BB6A00BA6600CD3E889090BB8C41CD3E3A90";
+        return Convert.FromHexString(hexData);
     }
 
     /// <summary>
-    /// Creates a stub BRUN30.EXE (Microsoft QuickBasic runtime) for testing.
+    /// Gets the binary data for BRUN30.EXE (Microsoft QuickBasic 3.0 runtime).
     /// </summary>
-    /// <param name="path">Path where BRUN30.EXE should be created.</param>
+    /// <returns>Binary data for BRUN30.EXE as a byte array.</returns>
     /// <remarks>
-    /// BRUN30.EXE is the runtime library for Microsoft QuickBasic 3.0.
-    /// Programs compiled with QuickBasic require this runtime to execute.
-    /// The actual BRUN30.EXE is about 70KB, but for testing we only need
-    /// a valid executable that can be loaded.
+    /// This is a stub representation of BRUN30.EXE with a valid MZ header.
+    /// The actual BRUN30.EXE is about 70KB, but for testing PATH search functionality,
+    /// we only need a valid executable that can be loaded.
+    /// SHA256 of real file: b9ebf91c480d43093987b2e6dc6289fd59a9210fe1d8fc3c289ed7d022dffc60
     /// </remarks>
-    private void CreateBrun30Stub(string path) {
-        CreateStubExe(path);
+    private static byte[] GetBrun30ExeData() {
+        // Create a minimal valid DOS executable for BRUN30.EXE
+        // This is sufficient for testing EXEC functionality and PATH search
+        return new byte[] {
+            0x4D, 0x5A, // MZ signature
+            0x90, 0x00, // Bytes in last page
+            0x03, 0x00, // Pages in file
+            0x00, 0x00, // Relocations
+            0x04, 0x00, // Size of header in paragraphs
+            0x00, 0x00, // Minimum extra paragraphs
+            0xFF, 0xFF, // Maximum extra paragraphs
+            0x00, 0x00, // Initial SS
+            0xB8, 0x00, // Initial SP
+            0x00, 0x00, // Checksum
+            0x00, 0x00, // Initial IP
+            0x00, 0x00, // Initial CS
+            0x40, 0x00, // Relocation table offset
+            0x00, 0x00, // Overlay number
+            // Code section - just HLT
+            0xF4 // HLT
+        };
     }
 
     /// <summary>
