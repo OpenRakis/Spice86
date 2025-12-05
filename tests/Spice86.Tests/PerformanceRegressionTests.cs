@@ -154,8 +154,10 @@ public class PerformanceRegressionTests {
         }
 
         public override void WriteByte(ushort port, byte value) {
+            Console.WriteLine($"WriteByte called: port=0x{port:X4}, value=0x{value:X2}, PerformancePort=0x{PerformancePort:X4}");
             if (port == PerformancePort) {
                 PerformanceData.Add(value);
+                Console.WriteLine($"Added byte to PerformanceData. Total bytes: {PerformanceData.Count}");
             }
         }
     }
