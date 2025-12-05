@@ -746,11 +746,8 @@ public class DosProcessManager : DosFileLoader {
         CopyFileTableFromParent(psp, parentPsp);
 
         // Load command-line arguments
-        byte[] commandLineBytes = ArgumentsToDosBytes(arguments);
-        byte length = commandLineBytes[0];
-        string asciiCommandLine = Encoding.ASCII.GetString(commandLineBytes, 1, length);
-        psp.DosCommandTail.Length = (byte)(asciiCommandLine.Length + 1);
-        psp.DosCommandTail.Command = asciiCommandLine;
+        // Load the command-line arguments into the PSP's command tail.
+        psp.DosCommandTail.Command = DosCommandTail.PrepareCommandlineString(arguments);
     }
 
     /// <summary>
@@ -1290,16 +1287,7 @@ public class DosProcessManager : DosFileLoader {
     /// Copies the command tail from parent PSP (offset 0x80) to child PSP.
     /// </summary>
     private void CopyCommandTailFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
-        // Copy the command tail length byte and command string
-        childPsp.DosCommandTail.Length = parentPsp.DosCommandTail.Length;
-        
-        // Copy up to MaxCommandTailLength bytes of command tail data
-        uint parentTailAddr = parentPsp.BaseAddress + CommandTailDataOffset;
-        uint childTailAddr = childPsp.BaseAddress + CommandTailDataOffset;
-        
-        for (int i = 0; i < MaxCommandTailLength; i++) {
-            _memory.UInt8[childTailAddr + (uint)i] = _memory.UInt8[parentTailAddr + (uint)i];
-        }
+        childPsp.DosCommandTail.Command = parentPsp.DosCommandTail.Command;
     }
 
     /// <summary>
