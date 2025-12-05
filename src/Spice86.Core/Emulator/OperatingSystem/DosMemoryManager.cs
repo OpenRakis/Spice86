@@ -14,6 +14,13 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class DosMemoryManager {
     internal const ushort LastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
+    private const ushort FakeMcbSize = 0xFFFF;
+    private const byte FitTypeMask = 0x03;
+    private const byte MaxValidFitType = 0x02;
+    private const byte ReservedBitsMask = 0x3C;
+    private const byte HighMemMask = 0xC0;
+    private const byte HighMemFirstThenLow = 0x40;
+    private const byte HighMemOnlyNoFallback = 0x80;
     private readonly ILoggerService _loggerService;
     private readonly IMemory _memory;
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
@@ -82,17 +89,17 @@ public class DosMemoryManager {
         get => _allocationStrategy;
         set {
             // Validate the strategy - only allow valid combinations
-            byte fitType = (byte)((byte)value & 0x03);
-            if (fitType > 0x02) {
+            byte fitType = (byte)((byte)value & FitTypeMask);
+            if (fitType > MaxValidFitType) {
                 // Invalid fit type, ignore
                 return;
             }
             // Validate bits 2-5 must be zero per DOS specification
-            if (((byte)value & 0x3C) != 0) {
+            if (((byte)value & ReservedBitsMask) != 0) {
                 return;
             }
-            byte highMemBits = (byte)((byte)value & 0xC0);
-            if (highMemBits != 0x00 && highMemBits != 0x40 && highMemBits != 0x80) {
+            byte highMemBits = (byte)((byte)value & HighMemMask);
+            if (highMemBits != 0x00 && highMemBits != HighMemFirstThenLow && highMemBits != HighMemOnlyNoFallback) {
                 // Invalid high memory bits, ignore
                 return;
             }
@@ -675,12 +682,12 @@ public class DosMemoryManager {
         // +1 because next block metadata is going to free space
         destination.Size = (ushort)(destination.Size + next.Size + 1);
 
-        // Mark the now-unlinked MCB as "fake" by setting its size to 0xFFFF.
+        // Mark the now-unlinked MCB as "fake" by setting its size to FakeMcbSize.
         // This matches FreeDOS kernel behavior (memmgr.c joinMCBs function) and prevents
         // issues with programs that might manually walk the MCB chain or perform double-free
-        // operations (like QB4/QBasic, Doom 8088). The 0xFFFF size makes the IsValid property
+        // operations (like QB4/QBasic, Doom 8088). The FakeMcbSize makes the IsValid property
         // return false for this block, effectively marking it as invalid/unlinked.
-        next.Size = 0xFFFF;
+        next.Size = FakeMcbSize;
     }
 
     /// <summary>
@@ -742,7 +749,7 @@ public class DosMemoryManager {
     /// </remarks>
     private DosMemoryControlBlock? SelectBlockByStrategy(IEnumerable<DosMemoryControlBlock> candidates) {
         // Get the fit type from the lower 2 bits of the strategy
-        byte fitType = (byte)((byte)_allocationStrategy & 0x03);
+        byte fitType = (byte)((byte)_allocationStrategy & FitTypeMask);
 
         DosMemoryControlBlock? selectedBlock = null;
 
@@ -750,23 +757,23 @@ public class DosMemoryManager {
             if (selectedBlock is null) {
                 selectedBlock = current;
                 // For first fit, we can return immediately
-                if (fitType == 0x00) {
+                if (fitType == (byte)DosMemoryAllocationStrategy.FirstFit) {
                     return selectedBlock;
                 }
                 continue;
             }
 
             switch (fitType) {
-                case 0x00: // First fit - already returned above
+                case (byte)DosMemoryAllocationStrategy.FirstFit: // First fit - already returned above
                     break;
 
-                case 0x01: // Best fit - take the smallest
+                case (byte)DosMemoryAllocationStrategy.BestFit: // Best fit - take the smallest
                     if (current.Size < selectedBlock.Size) {
                         selectedBlock = current;
                     }
                     break;
 
-                case 0x02: // Last fit - take the last one (highest address)
+                case (byte)DosMemoryAllocationStrategy.LastFit: // Last fit - take the last one (highest address)
                     // Since we iterate from low to high addresses, always update to the current
                     selectedBlock = current;
                     break;
