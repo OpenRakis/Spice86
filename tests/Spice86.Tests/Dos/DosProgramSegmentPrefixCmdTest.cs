@@ -27,27 +27,18 @@ public class DosProgramSegmentPrefixCmdTests {
     // The instance of the DosProgramSegmentPrefix class that we're testing
     private readonly DosProgramSegmentPrefix _psp;
 
-    void TestCommandLineParameter(string? spiceArguments, byte[] expected) {
-
+    private void TestCommandLineParameter(string? spiceArguments, byte[] expected) {
         string test = DosCommandTail.PrepareCommandlineString(spiceArguments);
         _psp.DosCommandTail.Command = test;
-        if (_psp.DosCommandTail.Command != test) {
-            throw new UnrecoverableException("Command result different");
-        }
-        if (_psp.DosCommandTail.Length != test.Length) {
-            throw new UnrecoverableException("unexpected length");
-        }
+        _psp.DosCommandTail.Command.Should().Be(test, "command should round-trip correctly");
+        _psp.DosCommandTail.Length.Should().Be((byte)test.Length, "length should match command string length");
         for (int i = 0; i < expected.Length; ++i) {
             byte v = _psp.DosCommandTail.UInt8[i];
-            if (v != expected[i]) {
-                throw new UnrecoverableException("v != expected");
-            }
+            v.Should().Be(expected[i], $"byte at index {i} should match expected value");
         }
         for (int i = _psp.DosCommandTail.Length + 2; i < DosCommandTail.MaxSize; ++i) {
             byte v = _psp.DosCommandTail.UInt8[i];
-            if (v != 0) {
-                throw new UnrecoverableException("not 0");
-            }
+            v.Should().Be(0, $"byte at index {i} should be zero-filled");
         }
     }
 
@@ -70,7 +61,7 @@ public class DosProgramSegmentPrefixCmdTests {
     /// Test some variants
     /// </summary>
     [Fact]
-    public void DoSomeTests() {
+    public void CommandLineEncoding_VariousInputs_MatchesDosFormat() {
         // Assert
         TestCommandLineParameter("", new byte[] { 0x00, 0x0D });
         // same as empty
@@ -78,10 +69,10 @@ public class DosProgramSegmentPrefixCmdTests {
         TestCommandLineParameter("4", new byte[] { 0x02, 0x20, 0x34, 0x0D });
         // the same as "4"
         TestCommandLineParameter(" 4", new byte[] { 0x02, 0x20, 0x34, 0x0D });
-        // the same as "4" - trailing whitespaces getting stripped
+        // Input "  4  " becomes "  4" (3 chars: two spaces + '4') after stripping trailing whitespace - NOT the same as "4"
         TestCommandLineParameter("  4  ", new byte[] { 0x03, 0x20, 0x20, 0x34, 0x0D });
         // Windows: Spice86.exe -e test.exe -a "   ""ab""  cd"
-        // same as (but DOS does not removes the outer apostrophs and no quoting needed)
+        // same as (but DOS does not removes the outer apostrophes and no quoting needed)
         // DOS: show80h.exe   "ab"  cd
         TestCommandLineParameter("   \"ab\"  cd", new byte[] { 0x0B, 0x20, 0x20, 0x20, 0x22, 0x61, 0x62, 0x22, 0x20, 0x20, 0x63, 0x64, 0x0D });
     }

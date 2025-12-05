@@ -31,7 +31,7 @@ public class DosCommandTail : MemoryBasedDataStructure {
         ag = ag.Length > DosCommandTail.MaxCharacterLength ? ag[..DosCommandTail.MaxCharacterLength] : ag;
 
         // stripping trailing whitespaces
-        ag = ag.TrimEnd(new char[]{ ' ' });
+        ag = ag.TrimEnd(' ');
 
         CheckParameterString(ag);
 
@@ -40,7 +40,7 @@ public class DosCommandTail : MemoryBasedDataStructure {
 
     public static void CheckParameterString(string value) {
         if (value.Length > 0 && value[0] != ' ') {
-            throw new ArgumentException("there needs to be a blank at first");
+            throw new ArgumentException("Command line must start with a space character (DOS PSP requirement).");
         }
 
         if (value.Length > DosCommandTail.MaxCharacterLength) {
