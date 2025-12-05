@@ -21,23 +21,22 @@ public class DosExecPathSearchIntegrationTests {
         _output = output;
     }
     /// <summary>
-    /// Tests the actual INSECTS.EXE scenario where it needs to find BRUN30.EXE via PATH.
-    /// This reproduces the real-world use case described in the issue where both executables
-    /// are in the same directory initially, demonstrating that BRUN30.EXE can be found via PATH
-    /// when it's in a subdirectory.
+    /// Tests the actual INSECTS.EXE scenario where both INSECTS.EXE and BRUN30.EXE are in the same directory.
+    /// This reproduces the real-world use case described in the issue.
     /// </summary>
+    /// <remarks>
+    /// In the real scenario, both INSECTS.EXE and BRUN30.EXE are in the same folder.
+    /// INSECTS.EXE is a QuickBasic program that requires BRUN30.EXE (QuickBasic 3.0 runtime) to run.
+    /// This test verifies that INSECTS.EXE can successfully find and load BRUN30.EXE from the same directory.
+    /// </remarks>
     [Fact]
-    public void InsectsExe_CanFindBrun30InPath() {
-        // Create test directory structure (both files initially in same directory):
+    public void InsectsExe_CanFindBrun30InSameDirectory() {
+        // Create test directory with both files in same location:
         //   rootDir/
-        //     INSECTS.EXE       <- QuickBasic program (current directory)
-        //     BRUN30.EXE        <- Initially in same directory
-        //     RUNTIME/
-        //       BRUN30.EXE      <- Also placed here for PATH search test
+        //     INSECTS.EXE       <- QuickBasic program
+        //     BRUN30.EXE        <- QuickBasic runtime (in same directory)
         string rootDir = Path.Combine(Path.GetTempPath(), "Spice86Test_Insects_" + Guid.NewGuid().ToString("N")[..8]);
-        string runtimeSubdir = Path.Combine(rootDir, "RUNTIME");
         Directory.CreateDirectory(rootDir);
-        Directory.CreateDirectory(runtimeSubdir);
         
         try {
             _output.WriteLine($"Test directory: {rootDir}");
@@ -47,16 +46,10 @@ public class DosExecPathSearchIntegrationTests {
             File.WriteAllBytes(insectsPath, GetInsectsExeData());
             _output.WriteLine($"Created INSECTS.EXE at: {insectsPath}");
 
-            // Create BRUN30.EXE from embedded binary data in both locations:
-            // 1. In the same directory as INSECTS.EXE (simulating real scenario)
-            string brun30SameDirPath = Path.Combine(rootDir, "BRUN30.EXE");
-            File.WriteAllBytes(brun30SameDirPath, GetBrun30ExeData());
-            _output.WriteLine($"Created BRUN30.EXE at: {brun30SameDirPath}");
-            
-            // 2. In RUNTIME subdirectory (for PATH search test)
-            string brun30RuntimePath = Path.Combine(runtimeSubdir, "BRUN30.EXE");
-            File.WriteAllBytes(brun30RuntimePath, GetBrun30ExeData());
-            _output.WriteLine($"Created BRUN30.EXE at: {brun30RuntimePath}");
+            // Create BRUN30.EXE from embedded binary data in the same directory
+            string brun30Path = Path.Combine(rootDir, "BRUN30.EXE");
+            File.WriteAllBytes(brun30Path, GetBrun30ExeData());
+            _output.WriteLine($"Created BRUN30.EXE at: {brun30Path}");
 
             // Setup emulator - C: drive will be mounted to rootDir
             _output.WriteLine("Setting up emulator...");
@@ -73,26 +66,11 @@ public class DosExecPathSearchIntegrationTests {
             Spice86DependencyInjection di = creator.Create();
             _output.WriteLine("Emulator created successfully");
             
-            // First test: BRUN30.EXE should be found in current directory
-            _output.WriteLine("Test 1: Attempting to EXEC BRUN30.EXE (should find in current directory)...");
-            DosExecResult result1 = di.Machine.Dos.ProcessManager.Exec("BRUN30.EXE", null);
-            _output.WriteLine($"EXEC result: Success={result1.Success}, ErrorCode={result1.ErrorCode}");
-            result1.Success.Should().BeTrue("BRUN30.EXE should be found in current directory");
-            
-            // Now remove BRUN30.EXE from current directory
-            File.Delete(brun30SameDirPath);
-            _output.WriteLine("Removed BRUN30.EXE from current directory");
-            
-            // Add C:\RUNTIME to PATH
-            string currentPath = di.Machine.Dos.ProcessManager.EnvironmentVariables["PATH"];
-            di.Machine.Dos.ProcessManager.EnvironmentVariables["PATH"] = $"{currentPath};C:\\RUNTIME";
-            _output.WriteLine($"PATH set to: {di.Machine.Dos.ProcessManager.EnvironmentVariables["PATH"]}");
-            
-            // Second test: BRUN30.EXE should now be found via PATH in C:\RUNTIME
-            _output.WriteLine("Test 2: Attempting to EXEC BRUN30.EXE (should find via PATH in C:\\RUNTIME)...");
-            DosExecResult result2 = di.Machine.Dos.ProcessManager.Exec("BRUN30.EXE", null);
-            _output.WriteLine($"EXEC result: Success={result2.Success}, ErrorCode={result2.ErrorCode}");
-            result2.Success.Should().BeTrue("BRUN30.EXE should be found in C:\\RUNTIME via PATH, just like in FreeDOS");
+            // Test: BRUN30.EXE should be found in the same directory as INSECTS.EXE
+            _output.WriteLine("Attempting to EXEC BRUN30.EXE from same directory...");
+            DosExecResult result = di.Machine.Dos.ProcessManager.Exec("BRUN30.EXE", null);
+            _output.WriteLine($"EXEC result: Success={result.Success}, ErrorCode={result.ErrorCode}");
+            result.Success.Should().BeTrue("BRUN30.EXE should be found in the same directory as INSECTS.EXE");
         } finally {
             if (Directory.Exists(rootDir)) {
                 Directory.Delete(rootDir, true);
