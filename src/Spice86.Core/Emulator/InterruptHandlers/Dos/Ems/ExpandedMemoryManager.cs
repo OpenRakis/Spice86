@@ -17,15 +17,30 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 /// <summary>
-/// Provides DOS applications with EMS memory. <br/>
-/// Expanded memory is memory beyond DOS's 640K-byte limit.  This LIM <br/>
-/// implementation supports 8 MB of expanded memory. <br/>
+/// Provides DOS applications with EMS memory via INT 67h. <br/>
+/// Expanded memory is memory beyond DOS's 640K-byte limit. This implementation
+/// supports 8 MB of expanded memory (512 pages of 16 KB each). <br/>
 /// Because the 8086, 8088, and 80286 (in real mode) microprocessors can <br/>
 /// physically address only 1M byte of memory, they access expanded memory <br/>
-/// through a window in their physical address range.
-/// <remarks>This is a LIM standard implementation. Which means there's no
-/// difference between EMM pages and raw pages. They're both 16 KB.</remarks>
+/// through a 64 KB window (page frame) in their physical address range.
+/// <para>
+/// This implementation is based on the LIM EMS 4.0 specification with the following scope:
+/// <list type="bullet">
+/// <item>Core EMS 3.2 functions (0x40-0x4E): Get Status, Page Frame, Allocate/Deallocate, Map/Unmap, etc.</item>
+/// <item>Selected EMS 4.0 functions: 0x50 (Map Multiple), 0x51 (Reallocate), 0x53 (Handle Names), 0x58 (Mappable Array), 0x59 (Hardware Info)</item>
+/// <item>VCPI (Virtual Control Program Interface) is not currently implemented as we only emulate real mode</item>
+/// <item>GEMMIS and other LIM 4.0 OS-specific functions (0x5D-0x5F) are not currently implemented</item>
+/// </list>
+/// </para>
+/// <para>
+/// The EMS implementation uses its own RAM separate from conventional memory, consistent with
+/// how real EMS hardware works. This is correct behavior for a real-mode emulator.
+/// </para>
 /// </summary>
+/// <remarks>
+/// This is a LIM standard implementation where EMM pages and raw pages are identical (both 16 KB).
+/// The page frame is located at segment 0xE000, which is above 640K in the Upper Memory Area.
+/// </remarks>
 public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <summary>
     /// The string identifier in main memory for the EMS Handler. <br/>
@@ -84,11 +99,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     public IDictionary<ushort, EmmRegister> EmmPageFrame { get; init; } = new Dictionary<ushort, EmmRegister>();
 
     /// <summary>
-    /// This is the copy of the page frame. <br/>
-    /// We copy the Emm Page Frame into it in the Save Page Map function. <br/>
-    /// We restore this copy into the Emm Page Frame in the Restore Page Map function.
+    /// Stores the saved page mappings for each physical page. <br/>
+    /// Save Page Map stores which EmmPage is mapped to each physical page. <br/>
+    /// Restore Page Map restores these mappings.
     /// </summary>
-    public IDictionary<ushort, EmmRegister> EmmPageFrameSave { get; init; } = new Dictionary<ushort, EmmRegister>();
+    private readonly IDictionary<ushort, EmmPage> _savedPageMappings = new Dictionary<ushort, EmmPage>();
 
     /// <summary>
     /// The EMM handles given to the DOS programs. An EMM Handle has one or more unique logical pages.
@@ -124,7 +139,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             Name = EmsIdentifier,
             Attributes = DeviceAttributes.Ioctl | DeviceAttributes.Character,
             StrategyEntryPoint = 0,
-            InterruptEntryPoint = 0
+            InterruptEntryPoint = 0,
+            NextDevicePointer = new SegmentedAddress(0xFFFF, 0xFFFF)
         };
         FillDispatchTable();
 
@@ -313,7 +329,16 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <param name="existingHandle">Used to reallocate logical pages to an existing handle. Optional.</param>
     /// <returns>The modified <see cref="EmmHandle"/> instance.</returns>
     public EmmHandle AllocatePages(ushort numberOfPagesToAlloc, EmmHandle? existingHandle = null) {
-        int key = existingHandle?.HandleNumber ?? EmmHandles.Count;
+        int key;
+        if (existingHandle != null) {
+            key = existingHandle.HandleNumber;
+        } else {
+            // Find the next available handle ID (don't just use Count as it can collide after deallocation)
+            key = 0;
+            while (EmmHandles.ContainsKey(key)) {
+                key++;
+            }
+        }
         existingHandle ??= new() {
             HandleNumber = (ushort)key
         };
@@ -379,7 +404,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// </remarks>
     /// <returns>The status code.</returns>
     public byte MapUnmapHandlePage(ushort logicalPageNumber, ushort physicalPageNumber, ushort handleId) {
-        if (physicalPageNumber > EmmPageFrame.Count) {
+        if (physicalPageNumber >= EmmMaxPhysicalPages) {
             if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
                 LoggerService.Warning("Physical page {PhysicalPage} out of range",
                     physicalPageNumber);
@@ -470,10 +495,15 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     }
 
     /// <summary>
-    /// Returns the LIM specs version we implement (3.2) in _state.AL. <br/>
+    /// Returns the EMS version in _state.AL using BCD format. <br/>
+    /// This implementation returns version 3.2 (0x32) for compatibility,
+    /// even though it supports selected EMS 4.0 functions (0x50, 0x51, 0x53, 0x58, 0x59).
+    /// Programs that need to use EMS 4.0 functions should check for specific
+    /// function support rather than relying solely on the version number.
     /// </summary>
     public void GetEmmVersion() {
-        // Return EMS version 3.2.
+        // Return EMS version 3.2 in BCD format.
+        // Note: We implement some EMS 4.0 functions but report 3.2 for broader compatibility.
         State.AL = 0x32;
         // Return good status.
         State.AH = EmmStatus.EmmNoError;
@@ -509,7 +539,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     }
 
     /// <summary>
-    /// Saves the page map to the <see cref="EmmPageFrameSave"/> dictionary.
+    /// Saves the page map to the <see cref="_savedPageMappings"/> dictionary.
     /// </summary>
     /// <param name="handleId">The Id of the EMM handle to be saved.</param>
     /// <returns>The status code.</returns>
@@ -524,10 +554,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             return EmmStatus.EmmPageMapSaved;
         }
 
-        EmmPageFrameSave.Clear();
+        _savedPageMappings.Clear();
 
+        // Save which EmmPage is mapped to each physical page
         foreach (KeyValuePair<ushort, EmmRegister> item in EmmPageFrame) {
-            EmmPageFrameSave.Add(item);
+            _savedPageMappings.Add(item.Key, item.Value.PhysicalPage);
         }
 
         EmmHandles[handleId].SavedPageMap = true;
@@ -561,7 +592,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     }
 
     /// <summary>
-    /// Restores the page map from the <see cref="EmmPageFrameSave"/> dictionary.
+    /// Restores the page map from the <see cref="_savedPageMappings"/> dictionary.
     /// </summary>
     /// <param name="handleId">The Id of the EMM handle to restore.</param>
     /// <returns>The status code.</returns>
@@ -576,10 +607,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             return EmmStatus.EmmPageNotSavedFirst;
         }
 
-        EmmPageFrame.Clear();
-
-        foreach (KeyValuePair<ushort, EmmRegister> item in EmmPageFrameSave) {
-            EmmPageFrame.Add(item);
+        // Restore the EmmPage mappings to each physical page register
+        foreach (KeyValuePair<ushort, EmmPage> item in _savedPageMappings) {
+            if (EmmPageFrame.TryGetValue(item.Key, out EmmRegister? register)) {
+                register.PhysicalPage = item.Value;
+            }
         }
 
         EmmHandles[handleId].SavedPageMap = false;
@@ -842,8 +874,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
                 // No alternate register sets
                 Memory.UInt16[data] = 0x0000;
                 data += 2;
-                // Context save area size
-                Memory.UInt16[data] = (ushort)EmmHandles.SelectMany(static x => x.Value.LogicalPages).Count();
+                // Context save area size in bytes (following FreeDOS formula: (physicalPages + 1) * 4)
+                // This represents the bytes needed to save the mapping context for all physical pages
+                Memory.UInt16[data] = (ushort)((EmmMaxPhysicalPages + 1) * 4);
                 data += 2;
                 // No DMA channels
                 Memory.UInt16[data] = 0x0000;
