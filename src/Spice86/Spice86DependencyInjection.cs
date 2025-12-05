@@ -379,7 +379,6 @@ public class Spice86DependencyInjection : IDisposable {
             MinValueDelta = 3000,
             MaxIntervalMilliseconds = 10
         });
-        EmulationLoop emulationLoop;
         InputEventHub inputEventHub;
 
         if (mainWindow != null) {
@@ -404,22 +403,18 @@ public class Spice86DependencyInjection : IDisposable {
 
             inputEventHub = new(mainWindowViewModel, mainWindowViewModel);
 
-            emulationLoop = new(
-                functionHandler, cpuForEmulationLoop,
-                state, executionStateSlice, dualPic, emulatorBreakpointsManager,
-                cpuPerformanceMeasurer, pauseHandler, cyclesLimiter, inputEventHub, cyclesBudgeter, loggerService);
-
             _gui = mainWindowViewModel;
         } else {
             HeadlessGui headlessGui = new HeadlessGui();
             _gui = headlessGui;
             inputEventHub = new InputEventHub(headlessGui, headlessGui);
-            emulationLoop = new(
-                functionHandler, cpuForEmulationLoop,
-                state, executionStateSlice, dualPic, emulatorBreakpointsManager,
-                cpuPerformanceMeasurer, pauseHandler, cyclesLimiter,
-                inputEventHub, cyclesBudgeter, loggerService);
         }
+        
+        EmulationLoop emulationLoop = new(
+            functionHandler, cpuForEmulationLoop,
+            state, executionStateSlice, dualPic, emulatorBreakpointsManager,
+            cpuPerformanceMeasurer, pauseHandler, cyclesLimiter,
+            inputEventHub, cyclesBudgeter, loggerService);
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
         vgaCard.SubscribeToEvents();
