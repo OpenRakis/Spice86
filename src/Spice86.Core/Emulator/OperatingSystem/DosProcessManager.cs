@@ -152,6 +152,11 @@ public class DosProcessManager : DosFileLoader {
     /// Gets the simulated COMMAND.COM instance.
     /// </summary>
     public CommandCom CommandCom => _commandCom;
+    
+    /// <summary>
+    /// Gets the master environment variables that all DOS programs inherit.
+    /// </summary>
+    public EnvironmentVariables EnvironmentVariables => _environmentVariables;
 
     public DosProcessManager(IMemory memory, State state,
         DosProgramSegmentPrefixTracker dosPspTracker, DosMemoryManager dosMemoryManager,
@@ -374,17 +379,94 @@ public class DosProcessManager : DosFileLoader {
     }
 
     /// <summary>
-    /// Resolves a DOS path to a host file path.
+    /// Resolves a DOS path to a host file path, searching the PATH environment variable if necessary.
     /// </summary>
+    /// <remarks>
+    /// Implements DOS EXEC path searching behavior:
+    /// 1. If the program path contains a directory separator (\ or /), resolve it directly (no PATH search)
+    /// 2. Otherwise:
+    ///    a. Try current directory first
+    ///    b. If not found, search each directory in the PATH environment variable
+    /// This matches FreeDOS behavior where runtime dependencies like BRUN30.EXE can be found via PATH.
+    /// </remarks>
     private string? ResolveToHostPath(string dosPath) {
-        // Try to resolve through the file manager
+        // If the path contains a directory separator, it's a specific path - don't search PATH
+        bool hasDirectorySeparator = dosPath.Contains(DosPathResolver.DirectorySeparatorChar) ||
+                                      dosPath.Contains(DosPathResolver.AltDirectorySeparatorChar);
+        
+        // Try to resolve through the file manager (current directory first)
         try {
-            return _fileManager.GetHostPath(dosPath);
+            string? hostPath = _fileManager.GetHostPath(dosPath);
+            if (hostPath != null && File.Exists(hostPath)) {
+                return hostPath;
+            }
         } catch (IOException) {
-            return null;
+            // Continue to PATH search
         } catch (UnauthorizedAccessException) {
+            // Continue to PATH search
+        }
+        
+        // If path contains directory separator, don't search PATH
+        if (hasDirectorySeparator) {
             return null;
         }
+        
+        // Search in PATH environment variable
+        return SearchExecutableInPath(dosPath);
+    }
+    
+    /// <summary>
+    /// Searches for an executable in the directories specified by the PATH environment variable.
+    /// </summary>
+    /// <param name="programName">The name of the executable to find (e.g., "BRUN30.EXE")</param>
+    /// <returns>The full host path to the executable if found, null otherwise</returns>
+    private string? SearchExecutableInPath(string programName) {
+        // Get PATH from environment variables
+        if (!_environmentVariables.TryGetValue("PATH", out string? pathValue) || string.IsNullOrWhiteSpace(pathValue)) {
+            return null;
+        }
+        
+        // PATH is semicolon-separated in DOS
+        string[] pathDirectories = pathValue.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        
+        foreach (string pathDir in pathDirectories) {
+            if (string.IsNullOrWhiteSpace(pathDir)) {
+                continue;
+            }
+            
+            // Construct the full path by combining PATH directory with program name
+            // Handle both DOS-style paths (C:\DIR) and relative paths
+            string fullDosPath;
+            if (pathDir.EndsWith(DosPathResolver.DirectorySeparatorChar) ||
+                pathDir.EndsWith(DosPathResolver.AltDirectorySeparatorChar)) {
+                fullDosPath = pathDir + programName;
+            } else {
+                fullDosPath = pathDir + DosPathResolver.DirectorySeparatorChar + programName;
+            }
+            
+            // Try to resolve this path
+            try {
+                string? hostPath = _fileManager.GetHostPath(fullDosPath);
+                if (hostPath != null && File.Exists(hostPath)) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("Found executable '{Program}' in PATH directory '{PathDir}' -> '{HostPath}'",
+                            programName, pathDir, hostPath);
+                    }
+                    return hostPath;
+                }
+            } catch (IOException) {
+                // Continue searching in other PATH directories
+            } catch (UnauthorizedAccessException) {
+                // Continue searching in other PATH directories
+            }
+        }
+        
+        // Not found in any PATH directory
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Executable '{Program}' not found in PATH: {Path}",
+                programName, pathValue);
+        }
+        return null;
     }
 
     /// <summary>
