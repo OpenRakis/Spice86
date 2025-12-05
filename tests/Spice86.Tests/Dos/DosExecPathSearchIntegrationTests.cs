@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using Xunit;
+using Xunit.Abstractions;
 
 /// <summary>
 /// Integration tests for DOS EXEC path searching functionality.
@@ -14,6 +15,78 @@ using Xunit;
 /// for QuickBasic programs) from directories specified in the PATH variable.
 /// </summary>
 public class DosExecPathSearchIntegrationTests {
+    private readonly ITestOutputHelper _output;
+
+    public DosExecPathSearchIntegrationTests(ITestOutputHelper output) {
+        _output = output;
+    }
+    /// <summary>
+    /// Tests the actual INSECTS.EXE scenario where it needs to find BRUN30.EXE via PATH.
+    /// This reproduces the real-world use case described in the issue.
+    /// </summary>
+    [Fact]
+    public void InsectsExe_CanFindBrun30InPath() {
+        // Create test directory structure matching the real scenario:
+        //   rootDir/
+        //     INSECTS.EXE       <- QuickBasic program
+        //     INSECTS.001       <- Data file
+        //     INSECTS.002       <- Data file
+        //     RUNTIME/
+        //       BRUN30.EXE      <- QuickBasic runtime (to be found via PATH)
+        string rootDir = Path.Combine(Path.GetTempPath(), "Spice86Test_Insects_" + Guid.NewGuid().ToString("N")[..8]);
+        string runtimeSubdir = Path.Combine(rootDir, "RUNTIME");
+        Directory.CreateDirectory(rootDir);
+        Directory.CreateDirectory(runtimeSubdir);
+        
+        try {
+            _output.WriteLine($"Test directory: {rootDir}");
+            
+            // Create BRUN30.EXE in RUNTIME subdirectory
+            // This is the Microsoft QuickBasic runtime that INSECTS.EXE needs
+            string brun30Path = Path.Combine(runtimeSubdir, "BRUN30.EXE");
+            CreateBrun30Stub(brun30Path);
+            _output.WriteLine($"Created BRUN30.EXE at: {brun30Path}");
+
+            // Create a stub INSECTS.EXE that will try to load BRUN30.EXE
+            // In reality, INSECTS.EXE is compiled with QuickBasic and depends on BRUN30.EXE
+            string insectsPath = Path.Combine(rootDir, "INSECTS.EXE");
+            CreateInsectsStub(insectsPath);
+            _output.WriteLine($"Created INSECTS.EXE at: {insectsPath}");
+
+            // Setup emulator - C: drive will be mounted to rootDir
+            _output.WriteLine("Setting up emulator...");
+            Spice86Creator creator = new(
+                binName: insectsPath,
+                enableCfgCpu: true,
+                enablePit: false,
+                recordData: false,
+                maxCycles: 10000L,
+                installInterruptVectors: true,
+                enableA20Gate: true
+            );
+
+            Spice86DependencyInjection di = creator.Create();
+            _output.WriteLine("Emulator created successfully");
+            
+            // Add C:\RUNTIME to PATH - this simulates having BRUN30.EXE in a PATH directory
+            string currentPath = di.Machine.Dos.ProcessManager.EnvironmentVariables["PATH"];
+            di.Machine.Dos.ProcessManager.EnvironmentVariables["PATH"] = $"{currentPath};C:\\RUNTIME";
+            _output.WriteLine($"PATH set to: {di.Machine.Dos.ProcessManager.EnvironmentVariables["PATH"]}");
+            
+            // Try to exec BRUN30.EXE - this is what INSECTS.EXE would do internally
+            _output.WriteLine("Attempting to EXEC BRUN30.EXE...");
+            DosExecResult result = di.Machine.Dos.ProcessManager.Exec("BRUN30.EXE", null);
+            
+            // Verify that BRUN30.EXE was found via PATH
+            _output.WriteLine($"EXEC result: Success={result.Success}, ErrorCode={result.ErrorCode}");
+            result.Success.Should().BeTrue("BRUN30.EXE should be found in C:\\RUNTIME via PATH, just like in FreeDOS");
+        } finally {
+            if (Directory.Exists(rootDir)) {
+                Directory.Delete(rootDir, true);
+            }
+        }
+    }
+
     /// <summary>
     /// Tests that DOS EXEC succeeds when an executable is found via PATH environment variable.
     /// This verifies the fix for the issue where INSECTS.EXE cannot find BRUN30.EXE.
@@ -72,6 +145,32 @@ public class DosExecPathSearchIntegrationTests {
                 Directory.Delete(rootDir, true);
             }
         }
+    }
+
+    /// <summary>
+    /// Creates a stub INSECTS.EXE for testing.
+    /// This simulates the QuickBasic program that would load BRUN30.EXE.
+    /// </summary>
+    /// <param name="path">Path where INSECTS.EXE should be created.</param>
+    private void CreateInsectsStub(string path) {
+        // Create a minimal EXE that represents INSECTS.EXE
+        // In reality, INSECTS.EXE would try to load BRUN30.EXE, but for testing
+        // we just need a valid executable
+        CreateStubExe(path);
+    }
+
+    /// <summary>
+    /// Creates a stub BRUN30.EXE (Microsoft QuickBasic runtime) for testing.
+    /// </summary>
+    /// <param name="path">Path where BRUN30.EXE should be created.</param>
+    /// <remarks>
+    /// BRUN30.EXE is the runtime library for Microsoft QuickBasic 3.0.
+    /// Programs compiled with QuickBasic require this runtime to execute.
+    /// The actual BRUN30.EXE is about 70KB, but for testing we only need
+    /// a valid executable that can be loaded.
+    /// </remarks>
+    private void CreateBrun30Stub(string path) {
+        CreateStubExe(path);
     }
 
     /// <summary>
