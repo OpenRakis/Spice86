@@ -17,15 +17,15 @@ public class Spice86Creator {
 
     public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
-        bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null) {
+        bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, long? instructionsPerSecond = null) {
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
             CommandLineParser parser = new();
             overrideSupplier = parser.ParseCommandLine(["--OverrideSupplierClassName", overrideSupplierClassName])?.OverrideSupplier;
         }
 
-        int? instructionsPerSecond = enablePit ? 100000 : null;
-        int staticCycleBudget = GetStaticCycleBudget(instructionsPerSecond);
+        long? effectiveInstructionsPerSecond = instructionsPerSecond ?? (enablePit ? 100000 : null);
+        int staticCycleBudget = GetStaticCycleBudget(effectiveInstructionsPerSecond);
 
         _configuration = new Configuration {
             Exe = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin",
@@ -39,7 +39,7 @@ public class Spice86Creator {
             //Don"t need nor want to instantiate the UI in emulator unit tests
             HeadlessMode = HeadlessType.Minimal,
             // Use instructions per second based timer for predictability if timer is enabled
-            InstructionsPerSecond = instructionsPerSecond,
+            InstructionsPerSecond = effectiveInstructionsPerSecond,
             CfgCpu = enableCfgCpu,
             AudioEngine = AudioEngine.Dummy,
             FailOnUnhandledPort = failOnUnhandledPort,
@@ -62,11 +62,17 @@ public class Spice86Creator {
         return res;
     }
 
-    private static int GetStaticCycleBudget(int? instructionsPerSecond) {
+    private static int GetStaticCycleBudget(long? instructionsPerSecond) {
         int candidateCyclesPerMs = instructionsPerSecond.HasValue
             ? (int)Math.Round(instructionsPerSecond.Value / 1000.0)
             : ICyclesLimiter.RealModeCpuCyclesPerMs;
+        // For very high IPS values (performance tests), don't apply the limiter's cap
+        if (candidateCyclesPerMs > 60000) {
+            Console.WriteLine($"Using uncapped cycles budget: {candidateCyclesPerMs} cycles/ms (from IPS: {instructionsPerSecond})");
+            return candidateCyclesPerMs;
+        }
         CpuCycleLimiter limiter = new(candidateCyclesPerMs);
+        Console.WriteLine($"Using capped cycles budget: {limiter.TargetCpuCyclesPerMs} cycles/ms (from IPS: {instructionsPerSecond})");
         return limiter.TargetCpuCyclesPerMs;
     }
 }

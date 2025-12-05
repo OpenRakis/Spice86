@@ -58,16 +58,20 @@ public class PerformanceRegressionTests {
         string absoluteProgramPath = Path.GetFullPath(programPath);
 
         // Setup emulator (disable CfgCpu for now as it has issues with the program)
+        // Set InstructionsPerSecond to approximate real 8086 speed (4.77 MHz) so that
+        // wall-clock time used by PIT aligns with emulated time. This allows the 30-second
+        // benchmark to complete correctly, though it takes ~30 seconds of real time.
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: absoluteProgramPath,
             enableCfgCpu: false,  // Use traditional CPU for stability
             enablePit: true,
             recordData: false,
-            maxCycles: 100000000L,  // Allow enough cycles for 30-second benchmark
+            maxCycles: 1000000000L,  // Allow enough cycles for full benchmark
             installInterruptVectors: true,
             enableA20Gate: false,
             enableXms: false,
-            enableEms: false
+            enableEms: false,
+            instructionsPerSecond: 4_770_000  // Approximate real 8086 speed for timing accuracy
         ).Create();
 
         PerformanceTestHandler testHandler = new(
@@ -85,18 +89,31 @@ public class PerformanceRegressionTests {
     /// Extracts performance profile from raw performance data.
     /// </summary>
     private PerformanceProfile ExtractPerformanceProfile(List<byte> data) {
+        Console.WriteLine($"Total bytes received: {data.Count}");
+        if (data.Count > 0) {
+            Console.WriteLine($"First 10 bytes: {string.Join(" ", data.Take(10).Select(b => $"0x{b:X2}"))}");
+        }
+        
         if (data.Count < 3) {
+            Console.WriteLine("Not enough data received");
             return new PerformanceProfile { TotalFrames = 0, AverageFps = 0 };
         }
 
         // Find end marker (0xFE) and extract total frames
         int endMarkerIndex = data.FindIndex(b => b == 0xFE);
-        if (endMarkerIndex == -1 || endMarkerIndex + 2 >= data.Count) {
+        if (endMarkerIndex == -1) {
+            Console.WriteLine("End marker (0xFE) not found");
+            return new PerformanceProfile { TotalFrames = 0, AverageFps = 0 };
+        }
+        
+        if (endMarkerIndex + 2 >= data.Count) {
+            Console.WriteLine($"Not enough data after end marker at index {endMarkerIndex}");
             return new PerformanceProfile { TotalFrames = 0, AverageFps = 0 };
         }
 
         // Extract total frames (16-bit value after end marker)
         ushort totalFrames = (ushort)(data[endMarkerIndex + 1] | (data[endMarkerIndex + 2] << 8));
+        Console.WriteLine($"Total frames extracted: {totalFrames}");
         
         // Calculate average FPS: total frames divided by test duration
         const double TestDurationSeconds = 30.0;
@@ -154,10 +171,11 @@ public class PerformanceRegressionTests {
         }
 
         public override void WriteByte(ushort port, byte value) {
-            Console.WriteLine($"WriteByte called: port=0x{port:X4}, value=0x{value:X2}, PerformancePort=0x{PerformancePort:X4}");
             if (port == PerformancePort) {
                 PerformanceData.Add(value);
-                Console.WriteLine($"Added byte to PerformanceData. Total bytes: {PerformanceData.Count}");
+                if (PerformanceData.Count <= 10 || PerformanceData.Count % 10 == 0) {
+                    Console.WriteLine($"Port 0x99 write #{PerformanceData.Count}: 0x{value:X2}");
+                }
             }
         }
     }
