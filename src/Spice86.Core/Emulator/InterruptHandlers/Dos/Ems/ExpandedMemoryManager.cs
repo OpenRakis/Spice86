@@ -28,8 +28,8 @@ using System.Linq;
 /// <list type="bullet">
 /// <item>Core EMS 3.2 functions (0x40-0x4E): Get Status, Page Frame, Allocate/Deallocate, Map/Unmap, etc.</item>
 /// <item>Selected EMS 4.0 functions: 0x50 (Map Multiple), 0x51 (Reallocate), 0x53 (Handle Names), 0x58 (Mappable Array), 0x59 (Hardware Info)</item>
-/// <item>VCPI (Virtual Control Program Interface) is not currently implemented as we only emulate real mode</item>
-/// <item>GEMMIS and other LIM 4.0 OS-specific functions (0x5D-0x5F) are not currently implemented</item>
+/// <item>VCPI (Virtual Control Program Interface) is not currently implemented</item>
+/// <item>GEMMIS and other LIM 4.0 OS-specific functions (0x5D-0x5F) are not currently implemented due to limited development resources</item>
 /// </list>
 /// </para>
 /// <para>

@@ -30,7 +30,7 @@ using Xunit;
 /// </para>
 /// <para>
 /// Note: VCPI and other LIM 4.0 OS-specific features (GEMMIS) are not currently
-/// implemented as we only emulate real mode at this time.
+/// implemented due to limited development resources.
 /// </para>
 /// </summary>
 public class EmsUnitTests {
