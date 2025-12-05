@@ -242,10 +242,14 @@ The MCP server implementation follows these key principles:
 
 ### Enabling the MCP Server
 
-To enable the MCP server with stdio transport, use the `--McpServer` command-line flag:
+The MCP server is **enabled by default**. To disable it, use the `--McpServer` command-line flag:
 
 ```bash
-dotnet run --project src/Spice86 -- --Exe program.exe --McpServer true
+# MCP server is enabled by default - no flag needed
+dotnet run --project src/Spice86 -- --Exe program.exe
+
+# To explicitly disable the MCP server:
+dotnet run --project src/Spice86 -- --Exe program.exe --McpServer false
 ```
 
 When enabled, the MCP server:
