@@ -1,12 +1,14 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Reimplementation of int20
+/// Implements INT 20h - Program Terminate.
 /// </summary>
 public class DosInt20Handler : InterruptHandler {
     /// <summary>
@@ -17,7 +19,8 @@ public class DosInt20Handler : InterruptHandler {
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt20Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService)
+    public DosInt20Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, 
+        Stack stack, State state, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
     }
 
@@ -26,7 +29,12 @@ public class DosInt20Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        LoggerService.Verbose("PROGRAM TERMINATE");
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("INT 20h: PROGRAM TERMINATE (legacy)");
+        }
+        
+        // FreeDOS calls INT 21h AH=0 to handle termination
+        State.AH = 0x00;
         State.IsRunning = false;
     }
 }
