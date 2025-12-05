@@ -75,8 +75,19 @@ public class DosExecPathSearchIntegrationTests {
     }
 
     /// <summary>
-    /// Creates a minimal DOS executable (stub with MZ header).
+    /// Creates a minimal DOS executable with a valid MZ header for testing.
     /// </summary>
+    /// <param name="path">The full path where the executable should be created.</param>
+    /// <remarks>
+    /// This creates a functional but minimal DOS executable that can be loaded by the DOS emulator.
+    /// The executable contains:
+    /// <list type="bullet">
+    /// <item>MZ signature (0x4D 0x5A) - DOS executable marker</item>
+    /// <item>Minimal EXE header with required fields (pages, relocations, etc.)</item>
+    /// <item>HLT instruction as the only code - causes the program to halt immediately</item>
+    /// </list>
+    /// This is sufficient for testing EXEC functionality without needing actual program logic.
+    /// </remarks>
     private void CreateStubExe(string path) {
         // Minimal EXE with MZ header
         byte[] stubExe = new byte[] {

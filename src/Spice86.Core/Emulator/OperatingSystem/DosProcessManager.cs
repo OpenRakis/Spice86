@@ -379,12 +379,12 @@ public class DosProcessManager : DosFileLoader {
     }
 
     /// <summary>
-    /// Resolves a DOS path to a host file path, searching the PATH environment variable if necessary.
+    /// Resolves a DOS path to a host file path, searching the PATH environment variable for executables without directory separators.
     /// </summary>
     /// <remarks>
     /// Implements DOS EXEC path searching behavior:
     /// 1. If the program path contains a directory separator (\ or /), resolve it directly (no PATH search)
-    /// 2. Otherwise:
+    /// 2. Otherwise (filename only, no path):
     ///    a. Try current directory first
     ///    b. If not found, search each directory in the PATH environment variable
     /// This matches FreeDOS behavior where runtime dependencies like BRUN30.EXE can be found via PATH.
