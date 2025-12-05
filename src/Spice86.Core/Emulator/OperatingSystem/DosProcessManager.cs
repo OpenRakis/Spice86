@@ -410,23 +410,39 @@ public class DosProcessManager : DosFileLoader {
         }
 
         // Allocate memory for the program using MCB-based allocation
-        // Following FreeDOS/DOSBox: all programs are allocated from the MCB chain, not at hardcoded segments
+        // For the first program, we use InitialPspSegment; for child processes, we use MCB allocation
         ushort pspSegment;
-        // Always allocate from MCB chain (pass 0 to let memory manager find best block)
-        // This matches FreeDOS/DOSBox behavior where programs are allocated dynamically
-        DosMemoryControlBlock? memBlock = (isExe && exeFile is not null)
-            ? _memoryManager.ReserveSpaceForExe(exeFile, 0)
-            : _memoryManager.AllocateMemoryBlock(ComFileMemoryParagraphs);
+        DosMemoryControlBlock? memBlock;
         
+        if (_pspTracker.PspCount == 0) {
+            // First program - use the configured initial PSP segment
+            if (isExe && exeFile is not null) {
+                memBlock = _memoryManager.ReserveSpaceForExe(exeFile, _pspTracker.InitialPspSegment);
+            } else {
+                memBlock = _memoryManager.AllocateMemoryBlock(ComFileMemoryParagraphs);
+            }
+            pspSegment = _pspTracker.InitialPspSegment;
+        } else {
+            // Child process - use MCB allocation to find free memory
+            if (isExe && exeFile is not null) {
+                // Pass 0 to let memory manager find the best available block
+                memBlock = _memoryManager.ReserveSpaceForExe(exeFile, 0);
+            } else {
+                memBlock = _memoryManager.AllocateMemoryBlock(ComFileMemoryParagraphs);
+            }
+            
+            if (memBlock is null) {
+                return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
+            }
+            pspSegment = memBlock.DataBlockSegment;
+        }
+
         if (memBlock is null) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Failed to allocate memory for program");
+                _loggerService.Error("Failed to allocate memory for program at segment {Segment:X4}", pspSegment);
             }
             return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
         }
-        
-        // PSP segment is the data block segment of the allocated MCB
-        pspSegment = memBlock.DataBlockSegment;
 
         // Create and register the PSP
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
@@ -445,7 +461,7 @@ public class DosProcessManager : DosFileLoader {
             // Load directly without re-reserving
             LoadExeFileIntoReservedMemory(exeFile, memBlock, out cs, out ip, out ss, out sp);
         } else {
-            LoadComFileInternal(fileBytes, pspSegment, out cs, out ip, out ss, out sp);
+            LoadComFileInternal(fileBytes, out cs, out ip, out ss, out sp);
         }
 
         if (loadType == DosExecLoadType.LoadAndExecute) {
@@ -513,7 +529,7 @@ public class DosProcessManager : DosFileLoader {
             ss = (ushort)(exeFile.InitSS + programEntryPointSegment);
             sp = exeFile.InitSP;
         } else {
-            LoadComFileInternal(fileBytes, pspSegment, out cs, out ip, out ss, out sp);
+            LoadComFileInternal(fileBytes, out cs, out ip, out ss, out sp);
         }
 
         if (loadType == DosExecLoadType.LoadAndExecute) {
@@ -563,7 +579,7 @@ public class DosProcessManager : DosFileLoader {
             // For EXE files, memory was already reserved
             LoadExeFileIntoReservedMemory(exeFile, memBlock, out cs, out ip, out ss, out sp);
         } else {
-            LoadComFileInternal(fileBytes, pspSegment, out cs, out ip, out ss, out sp);
+            LoadComFileInternal(fileBytes, out cs, out ip, out ss, out sp);
         }
 
         if (loadType == DosExecLoadType.LoadAndExecute) {
@@ -658,9 +674,8 @@ public class DosProcessManager : DosFileLoader {
     /// <summary>
     /// Loads a COM file and returns entry point information.
     /// </summary>
-    private void LoadComFileInternal(byte[] com, ushort pspSegment, out ushort cs, out ushort ip, out ushort ss, out ushort sp) {
-        // COM files are loaded at PSP + 0x10 (PSP is 256 bytes, code starts after it)
-        ushort programEntryPointSegment = (ushort)(pspSegment + 0x10);
+    private void LoadComFileInternal(byte[] com, out ushort cs, out ushort ip, out ushort ss, out ushort sp) {
+        ushort programEntryPointSegment = _pspTracker.GetProgramEntryPointSegment();
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(programEntryPointSegment, ComOffset);
         _memory.LoadData(physicalStartAddress, com);
 

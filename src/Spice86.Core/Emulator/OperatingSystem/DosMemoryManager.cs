@@ -46,11 +46,11 @@ public class DosMemoryManager {
         // managed through the MCB chain.
         //
         // Memory layout:
-        // - Segments 0x0000-0x004F: Interrupt vectors, BIOS data area, DOS internal structures
-        // - Segment 0x004F: First MCB (for COMMAND.COM)
-        // - Segment 0x0050: COMMAND.COM PSP (16 paragraphs)
-        // - Segment 0x0060: Second MCB (free memory for user programs)
-        // - Segment 0x0061: Start of allocatable memory for user programs
+        // - Segments 0x0000-0x005F: Interrupt vectors, BIOS data area, DOS internal structures
+        // - Segment 0x005F: First MCB (for COMMAND.COM)
+        // - Segment 0x0060: COMMAND.COM PSP (16 paragraphs)
+        // - Segment 0x006F: Second MCB (free memory for user programs)
+        // - Segment 0x0070: Start of allocatable memory for user programs
         // - Segment 0x9FFF: End of conventional memory (before video memory at 0xA000)
         
         const ushort commandComMcbSegment = CommandCom.CommandComSegment - 1;
