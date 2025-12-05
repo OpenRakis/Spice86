@@ -33,6 +33,9 @@ public class DosInt21HandlerTests {
         const ushort fileHandle = 0x0003;
         dosFileManager.OpenFiles[fileHandle] = recordingFile;
         var clock = new Clock(logger);
+        var ioPortDispatcher = new Spice86.Core.Emulator.IOPorts.IOPortDispatcher(
+            new Spice86.Core.Emulator.VM.Breakpoint.AddressReadWriteBreakpoints(), state, logger, false);
+        var dosTables = new DosTables();
 
         var handler = new DosInt21Handler(
             memory,
@@ -47,6 +50,9 @@ public class DosInt21HandlerTests {
             dosFileManager,
             driveManager,
             clock,
+            null!,
+            ioPortDispatcher,
+            dosTables,
             logger);
 
         state.AL = (byte)SeekOrigin.Current;
