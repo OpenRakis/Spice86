@@ -41,7 +41,7 @@ public class DosFileManager {
 
     private class FileSearchPrivateData {
         public FileSearchPrivateData(string fileSpec, int index, ushort searchAttributes) {
-            FileSpec =  fileSpec;
+            FileSpec = fileSpec;
             Index = index;
             SearchAttributes = searchAttributes;
         }
@@ -145,6 +145,38 @@ public class DosFileManager {
     }
 
     /// <summary>
+    /// Closes all non-standard file handles (handles 5 and above) when a process terminates.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Standard file handles (0-4) are:
+    /// - 0: stdin
+    /// - 1: stdout
+    /// - 2: stderr
+    /// - 3: stdaux (auxiliary device)
+    /// - 4: stdprn (printer)
+    /// </para>
+    /// <para>
+    /// These are inherited from the parent and should not be closed when a child terminates.
+    /// Only handles 5 and above (user-opened files) are closed.
+    /// </para>
+    /// </remarks>
+    public void CloseAllNonStandardFileHandles() {
+        // Standard handles 0-4 are stdin, stdout, stderr, stdaux, stdprn
+        // These should not be closed when a process terminates
+        const ushort firstUserHandle = 5;
+        
+        for (ushort handle = firstUserHandle; handle < OpenFiles.Length; handle++) {
+            if (OpenFiles[handle] is DosFile) {
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("Closing file handle {Handle} on process termination", handle);
+                }
+                CloseFileOrDevice(handle);
+            }
+        }
+    }
+
+    /// <summary>
     /// Creates a file and returns the handle to the file.
     /// </summary>
     /// <param name="fileName">The target file name.</param>
@@ -160,7 +192,7 @@ public class DosFileManager {
             }
             return OpenDevice(device);
         }
-        
+
         string newHostFilePath = _dosPathResolver.PrefixWithHostDirectory(fileName);
 
         FileStream? testFileStream = null;
@@ -175,7 +207,7 @@ public class DosFileManager {
             // in order to avoid an exception
             for (ushort i = 0; i < OpenFiles.Length; i++) {
                 VirtualFileBase? virtualFile = OpenFiles[i];
-                if(virtualFile is DosFile dosFile) {
+                if (virtualFile is DosFile dosFile) {
                     string? openHostFilePath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFile.Name);
                     if (string.Equals(openHostFilePath, newHostFilePath, StringComparison.OrdinalIgnoreCase)) {
                         CloseFileOrDevice(i);
@@ -482,8 +514,9 @@ public class DosFileManager {
     /// </summary>
     /// <param name="fileName">The name of the file to open.</param>
     /// <param name="accessMode">The access mode (read, write, or read+write)</param>
+    /// <param name="noInherit">If true, the file handle will not be inherited by child processes.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult OpenFileOrDevice(string fileName, FileAccessMode accessMode) {
+    public DosFileOperationResult OpenFileOrDevice(string fileName, FileAccessMode accessMode, bool noInherit = false) {
         CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
             .FirstOrDefault(device => device.IsName(fileName));
         if (device is not null) {
@@ -502,10 +535,10 @@ public class DosFileManager {
         }
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Opening file {HostFileName} with mode {OpenMode}", hostFileName, accessMode);
+            _loggerService.Debug("Opening file {HostFileName} with mode {OpenMode}, noInherit={NoInherit}", hostFileName, accessMode, noInherit);
         }
 
-        return OpenFileInternal(fileName, hostFileName, accessMode);
+        return OpenFileInternal(fileName, hostFileName, accessMode, noInherit);
     }
 
     /// <summary>
@@ -695,8 +728,14 @@ public class DosFileManager {
         return DosFileOperationResult.Error(DosErrorCode.TooManyOpenFiles);
     }
 
-    internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.
-        GetFullHostPathFromDosOrDefault(dosPath);
+    /// <summary>
+    /// Resolves a DOS path to a host file system path.
+    /// </summary>
+    /// <param name="dosPath">The DOS path to resolve.</param>
+    /// <returns>The resolved host path, or null if the path cannot be resolved.</returns>
+    public string? GetHostPath(string dosPath) => _dosPathResolver.GetFullHostPathFromDosOrDefault(dosPath);
+
+    internal string? TryGetFullHostPathFromDos(string dosPath) => GetHostPath(dosPath);
 
     private static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
@@ -734,7 +773,7 @@ public class DosFileManager {
         return info;
     }
 
-    private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, FileAccessMode openMode) {
+    private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, FileAccessMode openMode, bool noInherit = false) {
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             // Not found
             return FileNotFoundError(dosFileName);
@@ -748,7 +787,9 @@ public class DosFileManager {
         ushort dosIndex = (ushort)freeIndex.Value;
         try {
             Stream? randomAccessFile = null;
-            switch (openMode) {
+            // Extract just the access mode bits (0-2) for file open operations
+            FileAccessMode baseAccessMode = (FileAccessMode)((byte)openMode & 0b111);
+            switch (baseAccessMode) {
                 case FileAccessMode.ReadOnly: {
                         if (File.Exists(hostFileName)) {
                             randomAccessFile = File.Open(hostFileName,
@@ -777,7 +818,8 @@ public class DosFileManager {
             if (randomAccessFile != null) {
                 byte driveIndex = _dosDriveManager.CurrentDriveIndex;
                 DosFile dosFile = new(dosFileName, dosIndex, randomAccessFile) {
-                    Drive = driveIndex
+                    Drive = driveIndex,
+                    Flags = noInherit ? (byte)FileAccessMode.Private : (byte)0
                 };
                 dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
                 SetOpenFile(dosIndex, dosFile);
@@ -933,10 +975,14 @@ public class DosFileManager {
     public DosFileOperationResult IoControl(State state) {
         byte handle = 0;
         byte drive = 0;
-        string operationName = $"IOCTL function 0x{state.AL:X2}";
+        IoctlFunction function = (IoctlFunction)state.AL;
+        string operationName = $"IOCTL function {function} (0x{state.AL:X2})";
 
-        if (state.AL is < 4 or 0x06 or 0x07 or
-            0x0a or 0x0c or 0x10) {
+        if (function is IoctlFunction.GetDeviceInformation or IoctlFunction.SetDeviceInformation or
+            IoctlFunction.ReadFromControlChannel or IoctlFunction.WriteToControlChannel or
+            IoctlFunction.GetInputStatus or IoctlFunction.GetOutputStatus or
+            IoctlFunction.IsHandleRemote or IoctlFunction.GenericIoctlForCharacterDevices or
+            IoctlFunction.QueryGenericIoctlCapabilityForHandle) {
             handle = (byte)state.BX;
             if (handle >= OpenFiles.Length || OpenFiles[handle] == null) {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
@@ -944,8 +990,8 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
             }
-        } else if (state.AL < 0x12) {
-            if (state.AL != 0x0b) {
+        } else if ((byte)function <= (byte)IoctlFunction.QueryGenericIoctlCapabilityForBlockDevice) {
+            if (function != IoctlFunction.SetSharingRetryCount) {
                 drive = (byte)(state.BX == 0 ? _dosDriveManager.CurrentDriveIndex : state.BX - 1);
                 if (drive >= 2 && (drive >= _dosDriveManager.NumberOfPotentiallyValidDriveLetters ||
                     _dosDriveManager.Count < (drive + 1))) {
@@ -963,8 +1009,8 @@ public class DosFileManager {
             return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
         }
 
-        switch (state.AL) {
-            case 0x00:      /* Get Device Information */
+        switch (function) {
+            case IoctlFunction.GetDeviceInformation:
                 VirtualFileBase? fileOrDevice = OpenFiles[handle];
                 if (fileOrDevice is IVirtualDevice virtualDevice) {
                     state.DX = (ushort)(virtualDevice.Information & ~ExtDeviceBit);
@@ -984,7 +1030,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.Value16(state.DX);
 
-            case 0x01:      /* Set Device Information */
+            case IoctlFunction.SetDeviceInformation:
                 if (state.DH != 0) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Invalid data for Set Device Information - DH={DH:X2}", state.DH);
@@ -1002,7 +1048,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
 
-            case 0x02:      /* Read from Device Control Channel */
+            case IoctlFunction.ReadFromControlChannel:
                 if (OpenFiles[handle] is IVirtualDevice readDevice &&
                     (readDevice.Information & 0xc000) > 0) {
                     if (readDevice is PrinterDevice printer && !printer.CanRead) {
@@ -1022,7 +1068,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
 
-            case 0x03:      /* Write to Device Control Channel */
+            case IoctlFunction.WriteToControlChannel:
                 if (OpenFiles[handle] is IVirtualDevice writtenDevice &&
                     (writtenDevice.Information & 0xc000) > 0) {
                     /* is character device with IOCTL support */
@@ -1043,7 +1089,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
 
-            case 0x06:      /* Get Input Status */
+            case IoctlFunction.GetInputStatus:
                 if (OpenFiles[handle] is IVirtualDevice inputDevice) {
                     if ((inputDevice.Information & 0x8000) > 0) {
                         if (((inputDevice.Information & 0x40) > 0)) {
@@ -1054,7 +1100,7 @@ public class DosFileManager {
                     }
                 } else if (OpenFiles[handle] is VirtualFileBase file) {
                     long oldLocation = file.Position;
-                    file.Seek(file.Position, SeekOrigin.End);
+                    file.Seek(0, SeekOrigin.End);
                     long endLocation = file.Position;
                     if (oldLocation < endLocation) { //Still data available
                         state.AL = 0xff;
@@ -1069,7 +1115,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
 
-            case 0x07:      /* Get Output Status */
+            case IoctlFunction.GetOutputStatus:
                 if (OpenFiles[handle] is IVirtualDevice outputDevice &&
                     (outputDevice.Information & ExtDeviceBit) > 0) {
                     state.AL = outputDevice.GetStatus(false);
@@ -1080,7 +1126,7 @@ public class DosFileManager {
                 state.AL = 0xFF;
                 return DosFileOperationResult.NoValue();
 
-            case 0x08:      /* Check if block device removable */
+            case IoctlFunction.IsBlockDeviceRemovable:
                 //* cdrom drives and drive A and B are removable */
                 if (drive < 2) {
                     state.AX = 0;
@@ -1094,7 +1140,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
 
-            case 0x09:      /* Check if block device remote */
+            case IoctlFunction.IsBlockDeviceRemote:
                 if ((drive >= 2) && _dosDriveManager.ElementAt(drive).Value.IsRemote) {
                     state.DX = 0x1000;  // device is remote
                                         // undocumented bits always clear
@@ -1105,7 +1151,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
 
-            case 0x0B:      /* Set sharing retry count */
+            case IoctlFunction.SetSharingRetryCount:
                 if (state.DX == 0) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Invalid retry count 0 for Set sharing retry count");
@@ -1114,7 +1160,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
 
-            case 0x0D:      /* Generic block device request */
+            case IoctlFunction.GenericIoctlForBlockDevices:
                 if (drive < 2 && _dosDriveManager.ElementAtOrDefault(drive).Value is null) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Access denied for drive {Drive} - drive not available", drive);
@@ -1131,8 +1177,9 @@ public class DosFileManager {
 
                 SegmentedAddress parameterBlock = new(state.DS, state.DX);
 
-                switch (state.CL) {
-                    case 0x60:  // Get Device Parameters
+                GenericBlockDeviceCommand blockCommand = (GenericBlockDeviceCommand)state.CL;
+                switch (blockCommand) {
+                    case GenericBlockDeviceCommand.GetDeviceParameters:
                         DosDeviceParameterBlock dosDeviceParameterBlock = new(_memory, parameterBlock.Linear);
                         dosDeviceParameterBlock.DeviceType = (byte)(drive >= 2 ? 0x05 : 0x07);
                         dosDeviceParameterBlock.DeviceAttributes = (ushort)(drive >= 2 ? 0x01 : 0x00);
@@ -1141,17 +1188,16 @@ public class DosFileManager {
                         dosDeviceParameterBlock.BiosParameterBlock.BytesPerSector = 0x0200; // (Win3 File Mgr. uses it)
                         break;
 
-                    case 0x46:  // Set Volume Serial Number (not yet implemented)
+                    case GenericBlockDeviceCommand.SetVolumeSerialNumber:
                         // TODO: pull new serial from DS:DX buffer and store it somewhere
                         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                             _loggerService.Warning("IOCTL: Set Volume Serial Number called but not yet implemented for drive {Drive}", drive);
                         }
                         break;
 
-                    case 0x66:  // Get Volume Serial Number + Volume Label + FS Type
-                        {
+                    case GenericBlockDeviceCommand.GetVolumeSerialNumber: {
                             VirtualDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
-                            DosVolumeInfo dosVolumeInfo = new (_memory, parameterBlock.Linear);
+                            DosVolumeInfo dosVolumeInfo = new(_memory, parameterBlock.Linear);
                             dosVolumeInfo.SerialNumber = 0x1234;
                             dosVolumeInfo.VolumeLabel = vDrive.Label.ToUpperInvariant();
                             dosVolumeInfo.FileSystemType = drive < 2 ? "FAT12" : "FAT16";
@@ -1169,7 +1215,7 @@ public class DosFileManager {
                 state.AX = 0;
                 return DosFileOperationResult.NoValue();
 
-            case 0x0E:      /* Get Logical Drive Map */
+            case IoctlFunction.GetLogicalDriveMap:
                 if (drive < 2) {
                     if (_dosDriveManager.HasDriveAtIndex(drive)) {
                         state.AL = (byte)(drive + 1);
@@ -1187,6 +1233,29 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
 
+            case IoctlFunction.IsHandleRemote:
+                // Check if handle refers to a remote file/device
+                // DX bit 15 is set if handle is remote
+                VirtualFileBase? remoteCheckFile = OpenFiles[handle];
+                if (remoteCheckFile is IVirtualDevice) {
+                    // Character devices are local
+                    state.DX = 0;
+                    state.AX = 0;
+                } else if (remoteCheckFile is DosFile remoteFile) {
+                    // Check if file is on a remote drive
+                    byte fileDrive = remoteFile.Drive == 0xff ? _dosDriveManager.CurrentDriveIndex : remoteFile.Drive;
+                    state.DX = _dosDriveManager.ElementAtOrDefault(fileDrive).Value?.IsRemote == true ? (ushort)0x8000 : (ushort)0;
+                    state.AX = 0;
+                } else {
+                    // Unexpected file type or null; set default values and log warning
+                    state.DX = 0;
+                    state.AX = 0;
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning("IOCTL: IsHandleRemote called for unexpected file type {Type} at handle {Handle}", remoteCheckFile?.GetType().FullName ?? "null", handle);
+                    }
+                }
+                return DosFileOperationResult.NoValue();
+
             default:
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error("IOCTL: Invalid function number 0x{FunctionCode:X2}", state.AL);
@@ -1196,34 +1265,58 @@ public class DosFileManager {
     }
 
     /// <summary>
-    /// Gets the proper DOS path for the emulated program.
+    /// Converts a host file path to a proper DOS path for the emulated program.
     /// </summary>
-    /// <param name="programPath">The absolute host path to the executable file.</param>
+    /// <param name="hostPath">The absolute host path to the executable file.</param>
     /// <returns>A properly formatted DOS absolute path for the PSP env block.</returns>
-    internal string GetDosProgramPath(string programPath) {
-        // Extract just the filename without path if it's a full path
-        string fileName = Path.GetFileName(programPath);
-
-        // Create a DOS path using the current drive and directory
-        string currentDrive = _dosDriveManager.CurrentDrive.DosVolume;
-        string currentDir = _dosDriveManager.CurrentDrive.CurrentDosDirectory;
-
-        // Ensure current directory has trailing backslash
-        if (!string.IsNullOrEmpty(currentDir) && !currentDir.EndsWith('\\')) {
-            currentDir += '\\';
+    /// <remarks>
+    /// This method implements the DOS TRUENAME functionality to convert a host path
+    /// to a canonical DOS path. It finds the mounted drive that contains the host path
+    /// and constructs the full DOS path including the directory structure.
+    /// 
+    /// For example, if the C: drive is mounted at "/home/user/games" and the host path
+    /// is "/home/user/games/MYFOLDER/GAME.EXE", the result will be "C:\MYFOLDER\GAME.EXE".
+    /// 
+    /// This is critical for programs that need to find resources relative to their
+    /// own executable location (like VB3 runtimes embedded in the EXE).
+    /// </remarks>
+    public string GetDosProgramPath(string hostPath) {
+        // Normalize the host path once before iterating through drives
+        string normalizedHostPath = ConvertUtils.ToSlashPath(hostPath);
+        
+        // Try to find a mounted drive that contains this host path
+        foreach (VirtualDrive drive in _dosDriveManager.GetDrives()) {
+            string mountedDir = ConvertUtils.ToSlashPath(drive.MountedHostDirectory).TrimEnd('/');
+            
+            // Check if the host path starts with the mounted directory
+            // Ensure we match exact directory boundaries to avoid false positives
+            // (e.g., "/home/user/games" should not match "/home/user/gamesdir/file.exe")
+            if (normalizedHostPath.StartsWith(mountedDir, StringComparison.OrdinalIgnoreCase) &&
+                (normalizedHostPath.Length == mountedDir.Length || normalizedHostPath[mountedDir.Length] == '/')) {
+                // Get the relative path from the mount point
+                string relativePath = normalizedHostPath.Length > mountedDir.Length 
+                    ? normalizedHostPath[(mountedDir.Length + 1)..] // Skip the separator
+                    : "";
+                
+                // Convert to DOS path format using existing utilities
+                string dosRelativePath = ConvertUtils.ToBackSlashPath(relativePath);
+                string dosPath = string.IsNullOrEmpty(dosRelativePath)
+                    ? $"{drive.DosVolume}\\"
+                    : $"{drive.DosVolume}\\{dosRelativePath}";
+                
+                // Normalize to uppercase for DOS compatibility
+                dosPath = dosPath.ToUpperInvariant();
+                
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("GetDosProgramPath: Converted host path '{HostPath}' to DOS path '{DosPath}'",
+                        hostPath, dosPath);
+                }
+                
+                return dosPath;
+            }
         }
-
-        // Build the full DOS path
-        string dosPath = $"{currentDrive}\\{currentDir}{fileName}";
-
-        // Replace slashes and standardize
-        dosPath = dosPath.Replace('/', '\\').ToUpperInvariant();
-
-        // Clean up any double backslashes
-        while (dosPath.Contains("\\\\")) {
-            dosPath = dosPath.Replace("\\\\", "\\");
-        }
-
-        return dosPath;
+        
+        // No matching drive found - this is an error condition
+        throw new InvalidOperationException($"No mounted drive contains the host path '{hostPath}'");
     }
 }
