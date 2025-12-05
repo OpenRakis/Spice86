@@ -25,6 +25,7 @@ internal sealed class DeviceScheduler {
     /// Time in the slice at which the currently active event is running.
     /// </summary>
     private double _activeEventScheduledTime;
+    private EmulationLoopSchedulerMonitor emulationLoopSchedulerMonitor;
 
     /// <summary>
     ///     Initializes a new queue bound to the provided CPU state and logger.
@@ -34,6 +35,7 @@ internal sealed class DeviceScheduler {
     public DeviceScheduler(ExecutionStateSlice cpuState, ILoggerService logger) {
         _executionStateSlice = cpuState;
         _logger = logger;
+        emulationLoopSchedulerMonitor = new EmulationLoopSchedulerMonitor(_logger, 100, 2);
         Initialize();
     }
 
@@ -89,6 +91,7 @@ internal sealed class DeviceScheduler {
         entry.ScheduledTime = (_isServicingEvents ? _activeEventScheduledTime : _executionStateSlice.NormalizedSliceProgress) + delay;
         entry.Handler = handler;
         entry.Value = val;
+        queuesize++;
 
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             string handlerName = GetHandlerName(handler);
@@ -126,6 +129,7 @@ internal sealed class DeviceScheduler {
                 _freeEntry = entry;
                 removedCount++;
                 entry = next;
+                queuesize--;
                 continue;
             }
 
@@ -165,6 +169,7 @@ internal sealed class DeviceScheduler {
                 _freeEntry = entry;
                 removedCount++;
                 entry = next;
+                queuesize--;
                 continue;
             }
 
@@ -181,6 +186,7 @@ internal sealed class DeviceScheduler {
         }
     }
 
+    private int queuesize = 0;
     /// <summary>
     ///     Executes due events, updates cycle counters, and prepares the next wake-up point.
     /// </summary>
@@ -228,6 +234,7 @@ internal sealed class DeviceScheduler {
         int processedCount = 0;
         while (_nextEntry != null && ConvertNormalizedToCycles(_nextEntry.ScheduledTime) <= cyclesConsumedInSlice) {
             ScheduledEntry? entry = _nextEntry;
+            emulationLoopSchedulerMonitor.OnEventExecuted(ConvertNormalizedToCycles(_nextEntry.ScheduledTime), cyclesConsumedInSlice, queuesize);
             _nextEntry = entry.Next;
 
             _activeEventScheduledTime = entry.ScheduledTime;
@@ -236,6 +243,7 @@ internal sealed class DeviceScheduler {
 
             entry.Next = _freeEntry;
             _freeEntry = entry;
+            queuesize--;
         }
         _isServicingEvents = false;
 
