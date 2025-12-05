@@ -67,6 +67,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     public const byte FreeMcbMarker = 0x0;
     private const byte McbLastEntry = 0x5A;
     private const byte McbNonLastEntry = 0x4D;
+    private const ushort FakeMcbSize = 0xFFFF;
 
     /// <summary>
     /// Initializes a new instance.
@@ -143,10 +144,10 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     public bool IsNonLast => TypeField == McbNonLastEntry;
 
     /// <summary>
-    /// Returns if the MCB is valid (must be Last or NonLast, and size must not be 0xFFFF).
-    /// The size check matches FreeDOS kernel behavior where 0xFFFF marks unlinked/fake MCBs.
+    /// Returns if the MCB is valid (must be Last or NonLast, and size must not be FakeMcbSize).
+    /// The size check matches FreeDOS kernel behavior where FakeMcbSize marks unlinked/fake MCBs.
     /// </summary>
-    public bool IsValid => (IsLast || IsNonLast) && Size != 0xFFFF;
+    public bool IsValid => (IsLast || IsNonLast) && Size != FakeMcbSize;
 
     /// <summary>
     /// Returns the next MCB in the MCB in chain, or null if not found.
