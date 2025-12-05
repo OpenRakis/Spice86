@@ -63,7 +63,7 @@ public class DosExecPathSearchIntegrationTests {
                 enableA20Gate: true
             );
 
-            Spice86DependencyInjection di = creator.Create();
+            using Spice86DependencyInjection di = creator.Create();
             _output.WriteLine("Emulator created successfully");
             
             // Test: BRUN30.EXE should be found in the same directory as INSECTS.EXE
@@ -117,7 +117,7 @@ public class DosExecPathSearchIntegrationTests {
                 enableA20Gate: true
             );
 
-            Spice86DependencyInjection di = creator.Create();
+            using Spice86DependencyInjection di = creator.Create();
             
             // C: drive is mounted to rootDir
             // RUNTIME subdirectory is accessible as C:\RUNTIME
@@ -188,6 +188,66 @@ public class DosExecPathSearchIntegrationTests {
     }
 
     /// <summary>
+    /// Tests that EXEC does not search PATH when the program path contains a directory separator.
+    /// This ensures explicit paths are respected and not accidentally resolved via PATH.
+    /// </summary>
+    [Fact]
+    public void ExecProgram_WithDirectorySeparator_DoesNotSearchPath() {
+        // Create test directory structure:
+        //   rootDir/
+        //     SUBDIR/
+        //       PROGRAM.EXE  <- Not accessible
+        //   pathDir/
+        //     PROGRAM.EXE    <- In PATH but should NOT be found
+        string rootDir = Path.Combine(Path.GetTempPath(), "Spice86Test_NoPathSearch_" + Guid.NewGuid().ToString("N")[..8]);
+        string subDir = Path.Combine(rootDir, "SUBDIR");
+        string pathDir = Path.Combine(rootDir, "PATHDIR");
+        Directory.CreateDirectory(rootDir);
+        Directory.CreateDirectory(subDir);
+        Directory.CreateDirectory(pathDir);
+        
+        try {
+            // Create PROGRAM.EXE in PATH directory
+            string pathProgramExe = Path.Combine(pathDir, "PROGRAM.EXE");
+            CreateStubExe(pathProgramExe);
+
+            // Create a main executable in root directory
+            string mainExe = Path.Combine(rootDir, "MAIN.EXE");
+            CreateStubExe(mainExe);
+
+            // Setup emulator
+            Spice86Creator creator = new(
+                binName: mainExe,
+                enableCfgCpu: true,
+                enablePit: false,
+                recordData: false,
+                maxCycles: 10000L,
+                installInterruptVectors: true,
+                enableA20Gate: true
+            );
+
+            using Spice86DependencyInjection di = creator.Create();
+            
+            // Add PATHDIR to PATH
+            string currentPath = di.Machine.Dos.ProcessManager.EnvironmentVariables["PATH"];
+            di.Machine.Dos.ProcessManager.EnvironmentVariables["PATH"] = $"{currentPath};C:\\PATHDIR";
+            
+            // Try to exec with a path containing directory separator
+            // This should NOT search PATH even though PROGRAM.EXE exists in PATH
+            DosExecResult result = di.Machine.Dos.ProcessManager.Exec("SUBDIR\\PROGRAM.EXE", null);
+            
+            // Should fail because SUBDIR\PROGRAM.EXE doesn't exist
+            // Even though PROGRAM.EXE exists in PATH, it should not be found
+            result.Success.Should().BeFalse("Path with directory separator should not search PATH");
+            result.ErrorCode.Should().Be(DosErrorCode.FileNotFound);
+        } finally {
+            if (Directory.Exists(rootDir)) {
+                Directory.Delete(rootDir, true);
+            }
+        }
+    }
+
+    /// <summary>
     /// Creates a minimal DOS executable with a valid MZ header for testing.
     /// </summary>
     /// <param name="path">The full path where the executable should be created.</param>
@@ -202,25 +262,6 @@ public class DosExecPathSearchIntegrationTests {
     /// This is sufficient for testing EXEC functionality without needing actual program logic.
     /// </remarks>
     private void CreateStubExe(string path) {
-        // Minimal EXE with MZ header
-        byte[] stubExe = new byte[] {
-            0x4D, 0x5A, // MZ signature
-            0x90, 0x00, // Bytes in last page
-            0x03, 0x00, // Pages in file
-            0x00, 0x00, // Relocations
-            0x04, 0x00, // Size of header in paragraphs
-            0x00, 0x00, // Minimum extra paragraphs
-            0xFF, 0xFF, // Maximum extra paragraphs
-            0x00, 0x00, // Initial SS
-            0xB8, 0x00, // Initial SP
-            0x00, 0x00, // Checksum
-            0x00, 0x00, // Initial IP
-            0x00, 0x00, // Initial CS
-            0x40, 0x00, // Relocation table offset
-            0x00, 0x00, // Overlay number
-            // Code section - just HLT
-            0xF4 // HLT
-        };
-        File.WriteAllBytes(path, stubExe);
+        File.WriteAllBytes(path, GetBrun30ExeData());
     }
 }

@@ -401,9 +401,9 @@ public class DosProcessManager : DosFileLoader {
                 return hostPath;
             }
         } catch (IOException) {
-            // Continue to PATH search
+            // Failed to resolve in current directory due to IO error; will try PATH search below
         } catch (UnauthorizedAccessException) {
-            // Continue to PATH search
+            // Access denied in current directory; will try PATH search below
         }
         
         // If path contains directory separator, don't search PATH
@@ -430,19 +430,10 @@ public class DosProcessManager : DosFileLoader {
         string[] pathDirectories = pathValue.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         
         foreach (string pathDir in pathDirectories) {
-            if (string.IsNullOrWhiteSpace(pathDir)) {
-                continue;
-            }
-            
             // Construct the full path by combining PATH directory with program name
-            // Handle both DOS-style paths (C:\DIR) and relative paths
-            string fullDosPath;
-            if (pathDir.EndsWith(DosPathResolver.DirectorySeparatorChar) ||
-                pathDir.EndsWith(DosPathResolver.AltDirectorySeparatorChar)) {
-                fullDosPath = pathDir + programName;
-            } else {
-                fullDosPath = pathDir + DosPathResolver.DirectorySeparatorChar + programName;
-            }
+            // Use TrimEnd to remove any trailing separators, then append separator and program name
+            string fullDosPath = pathDir.TrimEnd(DosPathResolver.DirectorySeparatorChar, DosPathResolver.AltDirectorySeparatorChar)
+                + DosPathResolver.DirectorySeparatorChar + programName;
             
             // Try to resolve this path
             try {
