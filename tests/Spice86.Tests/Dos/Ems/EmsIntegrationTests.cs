@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
 
+using System.IO;
 using System.Runtime.CompilerServices;
 
 using Xunit;
@@ -609,32 +610,7 @@ public class EmsIntegrationTests {
     /// </summary>
     [Fact]
     public void EmsMapWithPhysicalPage4_ShouldFail() {
-        byte[] program = new byte[] {
-            // Allocate 4 pages
-            0xBB, 0x04, 0x00,       // mov bx, 4
-            0xB4, 0x43,             // mov ah, 43h
-            0xCD, 0x67,             // int 67h
-            0x80, 0xFC, 0x00,       // cmp ah, 0
-            0x75, 0x10,             // jne failed
-            0x89, 0xD1,             // mov cx, dx - Save handle
-            // Try to map to physical page 4 (should fail - only 0-3 valid)
-            0xB0, 0x04,             // mov al, 4 - Physical page 4 (invalid!)
-            0xBB, 0x00, 0x00,       // mov bx, 0 - Logical page 0
-            0x89, 0xCA,             // mov dx, cx
-            0xB4, 0x44,             // mov ah, 44h
-            0xCD, 0x67,             // int 67h
-            0x80, 0xFC, 0x8B,       // cmp ah, 8Bh - Should return illegal physical page error
-            0x74, 0x04,             // je success
-            // failed:
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xEB, 0x02,             // jmp writeResult
-            // success:
-            0xB0, 0x00,             // mov al, TestResult.Success
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
+        byte[] program = File.ReadAllBytes("Resources/emsTests/physical_page_4_test.bin");
 
         EmsTestHandler testHandler = RunEmsTest(program, enableEms: true);
 
@@ -647,58 +623,7 @@ public class EmsIntegrationTests {
     /// </summary>
     [Fact]
     public void EmsHandleAllocationAfterDeallocation_ShouldNotCollide() {
-        byte[] program = new byte[] {
-            // Allocate handle 1 (4 pages)
-            0xBB, 0x04, 0x00,       // mov bx, 4
-            0xB4, 0x43,             // mov ah, 43h - Allocate
-            0xCD, 0x67,             // int 67h
-            0x80, 0xFC, 0x00,       // cmp ah, 0
-            0x75, 0x43,             // jne failed
-            0x89, 0xD7,             // mov di, dx - Save handle1 in DI
-            
-            // Allocate handle 2 (4 pages)
-            0xBB, 0x04, 0x00,       // mov bx, 4
-            0xB4, 0x43,             // mov ah, 43h - Allocate
-            0xCD, 0x67,             // int 67h
-            0x80, 0xFC, 0x00,       // cmp ah, 0
-            0x75, 0x38,             // jne failed
-            0x89, 0xD6,             // mov si, dx - Save handle2 in SI
-            
-            // Map handle2's page 0 to physical page 0 and write a marker
-            0xB0, 0x00,             // mov al, 0 - Physical page 0
-            0xBB, 0x00, 0x00,       // mov bx, 0 - Logical page 0
-            0x89, 0xF2,             // mov dx, si - handle2
-            0xB4, 0x44,             // mov ah, 44h
-            0xCD, 0x67,             // int 67h
-            0x80, 0xFC, 0x00,       // cmp ah, 0
-            0x75, 0x26,             // jne failed
-            
-            // Write 0xAA to handle2's page
-            0xB8, 0x00, 0xE0,       // mov ax, 0xE000
-            0x8E, 0xC0,             // mov es, ax
-            0x26, 0xC6, 0x06, 0x00, 0x00, 0xAA, // mov byte [es:0], 0AAh
-            
-            // Deallocate handle1 (the first handle)
-            0x89, 0xFA,             // mov dx, di - handle1
-            0xB4, 0x45,             // mov ah, 45h - Deallocate
-            0xCD, 0x67,             // int 67h
-            0x80, 0xFC, 0x00,       // cmp ah, 0
-            0x75, 0x12,             // jne failed
-            
-            // Verify handle2's data is still intact (0xAA)
-            0x26, 0xA0, 0x00, 0x00, // mov al, [es:0]
-            0x3C, 0xAA,             // cmp al, 0AAh
-            0x74, 0x04,             // je success
-            // failed:
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xEB, 0x02,             // jmp writeResult
-            // success:
-            0xB0, 0x00,             // mov al, TestResult.Success
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
+        byte[] program = File.ReadAllBytes("Resources/emsTests/handle_allocation_collision_test.bin");
 
         EmsTestHandler testHandler = RunEmsTest(program, enableEms: true);
 
