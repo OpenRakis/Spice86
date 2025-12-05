@@ -412,15 +412,11 @@ public class DosProcessManager : DosFileLoader {
         // Allocate memory for the program using MCB-based allocation
         // Following FreeDOS/DOSBox: all programs are allocated from the MCB chain, not at hardcoded segments
         ushort pspSegment;
-        DosMemoryControlBlock? memBlock;
-        
         // Always allocate from MCB chain (pass 0 to let memory manager find best block)
         // This matches FreeDOS/DOSBox behavior where programs are allocated dynamically
-        if (isExe && exeFile is not null) {
-            memBlock = _memoryManager.ReserveSpaceForExe(exeFile, 0);
-        } else {
-            memBlock = _memoryManager.AllocateMemoryBlock(ComFileMemoryParagraphs);
-        }
+        DosMemoryControlBlock? memBlock = (isExe && exeFile is not null)
+            ? _memoryManager.ReserveSpaceForExe(exeFile, 0)
+            : _memoryManager.AllocateMemoryBlock(ComFileMemoryParagraphs);
         
         if (memBlock is null) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {

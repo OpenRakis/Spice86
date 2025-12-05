@@ -278,7 +278,7 @@ public class DosMemoryManagerProductionConfigurationTest {
 
     /// <summary>
     /// Tests memory MCB chain structure matches reference/improvements_dos_bios pattern.
-    /// Verifies COMMAND.COM MCB at 0x005F, then free memory MCB at 0x006F.
+    /// Verifies COMMAND.COM MCB at 0x004F, then free memory MCB at 0x0060.
     /// </summary>
     [Fact]
     public void MemoryChainStructure_MatchesReferencePattern() {
@@ -427,7 +427,11 @@ public class DosMemoryManagerProductionConfigurationTest {
         Exception? caughtException = null;
         try {
             spice86DependencyInjection.ProgramExecutor.Run();
-        } catch (Exception ex) {
+        } catch (Spice86.Core.Emulator.CPU.InvalidOpCodeException ex) {
+            caughtException = ex;
+        } catch (IOException ex) {
+            caughtException = ex;
+        } catch (UnauthorizedAccessException ex) {
             caughtException = ex;
         }
 
