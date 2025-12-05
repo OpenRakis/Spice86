@@ -51,35 +51,6 @@ public class DosProcessManager : DosFileLoader {
         }
     }
 
-    /// <summary>
-    /// Converts the specified command-line arguments string into the format used by DOS.
-    /// </summary>
-    /// <param name="arguments">The command-line arguments string.</param>
-    /// <returns>The command-line arguments in the format used by DOS.</returns>
-    private static byte[] ArgumentsToDosBytes(string? arguments) {
-        byte[] res = new byte[128];
-        string correctLengthArguments = "";
-        if (string.IsNullOrWhiteSpace(arguments) == false) {
-            // Cut strings longer than 127 characters.
-            correctLengthArguments = arguments.Length > 127 ? arguments[..127] : arguments;
-        }
-
-        // Set the command line size.
-        res[0] = (byte)correctLengthArguments.Length;
-
-        byte[] argumentsBytes = Encoding.ASCII.GetBytes(correctLengthArguments);
-
-        // Copy the actual characters.
-        int index = 0;
-        for (; index < correctLengthArguments.Length; index++) {
-            res[index + 1] = argumentsBytes[index];
-        }
-
-        res[index + 1] = 0x0D; // Carriage return.
-        int endIndex = index + 1;
-        return res[0..endIndex];
-    }
-
     public override byte[] LoadFile(string file, string? arguments) {
         // TODO: We should be asking DosMemoryManager for a new block for the PSP, program, its
         // stack, and its requested extra space first. We shouldn't always assume that this is the
@@ -95,11 +66,7 @@ public class DosProcessManager : DosFileLoader {
         psp.NextSegment = DosMemoryManager.LastFreeSegment;
 
         // Load the command-line arguments into the PSP's command tail.
-        byte[] commandLineBytes = ArgumentsToDosBytes(arguments);
-        byte length = commandLineBytes[0];
-        string asciiCommandLine = Encoding.ASCII.GetString(commandLineBytes, 1, length);
-        psp.DosCommandTail.Length = (byte)(asciiCommandLine.Length + 1);
-        psp.DosCommandTail.Command = asciiCommandLine;
+        psp.DosCommandTail.Command = DosCommandTail.PrepareCommandlineString(arguments);
 
         byte[] environmentBlock = CreateEnvironmentBlock(file);
 
