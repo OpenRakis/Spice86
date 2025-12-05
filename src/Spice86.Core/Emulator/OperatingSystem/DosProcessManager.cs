@@ -449,7 +449,7 @@ public class DosProcessManager : DosFileLoader {
             // Load directly without re-reserving
             LoadExeFileIntoReservedMemory(exeFile, memBlock, out cs, out ip, out ss, out sp);
         } else {
-            LoadComFileInternal(fileBytes, out cs, out ip, out ss, out sp);
+            LoadComFileInternal(fileBytes, pspSegment, out cs, out ip, out ss, out sp);
         }
 
         if (loadType == DosExecLoadType.LoadAndExecute) {
@@ -517,7 +517,7 @@ public class DosProcessManager : DosFileLoader {
             ss = (ushort)(exeFile.InitSS + programEntryPointSegment);
             sp = exeFile.InitSP;
         } else {
-            LoadComFileInternal(fileBytes, out cs, out ip, out ss, out sp);
+            LoadComFileInternal(fileBytes, pspSegment, out cs, out ip, out ss, out sp);
         }
 
         if (loadType == DosExecLoadType.LoadAndExecute) {
@@ -567,7 +567,7 @@ public class DosProcessManager : DosFileLoader {
             // For EXE files, memory was already reserved
             LoadExeFileIntoReservedMemory(exeFile, memBlock, out cs, out ip, out ss, out sp);
         } else {
-            LoadComFileInternal(fileBytes, out cs, out ip, out ss, out sp);
+            LoadComFileInternal(fileBytes, pspSegment, out cs, out ip, out ss, out sp);
         }
 
         if (loadType == DosExecLoadType.LoadAndExecute) {
@@ -662,8 +662,9 @@ public class DosProcessManager : DosFileLoader {
     /// <summary>
     /// Loads a COM file and returns entry point information.
     /// </summary>
-    private void LoadComFileInternal(byte[] com, out ushort cs, out ushort ip, out ushort ss, out ushort sp) {
-        ushort programEntryPointSegment = _pspTracker.GetProgramEntryPointSegment();
+    private void LoadComFileInternal(byte[] com, ushort pspSegment, out ushort cs, out ushort ip, out ushort ss, out ushort sp) {
+        // COM files are loaded at PSP + 0x10 (PSP is 256 bytes, code starts after it)
+        ushort programEntryPointSegment = (ushort)(pspSegment + 0x10);
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(programEntryPointSegment, ComOffset);
         _memory.LoadData(physicalStartAddress, com);
 
