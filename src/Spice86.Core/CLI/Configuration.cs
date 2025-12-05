@@ -189,7 +189,7 @@ public sealed class Configuration {
     /// <summary>
     /// Determines whether to enable MCP (Model Context Protocol) server with stdio transport.
     /// </summary>
-    [Option(nameof(McpServer), Default = false, Required = false, HelpText = "Enable MCP (Model Context Protocol) server with stdio transport for programmatic emulator state inspection")]
+    [Option(nameof(McpServer), Default = true, Required = false, HelpText = "Enable MCP (Model Context Protocol) server with stdio transport for programmatic emulator state inspection. Enabled by default.")]
     public bool McpServer { get; init; }
 
     //TODO: Temporary fix, replace with real dependency injection
