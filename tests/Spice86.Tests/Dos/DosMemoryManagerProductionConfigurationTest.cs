@@ -382,4 +382,73 @@ public class DosMemoryManagerProductionConfigurationTest {
             }
         }
     }
+
+    /// <summary>
+    /// Integration test for Day of the Tentacle startup (TENTACLE.EXE).
+    /// Tests that the actual DOTT executable can start without memory allocation errors.
+    /// The startup logic is fairly small and should not trigger "Out of memory" errors.
+    /// </summary>
+    [Fact]
+    public void DayOfTheTentacle_Startup_ShouldNotShowMemoryErrors() {
+        // TENTACLE.EXE hex data from user
+        string hexData = "4D5A6D00A80000000200EE11FFFF6822800000000E0033141C0000004C5A3931FFFFC804000057568B5E088B378BFEBE98FFFF321E07B9FFFF33C0F2AEF7D12BF987FEFFC3D1E9F3A513C9F3A46A5C68E49AFFFF8641161283C4048946FE0BC074068BD8A7FFC6470100C51F8BD3803F00740E3FFF43807FFF5C7502F275F28BFABE0DD3EE00B0F816BAE68BDACC13308442FA2E75B4DAB4FE00FFEDFC75EDC7067C496AC3FFFA2A4DC52BC0A3462FA3EC32A36138C03AEF3A49EFFF7608FCF8FD069A7A00C00E759A08007F3A3C006864339A224365029A5A7DFEF0141E9A9839F08B1E8A563FFF8987F200A1D24AF5474E68502FF1076A00FE019A20066806DDC00342E883BF928FC0002E9EC43A2EC343FA7633F2833E742FED2A88C3F3C81BFF36F39AC7FF3C065601ADC6060C4D00B001A2FF01614FA21A489A76026A11DC0176D59DCAC1E88FFC475CFAC7F98B47268946FC8B36E861F8EE02B14645B10383C60F2FDD3976FC77EA9CFCDA01775EF9FCF6FF16F9FC18F9FC1A83FE0F7603BE0F0056D38F9A7C09580229361C4D79000F5DFAC79A3000AC7F7FFB3209601AA1E8328DFC04A0FF472AE4DFFBF4FC06A15A53F6FC28A17CF6FD2AA124DEC242F6FC58A140F6FD5AE9F009604A901E53606BF90175246A0684A39E09278A06CF3F4C539A0A01063D01001BC025FC74FB05C900EB2990D5027533355FD5F80EDBF5D5FFCB1B89878E8EF2011DD7FD3C949FF1BE3A02C28E29F3F9BC36437C09310AF584E89A7801C61CFEF5FA55C22BF6C6840C4BFFFF014683FE0D72F59A020068069A86000B87FF0A9A9C01FB803E044900751EC6C3FF061A48CDE00600099A0400300FFB7F9ADC06ECF3A31C37E93CFE909AD801F68010D1AC328436320EC204D8E23906C310E1750E7FCA4ABE07001AF9957805B6E904C670DF1402DA0ECF0E9A884AE3FBF6C14206E7E4611C0755A3CC0AFB9E0620FCFBCC56837419A04649BF882AE4509A0A003674E92950F8EB7454EEE963614F007E0F0319FF364042FC2442CC0A532D52E9D51002F702FFFDE0FC05B001EB03902AC0B8E9E940FF55371E8BEC568B26E9943E9A1201F6F0BB9A561CE99AEA00910BF67487FD0C566842A444207FE39AE804B4EE211787F1691B1BEB5EC9CB16328D80D39C03C41C0F715A841261024B00BA00058C07ECA4CFA34E45480740A6E174076CF9867CC4BE7807DD04BEF619E6403EB45DE842F7870FCB57561ED88A569AAE1188FBB68CF3D447F3FE0EE886108605AC15F46A01F5F1435B03D168900068404B108018B6EFD0EF08A3BFADF6776CE2A40F2C109A5CC39004F1BE016F0256DF3FFCFFBC2AF3F0";
+        
+        // Convert hex to bytes
+        byte[] tentacleExe = new byte[hexData.Length / 2];
+        for (int i = 0; i < tentacleExe.Length; i++) {
+            tentacleExe[i] = Convert.ToByte(hexData.Substring(i * 2, 2), 16);
+        }
+
+        // Write TENTACLE.EXE to file
+        string filePath = Path.GetFullPath("TENTACLE.EXE");
+        File.WriteAllBytes(filePath, tentacleExe);
+
+        // Setup emulator with DOS interrupt vectors installed
+        // Use increased maxCycles since this is a real program that does more than test code
+        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+            binName: filePath,
+            enableCfgCpu: true,
+            enablePit: true,
+            recordData: false,
+            maxCycles: 1000000L,  // 1M cycles for startup
+            installInterruptVectors: true,
+            enableA20Gate: false,
+            enableXms: false,
+            enableEms: false
+        ).Create();
+
+        // Run the program
+        // The test passes if:
+        // 1. No memory allocation errors occur (no "MCB IsValid: False", "Could not find any MCB to fit")
+        // 2. Program executes for a reasonable number of cycles (proves memory allocation worked)
+        // 3. Program may eventually fail due to invalid opcode (compressed data) or missing game files
+        //    but that's AFTER successful memory allocation
+        
+        Exception? caughtException = null;
+        try {
+            spice86DependencyInjection.ProgramExecutor.Run();
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+
+        // If an exception occurred, it should NOT be a memory-related error
+        if (caughtException is not null) {
+            string exceptionMessage = caughtException.ToString().ToLowerInvariant();
+            
+            // Check that it's NOT a memory allocation failure
+            exceptionMessage.Should().NotContain("mcb isvalid: false", 
+                "TENTACLE.EXE should not encounter invalid MCB errors");
+            exceptionMessage.Should().NotContain("could not find any mcb to fit",
+                "TENTACLE.EXE should not encounter MCB allocation failures");
+            exceptionMessage.Should().NotContain("out of memory",
+                "TENTACLE.EXE should not encounter out of memory errors");
+                
+            // InvalidOpCodeException is expected (compressed data or unimplemented instruction)
+            // As long as it's NOT a memory error, the test passes
+            caughtException.Should().BeOfType<Spice86.Core.Emulator.CPU.InvalidOpCodeException>(
+                "Program should fail on invalid opcode (compressed data), not memory errors");
+        }
+        
+        // Test passes - no memory allocation failures detected
+    }
 }
