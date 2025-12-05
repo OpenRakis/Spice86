@@ -477,13 +477,12 @@ public class Spice86DependencyInjection : IDisposable {
             InstallDefaultInterruptHandlers(interruptInstaller, dualPic, biosDataArea, loggerService);
         }
 
-        var dosClock = new Clock(loggerService);
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack,
             state, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
-                { "BLASTER", soundBlaster.BlasterString } }, dosClock, loggerService,
-            xms);
+                { "BLASTER", soundBlaster.BlasterString } }, loggerService,
+            ioPortDispatcher, dosTables, xms);
 
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers

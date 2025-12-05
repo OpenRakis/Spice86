@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
@@ -17,21 +18,140 @@ using System.Text;
 
 /// <summary>
 /// Setups the loading and execution of DOS programs and maintains the DOS PSP chains in memory.
+/// Implements DOS INT 21h AH=4Bh (EXEC - Load and/or Execute Program) functionality.
 /// </summary>
+/// <remarks>
+/// Based on MS-DOS 4.0 EXEC.ASM and RBIL documentation.
+/// </remarks>
 public class DosProcessManager : DosFileLoader {
     private const ushort ComOffset = 0x100;
+    
+    /// <summary>
+    /// CALL FAR opcode (far call instruction) used in PSP at offset 0x05.
+    /// </summary>
+    private const byte FarCallOpcode = 0x9A;
+    
+    /// <summary>
+    /// INT instruction opcode.
+    /// </summary>
+    private const byte IntOpcode = 0xCD;
+    
+    /// <summary>
+    /// INT 21h interrupt number.
+    /// </summary>
+    private const byte Int21Number = 0x21;
+    
+    /// <summary>
+    /// RETF instruction opcode (far return).
+    /// </summary>
+    private const byte RetfOpcode = 0xCB;
+    
+    /// <summary>
+    /// Faked CPM segment address (intentionally invalid).
+    /// </summary>
+    private const ushort FakeCpmSegment = 0xDEAD;
+    
+    /// <summary>
+    /// Faked CPM offset address (intentionally invalid).
+    /// </summary>
+    private const ushort FakeCpmOffset = 0xFFFF;
+    
+    /// <summary>
+    /// Indicates no previous PSP in the chain.
+    /// </summary>
+    private const uint NoPreviousPsp = 0xFFFFFFFF;
+    
+    /// <summary>
+    /// Default DOS major version number.
+    /// </summary>
+    private const byte DefaultDosVersionMajor = 5;
+    
+    /// <summary>
+    /// Default DOS minor version number.
+    /// </summary>
+    private const byte DefaultDosVersionMinor = 0;
+    
+    /// <summary>
+    /// Offset within PSP where the file table is stored.
+    /// </summary>
+    private const ushort FileTableOffset = 0x18;
+    
+    /// <summary>
+    /// Default maximum number of open files per process.
+    /// </summary>
+    private const byte DefaultMaxOpenFiles = 20;
+    
+    /// <summary>
+    /// Value indicating an unused file handle in the PSP file table.
+    /// </summary>
+    private const byte UnusedFileHandle = 0xFF;
+    
+    /// <summary>
+    /// Offset within PSP where command tail data begins.
+    /// </summary>
+    private const ushort CommandTailDataOffset = 0x81;
+    
+    /// <summary>
+    /// Maximum length of the command tail (127 bytes).
+    /// </summary>
+    private const int MaxCommandTailLength = 127;
+    
+    /// <summary>
+    /// Size of a File Control Block (FCB) in bytes.
+    /// </summary>
+    private const int FcbSize = 16;
+    
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
     private readonly DosDriveManager _driveManager;
 
     /// <summary>
+    /// The simulated COMMAND.COM that serves as the root of the PSP chain.
+    /// </summary>
+    private readonly CommandCom _commandCom;
+
+    /// <summary>
     /// The master environment block that all DOS PSPs inherit.
     /// </summary>
-    /// <remarks>
-    /// Not stored in emulated memory, so no one can modify it.
-    /// </remarks>
     private readonly EnvironmentVariables _environmentVariables;
+
+    /// <summary>
+    /// Stores the return code of the last terminated child process.
+    /// This is retrieved by INT 21h AH=4Dh (Get Return Code of Child Process).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The value is a 16-bit word where:
+    /// - AL (low byte) = Exit code (ERRORLEVEL) from the child process
+    /// - AH (high byte) = Termination type (see <see cref="DosTerminationType"/>)
+    /// </para>
+    /// <para>
+    /// <strong>MCB Note:</strong> In FreeDOS, this is stored in the SDA (Swappable Data Area)
+    /// and is only valid immediately after the child process terminates. Reading it a second
+    /// time returns 0 in MS-DOS. FreeDOS may behave slightly differently.
+    /// </para>
+    /// </remarks>
+    private ushort _lastChildReturnCode;
+
+    /// <summary>
+    /// Gets or sets the return code of the last terminated child process.
+    /// </summary>
+    /// <remarks>
+    /// The low byte (AL) contains the exit code, and the high byte (AH) contains
+    /// the termination type. See <see cref="DosTerminationType"/> for termination types.
+    /// In MS-DOS, this value is only valid for one read after EXEC returns - subsequent
+    /// reads return 0.
+    /// </remarks>
+    public ushort LastChildReturnCode {
+        get => _lastChildReturnCode;
+        set => _lastChildReturnCode = value;
+    }
+
+    /// <summary>
+    /// Gets the simulated COMMAND.COM instance.
+    /// </summary>
+    public CommandCom CommandCom => _commandCom;
 
     public DosProcessManager(IMemory memory, State state,
         DosProgramSegmentPrefixTracker dosPspTracker, DosMemoryManager dosMemoryManager,
@@ -44,7 +164,14 @@ public class DosProcessManager : DosFileLoader {
         _driveManager = dosDriveManager;
         _environmentVariables = new();
 
-        envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
+        // Initialize COMMAND.COM as the root of the PSP chain
+        _commandCom = new CommandCom(memory, loggerService);
+
+        // Use TryAdd to avoid ArgumentException if PATH already exists in envVars
+        string pathValue = $"{_driveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}";
+        if (!envVars.ContainsKey("PATH")) {
+            envVars.Add("PATH", pathValue);
+        }
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
             _environmentVariables.Add(envVar.Key, envVar.Value);
@@ -52,191 +179,613 @@ public class DosProcessManager : DosFileLoader {
     }
 
     /// <summary>
-    /// Converts the specified command-line arguments string into the format used by DOS.
+    /// Executes a program using DOS EXEC semantics (INT 21h, AH=4Bh).
+    /// This is the main API for program loading that should be called by CommandCom
+    /// and INT 21h handler.
     /// </summary>
-    /// <param name="arguments">The command-line arguments string.</param>
-    /// <returns>The command-line arguments in the format used by DOS.</returns>
-    private static byte[] ArgumentsToDosBytes(string? arguments) {
-        byte[] res = new byte[128];
-        string correctLengthArguments = "";
-        if (string.IsNullOrWhiteSpace(arguments) == false) {
-            // Cut strings longer than 127 characters.
-            correctLengthArguments = arguments.Length > 127 ? arguments[..127] : arguments;
+    /// <param name="programPath">The DOS path to the program (must include extension).</param>
+    /// <param name="arguments">Command line arguments for the program.</param>
+    /// <param name="loadType">The type of load operation to perform.</param>
+    /// <param name="environmentSegment">Environment segment to use (0 = inherit from parent).</param>
+    /// <returns>The result of the EXEC operation.</returns>
+    public DosExecResult Exec(string programPath, string? arguments, 
+        DosExecLoadType loadType = DosExecLoadType.LoadAndExecute, 
+        ushort environmentSegment = 0) {
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "EXEC: Loading program '{Program}' with args '{Args}', type={LoadType}",
+                programPath, arguments ?? "", loadType);
         }
 
-        // Set the command line size.
-        res[0] = (byte)correctLengthArguments.Length;
-
-        byte[] argumentsBytes = Encoding.ASCII.GetBytes(correctLengthArguments);
-
-        // Copy the actual characters.
-        int index = 0;
-        for (; index < correctLengthArguments.Length; index++) {
-            res[index + 1] = argumentsBytes[index];
+        // Resolve the program path to a host file path
+        string? hostPath = ResolveToHostPath(programPath);
+        if (hostPath is null || !File.Exists(hostPath)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("EXEC: Program file not found: {Program}", programPath);
+            }
+            return DosExecResult.Failed(DosErrorCode.FileNotFound);
         }
 
-        res[index + 1] = 0x0D; // Carriage return.
-        int endIndex = index + 1;
-        return res[0..endIndex];
-    }
+        // Read the program file
+        byte[] fileBytes;
+        try {
+            fileBytes = ReadFile(hostPath);
+        } catch (IOException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("EXEC: Failed to read program file: {Error}", ex.Message);
+            }
+            return DosExecResult.Failed(DosErrorCode.AccessDenied);
+        } catch (UnauthorizedAccessException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("EXEC: Access denied reading program file: {Error}", ex.Message);
+            }
+            return DosExecResult.Failed(DosErrorCode.AccessDenied);
+        }
 
-    public override byte[] LoadFile(string file, string? arguments) {
-        // TODO: We should be asking DosMemoryManager for a new block for the PSP, program, its
-        // stack, and its requested extra space first. We shouldn't always assume that this is the
-        // first program to be loaded and that we have enough space for it like we do right now.
-        // This will need to be fixed for DOS program load/exec support.
-        DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(_pspTracker.InitialPspSegment);
-        ushort pspSegment = MemoryUtils.ToSegment(psp.BaseAddress);
+        // Determine parent PSP
+        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
+        if (parentPspSegment == 0) {
+            // If no current PSP, use COMMAND.COM as parent
+            parentPspSegment = _commandCom.PspSegment;
+        }
 
-        // Set the PSP's first 2 bytes to INT 20h.
-        psp.Exit[0] = 0xCD;
-        psp.Exit[1] = 0x20;
+        // For the first program, we use the original loading approach that gives the program
+        // ALL remaining conventional memory (NextSegment = LastFreeSegment). This is how real DOS 
+        // works and ensures programs that resize their memory block via INT 21h 4Ah have room to grow.
+        // For child processes, we use proper MCB-based allocation.
+        bool isFirstProgram = _pspTracker.PspCount == 0;
 
-        psp.NextSegment = DosMemoryManager.LastFreeSegment;
+        // Create environment block
+        byte[] envBlockData = CreateEnvironmentBlock(programPath);
+        ushort envSegment = environmentSegment;
+        if (envSegment == 0) {
+            if (isFirstProgram) {
+                // For the first program, we place the environment block in a fixed location
+                // that won't conflict with the PSP at InitialPspSegment. We use the segment
+                // right after COMMAND.COM's PSP area (segment 0x70), which is unused memory
+                // between COMMAND.COM and the program's PSP.
+                // This avoids using MCB allocation which would place the environment at
+                // InitialPspSegment, where it would be overwritten by PSP initialization.
+                // See: https://github.com/maximilien-noal/Spice86/issues/XXX
+                envSegment = (ushort)(_commandCom.NextSegment);
+                uint envAddress = MemoryUtils.ToPhysicalAddress(envSegment, 0);
+                _memory.LoadData(envAddress, envBlockData);
+                
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose(
+                        "Placed first program environment block at segment {Segment:X4} ({Size} bytes)",
+                        envSegment, envBlockData.Length);
+                }
+            } else {
+                // For child processes, use MCB allocation as normal
+                envSegment = _memoryManager.AllocateEnvironmentBlock(envBlockData, parentPspSegment);
+                if (envSegment == 0) {
+                    return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
+                }
+            }
+        }
 
-        // Load the command-line arguments into the PSP's command tail.
-        byte[] commandLineBytes = ArgumentsToDosBytes(arguments);
-        byte length = commandLineBytes[0];
-        string asciiCommandLine = Encoding.ASCII.GetString(commandLineBytes, 1, length);
-        psp.DosCommandTail.Length = (byte)(asciiCommandLine.Length + 1);
-        psp.DosCommandTail.Command = asciiCommandLine;
+        // Allocate memory for the program and create PSP
+        DosExecResult result = isFirstProgram 
+            ? LoadFirstProgram(fileBytes, hostPath, arguments, parentPspSegment, envSegment, loadType)
+            : LoadProgram(fileBytes, hostPath, arguments, parentPspSegment, envSegment, loadType);
 
-        byte[] environmentBlock = CreateEnvironmentBlock(file);
+        if (!result.Success) {
+            // Free the environment block if we allocated it (only for non-first programs)
+            if (environmentSegment == 0 && envSegment != 0 && !isFirstProgram) {
+                _memoryManager.FreeMemoryBlock((ushort)(envSegment - 1));
+            }
+        }
 
-        // In the PSP, the Environment Block Segment field (defined at offset 0x2C) is a word, and is a pointer.
-        ushort envBlockPointer = (ushort)(pspSegment + 1);
-        SegmentedAddress envBlockSegmentAddress = new SegmentedAddress(envBlockPointer, 0);
-
-        // Copy the environment block to memory in a separated segment.
-        _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlockSegmentAddress.Segment,
-            envBlockSegmentAddress.Offset), environmentBlock);
-
-        // Point the PSP's environment segment to the environment block.
-        psp.EnvironmentTableSegment = envBlockSegmentAddress.Segment;
-
-        // Set the disk transfer area address to the command-line offset in the PSP.
-        _fileManager.SetDiskTransferAreaAddress(
-            pspSegment, DosCommandTail.OffsetInPspSegment);
-
-        return LoadExeOrComFile(file, pspSegment);
+        return result;
     }
 
     /// <summary>
-    /// Creates a DOS environment block from the current environment variables.
+    /// Loads an overlay using DOS EXEC semantics (INT 21h, AH=4Bh, AL=03h).
+    /// This loads program code at a specified segment without creating a PSP.
     /// </summary>
-    /// <param name="programPath">The path to the program being executed.</param>
-    /// <returns>A byte array containing the DOS environment block.</returns>
-    private byte[] CreateEnvironmentBlock(string programPath) {
-        using MemoryStream ms = new();
-    
-        // Add each environment variable as NAME=VALUE followed by a null terminator
-        foreach (KeyValuePair<string, string> envVar in _environmentVariables) {
-            string envString = $"{envVar.Key}={envVar.Value}";
-            byte[] envBytes = Encoding.ASCII.GetBytes(envString);
-            ms.Write(envBytes, 0, envBytes.Length);
-            ms.WriteByte(0); // Null terminator for this variable
+    /// <param name="programPath">The DOS path to the overlay file.</param>
+    /// <param name="loadSegment">The segment at which to load the overlay.</param>
+    /// <param name="relocationFactor">The relocation factor for EXE overlays.</param>
+    /// <returns>The result of the EXEC operation.</returns>
+    /// <remarks>
+    /// Overlay loading is used by programs that manage their own code overlays.
+    /// No PSP is created and no environment is set up.
+    /// </remarks>
+    public DosExecResult ExecOverlay(string programPath, ushort loadSegment, ushort relocationFactor) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "EXEC OVERLAY: Loading '{Program}' at segment {Segment:X4}, reloc={Reloc:X4}",
+                programPath, loadSegment, relocationFactor);
         }
-    
-        // Add final null byte to mark end of environment block
-        ms.WriteByte(0);
-    
-        // Write a word with value 1 after the environment variables
-        // This is required by DOS
-        ms.WriteByte(1);
-        ms.WriteByte(0);
-    
-        // Get the DOS path for the program (not the host path)
-        string dosPath = _fileManager.GetDosProgramPath(programPath);
-    
-        // Write the DOS path to the environment block
-        byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
-        ms.Write(programPathBytes, 0, programPathBytes.Length);
-        ms.WriteByte(0); // Null terminator for program path
-    
-        return ms.ToArray();
+
+        // Resolve the program path to a host file path
+        string? hostPath = ResolveToHostPath(programPath);
+        if (hostPath is null || !File.Exists(hostPath)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("EXEC OVERLAY: File not found: {Program}", programPath);
+            }
+            return DosExecResult.Failed(DosErrorCode.FileNotFound);
+        }
+
+        // Read the program file
+        byte[] fileBytes;
+        try {
+            fileBytes = ReadFile(hostPath);
+        } catch (IOException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("EXEC OVERLAY: IO error: {Error}", ex.Message);
+            }
+            return DosExecResult.Failed(DosErrorCode.AccessDenied);
+        } catch (UnauthorizedAccessException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("EXEC OVERLAY: Access denied: {Error}", ex.Message);
+            }
+            return DosExecResult.Failed(DosErrorCode.AccessDenied);
+        }
+
+        // Determine if this is an EXE or COM file
+        bool isExe = false;
+        DosExeFile? exeFile = null;
+
+        if (fileBytes.Length >= DosExeFile.MinExeSize) {
+            exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
+            isExe = exeFile.IsValid;
+        }
+
+        // Load the overlay at the specified segment
+        if (isExe && exeFile is not null) {
+            LoadExeOverlay(exeFile, loadSegment, relocationFactor);
+        } else {
+            LoadComOverlay(fileBytes, loadSegment);
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug(
+                "EXEC OVERLAY: Loaded {Size} bytes at segment {Segment:X4}",
+                fileBytes.Length, loadSegment);
+        }
+
+        return DosExecResult.Succeeded();
     }
 
-    private void LoadComFile(byte[] com) {
-        ushort programEntryPointSegment = _pspTracker.GetProgramEntryPointSegment();
-        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(programEntryPointSegment, ComOffset);
-        _memory.LoadData(physicalStartAddress, com);
-
-        // Make DS and ES point to the PSP
-        _state.DS = programEntryPointSegment;
-        _state.ES = programEntryPointSegment;
-        SetEntryPoint(programEntryPointSegment, ComOffset);
-        _state.InterruptFlag = true;
+    /// <summary>
+    /// Loads a COM file as an overlay at the specified segment.
+    /// </summary>
+    private void LoadComOverlay(byte[] comData, ushort loadSegment) {
+        uint physicalAddress = MemoryUtils.ToPhysicalAddress(loadSegment, 0);
+        _memory.LoadData(physicalAddress, comData);
     }
 
-    private void LoadExeFile(DosExeFile exeFile, ushort pspSegment) {
+    /// <summary>
+    /// Loads an EXE file as an overlay at the specified segment with relocations.
+    /// </summary>
+    private void LoadExeOverlay(DosExeFile exeFile, ushort loadSegment, ushort relocationFactor) {
+        uint physicalAddress = MemoryUtils.ToPhysicalAddress(loadSegment, 0);
+        _memory.LoadData(physicalAddress, exeFile.ProgramImage, (int)exeFile.ProgramSize);
+
+        // Apply relocations using the relocation factor
+        foreach (SegmentedAddress address in exeFile.RelocationTable) {
+            uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset)
+                + physicalAddress;
+            _memory.UInt16[addressToEdit] += relocationFactor;
+        }
+    }
+
+    /// <summary>
+    /// Resolves a DOS path to a host file path.
+    /// </summary>
+    private string? ResolveToHostPath(string dosPath) {
+        // Try to resolve through the file manager
+        try {
+            return _fileManager.GetHostPath(dosPath);
+        } catch (IOException) {
+            return null;
+        } catch (UnauthorizedAccessException) {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Size of memory allocation for COM files in paragraphs (~64KB).
+    /// COM files are loaded at CS:0100h and have a maximum size of 64KB - 256 bytes (for PSP).
+    /// This value (0xFFF paragraphs = 65,520 bytes) provides sufficient space for maximum COM file size.
+    /// </summary>
+    private const ushort ComFileMemoryParagraphs = 0xFFF;
+
+    /// <summary>
+    /// Loads the program into memory and sets up the PSP.
+    /// </summary>
+    private DosExecResult LoadProgram(byte[] fileBytes, string hostPath, string? arguments,
+        ushort parentPspSegment, ushort envSegment, DosExecLoadType loadType) {
+        
+        // Determine if this is an EXE or COM file
+        bool isExe = false;
+        DosExeFile? exeFile = null;
+        
+        if (fileBytes.Length >= DosExeFile.MinExeSize) {
+            exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
+            isExe = exeFile.IsValid;
+        }
+
+        // Allocate memory for the program using MCB-based allocation
+        // For the first program, we use InitialPspSegment; for child processes, we use MCB allocation
+        ushort pspSegment;
+        DosMemoryControlBlock? memBlock;
+        
+        if (_pspTracker.PspCount == 0) {
+            // First program - use the configured initial PSP segment
+            if (isExe && exeFile is not null) {
+                memBlock = _memoryManager.ReserveSpaceForExe(exeFile, _pspTracker.InitialPspSegment);
+            } else {
+                memBlock = _memoryManager.AllocateMemoryBlock(ComFileMemoryParagraphs);
+            }
+            pspSegment = _pspTracker.InitialPspSegment;
+        } else {
+            // Child process - use MCB allocation to find free memory
+            if (isExe && exeFile is not null) {
+                // Pass 0 to let memory manager find the best available block
+                memBlock = _memoryManager.ReserveSpaceForExe(exeFile, 0);
+            } else {
+                memBlock = _memoryManager.AllocateMemoryBlock(ComFileMemoryParagraphs);
+            }
+            
+            if (memBlock is null) {
+                return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
+            }
+            pspSegment = memBlock.DataBlockSegment;
+        }
+
+        if (memBlock is null) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("Failed to allocate memory for program at segment {Segment:X4}", pspSegment);
+            }
+            return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
+        }
+
+        // Create and register the PSP
+        DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
+
+        // Initialize PSP
+        InitializePsp(psp, parentPspSegment, envSegment, arguments);
+
+        // Set the disk transfer area address
+        _fileManager.SetDiskTransferAreaAddress(pspSegment, DosCommandTail.OffsetInPspSegment);
+
+        // Load the program
+        ushort cs, ip, ss, sp;
+        
+        if (isExe && exeFile is not null) {
+            // For EXE files, memory was already reserved by ReserveSpaceForExe
+            // Load directly without re-reserving
+            LoadExeFileIntoReservedMemory(exeFile, memBlock, out cs, out ip, out ss, out sp);
+        } else {
+            LoadComFileInternal(fileBytes, out cs, out ip, out ss, out sp);
+        }
+
+        if (loadType == DosExecLoadType.LoadAndExecute) {
+            // Set up CPU state for execution
+            _state.DS = pspSegment;
+            _state.ES = pspSegment;
+            _state.SS = ss;
+            _state.SP = sp;
+            SetEntryPoint(cs, ip);
+            _state.InterruptFlag = true;
+            
+            return DosExecResult.Succeeded();
+        } else if (loadType == DosExecLoadType.LoadOnly) {
+            // Return entry point info without executing
+            return DosExecResult.Succeeded(pspSegment, cs, ip, ss, sp);
+        }
+
+        return DosExecResult.Succeeded();
+    }
+
+    /// <summary>
+    /// Loads the first program using the original approach that gives it ALL remaining memory.
+    /// </summary>
+    /// <remarks>
+    /// This is the approach used in the original code and in real DOS. The first program gets
+    /// all remaining conventional memory (NextSegment = LastFreeSegment), which ensures that
+    /// programs that resize their memory block via INT 21h 4Ah have room to grow.
+    /// This is simpler and more compatible than MCB-based allocation for the initial program.
+    /// </remarks>
+    private DosExecResult LoadFirstProgram(byte[] fileBytes, string hostPath, string? arguments,
+        ushort parentPspSegment, ushort envSegment, DosExecLoadType loadType) {
+        
+        ushort pspSegment = _pspTracker.InitialPspSegment;
+        
+        // Create and register the PSP
+        DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
+
+        // Initialize PSP - this sets NextSegment = LastFreeSegment giving the program ALL memory
+        InitializePsp(psp, parentPspSegment, envSegment, arguments);
+
+        // Set the disk transfer area address
+        _fileManager.SetDiskTransferAreaAddress(pspSegment, DosCommandTail.OffsetInPspSegment);
+
+        // Determine if this is an EXE or COM file
+        bool isExe = false;
+        DosExeFile? exeFile = null;
+
+        if (fileBytes.Length >= DosExeFile.MinExeSize) {
+            exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
+            isExe = exeFile.IsValid;
+        }
+
+        // Load the program
+        ushort cs, ip, ss, sp;
+        
+        if (isExe && exeFile is not null) {
+            // For EXE files, calculate entry point based on PSP segment
+            // The program entry point is immediately after the PSP (16 paragraphs = 256 bytes)
+            ushort programEntryPointSegment = (ushort)(pspSegment + 0x10);
+            
+            LoadExeFileInMemoryAndApplyRelocations(exeFile, programEntryPointSegment);
+            
+            cs = (ushort)(exeFile.InitCS + programEntryPointSegment);
+            ip = exeFile.InitIP;
+            ss = (ushort)(exeFile.InitSS + programEntryPointSegment);
+            sp = exeFile.InitSP;
+        } else {
+            LoadComFileInternal(fileBytes, out cs, out ip, out ss, out sp);
+        }
+
+        if (loadType == DosExecLoadType.LoadAndExecute) {
+            // Set up CPU state for execution
+            _state.DS = pspSegment;
+            _state.ES = pspSegment;
+            _state.SS = ss;
+            _state.SP = sp;
+            SetEntryPoint(cs, ip);
+            _state.InterruptFlag = true;
+            
+            return DosExecResult.Succeeded();
+        } else if (loadType == DosExecLoadType.LoadOnly) {
+            // Return entry point info without executing
+            return DosExecResult.Succeeded(pspSegment, cs, ip, ss, sp);
+        }
+
+        return DosExecResult.Succeeded();
+    }
+
+    /// <summary>
+    /// Loads the first program using pre-allocated memory block.
+    /// </summary>
+    /// <remarks>
+    /// This is used for the first program where memory was reserved BEFORE allocating the environment
+    /// block to prevent the environment from taking the memory at InitialPspSegment.
+    /// </remarks>
+    private DosExecResult LoadProgramWithPreallocatedMemory(byte[] fileBytes, string hostPath, string? arguments,
+        ushort parentPspSegment, ushort envSegment, DosExecLoadType loadType, 
+        DosMemoryControlBlock memBlock, DosExeFile? exeFile, bool isExe) {
+        
+        ushort pspSegment = _pspTracker.InitialPspSegment;
+        
+        // Create and register the PSP
+        DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
+
+        // Initialize PSP
+        InitializePsp(psp, parentPspSegment, envSegment, arguments);
+
+        // Set the disk transfer area address
+        _fileManager.SetDiskTransferAreaAddress(pspSegment, DosCommandTail.OffsetInPspSegment);
+
+        // Load the program
+        ushort cs, ip, ss, sp;
+        
+        if (isExe && exeFile is not null) {
+            // For EXE files, memory was already reserved
+            LoadExeFileIntoReservedMemory(exeFile, memBlock, out cs, out ip, out ss, out sp);
+        } else {
+            LoadComFileInternal(fileBytes, out cs, out ip, out ss, out sp);
+        }
+
+        if (loadType == DosExecLoadType.LoadAndExecute) {
+            // Set up CPU state for execution
+            _state.DS = pspSegment;
+            _state.ES = pspSegment;
+            _state.SS = ss;
+            _state.SP = sp;
+            SetEntryPoint(cs, ip);
+            _state.InterruptFlag = true;
+            
+            return DosExecResult.Succeeded();
+        } else if (loadType == DosExecLoadType.LoadOnly) {
+            // Return entry point info without executing
+            return DosExecResult.Succeeded(pspSegment, cs, ip, ss, sp);
+        }
+
+        return DosExecResult.Succeeded();
+    }
+
+    /// <summary>
+    /// Loads an EXE file into already-reserved memory and returns entry point information.
+    /// </summary>
+    /// <remarks>
+    /// This method is used when memory has already been reserved by ReserveSpaceForExe.
+    /// It avoids the double-reservation issue that occurs when LoadExeFileInternal
+    /// is called with a pre-determined PSP segment.
+    /// </remarks>
+    private void LoadExeFileIntoReservedMemory(DosExeFile exeFile, DosMemoryControlBlock block,
+        out ushort cs, out ushort ip, out ushort ss, out ushort sp) {
+        
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Read header: {ReadHeader}", exeFile);
+            _loggerService.Verbose("Loading EXE into reserved memory: {Header}", exeFile);
         }
 
-        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, pspSegment);
-        if (block is null) {
-            throw new UnrecoverableException($"Failed to reserve space for EXE file at {pspSegment}");
-        }
-        // The program image is typically loaded immediately above the PSP, which is the start of
-        // the memory block that we just allocated. Seek 16 paragraphs into the allocated block to
-        // get our starting point.
         ushort programEntryPointSegment = (ushort)(block.DataBlockSegment + 0x10);
-        // There is one special case that we need to account for: if the EXE doesn't have any extra
-        // allocations, we need to load it as high as possible in the memory block rather than
-        // immediately after the PSP like we normally do. This will give the program extra space
-        // between the PSP and the start of the program image that it can use however it wants.
+        
         if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
             ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
             programEntryPointSegment = (ushort)(block.DataBlockSegment + programEntryPointOffset);
         }
 
         LoadExeFileInMemoryAndApplyRelocations(exeFile, programEntryPointSegment);
-        SetupCpuForExe(exeFile, programEntryPointSegment, pspSegment);
-    }
 
-    private byte[] LoadExeOrComFile(string file, ushort pspSegment) {
-        byte[] fileBytes = ReadFile(file);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Executable file size: {Size}", fileBytes.Length);
-        }
-
-        // Check if file size is at least EXE header size
-        if (fileBytes.Length >= DosExeFile.MinExeSize) {
-            // Try to read it as exe
-            DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
-            if (exeFile.IsValid) {
-                LoadExeFile(exeFile, pspSegment);
-            } else {
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("File {File} does not have a valid EXE header. Considering it a COM file.", file);
-                }
-
-                LoadComFile(fileBytes);
-            }
-        } else {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("File {File} size is {Size} bytes, which is less than minimum allowed. Consider it a COM file.",
-                    file, fileBytes.Length);
-            }
-            LoadComFile(fileBytes);
-        }
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Initial CPU State: {CpuState}", _state);
-        }
-
-        return fileBytes;
+        cs = (ushort)(exeFile.InitCS + programEntryPointSegment);
+        ip = exeFile.InitIP;
+        ss = (ushort)(exeFile.InitSS + programEntryPointSegment);
+        sp = exeFile.InitSP;
     }
 
     /// <summary>
-    /// Loads the program image and applies any necessary relocations to it.
+    /// Initializes common PSP fields shared between regular and child PSP creation.
+    /// Sets the INT 20h instruction and parent PSP segment.
     /// </summary>
-    /// <param name="exeFile">The EXE file to load.</param>
-    /// <param name="startSegment">The starting segment for the program.</param>
+    /// <param name="psp">The PSP to initialize.</param>
+    /// <param name="parentPspSegment">The segment of the parent PSP.</param>
+    private static void InitializeCommonPspFields(DosProgramSegmentPrefix psp, ushort parentPspSegment) {
+        // Set the PSP's first 2 bytes to INT 20h (CP/M-style exit)
+        psp.Exit[0] = IntOpcode;
+        psp.Exit[1] = 0x20;
+        
+        // Set parent PSP segment
+        psp.ParentProgramSegmentPrefix = parentPspSegment;
+    }
+
+    /// <summary>
+    /// Initializes a PSP with the given parameters.
+    /// </summary>
+    private void InitializePsp(DosProgramSegmentPrefix psp, ushort parentPspSegment, 
+        ushort envSegment, string? arguments) {
+        
+        // Initialize common PSP fields (INT 20h and parent PSP)
+        InitializeCommonPspFields(psp, parentPspSegment);
+
+        psp.NextSegment = DosMemoryManager.LastFreeSegment;
+        psp.EnvironmentTableSegment = envSegment;
+
+        // Copy file handle table from parent PSP
+        // This is critical for programs that use stdin/stdout/stderr (handles 0, 1, 2)
+        uint parentPspAddress = MemoryUtils.ToPhysicalAddress(parentPspSegment, 0);
+        DosProgramSegmentPrefix parentPsp = new(_memory, parentPspAddress);
+        CopyFileTableFromParent(psp, parentPsp);
+
+        // Load command-line arguments
+        // Load the command-line arguments into the PSP's command tail.
+        psp.DosCommandTail.Command = DosCommandTail.PrepareCommandlineString(arguments);
+    }
+
+    /// <summary>
+    /// Loads a COM file and returns entry point information.
+    /// </summary>
+    private void LoadComFileInternal(byte[] com, out ushort cs, out ushort ip, out ushort ss, out ushort sp) {
+        ushort programEntryPointSegment = _pspTracker.GetProgramEntryPointSegment();
+        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(programEntryPointSegment, ComOffset);
+        _memory.LoadData(physicalStartAddress, com);
+
+        cs = programEntryPointSegment;
+        ip = ComOffset;
+        ss = programEntryPointSegment;
+        sp = 0xFFFE; // Standard COM file stack
+    }
+
+    /// <summary>
+    /// Converts the specified command-line arguments string into the format used by DOS.
+    /// </summary>
+    private static byte[] ArgumentsToDosBytes(string? arguments) {
+        byte[] res = new byte[128];
+        string correctLengthArguments = "";
+        if (!string.IsNullOrWhiteSpace(arguments)) {
+            correctLengthArguments = arguments.Length > 127 ? arguments[..127] : arguments;
+        }
+
+        res[0] = (byte)correctLengthArguments.Length;
+        byte[] argumentsBytes = Encoding.ASCII.GetBytes(correctLengthArguments);
+
+        int index = 0;
+        for (; index < correctLengthArguments.Length; index++) {
+            res[index + 1] = argumentsBytes[index];
+        }
+
+        res[index + 1] = 0x0D;
+        int endIndex = index + 2;  // Include the carriage return byte
+        return res[0..endIndex];
+    }
+
+    /// <summary>
+    /// Legacy LoadFile implementation - used by ProgramExecutor for initial program loading.
+    /// This accepts a host path and loads the program via the EXEC API, simulating
+    /// how COMMAND.COM would launch a program.
+    /// </summary>
+    /// <remarks>
+    /// This method converts the host path to a DOS path and calls the internal EXEC
+    /// implementation. The program is launched as a child of COMMAND.COM, properly
+    /// establishing the PSP chain.
+    /// </remarks>
+    public override byte[] LoadFile(string hostPath, string? arguments) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "LoadFile: COMMAND.COM launching program from host path '{HostPath}' with args '{Args}'",
+                hostPath, arguments ?? "");
+        }
+
+        // Convert host path to DOS path for the EXEC call
+        string dosPath = _fileManager.GetDosProgramPath(hostPath);
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("LoadFile: Resolved DOS path: {DosPath}", dosPath);
+        }
+
+        // Call the EXEC API - this is how COMMAND.COM launches programs
+        // The EXEC method handles all the PSP setup, environment block allocation,
+        // and program loading internally
+        DosExecResult result = Exec(dosPath, arguments, DosExecLoadType.LoadAndExecute, environmentSegment: 0);
+        
+        if (!result.Success) {
+            throw new UnrecoverableException(
+                $"COMMAND.COM: Failed to launch program '{dosPath}': {result.ErrorCode}");
+        }
+
+        // Return file bytes for checksum verification
+        return ReadFile(hostPath);
+    }
+
+    /// <summary>
+    /// Creates a DOS environment block from the current environment variables.
+    /// </summary>
+    /// <remarks>
+    /// The environment block structure is:
+    /// - Environment variables as "KEY=VALUE\0" strings
+    /// - Double null (\0\0) to terminate the list  
+    /// - A WORD (16-bit little-endian) containing count of additional strings (usually 1)
+    /// - The full program path as an ASCIZ string (used by programs to find their own executable)
+    /// </remarks>
+    private byte[] CreateEnvironmentBlock(string programPath) {
+        using MemoryStream ms = new();
+
+        foreach (KeyValuePair<string, string> envVar in _environmentVariables) {
+            string envString = $"{envVar.Key}={envVar.Value}";
+            byte[] envBytes = Encoding.ASCII.GetBytes(envString);
+            ms.Write(envBytes, 0, envBytes.Length);
+            ms.WriteByte(0);
+        }
+
+        ms.WriteByte(0);  // Extra null to create double-null terminator
+        ms.WriteByte(1);  // WORD count = 1 (little-endian)
+        ms.WriteByte(0);
+
+        // programPath is already a full DOS path from Exec(), so we use it directly
+        // The path must be the full absolute DOS path (e.g., "C:\GAMES\MYGAME.EXE")
+        // so programs can find their runtime by extracting the directory from their path.
+        // This is the same as what FreeDOS and MS-DOS do with truename() in task.c
+        string normalizedPath = programPath.Replace('/', '\\').ToUpperInvariant();
+        byte[] programPathBytes = Encoding.ASCII.GetBytes(normalizedPath);
+        ms.Write(programPathBytes, 0, programPathBytes.Length);
+        ms.WriteByte(0);
+
+        return ms.ToArray();
+    }
+
+    /// <summary>
+    /// Loads the program image and applies any necessary relocations.
+    /// </summary>
     private void LoadExeFileInMemoryAndApplyRelocations(DosExeFile exeFile, ushort startSegment) {
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, 0);
         _memory.LoadData(physicalStartAddress, exeFile.ProgramImage, (int)exeFile.ProgramSize);
         foreach (SegmentedAddress address in exeFile.RelocationTable) {
-            // Read value from memory, add the start segment offset and write back
             uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset)
                 + physicalStartAddress;
             _memory.UInt16[addressToEdit] += startSegment;
@@ -244,27 +793,436 @@ public class DosProcessManager : DosFileLoader {
     }
 
     /// <summary>
-    /// Sets up the CPU to execute the loaded program.
+    /// Terminates the current process with the specified exit code and termination type.
     /// </summary>
-    /// <param name="exeFile">The EXE file that was loaded.</param>
-    /// <param name="startSegment">The starting segment address of the program.</param>
-    /// <param name="pspSegment">The segment address of the program's PSP (Program Segment Prefix).</param>
-    private void SetupCpuForExe(DosExeFile exeFile, ushort startSegment, ushort pspSegment) {
-        // MS-DOS uses the values in the file header to set the SP and SS registers and
-        // adjusts the initial value of the SS register by adding the start-segment
-        // address to it.
-        _state.SS = (ushort)(exeFile.InitSS + startSegment);
-        _state.SP = exeFile.InitSP;
+    /// <param name="exitCode">The exit code (ERRORLEVEL) to return to the parent process.</param>
+    /// <param name="terminationType">How the process terminated.</param>
+    /// <param name="interruptVectorTable">The interrupt vector table to restore vectors from PSP.</param>
+    /// <returns>
+    /// <c>true</c> if control should return to a parent process (child process terminating);
+    /// <c>false</c> if the main program is terminating and emulation should stop.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// This implements DOS process termination semantics (INT 21h AH=4Ch, INT 21h AH=00h, INT 20h).
+    /// </para>
+    /// <para>
+    /// The termination process:
+    /// <list type="number">
+    /// <item>Store the return code for retrieval by parent (INT 21h AH=4Dh)</item>
+    /// <item>Close all non-standard file handles (handles 5+)</item>
+    /// <item>Cache interrupt vectors from PSP before freeing memory</item>
+    /// <item>Free all memory blocks owned by the process</item>
+    /// <item>Restore interrupt vectors 22h, 23h, 24h from cached values</item>
+    /// <item>Remove the PSP from the tracker</item>
+    /// <item>Return control to parent via INT 22h vector</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// <strong>MCB Note:</strong> FreeDOS kernel uses FreeProcessMem() in task.c to free
+    /// all memory blocks owned by a PSP. This implementation follows the same pattern.
+    /// Note that in real DOS, the environment block is also freed since it's a separate
+    /// MCB owned by the terminating process's PSP.
+    /// </para>
+    /// </remarks>
+    public bool TerminateProcess(byte exitCode, DosTerminationType terminationType, 
+        InterruptVectorTable interruptVectorTable) {
+        
+        // Store the return code for parent to retrieve via INT 21h AH=4Dh
+        // Format: AH = termination type, AL = exit code
+        LastChildReturnCode = (ushort)(((ushort)terminationType << 8) | exitCode);
+        
+        DosProgramSegmentPrefix? currentPsp = _pspTracker.GetCurrentPsp();
+        if (currentPsp is null) {
+            // No PSP means we're terminating before any program was loaded
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("TerminateProcess called with no current PSP");
+            }
+            return false;
+        }
 
-        // Make DS and ES point to the PSP
-        _state.DS = pspSegment;
-        _state.ES = pspSegment;
+        ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
+        ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
 
-        _state.InterruptFlag = true;
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "Terminating process at PSP {CurrentPsp:X4}, exit code {ExitCode:X2}, type {Type}, parent PSP {ParentPsp:X4}",
+                currentPspSegment, exitCode, terminationType, parentPspSegment);
+        }
 
-        // Finally, MS-DOS reads the initial CS and IP values from the program's file
-        // header, adjusts the CS register value by adding the start-segment address to
-        // it, and transfers control to the program at the adjusted address.
-        SetEntryPoint((ushort)(exeFile.InitCS + startSegment), exeFile.InitIP);
+        // Check if this is the root process (PSP = parent PSP, like COMMAND.COM)
+        // or if parent is COMMAND.COM (the shell)
+        bool isRootProcess = currentPspSegment == parentPspSegment || 
+                            parentPspSegment == CommandCom.CommandComSegment;
+
+        // If this is a child process (not the main program), we have a parent to return to
+        bool hasParentToReturnTo = !isRootProcess && _pspTracker.PspCount > 1;
+
+        // Close all non-standard file handles (5+) opened by this process
+        // Standard handles 0-4 (stdin, stdout, stderr, stdaux, stdprn) are inherited and not closed
+        _fileManager.CloseAllNonStandardFileHandles();
+
+        // Cache interrupt vectors from PSP before freeing memory
+        // INT 22h = Terminate address, INT 23h = Ctrl-C, INT 24h = Critical error
+        // Must read these BEFORE freeing the PSP memory to avoid accessing freed memory
+        uint terminateAddr = currentPsp.TerminateAddress;
+        uint breakAddr = currentPsp.BreakAddress;
+        uint criticalErrorAddr = currentPsp.CriticalErrorAddress;
+
+        // Free all memory blocks owned by this process (including environment block)
+        // This follows FreeDOS kernel FreeProcessMem() pattern
+        _memoryManager.FreeProcessMemory(currentPspSegment);
+
+        // Restore interrupt vectors from cached values
+        RestoreInterruptVector(0x22, terminateAddr, interruptVectorTable);
+        RestoreInterruptVector(0x23, breakAddr, interruptVectorTable);
+        RestoreInterruptVector(0x24, criticalErrorAddr, interruptVectorTable);
+
+        // Remove the PSP from the tracker
+        _pspTracker.PopCurrentPspSegment();
+
+        if (hasParentToReturnTo) {
+            // Set up return to parent process
+            // DS and ES should point to parent's PSP
+            _state.DS = parentPspSegment;
+            _state.ES = parentPspSegment;
+
+            // Get the terminate address from the interrupt vector table
+            // The INT 22h vector was just restored from the PSP above, so it now
+            // contains the return address for the parent process
+            SegmentedAddress returnAddress = interruptVectorTable[0x22];
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug(
+                    "Returning to parent at {Segment:X4}:{Offset:X4}",
+                    returnAddress.Segment, returnAddress.Offset);
+            }
+
+            // Set up CPU to continue at the return address
+            _state.CS = returnAddress.Segment;
+            _state.IP = returnAddress.Offset;
+            
+            return true; // Continue execution at parent
+        }
+
+        // No parent to return to - this is the main program terminating
+        return false;
+    }
+
+    /// <summary>
+    /// Restores an interrupt vector from a stored far pointer if it's non-zero.
+    /// </summary>
+    /// <param name="vectorNumber">The interrupt vector number (e.g., 0x22, 0x23, 0x24).</param>
+    /// <param name="storedFarPointer">The far pointer stored in the PSP (offset:segment format, 0 means don't restore).</param>
+    /// <param name="interruptVectorTable">The interrupt vector table to update.</param>
+    /// <remarks>
+    /// The PSP stores far pointers as DWORDs where:
+    /// - Low 16 bits (bytes 0-1): offset  
+    /// - High 16 bits (bytes 2-3): segment
+    /// In little-endian byte order in memory: [offset_lo, offset_hi, seg_lo, seg_hi]
+    /// </remarks>
+    private static void RestoreInterruptVector(byte vectorNumber, uint storedFarPointer, 
+        InterruptVectorTable interruptVectorTable) {
+        if (storedFarPointer != 0) {
+            ushort offset = (ushort)(storedFarPointer & 0xFFFF);
+            ushort segment = (ushort)(storedFarPointer >> 16);
+            interruptVectorTable[vectorNumber] = new SegmentedAddress(segment, offset);
+        }
+    }
+
+    /// <summary>
+    /// Constructs a far pointer in offset:segment format (low 16 bits = offset, high 16 bits = segment).
+    /// </summary>
+    /// <param name="segment">The segment part of the pointer.</param>
+    /// <param name="offset">The offset part of the pointer.</param>
+    /// <returns>A uint representing the far pointer in offset:segment format.</returns>
+    public static uint MakeFarPointer(ushort segment, ushort offset) {
+        return ((uint)segment << 16) | offset;
+    }
+
+    /// <summary>
+    /// Creates a new PSP by copying the current PSP to a specified segment.
+    /// Implements INT 21h, AH=26h - Create New PSP.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Based on FreeDOS kernel implementation (kernel/task.c new_psp function):
+    /// <list type="bullet">
+    /// <item>Copies the entire current PSP (256 bytes) to the new segment</item>
+    /// <item>Updates terminate address (INT 22h vector) in the new PSP</item>
+    /// <item>Updates break address (INT 23h vector) in the new PSP</item>
+    /// <item>Updates critical error address (INT 24h vector) in the new PSP</item>
+    /// <item>Sets DOS version to return on INT 21h AH=30h</item>
+    /// <item>Does NOT change parent PSP (contrary to RBIL - this breaks some programs)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// This is a simpler version of CreateChildPsp (function 55h). It doesn't set up
+    /// parent-child relationships, file handles, or FCBs - it just copies the PSP and
+    /// updates the interrupt vectors. Used by programs that want to create a PSP copy
+    /// for their own purposes.
+    /// </para>
+    /// <para>
+    /// <strong>Note:</strong> RBIL (Ralf Brown's Interrupt List) documents that parent PSP
+    /// should be set to 0, but FreeDOS found that some programs (like Alpha Waves) break
+    /// when parent PSP is zeroed. FreeDOS leaves it as-is and we follow that behavior.
+    /// See: https://github.com/stsp/fdpp/issues/112
+    /// </para>
+    /// </remarks>
+    /// <param name="newPspSegment">The segment address where the new PSP will be created.</param>
+    /// <param name="interruptVectorTable">The interrupt vector table for getting current vectors.</param>
+    public void CreateNewPsp(ushort newPspSegment, InterruptVectorTable interruptVectorTable) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "CreateNewPsp: Copying current PSP to segment {NewPspSegment:X4}",
+                newPspSegment);
+        }
+
+        // Get the current PSP segment
+        ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
+        
+        // Get addresses for source and destination PSPs
+        uint currentPspAddress = MemoryUtils.ToPhysicalAddress(currentPspSegment, 0);
+        uint newPspAddress = MemoryUtils.ToPhysicalAddress(newPspSegment, 0);
+        
+        // Copy the entire PSP (256 bytes) from current PSP to new PSP
+        // Use ReadRam/LoadData for efficient bulk copy
+        byte[] pspData = _memory.ReadRam(DosProgramSegmentPrefix.MaxLength, currentPspAddress);
+        _memory.LoadData(newPspAddress, pspData);
+        
+        // Create a PSP wrapper for the new PSP to update fields
+        DosProgramSegmentPrefix newPsp = new(_memory, newPspAddress);
+        
+        // Update interrupt vectors in the new PSP from the interrupt vector table
+        // INT 22h - Terminate address
+        SegmentedAddress int22 = interruptVectorTable[0x22];
+        newPsp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
+        
+        // INT 23h - Break address (Ctrl-C handler)
+        SegmentedAddress int23 = interruptVectorTable[0x23];
+        newPsp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
+        
+        // INT 24h - Critical error address
+        SegmentedAddress int24 = interruptVectorTable[0x24];
+        newPsp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
+        
+        // Set DOS version to return on INT 21h AH=30h
+        // Use the default DOS version (5.0)
+        newPsp.DosVersionMajor = DefaultDosVersionMajor;
+        newPsp.DosVersionMinor = DefaultDosVersionMinor;
+        
+        // Note: We do NOT zero out the parent PSP segment (ps_parent) because
+        // this breaks some programs. FreeDOS leaves it as-is (from the copy).
+        // This is contrary to what RBIL documents.
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug(
+                "CreateNewPsp: Created PSP at {NewPspSegment:X4} from {CurrentPspSegment:X4}, Parent={Parent:X4}",
+                newPspSegment, currentPspSegment, newPsp.ParentProgramSegmentPrefix);
+        }
+    }
+
+    /// <summary>
+    /// Creates a child PSP (Program Segment Prefix) at the specified segment.
+    /// Implements INT 21h, AH=55h - Create Child PSP.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Based on DOSBox staging implementation and DOS 4.0 EXEC.ASM behavior:
+    /// <list type="bullet">
+    /// <item>Creates a new PSP at the specified segment</item>
+    /// <item>Sets the parent PSP to the current PSP</item>
+    /// <item>Copies the file handle table from the parent</item>
+    /// <item>Copies command tail from parent PSP (offset 0x80)</item>
+    /// <item>Copies FCB1 from parent (offset 0x5C)</item>
+    /// <item>Copies FCB2 from parent (offset 0x6C)</item>
+    /// <item>Inherits environment from parent</item>
+    /// <item>Inherits stack pointer from parent</item>
+    /// <item>Sets the PSP size</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// This function is used by programs like debuggers or overlay managers
+    /// that need to create a child process context without actually loading a program.
+    /// </para>
+    /// </remarks>
+    /// <param name="childSegment">The segment address where the child PSP will be created.</param>
+    /// <param name="sizeInParagraphs">The size of the memory block in paragraphs (16-byte units).</param>
+    /// <param name="interruptVectorTable">The interrupt vector table for saving current vectors.</param>
+    public void CreateChildPsp(ushort childSegment, ushort sizeInParagraphs, InterruptVectorTable interruptVectorTable) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "CreateChildPsp: Creating child PSP at segment {ChildSegment:X4}, size {Size} paragraphs",
+                childSegment, sizeInParagraphs);
+        }
+
+        // Get the parent PSP segment (current PSP)
+        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
+        
+        // Create the new PSP at the specified segment
+        uint childPspAddress = MemoryUtils.ToPhysicalAddress(childSegment, 0);
+        DosProgramSegmentPrefix childPsp = new(_memory, childPspAddress);
+        
+        // Initialize the child PSP with MakeNew-style initialization
+        InitializeChildPsp(childPsp, childSegment, parentPspSegment, sizeInParagraphs, interruptVectorTable);
+        
+        // Get the parent PSP to copy data from
+        uint parentPspAddress = MemoryUtils.ToPhysicalAddress(parentPspSegment, 0);
+        DosProgramSegmentPrefix parentPsp = new(_memory, parentPspAddress);
+        
+        // Copy file handle table from parent
+        CopyFileTableFromParent(childPsp, parentPsp);
+        
+        // Copy command tail from parent (offset 0x80)
+        CopyCommandTailFromParent(childPsp, parentPsp);
+        
+        // Copy FCB1 from parent (offset 0x5C)
+        CopyFcb1FromParent(childPsp, parentPsp);
+        
+        // Copy FCB2 from parent (offset 0x6C)
+        CopyFcb2FromParent(childPsp, parentPsp);
+        
+        // Inherit environment from parent
+        childPsp.EnvironmentTableSegment = parentPsp.EnvironmentTableSegment;
+        
+        // Inherit stack pointer from parent
+        childPsp.StackPointer = parentPsp.StackPointer;
+        
+        // Note: We intentionally do NOT register this child PSP with _pspTracker.PushPspSegment().
+        // INT 21h/55h is used by debuggers and overlay managers that manage their own PSP tracking.
+        // The INT 21h handler (DosInt21Handler.CreateChildPsp) will call SetCurrentPspSegment() to 
+        // update the SDA's current PSP, but the PSP is not added to the tracker's internal list. 
+        // This matches DOSBox behavior where DOS_ChildPSP() creates the PSP but the caller is 
+        // responsible for managing PSP tracking.
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug(
+                "CreateChildPsp: Parent={Parent:X4}, Env={Env:X4}, NextSeg={Next:X4}",
+                parentPspSegment, childPsp.EnvironmentTableSegment, childPsp.NextSegment);
+        }
+    }
+
+    /// <summary>
+    /// Initializes a child PSP with basic DOS structures.
+    /// Based on DOSBox DOS_PSP::MakeNew() implementation.
+    /// </summary>
+    private void InitializeChildPsp(DosProgramSegmentPrefix psp, ushort pspSegment, 
+        ushort parentPspSegment, ushort sizeInParagraphs, InterruptVectorTable interruptVectorTable) {
+        // Clear the PSP area first (256 bytes)
+        for (int i = 0; i < DosProgramSegmentPrefix.MaxLength; i++) {
+            _memory.UInt8[psp.BaseAddress + (uint)i] = 0;
+        }
+        
+        // Initialize common PSP fields (INT 20h and parent PSP)
+        InitializeCommonPspFields(psp, parentPspSegment);
+        
+        // Set size (next_seg = psp_segment + size)
+        psp.NextSegment = (ushort)(pspSegment + sizeInParagraphs);
+        
+        // CALL FAR opcode (for far call to DOS INT 21h dispatcher at PSP offset 0x05)
+        psp.FarCall = FarCallOpcode;
+        
+        // CPM entry point - faked address
+        psp.CpmServiceRequestAddress = MakeFarPointer(FakeCpmSegment, FakeCpmOffset);
+        
+        // INT 21h / RETF at offset 0x50
+        psp.Service[0] = IntOpcode;
+        psp.Service[1] = Int21Number;
+        psp.Service[2] = RetfOpcode;
+        
+        // Previous PSP set to indicate no previous PSP
+        psp.PreviousPspAddress = NoPreviousPsp;
+        
+        // Set DOS version
+        psp.DosVersionMajor = DefaultDosVersionMajor;
+        psp.DosVersionMinor = DefaultDosVersionMinor;
+        
+        // Save current interrupt vectors 22h, 23h, 24h into the PSP
+        SaveInterruptVectors(psp, interruptVectorTable);
+        
+        // Initialize file table pointer to point to internal file table
+        psp.FileTableAddress = MakeFarPointer(pspSegment, FileTableOffset);
+        psp.MaximumOpenFiles = DefaultMaxOpenFiles;
+        
+        // Initialize file handles to unused
+        for (int i = 0; i < DefaultMaxOpenFiles; i++) {
+            psp.Files[i] = UnusedFileHandle;
+        }
+    }
+
+    /// <summary>
+    /// Saves the current interrupt vectors (22h, 23h, 24h) into the PSP.
+    /// </summary>
+    private static void SaveInterruptVectors(DosProgramSegmentPrefix psp, InterruptVectorTable ivt) {
+        // INT 22h - Terminate address
+        SegmentedAddress int22 = ivt[0x22];
+        psp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
+        
+        // INT 23h - Break address  
+        SegmentedAddress int23 = ivt[0x23];
+        psp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
+        
+        // INT 24h - Critical error address
+        SegmentedAddress int24 = ivt[0x24];
+        psp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
+    }
+
+    /// <summary>
+    /// Copies file handle table from parent PSP to child PSP, respecting the no-inherit flag.
+    /// Files opened with the no-inherit flag (bit 7 set) are not copied to the child.
+    /// </summary>
+    /// <remarks>
+    /// Based on DOSBox DOS_PSP::CopyFileTable() behavior when createchildpsp is true.
+    /// Files marked with <see cref="FileAccessMode.Private"/> in their Flags property will not be
+    /// inherited by the child process - they get 0xFF (unused) instead.
+    /// </remarks>
+    private void CopyFileTableFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        for (int i = 0; i < DefaultMaxOpenFiles; i++) {
+            byte parentHandle = parentPsp.Files[i];
+            
+            // If handle is unused, keep it unused in child
+            if (parentHandle == UnusedFileHandle) {
+                childPsp.Files[i] = UnusedFileHandle;
+                continue;
+            }
+            
+            // Check if the file was opened with the no-inherit flag (FileAccessMode.Private)
+            if (parentHandle < _fileManager.OpenFiles.Length) {
+                VirtualFileBase? file = _fileManager.OpenFiles[parentHandle];
+                if (file is DosFile dosFile && (dosFile.Flags & (byte)FileAccessMode.Private) != 0) {
+                    // File has no-inherit flag set, don't copy to child
+                    childPsp.Files[i] = UnusedFileHandle;
+                    continue;
+                }
+            }
+            
+            // File can be inherited, copy the handle
+            childPsp.Files[i] = parentHandle;
+        }
+    }
+
+    /// <summary>
+    /// Copies the command tail from parent PSP (offset 0x80) to child PSP.
+    /// </summary>
+    private void CopyCommandTailFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        childPsp.DosCommandTail.Command = parentPsp.DosCommandTail.Command;
+    }
+
+    /// <summary>
+    /// Copies FCB1 from parent PSP (offset 0x5C) to child PSP.
+    /// </summary>
+    private static void CopyFcb1FromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        for (int i = 0; i < FcbSize; i++) {
+            childPsp.FirstFileControlBlock[i] = parentPsp.FirstFileControlBlock[i];
+        }
+    }
+
+    /// <summary>
+    /// Copies FCB2 from parent PSP (offset 0x6C) to child PSP.
+    /// </summary>
+    private static void CopyFcb2FromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        for (int i = 0; i < FcbSize; i++) {
+            childPsp.SecondFileControlBlock[i] = parentPsp.SecondFileControlBlock[i];
+        }
     }
 }
