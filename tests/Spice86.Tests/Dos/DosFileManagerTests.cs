@@ -159,8 +159,8 @@ public class DosFileManagerTests {
 
         InputEventHub inputEventQueue = new();
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
-            functionHandlerProvider, stack, state, a20Gate,
-            configuration.InitializeDOS is not false, loggerService);
+            functionHandlerProvider, stack, state, a20Gate, biosDataArea, dualPic,
+            ioPortDispatcher, configuration.InitializeDOS is not false, loggerService);
         Intel8042Controller intel8042Controller = new(
             state, ioPortDispatcher, a20Gate, dualPic,
             configuration.FailOnUnhandledPort, pauseHandler, loggerService, inputEventQueue);
