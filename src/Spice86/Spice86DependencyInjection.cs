@@ -332,7 +332,13 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher,
             pauseHandler, loggerService, dualPic, configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, loggerService);
+        
+        // Use EmulatedClock when InstructionsPerSecond is set for timing consistency in headless mode
+        IWallClock? clock = configuration.InstructionsPerSecond.HasValue 
+            ? new EmulatedClock(dualPic, DateTime.UtcNow) 
+            : null;
+        
+        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, loggerService, clock);
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
