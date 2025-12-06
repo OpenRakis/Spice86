@@ -38,7 +38,6 @@ public class Spice86Creator {
             HeadlessMode = HeadlessType.Minimal,
             // Use instructions per second based timer for predictability if timer is enabled
             InstructionsPerSecond = instructionsPerSecond,
-            CfgCpu = enableCfgCpu,
             AudioEngine = AudioEngine.Dummy,
             FailOnUnhandledPort = failOnUnhandledPort,
             A20Gate = enableA20Gate,

@@ -173,8 +173,7 @@ public sealed class Configuration {
     /// <summary>
     /// Determines whether to use experimental CFG CPU or regular interpreter.
     /// </summary>
-    [Option(nameof(CfgCpu), Default = false, Required = false, HelpText = "Enable CFG CPU (Control Flow Graph)")]
-    public bool CfgCpu { get; init; }
+
 
     /// <summary>
     /// Audio engine to use

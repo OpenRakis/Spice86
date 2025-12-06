@@ -63,7 +63,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
         IPauseHandler pauseHandler) {
         _uiDispatcher = uiDispatcher;
         _executionContextManager = executionContextManager;
-        IsCfgCpuEnabled = configuration.CfgCpu;
+        IsCfgCpuEnabled = true;
         AutoFollow = true;
 
         pauseHandler.Paused += () => {

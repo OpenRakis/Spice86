@@ -5,7 +5,7 @@ using Spice86.Shared.Utils;
 
 /// <summary>
 /// Exception thrown when an invalid mode is encountered during CPU operation.
-/// This can occur when the CPU attempts to execute an instruction which triggers a <see cref="ModRM.Read"/> with either an invalid memory offet or an invalid segment register.
+/// This can occur when the CPU attempts to execute an instruction with either an invalid memory offset or an invalid segment register.
 /// </summary>
 public class InvalidModeException : InvalidVMOperationException
 {
