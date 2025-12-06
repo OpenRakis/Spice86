@@ -12,11 +12,6 @@ using System.Text;
 /// Represents a Memory Control Block (MCB) in DOS memory.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The MCB is a 16-byte header that precedes each memory allocation in DOS conventional memory.
-/// DOS uses a singly-linked list of MCBs to track memory allocation.
-/// </para>
-/// <para>
 /// MCB structure (16 bytes):
 /// <code>
 /// Offset  Size  Description
@@ -26,36 +21,6 @@ using System.Text;
 /// 05h     3B    Reserved
 /// 08h     8B    Program name (only in DOS 4.0+)
 /// </code>
-/// </para>
-/// <para>
-/// <strong>FreeDOS vs MS-DOS MCB Behavior Notes:</strong>
-/// <list type="bullet">
-/// <item>
-/// <term>Upper Memory Blocks (UMB):</term>
-/// <description>FreeDOS and MS-DOS may have different UMB linking behavior.
-/// When UMBs are linked via INT 21h/58h subfunction 03h, the MCB chain extends
-/// into the UMB area. FreeDOS implements UMB handling in kernel/mazub.c.</description>
-/// </item>
-/// <item>
-/// <term>MCB Owner Name:</term>
-/// <description>The owner name at offset 08h is only valid in DOS 4.0+.
-/// FreeDOS always sets this field, while some MS-DOS versions may not for system blocks.
-/// See kernel/memmgr.c in FreeDOS for implementation details.</description>
-/// </item>
-/// <item>
-/// <term>Free Block Coalescing:</term>
-/// <description>Both FreeDOS and MS-DOS coalesce adjacent free blocks when memory is freed.
-/// The timing of coalescing may differ slightly. FreeDOS performs coalescing in
-/// DosMemFree() after setting the block free.</description>
-/// </item>
-/// <item>
-/// <term>Allocation Strategy:</term>
-/// <description>The memory allocation strategy (first fit, best fit, last fit) is implemented
-/// similarly in both, but FreeDOS has additional handling for high memory allocation
-/// that may differ from MS-DOS in edge cases.</description>
-/// </item>
-/// </list>
-/// </para>
 /// </remarks>
 [DebuggerDisplay("Owner = {Owner}, AllocationSizeInBytes = {AllocationSizeInBytes}, IsFree = {IsFree}, IsValid = {IsValid}, IsLast = {IsLast}")]
 public class DosMemoryControlBlock : MemoryBasedDataStructure {
