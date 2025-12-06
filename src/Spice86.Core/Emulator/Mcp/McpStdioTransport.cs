@@ -6,12 +6,9 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 /// <summary>
-/// Stdio transport layer for MCP (Model Context Protocol) server.
-/// Implements the standard MCP transport protocol: reading JSON-RPC requests from stdin and writing responses to stdout.
-/// This transport enables external tools and AI models to communicate with the emulator via standard I/O streams.
+/// Stdio transport for MCP server using synchronous I/O.
 /// </summary>
 public sealed class McpStdioTransport : IDisposable {
     private readonly IMcpServer _mcpServer;
@@ -19,26 +16,13 @@ public sealed class McpStdioTransport : IDisposable {
     private readonly TextReader _inputReader;
     private readonly TextWriter _outputWriter;
     private readonly CancellationTokenSource _cancellationTokenSource;
-    private Task? _readerTask;
+    private Thread? _readerThread;
     private bool _disposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="McpStdioTransport"/> class.
-    /// </summary>
-    /// <param name="mcpServer">The MCP server to handle requests.</param>
-    /// <param name="loggerService">The logger service for diagnostics.</param>
     public McpStdioTransport(IMcpServer mcpServer, ILoggerService loggerService)
         : this(mcpServer, loggerService, Console.In, Console.Out) {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="McpStdioTransport"/> class with custom I/O streams.
-    /// Used primarily for testing.
-    /// </summary>
-    /// <param name="mcpServer">The MCP server to handle requests.</param>
-    /// <param name="loggerService">The logger service for diagnostics.</param>
-    /// <param name="inputReader">The input stream to read from.</param>
-    /// <param name="outputWriter">The output stream to write to.</param>
     internal McpStdioTransport(IMcpServer mcpServer, ILoggerService loggerService, TextReader inputReader, TextWriter outputWriter) {
         _mcpServer = mcpServer;
         _loggerService = loggerService;
@@ -47,46 +31,37 @@ public sealed class McpStdioTransport : IDisposable {
         _cancellationTokenSource = new CancellationTokenSource();
     }
 
-    /// <summary>
-    /// Starts the stdio transport, reading requests from stdin and writing responses to stdout.
-    /// This method runs in a background task and continues until stopped or an error occurs.
-    /// </summary>
     public void Start() {
-        if (_readerTask != null) {
+        if (_readerThread != null) {
             throw new InvalidOperationException("MCP stdio transport is already started");
         }
 
         _loggerService.Information("MCP server starting with stdio transport");
-        _readerTask = Task.Run(async () => await RunAsync(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
+        _readerThread = new Thread(Run) { IsBackground = true };
+        _readerThread.Start();
     }
 
-    /// <summary>
-    /// Stops the stdio transport gracefully.
-    /// </summary>
     public void Stop() {
-        if (_readerTask == null) {
+        if (_readerThread == null) {
             return;
         }
 
         _loggerService.Information("MCP server stopping");
         _cancellationTokenSource.Cancel();
 
-        try {
-            _readerTask.Wait(TimeSpan.FromSeconds(5));
-        } catch (AggregateException ex) when (ex.InnerException is OperationCanceledException) {
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "Error stopping MCP stdio transport");
+        if (!_readerThread.Join(TimeSpan.FromSeconds(5))) {
+            _loggerService.Warning("MCP server thread did not stop within timeout");
         }
 
-        _readerTask = null;
+        _readerThread = null;
     }
 
-    private async Task RunAsync(CancellationToken cancellationToken) {
+    private void Run() {
         StringBuilder messageBuffer = new StringBuilder();
 
         try {
-            while (!cancellationToken.IsCancellationRequested) {
-                string? line = await ReadLineAsync(_inputReader, cancellationToken);
+            while (!_cancellationTokenSource.Token.IsCancellationRequested) {
+                string? line = _inputReader.ReadLine();
 
                 if (line == null) {
                     _loggerService.Information("MCP server: stdin closed, shutting down");
@@ -105,30 +80,35 @@ public sealed class McpStdioTransport : IDisposable {
                 try {
                     string responseJson = _mcpServer.HandleRequest(requestJson);
 
-                    await WriteLineAsync(_outputWriter, responseJson, cancellationToken);
-                    await _outputWriter.FlushAsync();
-                } catch (Exception ex) {
+                    _outputWriter.WriteLine(responseJson);
+                    _outputWriter.Flush();
+                } catch (InvalidOperationException ex) {
                     _loggerService.Error(ex, "Error processing MCP request: {Request}", requestJson);
 
                     string errorResponse = CreateErrorResponse($"Internal error: {ex.Message}");
-                    await WriteLineAsync(_outputWriter, errorResponse, cancellationToken);
-                    await _outputWriter.FlushAsync();
+                    _outputWriter.WriteLine(errorResponse);
+                    _outputWriter.Flush();
+                } catch (ArgumentException ex) {
+                    _loggerService.Error(ex, "Invalid MCP request: {Request}", requestJson);
+
+                    string errorResponse = CreateErrorResponse($"Invalid request: {ex.Message}");
+                    _outputWriter.WriteLine(errorResponse);
+                    _outputWriter.Flush();
+                } catch (IOException ex) {
+                    _loggerService.Error(ex, "I/O error processing MCP request: {Request}", requestJson);
+
+                    string errorResponse = CreateErrorResponse($"I/O error: {ex.Message}");
+                    _outputWriter.WriteLine(errorResponse);
+                    _outputWriter.Flush();
                 }
             }
         } catch (OperationCanceledException) {
             _loggerService.Information("MCP server shutdown requested");
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "Fatal error in MCP stdio transport");
+        } catch (IOException ex) {
+            _loggerService.Error(ex, "Fatal I/O error in MCP stdio transport");
+        } catch (ObjectDisposedException ex) {
+            _loggerService.Error(ex, "Stream disposed in MCP stdio transport");
         }
-    }
-
-    private static async Task<string?> ReadLineAsync(TextReader reader, CancellationToken cancellationToken) {
-        // Use WaitAsync for cancellation support across all TextReader implementations
-        return await reader.ReadLineAsync().WaitAsync(cancellationToken);
-    }
-
-    private static async Task WriteLineAsync(TextWriter writer, string text, CancellationToken cancellationToken) {
-        await writer.WriteLineAsync(text.AsMemory(), cancellationToken);
     }
 
     private static string CreateErrorResponse(string message) {
@@ -144,7 +124,6 @@ public sealed class McpStdioTransport : IDisposable {
         """;
     }
 
-    /// <inheritdoc />
     public void Dispose() {
         if (_disposed) {
             return;

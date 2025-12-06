@@ -12,9 +12,6 @@ using System.Text.Json.Nodes;
 
 using Xunit;
 
-/// <summary>
-/// Integration tests for the MCP server.
-/// </summary>
 public class McpServerTest {
     private const string TestProgramName = "add";
 
@@ -26,9 +23,6 @@ public class McpServerTest {
         return (spice86, server, functionCatalogue);
     }
 
-    /// <summary>
-    /// Tests that the MCP server can be initialized and responds with correct protocol version.
-    /// </summary>
     [Fact]
     public void TestInitialize() {
         (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
@@ -39,43 +33,42 @@ public class McpServerTest {
 
             JsonNode? responseNode = JsonNode.Parse(response);
             responseNode.Should().NotBeNull();
-            responseNode!["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
-            responseNode["id"]?.GetValue<int>().Should().Be(1);
-            responseNode["result"]?["protocolVersion"]?.GetValue<string>().Should().Be("2025-06-18");
-            responseNode["result"]?["serverInfo"]?["name"]?.GetValue<string>().Should().Be("Spice86 MCP Server");
+            if (responseNode != null) {
+                responseNode["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
+                responseNode["id"]?.GetValue<int>().Should().Be(1);
+                responseNode["result"]?["protocolVersion"]?.GetValue<string>().Should().Be("2025-06-18");
+                responseNode["result"]?["serverInfo"]?["name"]?.GetValue<string>().Should().Be("Spice86 MCP Server");
+            }
         }
     }
 
-    /// <summary>
-    /// Tests that the MCP server returns the list of available tools.
-    /// </summary>
     [Fact]
     public void TestToolsList() {
-        (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
-        using (spice86) {
-            string request = """{"jsonrpc":"2.0","method":"tools/list","id":2}""";
+        (_, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
+        using Spice86DependencyInjection spice86 = CreateMcpServerForTest().spice86;
+        string request = """{"jsonrpc":"2.0","method":"tools/list","id":2}""";
 
-            string response = server.HandleRequest(request);
+        string response = server.HandleRequest(request);
 
-            JsonNode? responseNode = JsonNode.Parse(response);
-            responseNode.Should().NotBeNull();
-            responseNode!["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
+        JsonNode? responseNode = JsonNode.Parse(response);
+        responseNode.Should().NotBeNull();
+        if (responseNode != null) {
+            responseNode["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
             responseNode["id"]?.GetValue<int>().Should().Be(2);
 
             JsonArray? tools = responseNode["result"]?["tools"]?.AsArray();
             tools.Should().NotBeNull();
-            tools!.Count.Should().Be(3);
+            if (tools != null) {
+                tools.Count.Should().Be(3);
 
-            string[] toolNames = tools.Select(t => t?["name"]?.GetValue<string>() ?? "").ToArray();
-            toolNames.Should().Contain("read_cpu_registers");
-            toolNames.Should().Contain("read_memory");
-            toolNames.Should().Contain("list_functions");
+                string[] toolNames = tools.Select(t => t?["name"]?.GetValue<string>() ?? "").ToArray();
+                toolNames.Should().Contain("read_cpu_registers");
+                toolNames.Should().Contain("read_memory");
+                toolNames.Should().Contain("list_functions");
+            }
         }
     }
 
-    /// <summary>
-    /// Tests reading CPU registers via the MCP server.
-    /// </summary>
     [Fact]
     public void TestReadCpuRegisters() {
         (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
@@ -91,24 +84,27 @@ public class McpServerTest {
 
             JsonNode? responseNode = JsonNode.Parse(response);
             responseNode.Should().NotBeNull();
-            responseNode!["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
-            responseNode["id"]?.GetValue<int>().Should().Be(3);
+            if (responseNode != null) {
+                responseNode["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
+                responseNode["id"]?.GetValue<int>().Should().Be(3);
 
-            string? resultText = responseNode["result"]?["content"]?[0]?["text"]?.GetValue<string>();
-            resultText.Should().NotBeNull();
+                string? resultText = responseNode["result"]?["content"]?[0]?["text"]?.GetValue<string>();
+                resultText.Should().NotBeNull();
 
-            JsonNode? registers = JsonNode.Parse(resultText!);
-            registers.Should().NotBeNull();
-            registers!["generalPurpose"]?["EAX"]?.GetValue<uint>().Should().Be(0x12345678);
-            registers["generalPurpose"]?["EBX"]?.GetValue<uint>().Should().Be(0xABCDEF01);
-            registers["segments"]?["CS"]?.GetValue<ushort>().Should().Be(0x1000);
-            registers["instructionPointer"]?["IP"]?.GetValue<ushort>().Should().Be(0x0100);
+                if (resultText != null) {
+                    JsonNode? registers = JsonNode.Parse(resultText);
+                    registers.Should().NotBeNull();
+                    if (registers != null) {
+                        registers["generalPurpose"]?["EAX"]?.GetValue<uint>().Should().Be(0x12345678);
+                        registers["generalPurpose"]?["EBX"]?.GetValue<uint>().Should().Be(0xABCDEF01);
+                        registers["segments"]?["CS"]?.GetValue<ushort>().Should().Be(0x1000);
+                        registers["instructionPointer"]?["IP"]?.GetValue<ushort>().Should().Be(0x0100);
+                    }
+                }
+            }
         }
     }
 
-    /// <summary>
-    /// Tests reading memory via the MCP server.
-    /// </summary>
     [Fact]
     public void TestReadMemory() {
         (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
@@ -122,23 +118,26 @@ public class McpServerTest {
 
             JsonNode? responseNode = JsonNode.Parse(response);
             responseNode.Should().NotBeNull();
-            responseNode!["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
-            responseNode["id"]?.GetValue<int>().Should().Be(4);
+            if (responseNode != null) {
+                responseNode["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
+                responseNode["id"]?.GetValue<int>().Should().Be(4);
 
-            string? resultText = responseNode["result"]?["content"]?[0]?["text"]?.GetValue<string>();
-            resultText.Should().NotBeNull();
+                string? resultText = responseNode["result"]?["content"]?[0]?["text"]?.GetValue<string>();
+                resultText.Should().NotBeNull();
 
-            JsonNode? memoryData = JsonNode.Parse(resultText!);
-            memoryData.Should().NotBeNull();
-            memoryData!["address"]?.GetValue<uint>().Should().Be(4096);
-            memoryData["length"]?.GetValue<int>().Should().Be(5);
-            memoryData["data"]?.GetValue<string>().Should().Be("0102030405");
+                if (resultText != null) {
+                    JsonNode? memoryData = JsonNode.Parse(resultText);
+                    memoryData.Should().NotBeNull();
+                    if (memoryData != null) {
+                        memoryData["address"]?.GetValue<uint>().Should().Be(4096);
+                        memoryData["length"]?.GetValue<int>().Should().Be(5);
+                        memoryData["data"]?.GetValue<string>().Should().Be("0102030405");
+                    }
+                }
+            }
         }
     }
 
-    /// <summary>
-    /// Tests listing functions via the MCP server.
-    /// </summary>
     [Fact]
     public void TestListFunctions() {
         (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue functionCatalogue) = CreateMcpServerForTest();
@@ -156,77 +155,79 @@ public class McpServerTest {
 
             JsonNode? responseNode = JsonNode.Parse(response);
             responseNode.Should().NotBeNull();
-            responseNode!["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
-            responseNode["id"]?.GetValue<int>().Should().Be(5);
+            if (responseNode != null) {
+                responseNode["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
+                responseNode["id"]?.GetValue<int>().Should().Be(5);
 
-            string? resultText = responseNode["result"]?["content"]?[0]?["text"]?.GetValue<string>();
-            resultText.Should().NotBeNull();
+                string? resultText = responseNode["result"]?["content"]?[0]?["text"]?.GetValue<string>();
+                resultText.Should().NotBeNull();
 
-            JsonNode? functionData = JsonNode.Parse(resultText!);
-            functionData.Should().NotBeNull();
-            functionData!["totalCount"]?.GetValue<int>().Should().Be(2);
+                if (resultText != null) {
+                    JsonNode? functionData = JsonNode.Parse(resultText);
+                    functionData.Should().NotBeNull();
+                    if (functionData != null) {
+                        functionData["totalCount"]?.GetValue<int>().Should().Be(2);
 
-            JsonArray? functions = functionData["functions"]?.AsArray();
-            functions.Should().NotBeNull();
-            functions!.Count.Should().Be(2);
+                        JsonArray? functions = functionData["functions"]?.AsArray();
+                        functions.Should().NotBeNull();
+                        if (functions != null) {
+                            functions.Count.Should().Be(2);
 
-            functions[0]?["name"]?.GetValue<string>().Should().Be("TestFunction1");
-            functions[0]?["calledCount"]?.GetValue<int>().Should().Be(2);
-            functions[1]?["name"]?.GetValue<string>().Should().Be("TestFunction2");
-            functions[1]?["calledCount"]?.GetValue<int>().Should().Be(1);
+                            functions[0]?["name"]?.GetValue<string>().Should().Be("TestFunction1");
+                            functions[0]?["calledCount"]?.GetValue<int>().Should().Be(2);
+                            functions[1]?["name"]?.GetValue<string>().Should().Be("TestFunction2");
+                            functions[1]?["calledCount"]?.GetValue<int>().Should().Be(1);
+                        }
+                    }
+                }
+            }
         }
     }
 
-    /// <summary>
-    /// Tests error handling for invalid JSON.
-    /// </summary>
     [Fact]
     public void TestInvalidJson() {
-        (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
-        using (spice86) {
-            string request = "invalid json";
+        (_, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
+        using Spice86DependencyInjection spice86 = CreateMcpServerForTest().spice86;
+        string request = "invalid json";
 
-            string response = server.HandleRequest(request);
+        string response = server.HandleRequest(request);
 
-            JsonNode? responseNode = JsonNode.Parse(response);
-            responseNode.Should().NotBeNull();
-            responseNode!["error"]?["code"]?.GetValue<int>().Should().Be(-32700);
+        JsonNode? responseNode = JsonNode.Parse(response);
+        responseNode.Should().NotBeNull();
+        if (responseNode != null) {
+            responseNode["error"]?["code"]?.GetValue<int>().Should().Be(-32700);
             responseNode["error"]?["message"]?.GetValue<string>().Should().Contain("Parse error");
         }
     }
 
-    /// <summary>
-    /// Tests error handling for unknown method.
-    /// </summary>
     [Fact]
     public void TestUnknownMethod() {
-        (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
-        using (spice86) {
-            string request = """{"jsonrpc":"2.0","method":"unknown_method","id":99}""";
+        (_, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
+        using Spice86DependencyInjection spice86 = CreateMcpServerForTest().spice86;
+        string request = """{"jsonrpc":"2.0","method":"unknown_method","id":99}""";
 
-            string response = server.HandleRequest(request);
+        string response = server.HandleRequest(request);
 
-            JsonNode? responseNode = JsonNode.Parse(response);
-            responseNode.Should().NotBeNull();
-            responseNode!["error"]?["code"]?.GetValue<int>().Should().Be(-32601);
+        JsonNode? responseNode = JsonNode.Parse(response);
+        responseNode.Should().NotBeNull();
+        if (responseNode != null) {
+            responseNode["error"]?["code"]?.GetValue<int>().Should().Be(-32601);
             responseNode["error"]?["message"]?.GetValue<string>().Should().Contain("Method not found");
         }
     }
 
-    /// <summary>
-    /// Tests error handling for invalid memory read parameters.
-    /// </summary>
     [Fact]
     public void TestReadMemoryInvalidLength() {
-        (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
-        using (spice86) {
-            string request = """{"jsonrpc":"2.0","method":"tools/call","params":{"name":"read_memory","arguments":{"address":0,"length":10000}},"id":6}""";
+        (_, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
+        using Spice86DependencyInjection spice86 = CreateMcpServerForTest().spice86;
+        string request = """{"jsonrpc":"2.0","method":"tools/call","params":{"name":"read_memory","arguments":{"address":0,"length":10000}},"id":6}""";
 
-            string response = server.HandleRequest(request);
+        string response = server.HandleRequest(request);
 
-            JsonNode? responseNode = JsonNode.Parse(response);
-            responseNode.Should().NotBeNull();
-            responseNode!["error"]?["code"]?.GetValue<int>().Should().Be(-32603);
+        JsonNode? responseNode = JsonNode.Parse(response);
+        responseNode.Should().NotBeNull();
+        if (responseNode != null) {
+            responseNode["error"]?["code"]?.GetValue<int>().Should().Be(-32603);
             responseNode["error"]?["message"]?.GetValue<string>().Should().Contain("Tool execution error");
         }
     }

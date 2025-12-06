@@ -14,11 +14,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 
 /// <summary>
-/// In-process Model Context Protocol (MCP) server for inspecting emulator state.
-/// This server exposes tools to query CPU registers, memory contents, function definitions, and CFG CPU state.
-/// Uses ModelContextProtocol.Core SDK for protocol types while avoiding Microsoft.Extensions.DependencyInjection.
-/// Automatically pauses the emulator before inspection to ensure thread-safe access to state.
-/// Thread-safe: All requests are serialized using an internal lock, allowing concurrent calls from multiple threads.
+/// MCP server exposing emulator state inspection tools (CPU, memory, functions, CFG).
+/// Thread-safe: serializes requests with internal lock and auto-pauses emulator during inspection.
 /// </summary>
 public sealed class McpServer : IMcpServer {
     private readonly IMemory _memory;
@@ -30,15 +27,6 @@ public sealed class McpServer : IMcpServer {
     private readonly Tool[] _tools;
     private readonly object _requestLock = new object();
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="McpServer"/> class.
-    /// </summary>
-    /// <param name="memory">The memory bus to inspect.</param>
-    /// <param name="state">The CPU state to inspect.</param>
-    /// <param name="functionCatalogue">The function catalogue to query.</param>
-    /// <param name="cfgCpu">The CFG CPU instance (optional, null if not using CFG CPU).</param>
-    /// <param name="pauseHandler">The pause handler for safe state inspection.</param>
-    /// <param name="loggerService">The logger service for diagnostics.</param>
     public McpServer(IMemory memory, State state, FunctionCatalogue functionCatalogue, CfgCpu? cfgCpu, IPauseHandler pauseHandler, ILoggerService loggerService) {
         _memory = memory;
         _state = state;
@@ -257,7 +245,7 @@ public sealed class McpServer : IMcpServer {
     }
 
     private MemoryReadResponse ReadMemory(JsonElement? arguments) {
-        if (arguments == null || !arguments.HasValue) {
+        if (!arguments.HasValue) {
             throw new ArgumentException("Missing arguments for read_memory");
         }
 
