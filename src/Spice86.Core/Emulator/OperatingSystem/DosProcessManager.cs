@@ -150,7 +150,7 @@ public class DosProcessManager : DosFileLoader {
         // Jump over the PSP to get the EXE image segment.
         ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
 
-        // Adjust image load segment if allocation should be the minimal amount possible
+        // Adjust image load segment
         if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
             ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
             ushort pspLoadSegment = block.DataBlockSegment;
