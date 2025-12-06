@@ -26,7 +26,8 @@ public class DosCommandTail : MemoryBasedDataStructure {
             return "";
         }
 
-        string ag = arguments;
+        // stripping trailing whitespaces - ignoring newline, tab and non blank whitespaces
+        string ag = arguments.TrimEnd(' ');
 
         // there needs to be a blank as first char in parameter string, if there isn't already
         if (ag[0] != ' ') {
@@ -35,9 +36,6 @@ public class DosCommandTail : MemoryBasedDataStructure {
 
         // Cut strings longer than 126 characters.
         ag = ag.Length > MaxCharacterLength ? ag[..MaxCharacterLength] : ag;
-
-        // stripping trailing whitespaces
-        ag = ag.TrimEnd(' ');
 
         CheckParameterString(ag);
 
