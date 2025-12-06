@@ -74,17 +74,8 @@ public class DosMemoryManager {
     }
 
     /// <summary>
-    /// Gets or sets the current memory allocation strategy.
+    /// Gets or sets the current memory allocation strategy (INT 21h/58h).
     /// </summary>
-    /// <remarks>
-    /// This is accessed via INT 21h/58h (Get/Set Memory Allocation Strategy).
-    /// The value is a byte where:
-    /// <list type="bullet">
-    /// <item>Bits 0-1: Fit type (0=first, 1=best, 2=last)</item>
-    /// <item>Bit 6: Try high memory first, then low</item>
-    /// <item>Bit 7: High memory only</item>
-    /// </list>
-    /// </remarks>
     public DosMemoryAllocationStrategy AllocationStrategy {
         get => _allocationStrategy;
         set {
@@ -144,11 +135,6 @@ public class DosMemoryManager {
     /// <param name="environmentData">The environment block data to copy.</param>
     /// <param name="ownerPspSegment">The PSP segment that owns this environment block.</param>
     /// <returns>The segment of the allocated environment block, or 0 if allocation failed.</returns>
-    /// <remarks>
-    /// This allocates an MCB for the environment block, which is the correct DOS behavior.
-    /// The environment block contains null-terminated strings of KEY=VALUE pairs,
-    /// followed by an additional null byte, then a word count and the program path.
-    /// </remarks>
     public ushort AllocateEnvironmentBlock(byte[] environmentData, ushort ownerPspSegment) {
         // Calculate size in paragraphs (round up)
         ushort sizeInParagraphs = (ushort)((environmentData.Length + 15) / 16);
@@ -181,11 +167,6 @@ public class DosMemoryManager {
     /// <param name="ownerPspSegment">The PSP segment that owns this environment block.</param>
     /// <param name="targetSegment">The specific segment where the environment block should be allocated.</param>
     /// <returns>The segment of the allocated environment block, or 0 if allocation failed.</returns>
-    /// <remarks>
-    /// This method is used when loading the first process where the environment block location
-    /// should match a specific segment derived from Configuration.ProgramEntryPointSegment.
-    /// This ensures consistent memory layout for reverse engineering purposes.
-    /// </remarks>
     public ushort AllocateEnvironmentBlockAtSegment(byte[] environmentData, ushort ownerPspSegment, ushort targetSegment) {
         // Calculate size in paragraphs (round up)
         ushort sizeInParagraphs = (ushort)((environmentData.Length + 15) / 16);
@@ -248,7 +229,6 @@ public class DosMemoryManager {
     public DosMemoryControlBlock? AllocateMemoryBlockForPsp(ushort requestedSizeInParagraphs, ushort pspSegment) {
         IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSizeInParagraphs);
 
-        // Select block based on allocation strategy
         DosMemoryControlBlock? blockOptional = SelectBlockByStrategy(candidates);
         if (blockOptional is null) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -313,13 +293,6 @@ public class DosMemoryManager {
     /// </summary>
     /// <param name="block">The MCB to free.</param>
     /// <returns>Whether the operation was successful.</returns>
-    /// <remarks>
-    /// This function matches FreeDOS kernel behavior (DosMemFree in memmgr.c):
-    /// It only marks the block as free without joining adjacent free blocks.
-    /// Block joining is deferred to allocation (FindCandidatesForAllocation) and
-    /// resizing (TryModifyBlock) operations, which matches FreeDOS's DosMemAlloc
-    /// and DosMemChange functions.
-    /// </remarks>
     public bool FreeMemoryBlock(DosMemoryControlBlock block) {
         if (!CheckValidOrLogError(block)) {
             return false;
@@ -682,11 +655,7 @@ public class DosMemoryManager {
         // +1 because next block metadata is going to free space
         destination.Size = (ushort)(destination.Size + next.Size + 1);
 
-        // Mark the now-unlinked MCB as "fake" by setting its size to FakeMcbSize.
-        // This matches FreeDOS kernel behavior (memmgr.c joinMCBs function) and prevents
-        // issues with programs that might manually walk the MCB chain or perform double-free
-        // operations (like QB4/QBasic, Doom 8088). The FakeMcbSize makes the IsValid property
-        // return false for this block, effectively marking it as invalid/unlinked.
+        // Mark the now unlinked MCB as "fake"
         next.Size = FakeMcbSize;
     }
 
@@ -787,10 +756,6 @@ public class DosMemoryManager {
     /// Checks the integrity of the MCB chain.
     /// </summary>
     /// <returns><c>true</c> if the MCB chain is valid, <c>false</c> if corruption is detected.</returns>
-    /// <remarks>
-    /// This is similar to FreeDOS's DosMemCheck() function.
-    /// It walks through the MCB chain and verifies that each MCB has a valid type marker.
-    /// </remarks>
     public bool CheckMcbChain() {
         DosMemoryControlBlock? current = _start;
 
@@ -822,10 +787,6 @@ public class DosMemoryManager {
     /// </summary>
     /// <param name="pspSegment">The PSP segment whose memory should be freed.</param>
     /// <returns><c>true</c> if all blocks were freed successfully, <c>false</c> if an error occurred.</returns>
-    /// <remarks>
-    /// This is similar to FreeDOS's FreeProcessMem() function.
-    /// It is typically called when a program terminates to release all of its allocated memory.
-    /// </remarks>
     public bool FreeProcessMemory(ushort pspSegment) {
         DosMemoryControlBlock? current = _start;
 
@@ -849,8 +810,7 @@ public class DosMemoryManager {
             current = current.GetNextOrDefault();
         }
 
-        // Note: We don't join blocks here to match FreeDOS FreeProcessMem() behavior.
-        // Block joining is deferred to allocation operations (joinMCBs called from DosMemAlloc).
+        // Matches FreeDOS, MS-DOS, and RBIL - block joining is deferred to allocation operations.
 
         return true;
     }
