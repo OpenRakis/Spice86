@@ -183,6 +183,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private CrtShaderType _shaderType = CrtShaderType.FakeLottes;
 
     private int _hostOutputHeight;
+    private uint[]? _frameBufferCache;
 
     internal event Action<uint[], int, int>? UpdateOpenGlFrame;
 
@@ -352,20 +353,22 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         // OpenGL rendering - provide the frame buffer directly
         _drawingSemaphoreSlim?.Wait();
         try {
-            // Allocate temporary buffer for the frame
-            uint[] frameBuffer = new uint[Width * Height];
+            int bufferSize = Width * Height;
+            // Reuse buffer to avoid per-frame allocations
+            if (_frameBufferCache is null || _frameBufferCache.Length != bufferSize) {
+                _frameBufferCache = new uint[bufferSize];
+            }
+
             unsafe {
-                fixed (uint* ptr = frameBuffer) {
-                    var uiRenderEventArgs = new UIRenderEventArgs(new IntPtr(ptr), frameBuffer.Length);
+                fixed (uint* ptr = _frameBufferCache) {
+                    var uiRenderEventArgs = new UIRenderEventArgs(new IntPtr(ptr), bufferSize);
                     RenderScreen.Invoke(this, uiRenderEventArgs);
                 }
             }
             // Send frame to OpenGL control
-            _uiDispatcher.Post(() => UpdateOpenGlFrame?.Invoke(frameBuffer, Width, Height), DispatcherPriority.Render);
+            _uiDispatcher.Post(() => UpdateOpenGlFrame?.Invoke(_frameBufferCache, Width, Height), DispatcherPriority.Render);
         } finally {
-            if (!_disposed) {
-                _drawingSemaphoreSlim?.Release();
-            }
+            _drawingSemaphoreSlim?.Release();
         }
     }
 

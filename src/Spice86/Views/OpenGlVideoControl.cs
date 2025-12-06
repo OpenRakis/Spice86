@@ -54,6 +54,8 @@ public class OpenGlVideoControl : OpenGlControlBase {
         AffectsRender<OpenGlVideoControl>(ShaderTypeProperty);
     }
 
+    private readonly object _frameBufferLock = new();
+
     /// <summary>
     /// Updates the video buffer with new frame data
     /// </summary>
@@ -61,15 +63,17 @@ public class OpenGlVideoControl : OpenGlControlBase {
     /// <param name="width">Width of the frame</param>
     /// <param name="height">Height of the frame</param>
     public void UpdateFrame(uint[] buffer, int width, int height) {
-        if (width != _width || height != _height) {
-            _width = width;
-            _height = height;
-            _frameBuffer = new uint[width * height];
-        }
+        lock (_frameBufferLock) {
+            if (width != _width || height != _height) {
+                _width = width;
+                _height = height;
+                _frameBuffer = new uint[width * height];
+            }
 
-        if (_frameBuffer is not null && buffer.Length <= _frameBuffer.Length) {
-            Array.Copy(buffer, _frameBuffer, buffer.Length);
-            Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Render);
+            if (_frameBuffer is not null && buffer.Length <= _frameBuffer.Length) {
+                Array.Copy(buffer, _frameBuffer, buffer.Length);
+                Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Render);
+            }
         }
     }
 
@@ -77,7 +81,7 @@ public class OpenGlVideoControl : OpenGlControlBase {
     /// Initialize OpenGL resources
     /// </summary>
     /// <param name="gl">The OpenGL interface</param>
-    protected override unsafe void OnOpenGlInit(GlInterface gl) {
+    protected override void OnOpenGlInit(GlInterface gl) {
         base.OnOpenGlInit(gl);
         _glExt = new GlExtensions(gl.GetProcAddress);
         _initialized = false;
@@ -89,6 +93,10 @@ public class OpenGlVideoControl : OpenGlControlBase {
     /// <param name="gl">The OpenGL interface</param>
     /// <param name="fb">The framebuffer to render to</param>
     protected override unsafe void OnOpenGlRender(GlInterface gl, int fb) {
+        if (_glExt is null) {
+            _glExt = new GlExtensions(gl.GetProcAddress);
+        }
+
         if (_frameBuffer is null || _width == 0 || _height == 0) {
             gl.ClearColor(0, 0, 0, 1);
             gl.Clear(GL_COLOR_BUFFER_BIT);
@@ -104,51 +112,48 @@ public class OpenGlVideoControl : OpenGlControlBase {
         gl.ClearColor(0, 0, 0, 1);
         gl.Clear(GL_COLOR_BUFFER_BIT);
 
-        if (_shaderProgram == 0 || _texture == 0) {
+        if (_shaderProgram == 0 || _texture == 0 || _glExt is null) {
             return;
         }
 
         // Update texture with new frame data
         gl.BindTexture(GL_TEXTURE_2D, _texture);
-        fixed (void* pdata = _frameBuffer) {
-            gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, GL_RGBA, GL_UNSIGNED_BYTE, new IntPtr(pdata));
+        lock (_frameBufferLock) {
+            fixed (void* pdata = _frameBuffer) {
+                gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, GL_RGBA, GL_UNSIGNED_BYTE, new IntPtr(pdata));
+            }
         }
 
         // Use shader program
         gl.UseProgram(_shaderProgram);
 
-        // Set uniforms - these are standard uniforms used by DOSBox Staging shaders
-        if (_glExt is null) {
-            return;
-        }
+        // Set uniforms
+        SetUniforms(gl, _glExt);
 
+        // Draw quad
+        gl.BindVertexArray(_vao);
+        gl.DrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        gl.BindVertexArray(0);
+    }
+
+    private void SetUniforms(GlInterface gl, GlExtensions glExt) {
         int rubyTextureLoc = gl.GetUniformLocationString(_shaderProgram, "rubyTexture");
         int rubyInputSizeLoc = gl.GetUniformLocationString(_shaderProgram, "rubyInputSize");
         int rubyTextureSizeLoc = gl.GetUniformLocationString(_shaderProgram, "rubyTextureSize");
         int rubyOutputSizeLoc = gl.GetUniformLocationString(_shaderProgram, "rubyOutputSize");
 
-        // Set texture unit (sampler2D uniform - use integer for texture unit)
         if (rubyTextureLoc >= 0) {
-            _glExt.Uniform1i(rubyTextureLoc, 0);
+            glExt.Uniform1i(rubyTextureLoc, 0);
         }
-        
-        // Set size uniforms (vec2)
         if (rubyInputSizeLoc >= 0) {
-            _glExt.Uniform2f(rubyInputSizeLoc, _width, _height);
+            glExt.Uniform2f(rubyInputSizeLoc, _width, _height);
         }
         if (rubyTextureSizeLoc >= 0) {
-            _glExt.Uniform2f(rubyTextureSizeLoc, _width, _height);
+            glExt.Uniform2f(rubyTextureSizeLoc, _width, _height);
         }
         if (rubyOutputSizeLoc >= 0) {
-            float outputWidth = (float)Bounds.Width;
-            float outputHeight = (float)Bounds.Height;
-            _glExt.Uniform2f(rubyOutputSizeLoc, outputWidth, outputHeight);
+            glExt.Uniform2f(rubyOutputSizeLoc, (float)Bounds.Width, (float)Bounds.Height);
         }
-
-        // Setup vertex attributes and draw
-        gl.BindVertexArray(_vao);
-        gl.DrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        gl.BindVertexArray(0);
     }
 
     /// <summary>
@@ -213,6 +218,8 @@ public class OpenGlVideoControl : OpenGlControlBase {
             System.Diagnostics.Debug.WriteLine("Failed to compile shaders, using passthrough");
             // Try fallback to passthrough shader
             if (!CompileShaders(gl, LoadPassthroughShader())) {
+                System.Diagnostics.Debug.WriteLine("Fatal: Failed to compile passthrough shader");
+                _initialized = false;
                 return;
             }
         }
@@ -272,6 +279,8 @@ public class OpenGlVideoControl : OpenGlControlBase {
         string? vertexError = gl.CompileShaderAndGetError(_vertexShader, vertexSource);
         if (!string.IsNullOrEmpty(vertexError)) {
             System.Diagnostics.Debug.WriteLine($"Vertex shader compilation failed: {vertexError}");
+            gl.DeleteShader(_vertexShader);
+            _vertexShader = 0;
             return false;
         }
 
@@ -280,6 +289,10 @@ public class OpenGlVideoControl : OpenGlControlBase {
         string? fragmentError = gl.CompileShaderAndGetError(_fragmentShader, fragmentSource);
         if (!string.IsNullOrEmpty(fragmentError)) {
             System.Diagnostics.Debug.WriteLine($"Fragment shader compilation failed: {fragmentError}");
+            gl.DeleteShader(_vertexShader);
+            gl.DeleteShader(_fragmentShader);
+            _vertexShader = 0;
+            _fragmentShader = 0;
             return false;
         }
 
@@ -292,6 +305,12 @@ public class OpenGlVideoControl : OpenGlControlBase {
         string? linkError = gl.LinkProgramAndGetError(_shaderProgram);
         if (!string.IsNullOrEmpty(linkError)) {
             System.Diagnostics.Debug.WriteLine($"Program linking failed: {linkError}");
+            gl.DeleteShader(_vertexShader);
+            gl.DeleteShader(_fragmentShader);
+            gl.DeleteProgram(_shaderProgram);
+            _vertexShader = 0;
+            _fragmentShader = 0;
+            _shaderProgram = 0;
             return false;
         }
 
@@ -338,8 +357,14 @@ public class OpenGlVideoControl : OpenGlControlBase {
 
             using System.IO.StreamReader reader = new(stream);
             return reader.ReadToEnd();
-        } catch (Exception ex) {
+        } catch (System.IO.IOException ex) {
             System.Diagnostics.Debug.WriteLine($"Failed to load shader {resourceName}: {ex.Message}");
+            return LoadPassthroughShader();
+        } catch (UnauthorizedAccessException ex) {
+            System.Diagnostics.Debug.WriteLine($"Access denied loading shader {resourceName}: {ex.Message}");
+            return LoadPassthroughShader();
+        } catch (ArgumentException ex) {
+            System.Diagnostics.Debug.WriteLine($"Invalid path for shader {resourceName}: {ex.Message}");
             return LoadPassthroughShader();
         }
     }
