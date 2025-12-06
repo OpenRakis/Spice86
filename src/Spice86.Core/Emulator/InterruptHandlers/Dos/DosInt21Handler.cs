@@ -175,11 +175,6 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Get a pointer to the "lead byte" table, for foreign character sets.
-    /// This is a table that tells DOS which bytes are the first byte of a double-byte character.
-    /// We don't support double-byte characters (yet), so we just return 0.
-    /// </summary>
-        /// <summary>
     /// INT 21h, AH=63h - Get Double Byte Character Set (DBCS) Lead Byte Table.
     /// <para>
     /// Returns a pointer to the DBCS lead-byte table, which indicates which byte values
