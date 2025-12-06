@@ -27,6 +27,7 @@
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance"/>
         <PackageReference Include="JetBrains.Annotations"/>
+        <PackageReference Include="ModelContextProtocol.Core"/>
         <PackageReference Include="Serilog"/>
         <PackageReference Include="System.Buffers"/>
         <PackageReference Include="System.Memory"/>
