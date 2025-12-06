@@ -133,7 +133,6 @@ public class DosFileManagerTests {
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             false, loggerService);
 
-        IInstructionExecutor instructionExecutor = cfgCpu;
         IFunctionHandlerProvider functionHandlerProvider = cfgCpu;
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
