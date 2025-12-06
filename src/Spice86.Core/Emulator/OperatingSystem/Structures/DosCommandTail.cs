@@ -63,7 +63,13 @@ public class DosCommandTail : MemoryBasedDataStructure {
 
     [Range(0, MaxCharacterLength)]
     public string Command {
-        get => Encoding.ASCII.GetString(GetUInt8Array(1, Length).ToArray());
+        get {
+            byte[] bytes = new byte[Length];
+            for (int i = 0; i < Length; i++) {
+                bytes[i] = UInt8[1 + i];
+            }
+            return Encoding.ASCII.GetString(bytes);
+        }
         set {
             CheckParameterString(value);
 
