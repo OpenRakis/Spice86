@@ -171,10 +171,7 @@ public sealed class McpServer : IMcpServer {
                     result = ReadCpuRegisters();
                     break;
                 case "read_memory":
-                    (result, errorMessage) = TryReadMemory(argumentsElement);
-                    if (errorMessage != null) {
-                        errorCode = -32602;
-                    }
+                    (result, errorMessage, errorCode) = TryReadMemory(argumentsElement);
                     break;
                 case "list_functions":
                     (result, errorMessage) = TryListFunctions(argumentsElement);
@@ -197,6 +194,11 @@ public sealed class McpServer : IMcpServer {
             if (errorMessage != null) {
                 _loggerService.Error("Error executing tool {ToolName}: {Error}", toolName, errorMessage);
                 return CreateErrorResponse(id, errorCode, errorMessage);
+            }
+
+            if (result == null) {
+                _loggerService.Error("Tool {ToolName} returned null result", toolName);
+                return CreateErrorResponse(id, -32603, "Tool execution returned null result");
             }
 
             return CreateToolCallResponse(id, result);
@@ -239,26 +241,26 @@ public sealed class McpServer : IMcpServer {
         };
     }
 
-    private (MemoryReadResponse? result, string? error) TryReadMemory(JsonElement? arguments) {
+    private (MemoryReadResponse? result, string? error, int errorCode) TryReadMemory(JsonElement? arguments) {
         if (!arguments.HasValue) {
-            return (null, "Missing arguments for read_memory");
+            return (null, "Missing arguments for read_memory", -32602);
         }
 
         JsonElement argsValue = arguments.Value;
 
         if (!argsValue.TryGetProperty("address", out JsonElement addressElement)) {
-            return (null, "Missing address parameter");
+            return (null, "Missing address parameter", -32602);
         }
 
         if (!argsValue.TryGetProperty("length", out JsonElement lengthElement)) {
-            return (null, "Missing length parameter");
+            return (null, "Missing length parameter", -32602);
         }
 
         uint address = addressElement.GetUInt32();
         int length = lengthElement.GetInt32();
 
         if (length <= 0 || length > 4096) {
-            return (null, "Length must be between 1 and 4096");
+            return (null, "Tool execution error: Length must be between 1 and 4096", -32603);
         }
 
         byte[] data = _memory.ReadRam((uint)length, address);
@@ -267,7 +269,7 @@ public sealed class McpServer : IMcpServer {
             Address = address,
             Length = length,
             Data = Convert.ToHexString(data)
-        }, null);
+        }, null, 0);
     }
 
     private (FunctionListResponse? result, string? error) TryListFunctions(JsonElement? arguments) {

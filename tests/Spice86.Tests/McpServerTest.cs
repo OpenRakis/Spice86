@@ -19,7 +19,7 @@ public class McpServerTest {
         Spice86Creator creator = new Spice86Creator(TestProgramName, false);
         Spice86DependencyInjection spice86 = creator.Create();
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
-        McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null, spice86.Machine.PauseHandler, new LoggerService());
+        McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null, new LoggerService());
         return (spice86, server, functionCatalogue);
     }
 

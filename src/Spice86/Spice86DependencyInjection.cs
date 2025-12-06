@@ -558,7 +558,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         McpStdioTransport? mcpStdioTransport = null;
-        McpServer mcpServer = new(memory, state, functionCatalogue, configuration.CfgCpu ? cfgCpu : null, pauseHandler, loggerService);
+        McpServer mcpServer = new(memory, state, functionCatalogue, configuration.CfgCpu ? cfgCpu : null, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("MCP server created...");
