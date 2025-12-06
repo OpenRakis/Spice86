@@ -35,6 +35,7 @@ using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Mcp;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -54,6 +55,9 @@ using Spice86.Views;
 
 using System.Diagnostics;
 
+using IMcpServer = Core.Emulator.Mcp.IMcpServer;
+using McpServer = Core.Emulator.Mcp.McpServer;
+
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
 /// </summary>
@@ -62,6 +66,13 @@ public class Spice86DependencyInjection : IDisposable {
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
     private readonly IGuiVideoPresentation? _gui;
+
+    /// <summary>
+    /// Gets the MCP (Model Context Protocol) server for in-process emulator state inspection.
+    /// </summary>
+    public IMcpServer McpServer { get; }
+
+    private readonly McpStdioTransport? _mcpStdioTransport;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -546,12 +557,31 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Program executor created...");
         }
 
+        // Initialize stdio transport if MCP server is enabled
+        McpStdioTransport? mcpStdioTransport = null;
+        McpServer mcpServer = new(memory, state, functionCatalogue, configuration.CfgCpu ? cfgCpu : null, pauseHandler, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("MCP server created...");
+        }
+
+        if (configuration.McpServer) {
+            mcpStdioTransport = new McpStdioTransport(mcpServer, loggerService);
+            mcpStdioTransport.Start();
+
+            if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                loggerService.Information("MCP stdio transport started...");
+            }
+        }
+
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("BIOS and DOS interrupt handlers created...");
         }
 
         Machine = machine;
         ProgramExecutor = programExecutor;
+        McpServer = mcpServer;
+        _mcpStdioTransport = mcpStdioTransport;
         ProgramExecutor.EmulationStopped += OnProgramExecutorEmulationStopped;
 
         if (mainWindow != null && uiDispatcher != null &&
@@ -690,6 +720,10 @@ public class Spice86DependencyInjection : IDisposable {
         if (!_disposed) {
             if (disposing) {
                 ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
+
+                // Stop MCP stdio transport if it was started
+                _mcpStdioTransport?.Dispose();
+
                 ProgramExecutor.Dispose();
 
                 // Dispose HeadlessGui BEFORE Machine to stop the rendering timer
