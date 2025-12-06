@@ -30,7 +30,8 @@
         <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="OptimizedPriorityQueue" />
         <PackageReference Include="Serilog" />
-        <PackageReference Include="Spectre.Console.Cli" />
+        <PackageReference Include="Serilog.Sinks.File" />
+		<PackageReference Include="Spectre.Console.Cli" />
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
         <PackageReference Include="Swashbuckle.AspNetCore" />
@@ -41,7 +42,10 @@
         <PackageReference Include="Mt32emu.net" />
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <PackageReference Include="Serilog.Extensions.Hosting" />
-    </ItemGroup>
+        <PackageReference Include="SkiaSharp" />
+		<PackageReference Include="ModelContextProtocol.Core"/>
+        <PackageReference Include="ModelContextProtocol.AspNetCore" />
+	</ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
@@ -58,6 +62,9 @@
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
             <_Parameter1>DynamicProxyGenAssembly2</_Parameter1>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+            <_Parameter1>Spice86</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>
     <ItemGroup>

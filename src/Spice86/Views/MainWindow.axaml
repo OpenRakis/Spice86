@@ -115,6 +115,16 @@
 						</MenuItem.Header>
 					</MenuItem>
 				</MenuItem>
+				<MenuItem Header="MCP">
+					<MenuItem Command="{Binding ShowMcpToolsCommand}" CommandParameter="{StaticResource ShowAdditionnalWindowBehavior}">
+						<MenuItem.Header>
+							<StackPanel Orientation="Horizontal">
+								<fluent:SymbolIcon Symbol="PlugConnected" />
+								<Label Content="Tools" />
+							</StackPanel>
+						</MenuItem.Header>
+					</MenuItem>
+				</MenuItem>
 			</Menu>
 			<StackPanel Grid.Column="1" Focusable="False" IsTabStop="False" IsEnabled="{Binding IsEmulatorRunning}" Grid.Row="0" Margin="160,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
 				<Label IsVisible="{Binding ShowCyclesLimitingUI}" Focusable="False" IsTabStop="False" VerticalAlignment="Center" Content="Cycles/ms:" />
@@ -173,6 +183,21 @@
 			<Separator />
 			<controls:StatusBarItem>
 				<TextBlock Text="{Binding EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />	
+			</controls:StatusBarItem>
+			<Separator />
+			<controls:StatusBarItem>
+				<StackPanel Orientation="Horizontal" Spacing="6">
+					<ToolTip.Tip>
+						<StackPanel Spacing="4" MaxWidth="420">
+							<TextBlock Text="{Binding McpStatusViewModel.NetworkStatusText, StringFormat='Status: {0}'}" FontWeight="SemiBold" />
+							<TextBlock Text="{Binding McpStatusViewModel.NetworkStatusTooltip}" TextWrapping="Wrap" />
+							<TextBlock Text="Green: MCP endpoint reachable. Red: endpoint unreachable." Opacity="0.75" TextWrapping="Wrap" />
+							<TextBlock Text="{Binding McpStatusViewModel.ServerEndpoint, StringFormat='Endpoint: {0}'}" Opacity="0.75" TextWrapping="Wrap" />
+						</StackPanel>
+					</ToolTip.Tip>
+					<Ellipse Width="10" Height="10" VerticalAlignment="Center" Fill="{Binding McpStatusViewModel.NetworkStatusColor}" />
+					<TextBlock Text="MCP" FontWeight="SemiBold" />
+				</StackPanel>
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem HorizontalAlignment="Right" HorizontalContentAlignment="Right">

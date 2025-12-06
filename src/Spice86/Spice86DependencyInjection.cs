@@ -31,6 +31,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
@@ -39,6 +40,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Mcp;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -70,6 +72,18 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly IGuiVideoPresentation? _gui;
     private readonly IEmulatedClock _emulatedClock;
     private readonly Spice86HttpApiServer? _httpApiServer;
+
+    /// <summary>
+    /// Gets shared MCP services used by the modern MCP tool implementation and UI.
+    /// </summary>
+    internal EmulatorMcpServices McpServices { get; }
+
+    /// <summary>
+    /// Gets the function catalogue that tracks function calls and provides information for debugging.
+    /// </summary>
+    public FunctionCatalogue FunctionCatalogue { get; }
+
+    private readonly McpHttpHost? _mcpHttpTransport;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -233,6 +247,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         FunctionCatalogue functionCatalogue = new FunctionCatalogue(
             functionInformationsData);
+        FunctionCatalogue = functionCatalogue;
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Function catalogue created...");
@@ -396,6 +411,15 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Emulator state serializer created...");
         }
 
+        ExpandedMemoryManager? mcpEmsManager = null;
+        if (configuration.Ems is not false || xms != null) {
+            mcpEmsManager = new ExpandedMemoryManager(memory, cfgCpu, stack, state, loggerService);
+        }
+
+        EmulatorMcpServices emulatorMcpServices = new(memory, state, functionCatalogue, cfgCpu,
+            ioPortDispatcher, vgaRenderer, pauseHandler, mcpEmsManager, xms,
+            emulatorBreakpointsManager, loggerService);
+
         MainWindowViewModel? mainWindowViewModel = null;
         UIDispatcher? uiDispatcher = null;
         HostStorageProvider? hostStorageProvider = null;
@@ -420,9 +444,22 @@ public class Spice86DependencyInjection : IDisposable {
                 _ => new HeadlessModeExceptionHandler(uiDispatcher)
             };
 
-            mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
-                pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter);
+            MainWindowViewModel.MainWindowViewModelDependencies mainWindowDependencies = new() {
+                SharedMouseData = sharedMouseData,
+                Pit = pitTimer,
+                UiDispatcher = uiDispatcher,
+                HostStorageProvider = hostStorageProvider,
+                TextClipboard = textClipboard,
+                Configuration = configuration,
+                LoggerService = loggerService,
+                PauseHandler = pauseHandler,
+                PerformanceViewModel = performanceViewModel,
+                ExceptionHandler = exceptionHandler,
+                CyclesLimiter = cyclesLimiter,
+                McpServices = emulatorMcpServices,
+                McpPort = configuration.McpHttpPort
+            };
+            mainWindowViewModel = new MainWindowViewModel(mainWindowDependencies);
 
             // Subscribe to video mode changes for dynamic aspect ratio correction
             vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
@@ -451,6 +488,7 @@ public class Spice86DependencyInjection : IDisposable {
         Intel8042Controller intel8042Controller = new(
             state, ioPortDispatcher, a20Gate, dualPic, emulationLoopScheduler,
             configuration.FailOnUnhandledPort, loggerService, inputEventHub);
+        emulatorMcpServices.Intel8042Controller = intel8042Controller;
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
@@ -510,6 +548,16 @@ public class Spice86DependencyInjection : IDisposable {
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             xms);
+
+        emulatorMcpServices.Intel8042Controller = intel8042Controller;
+        emulatorMcpServices.SoundBlaster = soundBlaster;
+        emulatorMcpServices.Opl3Fm = opl;
+        emulatorMcpServices.PcSpeaker = pcSpeaker;
+        emulatorMcpServices.Midi = midiDevice;
+        emulatorMcpServices.VgaFunctionality = vgaFunctionality;
+        emulatorMcpServices.BiosDataArea = biosDataArea;
+        emulatorMcpServices.InterruptVectorTable = interruptVectorTable;
+        emulatorMcpServices.Dos = dos;
 
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers
@@ -587,12 +635,28 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Program executor created...");
         }
 
+        McpHttpHost? mcpHttpTransport = null;
+
+        mcpHttpTransport = new McpHttpHost(loggerService);
+        try {
+            mcpHttpTransport.Start(emulatorMcpServices, configuration.McpHttpPort, null, null);
+            if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                loggerService.Information("MCP HTTP transport started on port {Port}", configuration.McpHttpPort);
+            }
+        } catch (InvalidOperationException ex) {
+            loggerService.Warning(ex, "Failed to configure MCP HTTP transport on port {Port}; MCP HTTP will be unavailable", configuration.McpHttpPort);
+            mcpHttpTransport.Dispose();
+            mcpHttpTransport = null;
+        }
+
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("BIOS and DOS interrupt handlers created...");
         }
 
         Machine = machine;
         ProgramExecutor = programExecutor;
+        McpServices = emulatorMcpServices;
+        _mcpHttpTransport = mcpHttpTransport;
         ProgramExecutor.EmulationStopped += OnProgramExecutorEmulationStopped;
 
         if (mainWindow != null && uiDispatcher != null &&
@@ -653,6 +717,8 @@ public class Spice86DependencyInjection : IDisposable {
                     debugWindowViewModel;
                 Application.Current.Resources[nameof(SoftwareMixerViewModel)] =
                     mixerViewModel;
+                Application.Current.Resources[nameof(McpStatusViewModel)] =
+                    mainWindowViewModel?.McpStatusViewModel;
             }
             mainWindow.DataContext = mainWindowViewModel;
         }
@@ -730,6 +796,8 @@ public class Spice86DependencyInjection : IDisposable {
         if (!_disposed) {
             if (disposing) {
                 ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
+                _mcpHttpTransport?.Dispose();
+
                 ProgramExecutor.Dispose();
 
                 // Dispose HeadlessGui BEFORE Machine to stop the rendering timer

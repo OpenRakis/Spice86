@@ -71,6 +71,12 @@ internal class ShowAdditionnalWindowBehavior : Behavior<Control> {
         ShowRegisteredWindow<HttpApiWindow>(ref _httpApiDataContext, nameof(HttpApiViewModel));
     }
 
+    private object? _mcpToolsDataContext;
+
+    internal void ShowMcpTools() {
+        ShowRegisteredWindow<McpToolsView>(ref _mcpToolsDataContext, nameof(McpStatusViewModel));
+    }
+
     private void OnPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e) {
         ShowInternalDebugger();
     }

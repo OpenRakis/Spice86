@@ -109,13 +109,18 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
     }
 
     private unsafe void DrawScreen() {
-        if (_disposed || _isSettingResolution || _isAppClosing || _pixelBuffer is null || RenderScreen is null) {
+        byte[]? pixelBuffer = _pixelBuffer;
+        if (_disposed || _isSettingResolution || _isAppClosing || pixelBuffer is null || RenderScreen is null) {
             return;
         }
 
         _drawingSemaphoreSlim?.Wait();
         try {
-            fixed (byte* bufferPtr = _pixelBuffer) {
+            if (_disposed) {
+                return;
+            }
+
+            fixed (byte* bufferPtr = pixelBuffer) {
                 int rowBytes = Width * 4; // 4 bytes per pixel (BGRA)
                 int length = rowBytes * Height / 4;
 
@@ -146,8 +151,9 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
         // This prevents a race condition where the timer callback
         // is in the middle of rendering when we dispose resources
         try {
-            _drawingSemaphoreSlim?.Wait(TimeSpan.FromMilliseconds(100));
-            _drawingSemaphoreSlim?.Release();
+            if (_drawingSemaphoreSlim?.Wait(TimeSpan.FromMilliseconds(100)) == true) {
+                _drawingSemaphoreSlim?.Release();
+            }
         } catch (ObjectDisposedException) {
             // Semaphore was already disposed, which is fine
         }
