@@ -55,7 +55,7 @@ public sealed class CircularBuffer {
 
         return count;
     }
-    
+
     /// <summary>
     /// Writes bytes from a location in memory to the buffer and advances the write pointer.
     /// </summary>

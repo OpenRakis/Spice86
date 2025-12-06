@@ -31,6 +31,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         { Commands.SetTimeConstant, 1 },
         { Commands.SingleCycleDmaOutput8, 2 },
         { Commands.DspIdentification, 1 },
+        { Commands.DmaIdentification, 1 },
+        { Commands.WriteTestRegister, 1 },
         { Commands.SetBlockTransferSize, 2 },
         { Commands.SetSampleRate, 2 },
         { Commands.SetInputSampleRate, 2 },
@@ -84,6 +86,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private const uint MaxDmaChunkCeilingBytes = 1024;
     private int _pendingDmaCompletion;
     private int _dmaPumpRecursion;
+    private byte _testRegister;
 
     /// <summary>
     ///     Initializes a new instance of the SoundBlaster class.
@@ -316,38 +319,38 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
                         _blasterState = BlasterState.ResetRequest;
                         break;
                     case 0 when _blasterState == BlasterState.ResetRequest: {
-                        _blasterState = BlasterState.Resetting;
-                        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                            _loggerService.Verbose("SoundBlaster DSP was reset");
-                        }
+                            _blasterState = BlasterState.Resetting;
+                            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                                _loggerService.Verbose("SoundBlaster DSP was reset");
+                            }
 
-                        Reset();
-                        break;
-                    }
+                            Reset();
+                            break;
+                        }
                 }
 
                 break;
             case DspPorts.DspWriteData:
                 switch (_blasterState) {
                     case BlasterState.WaitingForCommand: {
-                        _currentCommand = value;
-                        _blasterState = BlasterState.ReadingCommand;
-                        _commandData.Clear();
-                        CommandLengths.TryGetValue(value, out _commandDataLength);
-                        if (_commandDataLength == 0 && !ProcessCommand()) {
-                            base.WriteByte(port, value);
-                        }
+                            _currentCommand = value;
+                            _blasterState = BlasterState.ReadingCommand;
+                            _commandData.Clear();
+                            CommandLengths.TryGetValue(value, out _commandDataLength);
+                            if (_commandDataLength == 0 && !ProcessCommand()) {
+                                base.WriteByte(port, value);
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case BlasterState.ReadingCommand: {
-                        _commandData.Add(value);
-                        if (_commandData.Count >= _commandDataLength && !ProcessCommand()) {
-                            base.WriteByte(port, value);
-                        }
+                            _commandData.Add(value);
+                            if (_commandData.Count >= _commandDataLength && !ProcessCommand()) {
+                                base.WriteByte(port, value);
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                 }
 
                 break;
@@ -356,6 +359,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
                 break;
             case DspPorts.MixerAddress:
                 _ctMixer.CurrentAddress = value;
+                break;
+            case DspPorts.DspReadData:
+                // Writes to the read data port are ignored (used for polling in some programs)
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("Sound Blaster ignored write to DspReadData port {PortNumber:X4} with value {Value:X2}",
+                        port, value);
+                }
                 break;
             case IgnorePortOffset:
                 if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -1135,6 +1145,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
                 _outputData.Enqueue((byte)~_commandData[0]);
                 break;
 
+            case Commands.DmaIdentification:
+                _outputData.Enqueue(_commandData[0]);
+                break;
+
+            case Commands.WriteTestRegister:
+                _testRegister = _commandData[0];
+                break;
+
+            case Commands.ReadTestRegister:
+                _outputData.Enqueue(_testRegister);
+                break;
+
             case Commands.SetTimeConstant:
                 _dsp.SampleRate = 256000000 / (65536 - (_commandData[0] << 8));
                 UpdateActiveDmaRate();
@@ -1168,11 +1190,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
             case Commands.SingleCycleDmaOutput8_Alt:
             case Commands.SingleCycleDmaOutput8Fifo_Alt: {
-                bool stereo = (_commandData[0] & (1 << 5)) != 0;
-                BeginDmaPlayback(DmaPlaybackMode.Pcm8Bit, false, stereo, false);
-                startDmaScheduler = true;
-                break;
-            }
+                    bool stereo = (_commandData[0] & (1 << 5)) != 0;
+                    BeginDmaPlayback(DmaPlaybackMode.Pcm8Bit, false, stereo, false);
+                    startDmaScheduler = true;
+                    break;
+                }
 
             case Commands.SingleCycleDmaOutputADPCM4Ref:
                 BeginDmaPlayback(DmaPlaybackMode.Adpcm4Bit, false, false, false, CompressionLevel.ADPCM4, true);
@@ -1216,15 +1238,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
             case Commands.AutoInitDmaOutput8_Alt:
             case Commands.AutoInitDmaOutput8Fifo_Alt: {
-                if (!_blockTransferSizeSet) {
-                    _dsp.BlockTransferSize = (_commandData[1] | (_commandData[2] << 8)) + 1;
-                }
+                    if (!_blockTransferSizeSet) {
+                        _dsp.BlockTransferSize = (_commandData[1] | (_commandData[2] << 8)) + 1;
+                    }
 
-                bool stereo = (_commandData[0] & (1 << 5)) != 0;
-                BeginDmaPlayback(DmaPlaybackMode.Pcm8Bit, false, stereo, true);
-                startDmaScheduler = true;
-                break;
-            }
+                    bool stereo = (_commandData[0] & (1 << 5)) != 0;
+                    BeginDmaPlayback(DmaPlaybackMode.Pcm8Bit, false, stereo, true);
+                    startDmaScheduler = true;
+                    break;
+                }
 
             case Commands.ExitAutoInit8:
                 _dmaState.AutoInit = false;
@@ -1233,19 +1255,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
             case Commands.SingleCycleDmaOutput16:
             case Commands.SingleCycleDmaOutput16Fifo: {
-                bool stereo = (_commandData[0] & (1 << 5)) != 0;
-                BeginDmaPlayback(DmaPlaybackMode.Pcm16Bit, true, stereo, false);
-                startDmaScheduler = true;
-                break;
-            }
+                    bool stereo = (_commandData[0] & (1 << 5)) != 0;
+                    BeginDmaPlayback(DmaPlaybackMode.Pcm16Bit, true, stereo, false);
+                    startDmaScheduler = true;
+                    break;
+                }
 
             case Commands.AutoInitDmaOutput16:
             case Commands.AutoInitDmaOutput16Fifo: {
-                bool stereo = (_commandData[0] & (1 << 5)) != 0;
-                BeginDmaPlayback(DmaPlaybackMode.Pcm16Bit, true, stereo, true);
-                startDmaScheduler = true;
-                break;
-            }
+                    bool stereo = (_commandData[0] & (1 << 5)) != 0;
+                    BeginDmaPlayback(DmaPlaybackMode.Pcm16Bit, true, stereo, true);
+                    startDmaScheduler = true;
+                    break;
+                }
 
             case Commands.TurnOnSpeaker:
                 SetSpeakerEnabled(true);
@@ -1331,6 +1353,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         _dsp.Reset();
         _resetCount++;
         _pendingIrq = false;
+        _testRegister = 0;
 
         _dmaState.SpeakerEnabled = HasSpeaker;
         _dmaState.WarmupRemainingFrames = _dmaState.SpeakerEnabled ? _dmaState.ColdWarmupFrames : 0;
