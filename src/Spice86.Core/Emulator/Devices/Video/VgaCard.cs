@@ -35,7 +35,7 @@ public class VgaCard {
     public void SubscribeToEvents() {
         if (_gui is not null) {
             // Init bitmaps, needed for GUI to start calling Render function
-            _gui.SetResolution(_renderer.Width, _renderer.Height);
+            _gui.SetResolution(_renderer.Width, _renderer.Height, _renderer.PixelAspectRatio);
             _gui.RenderScreen += (_, e) => Render(e);
         }
     }
@@ -45,7 +45,7 @@ public class VgaCard {
             // Resolution is matching, nothing to do.
             return true;
         }
-        _gui?.SetResolution(_renderer.Width, _renderer.Height);
+        _gui?.SetResolution(_renderer.Width, _renderer.Height, _renderer.PixelAspectRatio);
         // Wait for it to be applied
         while (_renderer.Width != _gui?.Width || _renderer.Height != _gui?.Height);
         // Report that resolution did not match

@@ -41,6 +41,15 @@ public class Renderer : IVgaRenderer {
     public int Height => (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
 
     /// <inheritdoc />
+    public double PixelAspectRatio => Width switch {
+        320 => 5.0 / 6.0,  // VGA Mode 13h and similar modes use non-square pixels (5:6 width:height)
+        360 => 5.0 / 6.0,  // Similar aspect ratio correction needed
+        640 => 1.0,        // Square pixels for high-resolution modes
+        720 => 1.0,        // Square pixels for high-resolution modes
+        _ => 1.0           // Default to square pixels for unknown modes
+    };
+
+    /// <inheritdoc />
     public int BufferSize { get; private set; }
 
     /// <inheritdoc />

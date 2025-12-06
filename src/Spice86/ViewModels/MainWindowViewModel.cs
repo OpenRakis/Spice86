@@ -248,7 +248,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         UpdateShownEmulatorMouseCursorPosition();
     }
 
-    public void SetResolution(int width, int height) {
+    public void SetResolution(int width, int height, double pixelAspectRatio = 1.0) {
         _uiDispatcher.Post(() => {
             _isSettingResolution = true;
             Scale = 1;
@@ -261,7 +261,11 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 _drawingSemaphoreSlim?.Wait();
                 try {
                     Bitmap?.Dispose();
-                    Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
+                    // Adjust DPI based on pixel aspect ratio to correct for non-square pixels
+                    // For 320x200 modes (5:6 aspect), horizontal DPI should be 80 (96 * 5/6)
+                    double horizontalDpi = 96.0 * pixelAspectRatio;
+                    double verticalDpi = 96.0;
+                    Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(horizontalDpi, verticalDpi), PixelFormat.Bgra8888, AlphaFormat.Opaque);
                 } finally {
                     if (!_disposed) {
                         _drawingSemaphoreSlim?.Release();

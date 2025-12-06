@@ -15,6 +15,12 @@ public interface IVgaRenderer {
     int Height { get; }
 
     /// <summary>
+    ///     Gets the pixel aspect ratio (width/height) for the current video mode.
+    ///     Values less than 1.0 indicate pixels that are taller than they are wide (e.g., 320x200 modes).
+    /// </summary>
+    double PixelAspectRatio { get; }
+
+    /// <summary>
     ///     Gets the size of the buffer that was presented to the renderer.
     /// </summary>
     int BufferSize { get; }

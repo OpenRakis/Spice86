@@ -55,11 +55,12 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
 
     public double MouseY { get; set; }
 
-    public void SetResolution(int width, int height) {
+    public void SetResolution(int width, int height, double pixelAspectRatio = 1.0) {
         if (width <= 0 || height <= 0) {
             throw new ArgumentOutOfRangeException($"Invalid resolution: {width}x{height}");
         }
 
+        // Note: HeadlessGui doesn't need to use pixelAspectRatio as it doesn't display graphics
         _isSettingResolution = true;
         try {
             if (Width != width || Height != height) {
