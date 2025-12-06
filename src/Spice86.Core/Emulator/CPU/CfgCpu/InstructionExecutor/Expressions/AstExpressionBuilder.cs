@@ -50,14 +50,14 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
                 right = Expression.Convert(right, targetType);
             }
         }
-        
+
         // Shift operations require the right-hand operand to be an Int32 (shift count)
         if (binaryOperation is BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT) {
             if (right.Type != typeof(int)) {
                 right = Expression.Convert(right, typeof(int));
             }
         }
-        
+
         return binaryOperation switch {
             BinaryOperation.PLUS => Expression.Add(left, right),
             BinaryOperation.MINUS => Expression.Subtract(left, right),
@@ -81,19 +81,19 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             _ => throw new InvalidOperationException($"Unhandled Operation: {binaryOperation}")
         };
     }
-    
+
     private Type GetLargerType(Type type1, Type type2) {
         // For boolean types, keep them as-is
         if (type1 == typeof(bool) || type2 == typeof(bool)) {
             return typeof(bool);
         }
-        
+
         // Order types by size: byte < ushort < uint < ulong
         int size1 = GetTypeSize(type1);
         int size2 = GetTypeSize(type2);
         return size1 >= size2 ? type1 : type2;
     }
-    
+
     private int GetTypeSize(Type type) {
         if (type == typeof(byte) || type == typeof(sbyte)) {
             return 1;
@@ -109,7 +109,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         }
         return 4; // Default to 32-bit
     }
-    
+
     private UnaryExpression ToExpression(UnaryOperation unaryOperation, Expression value) {
         return unaryOperation switch {
             UnaryOperation.NOT => Expression.Not(value),
@@ -118,7 +118,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             _ => throw new InvalidOperationException($"Unhandled Operation: {unaryOperation}")
         };
     }
-    
+
     private T EnsureNonNull<T>(T? argument) {
         ArgumentNullException.ThrowIfNull(argument);
         return argument;
@@ -152,7 +152,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         }
         throw new ArgumentException($"Couldn't find a property named Item with 1 parameter for type {type}");
     }
-    
+
     private PropertyInfo FindDualParameterIndexer(Type type) {
         PropertyInfo[] propertyInfos = type.GetProperties();
         foreach (PropertyInfo propertyInfo in propertyInfos) {
@@ -175,13 +175,13 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         PropertyInfo indexer = FindSingleParameterIndexer(ToMemoryIndexerType(dataType));
         return Expression.Property(indexerProperty, indexer, indexExpression);
     }
-    
-    private IndexExpression ToMemoryIndexer(DataType dataType, Expression segmentExpression, Expression offsetExpression ) {
+
+    private IndexExpression ToMemoryIndexer(DataType dataType, Expression segmentExpression, Expression offsetExpression) {
         MemberExpression indexerProperty = ToMemoryIndexerProperty(dataType);
         PropertyInfo indexer = FindDualParameterIndexer(ToMemoryIndexerType(dataType));
         return Expression.Property(indexerProperty, indexer, segmentExpression, offsetExpression);
     }
-    
+
     private MemberExpression ToRegisterProperty(int registerIndex, DataType dataType, bool isSegmentRegister) {
         string name = isSegmentRegister ? _registerRenderer.ToStringSegmentRegister(registerIndex) : _registerRenderer.ToStringRegister(dataType.BitWidth, registerIndex);
         PropertyInfo stateRegisterProperty = EnsureNonNull(typeof(State).GetProperty(name));
@@ -189,7 +189,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression VisitSegmentRegisterNode(SegmentRegisterNode node) {
-       return ToRegisterProperty(node.RegisterIndex, node.DataType, true);
+        return ToRegisterProperty(node.RegisterIndex, node.DataType, true);
     }
 
     public Expression VisitSegmentedPointer(SegmentedPointerNode node) {
@@ -206,28 +206,28 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         Expression index = node.AbsoluteAddress.Accept(this);
         return ToMemoryIndexer(node.DataType, index);
     }
-    
+
     public Expression VisitSegmentedAddressConstantNode(SegmentedAddressConstantNode node) {
         throw new NotImplementedException();
     }
-    
+
     public Expression VisitBinaryOperationNode(BinaryOperationNode node) {
         Expression left = node.Left.Accept(this);
         Expression right = node.Right.Accept(this);
         return ToExpression(node.BinaryOperation, left, right);
     }
-    
+
     public Expression VisitUnaryOperationNode(UnaryOperationNode node) {
         Expression value = node.Value.Accept(this);
         return ToExpression(node.UnaryOperation, value);
     }
-    
+
     public Expression VisitTypeConversionNode(TypeConversionNode node) {
         Expression value = node.Value.Accept(this);
         Type targetType = FromDataType(node.DataType);
         return Expression.Convert(value, targetType);
     }
-    
+
     public Expression VisitInstructionNode(InstructionNode node) {
         throw new NotImplementedException();
     }
@@ -241,19 +241,19 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     public Expression<Action<State, Memory>> ToAction(Expression expression) {
         return Expression.Lambda<Action<State, Memory>>(expression, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, byte>> ToFuncUInt8(Expression expression) {
         return Expression.Lambda<Func<State, Memory, byte>>(expression, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, sbyte>> ToFuncInt8(Expression expression) {
         return Expression.Lambda<Func<State, Memory, sbyte>>(expression, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, ushort>> ToFuncUInt16(Expression expression) {
         return Expression.Lambda<Func<State, Memory, ushort>>(expression, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, short>> ToFuncInt16(Expression expression) {
         return Expression.Lambda<Func<State, Memory, short>>(expression, _allParameters);
     }
@@ -261,11 +261,11 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     public Expression<Func<State, Memory, uint>> ToFuncUInt32(Expression expression) {
         return Expression.Lambda<Func<State, Memory, uint>>(expression, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, int>> ToFuncInt32(Expression expression) {
         return Expression.Lambda<Func<State, Memory, int>>(expression, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, bool>> ToFuncBool(Expression expression) {
         return Expression.Lambda<Func<State, Memory, bool>>(expression, _allParameters);
     }

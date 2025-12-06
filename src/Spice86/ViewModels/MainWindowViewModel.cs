@@ -221,7 +221,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double MouseX { get; set; }
 
     public double MouseY { get; set; }
-    
+
     public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
         if (_pauseHandler.IsPaused) {
             return;
@@ -231,7 +231,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     public void OnMouseButtonUp(PointerReleasedEventArgs @event, Image image) {
-        if(_pauseHandler.IsPaused) {
+        if (_pauseHandler.IsPaused) {
             return;
         }
         Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
@@ -261,7 +261,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 _drawingSemaphoreSlim?.Wait();
                 try {
                     Bitmap?.Dispose();
-                    Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
+                    Vector dpi = CalculatePixelAspectRatioDpi(width, height);
+                    Bitmap = new WriteableBitmap(new PixelSize(Width, Height), dpi, PixelFormat.Bgra8888, AlphaFormat.Opaque);
                 } finally {
                     if (!_disposed) {
                         _drawingSemaphoreSlim?.Release();
@@ -272,6 +273,19 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             UpdateShownEmulatorMouseCursorPosition();
             InitializeRenderingTimer();
         }, DispatcherPriority.Background);
+    }
+
+    private static Vector CalculatePixelAspectRatioDpi(int width, int height) {
+        const double baseDpi = 96.0;
+        double aspectRatio = (double)width / height;
+        const double targetAspectRatio = 4.0 / 3.0;
+
+        if (aspectRatio < targetAspectRatio - 0.01) {
+            double pixelAspectRatio = 5.0 / 6.0;
+            return new Vector(baseDpi * pixelAspectRatio, baseDpi);
+        }
+
+        return new Vector(baseDpi, baseDpi);
     }
 
     public void HideMouseCursor() => _uiDispatcher.Post(() => ShowCursor = false);
@@ -356,8 +370,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
         StatusMessage = "Emulator starting...";
         AsmOverrideStatus = Configuration switch {
-            {UseCodeOverrideOption: true, OverrideSupplier: not null} => "ASM code overrides: enabled.",
-            {UseCodeOverride: false, OverrideSupplier: not null} =>
+            { UseCodeOverrideOption: true, OverrideSupplier: not null } => "ASM code overrides: enabled.",
+            { UseCodeOverride: false, OverrideSupplier: not null } =>
                 "ASM code overrides: only functions names will be referenced.",
             _ => "ASM code overrides: none."
         };
@@ -373,7 +387,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     internal event Action? Disposing;
-    
+
     private void Dispose(bool disposing) {
         if (!_disposed) {
             _disposed = true;
@@ -411,7 +425,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     [ObservableProperty]
     private string _currentLogLevel = "";
-    
+
     private void SetLogLevel(string logLevel) {
         if (logLevel == "Silent") {
             CurrentLogLevel = logLevel;

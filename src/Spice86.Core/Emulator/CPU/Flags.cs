@@ -16,7 +16,7 @@ public class Flags {
         [CpuModel.INTEL_80286] = new(bitsAlwaysOn: [1], bitsAlwaysOff: [3, 5, 12, 13, 14, 15]),
         [CpuModel.INTEL_80386] = new(bitsAlwaysOn: [1], bitsAlwaysOff: [3, 5, 12, 13, 14, 15])
     }.ToFrozenDictionary();
-    
+
     private record BitsOnOff {
         public BitsOnOff(List<int> bitsAlwaysOn, List<int> bitsAlwaysOff) {
             BitsAlwaysOn = BitMaskUtils.BitMaskFromBitList(bitsAlwaysOn);
@@ -26,7 +26,7 @@ public class Flags {
         /// Or that into the register
         /// </summary>
         public uint BitsAlwaysOn { get; }
-        
+
         /// <summary>
         /// And that into the register
         /// </summary>

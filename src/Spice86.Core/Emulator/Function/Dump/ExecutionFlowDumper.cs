@@ -46,7 +46,7 @@ public class ExecutionFlowDumper {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("File path \"{FilePath}\" is blank or doesn't exist", filePath);
             }
-            return new ();
+            return new();
         }
         try {
             return JsonSerializer.Deserialize<ExecutionDump>(File.ReadAllText(filePath)) ?? new();

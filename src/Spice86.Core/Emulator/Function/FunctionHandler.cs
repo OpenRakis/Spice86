@@ -1,16 +1,16 @@
 ﻿namespace Spice86.Core.Emulator.Function;
 
-using System.Text;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System.Text;
 
 /// <summary>
 /// Handles function calls for the emulator machine.
@@ -25,7 +25,7 @@ public class FunctionHandler {
     private readonly IMemory _memory;
 
     private readonly ExecutionFlowRecorder? _executionFlowRecorder;
-    
+
     private readonly FunctionCatalogue _functionCatalogue;
 
     /// <summary>
@@ -38,10 +38,10 @@ public class FunctionHandler {
     /// <param name="useCodeOverride">Whether or not to call overrides.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public FunctionHandler(
-        IMemory memory, 
-        State state, 
-        ExecutionFlowRecorder? executionFlowRecorder, 
-        FunctionCatalogue functionCatalogue, 
+        IMemory memory,
+        State state,
+        ExecutionFlowRecorder? executionFlowRecorder,
+        FunctionCatalogue functionCatalogue,
         bool useCodeOverride,
         ILoggerService loggerService) {
         _memory = memory;
@@ -52,7 +52,7 @@ public class FunctionHandler {
         UseCodeOverride = useCodeOverride;
     }
 
-    
+
     /// <summary>
     /// Calls an interrupt handler.
     /// </summary>
@@ -187,7 +187,7 @@ public class FunctionHandler {
             ret.CurrentCorrespondingCallInstruction = currentFunctionCall.Initiator;
         }
 
-        
+
         bool returnAddressAlignedWithCallStack = HandleReturn(returnCallType, currentFunctionCall);
         if (!returnAddressAlignedWithCallStack) {
             // Put it back in the stack, we did a jump not a return
@@ -195,7 +195,7 @@ public class FunctionHandler {
         }
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             FunctionInformation? currentFunctionInformation = _functionCatalogue.GetFunctionInformation(currentFunctionCall);
-            _loggerService.Verbose("Returning from function {From} to function {To} ({TargetAddress})", 
+            _loggerService.Verbose("Returning from function {From} to function {To} ({TargetAddress})",
                 currentFunctionInformation,
                 _functionCatalogue.GetFunctionInformation(CurrentFunctionCall),
                 PeekReturnAddressOnMachineStack(returnCallType));

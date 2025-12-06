@@ -16,7 +16,7 @@ public abstract class InstructionWithValueField<T> : CfgInstruction, IInstructio
         ValueField = valueField;
         AddField(ValueField);
     }
-    
+
     protected InstructionWithValueField(
         SegmentedAddress address,
         InstructionField<ushort> opcodeField,

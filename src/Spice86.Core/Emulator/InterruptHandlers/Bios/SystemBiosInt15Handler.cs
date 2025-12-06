@@ -149,7 +149,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
         uint wordCount = State.CX;
         uint byteCount = wordCount * 2;
-        
+
         // Validate word count first
         if (wordCount == 0) {
             SetCarryFlag(false, calledFromVm);
@@ -214,7 +214,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         // Perform the memory copy using spans (following XMS pattern)
         IList<byte> sourceSpan = Memory.GetSlice((int)sourceAddress, (int)byteCount);
         IList<byte> destinationSpan = Memory.GetSlice((int)destinationAddress, (int)byteCount);
-        
+
         sourceSpan.CopyTo(destinationSpan);
 
         // Restore A20 state

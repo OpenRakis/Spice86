@@ -233,7 +233,7 @@ public class AstExpressionParser {
 
     private ValueNode ParseNumber() {
         int start = _position;
-        
+
         // Hexadecimal
         if (CurrentChar() == '0' && (PeekChar() == 'x' || PeekChar() == 'X')) {
             Advance(); // skip '0'
@@ -301,11 +301,11 @@ public class AstExpressionParser {
             _ => throw new ExpressionParseException($"Unknown identifier: '{identifier}'", _input, _position - identifier.Length)
         };
     }
-    
+
     private ValueNode ParsePointerNode(DataType dataType) {
         // Parse either absolute pointer [addr] or segmented pointer segment:[offset]
         SkipWhitespace();
-        
+
         // Check if it's a segmented register (like ES, CS, DS, etc.)
         int savedPosition = _position;
         if (char.IsLetter(CurrentChar())) {
@@ -328,7 +328,7 @@ public class AstExpressionParser {
             // Not a segmented pointer, restore position
             _position = savedPosition;
         }
-        
+
         // Absolute pointer: [address]
         if (CurrentChar() != '[') {
             throw new ExpressionParseException("Expected '[' or segment register for pointer", _input, _position);
@@ -341,18 +341,18 @@ public class AstExpressionParser {
         Advance();
         return new AbsolutePointerNode(dataType, address);
     }
-    
+
     private ValueNode EnsureTypeCompatibility(ValueNode left, ValueNode right, out DataType commonType) {
         // Determine the common type based on operand types
         DataType leftType = left.DataType;
         DataType rightType = right.DataType;
-        
+
         // If types are the same, no conversion needed
         if (leftType.BitWidth == rightType.BitWidth && leftType.Signed == rightType.Signed) {
             commonType = leftType;
             return left;
         }
-        
+
         // When comparing to constant 0, use the non-constant operand's type
         if (right is ConstantNode { Value: 0 }) {
             commonType = leftType;
@@ -360,18 +360,18 @@ public class AstExpressionParser {
             left = new TypeConversionNode(leftType, left);
             return left;
         }
-        
+
         // Choose the larger type
         commonType = GetLargerType(leftType, rightType);
-        
+
         // Convert left if needed
         if (leftType.BitWidth != commonType.BitWidth || leftType.Signed != commonType.Signed) {
             left = new TypeConversionNode(commonType, left);
         }
-        
+
         return left;
     }
-    
+
     private DataType GetLargerType(DataType type1, DataType type2) {
         // Order by bit width: 8 < 16 < 32
         if (type1.BitWidth != type2.BitWidth) {
@@ -380,7 +380,7 @@ public class AstExpressionParser {
         // Same width: prefer unsigned
         return type1.Signed ? type2 : type1;
     }
-    
+
     private ValueNode ApplyBinaryOperation(BinaryOperation operation, ValueNode left, ValueNode right) {
         // For comparison and logical operations, convert operands to common type first
         if (operation == BinaryOperation.EQUAL || operation == BinaryOperation.NOT_EQUAL ||
@@ -390,13 +390,13 @@ public class AstExpressionParser {
             DataType commonType;
             left = EnsureTypeCompatibility(left, right, out commonType);
             // Don't convert constant 0 - it implicitly matches any type
-            if (!(right is ConstantNode { Value: 0 }) && 
+            if (!(right is ConstantNode { Value: 0 }) &&
                 (right.DataType.BitWidth != commonType.BitWidth || right.DataType.Signed != commonType.Signed)) {
                 right = new TypeConversionNode(commonType, right);
             }
             return new BinaryOperationNode(DataType.BOOL, left, operation, right);
         }
-        
+
         // For arithmetic and bitwise operations, use UINT32 as default result type
         return new BinaryOperationNode(DataType.UINT32, left, operation, right);
     }

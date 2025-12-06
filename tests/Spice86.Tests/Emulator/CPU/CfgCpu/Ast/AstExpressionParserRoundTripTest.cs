@@ -363,7 +363,7 @@ public class AstExpressionParserRoundTripTest {
 
     [Fact]
     public void TestNestedLogicalAndOr() {
-        AssertRoundTrip("(ax==0x100||bx==0x200)&&(cx==0x300||dx==0x400)", 
+        AssertRoundTrip("(ax==0x100||bx==0x200)&&(cx==0x300||dx==0x400)",
             "((uint)AX==0x00000100||(uint)BX==0x00000200)&&((uint)CX==0x00000300||(uint)DX==0x00000400)");
     }
 

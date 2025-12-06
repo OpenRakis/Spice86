@@ -1,7 +1,5 @@
 namespace Spice86.Core.Emulator.Gdb;
 
-using System.Globalization;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
@@ -9,6 +7,8 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
+
+using System.Globalization;
 
 /// <summary>
 /// Parses GDB remote protocol breakpoint commands (Z packets) into structured data
@@ -21,7 +21,7 @@ public class GdbBreakpointCommandParser {
     private const string GdbConditionTypeX = "X";
     private const string GdbConditionTypeCond = "cond";
     private const int MinimumCommandParts = 3;
-    
+
     private readonly ILoggerService _loggerService;
     private readonly BreakpointConditionCompiler? _conditionCompiler;
 
@@ -83,7 +83,7 @@ public class GdbBreakpointCommandParser {
         string baseCommand = command[..semicolonIndex];
         string conditionPart = command[(semicolonIndex + 1)..];
         string? conditionExpression = ExtractConditionExpression(conditionPart);
-        
+
         return (baseCommand, conditionExpression);
     }
 
@@ -134,7 +134,7 @@ public class GdbBreakpointCommandParser {
         if (int.TryParse(value, out int result)) {
             return result;
         }
-        
+
         LogErrorInvalidField(fieldName, value);
         return null;
     }

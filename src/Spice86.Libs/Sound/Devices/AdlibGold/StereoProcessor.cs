@@ -152,39 +152,39 @@ internal sealed class StereoProcessor {
 
         switch (reg) {
             case StereoProcessorControlReg.VolumeLeft: {
-                int value = data & volumeControlMask;
-                _gain.Left = CalcVolumeGain(value);
-                LogRegisterWrite(reg, data);
-                break;
-            }
+                    int value = data & volumeControlMask;
+                    _gain.Left = CalcVolumeGain(value);
+                    LogRegisterWrite(reg, data);
+                    break;
+                }
             case StereoProcessorControlReg.VolumeRight: {
-                int value = data & volumeControlMask;
-                _gain.Right = CalcVolumeGain(value);
-                LogRegisterWrite(reg, data);
-                break;
-            }
+                    int value = data & volumeControlMask;
+                    _gain.Right = CalcVolumeGain(value);
+                    LogRegisterWrite(reg, data);
+                    break;
+                }
             case StereoProcessorControlReg.Bass: {
-                int value = data & filterControlMask;
-                double gainDb = CalcFilterGainDb(value);
-                SetLowShelfGain(gainDb);
-                LogRegisterWrite(reg, data);
-                break;
-            }
+                    int value = data & filterControlMask;
+                    double gainDb = CalcFilterGainDb(value);
+                    SetLowShelfGain(gainDb);
+                    LogRegisterWrite(reg, data);
+                    break;
+                }
             case StereoProcessorControlReg.Treble: {
-                int value = data & filterControlMask;
-                const int extraTreble = 1;
-                double gainDb = CalcFilterGainDb(value + extraTreble);
-                SetHighShelfGain(gainDb);
-                LogRegisterWrite(reg, data);
-                break;
-            }
+                    int value = data & filterControlMask;
+                    const int extraTreble = 1;
+                    double gainDb = CalcFilterGainDb(value + extraTreble);
+                    SetHighShelfGain(gainDb);
+                    LogRegisterWrite(reg, data);
+                    break;
+                }
             case StereoProcessorControlReg.SwitchFunctions: {
-                var sf = new StereoProcessorSwitchFunctions(data);
-                _sourceSelector = (StereoProcessorSourceSelector)sf.SourceSelector;
-                _stereoMode = (StereoProcessorStereoMode)sf.StereoMode;
-                LogRegisterWrite(reg, data);
-                break;
-            }
+                    var sf = new StereoProcessorSwitchFunctions(data);
+                    _sourceSelector = (StereoProcessorSourceSelector)sf.SourceSelector;
+                    _stereoMode = (StereoProcessorStereoMode)sf.StereoMode;
+                    LogRegisterWrite(reg, data);
+                    break;
+                }
 
             default:
                 _logger.Warning("Unsupported stereo processor register {Register} written with value {Value:X2}", reg,
@@ -273,18 +273,18 @@ internal sealed class StereoProcessor {
         switch (_sourceSelector) {
             case StereoProcessorSourceSelector.SoundA1:
             case StereoProcessorSourceSelector.SoundA2: {
-                float left = frame.Left;
-                frame.Left = left;
-                frame.Right = left;
-                break;
-            }
+                    float left = frame.Left;
+                    frame.Left = left;
+                    frame.Right = left;
+                    break;
+                }
             case StereoProcessorSourceSelector.SoundB1:
             case StereoProcessorSourceSelector.SoundB2: {
-                float right = frame.Right;
-                frame.Left = right;
-                frame.Right = right;
-                break;
-            }
+                    float right = frame.Right;
+                    frame.Left = right;
+                    frame.Right = right;
+                    break;
+                }
         }
     }
 
@@ -313,24 +313,24 @@ internal sealed class StereoProcessor {
     private void ProcessStereoProcessing(ref AudioFrame frame) {
         switch (_stereoMode) {
             case StereoProcessorStereoMode.ForcedMono: {
-                float mono = frame.Left + frame.Right;
-                frame.Left = mono;
-                frame.Right = mono;
-                break;
-            }
+                    float mono = frame.Left + frame.Right;
+                    frame.Left = mono;
+                    frame.Right = mono;
+                    break;
+                }
             case StereoProcessorStereoMode.PseudoStereo: {
-                frame.Left = _allPass.Filter(frame.Left);
-                break;
-            }
+                    frame.Left = _allPass.Filter(frame.Left);
+                    break;
+                }
             case StereoProcessorStereoMode.SpatialStereo: {
-                const float crosstalkPercentage = 52.0f;
-                const float k = crosstalkPercentage / 100.0f;
-                float l = frame.Left;
-                float r = frame.Right;
-                frame.Left = l + ((l - r) * k);
-                frame.Right = r + ((r - l) * k);
-                break;
-            }
+                    const float crosstalkPercentage = 52.0f;
+                    const float k = crosstalkPercentage / 100.0f;
+                    float l = frame.Left;
+                    float r = frame.Right;
+                    frame.Left = l + ((l - r) * k);
+                    frame.Right = r + ((r - l) * k);
+                    break;
+                }
             case StereoProcessorStereoMode.LinearStereo:
                 break;
             default:

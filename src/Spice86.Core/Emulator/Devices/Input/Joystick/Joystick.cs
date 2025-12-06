@@ -24,7 +24,7 @@ public class Joystick : DefaultIOPortHandler {
         InitPortHandlers(ioPortDispatcher);
     }
 
-   private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(JoystickPositionAndStatus, this);
     }
 

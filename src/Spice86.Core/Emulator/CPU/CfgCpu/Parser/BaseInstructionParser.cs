@@ -21,7 +21,7 @@ public class BaseInstructionParser {
 
     protected BaseInstructionParser(InstructionReader instructionReader, State state) {
         _instructionReader = instructionReader;
-        _instructionPrefixParser =  new(_instructionReader);
+        _instructionPrefixParser = new(_instructionReader);
         _modRmParser = new(_instructionReader, state);
         _state = state;
     }

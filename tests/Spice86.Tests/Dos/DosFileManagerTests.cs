@@ -135,7 +135,7 @@ public class DosFileManagerTests {
             loggerService, executionFlowRecorder);
 
         IInstructionExecutor instructionExecutor = cpu;
-        IFunctionHandlerProvider functionHandlerProvider =  cpu;
+        IFunctionHandlerProvider functionHandlerProvider = cpu;
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, dualPic,

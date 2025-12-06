@@ -33,7 +33,7 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
         _driveMap.Add('B', null);
         _driveMap.Add('C', new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath, CurrentDosDirectory = "" });
         CurrentDrive = _driveMap.ElementAt(2).Value!;
-        if(loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             loggerService.Verbose("DOS Drives initialized: {@Drives}", _driveMap.Values);
         }
     }

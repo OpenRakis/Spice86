@@ -58,7 +58,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
         if (!OperatingSystem.IsWindows() && configuration.AudioEngine != AudioEngine.Dummy) {
             _soundChannel = softwareMixer.CreateChannel(nameof(GeneralMidiDevice));
         }
-        
+
         _deviceThread = new DeviceThread(nameof(GeneralMidiDevice), PlaybackLoopBody, pauseHandler, loggerService);
         if (OperatingSystem.IsWindows() && configuration.AudioEngine != AudioEngine.Dummy) {
             NativeMethods.midiOutOpen(out _midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);

@@ -72,7 +72,7 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
         FieldsInOrder.Add(fieldWithValue);
         UpdateLength();
     }
-    
+
     protected void AddFields(IEnumerable<FieldWithValue> fieldWithValues) {
         fieldWithValues.ToList().ForEach(AddField);
     }
@@ -126,7 +126,7 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
             .SelectMany(i => i)
             .ToImmutableList();
     }
-    
+
     public void SetLive(bool isLive) {
         _isLive = isLive;
     }

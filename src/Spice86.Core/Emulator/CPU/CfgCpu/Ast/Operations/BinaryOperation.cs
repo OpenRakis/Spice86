@@ -1,12 +1,12 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 
-public enum BinaryOperation { 
-    PLUS, 
+public enum BinaryOperation {
+    PLUS,
     MINUS,
-    MULTIPLY, 
+    MULTIPLY,
     DIVIDE,
     MODULO,
-    EQUAL, 
+    EQUAL,
     NOT_EQUAL,
     LESS_THAN,
     GREATER_THAN,
@@ -19,5 +19,5 @@ public enum BinaryOperation {
     BITWISE_XOR,
     LEFT_SHIFT,
     RIGHT_SHIFT,
-    ASSIGN 
+    ASSIGN
 }

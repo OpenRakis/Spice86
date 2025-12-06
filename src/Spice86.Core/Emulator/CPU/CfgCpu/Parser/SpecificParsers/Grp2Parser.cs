@@ -22,7 +22,7 @@ public class Grp2Parser : BaseGrpOperationParser {
 
         return GetOperationOneFactory(groupIndex).Parse(context, modRmContext, bitWidth);
     }
-    
+
     protected BaseOperationModRmFactory GetOperationOneFactory(int groupIndex) {
         return groupIndex switch {
             0 => new Grp2RolOneRmOperationFactory(this),

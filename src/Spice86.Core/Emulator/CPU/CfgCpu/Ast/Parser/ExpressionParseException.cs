@@ -43,7 +43,7 @@ public class ExpressionParseException : Exception {
         string snippet = Expression.Substring(start, end - start);
         int caretPosition = Position - start;
         string caret = new string(' ', caretPosition) + "^";
-        
+
         return $"  {snippet}\n  {caret}";
     }
 }

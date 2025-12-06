@@ -16,7 +16,7 @@ public class ExecutionFlowRecorder : IExecutionDumpFactory {
     /// Gets or sets whether we register calls, jumps, returns, and unaligned returns.
     /// </summary>
     public bool RecordData { get; set; }
-    
+
     /// <summary>
     /// Gets or sets whether we register self modifying machine code.
     /// </summary>

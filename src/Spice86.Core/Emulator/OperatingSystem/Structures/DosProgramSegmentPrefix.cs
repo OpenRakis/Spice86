@@ -92,5 +92,5 @@ public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
 
     public UInt8Array Unused3 => GetUInt8Array(0x7C, 4);
 
-    public DosCommandTail DosCommandTail => new (ByteReaderWriter, BaseAddress + 0x80);
+    public DosCommandTail DosCommandTail => new(ByteReaderWriter, BaseAddress + 0x80);
 }

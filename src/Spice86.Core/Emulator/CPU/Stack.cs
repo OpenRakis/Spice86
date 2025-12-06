@@ -124,7 +124,7 @@ public class Stack {
         _state.SP = (ushort)(_state.SP - 4);
         _memory.UInt32[_state.SS, _state.SP] = value;
     }
-    
+
     /// <summary>
     /// Peeks a SegmentedAddress value from the stack
     /// </summary>
@@ -152,7 +152,7 @@ public class Stack {
         _state.SP = (ushort)(_state.SP + 4);
         return res;
     }
-    
+
     /// <summary>
     /// Pops a SegmentedAddress value from the stack
     /// </summary>
@@ -171,7 +171,7 @@ public class Stack {
         _state.SP = (ushort)(_state.SP - 4);
         _memory.SegmentedAddress16[_state.SS, _state.SP] = value;
     }
-    
+
     /// <summary>
     /// Pushes a SegmentedAddress value on the stack
     /// </summary>
@@ -198,7 +198,7 @@ public class Stack {
     /// <param name="flagValue">A boolean that determines whether the bits specified by the flagMask should be set (if true) or cleared (if false).</param>
     public void SetFlagOnInterruptStack(int flagMask, bool flagValue) {
         int value = Peek16(4);
-        
+
         if (flagValue) {
             value |= flagMask;
         } else {

@@ -9,32 +9,32 @@ public enum ExtendedMemoryCopyStatus : byte {
     /// Operation completed successfully - source copied into destination.
     /// </summary>
     SourceCopiedIntoDest = 0x00,
-    
+
     /// <summary>
     /// RAM parity error detected during copy operation.
     /// </summary>
     ParityError = 0x02,
-    
+
     /// <summary>
     /// Invalid source handle or address.
     /// </summary>
     InvalidSource = 0x03,
-    
+
     /// <summary>
     /// Invalid destination handle or address.
     /// </summary>
     InvalidDestination = 0x04,
-    
+
     /// <summary>
     /// Invalid length specified for copy operation.
     /// </summary>
     InvalidLength = 0x05,
-    
+
     /// <summary>
     /// Invalid overlap between source and destination regions.
     /// </summary>
     InvalidOverlap = 0x06,
-    
+
     /// <summary>
     /// A20 line error occurred.
     /// </summary>

@@ -12,7 +12,7 @@ public class AddressBreakPoint : BreakPoint {
     public long Address { get; private set; }
 
     private Func<long, bool>? _additionalTriggerCondition;
-    
+
     /// <summary>
     /// The condition expression string for conditional breakpoints.
     /// </summary>

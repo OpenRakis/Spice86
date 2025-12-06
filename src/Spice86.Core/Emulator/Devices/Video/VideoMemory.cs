@@ -48,33 +48,33 @@ public class VideoMemory : IVideoMemory {
 
                 break;
             case ReadMode.ReadMode1: {
-                // Read mode 1 reads 8 pixels from the planes and compares each to a colorCompare register
-                // If the color matches, the corresponding bit in the result is set
-                // The colorDontCare bits indicate which bits in the colorCompare register to ignore.
+                    // Read mode 1 reads 8 pixels from the planes and compares each to a colorCompare register
+                    // If the color matches, the corresponding bit in the result is set
+                    // The colorDontCare bits indicate which bits in the colorCompare register to ignore.
 
-                // We take the inverse of the colorDontCare register and OR both the colorCompare and
-                // the extracted bits with them. This makes sure that the colorDontCare bits are always
-                // considered a match.
-                int colorDontCare = ~_state.GraphicsControllerRegisters.ColorDontCare;
-                int colorCompare = _state.GraphicsControllerRegisters.ColorCompare | colorDontCare;
-                // We loop through the 8 pixels in the latches, as well as the 8 bits in the result.
-                for (int i = 0; i < 8; i++) {
-                    // A pixel consists of 4 bits, one from each plane. We extract the bits from the
-                    // latches and OR them together to get the pixel.
-                    byte pixel = 0;
-                    for (int j = 0; j < 4; j++) {
-                        int bit = (_latches[j] >> i) & 1;
-                        pixel |= (byte)(bit << j);
+                    // We take the inverse of the colorDontCare register and OR both the colorCompare and
+                    // the extracted bits with them. This makes sure that the colorDontCare bits are always
+                    // considered a match.
+                    int colorDontCare = ~_state.GraphicsControllerRegisters.ColorDontCare;
+                    int colorCompare = _state.GraphicsControllerRegisters.ColorCompare | colorDontCare;
+                    // We loop through the 8 pixels in the latches, as well as the 8 bits in the result.
+                    for (int i = 0; i < 8; i++) {
+                        // A pixel consists of 4 bits, one from each plane. We extract the bits from the
+                        // latches and OR them together to get the pixel.
+                        byte pixel = 0;
+                        for (int j = 0; j < 4; j++) {
+                            int bit = (_latches[j] >> i) & 1;
+                            pixel |= (byte)(bit << j);
+                        }
+                        // Then we compare the pixel to the colorCompare register, and set the corresponding
+                        // bit in the result if they match.
+                        if ((pixel | colorDontCare) == colorCompare) {
+                            result |= (byte)(1 << i);
+                        }
                     }
-                    // Then we compare the pixel to the colorCompare register, and set the corresponding
-                    // bit in the result if they match.
-                    if ((pixel | colorDontCare) == colorCompare) {
-                        result |= (byte)(1 << i);
-                    }
+
+                    break;
                 }
-
-                break;
-            }
             default:
                 throw new InvalidOperationException($"Unknown readMode {_state.GraphicsControllerRegisters.GraphicsModeRegister.ReadMode}");
         }

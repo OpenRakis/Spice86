@@ -1,14 +1,14 @@
 namespace Spice86.Core.Emulator.Function.Dump;
 
-using System.IO;
-using System.Linq;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Function;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System.IO;
+using System.Linq;
 
 /// <summary>
 /// Provides functionality for dumping Ghidra symbols and labels to a file.
@@ -80,7 +80,7 @@ public class GhidraSymbolsDumper {
     /// </summary>
     /// <param name="filePath">The path of the file to read the symbols and labels from.</param>
     /// <returns>A dictionary containing function names from the file.</returns>
-    public  IEnumerable<FunctionInformation>  ReadFromFileOrCreate(string filePath) {
+    public IEnumerable<FunctionInformation> ReadFromFileOrCreate(string filePath) {
         if (!File.Exists(filePath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("File doesn't exist");

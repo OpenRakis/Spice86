@@ -41,7 +41,7 @@ public class DosFileManager {
 
     private class FileSearchPrivateData {
         public FileSearchPrivateData(string fileSpec, int index, ushort searchAttributes) {
-            FileSpec =  fileSpec;
+            FileSpec = fileSpec;
             Index = index;
             SearchAttributes = searchAttributes;
         }
@@ -160,7 +160,7 @@ public class DosFileManager {
             }
             return OpenDevice(device);
         }
-        
+
         string newHostFilePath = _dosPathResolver.PrefixWithHostDirectory(fileName);
 
         FileStream? testFileStream = null;
@@ -175,7 +175,7 @@ public class DosFileManager {
             // in order to avoid an exception
             for (ushort i = 0; i < OpenFiles.Length; i++) {
                 VirtualFileBase? virtualFile = OpenFiles[i];
-                if(virtualFile is DosFile dosFile) {
+                if (virtualFile is DosFile dosFile) {
                     string? openHostFilePath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFile.Name);
                     if (string.Equals(openHostFilePath, newHostFilePath, StringComparison.OrdinalIgnoreCase)) {
                         CloseFileOrDevice(i);
@@ -1151,7 +1151,7 @@ public class DosFileManager {
                     case 0x66:  // Get Volume Serial Number + Volume Label + FS Type
                         {
                             VirtualDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
-                            DosVolumeInfo dosVolumeInfo = new (_memory, parameterBlock.Linear);
+                            DosVolumeInfo dosVolumeInfo = new(_memory, parameterBlock.Linear);
                             dosVolumeInfo.SerialNumber = 0x1234;
                             dosVolumeInfo.VolumeLabel = vDrive.Label.ToUpperInvariant();
                             dosVolumeInfo.FileSystemType = drive < 2 ? "FAT12" : "FAT16";

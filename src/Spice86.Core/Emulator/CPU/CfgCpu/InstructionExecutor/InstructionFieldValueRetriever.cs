@@ -58,7 +58,7 @@ public class InstructionFieldValueRetriever {
 
         return Memory.Int32[field.PhysicalAddress];
     }
-    
+
     public SegmentedAddress GetFieldValue(InstructionField<SegmentedAddress> field) {
         if (field.UseValue) {
             return field.Value;

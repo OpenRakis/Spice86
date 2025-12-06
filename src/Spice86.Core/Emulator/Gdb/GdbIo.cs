@@ -64,10 +64,10 @@ public sealed class GdbIo : IDisposable {
         if (_socket is null) {
             return false;
         }
-        if(!_socket.Connected) {
+        if (!_socket.Connected) {
             return false;
         }
-        
+
         return !(_socket.Poll(1000, SelectMode.SelectRead) && _socket.Available == 0);
     }
 

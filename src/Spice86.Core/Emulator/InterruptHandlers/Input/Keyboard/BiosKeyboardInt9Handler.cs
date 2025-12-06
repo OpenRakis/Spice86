@@ -437,9 +437,11 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     keyboardState.Flags2 = (byte)(keyboardState.Flags2 & ~0x20);
                 }
                 break;
-            case (byte)ScanCode1.ScrollLock: keyboardState.Flags2 |= 0x10;
+            case (byte)ScanCode1.ScrollLock:
+                keyboardState.Flags2 |= 0x10;
                 break;
-            case ScrollLockReleased: keyboardState.Flags1 ^= 0x10; keyboardState.Flags2 = (byte)(keyboardState.Flags2 & ~0x10); keyboardState.Leds ^= 0x01;
+            case ScrollLockReleased:
+                keyboardState.Flags1 ^= 0x10; keyboardState.Flags2 = (byte)(keyboardState.Flags2 & ~0x10); keyboardState.Leds ^= 0x01;
                 break;
             case InsertReleased:
                 if ((keyboardState.Flags3 & 0x02) != 0) { /* Maybe honour the insert on keypad as well */

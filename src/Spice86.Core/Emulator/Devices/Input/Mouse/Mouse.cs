@@ -134,12 +134,12 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
             case MouseButton.XButton1:
             case MouseButton.XButton2:
             default: {
-                if (_logger.IsEnabled(LogEventLevel.Information)) {
-                    _logger.Information("Unknown mouse button clicked: {@EventArgs}", eventArgs);
-                    return;
+                    if (_logger.IsEnabled(LogEventLevel.Information)) {
+                        _logger.Information("Unknown mouse button clicked: {@EventArgs}", eventArgs);
+                        return;
+                    }
+                    break;
                 }
-                break;
-            }
         }
         UpdateMouse();
     }

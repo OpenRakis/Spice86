@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Shared.Utils;
+
 using Spice86.Shared.Emulator.Memory;
 
 

@@ -382,7 +382,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void ClearKeyboardBufferAndInvokeKeyboardFunction() {
         byte operation = State.AL;
-        if(LoggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
             LoggerService.Debug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", operation);
         }
         if (operation is not 0x0 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
@@ -446,7 +446,7 @@ public class DosInt21Handler : InterruptHandler {
         }
         dosInputBuffer.Characters = string.Empty;
 
-        while(State.IsRunning) {
+        while (State.IsRunning) {
             byte[] inputBuffer = new byte[1];
             readCount = standardInput.Read(inputBuffer, 0, 1);
             if (readCount < 1) {
@@ -474,7 +474,7 @@ public class DosInt21Handler : InterruptHandler {
                 standardOutput.Write(bell);
                 continue;
             }
-            if(standardOutput.CanWrite) {
+            if (standardOutput.CanWrite) {
                 standardOutput.Write(c);
             }
             dosInputBuffer.Characters += c;
@@ -501,7 +501,7 @@ public class DosInt21Handler : InterruptHandler {
     public void DirectConsoleIo(bool calledFromVm) {
         byte character = State.DL;
         if (character == 0xFF) {
-            if(LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("DOS INT21H DirectConsoleIo, INPUT REQUESTED");
             }
             if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn)
@@ -528,11 +528,11 @@ public class DosInt21Handler : InterruptHandler {
             }
             if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)
                 && stdOut.CanWrite) {
-                if(stdOut is ConsoleDevice consoleDeviceBefore) {
+                if (stdOut is ConsoleDevice consoleDeviceBefore) {
                     consoleDeviceBefore.DirectOutput = true;
                 }
                 stdOut.Write(character);
-                if(stdOut is ConsoleDevice consoleDeviceAfter) {
+                if (stdOut is ConsoleDevice consoleDeviceAfter) {
                     consoleDeviceAfter.DirectOutput = false;
                 }
                 State.AL = character;
@@ -572,7 +572,7 @@ public class DosInt21Handler : InterruptHandler {
             stdOut.CanWrite) {
             // Write to the standard output device
             stdOut.Write(characterByte);
-        } else if(LoggerService.IsEnabled(LogEventLevel.Warning)) {
+        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
             LoggerService.Warning("DOS INT21H DisplayOutput: Cannot write to standard output device.");
         }
         State.AL = _lastDisplayOutputCharacter;
@@ -945,7 +945,7 @@ public class DosInt21Handler : InterruptHandler {
         ushort fileHandle = State.BX;
         int offset = (State.CX << 16) | State.DX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("MOVE FILE POINTER USING HANDLE. {OriginOfMove}, {FileHandle}, {Offset}", 
+            LoggerService.Verbose("MOVE FILE POINTER USING HANDLE. {OriginOfMove}, {FileHandle}, {Offset}",
                 originOfMove, fileHandle, offset);
         }
 
@@ -967,7 +967,7 @@ public class DosInt21Handler : InterruptHandler {
         byte accessMode = State.AL;
         FileAccessMode fileAccessMode = (FileAccessMode)(accessMode & 0b111);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMode} : {FileAccessModeByte}", 
+            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMode} : {FileAccessModeByte}",
                 fileName, fileAccessMode,
                 ConvertUtils.ToHex8(State.AL));
         }
@@ -1043,9 +1043,9 @@ public class DosInt21Handler : InterruptHandler {
     /// The number of potentially valid drive letters in AL.
     /// </returns>
     public void SelectDefaultDrive() {
-        if(_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAtOrDefault(State.DL).Key, out VirtualDrive? mountedDrive)) {
+        if (_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAtOrDefault(State.DL).Key, out VirtualDrive? mountedDrive)) {
             _dosDriveManager.CurrentDrive = mountedDrive;
-        } 
+        }
         if (State.DL > DosDriveManager.MaxDriveCount && LoggerService.IsEnabled(LogEventLevel.Error)) {
             LoggerService.Error("DOS INT21H: Could not set default drive! Unrecognized index in State.DL: {DriveIndex}", State.DL);
         }

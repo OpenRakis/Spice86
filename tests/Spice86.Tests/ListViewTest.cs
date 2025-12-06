@@ -32,7 +32,7 @@ public class ListViewTest {
         AssertEqualsRange(source, slice, 0, 9);
     }
 
-    
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

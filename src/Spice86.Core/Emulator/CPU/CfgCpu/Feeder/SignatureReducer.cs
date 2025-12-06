@@ -50,14 +50,14 @@ public class SignatureReducer {
         }
         return res;
     }
-    
-    
+
+
     private static Dictionary<Signature, List<CfgInstruction>> GroupBySignatureWithOnlyFinal(
         IList<CfgInstruction> instructions) {
         IEnumerable<IGrouping<Signature, CfgInstruction>> grouped =
             instructions.GroupBy(i => i.SignatureFinal);
         return grouped.ToDictionary(
-            g => g.Key, 
+            g => g.Key,
             g => g.ToList()
         );
     }
@@ -87,8 +87,8 @@ public class SignatureReducer {
             }
         }
     }
-    
-    
+
+
     private bool IsFieldValueSame(FieldWithValue reference, IList<CfgInstruction> instructions, int fieldIndex) {
         foreach (CfgInstruction instruction in instructions) {
             FieldWithValue instructionField = instruction.FieldsInOrder[fieldIndex];

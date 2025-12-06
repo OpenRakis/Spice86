@@ -30,7 +30,7 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     public override UInt16Indexer UInt16 {
         get;
     }
-    
+
     /// <inheritdoc/>
     public override UInt16BigEndianIndexer UInt16BigEndian {
         get;
@@ -60,7 +60,7 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     public override SegmentedAddress16Indexer SegmentedAddress16 {
         get;
     }
-    
+
     /// <inheritdoc/>
     public override SegmentedAddress32Indexer SegmentedAddress32 {
         get;

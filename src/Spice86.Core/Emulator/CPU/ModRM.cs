@@ -33,7 +33,7 @@ public class ModRM {
     /// <param name="offset">The offset part of the segmented address.</param>
     /// <returns>The segment:offset computed into a linear address.</returns>
     public uint GetAddress(uint defaultSegmentRegisterIndex, ushort offset) {
-        uint segmentIndex = _state.SegmentOverrideIndex??defaultSegmentRegisterIndex;
+        uint segmentIndex = _state.SegmentOverrideIndex ?? defaultSegmentRegisterIndex;
 
         ushort segment = _state.SegmentRegisters.UInt16[segmentIndex];
         return MemoryUtils.ToPhysicalAddress(segment, offset);
@@ -52,12 +52,12 @@ public class ModRM {
     /// <summary>
     /// Gets or sets the value of the 32 bit register pointed at by the <see cref="RegisterIndex"/> property.
     /// </summary>
-    public uint R32 { get => _state.GeneralRegisters.UInt32[RegisterIndex]; set =>_state.GeneralRegisters.UInt32[RegisterIndex] = value; }
+    public uint R32 { get => _state.GeneralRegisters.UInt32[RegisterIndex]; set => _state.GeneralRegisters.UInt32[RegisterIndex] = value; }
 
     /// <summary>
     /// Gets or sets the value of the 16 bit register pointed at by the <see cref="RegisterIndex"/> property.
     /// </summary>
-    public ushort R16 { get => _state.GeneralRegisters.UInt16[RegisterIndex]; set =>_state.GeneralRegisters.UInt16[RegisterIndex] = value; }
+    public ushort R16 { get => _state.GeneralRegisters.UInt16[RegisterIndex]; set => _state.GeneralRegisters.UInt16[RegisterIndex] = value; }
 
     /// <summary>
     /// Gets or sets the value of the 8 bit register pointed at by the <see cref="RegisterIndex"/> property.

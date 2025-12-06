@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
+
 using System.Linq;
 
 /// <summary>
@@ -42,7 +43,7 @@ public class PreviousInstructions : InstructionReplacer {
         SegmentedAddress instructionAddress = newInstruction.Address;
 
         if (_previousInstructionsAtAddress.TryGetValue(instructionAddress,
-                out HashSet<CfgInstruction>? previousInstructionsAtAddress) 
+                out HashSet<CfgInstruction>? previousInstructionsAtAddress)
             && previousInstructionsAtAddress.Remove(oldInstruction)) {
             AddInstructionInPrevious(newInstruction);
         }

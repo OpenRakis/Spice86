@@ -19,37 +19,37 @@ public class BreakpointTestFixture : IDisposable {
     /// The CPU state for testing.
     /// </summary>
     public State State { get; }
-    
+
     /// <summary>
     /// The memory instance for testing.
     /// </summary>
     public Memory Memory { get; }
-    
+
     /// <summary>
     /// The breakpoints manager for testing.
     /// </summary>
     public EmulatorBreakpointsManager BreakpointsManager { get; }
-    
+
     /// <summary>
     /// The real pause handler (not mocked).
     /// </summary>
     public PauseHandler PauseHandler { get; }
-    
+
     /// <summary>
     /// The mocked logger service (only ILoggerService is mocked).
     /// </summary>
     public ILoggerService LoggerService { get; }
-    
+
     /// <summary>
     /// Memory breakpoints for read/write tracking.
     /// </summary>
     public AddressReadWriteBreakpoints MemoryBreakpoints { get; }
-    
+
     /// <summary>
     /// IO breakpoints for port tracking.
     /// </summary>
     public AddressReadWriteBreakpoints IoBreakpoints { get; }
-    
+
     /// <summary>
     /// Creates a new test fixture with all required components.
     /// Only ILoggerService is mocked; all other components are real implementations.
@@ -57,24 +57,24 @@ public class BreakpointTestFixture : IDisposable {
     public BreakpointTestFixture() {
         // Create State directly
         State = new State(CpuModel.INTEL_80286);
-        
+
         // Create Memory with required dependencies
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         MemoryBreakpoints = new AddressReadWriteBreakpoints();
         IoBreakpoints = new AddressReadWriteBreakpoints();
         A20Gate a20Gate = new(enabled: false);
         Memory = new Memory(MemoryBreakpoints, ram, a20Gate, initializeResetVector: true);
-        
+
         // Only ILoggerService is mocked
         LoggerService = Substitute.For<ILoggerService>();
-        
+
         // Use real PauseHandler
         PauseHandler = new PauseHandler(LoggerService);
-        
+
         // Create breakpoints manager with real components
         BreakpointsManager = new EmulatorBreakpointsManager(PauseHandler, State, Memory, MemoryBreakpoints, IoBreakpoints);
     }
-    
+
     /// <summary>
     /// Disposes of the fixture resources.
     /// </summary>
@@ -82,7 +82,7 @@ public class BreakpointTestFixture : IDisposable {
         PauseHandler.Dispose();
         GC.SuppressFinalize(this);
     }
-    
+
     /// <summary>
     /// Compiles a condition expression for use with breakpoints.
     /// </summary>
@@ -92,7 +92,7 @@ public class BreakpointTestFixture : IDisposable {
         BreakpointConditionCompiler compiler = new(State, Memory);
         return compiler.Compile(expression);
     }
-    
+
     /// <summary>
     /// Creates an address breakpoint with a condition.
     /// </summary>

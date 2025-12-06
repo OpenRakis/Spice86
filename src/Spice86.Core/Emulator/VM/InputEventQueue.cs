@@ -73,11 +73,13 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
 
     public double MouseX {
         get => _mouseEvents?.MouseX ?? 0;
-        set { if (_mouseEvents is not null) { _mouseEvents.MouseX = value; } } }
+        set { if (_mouseEvents is not null) { _mouseEvents.MouseX = value; } }
+    }
 
     public double MouseY {
         get => _mouseEvents?.MouseY ?? 0;
-        set { if (_mouseEvents is not null) { _mouseEvents.MouseY = value; } } }
+        set { if (_mouseEvents is not null) { _mouseEvents.MouseY = value; } }
+    }
 
     public void HideMouseCursor() => _mouseEvents?.HideMouseCursor();
 

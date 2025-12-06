@@ -15,7 +15,7 @@ public interface IInstructionExecutor {
     /// Signal that we are at the entry point of the program ready to start executing our very first instruction
     /// </summary>
     public void SignalEntry();
-    
+
     /// <summary>
     /// Signal that emulation just stopped, no more instruction will be executed
     /// </summary>

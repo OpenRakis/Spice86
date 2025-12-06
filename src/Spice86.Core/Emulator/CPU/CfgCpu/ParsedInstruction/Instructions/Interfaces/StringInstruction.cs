@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 
 public interface StringInstruction {
     public void ExecuteStringOperation(InstructionExecutionHelper helper);
-    
+
     /// <summary>
     /// Whether this String instruction can modify CPU flags or not
     /// </summary>

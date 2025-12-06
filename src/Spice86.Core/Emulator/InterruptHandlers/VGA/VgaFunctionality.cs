@@ -35,7 +35,7 @@ public class VgaFunctionality : IVgaFunctionality {
         _biosDataArea = biosDataArea;
         _vgaRom = vgaRom;
         _interruptVectorTable = interruptVectorTable;
-        if(bootUpInTextMode) {
+        if (bootUpInTextMode) {
             VgaSetMode(0x03, ModeFlags.Legacy);
         }
     }
@@ -521,7 +521,7 @@ public class VgaFunctionality : IVgaFunctionality {
         for (byte i = 0; i < 16; i++) {
             result[i] = ReadAttributeController(i);
         }
-        result[0]  = ReadAttributeController(0x11);
+        result[0] = ReadAttributeController(0x11);
 
         return result;
     }

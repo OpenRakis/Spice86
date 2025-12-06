@@ -64,7 +64,7 @@ public sealed class Machine : IDisposable {
     /// The emulated CPU state.
     /// </summary>
     public State CpuState { get; }
-    
+
     /// <summary>
     /// The in memory stack used by the CPU
     /// </summary>

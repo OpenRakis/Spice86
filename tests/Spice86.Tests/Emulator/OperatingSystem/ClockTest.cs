@@ -93,7 +93,7 @@ public class ClockTests {
 
         // Act
         _clock.SetTime(expectedHours, expectedMinutes, expectedSeconds, expectedHundredths);
-        var (hours, minutes, seconds, hundredths) = _clock.GetTime();
+        (byte hours, byte minutes, byte seconds, byte hundredths) = _clock.GetTime();
 
         // Assert
         hours.Should().Be(expectedHours);
@@ -111,7 +111,7 @@ public class ClockTests {
 
         // Act
         _clock.SetDate(expectedYear, expectedMonth, expectedDay);
-        var (year, month, day, dayOfWeek) = _clock.GetDate();
+        (ushort year, byte month, byte day, byte dayOfWeek) = _clock.GetDate();
 
         // Assert
         year.Should().Be(expectedYear);
@@ -126,7 +126,7 @@ public class ClockTests {
         DateTime now = DateTime.Now;
 
         // Act
-        var (hours, minutes, seconds, hundredths) = _clock.GetTime();
+        (byte hours, byte minutes, byte seconds, byte hundredths) = _clock.GetTime();
 
         // Assert
         hours.Should().Be((byte)now.Hour);
@@ -141,7 +141,7 @@ public class ClockTests {
         DateTime now = DateTime.Now;
 
         // Act
-        var (year, month, day, dayOfWeek) = _clock.GetDate();
+        (ushort year, byte month, byte day, byte dayOfWeek) = _clock.GetDate();
 
         // Assert
         year.Should().Be((ushort)now.Year);
@@ -265,7 +265,7 @@ public class ClockTests {
 
         // Act
         _clock.SetTime(18, 30, 45, 50);
-        var (hours, minutes, seconds, hundredths) = _clock.GetTime();
+        (byte hours, byte minutes, byte seconds, byte hundredths) = _clock.GetTime();
 
         // Assert
         hours.Should().Be(18);
@@ -281,7 +281,7 @@ public class ClockTests {
 
         // Act
         _clock.SetDate(2024, 12, 31);
-        var (year, month, day, _) = _clock.GetDate();
+        (ushort year, byte month, byte day, byte _) = _clock.GetDate();
 
         // Assert
         year.Should().Be(2024);

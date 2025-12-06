@@ -6,8 +6,7 @@ using System;
 using System.Runtime.InteropServices;
 
 [StructLayout(LayoutKind.Sequential)]
-internal readonly record struct PaStreamParameters
-{
+internal readonly record struct PaStreamParameters {
     public readonly int Device { get; init; }
     public readonly int ChannelCount { get; init; }
     public readonly PaSampleFormat SampleFormat { get; init; }

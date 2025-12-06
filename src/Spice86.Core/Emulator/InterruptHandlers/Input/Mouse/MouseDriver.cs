@@ -195,10 +195,10 @@ public class MouseDriver : IMouseDriver {
     public void SetCursorPosition(int x, int y) {
         int mouseAreaWidth = CurrentMaxX - CurrentMinX;
         int mouseAreaHeight = CurrentMaxY - CurrentMinY;
-        
+
         int clampedX = Math.Clamp(x, CurrentMinX, CurrentMaxX);
         int clampedY = Math.Clamp(y, CurrentMinY, CurrentMaxY);
-        
+
         if (mouseAreaWidth <= 0) {
             _mouseDevice.MouseXRelative = 0.0;
         } else {

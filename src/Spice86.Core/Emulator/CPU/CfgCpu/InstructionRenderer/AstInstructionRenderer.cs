@@ -86,25 +86,25 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         }
         return left + OperationToString(node.BinaryOperation) + right;
     }
-    
+
     private string RenderOperand(ValueNode operand, BinaryOperation parentOperation, bool isLeftOperand) {
         string rendered = operand.Accept(this);
-        
+
         // Check if we need to wrap in parentheses for precedence
         if (operand is BinaryOperationNode childBinaryOp) {
             int parentPrecedence = GetPrecedence(parentOperation);
             int childPrecedence = GetPrecedence(childBinaryOp.BinaryOperation);
-            
+
             // Wrap if child has lower precedence, or same precedence on right side (for left-associativity)
-            if (childPrecedence < parentPrecedence || 
+            if (childPrecedence < parentPrecedence ||
                 (!isLeftOperand && childPrecedence == parentPrecedence)) {
                 rendered = "(" + rendered + ")";
             }
         }
-        
+
         return rendered;
     }
-    
+
     private int GetPrecedence(BinaryOperation operation) {
         return operation switch {
             BinaryOperation.ASSIGN => 1,
@@ -129,7 +129,7 @@ public class AstInstructionRenderer : IAstVisitor<string> {
             _ => 0
         };
     }
-    
+
     public string VisitUnaryOperationNode(UnaryOperationNode node) {
         string value = node.Value.Accept(this);
         // Wrap binary operations in parentheses to preserve precedence
@@ -138,7 +138,7 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         }
         return OperationToString(node.UnaryOperation) + value;
     }
-    
+
     public string VisitTypeConversionNode(TypeConversionNode node) {
         string typeStr = node.DataType.BitWidth switch {
             BitWidth.BYTE_8 => node.DataType.Signed ? "(sbyte)" : "(byte)",
@@ -196,7 +196,7 @@ public class AstInstructionRenderer : IAstVisitor<string> {
             _ => throw new InvalidOperationException($"Unsupported AST operation {binaryOperation}")
         };
     }
-    
+
     private string OperationToString(UnaryOperation unaryOperation) {
         return unaryOperation switch {
             UnaryOperation.NOT => "!",

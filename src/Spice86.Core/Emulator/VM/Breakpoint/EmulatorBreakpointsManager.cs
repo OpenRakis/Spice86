@@ -241,7 +241,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         Action<BreakPoint> onReached, bool removeOnTrigger) {
         Func<long, bool>? condition = null;
         string? conditionExpression = serializableBreakpoint.ConditionExpression;
-        
+
         // Compile the condition expression if present
         if (!string.IsNullOrWhiteSpace(conditionExpression)) {
             try {
@@ -258,7 +258,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
                 conditionExpression = null;
             }
         }
-        
+
         return serializableBreakpoint.Type switch {
             BreakPointType.CPU_EXECUTION_ADDRESS or BreakPointType.CPU_INTERRUPT or BreakPointType.CPU_CYCLES or
             BreakPointType.MEMORY_ACCESS or BreakPointType.MEMORY_READ or BreakPointType.MEMORY_WRITE or

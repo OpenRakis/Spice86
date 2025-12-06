@@ -25,7 +25,7 @@ using Spice86.Views;
 /// </summary>
 public abstract class BreakpointUiTestBase : IDisposable {
     private readonly List<PauseHandler> _pauseHandlers = new();
-    
+
     /// <summary>
     /// Creates a mocked logger service. This is the only interface that should be mocked.
     /// </summary>
@@ -99,7 +99,7 @@ public abstract class BreakpointUiTestBase : IDisposable {
         PauseHandler pauseHandler = CreatePauseHandler(loggerService);
         UIDispatcher uiDispatcher = CreateUIDispatcher();
         IMessenger messenger = CreateMessenger();
-        
+
         // ITextClipboard is mocked because it requires platform-specific clipboard access
         ITextClipboard textClipboard = Substitute.For<ITextClipboard>();
 
@@ -165,7 +165,7 @@ public abstract class BreakpointUiTestBase : IDisposable {
 
         return (view, viewModel);
     }
-    
+
     /// <summary>
     /// Disposes of test resources.
     /// </summary>

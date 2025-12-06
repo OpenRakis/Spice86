@@ -173,7 +173,7 @@ public class ModRmParser {
             _ => throw new ArgumentOutOfRangeException(nameof(baseRegister), baseRegister, "Base register must be between 0 and 7 inclusive")
         };
     }
-    
+
     public ModRmContext EnsureNotMode3(ModRmContext context) {
         if (context.MemoryAddressType == MemoryAddressType.NONE) {
             throw new MemoryAddressMandatoryException(_state);

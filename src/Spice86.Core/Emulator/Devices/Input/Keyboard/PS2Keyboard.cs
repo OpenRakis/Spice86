@@ -192,7 +192,7 @@ public partial class PS2Keyboard {
         // For all the other keys, follow usual behavior
         TypematicUpdate(keyType, isPressed);
     }
-    
+
     private void MaybeNotifyLedState() {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("KEYBOARD: LED state: {LedState:X2}", LedState);

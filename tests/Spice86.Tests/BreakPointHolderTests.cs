@@ -88,7 +88,7 @@ public class BreakPointHolderTests {
     [Fact]
     public void HasActiveBreakpointsWithMultipleBreakpointsInMixedStates() {
         BreakPointHolder holder = new();
-        
+
         // Create multiple enabled breakpoints
         AddressBreakPoint enabledBreakpoint1 = new(
             BreakPointType.CPU_EXECUTION_ADDRESS,
@@ -100,13 +100,13 @@ public class BreakPointHolderTests {
             0x200,
             _ => { },
             false);
-        
+
         holder.ToggleBreakPoint(enabledBreakpoint1, true);
         holder.ToggleBreakPoint(enabledBreakpoint2, true);
-        
+
         // Both enabled - should return true
         Assert.True(holder.HasActiveBreakpoints);
-        
+
         // Create disabled breakpoints
         AddressBreakPoint disabledBreakpoint1 = new(
             BreakPointType.CPU_EXECUTION_ADDRESS,
@@ -122,23 +122,23 @@ public class BreakPointHolderTests {
             false) {
             IsEnabled = false
         };
-        
+
         holder.ToggleBreakPoint(disabledBreakpoint1, true);
         holder.ToggleBreakPoint(disabledBreakpoint2, true);
-        
+
         // Mix of enabled and disabled - should return true (counter reflects at least one enabled)
         Assert.True(holder.HasActiveBreakpoints);
-        
+
         // Disable all enabled breakpoints
         enabledBreakpoint1.IsEnabled = false;
         enabledBreakpoint2.IsEnabled = false;
-        
+
         // All disabled - should return false
         Assert.False(holder.HasActiveBreakpoints);
-        
+
         // Re-enable one
         enabledBreakpoint1.IsEnabled = true;
-        
+
         // At least one enabled - should return true
         Assert.True(holder.HasActiveBreakpoints);
     }

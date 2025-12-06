@@ -3,8 +3,8 @@ namespace Spice86.ViewModels;
 using Avalonia.Collections;
 using Avalonia.Controls;
 
-using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -108,17 +108,17 @@ public interface IDisassemblyViewModel : INotifyPropertyChanged, IDisassemblyCom
     /// This should be called when the view is hidden.
     /// </summary>
     void Deactivate();
-    
+
     /// <summary>
     /// Indicates whether the breakpoint creation dialog is visible.
     /// </summary>
     bool IsCreatingBreakpoint { get; set; }
-    
+
     /// <summary>
     /// The address for the breakpoint being created.
     /// </summary>
     string? BreakpointAddress { get; }
-    
+
     /// <summary>
     /// The condition expression for the breakpoint being created.
     /// </summary>

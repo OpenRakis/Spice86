@@ -44,7 +44,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     public bool RemoveIOPortHandler(int port) {
         return _ioPortHandlers.Remove(port);
     }
-    
+
     /// <inheritdoc/>
     public override byte ReadByte(ushort port) {
         UpdateLastPortRead(port);

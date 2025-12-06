@@ -50,7 +50,7 @@ public class MemoryWriter {
         _memory.UInt16[CurrentAddress.Segment, CurrentAddress.Offset] = w;
         CurrentAddress += 2;
     }
-    
+
     /// <summary>
     /// Writes the given signed word at CurrentAddress to emulated memory bus, increments CurrentAddress offset to next word.
     /// </summary>

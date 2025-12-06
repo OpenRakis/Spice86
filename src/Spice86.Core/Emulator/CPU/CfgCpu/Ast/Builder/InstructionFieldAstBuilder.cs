@@ -33,7 +33,7 @@ public class InstructionFieldAstBuilder(ConstantAstBuilder constant, PointerAstB
     public ValueNode? ToNode(InstructionField<int> field, bool nullIfZero = false) {
         return ToNode(ToType(field), (uint)field.Value, field.UseValue, field.PhysicalAddress, nullIfZero);
     }
-    
+
     public ValueNode? ToNode(DataType type, uint value, bool useValue, uint physicalAddress, bool nullIfZero) {
         if (useValue) {
             if (value == 0 && nullIfZero) {
@@ -51,23 +51,23 @@ public class InstructionFieldAstBuilder(ConstantAstBuilder constant, PointerAstB
 
         return Pointer.ToAbsolutePointer(DataType.UINT32, field.PhysicalAddress);
     }
-    
+
     public DataType ToType(InstructionField<byte> field) {
         return DataType.UINT8;
     }
-    
+
     public DataType ToType(InstructionField<ushort> field) {
         return DataType.UINT16;
     }
-    
+
     public DataType ToType(InstructionField<uint> field) {
         return DataType.UINT32;
     }
-    
+
     public DataType ToType(InstructionField<sbyte> field) {
         return DataType.INT8;
     }
-    
+
     public DataType ToType(InstructionField<short> field) {
         return DataType.INT16;
     }

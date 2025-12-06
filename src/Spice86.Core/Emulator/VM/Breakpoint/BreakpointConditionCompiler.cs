@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.Memory;
+
 using System.Linq.Expressions;
 
 /// <summary>
@@ -33,13 +34,13 @@ public class BreakpointConditionCompiler {
         // Parse the condition string into CfgCpu AST nodes
         AstExpressionParser parser = new();
         ValueNode astNode = parser.Parse(expression);
-        
+
         // Convert AST to Expression tree and compile to native code
         AstExpressionBuilder builder = new();
         Expression expressionTree = astNode.Accept(builder);
         Expression<Func<State, Memory, bool>> lambda = builder.ToFuncBool(expressionTree);
         Func<State, Memory, bool> compiledFunc = lambda.Compile();
-        
+
         // Return a wrapper that provides the current CPU state and memory
         return (address) => {
             // Note: The 'address' parameter is currently not used in the evaluation

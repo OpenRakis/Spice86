@@ -14,13 +14,13 @@ public static class CycleLimiterFactory {
         if (configuration.Cycles != null) {
             return new CpuCycleLimiter(configuration.Cycles.Value);
         }
-        
+
         if (configuration.InstructionsPerSecond != null) {
             // Convert instructions per second to cycles per millisecond with proper rounding
             int cyclesPerMs = (int)Math.Round(configuration.InstructionsPerSecond.Value / 1000.0);
             return new CpuCycleLimiter(cyclesPerMs);
         }
-        
+
         return new CpuCycleLimiter(ICyclesLimiter.RealModeCpuCyclesPerMs);
     }
 }

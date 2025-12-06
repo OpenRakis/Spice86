@@ -26,7 +26,7 @@ internal class ShowInternalDebuggerBehavior : Behavior<Control> {
         }
         AssociatedObject.PointerPressed -= OnPointerPressed;
     }
-    
+
     private object? _debugWindowDataContext;
 
     /// <summary>

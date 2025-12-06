@@ -12,8 +12,7 @@ internal static class PortAudioExtensions {
     }
 
     public static int PaGuard(this int code) {
-        if (!code.PaIsError())
-        {
+        if (!code.PaIsError()) {
             return code;
         }
 

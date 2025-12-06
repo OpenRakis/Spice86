@@ -2,8 +2,7 @@
 
 using System.Runtime.InteropServices;
 
-internal static class PlatformInfo
-{
+internal static class PlatformInfo {
     public static bool IsWindows => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
     public static bool IsLinux => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);

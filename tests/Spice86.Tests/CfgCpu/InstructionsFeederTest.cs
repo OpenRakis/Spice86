@@ -35,7 +35,7 @@ public class InstructionsFeederTest {
         _memory = new(memoryBreakpoints, new Ram(64), new A20Gate());
         _instructionReplacer = new();
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(new PauseHandler(loggerService), state, _memory, memoryBreakpoints, ioBreakpoints);
-        
+
         return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer);
     }
 

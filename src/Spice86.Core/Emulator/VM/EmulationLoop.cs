@@ -172,7 +172,7 @@ public class EmulationLoop : ICyclesLimiter {
             }
             _pauseHandler.WaitIfPaused();
             _dualPic.RunQueue();
-            if(_executionStateSlice.CyclesUntilReevaluation <= 0) {
+            if (_executionStateSlice.CyclesUntilReevaluation <= 0) {
                 break;
             }
             _cpu.ExecuteNext();

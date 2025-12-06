@@ -18,7 +18,7 @@ public record EnrichedInstruction(Instruction Instruction) {
     public FunctionInformation? Function { get; init; }
     public SegmentedAddress SegmentedAddress { get; init; }
     public ImmutableList<BreakpointViewModel> Breakpoints { get; init; } = [];
-    
+
     /// <summary>
     /// Gets or sets a custom formatted representation of the instruction.
     /// If null, the default formatting from Iced will be used.

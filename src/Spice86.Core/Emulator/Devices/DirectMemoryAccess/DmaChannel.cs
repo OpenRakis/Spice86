@@ -361,7 +361,7 @@ public sealed class DmaChannel {
                     } else {
                         PerformWrite(PageBase, CurrentAddress, want, writeBuffer, IsIncremented, bufferOffsetBytes);
                     }
-                    
+
                     done += want;
                     CurrentAddress = IsIncremented
                         ? unchecked(CurrentAddress + want)

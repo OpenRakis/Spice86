@@ -84,7 +84,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         // Create DumpContext with program hash and dump directory computation
         DumpFolderMetadata dumpContext = new(configuration.Exe, configuration.RecordedDataDirectory);
-        
+
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Dump context created with program hash {ProgramHash} and dump directory {DumpDirectory}",
                 dumpContext.ProgramHash, dumpContext.DumpDirectory);
@@ -152,7 +152,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Memory bus created...");
         }
 
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, 
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory,
             memoryReadWriteBreakpoints, ioReadWriteBreakpoints);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -353,14 +353,14 @@ public class Spice86DependencyInjection : IDisposable {
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Memory data exporter created...");
         }
-       
+
         EmulatorStateSerializer emulatorStateSerializer = new(dumpContext,
             memoryDataExporter, state, executionDumpFactory, functionCatalogue,
             emulatorBreakpointsManager, loggerService);
 
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
               emulatorStateSerializer.LoadBreakpoints(dumpContext.DumpDirectory);
-      
+
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
         ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(configuration);
@@ -409,7 +409,7 @@ public class Spice86DependencyInjection : IDisposable {
             _gui = headlessGui;
             inputEventHub = new InputEventHub(headlessGui, headlessGui);
         }
-        
+
         EmulationLoop emulationLoop = new(
             functionHandler, cpuForEmulationLoop,
             state, executionStateSlice, dualPic, emulatorBreakpointsManager,
@@ -560,7 +560,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             BreakpointsViewModel breakpointsViewModel = new(
                 state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);
-            
+
             breakpointsViewModel.RestoreBreakpoints(deserializedUserBreakpoints);
 
             DisassemblyViewModel disassemblyViewModel = new(
@@ -623,8 +623,7 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly byte[] _defaultIrqs = [3, 4, 5, 7, 10, 11];
 
     private void InstallDefaultInterruptHandlers(InterruptInstaller interruptInstaller, DualPic dualPic,
-        BiosDataArea biosDataArea, LoggerService loggerService)
-    {
+        BiosDataArea biosDataArea, LoggerService loggerService) {
         _loggerService.Information("Installing default interrupt handlers for IRQs {IRQs}...",
             string.Join(", ", _defaultIrqs));
         foreach (byte irq in _defaultIrqs) {

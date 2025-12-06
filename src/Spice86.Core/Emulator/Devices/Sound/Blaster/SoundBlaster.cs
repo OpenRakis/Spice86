@@ -316,38 +316,38 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
                         _blasterState = BlasterState.ResetRequest;
                         break;
                     case 0 when _blasterState == BlasterState.ResetRequest: {
-                        _blasterState = BlasterState.Resetting;
-                        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                            _loggerService.Verbose("SoundBlaster DSP was reset");
-                        }
+                            _blasterState = BlasterState.Resetting;
+                            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                                _loggerService.Verbose("SoundBlaster DSP was reset");
+                            }
 
-                        Reset();
-                        break;
-                    }
+                            Reset();
+                            break;
+                        }
                 }
 
                 break;
             case DspPorts.DspWriteData:
                 switch (_blasterState) {
                     case BlasterState.WaitingForCommand: {
-                        _currentCommand = value;
-                        _blasterState = BlasterState.ReadingCommand;
-                        _commandData.Clear();
-                        CommandLengths.TryGetValue(value, out _commandDataLength);
-                        if (_commandDataLength == 0 && !ProcessCommand()) {
-                            base.WriteByte(port, value);
-                        }
+                            _currentCommand = value;
+                            _blasterState = BlasterState.ReadingCommand;
+                            _commandData.Clear();
+                            CommandLengths.TryGetValue(value, out _commandDataLength);
+                            if (_commandDataLength == 0 && !ProcessCommand()) {
+                                base.WriteByte(port, value);
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case BlasterState.ReadingCommand: {
-                        _commandData.Add(value);
-                        if (_commandData.Count >= _commandDataLength && !ProcessCommand()) {
-                            base.WriteByte(port, value);
-                        }
+                            _commandData.Add(value);
+                            if (_commandData.Count >= _commandDataLength && !ProcessCommand()) {
+                                base.WriteByte(port, value);
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                 }
 
                 break;
@@ -1168,11 +1168,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
             case Commands.SingleCycleDmaOutput8_Alt:
             case Commands.SingleCycleDmaOutput8Fifo_Alt: {
-                bool stereo = (_commandData[0] & (1 << 5)) != 0;
-                BeginDmaPlayback(DmaPlaybackMode.Pcm8Bit, false, stereo, false);
-                startDmaScheduler = true;
-                break;
-            }
+                    bool stereo = (_commandData[0] & (1 << 5)) != 0;
+                    BeginDmaPlayback(DmaPlaybackMode.Pcm8Bit, false, stereo, false);
+                    startDmaScheduler = true;
+                    break;
+                }
 
             case Commands.SingleCycleDmaOutputADPCM4Ref:
                 BeginDmaPlayback(DmaPlaybackMode.Adpcm4Bit, false, false, false, CompressionLevel.ADPCM4, true);
@@ -1216,15 +1216,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
             case Commands.AutoInitDmaOutput8_Alt:
             case Commands.AutoInitDmaOutput8Fifo_Alt: {
-                if (!_blockTransferSizeSet) {
-                    _dsp.BlockTransferSize = (_commandData[1] | (_commandData[2] << 8)) + 1;
-                }
+                    if (!_blockTransferSizeSet) {
+                        _dsp.BlockTransferSize = (_commandData[1] | (_commandData[2] << 8)) + 1;
+                    }
 
-                bool stereo = (_commandData[0] & (1 << 5)) != 0;
-                BeginDmaPlayback(DmaPlaybackMode.Pcm8Bit, false, stereo, true);
-                startDmaScheduler = true;
-                break;
-            }
+                    bool stereo = (_commandData[0] & (1 << 5)) != 0;
+                    BeginDmaPlayback(DmaPlaybackMode.Pcm8Bit, false, stereo, true);
+                    startDmaScheduler = true;
+                    break;
+                }
 
             case Commands.ExitAutoInit8:
                 _dmaState.AutoInit = false;
@@ -1233,19 +1233,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
             case Commands.SingleCycleDmaOutput16:
             case Commands.SingleCycleDmaOutput16Fifo: {
-                bool stereo = (_commandData[0] & (1 << 5)) != 0;
-                BeginDmaPlayback(DmaPlaybackMode.Pcm16Bit, true, stereo, false);
-                startDmaScheduler = true;
-                break;
-            }
+                    bool stereo = (_commandData[0] & (1 << 5)) != 0;
+                    BeginDmaPlayback(DmaPlaybackMode.Pcm16Bit, true, stereo, false);
+                    startDmaScheduler = true;
+                    break;
+                }
 
             case Commands.AutoInitDmaOutput16:
             case Commands.AutoInitDmaOutput16Fifo: {
-                bool stereo = (_commandData[0] & (1 << 5)) != 0;
-                BeginDmaPlayback(DmaPlaybackMode.Pcm16Bit, true, stereo, true);
-                startDmaScheduler = true;
-                break;
-            }
+                    bool stereo = (_commandData[0] & (1 << 5)) != 0;
+                    BeginDmaPlayback(DmaPlaybackMode.Pcm16Bit, true, stereo, true);
+                    startDmaScheduler = true;
+                    break;
+                }
 
             case Commands.TurnOnSpeaker:
                 SetSpeakerEnabled(true);

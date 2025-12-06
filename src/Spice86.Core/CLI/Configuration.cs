@@ -16,7 +16,7 @@ public sealed class Configuration {
     /// </summary>
     [Option(nameof(Cycles), Default = null, Required = false, HelpText = "Precise control of the number of emulated CPU cycles per ms. For the rare speed-sensitive game. Default is undefined. Overrides instructions per second option if used.")]
     public int? Cycles { get; init; }
-    
+
     /// <summary>
     /// Cpu Model to emulate
     /// </summary>
@@ -28,7 +28,7 @@ public sealed class Configuration {
     /// </summary>
     [Option(nameof(A20Gate), Default = false, Required = false, HelpText = "Whether the 20th address line is silenced. Used for legacy 8086 programs.")]
     public bool A20Gate { get; init; }
-    
+
     /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>
@@ -170,7 +170,7 @@ public sealed class Configuration {
     /// </summary>
     [Option(nameof(StructureFile), Default = null, Required = false, HelpText = "Specify a C header file to be used for structure information")]
     public string? StructureFile { get; init; }
-    
+
     /// <summary>
     /// Determines whether to use experimental CFG CPU or regular interpreter.
     /// </summary>

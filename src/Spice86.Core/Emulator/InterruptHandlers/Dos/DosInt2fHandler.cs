@@ -98,7 +98,7 @@ public class DosInt2fHandler : InterruptHandler {
                 break;
             //Get XMS Control Function Address
             case (byte)XmsInt2FFunctionsCodes.GetCallbackAddress:
-                SegmentedAddress segmentedAddress = _xms?.CallbackAddress ?? new(0,0);
+                SegmentedAddress segmentedAddress = _xms?.CallbackAddress ?? new(0, 0);
                 State.ES = segmentedAddress.Segment;
                 State.BX = segmentedAddress.Offset;
                 break;
@@ -112,7 +112,7 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     public void HighMemoryAreaServices() {
-        switch(State.AL) {
+        switch (State.AL) {
             case 0x1 or 0x2: // Query Free HMA Space or Allocate HMA Space
                 State.BX = 0; // Number of bytes available / Amount allocated
                 State.ES = A20Gate.SegmentStartOfHighMemoryArea;
@@ -137,7 +137,7 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     public void WindowsVirtualMachineServices() {
-        switch(State.AL) {
+        switch (State.AL) {
             case 0x80: //MS Windows v3.0 - INSTALLATION CHECK {undocumented} (AX: 4680h)
                 State.AX = 1; //We are not Windows, but plain ol' MS-DOS.
                 break;

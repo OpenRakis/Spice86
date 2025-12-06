@@ -4,7 +4,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 /// Constants for some Expanded Memory Manager (EMM) subFunction IDs as per LIM 3.2 specifications.
 /// </summary>
 public static class EmmSubFunctionsCodes {
-    
+
     /// <summary>
     /// SubFunction ID for using physical page numbers. In LIM 3.2, this is used to map physical pages into a logical page frame.
     /// </summary>

@@ -9,7 +9,7 @@ public partial class PS2Keyboard {
         /// Indicates whether typematic behavior is enabled.
         /// </summary>
         public bool IsEnabledTypematic = true;
-        
+
         /// <summary>
         /// Indicates whether the make operation is enabled.
         /// </summary>

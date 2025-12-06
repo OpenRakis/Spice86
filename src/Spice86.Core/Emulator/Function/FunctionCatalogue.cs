@@ -28,5 +28,5 @@ public class FunctionCatalogue {
         }
         return FunctionInformations.TryGetValue(functionCall.Value.EntryPointAddress, out FunctionInformation? value) ? value : null;
     }
-    
+
 }
