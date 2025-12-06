@@ -76,7 +76,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     /// Allocation starts here and extends for <see cref="Size"/> paragraphs.
     /// You can also use <see cref="AllocationSizeInBytes"/> to retrieve the size of this block in bytes.
     /// </remarks>
-    public ushort DataBlockSegment => (ushort)(MemoryUtils.ToSegment(BaseAddress) + 1);
+    public ushort PspLoadSegment => (ushort)(MemoryUtils.ToSegment(BaseAddress) + 1);
 
     /// <summary>
     /// Gets a value indicating whether the MCB is free.
@@ -150,7 +150,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
             .Append(" IsLast: ").Append(IsLast)
             .Append(" IsNonLast: ").Append(IsNonLast)
             .Append(" BaseAddress: ").Append(ConvertUtils.ToHex32(BaseAddress))
-            .Append(" UsableSpaceSegment: ").Append(ConvertUtils.ToHex16(DataBlockSegment))
+            .Append(" UsableSpaceSegment: ").Append(ConvertUtils.ToHex16(PspLoadSegment))
             .Append(" TypeField: ").Append(TypeField)
             .Append(" PspSegment: ").Append(ConvertUtils.ToHex16(PspSegment))
             .Append(" Size: ").Append(Size)

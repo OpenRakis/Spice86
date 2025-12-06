@@ -148,18 +148,18 @@ public class DosProcessManager : DosFileLoader {
         // The program image is loaded immediately above the PSP, which is the start of
         // the memory block that we just allocated.
         // Seek 16 paragraphs into the allocated block to get EXE image segment.
-        ushort programEntryPoint = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
+        ushort imageLoadSegment = (ushort)(block.PspLoadSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
 
-        programEntryPoint = ComputeEntryPoint(exeFile, block, programEntryPoint);
+        imageLoadSegment = ComputeEntryPoint(exeFile, block, imageLoadSegment);
 
-        LoadExeFileInMemoryAndApplyRelocations(exeFile, programEntryPoint);
-        SetupCpuForExe(exeFile, programEntryPoint, pspSegment);
+        LoadExeFileInMemoryAndApplyRelocations(exeFile, imageLoadSegment);
+        SetupCpuForExe(exeFile, imageLoadSegment, pspSegment);
     }
 
     private static ushort ComputeEntryPoint(DosExeFile exeFile, DosMemoryControlBlock block, ushort programEntryPointSegment) {
         if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
             ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
-            programEntryPointSegment = (ushort)(block.DataBlockSegment + programEntryPointOffset);
+            programEntryPointSegment = (ushort)(block.PspLoadSegment + programEntryPointOffset);
         }
 
         return programEntryPointSegment;

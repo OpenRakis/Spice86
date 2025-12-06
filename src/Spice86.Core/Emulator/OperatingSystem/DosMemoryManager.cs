@@ -256,7 +256,7 @@ public class DosMemoryManager {
             // always precedes the program image, set the PSP segment to the beginning of the block.
             // The current PSP segment in the PSP tracker that we normally use may be for the
             // program loading this one.
-            block.PspSegment = block.DataBlockSegment;
+            block.PspSegment = block.PspLoadSegment;
 
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose(
@@ -264,7 +264,7 @@ public class DosMemoryManager {
                     block.Size == size.MinSizeInParagraphs ? "required" : "requested",
                     block.Size,
                     block.AllocationSizeInBytes,
-                    ConvertUtils.ToHex16(block.DataBlockSegment));
+                    ConvertUtils.ToHex16(block.PspLoadSegment));
             }
         } else if (_loggerService.IsEnabled(LogEventLevel.Error)) {
             _loggerService.Error(

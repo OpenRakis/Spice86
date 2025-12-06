@@ -357,7 +357,7 @@ public class DosInt21Handler : InterruptHandler {
             State.BX = largest.Size;
             return;
         }
-        State.AX = res.DataBlockSegment;
+        State.AX = res.PspLoadSegment;
     }
 
     /// <summary>
