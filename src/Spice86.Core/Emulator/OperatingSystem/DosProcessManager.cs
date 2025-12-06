@@ -150,8 +150,11 @@ public class DosProcessManager : DosFileLoader {
         // Jump over the PSP to get the EXE image segment.
         ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
 
-        // Adjust image load segment
+        // Dead code, should never occur, this scenario is very uncommon
         if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("EXE file has both MinAlloc and MaxAlloc at 0!");
+            }
             ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
             ushort pspLoadSegment = block.DataBlockSegment;
             loadImageSegment = (ushort)(pspLoadSegment + programEntryPointOffset);
