@@ -14,54 +14,15 @@ using System.Diagnostics;
 /// <summary>
 /// Emulates the MC146818 Real Time Clock (RTC) and CMOS RAM.
 /// <para>
-/// The MC146818 chip provides:
-/// - Real-time clock with date/time in BCD or binary format
-/// - 64 bytes of battery-backed CMOS RAM (registers 0x00-0x3F)
-/// - Periodic interrupt capability (IRQ 8)
-/// - Alarm functionality
-/// - Update-in-progress flag for time reads
+/// Provides real-time clock with date/time in BCD or binary format, 64 bytes of battery-backed CMOS RAM,
+/// periodic interrupt capability (IRQ 8), and alarm functionality.
 /// </para>
 /// <para>
-/// I/O Ports:
-/// - 0x70: Index/address register (write-only, bit 7 = NMI disable)
-/// - 0x71: Data register (read/write based on selected index)
+/// I/O Ports: 0x70 (address register), 0x71 (data register).
+/// Key registers: 0x00-0x09 (time/date), 0x0A-0x0D (status), 0x0F (shutdown), 0x10+ (CMOS config).
 /// </para>
 /// <para>
-/// Key Registers:
-/// - 0x00-0x09: Time/date registers (seconds, minutes, hours, day, month, year)
-/// - 0x0A: Status Register A (UIP bit, periodic rate selection)
-/// - 0x0B: Status Register B (format control, interrupt enables)
-/// - 0x0C: Status Register C (interrupt flags, read clears)
-/// - 0x0D: Status Register D (valid RAM and battery status)
-/// - 0x0F: Shutdown status byte
-/// - 0x10+: CMOS configuration data (floppy types, HD info, memory size)
-/// </para>
-/// <para>
-/// This implementation processes periodic events lazily on port access.
-/// Paused time (via IPauseHandler) does not advance RTC timing.
-/// </para>
-/// <para>
-/// Reference: DOSBox Staging CMOS implementation, MC146818 datasheet
-/// </para>
-/// <para>
-/// <b>Known deviations and simplifications:</b>
-/// <list type="bullet">
-/// <item>
-/// <description>
-/// <b>UIP (Update In Progress) timing:</b> The UIP flag is set/cleared based on elapsed real time, but timing is approximate and not cycle-accurate as on real hardware.
-/// </description>
-/// </item>
-/// <item>
-/// <description>
-/// <b>Alarm functionality:</b> Alarm registers are stored but alarm interrupts are not implemented; alarm events are not generated.
-/// </description>
-/// </item>
-/// <item>
-/// <description>
-/// <b>CMOS configuration registers:</b> Only a subset of configuration registers are implemented; many are stubbed or return default values as in DOSBox Staging. Unimplemented registers may return 0 or fixed values.
-/// </description>
-/// </item>
-/// </list>
+/// Limitations: UIP timing is approximate, alarm interrupts not implemented, partial CMOS config support.
 /// </para>
 /// </summary>
 public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
@@ -83,12 +44,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Initializes the RTC/CMOS device with default register values.
     /// </summary>
-    /// <param name="state">CPU state for I/O operations</param>
-    /// <param name="ioPortDispatcher">I/O port dispatcher for registering handlers</param>
-    /// <param name="dualPic">PIC for triggering IRQ 8 (periodic timer interrupt)</param>
-    /// <param name="pauseHandler">Handler for emulator pause/resume events</param>
-    /// <param name="failOnUnhandledPort">Whether to fail on unhandled I/O port access</param>
-    /// <param name="loggerService">Logger service for diagnostics</param>
     public RealTimeClock(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
         IPauseHandler pauseHandler, bool failOnUnhandledPort, ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
@@ -100,19 +55,12 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;
 
-        // Initialize RTC control registers with defaults matching DOSBox/real hardware
-        _cmosRegisters[CmosRegisterAddresses.StatusRegisterA] = 0x26;  // Default rate (1024 Hz) + 22-stage divider
-        _cmosRegisters[CmosRegisterAddresses.StatusRegisterB] = 0x02;  // 24-hour mode, no interrupts
-        _cmosRegisters[CmosRegisterAddresses.StatusRegisterD] = 0x80;  // Valid RAM + battery good
-
-        // Initialize BCD mode based on Status Register B (bit 2: 0=BCD, 1=binary)
-        // Default 0x02 has bit 2 clear, so BCD mode is enabled
+        _cmosRegisters[CmosRegisterAddresses.StatusRegisterA] = 0x26;
+        _cmosRegisters[CmosRegisterAddresses.StatusRegisterB] = 0x02;
+        _cmosRegisters[CmosRegisterAddresses.StatusRegisterD] = 0x80;
         _cmosRegisters.IsBcdMode = (_cmosRegisters[CmosRegisterAddresses.StatusRegisterB] & 0x04) == 0;
-
-        // Initialize CMOS RAM with base memory size.
-        // Base memory in KB: 640 (0x0280), stored as little-endian low/high bytes (0x80 at 0x15, 0x02 at 0x16)
-        _cmosRegisters[0x15] = 0x80;  // Low byte of 0x0280 (base memory in KB)
-        _cmosRegisters[0x16] = 0x02;  // High byte of 0x0280 (base memory in KB)
+        _cmosRegisters[0x15] = 0x80;
+        _cmosRegisters[0x16] = 0x02;
 
         ioPortDispatcher.AddIOPortHandler(CmosPorts.Address, this);
         ioPortDispatcher.AddIOPortHandler(CmosPorts.Data, this);
@@ -198,10 +146,9 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
                 }
                 return;
 
-            case CmosRegisterAddresses.StatusRegisterA:  // 0x0A - Status Register A (rate/divider control)
+            case CmosRegisterAddresses.StatusRegisterA:
                 _cmosRegisters[reg] = (byte)(value & 0x7F);
                 byte newDiv = (byte)(value & 0x0F);
-                // DOSBox compatibility: adjust divider values 0-2
                 if (newDiv <= 2) {
                     newDiv += 7;
                 }

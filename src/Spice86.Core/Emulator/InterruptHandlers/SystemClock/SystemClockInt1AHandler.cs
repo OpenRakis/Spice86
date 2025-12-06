@@ -11,8 +11,8 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Implementation of INT1A - BIOS Time Services.
-/// Provides access to system clock counter and RTC (Real-Time Clock) functions.
+/// INT 1Ah - BIOS Time Services.
+/// System clock counter and RTC date/time functions.
 /// </summary>
 public class SystemClockInt1AHandler : InterruptHandler {
     private readonly BiosDataArea _biosDataArea;
@@ -21,13 +21,6 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="biosDataArea">The BIOS structure where system info is stored in memory.</param>
-    /// <param name="realTimeClock">The RTC/CMOS device for reading and setting date/time.</param>
-    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
-    /// <param name="stack">The CPU stack.</param>
-    /// <param name="state">The CPU state.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
     public SystemClockInt1AHandler(IMemory memory, BiosDataArea biosDataArea,
         RealTimeClock realTimeClock, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state, ILoggerService loggerService)

@@ -82,46 +82,17 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// INT 15h, AH=83h - SYSTEM - WAIT (WAIT FUNCTION) - **PARTIALLY IMPLEMENTED / STUB**
-    /// <para>
-    /// <b>WARNING:</b> This is a <b>partial/stub implementation</b>. The wait completion mechanism is <b>not implemented</b>.
-    /// Programs calling this function will NOT have their waits automatically completed, which may cause programs to hang
-    /// unless they cancel the wait with AL=01h.
-    /// </para>
-    /// <para>
-    /// This function allows programs to request a timed delay with optional user callback.
-    /// The function uses the RTC periodic interrupt to implement the delay.
-    /// </para><br/>
-    /// <b>Inputs:</b><br/>
-    /// AH = 83h<br/>
-    /// AL = 00h to set alarm, 01h to cancel alarm<br/>
-    /// CX:DX = microseconds to wait<br/>
-    /// ES:BX = address of user interrupt routine (0000:0000 means no callback)<br/>
-    /// <b>Outputs:</b><br/>
-    /// CF clear if successful<br/>
-    /// CF set on error<br/>
-    /// AH = status (80h if event already in progress)<br/>
-    /// <para>
-    /// <b>Implementation Note:</b> This implementation stores the callback pointer and timeout values in the BIOS data area
-    /// and enables/disables the RTC periodic interrupt (bit 6 of Status Register B). However, it does <b>not</b> currently
-    /// implement the IRQ 8 (INT 70h) handler that would periodically decrement the timeout, set bit 7 of RtcWaitFlag upon
-    /// completion, disable the periodic interrupt, and invoke the callback at UserWaitCompleteFlag (if non-zero).
-    /// The actual wait completion mechanism is not yet implemented and programs relying on this function for timing
-    /// may experience issues until an IRQ 8 handler is added to complete the wait operation.
-    /// </para>
+    /// INT 15h, AH=83h - Event Wait Interval.
+    /// Sets up RTC periodic interrupt for timed delay with optional callback.
+    /// AL=00h to set, AL=01h to cancel. Returns CF=1 + AH=80h if event already in progress.
     /// </summary>
-    /// <param name="calledFromVm">Whether this function is called directly from the VM.</param>
     public void WaitFunction(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 15h, AH=83h - WAIT FUNCTION, AL={AL:X2}", State.AL);
         }
 
-        // AL = 01h: Cancel the wait
         if (State.AL == 0x01) {
-            // Clear the wait flag
             _biosDataArea.RtcWaitFlag = 0;
-
-            // Disable RTC periodic interrupt (clear bit 6 of Status Register B)
             ModifyCmosRegister(Devices.Cmos.CmosRegisterAddresses.StatusRegisterB, value => (byte)(value & ~0x40));
 
             SetCarryFlag(false, calledFromVm);
@@ -132,9 +103,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
 
-        // Check if a wait is already in progress
         if (_biosDataArea.RtcWaitFlag != 0) {
-            State.AH = 0x80;  // Event already in progress
+            State.AH = 0x80;
             SetCarryFlag(true, calledFromVm);
 
             if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
@@ -143,19 +113,10 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
 
-        // AL = 00h: Set up the wait
         uint count = ((uint)State.CX << 16) | State.DX;
-
-        // Store the callback pointer (ES:BX)
         _biosDataArea.UserWaitCompleteFlag = new SegmentedAddress(State.ES, State.BX);
-
-        // Store the wait count (microseconds)
         _biosDataArea.UserWaitTimeout = count;
-
-        // Mark the wait as active
         _biosDataArea.RtcWaitFlag = 1;
-
-        // Enable RTC periodic interrupt (set bit 6 of Status Register B)
         ModifyCmosRegister(Devices.Cmos.CmosRegisterAddresses.StatusRegisterB, value => (byte)(value | 0x40));
 
         SetCarryFlag(false, calledFromVm);
@@ -208,17 +169,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Reports  number of contiguous KB starting at absolute address 0x100000 <br/>
-    /// CF is cleared if successful, set otherwise. <br/> <br/>
-    /// Error is 0x80 (invalid command) for the IBM PC, Tandy, and PC Junior platforms. <br/>
-    /// Error is 0x86 (function not supported) for the IBM PC XT, and IBM PS/2.
+    /// INT 15h, AH=88h - Get Extended Memory Size.
+    /// Returns contiguous KB starting at 0x100000. Standard BIOS returns memory between 1MB and 16MB.
     /// </summary>
-    /// <remarks>
-    /// TSRs which wish to allocate extended memory to themselves often hook
-    /// this call, and return a reduced memory size.
-    /// They are then free to use the memory between the new and old sizes at will. <br/><br/>
-    /// The standard BIOS only returns memory between 1MB and 16MB; use AH=0xC7 for memory beyond 16MB.
-    /// </remarks>
     public void GetExtendedMemorySize(bool calledFromVm) {
         if (_a20Gate.IsEnabled || _configuration.Xms is true) {
             State.AX = 0; //Either the HMA is not accessible, or the DOS driver protects it.
@@ -229,22 +182,10 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// INT 15h, AH=87h - SYSTEM - COPY EXTENDED MEMORY
-    /// <para>
-    /// Copies data in extended memory using a global descriptor table.
-    /// This is a reimplementation of the SeaBIOS handle_1587 function.
-    /// </para><br/>
-    /// <b>Inputs:</b><br/>
-    /// AH = 87h<br/>
-    /// CX = number of words to copy (maximum 8000h)<br/>
-    /// ES:SI = pointer to global descriptor table (see RBIL #00499)<br/>
-    /// <b>Outputs:</b><br/>
-    /// CF set on error<br/>
-    /// CF clear if successful<br/>
-    /// AH = status (see RBIL #00498)<br/>
+    /// INT 15h, AH=87h - Copy Extended Memory.
+    /// Copies data using global descriptor table. CX=words to copy (max 8000h), ES:SI=GDT pointer.
     /// </summary>
     public void CopyExtendedMemory(bool calledFromVm) {
-        // Save current A20 state and enable it for extended memory access
         bool prevA20Enable = _a20Gate.IsEnabled;
         _a20Gate.IsEnabled = true;
 
@@ -273,7 +214,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
         uint sourceAddress = gdt.LinearSourceAddress;
         uint destinationAddress = gdt.LinearDestAddress;
 
-        // Validate addresses for overflow
         if (sourceAddress + byteCount < sourceAddress) {
             SetCarryFlag(true, calledFromVm);
             State.AH = (byte)ExtendedMemoryCopyStatus.InvalidSource;
@@ -288,7 +228,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
 
-        // Validate memory bounds - ensure we don't exceed available memory
         uint maxMemoryAddress = (uint)Memory.Length;
         if (sourceAddress + byteCount > maxMemoryAddress) {
             SetCarryFlag(true, calledFromVm);
@@ -304,7 +243,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
 
-        // Check for problematic overlap where source == destination would be a no-op anyway
         if (sourceAddress == destinationAddress) {
             SetCarryFlag(false, calledFromVm);
             State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
@@ -312,13 +250,11 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
 
-        // Perform the memory copy using spans (following XMS pattern)
         IList<byte> sourceSpan = Memory.GetSlice((int)sourceAddress, (int)byteCount);
         IList<byte> destinationSpan = Memory.GetSlice((int)destinationAddress, (int)byteCount);
 
         sourceSpan.CopyTo(destinationSpan);
 
-        // Restore A20 state
         _a20Gate.IsEnabled = prevA20Enable;
         SetCarryFlag(false, calledFromVm);
         State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
@@ -333,13 +269,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         State.AH = 0x86;
     }
 
-    /// <summary>
-    /// Modifies a CMOS register by reading its current value, applying a transformation function,
-    /// and writing the result back. This encapsulates the read-modify-write pattern required
-    /// for the MC146818 chip (write address, read data, write address again, write data).
-    /// </summary>
-    /// <param name="register">The CMOS register address to modify.</param>
-    /// <param name="modifier">A function that takes the current register value and returns the new value.</param>
+
     private void ModifyCmosRegister(byte register, Func<byte, byte> modifier) {
         _ioPortDispatcher.WriteByte(Devices.Cmos.CmosPorts.Address, register);
         byte currentValue = _ioPortDispatcher.ReadByte(Devices.Cmos.CmosPorts.Data);
@@ -349,24 +279,12 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// INT 15h, AH=86h - BIOS - WAIT (AT, PS)
-    /// <para>
-    /// Waits for CX:DX microseconds using the RTC timer.
-    /// This is implemented following the SeaBIOS handle_1586 function pattern,
-    /// which uses a user timer to wait without blocking the emulation loop.
-    /// </para><br/>
-    /// <b>Inputs:</b><br/>
-    /// AH = 86h<br/>
-    /// CX:DX = interval in microseconds<br/>
-    /// <b>Outputs:</b><br/>
-    /// CF set on error<br/>
-    /// CF clear if successful<br/>
-    /// AH = status (00h on success, 83h if timer already in use, 86h if function not supported)<br/>
+    /// INT 15h, AH=86h - BIOS Wait.
+    /// Waits for CX:DX microseconds. Returns CF=1 + AH=83h if timer already in use.
     /// </summary>
     public void BiosWait(bool calledFromVm) {
-        // Check if wait is already active
         if (_biosDataArea.RtcWaitFlag != 0) {
-            State.AH = 0x83; // Timer already in use
+            State.AH = 0x83;
             SetCarryFlag(true, calledFromVm);
             return;
         }
@@ -377,27 +295,14 @@ public class SystemBiosInt15Handler : InterruptHandler {
             LoggerService.Verbose("BIOS WAIT requested for {Microseconds} microseconds", microseconds);
         }
 
-        // Convert microseconds to milliseconds for the PIC event system
-        // Add 1ms to ensure we wait at least the requested time
         double delayMs = (microseconds / 1000.0) + 1.0;
-
-        // Set the wait flag to indicate a wait is in progress
         _biosDataArea.RtcWaitFlag = 1;
-
-        // Store the target microsecond count
         _biosDataArea.UserWaitTimeout = microseconds;
-
-        // Schedule a PIC event to clear the wait flag after the delay
         _dualPic.AddEvent(OnWaitComplete, delayMs);
-
-        // Success
         SetCarryFlag(false, calledFromVm);
     }
 
-    /// <summary>
-    /// Callback invoked when the BIOS wait timer expires.
-    /// Clears the RtcWaitFlag to signal completion.
-    /// </summary>
+
     private void OnWaitComplete(uint value) {
         _biosDataArea.RtcWaitFlag = 0;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -406,39 +311,29 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// INT 15h, AH=4Fh - Keyboard intercept function
-    /// Called by the INT 9 handler to allow translation or filtering of keyboard scan codes.
+    /// INT 15h, AH=4Fh - Keyboard Intercept.
+    /// Allows translation or filtering of keyboard scan codes. Returns CF=1 to process, CF=0 to ignore.
     /// </summary>
-    /// <remarks>
-    /// Input: AL = scan code
-    /// Output: CF clear if scan code should be ignored
-    ///         CF set if scan code should be processed
-    ///         AL = possibly modified scan code
-    /// </remarks>
     public void KeyboardIntercept(bool calledFromVm) {
         byte scanCode = State.AL;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 15h AH=4Fh: Keyboard intercept called with scan code {ScanCode:X2}", scanCode);
         }
 
-        // By default, we want to process the scan code (so set carry flag)
-        // A real keyboard hook could modify AL or clear CF here to alter behavior
         SetCarryFlag(true, calledFromVm);
     }
 
     /// <summary>
-    /// INT 15h, AH=90h - OS HOOK - DEVICE BUSY. Clears CF and sets AH=0.
+    /// INT 15h, AH=90h - Device Busy.
     /// </summary>
-    /// <param name="calledFromVm">Whether this function is called directly from the VM.</param>
     public void DeviceBusy(bool calledFromVm) {
         SetCarryFlag(false, calledFromVm);
         State.AH = 0;
     }
 
     /// <summary>
-    /// INT 15h, AH=91h - OS HOOK - DEVICE POST. Clears CF and sets AH=0.
+    /// INT 15h, AH=91h - Device Post.
     /// </summary>
-    /// <param name="calledFromVm">Whether this function is called directly from the VM.</param>
     public void DevicePost(bool calledFromVm) {
         SetCarryFlag(false, calledFromVm);
         State.AH = 0;
