@@ -9,15 +9,15 @@ using System.Threading;
 
 /// <summary>
 /// Stdio transport for MCP server using synchronous I/O.
+/// Runs on background thread for independent operation.
 /// </summary>
-public sealed class McpStdioTransport : IDisposable {
+public sealed class McpStdioTransport {
     private readonly IMcpServer _mcpServer;
     private readonly ILoggerService _loggerService;
     private readonly TextReader _inputReader;
     private readonly TextWriter _outputWriter;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private Thread? _readerThread;
-    private bool _disposed;
 
     public McpStdioTransport(IMcpServer mcpServer, ILoggerService loggerService)
         : this(mcpServer, loggerService, Console.In, Console.Out) {
@@ -37,7 +37,7 @@ public sealed class McpStdioTransport : IDisposable {
         }
 
         _loggerService.Information("MCP server starting with stdio transport");
-        _readerThread = new Thread(Run) { IsBackground = true };
+        _readerThread = new Thread(Run) { IsBackground = true, Name = "MCP-Server" };
         _readerThread.Start();
     }
 
@@ -122,15 +122,5 @@ public sealed class McpStdioTransport : IDisposable {
           "id": null
         }
         """;
-    }
-
-    public void Dispose() {
-        if (_disposed) {
-            return;
-        }
-
-        Stop();
-        _cancellationTokenSource.Dispose();
-        _disposed = true;
     }
 }

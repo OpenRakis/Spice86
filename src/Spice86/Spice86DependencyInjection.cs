@@ -721,7 +721,7 @@ public class Spice86DependencyInjection : IDisposable {
             if (disposing) {
                 ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
 
-                _mcpStdioTransport?.Dispose();
+                _mcpStdioTransport?.Stop();
 
                 ProgramExecutor.Dispose();
 
