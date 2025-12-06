@@ -262,8 +262,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 try {
                     Bitmap?.Dispose();
                     // Adjust DPI based on pixel aspect ratio to correct for non-square pixels
-                    // For 320x200 modes with 5:6 pixel aspect (width:height), pixels are taller than wide
-                    // To display correctly, horizontal DPI must be higher: 96 / (5/6) = 115.2
+                    // For 320x200 modes with 5:6 pixel aspect (width:height), each pixel's width is 5/6 of its height
+                    // To display correctly, increase horizontal DPI to make pixels appear narrower: 96 / (5/6) = 115.2
                     double horizontalDpi = 96.0 / pixelAspectRatio;
                     double verticalDpi = 96.0;
                     Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(horizontalDpi, verticalDpi), PixelFormat.Bgra8888, AlphaFormat.Opaque);
