@@ -128,10 +128,10 @@ public class DosProcessManager : DosFileLoader {
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(pspSegment, ComOffset);
         _memory.LoadData(physicalStartAddress, com);
 
-
-        // Make DS and ES point to the PSP
+        // Make SS, DS and ES point to the PSP
         _state.DS = pspSegment;
         _state.ES = pspSegment;
+        _state.SS = pspSegment;
         _state.SP = 0xFFFE; // Standard COM file stack
         SetEntryPoint(pspSegment, ComOffset);
         _state.InterruptFlag = true;
