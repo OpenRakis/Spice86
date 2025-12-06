@@ -26,9 +26,34 @@ internal partial class MainWindow : Window {
             if (DataContext is MainWindowViewModel viewModel) {
                 // Wire up OpenGL frame updates
                 viewModel.UpdateOpenGlFrame += OnUpdateOpenGlFrame;
+                
+                // Track window size changes for shader selection
+                this.PropertyChanged += OnWindowPropertyChanged;
+                
+                // Set initial host output resolution
+                UpdateHostOutputResolution();
+                
                 viewModel.StartEmulator();
             }
         }, DispatcherPriority.Background);
+    }
+
+    private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e) {
+        if (e.Property == ClientSizeProperty || e.Property == WindowStateProperty) {
+            UpdateHostOutputResolution();
+        }
+    }
+
+    private void UpdateHostOutputResolution() {
+        if (DataContext is MainWindowViewModel viewModel) {
+            // Get the window's client area size - this is the actual rendering output size
+            int outputWidth = (int)ClientSize.Width;
+            int outputHeight = (int)ClientSize.Height;
+            
+            if (outputHeight > 0) {
+                viewModel.UpdateHostOutputResolution(outputWidth, outputHeight);
+            }
+        }
     }
 
     private void OnUpdateOpenGlFrame(uint[] frameBuffer, int width, int height) {
@@ -61,11 +86,7 @@ internal partial class MainWindow : Window {
     }
 
     private void FocusOnVideoBuffer() {
-        if (OpenGlVideo?.IsVisible == true) {
-            OpenGlVideo.Focus();
-        } else {
-            Image?.Focus();
-        }
+        OpenGlVideo?.Focus();
     }
 
     protected override void OnOpened(EventArgs e) {

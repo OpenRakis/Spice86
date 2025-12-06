@@ -60,7 +60,7 @@ public class OpenGlVideoControl : OpenGlControlBase {
     /// <param name="buffer">The frame buffer to render</param>
     /// <param name="width">Width of the frame</param>
     /// <param name="height">Height of the frame</param>
-    public void UpdateFrame(Span<uint> buffer, int width, int height) {
+    public void UpdateFrame(uint[] buffer, int width, int height) {
         if (width != _width || height != _height) {
             _width = width;
             _height = height;
@@ -68,7 +68,7 @@ public class OpenGlVideoControl : OpenGlControlBase {
         }
 
         if (_frameBuffer is not null && buffer.Length <= _frameBuffer.Length) {
-            buffer.CopyTo(_frameBuffer);
+            Array.Copy(buffer, _frameBuffer, buffer.Length);
             Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Render);
         }
     }

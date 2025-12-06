@@ -150,25 +150,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         // Use PhysicalKey from Avalonia which represents the physical keyboard location
         KeyUp?.Invoke(this, new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: false));
     }
-    [RelayCommand]
-    private async Task SaveBitmap() {
-        if (Bitmap is not null) {
-            await _hostStorageProvider.SaveBitmapFile(Bitmap);
-        }
-    }
-
-    [RelayCommand]
-    private void SetShaderNone() => ShaderType = CrtShaderType.None;
-
-    [RelayCommand]
-    private void SetShaderFakeLottes() => ShaderType = CrtShaderType.FakeLottes;
-
-    [RelayCommand]
-    private void SetShaderEasyMode() => ShaderType = CrtShaderType.EasyMode;
-
-    [RelayCommand]
-    private void SetShaderCrtGeom() => ShaderType = CrtShaderType.CrtGeom;
-
     private bool _showCursor;
 
     public bool ShowCursor {
@@ -199,16 +180,40 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private Cursor? _cursor = Cursor.Default;
 
     [ObservableProperty]
-    private WriteableBitmap? _bitmap;
+    private CrtShaderType _shaderType = CrtShaderType.FakeLottes;
 
-    [ObservableProperty]
-    private bool _useOpenGlRendering = true;
+    private int _hostOutputHeight;
 
-    [ObservableProperty]
-    private CrtShaderType _shaderType = CrtShaderType.None;
-
-    internal event Action? InvalidateBitmap;
     internal event Action<uint[], int, int>? UpdateOpenGlFrame;
+
+    /// <summary>
+    /// Updates the host output resolution for shader selection.
+    /// This should be called when the window size or fullscreen state changes.
+    /// </summary>
+    /// <param name="outputWidth">The actual width of the rendering output in pixels</param>
+    /// <param name="outputHeight">The actual height of the rendering output in pixels</param>
+    public void UpdateHostOutputResolution(int outputWidth, int outputHeight) {
+        if (_hostOutputHeight != outputHeight) {
+            _hostOutputHeight = outputHeight;
+            UpdateShaderForHostResolution();
+        }
+    }
+
+    /// <summary>
+    /// Automatically selects the appropriate CRT shader based on host screen resolution.
+    /// Following DOSBox Staging's auto-adaptive system:
+    /// - FakeLottes for 1080p and below
+    /// - EasyMode for 1440p, 4K and higher resolutions
+    /// </summary>
+    private void UpdateShaderForHostResolution() {
+        // Select shader based on the host display resolution where the window is rendered
+        // This matches DOSBox Staging's crt-auto behavior
+        if (_hostOutputHeight <= 1080) {
+            ShaderType = CrtShaderType.FakeLottes;
+        } else {
+            ShaderType = CrtShaderType.EasyMode;
+        }
+    }
 
     internal void OnKeyDown(KeyEventArgs e) {
         if (_pauseHandler.IsPaused) {
@@ -241,28 +246,28 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     public double MouseY { get; set; }
     
-    public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
+    public void OnMouseButtonDown(PointerPressedEventArgs @event, Control control) {
         if (_pauseHandler.IsPaused) {
             return;
         }
-        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
+        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(control).Properties.PointerUpdateKind.GetMouseButton();
         MouseButtonDown?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, true));
     }
 
-    public void OnMouseButtonUp(PointerReleasedEventArgs @event, Image image) {
+    public void OnMouseButtonUp(PointerReleasedEventArgs @event, Control control) {
         if(_pauseHandler.IsPaused) {
             return;
         }
-        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
+        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(control).Properties.PointerUpdateKind.GetMouseButton();
         MouseButtonUp?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, false));
     }
 
-    public void OnMouseMoved(PointerEventArgs @event, Image image) {
-        if (image.Source is null || _pauseHandler.IsPaused) {
+    public void OnMouseMoved(PointerEventArgs @event, Control control) {
+        if (Width == 0 || Height == 0 || _pauseHandler.IsPaused) {
             return;
         }
-        MouseX = @event.GetPosition(image).X / image.Source.Size.Width;
-        MouseY = @event.GetPosition(image).Y / image.Source.Size.Height;
+        MouseX = @event.GetPosition(control).X / Width;
+        MouseY = @event.GetPosition(control).Y / Height;
         MouseMoved?.Invoke(this, new MouseMoveEventArgs(MouseX, MouseY));
         UpdateShownEmulatorMouseCursorPosition();
     }
@@ -274,22 +279,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             if (Width != width || Height != height) {
                 Width = width;
                 Height = height;
-                if (_disposed) {
-                    return;
-                }
-                
-                // Only create bitmap if not using OpenGL rendering
-                if (!UseOpenGlRendering) {
-                    _drawingSemaphoreSlim?.Wait();
-                    try {
-                        Bitmap?.Dispose();
-                        Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
-                    } finally {
-                        if (!_disposed) {
-                            _drawingSemaphoreSlim?.Release();
-                        }
-                    }
-                }
             }
             _isSettingResolution = false;
             UpdateShownEmulatorMouseCursorPosition();
@@ -360,40 +349,22 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             return;
         }
 
-        if (UseOpenGlRendering) {
-            // For OpenGL rendering, we need to provide the frame buffer directly
-            _drawingSemaphoreSlim?.Wait();
-            try {
-                // Allocate temporary buffer for the frame
-                uint[] frameBuffer = new uint[Width * Height];
-                unsafe {
-                    fixed (uint* ptr = frameBuffer) {
-                        var uiRenderEventArgs = new UIRenderEventArgs(new IntPtr(ptr), frameBuffer.Length);
-                        RenderScreen.Invoke(this, uiRenderEventArgs);
-                    }
-                }
-                // Send frame to OpenGL control
-                _uiDispatcher.Post(() => UpdateOpenGlFrame?.Invoke(frameBuffer, Width, Height), DispatcherPriority.Render);
-            } finally {
-                if (!_disposed) {
-                    _drawingSemaphoreSlim?.Release();
+        // OpenGL rendering - provide the frame buffer directly
+        _drawingSemaphoreSlim?.Wait();
+        try {
+            // Allocate temporary buffer for the frame
+            uint[] frameBuffer = new uint[Width * Height];
+            unsafe {
+                fixed (uint* ptr = frameBuffer) {
+                    var uiRenderEventArgs = new UIRenderEventArgs(new IntPtr(ptr), frameBuffer.Length);
+                    RenderScreen.Invoke(this, uiRenderEventArgs);
                 }
             }
-        } else {
-            // Traditional bitmap rendering
-            if (Bitmap is null) {
-                return;
-            }
-            _drawingSemaphoreSlim?.Wait();
-            try {
-                using ILockedFramebuffer pixels = Bitmap.Lock();
-                var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-                RenderScreen.Invoke(this, uiRenderEventArgs);
-                _uiDispatcher.Post(() => InvalidateBitmap?.Invoke(), DispatcherPriority.Background);
-            } finally {
-                if (!_disposed) {
-                    _drawingSemaphoreSlim?.Release();
-                }
+            // Send frame to OpenGL control
+            _uiDispatcher.Post(() => UpdateOpenGlFrame?.Invoke(frameBuffer, Width, Height), DispatcherPriority.Render);
+        } finally {
+            if (!_disposed) {
+                _drawingSemaphoreSlim?.Release();
             }
         }
     }
@@ -437,7 +408,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
                 // Dispose of UI-related resources in the UI thread
                 _uiDispatcher.Post(() => {
-                    Bitmap?.Dispose();
                     Cursor?.Dispose();
                 }, DispatcherPriority.MaxValue);
 
