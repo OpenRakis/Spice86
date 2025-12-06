@@ -309,51 +309,50 @@ public class MachineTest
 
         // INT 1C handler entry: IRET-only at IVT[1C]
         CfgInstruction? int1CHandlerEntry = currentInstructions.GetAtAddress(ivt[0x1C]);
-            Assert.NotNull(int1CHandlerEntry);
+        Assert.NotNull(int1CHandlerEntry);
 
-            // Tight checks:
+        // Tight checks:
 
-            // A) Entry INT8 has exactly two successors: handler entry and post-INT8 (call-to-return link)
-            int8Entry.Successors.Should().BeEquivalentTo([int8HandlerEntry, postInt8]);
+        // A) Entry INT8 has exactly two successors: handler entry and post-INT8 (call-to-return link)
+        int8Entry.Successors.Should().BeEquivalentTo([int8HandlerEntry, postInt8]);
 
-            // Inside INT8 handler exact layout:
-            // [0] callback at IVT[8] (3 bytes)
-            // [3] INT 1C (2 bytes)
-            // [5] EOI callback (4 bytes)
-            // [8] IRET (1 byte)
+        // Inside INT8 handler exact layout:
+        // [0] callback at IVT[8] (3 bytes)
+        // [3] INT 1C (2 bytes)
+        // [5] EOI callback (4 bytes)
+        // [8] IRET (1 byte)
 
-            SegmentedAddress addrInt1C = int8HandlerEntry.Address + 4;
-            SegmentedAddress addrEoiCallback = addrInt1C + 2;
-            SegmentedAddress addrIret8 = addrEoiCallback + 4;
+        SegmentedAddress addrInt1C = int8HandlerEntry.Address + 4;
+        SegmentedAddress addrEoiCallback = addrInt1C + 2;
+        SegmentedAddress addrIret8 = addrEoiCallback + 4;
 
-            CfgInstruction? intNode1C = currentInstructions.GetAtAddress(addrInt1C);
-            CfgInstruction? eoiCallback = currentInstructions.GetAtAddress(addrEoiCallback);
-            CfgInstruction? iret8 = currentInstructions.GetAtAddress(addrIret8);
+        CfgInstruction? intNode1C = currentInstructions.GetAtAddress(addrInt1C);
+        CfgInstruction? eoiCallback = currentInstructions.GetAtAddress(addrEoiCallback);
+        CfgInstruction? iret8 = currentInstructions.GetAtAddress(addrIret8);
 
-            Assert.NotNull(intNode1C);
-            Assert.NotNull(eoiCallback);
-            Assert.NotNull(iret8);
+        Assert.NotNull(intNode1C);
+        Assert.NotNull(eoiCallback);
+        Assert.NotNull(iret8);
 
-            // B) Callback (tick++) must fall through to INT 1C node only
-            int8HandlerEntry.Successors.Should().BeEquivalentTo([intNode1C]);
+        // B) Callback (tick++) must fall through to INT 1C node only
+        int8HandlerEntry.Successors.Should().BeEquivalentTo([intNode1C]);
 
-            // C) INT 1C node must have exactly two successors:
-            //    - INT 1C handler entry (invoke)
-            //    - fallthrough to EOI callback (return target after INT)
-            intNode1C.Successors.Should().BeEquivalentTo([int1CHandlerEntry, eoiCallback]);
+        // C) INT 1C node must have exactly two successors:
+        //    - INT 1C handler entry (invoke)
+        //    - fallthrough to EOI callback (return target after INT)
+        intNode1C.Successors.Should().BeEquivalentTo([int1CHandlerEntry, eoiCallback]);
 
-            // D) INT 1C handler (IRET-only) must return to EOI callback only
-            int1CHandlerEntry.Successors.Should().BeEquivalentTo([eoiCallback]);
+        // D) INT 1C handler (IRET-only) must return to EOI callback only
+        int1CHandlerEntry.Successors.Should().BeEquivalentTo([eoiCallback]);
 
-            // E) EOI callback must fall through to IRET of INT8 handler only
-            eoiCallback.Successors.Should().BeEquivalentTo([iret8]);
+        // E) EOI callback must fall through to IRET of INT8 handler only
+        eoiCallback.Successors.Should().BeEquivalentTo([iret8]);
 
-            // F) INT8 IRET must return to post-INT8 instruction only
-            iret8.Successors.Should().BeEquivalentTo([postInt8]);
+        // F) INT8 IRET must return to post-INT8 instruction only
+        iret8.Successors.Should().BeEquivalentTo([postInt8]);
 
-            // G) No direct edge from entry INT8 to INT1C handler
-            int8Entry.Successors.Should().NotContain(int1CHandlerEntry);
-        }
+        // G) No direct edge from entry INT8 to INT1C handler
+        int8Entry.Successors.Should().NotContain(int1CHandlerEntry);
     }
 
     [AssertionMethod]
