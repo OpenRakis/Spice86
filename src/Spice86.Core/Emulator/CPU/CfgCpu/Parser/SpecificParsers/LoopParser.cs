@@ -9,7 +9,7 @@ public class LoopParser(BaseInstructionParser instructionParser) : BaseInstructi
         BitWidth addressWidth = context.AddressWidthFromPrefixes;
         ushort opcode = context.OpcodeField.Value;
         InstructionField<sbyte> offsetField = _instructionReader.Int8.NextField(true);
-        if(BitIsTrue(opcode, 1)) {
+        if (BitIsTrue(opcode, 1)) {
             // Loop with no condition
             return addressWidth switch {
                 BitWidth.WORD_16 => new Loop16(context.Address, context.OpcodeField, context.Prefixes, offsetField),

@@ -37,7 +37,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// The MIDI command used by a receiving device to acknowledge receipt of a command.
     /// </summary>
     public const byte CommandAcknowledge = 0xFE;
-    
+
     private bool _disposed;
 
     /// <summary>
@@ -97,7 +97,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// All the input ports usable with the device.
     /// </summary>
     public IEnumerable<int> InputPorts => new int[] { DataPort, StatusPort };
-    
+
     /// <summary>
     /// Read a byte from a port.
     /// </summary>
@@ -117,7 +117,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// <param name="port">The port to write to.</param>
     /// <param name="value">The value being written.</param>
     public override void WriteWord(ushort port, ushort value) => WriteByte(port, (byte)value);
-    
+
     /// <summary>
     /// The port number used for MIDI commands.
     /// </summary>
@@ -127,7 +127,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// The port number used for MIDI data.
     /// </summary>
     public const int Data = 0x330;
-    
+
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
         return port switch {
@@ -168,10 +168,10 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
                 break;
         }
     }
-    
+
     private void Dispose(bool disposing) {
-        if(!_disposed) {
-            if(disposing) {
+        if (!_disposed) {
+            if (disposing) {
                 _midiMapper.Dispose();
             }
             _disposed = true;

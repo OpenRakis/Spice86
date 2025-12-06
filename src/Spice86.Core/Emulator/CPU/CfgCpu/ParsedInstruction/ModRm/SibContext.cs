@@ -8,7 +8,7 @@ public class SibContext {
     public SibBase SibBase { get; }
     public InstructionField<uint>? BaseField { get; }
     public SibIndex SibIndex { get; }
-    
+
     public List<FieldWithValue> FieldsInOrder { get; } = new();
 
     public SibContext(

@@ -19,7 +19,7 @@ public class HardwareMixer {
     private readonly byte[] _cdaVolume = new byte[2] { 31, 31 };    // Left, Right
     private readonly byte[] _lineVolume = new byte[2] { 31, 31 };   // Left, Right
     private byte _micVolume = 31;
-    
+
     // SB16 advanced registers
     private byte _pcmLevel;
     private byte _recordingMonitor;

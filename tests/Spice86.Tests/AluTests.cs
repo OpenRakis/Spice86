@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.CPU;
 using Xunit;
 
 public class AluTests {
-    
+
     [Theory]
     [InlineData(0b0011110000000000, 0b0010000000000001, 0, 0b0011110000000000, true, true)] // result is same as dest, flags unaffected
     [InlineData(0b0000000000000001, 0b0000000000000000, 1, 0b0000000000000010, false, false)] // shift one bit 

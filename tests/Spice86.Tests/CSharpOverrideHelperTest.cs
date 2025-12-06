@@ -22,8 +22,8 @@ public class CSharpOverrideHelperTest {
         yield return new object[] { false };
         yield return new object[] { true };
     }
-    
-    private Spice86DependencyInjection CreateDummyProgramExecutor(bool enableCfgCpu, string? overrideSupplierClassName=null) {
+
+    private Spice86DependencyInjection CreateDummyProgramExecutor(bool enableCfgCpu, string? overrideSupplierClassName = null) {
         Spice86DependencyInjection res =
             new Spice86Creator("jump2", enableCfgCpu, overrideSupplierClassName: overrideSupplierClassName).Create();
         // Setup stack
@@ -93,7 +93,7 @@ class RecursiveJumps : CSharpOverrideHelper {
     }
 
     public Action JumpTarget1(int loadOffset) {
-        entrydispatcher:
+    entrydispatcher:
         NumberOfCallsTo1++;
         if (JumpDispatcher.Jump(JumpTarget2, 0)) {
             loadOffset = JumpDispatcher.NextEntryAddress;
@@ -104,7 +104,7 @@ class RecursiveJumps : CSharpOverrideHelper {
     }
 
     public Action JumpTarget2(int loadOffset) {
-        entrydispatcher:
+    entrydispatcher:
         NumberOfCallsTo2++;
         if (NumberOfCallsTo2 == MaxNumberOfJumps) {
             return NearRet();
@@ -210,7 +210,7 @@ class VariousOverrides : CSharpOverrideHelper {
     public int ThirdFunctionCalled { get; set; }
     public int FirstInstructionOverridenCalled { get; set; }
     public int FirstDoOnTopOfInstructionCalled { get; set; }
-    
+
     public VariousOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, configuration) {
         CurrentInstance = this;

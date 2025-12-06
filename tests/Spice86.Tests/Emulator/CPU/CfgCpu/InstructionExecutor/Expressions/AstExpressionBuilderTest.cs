@@ -169,7 +169,7 @@ public class AstExpressionBuilderTest {
     private void ExecuteAssignment(ValueNode destination, byte value) {
         ConstantNode valueNode = new(destination.DataType, value);
         BinaryOperationNode operation = new(destination.DataType, destination, BinaryOperation.ASSIGN, valueNode);
-        
+
         // Act
         Execute(operation);
     }

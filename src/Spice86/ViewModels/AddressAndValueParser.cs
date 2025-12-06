@@ -10,10 +10,10 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 
 public partial class AddressAndValueParser {
-    
+
     [GeneratedRegex(@"^0x[0-9A-Fa-f]+$")]
     public static partial Regex HexUintRegex();
-    
+
     /// <summary>
     /// A000:0000 is valid
     /// DS:SI is valid
@@ -40,7 +40,7 @@ public partial class AddressAndValueParser {
         if (address != null) {
             return true;
         }
-        
+
         address = ParseHex(valueTrimmed);
         return address != null;
     }
@@ -63,7 +63,7 @@ public partial class AddressAndValueParser {
 
         return null;
     }
-    
+
     public static ushort? TryParseSegmentOrRegister(string value, State? state) {
         // Try a property of the CPU state first (there is no collision with hex values)
         ushort? res = GetUshortStateProperty(value, state);
@@ -78,7 +78,7 @@ public partial class AddressAndValueParser {
 
         return null;
     }
-    
+
     public static ushort? GetUshortStateProperty(string value, State? state) {
         if (state is null) {
             return null;
@@ -94,7 +94,7 @@ public partial class AddressAndValueParser {
     }
 
     public static bool IsValidHex(string value) {
-       return HexUintRegex().Match(value).Success;
+        return HexUintRegex().Match(value).Success;
     }
 
     public static uint? ParseHex(string value) {
@@ -113,7 +113,7 @@ public partial class AddressAndValueParser {
 
         return null;
     }
-    
+
     public static byte[]? ParseHexAsArray(string? value) {
         if (value == null) {
             return null;
@@ -122,22 +122,22 @@ public partial class AddressAndValueParser {
         if (!IsValidHex(valueTrimmed)) {
             return null;
         }
-        
+
         if (valueTrimmed.StartsWith("0x")) {
             valueTrimmed = valueTrimmed[2..];
         }
 
         return ConvertUtils.HexToByteArray(valueTrimmed);
     }
-    
-    
+
+
     public static bool TryValidateAddress(string? value, State state, out string message) {
         if (string.IsNullOrWhiteSpace(value)) {
             message = "Address is required";
             return false;
         }
         if (!IsValidHex(value) &&
-            !SegmentedAddressRegex().IsMatch(value) && 
+            !SegmentedAddressRegex().IsMatch(value) &&
             GetUshortStateProperty(value, state) == null) {
             message = "Invalid address format";
             return false;

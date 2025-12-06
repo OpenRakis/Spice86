@@ -11,11 +11,11 @@ public class RegisterAstBuilder {
     public ValueNode Reg16(RegisterIndex registerIndex) {
         return Reg(DataType.UINT16, registerIndex);
     }
-    
+
     public ValueNode SReg(SegmentRegisterIndex registerIndex) {
         return SReg((int)registerIndex);
     }
-    
+
     public ValueNode SReg(int segmentRegisterIndex) {
         return new SegmentRegisterNode(segmentRegisterIndex);
     }

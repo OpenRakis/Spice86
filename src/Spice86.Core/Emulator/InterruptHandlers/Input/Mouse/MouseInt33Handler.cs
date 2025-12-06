@@ -162,7 +162,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///        you must divide each value by 8 to get a character column,row. <br/>
     /// </summary>
     public void QueryButtonReleasedCounter() {
-        if(!TryGetMouseButtonIndex(State.BX, out MouseButton button)) {
+        if (!TryGetMouseButtonIndex(State.BX, out MouseButton button)) {
             ReturnNothingInCpuRegisters();
             return;
         }
@@ -394,7 +394,7 @@ public class MouseInt33Handler : InterruptHandler {
         if (horizontal == 0 || vertical == 0) {
             return;
         }
-        
+
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("{ClassName} INT {Int:X2} 0F {MethodName}: horizontal = {XRatio} mickeys per 8 pixels, vertical = {YRatio} mickeys per 8 pixels",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseMickeyPixelRatio), horizontal, vertical);
@@ -570,7 +570,7 @@ public class MouseInt33Handler : InterruptHandler {
         AddAction(0x21, Reset);
         AddAction(0x24, GetSoftwareVersionAndMouseType);
     }
-    
+
     private void Reset() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("{ClassName} INT {Int:X2} 21 {MethodName}: Resetting mouse", nameof(MouseInt33Handler), VectorNumber, nameof(Reset));

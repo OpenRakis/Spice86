@@ -4,10 +4,10 @@
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
     <ItemGroup>
-        <Using Remove="System.Linq"/>
-        <Using Include="System.Buffers.Binary"/>
-        <Using Include="CommunityToolkit.HighPerformance"/>
-        <Using Include="Spice86.Core.CLI"/>
+        <Using Remove="System.Linq" />
+        <Using Include="System.Buffers.Binary" />
+        <Using Include="CommunityToolkit.HighPerformance" />
+        <Using Include="Spice86.Core.CLI" />
     </ItemGroup>
     <!-- Properties geared towards NuGet -->
     <PropertyGroup>
@@ -18,31 +18,32 @@
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     </PropertyGroup>
     <ItemGroup>
-        <AdditionalFiles Include="Emulator/CPU/CfgCpu/ParsedInstruction/Instructions/Mixins/*.mixin"/>
-        <AdditionalFiles Include="Emulator/CPU/CfgCpu/Parser/SpecificParsers/Mixin/*.mixin"/>
+        <AdditionalFiles Include="Emulator/CPU/CfgCpu/ParsedInstruction/Instructions/Mixins/*.mixin" />
+        <AdditionalFiles Include="Emulator/CPU/CfgCpu/Parser/SpecificParsers/Mixin/*.mixin" />
     </ItemGroup>
     <ItemGroup>
-        <None Remove="Resources\2MGM.sf2"/>
+        <None Remove="Resources\2MGM.sf2" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="CommunityToolkit.HighPerformance"/>
-        <PackageReference Include="JetBrains.Annotations"/>
-        <PackageReference Include="Serilog"/>
-        <PackageReference Include="System.Buffers"/>
-        <PackageReference Include="System.Memory"/>
-        <PackageReference Include="System.Text.Encoding.CodePages"/>
-        <PackageReference Include="CommandLineParser"/>
-        <PackageReference Include="MeltySynth"/>
-        <PackageReference Include="Morris.Moxy"/>
+        <PackageReference Include="CommunityToolkit.HighPerformance" />
+        <PackageReference Include="JetBrains.Annotations" />
+        <PackageReference Include="ModelContextProtocol.Core" />
+        <PackageReference Include="Serilog" />
+        <PackageReference Include="System.Buffers" />
+        <PackageReference Include="System.Memory" />
+        <PackageReference Include="System.Text.Encoding.CodePages" />
+        <PackageReference Include="CommandLineParser" />
+        <PackageReference Include="MeltySynth" />
+        <PackageReference Include="Morris.Moxy" />
         <!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
-        <PackageReference Include="Mt32emu.net"/>
-        <PackageReference Include="System.Text.Json"/>
+        <PackageReference Include="Mt32emu.net" />
+        <PackageReference Include="System.Text.Json" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj"/>
-        <ProjectReference Include="..\Spice86.Libs\Spice86.Libs.csproj"/>
-        <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj"/>
-        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj"/>
+        <ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj" />
+        <ProjectReference Include="..\Spice86.Libs\Spice86.Libs.csproj" />
+        <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
+        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
     </ItemGroup>
     <ItemGroup>
         <None Update="Resources\2MGM.license">

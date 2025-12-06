@@ -1,7 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.Function;
 
-using System;
 using Spice86.Shared.Emulator.Memory;
+
+using System;
 
 /// <summary>
 /// Represents a function return in the emulator, including information about the return call type and the return address.

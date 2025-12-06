@@ -10,17 +10,17 @@ public class MiscellaneousOutput : Register8 {
         External,
         Reserved
     }
-    
+
     public enum IoAddressSelectValue {
         Monochrome,
         Color
     }
-    
+
     public enum PolarityValue {
         Negative,
         Positive
     }
-    
+
     /// <summary>
     ///     The I/O Address Select field (bit 0) selects the CRT controller addresses. When set to 0, this bit sets the
     ///     CRT controller addresses to hex 03Bx and the address for the Input Status Register 1 to hex 03BA for

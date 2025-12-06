@@ -26,7 +26,7 @@ public class Aaa : CfgInstruction {
         helper.State.CarryFlag = finalCarryFlag;
         helper.MoveIpAndSetNextNode(this);
     }
-    
+
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.AAA);
     }

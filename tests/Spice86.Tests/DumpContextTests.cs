@@ -77,7 +77,7 @@ public class DumpContextTests {
         string tempFile = Path.GetTempFileName();
         string envDir = Path.Combine(Path.GetTempPath(), "env-dump-dir");
         string? oldEnvValue = Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER");
-        
+
         try {
             byte[] testData = "test"u8.ToArray();
             File.WriteAllBytes(tempFile, testData);
@@ -107,7 +107,7 @@ public class DumpContextTests {
         // Arrange
         string tempFile = Path.GetTempFileName();
         string? oldEnvValue = Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER");
-        
+
         try {
             byte[] testData = "test program"u8.ToArray();
             File.WriteAllBytes(tempFile, testData);
@@ -134,7 +134,7 @@ public class DumpContextTests {
         string tempFile = Path.GetTempFileName();
         string nonExistentDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         string? oldEnvValue = Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER");
-        
+
         try {
             byte[] testData = "test program"u8.ToArray();
             File.WriteAllBytes(tempFile, testData);

@@ -39,10 +39,10 @@ public class Program {
 
         switch (configuration.HeadlessMode) {
             case HeadlessType.Minimal: {
-                Spice86DependencyInjection spice86DependencyInjection = new(configuration);
-                spice86DependencyInjection.HeadlessModeStart();
-                break;
-            }
+                    Spice86DependencyInjection spice86DependencyInjection = new(configuration);
+                    spice86DependencyInjection.HeadlessModeStart();
+                    break;
+                }
             case HeadlessType.Avalonia:
                 BuildAvaloniaApp().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions {
                     UseHeadlessDrawing = false

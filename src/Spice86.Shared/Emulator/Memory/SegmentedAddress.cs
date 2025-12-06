@@ -5,8 +5,20 @@ using System.Globalization;
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// An address that is represented with a real mode segment and an offset.
+/// Represents a real mode segmented memory address as used by x86 processors before protected mode.
 /// </summary>
+/// <remarks>
+/// In real mode, memory addresses are calculated as: Linear Address = (Segment × 16) + Offset.
+/// This allows addressing up to 1 MB of memory (20-bit address space) using 16-bit segment and offset values.
+/// <para>
+/// For example, the segmented address 0x1000:0x0234 translates to linear address 0x10234
+/// (calculated as: (0x1000 × 16) + 0x0234 = 0x10000 + 0x0234 = 0x10234).
+/// </para>
+/// <para>
+/// Note that multiple segmented addresses can point to the same linear address.
+/// For instance, 0x1000:0x0000, 0x0FFE:0x0020, and 0x0000:0x10000 all refer to linear address 0x10000.
+/// </para>
+/// </remarks>
 public readonly record struct SegmentedAddress : IComparable<SegmentedAddress> {
     public static SegmentedAddress ZERO = new(0, 0);
 

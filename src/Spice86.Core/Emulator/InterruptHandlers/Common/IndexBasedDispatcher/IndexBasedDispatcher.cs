@@ -7,7 +7,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Base class for most classes having to dispatch operations depending on a numeric value, like interrupts.
 /// </summary>
-public abstract class IndexBasedDispatcher<T> where T: IRunnable {
+public abstract class IndexBasedDispatcher<T> where T : IRunnable {
     /// <summary>
     /// Defines all the available runnables. Each one has an index number and code associated with it.
     /// </summary>

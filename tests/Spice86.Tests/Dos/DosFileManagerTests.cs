@@ -160,7 +160,7 @@ public class DosFileManagerTests {
         InputEventHub inputEventQueue = new();
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
             functionHandlerProvider, stack, state, a20Gate,
-            configuration.InitializeDOS is not false, loggerService);
+            biosDataArea, dualPic, ioPortDispatcher,configuration.InitializeDOS is not false, loggerService);
         Intel8042Controller intel8042Controller = new(
             state, ioPortDispatcher, a20Gate, dualPic,
             configuration.FailOnUnhandledPort, pauseHandler, loggerService, inputEventQueue);
@@ -172,12 +172,10 @@ public class DosFileManagerTests {
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
         biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
-        var clock = new Clock(loggerService);
-
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
-            biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
-            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
-            clock, loggerService);
+            biosKeyboardBuffer, keyboardInt16Handler, biosDataArea, vgaFunctionality,
+            new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } }, loggerService, ioPortDispatcher, new DosTables()
+            );
 
         return dos.FileManager;
     }

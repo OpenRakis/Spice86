@@ -50,21 +50,21 @@ public class GraphNodeBehavior {
 
             // Find the target element at the clicked position
             IInputElement? hitTestResult = control.InputHitTest(position);
-            
+
             // Find the relevant control that was clicked
             Control? clickedControl = hitTestResult as Control;
             if (clickedControl == null && hitTestResult is Control visual) {
                 clickedControl = visual.FindAncestorOfType<Control>();
             }
-            
+
             // If we found a control with DataContext, use it
             if (clickedControl != null && clickedControl.DataContext != null) {
                 // Find the GraphPanel this control belongs to
-                GraphPanel? graphPanel = control as GraphPanel ?? 
+                GraphPanel? graphPanel = control as GraphPanel ??
                     control.GetSelfAndVisualAncestors()
                            .OfType<GraphPanel>()
                            .FirstOrDefault();
-                
+
                 if (graphPanel != null) {
                     ICommand? command = GetNodeClickCommand(graphPanel);
                     if (command != null && command.CanExecute(clickedControl.DataContext)) {

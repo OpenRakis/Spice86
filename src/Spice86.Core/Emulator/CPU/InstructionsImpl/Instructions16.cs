@@ -379,7 +379,7 @@ public class Instructions16 : Instructions16Or32 {
     protected override void Grp3IdivRmAcc() {
         // no sign extension for v1 as it is already a 32bit value
         int v1 = State.DX << 16 | State.AX;
-        short v2 = (short) ModRM.GetRm16();
+        short v2 = (short)ModRM.GetRm16();
         short result = _alu16.Idiv(v1, v2);
         State.AX = (ushort)result;
         State.DX = (ushort)(v1 % v2);

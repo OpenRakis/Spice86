@@ -1,9 +1,8 @@
 namespace Spice86.Core.Emulator.Function.Dump;
 
-using Spice86.Shared.Interfaces;
-
 using Spice86.Core.Emulator.Function;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// A class that provides methods for reading recorded data from files.
@@ -25,8 +24,8 @@ public class RecordedDataReader : RecordedDataIoHandler {
     /// </summary>
     /// <returns>The execution dump read from the file, or a new instance if the file does not exist.</returns>
     public ExecutionDump ReadExecutionDumpFromFileOrCreate() {
-           return new ExecutionFlowDumper(_loggerService)
-                .ReadFromFileOrCreate(ExecutionFlowFile);
+        return new ExecutionFlowDumper(_loggerService)
+             .ReadFromFileOrCreate(ExecutionFlowFile);
     }
 
     /// <summary>

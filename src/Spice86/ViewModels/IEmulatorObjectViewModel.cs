@@ -1,4 +1,5 @@
 ﻿namespace Spice86.ViewModels;
+
 using System;
 
 public interface IEmulatorObjectViewModel {

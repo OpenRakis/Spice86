@@ -1,4 +1,5 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
+
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using System.ComponentModel.DataAnnotations;

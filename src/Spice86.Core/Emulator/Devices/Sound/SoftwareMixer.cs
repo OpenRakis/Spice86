@@ -76,7 +76,7 @@ public sealed class SoftwareMixer : IDisposable {
         Span<float> target = stackalloc float[data.Length];
         data.CopyTo(target);
         SimdConversions.ScaleInPlace(target, finalVolumeFactor);
-        
+
         _channels[channel].WriteData(target);
     }
 
@@ -95,7 +95,7 @@ public sealed class SoftwareMixer : IDisposable {
         float volumeFactor = channel.Volume / 100f;
         float separation = channel.StereoSeparation / 100f;
         float finalVolumeFactor = volumeFactor * (1 + separation);
-        
+
         Span<float> target = stackalloc float[data.Length];
         float scale = finalVolumeFactor / 32768f;
         SimdConversions.ConvertInt16ToScaledFloat(data, target, scale);

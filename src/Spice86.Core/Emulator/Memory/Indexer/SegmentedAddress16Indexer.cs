@@ -41,7 +41,7 @@ public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
             // Read using the physical addressing to get proper little-endian ordering
             uint offsetAddr = MemoryUtils.ToPhysicalAddress(segment, offset);
             uint segmentAddr = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
-            
+
             ushort offsetValue = _uInt16Indexer[offsetAddr];
             ushort segmentValue = _uInt16Indexer[segmentAddr];
             return new(segmentValue, offsetValue);
@@ -50,7 +50,7 @@ public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
             // Write using the physical addressing to get proper little-endian ordering
             uint offsetAddr = MemoryUtils.ToPhysicalAddress(segment, offset);
             uint segmentAddr = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
-            
+
             _uInt16Indexer[offsetAddr] = value.Offset;
             _uInt16Indexer[segmentAddr] = value.Segment;
         }

@@ -17,8 +17,21 @@ using Xunit;
 
 /// <summary>
 /// Tests the Expanded Memory Manager (EMS) functionality.
-/// Based on the LIM EMS 4.0 specification and implementation in ExpandedMemoryManager.cs
-/// Each test validates a specific EMS function or behavior.
+/// <para>
+/// Based on the LIM EMS specification:
+/// <list type="bullet">
+/// <item>Core functions (0x40-0x4E) are from EMS 3.2</item>
+/// <item>Extended functions (0x50-0x59) are from EMS 4.0</item>
+/// </list>
+/// </para>
+/// <para>
+/// The implementation was verified against the jemmex/emm386 source code from FreeDOS:
+/// https://github.com/FDOS/emm386
+/// </para>
+/// <para>
+/// Note: VCPI and other LIM 4.0 OS-specific features (GEMMIS) are not currently
+/// implemented as we only emulate real mode at this time.
+/// </para>
 /// </summary>
 public class EmsUnitTests {
     private readonly ExpandedMemoryManager _ems;
@@ -728,9 +741,11 @@ public class EmsUnitTests {
         ushort altRegisterSets = _memory.UInt16[bufferAddress + 2];
         altRegisterSets.Should().Be(0x0000, "No alternate register sets");
 
-        // Context save area size
+        // Context save area size (following FreeDOS formula: (physicalPages + 1) * 4)
+        // For 4 physical pages: (4 + 1) * 4 = 20 bytes
         ushort saveAreaSize = _memory.UInt16[bufferAddress + 4];
-        saveAreaSize.Should().BeGreaterThanOrEqualTo(0, "Save area size should be non-negative");
+        ushort expectedSaveAreaSize = (ExpandedMemoryManager.EmmMaxPhysicalPages + 1) * 4;
+        saveAreaSize.Should().Be(expectedSaveAreaSize, $"Save area size should be {expectedSaveAreaSize} bytes for {ExpandedMemoryManager.EmmMaxPhysicalPages} physical pages");
 
         ushort dmaChannels = _memory.UInt16[bufferAddress + 6];
         dmaChannels.Should().Be(0x0000, "No DMA channels");
@@ -942,5 +957,109 @@ public class EmsUnitTests {
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "Restore should succeed");
         _ems.EmmPageFrame.Should().HaveCount(4, "Page frame should be restored");
+    }
+
+    /// <summary>
+    /// Tests that physical page 4 is rejected (only 0-3 are valid).
+    /// Verifies the off-by-one bug fix where > was changed to >= in bounds checking.
+    /// </summary>
+    [Fact]
+    public void MapUnmapHandlePage_WithPhysicalPage4_ShouldFail() {
+        // Arrange - Allocate pages
+        _state.BX = 4;
+        _ems.AllocatePages();
+        ushort handle = _state.DX;
+
+        // Act - Try to map to physical page 4 (invalid, only 0-3 are valid)
+        _state.AL = 4; // Physical page 4 (invalid!)
+        _state.BX = 0; // Logical page 0
+        _state.DX = handle;
+        _ems.MapUnmapHandlePage();
+
+        // Assert
+        _state.AH.Should().Be(EmmStatus.EmmIllegalPhysicalPage, "Physical page 4 should be rejected");
+    }
+
+    /// <summary>
+    /// Tests that handles allocated after deallocation don't collide with existing handles.
+    /// Verifies the handle ID reuse bug fix where EmmHandles.Count was replaced with proper ID search.
+    /// </summary>
+    [Fact]
+    public void AllocatePages_AfterDeallocation_ShouldNotCollideWithExistingHandles() {
+        // Arrange - Allocate handle 1 (system handle 0 already exists)
+        _state.BX = 4;
+        _ems.AllocatePages();
+        ushort handle1 = _state.DX;
+
+        // Allocate handle 2
+        _state.BX = 4;
+        _ems.AllocatePages();
+        ushort handle2 = _state.DX;
+
+        // Map handle2's page and write data
+        _state.AL = 0; // Physical page 0
+        _state.BX = 0; // Logical page 0
+        _state.DX = handle2;
+        _ems.MapUnmapHandlePage();
+
+        uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(ExpandedMemoryManager.EmmPageFrameSegment, 0);
+        _memory.UInt8[pageFrameAddress] = 0xAA; // Write marker
+
+        // Deallocate handle1
+        _state.DX = handle1;
+        _ems.DeallocatePages();
+
+        // Act - Allocate a new handle (should get a new ID, not reuse handle2's ID)
+        _state.BX = 4;
+        _ems.AllocatePages();
+        ushort handle3 = _state.DX;
+
+        // Assert
+        handle3.Should().NotBe(handle2, "New handle should not collide with existing handle2");
+        _ems.EmmHandles.Should().ContainKey(handle2, "Handle2 should still exist");
+        _ems.EmmHandles[handle2].LogicalPages.Count.Should().Be(4, "Handle2 should still have its pages");
+
+        // Verify handle2's data is still intact
+        _memory.UInt8[pageFrameAddress].Should().Be(0xAA, "Handle2's data should not be corrupted");
+    }
+
+    /// <summary>
+    /// Tests that SavePageMap and RestorePageMap correctly preserve and restore page mappings,
+    /// even when the mapping changes between save and restore.
+    /// Verifies the save/restore bug fix where values are now properly saved instead of references.
+    /// </summary>
+    [Fact]
+    public void SaveAndRestorePageMap_ShouldRestoreActualMappings() {
+        // Arrange - Allocate 2 logical pages
+        _state.BX = 2;
+        _ems.AllocatePages();
+        ushort handle = _state.DX;
+
+        uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(ExpandedMemoryManager.EmmPageFrameSegment, 0);
+
+        // Map logical page 0 to physical page 0 and write data
+        _state.AL = 0; // Physical page 0
+        _state.BX = 0; // Logical page 0
+        _state.DX = handle;
+        _ems.MapUnmapHandlePage();
+        _memory.UInt8[pageFrameAddress] = 0x11;
+
+        // Save the page map for handle 0
+        _state.DX = 0;
+        _ems.SavePageMap();
+
+        // Now map logical page 1 to physical page 0 (changing the mapping)
+        _state.AL = 0; // Physical page 0
+        _state.BX = 1; // Logical page 1
+        _state.DX = handle;
+        _ems.MapUnmapHandlePage();
+        _memory.UInt8[pageFrameAddress] = 0x22;
+
+        // Act - Restore the page map
+        _state.DX = 0;
+        _ems.RestorePageMap();
+
+        // Assert - Should read the original value from logical page 0
+        _memory.UInt8[pageFrameAddress].Should().Be(0x11, "After restore, logical page 0 should be mapped back");
     }
 }

@@ -44,7 +44,7 @@ public class UInt16Indexer : MemoryIndexer<ushort> {
             _byteReaderWriter[address2] = (byte)(value >> 8);   // High byte at second address
         }
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _byteReaderWriter.Length / 2;
 }

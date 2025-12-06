@@ -43,13 +43,13 @@ public static class HighResolutionWaiter {
                     spinner.Reset();
                     continue;
                 case >= 0.05: {
-                    spinner.SpinOnce();
-                    if (spinner.NextSpinWillYield) {
-                        Thread.Yield();
-                    }
+                        spinner.SpinOnce();
+                        if (spinner.NextSpinWillYield) {
+                            Thread.Yield();
+                        }
 
-                    continue;
-                }
+                        continue;
+                    }
                 default:
                     spinner.SpinOnce();
                     break;

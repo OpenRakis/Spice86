@@ -21,7 +21,7 @@ public class ExecutionContext {
     /// Where the context started
     /// </summary>
     public SegmentedAddress EntryPoint { get; }
-    
+
     /// <summary>
     /// Function handler tracking the functions for this context. Function call stack is context dependant.
     /// </summary>
@@ -36,12 +36,12 @@ public class ExecutionContext {
     /// Last node actually executed by the CPU
     /// </summary>
     public ICfgNode? LastExecuted { get; set; }
-    
+
     /// <summary>
     /// Next node to execute according to the CFG Graph.
     /// </summary>
     public ICfgNode? NodeToExecuteNextAccordingToGraph { get; set; }
-    
+
     /// <summary>
     /// True when last executed triggered a CPU fault
     /// </summary>

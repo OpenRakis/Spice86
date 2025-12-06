@@ -1,7 +1,13 @@
 ﻿namespace Spice86.Core;
 
-public static class LinkedListExtensions
-{
+/// <summary>
+/// Provides extension methods for <see cref="LinkedList{T}"/> to support in-place node replacement operations.
+/// </summary>
+/// <remarks>
+/// These extensions are particularly useful when working with instruction sequences or execution flow graphs
+/// where nodes need to be replaced without reconstructing the entire list.
+/// </remarks>
+public static class LinkedListExtensions {
     /// <summary>
     /// Replaces an existing linked list node with zero or more new nodes.
     /// </summary>
@@ -9,8 +15,7 @@ public static class LinkedListExtensions
     /// <param name="list">Linked list instance.</param>
     /// <param name="originalItem">Item to replace.</param>
     /// <param name="newItems">Values to insert in place of the original item.</param>
-    public static void Replace<T>(this LinkedList<T> list, T originalItem, T[] newItems)
-    {
+    public static void Replace<T>(this LinkedList<T> list, T originalItem, T[] newItems) {
         if (list == null) {
             throw new ArgumentNullException(nameof(list));
         }
@@ -24,15 +29,12 @@ public static class LinkedListExtensions
             throw new ArgumentException("Original item not found.");
         }
 
-        if (originalNode.Previous == null)
-        {
+        if (originalNode.Previous == null) {
             list.RemoveFirst();
             for (int i = newItems.Length - 1; i >= 0; i--) {
                 list.AddFirst(newItems[i]);
             }
-        }
-        else
-        {
+        } else {
             LinkedListNode<T> previous = originalNode.Previous;
             list.Remove(originalNode);
             for (int i = newItems.Length - 1; i >= 0; i--) {
@@ -57,13 +59,10 @@ public static class LinkedListExtensions
             throw new ArgumentException("Original item not found.");
         }
 
-        if (originalNode.Previous == null)
-        {
+        if (originalNode.Previous == null) {
             list.RemoveFirst();
             list.AddFirst(newItem);
-        }
-        else
-        {
+        } else {
             LinkedListNode<T> previous = originalNode.Previous;
             list.Remove(originalNode);
             list.AddAfter(previous, newItem);

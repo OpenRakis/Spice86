@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.CPU.Registers;
 
 public class Instructions32 : Instructions16Or32 {
     private readonly Alu32 _alu32;
-    
+
     public Instructions32(State state, Cpu cpu, Memory.IMemory memory, ModRM modRm) :
         base(cpu, memory, modRm) {
         _alu32 = new(state);
@@ -334,7 +334,7 @@ public class Instructions32 : Instructions16Or32 {
         ModRM.SetRm32(res);
     }
 
-    
+
     protected override void Grp3TestRm() {
         _alu32.And(ModRM.GetRm32(), Cpu.NextUint32());
     }
@@ -375,7 +375,7 @@ public class Instructions32 : Instructions16Or32 {
     protected override void Grp3IdivRmAcc() {
         // no sign extension for v1 as it is already a 32bit value
         long v1 = (long)(((ulong)State.EDX << 32) | State.EAX);
-        int v2 = (int) ModRM.GetRm32();
+        int v2 = (int)ModRM.GetRm32();
         int result = _alu32.Idiv(v1, v2);
         State.EAX = (uint)result;
         State.EDX = (uint)(v1 % v2);
@@ -527,8 +527,8 @@ public class Instructions32 : Instructions16Or32 {
         uint framePtr = State.ESP;
         const int operandOffset = 4;
         for (int i = 0; i < level; i++) {
-                State.EBP -= operandOffset;
-                Stack.Push32(State.EBP);
+            State.EBP -= operandOffset;
+            Stack.Push32(State.EBP);
         }
 
         State.EBP = framePtr;

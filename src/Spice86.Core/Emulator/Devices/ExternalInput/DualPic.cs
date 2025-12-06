@@ -76,6 +76,12 @@ public sealed class DualPic : IDisposable {
     private readonly IOPortHandlerRegistry _ioPortHandlerRegistry;
     private readonly ILoggerService _logger;
 
+    /// <summary>
+    /// Gets the PIC event queue for scheduling timed events.
+    /// Components that need to schedule events should depend on this via their constructor.
+    /// </summary>
+    public DeviceScheduler EventQueue => _eventQueue;
+
     private readonly Intel8259Pic _primaryPic;
     private readonly Intel8259Pic _secondaryPic;
     private readonly IoReadHandler[] _readHandlers = new IoReadHandler[HandlerCount];
@@ -208,11 +214,11 @@ public sealed class DualPic : IDisposable {
                 WriteCommand(PrimaryPicCommandPort, (uint)(SpecificEoiBase | irq));
                 break;
             default: {
-                byte secondaryIrq = (byte)(irq - 8);
-                WriteCommand(SecondaryPicCommandPort, (uint)(SpecificEoiBase | secondaryIrq));
-                WriteCommand(PrimaryPicCommandPort, SpecificEoiBase | 2);
-                break;
-            }
+                    byte secondaryIrq = (byte)(irq - 8);
+                    WriteCommand(SecondaryPicCommandPort, (uint)(SpecificEoiBase | secondaryIrq));
+                    WriteCommand(PrimaryPicCommandPort, SpecificEoiBase | 2);
+                    break;
+                }
         }
     }
 

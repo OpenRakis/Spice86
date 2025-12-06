@@ -49,7 +49,7 @@ public sealed class Memory : Indexable.Indexable, IMemory {
         }
         return copy;
     }
-    
+
     /// <inheritdoc />
     public void WriteRam(byte[] array, uint offset = 0) {
         var length = Math.Min(array.Length, (uint)_memoryDevices.Length - offset);
@@ -79,7 +79,8 @@ public sealed class Memory : Indexable.Indexable, IMemory {
             address = A20Gate.TransformAddress(address);
             CurrentlyWritingByte = value;
             _memoryBreakpoints.MonitorWriteAccess(address);
-            SneakilyWrite(address, value);        }
+            SneakilyWrite(address, value);
+        }
     }
 
     /// <summary>
@@ -138,7 +139,7 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     public override UInt16Indexer UInt16 {
         get;
     }
-    
+
     /// <inheritdoc/>
     public override UInt16BigEndianIndexer UInt16BigEndian {
         get;
@@ -168,7 +169,7 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     public override SegmentedAddress16Indexer SegmentedAddress16 {
         get;
     }
-    
+
     /// <inheritdoc/>
     public override SegmentedAddress32Indexer SegmentedAddress32 {
         get;
