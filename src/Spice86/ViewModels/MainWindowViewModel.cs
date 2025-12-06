@@ -280,7 +280,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         double aspectRatio = (double)width / height;
         const double targetAspectRatio = 4.0 / 3.0;
 
-        if (aspectRatio < targetAspectRatio - 0.01) {
+        if (aspectRatio > targetAspectRatio + 0.01) {
             double pixelAspectRatio = 5.0 / 6.0;
             return new Vector(baseDpi * pixelAspectRatio, baseDpi);
         }
