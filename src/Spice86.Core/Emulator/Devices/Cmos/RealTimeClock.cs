@@ -30,13 +30,11 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private readonly CmosRegisters _cmosRegisters = new();
     private readonly IPauseHandler _pauseHandler;
 
-    // High resolution baseline timestamp (Stopwatch ticks)
     private readonly long _startTimestamp = Stopwatch.GetTimestamp();
 
-    // Pause accounting (Stopwatch ticks excluded from elapsed time)
     private long _pausedAccumulatedTicks;
     private long _pauseStartedTicks;
-    private bool _isPaused; // reflects current pause state (set on Paused, cleared on Resumed)
+    private bool _isPaused;
     private bool _disposed;
 
     private double _nextPeriodicTriggerMs;
@@ -50,7 +48,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         _dualPic = dualPic;
         _pauseHandler = pauseHandler;
 
-        // Subscribe to pause lifecycle events to keep timing exact.
         _pauseHandler.Pausing += OnPausing;
         _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;
@@ -74,7 +71,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Handles writes to port 0x70 (address/index selection) and 0x71 (data).
     /// </summary>
     public override void WriteByte(ushort port, byte value) {
-        // Process any pending periodic timer events before handling the write
         if (port == CmosPorts.Address || port == CmosPorts.Data) {
             ProcessPendingPeriodicEvents();
         }
@@ -120,26 +116,23 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private void HandleDataPortWrite(byte value) {
         byte reg = _cmosRegisters.CurrentRegister;
         switch (reg) {
-            // Time/date registers - store values (allows DOS/BIOS to set date/time)
-            // Note: Reads still return current host system time, not these stored values
-            case CmosRegisterAddresses.Seconds:      // 0x00
-            case CmosRegisterAddresses.Minutes:      // 0x02
-            case CmosRegisterAddresses.Hours:        // 0x04
-            case CmosRegisterAddresses.DayOfWeek:    // 0x06
-            case CmosRegisterAddresses.DayOfMonth:   // 0x07
-            case CmosRegisterAddresses.Month:        // 0x08
-            case CmosRegisterAddresses.Year:         // 0x09
-            case CmosRegisterAddresses.Century:      // 0x32
+            case CmosRegisterAddresses.Seconds:
+            case CmosRegisterAddresses.Minutes:
+            case CmosRegisterAddresses.Hours:
+            case CmosRegisterAddresses.DayOfWeek:
+            case CmosRegisterAddresses.DayOfMonth:
+            case CmosRegisterAddresses.Month:
+            case CmosRegisterAddresses.Year:
+            case CmosRegisterAddresses.Century:
                 _cmosRegisters[reg] = value;
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                     _loggerService.Verbose("CMOS: Time/date register {Reg:X2} set to {Val:X2} (stored but not used for time reads)", reg, value);
                 }
                 return;
 
-            // Alarm registers - store but don't implement alarm functionality
-            case 0x01:  // Seconds alarm
-            case 0x03:  // Minutes alarm
-            case 0x05:  // Hours alarm
+            case 0x01:
+            case 0x03:
+            case 0x05:
                 _cmosRegisters[reg] = value;
                 if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                     _loggerService.Information("CMOS: Alarm register {Reg:X2} set to {Val:X2}", reg, value);
@@ -179,7 +172,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
                 return;
 
             default:
-                // Other registers - store value in CMOS RAM
                 _cmosRegisters[reg] = (byte)(value & 0x7F);
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("CMOS: Write to unhandled register {Reg:X2} value {Val:X2}", reg, value);
@@ -204,7 +196,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
 
         DateTime now = DateTime.Now;
         switch (reg) {
-            // Time registers - return current system time
             case CmosRegisterAddresses.Seconds: return EncodeTimeComponent(now.Second);
             case CmosRegisterAddresses.Minutes: return EncodeTimeComponent(now.Minute);
             case CmosRegisterAddresses.Hours: return EncodeTimeComponent(now.Hour);
@@ -214,38 +205,33 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             case CmosRegisterAddresses.Year: return EncodeTimeComponent(now.Year % 100);
             case CmosRegisterAddresses.Century: return EncodeTimeComponent(now.Year / 100);
 
-            // Alarm registers
-            case 0x01:  // Seconds alarm
-            case 0x03:  // Minutes alarm
-            case 0x05:  // Hours alarm
+            case 0x01:
+            case 0x03:
+            case 0x05:
                 return _cmosRegisters[reg];
 
-            case CmosRegisterAddresses.StatusRegisterA: {  // 0x0A - Status Register A
-                                                           // Bit 7 = Update In Progress (UIP) - set during time update cycle
+            case CmosRegisterAddresses.StatusRegisterA: {
                     byte baseA = (byte)(_cmosRegisters[reg] & 0x7F);
                     return IsUpdateInProgress(now) ? (byte)(baseA | 0x80) : baseA;
                 }
 
-            case CmosRegisterAddresses.StatusRegisterC:  // 0x0C - Status Register C (interrupt flags, read clears)
+            case CmosRegisterAddresses.StatusRegisterC:
                 return ReadStatusC();
 
-            // Control and status registers
-            case CmosRegisterAddresses.StatusRegisterB:              // 0x0B - Status Register B
-            case CmosRegisterAddresses.StatusRegisterD:              // 0x0D - Status Register D
-            case CmosRegisterAddresses.ShutdownStatus: // 0x0F - Shutdown status
+            case CmosRegisterAddresses.StatusRegisterB:
+            case CmosRegisterAddresses.StatusRegisterD:
+            case CmosRegisterAddresses.ShutdownStatus:
 
-            // CMOS configuration registers
-            case 0x14:  // Equipment byte
-            case 0x15:  // Base memory low byte
-            case 0x16:  // Base memory high byte
-            case 0x17:  // Extended memory low byte
-            case 0x18:  // Extended memory high byte
-            case 0x30:  // Extended memory low byte (alternate)
-            case 0x31:  // Extended memory high byte (alternate)
+            case 0x14:
+            case 0x15:
+            case 0x16:
+            case 0x17:
+            case 0x18:
+            case 0x30:
+            case 0x31:
                 return _cmosRegisters[reg];
 
             default:
-                // Other CMOS RAM locations
                 return _cmosRegisters[reg];
         }
     }
@@ -268,23 +254,19 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         _cmosRegisters.Timer.Acknowledged = true;
 
         if (_cmosRegisters.Timer.Enabled) {
-            // In periodic interrupt mode, return and clear latched flags
             byte latched = _cmosRegisters[CmosRegisterAddresses.StatusRegisterC];
             _cmosRegisters[CmosRegisterAddresses.StatusRegisterC] = 0;
             return latched;
         }
 
-        // Generate flags based on elapsed time when not in periodic mode
         double nowMs = GetElapsedMilliseconds();
         byte value = 0;
 
-        // Periodic interrupt flag (bit 6)
         if (nowMs >= (_cmosRegisters.Last.Timer + _cmosRegisters.Timer.Delay)) {
             _cmosRegisters.Last.Timer = nowMs;
             value |= 0x40;
         }
 
-        // Update-ended interrupt flag (bit 4)
         if (nowMs >= (_cmosRegisters.Last.Ended + 1000.0)) {
             _cmosRegisters.Last.Ended = nowMs;
             value |= 0x10;
@@ -352,7 +334,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </para>
     /// </summary>
     private void ProcessPendingPeriodicEvents() {
-        // Pause-aware: events do not fire while paused.
         if (_isPaused) {
             return;
         }
@@ -361,8 +342,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         }
         double nowMs = GetElapsedMilliseconds();
         if (nowMs >= _nextPeriodicTriggerMs) {
-            // 0xC0 = IRQF (bit 7) + PF (bit 6) - both flags must be set for games like Contraption Zack to detect periodic timer events correctly.
-            // Contraption Zack (music) relies on both IRQF and PF being set in Status Register C to process timer interrupts.
             _cmosRegisters[CmosRegisterAddresses.StatusRegisterC] |= 0xC0;
             _cmosRegisters.Timer.Acknowledged = false;
             _cmosRegisters.Last.Timer = nowMs;
@@ -410,7 +389,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         long now = Stopwatch.GetTimestamp();
         long effectiveTicks = now - _startTimestamp - _pausedAccumulatedTicks;
         if (_isPaused) {
-            // Exclude time elapsed since pause started
             effectiveTicks -= (now - _pauseStartedTicks);
         }
         if (effectiveTicks < 0) {
@@ -429,16 +407,14 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         }
     }
 
-    // Pause event handlers
     private void OnPausing() {
         if (_isPaused) {
-            return; // already paused
+            return;
         }
         _pauseStartedTicks = Stopwatch.GetTimestamp();
     }
 
     private void OnPaused() {
-        // mark state paused (elapsed time will exclude ticks from now on)
         _isPaused = true;
     }
 
@@ -449,7 +425,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         long now = Stopwatch.GetTimestamp();
         _pausedAccumulatedTicks += (now - _pauseStartedTicks);
         _isPaused = false;
-        // Re-align next periodic trigger so it doesn't instantly fire after a long pause
         if (_cmosRegisters.Timer.Enabled && _cmosRegisters.Timer.Delay > 0) {
             double nowMs = GetElapsedMilliseconds();
             double period = _cmosRegisters.Timer.Delay;
@@ -463,7 +438,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             return;
         }
         _disposed = true;
-        // Unsubscribe to avoid leaks
         _pauseHandler.Pausing -= OnPausing;
         _pauseHandler.Paused -= OnPaused;
         _pauseHandler.Resumed -= OnResumed;

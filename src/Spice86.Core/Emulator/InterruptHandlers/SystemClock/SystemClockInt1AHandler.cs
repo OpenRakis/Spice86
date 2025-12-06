@@ -63,7 +63,6 @@ public class SystemClockInt1AHandler : InterruptHandler {
         State.DX = (ushort)(ticks & 0xFFFF);
         State.AL = _biosDataArea.TimerRollover;
 
-        // Clear rollover flag after reading
         _biosDataArea.TimerRollover = 0;
     }
 
@@ -106,7 +105,6 @@ public class SystemClockInt1AHandler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 1A, AH=03h - Set RTC Time (stub - not implemented, returning error)");
         }
-        // Return error - we don't support changing the system time
         State.CarryFlag = true;
     }
 
@@ -135,7 +133,6 @@ public class SystemClockInt1AHandler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 1A, AH=05h - Set RTC Date (stub - not implemented, returning error)");
         }
-        // Return error - we don't support changing the system date
         State.CarryFlag = true;
     }
 }

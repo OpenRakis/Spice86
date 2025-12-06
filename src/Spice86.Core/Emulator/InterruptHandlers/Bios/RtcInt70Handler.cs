@@ -48,42 +48,32 @@ public sealed class RtcInt70Handler : InterruptHandler {
             LoggerService.Verbose("INT 70h - RTC Alarm/Periodic Interrupt Handler");
         }
 
-        // Read Status Register C (0x0C) to check interrupt source and clear flags
-        // Reading this register clears the interrupt flags
         _ioPortDispatcher.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterC);
         byte statusC = _ioPortDispatcher.ReadByte(CmosPorts.Data);
 
-        // Check if this is a valid RTC interrupt (bit 6 = periodic, bit 5 = alarm)
         if ((statusC & 0x60) == 0) {
-            // Not a valid RTC interrupt, just acknowledge and exit
             AcknowledgeInterrupt();
             return;
         }
 
-        // Read Status Register B (0x0B) to check which interrupts are enabled
         _ioPortDispatcher.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterB);
         byte statusB = _ioPortDispatcher.ReadByte(CmosPorts.Data);
 
-        // Only process interrupts that are both flagged and enabled
         byte activeInterrupts = (byte)(statusC & statusB);
 
-        // Handle periodic interrupt (bit 6)
         if ((activeInterrupts & 0x40) != 0) {
             HandlePeriodicInterrupt();
         }
 
-        // Handle alarm interrupt (bit 5)
         if ((activeInterrupts & 0x20) != 0) {
             HandleAlarmInterrupt();
         }
 
-        // Acknowledge the interrupt and exit
         AcknowledgeInterrupt();
     }
 
 
     private void HandlePeriodicInterrupt() {
-        // Check if a wait is active
         if (_biosDataArea.RtcWaitFlag == 0) {
             return;
         }
@@ -92,10 +82,8 @@ public sealed class RtcInt70Handler : InterruptHandler {
         uint count = _biosDataArea.UserWaitTimeout;
 
         if (count > InterruptIntervalMicroseconds) {
-            // Still waiting - decrement the counter
             _biosDataArea.UserWaitTimeout = count - InterruptIntervalMicroseconds;
         } else {
-            // Wait has expired
             CompleteWait();
         }
     }
@@ -106,7 +94,6 @@ public sealed class RtcInt70Handler : InterruptHandler {
             LoggerService.Verbose("RTC wait completed");
         }
 
-        // Clear the wait counter and flag
         _biosDataArea.UserWaitTimeout = 0;
         _biosDataArea.RtcWaitFlag = 0;
 
@@ -141,10 +128,8 @@ public sealed class RtcInt70Handler : InterruptHandler {
 
 
     private void AcknowledgeInterrupt() {
-        // Point to default read-only register D and enable NMI
         _ioPortDispatcher.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterD);
 
-        // Send EOI to both PICs (IRQ 8 is on secondary PIC)
         _dualPic.AcknowledgeInterrupt(8);
 
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {

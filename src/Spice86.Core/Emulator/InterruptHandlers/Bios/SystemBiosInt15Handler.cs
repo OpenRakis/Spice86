@@ -51,7 +51,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
         _dualPic = dualPic;
         _ioPortDispatcher = ioPortDispatcher;
         if (initializeResetVector) {
-            // Put HLT instruction at the reset address
             memory.UInt16[0xF000, 0xFFF0] = 0xF4;
         }
         FillDispatchTable();
@@ -192,7 +191,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
         uint wordCount = State.CX;
         uint byteCount = wordCount * 2;
 
-        // Validate word count first
         if (wordCount == 0) {
             SetCarryFlag(false, calledFromVm);
             State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
@@ -200,7 +198,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
 
-        // Maximum 128K transfer on 386+ (following SeaBIOS comment)
         if (wordCount > 0x8000) {
             SetCarryFlag(true, calledFromVm);
             State.AH = (byte)ExtendedMemoryCopyStatus.InvalidLength;
@@ -264,7 +261,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// This function tells to the emulated program that we are an IBM PC AT, not a IBM PS/2.
     /// </summary>
     public void Unsupported() {
-        // We are not an IBM PS/2
         SetCarryFlag(true, true);
         State.AH = 0x86;
     }
