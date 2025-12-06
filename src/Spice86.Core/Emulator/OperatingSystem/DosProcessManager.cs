@@ -241,13 +241,6 @@ public class DosProcessManager : DosFileLoader {
         ushort envSegment = environmentSegment;
         if (envSegment == 0) {
             if (isFirstProgram) {
-                // For the first program, we place the environment block in a fixed location
-                // that won't conflict with the PSP at InitialPspSegment. We use the segment
-                // right after COMMAND.COM's PSP area (segment 0x70), which is unused memory
-                // between COMMAND.COM and the program's PSP.
-                // This avoids using MCB allocation which would place the environment at
-                // InitialPspSegment, where it would be overwritten by PSP initialization.
-                // See: https://github.com/maximilien-noal/Spice86/issues/XXX
                 envSegment = (ushort)(_commandCom.NextSegment);
                 uint envAddress = MemoryUtils.ToPhysicalAddress(envSegment, 0);
                 _memory.LoadData(envAddress, envBlockData);
@@ -551,56 +544,6 @@ public class DosProcessManager : DosFileLoader {
     }
 
     /// <summary>
-    /// Loads the first program using pre-allocated memory block.
-    /// </summary>
-    /// <remarks>
-    /// This is used for the first program where memory was reserved BEFORE allocating the environment
-    /// block to prevent the environment from taking the memory at InitialPspSegment.
-    /// </remarks>
-    private DosExecResult LoadProgramWithPreallocatedMemory(byte[] fileBytes, string hostPath, string? arguments,
-        ushort parentPspSegment, ushort envSegment, DosExecLoadType loadType, 
-        DosMemoryControlBlock memBlock, DosExeFile? exeFile, bool isExe) {
-        
-        ushort pspSegment = _pspTracker.InitialPspSegment;
-        
-        // Create and register the PSP
-        DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
-
-        // Initialize PSP
-        InitializePsp(psp, parentPspSegment, envSegment, arguments);
-
-        // Set the disk transfer area address
-        _fileManager.SetDiskTransferAreaAddress(pspSegment, DosCommandTail.OffsetInPspSegment);
-
-        // Load the program
-        ushort cs, ip, ss, sp;
-        
-        if (isExe && exeFile is not null) {
-            // For EXE files, memory was already reserved
-            LoadExeFileIntoReservedMemory(exeFile, memBlock, out cs, out ip, out ss, out sp);
-        } else {
-            LoadComFileInternal(fileBytes, out cs, out ip, out ss, out sp);
-        }
-
-        if (loadType == DosExecLoadType.LoadAndExecute) {
-            // Set up CPU state for execution
-            _state.DS = pspSegment;
-            _state.ES = pspSegment;
-            _state.SS = ss;
-            _state.SP = sp;
-            SetEntryPoint(cs, ip);
-            _state.InterruptFlag = true;
-            
-            return DosExecResult.Succeeded();
-        } else if (loadType == DosExecLoadType.LoadOnly) {
-            // Return entry point info without executing
-            return DosExecResult.Succeeded(pspSegment, cs, ip, ss, sp);
-        }
-
-        return DosExecResult.Succeeded();
-    }
-
-    /// <summary>
     /// Loads an EXE file into already-reserved memory and returns entry point information.
     /// </summary>
     /// <remarks>
@@ -680,29 +623,6 @@ public class DosProcessManager : DosFileLoader {
         ip = ComOffset;
         ss = programEntryPointSegment;
         sp = 0xFFFE; // Standard COM file stack
-    }
-
-    /// <summary>
-    /// Converts the specified command-line arguments string into the format used by DOS.
-    /// </summary>
-    private static byte[] ArgumentsToDosBytes(string? arguments) {
-        byte[] res = new byte[128];
-        string correctLengthArguments = "";
-        if (!string.IsNullOrWhiteSpace(arguments)) {
-            correctLengthArguments = arguments.Length > 127 ? arguments[..127] : arguments;
-        }
-
-        res[0] = (byte)correctLengthArguments.Length;
-        byte[] argumentsBytes = Encoding.ASCII.GetBytes(correctLengthArguments);
-
-        int index = 0;
-        for (; index < correctLengthArguments.Length; index++) {
-            res[index + 1] = argumentsBytes[index];
-        }
-
-        res[index + 1] = 0x0D;
-        int endIndex = index + 2;  // Include the carriage return byte
-        return res[0..endIndex];
     }
 
     /// <summary>
