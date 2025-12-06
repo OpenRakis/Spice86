@@ -146,8 +146,8 @@ public class DosProcessManager : DosFileLoader {
             throw new UnrecoverableException($"Failed to reserve space for EXE file at {pspSegment}");
         }
         // The program image is loaded immediately above the PSP, which is the start of
-        // the memory block that we just allocated. Seek 16 paragraphs into the allocated block to
-        // get our entry point.
+        // the memory block that we just allocated.
+        // Seek 16 paragraphs into the allocated block to get EXE image segment.
         ushort programEntryPoint = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
 
         programEntryPoint = ComputeEntryPoint(exeFile, block, programEntryPoint);
