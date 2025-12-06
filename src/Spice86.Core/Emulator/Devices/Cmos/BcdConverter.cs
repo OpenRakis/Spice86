@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.Devices.Cmos;
 /// <summary>
 /// Utility class for converting between Binary Coded Decimal (BCD) and binary formats.
 /// BCD encoding stores each decimal digit in a nibble (4 bits), allowing values 0-99 to be
-/// represented in a single byte (e.g., decimal 47 = 0x47 in BCD = 0100 0111).
+/// represented in a single byte (e.g., decimal 47 becomes BCD 0x47 = binary 0100_0111, where 0100=4 and 0111=7).
 /// </summary>
 public static class BcdConverter {
     /// <summary>

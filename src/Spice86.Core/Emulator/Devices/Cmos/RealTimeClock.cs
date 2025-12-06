@@ -361,12 +361,12 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </para>
     /// <para>
     /// This implementation approximates the behavior by checking if we're
-    /// within the first 2ms of a second boundary.
+    /// within 2ms of the next second boundary.
     /// </para>
     /// </summary>
     private bool IsUpdateInProgress(DateTime now) {
-        double fractional = (now.TimeOfDay.TotalMilliseconds % 1000.0) / 1000.0;
-        return fractional < 0.002;
+        double msInSecond = now.TimeOfDay.TotalMilliseconds % 1000.0;
+        return msInSecond >= 998.0 || msInSecond < 2.0;
     }
 
     /// <summary>
@@ -412,10 +412,10 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             return;
         }
         _pauseStartedTicks = Stopwatch.GetTimestamp();
+        _isPaused = true;
     }
 
     private void OnPaused() {
-        _isPaused = true;
     }
 
     private void OnResumed() {

@@ -525,7 +525,7 @@ public class Spice86DependencyInjection : IDisposable {
             joystick, intel8042Controller, keyboardInt16Handler,
             emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler,
-            systemBiosInt15Handler, systemClockInt1AHandler,
+            systemBiosInt15Handler, systemClockInt1AHandler, realTimeClock,
             pitTimer,
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler,

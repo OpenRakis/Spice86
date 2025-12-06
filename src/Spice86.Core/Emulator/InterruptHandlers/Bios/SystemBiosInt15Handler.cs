@@ -82,7 +82,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
     /// <summary>
     /// INT 15h, AH=83h - Event Wait Interval.
-    /// Sets up RTC periodic interrupt for timed delay with optional callback.
+    /// Sets up RTC periodic interrupt for timed delay. ES:BX points to a flag byte whose bit 7 will be set when the wait completes.
     /// AL=00h to set, AL=01h to cancel. Returns CF=1 + AH=80h if event already in progress.
     /// </summary>
     public void WaitFunction(bool calledFromVm) {
