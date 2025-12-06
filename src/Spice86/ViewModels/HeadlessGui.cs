@@ -55,13 +55,10 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
 
     public double MouseY { get; set; }
 
-    public void SetResolution(int width, int height, double pixelAspectRatio = 1.0) {
+    public void SetResolution(int width, int height) {
         if (width <= 0 || height <= 0) {
             throw new ArgumentOutOfRangeException($"Invalid resolution: {width}x{height}");
         }
-
-        // Headless mode doesn't need to apply pixel aspect ratio correction
-        // since there's no visual display, but we accept the parameter for interface compliance
 
         _isSettingResolution = true;
         try {

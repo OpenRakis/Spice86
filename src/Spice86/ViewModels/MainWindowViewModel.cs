@@ -246,7 +246,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         UpdateShownEmulatorMouseCursorPosition();
     }
 
-    public void SetResolution(int width, int height, double pixelAspectRatio = 1.0) {
+    public void SetResolution(int width, int height) {
         _uiDispatcher.Post(() => {
             _isSettingResolution = true;
             Scale = 1;
@@ -260,8 +260,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 _drawingSemaphoreSlim?.Wait();
                 try {
                     Bitmap?.Dispose();
-                    Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888,
-                        AlphaFormat.Opaque);
+                    Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
                 } finally {
                     if (!_disposed) {
                         _drawingSemaphoreSlim?.Release();

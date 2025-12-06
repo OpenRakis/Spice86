@@ -20,8 +20,7 @@ public interface IGuiVideoPresentation {
     /// </summary>
     /// <param name="videoWidth">The width in pixels</param>
     /// <param name="videoHeight">The height in pixels</param>
-    /// <param name="pixelAspectRatio">The pixel aspect ratio (width:height). Default is 1.0 for square pixels.</param>
-    void SetResolution(int videoWidth, int videoHeight, double pixelAspectRatio = 1.0);
+    void SetResolution(int videoWidth, int videoHeight);
 
     /// <summary>
     /// Invoked when the GUI asks the VideoCard to render the screen contents in the WriteableBitmap's buffer pointer.
