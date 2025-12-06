@@ -117,8 +117,7 @@ public class DosProgramSegmentPrefixTracker {
     }
 
     /// <summary>
-    /// Gets the address where the program image itself starts for the current program that is
-    /// loaded.
+    /// Gets the address where the COM program image itself starts within the PSP segment.
     /// </summary>
     /// <remarks>
     /// Only the DOS program manager should need to know this. It can be easily calculated from the
@@ -126,12 +125,11 @@ public class DosProgramSegmentPrefixTracker {
     /// manager.
     /// </remarks>
     /// <returns>
-    /// Returns the address where the current program should be loaded after the current PSP,
-    /// or <c>0</c> if there is no current PSP segment.
+    /// Returns the address where the COM program should start execution from.
     /// </returns>
-    public ushort GetProgramEntryPointSegment() {
+    public ushort GetComProgramEntryPoint() {
         ushort currentPspSegment = GetCurrentPspSegment();
-        return (ushort)(currentPspSegment == 0 ? 0 : currentPspSegment + 0x10);
+        return (ushort)(currentPspSegment + 0x10);
     }
 
     /// <summary>

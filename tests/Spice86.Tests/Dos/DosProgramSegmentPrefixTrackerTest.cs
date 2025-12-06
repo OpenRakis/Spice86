@@ -60,7 +60,7 @@ public class DosProgramSegmentPrefixTrackerTests {
         _pspTracker.PspCount.Should().Be(0);
         _pspTracker.GetCurrentPsp().Should().BeNull();
         _pspTracker.GetCurrentPspSegment().Should().Be(0xFF0);
-        _pspTracker.GetProgramEntryPointSegment().Should().Be(0x1000);
+        _pspTracker.GetComProgramEntryPoint().Should().Be(0x1000);
     }
 
     /// <summary>
@@ -81,7 +81,7 @@ public class DosProgramSegmentPrefixTrackerTests {
         _pspTracker.PspCount.Should().Be(3);
         _pspTracker.GetCurrentPsp().Should().Be(psp3);
         _pspTracker.GetCurrentPspSegment().Should().Be(0x7060);
-        _pspTracker.GetProgramEntryPointSegment().Should().Be(0x7070);
+        _pspTracker.GetComProgramEntryPoint().Should().Be(0x7070);
     }
 
     /// <summary>
@@ -109,7 +109,7 @@ public class DosProgramSegmentPrefixTrackerTests {
         _pspTracker.PspCount.Should().Be(2);
         _pspTracker.GetCurrentPsp().Should().Be(psp3);
         _pspTracker.GetCurrentPspSegment().Should().Be(0x4000);
-        _pspTracker.GetProgramEntryPointSegment().Should().Be(0x4010);
+        _pspTracker.GetComProgramEntryPoint().Should().Be(0x4010);
     }
 
     /// <summary>
@@ -119,7 +119,7 @@ public class DosProgramSegmentPrefixTrackerTests {
     [Fact]
     public void SetCurrentPspSegmentUpdatesGetCurrentPspSegment() {
         // Arrange
-        ushort arbitraryPspSegment = 0x1234;
+        const ushort arbitraryPspSegment = 0x1234;
 
         // Act
         _pspTracker.SetCurrentPspSegment(arbitraryPspSegment);
@@ -137,7 +137,7 @@ public class DosProgramSegmentPrefixTrackerTests {
     public void SetCurrentPspSegmentWorksWithArbitraryValue() {
         // Arrange
         DosProgramSegmentPrefix psp1 = _pspTracker.PushPspSegment(0x2000);
-        ushort arbitraryPspSegment = 0x9999; // Not in the PSP stack
+        const ushort arbitraryPspSegment = 0x9999; // Not in the PSP stack
 
         // Act
         _pspTracker.SetCurrentPspSegment(arbitraryPspSegment);
