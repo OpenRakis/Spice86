@@ -68,7 +68,6 @@ public sealed class McpServer : IMcpServer {
             }
         };
 
-        // Add CFG CPU tool only if CFG CPU is available
         if (_cfgCpu != null) {
             Tool[] allTools = new Tool[baseTools.Length + 1];
             baseTools.CopyTo(allTools, 0);
@@ -323,11 +322,9 @@ public sealed class McpServer : IMcpServer {
         ExecutionContextManager contextManager = _cfgCpu.ExecutionContextManager;
         Spice86.Core.Emulator.CPU.CfgCpu.Linker.ExecutionContext currentContext = contextManager.CurrentExecutionContext;
 
-        // Count total entry points across all contexts
         int totalEntryPoints = contextManager.ExecutionContextEntryPoints
             .Sum(kvp => kvp.Value.Count);
 
-        // Get entry point addresses
         string[] entryPointAddresses = contextManager.ExecutionContextEntryPoints
             .Select(kvp => kvp.Key.ToString())
             .ToArray();

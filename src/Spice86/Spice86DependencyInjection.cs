@@ -557,7 +557,6 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Program executor created...");
         }
 
-        // Initialize stdio transport if MCP server is enabled
         McpStdioTransport? mcpStdioTransport = null;
         McpServer mcpServer = new(memory, state, functionCatalogue, configuration.CfgCpu ? cfgCpu : null, pauseHandler, loggerService);
 
@@ -721,7 +720,6 @@ public class Spice86DependencyInjection : IDisposable {
             if (disposing) {
                 ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
 
-                // Stop MCP stdio transport if it was started
                 _mcpStdioTransport?.Dispose();
 
                 ProgramExecutor.Dispose();

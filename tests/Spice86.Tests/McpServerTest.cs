@@ -185,7 +185,6 @@ public class McpServerTest {
         functions.Should().NotBeNull();
         functions!.Count.Should().Be(2);
 
-        // The function with more calls should be first (ordered by CalledCount descending)
         functions[0]?["name"]?.GetValue<string>().Should().Be("TestFunction1");
         functions[0]?["calledCount"]?.GetValue<int>().Should().Be(2);
         functions[1]?["name"]?.GetValue<string>().Should().Be("TestFunction2");

@@ -74,7 +74,6 @@ public sealed class McpStdioTransport : IDisposable {
         try {
             _readerTask.Wait(TimeSpan.FromSeconds(5));
         } catch (AggregateException ex) when (ex.InnerException is OperationCanceledException) {
-            // Expected when canceling
         } catch (Exception ex) {
             _loggerService.Error(ex, "Error stopping MCP stdio transport");
         }
@@ -90,39 +89,33 @@ public sealed class McpStdioTransport : IDisposable {
                 string? line = await ReadLineAsync(_inputReader, cancellationToken);
 
                 if (line == null) {
-                    // End of stream
                     _loggerService.Information("MCP server: stdin closed, shutting down");
                     break;
                 }
 
-                // MCP uses newline-delimited JSON-RPC messages
                 if (string.IsNullOrWhiteSpace(line)) {
                     continue;
                 }
 
                 messageBuffer.Append(line);
 
-                // Process the complete JSON-RPC message
                 string requestJson = messageBuffer.ToString();
                 messageBuffer.Clear();
 
                 try {
                     string responseJson = _mcpServer.HandleRequest(requestJson);
 
-                    // Write response to stdout with newline delimiter
                     await WriteLineAsync(_outputWriter, responseJson, cancellationToken);
                     await _outputWriter.FlushAsync();
                 } catch (Exception ex) {
                     _loggerService.Error(ex, "Error processing MCP request: {Request}", requestJson);
 
-                    // Send error response
                     string errorResponse = CreateErrorResponse($"Internal error: {ex.Message}");
                     await WriteLineAsync(_outputWriter, errorResponse, cancellationToken);
                     await _outputWriter.FlushAsync();
                 }
             }
         } catch (OperationCanceledException) {
-            // Normal shutdown
             _loggerService.Information("MCP server shutdown requested");
         } catch (Exception ex) {
             _loggerService.Error(ex, "Fatal error in MCP stdio transport");
