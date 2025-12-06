@@ -5,8 +5,6 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
 
-using ModelContextProtocol.Server;
-
 using Serilog.Events;
 
 using Spice86.Core.CLI;
@@ -561,7 +559,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         // Initialize stdio transport if MCP server is enabled
         McpStdioTransport? mcpStdioTransport = null;
-        McpServer mcpServer = new(memory, state, functionCatalogue, cpuForEmulationLoop as CfgCpu, pauseHandler, loggerService);
+        McpServer mcpServer = new(memory, state, functionCatalogue, configuration.CfgCpu ? cfgCpu : null, pauseHandler, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("MCP server created...");

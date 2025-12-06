@@ -130,8 +130,7 @@ public sealed class McpStdioTransport : IDisposable {
     }
 
     private static async Task<string?> ReadLineAsync(TextReader reader, CancellationToken cancellationToken) {
-        // TextReader.ReadLineAsync doesn't support cancellation tokens in .NET Standard 2.0
-        // For .NET 10, we can use the version with cancellation token
+        // Use WaitAsync for cancellation support across all TextReader implementations
         return await reader.ReadLineAsync().WaitAsync(cancellationToken);
     }
 
