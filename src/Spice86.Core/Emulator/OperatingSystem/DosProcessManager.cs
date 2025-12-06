@@ -19,7 +19,6 @@ using System.Text;
 /// Setups the loading and execution of DOS programs and maintains the DOS PSP chains in memory.
 /// </summary>
 public class DosProcessManager : DosFileLoader {
-    private const ushort ComOffset = 0x100;
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
@@ -124,14 +123,16 @@ public class DosProcessManager : DosFileLoader {
     }
 
     private void LoadComFile(byte[] com) {
-        ushort programEntryPointSegment = _pspTracker.GetProgramEntryPointSegment();
-        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(programEntryPointSegment, ComOffset);
-        _memory.LoadData(physicalStartAddress, com);
+        ushort pspSegment = _pspTracker.GetCurrentPspSegment();
+        uint physicalLoadAddress = MemoryUtils.ToPhysicalAddress(pspSegment, DosProgramSegmentPrefix.PspSize);
+        _memory.LoadData(physicalLoadAddress, com);
 
-        // Make DS and ES point to the PSP
-        _state.DS = programEntryPointSegment;
-        _state.ES = programEntryPointSegment;
-        SetEntryPoint(programEntryPointSegment, ComOffset);
+        // Make SS, DS and ES point to the PSP
+        _state.DS = pspSegment;
+        _state.ES = pspSegment;
+        _state.SS = pspSegment;
+        _state.SP = 0xFFFE; // Standard COM file stack
+        SetEntryPoint(pspSegment, DosProgramSegmentPrefix.PspSize);
         _state.InterruptFlag = true;
     }
 
@@ -144,21 +145,19 @@ public class DosProcessManager : DosFileLoader {
         if (block is null) {
             throw new UnrecoverableException($"Failed to reserve space for EXE file at {pspSegment}");
         }
-        // The program image is typically loaded immediately above the PSP, which is the start of
-        // the memory block that we just allocated. Seek 16 paragraphs into the allocated block to
-        // get our starting point.
-        ushort programEntryPointSegment = (ushort)(block.DataBlockSegment + 0x10);
-        // There is one special case that we need to account for: if the EXE doesn't have any extra
-        // allocations, we need to load it as high as possible in the memory block rather than
-        // immediately after the PSP like we normally do. This will give the program extra space
-        // between the PSP and the start of the program image that it can use however it wants.
-        if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
-            ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
-            programEntryPointSegment = (ushort)(block.DataBlockSegment + programEntryPointOffset);
-        }
+        ushort pspLoadSegment = block.DataBlockSegment;
+        // The program image is loaded immediately above the PSP, which is the start of
+        // the memory block that we just allocated.
+        // Jump over the PSP to get the EXE image segment.
+        ushort loadImageSegment = (ushort)(pspLoadSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
 
-        LoadExeFileInMemoryAndApplyRelocations(exeFile, programEntryPointSegment);
-        SetupCpuForExe(exeFile, programEntryPointSegment, pspSegment);
+        // Adjust image load segment when PSP and exe image gets splitted due to load into high memory
+        if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
+            ushort imageDistanceInParagraphs = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
+            loadImageSegment = (ushort)(pspLoadSegment + imageDistanceInParagraphs);
+        }
+        LoadExeFileInMemoryAndApplyRelocations(exeFile, loadImageSegment);
+        SetupCpuForExe(exeFile, loadImageSegment, pspSegment);
     }
 
     private byte[] LoadExeOrComFile(string file, ushort pspSegment) {
@@ -198,15 +197,15 @@ public class DosProcessManager : DosFileLoader {
     /// Loads the program image and applies any necessary relocations to it.
     /// </summary>
     /// <param name="exeFile">The EXE file to load.</param>
-    /// <param name="startSegment">The starting segment for the program.</param>
-    private void LoadExeFileInMemoryAndApplyRelocations(DosExeFile exeFile, ushort startSegment) {
-        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, 0);
-        _memory.LoadData(physicalStartAddress, exeFile.ProgramImage, (int)exeFile.ProgramSize);
+    /// <param name="loadImageSegment">The load segment for the program.</param>
+    private void LoadExeFileInMemoryAndApplyRelocations(DosExeFile exeFile, ushort loadImageSegment) {
+        uint physicalLoadAddress = MemoryUtils.ToPhysicalAddress(loadImageSegment, 0);
+        _memory.LoadData(physicalLoadAddress, exeFile.ProgramImage, (int)exeFile.ProgramSize);
         foreach (SegmentedAddress address in exeFile.RelocationTable) {
             // Read value from memory, add the start segment offset and write back
             uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset)
-                + physicalStartAddress;
-            _memory.UInt16[addressToEdit] += startSegment;
+                + physicalLoadAddress;
+            _memory.UInt16[addressToEdit] += loadImageSegment;
         }
     }
 
@@ -214,13 +213,13 @@ public class DosProcessManager : DosFileLoader {
     /// Sets up the CPU to execute the loaded program.
     /// </summary>
     /// <param name="exeFile">The EXE file that was loaded.</param>
-    /// <param name="startSegment">The starting segment address of the program.</param>
+    /// <param name="loadSegment">The segment where the program has been loaded.</param>
     /// <param name="pspSegment">The segment address of the program's PSP (Program Segment Prefix).</param>
-    private void SetupCpuForExe(DosExeFile exeFile, ushort startSegment, ushort pspSegment) {
+    private void SetupCpuForExe(DosExeFile exeFile, ushort loadSegment, ushort pspSegment) {
         // MS-DOS uses the values in the file header to set the SP and SS registers and
         // adjusts the initial value of the SS register by adding the start-segment
         // address to it.
-        _state.SS = (ushort)(exeFile.InitSS + startSegment);
+        _state.SS = (ushort)(exeFile.InitSS + loadSegment);
         _state.SP = exeFile.InitSP;
 
         // Make DS and ES point to the PSP
@@ -232,6 +231,6 @@ public class DosProcessManager : DosFileLoader {
         // Finally, MS-DOS reads the initial CS and IP values from the program's file
         // header, adjusts the CS register value by adding the start-segment address to
         // it, and transfers control to the program at the adjusted address.
-        SetEntryPoint((ushort)(exeFile.InitCS + startSegment), exeFile.InitIP);
+        SetEntryPoint((ushort)(exeFile.InitCS + loadSegment), exeFile.InitIP);
     }
 }
