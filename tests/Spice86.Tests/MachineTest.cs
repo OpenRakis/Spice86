@@ -37,7 +37,7 @@ public class MachineTest
 
     public static IEnumerable<object[]> GetCfgCpuConfigurations()
     {
-        yield return new object[] { false };
+        // CfgCpu is now the only CPU implementation
         yield return new object[] { true };
     }
 
@@ -234,18 +234,16 @@ public class MachineTest
         expected[0x02] = 0xff;
         expected[0x03] = 0xff;
         Machine machine = TestOneBin("selfmodifyvalue", expected, enableCfgCpu);
-        if (enableCfgCpu) {
-            CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
-            CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x008));
-            Assert.NotNull(instruction);
-            if (instruction is MovRegImm16 movAxModifiedImm) {
-                InstructionField<ushort> immField = movAxModifiedImm.ValueField;
-                // Code should have been modified so instruction should use memory and not stored value
-                Assert.False(immField.UseValue);
-                Assert.Equal(instruction.Address.Linear + 1, immField.PhysicalAddress);
-            } else {
-                Assert.Fail("Should have been MOV AX, xxx");
-            }
+        CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+        CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x008));
+        Assert.NotNull(instruction);
+        if (instruction is MovRegImm16 movAxModifiedImm) {
+            InstructionField<ushort> immField = movAxModifiedImm.ValueField;
+            // Code should have been modified so instruction should use memory and not stored value
+            Assert.False(immField.UseValue);
+            Assert.Equal(instruction.Address.Linear + 1, immField.PhysicalAddress);
+        } else {
+            Assert.Fail("Should have been MOV AX, xxx");
         }
     }
 
@@ -293,25 +291,24 @@ public class MachineTest
         spice86DependencyInjection.ProgramExecutor.Run();
 
         InterruptVectorTable ivt = new(memory);
-        if (enableCfgCpu) {
-            CurrentInstructions currentInstructions =
-                machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+        CurrentInstructions currentInstructions =
+            machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
 
-            // Entry INT 8 in the COM
-            CfgInstruction? int8Entry = currentInstructions.GetAtAddress(entryPoint);
-            Assert.NotNull(int8Entry);
+        // Entry INT 8 in the COM
+        CfgInstruction? int8Entry = currentInstructions.GetAtAddress(entryPoint);
+        Assert.NotNull(int8Entry);
 
-            // Post-INT8 instruction in COM: int 8 is 2 bytes long
-            SegmentedAddress postInt8Addr = entryPoint + 2;
-            CfgInstruction? postInt8 = currentInstructions.GetAtAddress(postInt8Addr);
-            Assert.NotNull(postInt8);
+        // Post-INT8 instruction in COM: int 8 is 2 bytes long
+        SegmentedAddress postInt8Addr = entryPoint + 2;
+        CfgInstruction? postInt8 = currentInstructions.GetAtAddress(postInt8Addr);
+        Assert.NotNull(postInt8);
 
-            // INT 8 handler entry: callback at IVT[8]
-            CfgInstruction? int8HandlerEntry = currentInstructions.GetAtAddress(ivt[8]);
-            Assert.NotNull(int8HandlerEntry);
+        // INT 8 handler entry: callback at IVT[8]
+        CfgInstruction? int8HandlerEntry = currentInstructions.GetAtAddress(ivt[8]);
+        Assert.NotNull(int8HandlerEntry);
 
-            // INT 1C handler entry: IRET-only at IVT[1C]
-            CfgInstruction? int1CHandlerEntry = currentInstructions.GetAtAddress(ivt[0x1C]);
+        // INT 1C handler entry: IRET-only at IVT[1C]
+        CfgInstruction? int1CHandlerEntry = currentInstructions.GetAtAddress(ivt[0x1C]);
             Assert.NotNull(int1CHandlerEntry);
 
             // Tight checks:
@@ -379,11 +376,9 @@ public class MachineTest
     }
 
     private void CompareListingWithExpected(string binName, bool enableCfgCpu, Machine machine) {
-        if (enableCfgCpu) {
-            List<string> expectedLines = GetExpectedListing(binName);
-            List<string> actualLines = _dumper.ToAssemblyListing(machine);
-            Assert.Equal(expectedLines, actualLines);
-        }
+        List<string> expectedLines = GetExpectedListing(binName);
+        List<string> actualLines = _dumper.ToAssemblyListing(machine);
+        Assert.Equal(expectedLines, actualLines);
     }
 
     /// <summary>
@@ -419,13 +414,10 @@ public class MachineTest
         }
 
         //Assert
-        if (enableCfgCpu) {
-            Assert.Equal(8, debugPortsHandler.PostValues.Count);
-            // FF means test finished normally
-            Assert.Equal(0xFF, debugPortsHandler.PostValues.Last());
-        } else {
-            Assert.Equal(6, debugPortsHandler.PostValues.Count);
-        }
+        // CfgCpu is now the only CPU implementation
+        Assert.Equal(8, debugPortsHandler.PostValues.Count);
+        // FF means test finished normally
+        Assert.Equal(0xFF, debugPortsHandler.PostValues.Last());
         CompareListingWithExpected(binName, enableCfgCpu, machine);
     }
 
