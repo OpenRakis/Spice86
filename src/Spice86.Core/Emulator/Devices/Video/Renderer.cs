@@ -14,6 +14,7 @@ public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
     private readonly VideoMemory _memory;
     private readonly IVideoState _state;
+    private uint[] _tempBuffer = Array.Empty<uint>();
 
     /// <summary>
     ///     Create a new VGA renderer.
@@ -38,7 +39,20 @@ public class Renderer : IVgaRenderer {
     };
 
     /// <inheritdoc />
-    public int Height => (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
+    public int Height {
+        get {
+            int nativeHeight = (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
+            // Apply aspect ratio correction for VGA modes with non-square pixels.
+            // Low-res modes (320/360 width) need 1.2x vertical stretch to display correctly on square-pixel monitors.
+            // This matches how these modes appeared on 4:3 CRT screens.
+            return Width switch {
+                320 when nativeHeight == 200 => 240,  // 320x200 → 320x240 (4:3)
+                360 when nativeHeight == 200 => 240,  // 360x200 → 360x240 (3:2)
+                640 when nativeHeight == 400 => 480,  // 640x400 → 640x480 (4:3)
+                _ => nativeHeight  // No correction for other modes
+            };
+        }
+    }
 
     /// <inheritdoc />
     public int BufferSize { get; private set; }
@@ -61,9 +75,28 @@ public class Renderer : IVgaRenderer {
         }
         try {
             BufferSize = frameBuffer.Length;
-            if (Width * Height > BufferSize) {
+            
+            // Calculate native (pre-aspect-correction) dimensions
+            int nativeHeight = (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
+            int width = Width;
+            int outputHeight = Height;
+            bool needsAspectCorrection = outputHeight != nativeHeight;
+            
+            if (width * outputHeight > BufferSize) {
                 // Resolution change hasn't caught up yet. Skip a frame.
                 return;
+            }
+
+            // If aspect correction is needed, render to temp buffer first
+            Span<uint> renderTarget;
+            if (needsAspectCorrection) {
+                int tempBufferSize = width * nativeHeight;
+                if (_tempBuffer.Length < tempBufferSize) {
+                    _tempBuffer = new uint[tempBufferSize];
+                }
+                renderTarget = new Span<uint>(_tempBuffer, 0, tempBufferSize);
+            } else {
+                renderTarget = frameBuffer;
             }
 
             // Some timing helpers.
@@ -144,11 +177,11 @@ public class Renderer : IVgaRenderer {
 
                             // Convert the 4 bytes into 8 pixels.
                             if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
-                                Draw256ColorMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
+                                Draw256ColorMode(renderTarget, ref destinationAddress, plane0, plane1, plane2, plane3);
                             } else if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
-                                DrawGraphicsMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
+                                DrawGraphicsMode(renderTarget, ref destinationAddress, plane0, plane1, plane2, plane3);
                             } else {
-                                DrawTextMode(frameBuffer, ref destinationAddress, plane0, plane1, scanline);
+                                DrawTextMode(renderTarget, ref destinationAddress, plane0, plane1, scanline);
                             }
                             // This increases the memory address counter after each character, taking count-by-two and count-by-four into account.
                             memoryAddressCounter += (characterCounter & characterClockMask) == 0 ? 1 : 0;
@@ -182,11 +215,45 @@ public class Renderer : IVgaRenderer {
                 rowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
             } // End of vertical loop
 
+            // Apply aspect ratio correction if needed
+            if (needsAspectCorrection) {
+                ApplyAspectRatioCorrection(frameBuffer, nativeHeight);
+            }
+
             LastFrameRenderTime = stopwatch.Elapsed;
         } catch (IndexOutOfRangeException) {
             // Resolution changed during rendering, discard the rest of this frame.
         } finally {
             Monitor.Exit(RenderLock);
+        }
+    }
+
+    private void ApplyAspectRatioCorrection(Span<uint> outputBuffer, int nativeHeight) {
+        int width = Width;
+        int outputHeight = Height;
+        Span<uint> sourceBuffer = new Span<uint>(_tempBuffer, 0, width * nativeHeight);
+        
+        // For 320x200 → 320x240: stretch from 200 lines to 240 lines (1.2x)
+        // Strategy: for every 5 input lines, output 6 lines (duplicate every 5th line)
+        // This gives us exactly 200 * 6/5 = 240 lines
+        
+        int destLine = 0;
+        for (int sourceLine = 0; sourceLine < nativeHeight; sourceLine++) {
+            // Copy the source line to output
+            sourceBuffer.Slice(sourceLine * width, width).CopyTo(outputBuffer.Slice(destLine * width, width));
+            destLine++;
+            
+            // For 200→240 conversion: duplicate every 5th line (at indices 4, 9, 14, 19, ...)
+            // This means: when sourceLine % 5 == 4, duplicate the line
+            if (nativeHeight == 200 && outputHeight == 240 && sourceLine % 5 == 4) {
+                sourceBuffer.Slice(sourceLine * width, width).CopyTo(outputBuffer.Slice(destLine * width, width));
+                destLine++;
+            }
+            // For 400→480 conversion: duplicate every 5th line 
+            else if (nativeHeight == 400 && outputHeight == 480 && sourceLine % 5 == 4) {
+                sourceBuffer.Slice(sourceLine * width, width).CopyTo(outputBuffer.Slice(destLine * width, width));
+                destLine++;
+            }
         }
     }
 
