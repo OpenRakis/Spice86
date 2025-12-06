@@ -15,24 +15,22 @@ using System.Text.Json.Nodes;
 
 /// <summary>
 /// MCP server exposing emulator state inspection tools (CPU, memory, functions, CFG).
-/// Thread-safe: serializes requests with internal lock and auto-pauses emulator during inspection.
+/// Thread-safe: serializes requests with internal lock.
 /// </summary>
 public sealed class McpServer : IMcpServer {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly CfgCpu? _cfgCpu;
-    private readonly IPauseHandler _pauseHandler;
     private readonly ILoggerService _loggerService;
     private readonly Tool[] _tools;
     private readonly object _requestLock = new object();
 
-    public McpServer(IMemory memory, State state, FunctionCatalogue functionCatalogue, CfgCpu? cfgCpu, IPauseHandler pauseHandler, ILoggerService loggerService) {
+    public McpServer(IMemory memory, State state, FunctionCatalogue functionCatalogue, CfgCpu? cfgCpu, ILoggerService loggerService) {
         _memory = memory;
         _state = state;
         _functionCatalogue = functionCatalogue;
         _cfgCpu = cfgCpu;
-        _pauseHandler = pauseHandler;
         _loggerService = loggerService;
         _tools = CreateTools();
     }
@@ -164,47 +162,44 @@ public sealed class McpServer : IMcpServer {
 
         // Thread-safe: serialize all MCP requests to prevent concurrent access
         lock (_requestLock) {
-            // Pause emulator before inspecting state to ensure consistency
-            bool wasPaused = _pauseHandler.IsPaused;
-            if (!wasPaused) {
-                _pauseHandler.RequestPause($"MCP tool execution: {toolName}");
-                // Wait for pause to take effect by waiting for Paused event
-                // The PauseHandler's Paused event is invoked immediately after setting _pausing = true,
-                // so by the time RequestPause returns, the pause has taken effect
+            object? result = null;
+            string? errorMessage = null;
+            int errorCode = 0;
+
+            switch (toolName) {
+                case "read_cpu_registers":
+                    result = ReadCpuRegisters();
+                    break;
+                case "read_memory":
+                    (result, errorMessage) = TryReadMemory(argumentsElement);
+                    if (errorMessage != null) {
+                        errorCode = -32602;
+                    }
+                    break;
+                case "list_functions":
+                    (result, errorMessage) = TryListFunctions(argumentsElement);
+                    if (errorMessage != null) {
+                        errorCode = -32602;
+                    }
+                    break;
+                case "read_cfg_cpu_graph":
+                    (result, errorMessage) = TryReadCfgCpuGraph();
+                    if (errorMessage != null) {
+                        errorCode = -32603;
+                    }
+                    break;
+                default:
+                    errorMessage = $"Unknown tool: {toolName}";
+                    errorCode = -32601;
+                    break;
             }
 
-            try {
-                object result;
-                switch (toolName) {
-                    case "read_cpu_registers":
-                        result = ReadCpuRegisters();
-                        break;
-                    case "read_memory":
-                        result = ReadMemory(argumentsElement);
-                        break;
-                    case "list_functions":
-                        result = ListFunctions(argumentsElement);
-                        break;
-                    case "read_cfg_cpu_graph":
-                        result = ReadCfgCpuGraph();
-                        break;
-                    default:
-                        throw new InvalidOperationException($"Unknown tool: {toolName}");
-                }
-
-                return CreateToolCallResponse(id, result);
-            } catch (ArgumentException ex) {
-                _loggerService.Error(ex, "Error executing tool {ToolName}", toolName);
-                return CreateErrorResponse(id, -32602, $"Invalid params: {ex.Message}");
-            } catch (InvalidOperationException ex) {
-                _loggerService.Error(ex, "Error executing tool {ToolName}", toolName);
-                return CreateErrorResponse(id, -32603, $"Tool execution error: {ex.Message}");
-            } finally {
-                // Resume emulator if we paused it
-                if (!wasPaused && _pauseHandler.IsPaused) {
-                    _pauseHandler.Resume();
-                }
+            if (errorMessage != null) {
+                _loggerService.Error("Error executing tool {ToolName}: {Error}", toolName, errorMessage);
+                return CreateErrorResponse(id, errorCode, errorMessage);
             }
+
+            return CreateToolCallResponse(id, result);
         }
     }
 
@@ -244,38 +239,38 @@ public sealed class McpServer : IMcpServer {
         };
     }
 
-    private MemoryReadResponse ReadMemory(JsonElement? arguments) {
+    private (MemoryReadResponse? result, string? error) TryReadMemory(JsonElement? arguments) {
         if (!arguments.HasValue) {
-            throw new ArgumentException("Missing arguments for read_memory");
+            return (null, "Missing arguments for read_memory");
         }
 
         JsonElement argsValue = arguments.Value;
 
         if (!argsValue.TryGetProperty("address", out JsonElement addressElement)) {
-            throw new ArgumentException("Missing address parameter");
+            return (null, "Missing address parameter");
         }
 
         if (!argsValue.TryGetProperty("length", out JsonElement lengthElement)) {
-            throw new ArgumentException("Missing length parameter");
+            return (null, "Missing length parameter");
         }
 
         uint address = addressElement.GetUInt32();
         int length = lengthElement.GetInt32();
 
         if (length <= 0 || length > 4096) {
-            throw new InvalidOperationException("Length must be between 1 and 4096");
+            return (null, "Length must be between 1 and 4096");
         }
 
         byte[] data = _memory.ReadRam((uint)length, address);
 
-        return new MemoryReadResponse {
+        return (new MemoryReadResponse {
             Address = address,
             Length = length,
             Data = Convert.ToHexString(data)
-        };
+        }, null);
     }
 
-    private FunctionListResponse ListFunctions(JsonElement? arguments) {
+    private (FunctionListResponse? result, string? error) TryListFunctions(JsonElement? arguments) {
         int limit = 100;
 
         if (arguments != null) {
@@ -296,15 +291,15 @@ public sealed class McpServer : IMcpServer {
             })
             .ToArray();
 
-        return new FunctionListResponse {
+        return (new FunctionListResponse {
             Functions = functions,
             TotalCount = _functionCatalogue.FunctionInformations.Count
-        };
+        }, null);
     }
 
-    private CfgCpuGraphResponse ReadCfgCpuGraph() {
+    private (CfgCpuGraphResponse? result, string? error) TryReadCfgCpuGraph() {
         if (_cfgCpu == null) {
-            throw new InvalidOperationException("CFG CPU is not enabled. Use --CfgCpu to enable Control Flow Graph CPU.");
+            return (null, "CFG CPU is not enabled. Use --CfgCpu to enable Control Flow Graph CPU.");
         }
 
         ExecutionContextManager contextManager = _cfgCpu.ExecutionContextManager;
@@ -317,13 +312,13 @@ public sealed class McpServer : IMcpServer {
             .Select(kvp => kvp.Key.ToString())
             .ToArray();
 
-        return new CfgCpuGraphResponse {
+        return (new CfgCpuGraphResponse {
             CurrentContextDepth = currentContext.Depth,
             CurrentContextEntryPoint = currentContext.EntryPoint.ToString(),
             TotalEntryPoints = totalEntryPoints,
             EntryPointAddresses = entryPointAddresses,
             LastExecutedAddress = currentContext.LastExecuted?.Address.ToString() ?? "None"
-        };
+        }, null);
     }
 
     private static EmptyInputSchema CreateEmptyInputSchema() {
