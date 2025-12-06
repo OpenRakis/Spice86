@@ -148,16 +148,16 @@ public class DosProcessManager : DosFileLoader {
         // The program image is loaded immediately above the PSP, which is the start of
         // the memory block that we just allocated.
         // Jump over the PSP to get the EXE image segment.
-        ushort imageLoadSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
+        ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
 
         // Adjust image load segment if allocation should be the minimal amount possible
         if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
             ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
             ushort pspLoadSegment = block.DataBlockSegment;
-            imageLoadSegment = (ushort)(pspLoadSegment + programEntryPointOffset);
+            loadImageSegment = (ushort)(pspLoadSegment + programEntryPointOffset);
         }
-        LoadExeFileInMemoryAndApplyRelocations(exeFile, imageLoadSegment);
-        SetupCpuForExe(exeFile, imageLoadSegment, pspSegment);
+        LoadExeFileInMemoryAndApplyRelocations(exeFile, loadImageSegment);
+        SetupCpuForExe(exeFile, loadImageSegment, pspSegment);
     }
 
     private byte[] LoadExeOrComFile(string file, ushort pspSegment) {
@@ -197,15 +197,15 @@ public class DosProcessManager : DosFileLoader {
     /// Loads the program image and applies any necessary relocations to it.
     /// </summary>
     /// <param name="exeFile">The EXE file to load.</param>
-    /// <param name="startSegment">The starting segment for the program.</param>
-    private void LoadExeFileInMemoryAndApplyRelocations(DosExeFile exeFile, ushort startSegment) {
-        uint physicalLoadAddress = MemoryUtils.ToPhysicalAddress(startSegment, 0);
+    /// <param name="loadImageSegment">The load segment for the program.</param>
+    private void LoadExeFileInMemoryAndApplyRelocations(DosExeFile exeFile, ushort loadImageSegment) {
+        uint physicalLoadAddress = MemoryUtils.ToPhysicalAddress(loadImageSegment, 0);
         _memory.LoadData(physicalLoadAddress, exeFile.ProgramImage, (int)exeFile.ProgramSize);
         foreach (SegmentedAddress address in exeFile.RelocationTable) {
             // Read value from memory, add the start segment offset and write back
             uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset)
                 + physicalLoadAddress;
-            _memory.UInt16[addressToEdit] += startSegment;
+            _memory.UInt16[addressToEdit] += loadImageSegment;
         }
     }
 
@@ -213,13 +213,13 @@ public class DosProcessManager : DosFileLoader {
     /// Sets up the CPU to execute the loaded program.
     /// </summary>
     /// <param name="exeFile">The EXE file that was loaded.</param>
-    /// <param name="startSegment">The starting segment address of the program.</param>
+    /// <param name="loadSegment">The segment where the program has been loaded.</param>
     /// <param name="pspSegment">The segment address of the program's PSP (Program Segment Prefix).</param>
-    private void SetupCpuForExe(DosExeFile exeFile, ushort startSegment, ushort pspSegment) {
+    private void SetupCpuForExe(DosExeFile exeFile, ushort loadSegment, ushort pspSegment) {
         // MS-DOS uses the values in the file header to set the SP and SS registers and
         // adjusts the initial value of the SS register by adding the start-segment
         // address to it.
-        _state.SS = (ushort)(exeFile.InitSS + startSegment);
+        _state.SS = (ushort)(exeFile.InitSS + loadSegment);
         _state.SP = exeFile.InitSP;
 
         // Make DS and ES point to the PSP
@@ -231,6 +231,6 @@ public class DosProcessManager : DosFileLoader {
         // Finally, MS-DOS reads the initial CS and IP values from the program's file
         // header, adjusts the CS register value by adding the start-segment address to
         // it, and transfers control to the program at the adjusted address.
-        SetEntryPoint((ushort)(exeFile.InitCS + startSegment), exeFile.InitIP);
+        SetEntryPoint((ushort)(exeFile.InitCS + loadSegment), exeFile.InitIP);
     }
 }
