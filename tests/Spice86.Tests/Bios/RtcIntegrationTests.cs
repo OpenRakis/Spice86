@@ -152,7 +152,7 @@ public class RtcIntegrationTests {
         string tempFilePrefix = $"RtcIntegrationTests_{unitTestName}_";
         string tempDir = Path.GetTempPath();
         foreach (string file in Directory.GetFiles(tempDir, $"{tempFilePrefix}*.com")) {
-            try { File.Delete(file); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            File.Delete(file);
         }
         // Create a unique temp file with deterministic prefix and .com extension
         string tempFilePath = Path.Join(tempDir, $"{tempFilePrefix}{Guid.NewGuid()}.com");
@@ -180,10 +180,8 @@ public class RtcIntegrationTests {
 
             return testHandler;
         } finally {
-            // Clean up the temp file
             if (File.Exists(tempFilePath)) {
-                try { File.Delete(tempFilePath); } catch (IOException) { /* ignore file in use, etc. */ } catch (UnauthorizedAccessException) { /* ignore permission issues */ }
-                // optionally catch other expected exceptions or rethrow unexpected ones
+                File.Delete(tempFilePath);
             }
         }
     }
