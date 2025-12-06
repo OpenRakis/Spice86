@@ -36,6 +36,7 @@ public class DosInt21HandlerTests {
         var ioPortDispatcher = new Spice86.Core.Emulator.IOPorts.IOPortDispatcher(
             new Spice86.Core.Emulator.VM.Breakpoint.AddressReadWriteBreakpoints(), state, logger, false);
         var dosTables = new DosTables();
+        dosTables.Initialize(memory);
 
         var handler = new DosInt21Handler(
             memory,

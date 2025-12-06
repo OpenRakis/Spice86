@@ -10,31 +10,6 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Implements INT 20h - Program Terminate.
 /// </summary>
-/// <remarks>
-/// <para>
-/// INT 20h is the legacy DOS program termination interrupt, primarily used by COM programs.
-/// It terminates the current program and returns control to the parent process.
-/// </para>
-/// <para>
-/// <strong>Important:</strong> INT 20h requires CS to point to the PSP segment.
-/// This is automatic for COM files but may not be true for EXE files.
-/// Programs should use INT 21h/4Ch instead for reliable termination.
-/// </para>
-/// <para>
-/// The termination process:
-/// <list type="bullet">
-/// <item>Exit code is 0 (no way to specify exit code with INT 20h)</item>
-/// <item>All memory owned by the process is freed</item>
-/// <item>Interrupt vectors 22h, 23h, 24h are restored from PSP</item>
-/// <item>Control returns to parent via INT 22h vector</item>
-/// </list>
-/// </para>
-/// <para>
-/// <strong>MCB Note:</strong> The PSP segment is determined from CS on INT 20h entry.
-/// In real DOS, CS must equal the PSP segment for correct operation. This implementation
-/// follows the same behavior.
-/// </para>
-/// </remarks>
 public class DosInt20Handler : InterruptHandler {
     /// <summary>
     /// Initializes a new instance.
@@ -58,8 +33,8 @@ public class DosInt20Handler : InterruptHandler {
             LoggerService.Information("INT 20h: PROGRAM TERMINATE (legacy)");
         }
         
-        // INT 20h always exits with code 0 (no way to specify exit code)
-        // For minimal changes, we keep the simple termination behavior
+        // FreeDOS calls INT 21h AH=0 to handle termination
+        State.AH = 0x00;
         State.IsRunning = false;
     }
 }

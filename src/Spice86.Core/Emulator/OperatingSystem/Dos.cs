@@ -22,26 +22,8 @@ using Spice86.Shared.Utils;
 using System.Text;
 
 /// <summary>
-/// Emulates DOS (Disk Operating System) kernel services for real mode programs.
+/// Represents the DOS kernel.
 /// </summary>
-/// <remarks>
-/// This class provides implementations of DOS system calls typically accessed through software interrupts:
-/// <list type="bullet">
-/// <item><b>INT 20h</b>: Program termination</item>
-/// <item><b>INT 21h</b>: Primary DOS services (file I/O, memory management, process control, etc.)</item>
-/// <item><b>INT 2Fh</b>: Multiplexer interrupt (TSR communication, SHARE, MSCDEX, etc.)</item>
-/// </list>
-/// <para>
-/// The DOS implementation includes support for:
-/// <list type="bullet">
-/// <item>File system operations (open, read, write, close, seek)</item>
-/// <item>Memory management (MCB chain, allocation/deallocation)</item>
-/// <item>Process control (EXEC, terminate, return codes)</item>
-/// <item>Extended memory services (EMS, XMS)</item>
-/// <item>Device drivers and character I/O</item>
-/// </list>
-/// </para>
-/// </remarks>
 public sealed class Dos {
     //in DOSBox, this is the 'DOS_INFOBLOCK_SEG'
     private const int DosSysVarSegment = 0x80;
@@ -161,14 +143,13 @@ public sealed class Dos {
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
-    /// <param name="dosTables">The DOS tables structure.</param>
     /// <param name="xms">Optional XMS manager to expose through DOS.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         IDictionary<string, string> envVars, ILoggerService loggerService,
-        IOPortDispatcher ioPortDispatcher, DosTables dosTables,
+        IOPortDispatcher ioPortDispatcher,
         ExtendedMemoryManager? xms = null) {
         _loggerService = loggerService;
         Xms = xms;
@@ -185,15 +166,11 @@ public sealed class Dos {
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
 
-        // Initialize DOS tables (CDS and DBCS structures)
-        DosTables = dosTables;
+        DosTables = new DosTables();
         DosTables.Initialize(memory);
 
-        // Set up the CDS pointer in DosSysVars
-        if (DosTables.CurrentDirectoryStructure is not null) {
-            DosSysVars.CurrentDirectoryStructureListPointer = DosTables.CurrentDirectoryStructure.BaseAddress;
-            DosSysVars.CurrentDirectoryStructureCount = 26; // Support A-Z drives
-        }
+        DosSysVars.CurrentDirectoryStructureListPointer = DosTables.CurrentDirectoryStructure.BaseAddress;
+        DosSysVars.CurrentDirectoryStructureCount = 26;
 
         DosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
@@ -207,8 +184,6 @@ public sealed class Dos {
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
         ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
-        // Note: Clock parameter is kept for backwards compatibility and minimal changes
-        // It will be removed in a future refactoring when time management is reworked
         Clock clock = new Clock(_loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,

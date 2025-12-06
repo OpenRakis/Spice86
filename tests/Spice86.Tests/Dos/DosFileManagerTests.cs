@@ -172,12 +172,10 @@ public class DosFileManagerTests {
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
         biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
-        var dosTables = new DosTables();
-
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
             vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
-            loggerService, ioPortDispatcher, dosTables);
+            loggerService, ioPortDispatcher);
 
         return dos.FileManager;
     }

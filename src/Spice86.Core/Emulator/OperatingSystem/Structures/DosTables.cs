@@ -24,26 +24,21 @@ public class DosTables {
     /// <summary>
     /// Gets the Current Directory Structure (CDS) for DOS drives.
     /// </summary>
-    public CurrentDirectoryStructure? CurrentDirectoryStructure { get; private set; }
+    public CurrentDirectoryStructure CurrentDirectoryStructure { get; private set; } = default!;
 
     /// <summary>
     /// Gets the Double Byte Character Set (DBCS) lead-byte table.
     /// </summary>
-    public DosDoubleByteCharacterSet? DoubleByteCharacterSet { get; private set; }
+    public DosDoubleByteCharacterSet DoubleByteCharacterSet { get; private set; } = default!;
 
     /// <summary>
     /// Initializes the DOS table structures in memory.
-    /// This method allocates and initializes the CDS (Current Directory Structure)
-    /// and DBCS (Double Byte Character Set) tables at their designated memory locations.
     /// </summary>
     /// <param name="memory">The memory interface to write structures to.</param>
     public void Initialize(IByteReaderWriter memory) {
-        // Allocate CDS at fixed segment (MemoryMap.DosCdsSegment = 0x108)
         uint cdsAddress = MemoryUtils.ToPhysicalAddress(MemoryMap.DosCdsSegment, 0);
         CurrentDirectoryStructure = new CurrentDirectoryStructure(memory, cdsAddress);
 
-        // Allocate DBCS table in DOS private tables area (0xC800-0xD000)
-        // Allocate 12 paragraphs (192 bytes) to match DOSBox's DOS_GetMemory(12)
         ushort dbcsSegment = GetDosPrivateTableWritableAddress(12);
         uint dbcsAddress = MemoryUtils.ToPhysicalAddress(dbcsSegment, 0);
         DoubleByteCharacterSet = new DosDoubleByteCharacterSet(memory, dbcsAddress);

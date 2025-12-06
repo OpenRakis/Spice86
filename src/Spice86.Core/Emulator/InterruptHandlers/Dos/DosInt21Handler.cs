@@ -38,6 +38,8 @@ public class DosInt21Handler : InterruptHandler {
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
+    
+    private const ushort OffsetMask = 0x0F;
 
     /// <summary>
     /// Initializes a new instance.
@@ -197,29 +199,20 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         if (State.AL == 0) {
-            // Return pointer to DBCS table
-            if (_dosTables?.DoubleByteCharacterSet is not null) {
-                uint dbcsAddress = _dosTables.DoubleByteCharacterSet.BaseAddress;
-                ushort segment = MemoryUtils.ToSegment(dbcsAddress);
-                ushort offset = (ushort)(dbcsAddress & 0xF);
+            uint dbcsAddress = _dosTables.DoubleByteCharacterSet.BaseAddress;
+            ushort segment = MemoryUtils.ToSegment(dbcsAddress);
+            ushort offset = (ushort)(dbcsAddress & OffsetMask);
 
-                State.DS = segment;
-                State.SI = offset;
-                State.AL = 0;
-                State.CarryFlag = false; // Undocumented behavior: DOSBox clears carry flag on success
+            State.DS = segment;
+            State.SI = offset;
+            State.AL = 0;
+            State.CarryFlag = false; // FreeDOS clears carry flag on success
 
-                if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    LoggerService.Verbose("Returning DBCS table pointer at {Segment:X4}:{Offset:X4}", segment, offset);
-                }
-            } else {
-                // DBCS not initialized, return error
-                State.AL = 0xFF;
-                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                    LoggerService.Warning("DBCS table not initialized - returning error");
-                }
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("Returning DBCS table pointer at {Segment:X4}:{Offset:X4}", segment, offset);
             }
         } else {
-            // Invalid subfunction - return error without modifying carry flag (per DOSBox)
+            // FreeDOS returns error without modifying carry flag for invalid subfunction
             State.AL = 0xFF;
         }
     }
