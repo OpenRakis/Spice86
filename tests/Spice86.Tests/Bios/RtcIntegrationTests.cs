@@ -149,7 +149,7 @@ public class RtcIntegrationTests {
         // Read the program bytes and write to a temporary file with .com extension
         byte[] program = File.ReadAllBytes(fullPath);
         // Create a unique temp file with .com extension
-        string tempFilePath = Path.Combine(Path.GetTempPath(), $"{unitTestName}_{Guid.NewGuid()}.com");
+        string tempFilePath = Path.Join(Path.GetTempPath(), $"{unitTestName}_{Guid.NewGuid()}.com");
         File.WriteAllBytes(tempFilePath, program);
         try {
             // Setup emulator with .com extension
