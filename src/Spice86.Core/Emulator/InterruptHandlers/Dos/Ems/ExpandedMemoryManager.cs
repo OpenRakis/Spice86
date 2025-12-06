@@ -70,6 +70,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     public const ushort EmmNullHandle = 0xFFFF;
 
     /// <summary>
+    /// Maximum number of EMM handles as per LIM EMS specification.
+    /// Handle IDs range from 0 to 254 (255 total, excluding the system handle 0).
+    /// </summary>
+    public const int EmmMaxHandles = 255;
+
+    /// <summary>
     /// The start address of the Emm Page Frame, as a segment value. <br/>
     /// The page frame is located above 640K bytes.  Normally, only video <br/>
     /// adapters, network cards, and similar devices exist between 640K and 1024K.
@@ -310,7 +316,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             State.AH = EmmStatus.EmmTriedToAllocateZeroPages;
             return;
         }
-        if (EmmHandles.Count == EmmMemory.TotalPages) {
+        if (EmmHandles.Count >= EmmMaxHandles) {
             State.AH = EmmStatus.EmmOutOfHandles;
             return;
         }
@@ -335,8 +341,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         } else {
             // Find the next available handle ID (don't just use Count as it can collide after deallocation)
             key = 0;
-            while (EmmHandles.ContainsKey(key)) {
+            while (key < EmmMaxHandles && EmmHandles.ContainsKey(key)) {
                 key++;
+            }
+            if (key >= EmmMaxHandles) {
+                throw new InvalidOperationException($"Maximum number of EMM handles ({EmmMaxHandles}) reached");
             }
         }
         existingHandle ??= new() {
