@@ -16,6 +16,13 @@ public class Renderer : IVgaRenderer {
     private readonly IVideoState _state;
     private uint[] _tempBuffer = Array.Empty<uint>();
 
+    // VGA aspect ratio correction constants
+    private const int VgaLowResNativeHeight = 200;
+    private const int VgaLowResCorrectedHeight = 240;
+    private const int VgaHighResNativeHeight = 400;
+    private const int VgaHighResCorrectedHeight = 480;
+    private const int AspectCorrectionLineDuplicationInterval = 5; // Duplicate every 5th line for 1.2x stretch
+
     /// <summary>
     ///     Create a new VGA renderer.
     /// </summary>
@@ -46,9 +53,9 @@ public class Renderer : IVgaRenderer {
             // Low-res modes (320/360 width) need 1.2x vertical stretch to display correctly on square-pixel monitors.
             // This matches how these modes appeared on 4:3 CRT screens.
             return Width switch {
-                320 when nativeHeight == 200 => 240,  // 320x200 → 320x240 (4:3)
-                360 when nativeHeight == 200 => 240,  // 360x200 → 360x240 (3:2)
-                640 when nativeHeight == 400 => 480,  // 640x400 → 640x480 (4:3)
+                320 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 320x200 → 320x240 (4:3)
+                360 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 360x200 → 360x240 (3:2)
+                640 when nativeHeight == VgaHighResNativeHeight => VgaHighResCorrectedHeight,  // 640x400 → 640x480 (4:3)
                 _ => nativeHeight  // No correction for other modes
             };
         }
@@ -244,13 +251,15 @@ public class Renderer : IVgaRenderer {
             destLine++;
             
             // For 200→240 conversion: duplicate every 5th line (at indices 4, 9, 14, 19, ...)
-            // This means: when sourceLine % 5 == 4, duplicate the line
-            if (nativeHeight == 200 && outputHeight == 240 && sourceLine % 5 == 4) {
+            // This means: when sourceLine % AspectCorrectionLineDuplicationInterval == 4, duplicate the line
+            if (nativeHeight == VgaLowResNativeHeight && outputHeight == VgaLowResCorrectedHeight 
+                && sourceLine % AspectCorrectionLineDuplicationInterval == AspectCorrectionLineDuplicationInterval - 1) {
                 sourceBuffer.Slice(sourceLine * width, width).CopyTo(outputBuffer.Slice(destLine * width, width));
                 destLine++;
             }
             // For 400→480 conversion: duplicate every 5th line 
-            else if (nativeHeight == 400 && outputHeight == 480 && sourceLine % 5 == 4) {
+            else if (nativeHeight == VgaHighResNativeHeight && outputHeight == VgaHighResCorrectedHeight 
+                && sourceLine % AspectCorrectionLineDuplicationInterval == AspectCorrectionLineDuplicationInterval - 1) {
                 sourceBuffer.Slice(sourceLine * width, width).CopyTo(outputBuffer.Slice(destLine * width, width));
                 destLine++;
             }
