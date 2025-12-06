@@ -123,25 +123,11 @@ public class DosExeFile : MemoryBasedDataStructure {
         get {
             uint headerSize = HeaderSizeInBytes;
             uint fileLength = (uint)ByteReaderWriter.Length;
-            uint bytesAvailableAfterHeader;
 
-            if (fileLength > headerSize) {
-                bytesAvailableAfterHeader = fileLength - headerSize;
-            } else {
-                bytesAvailableAfterHeader = 0;
-            }
-
+            uint bytesAvailableAfterHeader = fileLength > headerSize ? fileLength - headerSize : 0;
             uint imageSize = (Pages * ExePageSizeInBytes) - headerSize;
-            uint declaredProgramSizeInBytes = imageSize + headerSize;
-            if (declaredProgramSizeInBytes < ExePageSizeInBytes) {
-                imageSize = ExePageSizeInBytes - headerSize;
-            }
 
-            if (imageSize <= bytesAvailableAfterHeader) {
-                return imageSize;
-            } else {
-                return bytesAvailableAfterHeader;
-            }
+            return Math.Min(imageSize, bytesAvailableAfterHeader);
         }
     }
 
