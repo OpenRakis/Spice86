@@ -24,9 +24,15 @@ internal partial class MainWindow : Window {
     private void MainWindow_Loaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e) {
         Dispatcher.UIThread.Post(() => {
             if (DataContext is MainWindowViewModel viewModel) {
+                // Wire up OpenGL frame updates
+                viewModel.UpdateOpenGlFrame += OnUpdateOpenGlFrame;
                 viewModel.StartEmulator();
             }
         }, DispatcherPriority.Background);
+    }
+
+    private void OnUpdateOpenGlFrame(uint[] frameBuffer, int width, int height) {
+        OpenGlVideo?.UpdateFrame(frameBuffer, width, height);
     }
 
     public static readonly StyledProperty<PerformanceViewModel?> PerformanceViewModelProperty =
@@ -55,7 +61,11 @@ internal partial class MainWindow : Window {
     }
 
     private void FocusOnVideoBuffer() {
-        Image.Focus();
+        if (OpenGlVideo?.IsVisible == true) {
+            OpenGlVideo.Focus();
+        } else {
+            Image?.Focus();
+        }
     }
 
     protected override void OnOpened(EventArgs e) {
@@ -85,6 +95,9 @@ internal partial class MainWindow : Window {
     }
 
     protected override void OnClosed(EventArgs e) {
+        if (DataContext is MainWindowViewModel viewModel) {
+            viewModel.UpdateOpenGlFrame -= OnUpdateOpenGlFrame;
+        }
         (DataContext as IDisposable)?.Dispose();
         base.OnClosed(e);
     }

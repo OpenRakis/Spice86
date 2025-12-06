@@ -157,6 +157,18 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
+    [RelayCommand]
+    private void SetShaderNone() => ShaderType = CrtShaderType.None;
+
+    [RelayCommand]
+    private void SetShaderFakeLottes() => ShaderType = CrtShaderType.FakeLottes;
+
+    [RelayCommand]
+    private void SetShaderEasyMode() => ShaderType = CrtShaderType.EasyMode;
+
+    [RelayCommand]
+    private void SetShaderCrtGeom() => ShaderType = CrtShaderType.CrtGeom;
+
     private bool _showCursor;
 
     public bool ShowCursor {
@@ -196,7 +208,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private CrtShaderType _shaderType = CrtShaderType.None;
 
     internal event Action? InvalidateBitmap;
-    internal event Action<Span<uint>, int, int>? UpdateOpenGlFrame;
+    internal event Action<uint[], int, int>? UpdateOpenGlFrame;
 
     internal void OnKeyDown(KeyEventArgs e) {
         if (_pauseHandler.IsPaused) {

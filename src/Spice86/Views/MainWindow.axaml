@@ -85,6 +85,18 @@
 							<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
 						</MenuItem.Header>
 					</MenuItem>
+					<MenuItem Header="CRT Shader">
+						<MenuItem>
+							<MenuItem.Header>
+								<CheckBox Content="Enable CRT Shaders (OpenGL)" IsChecked="{Binding UseOpenGlRendering}" />
+							</MenuItem.Header>
+						</MenuItem>
+						<Separator />
+						<MenuItem Header="None" Command="{Binding SetShaderNoneCommand}" />
+						<MenuItem Header="FakeLottes (≤640x480)" Command="{Binding SetShaderFakeLottesCommand}" />
+						<MenuItem Header="EasyMode (>640x480)" Command="{Binding SetShaderEasyModeCommand}" />
+						<MenuItem Header="CRT-Geom (All resolutions)" Command="{Binding SetShaderCrtGeomCommand}" />
+					</MenuItem>
 					<MenuItem Command="{Binding SaveBitmapCommand}">
 						<MenuItem.Header>
 							<StackPanel Orientation="Horizontal">
@@ -122,10 +134,21 @@
 					</ScaleTransform>
 				</LayoutTransformControl.RenderTransform>
 				<Viewbox>
-					<Image x:Name="Image"
-					    RenderOptions.BitmapInterpolationMode="None"
-					    Cursor="{Binding Cursor}"
-					    Source="{Binding Bitmap}" />
+					<Panel>
+						<!-- OpenGL Video Control for CRT shader effects -->
+						<local:OpenGlVideoControl x:Name="OpenGlVideo"
+						    IsVisible="{Binding UseOpenGlRendering}"
+						    Cursor="{Binding Cursor}"
+						    ShaderType="{Binding ShaderType}"
+						    Width="{Binding Width}"
+						    Height="{Binding Height}" />
+						<!-- Traditional bitmap rendering -->
+						<Image x:Name="Image"
+						    IsVisible="{Binding !UseOpenGlRendering}"
+						    RenderOptions.BitmapInterpolationMode="None"
+						    Cursor="{Binding Cursor}"
+						    Source="{Binding Bitmap}" />
+					</Panel>
 				</Viewbox>
 			</LayoutTransformControl>
 		</Viewbox>
