@@ -87,7 +87,10 @@ public class DosCommandTail : MemoryBasedDataStructure {
     }
 
     public const int MaxSize = 128;
-    public const int MaxCharacterLength = MaxSize - 2; /// length-byte + 126 chars max + \r
+    /// <summary>
+    /// Maximum character length: length-byte + 126 chars max + \r
+    /// </summary>
+    public const int MaxCharacterLength = MaxSize - 2;
 
     public const int OffsetInPspSegment = 0x80;
 }
