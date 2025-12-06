@@ -13,6 +13,8 @@ public class DosExeFile : MemoryBasedDataStructure {
     /// </summary>
     public const int MinExeSize = 0x1C;
 
+    private const uint ExePageSizeInBytes = 512;
+
     /// <summary>
     /// Creates a new instance of the ExeFile class.
     /// </summary>
@@ -119,15 +121,27 @@ public class DosExeFile : MemoryBasedDataStructure {
     /// </summary>
     public uint ProgramSize {
         get {
-            uint declaredTotalSize = LenFinalPage == 0
-                ? Pages * 512U
-                : (uint)((Pages == 0 ? 0 : Pages - 1) * 512) + LenFinalPage;
-
             uint headerSize = HeaderSizeInBytes;
             uint fileLength = (uint)ByteReaderWriter.Length;
-            uint declaredImageSize = declaredTotalSize > headerSize ? declaredTotalSize - headerSize : 0;
-            uint availableAfterHeader = fileLength > headerSize ? fileLength - headerSize : 0;
-            return declaredImageSize <= availableAfterHeader ? declaredImageSize : availableAfterHeader;
+            uint bytesAvailableAfterHeader;
+
+            if (fileLength > headerSize) {
+                bytesAvailableAfterHeader = fileLength - headerSize;
+            } else {
+                bytesAvailableAfterHeader = 0;
+            }
+
+            uint imageSize = (Pages * ExePageSizeInBytes) - headerSize;
+            uint declaredProgramSizeInBytes = imageSize + headerSize;
+            if (declaredProgramSizeInBytes < ExePageSizeInBytes) {
+                imageSize = ExePageSizeInBytes - headerSize;
+            }
+
+            if (imageSize <= bytesAvailableAfterHeader) {
+                return imageSize;
+            } else {
+                return bytesAvailableAfterHeader;
+            }
         }
     }
 
