@@ -117,22 +117,6 @@ public class DosProgramSegmentPrefixTracker {
     }
 
     /// <summary>
-    /// Gets the address where the COM program image itself starts within the PSP segment.
-    /// </summary>
-    /// <remarks>
-    /// Only the DOS program manager should need to know this. It can be easily calculated from the
-    /// current PSP segment. This function is provided just for the convenience of the program
-    /// manager.
-    /// </remarks>
-    /// <returns>
-    /// Returns the address where the COM program should start execution from.
-    /// </returns>
-    public ushort GetComProgramEntryPoint() {
-        ushort currentPspSegment = GetCurrentPspSegment();
-        return (ushort)(currentPspSegment + 0x10);
-    }
-
-    /// <summary>
     /// Registers a new PSP segment for a new program at the given address.
     /// </summary>
     /// <remarks>
