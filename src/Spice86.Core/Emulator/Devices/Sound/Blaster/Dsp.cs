@@ -373,13 +373,13 @@ public sealed class Dsp : IDisposable {
 
                 switch (_readIdleCycles) {
                     case < 250: {
-                        spinner.SpinOnce();
-                        if (spinner.NextSpinWillYield) {
-                            Thread.Yield();
-                        }
+                            spinner.SpinOnce();
+                            if (spinner.NextSpinWillYield) {
+                                Thread.Yield();
+                            }
 
-                        continue;
-                    }
+                            continue;
+                        }
                     case < 4000:
                         spinner.Reset();
                         HighResolutionWaiter.WaitMilliseconds(0.25);
