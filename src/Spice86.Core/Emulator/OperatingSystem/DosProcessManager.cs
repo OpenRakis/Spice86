@@ -145,19 +145,16 @@ public class DosProcessManager : DosFileLoader {
         if (block is null) {
             throw new UnrecoverableException($"Failed to reserve space for EXE file at {pspSegment}");
         }
+        ushort pspLoadSegment = block.DataBlockSegment;
         // The program image is loaded immediately above the PSP, which is the start of
         // the memory block that we just allocated.
         // Jump over the PSP to get the EXE image segment.
-        ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
+        ushort loadImageSegment = (ushort)(pspLoadSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
 
-        // Dead code, should never occur, this scenario is very uncommon
+        // Adjust image load segment when PSP and exe image gets splitted due to load into high memory
         if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("EXE file has both MinAlloc and MaxAlloc at 0!");
-            }
-            ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
-            ushort pspLoadSegment = block.DataBlockSegment;
-            loadImageSegment = (ushort)(pspLoadSegment + programEntryPointOffset);
+            ushort imageDistanceInParagraphs = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
+            loadImageSegment = (ushort)(pspLoadSegment + imageDistanceInParagraphs);
         }
         LoadExeFileInMemoryAndApplyRelocations(exeFile, loadImageSegment);
         SetupCpuForExe(exeFile, loadImageSegment, pspSegment);
