@@ -46,7 +46,7 @@ public class DosInt21HandlerTests {
             null!,
             dosFileManager,
             driveManager,
-            clock,
+            null!,
             logger);
 
         state.AL = (byte)SeekOrigin.Current;
