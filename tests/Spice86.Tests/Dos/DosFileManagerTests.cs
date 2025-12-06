@@ -6,6 +6,7 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
@@ -127,14 +128,13 @@ public class DosFileManagerTests {
         InterruptVectorTable interruptVectorTable = new(memory);
         Stack stack = new(memory, state);
         FunctionCatalogue functionCatalogue = new FunctionCatalogue(reader.ReadGhidraSymbolsFromFileOrCreate());
-        FunctionHandler functionHandler = new(memory, state, executionFlowRecorder, functionCatalogue, false, loggerService);
-        FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, functionCatalogue, false, loggerService);
-        Cpu cpu = new(interruptVectorTable, stack,
-            functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
-            loggerService, executionFlowRecorder);
 
-        IFunctionHandlerProvider functionHandlerProvider =  cpu;
+        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
+            dualPic, emulatorBreakpointsManager, functionCatalogue,
+            false, loggerService);
+
+        IInstructionExecutor instructionExecutor = cfgCpu;
+        IFunctionHandlerProvider functionHandlerProvider = cfgCpu;
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,

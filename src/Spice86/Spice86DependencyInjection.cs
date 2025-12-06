@@ -227,15 +227,6 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Function handler in external interrupt created...");
         }
 
-        Cpu cpu = new(interruptVectorTable, stack,
-            functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler,
-            emulatorBreakpointsManager, loggerService, executionFlowRecorder);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("CPU created...");
-        }
-
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             configuration.UseCodeOverrideOption, loggerService);
@@ -244,12 +235,10 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("CfgCpu created...");
         }
 
-        IFunctionHandlerProvider functionHandlerProvider = configuration.CfgCpu ? cfgCpu : cpu;
-        IExecutionDumpFactory executionDumpFactory =
-            configuration.CfgCpu ? new CfgCpuFlowDumper(cfgCpu, executionDump) : executionFlowRecorder;
+        IFunctionHandlerProvider functionHandlerProvider = cfgCpu;
+        IExecutionDumpFactory executionDumpFactory = new CfgCpuFlowDumper(cfgCpu, executionDump);
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            string cpuType = configuration.CfgCpu ? nameof(CfgCpu) : nameof(Cpu);
-            loggerService.Information("Execution will be done with {CpuType}", cpuType);
+            loggerService.Information("Execution will be done with CfgCpu");
         }
 
         // IO devices
@@ -362,9 +351,9 @@ public class Spice86DependencyInjection : IDisposable {
             emulatorBreakpointsManager, loggerService);
 
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
-            emulatorStateSerializer.LoadBreakpoints(dumpContext.DumpDirectory);
-
-        IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
+              emulatorStateSerializer.LoadBreakpoints(dumpContext.DumpDirectory);
+      
+        IInstructionExecutor cpuForEmulationLoop = cfgCpu;
 
         ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(configuration);
 
@@ -512,9 +501,9 @@ public class Spice86DependencyInjection : IDisposable {
 
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler,
             biosKeyboardInt9Handler,
-            callbackHandler, cpu,
-            cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
-            joystick, intel8042Controller, keyboardInt16Handler,
+            callbackHandler,
+            cfgCpu, state, stack, dos, gravisUltraSound, ioPortDispatcher,
+            joystick, intel8042Controller, interruptVectorTable, keyboardInt16Handler,
             emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler,
             systemBiosInt15Handler, systemClockInt1AHandler,
