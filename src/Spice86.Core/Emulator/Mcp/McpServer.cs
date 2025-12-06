@@ -9,63 +9,103 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
+using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.IOPorts;
+
 /// <summary>
-/// MCP server exposing emulator state inspection tools (CPU, memory, functions, CFG).
-/// Thread-safe: serializes requests with internal lock.
+/// MCP server exposing emulator inspection and control tools.
 /// </summary>
 public sealed class McpServer : IMcpServer {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly CfgCpu? _cfgCpu;
+    private readonly VgaCard _vgaCard;
+    private readonly IOPortDispatcher _ioPortDispatcher;
+    private readonly IVgaRenderer _vgaRenderer;
+    private readonly IPauseHandler _pauseHandler;
     private readonly ILoggerService _loggerService;
     private readonly Tool[] _tools;
     private readonly object _requestLock = new object();
 
-    public McpServer(IMemory memory, State state, FunctionCatalogue functionCatalogue, CfgCpu? cfgCpu, ILoggerService loggerService) {
+    public McpServer(IMemory memory, State state, FunctionCatalogue functionCatalogue, CfgCpu? cfgCpu,
+        VgaCard vgaCard, IOPortDispatcher ioPortDispatcher, IVgaRenderer vgaRenderer, 
+        IPauseHandler pauseHandler, ILoggerService loggerService) {
         _memory = memory;
         _state = state;
         _functionCatalogue = functionCatalogue;
         _cfgCpu = cfgCpu;
+        _vgaCard = vgaCard;
+        _ioPortDispatcher = ioPortDispatcher;
+        _vgaRenderer = vgaRenderer;
+        _pauseHandler = pauseHandler;
         _loggerService = loggerService;
         _tools = CreateTools();
     }
 
     private Tool[] CreateTools() {
-        Tool[] baseTools = new Tool[] {
+        List<Tool> tools = new List<Tool> {
             new Tool {
                 Name = "read_cpu_registers",
-                Description = "Read the current values of CPU registers (general purpose, segment, instruction pointer, and flags)",
+                Description = "Read CPU registers",
                 InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
             },
             new Tool {
                 Name = "read_memory",
-                Description = "Read a range of bytes from emulator memory",
+                Description = "Read memory range",
                 InputSchema = ConvertToJsonElement(CreateMemoryReadInputSchema())
             },
             new Tool {
                 Name = "list_functions",
-                Description = "List all known functions in the function catalogue",
+                Description = "List functions",
                 InputSchema = ConvertToJsonElement(CreateFunctionListInputSchema())
+            },
+            new Tool {
+                Name = "read_io_port",
+                Description = "Read from IO port",
+                InputSchema = ConvertToJsonElement(CreateIoPortInputSchema())
+            },
+            new Tool {
+                Name = "write_io_port",
+                Description = "Write to IO port",
+                InputSchema = ConvertToJsonElement(CreateIoPortWriteInputSchema())
+            },
+            new Tool {
+                Name = "get_video_state",
+                Description = "Get video card state",
+                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+            },
+            new Tool {
+                Name = "screenshot",
+                Description = "Capture screenshot as base64 PNG",
+                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+            },
+            new Tool {
+                Name = "pause_emulator",
+                Description = "Pause emulator",
+                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+            },
+            new Tool {
+                Name = "resume_emulator",
+                Description = "Resume emulator",
+                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
             }
         };
 
         if (_cfgCpu != null) {
-            Tool[] allTools = new Tool[baseTools.Length + 1];
-            baseTools.CopyTo(allTools, 0);
-            allTools[baseTools.Length] = new Tool {
+            tools.Add(new Tool {
                 Name = "read_cfg_cpu_graph",
-                Description = "Read Control Flow Graph CPU statistics and execution context information",
+                Description = "Read CFG CPU statistics",
                 InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
-            };
-            return allTools;
+            });
         }
 
-        return baseTools;
+        return tools.ToArray();
     }
 
     private static JsonElement ConvertToJsonElement(object schema) {
@@ -184,6 +224,27 @@ public sealed class McpServer : IMcpServer {
                     if (errorMessage != null) {
                         errorCode = -32603;
                     }
+                    break;
+                case "read_io_port":
+                    (result, errorMessage, errorCode) = TryReadIoPort(argumentsElement);
+                    break;
+                case "write_io_port":
+                    (result, errorMessage, errorCode) = TryWriteIoPort(argumentsElement);
+                    break;
+                case "get_video_state":
+                    result = GetVideoState();
+                    break;
+                case "screenshot":
+                    (result, errorMessage) = TryTakeScreenshot();
+                    if (errorMessage != null) {
+                        errorCode = -32603;
+                    }
+                    break;
+                case "pause_emulator":
+                    result = PauseEmulator();
+                    break;
+                case "resume_emulator":
+                    result = ResumeEmulator();
                     break;
                 default:
                     errorMessage = $"Unknown tool: {toolName}";
@@ -323,6 +384,104 @@ public sealed class McpServer : IMcpServer {
         }, null);
     }
 
+    private (IoPortReadResponse? result, string? error, int errorCode) TryReadIoPort(JsonElement? arguments) {
+        if (_pauseHandler.IsPaused) {
+            return (null, "Emulator is paused. Resume to read IO ports.", -32603);
+        }
+
+        if (!arguments.HasValue) {
+            return (null, "Missing port parameter", -32602);
+        }
+
+        if (!arguments.Value.TryGetProperty("port", out JsonElement portElement)) {
+            return (null, "Missing port parameter", -32602);
+        }
+
+        int port = portElement.GetInt32();
+        if (port < 0 || port > 65535) {
+            return (null, "Port must be 0-65535", -32602);
+        }
+
+        byte value = _ioPortDispatcher.ReadByte((ushort)port);
+        return (new IoPortReadResponse { Port = port, Value = value }, null, 0);
+    }
+
+    private (IoPortWriteResponse? result, string? error, int errorCode) TryWriteIoPort(JsonElement? arguments) {
+        if (_pauseHandler.IsPaused) {
+            return (null, "Emulator is paused. Resume to write IO ports.", -32603);
+        }
+
+        if (!arguments.HasValue) {
+            return (null, "Missing parameters", -32602);
+        }
+
+        JsonElement argsValue = arguments.Value;
+        if (!argsValue.TryGetProperty("port", out JsonElement portElement)) {
+            return (null, "Missing port parameter", -32602);
+        }
+
+        if (!argsValue.TryGetProperty("value", out JsonElement valueElement)) {
+            return (null, "Missing value parameter", -32602);
+        }
+
+        int port = portElement.GetInt32();
+        int value = valueElement.GetInt32();
+
+        if (port < 0 || port > 65535) {
+            return (null, "Port must be 0-65535", -32602);
+        }
+
+        if (value < 0 || value > 255) {
+            return (null, "Value must be 0-255", -32602);
+        }
+
+        _ioPortDispatcher.WriteByte((ushort)port, (byte)value);
+        return (new IoPortWriteResponse { Port = port, Value = value, Success = true }, null, 0);
+    }
+
+    private VideoStateResponse GetVideoState() {
+        return new VideoStateResponse {
+            Width = _vgaRenderer.Width,
+            Height = _vgaRenderer.Height,
+            BufferSize = _vgaRenderer.BufferSize
+        };
+    }
+
+    private (ScreenshotResponse? result, string? error) TryTakeScreenshot() {
+        int width = _vgaRenderer.Width;
+        int height = _vgaRenderer.Height;
+        uint[] buffer = new uint[width * height];
+        
+        _vgaRenderer.Render(buffer);
+
+        byte[] bytes = new byte[buffer.Length * 4];
+        Buffer.BlockCopy(buffer, 0, bytes, 0, bytes.Length);
+        string base64 = Convert.ToBase64String(bytes);
+
+        return (new ScreenshotResponse {
+            Width = width,
+            Height = height,
+            Format = "bgra32",
+            Data = base64
+        }, null);
+    }
+
+    private EmulatorControlResponse PauseEmulator() {
+        if (_pauseHandler.IsPaused) {
+            return new EmulatorControlResponse { Success = true, Message = "Already paused" };
+        }
+        _pauseHandler.RequestPause("MCP server request");
+        return new EmulatorControlResponse { Success = true, Message = "Paused" };
+    }
+
+    private EmulatorControlResponse ResumeEmulator() {
+        if (!_pauseHandler.IsPaused) {
+            return new EmulatorControlResponse { Success = true, Message = "Already running" };
+        }
+        _pauseHandler.Resume();
+        return new EmulatorControlResponse { Success = true, Message = "Resumed" };
+    }
+
     private static EmptyInputSchema CreateEmptyInputSchema() {
         return new EmptyInputSchema {
             Type = "object",
@@ -358,6 +517,36 @@ public sealed class McpServer : IMcpServer {
                 }
             },
             Required = Array.Empty<string>()
+        };
+    }
+
+    private static IoPortInputSchema CreateIoPortInputSchema() {
+        return new IoPortInputSchema {
+            Type = "object",
+            Properties = new IoPortInputProperties {
+                Port = new JsonSchemaProperty {
+                    Type = "integer",
+                    Description = "IO port number (0-65535)"
+                }
+            },
+            Required = new string[] { "port" }
+        };
+    }
+
+    private static IoPortWriteInputSchema CreateIoPortWriteInputSchema() {
+        return new IoPortWriteInputSchema {
+            Type = "object",
+            Properties = new IoPortWriteInputProperties {
+                Port = new JsonSchemaProperty {
+                    Type = "integer",
+                    Description = "IO port number (0-65535)"
+                },
+                Value = new JsonSchemaProperty {
+                    Type = "integer",
+                    Description = "Byte value to write (0-255)"
+                }
+            },
+            Required = new string[] { "port", "value" }
         };
     }
 

@@ -218,3 +218,53 @@ public sealed record CfgCpuGraphResponse {
     /// </summary>
     public required string LastExecutedAddress { get; init; }
 }
+
+internal sealed record IoPortInputSchema {
+    public required string Type { get; init; }
+    public required IoPortInputProperties Properties { get; init; }
+    public required string[] Required { get; init; }
+}
+
+internal sealed record IoPortInputProperties {
+    public required JsonSchemaProperty Port { get; init; }
+}
+
+internal sealed record IoPortWriteInputSchema {
+    public required string Type { get; init; }
+    public required IoPortWriteInputProperties Properties { get; init; }
+    public required string[] Required { get; init; }
+}
+
+internal sealed record IoPortWriteInputProperties {
+    public required JsonSchemaProperty Port { get; init; }
+    public required JsonSchemaProperty Value { get; init; }
+}
+
+public sealed record IoPortReadResponse {
+    public required int Port { get; init; }
+    public required byte Value { get; init; }
+}
+
+public sealed record IoPortWriteResponse {
+    public required int Port { get; init; }
+    public required int Value { get; init; }
+    public required bool Success { get; init; }
+}
+
+public sealed record VideoStateResponse {
+    public required int Width { get; init; }
+    public required int Height { get; init; }
+    public required int BufferSize { get; init; }
+}
+
+public sealed record ScreenshotResponse {
+    public required int Width { get; init; }
+    public required int Height { get; init; }
+    public required string Format { get; init; }
+    public required string Data { get; init; }
+}
+
+public sealed record EmulatorControlResponse {
+    public required bool Success { get; init; }
+    public required string Message { get; init; }
+}

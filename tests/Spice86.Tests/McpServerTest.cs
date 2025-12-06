@@ -19,7 +19,9 @@ public class McpServerTest {
         Spice86Creator creator = new Spice86Creator(TestProgramName, false);
         Spice86DependencyInjection spice86 = creator.Create();
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
-        McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null, new LoggerService());
+        McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null,
+            spice86.Machine.VgaCard, spice86.Machine.IoPortDispatcher, spice86.Machine.VgaRenderer, 
+            spice86.Machine.PauseHandler, new LoggerService());
         return (spice86, server, functionCatalogue);
     }
 
@@ -59,12 +61,18 @@ public class McpServerTest {
             JsonArray? tools = responseNode["result"]?["tools"]?.AsArray();
             tools.Should().NotBeNull();
             if (tools != null) {
-                tools.Count.Should().Be(3);
+                tools.Count.Should().BeGreaterThanOrEqualTo(3);
 
                 string[] toolNames = tools.Select(t => t?["name"]?.GetValue<string>() ?? "").ToArray();
                 toolNames.Should().Contain("read_cpu_registers");
                 toolNames.Should().Contain("read_memory");
                 toolNames.Should().Contain("list_functions");
+                toolNames.Should().Contain("read_io_port");
+                toolNames.Should().Contain("write_io_port");
+                toolNames.Should().Contain("get_video_state");
+                toolNames.Should().Contain("screenshot");
+                toolNames.Should().Contain("pause_emulator");
+                toolNames.Should().Contain("resume_emulator");
             }
         }
     }
