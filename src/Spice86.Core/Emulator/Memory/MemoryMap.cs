@@ -79,4 +79,19 @@ public static class MemoryMap {
     /// <see cref="VirtualDeviceBase"/>
     /// </summary>
     public const ushort DeviceDriversSegment = 0xF800;
+
+    /// <summary>
+    /// Segment for DOS CON device driver structure.
+    /// </summary>
+    public const ushort DosConDeviceSegment = 0x20;
+
+    /// <summary>
+    /// Segment for DOS CON string structures.
+    /// </summary>
+    public const ushort DosConStringSegment = 0x20;
+
+    /// <summary>
+    /// Segment for DOS Current Directory Structure (CDS).
+    /// </summary>
+    public const ushort DosCdsSegment = 0x108;
 }

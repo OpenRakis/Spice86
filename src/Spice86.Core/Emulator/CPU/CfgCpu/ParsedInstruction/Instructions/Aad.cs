@@ -23,7 +23,7 @@ public class Aad : InstructionWithValueField<byte> {
         helper.State.OverflowFlag = false;
         helper.MoveIpAndSetNextNode(this);
     }
-    
+
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.AAD);
     }

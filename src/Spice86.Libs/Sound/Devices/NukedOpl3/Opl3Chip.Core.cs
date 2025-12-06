@@ -76,11 +76,11 @@ public sealed partial class Opl3Chip {
 
                     break;
                 case 16: /* sd */ {
-                    byte noiseBit = (byte)(noise & 0x01);
-                    slot.PhaseGeneratorOutput = (ushort)(((chip.RhythmHihatBit8 & 0x01) << 9)
-                                                         | (((chip.RhythmHihatBit8 ^ noiseBit) & 0x01) << 8));
-                    break;
-                }
+                        byte noiseBit = (byte)(noise & 0x01);
+                        slot.PhaseGeneratorOutput = (ushort)(((chip.RhythmHihatBit8 & 0x01) << 9)
+                                                             | (((chip.RhythmHihatBit8 ^ noiseBit) & 0x01) << 8));
+                        break;
+                    }
                 case 17: /* tc */
                     slot.PhaseGeneratorOutput = unchecked((ushort)((rmXor << 9) | 0x80));
                     break;
@@ -364,19 +364,19 @@ public sealed partial class Opl3Chip {
         if (chip.NewM != 0) {
             switch (channel.ChannelType) {
                 case ChannelType.FourOp: {
-                    Opl3Channel pair = channel.Pair ?? throw new InvalidOperationException("Missing 4-op pair.");
-                    pair.Algorithm = (byte)(0x04 | (channel.Connection << 1) | pair.Connection);
-                    channel.Algorithm = 0x08;
-                    ChannelSetupAlgorithm(pair);
-                    break;
-                }
+                        Opl3Channel pair = channel.Pair ?? throw new InvalidOperationException("Missing 4-op pair.");
+                        pair.Algorithm = (byte)(0x04 | (channel.Connection << 1) | pair.Connection);
+                        channel.Algorithm = 0x08;
+                        ChannelSetupAlgorithm(pair);
+                        break;
+                    }
                 case ChannelType.FourOpPair: {
-                    Opl3Channel primary = channel.Pair ?? throw new InvalidOperationException("Missing 4-op primary.");
-                    channel.Algorithm = (byte)(0x04 | (primary.Connection << 1) | channel.Connection);
-                    primary.Algorithm = 0x08;
-                    ChannelSetupAlgorithm(channel);
-                    break;
-                }
+                        Opl3Channel primary = channel.Pair ?? throw new InvalidOperationException("Missing 4-op primary.");
+                        channel.Algorithm = (byte)(0x04 | (primary.Connection << 1) | channel.Connection);
+                        primary.Algorithm = 0x08;
+                        ChannelSetupAlgorithm(channel);
+                        break;
+                    }
                 default:
                     ChannelSetupAlgorithm(channel);
                     break;
@@ -434,13 +434,13 @@ public sealed partial class Opl3Chip {
         if (chip.NewM != 0) {
             switch (channel.ChannelType) {
                 case ChannelType.FourOp: {
-                    Opl3Channel pair = channel.Pair ?? throw new InvalidOperationException("Missing 4-op pair.");
-                    Opl3Envelope.EnvelopeKeyOn(channel.Slotz[0], EnvelopeKeyType.Normal);
-                    Opl3Envelope.EnvelopeKeyOn(channel.Slotz[1], EnvelopeKeyType.Normal);
-                    Opl3Envelope.EnvelopeKeyOn(pair.Slotz[0], EnvelopeKeyType.Normal);
-                    Opl3Envelope.EnvelopeKeyOn(pair.Slotz[1], EnvelopeKeyType.Normal);
-                    break;
-                }
+                        Opl3Channel pair = channel.Pair ?? throw new InvalidOperationException("Missing 4-op pair.");
+                        Opl3Envelope.EnvelopeKeyOn(channel.Slotz[0], EnvelopeKeyType.Normal);
+                        Opl3Envelope.EnvelopeKeyOn(channel.Slotz[1], EnvelopeKeyType.Normal);
+                        Opl3Envelope.EnvelopeKeyOn(pair.Slotz[0], EnvelopeKeyType.Normal);
+                        Opl3Envelope.EnvelopeKeyOn(pair.Slotz[1], EnvelopeKeyType.Normal);
+                        break;
+                    }
                 case ChannelType.TwoOp or ChannelType.Drum:
                     Opl3Envelope.EnvelopeKeyOn(channel.Slotz[0], EnvelopeKeyType.Normal);
                     Opl3Envelope.EnvelopeKeyOn(channel.Slotz[1], EnvelopeKeyType.Normal);
@@ -459,13 +459,13 @@ public sealed partial class Opl3Chip {
         if (chip.NewM != 0) {
             switch (channel.ChannelType) {
                 case ChannelType.FourOp: {
-                    Opl3Channel pair = channel.Pair ?? throw new InvalidOperationException("Missing 4-op pair.");
-                    Opl3Envelope.EnvelopeKeyOff(channel.Slotz[0], EnvelopeKeyType.Normal);
-                    Opl3Envelope.EnvelopeKeyOff(channel.Slotz[1], EnvelopeKeyType.Normal);
-                    Opl3Envelope.EnvelopeKeyOff(pair.Slotz[0], EnvelopeKeyType.Normal);
-                    Opl3Envelope.EnvelopeKeyOff(pair.Slotz[1], EnvelopeKeyType.Normal);
-                    break;
-                }
+                        Opl3Channel pair = channel.Pair ?? throw new InvalidOperationException("Missing 4-op pair.");
+                        Opl3Envelope.EnvelopeKeyOff(channel.Slotz[0], EnvelopeKeyType.Normal);
+                        Opl3Envelope.EnvelopeKeyOff(channel.Slotz[1], EnvelopeKeyType.Normal);
+                        Opl3Envelope.EnvelopeKeyOff(pair.Slotz[0], EnvelopeKeyType.Normal);
+                        Opl3Envelope.EnvelopeKeyOff(pair.Slotz[1], EnvelopeKeyType.Normal);
+                        break;
+                    }
                 case ChannelType.TwoOp:
                 case ChannelType.Drum:
                     Opl3Envelope.EnvelopeKeyOff(channel.Slotz[0], EnvelopeKeyType.Normal);
@@ -692,7 +692,7 @@ public sealed partial class Opl3Chip {
         ref short channel1,
         ref short channel2,
         ref short channel3
-        // ReSharper restore RedundantAssignment
+    // ReSharper restore RedundantAssignment
     ) {
         while (RateRatio != 0 && SampleCounter >= RateRatio) {
             OldSamples[0] = Samples[0];
@@ -893,53 +893,53 @@ public sealed partial class Opl3Chip {
 
             case 0x20:
             case 0x30: {
-                int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
-                if (slotIndex >= 0) {
-                    SlotWrite20(Slots[slotBase + slotIndex], value);
-                }
+                    int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
+                    if (slotIndex >= 0) {
+                        SlotWrite20(Slots[slotBase + slotIndex], value);
+                    }
 
-                break;
-            }
+                    break;
+                }
 
             case 0x40:
             case 0x50: {
-                int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
-                if (slotIndex >= 0) {
-                    SlotWrite40(Slots[slotBase + slotIndex], value);
-                }
+                    int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
+                    if (slotIndex >= 0) {
+                        SlotWrite40(Slots[slotBase + slotIndex], value);
+                    }
 
-                break;
-            }
+                    break;
+                }
 
             case 0x60:
             case 0x70: {
-                int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
-                if (slotIndex >= 0) {
-                    SlotWrite60(Slots[slotBase + slotIndex], value);
-                }
+                    int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
+                    if (slotIndex >= 0) {
+                        SlotWrite60(Slots[slotBase + slotIndex], value);
+                    }
 
-                break;
-            }
+                    break;
+                }
 
             case 0x80:
             case 0x90: {
-                int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
-                if (slotIndex >= 0) {
-                    SlotWrite80(Slots[slotBase + slotIndex], value);
-                }
+                    int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
+                    if (slotIndex >= 0) {
+                        SlotWrite80(Slots[slotBase + slotIndex], value);
+                    }
 
-                break;
-            }
+                    break;
+                }
 
             case 0xe0:
             case 0xf0: {
-                int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
-                if (slotIndex >= 0) {
-                    SlotWriteE0(Slots[slotBase + slotIndex], value);
-                }
+                    int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
+                    if (slotIndex >= 0) {
+                        SlotWriteE0(Slots[slotBase + slotIndex], value);
+                    }
 
-                break;
-            }
+                    break;
+                }
 
             case 0xa0:
                 if ((regm & 0x0f) < 9) {

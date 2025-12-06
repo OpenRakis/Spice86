@@ -45,8 +45,8 @@ internal partial class MainWindow : Window {
     }
 
     private void OnMenuKeyUp(object? sender, KeyEventArgs e) {
-          (DataContext as MainWindowViewModel)?.OnKeyUp(e);
-          e.Handled = true;
+        (DataContext as MainWindowViewModel)?.OnKeyUp(e);
+        e.Handled = true;
     }
 
     private void OnMenuKeyDown(object? sender, KeyEventArgs e) {

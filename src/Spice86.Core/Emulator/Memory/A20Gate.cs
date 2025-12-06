@@ -45,7 +45,7 @@ public class A20Gate {
     /// <param name="address">The memory address that is to be accessed.</param>
     /// <returns>The transformed address if the 20th address line is silenced. The same address if it isn't.</returns>
     [Pure]
-    public int TransformAddress(int address) => (int) (address & AddressMask);
+    public int TransformAddress(int address) => (int)(address & AddressMask);
 
     /// <summary>
     /// Calculates the new memory address with the 20th address line silenced. <br/>

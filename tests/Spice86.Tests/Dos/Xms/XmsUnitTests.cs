@@ -17,11 +17,27 @@ using Xunit;
 
 /// <summary>
 /// Tests the eXtended Memory Manager (XMS) functionality.
-/// Based on the HITEST.ASM tool from Microsoft's XMS driver validation suite,
-/// and on XMS 3.0 specs text file
+/// <para>
+/// Based on the XMS 2.0/3.0 specification:
+/// <list type="bullet">
+/// <item>XMS 2.0 functions (00h-11h) for basic memory management</item>
+/// <item>XMS 3.0 extended functions (88h, 89h, 8Eh, 8Fh) for 32-bit addressing</item>
+/// </list>
+/// </para>
+/// <para>
+/// The implementation was verified against:
+/// <list type="bullet">
+/// <item>The official XMS 2.0 specification text file</item>
+/// <item>HIMEM.SYS 2.06 source code: https://github.com/neozeed/himem.sys-2.06</item>
+/// <item>Microsoft's HITEST.ASM XMS driver validation suite</item>
+/// </list>
+/// </para>
+/// <para>
+/// Note: Upper Memory Blocks (UMBs) are optional per the specification and
+/// are not implemented as they are not required for real-mode emulation.
+/// </para>
 /// </summary>
-public class XmsUnitTests
-{
+public class XmsUnitTests {
     private readonly ExtendedMemoryManager _xms;
     private readonly State _state;
     private readonly Memory _memory;
@@ -31,8 +47,7 @@ public class XmsUnitTests
     private readonly MemoryAsmWriter _asmWriter;
     private readonly DosTables _dosTables;
 
-    public XmsUnitTests()
-    {
+    public XmsUnitTests() {
         // Setup memory and state
         _state = new State(CpuModel.INTEL_80286);
         _a20Gate = new A20Gate(false);
@@ -48,8 +63,7 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void GetXmsVersion_ShouldReturnCorrectValues()
-    {
+    public void GetXmsVersion_ShouldReturnCorrectValues() {
         // Arrange
         _state.AH = 0x00; // Get XMS Version
 
@@ -63,8 +77,7 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void RequestHighMemoryArea_ShouldSucceed()
-    {
+    public void RequestHighMemoryArea_ShouldSucceed() {
         // Arrange
         _state.AH = 0x01; // Request HMA
         _state.DX = 0xFFFF; // Request full HMA for application
@@ -78,8 +91,7 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void RequestHighMemoryArea_SecondRequestShouldFail()
-    {
+    public void RequestHighMemoryArea_SecondRequestShouldFail() {
         // Arrange - First request
         _state.AH = 0x01;
         _state.DX = 0xFFFF;
@@ -96,8 +108,7 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void ReleaseHighMemoryArea_ShouldSucceed()
-    {
+    public void ReleaseHighMemoryArea_ShouldSucceed() {
         // Arrange - Request HMA
         _state.AH = 0x01;
         _state.DX = 0xFFFF;
@@ -113,8 +124,7 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void ReleaseHighMemoryArea_WithoutRequestShouldFail()
-    {
+    public void ReleaseHighMemoryArea_WithoutRequestShouldFail() {
         // Act - Release HMA without requesting it
         _state.AH = 0x02;
         _xms.RunMultiplex();
@@ -125,8 +135,7 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void GlobalEnableA20_ShouldEnableA20Line()
-    {
+    public void GlobalEnableA20_ShouldEnableA20Line() {
         // Arrange
         _state.AH = 0x03; // Global Enable A20
 
@@ -145,7 +154,7 @@ public class XmsUnitTests
         var state = new State(CpuModel.INTEL_80286);
         var a20Gate = new A20Gate(true); // A20 is ALREADY enabled at startup
         var memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), a20Gate);
-        var loggerService = Substitute.For<ILoggerService>();
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
         var callbackHandler = new CallbackHandler(state, loggerService);
         var dosTables = new DosTables();
         var asmWriter = new MemoryAsmWriter(memory, new(0, 0), callbackHandler);
@@ -249,8 +258,7 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void QueryA20_ShouldReturnCurrentA20State()
-    {
+    public void QueryA20_ShouldReturnCurrentA20State() {
         // Arrange - Set A20 enabled
         _a20Gate.IsEnabled = true;
         _state.AH = 0x07; // Query A20
@@ -275,8 +283,7 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void QueryFreeExtendedMemory_ShouldReturnAvailableMemory()
-    {
+    public void QueryFreeExtendedMemory_ShouldReturnAvailableMemory() {
         // Arrange
         _state.AH = 0x08; // Query Free Extended Memory
 
@@ -290,8 +297,7 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void AllocateExtendedMemoryBlock_ShouldSucceed()
-    {
+    public void AllocateExtendedMemoryBlock_ShouldSucceed() {
         // Arrange
         _state.AH = 0x09; // Allocate Extended Memory Block
         _state.DX = 64;   // Allocate 64K
@@ -306,8 +312,7 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void FreeExtendedMemoryBlock_ShouldSucceed()
-    {
+    public void FreeExtendedMemoryBlock_ShouldSucceed() {
         // Arrange - First allocate memory
         _state.AH = 0x09;
         _state.DX = 64;
@@ -325,8 +330,7 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void MoveExtendedMemoryBlock_ShouldMoveData()
-    {
+    public void MoveExtendedMemoryBlock_ShouldMoveData() {
         // Arrange - Allocate source and destination blocks
         _state.AH = 0x09;
         _state.DX = 1;  // 1K destination block

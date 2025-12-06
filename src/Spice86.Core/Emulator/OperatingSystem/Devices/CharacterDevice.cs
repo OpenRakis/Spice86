@@ -14,7 +14,8 @@ public abstract class CharacterDevice : VirtualDeviceBase {
         string name, DeviceAttributes attributes = DeviceAttributes.Character)
         : base(new(memory, baseAddress) {
             Attributes = attributes | DeviceAttributes.Character,
-            Name = name
+            Name = name,
+            NextDevicePointer = new Spice86.Shared.Emulator.Memory.SegmentedAddress(0xFFFF, 0xFFFF)
         }) {
     }
 }

@@ -5,8 +5,7 @@ using System;
 /// <summary>
 /// The base class for all implementations of Audio Players
 /// </summary>
-public abstract class AudioPlayer : IDisposable
-{
+public abstract class AudioPlayer : IDisposable {
     /// <summary>
     /// Whether the native resources were disposed.
     /// </summary>

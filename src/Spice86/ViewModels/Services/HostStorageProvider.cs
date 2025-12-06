@@ -63,7 +63,7 @@ public class HostStorageProvider : IHostStorageProvider {
             }
         }
     }
-    
+
     public async Task SaveBinaryFile(byte[] bytes) {
         if (CanSave && CanPickFolder) {
             FilePickerSaveOptions options = new() {

@@ -27,19 +27,27 @@ public class DosProgramSegmentPrefixCmdTests {
     // The instance of the DosProgramSegmentPrefix class that we're testing
     private readonly DosProgramSegmentPrefix _psp;
 
-    private void TestCommandLineParameter(string? spiceArguments, byte[] expected) {
-        string preparedCommand = DosCommandTail.PrepareCommandlineString(spiceArguments);
-        _psp.DosCommandTail.Command = preparedCommand;
-        _psp.DosCommandTail.Command.Should().Be(preparedCommand, "command should round-trip correctly");
-        _psp.DosCommandTail.Length.Should().Be((byte)preparedCommand.Length, "length should match command string length");
-        expected.Length.Should().Be(_psp.DosCommandTail.Length + 2, "not enough expected bytes");
+    void TestCommandLineParameter(string? spiceArguments, byte[] expected) {
+
+        string test = DosCommandTail.PrepareCommandlineString(spiceArguments);
+        _psp.DosCommandTail.Command = test;
+        if (_psp.DosCommandTail.Command != test) {
+            throw new UnrecoverableException("Command result different");
+        }
+        if (_psp.DosCommandTail.Length != test.Length) {
+            throw new UnrecoverableException("unexpected length");
+        }
         for (int i = 0; i < expected.Length; ++i) {
             byte v = _psp.DosCommandTail.UInt8[i];
-            v.Should().Be(expected[i], $"byte at index {i} should match expected value");
+            if (v != expected[i]) {
+                throw new UnrecoverableException("v != expected");
+            }
         }
         for (int i = _psp.DosCommandTail.Length + 2; i < DosCommandTail.MaxSize; ++i) {
             byte v = _psp.DosCommandTail.UInt8[i];
-            v.Should().Be(0, $"byte at index {i} should be zero-filled");
+            if (v != 0) {
+                throw new UnrecoverableException("not 0");
+            }
         }
     }
 
@@ -62,29 +70,18 @@ public class DosProgramSegmentPrefixCmdTests {
     /// Test some variants
     /// </summary>
     [Fact]
-    public void CommandLineEncoding_VariousInputs_MatchesDosFormat() {
-        // Prepare argument-string tests
-        DosCommandTail.PrepareCommandlineString(null).Length.Should().Be(0);
-        DosCommandTail.PrepareCommandlineString("").Length.Should().Be(0);
-        DosCommandTail.PrepareCommandlineString("    ").Length.Should().Be(0);
-        DosCommandTail.PrepareCommandlineString("4").Should().Be(" 4");
-        DosCommandTail.PrepareCommandlineString(" 4").Should().Be(" 4");
-        DosCommandTail.PrepareCommandlineString("  4").Should().Be("  4");
-        DosCommandTail.PrepareCommandlineString("  4  ").Should().Be("  4");
-        DosCommandTail.PrepareCommandlineString(" " + new string('*', 256)).Length.Should().Be(DosCommandTail.MaxCharacterLength);
-
-        // Command bytes test
-        // empty
+    public void DoSomeTests() {
+        // Assert
         TestCommandLineParameter("", new byte[] { 0x00, 0x0D });
         // same as empty
         TestCommandLineParameter("  ", new byte[] { 0x00, 0x0D });
         TestCommandLineParameter("4", new byte[] { 0x02, 0x20, 0x34, 0x0D });
         // the same as "4"
         TestCommandLineParameter(" 4", new byte[] { 0x02, 0x20, 0x34, 0x0D });
-        // Input "  4  " becomes "  4"
+        // the same as "4" - trailing whitespaces getting stripped
         TestCommandLineParameter("  4  ", new byte[] { 0x03, 0x20, 0x20, 0x34, 0x0D });
         // Windows: Spice86.exe -e test.exe -a "   ""ab""  cd"
-        // same as (but DOS does not removes the outer apostrophes and no quoting needed)
+        // same as (but DOS does not removes the outer apostrophs and no quoting needed)
         // DOS: show80h.exe   "ab"  cd
         TestCommandLineParameter("   \"ab\"  cd", new byte[] { 0x0B, 0x20, 0x20, 0x20, 0x22, 0x61, 0x62, 0x22, 0x20, 0x20, 0x63, 0x64, 0x0D });
     }

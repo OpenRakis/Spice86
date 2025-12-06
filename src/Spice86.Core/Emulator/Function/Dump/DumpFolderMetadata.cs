@@ -34,7 +34,7 @@ public class DumpFolderMetadata {
     /// <exception cref="FileNotFoundException">Thrown when the executable file doesn't exist.</exception>
     public DumpFolderMetadata(string? exePath, string? explicitDumpDirectory) {
         ArgumentException.ThrowIfNullOrWhiteSpace(exePath);
-        
+
         if (!File.Exists(exePath)) {
             throw new FileNotFoundException($"Executable file not found: {exePath}", exePath);
         }
@@ -58,7 +58,7 @@ public class DumpFolderMetadata {
 
     private string DetermineDumpDirectory(string? explicitDirectory) {
         string baseDirectory;
-        
+
         // Priority 1: Explicit directory from command line
         if (!string.IsNullOrWhiteSpace(explicitDirectory)) {
             baseDirectory = explicitDirectory;

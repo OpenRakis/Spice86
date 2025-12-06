@@ -16,7 +16,7 @@ public class RecordedDataWriter : RecordedDataIoHandler {
     private readonly IExecutionDumpFactory _executionDumpFactory;
     private readonly MemoryDataExporter _memoryDataExporter;
     private readonly FunctionCatalogue _functionCatalogue;
-    
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -28,7 +28,7 @@ public class RecordedDataWriter : RecordedDataIoHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     public RecordedDataWriter(State state,
         IExecutionDumpFactory executionDumpFactory,
-        MemoryDataExporter memoryDataExporter, 
+        MemoryDataExporter memoryDataExporter,
         FunctionCatalogue functionCatalogue,
         string dumpDirectory, ILoggerService loggerService) : base(dumpDirectory) {
         _loggerService = loggerService;

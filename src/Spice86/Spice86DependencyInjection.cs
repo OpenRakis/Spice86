@@ -5,12 +5,15 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
 
+using ModelContextProtocol.Server;
+
 using Serilog.Events;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -35,6 +38,7 @@ using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Mcp;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -54,6 +58,9 @@ using Spice86.Views;
 
 using System.Diagnostics;
 
+using IMcpServer = Core.Emulator.Mcp.IMcpServer;
+using McpServer = Core.Emulator.Mcp.McpServer;
+
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
 /// </summary>
@@ -62,6 +69,13 @@ public class Spice86DependencyInjection : IDisposable {
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
     private readonly IGuiVideoPresentation? _gui;
+
+    /// <summary>
+    /// Gets the MCP (Model Context Protocol) server for in-process emulator state inspection.
+    /// </summary>
+    public IMcpServer McpServer { get; }
+
+    private readonly McpStdioTransport? _mcpStdioTransport;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -84,7 +98,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         // Create DumpContext with program hash and dump directory computation
         DumpFolderMetadata dumpContext = new(configuration.Exe, configuration.RecordedDataDirectory);
-        
+
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Dump context created with program hash {ProgramHash} and dump directory {DumpDirectory}",
                 dumpContext.ProgramHash, dumpContext.DumpDirectory);
@@ -152,7 +166,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Memory bus created...");
         }
 
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, 
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory,
             memoryReadWriteBreakpoints, ioReadWriteBreakpoints);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -180,6 +194,14 @@ public class Spice86DependencyInjection : IDisposable {
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Dual PIC created...");
+        }
+
+
+        RealTimeClock realTimeClock = new(state, ioPortDispatcher, dualPic,
+            pauseHandler, configuration.FailOnUnhandledPort, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("RTC/CMOS created...");
         }
 
         CallbackHandler callbackHandler = new(state, loggerService);
@@ -312,15 +334,15 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
-            functionHandlerProvider, stack, state, a20Gate,
-            configuration.InitializeDOS is not false, loggerService);
-        var rtc = new Clock(loggerService);
+            functionHandlerProvider, stack, state, a20Gate, biosDataArea, dualPic,
+            ioPortDispatcher, configuration.InitializeDOS is not false, loggerService);
 
-        SystemClockInt1AHandler systemClockInt1AHandler = new(memory,
-            functionHandlerProvider, stack,
-            state, loggerService, timerInt8Handler, rtc);
+        SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea,
+            realTimeClock, functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
             functionHandlerProvider, stack, state, loggerService);
+        RtcInt70Handler rtcInt70Handler = new(memory, functionHandlerProvider, stack, state,
+            dualPic, biosDataArea, ioPortDispatcher, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("BIOS interrupt handlers created...");
@@ -353,14 +375,14 @@ public class Spice86DependencyInjection : IDisposable {
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Memory data exporter created...");
         }
-       
+
         EmulatorStateSerializer emulatorStateSerializer = new(dumpContext,
             memoryDataExporter, state, executionDumpFactory, functionCatalogue,
             emulatorBreakpointsManager, loggerService);
 
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
               emulatorStateSerializer.LoadBreakpoints(dumpContext.DumpDirectory);
-      
+
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
         ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(configuration);
@@ -472,19 +494,18 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
             interruptInstaller.InstallInterruptHandler(systemClockInt1AHandler);
             interruptInstaller.InstallInterruptHandler(systemBiosInt13Handler);
+            interruptInstaller.InstallInterruptHandler(rtcInt70Handler);
             mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
             InstallDefaultInterruptHandlers(interruptInstaller, dualPic, biosDataArea, loggerService);
         }
 
-        var dosClock = new Clock(loggerService);
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack,
             state, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
-                { "BLASTER", soundBlaster.BlasterString } }, dosClock, loggerService,
-            xms);
-
+                { "BLASTER", soundBlaster.BlasterString } }, loggerService,
+            ioPortDispatcher, dosTables, xms);
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers
             interruptInstaller.InstallInterruptHandler(dos.DosInt20Handler);
@@ -549,9 +570,31 @@ public class Spice86DependencyInjection : IDisposable {
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("BIOS and DOS interrupt handlers created...");
         }
+        // Initialize stdio transport if MCP server is enabled
+        McpStdioTransport? mcpStdioTransport = null;
+        McpServer mcpServer = new(memory, state, functionCatalogue, cpuForEmulationLoop as CfgCpu, pauseHandler, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("MCP server created...");
+        }
+
+        if (configuration.McpServer) {
+            mcpStdioTransport = new McpStdioTransport(mcpServer, loggerService);
+            mcpStdioTransport.Start();
+
+            if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                loggerService.Information("MCP stdio transport started...");
+            }
+        }
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("BIOS and DOS interrupt handlers created...");
+        }
 
         Machine = machine;
         ProgramExecutor = programExecutor;
+        McpServer = mcpServer;
+        _mcpStdioTransport = mcpStdioTransport;
         ProgramExecutor.EmulationStopped += OnProgramExecutorEmulationStopped;
 
         if (mainWindow != null && uiDispatcher != null &&
@@ -560,7 +603,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             BreakpointsViewModel breakpointsViewModel = new(
                 state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);
-            
+
             breakpointsViewModel.RestoreBreakpoints(deserializedUserBreakpoints);
 
             DisassemblyViewModel disassemblyViewModel = new(
@@ -613,6 +656,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
     }
 
+
     private static ICyclesBudgeter CreateDefaultCyclesBudgeter(ICyclesLimiter cyclesLimiter) {
         long sliceDurationTicks = Math.Max(1, Stopwatch.Frequency / 1000);
         double sliceDurationMilliseconds = sliceDurationTicks * 1000.0 / Stopwatch.Frequency;
@@ -620,11 +664,11 @@ public class Spice86DependencyInjection : IDisposable {
         return cyclesBudgeter;
     }
 
+    // IRQ 8 (INT 70h) is handled by RtcInt70Handler, not the default handler
     private readonly byte[] _defaultIrqs = [3, 4, 5, 7, 10, 11];
 
     private void InstallDefaultInterruptHandlers(InterruptInstaller interruptInstaller, DualPic dualPic,
-        BiosDataArea biosDataArea, LoggerService loggerService)
-    {
+        BiosDataArea biosDataArea, LoggerService loggerService) {
         _loggerService.Information("Installing default interrupt handlers for IRQs {IRQs}...",
             string.Join(", ", _defaultIrqs));
         foreach (byte irq in _defaultIrqs) {
@@ -690,6 +734,10 @@ public class Spice86DependencyInjection : IDisposable {
         if (!_disposed) {
             if (disposing) {
                 ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
+
+                // Stop MCP stdio transport if it was started
+                _mcpStdioTransport?.Dispose();
+
                 ProgramExecutor.Dispose();
 
                 // Dispose HeadlessGui BEFORE Machine to stop the rendering timer

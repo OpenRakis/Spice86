@@ -1,12 +1,12 @@
 ﻿namespace Spice86.Core.Emulator.IOPorts;
 
-using System.Numerics;
-using System.Runtime.CompilerServices;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Interfaces;
+
+using System.Numerics;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Abstract base class for all classes that handle port reads and writes. Provides a default implementation for handling unhandled ports.

@@ -14,7 +14,7 @@ public class InstructionReader {
         Int32 = new(memory, InstructionReaderAddressSource);
         UInt32 = new(memory, InstructionReaderAddressSource);
         SegmentedAddress16 = new(memory, InstructionReaderAddressSource);
-        SegmentedAddress32 = new(memory,  InstructionReaderAddressSource);
+        SegmentedAddress32 = new(memory, InstructionReaderAddressSource);
     }
 
     public InstructionReaderAddressSource InstructionReaderAddressSource { get; }

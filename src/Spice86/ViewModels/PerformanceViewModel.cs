@@ -19,7 +19,7 @@ public partial class PerformanceViewModel : ViewModelBase {
     private double _averageInstructionsPerSecond;
 
     private bool _isPaused;
-    
+
     public PerformanceViewModel(State state, IPauseHandler pauseHandler,
         IUIDispatcher uiDispatcher, IPerformanceMeasureReader cpuPerfReader) {
         _cpuPerformanceReader = cpuPerfReader;

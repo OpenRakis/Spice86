@@ -12,7 +12,7 @@ public enum BreakPointType {
     /// specified in the breakpoint.
     /// </summary>
     CPU_EXECUTION_ADDRESS = 0,
-    
+
     /// <summary>
     /// CPU breakpoint triggered when an interrupt is executed.
     /// </summary>
@@ -38,7 +38,7 @@ public enum BreakPointType {
     /// Memory breakpoint triggered when memory is read or written at the address specified in the breakpoint.
     /// </summary>
     MEMORY_ACCESS = 5,
-    
+
     /// <summary>
     /// IO breakpoint triggered when a port is read at the address specified in the breakpoint.
     /// </summary>

@@ -13,7 +13,7 @@ public class RunnableAction : IRunnable {
     public RunnableAction(Action action) {
         _action = action;
     }
-    
+
     /// <inheritdoc/>
     public void Run() {
         _action.Invoke();

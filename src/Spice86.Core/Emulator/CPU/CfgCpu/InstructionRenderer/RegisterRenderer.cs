@@ -17,7 +17,7 @@ public class RegisterRenderer {
         { (int)RegisterIndex.DiIndex, "DI" }
     }.ToFrozenDictionary();
 
-    
+
     private static readonly FrozenDictionary<int, string> _segmentRegistersNames = new Dictionary<int, string>() {
         { (int)SegmentRegisterIndex.EsIndex, "ES" },
         { (int)SegmentRegisterIndex.CsIndex, "CS" },
@@ -36,13 +36,13 @@ public class RegisterRenderer {
     private string Reg16Name(int regIndex) {
         return _registersNames[regIndex];
     }
-    
+
     private string Reg32Name(int regIndex) {
         return "E" + Reg16Name(regIndex);
     }
     public string ToStringRegister(BitWidth bitWidth, int registerIndex) {
         return bitWidth switch {
-            BitWidth.BYTE_8=> Reg8Name(registerIndex),
+            BitWidth.BYTE_8 => Reg8Name(registerIndex),
             BitWidth.WORD_16 => Reg16Name(registerIndex),
             BitWidth.DWORD_32 => Reg32Name(registerIndex),
             _ => throw new ArgumentOutOfRangeException(nameof(bitWidth), bitWidth, null)

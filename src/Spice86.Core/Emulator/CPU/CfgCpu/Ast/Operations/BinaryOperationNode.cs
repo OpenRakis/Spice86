@@ -7,7 +7,7 @@ public class BinaryOperationNode(DataType dataType, ValueNode left, BinaryOperat
     public ValueNode Left { get; } = left;
     public BinaryOperation BinaryOperation { get; } = binaryOperation;
     public ValueNode Right { get; } = right;
-    
+
     public override T Accept<T>(IAstVisitor<T> astVisitor) {
         return astVisitor.VisitBinaryOperationNode(this);
     }

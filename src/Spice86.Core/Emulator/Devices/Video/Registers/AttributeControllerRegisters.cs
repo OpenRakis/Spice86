@@ -13,7 +13,7 @@ public sealed class AttributeControllerRegisters {
     public AttributeControllerRegisters() {
         InternalPalette = new byte[16];
     }
-    
+
     /// <summary>
     /// Gets or sets the address register.
     /// </summary>

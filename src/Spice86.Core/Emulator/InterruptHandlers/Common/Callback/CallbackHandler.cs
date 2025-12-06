@@ -10,9 +10,21 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Stores callback instructions definitions.
-/// Acts as a glue between code read by the CPU (callback number) and the C# code behind that is called.
+/// Manages the dispatch of CPU callbacks to C# implementations, acting as a bridge between emulated machine code and managed code.
 /// </summary>
+/// <remarks>
+/// The callback system allows C# code to be invoked when the emulated CPU executes specific callback numbers.
+/// This is fundamental to the emulator's operation, enabling:
+/// <list type="bullet">
+/// <item>BIOS and DOS interrupt handlers (INT 10h, INT 21h, etc.)</item>
+/// <item>Custom function overrides for reverse engineering</item>
+/// <item>Hardware device responses</item>
+/// </list>
+/// <para>
+/// Callbacks are identified by a unique 16-bit number, and the handler dispatches to the registered C# callback implementation
+/// when that number is encountered during execution.
+/// </para>
+/// </remarks>
 public class CallbackHandler : IndexBasedDispatcher<ICallback> {
     private const ushort CallbackAllocationStart = 0x100;
 

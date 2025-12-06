@@ -66,7 +66,7 @@ public abstract class MidiDevice : IDisposable {
     /// <param name="message">The message to play.</param>
     protected abstract void PlayShortMessage(uint message);
 
-    
+
     /// <summary>
     /// Plays a SysEx MIDI message.
     /// </summary>

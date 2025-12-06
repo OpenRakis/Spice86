@@ -8,7 +8,7 @@ public class PointerAstBuilder {
     public AbsolutePointerNode ToAbsolutePointer(DataType targetDataType, uint address) {
         return new AbsolutePointerNode(targetDataType, new ConstantNode(DataType.UINT32, address));
     }
-    
+
     public ValueNode ToSegmentedPointer(DataType targetDataType, SegmentRegisterIndex segmentRegisterIndex, ValueNode offset) {
         return ToSegmentedPointer(targetDataType, (int)segmentRegisterIndex, offset);
     }

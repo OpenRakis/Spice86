@@ -17,7 +17,7 @@ public class Spice86Creator {
 
     public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
-        bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null) {
+        bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, ushort? programEntryPointSegment = null) {
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
             CommandLineParser parser = new();
@@ -47,7 +47,11 @@ public class Spice86Creator {
             OverrideSupplier = overrideSupplier,
             Xms = enableXms,
             Ems = enableEms,
-            CyclesBudgeter = new StaticCyclesBudgeter(staticCycleBudget)
+            CyclesBudgeter = new StaticCyclesBudgeter(staticCycleBudget),
+            // Use provided segment or default 0x0070 for DOS tests.
+            // 0x0070 avoids MCB wraparound at 1MB boundary (which would occur with higher segments like 0xFFF0)
+            // and provides sufficient conventional memory for typical DOS programs (PSP at 0x0060).
+            ProgramEntryPointSegment = programEntryPointSegment ?? 0x0070
         };
 
         _maxCycles = maxCycles;

@@ -11,7 +11,7 @@ public abstract class FieldWithValue : Signature {
     /// Physical address of the field in memory
     /// </summary>
     public uint PhysicalAddress { get; init; }
-    
+
     /// <summary>
     /// When true value can be used for execution.
     /// When false the value has to be retrieved from the memory location of the field because field value is modified by code.
@@ -24,12 +24,12 @@ public abstract class FieldWithValue : Signature {
     /// <param name="other"></param>
     /// <returns>True if position and value is equals to the other field</returns>
     public abstract bool IsValueAndPositionEquals(FieldWithValue other);
-    
+
     /// <summary>
     /// Length of this field
     /// </summary>
-    public int Length { get; init;  }
-    
+    public int Length { get; init; }
+
     /// <summary>
     /// True means if the value of this field changes, enclosing instruction is not the same instruction anymore
     /// </summary>

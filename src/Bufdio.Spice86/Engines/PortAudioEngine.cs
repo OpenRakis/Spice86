@@ -71,8 +71,8 @@ public sealed class PortAudioEngine : IAudioEngine {
     }
 
     private void Dispose(bool disposing) {
-        if(!_disposed) {
-            if(disposing) {
+        if (!_disposed) {
+            if (disposing) {
                 NativeMethods.PortAudioAbortStream(_stream);
                 NativeMethods.PortAudioCloseStream(_stream);
             }

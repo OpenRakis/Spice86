@@ -14,13 +14,11 @@ using Xunit;
 /// Integration tests for XMS functionality that run machine code through the emulation stack,
 /// similar to how real programs like HITEST.ASM interact with the XMS driver.
 /// </summary>
-public class XmsIntegrationTests
-{
+public class XmsIntegrationTests {
     private const int ResultPort = 0x999;    // Port to write test results
     private const int DetailsPort = 0x998;   // Port to write test details/error messages
 
-    enum TestResult : byte
-    {
+    enum TestResult : byte {
         Success = 0x00,
         Failure = 0xFF
     }
@@ -29,8 +27,7 @@ public class XmsIntegrationTests
     /// Tests XMS installation check via INT 2Fh, AH=43h, AL=00h
     /// </summary>
     [Fact]
-    public void XmsInstallationCheck_ShouldBeInstalled()
-    {
+    public void XmsInstallationCheck_ShouldBeInstalled() {
         // This test checks if the XMS driver is installed by calling INT 2Fh, AH=43h, AL=00h
         // If AL returns 80h, XMS is installed
         byte[] program = new byte[]
@@ -50,7 +47,7 @@ public class XmsIntegrationTests
         };
 
         XmsTestHandler testHandler = RunXmsTest(program, enableA20Gate: false);
-        
+
         testHandler.Results.Should().Contain((byte)TestResult.Success);
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
     }
@@ -59,8 +56,7 @@ public class XmsIntegrationTests
     /// Tests XMS entry point retrieval via INT 2Fh, AH=43h, AL=10h
     /// </summary>
     [Fact]
-    public void GetXmsEntryPoint_ShouldReturnValidAddress()
-    {
+    public void GetXmsEntryPoint_ShouldReturnValidAddress() {
         // This test checks if we can get the XMS entry point
         // Result should be non-zero ES:BX
         byte[] program = new byte[]
@@ -80,7 +76,7 @@ public class XmsIntegrationTests
         };
 
         XmsTestHandler testHandler = RunXmsTest(program, enableA20Gate: false);
-        
+
         testHandler.Results.Should().Contain((byte)TestResult.Success);
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
     }
@@ -89,8 +85,7 @@ public class XmsIntegrationTests
     /// Runs the XMS test program and returns a test handler with results
     /// </summary>
     private XmsTestHandler RunXmsTest(byte[] program, bool enableA20Gate,
-        [CallerMemberName] string unitTestName = "test")
-    {
+        [CallerMemberName] string unitTestName = "test") {
         byte[] comFile = new byte[program.Length + 0x100];
         Array.Copy(program, 0, comFile, 0x100, program.Length);
 
@@ -124,19 +119,15 @@ public class XmsIntegrationTests
     /// <summary>
     /// Captures XMS test results from designated I/O ports
     /// </summary>
-    private class XmsTestHandler : DefaultIOPortHandler
-    {
+    private class XmsTestHandler : DefaultIOPortHandler {
         public List<byte> Results { get; } = new();
         public XmsTestHandler(State state, ILoggerService loggerService,
-            IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService)
-        {
+            IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
             ioPortDispatcher.AddIOPortHandler(ResultPort, this);
         }
 
-        public override void WriteByte(ushort port, byte value)
-        {
-            if (port == ResultPort)
-            {
+        public override void WriteByte(ushort port, byte value) {
+            if (port == ResultPort) {
                 Results.Add(value);
             }
         }

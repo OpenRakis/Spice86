@@ -14,7 +14,7 @@ public class JmpFarImm : InstructionWithSegmentedAddressField, IJumpInstruction 
     public JmpFarImm(
         SegmentedAddress address,
         InstructionField<ushort> opcodeField,
-        List<InstructionPrefix> prefixes, 
+        List<InstructionPrefix> prefixes,
         InstructionField<SegmentedAddress> segmentedAddressField) :
         base(address, opcodeField, prefixes, segmentedAddressField, 1) {
         _targetAddress = SegmentedAddressField.Value;

@@ -38,10 +38,10 @@ public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
 
     [ObservableProperty]
     private Exception? _exception;
-    
+
     [RelayCommand]
     public async Task CopyExceptionToClipboard() {
-        if(Exception is not null) {
+        if (Exception is not null) {
             await _textClipboard.SetTextAsync(
                 JsonSerializer.Serialize(
                     new ExceptionInfo(Exception.TargetSite?.ToString(), Exception.Message, Exception.StackTrace)));

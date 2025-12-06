@@ -33,7 +33,7 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
         _driveMap.Add('B', null);
         _driveMap.Add('C', new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath, CurrentDosDirectory = "" });
         CurrentDrive = _driveMap.ElementAt(2).Value!;
-        if(loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             loggerService.Verbose("DOS Drives initialized: {@Drives}", _driveMap.Values);
         }
     }
@@ -83,6 +83,14 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
             return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// Gets all mounted virtual drives (non-null drives).
+    /// </summary>
+    /// <returns>An enumerable of all mounted VirtualDrive instances.</returns>
+    public IEnumerable<VirtualDrive> GetDrives() {
+        return _driveMap.Values.OfType<VirtualDrive>();
     }
 
     public byte NumberOfPotentiallyValidDriveLetters {

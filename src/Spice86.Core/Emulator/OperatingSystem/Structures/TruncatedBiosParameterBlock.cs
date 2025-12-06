@@ -10,7 +10,7 @@ using Spice86.Shared.Emulator.Memory;
 public class TruncatedBiosParameterBlock : MemoryBasedDataStructure {
     public TruncatedBiosParameterBlock(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
     }
-    
+
     /// <summary>
     /// Gets or sets the number of bytes per sector.
     /// </summary>

@@ -4,8 +4,7 @@
 /// Represents configuration class that can be passed to audio engine.
 /// This class cannot be inherited.
 /// </summary>
-public readonly record struct AudioEngineOptions
-{
+public readonly record struct AudioEngineOptions {
     /// <summary>
     /// Initializes <see cref="AudioEngineOptions"/>.
     /// </summary>
@@ -13,8 +12,7 @@ public readonly record struct AudioEngineOptions
     /// <param name="channels">Desired audio channels, or fallback to maximum channels.</param>
     /// <param name="sampleRate">Desired output sample rate.</param>
     /// <param name="latency">Desired output latency.</param>
-    public AudioEngineOptions(AudioDevice defaultOutputDevice, int channels, int sampleRate, double latency)
-    {
+    public AudioEngineOptions(AudioDevice defaultOutputDevice, int channels, int sampleRate, double latency) {
         DefaultAudioDevice = defaultOutputDevice;
         Channels = FallbackChannelCount(DefaultAudioDevice, channels);
         SampleRate = sampleRate;
@@ -28,8 +26,7 @@ public readonly record struct AudioEngineOptions
     /// <param name="defaultOutputDevice">Desired output device, see: <see cref="PortAudioLib.OutputDevices"/>.</param>
     /// <param name="channels">Desired audio channels, or fallback to maximum channels.</param>
     /// <param name="sampleRate">Desired output sample rate.</param>
-    public AudioEngineOptions(AudioDevice defaultOutputDevice, int channels, int sampleRate)
-    {
+    public AudioEngineOptions(AudioDevice defaultOutputDevice, int channels, int sampleRate) {
         DefaultAudioDevice = defaultOutputDevice;
         Channels = FallbackChannelCount(DefaultAudioDevice, channels);
         SampleRate = sampleRate;
@@ -40,8 +37,7 @@ public readonly record struct AudioEngineOptions
     /// Initializes <see cref="AudioEngineOptions"/> by using default output device.
     /// Sample rate will be set to 44100, channels to 2 (or max) and latency to default high.
     /// </summary>
-    public AudioEngineOptions(AudioDevice defaultOutputDevice)
-    {
+    public AudioEngineOptions(AudioDevice defaultOutputDevice) {
         DefaultAudioDevice = defaultOutputDevice;
         Channels = FallbackChannelCount(DefaultAudioDevice, 2);
         SampleRate = 48000;

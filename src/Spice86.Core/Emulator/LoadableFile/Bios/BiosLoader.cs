@@ -1,10 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.LoadableFile.Bios;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Shared.Interfaces;
-
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 /// <summary>

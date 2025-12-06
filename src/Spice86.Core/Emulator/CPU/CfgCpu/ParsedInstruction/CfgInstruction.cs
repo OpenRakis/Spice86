@@ -72,7 +72,7 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
         FieldsInOrder.Add(fieldWithValue);
         UpdateLength();
     }
-    
+
     protected void AddFields(IEnumerable<FieldWithValue> fieldWithValues) {
         fieldWithValues.ToList().ForEach(AddField);
     }
@@ -115,18 +115,18 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     public Signature SignatureFinal {
         get {
             ImmutableList<byte?> signatureBytes = ComputeSignatureBytes(FieldsInOrder
-                .Where(field => field.Final));
+                .Where(f => f.Final));
             return new Signature(signatureBytes);
         }
     }
 
     private ImmutableList<byte?> ComputeSignatureBytes(IEnumerable<FieldWithValue> bytes) {
         return bytes
-            .Select(field => field.SignatureValue)
+            .Select(f => f.SignatureValue)
             .SelectMany(i => i)
             .ToImmutableList();
     }
-    
+
     public void SetLive(bool isLive) {
         _isLive = isLive;
     }

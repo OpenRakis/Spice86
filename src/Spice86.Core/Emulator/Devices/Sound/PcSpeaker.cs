@@ -213,6 +213,13 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
                 AddPitOutput(newIndex);
                 break;
 
+            case PitMode.RateGenerator:
+            case PitMode.RateGeneratorAlias:
+                _pit.Mode = mode;
+                _pit.Amplitude = PositiveAmplitude;
+                AddPitOutput(newIndex);
+                break;
+
             case PitMode.SquareWave:
             case PitMode.SquareWaveAlias:
                 _pit.Mode = mode;

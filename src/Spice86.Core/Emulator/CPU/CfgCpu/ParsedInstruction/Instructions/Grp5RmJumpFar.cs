@@ -14,7 +14,7 @@ public class Grp5RmJumpFar : InstructionWithModRm, IJumpInstruction {
         List<InstructionPrefix> prefixes, ModRmContext modRmContext) : base(address, opcodeField, prefixes,
         modRmContext, null) {
     }
-    
+
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         uint ipAddress = helper.ModRm.MandatoryMemoryAddress;

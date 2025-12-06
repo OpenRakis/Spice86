@@ -117,7 +117,7 @@ public class NodeLinker : InstructionReplacer {
             throw new UnhandledCfgDiscrepancyException("Trying to attach a non ASM instruction to a selector node which is not allowed. This should never happen.");
         }
     }
-    
+
     private void ReplaceSuccessorsPerType(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
         // Merge the SuccessorsPerType with the new instruction
         foreach (KeyValuePair<InstructionSuccessorType, ISet<ICfgNode>> oldEntry in oldInstruction.SuccessorsPerType) {
@@ -196,7 +196,7 @@ public class NodeLinker : InstructionReplacer {
     }
 
     private void ReplaceSuccessorOfCallInstruction(CfgInstruction instruction, ICfgNode currentSuccesor, ICfgNode newSuccesor) {
-        foreach(KeyValuePair<InstructionSuccessorType, ISet<ICfgNode>> entry in instruction.SuccessorsPerType) {
+        foreach (KeyValuePair<InstructionSuccessorType, ISet<ICfgNode>> entry in instruction.SuccessorsPerType) {
             ISet<ICfgNode> successors = entry.Value;
             if (successors.Contains(currentSuccesor)) {
                 successors.Remove(currentSuccesor);

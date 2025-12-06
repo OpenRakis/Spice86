@@ -11,4 +11,4 @@ public interface ISerializableBreakpointsSource {
     /// </summary>
     /// <returns>A SerializedBreakpoints object containing all the internal debugger breakpoints.</returns>
     public SerializableUserBreakpointCollection CreateSerializableBreakpoints();
-    }
+}

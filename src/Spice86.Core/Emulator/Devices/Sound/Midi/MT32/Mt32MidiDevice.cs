@@ -39,7 +39,7 @@ public sealed class Mt32MidiDevice : MidiDevice {
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
-        
+
         if (!LoadRoms(romsPath)) {
             if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 loggerService.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created",

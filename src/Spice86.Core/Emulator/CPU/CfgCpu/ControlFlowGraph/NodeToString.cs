@@ -45,7 +45,7 @@ public class NodeToString {
     private IEnumerable<string> SuccessorsToEnumerableString(CfgInstruction cfgInstruction) {
         return cfgInstruction.SuccessorsPerAddress.Select(e => $"{ToString(e.Value)}");
     }
-    
+
     private IEnumerable<string> SuccessorsToEnumerableString(SelectorNode selectorNode) {
         return selectorNode.SuccessorsPerSignature.Select(e => $"{e.Key} => {ToString(e.Value)}");
     }
