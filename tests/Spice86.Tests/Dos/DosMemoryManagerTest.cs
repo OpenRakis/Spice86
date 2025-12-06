@@ -94,7 +94,7 @@ public class DosMemoryManagerTests {
             return;
         }
 
-        uint startAddress = MemoryUtils.ToPhysicalAddress(block.PspLoadSegment, 0);
+        uint startAddress = MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0);
         int sizeInBytes = block.AllocationSizeInBytes;
         for (int i = 0; i < sizeInBytes; i++) {
             _memory.UInt8[startAddress + i] = fillByte;
@@ -148,7 +148,7 @@ public class DosMemoryManagerTests {
         block.IsFree.Should().BeTrue();
         block.IsLast.Should().BeTrue();
         block.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        block.PspLoadSegment.Should().Be(0xFF0);
+        block.DataBlockSegment.Should().Be(0xFF0);
         block.Size.Should().Be(36880);
         block.AllocationSizeInBytes.Should().Be(590080);
     }
@@ -168,7 +168,7 @@ public class DosMemoryManagerTests {
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
         block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block!.PspLoadSegment.Should().Be(0xFF0);
+        block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(16300);
         block!.AllocationSizeInBytes.Should().Be(260800);
     }
@@ -188,7 +188,7 @@ public class DosMemoryManagerTests {
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeTrue();
         block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block!.PspLoadSegment.Should().Be(0xFF0);
+        block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(36880);
         block!.AllocationSizeInBytes.Should().Be(590080);
     }
@@ -233,7 +233,7 @@ public class DosMemoryManagerTests {
         block1!.IsFree.Should().BeFalse();
         block1!.IsLast.Should().BeFalse();
         block1!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block1!.PspLoadSegment.Should().Be(0xFF0);
+        block1!.DataBlockSegment.Should().Be(0xFF0);
         block1!.Size.Should().Be(16300);
         block1!.AllocationSizeInBytes.Should().Be(260800);
 
@@ -242,7 +242,7 @@ public class DosMemoryManagerTests {
         block2!.IsFree.Should().BeFalse();
         block2!.IsLast.Should().BeFalse();
         block2!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block2!.PspLoadSegment.Should().Be(0x4F9D);
+        block2!.DataBlockSegment.Should().Be(0x4F9D);
         block2!.Size.Should().Be(20577);
         block2!.AllocationSizeInBytes.Should().Be(329232);
 
@@ -251,7 +251,7 @@ public class DosMemoryManagerTests {
         block3!.IsFree.Should().BeFalse();
         block3!.IsLast.Should().BeTrue();
         block3!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block3!.PspLoadSegment.Should().Be(0x9FFF);
+        block3!.DataBlockSegment.Should().Be(0x9FFF);
         block3!.Size.Should().Be(1);
         block3!.AllocationSizeInBytes.Should().Be(16);
 
@@ -305,7 +305,7 @@ public class DosMemoryManagerTests {
         block.IsFree.Should().BeFalse();
         block.IsLast.Should().BeFalse();
         block.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block.PspLoadSegment.Should().Be(0xFF0);
+        block.DataBlockSegment.Should().Be(0xFF0);
         block.Size.Should().Be(16300);
         block.AllocationSizeInBytes.Should().Be(260800);
     }
@@ -334,7 +334,7 @@ public class DosMemoryManagerTests {
         block.IsFree.Should().BeTrue();
         block.IsLast.Should().BeTrue();
         block.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        block.PspLoadSegment.Should().Be(0xFF0);
+        block.DataBlockSegment.Should().Be(0xFF0);
         block.Size.Should().Be(36880);
         block.AllocationSizeInBytes.Should().Be(590080);
     }
@@ -381,7 +381,7 @@ public class DosMemoryManagerTests {
         block.IsFree.Should().BeFalse();
         block.IsLast.Should().BeTrue();
         block.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block.PspLoadSegment.Should().Be(0xFF0);
+        block.DataBlockSegment.Should().Be(0xFF0);
         block.Size.Should().Be(36880);
         block.AllocationSizeInBytes.Should().Be(590080);
     }
@@ -410,7 +410,7 @@ public class DosMemoryManagerTests {
         block1.IsFree.Should().BeFalse();
         block1.IsLast.Should().BeFalse();
         block1.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block1.PspLoadSegment.Should().Be(0xFF0);
+        block1.DataBlockSegment.Should().Be(0xFF0);
         block1.Size.Should().Be(1234);
         block1.AllocationSizeInBytes.Should().Be(19744);
 
@@ -418,7 +418,7 @@ public class DosMemoryManagerTests {
         block2.IsFree.Should().BeTrue();
         block2.IsLast.Should().BeTrue();
         block2.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        block2.PspLoadSegment.Should().Be(0x14C3);
+        block2.DataBlockSegment.Should().Be(0x14C3);
         block2.Size.Should().Be(35645);
         block2.AllocationSizeInBytes.Should().Be(570320);
     }
@@ -439,7 +439,7 @@ public class DosMemoryManagerTests {
         block.IsFree.Should().BeTrue();
         block.IsLast.Should().BeTrue();
         block.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        block.PspLoadSegment.Should().Be(0xFF0);
+        block.DataBlockSegment.Should().Be(0xFF0);
         block.Size.Should().Be(36880);
         block.AllocationSizeInBytes.Should().Be(590080);
     }
@@ -461,7 +461,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
         modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        modifiedBlock.PspLoadSegment.Should().Be(0xFF0);
+        modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(20);
         modifiedBlock.AllocationSizeInBytes.Should().Be(320);
     }
@@ -484,7 +484,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
         modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        modifiedBlock.PspLoadSegment.Should().Be(0xFF0);
+        modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(9815);
         modifiedBlock.AllocationSizeInBytes.Should().Be(157040);
     }
@@ -513,7 +513,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
         modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        modifiedBlock.PspLoadSegment.Should().Be(0xFF0);
+        modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(16300);
         modifiedBlock.AllocationSizeInBytes.Should().Be(260800);
     }
@@ -552,7 +552,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
         modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        modifiedBlock.PspLoadSegment.Should().Be(0xFF0);
+        modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(9815);
         modifiedBlock.AllocationSizeInBytes.Should().Be(157040);
     }
@@ -579,7 +579,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsFree.Should().BeTrue();
         modifiedBlock.IsLast.Should().BeTrue();
         modifiedBlock.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        modifiedBlock.PspLoadSegment.Should().Be(0x50CA);
+        modifiedBlock.DataBlockSegment.Should().Be(0x50CA);
         modifiedBlock.Size.Should().Be(20278);
         modifiedBlock.AllocationSizeInBytes.Should().Be(324448);
     }
@@ -613,7 +613,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsFree.Should().BeTrue();
         modifiedBlock.IsLast.Should().BeTrue();
         modifiedBlock.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        modifiedBlock.PspLoadSegment.Should().Be(0x512F);
+        modifiedBlock.DataBlockSegment.Should().Be(0x512F);
         modifiedBlock.Size.Should().Be(20177);
         modifiedBlock.AllocationSizeInBytes.Should().Be(322832);
     }
@@ -634,7 +634,7 @@ public class DosMemoryManagerTests {
         block!.IsFree.Should().BeTrue();
         block!.IsLast.Should().BeTrue();
         block!.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        block!.PspLoadSegment.Should().Be(0xFF0);
+        block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(36880);
         block!.AllocationSizeInBytes.Should().Be(590080);
     }
@@ -689,7 +689,7 @@ public class DosMemoryManagerTests {
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
         block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block!.PspLoadSegment.Should().Be(0xFF0);
+        block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(16301);
         block!.AllocationSizeInBytes.Should().Be(260816);
     }
@@ -711,7 +711,7 @@ public class DosMemoryManagerTests {
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
         block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block!.PspLoadSegment.Should().Be(0xFF0);
+        block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(16301);
         block!.AllocationSizeInBytes.Should().Be(260816);
     }
@@ -744,7 +744,7 @@ public class DosMemoryManagerTests {
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
         block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block!.PspLoadSegment.Should().Be(0xFF0);
+        block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(12292);
         block!.AllocationSizeInBytes.Should().Be(196672);
     }
@@ -778,7 +778,7 @@ public class DosMemoryManagerTests {
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
         block!.PspSegment.Should().Be(0x3FF5);
-        block!.PspLoadSegment.Should().Be(0x3FF5);
+        block!.DataBlockSegment.Should().Be(0x3FF5);
         block!.Size.Should().Be(12292);
         block!.AllocationSizeInBytes.Should().Be(196672);
     }
@@ -801,7 +801,7 @@ public class DosMemoryManagerTests {
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeTrue();
         block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block!.PspLoadSegment.Should().Be(0xFF0);
+        block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(36880);
         block!.AllocationSizeInBytes.Should().Be(590080);
     }
@@ -824,7 +824,7 @@ public class DosMemoryManagerTests {
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeTrue();
         block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block!.PspLoadSegment.Should().Be(0xFF0);
+        block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(36880);
         block!.AllocationSizeInBytes.Should().Be(590080);
     }
@@ -856,7 +856,7 @@ public class DosMemoryManagerTests {
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
         block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block!.PspLoadSegment.Should().Be(0xFF0);
+        block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(12292);
         block!.AllocationSizeInBytes.Should().Be(196672);
     }
@@ -888,7 +888,7 @@ public class DosMemoryManagerTests {
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeTrue();
         block!.PspSegment.Should().Be(0x57F8);
-        block!.PspLoadSegment.Should().Be(0x57F8);
+        block!.DataBlockSegment.Should().Be(0x57F8);
         block!.Size.Should().Be(18440);
         block!.AllocationSizeInBytes.Should().Be(295040);
     }
@@ -921,7 +921,7 @@ public class DosMemoryManagerTests {
         block1!.IsFree.Should().BeFalse();
         block1!.IsLast.Should().BeFalse();
         block1!.PspSegment.Should().Be(_pspTracker.InitialPspSegment);
-        block1!.PspLoadSegment.Should().Be(0xFF0);
+        block1!.DataBlockSegment.Should().Be(0xFF0);
         block1!.Size.Should().Be(12301);
         block1!.AllocationSizeInBytes.Should().Be(196816);
 
@@ -929,7 +929,7 @@ public class DosMemoryManagerTests {
         block2!.IsFree.Should().BeFalse();
         block2!.IsLast.Should().BeFalse();
         block2!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
-        block2!.PspLoadSegment.Should().Be(0x3FFE);
+        block2!.DataBlockSegment.Should().Be(0x3FFE);
         block2!.Size.Should().Be(16112);
         block2!.AllocationSizeInBytes.Should().Be(257792);
     }
