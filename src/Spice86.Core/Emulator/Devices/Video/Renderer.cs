@@ -11,6 +11,17 @@ using ClockSelect = Registers.General.MiscellaneousOutput.ClockSelectValue;
 
 /// <inheritdoc cref="IVgaRenderer" />
 public class Renderer : IVgaRenderer {
+    /// <summary>
+    /// Pixel aspect ratio for VGA modes with non-square pixels (320x200, 360x400, etc.)
+    /// These modes use 5:6 width:height ratio to achieve correct 4:3 display on CRT monitors.
+    /// </summary>
+    private const double VgaNonSquarePixelAspectRatio = 5.0 / 6.0;
+
+    /// <summary>
+    /// Pixel aspect ratio for VGA modes with square pixels (640x480, 720x400, etc.)
+    /// </summary>
+    private const double VgaSquarePixelAspectRatio = 1.0;
+
     private static readonly object RenderLock = new();
     private readonly VideoMemory _memory;
     private readonly IVideoState _state;
@@ -42,11 +53,11 @@ public class Renderer : IVgaRenderer {
 
     /// <inheritdoc />
     public double PixelAspectRatio => Width switch {
-        320 => 5.0 / 6.0,  // VGA Mode 13h and similar modes use non-square pixels (5:6 width:height)
-        360 => 5.0 / 6.0,  // Similar aspect ratio correction needed
-        640 => 1.0,        // Square pixels for high-resolution modes
-        720 => 1.0,        // Square pixels for high-resolution modes
-        _ => 1.0           // Default to square pixels for unknown modes
+        320 => VgaNonSquarePixelAspectRatio,  // VGA Mode 13h and similar modes use non-square pixels
+        360 => VgaNonSquarePixelAspectRatio,  // Similar aspect ratio correction needed
+        640 => VgaSquarePixelAspectRatio,     // Square pixels for high-resolution modes
+        720 => VgaSquarePixelAspectRatio,     // Square pixels for high-resolution modes
+        _ => VgaSquarePixelAspectRatio        // Default to square pixels for unknown modes
     };
 
     /// <inheritdoc />
