@@ -28,10 +28,10 @@ public class DosProgramSegmentPrefixCmdTests {
     private readonly DosProgramSegmentPrefix _psp;
 
     private void TestCommandLineParameter(string? spiceArguments, byte[] expected) {
-        string test = DosCommandTail.PrepareCommandlineString(spiceArguments);
-        _psp.DosCommandTail.Command = test;
-        _psp.DosCommandTail.Command.Should().Be(test, "command should round-trip correctly");
-        _psp.DosCommandTail.Length.Should().Be((byte)test.Length, "length should match command string length");
+        string preparedCommand = DosCommandTail.PrepareCommandlineString(spiceArguments);
+        _psp.DosCommandTail.Command = preparedCommand;
+        _psp.DosCommandTail.Command.Should().Be(preparedCommand, "command should round-trip correctly");
+        _psp.DosCommandTail.Length.Should().Be((byte)preparedCommand.Length, "length should match command string length");
         expected.Length.Should().Be(_psp.DosCommandTail.Length + 2, "not enough expected bytes");
         for (int i = 0; i < expected.Length; ++i) {
             byte v = _psp.DosCommandTail.UInt8[i];
