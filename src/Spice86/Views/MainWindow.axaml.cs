@@ -23,16 +23,20 @@ internal partial class MainWindow : Window {
 
     private void MainWindow_Loaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e) {
         Dispatcher.UIThread.Post(() => {
+            System.Diagnostics.Debug.WriteLine("[WARN] MainWindow: MainWindow_Loaded called");
             if (DataContext is MainWindowViewModel viewModel) {
                 // Wire up OpenGL frame updates
                 viewModel.UpdateOpenGlFrame += OnUpdateOpenGlFrame;
+                System.Diagnostics.Debug.WriteLine("[WARN] MainWindow: UpdateOpenGlFrame event wired");
                 
                 // Track window size changes for shader selection
                 this.PropertyChanged += OnWindowPropertyChanged;
+                System.Diagnostics.Debug.WriteLine("[WARN] MainWindow: PropertyChanged event wired");
                 
                 // Set initial host output resolution
                 UpdateHostOutputResolution();
                 
+                System.Diagnostics.Debug.WriteLine($"[WARN] MainWindow: OpenGlVideo is {(OpenGlVideo != null ? "NOT NULL" : "NULL")}");
                 viewModel.StartEmulator();
             }
         }, DispatcherPriority.Background);
@@ -40,6 +44,7 @@ internal partial class MainWindow : Window {
 
     private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e) {
         if (e.Property == ClientSizeProperty || e.Property == WindowStateProperty) {
+            System.Diagnostics.Debug.WriteLine($"[WARN] MainWindow: Window property changed - {e.Property.Name}");
             UpdateHostOutputResolution();
         }
     }
@@ -49,6 +54,7 @@ internal partial class MainWindow : Window {
             // Get the window's client area size - this is the actual rendering output size
             int outputWidth = (int)ClientSize.Width;
             int outputHeight = (int)ClientSize.Height;
+            System.Diagnostics.Debug.WriteLine($"[WARN] MainWindow: UpdateHostOutputResolution - {outputWidth}x{outputHeight}");
             
             if (outputHeight > 0) {
                 viewModel.UpdateHostOutputResolution(outputWidth, outputHeight);
@@ -57,6 +63,7 @@ internal partial class MainWindow : Window {
     }
 
     private void OnUpdateOpenGlFrame(uint[] frameBuffer, int width, int height) {
+        System.Diagnostics.Debug.WriteLine($"[WARN] MainWindow: OnUpdateOpenGlFrame called - OpenGlVideo={(OpenGlVideo != null ? "exists" : "NULL")}, width={width}, height={height}, buffer.Length={frameBuffer.Length}");
         OpenGlVideo?.UpdateFrame(frameBuffer, width, height);
     }
 

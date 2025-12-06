@@ -194,6 +194,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     /// <param name="outputWidth">The actual width of the rendering output in pixels</param>
     /// <param name="outputHeight">The actual height of the rendering output in pixels</param>
     public void UpdateHostOutputResolution(int outputWidth, int outputHeight) {
+        System.Diagnostics.Debug.WriteLine($"[WARN] ViewModel: UpdateHostOutputResolution - width={outputWidth}, height={outputHeight}");
         if (_hostOutputHeight != outputHeight) {
             _hostOutputHeight = outputHeight;
             UpdateShaderForHostResolution();
@@ -209,11 +210,14 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private void UpdateShaderForHostResolution() {
         // Select shader based on the host display resolution where the window is rendered
         // This matches DOSBox Staging's crt-auto behavior
+        CrtShaderType newShaderType;
         if (_hostOutputHeight <= 1080) {
-            ShaderType = CrtShaderType.FakeLottes;
+            newShaderType = CrtShaderType.FakeLottes;
         } else {
-            ShaderType = CrtShaderType.EasyMode;
+            newShaderType = CrtShaderType.EasyMode;
         }
+        System.Diagnostics.Debug.WriteLine($"[WARN] ViewModel: UpdateShaderForHostResolution - height={_hostOutputHeight}, selected shader={newShaderType}");
+        ShaderType = newShaderType;
     }
 
     internal void OnKeyDown(KeyEventArgs e) {
@@ -274,10 +278,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     public void SetResolution(int width, int height) {
+        System.Diagnostics.Debug.WriteLine($"[WARN] ViewModel: SetResolution called - width={width}, height={height}");
         _uiDispatcher.Post(() => {
             _isSettingResolution = true;
             Scale = 1;
             if (Width != width || Height != height) {
+                System.Diagnostics.Debug.WriteLine($"[WARN] ViewModel: Resolution changing from {Width}x{Height} to {width}x{height}");
                 Width = width;
                 Height = height;
             }
@@ -354,9 +360,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _drawingSemaphoreSlim?.Wait();
         try {
             int bufferSize = Width * Height;
+            System.Diagnostics.Debug.WriteLine($"[WARN] ViewModel: DrawScreen - Width={Width}, Height={Height}, bufferSize={bufferSize}");
+            
             // Reuse buffer to avoid per-frame allocations
             if (_frameBufferCache is null || _frameBufferCache.Length != bufferSize) {
                 _frameBufferCache = new uint[bufferSize];
+                System.Diagnostics.Debug.WriteLine($"[WARN] ViewModel: Allocated new frame buffer cache");
             }
 
             unsafe {
@@ -365,6 +374,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                     RenderScreen.Invoke(this, uiRenderEventArgs);
                 }
             }
+            System.Diagnostics.Debug.WriteLine($"[WARN] ViewModel: RenderScreen invoked, UpdateOpenGlFrame subscribers={UpdateOpenGlFrame?.GetInvocationList().Length ?? 0}");
+            
             // Send frame to OpenGL control
             _uiDispatcher.Post(() => UpdateOpenGlFrame?.Invoke(_frameBufferCache, Width, Height), DispatcherPriority.Render);
         } finally {
