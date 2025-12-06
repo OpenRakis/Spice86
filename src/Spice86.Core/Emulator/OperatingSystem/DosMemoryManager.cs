@@ -14,10 +14,26 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class DosMemoryManager {
     internal const ushort LastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
+    private const ushort FakeMcbSize = 0xFFFF;
+    private const byte FitTypeMask = 0x03;
+    private const byte MaxValidFitType = 0x02;
+    private const byte ReservedBitsMask = 0x3C;
+    private const byte HighMemMask = 0xC0;
+    private const byte HighMemFirstThenLow = 0x40;
+    private const byte HighMemOnlyNoFallback = 0x80;
     private readonly ILoggerService _loggerService;
     private readonly IMemory _memory;
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryControlBlock _start;
+
+    /// <summary>
+    /// The current memory allocation strategy used for INT 21h/48h (allocate memory).
+    /// </summary>
+    /// <remarks>
+    /// The default strategy is <see cref="DosMemoryAllocationStrategy.FirstFit"/> to match MS-DOS behavior.
+    /// This can be changed via INT 21h/58h (Get/Set Memory Allocation Strategy).
+    /// </remarks>
+    private DosMemoryAllocationStrategy _allocationStrategy = DosMemoryAllocationStrategy.FirstFit;
 
     /// <summary>
     /// Initializes a new instance.
@@ -58,6 +74,31 @@ public class DosMemoryManager {
     }
 
     /// <summary>
+    /// Gets or sets the current memory allocation strategy (INT 21h/58h).
+    /// </summary>
+    public DosMemoryAllocationStrategy AllocationStrategy {
+        get => _allocationStrategy;
+        set {
+            // Validate the strategy - only allow valid combinations
+            byte fitType = (byte)((byte)value & FitTypeMask);
+            if (fitType > MaxValidFitType) {
+                // Invalid fit type, ignore
+                return;
+            }
+            // Validate bits 2-5 must be zero per DOS specification
+            if (((byte)value & ReservedBitsMask) != 0) {
+                return;
+            }
+            byte highMemBits = (byte)((byte)value & HighMemMask);
+            if (highMemBits != 0x00 && highMemBits != HighMemFirstThenLow && highMemBits != HighMemOnlyNoFallback) {
+                // Invalid high memory bits, ignore
+                return;
+            }
+            _allocationStrategy = value;
+        }
+    }
+
+    /// <summary>
     /// Allocates a memory block of the specified size. Returns <c>null</c> if no memory block could be found to fit the requested size.
     /// </summary>
     /// <param name="requestedSizeInParagraphs">The requested size in paragraphs of the memory block.</param>
@@ -65,13 +106,8 @@ public class DosMemoryManager {
     public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSizeInParagraphs) {
         IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSizeInParagraphs);
 
-        // take the smallest
-        DosMemoryControlBlock? blockOptional = null;
-        foreach (DosMemoryControlBlock currentElement in candidates) {
-            if (blockOptional is null || currentElement.Size < blockOptional.Size) {
-                blockOptional = currentElement;
-            }
-        }
+        // Select block based on allocation strategy
+        DosMemoryControlBlock? blockOptional = SelectBlockByStrategy(candidates);
         if (blockOptional is null) {
             // Nothing found
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -84,12 +120,132 @@ public class DosMemoryManager {
         if (!SplitBlock(block, requestedSizeInParagraphs)) {
             // An issue occurred while splitting the block
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Could not spit block {Block}", block);
+                _loggerService.Error("Could not split block {Block}", block);
             }
             return null;
         }
 
         block.PspSegment = _pspTracker.GetCurrentPspSegment();
+        return block;
+    }
+
+    /// <summary>
+    /// Allocates a memory block for an environment block and copies the environment data into it.
+    /// </summary>
+    /// <param name="environmentData">The environment block data to copy.</param>
+    /// <param name="ownerPspSegment">The PSP segment that owns this environment block.</param>
+    /// <returns>The segment of the allocated environment block, or 0 if allocation failed.</returns>
+    public ushort AllocateEnvironmentBlock(byte[] environmentData, ushort ownerPspSegment) {
+        // Calculate size in paragraphs (round up)
+        ushort sizeInParagraphs = (ushort)((environmentData.Length + 15) / 16);
+        
+        DosMemoryControlBlock? block = AllocateMemoryBlockForPsp(sizeInParagraphs, ownerPspSegment);
+        if (block is null) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("Failed to allocate environment block of {Size} bytes", environmentData.Length);
+            }
+            return 0;
+        }
+
+        // Copy environment data to the allocated block
+        uint dataAddress = MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0);
+        _memory.LoadData(dataAddress, environmentData);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose(
+                "Allocated environment block at segment {Segment:X4} ({Size} paragraphs) for PSP {Psp:X4}",
+                block.DataBlockSegment, sizeInParagraphs, ownerPspSegment);
+        }
+
+        return block.DataBlockSegment;
+    }
+
+    /// <summary>
+    /// Allocates a memory block for an environment block at a specific segment and copies the environment data into it.
+    /// </summary>
+    /// <param name="environmentData">The environment block data to copy.</param>
+    /// <param name="ownerPspSegment">The PSP segment that owns this environment block.</param>
+    /// <param name="targetSegment">The specific segment where the environment block should be allocated.</param>
+    /// <returns>The segment of the allocated environment block, or 0 if allocation failed.</returns>
+    public ushort AllocateEnvironmentBlockAtSegment(byte[] environmentData, ushort ownerPspSegment, ushort targetSegment) {
+        // Calculate size in paragraphs (round up)
+        ushort sizeInParagraphs = (ushort)((environmentData.Length + 15) / 16);
+
+        // Get the MCB at the target segment (MCB is 1 paragraph before the data block)
+        DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment((ushort)(targetSegment - 1));
+        
+        if (!block.IsValid || !block.IsFree) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error(
+                    "Cannot allocate environment block at segment {Segment:X4}: block is {Status}",
+                    targetSegment, block.IsValid ? "not free" : "invalid");
+            }
+            return 0;
+        }
+
+        if (block.Size < sizeInParagraphs) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error(
+                    "Cannot allocate environment block at segment {Segment:X4}: need {Needed} paragraphs, have {Have}",
+                    targetSegment, sizeInParagraphs, block.Size);
+            }
+            return 0;
+        }
+
+        // Split the block if it's larger than needed
+        if (block.Size > sizeInParagraphs) {
+            if (!SplitBlock(block, sizeInParagraphs)) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error(
+                        "Failed to split block at segment {Segment:X4} for environment allocation (requested {Requested} paragraphs, block size {BlockSize})",
+                        targetSegment, sizeInParagraphs, block.Size);
+                }
+                return 0;
+            }
+        }
+
+        // Mark the block as owned by the PSP
+        block.PspSegment = ownerPspSegment;
+
+        // Copy environment data to the allocated block
+        uint dataAddress = MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0);
+        _memory.LoadData(dataAddress, environmentData);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose(
+                "Allocated environment block at specific segment {Segment:X4} ({Size} paragraphs) for PSP {Psp:X4}",
+                block.DataBlockSegment, sizeInParagraphs, ownerPspSegment);
+        }
+
+        return block.DataBlockSegment;
+    }
+
+    /// <summary>
+    /// Allocates a memory block and assigns it to a specific PSP segment.
+    /// </summary>
+    /// <param name="requestedSizeInParagraphs">The requested size in paragraphs.</param>
+    /// <param name="pspSegment">The PSP segment to assign as owner.</param>
+    /// <returns>The allocated MCB, or null if allocation failed.</returns>
+    public DosMemoryControlBlock? AllocateMemoryBlockForPsp(ushort requestedSizeInParagraphs, ushort pspSegment) {
+        IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSizeInParagraphs);
+
+        DosMemoryControlBlock? blockOptional = SelectBlockByStrategy(candidates);
+        if (blockOptional is null) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("Could not find any MCB to fit {RequestedSize}", requestedSizeInParagraphs);
+            }
+            return null;
+        }
+
+        DosMemoryControlBlock block = blockOptional;
+        if (!SplitBlock(block, requestedSizeInParagraphs)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("Could not split block {Block}", block);
+            }
+            return null;
+        }
+
+        block.PspSegment = pspSegment;
         return block;
     }
 
@@ -143,7 +299,7 @@ public class DosMemoryManager {
         }
 
         block.SetFree();
-        return JoinBlocks(block, true);
+        return true;
     }
 
     /// <summary>
@@ -498,6 +654,9 @@ public class DosMemoryManager {
 
         // +1 because next block metadata is going to free space
         destination.Size = (ushort)(destination.Size + next.Size + 1);
+
+        // Mark the now unlinked MCB as "fake"
+        next.Size = FakeMcbSize;
     }
 
     /// <summary>
@@ -543,6 +702,116 @@ public class DosMemoryManager {
         // next is free
         next.SetFree();
         next.Size = (ushort)nextBlockSize;
+        return true;
+    }
+
+    /// <summary>
+    /// Selects a memory block based on the current allocation strategy.
+    /// </summary>
+    /// <param name="candidates">List of candidate blocks that fit the requested size.</param>
+    /// <returns>The selected block or null if none found.</returns>
+    /// <remarks>
+    /// Note: High memory bits (bits 6-7) of the allocation strategy are currently not handled.
+    /// This method only implements low memory allocation strategies. UMB (Upper Memory Block)
+    /// support would need to be added to handle strategies like FirstFitHighThenLow (0x40) or
+    /// FirstFitHighOnlyNoFallback (0x80).
+    /// </remarks>
+    private DosMemoryControlBlock? SelectBlockByStrategy(IEnumerable<DosMemoryControlBlock> candidates) {
+        // Get the fit type from the lower 2 bits of the strategy
+        byte fitType = (byte)((byte)_allocationStrategy & FitTypeMask);
+
+        DosMemoryControlBlock? selectedBlock = null;
+
+        foreach (DosMemoryControlBlock current in candidates) {
+            if (selectedBlock is null) {
+                selectedBlock = current;
+                // For first fit, we can return immediately
+                if (fitType == (byte)DosMemoryAllocationStrategy.FirstFit) {
+                    return selectedBlock;
+                }
+                continue;
+            }
+
+            switch (fitType) {
+                case (byte)DosMemoryAllocationStrategy.FirstFit: // First fit - already returned above
+                    break;
+
+                case (byte)DosMemoryAllocationStrategy.BestFit: // Best fit - take the smallest
+                    if (current.Size < selectedBlock.Size) {
+                        selectedBlock = current;
+                    }
+                    break;
+
+                case (byte)DosMemoryAllocationStrategy.LastFit: // Last fit - take the last one (highest address)
+                    // Since we iterate from low to high addresses, always update to the current
+                    selectedBlock = current;
+                    break;
+            }
+        }
+
+        return selectedBlock;
+    }
+
+    /// <summary>
+    /// Checks the integrity of the MCB chain.
+    /// </summary>
+    /// <returns><c>true</c> if the MCB chain is valid, <c>false</c> if corruption is detected.</returns>
+    public bool CheckMcbChain() {
+        DosMemoryControlBlock? current = _start;
+
+        while (current is not null) {
+            if (!current.IsValid) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("MCB chain corrupted at segment {Segment}",
+                        ConvertUtils.ToHex16(MemoryUtils.ToSegment(current.BaseAddress)));
+                }
+                return false;
+            }
+
+            if (current.IsLast) {
+                return true;
+            }
+
+            current = current.GetNextOrDefault();
+        }
+
+        // If we get here, we reached the end of memory without finding MCB_LAST
+        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+            _loggerService.Error("MCB chain ended unexpectedly without MCB_LAST marker");
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Frees all memory blocks owned by a specific PSP segment.
+    /// </summary>
+    /// <param name="pspSegment">The PSP segment whose memory should be freed.</param>
+    /// <returns><c>true</c> if all blocks were freed successfully, <c>false</c> if an error occurred.</returns>
+    public bool FreeProcessMemory(ushort pspSegment) {
+        DosMemoryControlBlock? current = _start;
+
+        while (current is not null) {
+            if (!current.IsValid) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("MCB chain corrupted while freeing process memory");
+                }
+                return false;
+            }
+
+            // Free blocks owned by this PSP
+            if (current.PspSegment == pspSegment) {
+                current.SetFree();
+            }
+
+            if (current.IsLast) {
+                break;
+            }
+
+            current = current.GetNextOrDefault();
+        }
+
+        // Matches FreeDOS, MS-DOS, and RBIL - block joining is deferred to allocation operations.
+
         return true;
     }
 }
