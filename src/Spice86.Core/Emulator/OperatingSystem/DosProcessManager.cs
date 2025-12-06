@@ -156,13 +156,13 @@ public class DosProcessManager : DosFileLoader {
         SetupCpuForExe(exeFile, programEntryPoint, pspSegment);
     }
 
-    private static ushort ComputeEntryPoint(DosExeFile exeFile, DosMemoryControlBlock block, ushort programEntryPoint) {
+    private static ushort ComputeEntryPoint(DosExeFile exeFile, DosMemoryControlBlock block, ushort programEntryPointSegment) {
         if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
             ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
-            programEntryPoint = (ushort)(block.DataBlockSegment + programEntryPointOffset);
+            programEntryPointSegment = (ushort)(block.DataBlockSegment + programEntryPointOffset);
         }
 
-        return programEntryPoint;
+        return programEntryPointSegment;
     }
 
     private byte[] LoadExeOrComFile(string file, ushort pspSegment) {
