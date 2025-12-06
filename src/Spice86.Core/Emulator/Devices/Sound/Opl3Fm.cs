@@ -4,6 +4,8 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Devices.AdlibGold;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
@@ -19,11 +21,13 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly Opl3Chip _chip = new();
     private readonly object _chipLock = new();
     private readonly DeviceThread _deviceThread;
+    private readonly EmulationLoopScheduler _scheduler;
+    private readonly IEmulatedClock _clock;
     private readonly DualPic _dualPic;
-    private readonly EmulatedTimeEventHandler _oplFlushHandler;
+    private readonly EventHandler _oplFlushHandler;
     private readonly Opl3Io _oplIo;
     private readonly byte _oplIrqLine;
-    private readonly EmulatedTimeEventHandler _oplTimerHandler;
+    private readonly EventHandler _oplTimerHandler;
     private readonly float[] _playBuffer = new float[2048];
 
     /// <summary>
@@ -49,16 +53,20 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="pauseHandler">Class for handling pausing the emulator.</param>
+    /// <param name="scheduler">The event scheduler.</param>
+    /// <param name="clock">The emulated clock.</param>
     /// <param name="dualPic">The shared dual PIC scheduler.</param>
     /// <param name="useAdlibGold">True to enable AdLib Gold filtering and surround processing.</param>
     /// <param name="enableOplIrq">True to forward OPL IRQs to the PIC.</param>
     /// <param name="oplIrqLine">IRQ line used when OPL IRQs are enabled.</param>
     public Opl3Fm(SoundChannel fmSynthSoundChannel, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
-        ILoggerService loggerService, IPauseHandler pauseHandler, DualPic dualPic,
+        ILoggerService loggerService, IPauseHandler pauseHandler, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
         bool useAdlibGold = false, bool enableOplIrq = false, byte oplIrqLine = 5)
         : base(state, failOnUnhandledPort, loggerService) {
         _soundChannel = fmSynthSoundChannel;
+        _scheduler = scheduler;
+        _clock = clock;
         _dualPic = dualPic;
         bool useAdLibGold = useAdlibGold;
         _useOplIrq = enableOplIrq;
@@ -68,7 +76,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         _oplFlushHandler = FlushOplWrites;
         _oplTimerHandler = ServiceOplTimers;
 
-        _oplIo = new Opl3Io(_chip, dualPic.GetCachedFractionalTickIndex) {
+        _oplIo = new Opl3Io(_chip, () => _clock.CurrentTimeMs) {
             OnIrqChanged = OnOplIrqChanged
         };
 
@@ -152,12 +160,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         if (disposing) {
             if (_oplFlushScheduled) {
-                _dualPic.RemoveEvents(_oplFlushHandler);
+                _scheduler.RemoveEvents(_oplFlushHandler);
                 _oplFlushScheduled = false;
             }
 
             if (_oplTimerScheduled) {
-                _dualPic.RemoveEvents(_oplTimerHandler);
+                _scheduler.RemoveEvents(_oplTimerHandler);
                 _oplTimerScheduled = false;
             }
 
@@ -231,7 +239,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 return;
         }
 
-        double now = _dualPic.GetFractionalTickIndex();
+        double now = _clock.CurrentTimeMs;
 
         if (audioWrite) {
             ScheduleOplFlush(now);
@@ -323,7 +331,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         }
 
         if (_oplFlushScheduled) {
-            _dualPic.RemoveEvents(_oplFlushHandler);
+            _scheduler.RemoveEvents(_oplFlushHandler);
             _oplFlushScheduled = false;
         }
 
@@ -335,7 +343,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             d = 0;
         }
 
-        _dualPic.AddEvent(_oplFlushHandler, d);
+        _scheduler.AddEvent(_oplFlushHandler, d);
         _oplFlushScheduled = true;
     }
 
@@ -351,7 +359,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         }
 
         if (_oplTimerScheduled) {
-            _dualPic.RemoveEvents(_oplTimerHandler);
+            _scheduler.RemoveEvents(_oplTimerHandler);
             _oplTimerScheduled = false;
         }
 
@@ -363,16 +371,16 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             d = 0;
         }
 
-        _dualPic.AddEvent(_oplTimerHandler, d);
+        _scheduler.AddEvent(_oplTimerHandler, d);
         _oplTimerScheduled = true;
     }
 
     /// <summary>
     ///     Flushes pending writes up to the current time and schedules the next flush if required.
     /// </summary>
-    /// <param name="unusedTick">Unused parameter supplied by the PIC event system.</param>
+    /// <param name="unusedTick">Unused parameter supplied by the EmulationLoopScheduler event system.</param>
     private void FlushOplWrites(uint unusedTick) {
-        double now = _dualPic.GetFractionalTickIndex();
+        double now = _clock.CurrentTimeMs;
         double? delay;
 
         lock (_chipLock) {
@@ -390,17 +398,17 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             d = 0;
         }
 
-        _dualPic.AddEvent(_oplFlushHandler, d);
+        _scheduler.AddEvent(_oplFlushHandler, d);
         _oplFlushScheduled = true;
     }
 
     /// <summary>
     ///     Advances OPL timers to the current time and schedules the next timer event.
     /// </summary>
-    /// <param name="unusedTick">Unused parameter supplied by the PIC event system.</param>
+    /// <param name="unusedTick">Unused parameter supplied by the EmulationLoopScheduler event system.</param>
     private void ServiceOplTimers(uint unusedTick) {
         _ = unusedTick;
-        double now = _dualPic.GetFractionalTickIndex();
+        double now = _clock.CurrentTimeMs;
         double? delay;
 
         lock (_chipLock) {
@@ -418,7 +426,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             d = 0;
         }
 
-        _dualPic.AddEvent(_oplTimerHandler, d);
+        _scheduler.AddEvent(_oplTimerHandler, d);
         _oplTimerScheduled = true;
     }
 

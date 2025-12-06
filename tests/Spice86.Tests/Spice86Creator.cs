@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
-using Spice86.Core.Emulator.VM.CycleBudget;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
 using Xunit;
@@ -25,7 +24,6 @@ public class Spice86Creator {
         }
 
         int? instructionsPerSecond = enablePit ? 100000 : null;
-        int staticCycleBudget = GetStaticCycleBudget(instructionsPerSecond);
 
         _configuration = new Configuration {
             Exe = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin",
@@ -47,7 +45,6 @@ public class Spice86Creator {
             OverrideSupplier = overrideSupplier,
             Xms = enableXms,
             Ems = enableEms,
-            CyclesBudgeter = new StaticCyclesBudgeter(staticCycleBudget)
         };
 
         _maxCycles = maxCycles;
@@ -60,13 +57,5 @@ public class Spice86Creator {
         res.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, _maxCycles,
             (breakpoint) => Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong."), true), true);
         return res;
-    }
-
-    private static int GetStaticCycleBudget(int? instructionsPerSecond) {
-        int candidateCyclesPerMs = instructionsPerSecond.HasValue
-            ? (int)Math.Round(instructionsPerSecond.Value / 1000.0)
-            : ICyclesLimiter.RealModeCpuCyclesPerMs;
-        CpuCycleLimiter limiter = new(candidateCyclesPerMs);
-        return limiter.TargetCpuCyclesPerMs;
     }
 }
