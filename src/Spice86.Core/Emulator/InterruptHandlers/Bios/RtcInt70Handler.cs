@@ -78,7 +78,9 @@ public sealed class RtcInt70Handler : InterruptHandler {
             return;
         }
 
-        const uint InterruptIntervalMicroseconds = 997;
+        // RTC periodic interrupt is typically 1024 Hz, so each period is ~976.5625 microseconds.
+        // Use explicit calculation for clarity and accuracy.
+        const uint InterruptIntervalMicroseconds = 1_000_000 / 1024;
         uint count = _biosDataArea.UserWaitTimeout;
 
         if (count > InterruptIntervalMicroseconds) {
