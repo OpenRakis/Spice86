@@ -246,7 +246,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         UpdateShownEmulatorMouseCursorPosition();
     }
 
-    public void SetResolution(int width, int height) {
+    public void SetResolution(int width, int height, double pixelAspectRatio = 1.0) {
         _uiDispatcher.Post(() => {
             _isSettingResolution = true;
             Scale = 1;

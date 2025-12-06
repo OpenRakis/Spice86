@@ -47,6 +47,13 @@ public class Renderer : IVgaRenderer {
     public TimeSpan LastFrameRenderTime { get; private set; }
 
     /// <inheritdoc />
+    public double PixelAspectRatio => Width switch {
+        320 or 360 => 5.0 / 6.0, // VGA low-res modes: pixels are 1.2x taller (5:6 width:height ratio)
+        640 or 720 => 1.0,        // VGA high-res modes: square pixels
+        _ => 1.0                   // Default to square pixels for unknown modes
+    };
+
+    /// <inheritdoc />
     public void Render(Span<uint> frameBuffer) {
         if (!Monitor.TryEnter(RenderLock)) {
             // We're already rendering. Get out of here.

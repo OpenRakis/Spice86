@@ -25,6 +25,13 @@ public interface IVgaRenderer {
     TimeSpan LastFrameRenderTime { get; }
 
     /// <summary>
+    /// Gets the pixel aspect ratio (width:height) for the current video mode.
+    /// For example, 5/6 (approximately 0.833) means pixels are taller than they are wide,
+    /// as was common in VGA 320x200 modes displayed on 4:3 CRT screens.
+    /// </summary>
+    double PixelAspectRatio { get; }
+
+    /// <summary>
     ///     Render the current video memory to a buffer.
     /// </summary>
     /// <param name="buffer">The framebuffer used by the VGA card to draw the image on screen.</param>
