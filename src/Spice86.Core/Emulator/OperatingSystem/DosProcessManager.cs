@@ -19,7 +19,6 @@ using System.Text;
 /// Setups the loading and execution of DOS programs and maintains the DOS PSP chains in memory.
 /// </summary>
 public class DosProcessManager : DosFileLoader {
-    private const ushort ComOffset = 0x100;
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
@@ -125,7 +124,7 @@ public class DosProcessManager : DosFileLoader {
 
     private void LoadComFile(byte[] com) {
         ushort pspSegment = _pspTracker.GetCurrentPspSegment();
-        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(pspSegment, ComOffset);
+        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(pspSegment, DosProgramSegmentPrefix.PspSize);
         _memory.LoadData(physicalStartAddress, com);
 
         // Make SS, DS and ES point to the PSP
@@ -133,7 +132,7 @@ public class DosProcessManager : DosFileLoader {
         _state.ES = pspSegment;
         _state.SS = pspSegment;
         _state.SP = 0xFFFE; // Standard COM file stack
-        SetEntryPoint(pspSegment, ComOffset);
+        SetEntryPoint(pspSegment, DosProgramSegmentPrefix.PspSize);
         _state.InterruptFlag = true;
     }
 
@@ -149,7 +148,7 @@ public class DosProcessManager : DosFileLoader {
         // The program image is typically loaded immediately above the PSP, which is the start of
         // the memory block that we just allocated. Seek 16 paragraphs into the allocated block to
         // get our starting point.
-        ushort programEntryPointSegment = (ushort)(block.DataBlockSegment + 0x10);
+        ushort programEntryPointSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
         // There is one special case that we need to account for: if the EXE doesn't have any extra
         // allocations, we need to load it as high as possible in the memory block rather than
         // immediately after the PSP like we normally do. This will give the program extra space

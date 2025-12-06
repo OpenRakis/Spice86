@@ -12,6 +12,8 @@ using System.Diagnostics;
 [DebuggerDisplay("BaseAddress={BaseAddress}, Parent={ParentProgramSegmentPrefix}, EnvSegment={EnvironmentTableSegment}, NextSegment={NextSegment}, StackPointer={StackPointer}, Cmd={DosCommandTail.Command}")]
 public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     public const ushort MaxLength = 0x80 + 128;
+    public const ushort PspSize = 0x100;
+    public const ushort PspSizeInParagraphs = 0x10;
 
     public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
     }
