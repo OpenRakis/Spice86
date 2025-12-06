@@ -145,21 +145,24 @@ public class DosProcessManager : DosFileLoader {
         if (block is null) {
             throw new UnrecoverableException($"Failed to reserve space for EXE file at {pspSegment}");
         }
-        // The program image is typically loaded immediately above the PSP, which is the start of
+        // The program image is loaded immediately above the PSP, which is the start of
         // the memory block that we just allocated. Seek 16 paragraphs into the allocated block to
-        // get our starting point.
-        ushort programEntryPointSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
-        // There is one special case that we need to account for: if the EXE doesn't have any extra
-        // allocations, we need to load it as high as possible in the memory block rather than
-        // immediately after the PSP like we normally do. This will give the program extra space
-        // between the PSP and the start of the program image that it can use however it wants.
+        // get our entry point.
+        ushort programEntryPoint = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
+
+        programEntryPoint = ComputeEntryPoint(exeFile, block, programEntryPoint);
+
+        LoadExeFileInMemoryAndApplyRelocations(exeFile, programEntryPoint);
+        SetupCpuForExe(exeFile, programEntryPoint, pspSegment);
+    }
+
+    private static ushort ComputeEntryPoint(DosExeFile exeFile, DosMemoryControlBlock block, ushort programEntryPointSegment) {
         if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
             ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
             programEntryPointSegment = (ushort)(block.DataBlockSegment + programEntryPointOffset);
         }
 
-        LoadExeFileInMemoryAndApplyRelocations(exeFile, programEntryPointSegment);
-        SetupCpuForExe(exeFile, programEntryPointSegment, pspSegment);
+        return programEntryPointSegment;
     }
 
     private byte[] LoadExeOrComFile(string file, ushort pspSegment) {
