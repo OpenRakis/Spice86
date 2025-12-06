@@ -189,7 +189,14 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     [ObservableProperty]
     private WriteableBitmap? _bitmap;
 
+    [ObservableProperty]
+    private bool _useOpenGlRendering = true;
+
+    [ObservableProperty]
+    private CrtShaderType _shaderType = CrtShaderType.None;
+
     internal event Action? InvalidateBitmap;
+    internal event Action<Span<uint>, int, int>? UpdateOpenGlFrame;
 
     internal void OnKeyDown(KeyEventArgs e) {
         if (_pauseHandler.IsPaused) {
@@ -258,13 +265,17 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 if (_disposed) {
                     return;
                 }
-                _drawingSemaphoreSlim?.Wait();
-                try {
-                    Bitmap?.Dispose();
-                    Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
-                } finally {
-                    if (!_disposed) {
-                        _drawingSemaphoreSlim?.Release();
+                
+                // Only create bitmap if not using OpenGL rendering
+                if (!UseOpenGlRendering) {
+                    _drawingSemaphoreSlim?.Wait();
+                    try {
+                        Bitmap?.Dispose();
+                        Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
+                    } finally {
+                        if (!_disposed) {
+                            _drawingSemaphoreSlim?.Release();
+                        }
                     }
                 }
             }
@@ -333,18 +344,44 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     private void DrawScreen() {
         if (_disposed || _pauseHandler.IsPaused || _isSettingResolution ||
-            _isAppClosing || Bitmap is null || RenderScreen is null) {
+            _isAppClosing || RenderScreen is null) {
             return;
         }
-        _drawingSemaphoreSlim?.Wait();
-        try {
-            using ILockedFramebuffer pixels = Bitmap.Lock();
-            var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-            RenderScreen.Invoke(this, uiRenderEventArgs);
-            _uiDispatcher.Post(() => InvalidateBitmap?.Invoke(), DispatcherPriority.Background);
-        } finally {
-            if (!_disposed) {
-                _drawingSemaphoreSlim?.Release();
+
+        if (UseOpenGlRendering) {
+            // For OpenGL rendering, we need to provide the frame buffer directly
+            _drawingSemaphoreSlim?.Wait();
+            try {
+                // Allocate temporary buffer for the frame
+                uint[] frameBuffer = new uint[Width * Height];
+                unsafe {
+                    fixed (uint* ptr = frameBuffer) {
+                        var uiRenderEventArgs = new UIRenderEventArgs(new IntPtr(ptr), frameBuffer.Length);
+                        RenderScreen.Invoke(this, uiRenderEventArgs);
+                    }
+                }
+                // Send frame to OpenGL control
+                _uiDispatcher.Post(() => UpdateOpenGlFrame?.Invoke(frameBuffer, Width, Height), DispatcherPriority.Render);
+            } finally {
+                if (!_disposed) {
+                    _drawingSemaphoreSlim?.Release();
+                }
+            }
+        } else {
+            // Traditional bitmap rendering
+            if (Bitmap is null) {
+                return;
+            }
+            _drawingSemaphoreSlim?.Wait();
+            try {
+                using ILockedFramebuffer pixels = Bitmap.Lock();
+                var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+                RenderScreen.Invoke(this, uiRenderEventArgs);
+                _uiDispatcher.Post(() => InvalidateBitmap?.Invoke(), DispatcherPriority.Background);
+            } finally {
+                if (!_disposed) {
+                    _drawingSemaphoreSlim?.Release();
+                }
             }
         }
     }
