@@ -32,7 +32,6 @@ public class DosInt21HandlerTests {
         var recordingFile = new RecordingVirtualFile();
         const ushort fileHandle = 0x0003;
         dosFileManager.OpenFiles[fileHandle] = recordingFile;
-        var clock = new Clock(logger);
 
         var handler = new DosInt21Handler(
             memory,
