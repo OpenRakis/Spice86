@@ -57,6 +57,10 @@ public class OpenGlVideoControl : OpenGlControlBase {
 
     public OpenGlVideoControl() {
         Console.WriteLine("[WARN] OpenGL: OpenGlVideoControl constructor called");
+        Dispatcher.UIThread.Post(() => {
+            Console.WriteLine("[WARN] OpenGL: Requesting initial frame rendering from constructor");
+            RequestNextFrameRendering();
+        }, DispatcherPriority.Render);
     }
 
     private readonly object _frameBufferLock = new();
