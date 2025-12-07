@@ -398,6 +398,8 @@ public class Spice86DependencyInjection : IDisposable {
         });
         InputEventHub inputEventHub;
 
+        McpStatusViewModel? mcpStatusViewModel = null;
+
         if (mainWindow != null) {
             uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
             hostStorageProvider = new HostStorageProvider(
@@ -416,7 +418,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
                 pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter);
+                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter, mcpStatusViewModel!);
 
             inputEventHub = new(mainWindowViewModel, mainWindowViewModel);
 
@@ -568,6 +570,10 @@ public class Spice86DependencyInjection : IDisposable {
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("MCP server created...");
+        }
+
+        if (mainWindow != null) {
+            mcpStatusViewModel = new McpStatusViewModel(mcpServer);
         }
 
         McpStdioTransport mcpStdioTransport = new(mcpServer, loggerService);
