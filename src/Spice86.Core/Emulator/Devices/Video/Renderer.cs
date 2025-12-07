@@ -68,6 +68,8 @@ public class Renderer : IVgaRenderer {
             int verticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
             int totalHeight = _state.CrtControllerRegisters.VerticalTotalValue + 2;
             int skew = _state.CrtControllerRegisters.HorizontalBlankingEndRegister.DisplayEnableSkew; // Skew controls the delay of enabling the display at the start of the line.
+            bool isScanDouble = _state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble;
+            int actualHeight = (verticalDisplayEnd + 1) / (isScanDouble ? 2 : 1); // Account for double-scan mode
             int characterClockMask = _state.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour
                 ? 3
                 : _state.CrtControllerRegisters.CrtModeControlRegister.CountByTwo
@@ -105,7 +107,7 @@ public class Renderer : IVgaRenderer {
                     int destinationAddressLatch = destinationAddress;
                     
                     // VGA aspect ratio correction: calculate lines to draw
-                    int actualDrawLines = AspectRatioHelper.CalculateLinesToDraw(Width, verticalDisplayEnd + 1, lineCounter, drawLinesPerScanLine);
+                    int actualDrawLines = AspectRatioHelper.CalculateLinesToDraw(Width, actualHeight, lineCounter, drawLinesPerScanLine);
                     
                     for (int doubleScan = 0; doubleScan < actualDrawLines; doubleScan++) {
                         int memoryAddressCounter = rowMemoryAddressCounter;
