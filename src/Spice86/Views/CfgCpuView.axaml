@@ -27,10 +27,6 @@
 				<TextBlock VerticalAlignment="Center">Number of nodes:</TextBlock>
 				<TextBlock Padding="5,0,0,0" VerticalAlignment="Center" Text="{Binding NumberOfNodes}" />
 			</StackPanel>
-			<StackPanel Grid.Column="1" Margin="5" Orientation="Horizontal">
-				<TextBlock VerticalAlignment="Center">Average time (ms):</TextBlock>
-				<TextBlock Padding="5,0,0,0" VerticalAlignment="Center" Text="{Binding AverageNodeTime}" />
-			</StackPanel>
 			<StackPanel Grid.Column="2" Margin="5" Orientation="Horizontal">
 				<TextBlock VerticalAlignment="Center">Max nodes:</TextBlock>
 				<NumericUpDown Margin="5,0,0,0" VerticalAlignment="Center" 

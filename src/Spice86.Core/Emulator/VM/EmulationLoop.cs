@@ -3,13 +3,11 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
-using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
@@ -93,6 +91,7 @@ public class EmulationLoop : ICyclesLimiter {
             _loggerService.Error(e, "Emulation failed with unhandled exception.");
             throw new InvalidVMOperationException(_cpuState, e);
         }
+
         _emulatorBreakpointsManager.OnMachineStop();
         _cpu.SignalEnd();
     }
@@ -131,7 +130,6 @@ public class EmulationLoop : ICyclesLimiter {
                 _pauseHandler.WaitIfPaused();
                 _emulationLoopScheduler.ProcessEvents();
                 _cpu.ExecuteNext();
-                //_performanceMeasurer.UpdateValue(_cpuState.Cycles);
                 _inputEventQueue.ProcessAllPendingInputEvents();
             } while (_cpuState.IsRunning);
         }
@@ -149,6 +147,7 @@ public class EmulationLoop : ICyclesLimiter {
             if (elapsedTimeInMilliseconds == 0) {
                 elapsedTimeInMilliseconds = 1;
             }
+
             long cyclesPerSeconds = _cpuState.Cycles * 1000 / elapsedTimeInMilliseconds;
             _loggerService.Warning(
                 "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
