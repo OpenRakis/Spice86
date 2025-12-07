@@ -270,12 +270,12 @@ public class Spice86DependencyInjection : IDisposable {
         VideoState videoState = new();
         VgaIoPortHandler vgaIoPortHandler = new(state, ioPortDispatcher,
             loggerService, videoState, configuration.FailOnUnhandledPort);
-        Renderer vgaRenderer = new(memory, videoState, loggerService);
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory,
             interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is not false);
+        Renderer vgaRenderer = new(memory, videoState, loggerService, vgaFunctionality);
         VgaBios vgaBios = new VgaBios(memory, functionHandlerProvider, stack,
             state, vgaFunctionality, biosDataArea, loggerService);
 

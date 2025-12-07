@@ -2,6 +2,8 @@ namespace Spice86.Core.Emulator.Devices.Video;
 
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Logging;
 
@@ -14,6 +16,8 @@ public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
     private readonly VideoMemory _memory;
     private readonly IVideoState _state;
+    private readonly IVgaFunctionality? _vgaFunctionality;
+    private VgaMode? _currentMode;
 
     /// <summary>
     ///     Create a new VGA renderer.
@@ -21,11 +25,29 @@ public class Renderer : IVgaRenderer {
     /// <param name="memory">The video memory implementation.</param>
     /// <param name="state">The video state implementation.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Renderer(IMemory memory, IVideoState state, LoggerService loggerService) {
+    /// <param name="vgaFunctionality">The VGA functionality interface for accessing video mode information.</param>
+    public Renderer(IMemory memory, IVideoState state, LoggerService loggerService, IVgaFunctionality? vgaFunctionality = null) {
         _state = state;
+        _vgaFunctionality = vgaFunctionality;
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         _memory = new VideoMemory(_state, loggerService);
         memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
+        
+        // Subscribe to video mode changes if vgaFunctionality is provided
+        if (_vgaFunctionality is not null) {
+            _vgaFunctionality.VideoModeChanged += OnVideoModeChanged;
+            // Get initial mode if available
+            try {
+                _currentMode = _vgaFunctionality.GetCurrentMode();
+            } catch {
+                // Ignore exceptions during initialization
+                _currentMode = null;
+            }
+        }
+    }
+    
+    private void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
+        _currentMode = e.NewMode;
     }
 
     /// <inheritdoc />
@@ -109,8 +131,11 @@ public class Renderer : IVgaRenderer {
                     // VGA aspect ratio correction: calculate lines to draw
                     // Use actualLineNumber which accounts for scanline within the logical row
                     int actualLineNumber = lineCounter / (maximumScanline + 1);
-                    // VGA Mode 13h (320x200) needs aspect correction for 5:6 pixel aspect ratio
-                    bool needsAspectCorrection = Width == 320 && actualHeight == 200;
+                    // Check if current mode needs aspect correction (VGA Mode 13h: 320x200)
+                    // Mode information comes from VgaFunctionality which tracks INT 10h mode switches
+                    bool needsAspectCorrection = _currentMode.HasValue && 
+                                                   _currentMode.Value.Width == 320 && 
+                                                   _currentMode.Value.Height == 200;
                     int actualDrawLines = AspectRatioHelper.CalculateLinesToDraw(needsAspectCorrection, actualHeight, actualLineNumber, drawLinesPerScanLine);
                     
                     for (int doubleScan = 0; doubleScan < actualDrawLines; doubleScan++) {
