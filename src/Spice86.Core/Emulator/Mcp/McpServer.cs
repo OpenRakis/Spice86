@@ -16,6 +16,8 @@ using System.Text.Json.Nodes;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
 /// <summary>
 /// MCP server exposing emulator inspection and control tools.
@@ -28,13 +30,16 @@ public sealed class McpServer : IMcpServer {
     private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly IVgaRenderer _vgaRenderer;
     private readonly IPauseHandler _pauseHandler;
+    private readonly ExpandedMemoryManager? _emsManager;
+    private readonly ExtendedMemoryManager? _xmsManager;
     private readonly ILoggerService _loggerService;
     private readonly Tool[] _tools;
     private readonly object _requestLock = new object();
 
     public McpServer(IMemory memory, State state, FunctionCatalogue functionCatalogue, CfgCpu cfgCpu,
         IOPortDispatcher ioPortDispatcher, IVgaRenderer vgaRenderer, 
-        IPauseHandler pauseHandler, ILoggerService loggerService) {
+        IPauseHandler pauseHandler, ExpandedMemoryManager? emsManager, ExtendedMemoryManager? xmsManager,
+        ILoggerService loggerService) {
         _memory = memory;
         _state = state;
         _functionCatalogue = functionCatalogue;
@@ -42,6 +47,8 @@ public sealed class McpServer : IMcpServer {
         _ioPortDispatcher = ioPortDispatcher;
         _vgaRenderer = vgaRenderer;
         _pauseHandler = pauseHandler;
+        _emsManager = emsManager;
+        _xmsManager = xmsManager;
         _loggerService = loggerService;
         _tools = CreateTools();
     }
@@ -100,6 +107,22 @@ public sealed class McpServer : IMcpServer {
             Description = "Read CFG CPU statistics",
             InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
         });
+
+        if (_emsManager != null) {
+            tools.Add(new Tool {
+                Name = "query_ems",
+                Description = "Query EMS (Expanded Memory Manager) state",
+                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+            });
+        }
+
+        if (_xmsManager != null) {
+            tools.Add(new Tool {
+                Name = "query_xms",
+                Description = "Query XMS (Extended Memory Manager) state",
+                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+            });
+        }
 
         return tools.ToArray();
     }
@@ -209,6 +232,8 @@ public sealed class McpServer : IMcpServer {
                     "screenshot" => TakeScreenshot(),
                     "pause_emulator" => PauseEmulator(),
                     "resume_emulator" => ResumeEmulator(),
+                    "query_ems" => QueryEms(),
+                    "query_xms" => QueryXms(),
                     _ => throw new McpMethodNotFoundException(toolName)
                 };
 
@@ -439,6 +464,59 @@ public sealed class McpServer : IMcpServer {
         }
         _pauseHandler.Resume();
         return new EmulatorControlResponse { Success = true, Message = "Resumed" };
+    }
+
+    private EmsStateResponse QueryEms() {
+        if (_emsManager == null) {
+            throw new InvalidOperationException("EMS is not enabled");
+        }
+
+        List<EmsHandleInfo> handles = new List<EmsHandleInfo>();
+        int allocatedPages = 0;
+
+        foreach (KeyValuePair<int, EmmHandle> kvp in _emsManager.EmmHandles) {
+            if (kvp.Key != ExpandedMemoryManager.EmmNullHandle && kvp.Value != null) {
+                int pageCount = kvp.Value.LogicalPages.Count;
+                handles.Add(new EmsHandleInfo {
+                    HandleId = kvp.Key,
+                    AllocatedPages = pageCount,
+                    Name = kvp.Value.Name
+                });
+                allocatedPages += pageCount;
+            }
+        }
+
+        ushort freePages = _emsManager.GetFreePageCount();
+
+        return new EmsStateResponse {
+            IsEnabled = true,
+            PageFrameSegment = ExpandedMemoryManager.EmmPageFrameSegment,
+            TotalPages = allocatedPages + freePages,
+            AllocatedPages = allocatedPages,
+            FreePages = freePages,
+            PageSize = ExpandedMemoryManager.EmmPageSize,
+            Handles = handles.ToArray()
+        };
+    }
+
+    private XmsStateResponse QueryXms() {
+        if (_xmsManager == null) {
+            throw new InvalidOperationException("XMS is not enabled");
+        }
+
+        long freeMemoryKB = _xmsManager.TotalFreeMemory / 1024;
+        int totalMemoryKB = ExtendedMemoryManager.XmsMemorySize;
+
+        return new XmsStateResponse {
+            IsEnabled = true,
+            TotalMemoryKB = totalMemoryKB,
+            FreeMemoryKB = (int)freeMemoryKB,
+            LargestBlockKB = (int)freeMemoryKB,
+            HmaAvailable = true,
+            HmaAllocated = false,
+            AllocatedBlocks = 0,
+            Handles = Array.Empty<XmsHandleInfo>()
+        };
     }
 
     private static EmptyInputSchema CreateEmptyInputSchema() {

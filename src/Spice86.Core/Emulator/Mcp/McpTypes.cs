@@ -268,3 +268,36 @@ public sealed record EmulatorControlResponse {
     public required bool Success { get; init; }
     public required string Message { get; init; }
 }
+
+public sealed record EmsStateResponse {
+    public required bool IsEnabled { get; init; }
+    public required int PageFrameSegment { get; init; }
+    public required int TotalPages { get; init; }
+    public required int AllocatedPages { get; init; }
+    public required int FreePages { get; init; }
+    public required int PageSize { get; init; }
+    public required EmsHandleInfo[] Handles { get; init; }
+}
+
+public sealed record EmsHandleInfo {
+    public required int HandleId { get; init; }
+    public required int AllocatedPages { get; init; }
+    public required string Name { get; init; }
+}
+
+public sealed record XmsStateResponse {
+    public required bool IsEnabled { get; init; }
+    public required int TotalMemoryKB { get; init; }
+    public required int FreeMemoryKB { get; init; }
+    public required int LargestBlockKB { get; init; }
+    public required bool HmaAvailable { get; init; }
+    public required bool HmaAllocated { get; init; }
+    public required int AllocatedBlocks { get; init; }
+    public required XmsHandleInfo[] Handles { get; init; }
+}
+
+public sealed record XmsHandleInfo {
+    public required int HandleId { get; init; }
+    public required int SizeKB { get; init; }
+    public required bool IsLocked { get; init; }
+}
