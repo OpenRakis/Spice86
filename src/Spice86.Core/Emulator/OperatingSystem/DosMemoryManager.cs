@@ -35,14 +35,14 @@ public class DosMemoryManager {
         // The MCB starts 1 paragraph (16 bytes) before the 16 paragraph (256 bytes) PSP. Since
         // we're the memory manager, we're the one who needs to read the MCB, so we need to start
         // with its address by subtracting 1 paragraph from the PSP.
-        ushort startSegment = (ushort)(pspSegment - 1);
-        _start = GetDosMemoryControlBlockFromSegment(startSegment);
-        // LastFreeSegment and startSegment are both valid segments that may be allocated, so we
+        ushort loadSegment = (ushort)(pspSegment - 1);
+        _start = GetDosMemoryControlBlockFromSegment(loadSegment);
+        // LastFreeSegment and loadSegment are both valid segments that may be allocated, so we
         // need to add 1 paragraph to the result to ensure that our calculated size doesn't exclude
         // LastFreeSegment from being allocated. Some games do their own math to calculate the
         // maximum free conventional memory from the last block that was allocated rather than
         // asking the memory manager, and if we were off by one, allocation would fail.
-        ushort size = (ushort)((LastFreeSegment - startSegment) + 1);
+        ushort size = (ushort)((LastFreeSegment - loadSegment) + 1);
         // We adjusted the start address above so that it starts with the MCB, but the MCB itself
         // isn't actually useable space. We need it here in the DOS memory manager for accounting.
         // Therefore subtract the size of the MCB (1 paragraph, which is 16 bytes) from the total

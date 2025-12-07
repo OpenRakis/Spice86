@@ -117,24 +117,6 @@ public class DosProgramSegmentPrefixTracker {
     }
 
     /// <summary>
-    /// Gets the address where the program image itself starts for the current program that is
-    /// loaded.
-    /// </summary>
-    /// <remarks>
-    /// Only the DOS program manager should need to know this. It can be easily calculated from the
-    /// current PSP segment. This function is provided just for the convenience of the program
-    /// manager.
-    /// </remarks>
-    /// <returns>
-    /// Returns the address where the current program should be loaded after the current PSP,
-    /// or <c>0</c> if there is no current PSP segment.
-    /// </returns>
-    public ushort GetProgramEntryPointSegment() {
-        ushort currentPspSegment = GetCurrentPspSegment();
-        return (ushort)(currentPspSegment == 0 ? 0 : currentPspSegment + 0x10);
-    }
-
-    /// <summary>
     /// Registers a new PSP segment for a new program at the given address.
     /// </summary>
     /// <remarks>
