@@ -152,9 +152,18 @@ public class Renderer : IVgaRenderer {
                 for (int scanline = 0; scanline <= maximumScanline; scanline++) {
                     // We latch the destination address here, so that the double-scan lines are drawn on top of each other.
                     int destinationAddressLatch = destinationAddress;
-                    for (int doubleScan = 0; doubleScan < drawLinesPerScanLine; doubleScan++) {
+                    
+                    // VGA aspect ratio correction: duplicate scanline if needed
+                    int nativeHeight = verticalDisplayEnd + 1;
+                    bool duplicateLine = AspectRatioHelper.ShouldDuplicateLine(Width, nativeHeight, lineCounter);
+                    int actualDrawLines = duplicateLine ? drawLinesPerScanLine + 1 : drawLinesPerScanLine;
+                    
+                    for (int doubleScan = 0; doubleScan < actualDrawLines; doubleScan++) {
                         int memoryAddressCounter = rowMemoryAddressCounter;
-                        destinationAddress = destinationAddressLatch;
+                        // Don't reset address for aspect correction duplicate
+                        if (doubleScan < drawLinesPerScanLine) {
+                            destinationAddress = destinationAddressLatch;
+                        }
 
                         long ticksAtStartOfRow = stopwatch.ElapsedTicks;
                         bool horizontalBlanking = true;
