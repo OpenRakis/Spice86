@@ -7,7 +7,6 @@ using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
 using System;
-using System.Collections.Concurrent;
 
 /// <summary>
 /// Represents a queue for handling and processing keyboard and mouse events. <br/>
@@ -22,7 +21,7 @@ using System.Collections.Concurrent;
 /// cursor visibility, delegating these operations to the underlying implementation, if available.</remarks>
 public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
     // a thread-safe queue, accessed by both UI thread and emulation thread.
-    private readonly ConcurrentQueue<Action> _eventQueue = new();
+    private readonly Queue<Action> _eventQueue = new();
     private readonly IGuiMouseEvents? _mouseEvents;
     private readonly IGuiKeyboardEvents? _keyboardEvents;
 
