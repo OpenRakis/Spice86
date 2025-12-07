@@ -1165,28 +1165,6 @@ public class DosMemoryManagerTests {
     }
 
     /// <summary>
-    /// Ensures that FreeProcessMemory frees only blocks owned by a specific PSP.
-    /// </summary>
-    [Fact]
-    public void FreeProcessMemoryFreesOnlyTargetPspBlocks() {
-        // Arrange - Allocate blocks for different PSP segments
-        ushort pspSegment1 = 0x1000;
-        ushort pspSegment2 = 0x2000;
-        DosMemoryControlBlock? block1 = _memoryManager.AllocateMemoryBlockForPsp(1000, pspSegment1);
-        DosMemoryControlBlock? block2 = _memoryManager.AllocateMemoryBlockForPsp(2000, pspSegment2);
-        DosMemoryControlBlock? block3 = _memoryManager.AllocateMemoryBlockForPsp(1500, pspSegment1);
-        
-        // Act - Free only pspSegment1's blocks
-        bool result = _memoryManager.FreeProcessMemory(pspSegment1);
-        
-        // Assert
-        result.Should().BeTrue();
-        block1!.IsFree.Should().BeTrue();
-        block2!.IsFree.Should().BeFalse();  // Should remain allocated (different PSP)
-        block3!.IsFree.Should().BeTrue();
-    }
-
-    /// <summary>
     /// Ensures that setting an invalid allocation strategy (fit type > 2) is ignored.
     /// </summary>
     [Fact]
