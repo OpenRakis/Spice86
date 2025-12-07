@@ -100,7 +100,9 @@ public class Renderer : IVgaRenderer {
             Span<uint> renderTarget;
             if (needsAspectCorrection) {
                 int tempBufferSize = width * nativeHeight;
-                if (_tempBuffer.Length < tempBufferSize) {
+                // Grow or shrink the buffer as needed. Shrink if buffer is more than 2x the required size
+                // to prevent memory waste when resolution changes from high to low.
+                if (_tempBuffer.Length < tempBufferSize || _tempBuffer.Length > tempBufferSize * 2) {
                     _tempBuffer = new uint[tempBufferSize];
                 }
                 renderTarget = new Span<uint>(_tempBuffer, 0, tempBufferSize);
