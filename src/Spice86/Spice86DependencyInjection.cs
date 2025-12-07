@@ -72,6 +72,11 @@ public class Spice86DependencyInjection : IDisposable {
     /// </summary>
     public IMcpServer McpServer { get; }
 
+    /// <summary>
+    /// Gets the function catalogue that tracks function calls and provides information for debugging.
+    /// </summary>
+    public FunctionCatalogue FunctionCatalogue { get; }
+
     private readonly McpStdioTransport _mcpStdioTransport;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
@@ -220,6 +225,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         FunctionCatalogue functionCatalogue = new FunctionCatalogue(
             functionInformationsData);
+        FunctionCatalogue = functionCatalogue;
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Function catalogue created...");

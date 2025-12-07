@@ -18,7 +18,7 @@ public class McpServerTest {
     private static (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue functionCatalogue) CreateMcpServerForTest() {
         Spice86Creator creator = new Spice86Creator(TestProgramName, false);
         Spice86DependencyInjection spice86 = creator.Create();
-        FunctionCatalogue functionCatalogue = new FunctionCatalogue();
+        FunctionCatalogue functionCatalogue = spice86.FunctionCatalogue;
         McpServer server = (McpServer)spice86.McpServer;
         return (spice86, server, functionCatalogue);
     }
