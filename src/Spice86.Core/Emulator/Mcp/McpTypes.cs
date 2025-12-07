@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.Mcp;
 /// <summary>
 /// Response for CPU registers query.
 /// </summary>
-public sealed record CpuRegistersResponse {
+public sealed record CpuRegistersResponse : McpToolResponse {
     /// <summary>
     /// Gets the general purpose registers.
     /// </summary>
@@ -75,7 +75,7 @@ public sealed record CpuFlags {
 /// <summary>
 /// Response for memory read operation.
 /// </summary>
-public sealed record MemoryReadResponse {
+public sealed record MemoryReadResponse : McpToolResponse {
     /// <summary>
     /// Gets the starting address that was read.
     /// </summary>
@@ -95,7 +95,7 @@ public sealed record MemoryReadResponse {
 /// <summary>
 /// Response for function list query.
 /// </summary>
-public sealed record FunctionListResponse {
+public sealed record FunctionListResponse : McpToolResponse {
     /// <summary>
     /// Gets the array of functions.
     /// </summary>
@@ -191,7 +191,7 @@ internal sealed record FunctionListInputSchema {
 /// <summary>
 /// Response for CFG CPU graph inspection.
 /// </summary>
-public sealed record CfgCpuGraphResponse {
+public sealed record CfgCpuGraphResponse : McpToolResponse {
     /// <summary>
     /// Gets the current execution context depth.
     /// Depth 0 is the initial context, higher values indicate nested interrupt contexts.
@@ -240,36 +240,36 @@ internal sealed record IoPortWriteInputProperties {
     public required JsonSchemaProperty Value { get; init; }
 }
 
-public sealed record IoPortReadResponse {
+public sealed record IoPortReadResponse : McpToolResponse {
     public required int Port { get; init; }
     public required byte Value { get; init; }
 }
 
-public sealed record IoPortWriteResponse {
+public sealed record IoPortWriteResponse : McpToolResponse {
     public required int Port { get; init; }
     public required int Value { get; init; }
     public required bool Success { get; init; }
 }
 
-public sealed record VideoStateResponse {
+public sealed record VideoStateResponse : McpToolResponse {
     public required int Width { get; init; }
     public required int Height { get; init; }
     public required int BufferSize { get; init; }
 }
 
-public sealed record ScreenshotResponse {
+public sealed record ScreenshotResponse : McpToolResponse {
     public required int Width { get; init; }
     public required int Height { get; init; }
     public required string Format { get; init; }
     public required string Data { get; init; }
 }
 
-public sealed record EmulatorControlResponse {
+public sealed record EmulatorControlResponse : McpToolResponse {
     public required bool Success { get; init; }
     public required string Message { get; init; }
 }
 
-public sealed record EmsStateResponse {
+public sealed record EmsStateResponse : McpToolResponse {
     public required bool IsEnabled { get; init; }
     public required int PageFrameSegment { get; init; }
     public required int TotalPages { get; init; }
@@ -285,7 +285,7 @@ public sealed record EmsHandleInfo {
     public required string Name { get; init; }
 }
 
-public sealed record XmsStateResponse {
+public sealed record XmsStateResponse : McpToolResponse {
     public required bool IsEnabled { get; init; }
     public required int TotalMemoryKB { get; init; }
     public required int FreeMemoryKB { get; init; }

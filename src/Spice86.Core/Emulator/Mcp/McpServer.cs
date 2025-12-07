@@ -13,11 +13,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Runtime.CompilerServices;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+using Spice86.Core.Emulator.Mcp.Request;
 
 /// <summary>
 /// MCP server exposing emulator inspection and control tools.
@@ -221,7 +223,7 @@ public sealed class McpServer : IMcpServer {
 
         lock (_requestLock) {
             try {
-                object result = toolName switch {
+                McpToolResponse result = toolName switch {
                     "read_cpu_registers" => ReadCpuRegisters(),
                     "read_memory" => ReadMemory(argumentsElement),
                     "list_functions" => ListFunctions(argumentsElement),
@@ -243,10 +245,10 @@ public sealed class McpServer : IMcpServer {
                 return CreateErrorResponse(id, ex.ErrorCode, ex.Message);
             } catch (ArgumentException ex) {
                 _loggerService.Error("Invalid argument for tool {ToolName}: {Error}", toolName, ex.Message);
-                return CreateErrorResponse(id, -32602, ex.Message);
+                return CreateErrorResponse(id, (int)JsonRpcErrorCode.InvalidParams, ex.Message);
             } catch (InvalidOperationException ex) {
                 _loggerService.Error("Invalid operation for tool {ToolName}: {Error}", toolName, ex.Message);
-                return CreateErrorResponse(id, -32603, ex.Message);
+                return CreateErrorResponse(id, (int)JsonRpcErrorCode.InternalError, ex.Message);
             } catch (Exception ex) {
                 _loggerService.Error(ex, "Unexpected error executing tool {ToolName}", toolName);
                 return CreateErrorResponse(id, -32603, $"Internal error: {ex.Message}");
@@ -471,20 +473,16 @@ public sealed class McpServer : IMcpServer {
             throw new InvalidOperationException("EMS is not enabled");
         }
 
-        List<EmsHandleInfo> handles = new List<EmsHandleInfo>();
-        int allocatedPages = 0;
+        EmsHandleInfo[] handles = _emsManager.EmmHandles
+            .Where(kvp => kvp.Key != ExpandedMemoryManager.EmmNullHandle && kvp.Value != null)
+            .Select(kvp => new EmsHandleInfo {
+                HandleId = kvp.Key,
+                AllocatedPages = kvp.Value.LogicalPages.Count,
+                Name = kvp.Value.Name
+            })
+            .ToArray();
 
-        foreach (KeyValuePair<int, EmmHandle> kvp in _emsManager.EmmHandles) {
-            if (kvp.Key != ExpandedMemoryManager.EmmNullHandle && kvp.Value != null) {
-                int pageCount = kvp.Value.LogicalPages.Count;
-                handles.Add(new EmsHandleInfo {
-                    HandleId = kvp.Key,
-                    AllocatedPages = pageCount,
-                    Name = kvp.Value.Name
-                });
-                allocatedPages += pageCount;
-            }
-        }
+        int allocatedPages = handles.Sum(h => h.AllocatedPages);
 
         ushort freePages = _emsManager.GetFreePageCount();
 
@@ -495,7 +493,7 @@ public sealed class McpServer : IMcpServer {
             AllocatedPages = allocatedPages,
             FreePages = freePages,
             PageSize = ExpandedMemoryManager.EmmPageSize,
-            Handles = handles.ToArray()
+            Handles = handles
         };
     }
 
