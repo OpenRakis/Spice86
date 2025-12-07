@@ -7,7 +7,6 @@ using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
 using System;
-using System.Collections.Concurrent;
 
 /// <summary>
 /// Represents a queue for handling and processing keyboard and mouse events. <br/>
@@ -21,8 +20,9 @@ using System.Collections.Concurrent;
 /// The <see cref="InputEventHub"/> also exposes properties and methods for interacting with mouse  coordinates and
 /// cursor visibility, delegating these operations to the underlying implementation, if available.</remarks>
 public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
-    // a thread-safe queue, accessed by both UI thread and emulation thread.
-    private readonly ConcurrentQueue<Action> _eventQueue = new();
+    private readonly Queue<Action> _eventQueue = new();
+    // a thread-safe queue, accessed by both UI thread and emulation thread, requires a lock.
+    private readonly object _lock = new();
     private readonly IGuiMouseEvents? _mouseEvents;
     private readonly IGuiKeyboardEvents? _keyboardEvents;
 
@@ -47,27 +47,32 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
         }
     }
 
+    private void Enqueue(Action action) {
+        lock (_lock) {
+            _eventQueue.Enqueue(action);
+        }
+    }
+
     private void OnMouseMoved(object? sender, MouseMoveEventArgs e) =>
-        _eventQueue.Enqueue(() => MouseMoved?.Invoke(sender, e));
+        Enqueue(() => MouseMoved?.Invoke(sender, e));
 
     private void OnMouseButtonUp(object? sender, MouseButtonEventArgs e) =>
-        _eventQueue.Enqueue(() => MouseButtonUp?.Invoke(sender, e));
+        Enqueue(() => MouseButtonUp?.Invoke(sender, e));
 
     private void OnMouseButtonDown(object? sender, MouseButtonEventArgs e) =>
-        _eventQueue.Enqueue(() => MouseButtonDown?.Invoke(sender, e));
+        Enqueue(() => MouseButtonDown?.Invoke(sender, e));
 
     private void OnKeyUp(object? sender, KeyboardEventArgs e) =>
-        _eventQueue.Enqueue(() => KeyUp?.Invoke(sender, e));
+        Enqueue(() => KeyUp?.Invoke(sender, e));
 
     private void OnKeyDown(object? sender, KeyboardEventArgs e) =>
-        _eventQueue.Enqueue(() => KeyDown?.Invoke(sender, e));
+        Enqueue(() => KeyDown?.Invoke(sender, e));
 
-    /// <summary>
-    /// Processes all pending input events in the event queue.
-    /// </summary>
     internal void ProcessAllPendingInputEvents() {
-        while (_eventQueue.TryDequeue(out Action? top)) {
-            top.Invoke();
+        lock (_lock) {
+            while (_eventQueue.TryDequeue(out Action? action)) {
+                action.Invoke();
+            }
         }
     }
 
