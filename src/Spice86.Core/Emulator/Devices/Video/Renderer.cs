@@ -14,7 +14,7 @@ public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
     private readonly VideoMemory _memory;
     private readonly IVideoState _state;
-    private uint[] _tempBuffer = Array.Empty<uint>();
+    private uint[] _tempBuffer = new uint[320 * 200]; // Initialize to common VGA Mode 13h size to avoid first-frame allocation
 
     // VGA aspect ratio correction constants
     private const int VgaLowResNativeHeight = 200;
@@ -62,8 +62,8 @@ public class Renderer : IVgaRenderer {
             // Low-res modes (320/360 width) need 1.2x vertical stretch to display correctly on square-pixel monitors.
             // This matches how these modes appeared on 4:3 CRT screens.
             return Width switch {
-                320 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 320x200 → 320x240 (4:3)
-                360 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 360x200 → 360x240 (correct for 5:6 PAR)
+                320 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 320x200 → 320x240 (corrects for 5:6 PAR; 4:3 display)
+                360 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 360x200 → 360x240 (aspect correction for 4:3 CRT display)
                 640 when nativeHeight == VgaHighResNativeHeight => VgaHighResCorrectedHeight,  // 640x400 → 640x480 (4:3)
                 _ => nativeHeight  // No correction for other modes
             };
@@ -100,9 +100,9 @@ public class Renderer : IVgaRenderer {
             Span<uint> renderTarget;
             if (needsAspectCorrection) {
                 int tempBufferSize = width * nativeHeight;
-                // Grow or shrink the buffer as needed. Shrink if buffer is more than 2x the required size
+                // Grow or shrink the buffer as needed. Shrink if buffer is 2x or more the required size
                 // to prevent memory waste when resolution changes from high to low.
-                if (_tempBuffer.Length < tempBufferSize || _tempBuffer.Length > tempBufferSize * 2) {
+                if (_tempBuffer.Length < tempBufferSize || _tempBuffer.Length >= tempBufferSize * 2) {
                     _tempBuffer = new uint[tempBufferSize];
                 }
                 renderTarget = new Span<uint>(_tempBuffer, 0, tempBufferSize);
