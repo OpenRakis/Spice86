@@ -313,16 +313,12 @@ public class OpenGlVideoControl : OpenGlControlBase {
     private bool CompileShaders(GlInterface gl, string shaderSource) {
         Console.WriteLine($"[WARN] OpenGL: CompileShaders starting - source length={shaderSource.Length}");
         
-        // Separate vertex and fragment shaders from the combined GLSL file
-        string vertexSource = ExtractShaderPart(shaderSource, true);
-        string fragmentSource = ExtractShaderPart(shaderSource, false);
+        // DOSBox Staging shaders use conditional compilation with #if defined(VERTEX) and #elif defined(FRAGMENT)
+        // We need to compile the entire source twice - once for vertex, once for fragment
+        string vertexSource = "#define VERTEX\n" + shaderSource;
+        string fragmentSource = "#define FRAGMENT\n" + shaderSource;
         
-        Console.WriteLine($"[WARN] OpenGL: Extracted vertex shader length={vertexSource?.Length ?? 0}, fragment shader length={fragmentSource?.Length ?? 0}");
-
-        if (string.IsNullOrEmpty(vertexSource) || string.IsNullOrEmpty(fragmentSource)) {
-            Console.WriteLine("[WARN] OpenGL: Failed to extract shader parts");
-            return false;
-        }
+        Console.WriteLine($"[WARN] OpenGL: Prepared vertex shader length={vertexSource.Length}, fragment shader length={fragmentSource.Length}");
 
         // Compile vertex shader
         Console.WriteLine("[WARN] OpenGL: Compiling vertex shader");
@@ -341,7 +337,7 @@ public class OpenGlVideoControl : OpenGlControlBase {
         _fragmentShader = gl.CreateShader(GL_FRAGMENT_SHADER);
         string? fragmentError = gl.CompileShaderAndGetError(_fragmentShader, fragmentSource);
         if (!string.IsNullOrEmpty(fragmentError)) {
-            Console.WriteLine($"[WARN] OpenGL: Fragment shader compilation FAILED: {fragmentError}");
+            Console.WriteLine($"[WARN] OpenGL: Fragment shader compilation FAILED: {vertexError}");
             gl.DeleteShader(_vertexShader);
             gl.DeleteShader(_fragmentShader);
             _vertexShader = 0;
@@ -371,28 +367,6 @@ public class OpenGlVideoControl : OpenGlControlBase {
         Console.WriteLine($"[WARN] OpenGL: Program linked successfully - id={_shaderProgram}");
 
         return true;
-    }
-
-    private string ExtractShaderPart(string shaderSource, bool vertex) {
-        // DOSBox Staging shaders use conditional compilation with #if defined(VERTEX) and #if defined(FRAGMENT)
-        string marker = vertex ? "#if defined(VERTEX)" : "#elif defined(FRAGMENT)";
-        string endMarker = vertex ? "#elif defined(FRAGMENT)" : "#endif";
-        
-        int startIndex = shaderSource.IndexOf(marker, StringComparison.Ordinal);
-        if (startIndex == -1) {
-            return string.Empty;
-        }
-
-        startIndex += marker.Length;
-        int endIndex = shaderSource.IndexOf(endMarker, startIndex, StringComparison.Ordinal);
-        if (endIndex == -1) {
-            endIndex = shaderSource.Length;
-        }
-
-        string extracted = shaderSource.Substring(startIndex, endIndex - startIndex);
-        
-        // Add the appropriate define at the beginning
-        return (vertex ? "#define VERTEX\n" : "#define FRAGMENT\n") + extracted;
     }
 
     private string LoadShaderSource(CrtShaderType shaderType) {
