@@ -196,69 +196,36 @@ public sealed class McpServer : IMcpServer {
 
         JsonElement? argumentsElement = paramsElement.TryGetProperty("arguments", out JsonElement args) ? args : null;
 
-        // Thread-safe: serialize all MCP requests to prevent concurrent access
         lock (_requestLock) {
-            object? result = null;
-            string? errorMessage = null;
-            int errorCode = 0;
+            try {
+                object result = toolName switch {
+                    "read_cpu_registers" => ReadCpuRegisters(),
+                    "read_memory" => ReadMemory(argumentsElement),
+                    "list_functions" => ListFunctions(argumentsElement),
+                    "read_cfg_cpu_graph" => ReadCfgCpuGraph(),
+                    "read_io_port" => ReadIoPort(argumentsElement),
+                    "write_io_port" => WriteIoPort(argumentsElement),
+                    "get_video_state" => GetVideoState(),
+                    "screenshot" => TakeScreenshot(),
+                    "pause_emulator" => PauseEmulator(),
+                    "resume_emulator" => ResumeEmulator(),
+                    _ => throw new McpMethodNotFoundException(toolName)
+                };
 
-            switch (toolName) {
-                case "read_cpu_registers":
-                    result = ReadCpuRegisters();
-                    break;
-                case "read_memory":
-                    (result, errorMessage, errorCode) = TryReadMemory(argumentsElement);
-                    break;
-                case "list_functions":
-                    (result, errorMessage) = TryListFunctions(argumentsElement);
-                    if (errorMessage != null) {
-                        errorCode = -32602;
-                    }
-                    break;
-                case "read_cfg_cpu_graph":
-                    (result, errorMessage) = TryReadCfgCpuGraph();
-                    if (errorMessage != null) {
-                        errorCode = -32603;
-                    }
-                    break;
-                case "read_io_port":
-                    (result, errorMessage, errorCode) = TryReadIoPort(argumentsElement);
-                    break;
-                case "write_io_port":
-                    (result, errorMessage, errorCode) = TryWriteIoPort(argumentsElement);
-                    break;
-                case "get_video_state":
-                    result = GetVideoState();
-                    break;
-                case "screenshot":
-                    (result, errorMessage) = TryTakeScreenshot();
-                    if (errorMessage != null) {
-                        errorCode = -32603;
-                    }
-                    break;
-                case "pause_emulator":
-                    result = PauseEmulator();
-                    break;
-                case "resume_emulator":
-                    result = ResumeEmulator();
-                    break;
-                default:
-                    errorMessage = $"Unknown tool: {toolName}";
-                    errorCode = -32601;
-                    break;
+                return CreateToolCallResponse(id, result);
+            } catch (McpException ex) {
+                _loggerService.Error("Error executing tool {ToolName}: {Error}", toolName, ex.Message);
+                return CreateErrorResponse(id, ex.ErrorCode, ex.Message);
+            } catch (ArgumentException ex) {
+                _loggerService.Error("Invalid argument for tool {ToolName}: {Error}", toolName, ex.Message);
+                return CreateErrorResponse(id, -32602, ex.Message);
+            } catch (InvalidOperationException ex) {
+                _loggerService.Error("Invalid operation for tool {ToolName}: {Error}", toolName, ex.Message);
+                return CreateErrorResponse(id, -32603, ex.Message);
+            } catch (Exception ex) {
+                _loggerService.Error(ex, "Unexpected error executing tool {ToolName}", toolName);
+                return CreateErrorResponse(id, -32603, $"Internal error: {ex.Message}");
             }
-
-            if (errorMessage != null) {
-                _loggerService.Error("Error executing tool {ToolName}: {Error}", toolName, errorMessage);
-                return CreateErrorResponse(id, errorCode, errorMessage);
-            }
-
-            if (result == null) {
-                _loggerService.Error("Tool {ToolName} returned null result", toolName);
-                return CreateErrorResponse(id, -32603, "Tool execution returned null result");
-            }
-
-            return CreateToolCallResponse(id, result);
         }
     }
 
@@ -298,38 +265,38 @@ public sealed class McpServer : IMcpServer {
         };
     }
 
-    private (MemoryReadResponse? result, string? error, int errorCode) TryReadMemory(JsonElement? arguments) {
+    private MemoryReadResponse ReadMemory(JsonElement? arguments) {
         if (!arguments.HasValue) {
-            return (null, "Missing arguments for read_memory", -32602);
+            throw new McpInvalidParametersException("Missing arguments for read_memory");
         }
 
         JsonElement argsValue = arguments.Value;
 
         if (!argsValue.TryGetProperty("address", out JsonElement addressElement)) {
-            return (null, "Missing address parameter", -32602);
+            throw new McpInvalidParametersException("Missing address parameter");
         }
 
         if (!argsValue.TryGetProperty("length", out JsonElement lengthElement)) {
-            return (null, "Missing length parameter", -32602);
+            throw new McpInvalidParametersException("Missing length parameter");
         }
 
         uint address = addressElement.GetUInt32();
         int length = lengthElement.GetInt32();
 
         if (length <= 0 || length > 4096) {
-            return (null, "Tool execution error: Length must be between 1 and 4096", -32603);
+            throw new McpInternalErrorException("Tool execution error: Length must be between 1 and 4096");
         }
 
         byte[] data = _memory.ReadRam((uint)length, address);
 
-        return (new MemoryReadResponse {
+        return new MemoryReadResponse {
             Address = address,
             Length = length,
             Data = Convert.ToHexString(data)
-        }, null, 0);
+        };
     }
 
-    private (FunctionListResponse? result, string? error) TryListFunctions(JsonElement? arguments) {
+    private FunctionListResponse ListFunctions(JsonElement? arguments) {
         int limit = 100;
 
         if (arguments != null) {
@@ -350,17 +317,13 @@ public sealed class McpServer : IMcpServer {
             })
             .ToArray();
 
-        return (new FunctionListResponse {
+        return new FunctionListResponse {
             Functions = functions,
             TotalCount = _functionCatalogue.FunctionInformations.Count
-        }, null);
+        };
     }
 
-    private (CfgCpuGraphResponse? result, string? error) TryReadCfgCpuGraph() {
-        if (_cfgCpu == null) {
-            return (null, "CFG CPU is not enabled. Use --CfgCpu to enable Control Flow Graph CPU.");
-        }
-
+    private CfgCpuGraphResponse ReadCfgCpuGraph() {
         ExecutionContextManager contextManager = _cfgCpu.ExecutionContextManager;
         Spice86.Core.Emulator.CPU.CfgCpu.Linker.ExecutionContext currentContext = contextManager.CurrentExecutionContext;
 
@@ -371,68 +334,68 @@ public sealed class McpServer : IMcpServer {
             .Select(kvp => kvp.Key.ToString())
             .ToArray();
 
-        return (new CfgCpuGraphResponse {
+        return new CfgCpuGraphResponse {
             CurrentContextDepth = currentContext.Depth,
             CurrentContextEntryPoint = currentContext.EntryPoint.ToString(),
             TotalEntryPoints = totalEntryPoints,
             EntryPointAddresses = entryPointAddresses,
             LastExecutedAddress = currentContext.LastExecuted?.Address.ToString() ?? "None"
-        }, null);
+        };
     }
 
-    private (IoPortReadResponse? result, string? error, int errorCode) TryReadIoPort(JsonElement? arguments) {
+    private IoPortReadResponse ReadIoPort(JsonElement? arguments) {
         if (_pauseHandler.IsPaused) {
-            return (null, "Emulator is paused. Resume to read IO ports.", -32603);
+            throw new McpInternalErrorException("Emulator is paused. Resume to read IO ports.");
         }
 
         if (!arguments.HasValue) {
-            return (null, "Missing port parameter", -32602);
+            throw new McpInvalidParametersException("Missing port parameter");
         }
 
         if (!arguments.Value.TryGetProperty("port", out JsonElement portElement)) {
-            return (null, "Missing port parameter", -32602);
+            throw new McpInvalidParametersException("Missing port parameter");
         }
 
         int port = portElement.GetInt32();
         if (port < 0 || port > 65535) {
-            return (null, "Port must be 0-65535", -32602);
+            throw new McpInvalidParametersException("Port must be 0-65535");
         }
 
         byte value = _ioPortDispatcher.ReadByte((ushort)port);
-        return (new IoPortReadResponse { Port = port, Value = value }, null, 0);
+        return new IoPortReadResponse { Port = port, Value = value };
     }
 
-    private (IoPortWriteResponse? result, string? error, int errorCode) TryWriteIoPort(JsonElement? arguments) {
+    private IoPortWriteResponse WriteIoPort(JsonElement? arguments) {
         if (_pauseHandler.IsPaused) {
-            return (null, "Emulator is paused. Resume to write IO ports.", -32603);
+            throw new McpInternalErrorException("Emulator is paused. Resume to write IO ports.");
         }
 
         if (!arguments.HasValue) {
-            return (null, "Missing parameters", -32602);
+            throw new McpInvalidParametersException("Missing parameters");
         }
 
         JsonElement argsValue = arguments.Value;
         if (!argsValue.TryGetProperty("port", out JsonElement portElement)) {
-            return (null, "Missing port parameter", -32602);
+            throw new McpInvalidParametersException("Missing port parameter");
         }
 
         if (!argsValue.TryGetProperty("value", out JsonElement valueElement)) {
-            return (null, "Missing value parameter", -32602);
+            throw new McpInvalidParametersException("Missing value parameter");
         }
 
         int port = portElement.GetInt32();
         int value = valueElement.GetInt32();
 
         if (port < 0 || port > 65535) {
-            return (null, "Port must be 0-65535", -32602);
+            throw new McpInvalidParametersException("Port must be 0-65535");
         }
 
         if (value < 0 || value > 255) {
-            return (null, "Value must be 0-255", -32602);
+            throw new McpInvalidParametersException("Value must be 0-255");
         }
 
         _ioPortDispatcher.WriteByte((ushort)port, (byte)value);
-        return (new IoPortWriteResponse { Port = port, Value = value, Success = true }, null, 0);
+        return new IoPortWriteResponse { Port = port, Value = value, Success = true };
     }
 
     private VideoStateResponse GetVideoState() {
@@ -443,7 +406,7 @@ public sealed class McpServer : IMcpServer {
         };
     }
 
-    private (ScreenshotResponse? result, string? error) TryTakeScreenshot() {
+    private ScreenshotResponse TakeScreenshot() {
         int width = _vgaRenderer.Width;
         int height = _vgaRenderer.Height;
         uint[] buffer = new uint[width * height];
@@ -454,12 +417,12 @@ public sealed class McpServer : IMcpServer {
         Buffer.BlockCopy(buffer, 0, bytes, 0, bytes.Length);
         string base64 = Convert.ToBase64String(bytes);
 
-        return (new ScreenshotResponse {
+        return new ScreenshotResponse {
             Width = width,
             Height = height,
             Format = "bgra32",
             Data = base64
-        }, null);
+        };
     }
 
     private EmulatorControlResponse PauseEmulator() {
