@@ -20,6 +20,8 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Mcp.Request;
+using Spice86.Core.Emulator.Mcp.Response;
+using Spice86.Core.Emulator.Mcp.Schema;
 
 /// <summary>
 /// MCP server exposing emulator inspection and control tools.
