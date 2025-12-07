@@ -36,6 +36,15 @@ public class Renderer : IVgaRenderer {
         memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
     }
 
+    /// <summary>
+    /// Calculates the native (pre-aspect-correction) height from VGA registers.
+    /// </summary>
+    /// <returns>The native height in pixels.</returns>
+    private int CalculateNativeHeight() {
+        return (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / 
+               (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
+    }
+
     /// <inheritdoc />
     public int Width => (_state.GeneralRegisters.MiscellaneousOutput.ClockSelect, _state.SequencerRegisters.ClockingModeRegister.HalfDotClock) switch {
         (ClockSelect.Use25175Khz, true) => 320,
@@ -48,13 +57,13 @@ public class Renderer : IVgaRenderer {
     /// <inheritdoc />
     public int Height {
         get {
-            int nativeHeight = (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
+            int nativeHeight = CalculateNativeHeight();
             // Apply aspect ratio correction for VGA modes with non-square pixels.
             // Low-res modes (320/360 width) need 1.2x vertical stretch to display correctly on square-pixel monitors.
             // This matches how these modes appeared on 4:3 CRT screens.
             return Width switch {
                 320 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 320x200 → 320x240 (4:3)
-                360 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 360x200 → 360x240 (3:2)
+                360 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 360x200 → 360x240 (correct for 5:6 PAR)
                 640 when nativeHeight == VgaHighResNativeHeight => VgaHighResCorrectedHeight,  // 640x400 → 640x480 (4:3)
                 _ => nativeHeight  // No correction for other modes
             };
@@ -77,7 +86,7 @@ public class Renderer : IVgaRenderer {
             BufferSize = frameBuffer.Length;
             
             // Calculate native (pre-aspect-correction) dimensions
-            int nativeHeight = (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
+            int nativeHeight = CalculateNativeHeight();
             int width = Width;
             int outputHeight = Height;
             bool needsAspectCorrection = outputHeight != nativeHeight;
