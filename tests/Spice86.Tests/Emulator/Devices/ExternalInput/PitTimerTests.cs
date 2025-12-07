@@ -10,6 +10,8 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -56,22 +58,18 @@ public sealed class PitTimerTests : IDisposable {
         public PitFixture() {
             Logger = Substitute.For<ILoggerService>();
             State = new State(CpuModel.ZET_86);
-            CpuState = new ExecutionStateSlice(State) {
-                InterruptFlag = true,
-                CyclesAllocatedForSlice = 256,
-                CyclesLeft = 256
-            };
             var breakpoints = new AddressReadWriteBreakpoints();
             Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false);
             IoPortHandlerRegistry = new IOPortHandlerRegistry(Dispatcher, State, Logger, false);
-            DualPic = new DualPic(IoPortHandlerRegistry, CpuState, Logger);
+            DualPic = new DualPic(IoPortHandlerRegistry, Logger);
             Speaker = new StubPitSpeaker();
-            PitTimer = new PitTimer(IoPortHandlerRegistry, DualPic, Speaker, Logger);
+            var emulatedClock = new EmulatedClock();
+            var emulationLoopScheduler = new EmulationLoopScheduler(emulatedClock, Logger);
+            PitTimer = new PitTimer(IoPortHandlerRegistry, DualPic, Speaker, emulationLoopScheduler, emulatedClock, Logger);
         }
 
         public ILoggerService Logger { get; }
         public State State { get; }
-        public ExecutionStateSlice CpuState { get; }
         public IOPortDispatcher Dispatcher { get; }
         public IOPortHandlerRegistry IoPortHandlerRegistry { get; }
         public DualPic DualPic { get; }

@@ -10,6 +10,8 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -30,11 +32,10 @@ public class Pit8254Tests {
         State state = new(CpuModel.INTEL_80286);
         var dispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
         _ioPortHandlerRegistry = new IOPortHandlerRegistry(dispatcher, state, logger, false);
-        var cpuState = new ExecutionStateSlice(state) {
-            InterruptFlag = true
-        };
-        var pic = new DualPic(_ioPortHandlerRegistry, cpuState, logger);
-        _pit = new PitTimer(_ioPortHandlerRegistry, pic, _speaker, logger);
+        var pic = new DualPic(_ioPortHandlerRegistry, logger);
+        var emulatedClock = new EmulatedClock();
+        var emulationLoopScheduler = new EmulationLoopScheduler(emulatedClock, logger);
+        _pit = new PitTimer(_ioPortHandlerRegistry, pic, _speaker, emulationLoopScheduler, emulatedClock, logger);
     }
 
     [Theory]
