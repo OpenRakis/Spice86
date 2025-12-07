@@ -337,7 +337,7 @@ public class OpenGlVideoControl : OpenGlControlBase {
         _fragmentShader = gl.CreateShader(GL_FRAGMENT_SHADER);
         string? fragmentError = gl.CompileShaderAndGetError(_fragmentShader, fragmentSource);
         if (!string.IsNullOrEmpty(fragmentError)) {
-            Console.WriteLine($"[WARN] OpenGL: Fragment shader compilation FAILED: {vertexError}");
+            Console.WriteLine($"[WARN] OpenGL: Fragment shader compilation FAILED: {fragmentError}");
             gl.DeleteShader(_vertexShader);
             gl.DeleteShader(_fragmentShader);
             _vertexShader = 0;
