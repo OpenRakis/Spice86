@@ -352,8 +352,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
               emulatorStateSerializer.LoadBreakpoints(dumpContext.DumpDirectory);
-      
-        IInstructionExecutor cpuForEmulationLoop = cfgCpu;
 
         ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(configuration);
 
@@ -399,7 +397,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         EmulationLoop emulationLoop = new(
-            functionHandler, cpuForEmulationLoop,
+            functionHandler, cfgCpu,
             state, emulationLoopScheduler, emulatorBreakpointsManager,
             pauseHandler, inputEventHub, cyclesLimiter, loggerService);
 
