@@ -228,7 +228,7 @@ public class Renderer : IVgaRenderer {
 
             // Apply aspect ratio correction if needed
             if (needsAspectCorrection) {
-                ApplyAspectRatioCorrection(frameBuffer, nativeHeight);
+                ApplyAspectRatioCorrection(frameBuffer, renderTarget, width, nativeHeight, outputHeight);
             }
 
             LastFrameRenderTime = stopwatch.Elapsed;
@@ -239,14 +239,21 @@ public class Renderer : IVgaRenderer {
         }
     }
 
-    private void ApplyAspectRatioCorrection(Span<uint> outputBuffer, int nativeHeight) {
-        int width = Width;
-        int outputHeight = Height;
+    /// <summary>
+    /// Applies VGA aspect ratio correction by duplicating scanlines.
+    /// Stretches 200-line modes to 240 lines and 400-line modes to 480 lines.
+    /// </summary>
+    /// <param name="outputBuffer">The destination buffer for corrected output.</param>
+    /// <param name="sourceBuffer">The source buffer containing native resolution rendering.</param>
+    /// <param name="width">The width in pixels.</param>
+    /// <param name="nativeHeight">The native (pre-correction) height in pixels.</param>
+    /// <param name="outputHeight">The corrected (post-correction) height in pixels.</param>
+    private void ApplyAspectRatioCorrection(Span<uint> outputBuffer, Span<uint> sourceBuffer, int width, int nativeHeight, int outputHeight) {
         
         // Bounds check: ensure source and destination buffers are large enough
         int sourceBufferSize = width * nativeHeight;
         int outputBufferSize = width * outputHeight;
-        if (_tempBuffer.Length < sourceBufferSize) {
+        if (sourceBuffer.Length < sourceBufferSize) {
             // Source buffer too small, skip aspect correction
             return;
         }
@@ -254,8 +261,6 @@ public class Renderer : IVgaRenderer {
             // Output buffer too small, skip aspect correction
             return;
         }
-        
-        Span<uint> sourceBuffer = new Span<uint>(_tempBuffer, 0, sourceBufferSize);
         
         // For 320x200 → 320x240: stretch from 200 lines to 240 lines (1.2x)
         // Strategy: for every 5 input lines, output 6 lines (duplicate every 5th line)
@@ -276,18 +281,10 @@ public class Renderer : IVgaRenderer {
             sourceBuffer.Slice(sourceOffset, width).CopyTo(outputBuffer.Slice(destOffset, width));
             destLine++;
             
-            // For 200→240 conversion: duplicate every 5th line (at indices 4, 9, 14, 19, ...)
+            // For 200→240 and 400→480 conversions: duplicate every 5th line (at indices 4, 9, 14, 19, ...)
             // This means: when sourceLine % AspectCorrectionLineDuplicationInterval == 4, duplicate the line
-            if (nativeHeight == VgaLowResNativeHeight && outputHeight == VgaLowResCorrectedHeight 
-                && sourceLine % AspectCorrectionLineDuplicationInterval == AspectCorrectionLineDuplicationInterval - 1) {
-                destOffset = destLine * width;
-                if (destOffset + width <= outputBufferSize) {
-                    sourceBuffer.Slice(sourceOffset, width).CopyTo(outputBuffer.Slice(destOffset, width));
-                    destLine++;
-                }
-            }
-            // For 400→480 conversion: duplicate every 5th line 
-            else if (nativeHeight == VgaHighResNativeHeight && outputHeight == VgaHighResCorrectedHeight 
+            if (((nativeHeight == VgaLowResNativeHeight && outputHeight == VgaLowResCorrectedHeight) ||
+                 (nativeHeight == VgaHighResNativeHeight && outputHeight == VgaHighResCorrectedHeight))
                 && sourceLine % AspectCorrectionLineDuplicationInterval == AspectCorrectionLineDuplicationInterval - 1) {
                 destOffset = destLine * width;
                 if (destOffset + width <= outputBufferSize) {
