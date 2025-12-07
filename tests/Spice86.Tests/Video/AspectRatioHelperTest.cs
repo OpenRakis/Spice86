@@ -94,18 +94,23 @@ public class AspectRatioHelperTest {
     }
 
     /// <summary>
-    /// Verifies that ShouldResetDestinationAddress returns true for base iterations and false for duplicates.
-    /// This ensures duplicate lines are drawn to new positions, not overwriting originals.
+    /// Verifies that ShouldResetDestinationAddress correctly identifies when to reset the destination address.
+    /// For iteration 0: no reset needed (first draw uses latched address).
+    /// For iteration 1 in double-scan mode: reset to draw on same line.
+    /// For iteration 2+ (aspect correction): no reset to draw on new lines.
     /// </summary>
     [Fact]
     public void ShouldResetDestinationAddress_CorrectlyIdentifiesBaseAndDuplicate() {
         // Arrange
-        int baseLinesPerScanline = 1;
+        int baseLinesPerScanline = 2; // Double-scan mode
         
-        // Act & Assert: First iteration should reset (base line)
-        Assert.True(AspectRatioHelper.ShouldResetDestinationAddress(0, baseLinesPerScanline));
+        // Act & Assert: Iteration 0 should NOT reset (first draw uses latched address)
+        Assert.False(AspectRatioHelper.ShouldResetDestinationAddress(0, baseLinesPerScanline));
         
-        // Act & Assert: Second iteration should NOT reset (duplicate line)
-        Assert.False(AspectRatioHelper.ShouldResetDestinationAddress(1, baseLinesPerScanline));
+        // Act & Assert: Iteration 1 should reset (double-scan - draw on same line)
+        Assert.True(AspectRatioHelper.ShouldResetDestinationAddress(1, baseLinesPerScanline));
+        
+        // Act & Assert: Iteration 2 should NOT reset (aspect correction - draw on new line)
+        Assert.False(AspectRatioHelper.ShouldResetDestinationAddress(2, baseLinesPerScanline));
     }
 }
