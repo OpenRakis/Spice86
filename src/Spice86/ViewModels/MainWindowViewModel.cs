@@ -38,7 +38,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly PerformanceViewModel _performanceViewModel;
     private readonly IExceptionHandler _exceptionHandler;
 
-    public McpStatusViewModel McpStatusViewModel { get; }
+    public McpStatusViewModel? McpStatusViewModel { get; set; }
 
     private int? _targetCyclesPerMs;
 
@@ -91,8 +91,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
         Configuration configuration, ILoggerService loggerService,
         IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel,
-        IExceptionHandler exceptionHandler, ICyclesLimiter cyclesLimiter,
-        McpStatusViewModel mcpStatusViewModel)
+        IExceptionHandler exceptionHandler, ICyclesLimiter cyclesLimiter)
         : base(uiDispatcher, textClipboard) {
         _sharedMouseData = sharedMouseData;
         _pit = pit;
@@ -102,7 +101,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
         _cyclesLimiter = cyclesLimiter;
-        McpStatusViewModel = mcpStatusViewModel;
         TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
         _pauseHandler = pauseHandler;
         _pauseHandler.Paused += OnPaused;
