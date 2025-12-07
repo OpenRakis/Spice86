@@ -315,8 +315,14 @@ public class OpenGlVideoControl : OpenGlControlBase {
         
         // DOSBox Staging shaders use conditional compilation with #if defined(VERTEX) and #elif defined(FRAGMENT)
         // We need to compile the entire source twice - once for vertex, once for fragment
-        string vertexSource = "#define VERTEX\n" + shaderSource;
-        string fragmentSource = "#define FRAGMENT\n" + shaderSource;
+        // Insert #define after #version directive (must be first non-comment line)
+        int versionEnd = shaderSource.IndexOf('\n');
+        if (versionEnd < 0) versionEnd = 0;
+        string versionLine = versionEnd > 0 ? shaderSource.Substring(0, versionEnd + 1) : "";
+        string restOfShader = versionEnd > 0 ? shaderSource.Substring(versionEnd + 1) : shaderSource;
+        
+        string vertexSource = versionLine + "#define VERTEX\n" + restOfShader;
+        string fragmentSource = versionLine + "#define FRAGMENT\n" + restOfShader;
         
         Console.WriteLine($"[WARN] OpenGL: Prepared vertex shader length={vertexSource.Length}, fragment shader length={fragmentSource.Length}");
 
