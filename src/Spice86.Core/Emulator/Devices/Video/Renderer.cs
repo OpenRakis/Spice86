@@ -58,14 +58,12 @@ public class Renderer : IVgaRenderer {
     public int Height {
         get {
             int nativeHeight = CalculateNativeHeight();
-            // Apply aspect ratio correction for VGA modes with non-square pixels.
-            // Low-res modes (320/360 width) need 1.2x vertical stretch to display correctly on square-pixel monitors.
-            // This matches how these modes appeared on 4:3 CRT screens.
+            // Apply aspect ratio correction for VGA Mode 13h (320x200) which uses non-square pixels (5:6 PAR).
+            // Stretch to 320x240 to display correctly on square-pixel monitors (4:3 aspect).
             return Width switch {
-                320 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 320x200 → 320x240 (corrects for 5:6 PAR; 4:3 display)
-                360 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 360x200 → 360x240 (aspect correction for 4:3 CRT display)
-                640 when nativeHeight == VgaHighResNativeHeight => VgaHighResCorrectedHeight,  // 640x400 → 640x480 (4:3)
-                _ => nativeHeight  // No correction for other modes
+                320 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 320x200 → 320x240
+                640 when nativeHeight == VgaHighResNativeHeight => VgaHighResCorrectedHeight,  // 640x400 → 640x480
+                _ => nativeHeight
             };
         }
     }
