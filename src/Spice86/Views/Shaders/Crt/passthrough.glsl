@@ -1,4 +1,4 @@
-#version 120
+#version 300 es
 
 // Simple passthrough shader - renders the texture without any effects
 

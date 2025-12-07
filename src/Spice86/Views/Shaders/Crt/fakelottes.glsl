@@ -1,4 +1,4 @@
-#version 120
+#version 300 es
 
 // Simple scanlines with curvature and mask effects lifted from crt-lottes
 // by hunterk
