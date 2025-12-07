@@ -107,7 +107,9 @@ public class Renderer : IVgaRenderer {
                     int destinationAddressLatch = destinationAddress;
                     
                     // VGA aspect ratio correction: calculate lines to draw
-                    int actualDrawLines = AspectRatioHelper.CalculateLinesToDraw(Width, actualHeight, lineCounter, drawLinesPerScanLine);
+                    // Use actualLineNumber which accounts for scanline within the logical row
+                    int actualLineNumber = lineCounter / (maximumScanline + 1);
+                    int actualDrawLines = AspectRatioHelper.CalculateLinesToDraw(Width, actualHeight, actualLineNumber, drawLinesPerScanLine);
                     
                     for (int doubleScan = 0; doubleScan < actualDrawLines; doubleScan++) {
                         int memoryAddressCounter = rowMemoryAddressCounter;
