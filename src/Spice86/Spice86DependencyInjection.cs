@@ -72,7 +72,7 @@ public class Spice86DependencyInjection : IDisposable {
     /// </summary>
     public IMcpServer McpServer { get; }
 
-    private readonly McpStdioTransport? _mcpStdioTransport;
+    private readonly McpStdioTransport _mcpStdioTransport;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -557,21 +557,18 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Program executor created...");
         }
 
-        McpStdioTransport? mcpStdioTransport = null;
-        McpServer mcpServer = new(memory, state, functionCatalogue, configuration.CfgCpu ? cfgCpu : null, 
-            vgaCard, ioPortDispatcher, vgaRenderer, pauseHandler, loggerService);
+        McpServer mcpServer = new(memory, state, functionCatalogue, cfgCpu, 
+            ioPortDispatcher, vgaRenderer, pauseHandler, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("MCP server created...");
         }
 
-        if (configuration.McpServer) {
-            mcpStdioTransport = new McpStdioTransport(mcpServer, loggerService);
-            mcpStdioTransport.Start();
+        McpStdioTransport mcpStdioTransport = new(mcpServer, loggerService);
+        mcpStdioTransport.Start();
 
-            if (loggerService.IsEnabled(LogEventLevel.Information)) {
-                loggerService.Information("MCP stdio transport started...");
-            }
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("MCP stdio transport started...");
         }
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -721,7 +718,7 @@ public class Spice86DependencyInjection : IDisposable {
             if (disposing) {
                 ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
 
-                _mcpStdioTransport?.Stop();
+                _mcpStdioTransport.Stop();
 
                 ProgramExecutor.Dispose();
 

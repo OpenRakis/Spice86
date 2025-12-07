@@ -19,9 +19,7 @@ public class McpServerTest {
         Spice86Creator creator = new Spice86Creator(TestProgramName, false);
         Spice86DependencyInjection spice86 = creator.Create();
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
-        McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null,
-            spice86.Machine.VgaCard, spice86.Machine.IoPortDispatcher, spice86.Machine.VgaRenderer, 
-            spice86.Machine.PauseHandler, new LoggerService());
+        McpServer server = (McpServer)spice86.McpServer;
         return (spice86, server, functionCatalogue);
     }
 
@@ -46,11 +44,11 @@ public class McpServerTest {
 
     [Fact]
     public void TestToolsList() {
-        (_, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
-        using Spice86DependencyInjection spice86 = CreateMcpServerForTest().spice86;
-        string request = """{"jsonrpc":"2.0","method":"tools/list","id":2}""";
+        (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
+        using (spice86) {
+            string request = """{"jsonrpc":"2.0","method":"tools/list","id":2}""";
 
-        string response = server.HandleRequest(request);
+            string response = server.HandleRequest(request);
 
         JsonNode? responseNode = JsonNode.Parse(response);
         responseNode.Should().NotBeNull();
@@ -74,6 +72,7 @@ public class McpServerTest {
                 toolNames.Should().Contain("pause_emulator");
                 toolNames.Should().Contain("resume_emulator");
             }
+        }
         }
     }
 
@@ -194,49 +193,52 @@ public class McpServerTest {
 
     [Fact]
     public void TestInvalidJson() {
-        (_, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
-        using Spice86DependencyInjection spice86 = CreateMcpServerForTest().spice86;
-        string request = "invalid json";
+        (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
+        using (spice86) {
+            string request = "invalid json";
 
-        string response = server.HandleRequest(request);
+            string response = server.HandleRequest(request);
 
-        JsonNode? responseNode = JsonNode.Parse(response);
-        responseNode.Should().NotBeNull();
-        if (responseNode != null) {
-            responseNode["error"]?["code"]?.GetValue<int>().Should().Be(-32700);
-            responseNode["error"]?["message"]?.GetValue<string>().Should().Contain("Parse error");
+            JsonNode? responseNode = JsonNode.Parse(response);
+            responseNode.Should().NotBeNull();
+            if (responseNode != null) {
+                responseNode["error"]?["code"]?.GetValue<int>().Should().Be(-32700);
+                responseNode["error"]?["message"]?.GetValue<string>().Should().Contain("Parse error");
+            }
         }
     }
 
     [Fact]
     public void TestUnknownMethod() {
-        (_, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
-        using Spice86DependencyInjection spice86 = CreateMcpServerForTest().spice86;
-        string request = """{"jsonrpc":"2.0","method":"unknown_method","id":99}""";
+        (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
+        using (spice86) {
+            string request = """{"jsonrpc":"2.0","method":"unknown_method","id":99}""";
 
-        string response = server.HandleRequest(request);
+            string response = server.HandleRequest(request);
 
-        JsonNode? responseNode = JsonNode.Parse(response);
-        responseNode.Should().NotBeNull();
-        if (responseNode != null) {
-            responseNode["error"]?["code"]?.GetValue<int>().Should().Be(-32601);
-            responseNode["error"]?["message"]?.GetValue<string>().Should().Contain("Method not found");
+            JsonNode? responseNode = JsonNode.Parse(response);
+            responseNode.Should().NotBeNull();
+            if (responseNode != null) {
+                responseNode["error"]?["code"]?.GetValue<int>().Should().Be(-32601);
+                responseNode["error"]?["message"]?.GetValue<string>().Should().Contain("Method not found");
+            }
         }
     }
 
     [Fact]
     public void TestReadMemoryInvalidLength() {
-        (_, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
-        using Spice86DependencyInjection spice86 = CreateMcpServerForTest().spice86;
-        string request = """{"jsonrpc":"2.0","method":"tools/call","params":{"name":"read_memory","arguments":{"address":0,"length":10000}},"id":6}""";
+        (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
+        using (spice86) {
+            string request = """{"jsonrpc":"2.0","method":"tools/call","params":{"name":"read_memory","arguments":{"address":0,"length":10000}},"id":6}""";
 
-        string response = server.HandleRequest(request);
+            string response = server.HandleRequest(request);
 
-        JsonNode? responseNode = JsonNode.Parse(response);
-        responseNode.Should().NotBeNull();
-        if (responseNode != null) {
-            responseNode["error"]?["code"]?.GetValue<int>().Should().Be(-32603);
-            responseNode["error"]?["message"]?.GetValue<string>().Should().Contain("Tool execution error");
+            JsonNode? responseNode = JsonNode.Parse(response);
+            responseNode.Should().NotBeNull();
+            if (responseNode != null) {
+                responseNode["error"]?["code"]?.GetValue<int>().Should().Be(-32603);
+                responseNode["error"]?["message"]?.GetValue<string>().Should().Contain("Tool execution error");
+            }
         }
     }
 }

@@ -24,8 +24,7 @@ public sealed class McpServer : IMcpServer {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly FunctionCatalogue _functionCatalogue;
-    private readonly CfgCpu? _cfgCpu;
-    private readonly VgaCard _vgaCard;
+    private readonly CfgCpu _cfgCpu;
     private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly IVgaRenderer _vgaRenderer;
     private readonly IPauseHandler _pauseHandler;
@@ -33,14 +32,13 @@ public sealed class McpServer : IMcpServer {
     private readonly Tool[] _tools;
     private readonly object _requestLock = new object();
 
-    public McpServer(IMemory memory, State state, FunctionCatalogue functionCatalogue, CfgCpu? cfgCpu,
-        VgaCard vgaCard, IOPortDispatcher ioPortDispatcher, IVgaRenderer vgaRenderer, 
+    public McpServer(IMemory memory, State state, FunctionCatalogue functionCatalogue, CfgCpu cfgCpu,
+        IOPortDispatcher ioPortDispatcher, IVgaRenderer vgaRenderer, 
         IPauseHandler pauseHandler, ILoggerService loggerService) {
         _memory = memory;
         _state = state;
         _functionCatalogue = functionCatalogue;
         _cfgCpu = cfgCpu;
-        _vgaCard = vgaCard;
         _ioPortDispatcher = ioPortDispatcher;
         _vgaRenderer = vgaRenderer;
         _pauseHandler = pauseHandler;
@@ -82,7 +80,7 @@ public sealed class McpServer : IMcpServer {
             },
             new Tool {
                 Name = "screenshot",
-                Description = "Capture screenshot as base64 PNG",
+                Description = "Capture screenshot as base64-encoded BGRA32 raw data",
                 InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
             },
             new Tool {
@@ -97,13 +95,11 @@ public sealed class McpServer : IMcpServer {
             }
         };
 
-        if (_cfgCpu != null) {
-            tools.Add(new Tool {
-                Name = "read_cfg_cpu_graph",
-                Description = "Read CFG CPU statistics",
-                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
-            });
-        }
+        tools.Add(new Tool {
+            Name = "read_cfg_cpu_graph",
+            Description = "Read CFG CPU statistics",
+            InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+        });
 
         return tools.ToArray();
     }

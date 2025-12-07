@@ -53,6 +53,8 @@ public sealed class McpStdioTransport {
             _loggerService.Warning("MCP server thread did not stop within timeout");
         }
 
+        _cancellationTokenSource.Dispose();
+
         _readerThread = null;
     }
 
