@@ -14,14 +14,6 @@ public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
     private readonly VideoMemory _memory;
     private readonly IVideoState _state;
-    private uint[] _tempBuffer = new uint[320 * 200]; // Initialize to common VGA Mode 13h size to avoid first-frame allocation
-
-    // VGA aspect ratio correction constants
-    private const int VgaLowResNativeHeight = 200;
-    private const int VgaLowResCorrectedHeight = 240;
-    private const int VgaHighResNativeHeight = 400;
-    private const int VgaHighResCorrectedHeight = 480;
-    private const int AspectCorrectionLineDuplicationInterval = 5; // Duplicate every 5th line for 1.2x stretch
 
     /// <summary>
     ///     Create a new VGA renderer.
@@ -36,15 +28,6 @@ public class Renderer : IVgaRenderer {
         memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
     }
 
-    /// <summary>
-    /// Calculates the native (pre-aspect-correction) height from VGA registers.
-    /// </summary>
-    /// <returns>The native height in pixels.</returns>
-    private int CalculateNativeHeight() {
-        return (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / 
-               (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
-    }
-
     /// <inheritdoc />
     public int Width => (_state.GeneralRegisters.MiscellaneousOutput.ClockSelect, _state.SequencerRegisters.ClockingModeRegister.HalfDotClock) switch {
         (ClockSelect.Use25175Khz, true) => 320,
@@ -55,18 +38,7 @@ public class Renderer : IVgaRenderer {
     };
 
     /// <inheritdoc />
-    public int Height {
-        get {
-            int nativeHeight = CalculateNativeHeight();
-            // Apply aspect ratio correction for VGA Mode 13h (320x200) which uses non-square pixels (5:6 PAR).
-            // Stretch to 320x240 to display correctly on square-pixel monitors (4:3 aspect).
-            return Width switch {
-                320 when nativeHeight == VgaLowResNativeHeight => VgaLowResCorrectedHeight,  // 320x200 → 320x240
-                640 when nativeHeight == VgaHighResNativeHeight => VgaHighResCorrectedHeight,  // 640x400 → 640x480
-                _ => nativeHeight
-            };
-        }
-    }
+    public int Height => (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
 
     /// <inheritdoc />
     public int BufferSize { get; private set; }
@@ -82,30 +54,9 @@ public class Renderer : IVgaRenderer {
         }
         try {
             BufferSize = frameBuffer.Length;
-            
-            // Calculate native (pre-aspect-correction) dimensions
-            int nativeHeight = CalculateNativeHeight();
-            int width = Width;
-            int outputHeight = Height;
-            bool needsAspectCorrection = outputHeight != nativeHeight;
-            
-            if (width * outputHeight > BufferSize) {
+            if (Width * Height > BufferSize) {
                 // Resolution change hasn't caught up yet. Skip a frame.
                 return;
-            }
-
-            // If aspect correction is needed, render to temp buffer first
-            Span<uint> renderTarget;
-            if (needsAspectCorrection) {
-                int tempBufferSize = width * nativeHeight;
-                // Grow or shrink the buffer as needed. Shrink if buffer is 2x or more the required size
-                // to prevent memory waste when resolution changes from high to low.
-                if (_tempBuffer.Length < tempBufferSize || _tempBuffer.Length >= tempBufferSize * 2) {
-                    _tempBuffer = new uint[tempBufferSize];
-                }
-                renderTarget = new Span<uint>(_tempBuffer, 0, tempBufferSize);
-            } else {
-                renderTarget = frameBuffer;
             }
 
             // Some timing helpers.
@@ -153,15 +104,12 @@ public class Renderer : IVgaRenderer {
                     // We latch the destination address here, so that the double-scan lines are drawn on top of each other.
                     int destinationAddressLatch = destinationAddress;
                     
-                    // VGA aspect ratio correction: duplicate scanline if needed
-                    int nativeHeight = verticalDisplayEnd + 1;
-                    bool duplicateLine = AspectRatioHelper.ShouldDuplicateLine(Width, nativeHeight, lineCounter);
-                    int actualDrawLines = duplicateLine ? drawLinesPerScanLine + 1 : drawLinesPerScanLine;
+                    // VGA aspect ratio correction: calculate lines to draw
+                    int actualDrawLines = AspectRatioHelper.CalculateLinesToDraw(Width, verticalDisplayEnd + 1, lineCounter, drawLinesPerScanLine);
                     
                     for (int doubleScan = 0; doubleScan < actualDrawLines; doubleScan++) {
                         int memoryAddressCounter = rowMemoryAddressCounter;
-                        // Don't reset address for aspect correction duplicate
-                        if (doubleScan < drawLinesPerScanLine) {
+                        if (AspectRatioHelper.ShouldResetDestinationAddress(doubleScan, drawLinesPerScanLine)) {
                             destinationAddress = destinationAddressLatch;
                         }
 
@@ -195,11 +143,11 @@ public class Renderer : IVgaRenderer {
 
                             // Convert the 4 bytes into 8 pixels.
                             if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
-                                Draw256ColorMode(renderTarget, ref destinationAddress, plane0, plane1, plane2, plane3);
+                                Draw256ColorMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
                             } else if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
-                                DrawGraphicsMode(renderTarget, ref destinationAddress, plane0, plane1, plane2, plane3);
+                                DrawGraphicsMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
                             } else {
-                                DrawTextMode(renderTarget, ref destinationAddress, plane0, plane1, scanline);
+                                DrawTextMode(frameBuffer, ref destinationAddress, plane0, plane1, scanline);
                             }
                             // This increases the memory address counter after each character, taking count-by-two and count-by-four into account.
                             memoryAddressCounter += (characterCounter & characterClockMask) == 0 ? 1 : 0;
@@ -233,72 +181,11 @@ public class Renderer : IVgaRenderer {
                 rowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
             } // End of vertical loop
 
-            // Apply aspect ratio correction if needed
-            if (needsAspectCorrection) {
-                ApplyAspectRatioCorrection(frameBuffer, renderTarget, width, nativeHeight, outputHeight);
-            }
-
             LastFrameRenderTime = stopwatch.Elapsed;
         } catch (IndexOutOfRangeException) {
             // Resolution changed during rendering, discard the rest of this frame.
         } finally {
             Monitor.Exit(RenderLock);
-        }
-    }
-
-    /// <summary>
-    /// Applies VGA aspect ratio correction by duplicating scanlines.
-    /// Stretches 200-line modes to 240 lines and 400-line modes to 480 lines.
-    /// </summary>
-    /// <param name="outputBuffer">The destination buffer for corrected output.</param>
-    /// <param name="sourceBuffer">The source buffer containing native resolution rendering.</param>
-    /// <param name="width">The width in pixels.</param>
-    /// <param name="nativeHeight">The native (pre-correction) height in pixels.</param>
-    /// <param name="outputHeight">The corrected (post-correction) height in pixels.</param>
-    private void ApplyAspectRatioCorrection(Span<uint> outputBuffer, Span<uint> sourceBuffer, int width, int nativeHeight, int outputHeight) {
-        
-        // Bounds check: ensure source and destination buffers are large enough
-        int sourceBufferSize = width * nativeHeight;
-        int outputBufferSize = width * outputHeight;
-        if (sourceBuffer.Length < sourceBufferSize) {
-            // Source buffer too small, skip aspect correction
-            return;
-        }
-        if (outputBuffer.Length < outputBufferSize) {
-            // Output buffer too small, skip aspect correction
-            return;
-        }
-        
-        // For 320x200 → 320x240: stretch from 200 lines to 240 lines (1.2x)
-        // Strategy: for every 5 input lines, output 6 lines (duplicate every 5th line)
-        // This gives us exactly 200 * 6/5 = 240 lines
-        
-        int destLine = 0;
-        for (int sourceLine = 0; sourceLine < nativeHeight; sourceLine++) {
-            // Bounds check before copying each line
-            int sourceOffset = sourceLine * width;
-            int destOffset = destLine * width;
-            
-            if (sourceOffset + width > sourceBufferSize || destOffset + width > outputBufferSize) {
-                // Would overflow, stop processing
-                break;
-            }
-            
-            // Copy the source line to output
-            sourceBuffer.Slice(sourceOffset, width).CopyTo(outputBuffer.Slice(destOffset, width));
-            destLine++;
-            
-            // For 200→240 and 400→480 conversions: duplicate every 5th line (at indices 4, 9, 14, 19, ...)
-            // This means: when sourceLine % AspectCorrectionLineDuplicationInterval == 4, duplicate the line
-            if (((nativeHeight == VgaLowResNativeHeight && outputHeight == VgaLowResCorrectedHeight) ||
-                 (nativeHeight == VgaHighResNativeHeight && outputHeight == VgaHighResCorrectedHeight))
-                && sourceLine % AspectCorrectionLineDuplicationInterval == AspectCorrectionLineDuplicationInterval - 1) {
-                destOffset = destLine * width;
-                if (destOffset + width <= outputBufferSize) {
-                    sourceBuffer.Slice(sourceOffset, width).CopyTo(outputBuffer.Slice(destOffset, width));
-                    destLine++;
-                }
-            }
         }
     }
 
