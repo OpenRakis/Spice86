@@ -26,7 +26,7 @@ using System.Runtime.CompilerServices;
 /// <summary>
 ///     Coordinates the paired PIC controllers and handles bus registration.
 /// </summary>
-public sealed class DualPic : IDisposable {
+public sealed class DualPic : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     Identifies which controller to observe or configure.
     /// </summary>
@@ -56,26 +56,22 @@ public sealed class DualPic : IDisposable {
 
     private const byte SpecificEoiBase = (byte)(Ocw2Flags.EndOfInterrupt | Ocw2Flags.Specific);
 
-    private const int HandlerCount = 4;
-    private readonly IOPortHandlerRegistry _ioPortHandlerRegistry;
-    private readonly ILoggerService _logger;
-
+    private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly Intel8259Pic _primaryPic;
     private readonly Intel8259Pic _secondaryPic;
-    private readonly IoReadHandler[] _readHandlers = new IoReadHandler[HandlerCount];
-    private readonly IoWriteHandler[] _writeHandlers = new IoWriteHandler[HandlerCount];
 
     /// <summary>
     ///     Initializes controller state and registers I/O handlers.
     /// </summary>
-    /// <param name="ioPortHandlerRegistry">I/O fabric used to register command and data port handlers.</param>
+    /// <param name="ioPortDispatcher">I/O dispatcher used to register port handlers.</param>
+    /// <param name="state">CPU state.</param>
     /// <param name="loggerService">Logger used for diagnostic messages.</param>
-    public DualPic(IOPortHandlerRegistry ioPortHandlerRegistry, ILoggerService loggerService) {
-        _ioPortHandlerRegistry = ioPortHandlerRegistry;
-        _logger = loggerService;
-
-        _primaryPic = new PrimaryPic(_logger, SetIrqCheck);
-        _secondaryPic = new SecondaryPic(_logger, CascadeRaiseFromSecondary, CascadeLowerFromSecondary);
+    /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
+    public DualPic(IOPortDispatcher ioPortDispatcher, State state, ILoggerService loggerService, bool failOnUnhandledPort)
+        : base(state, failOnUnhandledPort, loggerService) {
+        _ioPortDispatcher = ioPortDispatcher;
+        _primaryPic = new PrimaryPic(loggerService, SetIrqCheck);
+        _secondaryPic = new SecondaryPic(loggerService, CascadeRaiseFromSecondary, CascadeLowerFromSecondary);
 
         InitializeControllers();
         InstallHandlers();
@@ -90,13 +86,10 @@ public sealed class DualPic : IDisposable {
     ///     Releases registered I/O handlers from the shared bus.
     /// </summary>
     public void Dispose() {
-        foreach (IoReadHandler handler in _readHandlers) {
-            handler.Uninstall();
-        }
-
-        foreach (IoWriteHandler handler in _writeHandlers) {
-            handler.Uninstall();
-        }
+        _ioPortDispatcher.RemoveIOPortHandler(PrimaryPicCommandPort);
+        _ioPortDispatcher.RemoveIOPortHandler(PrimaryPicDataPort);
+        _ioPortDispatcher.RemoveIOPortHandler(SecondaryPicCommandPort);
+        _ioPortDispatcher.RemoveIOPortHandler(SecondaryPicDataPort);
     }
 
     /// <summary>
@@ -112,23 +105,36 @@ public sealed class DualPic : IDisposable {
     ///     Installs all I/O handlers required to expose the PIC command and data ports.
     /// </summary>
     private void InstallHandlers() {
-        _readHandlers[0] = new IoReadHandler(_ioPortHandlerRegistry, ReadCommand, _logger);
-        _readHandlers[0].Install(PrimaryPicCommandPort);
-        _readHandlers[1] = new IoReadHandler(_ioPortHandlerRegistry, ReadData, _logger);
-        _readHandlers[1].Install(PrimaryPicDataPort);
-        _readHandlers[2] = new IoReadHandler(_ioPortHandlerRegistry, ReadCommand, _logger);
-        _readHandlers[2].Install(SecondaryPicCommandPort);
-        _readHandlers[3] = new IoReadHandler(_ioPortHandlerRegistry, ReadData, _logger);
-        _readHandlers[3].Install(SecondaryPicDataPort);
+        _ioPortDispatcher.AddIOPortHandler(PrimaryPicCommandPort, this);
+        _ioPortDispatcher.AddIOPortHandler(PrimaryPicDataPort, this);
+        _ioPortDispatcher.AddIOPortHandler(SecondaryPicCommandPort, this);
+        _ioPortDispatcher.AddIOPortHandler(SecondaryPicDataPort, this);
+    }
 
-        _writeHandlers[0] = new IoWriteHandler(_ioPortHandlerRegistry, WriteCommand, _logger);
-        _writeHandlers[0].Install(PrimaryPicCommandPort);
-        _writeHandlers[1] = new IoWriteHandler(_ioPortHandlerRegistry, WriteData, _logger);
-        _writeHandlers[1].Install(PrimaryPicDataPort);
-        _writeHandlers[2] = new IoWriteHandler(_ioPortHandlerRegistry, WriteCommand, _logger);
-        _writeHandlers[2].Install(SecondaryPicCommandPort);
-        _writeHandlers[3] = new IoWriteHandler(_ioPortHandlerRegistry, WriteData, _logger);
-        _writeHandlers[3].Install(SecondaryPicDataPort);
+    /// <inheritdoc />
+    public override byte ReadByte(ushort port) {
+        return port switch {
+            PrimaryPicCommandPort or SecondaryPicCommandPort => (byte)ReadCommand(port),
+            PrimaryPicDataPort or SecondaryPicDataPort => (byte)ReadData(port),
+            _ => base.ReadByte(port)
+        };
+    }
+
+    /// <inheritdoc />
+    public override void WriteByte(ushort port, byte value) {
+        switch (port) {
+            case PrimaryPicCommandPort:
+            case SecondaryPicCommandPort:
+                WriteCommand(port, value);
+                break;
+            case PrimaryPicDataPort:
+            case SecondaryPicDataPort:
+                WriteData(port, value);
+                break;
+            default:
+                base.WriteByte(port, value);
+                break;
+        }
     }
 
     private void CascadeRaiseFromSecondary() {
@@ -153,7 +159,7 @@ public sealed class DualPic : IDisposable {
     ///     Resets controller registers.
     /// </summary>
     public void Reset() {
-        _logger.Debug("PIC: Reset invoked; controllers will be reinitialized");
+        _loggerService.Debug("PIC: Reset invoked; controllers will be reinitialized");
         InitializeControllers();
     }
 
@@ -171,7 +177,7 @@ public sealed class DualPic : IDisposable {
     public void AcknowledgeInterrupt(byte irq) {
         switch (irq) {
             case > MaxIrq:
-                _logger.Error("PIC: Acknowledge requested for out-of-range IRQ {Irq}", irq);
+                _loggerService.Error("PIC: Acknowledge requested for out-of-range IRQ {Irq}", irq);
                 return;
             case < 8:
                 WriteCommand(PrimaryPicCommandPort, (uint)(SpecificEoiBase | irq));
@@ -274,7 +280,7 @@ public sealed class DualPic : IDisposable {
             case SecondaryPicCommandPort:
                 return _secondaryPic;
             default:
-                _logger.Error("PIC: Command port {Port:X} is not recognized; defaulting to primary controller", port);
+                _loggerService.Error("PIC: Command port {Port:X} is not recognized; defaulting to primary controller", port);
                 return _primaryPic;
         }
     }
@@ -287,7 +293,7 @@ public sealed class DualPic : IDisposable {
             case SecondaryPicDataPort:
                 return _secondaryPic;
             default:
-                _logger.Error("PIC: Data port {Port:X} is not recognized; defaulting to primary controller", port);
+                _loggerService.Error("PIC: Data port {Port:X} is not recognized; defaulting to primary controller", port);
                 return _primaryPic;
         }
     }
@@ -322,15 +328,15 @@ public sealed class DualPic : IDisposable {
         }
 
         if ((icw1Flags & Icw1Flags.FourByteInterval) != 0) {
-            _logger.Error("PIC ({Controller}): 4-byte interval not handled", GetPicName(pic));
+            _loggerService.Error("PIC ({Controller}): 4-byte interval not handled", GetPicName(pic));
         }
 
         if ((icw1Flags & Icw1Flags.LevelTriggered) != 0) {
-            _logger.Error("PIC ({Controller}): Level triggered mode not handled", GetPicName(pic));
+            _loggerService.Error("PIC ({Controller}): Level triggered mode not handled", GetPicName(pic));
         }
 
         if ((icw1Flags & Icw1Flags.ProcessorModeMask) != 0) {
-            _logger.Error("PIC ({Controller}): 8080/8085 mode not handled", GetPicName(pic));
+            _loggerService.Error("PIC ({Controller}): 8080/8085 mode not handled", GetPicName(pic));
         }
 
         pic.SetInterruptMaskRegister(0);
@@ -347,7 +353,7 @@ public sealed class DualPic : IDisposable {
         }
 
         if ((ocw3Flags & Ocw3Flags.Poll) != 0) {
-            _logger.Error("PIC ({Controller}): Poll command not handled", GetCommandPicName(port));
+            _loggerService.Error("PIC ({Controller}): Poll command not handled", GetCommandPicName(port));
         }
 
         if ((ocw3Flags & Ocw3Flags.FunctionSelect) != 0) {
@@ -361,8 +367,8 @@ public sealed class DualPic : IDisposable {
         pic.IsSpecialMaskModeEnabled = (ocw3Flags & Ocw3Flags.SpecialMaskEnable) != 0;
         // Check if there are IRQs ready to run, as the priority system has possibly been changed.
         pic.CheckForIrq();
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("PIC {Controller} (port {Port:X}): special mask {Mode}",
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PIC {Controller} (port {Port:X}): special mask {Mode}",
                 GetCommandPicName(port),
                 port,
                 pic.IsSpecialMaskModeEnabled ? "ON" : "OFF");
@@ -384,8 +390,8 @@ public sealed class DualPic : IDisposable {
                 clearedIrq = priorityLevel;
             } else {
                 if (pic.ActiveIrqLine == NoPendingIrq) {
-                    if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                        _logger.Verbose("PIC {Controller}: Ignored nonspecific EOI because no IRQ is active",
+                    if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                        _loggerService.Verbose("PIC {Controller}: Ignored nonspecific EOI because no IRQ is active",
                             GetPicName(pic));
                     }
                     return;
@@ -399,13 +405,13 @@ public sealed class DualPic : IDisposable {
 
             if (shouldRotate) {
                 pic.SetLowestPriorityIrq(clearedIrq);
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("PIC {Controller}: Nonspecific EOI rotated lowest priority to IRQ {Irq}",
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("PIC {Controller}: Nonspecific EOI rotated lowest priority to IRQ {Irq}",
                         GetPicName(pic),
                         clearedIrq);
                 }
-            } else if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                _logger.Verbose("PIC {Controller}: Cleared IRQ {Cleared} via EOI", GetPicName(pic), clearedIrq);
+            } else if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("PIC {Controller}: Cleared IRQ {Cleared} via EOI", GetPicName(pic), clearedIrq);
             }
 
             pic.CheckAfterEoi();
@@ -414,8 +420,8 @@ public sealed class DualPic : IDisposable {
 
         if (isSpecific) {
             if (!shouldRotate) {
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("PIC {Controller}: Specific priority set command without rotate ignored",
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("PIC {Controller}: Specific priority set command without rotate ignored",
                         GetPicName(pic));
                 }
                 return;
@@ -423,8 +429,8 @@ public sealed class DualPic : IDisposable {
 
             pic.SetLowestPriorityIrq(priorityLevel);
             pic.CheckForIrq();
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("PIC {Controller}: Lowest priority explicitly set to IRQ {Irq}",
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("PIC {Controller}: Lowest priority explicitly set to IRQ {Irq}",
                     GetPicName(pic),
                     priorityLevel);
             }
@@ -440,8 +446,8 @@ public sealed class DualPic : IDisposable {
 
         pic.SetLowestPriorityIrq(priorityLevel);
         pic.CheckForIrq();
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("PIC {Controller}: Rotation command applied; lowest priority is IRQ {Irq}",
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("PIC {Controller}: Rotation command applied; lowest priority is IRQ {Irq}",
                 GetPicName(pic),
                 priorityLevel);
         }
@@ -486,15 +492,15 @@ public sealed class DualPic : IDisposable {
                 break;
 
             default:
-                _logger.Warning("PIC: Unexpected ICW value {Value:X}", val);
+                _loggerService.Warning("PIC: Unexpected ICW value {Value:X}", val);
 
                 break;
         }
     }
 
     private void ProcessIcw2Write(ushort port, byte val, Intel8259Pic pic) {
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("PIC {Controller}: Base vector {Vector}", GetDataPicName(port), val);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PIC {Controller}: Base vector {Vector}", GetDataPicName(port), val);
         }
 
         pic.InterruptVectorBase = (byte)(val & 0xf8);
@@ -506,8 +512,8 @@ public sealed class DualPic : IDisposable {
     }
 
     private void ProcessIcw3Write(ushort port, byte val, Intel8259Pic pic) {
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("PIC {Controller}: ICW 3 {Vector}", GetDataPicName(port), val);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PIC {Controller}: ICW 3 {Vector}", GetDataPicName(port), val);
         }
 
         if (pic.CurrentIcwIndex++ >= pic.RemainingInitializationWords) {
@@ -519,16 +525,16 @@ public sealed class DualPic : IDisposable {
         var icw4Flags = (Icw4Flags)val;
         pic.IsAutoEndOfInterruptEnabled = (icw4Flags & Icw4Flags.AutoEoi) != 0;
 
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("PIC {Controller}: ICW 4 {Value}", GetDataPicName(port), val);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PIC {Controller}: ICW 4 {Value}", GetDataPicName(port), val);
         }
 
         if ((icw4Flags & Icw4Flags.Intel8086Mode) == 0) {
-            _logger.Error("PIC {Controller}: ICW4 {Value:X}, 8085 mode not handled", GetDataPicName(port), val);
+            _loggerService.Error("PIC {Controller}: ICW4 {Value:X}, 8085 mode not handled", GetDataPicName(port), val);
         }
 
         if ((icw4Flags & Icw4Flags.SpecialFullyNestedMode) != 0) {
-            _logger.Warning("PIC {Controller}: ICW4 {Value:X}, special fully-nested mode not handled",
+            _loggerService.Warning("PIC {Controller}: ICW4 {Value:X}, special fully-nested mode not handled",
                 GetDataPicName(port), val);
         }
 
@@ -543,7 +549,7 @@ public sealed class DualPic : IDisposable {
     /// <param name="irq">IRQ number in the range 0–15.</param>
     public void ActivateIrq(byte irq) {
         if (irq > MaxIrq) {
-            _logger.Error("PIC: Activation requested for out-of-range IRQ {Irq}", irq);
+            _loggerService.Error("PIC: Activation requested for out-of-range IRQ {Irq}", irq);
             return;
         }
 
@@ -557,7 +563,7 @@ public sealed class DualPic : IDisposable {
     /// <param name="irq">IRQ number in the range 0–15.</param>
     public void DeactivateIrq(byte irq) {
         if (irq > MaxIrq) {
-            _logger.Error("PIC: Deactivation requested for out-of-range IRQ {Irq}", irq);
+            _loggerService.Error("PIC: Deactivation requested for out-of-range IRQ {Irq}", irq);
             return;
         }
 
@@ -578,7 +584,7 @@ public sealed class DualPic : IDisposable {
     private byte? SecondaryStartIrq() {
         byte selectedIrq = _secondaryPic.GetNextPendingIrq();
         if (selectedIrq == NoPendingIrq) {
-            _logger.Error("PIC {Controller}: IRQ 2 is active, but IRQ is not active on the secondary controller.",
+            _loggerService.Error("PIC {Controller}: IRQ 2 is active, but IRQ is not active on the secondary controller.",
                 nameof(PicController.Secondary));
 
             return null;
@@ -602,7 +608,7 @@ public sealed class DualPic : IDisposable {
     /// <param name="masked"><see langword="true" /> to suppress the IRQ; otherwise <see langword="false" />.</param>
     public void SetIrqMask(uint irq, bool masked) {
         if (irq > MaxIrq) {
-            _logger.Error("PIC: Mask update requested for out-of-range IRQ {Irq}", irq);
+            _loggerService.Error("PIC: Mask update requested for out-of-range IRQ {Irq}", irq);
             return;
         }
 
@@ -612,7 +618,7 @@ public sealed class DualPic : IDisposable {
             return;
         }
 
-        _logger.Debug("PIC: IRQ {Irq} mask changed to {Masked}", irq, newMask);
+        _loggerService.Debug("PIC: IRQ {Irq} mask changed to {Masked}", irq, newMask);
         IrqMaskChanged?.Invoke((byte)irq, newMask);
     }
     

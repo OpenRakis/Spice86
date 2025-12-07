@@ -117,12 +117,11 @@ public class DosFileManagerTests {
         IEmulatedClock emulatedClock = new EmulatedClock();
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
-        IOPortHandlerRegistry ioPortHandlerRegistry = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
         
         BiosDataArea biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
 
-        var dualPic = new DualPic(ioPortHandlerRegistry, loggerService);
+        var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
 
         CallbackHandler callbackHandler = new(state, loggerService);
         InterruptVectorTable interruptVectorTable = new(memory);
@@ -140,11 +139,11 @@ public class DosFileManagerTests {
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService);
+        PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService, configuration.FailOnUnhandledPort);
 
         pcSpeaker.AttachPitControl(pitTimer);
 
-        DmaSystem dmaSystem =
+        DmaBus dmaSystem =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);

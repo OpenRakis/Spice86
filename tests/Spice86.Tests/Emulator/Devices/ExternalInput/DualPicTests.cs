@@ -59,19 +59,16 @@ public sealed class DualPicTests : IDisposable {
             State = new State(CpuModel.ZET_86);
             var breakpoints = new AddressReadWriteBreakpoints();
             Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false);
-            IoPortHandlerRegistry = new IOPortHandlerRegistry(Dispatcher, State, Logger, false);
-            DualPic = new DualPic(IoPortHandlerRegistry, Logger);
+            DualPic = new DualPic(Dispatcher, State, Logger, false);
         }
 
         public ILoggerService Logger { get; }
         public State State { get; }
         public IOPortDispatcher Dispatcher { get; }
-        public IOPortHandlerRegistry IoPortHandlerRegistry { get; }
         public DualPic DualPic { get; }
 
         public void Dispose() {
             DualPic.Dispose();
-            IoPortHandlerRegistry.Reset();
         }
     }
 }

@@ -127,10 +127,6 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("IO port dispatcher created...");
         }
 
-        IOPortHandlerRegistry ioPortHandlerRegistry = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
-
-        loggerService.Information("IO system bridge created...");
-
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -169,7 +165,7 @@ public class Spice86DependencyInjection : IDisposable {
         IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null ? new CyclesClock(state, configuration.InstructionsPerSecond.Value) : new EmulatedClock();
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
 
-        var dualPic = new DualPic(ioPortHandlerRegistry, loggerService);
+        var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
 
         if (configuration.InitializeDOS is false) {
             loggerService.Information("Masking all PIC IRQs...");
@@ -260,7 +256,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Timer int8 handler created...");
         }
 
-        DmaSystem dmaSystem =
+        DmaBus dmaSystem =
             new(memory, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
@@ -332,7 +328,7 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher,
             pauseHandler, loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService);
+        PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService, configuration.FailOnUnhandledPort);
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
