@@ -7,18 +7,13 @@ using NSubstitute;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
 
-public sealed class DualPicTests : IDisposable {
+public sealed class DualPicTests {
     private readonly DualPicFixture _fixture = new();
-
-    public void Dispose() {
-        _fixture.Dispose();
-    }
 
     [Fact]
     public void ActivateIrq0DeliversExpectedVector() {
@@ -53,7 +48,7 @@ public sealed class DualPicTests : IDisposable {
         snapshot.InServiceRegister.Should().Be(0);
     }
 
-    private sealed class DualPicFixture : IDisposable {
+    private sealed class DualPicFixture {
         public DualPicFixture() {
             Logger = Substitute.For<ILoggerService>();
             State = new State(CpuModel.ZET_86);
@@ -66,9 +61,5 @@ public sealed class DualPicTests : IDisposable {
         public State State { get; }
         public IOPortDispatcher Dispatcher { get; }
         public DualPic DualPic { get; }
-
-        public void Dispose() {
-            DualPic.Dispose();
-        }
     }
 }

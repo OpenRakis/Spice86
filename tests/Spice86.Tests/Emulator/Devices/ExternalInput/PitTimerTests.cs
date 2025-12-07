@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
@@ -16,12 +15,8 @@ using Spice86.Shared.Interfaces;
 
 using Xunit;
 
-public sealed class PitTimerTests : IDisposable {
+public sealed class PitTimerTests {
     private readonly PitFixture _fixture = new();
-
-    public void Dispose() {
-        _fixture.Dispose();
-    }
 
     [Fact]
     public void Channel0ProgrammingUpdatesSnapshot() {
@@ -54,7 +49,7 @@ public sealed class PitTimerTests : IDisposable {
         _fixture.Speaker.CounterInvocationCount.Should().Be(2);
     }
 
-    private sealed class PitFixture : IDisposable {
+    private sealed class PitFixture {
         public PitFixture() {
             Logger = Substitute.For<ILoggerService>();
             State = new State(CpuModel.ZET_86);
@@ -73,11 +68,6 @@ public sealed class PitTimerTests : IDisposable {
         public DualPic DualPic { get; }
         public StubPitSpeaker Speaker { get; }
         public PitTimer PitTimer { get; }
-
-        public void Dispose() {
-            PitTimer.Dispose();
-            DualPic.Dispose();
-        }
     }
 
     internal sealed class StubPitSpeaker : IPitSpeaker {

@@ -4,7 +4,6 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System.Runtime.CompilerServices;
@@ -26,7 +25,7 @@ using System.Runtime.CompilerServices;
 /// <summary>
 ///     Coordinates the paired PIC controllers and handles bus registration.
 /// </summary>
-public sealed class DualPic : DefaultIOPortHandler, IDisposable {
+public sealed partial class DualPic : DefaultIOPortHandler {
     /// <summary>
     ///     Identifies which controller to observe or configure.
     /// </summary>
@@ -81,16 +80,6 @@ public sealed class DualPic : DefaultIOPortHandler, IDisposable {
     ///     Gets a value indicating whether any pending IRQ requires CPU attention.
     /// </summary>
     public bool IrqCheck { get; private set; }
-
-    /// <summary>
-    ///     Releases registered I/O handlers from the shared bus.
-    /// </summary>
-    public void Dispose() {
-        _ioPortDispatcher.RemoveIOPortHandler(PrimaryPicCommandPort);
-        _ioPortDispatcher.RemoveIOPortHandler(PrimaryPicDataPort);
-        _ioPortDispatcher.RemoveIOPortHandler(SecondaryPicCommandPort);
-        _ioPortDispatcher.RemoveIOPortHandler(SecondaryPicDataPort);
-    }
 
     /// <summary>
     ///     Raised when the mask state of an IRQ changes.
@@ -631,39 +620,5 @@ public sealed class DualPic : DefaultIOPortHandler, IDisposable {
         byte effectiveControllerIrq = GetEffectiveControllerIrq(irq);
         Intel8259Pic pic = GetPicByIrq(irq);
         return (pic.InterruptMaskRegister & (1 << effectiveControllerIrq)) != 0;
-    }
-
-    [Flags]
-    private enum Icw1Flags : byte {
-        RequireIcw4 = 0x01,
-        SingleMode = 0x02,
-        FourByteInterval = 0x04,
-        LevelTriggered = 0x08,
-        Initialization = 0x10,
-        ProcessorModeMask = 0xe0
-    }
-
-    [Flags]
-    private enum Ocw3Flags : byte {
-        ReadIssr = 0x01,
-        FunctionSelect = 0x02,
-        Poll = 0x04,
-        CommandSelect = 0x08,
-        SpecialMaskEnable = 0x20,
-        SpecialMaskSelect = 0x40
-    }
-
-    [Flags]
-    private enum Ocw2Flags : byte {
-        EndOfInterrupt = 0x20,
-        Specific = 0x40,
-        Rotate = 0x80
-    }
-
-    [Flags]
-    private enum Icw4Flags : byte {
-        Intel8086Mode = 0x01,
-        AutoEoi = 0x02,
-        SpecialFullyNestedMode = 0x10
     }
 }

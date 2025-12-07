@@ -15,7 +15,7 @@ using System.Diagnostics;
 ///     Simulates the three-channel programmable interval timer, wiring channel 0 to the PIC scheduler and channel 2 to
 ///     the PC speaker shim while maintaining deterministic behavior.
 /// </summary>
-public sealed class PitTimer : DefaultIOPortHandler, IDisposable, IPitControl, ITimeMultiplier {
+public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplier {
     /// <summary>Underlying clock rate in hertz used by the PIT.</summary>
     public const int PitTickRate = 1193182;
 
@@ -109,18 +109,6 @@ public sealed class PitTimer : DefaultIOPortHandler, IDisposable, IPitControl, I
     private ref PitChannel Channel2 => ref _pitChannels[2];
 
     private double PicFullIndex => _clock.CurrentTimeMs;
-
-    /// <summary>
-    ///     Uninstalls all registered I/O handlers and clears the scheduled channel 0 event.
-    /// </summary>
-    public void Dispose() {
-        _ioPortDispatcher.RemoveIOPortHandler(PitChannel0Port);
-        _ioPortDispatcher.RemoveIOPortHandler(PitChannel1Port);
-        _ioPortDispatcher.RemoveIOPortHandler(PitChannel2Port);
-        _ioPortDispatcher.RemoveIOPortHandler(PitControlPort);
-
-        _scheduler.RemoveEvents(PitChannel0Event);
-    }
 
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
