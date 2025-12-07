@@ -65,10 +65,10 @@ public class OpenGlVideoControl : OpenGlControlBase {
     /// <param name="height">Height of the frame</param>
     public void UpdateFrame(uint[] buffer, int width, int height) {
         lock (_frameBufferLock) {
-            Debug.WriteLine($"[WARN] OpenGL: UpdateFrame called - width={width}, height={height}, buffer.Length={buffer.Length}");
+            Console.WriteLine($"[WARN] OpenGL: UpdateFrame called - width={width}, height={height}, buffer.Length={buffer.Length}");
             
             if (width != _width || height != _height) {
-                Debug.WriteLine($"[WARN] OpenGL: Resolution changed from {_width}x{_height} to {width}x{height}");
+                Console.WriteLine($"[WARN] OpenGL: Resolution changed from {_width}x{_height} to {width}x{height}");
                 _width = width;
                 _height = height;
                 _frameBuffer = new uint[width * height];
@@ -76,10 +76,10 @@ public class OpenGlVideoControl : OpenGlControlBase {
 
             if (_frameBuffer is not null && buffer.Length <= _frameBuffer.Length) {
                 Array.Copy(buffer, _frameBuffer, buffer.Length);
-                Debug.WriteLine($"[WARN] OpenGL: Frame buffer copied, requesting render");
+                Console.WriteLine($"[WARN] OpenGL: Frame buffer copied, requesting render");
                 Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Render);
             } else {
-                Debug.WriteLine($"[WARN] OpenGL: Frame buffer copy skipped - _frameBuffer null or buffer too large");
+                Console.WriteLine($"[WARN] OpenGL: Frame buffer copy skipped - _frameBuffer null or buffer too large");
             }
         }
     }
@@ -90,9 +90,9 @@ public class OpenGlVideoControl : OpenGlControlBase {
     /// <param name="gl">The OpenGL interface</param>
     protected override void OnOpenGlInit(GlInterface gl) {
         base.OnOpenGlInit(gl);
-        Debug.WriteLine("[WARN] OpenGL: OnOpenGlInit called");
+        Console.WriteLine("[WARN] OpenGL: OnOpenGlInit called");
         _glExt = new GlExtensions(gl.GetProcAddress);
-        Debug.WriteLine("[WARN] OpenGL: GlExtensions initialized");
+        Console.WriteLine("[WARN] OpenGL: GlExtensions initialized");
         _initialized = false;
     }
 
@@ -102,34 +102,34 @@ public class OpenGlVideoControl : OpenGlControlBase {
     /// <param name="gl">The OpenGL interface</param>
     /// <param name="fb">The framebuffer to render to</param>
     protected override unsafe void OnOpenGlRender(GlInterface gl, int fb) {
-        Debug.WriteLine($"[WARN] OpenGL: OnOpenGlRender called - _glExt={(_glExt != null)}, _frameBuffer={(_frameBuffer != null)}, _width={_width}, _height={_height}");
+        Console.WriteLine($"[WARN] OpenGL: OnOpenGlRender called - _glExt={(_glExt != null)}, _frameBuffer={(_frameBuffer != null)}, _width={_width}, _height={_height}");
         
         if (_glExt is null) {
-            Debug.WriteLine("[WARN] OpenGL: _glExt was null, initializing now");
+            Console.WriteLine("[WARN] OpenGL: _glExt was null, initializing now");
             _glExt = new GlExtensions(gl.GetProcAddress);
         }
 
         if (_frameBuffer is null || _width == 0 || _height == 0) {
-            Debug.WriteLine($"[WARN] OpenGL: No frame buffer or invalid dimensions, clearing screen");
+            Console.WriteLine($"[WARN] OpenGL: No frame buffer or invalid dimensions, clearing screen");
             gl.ClearColor(0, 0, 0, 1);
             gl.Clear(GL_COLOR_BUFFER_BIT);
             return;
         }
 
         if (!_initialized || _currentShaderType != ShaderType) {
-            Debug.WriteLine($"[WARN] OpenGL: Initializing resources - _initialized={_initialized}, ShaderType={ShaderType}");
+            Console.WriteLine($"[WARN] OpenGL: Initializing resources - _initialized={_initialized}, ShaderType={ShaderType}");
             InitializeResources(gl);
             _currentShaderType = ShaderType;
-            Debug.WriteLine($"[WARN] OpenGL: Resources initialized - _shaderProgram={_shaderProgram}, _texture={_texture}, _vao={_vao}");
+            Console.WriteLine($"[WARN] OpenGL: Resources initialized - _shaderProgram={_shaderProgram}, _texture={_texture}, _vao={_vao}");
         }
 
         gl.Viewport(0, 0, (int)Bounds.Width, (int)Bounds.Height);
-        Debug.WriteLine($"[WARN] OpenGL: Viewport set to {(int)Bounds.Width}x{(int)Bounds.Height}");
+        Console.WriteLine($"[WARN] OpenGL: Viewport set to {(int)Bounds.Width}x{(int)Bounds.Height}");
         gl.ClearColor(0, 0, 0, 1);
         gl.Clear(GL_COLOR_BUFFER_BIT);
 
         if (_shaderProgram == 0 || _texture == 0 || _glExt is null) {
-            Debug.WriteLine($"[WARN] OpenGL: Missing required resources - _shaderProgram={_shaderProgram}, _texture={_texture}, _glExt={(_glExt != null)}");
+            Console.WriteLine($"[WARN] OpenGL: Missing required resources - _shaderProgram={_shaderProgram}, _texture={_texture}, _glExt={(_glExt != null)}");
             return;
         }
 
@@ -137,24 +137,24 @@ public class OpenGlVideoControl : OpenGlControlBase {
         gl.BindTexture(GL_TEXTURE_2D, _texture);
         lock (_frameBufferLock) {
             fixed (void* pdata = _frameBuffer) {
-                Debug.WriteLine($"[WARN] OpenGL: Uploading texture data {_width}x{_height}");
+                Console.WriteLine($"[WARN] OpenGL: Uploading texture data {_width}x{_height}");
                 gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, GL_RGBA, GL_UNSIGNED_BYTE, new IntPtr(pdata));
             }
         }
 
         // Use shader program
         gl.UseProgram(_shaderProgram);
-        Debug.WriteLine($"[WARN] OpenGL: Using shader program {_shaderProgram}");
+        Console.WriteLine($"[WARN] OpenGL: Using shader program {_shaderProgram}");
 
         // Set uniforms
         SetUniforms(gl, _glExt);
 
         // Draw quad
         gl.BindVertexArray(_vao);
-        Debug.WriteLine($"[WARN] OpenGL: Drawing quad with VAO {_vao}");
+        Console.WriteLine($"[WARN] OpenGL: Drawing quad with VAO {_vao}");
         gl.DrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         gl.BindVertexArray(0);
-        Debug.WriteLine("[WARN] OpenGL: Frame rendered");
+        Console.WriteLine("[WARN] OpenGL: Frame rendered");
     }
 
     private void SetUniforms(GlInterface gl, GlExtensions glExt) {
@@ -163,23 +163,23 @@ public class OpenGlVideoControl : OpenGlControlBase {
         int rubyTextureSizeLoc = gl.GetUniformLocationString(_shaderProgram, "rubyTextureSize");
         int rubyOutputSizeLoc = gl.GetUniformLocationString(_shaderProgram, "rubyOutputSize");
 
-        Debug.WriteLine($"[WARN] OpenGL: Uniform locations - rubyTexture={rubyTextureLoc}, rubyInputSize={rubyInputSizeLoc}, rubyTextureSize={rubyTextureSizeLoc}, rubyOutputSize={rubyOutputSizeLoc}");
+        Console.WriteLine($"[WARN] OpenGL: Uniform locations - rubyTexture={rubyTextureLoc}, rubyInputSize={rubyInputSizeLoc}, rubyTextureSize={rubyTextureSizeLoc}, rubyOutputSize={rubyOutputSizeLoc}");
 
         if (rubyTextureLoc >= 0) {
             glExt.Uniform1i(rubyTextureLoc, 0);
-            Debug.WriteLine("[WARN] OpenGL: Set rubyTexture uniform to 0");
+            Console.WriteLine("[WARN] OpenGL: Set rubyTexture uniform to 0");
         }
         if (rubyInputSizeLoc >= 0) {
             glExt.Uniform2f(rubyInputSizeLoc, _width, _height);
-            Debug.WriteLine($"[WARN] OpenGL: Set rubyInputSize uniform to {_width}x{_height}");
+            Console.WriteLine($"[WARN] OpenGL: Set rubyInputSize uniform to {_width}x{_height}");
         }
         if (rubyTextureSizeLoc >= 0) {
             glExt.Uniform2f(rubyTextureSizeLoc, _width, _height);
-            Debug.WriteLine($"[WARN] OpenGL: Set rubyTextureSize uniform to {_width}x{_height}");
+            Console.WriteLine($"[WARN] OpenGL: Set rubyTextureSize uniform to {_width}x{_height}");
         }
         if (rubyOutputSizeLoc >= 0) {
             glExt.Uniform2f(rubyOutputSizeLoc, (float)Bounds.Width, (float)Bounds.Height);
-            Debug.WriteLine($"[WARN] OpenGL: Set rubyOutputSize uniform to {Bounds.Width}x{Bounds.Height}");
+            Console.WriteLine($"[WARN] OpenGL: Set rubyOutputSize uniform to {Bounds.Width}x{Bounds.Height}");
         }
     }
 
@@ -211,11 +211,11 @@ public class OpenGlVideoControl : OpenGlControlBase {
     }
 
     private unsafe void InitializeResources(GlInterface gl) {
-        Debug.WriteLine($"[WARN] OpenGL: InitializeResources starting - ShaderType={ShaderType}");
+        Console.WriteLine($"[WARN] OpenGL: InitializeResources starting - ShaderType={ShaderType}");
         
         // Clean up previous resources
         if (_initialized) {
-            Debug.WriteLine("[WARN] OpenGL: Cleaning up previous resources");
+            Console.WriteLine("[WARN] OpenGL: Cleaning up previous resources");
             if (_vao != 0) {
                 gl.DeleteVertexArray(_vao);
                 _vao = 0;
@@ -243,21 +243,21 @@ public class OpenGlVideoControl : OpenGlControlBase {
         }
 
         // Load and compile shader
-        Debug.WriteLine($"[WARN] OpenGL: Loading shader source for {ShaderType}");
+        Console.WriteLine($"[WARN] OpenGL: Loading shader source for {ShaderType}");
         string shaderSource = LoadShaderSource(ShaderType);
-        Debug.WriteLine($"[WARN] OpenGL: Shader source loaded, length={shaderSource.Length}");
+        Console.WriteLine($"[WARN] OpenGL: Shader source loaded, length={shaderSource.Length}");
         
         if (!CompileShaders(gl, shaderSource)) {
-            Debug.WriteLine("[WARN] OpenGL: Failed to compile shaders, using passthrough");
+            Console.WriteLine("[WARN] OpenGL: Failed to compile shaders, using passthrough");
             // Try fallback to passthrough shader
             if (!CompileShaders(gl, LoadPassthroughShader())) {
-                Debug.WriteLine("[WARN] OpenGL: FATAL - Failed to compile passthrough shader");
+                Console.WriteLine("[WARN] OpenGL: FATAL - Failed to compile passthrough shader");
                 _initialized = false;
                 return;
             }
         }
         
-        Debug.WriteLine($"[WARN] OpenGL: Shaders compiled successfully - program={_shaderProgram}");
+        Console.WriteLine($"[WARN] OpenGL: Shaders compiled successfully - program={_shaderProgram}");
 
         // Create vertex array and buffer for a fullscreen quad
         _vao = gl.GenVertexArray();
@@ -289,61 +289,61 @@ public class OpenGlVideoControl : OpenGlControlBase {
         gl.BindVertexArray(0);
 
         // Create texture for the VGA framebuffer
-        Debug.WriteLine("[WARN] OpenGL: Creating texture");
+        Console.WriteLine("[WARN] OpenGL: Creating texture");
         _texture = gl.GenTexture();
         gl.BindTexture(GL_TEXTURE_2D, _texture);
         gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        Debug.WriteLine($"[WARN] OpenGL: Texture created - id={_texture}");
+        Console.WriteLine($"[WARN] OpenGL: Texture created - id={_texture}");
 
         _initialized = true;
-        Debug.WriteLine($"[WARN] OpenGL: InitializeResources completed successfully - VAO={_vao}, VBO={_vbo}, Texture={_texture}, Program={_shaderProgram}");
+        Console.WriteLine($"[WARN] OpenGL: InitializeResources completed successfully - VAO={_vao}, VBO={_vbo}, Texture={_texture}, Program={_shaderProgram}");
     }
 
     private bool CompileShaders(GlInterface gl, string shaderSource) {
-        Debug.WriteLine($"[WARN] OpenGL: CompileShaders starting - source length={shaderSource.Length}");
+        Console.WriteLine($"[WARN] OpenGL: CompileShaders starting - source length={shaderSource.Length}");
         
         // Separate vertex and fragment shaders from the combined GLSL file
         string vertexSource = ExtractShaderPart(shaderSource, true);
         string fragmentSource = ExtractShaderPart(shaderSource, false);
         
-        Debug.WriteLine($"[WARN] OpenGL: Extracted vertex shader length={vertexSource?.Length ?? 0}, fragment shader length={fragmentSource?.Length ?? 0}");
+        Console.WriteLine($"[WARN] OpenGL: Extracted vertex shader length={vertexSource?.Length ?? 0}, fragment shader length={fragmentSource?.Length ?? 0}");
 
         if (string.IsNullOrEmpty(vertexSource) || string.IsNullOrEmpty(fragmentSource)) {
-            Debug.WriteLine("[WARN] OpenGL: Failed to extract shader parts");
+            Console.WriteLine("[WARN] OpenGL: Failed to extract shader parts");
             return false;
         }
 
         // Compile vertex shader
-        Debug.WriteLine("[WARN] OpenGL: Compiling vertex shader");
+        Console.WriteLine("[WARN] OpenGL: Compiling vertex shader");
         _vertexShader = gl.CreateShader(GL_VERTEX_SHADER);
         string? vertexError = gl.CompileShaderAndGetError(_vertexShader, vertexSource);
         if (!string.IsNullOrEmpty(vertexError)) {
-            Debug.WriteLine($"[WARN] OpenGL: Vertex shader compilation FAILED: {vertexError}");
+            Console.WriteLine($"[WARN] OpenGL: Vertex shader compilation FAILED: {vertexError}");
             gl.DeleteShader(_vertexShader);
             _vertexShader = 0;
             return false;
         }
-        Debug.WriteLine($"[WARN] OpenGL: Vertex shader compiled successfully - id={_vertexShader}");
+        Console.WriteLine($"[WARN] OpenGL: Vertex shader compiled successfully - id={_vertexShader}");
 
         // Compile fragment shader
-        Debug.WriteLine("[WARN] OpenGL: Compiling fragment shader");
+        Console.WriteLine("[WARN] OpenGL: Compiling fragment shader");
         _fragmentShader = gl.CreateShader(GL_FRAGMENT_SHADER);
         string? fragmentError = gl.CompileShaderAndGetError(_fragmentShader, fragmentSource);
         if (!string.IsNullOrEmpty(fragmentError)) {
-            Debug.WriteLine($"[WARN] OpenGL: Fragment shader compilation FAILED: {fragmentError}");
+            Console.WriteLine($"[WARN] OpenGL: Fragment shader compilation FAILED: {fragmentError}");
             gl.DeleteShader(_vertexShader);
             gl.DeleteShader(_fragmentShader);
             _vertexShader = 0;
             _fragmentShader = 0;
             return false;
         }
-        Debug.WriteLine($"[WARN] OpenGL: Fragment shader compiled successfully - id={_fragmentShader}");
+        Console.WriteLine($"[WARN] OpenGL: Fragment shader compiled successfully - id={_fragmentShader}");
 
         // Link program
-        Debug.WriteLine("[WARN] OpenGL: Linking shader program");
+        Console.WriteLine("[WARN] OpenGL: Linking shader program");
         _shaderProgram = gl.CreateProgram();
         gl.AttachShader(_shaderProgram, _vertexShader);
         gl.AttachShader(_shaderProgram, _fragmentShader);
@@ -351,7 +351,7 @@ public class OpenGlVideoControl : OpenGlControlBase {
         
         string? linkError = gl.LinkProgramAndGetError(_shaderProgram);
         if (!string.IsNullOrEmpty(linkError)) {
-            Debug.WriteLine($"[WARN] OpenGL: Program linking FAILED: {linkError}");
+            Console.WriteLine($"[WARN] OpenGL: Program linking FAILED: {linkError}");
             gl.DeleteShader(_vertexShader);
             gl.DeleteShader(_fragmentShader);
             gl.DeleteProgram(_shaderProgram);
@@ -360,7 +360,7 @@ public class OpenGlVideoControl : OpenGlControlBase {
             _shaderProgram = 0;
             return false;
         }
-        Debug.WriteLine($"[WARN] OpenGL: Program linked successfully - id={_shaderProgram}");
+        Console.WriteLine($"[WARN] OpenGL: Program linked successfully - id={_shaderProgram}");
 
         return true;
     }
@@ -396,27 +396,27 @@ public class OpenGlVideoControl : OpenGlControlBase {
         };
 
         string resourcePath = $"avares://Spice86/Views/Shaders/Crt/{resourceName}";
-        Debug.WriteLine($"[WARN] OpenGL: Loading shader from {resourcePath}");
+        Console.WriteLine($"[WARN] OpenGL: Loading shader from {resourcePath}");
         
         try {
             using System.IO.Stream? stream = AssetLoader.Open(new Uri(resourcePath));
             if (stream is null) {
-                Debug.WriteLine($"[WARN] OpenGL: Stream is null for {resourceName}, loading passthrough");
+                Console.WriteLine($"[WARN] OpenGL: Stream is null for {resourceName}, loading passthrough");
                 return LoadPassthroughShader();
             }
 
             using System.IO.StreamReader reader = new(stream);
             string content = reader.ReadToEnd();
-            Debug.WriteLine($"[WARN] OpenGL: Successfully loaded {resourceName} - length={content.Length}");
+            Console.WriteLine($"[WARN] OpenGL: Successfully loaded {resourceName} - length={content.Length}");
             return content;
         } catch (System.IO.IOException ex) {
-            Debug.WriteLine($"[WARN] OpenGL: IOException loading shader {resourceName}: {ex.Message}");
+            Console.WriteLine($"[WARN] OpenGL: IOException loading shader {resourceName}: {ex.Message}");
             return LoadPassthroughShader();
         } catch (UnauthorizedAccessException ex) {
-            Debug.WriteLine($"[WARN] OpenGL: UnauthorizedAccessException loading shader {resourceName}: {ex.Message}");
+            Console.WriteLine($"[WARN] OpenGL: UnauthorizedAccessException loading shader {resourceName}: {ex.Message}");
             return LoadPassthroughShader();
         } catch (ArgumentException ex) {
-            Debug.WriteLine($"[WARN] OpenGL: ArgumentException loading shader {resourceName}: {ex.Message}");
+            Console.WriteLine($"[WARN] OpenGL: ArgumentException loading shader {resourceName}: {ex.Message}");
             return LoadPassthroughShader();
         }
     }
