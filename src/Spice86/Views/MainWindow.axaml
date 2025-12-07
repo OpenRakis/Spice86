@@ -113,13 +113,11 @@
 						ScaleY="{Binding Scale}">
 					</ScaleTransform>
 				</LayoutTransformControl.RenderTransform>
-				<Viewbox>
-					<!-- OpenGL Video Control for CRT shader effects -->
-					<local:OpenGlVideoControl x:Name="OpenGlVideo"
-					    Width="640" Height="480"
-					    Cursor="{Binding Cursor}"
-					    ShaderType="{Binding ShaderType}" />
-				</Viewbox>
+				<!-- OpenGL Video Control for CRT shader effects -->
+				<local:OpenGlVideoControl x:Name="OpenGlVideo"
+				    Width="640" Height="480"
+				    Cursor="{Binding Cursor}"
+				    ShaderType="{Binding ShaderType}" />
 			</LayoutTransformControl>
 		</Viewbox>
 		<controls:StatusBar IsTabStop="False" Focusable="False" VerticalAlignment="Bottom" Grid.Row="2">

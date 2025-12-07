@@ -55,6 +55,10 @@ public class OpenGlVideoControl : OpenGlControlBase {
         AffectsRender<OpenGlVideoControl>(ShaderTypeProperty);
     }
 
+    public OpenGlVideoControl() {
+        Console.WriteLine("[WARN] OpenGL: OpenGlVideoControl constructor called");
+    }
+
     private readonly object _frameBufferLock = new();
 
     /// <summary>
