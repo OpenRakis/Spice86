@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.Devices.Timer;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
@@ -14,7 +15,7 @@ using System.Diagnostics;
 ///     Simulates the three-channel programmable interval timer, wiring channel 0 to the PIC scheduler and channel 2 to
 ///     the PC speaker shim while maintaining deterministic behavior.
 /// </summary>
-public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
+public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplier {
     /// <summary>Underlying clock rate in hertz used by the PIT.</summary>
     public const int PitTickRate = 1193182;
 
@@ -33,8 +34,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     private const int MaxDecCount = 0x10000;
 
     private const byte TimerStatusModeMask = 0x07;
-    private readonly IOPortHandlerRegistry _ioPortHandlerRegistry;
-    private readonly ILoggerService _logger;
+    private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly IPitSpeaker _pcSpeaker;
     private readonly DualPic _pic;
     private readonly EmulationLoopScheduler _scheduler;
@@ -42,9 +42,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
 
     // Three PIT channels are supported. Each uses the same state machine while addressing distinct peripherals.
     private readonly PitChannel[] _pitChannels = new PitChannel[3];
-    private readonly List<IoReadHandler> _readHandlers = [];
     private readonly IWallClock _wallClock;
-    private readonly List<IoWriteHandler> _writeHandlers = [];
 
     private bool _isChannel2GateHigh;
 
@@ -60,17 +58,20 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     /// <summary>
     ///     Initializes a new PIT instance and installs I/O handlers for all timer ports.
     /// </summary>
-    /// <param name="ioPortHandlerRegistry">I/O subsystem used to register read and write handlers.</param>
+    /// <param name="ioPortDispatcher">I/O dispatcher used to register port handlers.</param>
+    /// <param name="state">CPU state.</param>
     /// <param name="pic">Programmable interrupt controller that receives channel 0 callbacks.</param>
     /// <param name="pcSpeaker">Speaker shim that mirrors channel 2 reloads and control words.</param>
-    /// <param name="logger">Optional logger for trace output. A null value installs a no-op logger.</param>
     /// <param name="scheduler">The event scheduler.</param>
     /// <param name="clock">The emulated clock.</param>
-    public PitTimer(IOPortHandlerRegistry ioPortHandlerRegistry, DualPic pic, IPitSpeaker pcSpeaker, EmulationLoopScheduler scheduler, IEmulatedClock clock, ILoggerService logger) {
-        _ioPortHandlerRegistry = ioPortHandlerRegistry;
+    /// <param name="loggerService">Logger for trace output.</param>
+    /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
+    public PitTimer(IOPortDispatcher ioPortDispatcher, State state, DualPic pic, IPitSpeaker pcSpeaker, 
+        EmulationLoopScheduler scheduler, IEmulatedClock clock, ILoggerService loggerService, bool failOnUnhandledPort)
+        : base(state, failOnUnhandledPort, loggerService) {
+        _ioPortDispatcher = ioPortDispatcher;
         _pic = pic;
         _pcSpeaker = pcSpeaker;
-        _logger = logger;
         _scheduler = scheduler;
         _clock = clock;
         _wallClock = new WallClock();
@@ -109,19 +110,28 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
 
     private double PicFullIndex => _clock.CurrentTimeMs;
 
-    /// <summary>
-    ///     Uninstalls all registered I/O handlers and clears the scheduled channel 0 event.
-    /// </summary>
-    public void Dispose() {
-        foreach (IoReadHandler handle in _readHandlers) {
-            handle.Uninstall();
-        }
+    /// <inheritdoc />
+    public override byte ReadByte(ushort port) {
+        return port switch {
+            PitChannel0Port or PitChannel1Port or PitChannel2Port => (byte)ReadLatch(port),
+            _ => base.ReadByte(port)
+        };
+    }
 
-        foreach (IoWriteHandler handle in _writeHandlers) {
-            handle.Uninstall();
+    /// <inheritdoc />
+    public override void WriteByte(ushort port, byte value) {
+        switch (port) {
+            case PitChannel0Port:
+            case PitChannel2Port:
+                WriteLatch(port, value);
+                break;
+            case PitControlPort:
+                HandleControlPortWrite(port, value);
+                break;
+            default:
+                base.WriteByte(port, value);
+                break;
         }
-
-        _scheduler.RemoveEvents(PitChannel0Event);
     }
 
     /// <summary>
@@ -141,8 +151,8 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
         ref PitChannel channel = ref Channel2;
         PitMode mode = channel.Mode;
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Gate 2 input changed from {PreviousState} to {CurrentState} in mode {Mode}",
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Gate 2 input changed from {PreviousState} to {CurrentState} in mode {Mode}",
                 _isChannel2GateHigh, input, PitModeToString(mode));
         }
 
@@ -184,8 +194,8 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
             case PitMode.SoftwareStrobe:
             case PitMode.HardwareStrobe:
             case PitMode.Inactive:
-                if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning("Unsupported gate 2 mode {Mode}", PitModeToString(mode));
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("Unsupported gate 2 mode {Mode}", PitModeToString(mode));
                 }
 
                 break;
@@ -209,12 +219,12 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     /// <remarks>Non-positive inputs reset the multiplier to its neutral value (1.0).</remarks>
     public void SetTimeMultiplier(double value) {
         if (value <= 0) {
-            _logger.Warning("Requested time multiplier {Multiplier} is negative; reverting to 1.0.", value);
+            _loggerService.Warning("Requested time multiplier {Multiplier} is negative; reverting to 1.0.", value);
             _timeMultiplier = 1.0;
             return;
         }
 
-        _logger.Debug("Time multiplier set to {Multiplier}", value);
+        _loggerService.Debug("Time multiplier set to {Multiplier}", value);
 
         _timeMultiplier = value;
     }
@@ -227,26 +237,10 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     }
 
     private void InstallHandlers() {
-        InstallWriteHandler(PitChannel0Port, WriteLatch);
-        // Channel 1 was used for DRAM refresh on real hardware, but it's not emulated and therefore not installed
-        InstallWriteHandler(PitChannel2Port, WriteLatch);
-        InstallWriteHandler(PitControlPort, HandleControlPortWrite);
-
-        InstallReadHandler(PitChannel0Port, ReadLatch);
-        InstallReadHandler(PitChannel1Port, ReadLatch);
-        InstallReadHandler(PitChannel2Port, ReadLatch);
-    }
-
-    private void InstallWriteHandler(ushort port, IoWriteDelegate handler) {
-        var writeHandler = new IoWriteHandler(_ioPortHandlerRegistry, handler, _logger);
-        writeHandler.Install(port);
-        _writeHandlers.Add(writeHandler);
-    }
-
-    private void InstallReadHandler(ushort port, IoReadDelegate handler) {
-        var readHandler = new IoReadHandler(_ioPortHandlerRegistry, handler, _logger);
-        readHandler.Install(port);
-        _readHandlers.Add(readHandler);
+        _ioPortDispatcher.AddIOPortHandler(PitChannel0Port, this);
+        _ioPortDispatcher.AddIOPortHandler(PitChannel1Port, this);
+        _ioPortDispatcher.AddIOPortHandler(PitChannel2Port, this);
+        _ioPortDispatcher.AddIOPortHandler(PitControlPort, this);
     }
 
     private static int GetMaxCount(in PitChannel channel) {
@@ -348,8 +342,8 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
             case PitMode.Inactive:
             default:
                 // Modes 1 and 5 depend on external gating, and mode 7 is unused, so treat them as illegal in this read path.
-                if (_logger.IsEnabled(LogEventLevel.Error)) {
-                    _logger.Error("Illegal Mode {Mode} for reading output", PitModeToString(channel.Mode));
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("Illegal Mode {Mode} for reading output", PitModeToString(channel.Mode));
                 }
 
                 return true;
@@ -488,8 +482,8 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
             case PitMode.HardwareStrobe:
             case PitMode.Inactive:
             default:
-                if (_logger.IsEnabled(LogEventLevel.Error)) {
-                    _logger.Error("Illegal Mode {Mode} for reading counter {Counter}",
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("Illegal Mode {Mode} for reading counter {Counter}",
                         PitModeToString(channel.Mode), count);
                 }
 
@@ -567,14 +561,14 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
                     }
 
                     _scheduler.AddEvent(PitChannel0Event, channel.Delay);
-                } else if (_logger.IsEnabled(LogEventLevel.Information)) {
-                    _logger.Information("PIT 0 Timer set without new control word");
+                } else if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                    _loggerService.Information("PIT 0 Timer set without new control word");
                 }
 
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                     double frequency = 1000.0 / channel.Delay;
                     string pitMode = PitModeToString(channel.Mode);
-                    _logger.Verbose("PIT 0 Timer at {Frequency:F4} Hz {PitMode}", frequency, pitMode);
+                    _loggerService.Verbose("PIT 0 Timer at {Frequency:F4} Hz {PitMode}", frequency, pitMode);
                 }
 
                 break;
@@ -584,7 +578,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
                 break;
 
             default:
-                _logger.Error("PIT: Illegal timer selected for writing: {Channel}", channelNum);
+                _loggerService.Error("PIT: Illegal timer selected for writing: {Channel}", channelNum);
                 break;
         }
 

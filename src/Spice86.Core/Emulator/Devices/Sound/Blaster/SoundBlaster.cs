@@ -107,7 +107,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
     /// <param name="pauseHandler">The handler for the emulation pause state.</param>
     public SoundBlaster(IOPortDispatcher ioPortDispatcher, SoftwareMixer softwareMixer, State state,
-        DmaSystem dmaSystem,
+        DmaBus dmaSystem,
         DualPic dualPic, EmulationLoopScheduler scheduler, IEmulatedClock clock, bool failOnUnhandledPort, ILoggerService loggerService,
         SoundBlasterHardwareConfig soundBlasterHardwareConfig, IPauseHandler pauseHandler) : base(state,
         failOnUnhandledPort, loggerService) {
