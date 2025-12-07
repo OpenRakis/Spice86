@@ -118,6 +118,11 @@ public sealed class McpServer : IMcpServer {
                 Description = "Query EMS (Expanded Memory Manager) state",
                 InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
             });
+            tools.Add(new Tool {
+                Name = "read_ems_memory",
+                Description = "Read EMS (Expanded Memory) from a specific handle and page",
+                InputSchema = ConvertToJsonElement(CreateEmsMemoryReadInputSchema())
+            });
         }
 
         if (_xmsManager != null) {
@@ -125,6 +130,11 @@ public sealed class McpServer : IMcpServer {
                 Name = "query_xms",
                 Description = "Query XMS (Extended Memory Manager) state",
                 InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+            });
+            tools.Add(new Tool {
+                Name = "read_xms_memory",
+                Description = "Read XMS (Extended Memory) from a specific handle",
+                InputSchema = ConvertToJsonElement(CreateXmsMemoryReadInputSchema())
             });
         }
 
@@ -238,6 +248,8 @@ public sealed class McpServer : IMcpServer {
                     "resume_emulator" => ResumeEmulator(),
                     "query_ems" => QueryEms(),
                     "query_xms" => QueryXms(),
+                    "read_ems_memory" => ReadEmsMemory(argumentsElement),
+                    "read_xms_memory" => ReadXmsMemory(argumentsElement),
                     _ => throw new McpMethodNotFoundException(toolName)
                 };
 
@@ -519,6 +531,128 @@ public sealed class McpServer : IMcpServer {
         };
     }
 
+    private EmsMemoryReadResponse ReadEmsMemory(JsonElement? arguments) {
+        if (_emsManager == null) {
+            throw new InvalidOperationException("EMS is not enabled");
+        }
+
+        if (!arguments.HasValue) {
+            throw new McpInvalidParametersException("Missing arguments for read_ems_memory");
+        }
+
+        JsonElement argsValue = arguments.Value;
+
+        if (!argsValue.TryGetProperty("handle", out JsonElement handleElement)) {
+            throw new McpInvalidParametersException("Missing handle parameter");
+        }
+
+        if (!argsValue.TryGetProperty("logicalPage", out JsonElement logicalPageElement)) {
+            throw new McpInvalidParametersException("Missing logicalPage parameter");
+        }
+
+        if (!argsValue.TryGetProperty("offset", out JsonElement offsetElement)) {
+            throw new McpInvalidParametersException("Missing offset parameter");
+        }
+
+        if (!argsValue.TryGetProperty("length", out JsonElement lengthElement)) {
+            throw new McpInvalidParametersException("Missing length parameter");
+        }
+
+        int handle = handleElement.GetInt32();
+        int logicalPage = logicalPageElement.GetInt32();
+        int offset = offsetElement.GetInt32();
+        int length = lengthElement.GetInt32();
+
+        if (length <= 0 || length > 4096) {
+            throw new McpInternalErrorException("Tool execution error: Length must be between 1 and 4096");
+        }
+
+        if (!_emsManager.EmmHandles.TryGetValue(handle, out InterruptHandlers.Dos.Ems.EmmHandle? emmHandle)) {
+            throw new McpInternalErrorException($"Invalid EMS handle: {handle}");
+        }
+
+        if (logicalPage < 0 || logicalPage >= emmHandle.LogicalPages.Count) {
+            throw new McpInternalErrorException($"Invalid logical page: {logicalPage}");
+        }
+
+        InterruptHandlers.Dos.Ems.EmmPage page = emmHandle.LogicalPages[logicalPage];
+
+        if (offset < 0 || offset >= page.Size) {
+            throw new McpInternalErrorException($"Invalid offset: {offset}");
+        }
+
+        if (offset + length > page.Size) {
+            throw new McpInternalErrorException($"Read would exceed page boundary");
+        }
+
+        IList<byte> data = page.GetSlice(offset, length);
+        byte[] dataArray = new byte[data.Count];
+        data.CopyTo(dataArray, 0);
+
+        return new EmsMemoryReadResponse {
+            Handle = handle,
+            LogicalPage = logicalPage,
+            Offset = offset,
+            Length = length,
+            Data = Convert.ToHexString(dataArray)
+        };
+    }
+
+    private XmsMemoryReadResponse ReadXmsMemory(JsonElement? arguments) {
+        if (_xmsManager == null) {
+            throw new InvalidOperationException("XMS is not enabled");
+        }
+
+        if (!arguments.HasValue) {
+            throw new McpInvalidParametersException("Missing arguments for read_xms_memory");
+        }
+
+        JsonElement argsValue = arguments.Value;
+
+        if (!argsValue.TryGetProperty("handle", out JsonElement handleElement)) {
+            throw new McpInvalidParametersException("Missing handle parameter");
+        }
+
+        if (!argsValue.TryGetProperty("offset", out JsonElement offsetElement)) {
+            throw new McpInvalidParametersException("Missing offset parameter");
+        }
+
+        if (!argsValue.TryGetProperty("length", out JsonElement lengthElement)) {
+            throw new McpInvalidParametersException("Missing length parameter");
+        }
+
+        int handle = handleElement.GetInt32();
+        uint offset = offsetElement.GetUInt32();
+        int length = lengthElement.GetInt32();
+
+        if (length <= 0 || length > 4096) {
+            throw new McpInternalErrorException("Tool execution error: Length must be between 1 and 4096");
+        }
+
+        if (!_xmsManager.TryGetBlock(handle, out InterruptHandlers.Dos.Xms.XmsBlock? xmsBlock)) {
+            throw new McpInternalErrorException($"Invalid XMS handle: {handle}");
+        }
+
+        if (offset >= xmsBlock.Value.Length) {
+            throw new McpInternalErrorException($"Invalid offset: {offset}");
+        }
+
+        if (offset + length > xmsBlock.Value.Length) {
+            throw new McpInternalErrorException($"Read would exceed block boundary");
+        }
+
+        IList<byte> data = _xmsManager.XmsRam.GetSlice((int)(xmsBlock.Value.Offset + offset), length);
+        byte[] dataArray = new byte[data.Count];
+        data.CopyTo(dataArray, 0);
+
+        return new XmsMemoryReadResponse {
+            Handle = handle,
+            Offset = offset,
+            Length = length,
+            Data = Convert.ToHexString(dataArray)
+        };
+    }
+
     private static EmptyInputSchema CreateEmptyInputSchema() {
         return new EmptyInputSchema {
             Type = "object",
@@ -584,6 +718,52 @@ public sealed class McpServer : IMcpServer {
                 }
             },
             Required = new string[] { "port", "value" }
+        };
+    }
+
+    private static EmsMemoryReadInputSchema CreateEmsMemoryReadInputSchema() {
+        return new EmsMemoryReadInputSchema {
+            Type = "object",
+            Properties = new EmsMemoryReadInputProperties {
+                Handle = new JsonSchemaProperty {
+                    Type = "integer",
+                    Description = "EMS handle ID"
+                },
+                LogicalPage = new JsonSchemaProperty {
+                    Type = "integer",
+                    Description = "Logical page number within the handle"
+                },
+                Offset = new JsonSchemaProperty {
+                    Type = "integer",
+                    Description = "Offset within the logical page"
+                },
+                Length = new JsonSchemaProperty {
+                    Type = "integer",
+                    Description = "Number of bytes to read (max 4096)"
+                }
+            },
+            Required = new string[] { "handle", "logicalPage", "offset", "length" }
+        };
+    }
+
+    private static XmsMemoryReadInputSchema CreateXmsMemoryReadInputSchema() {
+        return new XmsMemoryReadInputSchema {
+            Type = "object",
+            Properties = new XmsMemoryReadInputProperties {
+                Handle = new JsonSchemaProperty {
+                    Type = "integer",
+                    Description = "XMS handle ID"
+                },
+                Offset = new JsonSchemaProperty {
+                    Type = "integer",
+                    Description = "Offset within the XMS block"
+                },
+                Length = new JsonSchemaProperty {
+                    Type = "integer",
+                    Description = "Number of bytes to read (max 4096)"
+                }
+            },
+            Required = new string[] { "handle", "offset", "length" }
         };
     }
 

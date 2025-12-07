@@ -570,6 +570,10 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("MCP server created...");
         }
 
+        if (mainWindowViewModel != null) {
+            mainWindowViewModel.McpStatusViewModel = new McpStatusViewModel(mcpServer);
+        }
+
         McpStdioTransport mcpStdioTransport = new(mcpServer, loggerService);
         mcpStdioTransport.Start();
 

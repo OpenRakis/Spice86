@@ -196,4 +196,34 @@ public class McpServerTest {
             ValidateErrorResponse(responseNode!, -32603, "Tool execution error");
         }
     }
+
+    [Fact]
+    public void TestReadEmsMemory_NotEnabled() {
+        (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
+        using (spice86) {
+            // Test when EMS is not enabled (the default for CreateMcpServerForTest)
+            string request = """{"jsonrpc":"2.0","method":"tools/call","params":{"name":"read_ems_memory","arguments":{"handle":0,"logicalPage":0,"offset":0,"length":5}},"id":7}""";
+
+            string response = server.HandleRequest(request);
+
+            JsonNode? responseNode = JsonNode.Parse(response);
+            responseNode.Should().NotBeNull();
+            ValidateErrorResponse(responseNode!, -32603, "EMS is not enabled");
+        }
+    }
+
+    [Fact]
+    public void TestReadXmsMemory_NotEnabled() {
+        (Spice86DependencyInjection spice86, McpServer server, FunctionCatalogue _) = CreateMcpServerForTest();
+        using (spice86) {
+            // Test when XMS is not enabled (the default for CreateMcpServerForTest)
+            string request = """{"jsonrpc":"2.0","method":"tools/call","params":{"name":"read_xms_memory","arguments":{"handle":0,"offset":0,"length":5}},"id":8}""";
+
+            string response = server.HandleRequest(request);
+
+            JsonNode? responseNode = JsonNode.Parse(response);
+            responseNode.Should().NotBeNull();
+            ValidateErrorResponse(responseNode!, -32603, "XMS is not enabled");
+        }
+    }
 }
