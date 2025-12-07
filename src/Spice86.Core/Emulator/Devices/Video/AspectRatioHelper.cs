@@ -6,14 +6,15 @@ namespace Spice86.Core.Emulator.Devices.Video;
 public static class AspectRatioHelper {
     /// <summary>
     /// Calculates whether a scanline should be duplicated for aspect ratio correction.
-    /// For 320x200 mode, duplicates every 5th line to achieve 240 output lines (1.2x stretch).
+    /// For modes requiring 5:6 pixel aspect ratio correction (320-width modes with 200-line height),
+    /// duplicates every 5th line to achieve 1.2x vertical stretch (240 output lines).
     /// </summary>
-    /// <param name="width">Display width in pixels.</param>
-    /// <param name="nativeHeight">Native height in pixels.</param>
+    /// <param name="width">Display width in pixels (from current VGA mode).</param>
+    /// <param name="nativeHeight">Native height in pixels (from current VGA mode).</param>
     /// <param name="currentLine">Current scanline being rendered (0-based).</param>
     /// <returns>True if this line should be duplicated.</returns>
     public static bool ShouldDuplicateLine(int width, int nativeHeight, int currentLine) {
-        // VGA Mode 13h: 320x200 with 5:6 PAR needs correction to 320x240
+        // VGA Mode 13h: 320x200 with 5:6 PAR needs correction to 240 lines for 4:3 aspect
         if (width == 320 && nativeHeight == 200) {
             // Duplicate every 5th line (lines 4, 9, 14, ..., 194, 199)
             return currentLine % 5 == 4 && currentLine < nativeHeight;
