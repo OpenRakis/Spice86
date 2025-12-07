@@ -109,7 +109,9 @@ public class Renderer : IVgaRenderer {
                     // VGA aspect ratio correction: calculate lines to draw
                     // Use actualLineNumber which accounts for scanline within the logical row
                     int actualLineNumber = lineCounter / (maximumScanline + 1);
-                    int actualDrawLines = AspectRatioHelper.CalculateLinesToDraw(Width, actualHeight, actualLineNumber, drawLinesPerScanLine);
+                    // VGA Mode 13h (320x200) needs aspect correction for 5:6 pixel aspect ratio
+                    bool needsAspectCorrection = Width == 320 && actualHeight == 200;
+                    int actualDrawLines = AspectRatioHelper.CalculateLinesToDraw(needsAspectCorrection, actualHeight, actualLineNumber, drawLinesPerScanLine);
                     
                     for (int doubleScan = 0; doubleScan < actualDrawLines; doubleScan++) {
                         int memoryAddressCounter = rowMemoryAddressCounter;

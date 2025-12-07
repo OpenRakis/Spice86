@@ -14,14 +14,14 @@ public class AspectRatioHelperTest {
     [Fact]
     public void Mode13h_DuplicatesEvery5thLine() {
         // Arrange: VGA Mode 13h parameters
-        int width = 320;
+        bool needsAspectCorrection = true; // Mode 13h requires aspect correction
         int nativeHeight = 200;
         
         // Act & Assert: Check specific 5th lines should duplicate
-        Assert.True(AspectRatioHelper.ShouldDuplicateLine(width, nativeHeight, 4));
-        Assert.True(AspectRatioHelper.ShouldDuplicateLine(width, nativeHeight, 9));
-        Assert.True(AspectRatioHelper.ShouldDuplicateLine(width, nativeHeight, 14));
-        Assert.True(AspectRatioHelper.ShouldDuplicateLine(width, nativeHeight, 199));
+        Assert.True(AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, nativeHeight, 4));
+        Assert.True(AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, nativeHeight, 9));
+        Assert.True(AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, nativeHeight, 14));
+        Assert.True(AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, nativeHeight, 199));
     }
 
     /// <summary>
@@ -31,26 +31,27 @@ public class AspectRatioHelperTest {
     [Fact]
     public void Mode13h_DoesNotDuplicateOtherLines() {
         // Arrange: VGA Mode 13h parameters
-        int width = 320;
+        bool needsAspectCorrection = true; // Mode 13h requires aspect correction
         int nativeHeight = 200;
         
         // Act & Assert: Non-5th lines should not duplicate
-        Assert.False(AspectRatioHelper.ShouldDuplicateLine(width, nativeHeight, 0));
-        Assert.False(AspectRatioHelper.ShouldDuplicateLine(width, nativeHeight, 1));
-        Assert.False(AspectRatioHelper.ShouldDuplicateLine(width, nativeHeight, 3));
-        Assert.False(AspectRatioHelper.ShouldDuplicateLine(width, nativeHeight, 5));
+        Assert.False(AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, nativeHeight, 0));
+        Assert.False(AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, nativeHeight, 1));
+        Assert.False(AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, nativeHeight, 3));
+        Assert.False(AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, nativeHeight, 5));
     }
 
     /// <summary>
-    /// Verifies that non-320x200 modes do not trigger scanline duplication.
-    /// Aspect ratio correction only applies to VGA Mode 13h (320x200).
+    /// Verifies that modes not requiring aspect correction do not trigger scanline duplication.
+    /// When needsAspectCorrection is false, no lines should be duplicated.
     /// </summary>
     [Fact]
     public void OtherModes_NeverDuplicate() {
-        // Arrange & Act & Assert: Different video modes
-        Assert.False(AspectRatioHelper.ShouldDuplicateLine(640, 480, 4));  // VGA 640x480
-        Assert.False(AspectRatioHelper.ShouldDuplicateLine(640, 200, 4));  // Non-standard mode
-        Assert.False(AspectRatioHelper.ShouldDuplicateLine(320, 240, 4));  // Already corrected
+        // Arrange & Act & Assert: Modes that don't need aspect correction
+        bool needsAspectCorrection = false;
+        Assert.False(AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, 480, 4));  // VGA 640x480
+        Assert.False(AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, 200, 4));  // Other 200-line mode not needing correction
+        Assert.False(AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, 240, 4));  // Already corrected
     }
 
     /// <summary>
@@ -60,13 +61,13 @@ public class AspectRatioHelperTest {
     [Fact]
     public void Mode13h_Produces40Duplicates() {
         // Arrange: VGA Mode 13h parameters
-        int width = 320;
+        bool needsAspectCorrection = true; // Mode 13h requires aspect correction
         int nativeHeight = 200;
         
         // Act: Count duplicates across all scanlines
         int duplicateCount = 0;
         for (int line = 0; line < nativeHeight; line++) {
-            if (AspectRatioHelper.ShouldDuplicateLine(width, nativeHeight, line)) {
+            if (AspectRatioHelper.ShouldDuplicateLine(needsAspectCorrection, nativeHeight, line)) {
                 duplicateCount++;
             }
         }
@@ -82,15 +83,15 @@ public class AspectRatioHelperTest {
     [Fact]
     public void CalculateLinesToDraw_AddsOneForDuplicates() {
         // Arrange
-        int width = 320;
+        bool needsAspectCorrection = true; // Mode 13h requires aspect correction
         int nativeHeight = 200;
         int baseLinesPerScanline = 1;
         
         // Act & Assert: Line 4 should draw 2 times (base 1 + duplicate 1)
-        Assert.Equal(2, AspectRatioHelper.CalculateLinesToDraw(width, nativeHeight, 4, baseLinesPerScanline));
+        Assert.Equal(2, AspectRatioHelper.CalculateLinesToDraw(needsAspectCorrection, nativeHeight, 4, baseLinesPerScanline));
         
         // Act & Assert: Line 0 should draw 1 time (base only)
-        Assert.Equal(1, AspectRatioHelper.CalculateLinesToDraw(width, nativeHeight, 0, baseLinesPerScanline));
+        Assert.Equal(1, AspectRatioHelper.CalculateLinesToDraw(needsAspectCorrection, nativeHeight, 0, baseLinesPerScanline));
     }
 
     /// <summary>
