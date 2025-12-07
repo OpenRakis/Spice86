@@ -629,21 +629,7 @@ public sealed class McpServer : IMcpServer {
             throw new McpInternalErrorException("Tool execution error: Length must be between 1 and 4096");
         }
 
-        bool blockFound = false;
-        InterruptHandlers.Dos.Xms.XmsBlock? xmsBlock = null;
-
-        foreach (InterruptHandlers.Dos.Xms.XmsBlock block in _xmsManager.GetType()
-            .GetField("_xmsBlocksLinkedList", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?
-            .GetValue(_xmsManager) as System.Collections.Generic.LinkedList<InterruptHandlers.Dos.Xms.XmsBlock> ?? 
-            new System.Collections.Generic.LinkedList<InterruptHandlers.Dos.Xms.XmsBlock>()) {
-            if (!block.IsFree && block.Handle == handle) {
-                xmsBlock = block;
-                blockFound = true;
-                break;
-            }
-        }
-
-        if (!blockFound || !xmsBlock.HasValue) {
+        if (!_xmsManager.TryGetBlock(handle, out InterruptHandlers.Dos.Xms.XmsBlock? xmsBlock)) {
             throw new McpInternalErrorException($"Invalid XMS handle: {handle}");
         }
 
