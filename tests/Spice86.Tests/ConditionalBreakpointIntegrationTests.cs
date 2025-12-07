@@ -28,7 +28,6 @@ public class ConditionalBreakpointIntegrationTests {
         // Arrange - Use the full emulator with a real test binary
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             "add", 
-            enableCfgCpu: true,
             maxCycles: 10000).Create();
         
         Machine machine = spice86DependencyInjection.Machine;
@@ -89,7 +88,6 @@ public class ConditionalBreakpointIntegrationTests {
         // Arrange
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             "add",
-            enableCfgCpu: true,
             maxCycles: 10000).Create();
 
         Machine machine = spice86DependencyInjection.Machine;
@@ -136,7 +134,6 @@ public class ConditionalBreakpointIntegrationTests {
         // Arrange
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             "add",
-            enableCfgCpu: true,
             maxCycles: 10000).Create();
 
         Machine machine = spice86DependencyInjection.Machine;
@@ -182,7 +179,6 @@ public class ConditionalBreakpointIntegrationTests {
         // Arrange
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             "add",
-            enableCfgCpu: true,
             maxCycles: 1000).Create();
 
         Machine machine = spice86DependencyInjection.Machine;
@@ -229,7 +225,6 @@ public class ConditionalBreakpointIntegrationTests {
         // Arrange
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             "datatrnf",  // Data transfer test binary - does memory operations
-            enableCfgCpu: true,
             maxCycles: 10000).Create();
 
         Machine machine = spice86DependencyInjection.Machine;
@@ -283,7 +278,6 @@ public class ConditionalBreakpointIntegrationTests {
         // Arrange
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             "add",
-            enableCfgCpu: true,
             maxCycles: 10000).Create();
 
         Machine machine = spice86DependencyInjection.Machine;
@@ -336,7 +330,6 @@ public class ConditionalBreakpointIntegrationTests {
         // Arrange - Use the interrupt test binary
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             "interrupt",
-            enableCfgCpu: true,
             installInterruptVectors: true,
             maxCycles: 10000).Create();
 
@@ -386,7 +379,6 @@ public class ConditionalBreakpointIntegrationTests {
         // Arrange
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             "bitwise",  // Bitwise test binary
-            enableCfgCpu: true,
             maxCycles: 10000).Create();
 
         Machine machine = spice86DependencyInjection.Machine;
@@ -431,7 +423,6 @@ public class ConditionalBreakpointIntegrationTests {
         // Arrange
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             "add",
-            enableCfgCpu: true,
             maxCycles: 10000).Create();
 
         Machine machine = spice86DependencyInjection.Machine;

@@ -14,7 +14,7 @@ public class Spice86Creator {
     private readonly Configuration _configuration;
     private readonly long _maxCycles;
 
-    public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
+    public Spice86Creator(string binName, bool enablePit = false, bool recordData = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
         bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null) {
         IOverrideSupplier? overrideSupplier = null;

@@ -9,18 +9,11 @@ using Spice86.Core.Emulator.VM;
 using Xunit;
 
 public sealed class DualPicIntegrationTests {
-    public static IEnumerable<object[]> CfgCpuConfigurations() {
-        yield return [false];
-        yield return [true];
-    }
-
-    [Theory]
-    [MemberData(nameof(CfgCpuConfigurations))]
-    public void ExternalInterruptProgramRaisesHardwareIrq(bool enableCfgCpu) {
+    [Fact]
+    public void ExternalInterruptProgramRaisesHardwareIrq() {
         using Spice86DependencyInjection spice86 = new Spice86Creator(
             "externalint",
-            enableCfgCpu,
-            true,
+            enablePit: true,
             maxCycles: 0x0FFFFFFF,
             installInterruptVectors: false).Create();
 

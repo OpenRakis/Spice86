@@ -133,8 +133,6 @@ public class DosFileManagerTests {
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             false, loggerService);
 
-        IFunctionHandlerProvider functionHandlerProvider = cfgCpu;
-
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort);
@@ -158,22 +156,22 @@ public class DosFileManagerTests {
 
         InputEventHub inputEventQueue = new();
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
-            functionHandlerProvider, stack, state, a20Gate,
+            cfgCpu, stack, state, a20Gate,
             configuration.InitializeDOS is not false, loggerService);
         Intel8042Controller intel8042Controller = new(
             state, ioPortDispatcher, a20Gate, dualPic, emulationLoopScheduler,
             configuration.FailOnUnhandledPort, loggerService, inputEventQueue);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
-            stack, state, functionHandlerProvider, dualPic, systemBiosInt15Handler,
+            stack, state, cfgCpu, dualPic, systemBiosInt15Handler,
             intel8042Controller, biosKeyboardBuffer, loggerService);
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
-            memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
+            memory, biosDataArea, cfgCpu, stack, state, loggerService,
         biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
         var clock = new Clock(loggerService);
 
-        Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
+        Dos dos = new Dos(configuration, memory, cfgCpu, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
             vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             clock, loggerService);
