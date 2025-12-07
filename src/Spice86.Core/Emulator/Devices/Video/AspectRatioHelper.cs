@@ -38,12 +38,17 @@ public static class AspectRatioHelper {
 
     /// <summary>
     /// Determines whether to reset the destination address for the current draw iteration.
-    /// For aspect ratio correction, the duplicate line should NOT reset the address.
+    /// For double-scan iterations (0, 1), reset to draw on the same line.
+    /// For aspect correction duplicate (iteration 2+), don't reset to draw on new line.
     /// </summary>
     /// <param name="currentIteration">Current draw iteration (0-based).</param>
     /// <param name="baseLinesPerScanline">Base number of lines per scanline.</param>
     /// <returns>True if destination address should be reset.</returns>
     public static bool ShouldResetDestinationAddress(int currentIteration, int baseLinesPerScanline) {
-        return currentIteration < baseLinesPerScanline;
+        // Reset for iterations 1 onwards, but only up to baseLinesPerScanline-1
+        // iteration 0: no reset (first draw)
+        // iteration 1: reset (double-scan - draw on same line as iteration 0)
+        // iteration 2: no reset (aspect correction - draw on NEW line)
+        return currentIteration > 0 && currentIteration < baseLinesPerScanline;
     }
 }
