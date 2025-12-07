@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -146,6 +147,11 @@ public sealed class Machine : IDisposable {
     public SystemClockInt1AHandler SystemClockInt1AHandler { get; }
 
     /// <summary>
+    /// The Real-Time Clock (RTC) and CMOS RAM device.
+    /// </summary>
+    public RealTimeClock RealTimeClock { get; }
+
+    /// <summary>
     /// The Programmable Interval Timer.
     /// </summary>
     public PitTimer Timer { get; }
@@ -250,6 +256,7 @@ public sealed class Machine : IDisposable {
         SystemBiosInt12Handler systemBiosInt12Handler,
         SystemBiosInt15Handler systemBiosInt15Handler,
         SystemClockInt1AHandler systemClockInt1AHandler,
+        RealTimeClock realTimeClock,
         PitTimer timer,
         TimerInt8Handler timerInt8Handler,
         VgaCard vgaCard,
@@ -288,6 +295,7 @@ public sealed class Machine : IDisposable {
         SystemBiosInt12Handler = systemBiosInt12Handler;
         SystemBiosInt15Handler = systemBiosInt15Handler;
         SystemClockInt1AHandler = systemClockInt1AHandler;
+        RealTimeClock = realTimeClock;
         Timer = timer;
         TimerInt8Handler = timerInt8Handler;
         VgaCard = vgaCard;
@@ -317,6 +325,7 @@ public sealed class Machine : IDisposable {
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
                 SoftwareMixer.Dispose();
+                RealTimeClock.Dispose();
             }
             _disposed = true;
         }
