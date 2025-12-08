@@ -11,7 +11,18 @@ using System.Diagnostics;
 /// </summary>
 [DebuggerDisplay("BaseAddress={BaseAddress}, Parent={ParentProgramSegmentPrefix}, EnvSegment={EnvironmentTableSegment}, NextSegment={NextSegment}, StackPointer={StackPointer}, Cmd={DosCommandTail.Command}")]
 public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
+    /// <summary>
+    /// PSP size but also includes the maximum possible length of the DOS command tail.
+    /// </summary>
     public const ushort MaxLength = 0x80 + 128;
+    /// <summary>
+    /// The size of the PSP struct. Important for program loading.
+    /// </summary>
+    public const ushort PspSize = 0x100;
+    /// <summary>
+    /// Specifies the size, in DOS paragraphs, of a Program Segment Prefix (PSP).
+    /// </summary>
+    public const ushort PspSizeInParagraphs = 0x10;
 
     public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
     }

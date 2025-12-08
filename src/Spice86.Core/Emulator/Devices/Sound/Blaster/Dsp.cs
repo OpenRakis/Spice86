@@ -16,7 +16,7 @@ public sealed class Dsp : IDisposable {
     private readonly ADPCM2 _adpcm2;
     private readonly ADPCM3 _adpcm3;
     private readonly ADPCM4 _adpcm4;
-    private readonly DmaSystem _dmaSystem;
+    private readonly DmaBus _dmaSystem;
     private readonly object _pumpLock = new();
     private readonly ILoggerService _logger;
     private readonly int _lowDmaChannelNumber;
@@ -29,7 +29,7 @@ public sealed class Dsp : IDisposable {
     /// <param name="lowDmaChannelNumber">Channel number used for 8-bit transfers.</param>
     /// <param name="highDmaChannelNumber">Optional channel number used for 16-bit transfers.</param>
     /// <param name="loggerService">Service instance used to log DSP activity.</param>
-    public Dsp(DmaSystem dmaSystem, int lowDmaChannelNumber, int? highDmaChannelNumber, ILoggerService loggerService) {
+    public Dsp(DmaBus dmaSystem, int lowDmaChannelNumber, int? highDmaChannelNumber, ILoggerService loggerService) {
         _adpcm2 = new ADPCM2();
         _adpcm3 = new ADPCM3();
         _adpcm4 = new ADPCM4();

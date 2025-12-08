@@ -3,15 +3,12 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
-using Spice86.Core.Emulator.VM.CycleBudget;
-using Spice86.Shared.Diagnostics;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
 
 using System.Diagnostics;
 
@@ -20,7 +17,6 @@ using System.Diagnostics;
 /// triggers hardware timers, and keeps DMA transfers moving forward.
 /// </summary>
 public class EmulationLoop : ICyclesLimiter {
-    private readonly PerformanceMeasurer _performanceMeasurer;
     private readonly ILoggerService _loggerService;
     private readonly IInstructionExecutor _cpu;
     private readonly FunctionHandler _functionHandler;
@@ -29,14 +25,8 @@ public class EmulationLoop : ICyclesLimiter {
     private readonly IPauseHandler _pauseHandler;
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly ICyclesLimiter _cyclesLimiter;
-    private readonly DualPic _dualPic;
-    private readonly ExecutionStateSlice _executionStateSlice;
-    private readonly Stopwatch _sliceStopwatch = new();
-    private long _nextSliceTick;
-    private bool _sliceInitialized;
-    private readonly long _sliceDurationTicks;
-    private readonly ICyclesBudgeter _cyclesBudgeter;
     private readonly InputEventHub _inputEventQueue;
+    private readonly EmulationLoopScheduler.EmulationLoopScheduler _emulationLoopScheduler;
 
     /// <summary>
     /// Gets or sets whether the emulation is paused.
@@ -58,37 +48,25 @@ public class EmulationLoop : ICyclesLimiter {
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
-    /// <param name="performanceMeasure">The shared performance measurer instance, to measure CPU performance.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
-    /// <param name="executionStateSlice">Shared cycle budgeting state consumed by the Device Scheduler or PIT scheduler.</param>
-    /// <param name="dualPic">Programmable interrupt controller driving hardware IRQ delivery.</param>
-    /// <param name="cyclesLimiter">Limits the number of executed instructions per slice</param>
-    /// <param name="cyclesBudgeter">Budgets how many cycles are available per slice</param>
+    /// <param name="emulationLoopScheduler">The event scheduler.</param>
     /// <param name="inputEventQueue">Used to ensure that Mouse/Keyboard events are processed in the emulation thread.</param>
+    /// <param name="cyclesLimiter">Limits the number of executed instructions per slice</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public EmulationLoop(FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
-        ExecutionStateSlice executionStateSlice, DualPic dualPic,
+        EmulationLoopScheduler.EmulationLoopScheduler emulationLoopScheduler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        PerformanceMeasurer performanceMeasure,
-        IPauseHandler pauseHandler, ICyclesLimiter cyclesLimiter,
-        InputEventHub inputEventQueue, ICyclesBudgeter cyclesBudgeter,
-        ILoggerService loggerService) {
+        IPauseHandler pauseHandler, InputEventHub inputEventQueue,
+        ICyclesLimiter cyclesLimiter, ILoggerService loggerService) {
         _loggerService = loggerService;
-        _performanceMeasurer = performanceMeasure;
         _cpu = cpu;
         _functionHandler = functionHandler;
         _cpuState = cpuState;
-        _executionStateSlice = executionStateSlice;
-        _dualPic = dualPic;
+        _emulationLoopScheduler = emulationLoopScheduler;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        _cyclesLimiter = cyclesLimiter;
-        _sliceDurationTicks = Math.Max(1, Stopwatch.Frequency / 1000);
-        _cyclesBudgeter = cyclesBudgeter;
-        _pauseHandler.Paused += OnPauseStateChanged;
-        _pauseHandler.Resumed += OnPauseStateChanged;
-        _sliceStopwatch.Start();
         _inputEventQueue = inputEventQueue;
+        _cyclesLimiter = cyclesLimiter;
     }
 
     /// <summary>
@@ -113,6 +91,7 @@ public class EmulationLoop : ICyclesLimiter {
             _loggerService.Error(e, "Emulation failed with unhandled exception.");
             throw new InvalidVMOperationException(_cpuState, e);
         }
+
         _emulatorBreakpointsManager.OnMachineStop();
         _cpu.SignalEnd();
     }
@@ -142,46 +121,21 @@ public class EmulationLoop : ICyclesLimiter {
     private void RunLoop() {
         _performanceStopwatch.Start();
         _cpu.SignalEntry();
-        ResetSliceTimer();
         while (_cpuState.IsRunning) {
-            bool runImmediately;
             do {
-                runImmediately = RunSlice();
-            } while (runImmediately && _cpuState.IsRunning);
+                if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
+                    _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+                }
+
+                _pauseHandler.WaitIfPaused();
+                _emulationLoopScheduler.ProcessEvents();
+                _cpu.ExecuteNext();
+                _inputEventQueue.ProcessAllPendingInputEvents();
+            } while (_cpuState.IsRunning);
         }
+
         _performanceStopwatch.Stop();
         OutputPerfStats();
-    }
-
-    /// <summary>
-    ///     Executes one scheduling slice of emulation work.
-    /// </summary>
-    /// <returns>True when the next slice should begin immediately, otherwise false.</returns>
-    private bool RunSlice() {
-        InitializeSliceTimer();
-        long sliceStartTicks = _sliceStopwatch.ElapsedTicks;
-        long sliceStartCycles = _cpuState.Cycles;
-        int targetCycles = _cyclesBudgeter.GetNextSliceBudget();
-
-        _executionStateSlice.CyclesAllocatedForSlice = targetCycles;
-        _dualPic.AddTick();
-
-        while (_cpuState.IsRunning) {
-            if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
-                _emulatorBreakpointsManager.CheckExecutionBreakPoints();
-            }
-            _pauseHandler.WaitIfPaused();
-            _dualPic.RunQueue();
-            if(_executionStateSlice.CyclesUntilReevaluation <= 0) {
-                break;
-            }
-            _cpu.ExecuteNext();
-        }
-
-        _performanceMeasurer.UpdateValue(_cpuState.Cycles);
-        UpdateAdaptiveCycleBudget(sliceStartTicks, sliceStartCycles);
-        _inputEventQueue.ProcessAllPendingInputEvents();
-        return HandleSliceTiming();
     }
 
     /// <summary>
@@ -189,13 +143,18 @@ public class EmulationLoop : ICyclesLimiter {
     /// </summary>
     private void OutputPerfStats() {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            long cyclesPerSeconds = _performanceMeasurer.AverageValuePerSecond;
             long elapsedTimeInMilliseconds = _performanceStopwatch.ElapsedMilliseconds;
+            if (elapsedTimeInMilliseconds == 0) {
+                elapsedTimeInMilliseconds = 1;
+            }
+
+            long cyclesPerSeconds = _cpuState.Cycles * 1000 / elapsedTimeInMilliseconds;
             _loggerService.Warning(
                 "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
                 _cpuState.Cycles, elapsedTimeInMilliseconds, cyclesPerSeconds);
         }
     }
+
 
     /// <summary>
     ///     Increases the emulated CPU cycle budget.
@@ -209,72 +168,5 @@ public class EmulationLoop : ICyclesLimiter {
     /// </summary>
     public void DecreaseCycles() {
         _cyclesLimiter.DecreaseCycles();
-    }
-
-    /// <summary>
-    ///     Initializes the slice timer if it has not been started yet.
-    /// </summary>
-    private void InitializeSliceTimer() {
-        if (_sliceInitialized) {
-            return;
-        }
-
-        _nextSliceTick = _sliceStopwatch.ElapsedTicks;
-        _sliceInitialized = true;
-    }
-
-    /// <summary>
-    ///     Handles slice timing, waiting if necessary to respect the configured slice duration.
-    /// </summary>
-    /// <returns>True when another slice should start immediately; otherwise false.</returns>
-    private bool HandleSliceTiming() {
-        if (!_sliceInitialized || !_cpuState.IsRunning) {
-            return false;
-        }
-
-        _nextSliceTick += _sliceDurationTicks;
-        bool waited = HighResolutionWaiter.WaitUntil(_sliceStopwatch, _nextSliceTick);
-        return _cpuState.IsRunning && !waited;
-    }
-
-    /// <summary>
-    ///     Resets the slice timer so the next call will reinitialize timing.
-    /// </summary>
-    private void ResetSliceTimer() {
-        _sliceInitialized = false;
-        _nextSliceTick = _sliceStopwatch.ElapsedTicks;
-    }
-
-    /// <summary>
-    ///     Updates the adaptive cycle budget based on the actual duration of the executed slice.
-    /// </summary>
-    private void UpdateAdaptiveCycleBudget(long sliceStartTicks, long sliceStartCycles) {
-        if (!_cpuState.IsRunning) {
-            return;
-        }
-
-        long elapsedTicks = _sliceStopwatch.ElapsedTicks - sliceStartTicks;
-        if (elapsedTicks <= 0) {
-            return;
-        }
-
-        double elapsedMilliseconds = elapsedTicks * 1000.0 / Stopwatch.Frequency;
-        if (elapsedMilliseconds <= 0) {
-            return;
-        }
-
-        long cyclesExecuted = _cpuState.Cycles - sliceStartCycles;
-        if (cyclesExecuted <= 0) {
-            return;
-        }
-
-        _cyclesBudgeter.UpdateBudget(elapsedMilliseconds, cyclesExecuted, _cpuState.IsRunning);
-    }
-
-    /// <summary>
-    ///     Responds to pause state changes by resetting the slice timer.
-    /// </summary>
-    private void OnPauseStateChanged() {
-        ResetSliceTimer();
     }
 }

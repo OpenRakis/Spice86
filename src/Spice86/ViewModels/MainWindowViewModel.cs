@@ -49,8 +49,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
-    [ObservableProperty]
-    private bool _showCyclesLimitingUI;
+    [ObservableProperty] private bool _showCyclesLimitingUI;
 
     [RelayCommand]
     private void IncreaseTargetCycles() {
@@ -64,8 +63,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
     }
 
-    [ObservableProperty]
-    private Configuration _configuration;
+    [ObservableProperty] private Configuration _configuration;
 
     private bool _disposed;
     private bool _renderingTimerInitialized;
@@ -106,15 +104,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         TimeMultiplier = Configuration.TimeMultiplier;
         _targetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
         ShowCyclesLimitingUI = _cyclesLimiter.TargetCpuCyclesPerMs is not 0;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0),
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1),
             DispatcherPriority.Background,
             (_, _) => RefreshMainTitleWithInstructionsPerMs());
     }
 
     private void RefreshMainTitleWithInstructionsPerMs() {
-        if (IsPaused) {
-            return;
-        }
         SetMainTitle(_performanceViewModel.InstructionsPerMillisecond);
     }
 
@@ -148,7 +143,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
 
         // Use PhysicalKey from Avalonia which represents the physical keyboard location
-        KeyUp?.Invoke(this, new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: false));
+        KeyUp?.Invoke(this,
+            new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: false));
     }
     private bool _showCursor;
 
@@ -176,8 +172,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
-    [ObservableProperty]
-    private Cursor? _cursor = Cursor.Default;
+    [ObservableProperty] private Cursor? _cursor = Cursor.Default;
 
     [ObservableProperty]
     private CrtShaderType _shaderType = CrtShaderType.FakeLottes;
@@ -226,17 +221,15 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
 
         // Use PhysicalKey from Avalonia which represents the physical keyboard location
-        KeyDown?.Invoke(this, new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: true));
+        KeyDown?.Invoke(this,
+            new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: true));
     }
 
-    [ObservableProperty]
-    private string _statusMessage = "Emulator: not started.";
+    [ObservableProperty] private string _statusMessage = "Emulator: not started.";
 
-    [ObservableProperty]
-    private string _asmOverrideStatus = "ASM Overrides: not used.";
+    [ObservableProperty] private string _asmOverrideStatus = "ASM Overrides: not used.";
 
-    [ObservableProperty]
-    private string _emulatorMouseCursorInfo = "?";
+    [ObservableProperty] private string _emulatorMouseCursorInfo = "?";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
@@ -287,6 +280,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 Width = width;
                 Height = height;
             }
+
             _isSettingResolution = false;
             UpdateShownEmulatorMouseCursorPosition();
             InitializeRenderingTimer();
@@ -315,8 +309,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}";
     }
 
-    [ObservableProperty]
-    private string? _mainTitle;
+    [ObservableProperty] private string? _mainTitle;
 
     private double? _timeMultiplier = 1;
 
@@ -345,6 +338,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         if (_renderingTimerInitialized) {
             return;
         }
+
         _renderingTimerInitialized = true;
         _drawTimer.Elapsed += (_, _) => DrawScreen();
         _drawTimer.Start();
@@ -388,10 +382,11 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             string.IsNullOrWhiteSpace(Configuration.CDrive)) {
             return;
         }
+
         StatusMessage = "Emulator starting...";
         AsmOverrideStatus = Configuration switch {
-            {UseCodeOverrideOption: true, OverrideSupplier: not null} => "ASM code overrides: enabled.",
-            {UseCodeOverride: false, OverrideSupplier: not null} =>
+            { UseCodeOverrideOption: true, OverrideSupplier: not null } => "ASM code overrides: enabled.",
+            { UseCodeOverride: false, OverrideSupplier: not null } =>
                 "ASM code overrides: only functions names will be referenced.",
             _ => "ASM code overrides: none."
         };
@@ -407,7 +402,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     internal event Action? Disposing;
-    
+
     private void Dispose(bool disposing) {
         if (!_disposed) {
             _disposed = true;
@@ -438,13 +433,18 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
-    private void OnResumed() => _uiDispatcher.Post(() => IsPaused = false, DispatcherPriority.Background);
+    private void OnResumed() => _uiDispatcher.Post(() => {
+        IsPaused = false;
+        RefreshMainTitleWithInstructionsPerMs();
+    }, DispatcherPriority.Background);
 
-    private void OnPaused() => _uiDispatcher.Post(() => IsPaused = true, DispatcherPriority.Background);
+    private void OnPaused() => _uiDispatcher.Post(() => {
+        IsPaused = true;
+        RefreshMainTitleWithInstructionsPerMs();
+    }, DispatcherPriority.Background);
 
-    [ObservableProperty]
-    private string _currentLogLevel = "";
-    
+    [ObservableProperty] private string _currentLogLevel = "";
+
     private void SetLogLevel(string logLevel) {
         if (logLevel == "Silent") {
             CurrentLogLevel = logLevel;
@@ -482,11 +482,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Emulation exited. Closing main window...");
             }
+
             _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
         } catch (Exception e) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "An error occurred during execution");
             }
+
             OnEmulatorErrorOccured(e);
         } finally {
             _uiDispatcher.Post(() => IsEmulatorRunning = false);
