@@ -8,7 +8,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     Coordinates the primary and secondary DMA controllers and exposes ISA-compatible DMA behavior.
 /// </summary>
-public sealed class DmaSystem : DefaultIOPortHandler {
+public sealed class DmaBus : DefaultIOPortHandler {
     private static readonly Dictionary<ushort, byte> PageRegisterToChannel = new() {
         { 0x87, 0 }, // channel 0
         { 0x83, 1 }, // channel 1
@@ -37,7 +37,7 @@ public sealed class DmaSystem : DefaultIOPortHandler {
     ///     Set to 0xFFFFFFFF to emulate EMM386 behavior that ignores segment boundaries.
     ///     See <see href="https://www.os2museum.com/wp/8237a-dma-page-fun/" /> for context.
     /// </param>
-    public DmaSystem(
+    public DmaBus(
         IMemory memory,
         State state,
         IOPortDispatcher ioPortDispatcher,

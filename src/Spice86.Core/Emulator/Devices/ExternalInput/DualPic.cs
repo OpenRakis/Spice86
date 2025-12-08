@@ -2,8 +2,8 @@ namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System.Runtime.CompilerServices;
@@ -23,24 +23,9 @@ using System.Runtime.CompilerServices;
 // primary has no control over the secondary.
 
 /// <summary>
-///     Represents the callback signature invoked when a queued PIC event fires.
+///     Coordinates the paired PIC controllers and handles bus registration.
 /// </summary>
-/// <param name="value">Controller-supplied value associated with the event.</param>
-public delegate void EmulatedTimeEventHandler(uint value);
-
-/// <summary>
-///     Represents the callback signature invoked once per simulated millisecond tick.
-/// </summary>
-public delegate void TimerTickHandler();
-
-/// <summary>
-///     Coordinates the paired PIC controllers, handles bus registration, and advances deterministic tick scheduling.
-/// </summary>
-/// <remarks>
-///     Installs port handlers on construction, mirrors interrupt register state, and integrates with the shared CPU
-///     scheduler without wall-clock dependencies.
-/// </remarks>
-public sealed class DualPic : IDisposable {
+public sealed partial class DualPic : DefaultIOPortHandler {
     /// <summary>
     ///     Identifies which controller to observe or configure.
     /// </summary>
@@ -70,38 +55,24 @@ public sealed class DualPic : IDisposable {
 
     private const byte SpecificEoiBase = (byte)(Ocw2Flags.EndOfInterrupt | Ocw2Flags.Specific);
 
-    private const int HandlerCount = 4;
-    private readonly ExecutionStateSlice _executionStateSlice;
-    private readonly DeviceScheduler _eventQueue;
-    private readonly IOPortHandlerRegistry _ioPortHandlerRegistry;
-    private readonly ILoggerService _logger;
-
+    private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly Intel8259Pic _primaryPic;
     private readonly Intel8259Pic _secondaryPic;
-    private readonly IoReadHandler[] _readHandlers = new IoReadHandler[HandlerCount];
-    private readonly IoWriteHandler[] _writeHandlers = new IoWriteHandler[HandlerCount];
-
-    // Thread-safe copy of the fractional tick index used by asynchronous consumers.
-    private double _cachedFractionalTickIndex;
-    private TickHandlerNode? _firstTicker;
 
     /// <summary>
-    ///     Initializes controller state, registers I/O handlers, and configures deterministic scheduling.
+    ///     Initializes controller state and registers I/O handlers.
     /// </summary>
-    /// <param name="ioPortHandlerRegistry">I/O fabric used to register command and data port handlers.</param>
-    /// <param name="cpuState">Shared CPU timing state consumed by both controllers.</param>
+    /// <param name="ioPortDispatcher">I/O dispatcher used to register port handlers.</param>
+    /// <param name="state">CPU state.</param>
     /// <param name="loggerService">Logger used for diagnostic messages.</param>
-    public DualPic(IOPortHandlerRegistry ioPortHandlerRegistry, ExecutionStateSlice cpuState, ILoggerService loggerService) {
-        _ioPortHandlerRegistry = ioPortHandlerRegistry;
-        _executionStateSlice = cpuState;
-        _logger = loggerService;
-
-        _primaryPic = new PrimaryPic(_logger, _executionStateSlice, SetIrqCheck);
-        _secondaryPic = new SecondaryPic(_logger, CascadeRaiseFromSecondary, CascadeLowerFromSecondary);
-        _eventQueue = new DeviceScheduler(_executionStateSlice, _logger);
+    /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
+    public DualPic(IOPortDispatcher ioPortDispatcher, State state, ILoggerService loggerService, bool failOnUnhandledPort)
+        : base(state, failOnUnhandledPort, loggerService) {
+        _ioPortDispatcher = ioPortDispatcher;
+        _primaryPic = new PrimaryPic(loggerService, SetIrqCheck);
+        _secondaryPic = new SecondaryPic(loggerService, CascadeRaiseFromSecondary, CascadeLowerFromSecondary);
 
         InitializeControllers();
-        InitializeQueue();
         InstallHandlers();
     }
 
@@ -109,24 +80,6 @@ public sealed class DualPic : IDisposable {
     ///     Gets a value indicating whether any pending IRQ requires CPU attention.
     /// </summary>
     public bool IrqCheck { get; private set; }
-
-    /// <summary>
-    ///     Gets the elapsed tick count maintained by the PIC scheduler.
-    /// </summary>
-    public uint Ticks { get; private set; }
-
-    /// <summary>
-    ///     Releases registered I/O handlers from the shared bus.
-    /// </summary>
-    public void Dispose() {
-        foreach (IoReadHandler handler in _readHandlers) {
-            handler.Uninstall();
-        }
-
-        foreach (IoWriteHandler handler in _writeHandlers) {
-            handler.Uninstall();
-        }
-    }
 
     /// <summary>
     ///     Raised when the mask state of an IRQ changes.
@@ -141,23 +94,36 @@ public sealed class DualPic : IDisposable {
     ///     Installs all I/O handlers required to expose the PIC command and data ports.
     /// </summary>
     private void InstallHandlers() {
-        _readHandlers[0] = new IoReadHandler(_ioPortHandlerRegistry, ReadCommand, _logger);
-        _readHandlers[0].Install(PrimaryPicCommandPort);
-        _readHandlers[1] = new IoReadHandler(_ioPortHandlerRegistry, ReadData, _logger);
-        _readHandlers[1].Install(PrimaryPicDataPort);
-        _readHandlers[2] = new IoReadHandler(_ioPortHandlerRegistry, ReadCommand, _logger);
-        _readHandlers[2].Install(SecondaryPicCommandPort);
-        _readHandlers[3] = new IoReadHandler(_ioPortHandlerRegistry, ReadData, _logger);
-        _readHandlers[3].Install(SecondaryPicDataPort);
+        _ioPortDispatcher.AddIOPortHandler(PrimaryPicCommandPort, this);
+        _ioPortDispatcher.AddIOPortHandler(PrimaryPicDataPort, this);
+        _ioPortDispatcher.AddIOPortHandler(SecondaryPicCommandPort, this);
+        _ioPortDispatcher.AddIOPortHandler(SecondaryPicDataPort, this);
+    }
 
-        _writeHandlers[0] = new IoWriteHandler(_ioPortHandlerRegistry, WriteCommand, _logger);
-        _writeHandlers[0].Install(PrimaryPicCommandPort);
-        _writeHandlers[1] = new IoWriteHandler(_ioPortHandlerRegistry, WriteData, _logger);
-        _writeHandlers[1].Install(PrimaryPicDataPort);
-        _writeHandlers[2] = new IoWriteHandler(_ioPortHandlerRegistry, WriteCommand, _logger);
-        _writeHandlers[2].Install(SecondaryPicCommandPort);
-        _writeHandlers[3] = new IoWriteHandler(_ioPortHandlerRegistry, WriteData, _logger);
-        _writeHandlers[3].Install(SecondaryPicDataPort);
+    /// <inheritdoc />
+    public override byte ReadByte(ushort port) {
+        return port switch {
+            PrimaryPicCommandPort or SecondaryPicCommandPort => (byte)ReadCommand(port),
+            PrimaryPicDataPort or SecondaryPicDataPort => (byte)ReadData(port),
+            _ => base.ReadByte(port)
+        };
+    }
+
+    /// <inheritdoc />
+    public override void WriteByte(ushort port, byte value) {
+        switch (port) {
+            case PrimaryPicCommandPort:
+            case SecondaryPicCommandPort:
+                WriteCommand(port, value);
+                break;
+            case PrimaryPicDataPort:
+            case SecondaryPicDataPort:
+                WriteData(port, value);
+                break;
+            default:
+                base.WriteByte(port, value);
+                break;
+        }
     }
 
     private void CascadeRaiseFromSecondary() {
@@ -179,13 +145,11 @@ public sealed class DualPic : IDisposable {
     }
 
     /// <summary>
-    ///     Resets controller registers and reinitializes the event queue.
+    ///     Resets controller registers.
     /// </summary>
     public void Reset() {
-        _logger.Debug("PIC: Reset invoked; controllers and event queue will be reinitialized");
-
+        _loggerService.Debug("PIC: Reset invoked; controllers will be reinitialized");
         InitializeControllers();
-        InitializeQueue();
     }
 
     /// <summary>
@@ -202,7 +166,7 @@ public sealed class DualPic : IDisposable {
     public void AcknowledgeInterrupt(byte irq) {
         switch (irq) {
             case > MaxIrq:
-                _logger.Error("PIC: Acknowledge requested for out-of-range IRQ {Irq}", irq);
+                _loggerService.Error("PIC: Acknowledge requested for out-of-range IRQ {Irq}", irq);
                 return;
             case < 8:
                 WriteCommand(PrimaryPicCommandPort, (uint)(SpecificEoiBase | irq));
@@ -217,18 +181,31 @@ public sealed class DualPic : IDisposable {
     }
 
     /// <summary>
-    ///     Computes the next interrupt vector if one is pending, mirroring the legacy API.
+    ///     Computes the next interrupt vector if one is pending.
     /// </summary>
     /// <returns>The vector number, or <see langword="null" /> if none is pending.</returns>
     public byte? ComputeVectorNumber() {
-        RunIrqs();
-        byte? last = _executionStateSlice.LastHardwareInterrupt;
-        if (last == null) {
+        if (!IrqCheck) {
             return null;
         }
 
-        _executionStateSlice.ClearLastHardwareInterrupt();
-        return last.Value;
+        byte nextIrq = _primaryPic.GetNextPendingIrq();
+        byte? vectorNumber = null;
+        switch (nextIrq) {
+            case NoPendingIrq:
+                IrqCheck = false;
+                return null;
+            case 2:
+                vectorNumber = SecondaryStartIrq();
+                break;
+            default:
+                vectorNumber = PrimaryStartIrq(nextIrq);
+                break;
+        }
+
+        // Disable check variable.
+        IrqCheck = false;
+        return vectorNumber;
     }
 
     /// <summary>
@@ -236,7 +213,6 @@ public sealed class DualPic : IDisposable {
     /// </summary>
     private void InitializeControllers() {
         IrqCheck = false;
-        Ticks = 0;
 
         _primaryPic.Initialize();
         _secondaryPic.Initialize();
@@ -249,16 +225,7 @@ public sealed class DualPic : IDisposable {
         SetIrqMask(9, false); // AT-era systems expose IRQ 9 in addition to the cascade line.
         DeactivateIrq(9); // Clear any stale latch on IRQ 9 to mirror the bootstrap sequence.
     }
-
-    /// <summary>
-    ///     Clears the event queue state and associated bookkeeping.
-    /// </summary>
-    private void InitializeQueue() {
-        _eventQueue.Initialize();
-        _firstTicker = null;
-        _cachedFractionalTickIndex = 0.0;
-    }
-
+    
     /// <summary>
     ///     Captures a snapshot of controller-facing registers for inspection.
     /// </summary>
@@ -302,7 +269,7 @@ public sealed class DualPic : IDisposable {
             case SecondaryPicCommandPort:
                 return _secondaryPic;
             default:
-                _logger.Error("PIC: Command port {Port:X} is not recognized; defaulting to primary controller", port);
+                _loggerService.Error("PIC: Command port {Port:X} is not recognized; defaulting to primary controller", port);
                 return _primaryPic;
         }
     }
@@ -315,7 +282,7 @@ public sealed class DualPic : IDisposable {
             case SecondaryPicDataPort:
                 return _secondaryPic;
             default:
-                _logger.Error("PIC: Data port {Port:X} is not recognized; defaulting to primary controller", port);
+                _loggerService.Error("PIC: Data port {Port:X} is not recognized; defaulting to primary controller", port);
                 return _primaryPic;
         }
     }
@@ -329,7 +296,7 @@ public sealed class DualPic : IDisposable {
     ///     Handles command port writes, decoding ICW/OCW sequences and maintaining controller state.
     /// </summary>
     private void WriteCommand(ushort port, uint value) {
-        byte rawValue = NumericConverters.CheckCast<byte, uint>(value);
+        byte rawValue = (byte)value;
         Intel8259Pic pic = GetCommandPicByPort(port);
 
         if (ProcessInitializationCommand(rawValue, pic)) {
@@ -350,15 +317,15 @@ public sealed class DualPic : IDisposable {
         }
 
         if ((icw1Flags & Icw1Flags.FourByteInterval) != 0) {
-            _logger.Error("PIC ({Controller}): 4-byte interval not handled", GetPicName(pic));
+            _loggerService.Error("PIC ({Controller}): 4-byte interval not handled", GetPicName(pic));
         }
 
         if ((icw1Flags & Icw1Flags.LevelTriggered) != 0) {
-            _logger.Error("PIC ({Controller}): Level triggered mode not handled", GetPicName(pic));
+            _loggerService.Error("PIC ({Controller}): Level triggered mode not handled", GetPicName(pic));
         }
 
         if ((icw1Flags & Icw1Flags.ProcessorModeMask) != 0) {
-            _logger.Error("PIC ({Controller}): 8080/8085 mode not handled", GetPicName(pic));
+            _loggerService.Error("PIC ({Controller}): 8080/8085 mode not handled", GetPicName(pic));
         }
 
         pic.SetInterruptMaskRegister(0);
@@ -375,7 +342,7 @@ public sealed class DualPic : IDisposable {
         }
 
         if ((ocw3Flags & Ocw3Flags.Poll) != 0) {
-            _logger.Error("PIC ({Controller}): Poll command not handled", GetCommandPicName(port));
+            _loggerService.Error("PIC ({Controller}): Poll command not handled", GetCommandPicName(port));
         }
 
         if ((ocw3Flags & Ocw3Flags.FunctionSelect) != 0) {
@@ -389,8 +356,8 @@ public sealed class DualPic : IDisposable {
         pic.IsSpecialMaskModeEnabled = (ocw3Flags & Ocw3Flags.SpecialMaskEnable) != 0;
         // Check if there are IRQs ready to run, as the priority system has possibly been changed.
         pic.CheckForIrq();
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("PIC {Controller} (port {Port:X}): special mask {Mode}",
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PIC {Controller} (port {Port:X}): special mask {Mode}",
                 GetCommandPicName(port),
                 port,
                 pic.IsSpecialMaskModeEnabled ? "ON" : "OFF");
@@ -412,8 +379,8 @@ public sealed class DualPic : IDisposable {
                 clearedIrq = priorityLevel;
             } else {
                 if (pic.ActiveIrqLine == NoPendingIrq) {
-                    if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                        _logger.Verbose("PIC {Controller}: Ignored nonspecific EOI because no IRQ is active",
+                    if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                        _loggerService.Verbose("PIC {Controller}: Ignored nonspecific EOI because no IRQ is active",
                             GetPicName(pic));
                     }
                     return;
@@ -427,13 +394,13 @@ public sealed class DualPic : IDisposable {
 
             if (shouldRotate) {
                 pic.SetLowestPriorityIrq(clearedIrq);
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("PIC {Controller}: Nonspecific EOI rotated lowest priority to IRQ {Irq}",
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("PIC {Controller}: Nonspecific EOI rotated lowest priority to IRQ {Irq}",
                         GetPicName(pic),
                         clearedIrq);
                 }
-            } else if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                _logger.Verbose("PIC {Controller}: Cleared IRQ {Cleared} via EOI", GetPicName(pic), clearedIrq);
+            } else if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("PIC {Controller}: Cleared IRQ {Cleared} via EOI", GetPicName(pic), clearedIrq);
             }
 
             pic.CheckAfterEoi();
@@ -442,8 +409,8 @@ public sealed class DualPic : IDisposable {
 
         if (isSpecific) {
             if (!shouldRotate) {
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("PIC {Controller}: Specific priority set command without rotate ignored",
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("PIC {Controller}: Specific priority set command without rotate ignored",
                         GetPicName(pic));
                 }
                 return;
@@ -451,8 +418,8 @@ public sealed class DualPic : IDisposable {
 
             pic.SetLowestPriorityIrq(priorityLevel);
             pic.CheckForIrq();
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("PIC {Controller}: Lowest priority explicitly set to IRQ {Irq}",
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("PIC {Controller}: Lowest priority explicitly set to IRQ {Irq}",
                     GetPicName(pic),
                     priorityLevel);
             }
@@ -468,8 +435,8 @@ public sealed class DualPic : IDisposable {
 
         pic.SetLowestPriorityIrq(priorityLevel);
         pic.CheckForIrq();
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("PIC {Controller}: Rotation command applied; lowest priority is IRQ {Irq}",
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("PIC {Controller}: Rotation command applied; lowest priority is IRQ {Irq}",
                 GetPicName(pic),
                 priorityLevel);
         }
@@ -494,7 +461,7 @@ public sealed class DualPic : IDisposable {
     ///     Handles data port writes, updating OCW1 or the remaining ICW fields.
     /// </summary>
     private void WriteData(ushort port, uint value) {
-        byte val = NumericConverters.CheckCast<byte, uint>(value);
+        byte val = (byte)value;
         Intel8259Pic pic = GetDataPicByPort(port);
         switch (pic.CurrentIcwIndex) {
             case 0:
@@ -514,15 +481,15 @@ public sealed class DualPic : IDisposable {
                 break;
 
             default:
-                _logger.Warning("PIC: Unexpected ICW value {Value:X}", val);
+                _loggerService.Warning("PIC: Unexpected ICW value {Value:X}", val);
 
                 break;
         }
     }
 
     private void ProcessIcw2Write(ushort port, byte val, Intel8259Pic pic) {
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("PIC {Controller}: Base vector {Vector}", GetDataPicName(port), val);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PIC {Controller}: Base vector {Vector}", GetDataPicName(port), val);
         }
 
         pic.InterruptVectorBase = (byte)(val & 0xf8);
@@ -534,8 +501,8 @@ public sealed class DualPic : IDisposable {
     }
 
     private void ProcessIcw3Write(ushort port, byte val, Intel8259Pic pic) {
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("PIC {Controller}: ICW 3 {Vector}", GetDataPicName(port), val);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PIC {Controller}: ICW 3 {Vector}", GetDataPicName(port), val);
         }
 
         if (pic.CurrentIcwIndex++ >= pic.RemainingInitializationWords) {
@@ -547,16 +514,16 @@ public sealed class DualPic : IDisposable {
         var icw4Flags = (Icw4Flags)val;
         pic.IsAutoEndOfInterruptEnabled = (icw4Flags & Icw4Flags.AutoEoi) != 0;
 
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("PIC {Controller}: ICW 4 {Value}", GetDataPicName(port), val);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PIC {Controller}: ICW 4 {Value}", GetDataPicName(port), val);
         }
 
         if ((icw4Flags & Icw4Flags.Intel8086Mode) == 0) {
-            _logger.Error("PIC {Controller}: ICW4 {Value:X}, 8085 mode not handled", GetDataPicName(port), val);
+            _loggerService.Error("PIC {Controller}: ICW4 {Value:X}, 8085 mode not handled", GetDataPicName(port), val);
         }
 
         if ((icw4Flags & Icw4Flags.SpecialFullyNestedMode) != 0) {
-            _logger.Warning("PIC {Controller}: ICW4 {Value:X}, special fully-nested mode not handled",
+            _loggerService.Warning("PIC {Controller}: ICW4 {Value:X}, special fully-nested mode not handled",
                 GetDataPicName(port), val);
         }
 
@@ -571,31 +538,12 @@ public sealed class DualPic : IDisposable {
     /// <param name="irq">IRQ number in the range 0–15.</param>
     public void ActivateIrq(byte irq) {
         if (irq > MaxIrq) {
-            _logger.Error("PIC: Activation requested for out-of-range IRQ {Irq}", irq);
+            _loggerService.Error("PIC: Activation requested for out-of-range IRQ {Irq}", irq);
             return;
         }
 
         byte controllerIrq = GetEffectiveControllerIrq(irq);
-
-        int oldCycles = _executionStateSlice.CyclesUntilReevaluation;
         GetPicByIrq(irq).RaiseIrq(controllerIrq);
-
-        if (oldCycles == _executionStateSlice.CyclesUntilReevaluation) {
-            return;
-        }
-
-        // if CyclesUntilReevaluation have changed, this means that the interrupt was triggered by an I/O
-        // register writing rather than an event.
-        // Real hardware executes 0 to ~13 NOPs or comparable instructions
-        // before the processor picks up the interrupt. Let's try with 2
-        // cycles here.
-        // Required by Panic demo (irq0), It came from the desert (MPU401)
-        // Does it matter if _executionStateSlice.CyclesLeft becomes negative?
-        // It might be an idea to do this always to simulate this
-        // So on writing mask and EOI as well. (so inside the activate function)
-        //		CyclesLeft += (CyclesUntilReevaluation-2);
-        _executionStateSlice.CyclesLeft -= 2;
-        _executionStateSlice.CyclesUntilReevaluation = 2;
     }
 
     /// <summary>
@@ -604,7 +552,7 @@ public sealed class DualPic : IDisposable {
     /// <param name="irq">IRQ number in the range 0–15.</param>
     public void DeactivateIrq(byte irq) {
         if (irq > MaxIrq) {
-            _logger.Error("PIC: Deactivation requested for out-of-range IRQ {Irq}", irq);
+            _loggerService.Error("PIC: Deactivation requested for out-of-range IRQ {Irq}", irq);
             return;
         }
 
@@ -622,53 +570,24 @@ public sealed class DualPic : IDisposable {
     }
 
     // Select the first pending IRQ on the secondary controller and cascade it through IRQ 2.
-    private void SecondaryStartIrq() {
+    private byte? SecondaryStartIrq() {
         byte selectedIrq = _secondaryPic.GetNextPendingIrq();
         if (selectedIrq == NoPendingIrq) {
-            _logger.Error("PIC {Controller}: IRQ 2 is active, but IRQ is not active on the secondary controller.",
+            _loggerService.Error("PIC {Controller}: IRQ 2 is active, but IRQ is not active on the secondary controller.",
                 nameof(PicController.Secondary));
 
-            return;
+            return null;
         }
 
         _secondaryPic.StartIrq(selectedIrq);
         _primaryPic.StartIrq(2);
-        _executionStateSlice.SetLastHardwareInterrupt((byte)(_secondaryPic.InterruptVectorBase + selectedIrq));
+        return (byte)(_secondaryPic.InterruptVectorBase + selectedIrq);
     }
 
     // Starts servicing the specified primary IRQ and notifies the CPU.
-    private void PrimaryStartIrq(byte index) {
+    private byte PrimaryStartIrq(byte index) {
         _primaryPic.StartIrq(index);
-        _executionStateSlice.SetLastHardwareInterrupt((byte)(_primaryPic.InterruptVectorBase + index));
-    }
-
-    /// <summary>
-    ///     Resolves pending IRQs when the CPU interrupt flag permits delivery.
-    /// </summary>
-    /// <remarks>
-    ///     Skips dispatch when interrupts are disabled, no IRQs are latched, or the decoder is executing the trap-run
-    ///     sentinel used to drain outstanding cycles.
-    /// </remarks>
-    private void RunIrqs() {
-        if (!_executionStateSlice.InterruptFlag || _executionStateSlice.InterruptShadowing || !IrqCheck) {
-            return;
-        }
-
-        byte nextIrq = _primaryPic.GetNextPendingIrq();
-        switch (nextIrq) {
-            case NoPendingIrq:
-                IrqCheck = false;
-                return;
-            case 2:
-                SecondaryStartIrq();
-                break;
-            default:
-                PrimaryStartIrq(nextIrq);
-                break;
-        }
-
-        // Disable check variable.
-        IrqCheck = false;
+        return (byte)(_primaryPic.InterruptVectorBase + index);
     }
 
     /// <summary>
@@ -678,7 +597,7 @@ public sealed class DualPic : IDisposable {
     /// <param name="masked"><see langword="true" /> to suppress the IRQ; otherwise <see langword="false" />.</param>
     public void SetIrqMask(uint irq, bool masked) {
         if (irq > MaxIrq) {
-            _logger.Error("PIC: Mask update requested for out-of-range IRQ {Irq}", irq);
+            _loggerService.Error("PIC: Mask update requested for out-of-range IRQ {Irq}", irq);
             return;
         }
 
@@ -688,166 +607,10 @@ public sealed class DualPic : IDisposable {
             return;
         }
 
-        _logger.Debug("PIC: IRQ {Irq} mask changed to {Masked}", irq, newMask);
+        _loggerService.Debug("PIC: IRQ {Irq} mask changed to {Masked}", irq, newMask);
         IrqMaskChanged?.Invoke((byte)irq, newMask);
     }
-
-    /// <summary>
-    ///     Queues a PIC event with a fractional tick delay.
-    /// </summary>
-    /// <param name="handler">Callback to invoke.</param>
-    /// <param name="delay">Delay in tick units relative to the current index.</param>
-    /// <param name="val">Value forwarded to the callback.</param>
-    public void AddEvent(EmulatedTimeEventHandler handler, double delay, uint val = 0) {
-        _logger.Verbose("PIC: Scheduling event {Handler} with delay {Delay} and payload {Value}", handler.Method.Name,
-            delay, val);
-        _eventQueue.AddEvent(handler, delay, val);
-    }
-
-    /// <summary>
-    ///     Removes queued events matching both handler and value.
-    /// </summary>
-    /// <param name="handler">Handler to match.</param>
-    /// <param name="val">Value to match.</param>
-    public void RemoveSpecificEvents(EmulatedTimeEventHandler handler, uint val) {
-        _logger.Verbose("PIC: Removing specific events for {Handler} with payload {Value}", handler.Method.Name, val);
-        _eventQueue.RemoveSpecificEvents(handler, val);
-    }
-
-    /// <summary>
-    ///     Removes all queued events matching the provided handler.
-    /// </summary>
-    /// <param name="handler">Handler to remove.</param>
-    public void RemoveEvents(EmulatedTimeEventHandler handler) {
-        _logger.Verbose("PIC: Removing all events for {Handler}", handler.Method.Name);
-        _eventQueue.RemoveEvents(handler);
-    }
-
-    /// <summary>
-    ///     Advances queued events, synchronizes the atomic index, and services resulting IRQs.
-    /// </summary>
-    /// <returns>
-    ///     <see langword="true" /> when the queue processed or retained events; otherwise <see langword="false" />.
-    /// </returns>
-    /// <remarks>
-    ///     Invokes <see cref="UpdateCachedFractionalTickIndex" /> before processing so asynchronous consumers observe the latest
-    ///     fractional tick.
-    /// </remarks>
-    public bool RunQueue() {
-        UpdateCachedFractionalTickIndex();
-        bool queueResult = _eventQueue.RunQueue();
-        if (queueResult) {
-            RunIrqs();
-        }
-
-        return queueResult;
-    }
-
-    /// <summary>
-    ///     Removes a previously registered per-tick handler.
-    /// </summary>
-    /// <param name="handler">Handler to remove from the list.</param>
-    /// <remarks>
-    ///     No action is taken if the handler is not present.
-    /// </remarks>
-    public void RemoveTickHandler(TimerTickHandler handler) {
-        TickHandlerNode? previous = null;
-        TickHandlerNode? current = _firstTicker;
-
-        while (current != null) {
-            if (current.Handler == handler) {
-                if (previous == null) {
-                    _firstTicker = current.Next;
-                } else {
-                    previous.Next = current.Next;
-                }
-
-                return;
-            }
-
-            previous = current;
-            current = current.Next;
-        }
-    }
-
-    /// <summary>
-    ///     Registers a handler to run once per simulated tick.
-    /// </summary>
-    /// <param name="handler">Handler to invoke each tick.</param>
-    /// <remarks>
-    ///     Handlers execute in last-in-first-out order because new registrations are added to the front of the list.
-    /// </remarks>
-    public void AddTickHandler(TimerTickHandler handler) {
-        var newTicker = new TickHandlerNode {
-            Handler = handler,
-            Next = _firstTicker
-        };
-        _firstTicker = newTicker;
-    }
-
-    /// <summary>
-    ///     Advances the tick counter, executes scheduled events, and invokes tick handlers.
-    /// </summary>
-    /// <remarks>
-    ///     Resets the CPU slice counters to their maximum values before evaluating queued events for the new tick.
-    /// </remarks>
-    public void AddTick() {
-        // Set up new number of cycles for the device scheduler.
-        _executionStateSlice.CyclesLeft = _executionStateSlice.CyclesAllocatedForSlice;
-        _executionStateSlice.CyclesUntilReevaluation = 0;
-        Ticks++;
-
-        // Decrement each scheduled entry by one tick (the queue stores offsets in 1.0 tick units).
-        _eventQueue.DecrementIndicesForTick();
-
-        // Call our list of ticker handlers.
-        TickHandlerNode? ticker = _firstTicker;
-        while (ticker != null) {
-            TickHandlerNode? nextTicker = ticker.Next;
-            ticker.Handler?.Invoke();
-            ticker = nextTicker;
-        }
-    }
-
-    /// <summary>
-    ///     Computes the fractional tick index using the current CPU cycle progress.
-    /// </summary>
-    /// <returns>Tick count with a sub-tick fractional component.</returns>
-    /// <remarks>
-    ///     Adds the integral tick counter to the fraction returned by <see cref="ExecutionStateSlice.NormalizedSliceProgress" />.
-    /// </remarks>
-    public double GetFractionalTickIndex() {
-        return Ticks + _executionStateSlice.NormalizedSliceProgress;
-    }
-
-    /// <summary>
-    ///     Stores a thread-safe copy of the fractional tick index.
-    /// </summary>
-    /// <remarks>Further calls to <see cref="GetCachedFractionalTickIndex" /> return the value captured here.</remarks>
-    public void UpdateCachedFractionalTickIndex() {
-        _cachedFractionalTickIndex = GetFractionalTickIndex();
-    }
-
-    /// <summary>
-    ///     Gets the last stored thread-safe fractional tick index.
-    /// </summary>
-    /// <returns>Previously stored fractional tick value.</returns>
-    /// <remarks>
-    ///     The returned value is only refreshed by <see cref="UpdateCachedFractionalTickIndex" />.
-    /// </remarks>
-    public double GetCachedFractionalTickIndex() {
-        return _cachedFractionalTickIndex;
-    }
-
-    /// <summary>
-    ///     Converts a fractional tick amount into an integral cycle count using the CPU scheduler.
-    /// </summary>
-    /// <param name="amount">Fraction of the current tick window.</param>
-    /// <returns>Integral cycle count.</returns>
-    public int MakeCycles(double amount) {
-        return _executionStateSlice.ConvertNormalizedToCycles(amount);
-    }
-
+    
     /// <summary>
     ///     Indicates whether the specified IRQ is currently masked on its controller.
     /// </summary>
@@ -857,54 +620,5 @@ public sealed class DualPic : IDisposable {
         byte effectiveControllerIrq = GetEffectiveControllerIrq(irq);
         Intel8259Pic pic = GetPicByIrq(irq);
         return (pic.InterruptMaskRegister & (1 << effectiveControllerIrq)) != 0;
-    }
-
-    [Flags]
-    private enum Icw1Flags : byte {
-        RequireIcw4 = 0x01,
-        SingleMode = 0x02,
-        FourByteInterval = 0x04,
-        LevelTriggered = 0x08,
-        Initialization = 0x10,
-        ProcessorModeMask = 0xe0
-    }
-
-    [Flags]
-    private enum Ocw3Flags : byte {
-        ReadIssr = 0x01,
-        FunctionSelect = 0x02,
-        Poll = 0x04,
-        CommandSelect = 0x08,
-        SpecialMaskEnable = 0x20,
-        SpecialMaskSelect = 0x40
-    }
-
-    [Flags]
-    private enum Ocw2Flags : byte {
-        EndOfInterrupt = 0x20,
-        Specific = 0x40,
-        Rotate = 0x80
-    }
-
-    [Flags]
-    private enum Icw4Flags : byte {
-        Intel8086Mode = 0x01,
-        AutoEoi = 0x02,
-        SpecialFullyNestedMode = 0x10
-    }
-
-    /// <summary>
-    /// Represents a node in a singly linked list of timer tick handlers.
-    /// </summary>
-    private sealed class TickHandlerNode {
-        /// <summary>
-        ///     The timer tick handler delegate to invoke for this node.
-        /// </summary>
-        public TimerTickHandler? Handler;
-
-        /// <summary>
-        ///     Reference to the next node in the linked list of tick handlers.
-        /// </summary>
-        public TickHandlerNode? Next;
     }
 }

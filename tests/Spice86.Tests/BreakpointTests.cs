@@ -175,7 +175,7 @@ public class BreakpointTests {
         Assert.Equal(1, triggers);
     }
 
-    // Note: This test verifies timer interrupt generation with the new PIT/PIC event system.
+    // Note: This test verifies timer interrupt generation with the new PIT/EmulationLoopScheduler event system.
     // The test expects approximately 356 timer interrupts. Due to the transition from an instruction-based
     // timer model (where the counter decremented once per CPU instruction) to a time-based event model
     // (where events are scheduled with sub-millisecond precision), there may be small timing differences.
