@@ -60,7 +60,15 @@ public class Renderer : IVgaRenderer {
     };
 
     /// <inheritdoc />
-    public int Height => (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
+    public int Height {
+        get {
+            int nativeHeight = (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
+            if (_currentMode.HasValue && _currentMode.Value.NeedsAspectCorrection) {
+                return nativeHeight * 6 / 5;
+            }
+            return nativeHeight;
+        }
+    }
 
     /// <inheritdoc />
     public int BufferSize { get; private set; }
@@ -128,14 +136,8 @@ public class Renderer : IVgaRenderer {
                     // We latch the destination address here, so that the double-scan lines are drawn on top of each other.
                     int destinationAddressLatch = destinationAddress;
                     
-                    // VGA aspect ratio correction: calculate lines to draw
-                    // Use actualLineNumber which accounts for scanline within the logical row
                     int actualLineNumber = lineCounter / (maximumScanline + 1);
-                    // Check if current mode needs aspect correction (VGA Mode 13h: 320x200)
-                    // Mode information comes from VgaFunctionality which tracks INT 10h mode switches
-                    bool needsAspectCorrection = _currentMode.HasValue && 
-                                                   _currentMode.Value.Width == 320 && 
-                                                   _currentMode.Value.Height == 200;
+                    bool needsAspectCorrection = _currentMode.HasValue && _currentMode.Value.NeedsAspectCorrection;
                     int actualDrawLines = AspectRatioHelper.CalculateLinesToDraw(needsAspectCorrection, actualHeight, actualLineNumber, drawLinesPerScanLine);
                     
                     for (int doubleScan = 0; doubleScan < actualDrawLines; doubleScan++) {

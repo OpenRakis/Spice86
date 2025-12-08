@@ -53,7 +53,7 @@ internal readonly struct RegisterValueSet {
         [0x10] = new VideoMode(new VgaMode(MemoryModel.Planar, 640, 350, 4, 8, 14, VgaConstants.GraphicsSegment), 0xFF, Palettes.Ega, SequencerRegisterValueSet6, 0xa3, CrtControllerRegisterValueSet8, AttributeControllerRegisterValueSet7, GraphicsControllerRegisterValueSet5),
         [0x11] = new VideoMode(new VgaMode(MemoryModel.Planar, 640, 480, 1, 8, 16, VgaConstants.GraphicsSegment), 0xFF, Palettes.Ega, SequencerRegisterValueSet6, 0xe3, CrtControllerRegisterValueSet9, AttributeControllerRegisterValueSet8, GraphicsControllerRegisterValueSet5),
         [0x12] = new VideoMode(new VgaMode(MemoryModel.Planar, 640, 480, 4, 8, 16, VgaConstants.GraphicsSegment), 0xFF, Palettes.Ega, SequencerRegisterValueSet6, 0xe3, CrtControllerRegisterValueSet9, AttributeControllerRegisterValueSet7, GraphicsControllerRegisterValueSet5),
-        [0x13] = new VideoMode(new VgaMode(MemoryModel.Packed, 320, 200, 8, 8, 8, VgaConstants.GraphicsSegment), 0xFF, Palettes.Vga, SequencerRegisterValueSet7, 0x63, CrtControllerRegisterValueSet10, AttributeControllerRegisterValueSet9, GraphicsControllerRegisterValueSet6),
+        [0x13] = new VideoMode(new VgaMode(MemoryModel.Packed, 320, 200, 8, 8, 8, VgaConstants.GraphicsSegment, NeedsAspectCorrection: true), 0xFF, Palettes.Vga, SequencerRegisterValueSet7, 0x63, CrtControllerRegisterValueSet10, AttributeControllerRegisterValueSet9, GraphicsControllerRegisterValueSet6),
         [0x6A] = new VideoMode(new VgaMode(MemoryModel.Planar, 800, 600, 4, 8, 16, VgaConstants.GraphicsSegment), 0xFF, Palettes.Ega, SequencerRegisterValueSet6, 0xe3, CrtControllerRegisterValueSet11, AttributeControllerRegisterValueSet7, GraphicsControllerRegisterValueSet5)
     };
 }
