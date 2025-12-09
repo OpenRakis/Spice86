@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -30,10 +31,15 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
+    private readonly DosProcessManager _dosProcessManager;
+    private readonly IOPortDispatcher _ioPortDispatcher;
+    private readonly DosTables _dosTables;
+    private readonly Clock _clock;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
-    private readonly Clock _clock;
+    
+    private const ushort OffsetMask = 0x0F;
 
     /// <summary>
     /// Initializes a new instance.
@@ -50,12 +56,17 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
     /// <param name="dosDriveManager">The DOS class responsible for DOS volumes.</param>
     /// <param name="clock">The class responsible for the clock exposed to DOS programs.</param>
+    /// <param name="dosProcessManager">The DOS class responsible for program loading and execution.</param>
+    /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports (e.g., CMOS).</param>
+    /// <param name="dosTables">The DOS tables structure containing CDS and DBCS information.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt21Handler(IMemory memory, DosProgramSegmentPrefixTracker dosPspTracker,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, DosDriveManager dosDriveManager, Clock clock, ILoggerService loggerService)
+        DosFileManager dosFileManager, DosDriveManager dosDriveManager, Clock clock,
+        DosProcessManager dosProcessManager,
+        IOPortDispatcher ioPortDispatcher, DosTables dosTables, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
         _dosPspTracker = dosPspTracker;
@@ -64,8 +75,11 @@ public class DosInt21Handler : InterruptHandler {
         _dosMemoryManager = dosMemoryManager;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
-        _interruptVectorTable = new InterruptVectorTable(memory);
         _clock = clock;
+        _dosProcessManager = dosProcessManager;
+        _ioPortDispatcher = ioPortDispatcher;
+        _dosTables = dosTables;
+        _interruptVectorTable = new InterruptVectorTable(memory);
         FillDispatchTable();
     }
 
@@ -130,6 +144,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x51, GetPspAddress);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
+        AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
     }
 
     public void SetDate() {
@@ -162,15 +177,61 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Get a pointer to the "lead byte" table, for foreign character sets.
-    /// This is a table that tells DOS which bytes are the first byte of a double-byte character.
-    /// We don't support double-byte characters (yet), so we just return 0.
+    /// INT 21h, AH=63h - Get Double Byte Character Set (DBCS) Lead Byte Table.
+    /// <para>
+    /// Returns a pointer to the DBCS lead-byte table, which indicates which byte values
+    /// are lead bytes in double-byte character sequences (e.g., Japanese, Chinese, Korean).
+    /// An empty table (value 0) indicates no DBCS ranges are defined.
+    /// </para>
+    /// <b>Expects:</b><br/>
+    /// AL = 0 to get DBCS lead byte table pointer
+    /// <b>Returns:</b><br/>
+    /// If AL was 0:<br/>
+    /// - DS:SI = pointer to DBCS lead byte table<br/>
+    /// - AL = 0<br/>
+    /// - CF = 0 (undocumented)<br/>
+    /// If AL was not 0:<br/>
+    /// - AL = 0xFF<br/>
     /// </summary>
     private void GetLeadByteTable() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET LEAD BYTE TABLE");
+            LoggerService.Verbose("INT 21h AH=63h - Get DBCS Lead Byte Table, AL={AL:X2}", State.AL);
         }
-        State.AX = 0;
+
+        if (State.AL == 0) {
+            uint dbcsAddress = _dosTables.DoubleByteCharacterSet.BaseAddress;
+            ushort segment = MemoryUtils.ToSegment(dbcsAddress);
+            ushort offset = (ushort)(dbcsAddress & OffsetMask);
+
+            State.DS = segment;
+            State.SI = offset;
+            State.AL = 0;
+            State.CarryFlag = false; // FreeDOS clears carry flag on success
+
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("Returning DBCS table pointer at {Segment:X4}:{Offset:X4}", segment, offset);
+            }
+        } else {
+            // FreeDOS returns error without modifying carry flag for invalid subfunction
+            State.AL = 0xFF;
+        }
+    }
+
+    /// <summary>
+    /// Obtains or selects the current code page.
+    /// </summary>
+    /// <remarks>Setting the global loaded code page table is not supported and has no effect.</remarks>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    public void GetSetGlobalLoadedCodePageTable(bool calledFromVm) {
+        if (State.AL == 1) {
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("Getting the global loaded code page is not supported - returned 0 which passes test programs...");
+            }
+            State.BX = State.DX = 0;
+            SetCarryFlag(false, calledFromVm);
+        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("Setting the global loaded code page is not supported.");
+        }
     }
 
     /// <summary>

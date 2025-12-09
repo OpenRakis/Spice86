@@ -168,12 +168,10 @@ public class DosFileManagerTests {
             memory, biosDataArea, cfgCpu, stack, state, loggerService,
         biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
-        var clock = new Clock(loggerService);
-
         Dos dos = new Dos(configuration, memory, cfgCpu, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
             vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
-            clock, loggerService);
+            loggerService, ioPortDispatcher);
 
         return dos.FileManager;
     }
