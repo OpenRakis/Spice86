@@ -21,7 +21,7 @@ The entire emulator is assembled in `Spice86DependencyInjection.cs` (~600 lines)
 - Entry point is `Program.cs` which instantiates `Spice86DependencyInjection`
 - **`Spice86DependencyInjection` is the central composition root** - understand its structure when working with dependencies
 - The `Machine` class aggregates emulator components (CPU, memory, devices) - access via properties like `CfgCpu`, `Memory`, `Stack`
-- `InterruptVectorTable` and `Stack` are now passed directly to `Machine` constructor (no longer obtained from removed `Cpu` class)
+- `InterruptVectorTable` and `Stack` are now passed directly to `Machine` constructor
 
 ### CPU Execution Model
 **`CfgCpu`** is the sole CPU implementation (Control Flow Graph-based executor):
