@@ -259,8 +259,4 @@ public class FunctionHandler {
         }
         return false;
     }
-
-    private bool UseOverride(FunctionInformation? functionInformation) {
-        return UseCodeOverride && functionInformation != null && functionInformation.HasOverride;
-    }
 }
