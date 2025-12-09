@@ -3,11 +3,11 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
@@ -18,7 +18,7 @@ using System.Diagnostics;
 /// </summary>
 public class EmulationLoop : ICyclesLimiter {
     private readonly ILoggerService _loggerService;
-    private readonly IInstructionExecutor _cpu;
+    private readonly CfgCpu _cpu;
     private readonly FunctionHandler _functionHandler;
     private readonly State _cpuState;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
@@ -53,7 +53,7 @@ public class EmulationLoop : ICyclesLimiter {
     /// <param name="inputEventQueue">Used to ensure that Mouse/Keyboard events are processed in the emulation thread.</param>
     /// <param name="cyclesLimiter">Limits the number of executed instructions per slice</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public EmulationLoop(FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
+    public EmulationLoop(FunctionHandler functionHandler, CfgCpu cpu, State cpuState,
         EmulationLoopScheduler.EmulationLoopScheduler emulationLoopScheduler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, InputEventHub inputEventQueue,
@@ -110,7 +110,7 @@ public class EmulationLoop : ICyclesLimiter {
     /// <param name="functionHandler">Handler used to call into emulated machine code.</param>
     private void StartRunLoop(FunctionHandler functionHandler) {
         // Entry could be overridden and could throw exceptions
-        functionHandler.Call(CallType.MACHINE, _cpuState.IpSegmentedAddress, null, null, "entry", false);
+        functionHandler.Call(CallType.MACHINE, _cpuState.IpSegmentedAddress, null, null, "entry");
         RunLoop();
         functionHandler.Ret(CallType.MACHINE, null);
     }

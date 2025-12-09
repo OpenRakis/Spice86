@@ -57,7 +57,7 @@ public class ExecutionContextManager : InstructionReplacer {
     }
 
     private ExecutionContext NewExecutionContext(SegmentedAddress entryPoint) {
-        return new(entryPoint, CurrentDepth, new(_memory, _state, null, _functionCatalogue, _useCodeOverride, _loggerService));
+        return new(entryPoint, CurrentDepth, new(_memory, _state, _functionCatalogue, _useCodeOverride, _loggerService));
     }
 
     public void SignalNewExecutionContext(SegmentedAddress entryAddress, SegmentedAddress expectedReturnAddress) {

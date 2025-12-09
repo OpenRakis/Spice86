@@ -169,12 +169,6 @@ public sealed class Configuration {
     /// </summary>
     [Option(nameof(StructureFile), Default = null, Required = false, HelpText = "Specify a C header file to be used for structure information")]
     public string? StructureFile { get; init; }
-    
-    /// <summary>
-    /// Determines whether to use experimental CFG CPU or regular interpreter.
-    /// </summary>
-    [Option(nameof(CfgCpu), Default = false, Required = false, HelpText = "Enable CFG CPU (Control Flow Graph)")]
-    public bool CfgCpu { get; init; }
 
     /// <summary>
     /// Audio engine to use

@@ -35,8 +35,6 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
     [ObservableProperty] private long _numberOfNodes;
 
-    [ObservableProperty] private bool _isCfgCpuEnabled;
-
     [ObservableProperty] private string _searchText = string.Empty;
 
     [ObservableProperty] private string _statusMessage = string.Empty;
@@ -57,13 +55,11 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
     [ObservableProperty] private int _selectedTabIndex;
 
-    public CfgCpuViewModel(Configuration configuration,
-        IUIDispatcher uiDispatcher,
+    public CfgCpuViewModel(IUIDispatcher uiDispatcher,
         ExecutionContextManager executionContextManager,
         IPauseHandler pauseHandler) {
         _uiDispatcher = uiDispatcher;
         _executionContextManager = executionContextManager;
-        IsCfgCpuEnabled = configuration.CfgCpu;
         AutoFollow = true;
 
         pauseHandler.Paused += () => {
