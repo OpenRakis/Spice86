@@ -104,10 +104,9 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         ExecutionDump executionDump = reader.ReadExecutionDumpFromFileOrCreate();
-        ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, executionDump);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Execution flow recorder created...");
+            loggerService.Information("Execution dump read...");
         }
 
         State state = new(configuration.CpuModel);
@@ -214,14 +213,14 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         FunctionHandler functionHandler = new(memory, state,
-            executionFlowRecorder, functionCatalogue, configuration.UseCodeOverrideOption, loggerService);
+            functionCatalogue, configuration.UseCodeOverrideOption, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Function handler created...");
         }
 
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state,
-            executionFlowRecorder, functionCatalogue, configuration.UseCodeOverrideOption, loggerService);
+            functionCatalogue, configuration.UseCodeOverrideOption, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Function handler in external interrupt created...");

@@ -107,7 +107,6 @@ public class DosFileManagerTests {
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
         RecordedDataReader reader = new(configuration.RecordedDataDirectory!, loggerService);
-        ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, new());
         State state = new(CpuModel.INTEL_80286);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();

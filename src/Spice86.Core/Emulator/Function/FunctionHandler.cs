@@ -24,8 +24,6 @@ public class FunctionHandler {
 
     private readonly IMemory _memory;
 
-    private readonly ExecutionFlowRecorder? _executionFlowRecorder;
-    
     private readonly FunctionCatalogue _functionCatalogue;
 
     /// <summary>
@@ -34,19 +32,16 @@ public class FunctionHandler {
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
-    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="useCodeOverride">Whether or not to call overrides.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public FunctionHandler(
         IMemory memory, 
         State state, 
-        ExecutionFlowRecorder? executionFlowRecorder, 
         FunctionCatalogue functionCatalogue, 
         bool useCodeOverride,
         ILoggerService loggerService) {
         _memory = memory;
         _state = state;
-        _executionFlowRecorder = executionFlowRecorder;
         _loggerService = loggerService;
         _functionCatalogue = functionCatalogue;
         UseCodeOverride = useCodeOverride;
@@ -94,10 +89,8 @@ public class FunctionHandler {
             _loggerService.Verbose("{Depth} Calling {CurrentFunction} from {Caller}", _callerStack.Count, currentFunction, caller);
         }
 
-        if (_executionFlowRecorder != null) {
-            FunctionInformation? caller = _functionCatalogue.GetFunctionInformation(CurrentFunctionCall);
-            currentFunction.Enter(caller);
-        }
+        FunctionInformation? callerInfo = _functionCatalogue.GetFunctionInformation(CurrentFunctionCall);
+        currentFunction.Enter(callerInfo);
 
         if (UseCodeOverride) {
             currentFunction.CallOverride();
@@ -209,9 +202,6 @@ public class FunctionHandler {
 
     private bool HandleReturn(CallType returnCallType, FunctionCall currentFunctionCall) {
         bool returnAddressAlignedWithCallStack = DetectUnalignedReturns(currentFunctionCall, returnCallType);
-        if (_executionFlowRecorder == null) {
-            return returnAddressAlignedWithCallStack;
-        }
         FunctionInformation? currentFunctionInformation = _functionCatalogue.GetFunctionInformation(currentFunctionCall);
         if (currentFunctionInformation != null && !UseOverride(currentFunctionInformation)) {
             FunctionReturn currentFunctionReturn = new FunctionReturn(returnCallType, _state.IpSegmentedAddress);
@@ -253,13 +243,9 @@ public class FunctionHandler {
             return true;
         }
 
-        // Record the unexpected behaviour. Generated code will see this as well.
-        _executionFlowRecorder?.RegisterUnalignedReturn(_state.CS, _state.IP, actualReturnAddress.Value.Segment,
-            actualReturnAddress.Value.Offset);
         FunctionInformation? currentFunctionInformation = _functionCatalogue.GetFunctionInformation(currentFunctionCall);
         FunctionReturn currentFunctionReturn = new FunctionReturn(returnCallType, _state.IpSegmentedAddress);
-        // TODO: increase log level when regular cpu is not there anymore. CfgCpu is quite accurate at detecting this, regular cpu not so much.
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose) && currentFunctionInformation != null
+        if (_loggerService.IsEnabled(LogEventLevel.Warning) && currentFunctionInformation != null
             && !currentFunctionInformation.UnalignedReturns.ContainsKey(currentFunctionReturn)) {
             CallType callType = currentFunctionCall.CallType;
             SegmentedAddress stackAddressAfterCall = currentFunctionCall.StackAddressAfterCall;
@@ -275,7 +261,7 @@ public class FunctionHandler {
                 additionalInformation += "Return address on stack was modified";
             }
 
-            _loggerService.Verbose(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
+            _loggerService.Warning(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
 Current function {CurrentFunctionInformation} return instruction {CurrentFunctionReturn} will not go to the expected place:
 - Expected return at {CallType} call time was {ExpectedReturnAddress} but return will go to {ActualReturnAddress}
 - Return was stored on stack at address {StackAddressAfterCall} which contains {ReturnAddressOnCallTimeStack}
