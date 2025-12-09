@@ -242,18 +242,20 @@ public class FunctionHandler {
             if (!Equals(expectedReturnAddress, returnAddressOnCallTimeStack)) {
                 additionalInformation += "Return address on stack was modified";
             }
-
-            _loggerService.Warning(@"PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
-Current function {CurrentFunctionInformation} return instruction {CurrentFunctionReturn} will not go to the expected place:
-- Expected return at {CallType} call time was {ExpectedReturnAddress} but return will go to {ActualReturnAddress}
-- Return was stored on stack at address {StackAddressAfterCall} which contains {ReturnAddressOnCallTimeStack}
-- Stack is now at address {CurrentStackAddress}
-{AdditionalInformation}
-            ",
-                currentFunctionInformation.ToString(), currentFunctionReturn.ToString(),
-                callType.ToString(), expectedReturnAddress?.ToString(), actualReturnAddress.ToString(), stackAddressAfterCall.ToString(), returnAddressOnCallTimeStack?.ToString(),
-                currentStackAddress.ToString(),
-                additionalInformation);
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("""
+                PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
+                Current function {CurrentFunctionInformation} return instruction {CurrentFunctionReturn} will not go to the expected place:
+                - Expected return at {CallType} call time was {ExpectedReturnAddress} but return will go to {ActualReturnAddress}
+                - Return was stored on stack at address {StackAddressAfterCall} which contains {ReturnAddressOnCallTimeStack}
+                - Stack is now at address {CurrentStackAddress}
+                {AdditionalInformation}          
+                """,
+                    currentFunctionInformation.ToString(), currentFunctionReturn.ToString(),
+                    callType.ToString(), expectedReturnAddress?.ToString(), actualReturnAddress.ToString(), stackAddressAfterCall.ToString(), returnAddressOnCallTimeStack?.ToString(),
+                    currentStackAddress.ToString(),
+                    additionalInformation);
+            }
         }
         return false;
     }
