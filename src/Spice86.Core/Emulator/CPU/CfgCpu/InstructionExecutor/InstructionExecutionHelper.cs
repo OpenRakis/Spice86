@@ -160,14 +160,14 @@ public class InstructionExecutionHelper {
         _emulatorBreakpointsManager.InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
         MoveIpToEndOfInstruction(instruction);
         (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterruptWithoutBreakpoint(vectorNumber);
-        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
+        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleInterruptCall(CfgInstruction instruction, byte vectorNumber) {
         (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterrupt(vectorNumber);
-        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
+        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
     

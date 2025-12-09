@@ -426,7 +426,7 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <returns>returns an <see cref="Action"/> that makes the CPU perform a far return instruction when invoked.</returns>
     public Action FarRet(ushort numberOfBytesToPop = 0) {
-        return () => ReturnOperationsHelper.FarRet16(State, Stack, numberOfBytesToPop);
+        return () => new ReturnOperationsHelper(State, Stack).FarRet16(numberOfBytesToPop);
     }
 
     /// <summary>
@@ -434,7 +434,7 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <returns>returns an <see cref="Action"/> that performs an interrupt return when invoked.</returns>
     public Action InterruptRet() {
-        return () => ReturnOperationsHelper.InterruptRet(State, Stack);
+        return () => new ReturnOperationsHelper(State, Stack).InterruptRet(State, Stack);
     }
 
     /// <summary>
@@ -452,7 +452,7 @@ public class CSharpOverrideHelper {
     /// <param name="numberOfBytesToPop">The number of bytes to remove from the stack.</param>
     /// <returns>An action that performs a near return.</returns>
     public Action NearRet(ushort numberOfBytesToPop = 0) {
-        return () => ReturnOperationsHelper.NearRet16(State, Stack, numberOfBytesToPop);
+        return () => new ReturnOperationsHelper(State, Stack).NearRet16(numberOfBytesToPop);
     }
 
     /// <summary>

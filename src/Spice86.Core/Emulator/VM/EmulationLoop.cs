@@ -110,7 +110,7 @@ public class EmulationLoop : ICyclesLimiter {
     /// <param name="functionHandler">Handler used to call into emulated machine code.</param>
     private void StartRunLoop(FunctionHandler functionHandler) {
         // Entry could be overridden and could throw exceptions
-        functionHandler.Call(CallType.MACHINE, _cpuState.IpSegmentedAddress, null, null, "entry", false);
+        functionHandler.Call(CallType.MACHINE, _cpuState.IpSegmentedAddress, null, null, "entry");
         RunLoop();
         functionHandler.Ret(CallType.MACHINE, null);
     }

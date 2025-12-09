@@ -61,24 +61,6 @@ public record FunctionInformation : IComparable<FunctionInformation> {
     }
 
     /// <summary>
-    /// Adds the specified function return and target to the <see cref="Returns"/> dictionary property.
-    /// </summary>
-    /// <param name="functionReturn">The function return to add to the Returns dictionary.</param>
-    /// <param name="target">The target address to add to the Returns dictionary.</param>
-    public void AddReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
-        AddReturn(Returns, functionReturn, target);
-    }
-
-    /// <summary>
-    /// Adds the specified function return and target to the <see cref="UnalignedReturns"/> dictionary property.
-    /// </summary>
-    /// <param name="functionReturn">The function return to add to the UnalignedReturns dictionary.</param>
-    /// <param name="target">The target address to add to the UnalignedReturns dictionary.</param>
-    public void AddUnalignedReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
-        AddReturn(UnalignedReturns, functionReturn, target);
-    }
-
-    /// <summary>
     /// Invokes the C# override of the machine code for the function.
     /// </summary>
     public void CallOverride() {
@@ -150,17 +132,5 @@ public record FunctionInformation : IComparable<FunctionInformation> {
     /// <inheritdoc />
     public override string ToString() {
         return $"{Name}_{ConvertUtils.ToCSharpStringWithPhysical(_address)}";
-    }
-
-    private static void AddReturn(Dictionary<FunctionReturn, HashSet<SegmentedAddress>> returnsMap, FunctionReturn functionReturn, SegmentedAddress? target) {
-        if (target == null) {
-            return;
-        }
-        returnsMap.TryGetValue(functionReturn, out HashSet<SegmentedAddress>? addresses);
-        if (addresses == null) {
-            addresses = new HashSet<SegmentedAddress>();
-            returnsMap.Add(functionReturn, addresses);
-        }
-        addresses.Add(target.Value);
     }
 }

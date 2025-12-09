@@ -55,9 +55,8 @@ public class FunctionHandler {
     /// <param name="expectedReturnAddress">The expected address of return.</param>
     /// <param name="call">Instruction that initiated the call.</param>
     /// <param name="vectorNumber">The vector number of the interrupt handler.</param>
-    /// <param name="recordReturn">A value indicating whether to record the return.</param>
-    public void ICall(SegmentedAddress entryAddress, SegmentedAddress expectedReturnAddress, CfgInstruction? call, byte vectorNumber, bool recordReturn) {
-        Call(CallType.INTERRUPT, entryAddress, expectedReturnAddress, call, $"interrupt_handler_{ConvertUtils.ToHex(vectorNumber)}", recordReturn);
+    public void ICall(SegmentedAddress entryAddress, SegmentedAddress expectedReturnAddress, CfgInstruction? call, byte vectorNumber) {
+        Call(CallType.INTERRUPT, entryAddress, expectedReturnAddress, call, $"interrupt_handler_{ConvertUtils.ToHex(vectorNumber)}");
     }
 
     /// <summary>
@@ -68,7 +67,7 @@ public class FunctionHandler {
     /// <param name="expectedReturnAddress">The expected address of return.</param>
     /// <param name="call">Instruction that initiated the call.</param>
     public void Call(CallType callType, SegmentedAddress entryAddress, SegmentedAddress? expectedReturnAddress, CfgInstruction? call) {
-        Call(callType, entryAddress, expectedReturnAddress, call, null, true);
+        Call(callType, entryAddress, expectedReturnAddress, call, null);
     }
 
     /// <summary>
@@ -79,10 +78,9 @@ public class FunctionHandler {
     /// <param name="expectedReturnAddress">The expected address of return.</param>
     /// <param name="call">Instruction that initiated the call.</param>
     /// <param name="name">Name to give to the function.</param>
-    /// <param name="recordReturn">A value indicating whether to record the return.</param>
-    public void Call(CallType callType, SegmentedAddress entryAddress, SegmentedAddress? expectedReturnAddress, CfgInstruction? call, string? name, bool recordReturn) {
+    public void Call(CallType callType, SegmentedAddress entryAddress, SegmentedAddress? expectedReturnAddress, CfgInstruction? call, string? name) {
         FunctionInformation currentFunction = _functionCatalogue.GetOrCreateFunctionInformation(entryAddress, name);
-        FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, CurrentStackAddress, call, recordReturn);
+        FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, CurrentStackAddress, call);
         _callerStack.Push(currentFunctionCall);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             FunctionInformation? caller = _functionCatalogue.GetFunctionInformation(CurrentFunctionCall);
@@ -202,22 +200,6 @@ public class FunctionHandler {
 
     private bool HandleReturn(CallType returnCallType, FunctionCall currentFunctionCall) {
         bool returnAddressAlignedWithCallStack = DetectUnalignedReturns(currentFunctionCall, returnCallType);
-        FunctionInformation? currentFunctionInformation = _functionCatalogue.GetFunctionInformation(currentFunctionCall);
-        if (currentFunctionInformation != null && !UseOverride(currentFunctionInformation)) {
-            FunctionReturn currentFunctionReturn = new FunctionReturn(returnCallType, _state.IpSegmentedAddress);
-            SegmentedAddress? actualReturnAddress = PeekReturnAddressOnMachineStack(returnCallType);
-            SegmentedAddress? addressToRecord = actualReturnAddress;
-            if (!currentFunctionCall.IsReturnRecorded) {
-                addressToRecord = null;
-            }
-
-            if (returnAddressAlignedWithCallStack) {
-                currentFunctionInformation.AddReturn(currentFunctionReturn, addressToRecord);
-            } else {
-                currentFunctionInformation.AddUnalignedReturn(currentFunctionReturn, addressToRecord);
-            }
-        }
-
         return returnAddressAlignedWithCallStack;
     }
 

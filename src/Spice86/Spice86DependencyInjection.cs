@@ -235,10 +235,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         IFunctionHandlerProvider functionHandlerProvider = cfgCpu;
-        IExecutionDumpFactory executionDumpFactory = new CfgCpuFlowDumper(cfgCpu, executionDump);
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Execution will be done with CfgCpu");
-        }
+        CfgCpuFlowDumper cfgCpuFlowDumper = new CfgCpuFlowDumper(cfgCpu, executionDump);
 
         // IO devices
         var timerInt8Handler = new TimerInt8Handler(dualPic, biosDataArea);
@@ -346,7 +343,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         EmulatorStateSerializer emulatorStateSerializer = new(dumpContext,
-            memoryDataExporter, state, executionDumpFactory, functionCatalogue,
+            memoryDataExporter, state, cfgCpuFlowDumper, functionCatalogue,
             emulatorBreakpointsManager, loggerService);
 
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
@@ -525,7 +522,7 @@ public class Spice86DependencyInjection : IDisposable {
         ProgramExecutor programExecutor = new(configuration, emulationLoop,
             emulatorBreakpointsManager, emulatorStateSerializer, memory,
             functionHandlerProvider, memoryDataExporter, state, dos,
-            functionCatalogue, executionDumpFactory, pauseHandler,
+            functionCatalogue, cfgCpuFlowDumper, pauseHandler,
             mainWindowViewModel, dumpContext, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -565,7 +562,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             MidiViewModel midiViewModel = new(midiDevice);
 
-            CfgCpuViewModel cfgCpuViewModel = new(configuration, uiDispatcher,
+            CfgCpuViewModel cfgCpuViewModel = new(uiDispatcher,
                 cfgCpu.ExecutionContextManager, pauseHandler);
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
