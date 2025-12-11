@@ -7,7 +7,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     Represents a sound channel and coordinates rendering with the shared software mixer.
 ///     Each channel has its own render thread to prevent packet drops in PortAudio.
-///     Uses tight loop like original DeviceThread, with PortAudio blocking for flow control.
+///     Implements DOSBox Staging's RenderUpToNow pattern: time-based sample generation.
 /// </summary>
 public class SoundChannel {
     private readonly ILoggerService _logger;
@@ -18,6 +18,9 @@ public class SoundChannel {
     private Action? _renderCallback;
     private Thread? _renderThread;
     private readonly ManualResetEventSlim _stopEvent = new(false);
+    private readonly System.Diagnostics.Stopwatch _renderTimer = new();
+    private double _lastRenderTimeSeconds;
+    private double _fractionalSamples;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="SoundChannel" /> class.
@@ -175,17 +178,46 @@ public class SoundChannel {
     }
 
     /// <summary>
-    ///     The render thread loop that continuously calls the device callback.
-    ///     Matches original DeviceThread behavior: tight loop with PortAudio providing natural flow control.
-    ///     PortAudio's WriteData blocks when buffer is full, preventing excessive CPU usage and ensuring correct timing.
+    ///     The render thread loop implementing DOSBox Staging's RenderUpToNow pattern.
+    ///     Calculates required samples based on elapsed real time, not fixed intervals or tight loops.
     /// </summary>
     private void RenderThreadLoop() {
+        _renderTimer.Start();
+        _lastRenderTimeSeconds = 0;
+        _fractionalSamples = 0;
+        
+        // Target: check every ~5ms, but only render if enough time has elapsed for meaningful samples
+        const int sleepMs = 5;
+        
         while (!_stopEvent.IsSet) {
             try {
-                // Continuously invoke callback - matches master branch DeviceThread behavior
-                // PortAudio's WriteData will block when buffer is full, providing natural pacing
-                // This ensures audio is generated exactly as fast as it's consumed
-                _renderCallback?.Invoke();
+                // RenderUpToNow pattern from DOSBox Staging:
+                // 1. Calculate elapsed time since last render
+                double currentTimeSeconds = _renderTimer.Elapsed.TotalSeconds;
+                double elapsedSeconds = currentTimeSeconds - _lastRenderTimeSeconds;
+                
+                // 2. Calculate how many samples should have been generated in this time
+                //    samples = sampleRate × elapsedTime
+                double samplesNeeded = (SampleRate * elapsedSeconds) + _fractionalSamples;
+                
+                // 3. Only render if we need at least one full callback's worth of samples
+                //    (Devices generate fixed-size buffers, so we call callback when enough time has passed)
+                //    At 48kHz with 2048 sample buffer: 2048/48000 = 42.67ms per callback
+                //    We check every 5ms but only invoke when enough samples accumulated
+                const int typicalBufferSize = 2048;
+                double samplesPerCallback = typicalBufferSize;
+                
+                if (samplesNeeded >= samplesPerCallback) {
+                    // Invoke callback to generate audio
+                    _renderCallback?.Invoke();
+                    
+                    // Update timing - consumed one callback's worth of samples
+                    _fractionalSamples = samplesNeeded - samplesPerCallback;
+                    _lastRenderTimeSeconds = currentTimeSeconds;
+                } else {
+                    // Not enough time elapsed yet, sleep briefly
+                    Thread.Sleep(sleepMs);
+                }
             } catch (Exception ex) {
                 _logger.Error(ex, "SOUND CHANNEL {ChannelName}: Error in render thread loop.", Name);
             }
