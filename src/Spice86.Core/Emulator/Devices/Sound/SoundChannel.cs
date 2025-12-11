@@ -6,6 +6,7 @@ using Spice86.Shared.Interfaces;
 
 /// <summary>
 ///     Represents a sound channel and coordinates rendering with the shared software mixer.
+///     Each channel has its own render thread to prevent packet drops in PortAudio.
 /// </summary>
 public class SoundChannel {
     private readonly ILoggerService _logger;
@@ -14,6 +15,8 @@ public class SoundChannel {
     private float _stereoSeparation = 50;
     private int _volume = 100;
     private Action? _renderCallback;
+    private Thread? _renderThread;
+    private readonly ManualResetEventSlim _stopEvent = new(false);
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="SoundChannel" /> class.
@@ -133,5 +136,57 @@ public class SoundChannel {
     /// </summary>
     internal void InvokeRenderCallback() {
         _renderCallback?.Invoke();
+    }
+
+    /// <summary>
+    ///     Starts the render thread for this channel.
+    /// </summary>
+    internal void StartRenderThread() {
+        if (_renderThread is not null) {
+            return;
+        }
+
+        _stopEvent.Reset();
+        _renderThread = new Thread(RenderThreadLoop) {
+            Name = $"SoundChannel-{Name}",
+            IsBackground = true
+        };
+        _renderThread.Start();
+        
+        _logger.Debug("SOUND CHANNEL {ChannelName}: Render thread started.", Name);
+    }
+
+    /// <summary>
+    ///     Stops the render thread for this channel.
+    /// </summary>
+    internal void StopRenderThread() {
+        if (_renderThread is null) {
+            return;
+        }
+
+        _stopEvent.Set();
+        if (_renderThread.IsAlive) {
+            _renderThread.Join(TimeSpan.FromSeconds(2));
+        }
+        _renderThread = null;
+        
+        _logger.Debug("SOUND CHANNEL {ChannelName}: Render thread stopped.", Name);
+    }
+
+    /// <summary>
+    ///     The render thread loop that continuously calls the device callback.
+    /// </summary>
+    private void RenderThreadLoop() {
+        while (!_stopEvent.IsSet) {
+            try {
+                _renderCallback?.Invoke();
+                
+                // Small sleep to prevent busy-waiting
+                // The callback will typically render a small buffer of audio
+                Thread.Sleep(1);
+            } catch (Exception ex) {
+                _logger.Error(ex, "SOUND CHANNEL {ChannelName}: Error in render thread loop.", Name);
+            }
+        }
     }
 }

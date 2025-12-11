@@ -7,14 +7,12 @@ using Spice86.Shared.Utils;
 using System.Linq;
 
 /// <summary>
-///     Basic software mixer for sound channels with mixer-owned thread for pulling audio from devices.
+///     Basic software mixer for sound channels. Each channel has its own render thread.
 /// </summary>
 public sealed class SoftwareMixer : IDisposable {
     private readonly AudioPlayerFactory _audioPlayerFactory;
     private readonly Dictionary<SoundChannel, AudioPlayer> _channels = new();
     private readonly ILoggerService _logger;
-    private readonly Thread? _mixerThread;
-    private readonly ManualResetEventSlim _stopEvent = new(false);
     private bool _disposed;
 
     /// <summary>
@@ -25,14 +23,6 @@ public sealed class SoftwareMixer : IDisposable {
     public SoftwareMixer(ILoggerService loggerService, AudioEngine audioEngine) {
         _logger = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
         _audioPlayerFactory = new AudioPlayerFactory(_logger, audioEngine);
-        
-        // Start the mixer thread that will call device callbacks
-        _mixerThread = new Thread(MixerThreadLoop) {
-            Name = "SoftwareMixer",
-            IsBackground = true
-        };
-        _mixerThread.Start();
-        _logger.Debug("SOFTWARE MIXER: Mixer thread started.");
     }
 
     /// <summary>
@@ -62,11 +52,15 @@ public sealed class SoftwareMixer : IDisposable {
     /// <param name="soundChannel">The channel instance to register.</param>
     /// <param name="sampleRate">The channel sample rate, in Hz.</param>
     internal void Register(SoundChannel soundChannel, int sampleRate) {
-        _channels.Add(soundChannel, _audioPlayerFactory.CreatePlayer(sampleRate, 2048));
+        AudioPlayer audioPlayer = _audioPlayerFactory.CreatePlayer(sampleRate, 2048);
+        _channels.Add(soundChannel, audioPlayer);
         Channels = _channels.AsReadOnly();
 
         _logger.Debug("SOFTWARE MIXER: Registered channel {ChannelName} at sample rate {SampleRate} Hz.",
             soundChannel.Name, sampleRate);
+        
+        // Start the render thread for this channel
+        soundChannel.StartRenderThread();
     }
 
     /// <summary>
@@ -138,28 +132,6 @@ public sealed class SoftwareMixer : IDisposable {
     }
 
     /// <summary>
-    ///     The mixer thread loop that calls device callbacks to pull audio data.
-    /// </summary>
-    private void MixerThreadLoop() {
-        while (!_stopEvent.IsSet) {
-            try {
-                // Call each channel's render callback to pull audio data
-                foreach (SoundChannel channel in _channels.Keys.ToList()) {
-                    channel.InvokeRenderCallback();
-                }
-
-                // Small sleep to prevent busy-waiting
-                // This will be replaced by proper timing based on audio buffer needs
-                Thread.Sleep(1);
-            } catch (Exception ex) {
-                _logger.Error(ex, "SOFTWARE MIXER: Error in mixer thread loop.");
-            }
-        }
-
-        _logger.Debug("SOFTWARE MIXER: Mixer thread stopped.");
-    }
-
-    /// <summary>
     ///     Disposes the mixer, releasing audio players and clearing the channel registry.
     /// </summary>
     /// <param name="disposing">Indicates whether managed resources should be released.</param>
@@ -171,15 +143,11 @@ public sealed class SoftwareMixer : IDisposable {
         _logger.Debug("SOFTWARE MIXER: Disposing mixer (disposing = {Disposing}).", disposing);
 
         if (disposing) {
-            // Stop the mixer thread
-            _stopEvent.Set();
-            if (_mixerThread is not null && _mixerThread.IsAlive) {
-                _mixerThread.Join(TimeSpan.FromSeconds(2));
-            }
-            _stopEvent.Dispose();
-
             foreach ((SoundChannel channel, AudioPlayer audioPlayer) in _channels) {
                 try {
+                    // Stop the channel's render thread
+                    channel.StopRenderThread();
+                    
                     audioPlayer.Dispose();
                 } catch (Exception ex) {
                     _logger.Error(ex, "SOFTWARE MIXER: Failed to dispose audio player for channel {ChannelName}.",
