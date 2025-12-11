@@ -7,6 +7,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     Represents a sound channel and coordinates rendering with the shared software mixer.
 ///     Each channel has its own render thread to prevent packet drops in PortAudio.
+///     Uses time-based rendering (RenderUpToNow pattern) to prevent timing issues.
 /// </summary>
 public class SoundChannel {
     private readonly ILoggerService _logger;
@@ -17,6 +18,7 @@ public class SoundChannel {
     private Action? _renderCallback;
     private Thread? _renderThread;
     private readonly ManualResetEventSlim _stopEvent = new(false);
+    private readonly System.Diagnostics.Stopwatch _renderStopwatch = new();
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="SoundChannel" /> class.
@@ -174,15 +176,40 @@ public class SoundChannel {
     }
 
     /// <summary>
-    ///     The render thread loop that continuously calls the device callback.
-    ///     The callback writes to PortAudio which blocks when buffer is full, naturally controlling the pace.
+    ///     The render thread loop using time-based rendering (RenderUpToNow pattern from DOSBox Staging).
+    ///     Renders audio at precise intervals based on real time to prevent pitch/timing issues.
     /// </summary>
     private void RenderThreadLoop() {
+        _renderStopwatch.Start();
+        long lastRenderTime = 0;
+        
+        // Target interval: render every ~10ms (100 times per second)
+        // This provides smooth audio without excessive CPU usage
+        const double targetIntervalMs = 10.0;
+        
         while (!_stopEvent.IsSet) {
             try {
-                // Continuously invoke callback
-                // PortAudio's WriteData will block when buffer is full, providing natural flow control
-                _renderCallback?.Invoke();
+                // Calculate elapsed time since last render
+                long currentTime = _renderStopwatch.ElapsedMilliseconds;
+                double elapsedMs = currentTime - lastRenderTime;
+                
+                // Only render if enough time has passed
+                if (elapsedMs >= targetIntervalMs) {
+                    // Invoke callback to generate and render audio
+                    _renderCallback?.Invoke();
+                    
+                    // Update last render time
+                    lastRenderTime = currentTime;
+                } else {
+                    // Sleep for remaining time until next render
+                    double remainingMs = targetIntervalMs - elapsedMs;
+                    if (remainingMs > 1.0) {
+                        Thread.Sleep((int)remainingMs);
+                    } else {
+                        // Very short wait, just yield to avoid busy-waiting
+                        Thread.Sleep(0);
+                    }
+                }
             } catch (Exception ex) {
                 _logger.Error(ex, "SOUND CHANNEL {ChannelName}: Error in render thread loop.", Name);
             }
