@@ -180,47 +180,41 @@ public class SoundChannel {
     /// <summary>
     ///     The render thread loop implementing DOSBox Staging's RenderUpToNow pattern.
     ///     Calculates required samples based on elapsed real time, not fixed intervals or tight loops.
+    ///     No sleep - checks continuously but only renders when enough time elapsed.
+    ///     No try/catch - errors propagate for proper handling.
     /// </summary>
     private void RenderThreadLoop() {
         _renderTimer.Start();
         _lastRenderTimeSeconds = 0;
         _fractionalSamples = 0;
         
-        // Target: check every ~5ms, but only render if enough time has elapsed for meaningful samples
-        const int sleepMs = 5;
+        // RenderUpToNow pattern from DOSBox Staging:
+        // Calculate elapsed time and only render when enough samples are needed
+        const int typicalBufferSize = 2048;
+        double samplesPerCallback = typicalBufferSize;
         
         while (!_stopEvent.IsSet) {
-            try {
-                // RenderUpToNow pattern from DOSBox Staging:
-                // 1. Calculate elapsed time since last render
-                double currentTimeSeconds = _renderTimer.Elapsed.TotalSeconds;
-                double elapsedSeconds = currentTimeSeconds - _lastRenderTimeSeconds;
+            // 1. Calculate elapsed time since last render
+            double currentTimeSeconds = _renderTimer.Elapsed.TotalSeconds;
+            double elapsedSeconds = currentTimeSeconds - _lastRenderTimeSeconds;
+            
+            // 2. Calculate how many samples should have been generated in this time
+            //    samples = sampleRate × elapsedTime
+            double samplesNeeded = (SampleRate * elapsedSeconds) + _fractionalSamples;
+            
+            // 3. Only render if we need at least one full callback's worth of samples
+            //    Devices generate fixed-size buffers, so we call callback when enough time has passed
+            //    At 48kHz with 2048 sample buffer: 2048/48000 = 42.67ms per callback
+            if (samplesNeeded >= samplesPerCallback) {
+                // Invoke callback to generate audio
+                _renderCallback?.Invoke();
                 
-                // 2. Calculate how many samples should have been generated in this time
-                //    samples = sampleRate × elapsedTime
-                double samplesNeeded = (SampleRate * elapsedSeconds) + _fractionalSamples;
-                
-                // 3. Only render if we need at least one full callback's worth of samples
-                //    (Devices generate fixed-size buffers, so we call callback when enough time has passed)
-                //    At 48kHz with 2048 sample buffer: 2048/48000 = 42.67ms per callback
-                //    We check every 5ms but only invoke when enough samples accumulated
-                const int typicalBufferSize = 2048;
-                double samplesPerCallback = typicalBufferSize;
-                
-                if (samplesNeeded >= samplesPerCallback) {
-                    // Invoke callback to generate audio
-                    _renderCallback?.Invoke();
-                    
-                    // Update timing - consumed one callback's worth of samples
-                    _fractionalSamples = samplesNeeded - samplesPerCallback;
-                    _lastRenderTimeSeconds = currentTimeSeconds;
-                } else {
-                    // Not enough time elapsed yet, sleep briefly
-                    Thread.Sleep(sleepMs);
-                }
-            } catch (Exception ex) {
-                _logger.Error(ex, "SOUND CHANNEL {ChannelName}: Error in render thread loop.", Name);
+                // Update timing - consumed one callback's worth of samples
+                _fractionalSamples = samplesNeeded - samplesPerCallback;
+                _lastRenderTimeSeconds = currentTimeSeconds;
             }
+            // Note: No sleep - continuously check, but only render when time elapsed
+            // The callback itself (PortAudio WriteData) will block when buffer is full
         }
     }
 }
