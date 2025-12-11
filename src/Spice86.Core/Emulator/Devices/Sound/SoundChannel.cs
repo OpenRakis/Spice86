@@ -13,6 +13,7 @@ public class SoundChannel {
     private bool _isMuted;
     private float _stereoSeparation = 50;
     private int _volume = 100;
+    private Action? _renderCallback;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="SoundChannel" /> class.
@@ -117,5 +118,20 @@ public class SoundChannel {
     /// <param name="data">The audio frame to mix and render.</param>
     public void Render(Span<byte> data) {
         _mixer.Render(data, this);
+    }
+
+    /// <summary>
+    ///     Sets the callback that the mixer will invoke to generate audio data.
+    /// </summary>
+    /// <param name="callback">The callback action to invoke when the mixer needs audio data.</param>
+    public void SetRenderCallback(Action? callback) {
+        _renderCallback = callback;
+    }
+
+    /// <summary>
+    ///     Invokes the render callback if one is set.
+    /// </summary>
+    internal void InvokeRenderCallback() {
+        _renderCallback?.Invoke();
     }
 }

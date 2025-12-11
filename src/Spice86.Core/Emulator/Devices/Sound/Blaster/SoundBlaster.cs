@@ -53,7 +53,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private readonly List<byte> _commandData = [];
     private readonly SoundBlasterHardwareConfig _config;
     private readonly HardwareMixer _ctMixer;
-    private readonly DeviceThread _deviceThread;
     private readonly DmaPlaybackState _dmaState = new();
 
     private readonly Dsp _dsp;
@@ -117,9 +116,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         RegisterDmaCallbacks();
         _dualPic.IrqMaskChanged += OnPicIrqMaskChanged;
 
-        _deviceThread = new DeviceThread(nameof(SoundBlaster), PlaybackLoopBody, pauseHandler, loggerService);
         PCMSoundChannel = softwareMixer.CreateChannel(nameof(SoundBlaster));
         _outputSampleRate = PCMSoundChannel.SampleRate;
+        // Register the playback callback with the channel so the mixer can call it
+        PCMSoundChannel.SetRenderCallback(PlaybackLoopBody);
+        
         FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(Sound.Opl3Fm), _outputSampleRate);
         Opl3Fm = new Opl3Fm(FMSynthSoundChannel, state, ioPortDispatcher, failOnUnhandledPort, loggerService,
             pauseHandler, scheduler, clock, dualPic, enableOplIrq: true, useAdlibGold: true);
@@ -293,7 +294,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
-        _deviceThread.StartThreadIfNeeded();
         switch (port - _config.BaseAddress) {
             case Mpu401DataPortOffset:
             case Mpu401StatusCommandPortOffset:
@@ -389,9 +389,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         }
 
         if (disposing) {
+            // Unregister callback from channel
+            PCMSoundChannel.SetRenderCallback(null);
+            
             ResetDmaState();
             UnregisterDmaCallbacks();
-            _deviceThread.Dispose();
             _dsp.Dispose();
         }
 

@@ -4,13 +4,17 @@ using Spice86.Core.Backend.Audio;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Linq;
+
 /// <summary>
-///     Basic software mixer for sound channels.
+///     Basic software mixer for sound channels with mixer-owned thread for pulling audio from devices.
 /// </summary>
 public sealed class SoftwareMixer : IDisposable {
     private readonly AudioPlayerFactory _audioPlayerFactory;
     private readonly Dictionary<SoundChannel, AudioPlayer> _channels = new();
     private readonly ILoggerService _logger;
+    private readonly Thread? _mixerThread;
+    private readonly ManualResetEventSlim _stopEvent = new(false);
     private bool _disposed;
 
     /// <summary>
@@ -21,6 +25,14 @@ public sealed class SoftwareMixer : IDisposable {
     public SoftwareMixer(ILoggerService loggerService, AudioEngine audioEngine) {
         _logger = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
         _audioPlayerFactory = new AudioPlayerFactory(_logger, audioEngine);
+        
+        // Start the mixer thread that will call device callbacks
+        _mixerThread = new Thread(MixerThreadLoop) {
+            Name = "SoftwareMixer",
+            IsBackground = true
+        };
+        _mixerThread.Start();
+        _logger.Debug("SOFTWARE MIXER: Mixer thread started.");
     }
 
     /// <summary>
@@ -126,6 +138,28 @@ public sealed class SoftwareMixer : IDisposable {
     }
 
     /// <summary>
+    ///     The mixer thread loop that calls device callbacks to pull audio data.
+    /// </summary>
+    private void MixerThreadLoop() {
+        while (!_stopEvent.IsSet) {
+            try {
+                // Call each channel's render callback to pull audio data
+                foreach (SoundChannel channel in _channels.Keys.ToList()) {
+                    channel.InvokeRenderCallback();
+                }
+
+                // Small sleep to prevent busy-waiting
+                // This will be replaced by proper timing based on audio buffer needs
+                Thread.Sleep(1);
+            } catch (Exception ex) {
+                _logger.Error(ex, "SOFTWARE MIXER: Error in mixer thread loop.");
+            }
+        }
+
+        _logger.Debug("SOFTWARE MIXER: Mixer thread stopped.");
+    }
+
+    /// <summary>
     ///     Disposes the mixer, releasing audio players and clearing the channel registry.
     /// </summary>
     /// <param name="disposing">Indicates whether managed resources should be released.</param>
@@ -137,6 +171,13 @@ public sealed class SoftwareMixer : IDisposable {
         _logger.Debug("SOFTWARE MIXER: Disposing mixer (disposing = {Disposing}).", disposing);
 
         if (disposing) {
+            // Stop the mixer thread
+            _stopEvent.Set();
+            if (_mixerThread is not null && _mixerThread.IsAlive) {
+                _mixerThread.Join(TimeSpan.FromSeconds(2));
+            }
+            _stopEvent.Dispose();
+
             foreach ((SoundChannel channel, AudioPlayer audioPlayer) in _channels) {
                 try {
                     audioPlayer.Dispose();
