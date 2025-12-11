@@ -160,9 +160,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         }
 
         if (disposing) {
-            // Unregister callback from channel
-            _soundChannel.SetRenderCallback(null);
-            
             if (_oplFlushScheduled) {
                 _scheduler.RemoveEvents(_oplFlushHandler);
                 _oplFlushScheduled = false;

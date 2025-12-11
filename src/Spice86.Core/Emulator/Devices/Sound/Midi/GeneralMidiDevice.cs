@@ -123,9 +123,6 @@ public sealed class GeneralMidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                // Unregister callback from channel
-                _soundChannel?.SetRenderCallback(null);
-                
                 if (OperatingSystem.IsWindows() &&
                     _configuration.AudioEngine != AudioEngine.Dummy &&
                     _midiOutHandle != IntPtr.Zero) {

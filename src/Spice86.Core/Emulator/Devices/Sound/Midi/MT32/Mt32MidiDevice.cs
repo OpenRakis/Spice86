@@ -106,9 +106,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                // Unregister callback from channel
-                _soundChannel.SetRenderCallback(null);
-                
                 _context.Dispose();
             }
             _disposed = true;

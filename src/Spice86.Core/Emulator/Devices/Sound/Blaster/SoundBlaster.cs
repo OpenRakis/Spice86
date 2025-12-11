@@ -389,9 +389,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         }
 
         if (disposing) {
-            // Unregister callback from channel
-            PCMSoundChannel.SetRenderCallback(null);
-            
             ResetDmaState();
             UnregisterDmaCallbacks();
             _dsp.Dispose();

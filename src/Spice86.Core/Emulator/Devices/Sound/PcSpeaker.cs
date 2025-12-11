@@ -292,9 +292,6 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         }
 
         if (disposing) {
-            // Unregister callback from channel
-            _soundChannel.SetRenderCallback(null);
-            
             _scheduler.RemoveEvents(_tickHandler);
         }
 
