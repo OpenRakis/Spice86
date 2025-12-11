@@ -180,10 +180,6 @@ public class SoundChannel {
         while (!_stopEvent.IsSet) {
             try {
                 _renderCallback?.Invoke();
-                
-                // Small sleep to prevent busy-waiting
-                // The callback will typically render a small buffer of audio
-                Thread.Sleep(1);
             } catch (Exception ex) {
                 _logger.Error(ex, "SOUND CHANNEL {ChannelName}: Error in render thread loop.", Name);
             }
