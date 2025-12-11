@@ -17,6 +17,7 @@ public class SoundChannel {
     private Action? _renderCallback;
     private Thread? _renderThread;
     private readonly ManualResetEventSlim _stopEvent = new(false);
+    private readonly AutoResetEvent _renderEvent = new(false);
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="SoundChannel" /> class.
@@ -175,11 +176,30 @@ public class SoundChannel {
 
     /// <summary>
     ///     The render thread loop that continuously calls the device callback.
+    ///     Uses time-based rendering to prevent CPU busy-waiting while maintaining smooth audio.
     /// </summary>
     private void RenderThreadLoop() {
+        // Use a timer to trigger renders at a reasonable rate
+        // This prevents busy-waiting while ensuring audio is rendered frequently enough
+        using System.Threading.Timer timer = new System.Threading.Timer(
+            _ => _renderEvent.Set(),
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromMilliseconds(5) // Render every 5ms for smooth audio
+        );
+
         while (!_stopEvent.IsSet) {
             try {
+                // Wait for timer or stop signal
+                if (_stopEvent.Wait(0)) {
+                    break;
+                }
+
+                // Render audio
                 _renderCallback?.Invoke();
+
+                // Wait for next render cycle
+                _renderEvent.WaitOne(10); // Max wait 10ms to stay responsive
             } catch (Exception ex) {
                 _logger.Error(ex, "SOUND CHANNEL {ChannelName}: Error in render thread loop.", Name);
             }
