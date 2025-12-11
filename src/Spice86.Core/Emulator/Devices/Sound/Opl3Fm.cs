@@ -20,7 +20,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
     private readonly object _chipLock = new();
-    private readonly DeviceThread _deviceThread;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly DualPic _dualPic;
@@ -71,7 +70,9 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         bool useAdLibGold = useAdlibGold;
         _useOplIrq = enableOplIrq;
         _oplIrqLine = oplIrqLine;
-        _deviceThread = new DeviceThread(nameof(Opl3Fm), PlaybackLoopBody, pauseHandler, loggerService);
+        
+        // Register the playback callback with the channel so the mixer can call it
+        _soundChannel.SetRenderCallback(PlaybackLoopBody);
 
         _oplFlushHandler = FlushOplWrites;
         _oplTimerHandler = ServiceOplTimers;
@@ -159,6 +160,9 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         }
 
         if (disposing) {
+            // Unregister callback from channel
+            _soundChannel.SetRenderCallback(null);
+            
             if (_oplFlushScheduled) {
                 _scheduler.RemoveEvents(_oplFlushHandler);
                 _oplFlushScheduled = false;
@@ -173,7 +177,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 _dualPic.DeactivateIrq(_oplIrqLine);
             }
 
-            _deviceThread.Dispose();
             _adLibGold?.Dispose();
         }
 
@@ -251,16 +254,11 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    ///     Starts the playback thread if it is currently idle.
+    ///     Initializes playback if needed.
     /// </summary>
     private void InitializePlaybackIfNeeded() {
-        if (_deviceThread.Active) {
-            return;
-        }
-
-        _loggerService.Debug("Starting OPL3 FM playback thread.");
+        // Mixer thread will call the callback, just render initial buffer
         RenderTo(_playBuffer);
-        _deviceThread.StartThreadIfNeeded();
     }
 
     /// <inheritdoc />

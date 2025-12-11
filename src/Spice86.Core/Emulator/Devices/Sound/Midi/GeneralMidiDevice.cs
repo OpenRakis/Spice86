@@ -25,7 +25,6 @@ public sealed class GeneralMidiDevice : MidiDevice {
 
     private bool _disposed;
 
-    private readonly DeviceThread _deviceThread;
     private volatile uint _message;
 
     // General MIDI needs a large buffer to store preset PCM data of musical instruments.
@@ -57,9 +56,10 @@ public sealed class GeneralMidiDevice : MidiDevice {
         }
         if (!OperatingSystem.IsWindows() && configuration.AudioEngine != AudioEngine.Dummy) {
             _soundChannel = softwareMixer.CreateChannel(nameof(GeneralMidiDevice));
+            // Register the playback callback with the channel so the mixer can call it
+            _soundChannel.SetRenderCallback(PlaybackLoopBody);
         }
         
-        _deviceThread = new DeviceThread(nameof(GeneralMidiDevice), PlaybackLoopBody, pauseHandler, loggerService);
         if (OperatingSystem.IsWindows() && configuration.AudioEngine != AudioEngine.Dummy) {
             NativeMethods.midiOutOpen(out _midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
         }
@@ -83,9 +83,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
         if (OperatingSystem.IsWindows() && _configuration.AudioEngine != AudioEngine.Dummy) {
             NativeMethods.midiOutShortMsg(_midiOutHandle, message);
         } else {
-            _deviceThread.StartThreadIfNeeded();
             _message = message;
-            _deviceThread.Resume();
         }
     }
 
@@ -125,13 +123,15 @@ public sealed class GeneralMidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                // Unregister callback from channel
+                _soundChannel?.SetRenderCallback(null);
+                
                 if (OperatingSystem.IsWindows() &&
                     _configuration.AudioEngine != AudioEngine.Dummy &&
                     _midiOutHandle != IntPtr.Zero) {
                     NativeMethods.midiOutClose(_midiOutHandle);
                     _midiOutHandle = IntPtr.Zero;
                 }
-                _deviceThread.Dispose();
             }
 
             _disposed = true;

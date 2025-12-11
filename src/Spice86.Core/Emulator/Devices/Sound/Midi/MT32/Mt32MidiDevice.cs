@@ -15,7 +15,6 @@ using System.Linq;
 public sealed class Mt32MidiDevice : MidiDevice {
     private readonly Mt32Context _context;
     private readonly SoundChannel _soundChannel;
-    private readonly DeviceThread _deviceThread;
 
     /// <summary>
     /// Indicates whether this object has been disposed.
@@ -35,7 +34,10 @@ public sealed class Mt32MidiDevice : MidiDevice {
     public Mt32MidiDevice(SoftwareMixer softwareMixer, string romsPath, IPauseHandler pauseHandler, ILoggerService loggerService) {
         _soundChannel = softwareMixer.CreateChannel(nameof(Mt32MidiDevice));
         _context = new();
-        _deviceThread = new DeviceThread(nameof(Mt32MidiDevice), PlaybackLoopBody, pauseHandler, loggerService);
+        
+        // Register the playback callback with the channel so the mixer can call it
+        _soundChannel.SetRenderCallback(PlaybackLoopBody);
+        
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
@@ -55,7 +57,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <inheritdoc/>
     protected override void PlayShortMessage(uint message) {
         if (!_disposed) {
-            _deviceThread.StartThreadIfNeeded();
             _context.PlayMessage(message);
         }
     }
@@ -63,7 +64,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <inheritdoc/>
     protected override void PlaySysex(ReadOnlySpan<byte> data) {
         if (!_disposed) {
-            _deviceThread.StartThreadIfNeeded();
             _context.PlaySysex(data);
         }
     }
@@ -106,7 +106,9 @@ public sealed class Mt32MidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _deviceThread.Dispose();
+                // Unregister callback from channel
+                _soundChannel.SetRenderCallback(null);
+                
                 _context.Dispose();
             }
             _disposed = true;

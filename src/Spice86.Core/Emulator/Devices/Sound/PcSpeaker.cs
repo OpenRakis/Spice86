@@ -38,7 +38,6 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     private const float MsPerPitTick = 1000.0f / PitTimer.PitTickRate;
     private static readonly int MinimumCounter = Math.Max(1, 2 * PitTimer.PitTickRate / SampleRateHz);
     private readonly float[] _audioBuffer = new float[FramesPerBuffer * Channels];
-    private readonly DeviceThread _deviceThread;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly float[] _frameBuffer = new float[FramesPerBuffer];
@@ -95,6 +94,9 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         _soundChannel = softwareMixer.CreateChannel(nameof(PcSpeaker), SampleRateHz);
         _soundChannel.Volume = 100;
         _soundChannel.StereoSeparation = 0;
+        
+        // Register the playback callback with the channel so the mixer can call it
+        _soundChannel.SetRenderCallback(PlaybackLoop);
 
         _highPassFilter.Setup(SampleRateHz, 120, FilterQ);
         _lowPassFilter.Setup(SampleRateHz, 4300, FilterQ);
@@ -106,8 +108,6 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
 
         _tickHandler = OnSchedulerTick;
         _scheduler.AddEvent(_tickHandler, 1.0);
-
-        _deviceThread = new DeviceThread(nameof(PcSpeaker), PlaybackLoop, pauseHandler, loggerService);
     }
 
     /// <inheritdoc />
@@ -292,8 +292,10 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         }
 
         if (disposing) {
+            // Unregister callback from channel
+            _soundChannel.SetRenderCallback(null);
+            
             _scheduler.RemoveEvents(_tickHandler);
-            _deviceThread.Dispose();
         }
 
         _disposed = true;
@@ -517,10 +519,6 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     }
 
     private void AddImpulse(float index, float amplitude) {
-        if (!_deviceThread.Active) {
-            _pit.PreviousAmplitude = NeutralAmplitude;
-        }
-
         if (Math.Abs(amplitude - _pit.PreviousAmplitude) < 1e-6f) {
             return;
         }
@@ -576,8 +574,6 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
 
             _outputQueue.Enqueue(value);
         }
-
-        _deviceThread.StartThreadIfNeeded();
     }
 
     private void PlaybackLoop() {
