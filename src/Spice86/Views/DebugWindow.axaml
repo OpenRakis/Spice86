@@ -113,7 +113,7 @@
 							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F7" Header="Video Card" ToolTip.Tip="Alt-F7" Content="{Binding VideoCardViewModel}" />
 							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F8" Header="Color Palette" ToolTip.Tip="Alt-F8" Content="{Binding PaletteViewModel}" />
 							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F9" Header="General MIDI / MT-32" ToolTip.Tip="Alt-F9" Content="{Binding MidiViewModel}" />
-							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F10" Header="Software Mixer" ToolTip.Tip="Alt-F10" Content="{Binding SoftwareMixerViewModel}" />
+
 						</TabControl>
 					</dockModel:Document>
 					<dockModel:Document 

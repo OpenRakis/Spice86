@@ -326,11 +326,11 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
-        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        var midiDevice = new Midi(configuration, softwareMixer, state,
+        Mixer mixer = new(loggerService, configuration.AudioEngine);
+        var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
-        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher,
+        PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher,
             pauseHandler, loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
 
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock,
@@ -339,12 +339,20 @@ public class Spice86DependencyInjection : IDisposable {
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SbPro2);
+        MixerChannel oplChannel = mixer.AddChannel(
+            framesRequested => { }, 49716, "OPL3FM",
+            new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
+        Opl3Fm opl3Fm = new(oplChannel, state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService, pauseHandler,
+            emulationLoopScheduler, emulatedClock, dualPic,
+            useAdlibGold: false, enableOplIrq: false);
+
+        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SBPro2);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
         var soundBlaster = new SoundBlaster(ioPortDispatcher,
-            softwareMixer, state, dmaSystem, dualPic, emulationLoopScheduler, emulatedClock,
-            configuration.FailOnUnhandledPort,
-            loggerService, soundBlasterHardwareConfig, pauseHandler);
+            state, dmaSystem, dualPic, mixer, opl3Fm, loggerService,
+            emulationLoopScheduler, emulatedClock,
+            soundBlasterHardwareConfig);
         var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
@@ -521,7 +529,7 @@ public class Spice86DependencyInjection : IDisposable {
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
-            dmaSystem, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
+            dmaSystem, opl3Fm, mixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -570,8 +578,6 @@ public class Spice86DependencyInjection : IDisposable {
             PaletteViewModel paletteViewModel = new(videoState.DacRegisters.ArgbPalette,
                 uiDispatcher);
 
-            SoftwareMixerViewModel softwareMixerViewModel = new(softwareMixer);
-
             VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState, hostStorageProvider);
 
             CpuViewModel cpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
@@ -602,7 +608,7 @@ public class Spice86DependencyInjection : IDisposable {
             DebugWindowViewModel debugWindowViewModel = new(
                 WeakReferenceMessenger.Default, uiDispatcher, pauseHandler,
                 breakpointsViewModel, disassemblyViewModel,
-                paletteViewModel, softwareMixerViewModel, videoCardViewModel,
+                paletteViewModel, videoCardViewModel,
                 cpuViewModel, midiViewModel, cfgCpuViewModel,
                 [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
 

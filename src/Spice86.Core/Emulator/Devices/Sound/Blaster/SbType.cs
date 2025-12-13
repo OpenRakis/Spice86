@@ -1,20 +1,14 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 /// <summary>
-/// List of SoundBlaster types. Decides minor differences in the hardware.
+/// Sound Blaster type enum
 /// </summary>
 public enum SbType {
-    /// <summary>
-    /// SoundBlaster 16
-    /// </summary>
+    None = 0,
+    SB1 = 1,
+    SBPro1 = 2,
+    SB2 = 3,
+    SBPro2 = 4,
     Sb16 = 6,
-    /// <summary>
-    /// SoundBlaster Pro
-    /// </summary>
-    SbPro1 = 2,
-
-    /// <summary>
-    /// SoundBlaster Pro 2
-    /// </summary>
-    SbPro2 = 4,
+    GameBlaster = 7
 }

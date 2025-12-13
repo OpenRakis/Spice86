@@ -136,8 +136,8 @@ public class DosFileManagerTests {
 
         IFunctionHandlerProvider functionHandlerProvider =  cpu;
 
-        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
+        Mixer mixer = new(loggerService, configuration.AudioEngine);
+        PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort);
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService, configuration.FailOnUnhandledPort);
 
@@ -146,10 +146,18 @@ public class DosFileManagerTests {
         DmaBus dmaSystem =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
+        MixerChannel oplChannel = mixer.AddChannel(
+            framesRequested => { }, 49716, "OPL3FM",
+            new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
+        Opl3Fm opl3Fm = new(oplChannel, state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService, pauseHandler,
+            emulationLoopScheduler, emulatedClock, dualPic,
+            useAdlibGold: false, enableOplIrq: false);
+
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaSystem, dualPic, emulationLoopScheduler, emulatedClock,
-            configuration.FailOnUnhandledPort,
-            loggerService, soundBlasterHardwareConfig, pauseHandler);
+        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, state, dmaSystem, dualPic, mixer, opl3Fm,
+            loggerService, emulationLoopScheduler, emulatedClock,
+            soundBlasterHardwareConfig);
 
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory, interruptVectorTable, ioPortDispatcher,

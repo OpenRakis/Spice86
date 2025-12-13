@@ -4,6 +4,7 @@ using Mt32emu;
 
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM;
+using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;
 
 using System.IO.Compression;
@@ -14,7 +15,7 @@ using System.Linq;
 /// </summary>
 public sealed class Mt32MidiDevice : MidiDevice {
     private readonly Mt32Context _context;
-    private readonly SoundChannel _soundChannel;
+    private readonly MixerChannel _mixerChannel;
     private readonly DeviceThread _deviceThread;
 
     /// <summary>
@@ -27,13 +28,13 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <summary>
     /// Constructs an instance of <see cref="Mt32MidiDevice"/>.
     /// </summary>
-    /// <param name="softwareMixer">The software mixer for sund channels.</param>
+    /// <param name="mixer">The software mixer for sound channels.</param>
     /// <param name="romsPath">The path to the MT-32 ROM files.</param>
     /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
     /// <param name="loggerService">The logger service to use for logging messages.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
-    public Mt32MidiDevice(SoftwareMixer softwareMixer, string romsPath, IPauseHandler pauseHandler, ILoggerService loggerService) {
-        _soundChannel = softwareMixer.CreateChannel(nameof(Mt32MidiDevice));
+    public Mt32MidiDevice(Mixer mixer, string romsPath, IPauseHandler pauseHandler, ILoggerService loggerService) {
+        _mixerChannel = mixer.AddChannel(RenderCallback, 48000, nameof(Mt32MidiDevice), new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
         _context = new();
         _deviceThread = new DeviceThread(nameof(Mt32MidiDevice), PlaybackLoopBody, pauseHandler, loggerService);
         if (string.IsNullOrWhiteSpace(romsPath)) {
@@ -50,6 +51,7 @@ public sealed class Mt32MidiDevice : MidiDevice {
         _context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(48000);
         _context.SetSampleRate(48000);
         _context.OpenSynth();
+        _mixerChannel.Enable(true);
     }
 
     /// <inheritdoc/>
@@ -71,7 +73,16 @@ public sealed class Mt32MidiDevice : MidiDevice {
     private void PlaybackLoopBody() {
         ((Span<float>)_buffer).Clear();
         _context.Render(_buffer);
-        _soundChannel.Render(_buffer);
+    }
+
+    private void RenderCallback(int framesRequested) {
+        ((Span<float>)_buffer).Clear();
+        _context.Render(_buffer);
+
+        _mixerChannel.AudioFrames.Clear();
+        for (int i = 0; i < _buffer.Length && i < framesRequested * 2; i += 2) {
+            _mixerChannel.AudioFrames.Add(new AudioFrame(_buffer[i], _buffer[i + 1]));
+        }
     }
 
     private bool LoadRoms(string path) {

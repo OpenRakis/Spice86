@@ -5,6 +5,7 @@ using MeltySynth;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM;
+using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;
 
 using System.Linq;
@@ -20,7 +21,7 @@ using OperatingSystem = System.OperatingSystem;
 /// </summary>
 public sealed class GeneralMidiDevice : MidiDevice {
     private readonly Configuration _configuration;
-    private readonly SoundChannel? _soundChannel;
+    private readonly MixerChannel? _mixerChannel;
     private readonly Synthesizer? _synthesizer;
 
     private bool _disposed;
@@ -44,10 +45,10 @@ public sealed class GeneralMidiDevice : MidiDevice {
     /// Initializes a new instance of <see cref="GeneralMidiDevice"/>.
     /// </summary>
     /// <param name="configuration">The class that tells us what to run and how.</param>
-    /// <param name="softwareMixer">The software mixer for sound channels.</param>
+    /// <param name="mixer">The software mixer for sound channels.</param>
     /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
     /// <param name="loggerService">The service used to log messages.</param>
-    public GeneralMidiDevice(Configuration configuration, SoftwareMixer softwareMixer, IPauseHandler pauseHandler, ILoggerService loggerService) {
+    public GeneralMidiDevice(Configuration configuration, Mixer mixer, IPauseHandler pauseHandler, ILoggerService loggerService) {
         _configuration = configuration;
         if (GetType().Assembly.GetManifestResourceNames().Any(x => x == SoundFontResourceName)) {
             Stream? resource = GetType().Assembly.GetManifestResourceStream(SoundFontResourceName);
@@ -56,7 +57,8 @@ public sealed class GeneralMidiDevice : MidiDevice {
             }
         }
         if (!OperatingSystem.IsWindows() && configuration.AudioEngine != AudioEngine.Dummy) {
-            _soundChannel = softwareMixer.CreateChannel(nameof(GeneralMidiDevice));
+            _mixerChannel = mixer.AddChannel(RenderCallback, 48000, nameof(GeneralMidiDevice), new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
+            _mixerChannel.Enable(true);
         }
         
         _deviceThread = new DeviceThread(nameof(GeneralMidiDevice), PlaybackLoopBody, pauseHandler, loggerService);
@@ -71,7 +73,20 @@ public sealed class GeneralMidiDevice : MidiDevice {
         ((Span<float>)_buffer).Clear();
 
         FillBuffer(_synthesizer, _buffer);
-        _soundChannel?.Render(_buffer);
+    }
+
+    private void RenderCallback(int framesRequested) {
+        if (_mixerChannel is null) {
+            return;
+        }
+
+        ((Span<float>)_buffer).Clear();
+        FillBuffer(_synthesizer, _buffer);
+
+        _mixerChannel.AudioFrames.Clear();
+        for (int i = 0; i < _buffer.Length && i < framesRequested * 2; i += 2) {
+            _mixerChannel.AudioFrames.Add(new AudioFrame(_buffer[i], _buffer[i + 1]));
+        }
     }
 
     private void FillBuffer(Synthesizer? synthesizer, Span<float> data) {
