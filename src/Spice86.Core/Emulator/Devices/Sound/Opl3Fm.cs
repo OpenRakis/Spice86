@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Libs.Sound.Common;
 using Spice86.Libs.Sound.Devices.AdlibGold;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
@@ -31,9 +32,9 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly float[] _playBuffer = new float[2048];
 
     /// <summary>
-    ///     The sound channel used for the OPL3 FM synth.
+    ///     The mixer channel used for the OPL3 FM synth.
     /// </summary>
-    private readonly SoundChannel _soundChannel;
+    private readonly MixerChannel _mixerChannel;
 
     private readonly short[] _tmpInterleaved = new short[2048];
     private readonly bool _useOplIrq;
@@ -44,7 +45,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     Initializes a new instance of the OPL3 FM synth chip.
     /// </summary>
-    /// <param name="fmSynthSoundChannel">The software mixer's sound channel for the OPL3 FM Synth chip.</param>
+    /// <param name="fmSynthMixerChannel">The software mixer's channel for the OPL3 FM Synth chip.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="ioPortDispatcher">
     ///     The class that is responsible for dispatching ports reads and writes to classes that
@@ -59,12 +60,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <param name="useAdlibGold">True to enable AdLib Gold filtering and surround processing.</param>
     /// <param name="enableOplIrq">True to forward OPL IRQs to the PIC.</param>
     /// <param name="oplIrqLine">IRQ line used when OPL IRQs are enabled.</param>
-    public Opl3Fm(SoundChannel fmSynthSoundChannel, State state,
+    public Opl3Fm(MixerChannel fmSynthMixerChannel, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
         ILoggerService loggerService, IPauseHandler pauseHandler, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
         bool useAdlibGold = false, bool enableOplIrq = false, byte oplIrqLine = 5)
         : base(state, failOnUnhandledPort, loggerService) {
-        _soundChannel = fmSynthSoundChannel;
+        _mixerChannel = fmSynthMixerChannel;
         _scheduler = scheduler;
         _clock = clock;
         _dualPic = dualPic;
@@ -80,16 +81,17 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             OnIrqChanged = OnOplIrqChanged
         };
 
+        int sampleRate = _mixerChannel.GetSampleRate();
         if (useAdLibGold) {
-            _adLibGold = new AdLibGoldDevice(_soundChannel.SampleRate, loggerService);
+            _adLibGold = new AdLibGoldDevice(sampleRate, loggerService);
             _adLibGoldIo = _adLibGold.CreateIoAttachedTo(_oplIo);
         }
 
         _loggerService.Debug(
             "Initializing OPL3 FM synth. AdLib Gold enabled: {AdLibGoldEnabled}, OPL IRQ enabled: {OplIrqEnabled}, Sample rate: {SampleRate}",
-            useAdLibGold, _useOplIrq, _soundChannel.SampleRate);
+            useAdLibGold, _useOplIrq, sampleRate);
 
-        _oplIo.Reset((uint)_soundChannel.SampleRate);
+        _oplIo.Reset((uint)sampleRate);
 
         InitializeToneGenerators();
 
@@ -277,8 +279,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     ///     Generates and plays back output waveform data.
     /// </summary>
     private void PlaybackLoopBody() {
-        _soundChannel.Render(_playBuffer);
         RenderTo(_playBuffer);
+        
+        _mixerChannel.AudioFrames.Clear();
+        for (int i = 0; i < _playBuffer.Length; i += 2) {
+            _mixerChannel.AudioFrames.Add(new AudioFrame(_playBuffer[i], _playBuffer[i + 1]));
+        }
     }
 
     /// <summary>

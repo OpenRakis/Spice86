@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Libs.Sound.Common;
 using Spice86.Libs.Sound.Filters.IirFilters.Filters.RBJ;
 using Spice86.Shared.Interfaces;
 
@@ -51,7 +52,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
 
     private readonly PitState _pit = new();
 
-    private readonly SoundChannel _soundChannel;
+    private readonly MixerChannel _mixerChannel;
     private readonly EventHandler _tickHandler;
     private readonly float[] _waveform = new float[WaveformSize];
     private float _accumulator;
@@ -67,7 +68,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     /// <summary>
     ///     Initializes a new instance of the <see cref="PcSpeaker" /> class.
     /// </summary>
-    /// <param name="softwareMixer">The shared software mixer used to render output.</param>
+    /// <param name="mixer">The shared software mixer used to render output.</param>
     /// <param name="state">Machine state for registering I/O handlers.</param>
     /// <param name="ioPortDispatcher">Dispatcher used to register the speaker port.</param>
     /// <param name="pauseHandler">Handler used to honor emulator pause requests.</param>
@@ -77,7 +78,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     /// <param name="failOnUnhandledPort">Indicates whether unhandled port accesses should throw.</param>
     /// <param name="pitControl">Optional PIT control used to synchronize channel 2 output.</param>
     public PcSpeaker(
-        SoftwareMixer softwareMixer,
+        Mixer mixer,
         State state,
         IOPortDispatcher ioPortDispatcher,
         IPauseHandler pauseHandler,
@@ -92,9 +93,9 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         _clock = clock;
         _pitControl = pitControl;
 
-        _soundChannel = softwareMixer.CreateChannel(nameof(PcSpeaker), SampleRateHz);
-        _soundChannel.Volume = 100;
-        _soundChannel.StereoSeparation = 0;
+        _mixerChannel = mixer.AddChannel(RenderCallback, SampleRateHz, nameof(PcSpeaker), new HashSet<ChannelFeature> { ChannelFeature.Stereo });
+        _mixerChannel.SetAppVolume(new AudioFrame(1.0f, 1.0f));
+        _mixerChannel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Left });
 
         _highPassFilter.Setup(SampleRateHz, 120, FilterQ);
         _lowPassFilter.Setup(SampleRateHz, 4300, FilterQ);
@@ -617,8 +618,28 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
             _audioBuffer[sampleIndex++] = sample;
             _audioBuffer[sampleIndex++] = sample;
         }
+    }
 
-        _soundChannel.Render(_audioBuffer.AsSpan(0, frames * Channels));
+    private void RenderCallback(int framesRequested) {
+        _mixerChannel.AudioFrames.Clear();
+        
+        int framesToProcess = Math.Min(framesRequested, FramesPerBuffer);
+        lock (_outputLock) {
+            if (_outputQueue.Count < framesToProcess) {
+                framesToProcess = _outputQueue.Count;
+            }
+
+            for (int i = 0; i < framesToProcess; i++) {
+                _frameBuffer[i] = _outputQueue.Dequeue();
+            }
+        }
+
+        if (framesToProcess > 0) {
+            ApplyFiltersAndRender(framesToProcess);
+            for (int i = 0; i < framesToProcess * Channels; i += 2) {
+                _mixerChannel.AudioFrames.Add(new AudioFrame(_audioBuffer[i], _audioBuffer[i + 1]));
+            }
+        }
     }
 
     private float GetPicTickIndex() {

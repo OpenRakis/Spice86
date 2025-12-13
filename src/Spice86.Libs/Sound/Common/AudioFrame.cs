@@ -3,7 +3,7 @@ namespace Spice86.Libs.Sound.Common;
 /// <summary>
 ///     Represents a stereo audio frame with left and right channel sample values.
 /// </summary>
-internal struct AudioFrame : IEquatable<AudioFrame> {
+public struct AudioFrame : IEquatable<AudioFrame> {
     /// <summary>
     ///     Sample amplitude for the left channel.
     /// </summary>
