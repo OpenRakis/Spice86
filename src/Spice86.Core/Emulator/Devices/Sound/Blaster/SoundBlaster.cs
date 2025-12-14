@@ -195,8 +195,163 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         public E2State E2 { get; } = new E2State();
     }
 
-    private static readonly FrozenDictionary<byte, byte> CommandLengthsSb = CreateCommandLengthsSb();
-    private static readonly FrozenDictionary<byte, byte> CommandLengthsSb16 = CreateCommandLengthsSb16();
+    // =============================================================================
+    // ADPCM Decoders - ported from DOSBox Staging soundblaster.cpp lines 863-958
+    // =============================================================================
+    
+    /// <summary>
+    /// Decodes a single ADPCM portion using the specified mapping tables.
+    /// Mirrors decode_adpcm_portion() from DOSBox.
+    /// </summary>
+    private static byte DecodeAdpcmPortion(
+        int bitPortion,
+        ReadOnlySpan<byte> adjustMap,
+        ReadOnlySpan<sbyte> scaleMap,
+        int lastIndex,
+        ref byte reference,
+        ref ushort stepsize) {
+        
+        int i = Math.Clamp(bitPortion + stepsize, 0, lastIndex);
+        stepsize = (ushort)((stepsize + adjustMap[i]) & 0xFF);
+        int newSample = reference + scaleMap[i];
+        reference = (byte)Math.Clamp(newSample, 0, 255);
+        return reference;
+    }
+    
+    /// <summary>
+    /// Decodes one byte of 2-bit ADPCM data into 4 samples.
+    /// Mirrors decode_adpcm_2bit() from DOSBox.
+    /// </summary>
+    private static byte[] DecodeAdpcm2Bit(byte data, ref byte reference, ref ushort stepsize) {
+        ReadOnlySpan<sbyte> scaleMap = stackalloc sbyte[] {
+             0,  1,  0,  -1,  1,  3,  -1,  -3,
+             2,  6, -2,  -6,  4, 12,  -4, -12,
+             8, 24, -8, -24,  6, 48, -16, -48
+        };
+        ReadOnlySpan<byte> adjustMap = stackalloc byte[] {
+              0,   4,   0,   4,
+            252,   4, 252,   4, 252,   4, 252,   4,
+            252,   4, 252,   4, 252,   4, 252,   4,
+            252,   0, 252,   0
+        };
+        const int lastIndex = 23;
+        
+        byte[] samples = new byte[4];
+        samples[0] = DecodeAdpcmPortion((data >> 6) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        samples[1] = DecodeAdpcmPortion((data >> 4) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        samples[2] = DecodeAdpcmPortion((data >> 2) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        samples[3] = DecodeAdpcmPortion((data >> 0) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        return samples;
+    }
+    
+    /// <summary>
+    /// Decodes one byte of 3-bit ADPCM data into 3 samples.
+    /// Mirrors decode_adpcm_3bit() from DOSBox.
+    /// </summary>
+    private static byte[] DecodeAdpcm3Bit(byte data, ref byte reference, ref ushort stepsize) {
+        ReadOnlySpan<sbyte> scaleMap = stackalloc sbyte[] {
+             0,  1,  2,  3,  0,  -1,  -2,  -3,
+             1,  3,  5,  7, -1,  -3,  -5,  -7,
+             2,  6, 10, 14, -2,  -6, -10, -14,
+             4, 12, 20, 28, -4, -12, -20, -28,
+             5, 15, 25, 35, -5, -15, -25, -35
+        };
+        ReadOnlySpan<byte> adjustMap = stackalloc byte[] {
+              0, 0, 0,   8,   0, 0, 0,   8,
+            248, 0, 0,   8, 248, 0, 0,   8,
+            248, 0, 0,   8, 248, 0, 0,   8,
+            248, 0, 0,   8, 248, 0, 0,   8,
+            248, 0, 0,   0, 248, 0, 0,   0
+        };
+        const int lastIndex = 39;
+        
+        byte[] samples = new byte[3];
+        samples[0] = DecodeAdpcmPortion((data >> 5) & 0x7, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        samples[1] = DecodeAdpcmPortion((data >> 2) & 0x7, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        samples[2] = DecodeAdpcmPortion((data & 0x3) << 1, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        return samples;
+    }
+    
+    /// <summary>
+    /// Decodes one byte of 4-bit ADPCM data into 2 samples.
+    /// Mirrors decode_adpcm_4bit() from DOSBox.
+    /// </summary>
+    private static byte[] DecodeAdpcm4Bit(byte data, ref byte reference, ref ushort stepsize) {
+        ReadOnlySpan<sbyte> scaleMap = stackalloc sbyte[] {
+             0,  1,  2,  3,  4,  5,  6,  7,  0,  -1,  -2,  -3,  -4,  -5,  -6,  -7,
+             1,  3,  5,  7,  9, 11, 13, 15, -1,  -3,  -5,  -7,  -9, -11, -13, -15,
+             2,  6, 10, 14, 18, 22, 26, 30, -2,  -6, -10, -14, -18, -22, -26, -30,
+             4, 12, 20, 28, 36, 44, 52, 60, -4, -12, -20, -28, -36, -44, -52, -60
+        };
+        ReadOnlySpan<byte> adjustMap = stackalloc byte[] {
+              0, 0, 0, 0, 0, 16, 16, 16,
+              0, 0, 0, 0, 0, 16, 16, 16,
+            240, 0, 0, 0, 0, 16, 16, 16,
+            240, 0, 0, 0, 0, 16, 16, 16,
+            240, 0, 0, 0, 0, 16, 16, 16,
+            240, 0, 0, 0, 0, 16, 16, 16,
+            240, 0, 0, 0, 0,  0,  0,  0,
+            240, 0, 0, 0, 0,  0,  0,  0
+        };
+        const int lastIndex = 63;
+        
+        byte[] samples = new byte[2];
+        samples[0] = DecodeAdpcmPortion(data >> 4, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        samples[1] = DecodeAdpcmPortion(data & 0xF, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        return samples;
+    }
+    
+    // =============================================================================
+    // DSP Command Tables - ported from DOSBox Staging soundblaster.cpp lines 205-265
+    // =============================================================================
+    
+    /// <summary>
+    /// Number of parameter bytes for DSP commands on SB/SB Pro models.
+    /// Mirrors dsp_cmd_len_sb[] from DOSBox.
+    /// </summary>
+    private static readonly byte[] DspCommandLengthsSb = new byte[256] {
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x00
+        1, 0, 0, 0,  2, 2, 2, 2,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x10 (Wari hack: 0x15-0x17 have 2 bytes)
+        0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x20
+        0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  // 0x30
+        1, 2, 2, 0,  0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  // 0x40
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x50
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x60
+        0, 0, 0, 0,  2, 2, 2, 2,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x70
+        2, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x80
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x90
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xA0
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xB0
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xC0
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xD0
+        1, 0, 1, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xE0
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0   // 0xF0
+    };
+    
+    /// <summary>
+    /// Number of parameter bytes for DSP commands on SB16 model.
+    /// Mirrors dsp_cmd_len_sb16[] from DOSBox.
+    /// </summary>
+    private static readonly byte[] DspCommandLengthsSb16 = new byte[256] {
+        0, 0, 0, 0,  1, 2, 0, 0,  1, 0, 0, 0,  0, 0, 2, 1,  // 0x00
+        1, 0, 0, 0,  2, 2, 2, 2,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x10
+        0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x20
+        0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  // 0x30
+        1, 2, 2, 0,  0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  // 0x40
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x50
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x60
+        0, 0, 0, 0,  2, 2, 2, 2,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x70
+        2, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x80
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x90
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xA0
+        3, 3, 3, 3,  3, 3, 3, 3,  3, 3, 3, 3,  3, 3, 3, 3,  // 0xB0
+        3, 3, 3, 3,  3, 3, 3, 3,  3, 3, 3, 3,  3, 3, 3, 3,  // 0xC0
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xD0
+        1, 0, 1, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xE0
+        0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0   // 0xF0
+    };
+
+
     private static readonly int[][] E2IncrTable = new int[][] {
         new int[] { 0x01, -0x02, -0x04, 0x08, -0x10, 0x20, 0x40, -0x80, -106 },
         new int[] { -0x01, 0x02, -0x04, 0x08, 0x10, -0x20, 0x40, -0x80, 165 },
@@ -340,8 +495,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     /// <summary>
     /// Generates a single audio frame from the DMA buffer.
-    /// This is where actual PCM data is read and converted to audio.
-    /// Supports PCM8, PCM16, and ADPCM (2-bit, 3-bit, 4-bit) modes.
+    /// Mirrors DOSBox play_dma_transfer() pattern for PCM8/ADPCM modes.
     /// </summary>
     private AudioFrame GenerateDmaFrame() {
         // If no DMA transfer is active, return silence
@@ -352,14 +506,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return new AudioFrame(0.0f, 0.0f);
         }
 
-        // Handle different DMA modes
+        // Handle different DMA modes - mirrors DOSBox switch statement
         switch (_sb.Dma.Mode) {
             case DmaMode.Pcm8Bit:
                 return GeneratePcm8Frame();
-            
-            case DmaMode.Pcm16Bit:
-            case DmaMode.Pcm16BitAliased:
-                return GeneratePcm16Frame();
             
             case DmaMode.Adpcm2Bit:
                 return GenerateAdpcm2Frame();
@@ -370,6 +520,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case DmaMode.Adpcm4Bit:
                 return GenerateAdpcm4Frame();
             
+            case DmaMode.Pcm16Bit:
+            case DmaMode.Pcm16BitAliased:
+                // TODO: Port 16-bit PCM handling
+                _loggerService.Warning("SOUNDBLASTER: 16-bit PCM not yet implemented");
+                return new AudioFrame(0.0f, 0.0f);
+            
             default:
                 _loggerService.Warning("SOUNDBLASTER: Unsupported DMA mode {Mode}", _sb.Dma.Mode);
                 return new AudioFrame(0.0f, 0.0f);
@@ -378,6 +534,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     
     /// <summary>
     /// Generates a frame for 8-bit PCM mode.
+    /// Mirrors DOSBox Pcm8Bit case in play_dma_transfer().
     /// </summary>
     private AudioFrame GeneratePcm8Frame() {
         byte sample = 0;
@@ -399,9 +556,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                         _loggerService.Debug("SOUNDBLASTER: First DMA byte read: 0x{Sample:X2}", sample);
                     }
                 }
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("SOUNDBLASTER: DMA read words={WordsRead} left={Left}", wordsRead, _sb.Dma.Left);
-                }
             } else {
                 if (_sb.Dma.Left > 0) {
                     _loggerService.Warning("SOUNDBLASTER: DMA read returned 0 words but DMA.Left={DmaLeft}", _sb.Dma.Left);
@@ -417,39 +571,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
     
     /// <summary>
-    /// Generates a frame for 16-bit PCM mode.
-    /// </summary>
-    private AudioFrame GeneratePcm16Frame() {
-        // 16-bit PCM requires reading 2 bytes
-        short sample = 0;
-        
-        try {
-            Span<byte> buffer = stackalloc byte[2];
-            int wordsRead = _sb.Dma.Channel!.Read(_sb.Dma.Channel.Is16Bit ? 1 : 2, buffer);
-            
-            if (wordsRead > 0) {
-                // Little-endian 16-bit sample
-                sample = (short)(buffer[0] | (buffer[1] << 8));
-                
-                if (_sb.Dma.Left > 0) {
-                    _sb.Dma.Left -= 2;
-                }
-            } else {
-                return new AudioFrame(0.0f, 0.0f);
-            }
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "SOUNDBLASTER: Exception reading 16-bit DMA");
-            return new AudioFrame(0.0f, 0.0f);
-        }
-        
-        // Convert signed 16-bit to float (-32768 to 32767 → -1.0 to 1.0)
-        float value = _sb.SpeakerEnabled ? sample : 0.0f;
-        return new AudioFrame(value, value);
-    }
-    
-    /// <summary>
     /// Generates a frame for 2-bit ADPCM mode.
-    /// One byte contains 4 compressed samples.
+    /// Mirrors DOSBox Adpcm2Bit case with decode_adpcm_dma lambda.
     /// </summary>
     private AudioFrame GenerateAdpcm2Frame() {
         // Decode samples from buffer cache if available
@@ -467,10 +590,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             if (wordsRead > 0 && _sb.Dma.Left > 0) {
                 _sb.Dma.Left--;
                 
-                // Decode 1 byte → 4 samples (must use locals for ref params)
+                // Parse reference byte if provided (mirrors DOSBox haveref handling)
+                if (_sb.Adpcm.HaveRef) {
+                    _sb.Adpcm.HaveRef = false;
+                    _sb.Adpcm.Reference = buffer[0];
+                    _sb.Adpcm.Stepsize = MinAdaptiveStepSize;
+                    return _sb.DacState.RenderFrame(buffer[0], _sb.SpeakerEnabled);
+                }
+                
+                // Decode 1 byte → 4 samples
                 byte reference = _sb.Adpcm.Reference;
                 ushort stepsize = _sb.Adpcm.Stepsize;
-                byte[] samples = AdpcmDecoders.DecodeAdpcm2Bit(buffer[0], ref reference, ref stepsize);
+                byte[] samples = DecodeAdpcm2Bit(buffer[0], ref reference, ref stepsize);
                 _sb.Adpcm.Reference = reference;
                 _sb.Adpcm.Stepsize = stepsize;
                 
@@ -491,7 +622,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     
     /// <summary>
     /// Generates a frame for 3-bit ADPCM mode.
-    /// One byte contains 3 compressed samples (2 bits unused).
+    /// Mirrors DOSBox Adpcm3Bit case.
     /// </summary>
     private AudioFrame GenerateAdpcm3Frame() {
         if (_sb.Dma.RemainSize > 0) {
@@ -507,10 +638,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             if (wordsRead > 0 && _sb.Dma.Left > 0) {
                 _sb.Dma.Left--;
                 
-                // Decode 1 byte → 3 samples (must use locals for ref params)
+                if (_sb.Adpcm.HaveRef) {
+                    _sb.Adpcm.HaveRef = false;
+                    _sb.Adpcm.Reference = buffer[0];
+                    _sb.Adpcm.Stepsize = MinAdaptiveStepSize;
+                    return _sb.DacState.RenderFrame(buffer[0], _sb.SpeakerEnabled);
+                }
+                
                 byte reference = _sb.Adpcm.Reference;
                 ushort stepsize = _sb.Adpcm.Stepsize;
-                byte[] samples = AdpcmDecoders.DecodeAdpcm3Bit(buffer[0], ref reference, ref stepsize);
+                byte[] samples = DecodeAdpcm3Bit(buffer[0], ref reference, ref stepsize);
                 _sb.Adpcm.Reference = reference;
                 _sb.Adpcm.Stepsize = stepsize;
                 
@@ -530,7 +667,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     
     /// <summary>
     /// Generates a frame for 4-bit ADPCM mode.
-    /// One byte contains 2 compressed samples.
+    /// Mirrors DOSBox Adpcm4Bit case.
     /// </summary>
     private AudioFrame GenerateAdpcm4Frame() {
         if (_sb.Dma.RemainSize > 0) {
@@ -546,10 +683,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             if (wordsRead > 0 && _sb.Dma.Left > 0) {
                 _sb.Dma.Left--;
                 
-                // Decode 1 byte → 2 samples (must use locals for ref params)
+                if (_sb.Adpcm.HaveRef) {
+                    _sb.Adpcm.HaveRef = false;
+                    _sb.Adpcm.Reference = buffer[0];
+                    _sb.Adpcm.Stepsize = MinAdaptiveStepSize;
+                    return _sb.DacState.RenderFrame(buffer[0], _sb.SpeakerEnabled);
+                }
+                
                 byte reference = _sb.Adpcm.Reference;
                 ushort stepsize = _sb.Adpcm.Stepsize;
-                byte[] samples = AdpcmDecoders.DecodeAdpcm4Bit(buffer[0], ref reference, ref stepsize);
+                byte[] samples = DecodeAdpcm4Bit(buffer[0], ref reference, ref stepsize);
                 _sb.Adpcm.Reference = reference;
                 _sb.Adpcm.Stepsize = stepsize;
                 
@@ -616,26 +759,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     // Command length tables - mirrors dsp_cmd_len_sb and dsp_cmd_len_sb16 from DOSBox
-    private static FrozenDictionary<byte, byte> CreateCommandLengthsSb() {
-        var dict = new Dictionary<byte, byte> {
-            [0x10] = 1, [0x14] = 2, [0x15] = 2, [0x17] = 2, [0x18] = 2,
-            [0x24] = 2, [0x40] = 1, [0x41] = 2, [0x42] = 2, [0x48] = 2,
-            [0x74] = 2, [0x75] = 2, [0x76] = 2, [0x77] = 2, [0x7D] = 2,
-            [0x80] = 2, [0xE0] = 1, [0xE2] = 1, [0xE4] = 1
-        };
-        return dict.ToFrozenDictionary();
-    }
-
-    private static FrozenDictionary<byte, byte> CreateCommandLengthsSb16() {
-        FrozenDictionary<byte, byte> baseDict = CreateCommandLengthsSb();
-        var dict = new Dictionary<byte, byte>(baseDict);
-        dict[0x04] = 1; dict[0x05] = 2; dict[0x08] = 1; dict[0x0E] = 2; dict[0x0F] = 1;
-        for (byte i = 0xB0; i <= 0xCF; i++) dict[i] = 3;
-        dict[0xF9] = 1; dict[0xFA] = 1;
-        return dict.ToFrozenDictionary();
-    }
-
-    // ReadByte, WriteByte, Reset, and other existing methods remain the same...
+    // ReadByte, WriteByte, Reset, and other existing methods...
     public override byte ReadByte(ushort port) {
         switch (port - _config.BaseAddress) {
             case 0x0A:
@@ -765,9 +889,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
 
                 if (_config.SbType == SbType.Sb16) {
-                    CommandLengthsSb16.TryGetValue(value, out _commandDataLength);
+                    _commandDataLength = DspCommandLengthsSb16[value];
                 } else {
-                    CommandLengthsSb.TryGetValue(value, out _commandDataLength);
+                    _commandDataLength = DspCommandLengthsSb[value];
                 }
 
                 if (_commandDataLength == 0) {
