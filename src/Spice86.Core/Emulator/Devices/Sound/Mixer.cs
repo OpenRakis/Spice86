@@ -263,12 +263,6 @@ public sealed class Mixer : IDisposable {
                     _loggerService.Error(ex, "MIXER: Failed writing audio block to PortAudio");
                 }
 
-                // Sleep for the duration of the blocksize
-                // At 48kHz, 1024 frames = ~21ms
-                int sleepMs = (_blocksize * 1000) / _sampleRateHz;
-                if (sleepMs > 0) {
-                    Thread.Sleep(sleepMs);
-                }
             }
         } catch (Exception ex) {
             _loggerService.Error(ex, "MIXER: Mixer thread encountered an error");
