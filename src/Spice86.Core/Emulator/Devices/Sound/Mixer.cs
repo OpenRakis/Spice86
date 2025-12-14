@@ -418,30 +418,29 @@ public sealed class Mixer : IDisposable {
                 _peakRight *= PeakDecayCoeff;
             }
             
-            // Soft clipping if approaching limits (>= 32000)
-            const float softClipThreshold = 32000.0f;
-            const float hardLimit = 32767.0f;
-            
-            float left = frame.Left;
-            float right = frame.Right;
-            
-            // Soft knee limiting
-            if (Math.Abs(left) > softClipThreshold) {
-                float sign = Math.Sign(left);
-                float excess = Math.Abs(left) - softClipThreshold;
-                float softened = softClipThreshold + excess * 0.5f; // Reduce overshoot by half
-                left = Math.Clamp(sign * softened, -hardLimit, hardLimit);
-            }
-            
-            if (Math.Abs(right) > softClipThreshold) {
-                float sign = Math.Sign(right);
-                float excess = Math.Abs(right) - softClipThreshold;
-                float softened = softClipThreshold + excess * 0.5f;
-                right = Math.Clamp(sign * softened, -hardLimit, hardLimit);
-            }
+            // Apply soft clipping to both channels
+            float left = ApplySoftClipping(frame.Left);
+            float right = ApplySoftClipping(frame.Right);
             
             _outputBuffer[i] = new AudioFrame(left, right);
         }
+    }
+    
+    /// <summary>
+    /// Applies soft-knee limiting to a single sample to prevent harsh clipping.
+    /// </summary>
+    private static float ApplySoftClipping(float sample) {
+        const float softClipThreshold = 32000.0f;
+        const float hardLimit = 32767.0f;
+        
+        if (Math.Abs(sample) > softClipThreshold) {
+            float sign = Math.Sign(sample);
+            float excess = Math.Abs(sample) - softClipThreshold;
+            float softened = softClipThreshold + excess * 0.5f; // Reduce overshoot by half
+            return Math.Clamp(sign * softened, -hardLimit, hardLimit);
+        }
+        
+        return sample;
     }
     
     /// <summary>

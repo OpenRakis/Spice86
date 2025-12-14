@@ -300,21 +300,28 @@ public sealed class MixerChannel {
     /// Mirrors DOSBox lerp_upsample logic.
     /// </summary>
     private void ApplyLerpUpsampling(int targetFrames) {
-        // This assumes we have input frames in AudioFrames already
-        if (AudioFrames.Count == 0) {
-            return;
-        }
-        
+        // Store input frames and clear buffer for output
         List<AudioFrame> inputFrames = new List<AudioFrame>(AudioFrames);
         AudioFrames.Clear();
+        
+        // If no input, fill with silence or last known frame
+        if (inputFrames.Count == 0) {
+            for (int i = 0; i < targetFrames; i++) {
+                AudioFrames.Add(_lerpPrevFrame); // Use last frame or silence
+            }
+            return;
+        }
         
         double stepSize = (double)_sampleRateHz / _mixerSampleRateHz;
         int inputIndex = 0;
         
-        for (int i = 0; i < targetFrames && inputIndex < inputFrames.Count; i++) {
-            // Get frames for interpolation
-            _lerpPrevFrame = inputIndex > 0 ? inputFrames[inputIndex - 1] : _lerpPrevFrame;
-            _lerpNextFrame = inputIndex < inputFrames.Count ? inputFrames[inputIndex] : _lerpNextFrame;
+        // Always produce targetFrames output
+        for (int i = 0; i < targetFrames; i++) {
+            // Ensure we have valid prev and next frames
+            if (inputIndex < inputFrames.Count) {
+                _lerpNextFrame = inputFrames[inputIndex];
+            }
+            // else keep using the last _lerpNextFrame
             
             // Linear interpolation
             float t = (float)(_lerpPhase - Math.Floor(_lerpPhase));
@@ -327,12 +334,12 @@ public sealed class MixerChannel {
             
             // Advance phase
             _lerpPhase += stepSize;
-            while (_lerpPhase >= 1.0 && inputIndex < inputFrames.Count - 1) {
+            while (_lerpPhase >= 1.0) {
                 _lerpPhase -= 1.0;
+                _lerpPrevFrame = _lerpNextFrame;
                 inputIndex++;
-                _lerpPrevFrame = inputFrames[inputIndex];
-                if (inputIndex + 1 < inputFrames.Count) {
-                    _lerpNextFrame = inputFrames[inputIndex + 1];
+                if (inputIndex < inputFrames.Count) {
+                    _lerpNextFrame = inputFrames[inputIndex];
                 }
             }
         }
