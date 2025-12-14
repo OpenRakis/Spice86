@@ -1152,6 +1152,20 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 break;
 
+            case 0x16:
+            case 0x17:
+                // Single Cycle 2-bit ADPCM
+                // 0x17 includes reference byte
+                if (_currentCommand == 0x17) {
+                    _sb.Adpcm.HaveRef = true;
+                }
+                _sb.Dma.Left = (uint)(1 + _commandData[0] + (_commandData[1] << 8));
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: 2-bit ADPCM size={Size} haveRef={HaveRef}", _sb.Dma.Left, _sb.Adpcm.HaveRef);
+                }
+                DspPrepareDmaOld(DmaMode.Adpcm2Bit, false, false);
+                break;
+
             case 0x74:
             case 0x75:
                 // Single Cycle 4-bit ADPCM
