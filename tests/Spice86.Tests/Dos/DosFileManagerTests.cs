@@ -10,7 +10,6 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
@@ -146,24 +145,10 @@ public class DosFileManagerTests {
         DmaBus dmaSystem =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
-        MixerChannel oplChannel = mixer.AddChannel(
-            framesRequested => { }, 49716, "OPL3FM",
-            new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
-        Opl3Fm opl3Fm = new(oplChannel, state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService, pauseHandler,
-            emulationLoopScheduler, emulatedClock, dualPic,
-            useAdlibGold: false, enableOplIrq: false);
-
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, state, dmaSystem, dualPic, mixer, opl3Fm,
-            loggerService, emulationLoopScheduler, emulatedClock,
-            soundBlasterHardwareConfig);
-
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory, interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
-
 
         InputEventHub inputEventQueue = new();
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
@@ -182,7 +167,7 @@ public class DosFileManagerTests {
 
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
-            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
+            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", string.Empty } },
             loggerService, ioPortDispatcher);
 
         return dos.FileManager;

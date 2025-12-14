@@ -21,7 +21,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
     private readonly object _chipLock = new();
-    private readonly DeviceThread _deviceThread;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly DualPic _dualPic;
@@ -72,7 +71,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         bool useAdLibGold = useAdlibGold;
         _useOplIrq = enableOplIrq;
         _oplIrqLine = oplIrqLine;
-        _deviceThread = new DeviceThread(nameof(Opl3Fm), PlaybackLoopBody, pauseHandler, loggerService);
 
         _oplFlushHandler = FlushOplWrites;
         _oplTimerHandler = ServiceOplTimers;
@@ -92,6 +90,11 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             useAdLibGold, _useOplIrq, sampleRate);
 
         _oplIo.Reset((uint)sampleRate);
+
+        // Register OPL3 as a mixer handler that will be called during mix cycles
+        // This is critical - the mixer calls our handler every blocksize frames
+        // We generate OPL audio directly in the handler, not via scheduler events
+        _mixerChannel.Enable(true);
 
         InitializeToneGenerators();
 
@@ -175,7 +178,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 _dualPic.DeactivateIrq(_oplIrqLine);
             }
 
-            _deviceThread.Dispose();
             _adLibGold?.Dispose();
         }
 
@@ -256,13 +258,8 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     ///     Starts the playback thread if it is currently idle.
     /// </summary>
     private void InitializePlaybackIfNeeded() {
-        if (_deviceThread.Active) {
-            return;
-        }
-
         _loggerService.Debug("Starting OPL3 FM playback thread.");
         RenderTo(_playBuffer);
-        _deviceThread.StartThreadIfNeeded();
     }
 
     /// <inheritdoc />
@@ -276,7 +273,64 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
+    ///     OPL3 mixer handler - called by the mixer thread to generate frames.
+    ///     This replaces the event-based scheduler approach with direct mixer integration.
+    ///     Mirrors DOSBox Staging's Opl::AudioCallback()
+    /// </summary>
+    public void GenerateOplFrames(int framesRequested) {
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("OPL3: Generate framesRequested={Frames}", framesRequested);
+        }
+        // Generate OPL frames and add them to the mixer channel
+        // The mixer calls this with blocksize frames (typically 1024 @ 48kHz)
+        
+        int framesGenerated = 0;
+        while (framesGenerated < framesRequested) {
+            // Generate up to MaxSamplesPerGenerationBatch frames at a time
+            int framesToGenerate = Math.Min(MaxSamplesPerGenerationBatch, framesRequested - framesGenerated);
+            int samplesToGenerate = framesToGenerate * 2; // stereo = 2 samples per frame
+            
+            if (samplesToGenerate > _tmpInterleaved.Length) {
+                samplesToGenerate = _tmpInterleaved.Length;
+                framesToGenerate = samplesToGenerate / 2;
+            }
+
+            Span<short> interleaved = _tmpInterleaved.AsSpan(0, samplesToGenerate);
+
+            lock (_chipLock) {
+                _chip.GenerateStream(interleaved);
+            }
+
+            // Convert interleaved int16 samples to AudioFrames
+            const float scale = 1.0f / 32768f;
+            for (int i = 0; i < framesToGenerate; i++) {
+                float left = interleaved[i * 2] * scale;
+                float right = interleaved[i * 2 + 1] * scale;
+
+                // Apply AdLib Gold filtering if enabled
+                if (_adLibGold is not null) {
+                    Span<float> frameBuffer = _playBuffer.AsSpan(i * 2, 2);
+                    frameBuffer[0] = left;
+                    frameBuffer[1] = right;
+                    // AdLib Gold processing would happen here
+                    left = frameBuffer[0];
+                    right = frameBuffer[1];
+                }
+
+                _mixerChannel.AudioFrames.Add(new AudioFrame(left, right));
+            }
+
+            framesGenerated += framesToGenerate;
+        }
+
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("OPL3: Generated frames={Frames}", framesGenerated);
+        }
+    }
+
+    /// <summary>
     ///     Generates and plays back output waveform data.
+    ///     DEPRECATED: Replaced by GenerateOplFrames for proper mixer integration.
     /// </summary>
     private void PlaybackLoopBody() {
         RenderTo(_playBuffer);

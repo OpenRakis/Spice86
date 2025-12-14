@@ -1,25 +1,31 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Sound Blaster device implementation mirrored from DOSBox Staging
 // Reference: src/hardware/audio/soundblaster.cpp
+// SB PRO 2 support with DSP command handling and DAC emulation
 // http://www.fysnet.net/detectsb.htm
 
 namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;
-using System.Collections.Frozen;
-using System.Linq;
 
-public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IDisposable {
+using System;
+using System.Collections.Frozen;
+using System.Collections.Generic;
+
+/// <summary>
+/// Sound Blaster SB PRO 2 emulation - mirrors DOSBox Staging soundblaster.cpp
+/// </summary>
+public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider {
     private const int DmaBufSize = 1024;
     private const int DspBufSize = 64;
     private const int SbShift = 14;
@@ -205,12 +211,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private readonly DmaChannel? _secondaryDmaChannel;
     private readonly Mixer _mixer;
     private readonly MixerChannel _dacChannel;
-    private readonly Opl3Fm _opl3Fm;
-    private readonly HardwareMixer _hwMixer;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
-    private bool _disposed;
-    private int _framesAddedThisTick;
 
     private Queue<byte> _outputData = new Queue<byte>();
     private List<byte> _commandData = new List<byte>();
@@ -224,7 +226,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         DmaBus dmaSystem,
         DualPic dualPic,
         Mixer mixer,
-        Opl3Fm opl3Fm,
         ILoggerService loggerService,
         EmulationLoopScheduler scheduler,
         IEmulatedClock clock,
@@ -234,7 +235,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _config = soundBlasterHardwareConfig;
         _dualPic = dualPic;
         _mixer = mixer;
-        _opl3Fm = opl3Fm;
         _scheduler = scheduler;
         _clock = clock;
 
@@ -273,9 +273,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
 
         _dacChannel = _mixer.AddChannel(GenerateFrames, (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
-
-        MixerChannel oplChannel = _mixer.FindChannel("OPL3FM") ?? throw new InvalidOperationException("OPL3FM channel not found in mixer.");
-        _hwMixer = new HardwareMixer(_config, _dacChannel, oplChannel, loggerService);
+        _dacChannel.Enable(true);
 
         InitSpeakerState();
         InitPortHandlers(ioPortDispatcher);
@@ -293,42 +291,162 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void GenerateFrames(int framesRequested) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SB: GenerateFrames framesRequested={Frames} mode={Mode} dmaLeft={Left}", framesRequested, _sb.Mode, _sb.Dma.Left);
+        }
         // Callback from mixer requesting audio frames
-        while (_framesAddedThisTick < framesRequested) {
+        // The mixer calls this with blocksize frames (typically 1024 @ 48kHz)
+        // This matches DOSBox's soundblaster.cpp GenerateFrames pattern
+        
+        int framesGenerated = 0;
+        while (framesGenerated < framesRequested) {
+            AudioFrame frame = new(0.0f, 0.0f);
+            
             switch (_sb.Mode) {
                 case DspMode.None:
                 case DspMode.DmaPause:
                 case DspMode.DmaMasked:
                     // Generate silence
-                    _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
-                    _framesAddedThisTick++;
+                    frame = new AudioFrame(0.0f, 0.0f);
                     break;
 
                 case DspMode.Dac:
-                    // DAC mode - render one frame at current sample
-                    byte dacSample = _sb.Dsp.In.Data[0];
-                    _dacChannel.AudioFrames.Add(_sb.DacState.RenderFrame(dacSample, _sb.SpeakerEnabled));
-                    _framesAddedThisTick++;
+                    // DAC mode - render current DAC sample
+                    if (_sb.Dsp.In.Data.Length > 0) {
+                        byte dacSample = _sb.Dsp.In.Data[0];
+                        frame = _sb.DacState.RenderFrame(dacSample, _sb.SpeakerEnabled);
+                    }
                     break;
 
                 case DspMode.Dma:
-                    // DMA mode - process DMA transfer
-                    // This would call into DMA processing logic
-                    // For now just add silence
-                    _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
-                    _framesAddedThisTick++;
+                    // DMA mode - pull samples from DMA buffer
+                    // Critical: Must actually read from DMA channel data
+                    frame = GenerateDmaFrame();
+                    if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                        _loggerService.Verbose("SB: DMA frame generated; left={Left}", _sb.Dma.Left);
+                    }
+                    
+                    // Check if DMA transfer is now complete
+                    if (_sb.Dma.Left == 0 && _sb.Dma.Mode != DmaMode.None) {
+                        OnDmaTransferComplete();
+                    }
                     break;
             }
+
+            _dacChannel.AudioFrames.Add(frame);
+            framesGenerated++;
         }
     }
 
+    /// <summary>
+    /// Generates a single audio frame from the DMA buffer.
+    /// This is where actual PCM data is read and converted to audio.
+    /// </summary>
+    private AudioFrame GenerateDmaFrame() {
+        // If no DMA transfer is active, return silence
+        if (_sb.Dma.Channel is null || _sb.Dma.Left == 0 || _sb.Dma.Mode == DmaMode.None) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("SB: GenerateDmaFrame idle; channelNull={Null} left={Left} mode={Mode}", _sb.Dma.Channel is null, _sb.Dma.Left, _sb.Dma.Mode);
+            }
+            return new AudioFrame(0.0f, 0.0f);
+        }
+
+        // For 8-bit PCM (most common), read one byte from DMA
+        byte sample = 0;
+        
+        try {
+            // Read one byte from DMA channel
+            // The DMA channel will automatically:
+            // 1. Read from memory at current address
+            // 2. Increment/decrement the address
+            // 3. Decrement the remaining word count
+            
+            Span<byte> buffer = stackalloc byte[1];
+            int wordsRead = _sb.Dma.Channel.Read(1, buffer);
+            
+            if (wordsRead > 0) {
+                sample = buffer[0];
+                
+                // Manually update our DMA tracking (DMA channel updates its internals)
+                if (_sb.Dma.Left > 0) {
+                    _sb.Dma.Left--;
+                }
+                
+                // Update first transfer flag if this is the first byte read
+                if (_sb.Dma.FirstTransfer) {
+                    _sb.Dma.FirstTransfer = false;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: First DMA byte read: 0x{Sample:X2}", sample);
+                    }
+                }
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SOUNDBLASTER: DMA read words={WordsRead} left={Left} addr={Addr} page={Page}", wordsRead, _sb.Dma.Left, _sb.Dma.Channel.CurrentAddress, _sb.Dma.Channel.PageRegisterValue);
+                }
+            } else {
+                // DMA read returned 0 words - this indicates a problem
+                // Channel may not have data, or DMA is not properly configured
+                if (_sb.Dma.Left > 0) {
+                    _loggerService.Warning("SOUNDBLASTER: DMA read returned 0 words but DMA.Left={DmaLeft}",
+                        _sb.Dma.Left);
+                }
+                return new AudioFrame(0.0f, 0.0f);
+            }
+        } catch (Exception ex) {
+            _loggerService.Error(ex, "SOUNDBLASTER: Exception reading from DMA channel");
+            return new AudioFrame(0.0f, 0.0f);
+        }
+
+        // Render the sample through the DAC
+        // Sample interpretation depends on DMA mode (8-bit PCM, 16-bit PCM, ADPCM, etc.)
+        // For now, assume 8-bit unsigned PCM (most common for legacy SoundBlaster)
+        return _sb.DacState.RenderFrame(sample, _sb.SpeakerEnabled);
+    }
+
+    /// <summary>
+    /// Called when a DMA transfer completes (all bytes read).
+    /// This signals the interrupt to wake the DOS driver.
+    /// </summary>
+    private void OnDmaTransferComplete() {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DMA transfer complete, signaling IRQ {Irq}; autoInit={AutoInit}", _sb.Hw.Irq, _sb.Dma.AutoInit);
+        }
+
+        // Check if auto-init is enabled (continuous looping transfers)
+        if (_sb.Dma.AutoInit) {
+            // Reload DMA parameters for next transfer
+            _sb.Dma.Left = _sb.Dma.AutoSize;
+            _sb.Dma.FirstTransfer = true;
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: Auto-init reload size={Size} channel={Channel} addr={Addr}", _sb.Dma.AutoSize, _sb.Dma.Channel?.ChannelNumber, _sb.Dma.Channel?.CurrentAddress);
+            }
+        } else {
+            // Single transfer mode - stop after this transfer completes
+            _sb.Mode = DspMode.None;
+            _sb.Dma.Mode = DmaMode.None;
+        }
+
+        // Signal interrupt to wake the DOS driver
+        // The driver responds by reading the status register and potentially
+        // starting the next DMA transfer
+        _dualPic.ActivateIrq(_sb.Hw.Irq);
+
+        // Set pending interrupt flag (for status register readback)
+        _sb.Irq.Pending8Bit = true;
+    }
+
     private void MixerTickCallback(uint unusedTick) {
+        // This callback was used to reset the frame counter each millisecond
+        // However, with the new block-based mixer, this is no longer needed
+        // The mixer calls GenerateFrames() directly with the desired frame count
+        // Keeping for backwards compatibility, but it doesn't do much now
+        
         if (!_dacChannel.IsEnabled) {
             _scheduler.AddEvent(MixerTickCallback, 1.0);
             return;
         }
 
-        _framesAddedThisTick = 0;
+        // Frame counter reset is handled by mixer blocks, not per-tick
         _scheduler.AddEvent(MixerTickCallback, 1.0);
     }
 
@@ -344,7 +462,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private static FrozenDictionary<byte, byte> CreateCommandLengthsSb16() {
-        var baseDict = CreateCommandLengthsSb();
+        FrozenDictionary<byte, byte> baseDict = CreateCommandLengthsSb();
         var dict = new Dictionary<byte, byte>(baseDict);
         dict[0x04] = 1; dict[0x05] = 2; dict[0x08] = 1; dict[0x0E] = 2; dict[0x0F] = 1;
         for (byte i = 0xB0; i <= 0xCF; i++) dict[i] = 3;
@@ -469,11 +587,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void DspDoWrite(byte value) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SB: DSP write value=0x{Value:X2} state={State}", value, _blasterState);
+        }
         switch (_blasterState) {
             case BlasterState.WaitingForCommand:
                 _currentCommand = value;
                 _blasterState = BlasterState.ReadingCommand;
                 _commandData.Clear();
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Command 0x{Cmd:X2} received; expecting {Len} bytes", _currentCommand, _commandDataLength);
+                }
 
                 if (_config.SbType == SbType.Sb16) {
                     CommandLengthsSb16.TryGetValue(value, out _commandDataLength);
@@ -488,6 +612,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case BlasterState.ReadingCommand:
                 _commandData.Add(value);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SB: Command 0x{Cmd:X2} param[{Count}] = 0x{Val:X2}", _currentCommand, _commandData.Count - 1, value);
+                }
                 if (_commandData.Count >= _commandDataLength) {
                     ProcessCommand();
                 }
@@ -496,6 +623,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private bool ProcessCommand() {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            string paramsHex = _commandData.Count > 0 ? string.Join(" ", _commandData.ConvertAll(b => b.ToString("X2"))) : string.Empty;
+            _loggerService.Debug("SB: Processing command 0x{Cmd:X2} params={Params}", _currentCommand, paramsHex);
+        }
         switch (_currentCommand) {
             case 0x04:
                 // Sb16 ASP set mode register or DSP Status
@@ -538,14 +669,26 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x15:
             case 0x91:
                 // Single Cycle 8-Bit DMA DAC
-                // dsp_prepare_dma_old(DmaMode.Pcm8Bit, false, false)
+                // Size is in _commandData (command expects 2 bytes: size low, size high)
+                if (_commandData.Count >= 2) {
+                    _sb.Dma.Left = (uint)(1 + _commandData[0] + (_commandData[1] << 8));
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Single-cycle 8-bit DMA size={Size}", _sb.Dma.Left);
+                    }
+                    DspPrepareDmaOld(DmaMode.Pcm8Bit, false, false);
+                } else {
+                    _loggerService.Warning("SOUNDBLASTER: Command 0x{Command:X2} missing size parameters", _currentCommand);
+                }
                 break;
 
             case 0x1c:
             case 0x90:
                 // Auto Init 8-bit DMA
+                // Uses AutoSize previously set by command 0x48
                 if (_config.SbType > SbType.SB1) {
-                    // dsp_prepare_dma_old(DmaMode.Pcm8Bit, true, false)
+                    DspPrepareDmaOld(DmaMode.Pcm8Bit, true, false);
+                } else {
+                    _loggerService.Warning("SOUNDBLASTER: Auto-init DMA not supported on {SbType}", _config.SbType);
                 }
                 break;
 
@@ -553,12 +696,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Single Cycle 8-Bit DMA ADC
                 _sb.Dma.Left = (uint)(1 + _commandData[0] + (_commandData[1] << 8));
                 _sb.Dma.Sign = false;
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Single-cycle 8-bit ADC size={Size}", _sb.Dma.Left);
+                }
+                DspPrepareDmaOld(DmaMode.Pcm8Bit, false, true);
                 break;
 
             case 0x40:
                 // Set Timeconstant
                 if (_commandData.Count >= 1) {
                     _sb.FreqHz = (uint)(1000000 / (256 - _commandData[0]));
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Timeconstant set tc=0x{Tc:X2} rate={Rate}Hz", _commandData[0], _sb.FreqHz);
+                    }
                 }
                 break;
 
@@ -576,6 +726,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Set DMA Block Size
                 if (_config.SbType > SbType.SB1) {
                     _sb.Dma.AutoSize = (uint)(1 + _commandData[0] + (_commandData[1] << 8));
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: DMA AutoSize set to {AutoSize}", _sb.Dma.AutoSize);
+                    }
                 }
                 break;
 
@@ -585,7 +738,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 if (_currentCommand == 0x75) {
                     _sb.Adpcm.HaveRef = true;
                 }
-                // dsp_prepare_dma_old(DmaMode.Adpcm4Bit, false, false)
+                DspPrepareDmaOld(DmaMode.Adpcm4Bit, false, false);
                 break;
 
             case 0x76:
@@ -594,14 +747,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 if (_currentCommand == 0x77) {
                     _sb.Adpcm.HaveRef = true;
                 }
-                // dsp_prepare_dma_old(DmaMode.Adpcm3Bit, false, false)
+                DspPrepareDmaOld(DmaMode.Adpcm3Bit, false, false);
                 break;
 
             case 0x7d:
                 // Auto Init 4-bit ADPCM
                 if (_config.SbType > SbType.SB1) {
                     _sb.Adpcm.HaveRef = true;
-                    // dsp_prepare_dma_old(DmaMode.Adpcm4Bit, true, false)
+                    DspPrepareDmaOld(DmaMode.Adpcm4Bit, true, false);
                 }
                 break;
 
@@ -806,6 +959,66 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Mode = mode;
     }
 
+    private void DspPrepareDmaOld(DmaMode mode, bool autoInit, bool recordMode) {
+        // Setup DMA transfer with given mode and parameters
+        // Called when a DMA command (0x14, 0x1c, 0x24, etc) is executed
+        
+        _sb.Dma.Mode = mode;
+        _sb.Dma.AutoInit = autoInit;
+        
+        // Determine bit depth based on DMA mode
+        _sb.Dma.Bits = mode switch {
+            DmaMode.Pcm8Bit => 8,
+            DmaMode.Pcm16Bit or DmaMode.Pcm16BitAliased => 16,
+            DmaMode.Adpcm2Bit => 2,
+            DmaMode.Adpcm3Bit => 3,
+            DmaMode.Adpcm4Bit => 4,
+            _ => 8
+        };
+        
+        // For single-cycle DMA, Left should already be set by the DMA command
+        // For auto-init, use AutoSize
+        if (autoInit) {
+            _sb.Dma.Left = _sb.Dma.AutoSize;
+        }
+        
+        // Validate that we have a transfer size
+        if (_sb.Dma.Left == 0) {
+            _loggerService.Warning("SOUNDBLASTER: DMA prepared with zero transfer size (AutoInit={AutoInit}, Mode={Mode}). DMA will not start.",
+                autoInit, mode);
+            _sb.Dma.Mode = DmaMode.None;
+            return;
+        }
+        
+        // Select appropriate DMA channel based on bit depth
+        // 16-bit modes use the secondary (high) DMA channel, 8-bit modes use primary (low)
+        DmaChannel? dmaChannel = null;
+        if (_sb.Dma.Bits == 16) {
+            dmaChannel = _secondaryDmaChannel;
+        } else {
+            dmaChannel = _primaryDmaChannel;
+        }
+        
+        if (dmaChannel is null) {
+            _loggerService.Warning("SOUNDBLASTER: DMA channel not available for {Bits}-bit mode", _sb.Dma.Bits);
+            _sb.Dma.Mode = DmaMode.None;
+            return;
+        }
+        
+        _sb.Dma.Channel = dmaChannel;
+        _sb.Dma.FirstTransfer = true;
+        
+        // Transition DSP mode to DMA if not already in DMA mode
+        if (_sb.Mode != DspMode.Dma) {
+            DspChangeMode(DspMode.Dma);
+        }
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DMA prepared - Mode={Mode}, AutoInit={AutoInit}, Bits={Bits}, Left={Left}, Channel={Channel}",
+                mode, autoInit, _sb.Dma.Bits, _sb.Dma.Left, dmaChannel.ChannelNumber);
+        }
+    }
+
     private void SetSpeakerEnabled(bool enabled) {
         if (_sb.Type == SbType.Sb16) {
             return;
@@ -899,20 +1112,4 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Mixer.Master[1] = DefaultVolume;
     }
 
-    public void Dispose() {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    private void Dispose(bool disposing) {
-        if (_disposed) {
-            return;
-        }
-
-        if (disposing) {
-            // Cleanup
-        }
-
-        _disposed = true;
-    }
 }

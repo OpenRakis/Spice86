@@ -313,7 +313,6 @@ public sealed class Machine : IDisposable {
         if (!_disposed) {
             if (disposing) {
                 MidiDevice.Dispose();
-                SoundBlaster.Dispose();
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
                 Mixer.Dispose();

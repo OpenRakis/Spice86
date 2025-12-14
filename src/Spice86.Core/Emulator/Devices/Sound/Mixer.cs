@@ -1,18 +1,14 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-// Mixer implementation mirrored from DOSBox Staging
-// Reference: src/audio/mixer.cpp
-
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Backend.Audio;
 using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 
 /// <summary>
 /// Central audio mixer that runs in its own thread and produces final mixed output.
-/// Mirrors DOSBox Staging's mixer.cpp architecture.
 /// </summary>
 public sealed class Mixer : IDisposable {
     private const int DefaultSampleRateHz = 48000;
@@ -29,7 +25,7 @@ public sealed class Mixer : IDisposable {
     // Channels registry - matches DOSBox mixer.channels
     private readonly ConcurrentDictionary<string, MixerChannel> _channels = new();
     
-    // Mixer thread and synchronization
+    // Mixer thread that produces and writes directly to PortAudio
     private readonly Thread _mixerThread;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly Lock _mixerLock = new();
@@ -47,9 +43,7 @@ public sealed class Mixer : IDisposable {
     private readonly List<AudioFrame> _reverbAuxBuffer = new();
     private readonly List<AudioFrame> _chorusAuxBuffer = new();
     
-    // Final output queue to PortAudio thread
-    private readonly ConcurrentQueue<AudioFrame> _finalOutputQueue = new();
-    private readonly SemaphoreSlim _outputAvailable = new(0, 1);
+    // Final output queue is not used; mixer writes directly
     
     private bool _disposed;
 
@@ -60,13 +54,12 @@ public sealed class Mixer : IDisposable {
         // Create the audio player with our sample rate and blocksize
         _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize);
         
-        // Start mixer thread
+        // Start mixer thread (produces frames and writes to PortAudio directly)
         _mixerThread = new Thread(MixerThreadLoop) {
             Name = "Spice86-Mixer",
             IsBackground = true,
             Priority = ThreadPriority.AboveNormal
         };
-        
         _mixerThread.Start();
         
         _loggerService.Information("MIXER: Initialized stereo {SampleRate} Hz audio with {BlockSize} sample frame buffer",
@@ -100,7 +93,7 @@ public sealed class Mixer : IDisposable {
     }
 
     /// <summary>
-    /// Adds a channel to the mixer. Mirrors MIXER_AddChannel from DOSBox.
+    /// Adds a channel to the mixer.
     /// </summary>
     public MixerChannel AddChannel(
         Action<int> handler,
@@ -141,7 +134,7 @@ public sealed class Mixer : IDisposable {
     }
 
     /// <summary>
-    /// Finds a channel by name. Mirrors MIXER_FindChannel from DOSBox.
+    /// Finds a channel by name.
     /// </summary>
     public MixerChannel? FindChannel(string name) {
         _channels.TryGetValue(name, out MixerChannel? channel);
@@ -159,10 +152,19 @@ public sealed class Mixer : IDisposable {
     }
 
     /// <summary>
+    /// Gets all registered mixer channels.
+    /// </summary>
+    public IEnumerable<MixerChannel> GetAllChannels() {
+        return _channels.Values;
+    }
+
+    /// <summary>
     /// Main mixer thread loop - mirrors mixer_thread_loop from DOSBox.
     /// </summary>
     private void MixerThreadLoop() {
-        _loggerService.Debug("MIXER: Mixer thread started");
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("MIXER: Mixer thread started. sampleRate={SampleRateHz}, blocksize={Blocksize}", _sampleRateHz, _blocksize);
+        }
         
         CancellationToken token = _cancellationTokenSource.Token;
 
@@ -171,22 +173,61 @@ public sealed class Mixer : IDisposable {
                 // Mix one blocksize worth of frames
                 int framesRequested = _blocksize;
                 
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("MIXER: Begin mix cycle frames={FramesRequested} channels={ChannelCount}", framesRequested, _channels.Count);
+                }
+
                 lock (_mixerLock) {
                     MixSamples(framesRequested);
                 }
 
-                // Enqueue output to PortAudio consumer
-                foreach (AudioFrame frame in _outputBuffer) {
-                    _finalOutputQueue.Enqueue(frame);
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                    // Summarize per-channel contributions similar to DOSBox's trace
+                    foreach (KeyValuePair<string, MixerChannel> kvp in _channels) {
+                        MixerChannel ch = kvp.Value;
+                        if (!ch.IsEnabled) {
+                            continue;
+                        }
+                        int contributed = Math.Min(framesRequested, ch.AudioFrames.Count);
+                        string features = string.Join(",", ch.GetFeatures());
+                        _loggerService.Verbose("MIXER: Channel={Channel} contributed={Frames} rate={Rate} features={Features}", ch.GetName(), contributed, ch.GetSampleRate(), features);
+                    }
                 }
-                
-                _outputAvailable.Release(_outputBuffer.Count);
 
-                // Consume from queue to audio player (non-blocking)
-                ConsumeOutputQueue();
-                
-                // Small sleep to avoid busy-wait (matches DOSBox sleep logic)
-                Thread.Sleep(1);
+                // Write the mixed block directly to PortAudio (mirror DOSBox behavior)
+                try {
+                    int framesToWrite = _outputBuffer.Count;
+                    if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                        _loggerService.Verbose("MIXER: Mixed frames={Frames}", framesToWrite);
+                    }
+                    if (framesToWrite > 0) {
+                        float[] temp = System.Buffers.ArrayPool<float>.Shared.Rent(framesToWrite * 2);
+                        try {
+                            Span<float> interleavedBuffer = temp.AsSpan(0, framesToWrite * 2);
+                            const float normalizeFactor = 1.0f / 32768.0f;
+                            for (int i = 0; i < framesToWrite; i++) {
+                                int offset = i * 2;
+                                interleavedBuffer[offset] = _outputBuffer[i].Left * normalizeFactor;
+                                interleavedBuffer[offset + 1] = _outputBuffer[i].Right * normalizeFactor;
+                            }
+                            _audioPlayer.WriteData(interleavedBuffer);
+                            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                                _loggerService.Verbose("MIXER: Wrote frames to PortAudio frames={Frames}", framesToWrite);
+                            }
+                        } finally {
+                            System.Buffers.ArrayPool<float>.Shared.Return(temp);
+                        }
+                    }
+                } catch (Exception ex) {
+                    _loggerService.Error(ex, "MIXER: Failed writing audio block to PortAudio");
+                }
+
+                // Sleep for the duration of the blocksize
+                // At 48kHz, 1024 frames = ~21ms
+                int sleepMs = (_blocksize * 1000) / _sampleRateHz;
+                if (sleepMs > 0) {
+                    Thread.Sleep(sleepMs);
+                }
             }
         } catch (Exception ex) {
             _loggerService.Error(ex, "MIXER: Mixer thread encountered an error");
@@ -194,6 +235,8 @@ public sealed class Mixer : IDisposable {
             _loggerService.Debug("MIXER: Mixer thread stopped");
         }
     }
+
+    // No consumer thread: mixer thread writes directly to the audio backend
 
     /// <summary>
     /// Mix samples from all channels - mirrors mix_samples from DOSBox.
@@ -227,8 +270,8 @@ public sealed class Mixer : IDisposable {
             for (int i = 0; i < numFrames; i++) {
                 AudioFrame channelFrame = channel.AudioFrames[i];
                 
-                // Add to master output
-                _outputBuffer[i] = _outputBuffer[i].Add(channelFrame);
+                // Add to master output using operator
+                _outputBuffer[i] = _outputBuffer[i] + channelFrame;
                 
                 // TODO: Reverb and chorus sends
             }
@@ -236,43 +279,22 @@ public sealed class Mixer : IDisposable {
             // Remove consumed frames from channel
             if (numFrames > 0) {
                 channel.AudioFrames.RemoveRange(0, numFrames);
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("MIXER: Channel {Channel} provided frames={Frames}", channel.GetName(), numFrames);
+                }
             }
         }
 
-        // Apply master gain
+        // Apply master gain using operator
         AudioFrame masterGainSnapshot = _masterGain;
         for (int i = 0; i < _outputBuffer.Count; i++) {
-            _outputBuffer[i] = _outputBuffer[i].Multiply(masterGainSnapshot);
+            _outputBuffer[i] = _outputBuffer[i] * masterGainSnapshot;
         }
 
         // TODO: Master compressor, reverb, chorus processing
     }
 
-    /// <summary>
-    /// Consumes frames from the output queue and writes them to PortAudio.
-    /// </summary>
-    private void ConsumeOutputQueue() {
-        const int MaxFramesToWrite = 2048;
-        Span<float> interleavedBuffer = stackalloc float[MaxFramesToWrite * 2];
-        
-        int frameCount = 0;
-        while (frameCount < MaxFramesToWrite && _finalOutputQueue.TryDequeue(out AudioFrame frame)) {
-            int offset = frameCount * 2;
-            interleavedBuffer[offset] = frame.Left;
-            interleavedBuffer[offset + 1] = frame.Right;
-            frameCount++;
-        }
-
-        if (frameCount > 0) {
-            // Normalize to -1.0 to +1.0 range for audio output
-            const float normalizeFactor = 1.0f / 32768.0f;
-            for (int i = 0; i < frameCount * 2; i++) {
-                interleavedBuffer[i] *= normalizeFactor;
-            }
-            
-            _audioPlayer.WriteData(interleavedBuffer.Slice(0, frameCount * 2));
-        }
-    }
+    // ConsumeOutputQueue removed; direct write path used
 
     public void Dispose() {
         if (_disposed) {
@@ -284,14 +306,18 @@ public sealed class Mixer : IDisposable {
         _threadShouldQuit = true;
         _cancellationTokenSource.Cancel();
         
+        // Wait for mixer thread to stop producing frames
         if (_mixerThread.IsAlive) {
-            _mixerThread.Join(1000);
+            _mixerThread.Join(TimeSpan.FromSeconds(5));
         }
 
+        // No output queue or consumer thread to stop in direct-write mode
+
         _cancellationTokenSource.Dispose();
-        _outputAvailable.Dispose();
         _audioPlayer.Dispose();
 
         _disposed = true;
     }
+
+    // AudioFrameQueue removed: DOSBox writes directly from mixer thread
 }

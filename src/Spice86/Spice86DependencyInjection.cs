@@ -339,10 +339,15 @@ public class Spice86DependencyInjection : IDisposable {
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
+        // Create Opl3Fm FIRST, then register its handler with the mixer
+        // This is necessary because we need the OPL instance to get its GenerateOplFrames method
+        Opl3Fm opl3Fm = null!; // Will be assigned below
+
         MixerChannel oplChannel = mixer.AddChannel(
-            framesRequested => { }, 49716, "OPL3FM",
+            framesRequested => opl3Fm.GenerateOplFrames(framesRequested), 49716, "OPL3FM",
             new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
-        Opl3Fm opl3Fm = new(oplChannel, state, ioPortDispatcher,
+        
+        opl3Fm = new(oplChannel, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService, pauseHandler,
             emulationLoopScheduler, emulatedClock, dualPic,
             useAdlibGold: false, enableOplIrq: false);
@@ -350,7 +355,7 @@ public class Spice86DependencyInjection : IDisposable {
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SBPro2);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
         var soundBlaster = new SoundBlaster(ioPortDispatcher,
-            state, dmaSystem, dualPic, mixer, opl3Fm, loggerService,
+            state, dmaSystem, dualPic, mixer, loggerService,
             emulationLoopScheduler, emulatedClock,
             soundBlasterHardwareConfig);
         var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
@@ -406,7 +411,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
                 pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter);
+                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter, mixer);
 
             inputEventHub = new(mainWindowViewModel, mainWindowViewModel);
 

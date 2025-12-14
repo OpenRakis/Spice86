@@ -171,6 +171,15 @@ public sealed class MixerChannel {
     }
 
     /// <summary>
+    /// Gets the channel mapping.
+    /// </summary>
+    public StereoLine GetChannelMap() {
+        lock (_mutex) {
+            return _channelMap;
+        }
+    }
+
+    /// <summary>
     /// Sets the output line mapping.
     /// </summary>
     public void SetLineoutMap(StereoLine map) {

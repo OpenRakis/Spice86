@@ -15,8 +15,7 @@ using System.Linq;
 /// </summary>
 public sealed class Mt32MidiDevice : MidiDevice {
     private readonly Mt32Context _context;
-    private readonly MixerChannel _mixerChannel;
-    private readonly DeviceThread _deviceThread;
+    private readonly MixerChannel? _mixerChannel;
 
     /// <summary>
     /// Indicates whether this object has been disposed.
@@ -36,7 +35,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
     public Mt32MidiDevice(Mixer mixer, string romsPath, IPauseHandler pauseHandler, ILoggerService loggerService) {
         _mixerChannel = mixer.AddChannel(RenderCallback, 48000, nameof(Mt32MidiDevice), new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
         _context = new();
-        _deviceThread = new DeviceThread(nameof(Mt32MidiDevice), PlaybackLoopBody, pauseHandler, loggerService);
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
@@ -51,13 +49,12 @@ public sealed class Mt32MidiDevice : MidiDevice {
         _context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(48000);
         _context.SetSampleRate(48000);
         _context.OpenSynth();
-        _mixerChannel.Enable(true);
+        _mixerChannel?.Enable(true);
     }
 
     /// <inheritdoc/>
     protected override void PlayShortMessage(uint message) {
         if (!_disposed) {
-            _deviceThread.StartThreadIfNeeded();
             _context.PlayMessage(message);
         }
     }
@@ -65,7 +62,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <inheritdoc/>
     protected override void PlaySysex(ReadOnlySpan<byte> data) {
         if (!_disposed) {
-            _deviceThread.StartThreadIfNeeded();
             _context.PlaySysex(data);
         }
     }
@@ -76,6 +72,10 @@ public sealed class Mt32MidiDevice : MidiDevice {
     }
 
     private void RenderCallback(int framesRequested) {
+        if (_mixerChannel is null) {
+            return;
+        }
+        // Generate audio and push into mixer; emit verbose counts for side-by-side tracing
         ((Span<float>)_buffer).Clear();
         _context.Render(_buffer);
 
@@ -117,7 +117,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _deviceThread.Dispose();
                 _context.Dispose();
             }
             _disposed = true;
