@@ -22,12 +22,19 @@ public sealed class MixerChannel {
     // Sample rate and timing
     private int _sampleRateHz;
     private int _framesNeeded;
+    private int _mixerSampleRateHz = 48000; // Default mixer rate
 
     // Volume gains - mirrors DOSBox volume system
     private AudioFrame _userVolumeGain = new(1.0f, 1.0f);
     private AudioFrame _appVolumeGain = new(1.0f, 1.0f);
     private float _db0VolumeGain = 1.0f;
     private AudioFrame _combinedVolumeGain = new(1.0f, 1.0f);
+    
+    // Resampling state - mirrors DOSBox lerp_upsampler
+    private bool _doLerpUpsample;
+    private double _lerpPhase;
+    private AudioFrame _lerpPrevFrame;
+    private AudioFrame _lerpNextFrame;
 
     // Channel mapping
     private StereoLine _outputMap = new() { Left = LineIndex.Left, Right = LineIndex.Right };
@@ -75,12 +82,40 @@ public sealed class MixerChannel {
 
     /// <summary>
     /// Sets the channel sample rate.
+    /// Mirrors DOSBox SetSampleRate() with resampler configuration.
     /// </summary>
     public void SetSampleRate(int sampleRateHz) {
         lock (_mutex) {
             _sampleRateHz = sampleRateHz;
-            // TODO: Configure resampler if needed
+            
+            // Configure resampling if channel rate differs from mixer rate
+            // Mirrors DOSBox resample configuration logic
+            if (_sampleRateHz < _mixerSampleRateHz) {
+                _doLerpUpsample = true;
+                InitLerpUpsamplerState();
+            } else {
+                _doLerpUpsample = false;
+            }
         }
+    }
+    
+    /// <summary>
+    /// Sets the mixer sample rate for resampling calculations.
+    /// </summary>
+    public void SetMixerSampleRate(int mixerSampleRateHz) {
+        lock (_mutex) {
+            _mixerSampleRateHz = mixerSampleRateHz;
+        }
+    }
+    
+    /// <summary>
+    /// Initializes the linear interpolation upsampler state.
+    /// Mirrors DOSBox InitLerpUpsamplerState().
+    /// </summary>
+    private void InitLerpUpsamplerState() {
+        _lerpPhase = 0.0;
+        _lerpPrevFrame = new AudioFrame(0.0f, 0.0f);
+        _lerpNextFrame = new AudioFrame(0.0f, 0.0f);
     }
 
     /// <summary>
@@ -220,7 +255,7 @@ public sealed class MixerChannel {
 
     /// <summary>
     /// Requests frames from the channel handler and fills the audio buffer.
-    /// Mirrors the Mix() method from DOSBox.
+    /// Mirrors the Mix() method from DOSBox with resampling support.
     /// </summary>
     public void Mix(int framesRequested) {
         if (!IsEnabled) {
@@ -229,21 +264,77 @@ public sealed class MixerChannel {
 
         _framesNeeded = framesRequested;
 
-        while (_framesNeeded > AudioFrames.Count) {
-            float stretchFactor;
-            int framesRemaining;
-            
-            lock (_mutex) {
-                stretchFactor = (float)_sampleRateHz / 48000.0f; // TODO: Get mixer rate
-                framesRemaining = (int)Math.Ceiling(
-                    (_framesNeeded - AudioFrames.Count) * stretchFactor);
+        // If resampling is enabled, request proportionally more/fewer frames
+        lock (_mutex) {
+            if (_doLerpUpsample && _sampleRateHz < _mixerSampleRateHz) {
+                // Need to upsample - request fewer input frames
+                int inputFramesNeeded = (int)Math.Ceiling(
+                    framesRequested * (double)_sampleRateHz / _mixerSampleRateHz);
+                
+                // Request frames from handler
+                if (inputFramesNeeded > 0) {
+                    _handler(inputFramesNeeded);
+                }
+                
+                // Perform linear interpolation upsampling
+                ApplyLerpUpsampling(framesRequested);
+            } else {
+                // No resampling or downsampling - request frames directly
+                while (_framesNeeded > AudioFrames.Count) {
+                    float stretchFactor = (float)_sampleRateHz / _mixerSampleRateHz;
+                    int framesRemaining = (int)Math.Ceiling(
+                        (_framesNeeded - AudioFrames.Count) * stretchFactor);
 
-                if (framesRemaining <= 0) {
-                    break;
+                    if (framesRemaining <= 0) {
+                        break;
+                    }
+
+                    _handler(Math.Max(1, framesRemaining));
                 }
             }
-
-            _handler(Math.Max(1, framesRemaining));
+        }
+    }
+    
+    /// <summary>
+    /// Applies linear interpolation upsampling to reach the mixer sample rate.
+    /// Mirrors DOSBox lerp_upsample logic.
+    /// </summary>
+    private void ApplyLerpUpsampling(int targetFrames) {
+        // This assumes we have input frames in AudioFrames already
+        if (AudioFrames.Count == 0) {
+            return;
+        }
+        
+        List<AudioFrame> inputFrames = new List<AudioFrame>(AudioFrames);
+        AudioFrames.Clear();
+        
+        double stepSize = (double)_sampleRateHz / _mixerSampleRateHz;
+        int inputIndex = 0;
+        
+        for (int i = 0; i < targetFrames && inputIndex < inputFrames.Count; i++) {
+            // Get frames for interpolation
+            _lerpPrevFrame = inputIndex > 0 ? inputFrames[inputIndex - 1] : _lerpPrevFrame;
+            _lerpNextFrame = inputIndex < inputFrames.Count ? inputFrames[inputIndex] : _lerpNextFrame;
+            
+            // Linear interpolation
+            float t = (float)(_lerpPhase - Math.Floor(_lerpPhase));
+            AudioFrame interpolated = new AudioFrame(
+                _lerpPrevFrame.Left * (1.0f - t) + _lerpNextFrame.Left * t,
+                _lerpPrevFrame.Right * (1.0f - t) + _lerpNextFrame.Right * t
+            );
+            
+            AudioFrames.Add(interpolated);
+            
+            // Advance phase
+            _lerpPhase += stepSize;
+            while (_lerpPhase >= 1.0 && inputIndex < inputFrames.Count - 1) {
+                _lerpPhase -= 1.0;
+                inputIndex++;
+                _lerpPrevFrame = inputFrames[inputIndex];
+                if (inputIndex + 1 < inputFrames.Count) {
+                    _lerpNextFrame = inputFrames[inputIndex + 1];
+                }
+            }
         }
     }
 

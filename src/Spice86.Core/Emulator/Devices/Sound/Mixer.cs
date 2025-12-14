@@ -106,6 +106,7 @@ public sealed class Mixer : IDisposable {
         }
 
         MixerChannel channel = new(handler, name, features, _loggerService);
+        channel.SetMixerSampleRate(_sampleRateHz); // Tell channel about mixer rate
         channel.SetSampleRate(sampleRateHz);
         channel.SetAppVolume(new AudioFrame(1.0f, 1.0f));
         channel.SetUserVolume(new AudioFrame(1.0f, 1.0f));
