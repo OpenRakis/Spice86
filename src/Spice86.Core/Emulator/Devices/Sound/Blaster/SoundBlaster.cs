@@ -172,7 +172,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         public class AdpcmState {
             public byte Reference { get; set; } = 0;
-            public byte Stepsize { get; set; } = 0;
+            public ushort Stepsize { get; set; } = 0;
             public bool HaveRef { get; set; } = false;
         }
 
@@ -469,7 +469,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 
                 // Decode 1 byte → 4 samples (must use locals for ref params)
                 byte reference = _sb.Adpcm.Reference;
-                byte stepsize = _sb.Adpcm.Stepsize;
+                ushort stepsize = _sb.Adpcm.Stepsize;
                 byte[] samples = AdpcmDecoders.DecodeAdpcm2Bit(buffer[0], ref reference, ref stepsize);
                 _sb.Adpcm.Reference = reference;
                 _sb.Adpcm.Stepsize = stepsize;
@@ -509,7 +509,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 
                 // Decode 1 byte → 3 samples (must use locals for ref params)
                 byte reference = _sb.Adpcm.Reference;
-                byte stepsize = _sb.Adpcm.Stepsize;
+                ushort stepsize = _sb.Adpcm.Stepsize;
                 byte[] samples = AdpcmDecoders.DecodeAdpcm3Bit(buffer[0], ref reference, ref stepsize);
                 _sb.Adpcm.Reference = reference;
                 _sb.Adpcm.Stepsize = stepsize;
@@ -548,7 +548,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 
                 // Decode 1 byte → 2 samples (must use locals for ref params)
                 byte reference = _sb.Adpcm.Reference;
-                byte stepsize = _sb.Adpcm.Stepsize;
+                ushort stepsize = _sb.Adpcm.Stepsize;
                 byte[] samples = AdpcmDecoders.DecodeAdpcm4Bit(buffer[0], ref reference, ref stepsize);
                 _sb.Adpcm.Reference = reference;
                 _sb.Adpcm.Stepsize = stepsize;

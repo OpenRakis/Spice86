@@ -20,7 +20,7 @@ public static class AdpcmDecoders {
     /// <param name="scaleMap">Sample delta lookup table</param>
     /// <param name="lastIndex">Maximum valid index in the lookup tables</param>
     /// <param name="reference">Current reference sample (0-255), updated by this method</param>
-    /// <param name="stepsize">Current step size (0-255), updated by this method</param>
+    /// <param name="stepsize">Current step size (0-65535), updated by this method</param>
     /// <returns>Decoded 8-bit unsigned sample value</returns>
     private static byte DecodeAdpcmPortion(
         int bitPortion,
@@ -28,11 +28,11 @@ public static class AdpcmDecoders {
         ReadOnlySpan<sbyte> scaleMap,
         int lastIndex,
         ref byte reference,
-        ref byte stepsize) {
+        ref ushort stepsize) {
         
         int i = Math.Clamp(bitPortion + stepsize, 0, lastIndex);
         
-        stepsize = (byte)((stepsize + adjustMap[i]) & 0xFF);
+        stepsize = (ushort)((stepsize + adjustMap[i]) & 0xFF);
         
         int newSample = reference + scaleMap[i];
         reference = (byte)Math.Clamp(newSample, 0, 255);
@@ -46,9 +46,9 @@ public static class AdpcmDecoders {
     /// </summary>
     /// <param name="data">Compressed byte containing 4 samples</param>
     /// <param name="reference">Current reference sample (0-255), updated by this method</param>
-    /// <param name="stepsize">Current step size (0-255), updated by this method</param>
+    /// <param name="stepsize">Current step size (0-65535), updated by this method</param>
     /// <returns>Array of 4 decoded samples</returns>
-    public static byte[] DecodeAdpcm2Bit(byte data, ref byte reference, ref byte stepsize) {
+    public static byte[] DecodeAdpcm2Bit(byte data, ref byte reference, ref ushort stepsize) {
         // Scale map: delta values to add to reference sample
         ReadOnlySpan<sbyte> scaleMap = stackalloc sbyte[] {
              0,  1,  0,  -1,  1,  3,  -1,  -3,
@@ -81,9 +81,9 @@ public static class AdpcmDecoders {
     /// </summary>
     /// <param name="data">Compressed byte containing 3 samples</param>
     /// <param name="reference">Current reference sample (0-255), updated by this method</param>
-    /// <param name="stepsize">Current step size (0-255), updated by this method</param>
+    /// <param name="stepsize">Current step size (0-65535), updated by this method</param>
     /// <returns>Array of 3 decoded samples</returns>
-    public static byte[] DecodeAdpcm3Bit(byte data, ref byte reference, ref byte stepsize) {
+    public static byte[] DecodeAdpcm3Bit(byte data, ref byte reference, ref ushort stepsize) {
         // Scale map: delta values to add to reference sample
         ReadOnlySpan<sbyte> scaleMap = stackalloc sbyte[] {
              0,  1,  2,  3,  0,  -1,  -2,  -3,
@@ -118,9 +118,9 @@ public static class AdpcmDecoders {
     /// </summary>
     /// <param name="data">Compressed byte containing 2 samples</param>
     /// <param name="reference">Current reference sample (0-255), updated by this method</param>
-    /// <param name="stepsize">Current step size (0-255), updated by this method</param>
+    /// <param name="stepsize">Current step size (0-65535), updated by this method</param>
     /// <returns>Array of 2 decoded samples</returns>
-    public static byte[] DecodeAdpcm4Bit(byte data, ref byte reference, ref byte stepsize) {
+    public static byte[] DecodeAdpcm4Bit(byte data, ref byte reference, ref ushort stepsize) {
         // Scale map: delta values to add to reference sample
         ReadOnlySpan<sbyte> scaleMap = stackalloc sbyte[] {
              0,  1,  2,  3,  4,  5,  6,  7,  0,  -1,  -2,  -3,  -4,  -5,  -6,  -7,

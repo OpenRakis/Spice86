@@ -25,7 +25,8 @@ public static class DmaTransferHelpers {
     /// Converts 8-bit signed sample to float (mirrors lut_s8to16 lookup in DOSBox).
     /// </summary>
     public static float ToFloatS8(sbyte sample) {
-        return LookupTables.S8To16[sample];
+        // Lookup table is indexed by unsigned byte (0-255), convert signed to unsigned index
+        return LookupTables.S8To16[(byte)sample];
     }
     
     /// <summary>
