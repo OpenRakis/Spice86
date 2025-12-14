@@ -172,7 +172,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         public class AdpcmState {
             public byte Reference { get; set; } = 0;
-            public ushort Stepsize { get; set; } = 0;
+            public byte Stepsize { get; set; } = 0;
             public bool HaveRef { get; set; } = false;
         }
 
@@ -341,6 +341,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// <summary>
     /// Generates a single audio frame from the DMA buffer.
     /// This is where actual PCM data is read and converted to audio.
+    /// Supports PCM8, PCM16, and ADPCM (2-bit, 3-bit, 4-bit) modes.
     /// </summary>
     private AudioFrame GenerateDmaFrame() {
         // If no DMA transfer is active, return silence
@@ -351,28 +352,47 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return new AudioFrame(0.0f, 0.0f);
         }
 
-        // For 8-bit PCM (most common), read one byte from DMA
+        // Handle different DMA modes
+        switch (_sb.Dma.Mode) {
+            case DmaMode.Pcm8Bit:
+                return GeneratePcm8Frame();
+            
+            case DmaMode.Pcm16Bit:
+            case DmaMode.Pcm16BitAliased:
+                return GeneratePcm16Frame();
+            
+            case DmaMode.Adpcm2Bit:
+                return GenerateAdpcm2Frame();
+            
+            case DmaMode.Adpcm3Bit:
+                return GenerateAdpcm3Frame();
+            
+            case DmaMode.Adpcm4Bit:
+                return GenerateAdpcm4Frame();
+            
+            default:
+                _loggerService.Warning("SOUNDBLASTER: Unsupported DMA mode {Mode}", _sb.Dma.Mode);
+                return new AudioFrame(0.0f, 0.0f);
+        }
+    }
+    
+    /// <summary>
+    /// Generates a frame for 8-bit PCM mode.
+    /// </summary>
+    private AudioFrame GeneratePcm8Frame() {
         byte sample = 0;
         
         try {
-            // Read one byte from DMA channel
-            // The DMA channel will automatically:
-            // 1. Read from memory at current address
-            // 2. Increment/decrement the address
-            // 3. Decrement the remaining word count
-            
             Span<byte> buffer = stackalloc byte[1];
-            int wordsRead = _sb.Dma.Channel.Read(1, buffer);
+            int wordsRead = _sb.Dma.Channel!.Read(1, buffer);
             
             if (wordsRead > 0) {
                 sample = buffer[0];
                 
-                // Manually update our DMA tracking (DMA channel updates its internals)
                 if (_sb.Dma.Left > 0) {
                     _sb.Dma.Left--;
                 }
                 
-                // Update first transfer flag if this is the first byte read
                 if (_sb.Dma.FirstTransfer) {
                     _sb.Dma.FirstTransfer = false;
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -380,14 +400,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     }
                 }
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("SOUNDBLASTER: DMA read words={WordsRead} left={Left} addr={Addr} page={Page}", wordsRead, _sb.Dma.Left, _sb.Dma.Channel.CurrentAddress, _sb.Dma.Channel.PageRegisterValue);
+                    _loggerService.Verbose("SOUNDBLASTER: DMA read words={WordsRead} left={Left}", wordsRead, _sb.Dma.Left);
                 }
             } else {
-                // DMA read returned 0 words - this indicates a problem
-                // Channel may not have data, or DMA is not properly configured
                 if (_sb.Dma.Left > 0) {
-                    _loggerService.Warning("SOUNDBLASTER: DMA read returned 0 words but DMA.Left={DmaLeft}",
-                        _sb.Dma.Left);
+                    _loggerService.Warning("SOUNDBLASTER: DMA read returned 0 words but DMA.Left={DmaLeft}", _sb.Dma.Left);
                 }
                 return new AudioFrame(0.0f, 0.0f);
             }
@@ -396,10 +413,158 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return new AudioFrame(0.0f, 0.0f);
         }
 
-        // Render the sample through the DAC
-        // Sample interpretation depends on DMA mode (8-bit PCM, 16-bit PCM, ADPCM, etc.)
-        // For now, assume 8-bit unsigned PCM (most common for legacy SoundBlaster)
         return _sb.DacState.RenderFrame(sample, _sb.SpeakerEnabled);
+    }
+    
+    /// <summary>
+    /// Generates a frame for 16-bit PCM mode.
+    /// </summary>
+    private AudioFrame GeneratePcm16Frame() {
+        // 16-bit PCM requires reading 2 bytes
+        short sample = 0;
+        
+        try {
+            Span<byte> buffer = stackalloc byte[2];
+            int wordsRead = _sb.Dma.Channel!.Read(_sb.Dma.Channel.Is16Bit ? 1 : 2, buffer);
+            
+            if (wordsRead > 0) {
+                // Little-endian 16-bit sample
+                sample = (short)(buffer[0] | (buffer[1] << 8));
+                
+                if (_sb.Dma.Left > 0) {
+                    _sb.Dma.Left -= 2;
+                }
+            } else {
+                return new AudioFrame(0.0f, 0.0f);
+            }
+        } catch (Exception ex) {
+            _loggerService.Error(ex, "SOUNDBLASTER: Exception reading 16-bit DMA");
+            return new AudioFrame(0.0f, 0.0f);
+        }
+        
+        // Convert signed 16-bit to float (-32768 to 32767 → -1.0 to 1.0)
+        float value = _sb.SpeakerEnabled ? sample : 0.0f;
+        return new AudioFrame(value, value);
+    }
+    
+    /// <summary>
+    /// Generates a frame for 2-bit ADPCM mode.
+    /// One byte contains 4 compressed samples.
+    /// </summary>
+    private AudioFrame GenerateAdpcm2Frame() {
+        // Decode samples from buffer cache if available
+        if (_sb.Dma.RemainSize > 0) {
+            byte sample = _sb.Dma.Buf8[DmaBufSize - (int)_sb.Dma.RemainSize];
+            _sb.Dma.RemainSize--;
+            return _sb.DacState.RenderFrame(sample, _sb.SpeakerEnabled);
+        }
+        
+        // Read and decode new byte
+        try {
+            Span<byte> buffer = stackalloc byte[1];
+            int wordsRead = _sb.Dma.Channel!.Read(1, buffer);
+            
+            if (wordsRead > 0 && _sb.Dma.Left > 0) {
+                _sb.Dma.Left--;
+                
+                // Decode 1 byte → 4 samples (must use locals for ref params)
+                byte reference = _sb.Adpcm.Reference;
+                byte stepsize = _sb.Adpcm.Stepsize;
+                byte[] samples = AdpcmDecoders.DecodeAdpcm2Bit(buffer[0], ref reference, ref stepsize);
+                _sb.Adpcm.Reference = reference;
+                _sb.Adpcm.Stepsize = stepsize;
+                
+                // Cache samples in buffer
+                for (int i = 0; i < samples.Length; i++) {
+                    _sb.Dma.Buf8[i] = samples[i];
+                }
+                _sb.Dma.RemainSize = (uint)(samples.Length - 1);
+                
+                return _sb.DacState.RenderFrame(samples[0], _sb.SpeakerEnabled);
+            }
+        } catch (Exception ex) {
+            _loggerService.Error(ex, "SOUNDBLASTER: Exception in ADPCM2 decode");
+        }
+        
+        return new AudioFrame(0.0f, 0.0f);
+    }
+    
+    /// <summary>
+    /// Generates a frame for 3-bit ADPCM mode.
+    /// One byte contains 3 compressed samples (2 bits unused).
+    /// </summary>
+    private AudioFrame GenerateAdpcm3Frame() {
+        if (_sb.Dma.RemainSize > 0) {
+            byte sample = _sb.Dma.Buf8[DmaBufSize - (int)_sb.Dma.RemainSize];
+            _sb.Dma.RemainSize--;
+            return _sb.DacState.RenderFrame(sample, _sb.SpeakerEnabled);
+        }
+        
+        try {
+            Span<byte> buffer = stackalloc byte[1];
+            int wordsRead = _sb.Dma.Channel!.Read(1, buffer);
+            
+            if (wordsRead > 0 && _sb.Dma.Left > 0) {
+                _sb.Dma.Left--;
+                
+                // Decode 1 byte → 3 samples (must use locals for ref params)
+                byte reference = _sb.Adpcm.Reference;
+                byte stepsize = _sb.Adpcm.Stepsize;
+                byte[] samples = AdpcmDecoders.DecodeAdpcm3Bit(buffer[0], ref reference, ref stepsize);
+                _sb.Adpcm.Reference = reference;
+                _sb.Adpcm.Stepsize = stepsize;
+                
+                for (int i = 0; i < samples.Length; i++) {
+                    _sb.Dma.Buf8[i] = samples[i];
+                }
+                _sb.Dma.RemainSize = (uint)(samples.Length - 1);
+                
+                return _sb.DacState.RenderFrame(samples[0], _sb.SpeakerEnabled);
+            }
+        } catch (Exception ex) {
+            _loggerService.Error(ex, "SOUNDBLASTER: Exception in ADPCM3 decode");
+        }
+        
+        return new AudioFrame(0.0f, 0.0f);
+    }
+    
+    /// <summary>
+    /// Generates a frame for 4-bit ADPCM mode.
+    /// One byte contains 2 compressed samples.
+    /// </summary>
+    private AudioFrame GenerateAdpcm4Frame() {
+        if (_sb.Dma.RemainSize > 0) {
+            byte sample = _sb.Dma.Buf8[DmaBufSize - (int)_sb.Dma.RemainSize];
+            _sb.Dma.RemainSize--;
+            return _sb.DacState.RenderFrame(sample, _sb.SpeakerEnabled);
+        }
+        
+        try {
+            Span<byte> buffer = stackalloc byte[1];
+            int wordsRead = _sb.Dma.Channel!.Read(1, buffer);
+            
+            if (wordsRead > 0 && _sb.Dma.Left > 0) {
+                _sb.Dma.Left--;
+                
+                // Decode 1 byte → 2 samples (must use locals for ref params)
+                byte reference = _sb.Adpcm.Reference;
+                byte stepsize = _sb.Adpcm.Stepsize;
+                byte[] samples = AdpcmDecoders.DecodeAdpcm4Bit(buffer[0], ref reference, ref stepsize);
+                _sb.Adpcm.Reference = reference;
+                _sb.Adpcm.Stepsize = stepsize;
+                
+                for (int i = 0; i < samples.Length; i++) {
+                    _sb.Dma.Buf8[i] = samples[i];
+                }
+                _sb.Dma.RemainSize = (uint)(samples.Length - 1);
+                
+                return _sb.DacState.RenderFrame(samples[0], _sb.SpeakerEnabled);
+            }
+        } catch (Exception ex) {
+            _loggerService.Error(ex, "SOUNDBLASTER: Exception in ADPCM4 decode");
+        }
+        
+        return new AudioFrame(0.0f, 0.0f);
     }
 
     /// <summary>
