@@ -1,12 +1,13 @@
-# DOSBox Staging Audio Subsystem Port - Comprehensive Plan
+# DOSBox Staging Audio Subsystem Port - Focused Plan
 
 ## Executive Summary
 
-This document outlines the multi-phase plan for porting DOSBox Staging's audio subsystem (~7000 lines) to Spice86. The port aims for full audio parity with DOSBox while leveraging Spice86's existing infrastructure and maintaining side-by-side debuggability with the reference implementation.
+This document outlines the plan for porting DOSBox Staging's audio subsystem to Spice86 **to fix core audio rendering issues**. The ONLY priority is to mirror DOSBox Staging mixer.cpp and soundblaster.cpp architecture and management exactly.
 
+**Objective:** Fix Spice86's core audio rendering problems by mirroring DOSBox's proven audio architecture  
 **Current Status:** Phase 1 Complete (~910 lines ported)  
-**Remaining Work:** ~6000+ lines across multiple phases  
-**Target:** Full parity with DOSBox Staging mixer.cpp (3276 lines) and soundblaster.cpp (3918 lines)
+**Remaining Core Work:** ~3600 lines to mirror essential DOSBox audio  
+**Target:** Functional parity with DOSBox Staging mixer.cpp (3276 lines) and soundblaster.cpp (3918 lines) for audio rendering
 
 ---
 
@@ -202,138 +203,65 @@ This document outlines the multi-phase plan for porting DOSBox Staging's audio s
 
 **DOSBox Reference:** `src/hardware/audio/soundblaster.cpp` lines 3500-3600
 
-### Phase 4: Advanced Mixer Features (~1200 lines)
+### Phase 4: Core Mixer Thread Architecture (~1200 lines)
 
-#### Priority: MEDIUM-HIGH - Audio quality improvements
+#### Priority: CRITICAL - Essential for audio rendering fixes
 
-**Target:** `Mixer.cs` expansion to match DOSBox mixer.cpp size (3276 lines)
+**Target:** `Mixer.cs` expansion to mirror DOSBox mixer.cpp architecture
 
-#### 4.1 Advanced Resampling (~400 lines)
+#### 4.1 Mixer Thread Management (~300 lines)
+- Mirror DOSBox's mixer thread lifecycle and timing
+- Proper audio callback synchronization
+- Frame timing and buffer management
+- Thread-safe channel registration/deregistration
+
+**DOSBox Reference:** `src/hardware/audio/mixer.cpp` lines 400-700
+
+#### 4.2 Advanced Resampling (~400 lines)
 - Zero-order hold (ZoH) upsampler for low sample rates
-- Speex resampler equivalent using existing IIR filters
 - Multi-stage resampling for extreme rate differences
-- Sinc interpolation option for high-quality resampling
 - Per-channel resampler selection based on rate difference
+- Proper phase alignment between channels
 
 **DOSBox Reference:** `src/hardware/audio/mixer.cpp` lines 800-1200
 
-#### 4.2 Enhanced Effects Pipeline (~300 lines)
-- **Reverb Enhancement:**
-  - High-pass filter integration (using existing IIR Butterworth)
-  - Multi-tap delay lines for realistic room simulation
-  - Early reflections + late reverb separation
-  - Configurable room size and damping
+#### 4.3 Channel Mixing and Accumulation (~300 lines)
+- Mirror DOSBox's per-channel mixing logic
+- Proper gain staging and normalization
+- Sample accumulation with overflow prevention
+- Channel enable/disable handling
 
-- **Chorus Enhancement:**
-  - LFO (Low-Frequency Oscillator) modulation
-  - Multi-voice chorus (2-4 voices)
-  - Depth and rate controls
+**DOSBox Reference:** `src/hardware/audio/mixer.cpp` lines 1200-1500
 
-- **Additional Effects:**
-  - Stereo widening
-  - Bass boost / treble boost
-  - Equalizer (3-band or 10-band using IIR filters)
+#### 4.4 Output Pipeline (~200 lines)
+- Pre-buffering system for smooth startup
+- Output frame generation matching DOSBox exactly
+- Clipping prevention and limiting
+- Master output formatting
 
-**DOSBox Reference:** `src/hardware/audio/mixer.cpp` lines 1800-2100
+**DOSBox Reference:** `src/hardware/audio/mixer.cpp` lines 2300-2500
 
-#### 4.3 Dynamic Range Management (~200 lines)
-- Look-ahead limiter (prevents clipping proactively)
-- Multi-band compressor (separate bass/mid/treble compression)
-- Automatic gain control (AGC) for consistent output levels
-- Noise gate for eliminating low-level hum
+### Phase 5: Audio Thread Coordination (~400 lines)
 
-**DOSBox Reference:** `src/hardware/audio/mixer.cpp` lines 2100-2300
+#### Priority: CRITICAL - Fixes timing and synchronization issues
 
-#### 4.4 Prebuffering and Smooth Startup (~150 lines)
-- Prebuffer system (25-100ms buffer before output starts)
-- Prevents initial crackling and pops
-- Smooth fade-in for channel enable
-- Anti-pop circuitry emulation
+**Target:** `Mixer.cs` + `SoundBlaster.cs` integration
 
-**DOSBox Reference:** `src/hardware/audio/mixer.cpp` lines 600-750
+#### 5.1 Device-to-Mixer Coordination (~200 lines)
+- Mirror DOSBox's callback architecture
+- Synchronous sample pulling from devices
+- Proper event ordering and timing
+- Lock-free communication patterns where possible
 
-#### 4.5 Channel Management (~150 lines)
-- Dynamic channel addition/removal
-- Channel priority system
-- Voice stealing for channel limits
-- Mute/solo functionality per channel
+**DOSBox Reference:** `src/hardware/audio/mixer.cpp` lines 1500-1700
 
-**DOSBox Reference:** `src/hardware/audio/mixer.cpp` lines 400-550
+#### 5.2 DMA-Audio Synchronization (~200 lines)
+- DMA transfer timing coordination
+- IRQ signaling at correct sample boundaries
+- Buffer exhaustion handling
+- Auto-init DMA reload timing
 
-### Phase 5: Filter Bank and Hardware Quirks (~400 lines)
-
-#### Priority: LOW-MEDIUM - Historical accuracy
-
-**Target:** New `FilterBank.cs` + `SoundBlaster.cs` integration
-
-#### 5.1 Sound Blaster Filter Emulation (~200 lines)
-- **SB1.0 Filter:** 3.2kHz low-pass (single-pole IIR)
-- **SB2.0 Filter:** Improved 8kHz low-pass (two-pole IIR)
-- **SBPro1 Filter:** 12kHz low-pass, stereo
-- **SBPro2 Filter:** 20kHz low-pass, improved stereo separation
-- **SB16 Filter:** 44kHz low-pass, high-quality
-
-Filters should use existing `Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth` infrastructure.
-
-**DOSBox Reference:** `src/hardware/audio/soundblaster.cpp` lines 500-700
-
-#### 5.2 Hardware Quirks and Compatibility (~200 lines)
-- Sample rate limit emulation (22kHz for SBPro, 44.1kHz for SB16)
-- Mono/stereo mode switching artifacts
-- IRQ timing variations between SB models
-- DMA alignment requirements
-- "Silent" sample injection for timing-sensitive games
-
-**DOSBox Reference:** `src/hardware/audio/soundblaster.cpp` lines 3200-3400
-
-### Phase 6: Performance Optimization (~500 lines)
-
-#### Priority: LOW - Performance improvements
-
-#### 6.1 SIMD Optimization (~200 lines)
-- Leverage `SimdConversions` for bulk sample processing
-- Vectorized mixing operations using `System.Numerics.Vector`
-- Batch processing for effect chains
-- Parallel channel processing where safe
-
-**Target:** `Mixer.cs`, `MixerChannel.cs`
-
-#### 6.2 Memory Allocation Reduction (~150 lines)
-- Object pooling for temporary buffers
-- ArrayPool<T> usage for frame buffers
-- Span<T> and Memory<T> for zero-copy operations
-- Reduce List<AudioFrame> allocations
-
-**Target:** All audio files
-
-#### 6.3 Profiling and Hotspot Elimination (~150 lines)
-- Identify bottlenecks with BenchmarkDotNet
-- Optimize tight loops in resampling and effects
-- Cache frequently accessed data
-- Reduce lock contention in mixer thread
-
-**Target:** Performance-critical paths
-
-### Phase 7: Testing and Validation (~300 lines)
-
-#### Priority: ONGOING - Quality assurance
-
-#### 7.1 Unit Tests (~150 lines)
-- ADPCM decoder correctness (against known test vectors)
-- Resampling accuracy (compare output with DOSBox)
-- Effect algorithm validation
-- DMA transfer logic verification
-
-**Target:** `tests/Spice86.Tests/Audio/`
-
-#### 7.2 Integration Tests (~150 lines)
-- End-to-end audio playback tests
-- Multiple simultaneous channels
-- Sample rate switching
-- Effect enable/disable
-- Stress testing (high channel count, rapid changes)
-
-**Target:** `tests/Spice86.Tests/Audio/`
+**DOSBox Reference:** `src/hardware/audio/soundblaster.cpp` lines 2700-2900
 
 ---
 
@@ -515,128 +443,67 @@ private static byte[] DecodeAdpcm4Bit(byte data, ref byte reference, ref ushort 
 
 ---
 
-## 5. Phase Priorities and Timeline Estimate
+## 5. Phase Priorities and Timeline
 
 ### Priority Classification
 
-**Priority HIGH:** Core functionality, directly impacts audio playback quality  
-**Priority MEDIUM:** Nice-to-have features, improves compatibility or quality  
-**Priority LOW:** Polish, optimization, edge cases
+**ALL PHASES ARE CRITICAL:** The ONLY goal is to mirror DOSBox to fix audio rendering issues. No "nice to have" features - only exact DOSBox mirroring.
 
 ### Estimated Effort (Lines of Code)
 
 | Phase | Description | Lines | Priority | Estimated Effort |
 |-------|-------------|-------|----------|------------------|
-| Phase 1 | ✅ ADPCM + Basic Mixer (Complete) | 910 | HIGH | ✅ Done |
-| Phase 2 | Complete SB DMA Logic | 800 | HIGH | 2-3 weeks |
-| Phase 3 | Complete DSP Commands | 600 | MEDIUM | 2 weeks |
-| Phase 4 | Advanced Mixer Features | 1200 | MEDIUM-HIGH | 3-4 weeks |
-| Phase 5 | Filter Bank + Quirks | 400 | LOW-MEDIUM | 1-2 weeks |
-| Phase 6 | Performance Optimization | 500 | LOW | 2 weeks |
-| Phase 7 | Testing & Validation | 300 | ONGOING | Continuous |
-| **TOTAL** | **Full DOSBox Parity** | **4710** | - | **10-15 weeks** |
+| Phase 1 | ✅ ADPCM + Basic Mixer (Complete) | 910 | CRITICAL | ✅ Done |
+| Phase 2 | Complete SB DMA Logic | 800 | CRITICAL | 2-3 weeks |
+| Phase 3 | Complete DSP Commands | 600 | CRITICAL | 2 weeks |
+| Phase 4 | Core Mixer Thread Architecture | 1200 | CRITICAL | 3-4 weeks |
+| Phase 5 | Audio Thread Coordination | 400 | CRITICAL | 1-2 weeks |
+| **TOTAL** | **Core DOSBox Mirroring** | **3910** | - | **8-11 weeks** |
 
-**Note:** Estimates assume part-time effort. Full-time development could reduce timeline by 50%.
+**Focus:** Mirror DOSBox architecture exactly to fix Spice86's core audio rendering problems.
 
-### Recommended Phase Order
+### Execution Order
 
-1. **Phase 2** (HIGH) - Essential for robust audio playback
-2. **Phase 4** (MEDIUM-HIGH) - Significant quality improvements
-3. **Phase 3** (MEDIUM) - Hardware compatibility
-4. **Phase 5** (LOW-MEDIUM) - Historical accuracy
-5. **Phase 6** (LOW) - Performance tuning
-6. **Phase 7** (ONGOING) - Continuous validation
+1. **Phase 2** (CRITICAL) - DMA transfer logic fixes
+2. **Phase 4** (CRITICAL) - Mixer thread architecture fixes
+3. **Phase 5** (CRITICAL) - Device-mixer coordination fixes
+4. **Phase 3** (CRITICAL) - Complete DSP command support
 
 ---
 
 ## 6. Success Criteria
 
-### Phase Completion Criteria
+### Core Objective
 
-Each phase is considered complete when:
+**Audio rendering works correctly in Spice86 by mirroring DOSBox architecture.**
 
-1. ✅ **All planned code ported** from DOSBox reference sections
-2. ✅ **Builds with 0 errors, 0 warnings**
-3. ✅ **Unit tests pass** for new functionality
-4. ✅ **Integration tests pass** with real DOS programs
-5. ✅ **Code review approved** comparing with DOSBox source
-6. ✅ **No regressions** in existing audio functionality
+Success achieved when:
 
-### Overall Parity Criteria
-
-Full DOSBox audio parity achieved when:
-
-1. ✅ **Line count matches** (~4700 new lines vs DOSBox ~4550 relevant lines)
-2. ✅ **All Sound Blaster variants work** (SB1, SB2, SBPro1, SBPro2, SB16)
-3. ✅ **All audio test programs pass** (same set as DOSBox validation)
-4. ✅ **No audio artifacts** in major DOS games (Dune, Doom, Duke 3D, etc.)
-5. ✅ **Resampling quality matches** DOSBox (A/B comparison)
-6. ✅ **Performance acceptable** (< 5% CPU overhead vs current implementation)
+1. ✅ **No audio artifacts** (crackling, pops, distortion)
+2. ✅ **Proper timing** (DMA/IRQ/mixer synchronization)
+3. ✅ **Stable playback** in DOS programs (Dune, Doom, etc.)
+4. ✅ **Architecture mirrors DOSBox** (side-by-side verifiable)
 
 ---
 
-## 7. Risk Mitigation
+## 7. Known Challenges
 
-### Known Challenges
-
-#### Challenge 1: Async vs Sync Audio Architecture
-**DOSBox:** Mixer thread pulls samples from devices synchronously  
+### Challenge 1: Thread Architecture Mismatch
+**DOSBox:** Single mixer thread pulls samples synchronously  
 **Spice86:** DeviceThread + Mixer dual-thread architecture
 
-**Mitigation:** Careful synchronization, leverage existing DeviceThread pattern
+**Solution:** Refactor to mirror DOSBox's synchronous pull model
 
-#### Challenge 2: Missing Speex Resampler
-**DOSBox:** Uses Speex for high-quality resampling  
-**Spice86:** Has IIR Butterworth filters but not Speex
+### Challenge 2: Timing Synchronization
+**DOSBox:** Mixer callback drives device sample generation  
+**Spice86:** DeviceThread pushes samples independently
 
-**Mitigation:** Implement equivalent using IIR filters + linear interpolation combination
-
-#### Challenge 3: Performance Impact
-**Risk:** Effects pipeline + resampling adds CPU overhead
-
-**Mitigation:** Phase 6 optimization pass, SIMD usage, optional effect disable
-
-#### Challenge 4: Regression Introduction
-**Risk:** New code breaks existing audio functionality
-
-**Mitigation:** Comprehensive testing at each phase, automated regression tests
-
----
-
-## 8. Future Enhancements (Beyond Parity)
-
-Once DOSBox parity achieved, potential enhancements:
-
-1. **Advanced Effects**
-   - Convolution reverb using impulse responses
-   - Vintage effect emulation (tape saturation, tube warmth)
-   - Spectral processing
-
-2. **Modern Audio Features**
-   - WASAPI exclusive mode support (Windows)
-   - JACK integration (Linux)
-   - Real-time latency monitoring
-
-3. **Analysis Tools**
-   - Spectrum analyzer visualization
-   - Waveform display
-   - Audio recording with markers
-
-4. **Accessibility**
-   - Mono output mode for hearing-impaired users
-   - Audio ducking for text-to-speech
-   - Visual indicators for sound events
+**Solution:** Port DOSBox's callback-driven architecture exactly
 
 ---
 
 ## Document Maintenance
 
 **Last Updated:** 2025-12-14  
-**Status:** Phase 1 Complete  
-**Next Review:** After Phase 2 completion  
-
-This document should be updated at the end of each phase with:
-- Actual vs estimated effort
-- Lessons learned
-- Architecture changes
-- Updated priorities based on user feedback
+**Status:** Phase 1 Complete - Focused plan for core audio fixes  
+**Next Review:** After Phase 2 completion
