@@ -43,6 +43,38 @@ public sealed class Mixer : IDisposable {
     private readonly List<AudioFrame> _reverbAuxBuffer = new();
     private readonly List<AudioFrame> _chorusAuxBuffer = new();
     
+    // Compressor state - mirrors DOSBox compressor
+    private bool _doCompressor = false;
+    private float _compressorThreshold = 0.5f; // -6dB threshold
+    private float _compressorRatio = 4.0f; // 4:1 compression ratio
+    private float _compressorPeakLevel = 0.0f;
+    private const float CompressorAttackCoeff = 0.999f;
+    private const float CompressorReleaseCoeff = 0.9999f;
+    
+    // Normalization state - mirrors DOSBox peak detection
+    private float _peakLeft = 0.0f;
+    private float _peakRight = 0.0f;
+    private const float PeakDecayCoeff = 0.995f; // Slow decay for peak tracking
+    
+    // Reverb state - simplified implementation using delay + feedback
+    private bool _doReverb = false;
+    private readonly List<AudioFrame> _reverbDelayBuffer = new();
+    private const int ReverbDelayFrames = 2400; // ~50ms at 48kHz
+    private const float ReverbFeedback = 0.3f;
+    private const float ReverbMix = 0.2f;
+    private int _reverbDelayIndex = 0;
+    
+    // Chorus state - delay buffer with LFO
+    private bool _doChorus = false;
+    private readonly List<AudioFrame> _chorusDelayBuffer = new();
+    private const int ChorusDelayFrames = 960; // ~20ms at 48kHz
+    private const float ChorusMix = 0.15f;
+    private int _chorusDelayIndex = 0;
+    
+    // Crossfeed state - stereo mixing for headphone spatialization
+    private bool _doCrossfeed = false;
+    private const float CrossfeedStrength = 0.3f; // 30% mix to opposite channel
+    
     // Final output queue is not used; mixer writes directly
     
     private bool _disposed;
@@ -53,6 +85,14 @@ public sealed class Mixer : IDisposable {
         
         // Create the audio player with our sample rate and blocksize
         _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize);
+        
+        // Initialize effect delay buffers with silence
+        for (int i = 0; i < ReverbDelayFrames; i++) {
+            _reverbDelayBuffer.Add(new AudioFrame(0.0f, 0.0f));
+        }
+        for (int i = 0; i < ChorusDelayFrames; i++) {
+            _chorusDelayBuffer.Add(new AudioFrame(0.0f, 0.0f));
+        }
         
         // Start mixer thread (produces frames and writes to PortAudio directly)
         _mixerThread = new Thread(MixerThreadLoop) {
@@ -106,6 +146,7 @@ public sealed class Mixer : IDisposable {
         }
 
         MixerChannel channel = new(handler, name, features, _loggerService);
+        channel.SetMixerSampleRate(_sampleRateHz); // Tell channel about mixer rate
         channel.SetSampleRate(sampleRateHz);
         channel.SetAppVolume(new AudioFrame(1.0f, 1.0f));
         channel.SetUserVolume(new AudioFrame(1.0f, 1.0f));
@@ -291,7 +332,191 @@ public sealed class Mixer : IDisposable {
             _outputBuffer[i] = _outputBuffer[i] * masterGainSnapshot;
         }
 
-        // TODO: Master compressor, reverb, chorus processing
+        // Apply effects pipeline - mirrors DOSBox effects order
+        if (_doReverb) {
+            ApplyReverb();
+        }
+        
+        if (_doChorus) {
+            ApplyChorus();
+        }
+        
+        if (_doCrossfeed) {
+            ApplyCrossfeed();
+        }
+        
+        // Apply compressor if enabled - mirrors DOSBox compressor
+        if (_doCompressor) {
+            ApplyCompressor();
+        }
+        
+        // Apply master normalization - mirrors DOSBox peak detection
+        ApplyMasterNormalization();
+    }
+    
+    /// <summary>
+    /// Applies simple compressor to reduce dynamic range.
+    /// Mirrors DOSBox Compressor logic with peak detection and gain reduction.
+    /// </summary>
+    private void ApplyCompressor() {
+        for (int i = 0; i < _outputBuffer.Count; i++) {
+            AudioFrame frame = _outputBuffer[i];
+            
+            // Detect peak level (max of L/R channels)
+            float peakSample = Math.Max(Math.Abs(frame.Left), Math.Abs(frame.Right));
+            
+            // Update peak tracker with attack/release
+            if (peakSample > _compressorPeakLevel) {
+                // Attack - fast response to louder signals
+                _compressorPeakLevel = _compressorPeakLevel * CompressorAttackCoeff + 
+                                       peakSample * (1.0f - CompressorAttackCoeff);
+            } else {
+                // Release - slow return to quiet
+                _compressorPeakLevel = _compressorPeakLevel * CompressorReleaseCoeff + 
+                                       peakSample * (1.0f - CompressorReleaseCoeff);
+            }
+            
+            // Calculate gain reduction if above threshold
+            float gainReduction = 1.0f;
+            if (_compressorPeakLevel > _compressorThreshold) {
+                // Apply compression ratio
+                float overshoot = _compressorPeakLevel - _compressorThreshold;
+                float compressed = overshoot / _compressorRatio;
+                gainReduction = (_compressorThreshold + compressed) / _compressorPeakLevel;
+            }
+            
+            // Apply gain reduction
+            _outputBuffer[i] = new AudioFrame(
+                frame.Left * gainReduction,
+                frame.Right * gainReduction
+            );
+        }
+    }
+    
+    /// <summary>
+    /// Applies master normalization to prevent clipping and maintain consistent levels.
+    /// Mirrors DOSBox peak detection and soft limiting.
+    /// </summary>
+    private void ApplyMasterNormalization() {
+        // Track peaks for adaptive gain
+        for (int i = 0; i < _outputBuffer.Count; i++) {
+            AudioFrame frame = _outputBuffer[i];
+            
+            // Update peak trackers
+            float absLeft = Math.Abs(frame.Left);
+            float absRight = Math.Abs(frame.Right);
+            
+            if (absLeft > _peakLeft) {
+                _peakLeft = absLeft;
+            } else {
+                _peakLeft *= PeakDecayCoeff;
+            }
+            
+            if (absRight > _peakRight) {
+                _peakRight = absRight;
+            } else {
+                _peakRight *= PeakDecayCoeff;
+            }
+            
+            // Apply soft clipping to both channels
+            float left = ApplySoftClipping(frame.Left);
+            float right = ApplySoftClipping(frame.Right);
+            
+            _outputBuffer[i] = new AudioFrame(left, right);
+        }
+    }
+    
+    /// <summary>
+    /// Applies soft-knee limiting to a single sample to prevent harsh clipping.
+    /// </summary>
+    private static float ApplySoftClipping(float sample) {
+        const float softClipThreshold = 32000.0f;
+        const float hardLimit = 32767.0f;
+        
+        if (Math.Abs(sample) > softClipThreshold) {
+            float sign = Math.Sign(sample);
+            float excess = Math.Abs(sample) - softClipThreshold;
+            float softened = softClipThreshold + excess * 0.5f; // Reduce overshoot by half
+            return Math.Clamp(sign * softened, -hardLimit, hardLimit);
+        }
+        
+        return sample;
+    }
+    
+    /// <summary>
+    /// Applies simple reverb effect using delay buffer with feedback.
+    /// Simplified implementation mirroring DOSBox reverb concept.
+    /// </summary>
+    private void ApplyReverb() {
+        for (int i = 0; i < _outputBuffer.Count; i++) {
+            AudioFrame dry = _outputBuffer[i];
+            
+            // Get delayed signal from circular buffer
+            AudioFrame delayed = _reverbDelayBuffer[_reverbDelayIndex];
+            
+            // Mix delayed signal back with feedback
+            AudioFrame feedback = new AudioFrame(
+                delayed.Left * ReverbFeedback,
+                delayed.Right * ReverbFeedback
+            );
+            
+            // Store new input + feedback in delay buffer
+            _reverbDelayBuffer[_reverbDelayIndex] = new AudioFrame(
+                dry.Left + feedback.Left,
+                dry.Right + feedback.Right
+            );
+            
+            // Mix wet (reverb) with dry signal
+            _outputBuffer[i] = new AudioFrame(
+                dry.Left + delayed.Left * ReverbMix,
+                dry.Right + delayed.Right * ReverbMix
+            );
+            
+            // Advance delay index (circular buffer)
+            _reverbDelayIndex = (_reverbDelayIndex + 1) % ReverbDelayFrames;
+        }
+    }
+    
+    /// <summary>
+    /// Applies simple chorus effect using fixed delay.
+    /// Simplified implementation mirroring DOSBox chorus concept.
+    /// </summary>
+    private void ApplyChorus() {
+        for (int i = 0; i < _outputBuffer.Count; i++) {
+            AudioFrame dry = _outputBuffer[i];
+            
+            // Get delayed signal
+            AudioFrame delayed = _chorusDelayBuffer[_chorusDelayIndex];
+            
+            // Store current in delay buffer
+            _chorusDelayBuffer[_chorusDelayIndex] = dry;
+            
+            // Mix delayed signal with dry
+            _outputBuffer[i] = new AudioFrame(
+                dry.Left + delayed.Left * ChorusMix,
+                dry.Right + delayed.Right * ChorusMix
+            );
+            
+            // Advance delay index
+            _chorusDelayIndex = (_chorusDelayIndex + 1) % ChorusDelayFrames;
+        }
+    }
+    
+    /// <summary>
+    /// Applies crossfeed effect for headphone spatialization.
+    /// Mirrors DOSBox crossfeed mixing matrix.
+    /// </summary>
+    private void ApplyCrossfeed() {
+        for (int i = 0; i < _outputBuffer.Count; i++) {
+            AudioFrame frame = _outputBuffer[i];
+            
+            // Mix some of each channel into the opposite channel
+            // This simulates speaker crosstalk for headphone listening
+            float newLeft = frame.Left + frame.Right * CrossfeedStrength;
+            float newRight = frame.Right + frame.Left * CrossfeedStrength;
+            
+            _outputBuffer[i] = new AudioFrame(newLeft, newRight);
+        }
     }
 
     // ConsumeOutputQueue removed; direct write path used
