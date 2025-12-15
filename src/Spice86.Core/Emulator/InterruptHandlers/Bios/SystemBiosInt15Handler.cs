@@ -8,7 +8,9 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -22,8 +24,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
     private readonly A20Gate _a20Gate;
     private readonly Configuration _configuration;
     private readonly BiosDataArea _biosDataArea;
-    private readonly DualPic _dualPic;
-    private readonly IOPorts.IOPortDispatcher _ioPortDispatcher;
+    private readonly IOPortDispatcher _ioPortDispatcher;
+    private readonly EmulationLoopScheduler _emulationLoopScheduler;
 
     /// <summary>
     /// Initializes a new instance.
@@ -35,20 +37,19 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="a20Gate">The A20 line gate.</param>
     /// <param name="biosDataArea">The BIOS data area for accessing system flags and variables.</param>
-    /// <param name="dualPic">The PIC for timing operations.</param>
+    /// <param name="emulationLoopScheduler">Used for registering a timed callback named 'OnWaitComplete' when emulated programs call the BIOS WAIT function.</param>
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports (e.g., CMOS).</param>
     /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public SystemBiosInt15Handler(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, A20Gate a20Gate, BiosDataArea biosDataArea, DualPic dualPic,
-        IOPorts.IOPortDispatcher ioPortDispatcher, bool initializeResetVector,
-        ILoggerService loggerService)
+        State state, A20Gate a20Gate, BiosDataArea biosDataArea, EmulationLoopScheduler emulationLoopScheduler,
+        IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, bool initializeResetVector)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _a20Gate = a20Gate;
+        _emulationLoopScheduler = emulationLoopScheduler;
         _configuration = configuration;
         _biosDataArea = biosDataArea;
-        _dualPic = dualPic;
         _ioPortDispatcher = ioPortDispatcher;
         if (initializeResetVector) {
             memory.UInt16[0xF000, 0xFFF0] = 0xF4;
@@ -294,7 +295,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         double delayMs = (microseconds / 1000.0) + 1.0;
         _biosDataArea.RtcWaitFlag = 1;
         _biosDataArea.UserWaitTimeout = microseconds;
-        _dualPic.AddEvent(OnWaitComplete, delayMs);
+        _emulationLoopScheduler.AddEvent(OnWaitComplete, delayMs);
         SetCarryFlag(false, calledFromVm);
     }
 

@@ -26,7 +26,8 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Core.Emulator.VM.CpuSpeedLimit;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -107,21 +108,20 @@ public class DosFileManagerTests {
         RecordedDataReader reader = new(configuration.RecordedDataDirectory!, loggerService);
         ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, new());
         State state = new(CpuModel.INTEL_80286);
-        ExecutionStateSlice executionStateSlice = new(state) {
-            CyclesAllocatedForSlice = 1,
-            CyclesLeft = 1
-        };
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
         IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
         A20Gate a20Gate = new(configuration.A20Gate);
         Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
+        IEmulatedClock emulatedClock = new EmulatedClock();
+        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
+        
         BiosDataArea biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
-        IOPortHandlerRegistry ioPortHandlerRegistry = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
-        DualPic dualPic = new DualPic(ioPortHandlerRegistry, executionStateSlice, loggerService);
+
+        var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
 
         CallbackHandler callbackHandler = new(state, loggerService);
         InterruptVectorTable interruptVectorTable = new(memory);
@@ -131,23 +131,23 @@ public class DosFileManagerTests {
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, functionCatalogue, false, loggerService);
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, executionStateSlice, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
+            dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
             loggerService, executionFlowRecorder);
 
-        IInstructionExecutor instructionExecutor = cpu;
-        IFunctionHandlerProvider functionHandlerProvider =  cpu;
+        IFunctionHandlerProvider functionHandlerProvider = cpu;
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, dualPic,
+        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, loggerService);
+        PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService, configuration.FailOnUnhandledPort);
+
         pcSpeaker.AttachPitControl(pitTimer);
 
-        DmaSystem dmaSystem =
+        DmaBus dmaSystem =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaSystem, dualPic,
+        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaSystem, dualPic, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
 
@@ -159,11 +159,11 @@ public class DosFileManagerTests {
 
         InputEventHub inputEventQueue = new();
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
-            functionHandlerProvider, stack, state, a20Gate, biosDataArea, dualPic,
-            ioPortDispatcher, configuration.InitializeDOS is not false, loggerService);
+            functionHandlerProvider, stack, state, a20Gate, biosDataArea, emulationLoopScheduler,
+            ioPortDispatcher, loggerService, configuration.InitializeDOS is not false);
         Intel8042Controller intel8042Controller = new(
-            state, ioPortDispatcher, a20Gate, dualPic,
-            configuration.FailOnUnhandledPort, pauseHandler, loggerService, inputEventQueue);
+            state, ioPortDispatcher, a20Gate, dualPic, emulationLoopScheduler,
+            configuration.FailOnUnhandledPort, loggerService, inputEventQueue);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
             stack, state, functionHandlerProvider, dualPic, systemBiosInt15Handler,

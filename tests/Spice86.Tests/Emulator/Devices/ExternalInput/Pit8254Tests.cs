@@ -10,6 +10,8 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -19,7 +21,7 @@ public class Pit8254Tests {
     private const ushort PitChannel1Port = 0x41;
     private const ushort PitChannel2Port = 0x42;
     private const ushort PitControlPort = 0x43;
-    private readonly IOPortHandlerRegistry _ioPortHandlerRegistry;
+    private readonly IOPortDispatcher _ioPortDispatcher;
 
     private readonly PitTimer _pit;
     private readonly IPitSpeaker _speaker;
@@ -28,13 +30,11 @@ public class Pit8254Tests {
         ILoggerService logger = Substitute.For<ILoggerService>();
         _speaker = Substitute.For<IPitSpeaker>();
         State state = new(CpuModel.INTEL_80286);
-        var dispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
-        _ioPortHandlerRegistry = new IOPortHandlerRegistry(dispatcher, state, logger, false);
-        var cpuState = new ExecutionStateSlice(state) {
-            InterruptFlag = true
-        };
-        var pic = new DualPic(_ioPortHandlerRegistry, cpuState, logger);
-        _pit = new PitTimer(_ioPortHandlerRegistry, pic, _speaker, logger);
+        _ioPortDispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
+        var pic = new DualPic(_ioPortDispatcher, state, logger, false);
+        var emulatedClock = new EmulatedClock();
+        var emulationLoopScheduler = new EmulationLoopScheduler(emulatedClock, logger);
+        _pit = new PitTimer(_ioPortDispatcher, state, pic, _speaker, emulationLoopScheduler, emulatedClock, logger, false);
     }
 
     [Theory]
@@ -71,7 +71,7 @@ public class Pit8254Tests {
         PitChannelSnapshot snapshotBefore = _pit.GetChannelSnapshot(counterIndex);
 
         ConfigureCounter(counterIndex, 3, 3, 0);
-        _ioPortHandlerRegistry.Write(port, 0x01);
+        _ioPortDispatcher.WriteByte(port, 0x01);
 
         PitChannelSnapshot snapshotAfter = _pit.GetChannelSnapshot(counterIndex);
         snapshotAfter.Count.Should().Be(snapshotBefore.Count);
@@ -132,14 +132,14 @@ public class Pit8254Tests {
     }
 
     private void ConfigureCounter(byte counter, byte readWritePolicy, byte mode, byte bcd) {
-        _ioPortHandlerRegistry.Write(PitControlPort, GenerateConfigureCounterByte(counter, readWritePolicy, mode, bcd));
+        _ioPortDispatcher.WriteByte(PitControlPort, GenerateConfigureCounterByte(counter, readWritePolicy, mode, bcd));
     }
 
     private void WriteFullReload(byte counterIndex, ushort value) {
         ConfigureCounter(counterIndex, 3, 3, 0);
         ushort port = GetPort(counterIndex);
-        _ioPortHandlerRegistry.Write(port, (byte)(value & 0xFF));
-        _ioPortHandlerRegistry.Write(port, (byte)((value >> 8) & 0xFF));
+        _ioPortDispatcher.WriteByte(port, (byte)(value & 0xFF));
+        _ioPortDispatcher.WriteByte(port, (byte)((value >> 8) & 0xFF));
     }
 
     private static ushort GetPort(byte counterIndex) {
@@ -165,10 +165,10 @@ public class Pit8254Tests {
     }
 
     private ushort ReadLatchedValue(byte counterIndex) {
-        _ioPortHandlerRegistry.Write(PitControlPort, GenerateConfigureCounterByte(counterIndex, 0, 0, 0));
+        _ioPortDispatcher.WriteByte(PitControlPort, GenerateConfigureCounterByte(counterIndex, 0, 0, 0));
         ushort port = GetPort(counterIndex);
-        byte lsb = (byte)_ioPortHandlerRegistry.Read(port);
-        byte msb = (byte)_ioPortHandlerRegistry.Read(port);
+        byte lsb = _ioPortDispatcher.ReadByte(port);
+        byte msb = _ioPortDispatcher.ReadByte(port);
         return (ushort)(lsb | (msb << 8));
     }
 

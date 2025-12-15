@@ -7,6 +7,8 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Frozen;
@@ -54,8 +56,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private readonly DeviceThread _deviceThread;
     private readonly DmaPlaybackState _dmaState = new();
 
-    private readonly EmulatedTimeEventHandler _dmaTransferEventHandler;
+    private readonly EventHandler _dmaTransferEventHandler;
     private readonly Dsp _dsp;
+    private readonly EmulationLoopScheduler _scheduler;
+    private readonly IEmulatedClock _clock;
     private readonly DualPic _dualPic;
     private readonly Queue<byte> _outputData = new();
     private readonly int _outputSampleRate;
@@ -64,7 +68,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private readonly byte[] _readFromDspBuffer = new byte[512];
     private readonly short[] _renderingBuffer = new short[65536 * 2];
     private readonly DmaChannel? _secondaryDmaChannel;
-    private readonly EmulatedTimeEventHandler _suppressDmaEventHandler;
+    private readonly EventHandler _suppressDmaEventHandler;
     private BlasterState _blasterState;
     private bool _blockTransferSizeSet;
     private byte _commandDataLength;
@@ -96,17 +100,21 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="dmaSystem">The DMA system used for PCM data transfers by the DSP.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
+    /// <param name="scheduler">The event scheduler.</param>
+    /// <param name="clock">The emulated clock.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="loggerService">The logging service used for logging events.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
     /// <param name="pauseHandler">The handler for the emulation pause state.</param>
     public SoundBlaster(IOPortDispatcher ioPortDispatcher, SoftwareMixer softwareMixer, State state,
-        DmaSystem dmaSystem,
-        DualPic dualPic, bool failOnUnhandledPort, ILoggerService loggerService,
+        DmaBus dmaSystem,
+        DualPic dualPic, EmulationLoopScheduler scheduler, IEmulatedClock clock, bool failOnUnhandledPort, ILoggerService loggerService,
         SoundBlasterHardwareConfig soundBlasterHardwareConfig, IPauseHandler pauseHandler) : base(state,
         failOnUnhandledPort, loggerService) {
         _config = soundBlasterHardwareConfig;
         _dualPic = dualPic;
+        _scheduler = scheduler;
+        _clock = clock;
         _dmaTransferEventHandler = DmaTransferEvent;
         _suppressDmaEventHandler = SuppressDmaEvent;
         _primaryDmaChannel = dmaSystem.GetChannel(_config.LowDma)
@@ -131,7 +139,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         _outputSampleRate = PCMSoundChannel.SampleRate;
         FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(Sound.Opl3Fm), _outputSampleRate);
         Opl3Fm = new Opl3Fm(FMSynthSoundChannel, state, ioPortDispatcher, failOnUnhandledPort, loggerService,
-            pauseHandler, dualPic, enableOplIrq: true, useAdlibGold: true);
+            pauseHandler, scheduler, clock, dualPic, enableOplIrq: true, useAdlibGold: true);
         _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, PCMSoundChannel, FMSynthSoundChannel, loggerService);
         InitPortHandlers(ioPortDispatcher);
 
@@ -569,7 +577,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        _dualPic.RemoveEvents(_dmaTransferEventHandler);
+        _scheduler.RemoveEvents(_dmaTransferEventHandler);
         _dmaTransferEventScheduled = false;
     }
 
@@ -595,12 +603,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
         if (_dsp.IsWriteBufferAtCapacity()) {
             double retryDelay = Math.Min(DmaTransferIntervalMs, 0.25);
-            _dualPic.AddEvent(_dmaTransferEventHandler, retryDelay);
+            _scheduler.AddEvent(_dmaTransferEventHandler, retryDelay);
             _dmaTransferEventScheduled = true;
             return;
         }
 
-        _dmaState.LastPumpTimeMs = _dualPic.GetFractionalTickIndex();
+        _dmaState.LastPumpTimeMs = _clock.CurrentTimeMs;
 
         uint available = GetAvailableDmaBytes();
         uint chunk = chunkHint != 0 ? NormalizeDmaRequest(Math.Min(chunkHint, available), available) : 0;
@@ -627,7 +635,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
         if (bytesTransferred <= 0) {
             double retryDelay = Math.Min(chunk * 1000.0 / Math.Max(_dmaState.RateBytesPerSecond, 1.0), 0.25);
-            _dualPic.AddEvent(_dmaTransferEventHandler, retryDelay);
+            _scheduler.AddEvent(_dmaTransferEventHandler, retryDelay);
             _dmaTransferEventScheduled = true;
             return;
         }
@@ -655,7 +663,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        _dualPic.AddEvent(_dmaTransferEventHandler, delayMs, chunk);
+        _scheduler.AddEvent(_dmaTransferEventHandler, delayMs, chunk);
         _dmaTransferEventScheduled = true;
     }
 
@@ -716,7 +724,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        _dualPic.RemoveEvents(_suppressDmaEventHandler);
+        _scheduler.RemoveEvents(_suppressDmaEventHandler);
         _suppressDmaEventScheduled = false;
     }
 
@@ -756,7 +764,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             bytesToRequest = normalizedBytes;
         }
 
-        _dualPic.AddEvent(_suppressDmaEventHandler, delay, bytesToRequest);
+        _scheduler.AddEvent(_suppressDmaEventHandler, delay, bytesToRequest);
         _suppressDmaEventScheduled = true;
     }
 
@@ -766,7 +774,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        double nowMs = _dualPic.GetFractionalTickIndex();
+        double nowMs = _clock.CurrentTimeMs;
         double elapsedMs = nowMs - _dmaState.LastPumpTimeMs;
         if (elapsedMs <= 0.0) {
             return;
@@ -823,7 +831,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         requestedBytes = NormalizeDmaRequest(requestedBytes, remainingBytes);
 
         if (requestedBytes == 0) {
-            _dmaState.LastPumpTimeMs = _dualPic.GetFractionalTickIndex();
+            _dmaState.LastPumpTimeMs = _clock.CurrentTimeMs;
             if (!HandleDmaBlockCompletion()) {
                 return;
             }
@@ -848,12 +856,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
                 "Sound Blaster DMA pump transferred 0 of {RequestedBytes} bytes during suppression; scheduling retry.",
                 requestedBytes);
             double retryDelay = Math.Min(requestedBytes * 1000.0 / Math.Max(_dmaState.RateBytesPerSecond, 1.0), 0.25);
-            _dualPic.AddEvent(_suppressDmaEventHandler, retryDelay, requestedBytes);
+            _scheduler.AddEvent(_suppressDmaEventHandler, retryDelay, requestedBytes);
             _suppressDmaEventScheduled = true;
             return;
         }
 
-        _dmaState.LastPumpTimeMs = _dualPic.GetFractionalTickIndex();
+        _dmaState.LastPumpTimeMs = _clock.CurrentTimeMs;
 
         if (_dmaState.RemainingBytes == 0) {
             bool continuePlayback = HandleDmaBlockCompletion();
@@ -1008,7 +1016,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         _dmaState.AutoSizeBytes = 0;
         _dmaState.IrqRaisedForCurrentBlock = false;
         _dmaState.DmaMasked = false;
-        _dmaState.LastPumpTimeMs = _dualPic.GetFractionalTickIndex();
+        _dmaState.LastPumpTimeMs = _clock.CurrentTimeMs;
         Volatile.Write(ref _pendingDmaCompletion, 0);
     }
 
@@ -1054,7 +1062,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         }
 
         UpdateActiveDmaRate();
-        _dmaState.LastPumpTimeMs = _dualPic.GetFractionalTickIndex();
+        _dmaState.LastPumpTimeMs = _clock.CurrentTimeMs;
     }
 
     private void UpdateActiveDmaRate() {

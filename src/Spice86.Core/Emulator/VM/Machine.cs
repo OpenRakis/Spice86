@@ -194,7 +194,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The DMA system (primary and secondary controllers).
     /// </summary>
-    public DmaSystem DmaSystem { get; }
+    public DmaBus DmaSystem { get; }
 
     /// <summary>
     /// The OPL3 FM Synth chip.
@@ -265,7 +265,7 @@ public sealed class Machine : IDisposable {
         IVgaRenderer vgaRenderer,
         IVideoInt10Handler videoInt10Handler,
         VgaRom vgaRom,
-        DmaSystem dmaSystem,
+        DmaBus dmaSystem,
         Opl3Fm opl3Fm,
         SoftwareMixer softwareMixer,
         IMouseDevice mouseDevice,
