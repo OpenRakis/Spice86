@@ -302,6 +302,91 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
     
     // =============================================================================
+    // Bulk DMA Reading - ported from DOSBox Staging soundblaster.cpp lines 1029-1113
+    // =============================================================================
+    
+    /// <summary>
+    /// Optimized 8-bit DMA read with boundary checking.
+    /// Mirrors read_dma_8bit() from DOSBox.
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 1029-1059
+    /// </summary>
+    private uint ReadDma8Bit(uint bytesToRead, uint bufferIndex = 0) {
+        if (bufferIndex >= DmaBufSize) {
+            _loggerService.Error("SOUNDBLASTER: Read requested out of bounds of DMA buffer at index {Index}", bufferIndex);
+            return 0;
+        }
+        
+        if (_sb.Dma.Channel is null) {
+            _loggerService.Warning("SOUNDBLASTER: Attempted to read DMA with null channel");
+            return 0;
+        }
+        
+        uint bytesAvailable = DmaBufSize - bufferIndex;
+        uint clampedBytes = Math.Min(bytesToRead, bytesAvailable);
+        
+        try {
+            Span<byte> buffer = _sb.Dma.Buf8.AsSpan((int)bufferIndex, (int)clampedBytes);
+            int bytesRead = _sb.Dma.Channel.Read((int)clampedBytes, buffer);
+            return (uint)Math.Max(0, bytesRead);
+        } catch (Exception ex) {
+            _loggerService.Error(ex, "SOUNDBLASTER: Exception during 8-bit DMA read");
+            return 0;
+        }
+    }
+    
+    /// <summary>
+    /// Optimized 16-bit DMA read with alignment handling.
+    /// Mirrors read_dma_16bit() from DOSBox.
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 1060-1113
+    /// </summary>
+    private uint ReadDma16Bit(uint wordsToRead, uint bufferIndex = 0) {
+        if (bufferIndex >= DmaBufSize) {
+            _loggerService.Error("SOUNDBLASTER: Read requested out of bounds of DMA buffer at index {Index}", bufferIndex);
+            return 0;
+        }
+        
+        if (_sb.Dma.Channel is null) {
+            _loggerService.Warning("SOUNDBLASTER: Attempted to read DMA with null channel");
+            return 0;
+        }
+        
+        // In DMA controller, if channel is 16-bit, we're dealing with 16-bit words.
+        // Otherwise, we're dealing with 8-bit words (bytes).
+        bool is16BitChannel = _sb.Dma.Channel.ChannelNumber >= 4 && _sb.Dma.Channel.ChannelNumber != 4;
+        uint bytesRequested = wordsToRead;
+        
+        if (is16BitChannel) {
+            bytesRequested *= 2;
+            if (_sb.Dma.Mode != DmaMode.Pcm16Bit) {
+                _loggerService.Warning("SOUNDBLASTER: Expected 16-bit mode but DMA mode is {Mode}", _sb.Dma.Mode);
+            }
+        } else {
+            if (_sb.Dma.Mode != DmaMode.Pcm16BitAliased) {
+                _loggerService.Warning("SOUNDBLASTER: Expected 16-bit aliased mode but DMA mode is {Mode}", _sb.Dma.Mode);
+            }
+        }
+        
+        // Clamp words to read so we don't overflow our buffer
+        uint bytesAvailable = (DmaBufSize - bufferIndex) * 2;
+        uint clampedWords = Math.Min(bytesRequested, bytesAvailable);
+        if (is16BitChannel) {
+            clampedWords /= 2;
+        }
+        
+        try {
+            // Read into the 16-bit buffer (reinterpret as byte span for DMA controller)
+            int byteOffset = (int)bufferIndex * 2;
+            Span<byte> byteBuffer = System.Runtime.InteropServices.MemoryMarshal.Cast<short, byte>(_sb.Dma.Buf16.AsSpan());
+            Span<byte> targetBuffer = byteBuffer.Slice(byteOffset);
+            int wordsRead = _sb.Dma.Channel.Read((int)clampedWords, targetBuffer);
+            return (uint)Math.Max(0, wordsRead);
+        } catch (Exception ex) {
+            _loggerService.Error(ex, "SOUNDBLASTER: Exception during 16-bit DMA read");
+            return 0;
+        }
+    }
+    
+    // =============================================================================
     // DSP Command Tables - ported from DOSBox Staging soundblaster.cpp lines 205-265
     // =============================================================================
     
@@ -522,9 +607,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             
             case DmaMode.Pcm16Bit:
             case DmaMode.Pcm16BitAliased:
-                // TODO: Port 16-bit PCM handling
-                _loggerService.Warning("SOUNDBLASTER: 16-bit PCM not yet implemented");
-                return new AudioFrame(0.0f, 0.0f);
+                return GeneratePcm16Frame();
             
             default:
                 _loggerService.Warning("SOUNDBLASTER: Unsupported DMA mode {Mode}", _sb.Dma.Mode);
@@ -705,6 +788,54 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
         } catch (Exception ex) {
             _loggerService.Error(ex, "SOUNDBLASTER: Exception in ADPCM4 decode");
+        }
+        
+        return new AudioFrame(0.0f, 0.0f);
+    }
+    
+    /// <summary>
+    /// Generates a frame for 16-bit PCM mode (both true 16-bit and aliased 8-bit).
+    /// Mirrors DOSBox Pcm16Bit/Pcm16BitAliased case in play_dma_transfer().
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 1240-1285
+    /// </summary>
+    private AudioFrame GeneratePcm16Frame() {
+        // Decode samples from buffer cache if available
+        if (_sb.Dma.RemainSize > 0) {
+            short sample = _sb.Dma.Buf16[DmaBufSize - (int)_sb.Dma.RemainSize];
+            _sb.Dma.RemainSize--;
+            
+            // Convert 16-bit sample to float (-32768 to 32767 range)
+            float value = _sb.SpeakerEnabled ? sample : 0.0f;
+            return new AudioFrame(value, value);
+        }
+        
+        // Read new word from DMA
+        try {
+            uint wordsRead = ReadDma16Bit(1);
+            
+            if (wordsRead > 0 && _sb.Dma.Left > 0) {
+                _sb.Dma.Left--;
+                
+                if (_sb.Dma.FirstTransfer) {
+                    _sb.Dma.FirstTransfer = false;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: First 16-bit DMA word read: 0x{Sample:X4}", _sb.Dma.Buf16[0]);
+                    }
+                }
+                
+                short sample = _sb.Dma.Buf16[0];
+                
+                // Handle signed/unsigned conversion
+                if (!_sb.Dma.Sign) {
+                    // Unsigned 16-bit: convert to signed by subtracting 32768
+                    sample = (short)((ushort)sample - 32768);
+                }
+                
+                float value = _sb.SpeakerEnabled ? sample : 0.0f;
+                return new AudioFrame(value, value);
+            }
+        } catch (Exception ex) {
+            _loggerService.Error(ex, "SOUNDBLASTER: Exception in 16-bit PCM decode");
         }
         
         return new AudioFrame(0.0f, 0.0f);
@@ -1021,6 +1152,20 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 break;
 
+            case 0x16:
+            case 0x17:
+                // Single Cycle 2-bit ADPCM
+                // 0x17 includes reference byte
+                if (_currentCommand == 0x17) {
+                    _sb.Adpcm.HaveRef = true;
+                }
+                _sb.Dma.Left = (uint)(1 + _commandData[0] + (_commandData[1] << 8));
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: 2-bit ADPCM size={Size} haveRef={HaveRef}", _sb.Dma.Left, _sb.Adpcm.HaveRef);
+                }
+                DspPrepareDmaOld(DmaMode.Adpcm2Bit, false, false);
+                break;
+
             case 0x74:
             case 0x75:
                 // Single Cycle 4-bit ADPCM
@@ -1049,6 +1194,43 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0x80:
                 // Silence DAC
+                break;
+
+            // Generic 8/16-bit DMA commands (SB16 only) - 0xB0-0xCF
+            // Reference: DOSBox soundblaster.cpp lines 2068-2097
+            case 0xb0: case 0xb1: case 0xb2: case 0xb3:
+            case 0xb4: case 0xb5: case 0xb6: case 0xb7:
+            case 0xb8: case 0xb9: case 0xba: case 0xbb:
+            case 0xbc: case 0xbd: case 0xbe: case 0xbf:
+            case 0xc0: case 0xc1: case 0xc2: case 0xc3:
+            case 0xc4: case 0xc5: case 0xc6: case 0xc7:
+            case 0xc8: case 0xc9: case 0xca: case 0xcb:
+            case 0xcc: case 0xcd: case 0xce: case 0xcf:
+                if (_config.SbType == SbType.Sb16 && _commandData.Count >= 3) {
+                    // Parse command byte and mode byte
+                    // Command bit 4 (0x10): 0=8-bit, 1=16-bit
+                    // Mode byte bit 4 (0x10): signed data
+                    // Mode byte bit 5 (0x20): stereo
+                    // Command bit 2 (0x04): FIFO enable (we don't emulate FIFO delay)
+                    
+                    _sb.Dma.Sign = (_commandData[0] & 0x10) != 0;
+                    bool is16Bit = (_currentCommand & 0x10) != 0;
+                    bool autoInit = (_currentCommand & 0x04) != 0;
+                    bool stereo = (_commandData[0] & 0x20) != 0;
+                    
+                    // Length is in bytes (for 8-bit) or words (for 16-bit)
+                    uint length = (uint)(1 + _commandData[1] + (_commandData[2] << 8));
+                    
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB16: Generic DMA cmd=0x{Cmd:X2} mode=0x{Mode:X2} " +
+                            "16bit={Is16Bit} autoInit={AutoInit} stereo={Stereo} sign={Sign} len={Length}",
+                            _currentCommand, _commandData[0], is16Bit, autoInit, stereo, _sb.Dma.Sign, length);
+                    }
+                    
+                    DspPrepareDmaNew(is16Bit ? DmaMode.Pcm16Bit : DmaMode.Pcm8Bit, length, autoInit, stereo);
+                } else if (_config.SbType != SbType.Sb16) {
+                    _loggerService.Warning("SOUNDBLASTER: Generic DMA commands (0xB0-0xCF) require SB16");
+                }
                 break;
 
             case 0xd0:
@@ -1305,6 +1487,74 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA prepared - Mode={Mode}, AutoInit={AutoInit}, Bits={Bits}, Left={Left}, Channel={Channel}",
                 mode, autoInit, _sb.Dma.Bits, _sb.Dma.Left, dmaChannel.ChannelNumber);
+        }
+    }
+    
+    /// <summary>
+    /// Setup DMA transfer using new-style SB16 commands (0xB0-0xCF).
+    /// Mirrors dsp_prepare_dma_new() from DOSBox.
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 1646-1690
+    /// </summary>
+    private void DspPrepareDmaNew(DmaMode mode, uint length, bool autoInit, bool stereo) {
+        DmaMode newMode = mode;
+        uint newLength = length;
+        
+        // Select appropriate DMA channel and adjust mode/length if needed
+        if (mode == DmaMode.Pcm16Bit) {
+            // Try to use 16-bit DMA channel first
+            if (_secondaryDmaChannel is not null) {
+                _sb.Dma.Channel = _secondaryDmaChannel;
+            } else {
+                // Fall back to 8-bit DMA channel in aliased mode
+                _sb.Dma.Channel = _primaryDmaChannel;
+                newMode = DmaMode.Pcm16BitAliased;
+                // In aliased mode, sample length is specified as number of 16-bit samples
+                // but we need to double the 8-bit DMA buffer length
+                newLength *= 2;
+            }
+        } else {
+            // 8-bit modes always use primary DMA channel
+            _sb.Dma.Channel = _primaryDmaChannel;
+        }
+        
+        if (_sb.Dma.Channel is null) {
+            _loggerService.Warning("SOUNDBLASTER: No DMA channel available for mode {Mode}", mode);
+            return;
+        }
+        
+        // Set stereo flag
+        _sb.Dma.Stereo = stereo;
+        
+        // Set the length to the correct register depending on mode
+        if (autoInit) {
+            _sb.Dma.AutoSize = newLength;
+            _sb.Dma.Left = newLength;
+        } else {
+            _sb.Dma.SingleSize = newLength;
+            _sb.Dma.Left = newLength;
+        }
+        
+        // Setup the DMA transfer
+        _sb.Dma.Mode = newMode;
+        _sb.Dma.AutoInit = autoInit;
+        _sb.Dma.FirstTransfer = true;
+        
+        // Determine bit depth
+        _sb.Dma.Bits = newMode switch {
+            DmaMode.Pcm8Bit => 8,
+            DmaMode.Pcm16Bit or DmaMode.Pcm16BitAliased => 16,
+            _ => 8
+        };
+        
+        // Transition to DMA mode
+        if (_sb.Mode != DspMode.Dma) {
+            DspChangeMode(DspMode.Dma);
+        }
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DMA prepared (new) - Mode={Mode}, AutoInit={AutoInit}, " +
+                "Stereo={Stereo}, Bits={Bits}, Left={Left}, Channel={Channel}",
+                newMode, autoInit, stereo, _sb.Dma.Bits, _sb.Dma.Left, _sb.Dma.Channel.ChannelNumber);
         }
     }
 
