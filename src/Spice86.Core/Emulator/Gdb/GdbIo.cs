@@ -30,7 +30,12 @@ public sealed class GdbIo : IDisposable {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
         // Listen to connections in IPv4 or IPv6
         _tcpListener = new TcpListener(IPAddress.IPv6Any, port);
-        _tcpListener.Server.DualMode = true;
+        try {
+            _tcpListener.Server.DualMode = true;
+        } catch (PlatformNotSupportedException) {
+            // DualMode is not supported on some platforms (e.g., some Linux configurations)
+            // Fall back to IPv6-only mode
+        }
     }
 
     /// <summary>
