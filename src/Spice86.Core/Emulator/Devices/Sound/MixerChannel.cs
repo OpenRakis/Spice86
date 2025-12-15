@@ -647,7 +647,7 @@ public sealed class MixerChannel {
     /// Converts and adds a single frame with optional ZoH upsampling.
     /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() logic from mixer.cpp:1871
     /// </summary>
-    private void ConvertAndAddFrame(AudioFrame frame, bool isStereo) {
+    private void ConvertSamplesAndMaybeZohUpsample(AudioFrame frame, bool isStereo) {
         _prevFrame = _nextFrame;
         _nextFrame = frame;
         
@@ -680,7 +680,7 @@ public sealed class MixerChannel {
                 float sample = LookupTables.U8To16[data[pos]];
                 AudioFrame frame = new(sample, sample);
                 
-                ConvertAndAddFrame(frame, false);
+                ConvertSamplesAndMaybeZohUpsample(frame, false);
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
@@ -710,7 +710,7 @@ public sealed class MixerChannel {
                 float sample = data[pos];
                 AudioFrame frame = new(sample, sample);
                 
-                ConvertAndAddFrame(frame, false);
+                ConvertSamplesAndMaybeZohUpsample(frame, false);
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
@@ -741,7 +741,7 @@ public sealed class MixerChannel {
                 float right = data[pos * 2 + 1];
                 AudioFrame frame = new(left, right);
                 
-                ConvertAndAddFrame(frame, true);
+                ConvertSamplesAndMaybeZohUpsample(frame, true);
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
@@ -772,7 +772,7 @@ public sealed class MixerChannel {
                 float sample = data[pos] * 32768.0f; // Convert normalized float to 16-bit range
                 AudioFrame frame = new(sample, sample);
                 
-                ConvertAndAddFrame(frame, false);
+                ConvertSamplesAndMaybeZohUpsample(frame, false);
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
@@ -804,7 +804,7 @@ public sealed class MixerChannel {
                 float right = data[pos * 2 + 1] * 32768.0f;
                 AudioFrame frame = new(left, right);
                 
-                ConvertAndAddFrame(frame, true);
+                ConvertSamplesAndMaybeZohUpsample(frame, true);
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
@@ -833,7 +833,7 @@ public sealed class MixerChannel {
             while (pos < frames.Length) {
                 AudioFrame frame = frames[pos];
                 
-                ConvertAndAddFrame(frame, true);
+                ConvertSamplesAndMaybeZohUpsample(frame, true);
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
