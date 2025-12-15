@@ -130,35 +130,6 @@ public class DosMemoryManager {
     }
 
     /// <summary>
-    /// Allocates a memory block and assigns it to a specific PSP segment.
-    /// </summary>
-    /// <param name="requestedSizeInParagraphs">The requested size in paragraphs.</param>
-    /// <param name="pspSegment">The PSP segment to assign as owner.</param>
-    /// <returns>The allocated MCB, or null if allocation failed.</returns>
-    public DosMemoryControlBlock? AllocateMemoryBlockForPsp(ushort requestedSizeInParagraphs, ushort pspSegment) {
-        IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSizeInParagraphs);
-
-        DosMemoryControlBlock? blockOptional = SelectBlockByStrategy(candidates);
-        if (blockOptional is null) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Could not find any MCB to fit {RequestedSize}", requestedSizeInParagraphs);
-            }
-            return null;
-        }
-
-        DosMemoryControlBlock block = blockOptional;
-        if (!SplitBlock(block, requestedSizeInParagraphs)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Could not split block {Block}", block);
-            }
-            return null;
-        }
-
-        block.PspSegment = pspSegment;
-        return block;
-    }
-
-    /// <summary>
     /// Finds the largest free <see cref="DosMemoryControlBlock"/>.
     /// </summary>
     /// <returns>The largest free <see cref="DosMemoryControlBlock"/></returns>
@@ -352,7 +323,7 @@ public class DosMemoryManager {
     /// EXE files to allow the calculated values to be easily passed around together and to make it
     /// easier to identify where min/max allocation is requested inernally in the code.
     /// </remarks>
-    private struct AllocRange {
+    private readonly record struct AllocRange {
         public AllocRange(ushort minSize, ushort maxSize) {
             MinSizeInParagraphs = minSize;
             MaxSizeInParagraphs = minSize > maxSize ? minSize : maxSize;
