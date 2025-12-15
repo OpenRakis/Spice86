@@ -399,6 +399,7 @@ public sealed class Mixer : IDisposable {
             channel.Mix(framesRequested);
 
             // Accumulate channel output into master mix
+            // Mirrors DOSBox mixer.cpp:2418-2435
             int numFrames = Math.Min(framesRequested, channel.AudioFrames.Count);
             for (int i = 0; i < numFrames; i++) {
                 AudioFrame channelFrame = channel.AudioFrames[i];
@@ -406,7 +407,14 @@ public sealed class Mixer : IDisposable {
                 // Add to master output using operator
                 _outputBuffer[i] = _outputBuffer[i] + channelFrame;
                 
-                // TODO: Reverb and chorus sends
+                // Reverb and chorus sends - mirrors DOSBox logic
+                if (_doReverb && channel.DoReverbSend) {
+                    _reverbAuxBuffer[i] = _reverbAuxBuffer[i] + (channelFrame * channel.ReverbSendGain);
+                }
+                
+                if (_doChorus && channel.DoChorusSend) {
+                    _chorusAuxBuffer[i] = _chorusAuxBuffer[i] + (channelFrame * channel.ChorusSendGain);
+                }
             }
 
             // Remove consumed frames from channel

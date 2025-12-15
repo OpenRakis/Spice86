@@ -49,6 +49,20 @@ public sealed class MixerChannel {
     // State flags
     public bool IsEnabled { get; private set; }
     private bool _lastSamplesWereStereo;
+    
+    // Effect sends - mirrors DOSBox per-channel effect state
+    private bool _doCrossfeed;
+    private float _crossfeedStrength;
+    private float _crossfeedPanLeft;
+    private float _crossfeedPanRight;
+    
+    private bool _doReverbSend;
+    private float _reverbLevel;
+    private float _reverbSendGain;
+    
+    private bool _doChorusSend;
+    private float _chorusLevel;
+    private float _chorusSendGain;
 
     public MixerChannel(
         Action<int> handler,
@@ -68,6 +82,50 @@ public sealed class MixerChannel {
     public string GetName() {
         lock (_mutex) {
             return _name;
+        }
+    }
+    
+    /// <summary>
+    /// Gets whether reverb send is enabled for this channel.
+    /// </summary>
+    public bool DoReverbSend {
+        get {
+            lock (_mutex) {
+                return _doReverbSend;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets the reverb send gain for this channel.
+    /// </summary>
+    public float ReverbSendGain {
+        get {
+            lock (_mutex) {
+                return _reverbSendGain;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets whether chorus send is enabled for this channel.
+    /// </summary>
+    public bool DoChorusSend {
+        get {
+            lock (_mutex) {
+                return _doChorusSend;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets the chorus send gain for this channel.
+    /// </summary>
+    public float ChorusSendGain {
+        get {
+            lock (_mutex) {
+                return _chorusSendGain;
+            }
         }
     }
 
@@ -343,6 +401,131 @@ public sealed class MixerChannel {
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Sets the crossfeed strength for this channel.
+    /// Mirrors DOSBox SetCrossfeedStrength() from mixer.cpp:1617
+    /// </summary>
+    public void SetCrossfeedStrength(float strength) {
+        lock (_mutex) {
+            _crossfeedStrength = Math.Clamp(strength, 0.0f, 1.0f);
+            _doCrossfeed = HasFeature(ChannelFeature.Stereo) && _crossfeedStrength > 0.0f;
+            
+            if (!_doCrossfeed) {
+                _crossfeedStrength = 0.0f;
+                return;
+            }
+            
+            // Map [0, 1] range to [0.5, 0] - mirrors DOSBox logic
+            float p = (1.0f - _crossfeedStrength) / 2.0f;
+            const float center = 0.5f;
+            _crossfeedPanLeft = center - p;
+            _crossfeedPanRight = center + p;
+        }
+    }
+    
+    /// <summary>
+    /// Gets the crossfeed strength for this channel.
+    /// Mirrors DOSBox GetCrossfeedStrength() from mixer.cpp:1650
+    /// </summary>
+    public float GetCrossfeedStrength() {
+        lock (_mutex) {
+            return _crossfeedStrength;
+        }
+    }
+    
+    /// <summary>
+    /// Sets the reverb send level for this channel.
+    /// Mirrors DOSBox SetReverbLevel() from mixer.cpp:1656
+    /// </summary>
+    public void SetReverbLevel(float level) {
+        lock (_mutex) {
+            const float levelMin = 0.0f;
+            const float levelMax = 1.0f;
+            const float levelMinDb = -40.0f;
+            const float levelMaxDb = 0.0f;
+            
+            level = Math.Clamp(level, levelMin, levelMax);
+            _doReverbSend = HasFeature(ChannelFeature.ReverbSend) && level > levelMin;
+            
+            if (!_doReverbSend) {
+                _reverbLevel = levelMin;
+                _reverbSendGain = 0.0f;
+                return;
+            }
+            
+            _reverbLevel = level;
+            
+            // Remap level to decibels and convert to gain
+            float levelDb = Remap(levelMin, levelMax, levelMinDb, levelMaxDb, level);
+            _reverbSendGain = DecibelToGain(levelDb);
+        }
+    }
+    
+    /// <summary>
+    /// Gets the reverb send level for this channel.
+    /// Mirrors DOSBox GetReverbLevel() from mixer.cpp:1694
+    /// </summary>
+    public float GetReverbLevel() {
+        lock (_mutex) {
+            return _reverbLevel;
+        }
+    }
+    
+    /// <summary>
+    /// Sets the chorus send level for this channel.
+    /// Mirrors DOSBox SetChorusLevel() from mixer.cpp:1700
+    /// </summary>
+    public void SetChorusLevel(float level) {
+        lock (_mutex) {
+            const float levelMin = 0.0f;
+            const float levelMax = 1.0f;
+            const float levelMinDb = -24.0f;
+            const float levelMaxDb = 0.0f;
+            
+            level = Math.Clamp(level, levelMin, levelMax);
+            _doChorusSend = HasFeature(ChannelFeature.ChorusSend) && level > levelMin;
+            
+            if (!_doChorusSend) {
+                _chorusLevel = levelMin;
+                _chorusSendGain = 0.0f;
+                return;
+            }
+            
+            _chorusLevel = level;
+            
+            // Remap level to decibels and convert to gain
+            float levelDb = Remap(levelMin, levelMax, levelMinDb, levelMaxDb, level);
+            _chorusSendGain = DecibelToGain(levelDb);
+        }
+    }
+    
+    /// <summary>
+    /// Gets the chorus send level for this channel.
+    /// Mirrors DOSBox GetChorusLevel() from mixer.cpp:1738
+    /// </summary>
+    public float GetChorusLevel() {
+        lock (_mutex) {
+            return _chorusLevel;
+        }
+    }
+    
+    /// <summary>
+    /// Remaps a value from one range to another.
+    /// Helper for effect level calculations.
+    /// </summary>
+    private static float Remap(float inMin, float inMax, float outMin, float outMax, float value) {
+        float normalized = (value - inMin) / (inMax - inMin);
+        return outMin + normalized * (outMax - outMin);
+    }
+    
+    /// <summary>
+    /// Converts decibel value to linear gain.
+    /// Helper for effect level calculations.
+    /// </summary>
+    private static float DecibelToGain(float db) {
+        return (float)Math.Pow(10.0, db / 20.0);
     }
 
     /// <summary>
