@@ -18,10 +18,11 @@
 // - E2 increment table for DMA identification
 // - Bulk DMA read methods (ReadDma8Bit/ReadDma16Bit)
 // - Case 0x05 (SB16 ASP set codec parameter) - ADDED
+// - HardwareMixer integration with full register read/write support
+// - Mixer register read/write handlers (volume routing) via HardwareMixer class
 //
 // REMAINING:
 // - Fine-tune DMA/IRQ event coordination with mixer callbacks
-// - Mixer register read/write handlers (volume routing)
 // - Speaker warmup timing refinements
 
 // PHASE 2: Mixer.cpp - Core Mixing & Effects Pipeline [85% COMPLETE]
@@ -128,11 +129,12 @@
 
 // FILE COUNT (CURRENT vs TARGET)
 // ===============================
-// SoundBlaster.cs:  1749 lines (vs soundblaster.cpp: 3917 lines - 45%)
-// Mixer.cs:         784 lines  (vs mixer.cpp: 3276 lines - 24%)
-// MixerChannel.cs:  792 lines  (included in mixer.cpp)
-// MixerTypes.cs:    198 lines  (mixer.h enums/types)
-// TOTAL:            3523 lines (vs 7193 lines combined - 49% complete)
+// SoundBlaster.cs:  1725 lines (vs soundblaster.cpp: 3917 lines - 44%)
+// HardwareMixer.cs:  593 lines (mixer register handling)
+// Mixer.cs:          785 lines (vs mixer.cpp: 3276 lines - 24%)
+// MixerChannel.cs:   855 lines (included in mixer.cpp)
+// MixerTypes.cs:     198 lines (mixer.h enums/types)
+// TOTAL:            4156 lines (vs 7193 lines combined - 58% complete)
 //
 // Expected final: ~5000 lines total (C# is more verbose than C++)
 //
@@ -141,6 +143,7 @@
 // Per-Channel Effect Sends: Complete (SetReverbLevel, SetChorusLevel, SetCrossfeedStrength) ✓
 // Resampling: Linear interpolation + ZoH upsampler (Speex deferred) ✓
 // High-pass Filtering: Reverb input + Master output (IIR Butterworth) ✓
+// Mixer Register Handling: Complete via HardwareMixer (SB Pro & SB16 registers) ✓
 
 // PRIORITY ORDER (UPDATED)
 // =========================
@@ -151,8 +154,9 @@
 // 5. ✓ Global effect routing (DONE - SetGlobalReverb/Chorus/Crossfeed)
 // 6. ✓ High-quality resampling (DONE - ZoH upsampler added, Speex deferred)
 // 7. ✓ High-pass filtering (DONE - reverb input & master output)
-// 8. [ ] DMA/IRQ coordination refinements (NEXT - needed for perfect sync)
-// 9. [ ] Mixer effects upgrades (reverb/chorus quality improvements)
-// 10. [ ] Output prebuffering (smooth startup)
-// 11. [ ] Channel sleep/wake mechanism (CPU efficiency)
-// 12. [ ] Integration testing with DOS games
+// 8. ✓ Mixer register handlers (DONE - HardwareMixer integration with volume routing)
+// 9. [ ] DMA/IRQ coordination refinements (NEXT - needed for perfect sync)
+// 10. [ ] Mixer effects upgrades (reverb/chorus quality improvements)
+// 11. [ ] Output prebuffering (smooth startup)
+// 12. [ ] Channel sleep/wake mechanism (CPU efficiency)
+// 13. [ ] Integration testing with DOS games
