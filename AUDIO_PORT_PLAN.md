@@ -109,6 +109,10 @@
 // - This principle is RETROACTIVE: it applies to all mirroring work, past and future
 //   If previous code reviews led to deviations, those should be reconsidered
 //
+// - **DOSBox Staging is FEATURE-COMPLETE**: Do not add features beyond what DOSBox has
+//   The scope is strictly limited to mirroring existing DOSBox functionality
+//   Suggestions to add "improvements" or "enhancements" not in DOSBox must be rejected
+//
 // - Only accept code review feedback that:
 //   * Fixes actual bugs or compilation errors
 //   * Improves C# idioms WITHOUT changing structure (e.g., using statements)
