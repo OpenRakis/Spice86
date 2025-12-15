@@ -163,8 +163,14 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
                     _loggerService.Error("CMOS: Update-ended interrupt not supported (bit 4 set in Register B).");
                 }
                 if (_cmosRegisters.Timer.Enabled && !prevEnabled) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("RTC: Periodic interrupt enabled via Status Register B write");
+                    }
                     ScheduleNextPeriodicInterrupt();
                 } else if (!_cmosRegisters.Timer.Enabled && prevEnabled) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("RTC: Periodic interrupt disabled via Status Register B write");
+                    }
                     CancelPeriodicInterrupts();
                 }
                 return;
@@ -318,7 +324,13 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private void ScheduleNextPeriodicInterrupt() {
         if (_cmosRegisters.Timer.Delay <= 0) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("RTC: Cannot schedule periodic interrupt - delay is {Delay}", _cmosRegisters.Timer.Delay);
+            }
             return;
+        }
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("RTC: Scheduling next periodic interrupt in {Delay:F3}ms", _cmosRegisters.Timer.Delay);
         }
         _scheduler.AddEvent(OnPeriodicInterrupt, _cmosRegisters.Timer.Delay);
     }
@@ -345,7 +357,13 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private void OnPeriodicInterrupt(uint value) {
         if (!_cmosRegisters.Timer.Enabled || _cmosRegisters.Timer.Delay <= 0) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("RTC: Periodic interrupt fired but timer not enabled or delay invalid");
+            }
             return;
+        }
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("RTC: Periodic interrupt fired, raising IRQ 8");
         }
         _cmosRegisters[CmosRegisterAddresses.StatusRegisterC] |= 0xC0;
         _cmosRegisters.Timer.Acknowledged = false;
