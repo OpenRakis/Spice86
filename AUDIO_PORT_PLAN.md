@@ -5,6 +5,17 @@
 //
 // Excludes: Fast-forward, Capture, ESFM
 // Speex: Will be integrated via P/Invoke (compiled library, not translated to C#)
+//
+// LATEST UPDATE (2025-12-15)
+// ==========================
+// Phase 2A COMPLETED: DMA Callback System + Warmup Handling
+// - Implemented DspDmaCallback() mirroring DOSBox dsp_dma_callback()
+// - Added DMA callback registration in DspPrepareDmaOld/New
+// - DMA timing tracking with _lastDmaCallbackTime
+// - DMA masked/unmasked event handling for proper state transitions
+// - MaybeSilenceFrame() for warmup and speaker state (mirrors maybe_silence)
+// - Warmup handling applied to all frame generation paths
+// Total: +130 lines, reaching 51% parity with DOSBox soundblaster.cpp (2000/3917 lines)
 
 // PHASE 1: SoundBlaster.cpp - Complete DSP Command Set [100% COMPLETE]
 // =====================================================================
