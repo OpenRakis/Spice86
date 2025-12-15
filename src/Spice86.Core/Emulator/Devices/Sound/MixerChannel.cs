@@ -72,6 +72,10 @@ public sealed class MixerChannel {
     private bool _doChorusSend;
     private float _chorusLevel;
     private float _chorusSendGain;
+    
+    // Sleep/wake state - mirrors DOSBox sleeper
+    private readonly Sleeper _sleeper;
+    private bool _doSleep;
 
     public MixerChannel(
         Action<int> handler,
@@ -83,6 +87,10 @@ public sealed class MixerChannel {
         _name = name ?? throw new ArgumentNullException(nameof(name));
         _features = features ?? throw new ArgumentNullException(nameof(features));
         _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
+        
+        // Initialize sleep/wake mechanism - mirrors DOSBox mixer.cpp:313
+        _doSleep = HasFeature(ChannelFeature.Sleep);
+        _sleeper = new Sleeper(this);
     }
 
     /// <summary>
@@ -850,6 +858,264 @@ public sealed class MixerChannel {
             }
             
             _lastSamplesWereStereo = true;
+        }
+    }
+    
+    /// <summary>
+    /// Applies fade-out or signal detection to a frame if sleep is enabled.
+    /// Called by mixer during frame processing.
+    /// Mirrors DOSBox mixer.cpp:2420
+    /// </summary>
+    internal AudioFrame MaybeFadeOrListen(AudioFrame frame) {
+        if (!_doSleep) {
+            return frame;
+        }
+        
+        // No lock needed here - called within mixer's processing loop
+        return _sleeper.MaybeFadeOrListen(frame);
+    }
+    
+    /// <summary>
+    /// Attempts to put the channel to sleep if conditions are met.
+    /// Called by mixer after frame processing.
+    /// Mirrors DOSBox mixer.cpp:2441
+    /// </summary>
+    internal void MaybeSleep() {
+        if (!_doSleep) {
+            return;
+        }
+        
+        // No lock needed here - called within mixer's processing loop
+        _sleeper.MaybeSleep();
+    }
+    
+    /// <summary>
+    /// Wakes up a sleeping channel.
+    /// Audio devices that use the sleep feature need to wake up the channel whenever
+    /// they might prepare new samples for it (typically on IO port writes).
+    /// Mirrors DOSBox mixer.cpp:2120-2125
+    /// </summary>
+    /// <returns>True if the channel was actually sleeping, false if already awake</returns>
+    public bool WakeUp() {
+        if (!_doSleep) {
+            return false;
+        }
+        
+        lock (_mutex) {
+            return _sleeper.WakeUp();
+        }
+    }
+    
+    /// <summary>
+    /// Configures fade-out behavior for this channel.
+    /// Mirrors DOSBox mixer.cpp:1961-1967
+    /// </summary>
+    /// <param name="prefs">Configuration string (e.g., "true", "false", "500 500" for wait_ms and fade_ms)</param>
+    /// <returns>True if configuration succeeded, false otherwise</returns>
+    public bool ConfigureFadeOut(string prefs) {
+        lock (_mutex) {
+            return _sleeper.ConfigureFadeOut(prefs);
+        }
+    }
+    
+    /// <summary>
+    /// Nested class that manages channel sleep/wake behavior with optional fade-out.
+    /// Mirrors DOSBox Staging's MixerChannel::Sleeper class.
+    /// Reference: DOSBox mixer.cpp lines 1960-2130
+    /// </summary>
+    private sealed class Sleeper {
+        private readonly MixerChannel _channel;
+        
+        // The wait before fading or sleeping is bound between these values
+        private const int MinWaitMs = 100;
+        private const int DefaultWaitMs = 500;
+        private const int MaxWaitMs = 5000;
+        
+        private AudioFrame _lastFrame;
+        private long _wokenAtMs;
+        private float _fadeoutLevel;
+        private float _fadeoutDecrementPerMs;
+        private int _fadeoutOrSleepAfterMs;
+        
+        private bool _wantsFadeout;
+        private bool _hadSignal;
+        
+        public Sleeper(MixerChannel channel, int sleepAfterMs = DefaultWaitMs) {
+            _channel = channel ?? throw new ArgumentNullException(nameof(channel));
+            _fadeoutOrSleepAfterMs = sleepAfterMs;
+            
+            // The constructed sleep period is programmatically controlled
+            if (sleepAfterMs < MinWaitMs || sleepAfterMs > MaxWaitMs) {
+                throw new ArgumentOutOfRangeException(nameof(sleepAfterMs), 
+                    $"Sleep period must be between {MinWaitMs} and {MaxWaitMs} ms");
+            }
+        }
+        
+        /// <summary>
+        /// Configures fade-out behavior.
+        /// Mirrors DOSBox mixer.cpp:1968-2042
+        /// </summary>
+        public bool ConfigureFadeOut(string prefs) {
+            void SetWaitAndFade(int waitMs, int fadeMs) {
+                _fadeoutOrSleepAfterMs = waitMs;
+                _fadeoutDecrementPerMs = 1.0f / (float)fadeMs;
+                
+                // LOG_MSG equivalent - using Verbose level
+                if (_channel._loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                    _channel._loggerService.Verbose(
+                        "{Channel}: Fade-out enabled (wait {Wait} ms then fade for {Fade} ms)",
+                        _channel._name, waitMs, fadeMs);
+                }
+            }
+            
+            // Disable fade-out (default)
+            if (HasFalse(prefs)) {
+                _wantsFadeout = false;
+                return true;
+            }
+            
+            // Enable fade-out with defaults
+            if (HasTrue(prefs)) {
+                SetWaitAndFade(DefaultWaitMs, DefaultWaitMs);
+                _wantsFadeout = true;
+                return true;
+            }
+            
+            // Let the fade-out last between 10 ms and 3 seconds
+            const int MinFadeMs = 10;
+            const int MaxFadeMs = 3000;
+            
+            // Custom setting in 'WAIT FADE' syntax, where both are milliseconds
+            string[] parts = prefs.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2) {
+                if (int.TryParse(parts[0], out int waitMs) && int.TryParse(parts[1], out int fadeMs)) {
+                    bool waitIsValid = waitMs >= MinWaitMs && waitMs <= MaxWaitMs;
+                    bool fadeIsValid = fadeMs >= MinFadeMs && fadeMs <= MaxFadeMs;
+                    
+                    if (waitIsValid && fadeIsValid) {
+                        SetWaitAndFade(waitMs, fadeMs);
+                        _wantsFadeout = true;
+                        return true;
+                    }
+                }
+            }
+            
+            // Otherwise inform the user and disable the fade
+            if (_channel._loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                _channel._loggerService.Warning(
+                    "{Channel}: Invalid custom fadeout '{Prefs}'. " +
+                    "Expected 'true', 'false', or 'WAIT FADE' where WAIT is {MinWait}-{MaxWait} ms " +
+                    "and FADE is {MinFade}-{MaxFade} ms",
+                    _channel._name, prefs, MinWaitMs, MaxWaitMs, MinFadeMs, MaxFadeMs);
+            }
+            
+            _wantsFadeout = false;
+            return false;
+        }
+        
+        /// <summary>
+        /// Decrements the fade level based on elapsed time.
+        /// Mirrors DOSBox mixer.cpp:2029-2041
+        /// </summary>
+        private void DecrementFadeLevel(int awakeForMs) {
+            if (awakeForMs < _fadeoutOrSleepAfterMs) {
+                throw new ArgumentException("awakeForMs must be >= fadeoutOrSleepAfterMs");
+            }
+            
+            float elapsedFadeMs = (float)(awakeForMs - _fadeoutOrSleepAfterMs);
+            float decrement = _fadeoutDecrementPerMs * elapsedFadeMs;
+            
+            const float MinLevel = 0.0f;
+            const float MaxLevel = 1.0f;
+            _fadeoutLevel = Math.Clamp(MaxLevel - decrement, MinLevel, MaxLevel);
+        }
+        
+        /// <summary>
+        /// Either fades the frame or checks if the channel had any signal output.
+        /// Mirrors DOSBox mixer.cpp:2055-2071
+        /// </summary>
+        public AudioFrame MaybeFadeOrListen(AudioFrame frame) {
+            if (_wantsFadeout) {
+                // When fading, we actively drive down the channel level
+                return frame * _fadeoutLevel;
+            }
+            
+            if (!_hadSignal) {
+                // Otherwise, we inspect the running signal for changes
+                const float ChangeThreshold = 1.0f;
+                
+                _hadSignal = Math.Abs(frame.Left - _lastFrame.Left) > ChangeThreshold ||
+                            Math.Abs(frame.Right - _lastFrame.Right) > ChangeThreshold;
+                
+                _lastFrame = frame;
+            }
+            
+            return frame;
+        }
+        
+        /// <summary>
+        /// Attempts to put the channel to sleep if conditions are met.
+        /// Mirrors DOSBox mixer.cpp:2073-2099
+        /// </summary>
+        public void MaybeSleep() {
+            // A signed integer can hold a duration of ~24 days in milliseconds
+            long awakeForMs = Environment.TickCount64 - _wokenAtMs;
+            
+            // Not enough time has passed... try to sleep later
+            if (awakeForMs < _fadeoutOrSleepAfterMs) {
+                return;
+            }
+            
+            if (_wantsFadeout) {
+                // The channel is still fading out... try to sleep later
+                if (_fadeoutLevel > 0.0f) {
+                    DecrementFadeLevel((int)awakeForMs);
+                    return;
+                }
+            } else if (_hadSignal) {
+                // The channel is still producing a signal... so stay awake
+                WakeUp();
+                return;
+            }
+            
+            if (_channel.IsEnabled) {
+                _channel.Enable(false);
+                // LOG_INFO equivalent - commented out to match DOSBox behavior
+                // _channel._loggerService.Information("MIXER: {Channel} fell asleep", _channel._name);
+            }
+        }
+        
+        /// <summary>
+        /// Wakes up the channel.
+        /// Mirrors DOSBox mixer.cpp:2101-2119
+        /// </summary>
+        /// <returns>True when actually awoken, false if already awake</returns>
+        public bool WakeUp() {
+            // Always reset for another round of awakeness
+            _wokenAtMs = Environment.TickCount64;
+            _fadeoutLevel = 1.0f;
+            _hadSignal = false;
+            
+            bool wasSleeping = !_channel.IsEnabled;
+            if (wasSleeping) {
+                _channel.Enable(true);
+                // LOG_INFO equivalent - commented out to match DOSBox behavior
+                // _channel._loggerService.Information("MIXER: {Channel} woke up", _channel._name);
+            }
+            
+            return wasSleeping;
+        }
+        
+        private static bool HasFalse(string value) {
+            return string.Equals(value, "false", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "off", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "0", StringComparison.OrdinalIgnoreCase);
+        }
+        
+        private static bool HasTrue(string value) {
+            return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "on", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "1", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
