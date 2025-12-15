@@ -122,6 +122,10 @@ public class RtcIntegrationTests {
         // - Wait flag is properly managed in BIOS data area
         RtcTestHandler testHandler = RunRtcTest("bios_int70_wait.com", maxCycles: 500000L);
 
+        // Debug: Show what was captured
+        Console.WriteLine($"Results: [{string.Join(", ", testHandler.Results.Select(b => $"0x{b:X2}"))}]");
+        Console.WriteLine($"Details: [{string.Join(", ", testHandler.Details.Select(b => $"0x{b:X2}"))}]");
+        
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "BIOS INT 15h, AH=83h should configure RTC periodic interrupt correctly");
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
