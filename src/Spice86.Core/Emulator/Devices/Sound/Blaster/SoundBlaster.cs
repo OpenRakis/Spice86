@@ -311,6 +311,36 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         return samples;
     }
     
+    /// <summary>
+    /// Wrapper for DecodeAdpcm2Bit that returns a tuple (for bulk transfer compatibility).
+    /// </summary>
+    private static (byte[], byte, ushort) DecodeAdpcm2Bit(byte data, byte reference, ushort stepsize) {
+        byte refCopy = reference;
+        ushort stepsizeCopy = stepsize;
+        byte[] samples = DecodeAdpcm2Bit(data, ref refCopy, ref stepsizeCopy);
+        return (samples, refCopy, stepsizeCopy);
+    }
+    
+    /// <summary>
+    /// Wrapper for DecodeAdpcm3Bit that returns a tuple (for bulk transfer compatibility).
+    /// </summary>
+    private static (byte[], byte, ushort) DecodeAdpcm3Bit(byte data, byte reference, ushort stepsize) {
+        byte refCopy = reference;
+        ushort stepsizeCopy = stepsize;
+        byte[] samples = DecodeAdpcm3Bit(data, ref refCopy, ref stepsizeCopy);
+        return (samples, refCopy, stepsizeCopy);
+    }
+    
+    /// <summary>
+    /// Wrapper for DecodeAdpcm4Bit that returns a tuple (for bulk transfer compatibility).
+    /// </summary>
+    private static (byte[], byte, ushort) DecodeAdpcm4Bit(byte data, byte reference, ushort stepsize) {
+        byte refCopy = reference;
+        ushort stepsizeCopy = stepsize;
+        byte[] samples = DecodeAdpcm4Bit(data, ref refCopy, ref stepsizeCopy);
+        return (samples, refCopy, stepsizeCopy);
+    }
+    
     // =============================================================================
     // Bulk DMA Reading - ported from DOSBox Staging soundblaster.cpp lines 1029-1113
     // =============================================================================
@@ -613,25 +643,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     // This is a no-op if the channel is already running
                     MaybeWakeUp();
                     
-                    // DMA mode - pull samples from DMA buffer
-                    // Critical: Must actually read from DMA channel data
-                    frame = GenerateDmaFrame();
-                    if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        _loggerService.Verbose("SB: DMA frame generated; left={Left}", _sb.Dma.Left);
-                    }
-                    
-                    // Check if DMA transfer is now complete
-                    // IRQ is signaled immediately when DMA exhausts, before continuing to next frame
-                    if (_sb.Dma.Left == 0 && _sb.Dma.Mode != DmaMode.None) {
-                        OnDmaTransferComplete();
+                    // Use bulk DMA transfer if there's data to process
+                    // Calculate bytes needed for requested frames
+                    if (_sb.Dma.Left > 0 && _sb.Dma.Channel != null) {
+                        // Calculate bytes per frame based on mode
+                        uint bytesPerFrame = CalculateBytesPerFrame();
+                        uint bytesRequested = (uint)maxFramesToGenerate * bytesPerFrame;
                         
-                        // If not auto-init, stop generating frames after DMA completes
-                        // This prevents generating silence when DMA buffer is exhausted
-                        if (!_sb.Dma.AutoInit) {
-                            framesGenerated++;
-                            _dacChannel.AudioFrames.Add(frame);
-                            break;
-                        }
+                        // Perform bulk DMA transfer
+                        PlayDmaTransfer(bytesRequested);
+                        
+                        // Frames were already enqueued by PlayDmaTransfer,
+                        // so break out of the frame generation loop
+                        framesGenerated = maxFramesToGenerate;
                     }
                     break;
             }
@@ -745,6 +769,402 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     }
                 }
                 break;
+        }
+    }
+    
+    /// <summary>
+    /// Performs a bulk DMA transfer, reading and processing multiple samples at once.
+    /// Mirrors DOSBox play_dma_transfer() function for efficient batch processing.
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 1114-1365
+    /// </summary>
+    /// <param name="bytesRequested">Number of bytes requested for this transfer</param>
+    private void PlayDmaTransfer(uint bytesRequested) {
+        // How many bytes should we read from DMA?
+        uint lowerBound = _sb.Dma.AutoInit ? bytesRequested : _sb.Dma.Min;
+        uint bytesToRead = _sb.Dma.Left <= lowerBound ? _sb.Dma.Left : bytesRequested;
+        
+        // All three of these must be populated during the DMA sequence to
+        // ensure the proper quantities and unit are being accounted for.
+        // For example: use the channel count to convert from samples to frames.
+        uint bytesRead = 0;
+        uint samples = 0;
+        ushort frames = 0;
+        
+        // In DmaMode.Pcm16BitAliased mode temporarily divide by 2 to get
+        // number of 16-bit samples, because 8-bit DMA Read returns byte size,
+        // while in DmaMode.Pcm16Bit mode 16-bit DMA Read returns word size.
+        byte dma16ToSampleDivisor = _sb.Dma.Mode == DmaMode.Pcm16BitAliased ? (byte)2 : (byte)1;
+        
+        // Used to convert from samples to frames (which is what AddSamples unintuitively uses..)
+        byte channels = _sb.Dma.Stereo ? (byte)2 : (byte)1;
+        
+        _lastDmaCallbackTime = _clock.CurrentTimeMs;
+        
+        // Read the actual data, process it and send it off to the mixer
+        switch (_sb.Dma.Mode) {
+            case DmaMode.Adpcm2Bit:
+                (bytesRead, samples, frames) = DecodeAdpcmDma(bytesToRead, DecodeAdpcm2Bit);
+                break;
+                
+            case DmaMode.Adpcm3Bit:
+                (bytesRead, samples, frames) = DecodeAdpcmDma(bytesToRead, DecodeAdpcm3Bit);
+                break;
+                
+            case DmaMode.Adpcm4Bit:
+                (bytesRead, samples, frames) = DecodeAdpcmDma(bytesToRead, DecodeAdpcm4Bit);
+                break;
+                
+            case DmaMode.Pcm8Bit:
+                if (_sb.Dma.Stereo) {
+                    bytesRead = ReadDma8Bit(bytesToRead, _sb.Dma.RemainSize);
+                    samples = bytesRead + _sb.Dma.RemainSize;
+                    frames = (ushort)(samples / channels);
+                    
+                    // Only add whole frames when in stereo DMA mode. The
+                    // number of frames comes from the DMA request, and
+                    // therefore user-space data.
+                    if (frames > 0) {
+                        if (_sb.Dma.Sign) {
+                            EnqueueFramesStereo(_sb.Dma.Buf8, samples, true);
+                        } else {
+                            EnqueueFramesStereo(_sb.Dma.Buf8, samples, false);
+                        }
+                    }
+                    // Otherwise there's an unhandled dangling sample from the last round
+                    if ((samples & 1) != 0) {
+                        _sb.Dma.RemainSize = 1;
+                        _sb.Dma.Buf8[0] = _sb.Dma.Buf8[samples - 1];
+                    } else {
+                        _sb.Dma.RemainSize = 0;
+                    }
+                } else { // Mono
+                    bytesRead = ReadDma8Bit(bytesToRead);
+                    samples = bytesRead;
+                    // mono sanity-check
+                    if (channels != 1) {
+                        _loggerService.Error("SOUNDBLASTER: Mono mode but channels={Channels}", channels);
+                    }
+                    if (_sb.Dma.Sign) {
+                        EnqueueFramesMono(_sb.Dma.Buf8, samples, true);
+                    } else {
+                        EnqueueFramesMono(_sb.Dma.Buf8, samples, false);
+                    }
+                }
+                break;
+                
+            case DmaMode.Pcm16BitAliased:
+            case DmaMode.Pcm16Bit:
+                if (_sb.Dma.Stereo) {
+                    bytesRead = ReadDma16Bit(bytesToRead, _sb.Dma.RemainSize);
+                    samples = (bytesRead + _sb.Dma.RemainSize) / dma16ToSampleDivisor;
+                    frames = (ushort)(samples / channels);
+                    
+                    // Only add whole frames when in stereo DMA mode
+                    if (frames > 0) {
+                        if (_sb.Dma.Sign) {
+                            EnqueueFramesStereo16(_sb.Dma.Buf16, samples, true);
+                        } else {
+                            EnqueueFramesStereo16(_sb.Dma.Buf16, samples, false);
+                        }
+                    }
+                    if ((samples & 1) != 0) {
+                        // Carry over the dangling sample into the next round, or...
+                        _sb.Dma.RemainSize = 1;
+                        _sb.Dma.Buf16[0] = _sb.Dma.Buf16[samples - 1];
+                    } else {
+                        // ...the DMA transfer is done
+                        _sb.Dma.RemainSize = 0;
+                    }
+                } else { // 16-bit mono
+                    bytesRead = ReadDma16Bit(bytesToRead);
+                    samples = bytesRead / dma16ToSampleDivisor;
+                    
+                    // mono sanity check
+                    if (channels != 1) {
+                        _loggerService.Error("SOUNDBLASTER: Mono mode but channels={Channels}", channels);
+                    }
+                    
+                    if (_sb.Dma.Sign) {
+                        EnqueueFramesMono16(_sb.Dma.Buf16, samples, true);
+                    } else {
+                        EnqueueFramesMono16(_sb.Dma.Buf16, samples, false);
+                    }
+                }
+                break;
+                
+            default:
+                _loggerService.Warning("SOUNDBLASTER: Unhandled DMA mode {Mode}", _sb.Dma.Mode);
+                _sb.Mode = DspMode.None;
+                return;
+        }
+        
+        // Sanity check
+        if (frames > samples) {
+            _loggerService.Error("SOUNDBLASTER: Frames {Frames} should never exceed samples {Samples}", frames, samples);
+        }
+        
+        // If the first DMA transfer after a reset contains a single sample, it
+        // should be ignored. Quake and SBTEST.EXE have this behavior. If not
+        // ignored, the channels will be incorrectly reversed.
+        // https://github.com/dosbox-staging/dosbox-staging/issues/2942
+        // https://www.vogons.org/viewtopic.php?p=536104#p536104
+        if (_sb.Dma.FirstTransfer && samples == 1) {
+            // Forget any "dangling sample" that would otherwise be carried
+            // over to the next transfer.
+            _sb.Dma.RemainSize = 0;
+        }
+        _sb.Dma.FirstTransfer = false;
+        
+        // Deduct the DMA bytes read from the remaining to still read
+        _sb.Dma.Left -= bytesRead;
+        
+        if (_sb.Dma.Left == 0) {
+            if (_sb.Dma.Mode >= DmaMode.Pcm16Bit) {
+                RaiseIrq(SbIrq.Irq16);
+            } else {
+                RaiseIrq(SbIrq.Irq8);
+            }
+            
+            if (!_sb.Dma.AutoInit) {
+                // Not new single cycle transfer waiting?
+                if (_sb.Dma.SingleSize == 0) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Single cycle transfer ended");
+                    }
+                    _sb.Mode = DspMode.None;
+                    _sb.Dma.Mode = DmaMode.None;
+                } else {
+                    // A single size transfer is still waiting, handle that now
+                    _sb.Dma.Left = _sb.Dma.SingleSize;
+                    _sb.Dma.SingleSize = 0;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Switch to Single cycle transfer begun");
+                    }
+                }
+            } else {
+                if (_sb.Dma.AutoSize == 0) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Auto-init transfer with 0 size");
+                    }
+                    _sb.Mode = DspMode.None;
+                }
+                // Continue with a new auto init transfer
+                _sb.Dma.Left = _sb.Dma.AutoSize;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Decodes ADPCM DMA data in bulk using the provided decoder function.
+    /// Mirrors the decode_adpcm_dma lambda from DOSBox.
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 1139-1173
+    /// </summary>
+    private (uint bytesRead, uint samples, ushort frames) DecodeAdpcmDma(
+        uint bytesToRead,
+        Func<byte, byte, ushort, (byte[], byte, ushort)> decodeAdpcmFn) {
+        
+        uint numBytes = ReadDma8Bit(bytesToRead);
+        uint numSamples = 0;
+        ushort numFrames = 0;
+        
+        // Parse the reference ADPCM byte, if provided
+        uint i = 0;
+        if (numBytes > 0 && _sb.Adpcm.HaveRef) {
+            _sb.Adpcm.HaveRef = false;
+            _sb.Adpcm.Reference = _sb.Dma.Buf8[0];
+            _sb.Adpcm.Stepsize = MinAdaptiveStepSize;
+            ++i;
+        }
+        
+        // Decode the remaining DMA buffer into samples using the provided function
+        while (i < numBytes) {
+            (byte[] decoded, byte reference, ushort stepsize) = decodeAdpcmFn(
+                _sb.Dma.Buf8[i], _sb.Adpcm.Reference, _sb.Adpcm.Stepsize);
+            
+            _sb.Adpcm.Reference = reference;
+            _sb.Adpcm.Stepsize = stepsize;
+            
+            byte numDecoded = (byte)decoded.Length;
+            EnqueueFramesMono(decoded, numDecoded, false);
+            numSamples += numDecoded;
+            i++;
+        }
+        
+        // ADPCM is mono
+        numFrames = (ushort)numSamples;
+        return (numBytes, numSamples, numFrames);
+    }
+    
+    /// <summary>
+    /// Enqueues mono 8-bit frames, applying warmup and speaker state.
+    /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// </summary>
+    private void EnqueueFramesMono(byte[] samples, uint numSamples, bool signed) {
+        if (numSamples == 0) {
+            return;
+        }
+        
+        // Return silent frames if still in warmup
+        if (_sb.Dsp.WarmupRemainingMs > 0) {
+            _sb.Dsp.WarmupRemainingMs--;
+            for (uint i = 0; i < numSamples; i++) {
+                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+            }
+            return;
+        }
+        
+        // Return silent frames if speaker is disabled
+        if (!_sb.SpeakerEnabled) {
+            for (uint i = 0; i < numSamples; i++) {
+                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+            }
+            return;
+        }
+        
+        // Process samples into AudioFrames
+        for (uint i = 0; i < numSamples; i++) {
+            float value = signed ? LookupTables.S8To16[samples[i]] : LookupTables.U8To16[samples[i]];
+            _dacChannel.AudioFrames.Add(new AudioFrame(value, value));
+        }
+    }
+    
+    /// <summary>
+    /// Enqueues stereo 8-bit frames, applying warmup and speaker state.
+    /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// </summary>
+    private void EnqueueFramesStereo(byte[] samples, uint numSamples, bool signed) {
+        if (numSamples == 0) {
+            return;
+        }
+        
+        uint numFrames = numSamples / 2;
+        
+        // Return silent frames if still in warmup
+        if (_sb.Dsp.WarmupRemainingMs > 0) {
+            _sb.Dsp.WarmupRemainingMs--;
+            for (uint i = 0; i < numFrames; i++) {
+                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+            }
+            return;
+        }
+        
+        // Return silent frames if speaker is disabled
+        if (!_sb.SpeakerEnabled) {
+            for (uint i = 0; i < numFrames; i++) {
+                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+            }
+            return;
+        }
+        
+        // Process samples into AudioFrames
+        // Note: SB Pro 1 and 2 swap left/right channels
+        bool swapChannels = _sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2;
+        
+        for (uint i = 0; i < numFrames; i++) {
+            float left = signed ? LookupTables.S8To16[samples[i * 2]] : LookupTables.U8To16[samples[i * 2]];
+            float right = signed ? LookupTables.S8To16[samples[i * 2 + 1]] : LookupTables.U8To16[samples[i * 2 + 1]];
+            
+            if (swapChannels) {
+                _dacChannel.AudioFrames.Add(new AudioFrame(right, left));
+            } else {
+                _dacChannel.AudioFrames.Add(new AudioFrame(left, right));
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Enqueues mono 16-bit frames, applying warmup and speaker state.
+    /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// </summary>
+    private void EnqueueFramesMono16(short[] samples, uint numSamples, bool signed) {
+        if (numSamples == 0) {
+            return;
+        }
+        
+        // Return silent frames if still in warmup
+        if (_sb.Dsp.WarmupRemainingMs > 0) {
+            _sb.Dsp.WarmupRemainingMs--;
+            for (uint i = 0; i < numSamples; i++) {
+                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+            }
+            return;
+        }
+        
+        // Return silent frames if speaker is disabled
+        if (!_sb.SpeakerEnabled) {
+            for (uint i = 0; i < numSamples; i++) {
+                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+            }
+            return;
+        }
+        
+        // Process samples into AudioFrames
+        for (uint i = 0; i < numSamples; i++) {
+            float value;
+            if (signed) {
+                value = samples[i];
+            } else {
+                // Unsigned 16-bit: convert to signed by subtracting 32768
+                value = (ushort)samples[i] - 32768;
+            }
+            _dacChannel.AudioFrames.Add(new AudioFrame(value, value));
+        }
+    }
+    
+    /// <summary>
+    /// Enqueues stereo 16-bit frames, applying warmup and speaker state.
+    /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// </summary>
+    private void EnqueueFramesStereo16(short[] samples, uint numSamples, bool signed) {
+        if (numSamples == 0) {
+            return;
+        }
+        
+        uint numFrames = numSamples / 2;
+        
+        // Return silent frames if still in warmup
+        if (_sb.Dsp.WarmupRemainingMs > 0) {
+            _sb.Dsp.WarmupRemainingMs--;
+            for (uint i = 0; i < numFrames; i++) {
+                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+            }
+            return;
+        }
+        
+        // Return silent frames if speaker is disabled
+        if (!_sb.SpeakerEnabled) {
+            for (uint i = 0; i < numFrames; i++) {
+                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+            }
+            return;
+        }
+        
+        // Process samples into AudioFrames
+        // Note: SB Pro 1 and 2 swap left/right channels
+        bool swapChannels = _sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2;
+        
+        for (uint i = 0; i < numFrames; i++) {
+            float left;
+            float right;
+            
+            if (signed) {
+                left = samples[i * 2];
+                right = samples[i * 2 + 1];
+            } else {
+                // Unsigned 16-bit: convert to signed by subtracting 32768
+                left = (ushort)samples[i * 2] - 32768;
+                right = (ushort)samples[i * 2 + 1] - 32768;
+            }
+            
+            if (swapChannels) {
+                _dacChannel.AudioFrames.Add(new AudioFrame(right, left));
+            } else {
+                _dacChannel.AudioFrames.Add(new AudioFrame(left, right));
+            }
         }
     }
     
@@ -1035,6 +1455,72 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         return new AudioFrame(0.0f, 0.0f);
     }
 
+    /// <summary>
+    /// Calculates the number of DMA bytes needed per audio frame based on the current mode.
+    /// </summary>
+    private uint CalculateBytesPerFrame() {
+        byte channels = _sb.Dma.Stereo ? (byte)2 : (byte)1;
+        
+        switch (_sb.Dma.Mode) {
+            case DmaMode.Pcm8Bit:
+                // 8-bit PCM: 1 byte per sample, samples = channels
+                return channels;
+                
+            case DmaMode.Pcm16Bit:
+            case DmaMode.Pcm16BitAliased:
+                // 16-bit PCM: 2 bytes per sample, samples = channels
+                return (uint)(channels * 2);
+                
+            case DmaMode.Adpcm2Bit:
+                // 2-bit ADPCM: 1 byte decodes to 4 samples (mono only)
+                // Average: 0.25 bytes per sample
+                return channels == 1 ? 1u : channels;
+                
+            case DmaMode.Adpcm3Bit:
+                // 3-bit ADPCM: 1 byte decodes to 3 samples (mono only)
+                // Average: 0.33 bytes per sample
+                return channels == 1 ? 1u : channels;
+                
+            case DmaMode.Adpcm4Bit:
+                // 4-bit ADPCM: 1 byte decodes to 2 samples (mono only)
+                // Average: 0.5 bytes per sample
+                return channels == 1 ? 1u : channels;
+                
+            default:
+                return 1;
+        }
+    }
+    
+    /// <summary>
+    /// Raises the specified Sound Blaster IRQ and sets the appropriate pending flag.
+    /// Mirrors DOSBox sb_raise_irq() function.
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 411-442
+    /// </summary>
+    private void RaiseIrq(SbIrq irqType) {
+        switch (irqType) {
+            case SbIrq.Irq8:
+                _sb.Irq.Pending8Bit = true;
+                _dualPic.ActivateIrq(_sb.Hw.Irq);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SOUNDBLASTER: Raised 8-bit IRQ {Irq}", _sb.Hw.Irq);
+                }
+                break;
+                
+            case SbIrq.Irq16:
+                _sb.Irq.Pending16Bit = true;
+                _dualPic.ActivateIrq(_sb.Hw.Irq);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SOUNDBLASTER: Raised 16-bit IRQ {Irq}", _sb.Hw.Irq);
+                }
+                break;
+                
+            case SbIrq.IrqMpu:
+                // MPU-401 IRQ handling not implemented yet
+                _loggerService.Warning("SOUNDBLASTER: MPU-401 IRQ not yet implemented");
+                break;
+        }
+    }
+    
     /// <summary>
     /// Called when a DMA transfer completes (all bytes read).
     /// This signals the interrupt to wake the DOS driver.

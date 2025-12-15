@@ -6,8 +6,22 @@
 // Excludes: Fast-forward, Capture, ESFM
 // Speex: Will be integrated via P/Invoke (compiled library, not translated to C#)
 //
-// LATEST UPDATE (2025-12-15)
-// ==========================
+// LATEST UPDATE (2025-12-15) - Phase 2B
+// ======================================
+// Phase 2B COMPLETED: Bulk DMA Transfer Optimization
+// - Implemented PlayDmaTransfer() mirroring DOSBox play_dma_transfer() (lines 751-948)
+// - Added DecodeAdpcmDma() for bulk ADPCM processing with reference byte handling
+// - Implemented 4 enqueue methods: EnqueueFramesMono/Stereo (8-bit), EnqueueFramesMono16/Stereo16 (16-bit)
+// - All enqueue methods apply warmup and speaker state (mirrors maybe_silence pattern)
+// - SB Pro 1/2 channel swapping handled in stereo enqueue methods
+// - Added RaiseIrq() helper for 8-bit/16-bit IRQ signaling
+// - Added CalculateBytesPerFrame() for proper frame-to-byte conversion
+// - Tuple-returning ADPCM decoder wrappers for functional composition
+// - First DMA transfer single-sample filtering (Quake/SBTEST.EXE fix)
+// - Dangling sample carry-over for stereo mode (odd sample count handling)
+// - Auto-init vs single-cycle transfer logic with proper state transitions
+// Total: +456 lines, reaching 63% parity with DOSBox soundblaster.cpp (2456/3917 lines)
+//
 // Phase 2A COMPLETED: DMA Callback System + Warmup Handling
 // - Implemented DspDmaCallback() mirroring DOSBox dsp_dma_callback()
 // - Added DMA callback registration in DspPrepareDmaOld/New
@@ -15,7 +29,7 @@
 // - DMA masked/unmasked event handling for proper state transitions
 // - MaybeSilenceFrame() for warmup and speaker state (mirrors maybe_silence)
 // - Warmup handling applied to all frame generation paths
-// Total: +130 lines, reaching 51% parity with DOSBox soundblaster.cpp (2000/3917 lines)
+// Total: +130 lines (from Phase 2A)
 
 // PHASE 1: SoundBlaster.cpp - Complete DSP Command Set [100% COMPLETE]
 // =====================================================================
@@ -144,12 +158,12 @@
 
 // FILE COUNT (CURRENT vs TARGET)
 // ===============================
-// SoundBlaster.cs:  2000 lines (vs soundblaster.cpp: 3917 lines - 51%) [+130 lines for DMA callback + warmup]
+// SoundBlaster.cs:  2456 lines (vs soundblaster.cpp: 3917 lines - 63%) [+456 lines for bulk DMA transfer]
 // HardwareMixer.cs:  593 lines (mixer register handling)
 // Mixer.cs:          792 lines (vs mixer.cpp: 3276 lines - 24%)
 // MixerChannel.cs:  1121 lines (included in mixer.cpp) [+266 lines for Sleeper]
 // MixerTypes.cs:     198 lines (mixer.h enums/types)
-// TOTAL:            4704 lines (vs 7193 lines combined - 65% complete)
+// TOTAL:            5160 lines (vs 7193 lines combined - 72% complete)
 //
 // Expected final: ~5000 lines total (C# is more verbose than C++)
 //
@@ -172,15 +186,18 @@
 // 7. ✓ High-pass filtering (DONE - reverb input & master output)
 // 8. ✓ Mixer register handlers (DONE - HardwareMixer integration with volume routing)
 // 9. ✓ Channel sleep/wake mechanism (DONE - CPU efficiency via Sleeper class)
-// 10. ✓ DMA/IRQ coordination refinements (PHASE 2A DONE - DMA callback system + warmup)
+// 10. ✓ DMA/IRQ coordination refinements (PHASE 2B DONE - Bulk DMA transfer optimization)
 //     - ✓ DspDmaCallback() handler mirroring DOSBox dsp_dma_callback()
 //     - ✓ DMA callback registration in DspPrepareDmaOld/New
 //     - ✓ DMA timing tracking with _lastDmaCallbackTime
 //     - ✓ DMA masked/unmasked event handling
 //     - ✓ MaybeSilenceFrame() for warmup and speaker state (mirrors maybe_silence)
 //     - ✓ Warmup handling in all frame generation paths
-//     - [ ] Bulk DMA transfer optimization (play_dma_transfer full port)
-//     - [ ] Advanced DMA timing measurements
+//     - ✓ Bulk DMA transfer optimization (PlayDmaTransfer full port with all modes)
+//     - ✓ Bulk frame enqueueing (EnqueueFramesMono/Stereo for 8/16-bit)
+//     - ✓ First transfer single-sample filtering (Quake/SBTEST fix)
+//     - ✓ Stereo dangling sample carry-over handling
+//     - [ ] Advanced DMA timing measurements (deferred - not critical)
 // 11. [ ] Mixer effects upgrades (reverb/chorus quality improvements)
 // 12. [ ] Output prebuffering (smooth startup - PortAudio already provides buffering)
 // 13. [ ] Integration testing with DOS games
