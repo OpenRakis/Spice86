@@ -42,6 +42,11 @@ public sealed class MixerChannel {
     private float _zohPos;
     private int _zohTargetRateHz;
     
+    // Speex resampler state - mirrors DOSBox Speex integration
+    // NOTE: Infrastructure ready, but Speex resampling requires batch processing
+    // which needs integration into the Mix() method for buffer-level resampling
+    private Bufdio.Spice86.SpeexResampler? _speexResampler;
+    
     // Resample method - mirrors DOSBox resample_method
     private ResampleMethod _resampleMethod = ResampleMethod.LerpUpsampleOrResample;
 
@@ -241,26 +246,80 @@ public sealed class MixerChannel {
         _doLerpUpsample = false;
         _doZohUpsample = false;
         
+        // Dispose existing Speex resampler if any
+        if (_speexResampler != null) {
+            _speexResampler.Dispose();
+            _speexResampler = null;
+        }
+        
         switch (_resampleMethod) {
             case ResampleMethod.LerpUpsampleOrResample:
                 if (_sampleRateHz < _mixerSampleRateHz) {
                     _doLerpUpsample = true;
                     InitLerpUpsamplerState();
+                } else if (_sampleRateHz > _mixerSampleRateHz) {
+                    // Use Speex for downsampling - mirrors DOSBox behavior
+                    InitSpeexResampler();
                 }
-                // Note: Speex downsampling not implemented yet
                 break;
                 
             case ResampleMethod.ZeroOrderHoldAndResample:
                 if (_sampleRateHz < _zohTargetRateHz) {
                     _doZohUpsample = true;
                     InitZohUpsamplerState();
+                } else if (_sampleRateHz != _mixerSampleRateHz) {
+                    // Use Speex for any rate conversion after ZoH - mirrors DOSBox
+                    InitSpeexResampler();
                 }
-                // Note: Speex resampling not implemented yet
                 break;
                 
             case ResampleMethod.Resample:
-                // Note: Speex-only resampling not implemented yet
+                // Speex-only resampling for all rate conversions
+                if (_sampleRateHz != _mixerSampleRateHz) {
+                    InitSpeexResampler();
+                }
                 break;
+        }
+    }
+    
+    /// <summary>
+    /// Initializes the Speex resampler for high-quality rate conversion.
+    /// Mirrors DOSBox Speex initialization from mixer.cpp
+    /// NOTE: Infrastructure ready but not yet integrated into sample processing.
+    /// Requires buffer-level resampling implementation in Mix() method.
+    /// </summary>
+    private void InitSpeexResampler() {
+        try {
+            // Always use stereo (2 channels) for processing - mirrors DOSBox approach
+            // Channel samples will be processed separately through the resampler
+            uint channels = 2;
+            
+            // Use medium quality by default - good balance between CPU and quality
+            // Mirrors DOSBox's typical Speex quality setting
+            Bufdio.Spice86.Bindings.Speex.SpeexResamplerQuality quality = 
+                Bufdio.Spice86.Bindings.Speex.SpeexResamplerQuality.Medium;
+            
+            _speexResampler = new Bufdio.Spice86.SpeexResampler(
+                channels,
+                (uint)_sampleRateHz,
+                (uint)_mixerSampleRateHz,
+                quality);
+            
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _loggerService.Debug(
+                    "MIXER: Channel {Name} initialized Speex resampler {InRate}Hz -> {OutRate}Hz (infrastructure ready, not yet active)",
+                    _name, _sampleRateHz, _mixerSampleRateHz);
+            }
+        } catch (Exception ex) {
+            // If Speex library is not available, log warning and fall back to no resampling
+            // This allows the code to run even without Speex binaries installed
+            _loggerService.Warning(
+                "MIXER: Channel {Name} failed to initialize Speex resampler: {Error}. " +
+                "Speex resampling disabled. Install libspeexdsp for high-quality resampling.",
+                _name, ex.Message);
+            
+            _speexResampler?.Dispose();
+            _speexResampler = null;
         }
     }
 
