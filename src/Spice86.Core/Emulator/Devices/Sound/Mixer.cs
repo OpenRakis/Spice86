@@ -6,6 +6,7 @@ using Spice86.Shared.Interfaces;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using HighPassFilter = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
 
 /// <summary>
 /// Central audio mixer that runs in its own thread and produces final mixed output.
@@ -82,8 +83,8 @@ public sealed class Mixer : IDisposable {
     
     // High-pass filters - mirrors DOSBox HighpassFilter
     // Used on reverb input and master output
-    private readonly Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass[] _reverbHighPassFilter;
-    private readonly Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass[] _masterHighPassFilter;
+    private readonly HighPassFilter[] _reverbHighPassFilter;
+    private readonly HighPassFilter[] _masterHighPassFilter;
     private const int HighPassFilterOrder = 2; // 2nd-order Butterworth
     private const float ReverbHighPassCutoffHz = 120.0f; // Low-frequency cutoff for reverb
     private const float MasterHighPassCutoffHz = 3.0f; // Very low DC-blocking filter for master
@@ -101,14 +102,14 @@ public sealed class Mixer : IDisposable {
         
         // Initialize high-pass filters (2 channels - left and right)
         // Mirrors DOSBox HighpassFilter = std::array<Iir::Butterworth::HighPass<2>, 2>
-        _reverbHighPassFilter = new Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass[2];
-        _masterHighPassFilter = new Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass[2];
+        _reverbHighPassFilter = new HighPassFilter[2];
+        _masterHighPassFilter = new HighPassFilter[2];
         
         for (int i = 0; i < 2; i++) {
-            _reverbHighPassFilter[i] = new Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass(HighPassFilterOrder);
+            _reverbHighPassFilter[i] = new HighPassFilter(HighPassFilterOrder);
             _reverbHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, ReverbHighPassCutoffHz);
             
-            _masterHighPassFilter[i] = new Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass(HighPassFilterOrder);
+            _masterHighPassFilter[i] = new HighPassFilter(HighPassFilterOrder);
             _masterHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, MasterHighPassCutoffHz);
         }
         

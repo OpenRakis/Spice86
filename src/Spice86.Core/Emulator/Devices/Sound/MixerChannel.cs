@@ -684,9 +684,12 @@ public sealed class MixerChannel {
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
-                    if (_zohPos > 1.0f) {
+                    while (_zohPos > 1.0f) {
                         _zohPos -= 1.0f;
                         pos++;
+                        if (pos >= numFrames || pos >= data.Length) {
+                            break;
+                        }
                     }
                 } else {
                     pos++;
@@ -711,9 +714,12 @@ public sealed class MixerChannel {
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
-                    if (_zohPos > 1.0f) {
+                    while (_zohPos > 1.0f) {
                         _zohPos -= 1.0f;
                         pos++;
+                        if (pos >= numFrames || pos >= data.Length) {
+                            break;
+                        }
                     }
                 } else {
                     pos++;
@@ -739,9 +745,12 @@ public sealed class MixerChannel {
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
-                    if (_zohPos > 1.0f) {
+                    while (_zohPos > 1.0f) {
                         _zohPos -= 1.0f;
                         pos++;
+                        if (pos >= numFrames || (pos * 2 + 1) >= data.Length) {
+                            break;
+                        }
                     }
                 } else {
                     pos++;
@@ -767,9 +776,12 @@ public sealed class MixerChannel {
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
-                    if (_zohPos > 1.0f) {
+                    while (_zohPos > 1.0f) {
                         _zohPos -= 1.0f;
                         pos++;
+                        if (pos >= numFrames || pos >= data.Length) {
+                            break;
+                        }
                     }
                 } else {
                     pos++;
@@ -796,9 +808,12 @@ public sealed class MixerChannel {
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
-                    if (_zohPos > 1.0f) {
+                    while (_zohPos > 1.0f) {
                         _zohPos -= 1.0f;
                         pos++;
+                        if (pos >= numFrames || (pos * 2 + 1) >= data.Length) {
+                            break;
+                        }
                     }
                 } else {
                     pos++;
@@ -822,9 +837,12 @@ public sealed class MixerChannel {
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
-                    if (_zohPos > 1.0f) {
+                    while (_zohPos > 1.0f) {
                         _zohPos -= 1.0f;
                         pos++;
+                        if (pos >= frames.Length) {
+                            break;
+                        }
                     }
                 } else {
                     pos++;
