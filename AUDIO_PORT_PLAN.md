@@ -6,8 +6,8 @@
 // Excludes: Fast-forward, Capture, ESFM
 // Speex: Will be integrated via P/Invoke (compiled library, not translated to C#)
 //
-// LATEST UPDATE (2025-12-15) - Phase 3.2 Complete
-// =================================================
+// LATEST UPDATE (2025-12-15) - Phase 4 & 5 Unblocked
+// =====================================================
 // Phase 3.2 COMPLETED: Speex Buffer-Level Resampling Integration
 // - Implemented SpeexResampleBuffer() method in MixerChannel (lines 554-658)
 // - Modified Mix() to apply Speex resampling on collected buffer (lines 486-497)
@@ -17,7 +17,16 @@
 // - Verbose logging for debugging resampler behavior
 // - Activated for downsampling, ZoH+resample, and pure Speex modes
 // Total: +116 lines to MixerChannel (1180 -> 1296 lines)
-// Overall progress: 74% complete (5306/7193 lines)
+//
+// MAJOR MILESTONE: Phase 4 & 5 Unblocked
+// - ✅ DOSBox Staging source cloned to /tmp/dosbox-staging/
+// - ✅ Method mapping complete - see docs/audio/PHASE4_METHOD_MAPPING.md
+// - ✅ Reverb/Chorus scope confirmed - MVerb and TAL-Chorus ARE in DOSBox
+// - ✅ Architecture verified - Mixer.cs core already mirrors DOSBox correctly
+// - Ready to implement: MVerb reverb, TAL-Chorus, advanced Compressor
+// - Estimated remaining: 26-41 hours for complete Phase 4 & 5
+//
+// Overall progress: 74% complete (5365/7193 lines)
 //
 // Phase 2B COMPLETED: Bulk DMA Transfer Optimization
 // - Implemented PlayDmaTransfer() mirroring DOSBox play_dma_transfer() (lines 751-948)
@@ -91,14 +100,30 @@
 //   * WakeUp() - called from device I/O to wake sleeping channels
 //   * ConfigureFadeOut() - configurable wait/fade times
 //
-// REMAINING:
-// - Speex native library packaging (build and package binaries for Windows, Linux, macOS)
+// REMAINING (Phase 4 - Ready to Implement):
+// - Upgrade reverb to MVerb algorithm (DOSBox has MVerb - src/libs/mverb/MVerb.h)
+//   * Port MVerb.h to C# class (FDN reverb architecture)
+//   * Replace basic reverb in ApplyReverb() method
+//   * Estimated: 4-6 hours
+// - Upgrade chorus to TAL-Chorus algorithm (DOSBox has TAL-Chorus - src/libs/tal-chorus/)
+//   * Port 7 TAL-Chorus classes (Lfo, Chorus, ChorusEngine, etc.)
+//   * Implement modulated delay with LFO
+//   * Replace basic chorus in ApplyChorus() method
+//   * Estimated: 8-12 hours
+// - Upgrade compressor to DOSBox's RMS-based version (src/audio/private/compressor.h)
+//   * Port Compressor class with configurable parameters
+//   * Implement RMS detection, envelope follower, knee width
+//   * Replace inline compressor code
+//   * Estimated: 3-4 hours
+// - Add preset configuration system (Get/Set methods for effect presets)
+//   * Estimated: 4-6 hours
+// - Add global effect send helpers (SetGlobalReverb/Chorus/Crossfeed)
+//   * Estimated: 2-3 hours
+// - Speex native library packaging (build and package binaries - non-blocking)
 //   * P/Invoke infrastructure complete ✓
 //   * Buffer-level resampling integrated ✓
 //   * Build and ship Speex binaries with Spice86 (pending)
-//   * Integrate into Spice86 build/packaging process (pending)
-// - Upgrade reverb to proper algorithm (MVerb-like or simple Schroeder)
-// - Upgrade chorus to proper algorithm (TAL-Chorus-like with LFO)
+//   * Estimated: 8-16 hours
 // - Output prebuffering for smooth startup (NOTE: PortAudio already provides internal buffering)
 
 // PHASE 3: Integration & Synchronization

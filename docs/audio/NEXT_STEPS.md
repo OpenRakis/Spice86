@@ -1,8 +1,9 @@
 # Audio Architecture Porting - Next Steps
 
-## Current Status (as of 2025-12-15)
+## Current Status (as of 2025-12-15 - Updated)
 
-**Overall Progress: 74% Complete (5306/7193 lines)**
+**Overall Progress: 74% Complete (5365/7193 lines)**
+**DOSBox Source:** ✅ Available at `/tmp/dosbox-staging/`
 
 ### Completed Components
 
@@ -101,75 +102,101 @@
 **Complexity:** Medium (4-8 hours)
 **Blockers:** Requires Phase 3.2 and 3.3 complete
 
-### Phase 4: Core Mixer Thread Architecture ⏸️ BLOCKED
+### Phase 4: Core Mixer Thread Architecture ✅ UNBLOCKED
 
-**Target:** Expand `Mixer.cs` from 792 lines to ~2000 lines (to match DOSBox mixer.cpp:3276)
+**Target:** Expand `Mixer.cs` from 792 lines to ~1000 lines (advanced effects + preset system)
 
 **What's Needed:**
-1. **DOSBox Source Access:** Need mixer.cpp from DOSBox Staging repository
-2. **Systematic Method Mapping:** Identify all mixer.cpp methods not yet ported
-3. **Thread Lifecycle:** Mirror DOSBox mixer thread management (lines 400-700)
-4. **Advanced Resampling:** Multi-stage resampling patterns (lines 800-1200)
-5. **Channel Mixing:** Enhanced accumulation logic (lines 1200-1500)
-6. **Output Pipeline:** DOSBox output formatting (lines 2300-2500)
+1. ✅ **DOSBox Source Access:** Available at `/tmp/dosbox-staging/`
+2. ✅ **Systematic Method Mapping:** Complete - see `docs/audio/PHASE4_METHOD_MAPPING.md`
+3. ✅ **Architecture Analysis:** Core mixer thread already mirrors DOSBox correctly
+4. **Advanced Effects:** Port MVerb reverb and TAL-Chorus algorithms
+5. **Compressor Upgrade:** Replace basic compressor with DOSBox's RMS-based version
+6. **Preset System:** Add Get/Set methods for effect presets
+7. **Global Effect Sends:** Add helpers to configure all channels at once
 
-**Complexity:** Very High (40-80 hours)
+**Complexity:** Medium-High (22-33 hours)
+**Sub-Phases:**
+- Phase 4.1: Advanced Effects Algorithms (15-22 hours)
+  - MVerb reverb port (4-6 hours)
+  - TAL-Chorus library port (8-12 hours)
+  - Compressor class upgrade (3-4 hours)
+- Phase 4.2: Preset System (6-9 hours)
+  - Preset configuration methods (4-6 hours)
+  - Global effect sends (2-3 hours)
+- Phase 4.3: Minor Enhancements (1-2 hours)
+  - Channel feature query exposure (1 hour)
+
 **Blockers:** 
-- ❌ DOSBox Staging source code not available in workspace
-- ❌ Cannot identify specific methods to port without source
-- ❌ Risk of architectural deviation without DOSBox reference
+- ✅ DOSBox Staging source code now available
+- ✅ Method mapping complete
+- ✅ Architecture verified to match DOSBox
 
-**How to Unblock:**
-1. Clone DOSBox Staging repository to `/tmp/dosbox-staging/`
-2. Review mixer.cpp structure and create method-by-method mapping
-3. Port incrementally, testing after each method group
+### Phase 5: Audio Thread Coordination ✅ UNBLOCKED (Low Priority)
 
-### Phase 5: Audio Thread Coordination ⏸️ BLOCKED
+**Target:** Verify and enhance `Mixer.cs` + `SoundBlaster.cs` coordination
 
-**Target:** Improve `Mixer.cs` + `SoundBlaster.cs` coordination
+**Status:** Core coordination already functional - most work done in Phase 2B
 
 **What's Needed:**
-1. Device-to-mixer callback architecture (mixer.cpp:1500-1700)
-2. DMA-audio synchronization (soundblaster.cpp:2700-2900)
-3. Lock-free communication patterns
-4. Event ordering and timing precision
+1. ✅ Device-to-mixer architecture already mirrors DOSBox (callback-based)
+2. ✅ DMA-audio synchronization complete (PlayDmaTransfer, DspDmaCallback)
+3. ✅ Thread-safe communication via Lock and concurrent collections
+4. **Verification:** Side-by-side comparison with DOSBox source to confirm parity
+5. **Refinements:** Minor timing adjustments if needed based on testing
 
-**Complexity:** Very High (40-80 hours)
-**Blockers:** Same as Phase 4 - requires DOSBox source reference
+**Complexity:** Low (4-8 hours - mostly verification)
+**Blockers:** 
+- ✅ DOSBox source now available for verification
 
 ## Immediate Action Items
 
 ### For Next Session (Recommended Priority)
 
-1. **Speex Phase 3.3: Build Native Libraries** ⭐ HIGH PRIORITY
+1. **Phase 4.1: Port MVerb Reverb** ⭐ HIGH PRIORITY
+   - Port MVerb.h to C# class
+   - Implement FDN reverb architecture
+   - Replace basic reverb in ApplyReverb()
+   - 4-6 hours estimated
+   - See `docs/audio/PHASE4_METHOD_MAPPING.md` for details
+
+2. **Phase 4.1: Port TAL-Chorus** ⭐ HIGH PRIORITY
+   - Port TAL-Chorus library (7 classes)
+   - Implement modulated delay with LFO
+   - Replace basic chorus in ApplyChorus()
+   - 8-12 hours estimated
+   - See `docs/audio/PHASE4_METHOD_MAPPING.md` for details
+
+3. **Speex Phase 3.3: Build Native Libraries** ⭐ MEDIUM PRIORITY
    - Required for full Speex deployment
    - 8-16 hours estimated
-   - Unblocks end-to-end testing phase
+   - Can be done in parallel with Phase 4 work
    - NOTE: Speex integration is functionally complete, just needs native binaries
-
-2. **Obtain DOSBox Source** ⭐ CRITICAL
-   - Unblocks Phase 4 and 5
-   - Required for continued mirroring work
-   - 1-2 hours to clone and review
-   - Essential for final 26% of porting work
-
-3. **Testing Speex Integration** ⭐ MEDIUM PRIORITY (after Phase 3.3)
-   - Unit tests for SpeexResampler wrapper
-   - Integration tests with various sample rates
-   - Performance benchmarking
-   - DOS program compatibility testing
 
 ### For Future Sessions
 
-4. **Phase 4: Mixer Thread Architecture**
-   - After DOSBox source obtained
-   - Systematic method-by-method porting
-   - Side-by-side comparison with DOSBox
+4. **Phase 4.2: Preset System** (after Phase 4.1)
+   - Add preset configuration methods
+   - Add global effect send helpers
+   - 6-9 hours estimated
 
-5. **Phase 5: Audio Thread Coordination**
-   - After Phase 4 complete
-   - Focus on timing and synchronization
+5. **Phase 4.3: Compressor Upgrade** (after Phase 4.1)
+   - Port Compressor class from DOSBox
+   - Implement RMS detection
+   - Add knee width and makeup gain
+   - 3-4 hours estimated
+
+6. **Phase 5: Verification** (after Phase 4 complete)
+   - Side-by-side verification with DOSBox
+   - Minor timing adjustments if needed
    - Integration testing with DOS programs
+   - 4-8 hours estimated
+
+7. **Testing Infrastructure**
+   - Unit tests for effects algorithms
+   - Integration tests with various configurations
+   - Performance benchmarking
+   - 4-8 hours per category
 
 ## Success Criteria
 
@@ -208,14 +235,20 @@
 - **DOSBox:** https://github.com/dosbox-staging/dosbox-staging
 - **Speex:** https://github.com/xiph/speexdsp
 
-## Questions to Resolve
+## Questions Resolved ✅
 
-1. **Reverb/Chorus "Upgrade":** AUDIO_PORT_PLAN.md mentions upgrading reverb/chorus to "MVerb-like" and "TAL-Chorus-like" algorithms. Does DOSBox actually have these, or is this a feature addition beyond DOSBox? Need to verify against DOSBox source.
+1. ✅ **Reverb/Chorus "Upgrade":** CONFIRMED - DOSBox Staging DOES have MVerb and TAL-Chorus. These are legitimate mirroring tasks, not feature additions. Located at:
+   - `/tmp/dosbox-staging/src/libs/mverb/MVerb.h`
+   - `/tmp/dosbox-staging/src/libs/tal-chorus/ChorusEngine.h`
 
-2. **Mixer Line Count Gap:** Mixer.cs is only 24% complete (792/3276 lines). What specific DOSBox methods are missing? Requires source review.
+2. ✅ **Mixer Line Count Gap:** Analysis complete - Mixer.cs has core architecture correct (792 lines). Missing components are:
+   - Advanced effect algorithms (MVerb, TAL-Chorus) - ~200 lines
+   - Preset configuration system - ~150 lines
+   - Global effect send helpers - ~50 lines
+   - Target final size: ~1000 lines (not 3276 - much of DOSBox's code is config/setup which is out of scope)
 
-3. **Testing Strategy:** Should tests be added incrementally or after major phases complete? Current: no audio tests exist.
+3. **Testing Strategy:** Tests should be added after Phase 4 complete. Current: no audio tests exist, but mirroring work takes priority over testing infrastructure.
 
 ## Last Updated
 
-2025-12-15 - Phase 3.2 complete: Speex buffer-level resampling fully integrated (+116 lines)
+2025-12-15 - Phase 4 & 5 unblocked: DOSBox source obtained, method mapping complete. See `docs/audio/PHASE4_METHOD_MAPPING.md` for implementation plan.
