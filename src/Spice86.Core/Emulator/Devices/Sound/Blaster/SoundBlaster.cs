@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Common;
@@ -502,6 +503,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private readonly DmaChannel? _secondaryDmaChannel;
     private readonly Mixer _mixer;
     private readonly MixerChannel _dacChannel;
+    private readonly MixerChannel _fmSynthChannel;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly HardwareMixer _hardwareMixer;
@@ -516,17 +518,22 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     // Tracks the last time DMA callback was invoked for timing measurements
     private double _lastDmaCallbackTime;
 
+    /// <summary>
+    /// The internal OPL3 FM synth chip for music.
+    /// </summary>
+    public Opl3Fm Opl3Fm { get; }
+
     public SoundBlaster(
         IOPortDispatcher ioPortDispatcher,
         State state,
         DmaBus dmaSystem,
         DualPic dualPic,
         Mixer mixer,
-        MixerChannel oplMixerChannel,
         ILoggerService loggerService,
         EmulationLoopScheduler scheduler,
         IEmulatedClock clock,
-        SoundBlasterHardwareConfig soundBlasterHardwareConfig) 
+        SoundBlasterHardwareConfig soundBlasterHardwareConfig,
+        IPauseHandler pauseHandler) 
         : base(state, false, loggerService) {
 
         _config = soundBlasterHardwareConfig;
@@ -572,7 +579,27 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _dacChannel = _mixer.AddChannel(GenerateFrames, (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
         _dacChannel.Enable(true);
 
-        _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, oplMixerChannel, loggerService);
+        // Create OPL3 FM synth channel and device - mirrors master branch wiring
+        // AdlibGold and OPL IRQ support enabled to match DOSBox Staging capabilities
+        // Opl3Fm.GenerateOplFrames is called by the mixer and internally manages the channel
+        HashSet<ChannelFeature> fmFeatures = new HashSet<ChannelFeature> {
+            ChannelFeature.Stereo,
+            ChannelFeature.Synthesizer
+        };
+        
+        // Create a temporary callback that will be replaced by Opl3Fm after construction
+        Opl3Fm? opl3FmTemp = null;
+        _fmSynthChannel = _mixer.AddChannel(
+            framesRequested => opl3FmTemp?.GenerateOplFrames(framesRequested), 
+            49716, "OPL3FM", fmFeatures);
+        
+        // Now create Opl3Fm - it will register itself with the channel
+        Opl3Fm = new Opl3Fm(_fmSynthChannel, state, ioPortDispatcher, 
+            false, loggerService, pauseHandler, scheduler, clock, dualPic,
+            useAdlibGold: true, enableOplIrq: true);
+        opl3FmTemp = Opl3Fm;
+
+        _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, _fmSynthChannel, loggerService);
         _hardwareMixer.Reset();
 
         InitSpeakerState();
