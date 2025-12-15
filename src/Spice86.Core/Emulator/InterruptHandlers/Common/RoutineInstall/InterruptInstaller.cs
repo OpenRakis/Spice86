@@ -36,6 +36,12 @@ public class InterruptInstaller : AssemblyRoutineInstaller {
 
         // Define ASM in vector table
         _interruptVectorTable[interruptHandler.VectorNumber] = new(handlerAddress.Segment, handlerAddress.Offset);
+        
+        // Debug logging for INT 15h
+        if (interruptHandler.VectorNumber == 0x15) {
+            Console.WriteLine($"[INSTALL] INT 15h handler installed at {handlerAddress.Segment:X4}:{handlerAddress.Offset:X4}");
+        }
+        
         return handlerAddress;
     }
 }

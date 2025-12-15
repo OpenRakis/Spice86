@@ -171,6 +171,37 @@ public class RtcIntegrationTests {
                 enableEms: false
             ).Create();
 
+            // Debug: Check INT 15h vector location
+            var memory = spice86DependencyInjection.Machine.Memory;
+            uint ivtAddr = 0x15 * 4; // IVT entry for INT 15h (each entry is 4 bytes: offset, segment)
+            ushort offset = memory.UInt16[ivtAddr];
+            ushort segment = memory.UInt16[ivtAddr + 2];
+            uint handlerAddr = (uint)(segment * 16 + offset);
+            Console.WriteLine($"[DEBUG] INT 15h IVT entry at 0x{ivtAddr:X}: offset=0x{offset:X4}, segment=0x{segment:X4}");
+            Console.WriteLine($"[DEBUG] INT 15h handler address FROM IVT: {segment:X4}:{offset:X4} (physical: 0x{handlerAddr:X})");
+            
+            // Check where handler was supposed to be installed (F000:0020)
+            Console.Write($"[DEBUG] Memory at F000:0020 (where installed): ");
+            for (int i = 0; i < 8; i++) {
+                Console.Write($"{memory.UInt8[0xF000, (ushort)(0x0020 + i)]:X2} ");
+            }
+            Console.WriteLine();
+            
+            // Debug: Read memory at handler location from IVT
+            Console.Write($"[DEBUG] Memory at IVT location {segment:X4}:{offset:X4}: ");
+            for (int i = 0; i < 8; i++) {
+                Console.Write($"{memory.UInt8[segment, (ushort)(offset + i)]:X2} ");
+            }
+            Console.WriteLine();
+
+            // Debug: Check initial CS:IP before running
+            Console.WriteLine($"[DEBUG] Initial CS:IP before run: {spice86DependencyInjection.Machine.CpuState.CS:X4}:{spice86DependencyInjection.Machine.CpuState.IP:X4}");
+            
+            // Re-check IVT just before running
+            offset = memory.UInt16[ivtAddr];
+            segment = memory.UInt16[ivtAddr + 2];
+            Console.WriteLine($"[DEBUG] INT 15h IVT just before run: {segment:X4}:{offset:X4}");
+            
             RtcTestHandler testHandler = new(
                 spice86DependencyInjection.Machine.CpuState,
                 NSubstitute.Substitute.For<ILoggerService>(),
