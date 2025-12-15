@@ -1061,16 +1061,24 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 break;
 
-            case 0x08:
-                // SB16 ASP get version
+            case 0x08: // SB16 ASP get version
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("DSP Unhandled SB16ASP command {Cmd:X} sub {Sub:X}",
+                                        _currentCommand,
+                                        _commandData.Count > 0 ? _commandData[0] : 0);
+                }
+
                 if (_config.SbType == SbType.Sb16 && _commandData.Count >= 1) {
                     switch (_commandData[0]) {
                         case 0x03:
-                            DspAddData(0x18); // version ID
+                            DspAddData(0x18); // version ID (??)
                             break;
+
                         default:
                             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                                _loggerService.Debug("SB16: Unhandled ASP command 0x08 sub 0x{Sub:X2}", _commandData[0]);
+                                _loggerService.Debug("DSP Unhandled SB16ASP command {Cmd:X} sub {Sub:X}",
+                                                    _currentCommand,
+                                                    _commandData[0]);
                             }
                             break;
                     }
@@ -1123,17 +1131,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 break;
 
+            case 0x7f:
             case 0x1f:
-                // Auto Init 2-bit ADPCM Reference
                 if (_config.SbType > SbType.SB1) {
-                    _sb.Adpcm.HaveRef = true;
-                    DspPrepareDmaOld(DmaMode.Adpcm2Bit, true, false);
+                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                        _loggerService.Error("DSP:Unimplemented auto-init DMA ADPCM command {Cmd:X2}",
+                                            _currentCommand);
+                    }
                 }
                 break;
 
             case 0x20:
-                // Direct DAC 8-bit (alternative)
-                DspChangeMode(DspMode.Dac);
+                DspAddData(0x7f); // Fake silent input for Creative parrot
                 break;
 
             case 0x24:
@@ -1147,49 +1156,23 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 break;
 
             case 0x30:
-                // MIDI Polling Mode (ESS)
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SB: MIDI polling mode command (ESS specific)");
-                }
-                break;
-
             case 0x31:
-                // MIDI Interrupt Mode (ESS)
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SB: MIDI interrupt mode command (ESS specific)");
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("DSP:Unimplemented MIDI I/O command {Cmd:X2}",
+                                        _currentCommand);
                 }
                 break;
 
             case 0x34:
-                // MIDI UART Polling Mode
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SB: MIDI UART polling mode");
-                }
-                _sb.MidiEnabled = true;
-                break;
-
             case 0x35:
-                // MIDI UART Interrupt Mode
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SB: MIDI UART interrupt mode");
-                }
-                _sb.MidiEnabled = true;
-                break;
-
             case 0x36:
-                // MIDI UART Polling Mode with Timestamp (ESS)
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SB: MIDI UART polling mode with timestamp (ESS)");
-                }
-                _sb.MidiEnabled = true;
-                break;
-
             case 0x37:
-                // MIDI UART Interrupt Mode with Timestamp (ESS)
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SB: MIDI UART interrupt mode with timestamp (ESS)");
+                if (_config.SbType > SbType.SB1) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                        _loggerService.Error("DSP:Unimplemented MIDI UART command {Cmd:X2}",
+                                            _currentCommand);
+                    }
                 }
-                _sb.MidiEnabled = true;
                 break;
 
             case 0x38:
@@ -1272,37 +1255,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 break;
 
-            case 0x7f:
-                // Auto Init 3-bit ADPCM (2.6-bit) Reference
-                if (_config.SbType > SbType.SB1) {
-                    _sb.Adpcm.HaveRef = true;
-                    DspPrepareDmaOld(DmaMode.Adpcm3Bit, true, false);
-                }
-                break;
-
             case 0x80:
                 // Silence DAC
                 break;
 
             case 0x98:
-            case 0x99:
-                // High-speed Auto Init 8-bit DMA ADC (documented for DSP 2.x/3.x)
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SB: Unimplemented input command 0x{Cmd:X2}", _currentCommand);
-                }
-                break;
-
+            case 0x99: // Documented only for DSP 2.x and 3.x
             case 0xa0:
-                // Set input mode to mono (ESS)
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SB: Set input mode to mono (ESS)");
-                }
-                break;
-
-            case 0xa8:
-                // Set input mode to stereo (ESS, documented for DSP 3.x)
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SB: Set input mode to stereo (ESS)");
+            case 0xa8: // Documented only for DSP 3.x
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("DSP:Unimplemented input command {Cmd:X2}",
+                                        _currentCommand);
                 }
                 break;
 
@@ -1475,11 +1438,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 _sb.Dsp.TestRegister = _commandData[0];
                 break;
 
-            case 0xe7:
-                // ESS detect/read config
-                if (_sb.EssType == EssType.Es1688) {
-                    DspFlushData();
-                    DspAddData(0x68); // ESS688 ID
+            case 0xe7: // ESS detect/read config
+                switch (_sb.EssType) {
+                    case EssType.None:
+                        break;
+
+                    case EssType.Es1688:
+                        DspFlushData();
+                        // Determined via Windows driver debugging.
+                        DspAddData(0x68);
+                        DspAddData(0x80 | 0x09);
+                        break;
                 }
                 break;
 
