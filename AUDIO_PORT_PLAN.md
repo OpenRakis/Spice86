@@ -1,7 +1,10 @@
 // SPICE86 AUDIO PARITY PORT PLAN (UPDATED)
 // ==========================================
 // Port DOSBox Staging audio subsystem to achieve feature parity.
-// Excludes: Fast-forward, Capture, ESFM, Speex (use IIR filters or similar for resampling)
+// Reference: https://github.com/dosbox-staging/dosbox-staging
+//
+// Excludes: Fast-forward, Capture, ESFM
+// Speex: Will be integrated via P/Invoke (compiled library, not translated to C#)
 
 // PHASE 1: SoundBlaster.cpp - Complete DSP Command Set [100% COMPLETE]
 // =====================================================================
@@ -47,7 +50,10 @@
 // - High-pass filtering on master output (3Hz DC-blocking, 2nd-order Butterworth)
 //
 // REMAINING:
-// - Speex resampler integration (deferred - needs P/Invoke and cross-platform builds)
+// - Speex resampler integration via P/Invoke (compile Speex for all platforms, ship with Spice86)
+//   * Speex library is too complex to translate to C# - use native library via P/Invoke
+//   * Build and package Speex binaries for Windows, Linux, macOS
+//   * Integrate into Spice86 build/packaging process
 // - Upgrade reverb to proper algorithm (MVerb-like or simple Schroeder)
 // - Upgrade chorus to proper algorithm (TAL-Chorus-like with LFO)
 // - Output prebuffering for smooth startup
