@@ -1061,6 +1061,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 break;
 
+            case 0x05: // SB16 ASP set codec parameter
+                // Mirrors DOSBox soundblaster.cpp case 0x05
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("DSP Unhandled SB16ASP command 0x{Cmd:X2} (set codec parameter)", _currentCommand);
+                }
+                // No specific action needed - ASP commands are mostly unimplemented
+                break;
+
             case 0x08: // SB16 ASP get version
                 if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                     _loggerService.Debug("DSP Unhandled SB16ASP command {Cmd:X} sub {Sub:X}",
