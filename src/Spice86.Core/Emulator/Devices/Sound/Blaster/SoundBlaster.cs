@@ -601,6 +601,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     break;
 
                 case DspMode.Dma:
+                    // Keep channel awake during DMA processing - mirrors DOSBox soundblaster.cpp:3200
+                    // This is a no-op if the channel is already running
+                    MaybeWakeUp();
+                    
                     // DMA mode - pull samples from DMA buffer
                     // Critical: Must actually read from DMA channel data
                     frame = GenerateDmaFrame();
@@ -637,6 +641,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
     }
 
+    /// <summary>
+    /// Wakes up the DAC channel if it has the sleep feature enabled.
+    /// Mirrors DOSBox SoundBlaster::MaybeWakeUp() from soundblaster.cpp:1490-1494
+    /// </summary>
+    /// <returns>True if the channel was actually woken up, false if already awake</returns>
+    private bool MaybeWakeUp() {
+        return _dacChannel.WakeUp();
+    }
+    
     /// <summary>
     /// Generates a single audio frame from the DMA buffer.
     /// Mirrors DOSBox play_dma_transfer() pattern for PCM8/ADPCM modes.
@@ -1173,6 +1186,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x10:
                 // Direct DAC
                 DspChangeMode(DspMode.Dac);
+                
+                // Wake up channel for Direct DAC writes - mirrors DOSBox soundblaster.cpp:1956
+                if (MaybeWakeUp()) {
+                    // If we're waking up, the DAC hasn't been running, so start with fresh DAC state
+                    _sb.DacState = new Dac();
+                }
                 break;
 
             case 0x14:
@@ -1657,6 +1676,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             DspChangeMode(DspMode.Dma);
         }
         
+        // Wake up the channel now that DMA is ready to play
+        // Mirrors DOSBox soundblaster.cpp:840
+        MaybeWakeUp();
+        
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA prepared - Mode={Mode}, AutoInit={AutoInit}, Bits={Bits}, Left={Left}, Channel={Channel}, Rate={Rate}Hz",
                 mode, autoInit, _sb.Dma.Bits, _sb.Dma.Left, dmaChannel.ChannelNumber, dmaRateHz);
@@ -1738,6 +1761,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Mode != DspMode.Dma) {
             DspChangeMode(DspMode.Dma);
         }
+        
+        // Wake up the channel now that DMA is ready to play
+        // Mirrors DOSBox soundblaster.cpp:840
+        MaybeWakeUp();
         
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA prepared (new) - Mode={Mode}, AutoInit={AutoInit}, " +

@@ -25,7 +25,7 @@
 // - Fine-tune DMA/IRQ event coordination with mixer callbacks
 // - Speaker warmup timing refinements
 
-// PHASE 2: Mixer.cpp - Core Mixing & Effects Pipeline [85% COMPLETE]
+// PHASE 2: Mixer.cpp - Core Mixing & Effects Pipeline [90% COMPLETE]
 // ====================================================================
 // ✓ COMPLETED:
 // - Basic mixer thread loop with direct PortAudio output
@@ -49,6 +49,11 @@
 // - AddSamples_mfloat/AddSamples_sfloat for 32-bit float samples
 // - High-pass filtering on reverb input (120Hz cutoff, 2nd-order Butterworth)
 // - High-pass filtering on master output (3Hz DC-blocking, 2nd-order Butterworth)
+// - Channel sleep/wake mechanism (Sleeper class with fade-out and signal detection)
+//   * MaybeFadeOrListen() - applies fade or detects signal per frame
+//   * MaybeSleep() - checks if channel should sleep after timeout
+//   * WakeUp() - called from device I/O to wake sleeping channels
+//   * ConfigureFadeOut() - configurable wait/fade times
 //
 // REMAINING:
 // - Speex resampler integration via P/Invoke (compile Speex for all platforms, ship with Spice86)
@@ -57,8 +62,7 @@
 //   * Integrate into Spice86 build/packaging process
 // - Upgrade reverb to proper algorithm (MVerb-like or simple Schroeder)
 // - Upgrade chorus to proper algorithm (TAL-Chorus-like with LFO)
-// - Output prebuffering for smooth startup
-// - Channel sleep/wake mechanism for CPU efficiency
+// - Output prebuffering for smooth startup (NOTE: PortAudio already provides internal buffering)
 
 // PHASE 3: Integration & Synchronization
 // =======================================
@@ -129,12 +133,12 @@
 
 // FILE COUNT (CURRENT vs TARGET)
 // ===============================
-// SoundBlaster.cs:  1725 lines (vs soundblaster.cpp: 3917 lines - 44%)
+// SoundBlaster.cs:  1870 lines (vs soundblaster.cpp: 3917 lines - 48%)
 // HardwareMixer.cs:  593 lines (mixer register handling)
-// Mixer.cs:          785 lines (vs mixer.cpp: 3276 lines - 24%)
-// MixerChannel.cs:   855 lines (included in mixer.cpp)
+// Mixer.cs:          792 lines (vs mixer.cpp: 3276 lines - 24%)
+// MixerChannel.cs:  1121 lines (included in mixer.cpp) [+266 lines for Sleeper]
 // MixerTypes.cs:     198 lines (mixer.h enums/types)
-// TOTAL:            4156 lines (vs 7193 lines combined - 58% complete)
+// TOTAL:            4574 lines (vs 7193 lines combined - 64% complete)
 //
 // Expected final: ~5000 lines total (C# is more verbose than C++)
 //
@@ -144,6 +148,7 @@
 // Resampling: Linear interpolation + ZoH upsampler (Speex deferred) ✓
 // High-pass Filtering: Reverb input + Master output (IIR Butterworth) ✓
 // Mixer Register Handling: Complete via HardwareMixer (SB Pro & SB16 registers) ✓
+// Channel Sleep/Wake: Complete via Sleeper nested class (fade-out, signal detection) ✓
 
 // PRIORITY ORDER (UPDATED)
 // =========================
@@ -155,8 +160,8 @@
 // 6. ✓ High-quality resampling (DONE - ZoH upsampler added, Speex deferred)
 // 7. ✓ High-pass filtering (DONE - reverb input & master output)
 // 8. ✓ Mixer register handlers (DONE - HardwareMixer integration with volume routing)
-// 9. [ ] DMA/IRQ coordination refinements (NEXT - needed for perfect sync)
-// 10. [ ] Mixer effects upgrades (reverb/chorus quality improvements)
-// 11. [ ] Output prebuffering (smooth startup)
-// 12. [ ] Channel sleep/wake mechanism (CPU efficiency)
+// 9. ✓ Channel sleep/wake mechanism (DONE - CPU efficiency via Sleeper class)
+// 10. [ ] DMA/IRQ coordination refinements (NEXT - needed for perfect sync)
+// 11. [ ] Mixer effects upgrades (reverb/chorus quality improvements)
+// 12. [ ] Output prebuffering (smooth startup - PortAudio already provides buffering)
 // 13. [ ] Integration testing with DOS games

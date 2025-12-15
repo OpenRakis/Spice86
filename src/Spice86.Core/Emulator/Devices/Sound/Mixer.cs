@@ -519,6 +519,10 @@ public sealed class Mixer : IDisposable {
             for (int i = 0; i < numFrames; i++) {
                 AudioFrame channelFrame = channel.AudioFrames[i];
                 
+                // Apply sleep/wake fade-out or signal detection if enabled
+                // Mirrors DOSBox mixer.cpp:2419-2425
+                channelFrame = channel.MaybeFadeOrListen(channelFrame);
+                
                 // Add to master output using operator
                 _outputBuffer[i] = _outputBuffer[i] + channelFrame;
                 
@@ -539,6 +543,9 @@ public sealed class Mixer : IDisposable {
                     _loggerService.Verbose("MIXER: Channel {Channel} provided frames={Frames}", channel.GetName(), numFrames);
                 }
             }
+            
+            // Check if channel should sleep - mirrors DOSBox mixer.cpp:2440-2442
+            channel.MaybeSleep();
         }
 
         // Apply master gain using operator
