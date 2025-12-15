@@ -80,15 +80,17 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Handles writes to port 0x70 (address/index selection) and 0x71 (data).
     /// </summary>
     public override void WriteByte(ushort port, byte value) {
-        if (port == CmosPorts.Address || port == CmosPorts.Data) {
-            ProcessPendingPeriodicEvents();
+        if (_loggerService.IsEnabled(LogEventLevel.Information) && port == CmosPorts.Address && value == 0x0B) {
+            _loggerService.Information("RTC: Writing 0x0B to address port (selecting StatusB for next read/write)");
         }
         switch (port) {
             case CmosPorts.Address:
                 HandleAddressPortWrite(value);
+                ProcessPendingPeriodicEvents();
                 break;
             case CmosPorts.Data:
                 HandleDataPortWrite(value);
+                ProcessPendingPeriodicEvents();
                 break;
             default:
                 base.WriteByte(port, value);
@@ -102,8 +104,13 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </summary>
     public override byte ReadByte(ushort port) {
         if (port == CmosPorts.Data) {
+            byte result = HandleDataPortRead();
             ProcessPendingPeriodicEvents();
-            return HandleDataPortRead();
+            if (_loggerService.IsEnabled(LogEventLevel.Information) && _cmosRegisters.CurrentRegister == CmosRegisterAddresses.StatusRegisterB) {
+                _loggerService.Information("RTC: Port 0x71 read returning 0x{Result:X2} for register 0x{Reg:X2} (StatusB, PIE={PIE})",
+                    result, _cmosRegisters.CurrentRegister, (result & 0x40) != 0);
+            }
+            return result;
         }
         return base.ReadByte(port);
     }
@@ -171,12 +178,12 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
                     if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                         _loggerService.Information("RTC: Periodic interrupt enabled via Status Register B write");
                     }
-                    ScheduleNextPeriodicInterrupt();
+                    _nextPeriodicTriggerMs = GetElapsedMilliseconds() + _cmosRegisters.Timer.Delay;
                 } else if (!_cmosRegisters.Timer.Enabled && prevEnabled) {
                     if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                         _loggerService.Information("RTC: Periodic interrupt disabled via Status Register B write");
                     }
-                    CancelPeriodicInterrupts();
+                    _nextPeriodicTriggerMs = double.MaxValue;
                 }
                 return;
 
@@ -236,6 +243,14 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
                 return ReadStatusC();
 
             case CmosRegisterAddresses.StatusRegisterB:
+                {
+                    byte value = _cmosRegisters[reg];
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("RTC: Status Register B read: value=0x{Value:X2}, PIE={PIE}",
+                            value, (value & 0x40) != 0);
+                    }
+                    return value;
+                }
             case CmosRegisterAddresses.StatusRegisterD:
             case CmosRegisterAddresses.ShutdownStatus:
 
@@ -344,8 +359,9 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
                 _nextPeriodicTriggerMs += _cmosRegisters.Timer.Delay;
             }
             _dualPic.ProcessInterruptRequest(8);
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("RTC: Periodic interrupt fired via polling, raising IRQ 8");
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("RTC: Periodic interrupt fired via polling at nowMs={NowMs}, nextTrigger={NextTrigger}",
+                    nowMs, _nextPeriodicTriggerMs);
             }
         }
     }

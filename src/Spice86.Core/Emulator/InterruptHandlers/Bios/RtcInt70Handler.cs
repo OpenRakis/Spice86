@@ -109,11 +109,6 @@ public sealed class RtcInt70Handler : InterruptHandler {
                     userFlagAddress.Segment, userFlagAddress.Offset, currentValue | 0x80);
             }
         }
-
-        _ioPortDispatcher.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterB);
-        byte statusB = _ioPortDispatcher.ReadByte(CmosPorts.Data);
-        _ioPortDispatcher.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterB);
-        _ioPortDispatcher.WriteByte(CmosPorts.Data, (byte)(statusB & ~0x40));
     }
 
 
