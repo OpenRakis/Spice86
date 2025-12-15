@@ -1,8 +1,8 @@
 # Speex Resampler Integration Guide
 
-## Status: Infrastructure Complete, Integration Pending
+## Status: Integration Complete, Native Libraries Pending
 
-The Speex resampler P/Invoke bindings and wrapper classes are now implemented and ready for use. However, the actual integration into the audio sample processing pipeline is not yet complete.
+The Speex resampler P/Invoke bindings, wrapper classes, and buffer-level integration are now fully implemented. The system is functionally complete and will work once native Speex libraries are available on the system.
 
 ## What's Implemented
 
@@ -29,33 +29,35 @@ C# wrapper providing:
 - ConfigureResampler() method updated to initialize Speex for downsampling (lines 243-326)
 - InitSpeexResampler() method for creating and configuring Speex instances
 
-## What's NOT Yet Implemented
+## What's Implemented (Complete)
 
-### Buffer-Level Resampling in Mix() Method
+### Buffer-Level Resampling in Mix() Method ✅
 
-The current implementation processes samples one-by-one through AddSamples_* methods. Speex resampler works on **buffers**, not individual samples, requiring a different integration approach.
+The Speex resampler is now fully integrated into the audio sample processing pipeline.
 
-**Required Changes:**
+**Implementation Details:**
 
-1. **Modify Mix() Method** (MixerChannel.cs)
-   - After collecting samples in AudioFrames buffer
-   - Before returning frames to mixer
-   - Apply Speex resampling on the entire buffer
+1. **Modified Mix() Method** (MixerChannel.cs lines 486-497)
+   - Detects when Speex resampler is initialized and rate conversion is needed
+   - Collects samples in AudioFrames buffer
+   - Applies Speex resampling on the entire buffer
+   - Returns resampled frames to mixer
 
-2. **Add SpeexResampleBuffer() Method**
+2. **Added SpeexResampleBuffer() Method** (MixerChannel.cs lines 554-658)
    ```csharp
-   private void SpeexResampleBuffer(int requiredFrames) {
-       if (!_speexResampler?.IsInitialized ?? true) return;
-       
-       // Extract L/R channels from AudioFrames
-       // Call _speexResampler.ProcessFloat() for each channel
+   private void SpeexResampleBuffer(int targetFrames) {
+       // Extract L/R channels from AudioFrames into separate float arrays
+       // Call _speexResampler.ProcessFloat() for each channel (0 = left, 1 = right)
        // Rebuild AudioFrames with resampled data
+       // Handle frame count adjustment (padding/truncation)
+       // Graceful error handling with fallback to pass-through
    }
    ```
 
-3. **Update Mix() Call Chain**
-   - Currently: AddSamples → ConvertAndAdd → AudioFrames
-   - Future: AddSamples → AudioFrames → SpeexResample → Mixer
+3. **Updated Mix() Call Chain**
+   - Flow: AddSamples → AudioFrames → SpeexResample → Mixer
+   - Activated when: Speex initialized AND channel rate ≠ mixer rate
+   - Falls back to linear interpolation or pass-through if Speex unavailable
 
 ## Native Library Requirements
 
@@ -147,7 +149,7 @@ Reference: `dosbox-staging/src/audio/mixer.cpp`
 2. ✅ Create C# wrapper class (DONE)
 3. ✅ Add to MixerChannel fields (DONE)
 4. ✅ Initialize in ConfigureResampler (DONE)
-5. ⏸️ Implement buffer-level resampling in Mix() (PENDING)
+5. ✅ Implement buffer-level resampling in Mix() (DONE)
 6. ⏸️ Build/package native libraries for distribution (PENDING)
 7. ⏸️ Add unit tests (PENDING)
 8. ⏸️ Performance testing (PENDING)

@@ -483,6 +483,19 @@ public sealed class MixerChannel {
                 
                 // Perform linear interpolation upsampling
                 ApplyLerpUpsampling(framesRequested);
+            } else if (_speexResampler?.IsInitialized == true && _sampleRateHz != _mixerSampleRateHz) {
+                // Use Speex resampler for high-quality rate conversion
+                // Calculate how many input frames we need to produce the requested output
+                int inputFramesNeeded = (int)Math.Ceiling(
+                    framesRequested * (double)_sampleRateHz / _mixerSampleRateHz);
+                
+                // Request frames from handler
+                if (inputFramesNeeded > 0) {
+                    _handler(inputFramesNeeded);
+                }
+                
+                // Apply Speex resampling on the collected buffer
+                SpeexResampleBuffer(framesRequested);
             } else {
                 // No resampling or downsampling - request frames directly
                 while (_framesNeeded > AudioFrames.Count) {
@@ -546,6 +559,109 @@ public sealed class MixerChannel {
                 if (inputIndex < inputFrames.Count) {
                     _lerpNextFrame = inputFrames[inputIndex];
                 }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Applies Speex resampling to the collected AudioFrames buffer.
+    /// Processes stereo channels separately through the Speex resampler.
+    /// Mirrors DOSBox Speex resampling integration from mixer.cpp
+    /// </summary>
+    /// <param name="targetFrames">Number of output frames required</param>
+    private void SpeexResampleBuffer(int targetFrames) {
+        if (_speexResampler?.IsInitialized != true) {
+            return;
+        }
+        
+        // Store input frames and clear buffer for output
+        List<AudioFrame> inputFrames = new List<AudioFrame>(AudioFrames);
+        AudioFrames.Clear();
+        
+        // If no input, fill with silence
+        if (inputFrames.Count == 0) {
+            for (int i = 0; i < targetFrames; i++) {
+                AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+            }
+            return;
+        }
+        
+        try {
+            // Prepare separate channel buffers for Speex processing
+            // Speex processes each channel independently
+            int inputCount = inputFrames.Count;
+            float[] leftInput = new float[inputCount];
+            float[] rightInput = new float[inputCount];
+            float[] leftOutput = new float[targetFrames];
+            float[] rightOutput = new float[targetFrames];
+            
+            // Extract left and right channels from AudioFrames
+            for (int i = 0; i < inputCount; i++) {
+                leftInput[i] = inputFrames[i].Left;
+                rightInput[i] = inputFrames[i].Right;
+            }
+            
+            // Process left channel (channel index 0)
+            _speexResampler.ProcessFloat(
+                0, // Left channel
+                leftInput.AsSpan(),
+                leftOutput.AsSpan(),
+                out uint leftConsumed,
+                out uint leftGenerated);
+            
+            // Process right channel (channel index 1)
+            _speexResampler.ProcessFloat(
+                1, // Right channel
+                rightInput.AsSpan(),
+                rightOutput.AsSpan(),
+                out uint rightConsumed,
+                out uint rightGenerated);
+            
+            // Rebuild AudioFrames with resampled data
+            // Use the minimum of left/right generated frames to keep channels synchronized
+            int outputCount = (int)Math.Min(leftGenerated, rightGenerated);
+            
+            for (int i = 0; i < outputCount; i++) {
+                AudioFrames.Add(new AudioFrame(leftOutput[i], rightOutput[i]));
+            }
+            
+            // If we didn't produce enough frames, pad with the last frame or silence
+            while (AudioFrames.Count < targetFrames) {
+                AudioFrame lastFrame = AudioFrames.Count > 0 
+                    ? AudioFrames[AudioFrames.Count - 1] 
+                    : new AudioFrame(0.0f, 0.0f);
+                AudioFrames.Add(lastFrame);
+            }
+            
+            // If we produced too many frames, truncate to target
+            if (AudioFrames.Count > targetFrames) {
+                AudioFrames.RemoveRange(targetFrames, AudioFrames.Count - targetFrames);
+            }
+            
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose(
+                    "MIXER: Channel {Name} Speex resampled {InputFrames} -> {OutputFrames} frames " +
+                    "(L consumed: {LeftConsumed}, R consumed: {RightConsumed})",
+                    _name, inputCount, AudioFrames.Count, leftConsumed, rightConsumed);
+            }
+        } catch (Exception ex) {
+            // If Speex resampling fails, log error and fall back to pass-through
+            _loggerService.Error(
+                "MIXER: Channel {Name} Speex resampling failed: {Error}. Falling back to pass-through.",
+                _name, ex.Message);
+            
+            // Restore original frames or pad/truncate as needed
+            AudioFrames.Clear();
+            for (int i = 0; i < Math.Min(inputFrames.Count, targetFrames); i++) {
+                AudioFrames.Add(inputFrames[i]);
+            }
+            
+            // Pad if necessary
+            while (AudioFrames.Count < targetFrames) {
+                AudioFrame lastFrame = AudioFrames.Count > 0 
+                    ? AudioFrames[AudioFrames.Count - 1] 
+                    : new AudioFrame(0.0f, 0.0f);
+                AudioFrames.Add(lastFrame);
             }
         }
     }
