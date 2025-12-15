@@ -3,18 +3,20 @@
 // Port DOSBox Staging audio subsystem to achieve feature parity.
 // Excludes: Fast-forward, Capture, ESFM, Speex (use IIR filters or similar for resampling)
 
-// PHASE 1: SoundBlaster.cpp - Complete DSP Command Set [90% COMPLETE]
-// ====================================================================
+// PHASE 1: SoundBlaster.cpp - Complete DSP Command Set [~99% COMPLETE]
+// =====================================================================
 // ✓ COMPLETED:
 // - DAC class with rate measurement (lines 46-79)
 // - ADPCM decoders (2/3/4-bit with step-size adaptation) (lines 199-303)
 // - DSP command length tables (DspCommandLengthsSb/Sb16) (lines 397-437)
-// - 111 DSP command case handlers (vs 77 in DOSBox - expanded coverage)
+// - 95 unique DSP command case values (DOSBox has 96)
+// - All commands verified to exist in DOSBox soundblaster.cpp
 // - SbInfo structure with complete state management
 // - E2 increment table for DMA identification
 // - Bulk DMA read methods (ReadDma8Bit/ReadDma16Bit)
 //
 // REMAINING:
+// - Add case 0x05 (SB16 ASP set codec parameter) - only missing command
 // - Fine-tune DMA/IRQ event coordination with mixer callbacks
 // - Mixer register read/write handlers (volume routing)
 // - Speaker warmup timing refinements
@@ -80,11 +82,14 @@
 // TOTAL:            3079 lines (vs 7193 lines combined - 43% complete)
 //
 // Expected final: ~5000 lines total (C# is more verbose than C++)
+//
+// DSP Command Coverage: 95/96 unique case values (99%)
+// Mixer Preset Coverage: 4/4 enums (CrossfeedPreset, ReverbPreset, ChorusPreset, ResampleMethod)
 
 // PRIORITY ORDER (UPDATED)
 // =========================
-// 1. ✓ SoundBlaster DSP commands (DONE - 111 handlers)
-// 2. ✓ Mixer preset system (DONE - enums + configuration)
+// 1. ✓ SoundBlaster DSP commands (DONE - 95/96 from DOSBox)
+// 2. ✓ Mixer preset system (DONE - all enums from DOSBox)
 // 3. ✓ Channel volume controls (DONE - user + app volumes)
 // 4. [ ] High-quality resampling (NEXT - critical for audio quality)
 // 5. [ ] DMA/IRQ coordination refinements (needed for perfect sync)
