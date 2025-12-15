@@ -875,11 +875,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void MixerTickCallback(uint unusedTick) {
-        // This callback was used to reset the frame counter each millisecond
-        // However, with the new block-based mixer, this is no longer needed
-        // The mixer calls GenerateFrames() directly with the desired frame count
-        // Keeping for backwards compatibility, but it doesn't do much now
-        
         if (!_dacChannel.IsEnabled) {
             _scheduler.AddEvent(MixerTickCallback, 1.0);
             return;
