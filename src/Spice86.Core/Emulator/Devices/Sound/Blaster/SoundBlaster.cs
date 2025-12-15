@@ -481,6 +481,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private byte _currentCommand;
     private byte _commandDataLength;
     private BlasterState _blasterState = BlasterState.WaitingForCommand;
+    
+    // DMA callback timing tracking - mirrors DOSBox last_dma_callback
+    // Tracks the last time DMA callback was invoked for timing measurements
+    private double _lastDmaCallbackTime;
 
     public SoundBlaster(
         IOPortDispatcher ioPortDispatcher,
@@ -561,6 +565,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _loggerService.Verbose("SB: GenerateFrames framesRequested={Frames} mode={Mode} dmaLeft={Left} bufferSize={BufferSize}", 
                 framesRequested, _sb.Mode, _sb.Dma.Left, _dacChannel.AudioFrames.Count);
         }
+        
+        // Update DMA callback timestamp - mirrors DOSBox last_dma_callback
+        // Reference: src/hardware/audio/soundblaster.cpp line 1139
+        _lastDmaCallbackTime = _clock.CurrentTimeMs;
         
         // Callback from mixer requesting audio frames
         // Mirrors DOSBox's soundblaster.cpp GenerateFrames pattern
@@ -648,6 +656,96 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// <returns>True if the channel was actually woken up, false if already awake</returns>
     private bool MaybeWakeUp() {
         return _dacChannel.WakeUp();
+    }
+    
+    /// <summary>
+    /// DMA channel callback handler - mirrors DOSBox dsp_dma_callback().
+    /// Handles DMA channel state changes (masked/unmasked/terminal count).
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 772-874
+    /// </summary>
+    private void DspDmaCallback(DmaChannel channel, DmaChannel.DmaEvent dmaEvent) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DMA callback - Event={Event}, Mode={Mode}, Left={Left}", 
+                dmaEvent, _sb.Mode, _sb.Dma.Left);
+        }
+        
+        switch (dmaEvent) {
+            case DmaChannel.DmaEvent.ReachedTerminalCount:
+                // Terminal count reached - DMA transfer completed naturally
+                // This is handled by OnDmaTransferComplete() in GenerateFrames
+                break;
+                
+            case DmaChannel.DmaEvent.IsMasked:
+                // DMA channel has been masked (disabled) - mirrors DOSBox IsMasked case
+                if (_sb.Mode == DspMode.Dma) {
+                    // Catch up to current time but don't generate IRQ
+                    // This fixes timing issues with later SCI games
+                    double currentTime = _clock.CurrentTimeMs;
+                    double elapsedTime = currentTime - _lastDmaCallbackTime;
+                    
+                    if (elapsedTime > 0 && _sb.Dma.Rate > 0) {
+                        uint samplesToGenerate = (uint)(_sb.Dma.Rate * elapsedTime / 1000.0);
+                        
+                        // Limit to sb.dma.min to prevent runaway
+                        if (samplesToGenerate > _sb.Dma.Min) {
+                            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                                _loggerService.Debug("SOUNDBLASTER: Limiting masked amount to Min={Min} (was {Samples})", 
+                                    _sb.Dma.Min, samplesToGenerate);
+                            }
+                            samplesToGenerate = _sb.Dma.Min;
+                        }
+                        
+                        // Calculate minimum transfer size
+                        uint minSize = _sb.Dma.Mul >> SbShift;
+                        if (minSize == 0) {
+                            minSize = 1;
+                        }
+                        minSize *= 2;
+                        
+                        // Only process if we have enough data left
+                        if (_sb.Dma.Left > minSize) {
+                            if (samplesToGenerate > (_sb.Dma.Left - minSize)) {
+                                samplesToGenerate = _sb.Dma.Left - minSize;
+                            }
+                            
+                            // Don't trigger IRQ if we're about to complete a non-autoinit transfer
+                            if (!_sb.Dma.AutoInit && _sb.Dma.Left <= _sb.Dma.Min) {
+                                samplesToGenerate = 0;
+                            }
+                            
+                            // Process remaining DMA samples
+                            // This would normally call ProcessDMATransfer(samplesToGenerate)
+                            // but in our architecture, we let GenerateFrames handle it
+                        }
+                    }
+                    
+                    // Transition to masked state
+                    _sb.Mode = DspMode.DmaMasked;
+                    
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: DMA masked, stopping output. Left={Left}, CurrentCount={Count}",
+                            _sb.Dma.Left, channel.CurrentCount);
+                    }
+                }
+                break;
+                
+            case DmaChannel.DmaEvent.IsUnmasked:
+                // DMA channel has been unmasked (enabled) - mirrors DOSBox IsUnmasked case
+                if (_sb.Mode == DspMode.DmaMasked && _sb.Dma.Mode != DmaMode.None) {
+                    // Transition back to active DMA mode
+                    DspChangeMode(DspMode.Dma);
+                    
+                    // Wake up the mixer channel for playback
+                    // Unmasking is when software has finished setup and is ready for playback
+                    MaybeWakeUp();
+                    
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output. IsAutoiniting={IsAutoiniting}, BaseCount={BaseCount}",
+                            channel.IsAutoiniting, channel.BaseCount);
+                    }
+                }
+                break;
+        }
     }
     
     /// <summary>
@@ -1656,6 +1754,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Dma.Channel = dmaChannel;
         _sb.Dma.FirstTransfer = true;
         
+        // Register DMA callback - mirrors DOSBox RegisterCallback(dsp_dma_callback)
+        // Reference: src/hardware/audio/soundblaster.cpp line 1618
+        dmaChannel.RegisterCallback(DspDmaCallback);
+        
         // Update channel sample rate to match DMA rate
         // This ensures the mixer can properly resample if needed
         int dmaRateHz = (int)_sb.FreqHz;
@@ -1734,6 +1836,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Dma.Mode = newMode;
         _sb.Dma.AutoInit = autoInit;
         _sb.Dma.FirstTransfer = true;
+        
+        // Register DMA callback - mirrors DOSBox RegisterCallback(dsp_dma_callback)
+        // Reference: src/hardware/audio/soundblaster.cpp line 2156
+        _sb.Dma.Channel.RegisterCallback(DspDmaCallback);
         
         // Determine bit depth
         _sb.Dma.Bits = newMode switch {

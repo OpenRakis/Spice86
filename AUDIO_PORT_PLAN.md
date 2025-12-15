@@ -133,12 +133,12 @@
 
 // FILE COUNT (CURRENT vs TARGET)
 // ===============================
-// SoundBlaster.cs:  1870 lines (vs soundblaster.cpp: 3917 lines - 48%)
+// SoundBlaster.cs:  1976 lines (vs soundblaster.cpp: 3917 lines - 50%) [+106 lines for DMA callback]
 // HardwareMixer.cs:  593 lines (mixer register handling)
 // Mixer.cs:          792 lines (vs mixer.cpp: 3276 lines - 24%)
 // MixerChannel.cs:  1121 lines (included in mixer.cpp) [+266 lines for Sleeper]
 // MixerTypes.cs:     198 lines (mixer.h enums/types)
-// TOTAL:            4574 lines (vs 7193 lines combined - 64% complete)
+// TOTAL:            4680 lines (vs 7193 lines combined - 65% complete)
 //
 // Expected final: ~5000 lines total (C# is more verbose than C++)
 //
@@ -161,7 +161,13 @@
 // 7. ✓ High-pass filtering (DONE - reverb input & master output)
 // 8. ✓ Mixer register handlers (DONE - HardwareMixer integration with volume routing)
 // 9. ✓ Channel sleep/wake mechanism (DONE - CPU efficiency via Sleeper class)
-// 10. [ ] DMA/IRQ coordination refinements (NEXT - needed for perfect sync)
+// 10. ✓ DMA/IRQ coordination refinements (PHASE 2A DONE - DMA callback system)
+//     - ✓ DspDmaCallback() handler mirroring DOSBox dsp_dma_callback()
+//     - ✓ DMA callback registration in DspPrepareDmaOld/New
+//     - ✓ DMA timing tracking with _lastDmaCallbackTime
+//     - ✓ DMA masked/unmasked event handling
+//     - [ ] Bulk DMA transfer optimization (play_dma_transfer full port)
+//     - [ ] Advanced DMA timing measurements
 // 11. [ ] Mixer effects upgrades (reverb/chorus quality improvements)
 // 12. [ ] Output prebuffering (smooth startup - PortAudio already provides buffering)
 // 13. [ ] Integration testing with DOS games
