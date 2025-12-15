@@ -80,7 +80,7 @@ brew install speexdsp
 ### Option 2: Build from Source
 
 ```bash
-git clone https://gitlab.xiph.org/xiph/speexdsp.git
+git clone https://github.com/xiph/speexdsp.git
 cd speexdsp
 ./autogen.sh
 ./configure

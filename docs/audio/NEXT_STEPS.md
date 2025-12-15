@@ -89,7 +89,7 @@ private void SpeexResampleBuffer(int requiredFrames) {
 - Add to CI/CD build and packaging process
 
 **Resources:**
-- Source: https://gitlab.xiph.org/xiph/speexdsp
+- Source: https://github.com/xiph/speexdsp
 - Build instructions in SPEEX_INTEGRATION.md
 
 **Complexity:** High (8-16 hours, multi-platform testing)
@@ -209,7 +209,7 @@ private void SpeexResampleBuffer(int requiredFrames) {
 - **Planning:** docs/audio/DOSBOX_AUDIO_PORT_PLAN.md (detailed phases)
 - **Speex:** docs/audio/SPEEX_INTEGRATION.md (complete integration guide)
 - **DOSBox:** https://github.com/dosbox-staging/dosbox-staging
-- **Speex:** https://gitlab.xiph.org/xiph/speexdsp
+- **Speex:** https://github.com/xiph/speexdsp
 
 ## Questions to Resolve
 
