@@ -604,7 +604,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     // DAC mode - render current DAC sample
                     if (_sb.Dsp.In.Data.Length > 0) {
                         byte dacSample = _sb.Dsp.In.Data[0];
-                        frame = _sb.DacState.RenderFrame(dacSample, _sb.SpeakerEnabled);
+                        frame = MaybeSilenceFrame(dacSample);
                     }
                     break;
 
@@ -820,7 +820,31 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return new AudioFrame(0.0f, 0.0f);
         }
 
-        return _sb.DacState.RenderFrame(sample, _sb.SpeakerEnabled);
+        // Apply warmup and speaker state - mirrors DOSBox maybe_silence()
+        // Reference: src/hardware/audio/soundblaster.cpp lines 988-1030
+        return MaybeSilenceFrame(sample);
+    }
+    
+    /// <summary>
+    /// Applies warmup and speaker state to a sample frame.
+    /// Mirrors DOSBox maybe_silence() logic.
+    /// Returns silence if still in warmup or speaker disabled.
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030
+    /// </summary>
+    private AudioFrame MaybeSilenceFrame(byte sample) {
+        // Return silent frame if still in warmup
+        if (_sb.Dsp.WarmupRemainingMs > 0) {
+            _sb.Dsp.WarmupRemainingMs--;
+            return new AudioFrame(0.0f, 0.0f);
+        }
+        
+        // Return silent frame if speaker is disabled
+        if (!_sb.SpeakerEnabled) {
+            return new AudioFrame(0.0f, 0.0f);
+        }
+        
+        // Render actual sample
+        return _sb.DacState.RenderFrame(sample, true);
     }
     
     /// <summary>
@@ -832,7 +856,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Dma.RemainSize > 0) {
             byte sample = _sb.Dma.Buf8[DmaBufSize - (int)_sb.Dma.RemainSize];
             _sb.Dma.RemainSize--;
-            return _sb.DacState.RenderFrame(sample, _sb.SpeakerEnabled);
+            return MaybeSilenceFrame(sample);
         }
         
         // Read and decode new byte
@@ -848,7 +872,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     _sb.Adpcm.HaveRef = false;
                     _sb.Adpcm.Reference = buffer[0];
                     _sb.Adpcm.Stepsize = MinAdaptiveStepSize;
-                    return _sb.DacState.RenderFrame(buffer[0], _sb.SpeakerEnabled);
+                    return MaybeSilenceFrame(buffer[0]);
                 }
                 
                 // Decode 1 byte → 4 samples
@@ -864,7 +888,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 _sb.Dma.RemainSize = (uint)(samples.Length - 1);
                 
-                return _sb.DacState.RenderFrame(samples[0], _sb.SpeakerEnabled);
+                return MaybeSilenceFrame(samples[0]);
             }
         } catch (Exception ex) {
             _loggerService.Error(ex, "SOUNDBLASTER: Exception in ADPCM2 decode");
@@ -881,7 +905,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Dma.RemainSize > 0) {
             byte sample = _sb.Dma.Buf8[DmaBufSize - (int)_sb.Dma.RemainSize];
             _sb.Dma.RemainSize--;
-            return _sb.DacState.RenderFrame(sample, _sb.SpeakerEnabled);
+            return MaybeSilenceFrame(sample);
         }
         
         try {
@@ -895,7 +919,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     _sb.Adpcm.HaveRef = false;
                     _sb.Adpcm.Reference = buffer[0];
                     _sb.Adpcm.Stepsize = MinAdaptiveStepSize;
-                    return _sb.DacState.RenderFrame(buffer[0], _sb.SpeakerEnabled);
+                    return MaybeSilenceFrame(buffer[0]);
                 }
                 
                 byte reference = _sb.Adpcm.Reference;
@@ -909,7 +933,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 _sb.Dma.RemainSize = (uint)(samples.Length - 1);
                 
-                return _sb.DacState.RenderFrame(samples[0], _sb.SpeakerEnabled);
+                return MaybeSilenceFrame(samples[0]);
             }
         } catch (Exception ex) {
             _loggerService.Error(ex, "SOUNDBLASTER: Exception in ADPCM3 decode");
@@ -926,7 +950,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Dma.RemainSize > 0) {
             byte sample = _sb.Dma.Buf8[DmaBufSize - (int)_sb.Dma.RemainSize];
             _sb.Dma.RemainSize--;
-            return _sb.DacState.RenderFrame(sample, _sb.SpeakerEnabled);
+            return MaybeSilenceFrame(sample);
         }
         
         try {
@@ -940,7 +964,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     _sb.Adpcm.HaveRef = false;
                     _sb.Adpcm.Reference = buffer[0];
                     _sb.Adpcm.Stepsize = MinAdaptiveStepSize;
-                    return _sb.DacState.RenderFrame(buffer[0], _sb.SpeakerEnabled);
+                    return MaybeSilenceFrame(buffer[0]);
                 }
                 
                 byte reference = _sb.Adpcm.Reference;
@@ -954,7 +978,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 _sb.Dma.RemainSize = (uint)(samples.Length - 1);
                 
-                return _sb.DacState.RenderFrame(samples[0], _sb.SpeakerEnabled);
+                return MaybeSilenceFrame(samples[0]);
             }
         } catch (Exception ex) {
             _loggerService.Error(ex, "SOUNDBLASTER: Exception in ADPCM4 decode");
