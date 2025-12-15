@@ -38,6 +38,11 @@ public sealed class Mixer : IDisposable {
     // Master volume (atomic via Interlocked operations)
     private AudioFrame _masterGain = new(Minus6db, Minus6db);
     
+    // Effect presets - mirrors DOSBox preset system
+    private CrossfeedPreset _crossfeedPreset = CrossfeedPreset.None;
+    private ReverbPreset _reverbPreset = ReverbPreset.None;
+    private ChorusPreset _chorusPreset = ChorusPreset.None;
+    
     // Output buffers - matches DOSBox mixer output_buffer
     private readonly List<AudioFrame> _outputBuffer = new();
     private readonly List<AudioFrame> _reverbAuxBuffer = new();
@@ -128,6 +133,99 @@ public sealed class Mixer : IDisposable {
         set {
             lock (_mixerLock) {
                 _masterGain = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the current crossfeed preset.
+    /// Mirrors DOSBox MIXER_GetCrossfeedPreset().
+    /// </summary>
+    public CrossfeedPreset GetCrossfeedPreset() {
+        lock (_mixerLock) {
+            return _crossfeedPreset;
+        }
+    }
+    
+    /// <summary>
+    /// Sets the crossfeed preset and configures the effect.
+    /// Mirrors DOSBox MIXER_SetCrossfeedPreset().
+    /// </summary>
+    public void SetCrossfeedPreset(CrossfeedPreset preset) {
+        lock (_mixerLock) {
+            if (_crossfeedPreset == preset) {
+                return;
+            }
+            
+            _crossfeedPreset = preset;
+            _doCrossfeed = preset != CrossfeedPreset.None;
+            
+            if (_doCrossfeed) {
+                _loggerService.Information("MIXER: Crossfeed enabled ('{Preset}' preset)", preset);
+            } else {
+                _loggerService.Information("MIXER: Crossfeed disabled");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets the current reverb preset.
+    /// Mirrors DOSBox MIXER_GetReverbPreset().
+    /// </summary>
+    public ReverbPreset GetReverbPreset() {
+        lock (_mixerLock) {
+            return _reverbPreset;
+        }
+    }
+    
+    /// <summary>
+    /// Sets the reverb preset and configures the effect.
+    /// Mirrors DOSBox MIXER_SetReverbPreset().
+    /// </summary>
+    public void SetReverbPreset(ReverbPreset preset) {
+        lock (_mixerLock) {
+            if (_reverbPreset == preset) {
+                return;
+            }
+            
+            _reverbPreset = preset;
+            _doReverb = preset != ReverbPreset.None;
+            
+            if (_doReverb) {
+                _loggerService.Information("MIXER: Reverb enabled ('{Preset}' preset)", preset);
+            } else {
+                _loggerService.Information("MIXER: Reverb disabled");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets the current chorus preset.
+    /// Mirrors DOSBox MIXER_GetChorusPreset().
+    /// </summary>
+    public ChorusPreset GetChorusPreset() {
+        lock (_mixerLock) {
+            return _chorusPreset;
+        }
+    }
+    
+    /// <summary>
+    /// Sets the chorus preset and configures the effect.
+    /// Mirrors DOSBox MIXER_SetChorusPreset().
+    /// </summary>
+    public void SetChorusPreset(ChorusPreset preset) {
+        lock (_mixerLock) {
+            if (_chorusPreset == preset) {
+                return;
+            }
+            
+            _chorusPreset = preset;
+            _doChorus = preset != ChorusPreset.None;
+            
+            if (_doChorus) {
+                _loggerService.Information("MIXER: Chorus enabled ('{Preset}' preset)", preset);
+            } else {
+                _loggerService.Information("MIXER: Chorus disabled");
             }
         }
     }

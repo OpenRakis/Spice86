@@ -86,3 +86,113 @@ public struct StereoLine {
         return !left.Equals(right);
     }
 }
+
+/// <summary>
+/// Crossfeed effect presets - mirrors DOSBox CrossfeedPreset.
+/// Crossfeed mixes a portion of the left channel into the right and vice-versa,
+/// creating a more natural stereo image for headphone listening.
+/// </summary>
+public enum CrossfeedPreset {
+    /// <summary>
+    /// No crossfeed processing.
+    /// </summary>
+    None,
+    
+    /// <summary>
+    /// Light crossfeed (20% strength).
+    /// </summary>
+    Light,
+    
+    /// <summary>
+    /// Normal crossfeed (40% strength) - default.
+    /// </summary>
+    Normal,
+    
+    /// <summary>
+    /// Strong crossfeed (60% strength).
+    /// </summary>
+    Strong
+}
+
+/// <summary>
+/// Reverb effect presets - mirrors DOSBox ReverbPreset.
+/// Reverb simulates acoustic reflections in various room sizes.
+/// </summary>
+public enum ReverbPreset {
+    /// <summary>
+    /// No reverb processing.
+    /// </summary>
+    None,
+    
+    /// <summary>
+    /// Tiny room reverb (very short decay).
+    /// </summary>
+    Tiny,
+    
+    /// <summary>
+    /// Small room reverb.
+    /// </summary>
+    Small,
+    
+    /// <summary>
+    /// Medium room reverb - default.
+    /// </summary>
+    Medium,
+    
+    /// <summary>
+    /// Large hall reverb.
+    /// </summary>
+    Large,
+    
+    /// <summary>
+    /// Huge cathedral-like reverb (long decay).
+    /// </summary>
+    Huge
+}
+
+/// <summary>
+/// Chorus effect presets - mirrors DOSBox ChorusPreset.
+/// Chorus creates a thicker, richer sound by adding delayed copies with pitch variation.
+/// </summary>
+public enum ChorusPreset {
+    /// <summary>
+    /// No chorus processing.
+    /// </summary>
+    None,
+    
+    /// <summary>
+    /// Light chorus effect.
+    /// </summary>
+    Light,
+    
+    /// <summary>
+    /// Normal chorus effect - default.
+    /// </summary>
+    Normal,
+    
+    /// <summary>
+    /// Strong chorus effect.
+    /// </summary>
+    Strong
+}
+
+/// <summary>
+/// Resampling method - mirrors DOSBox ResampleMethod.
+/// Controls how audio is resampled when channel rate differs from mixer rate.
+/// </summary>
+public enum ResampleMethod {
+    /// <summary>
+    /// Use linear interpolation for upsampling, Speex-like for downsampling.
+    /// </summary>
+    LerpUpsampleOrResample,
+    
+    /// <summary>
+    /// Zero-order hold upsampling followed by resampling (vintage DAC sound).
+    /// </summary>
+    ZeroOrderHoldAndResample,
+    
+    /// <summary>
+    /// High-quality Speex-like resampling for both up and down.
+    /// </summary>
+    Resample
+}
