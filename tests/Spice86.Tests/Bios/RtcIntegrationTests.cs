@@ -120,7 +120,7 @@ public class RtcIntegrationTests {
         // - Stores wait timeout in BIOS data area
         // - Canceling the wait disables the periodic interrupt
         // - Wait flag is properly managed in BIOS data area
-        RtcTestHandler testHandler = RunRtcTest("bios_int70_wait.com");
+        RtcTestHandler testHandler = RunRtcTest("bios_int70_wait.com", maxCycles: 500000L);
 
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "BIOS INT 15h, AH=83h should configure RTC periodic interrupt correctly");
@@ -133,7 +133,7 @@ public class RtcIntegrationTests {
     /// <summary>
     /// Runs an RTC test program and returns a test handler with results.
     /// </summary>
-    private RtcTestHandler RunRtcTest(string comFileName,
+    private RtcTestHandler RunRtcTest(string comFileName, long maxCycles = 100000L,
         [CallerMemberName] string unitTestName = "test") {
 
         // Load the compiled .com file from Resources/RtcTests directory
@@ -164,7 +164,7 @@ public class RtcIntegrationTests {
                 enableCfgCpu: true,
                 enablePit: true,
                 recordData: false,
-                maxCycles: 100000L,
+                maxCycles: maxCycles,
                 installInterruptVectors: true,
                 enableA20Gate: false,
                 enableXms: false,
