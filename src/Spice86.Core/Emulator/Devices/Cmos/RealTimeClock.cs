@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -29,6 +30,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private readonly DualPic _dualPic;
     private readonly CmosRegisters _cmosRegisters = new();
     private readonly IPauseHandler _pauseHandler;
+    private readonly EmulationLoopScheduler _scheduler;
 
     private readonly long _startTimestamp = Stopwatch.GetTimestamp();
 
@@ -37,16 +39,15 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private bool _isPaused;
     private bool _disposed;
 
-    private double _nextPeriodicTriggerMs;
-
     /// <summary>
     /// Initializes the RTC/CMOS device with default register values.
     /// </summary>
     public RealTimeClock(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
-        IPauseHandler pauseHandler, bool failOnUnhandledPort, ILoggerService loggerService)
+        EmulationLoopScheduler scheduler, IPauseHandler pauseHandler, bool failOnUnhandledPort, ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         _pauseHandler = pauseHandler;
+        _scheduler = scheduler;
 
         _pauseHandler.Pausing += OnPausing;
         _pauseHandler.Paused += OnPaused;
@@ -71,9 +72,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Handles writes to port 0x70 (address/index selection) and 0x71 (data).
     /// </summary>
     public override void WriteByte(ushort port, byte value) {
-        if (port == CmosPorts.Address || port == CmosPorts.Data) {
-            ProcessPendingPeriodicEvents();
-        }
         switch (port) {
             case CmosPorts.Address:
                 HandleAddressPortWrite(value);
@@ -93,7 +91,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </summary>
     public override byte ReadByte(ushort port) {
         if (port == CmosPorts.Data) {
-            ProcessPendingPeriodicEvents();
             return HandleDataPortRead();
         }
         return base.ReadByte(port);
@@ -159,7 +156,9 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
                     _loggerService.Error("CMOS: Update-ended interrupt not supported (bit 4 set in Register B).");
                 }
                 if (_cmosRegisters.Timer.Enabled && !prevEnabled) {
-                    ScheduleNextPeriodic();
+                    ScheduleNextPeriodicInterrupt();
+                } else if (!_cmosRegisters.Timer.Enabled && prevEnabled) {
+                    CancelPeriodicInterrupts();
                 }
                 return;
 
@@ -308,23 +307,27 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    /// Schedules the next periodic interrupt event.
-    /// Aligns the trigger time to a multiple of the period to maintain consistent timing.
+    /// Schedules the next periodic interrupt event using the EmulationLoopScheduler.
     /// </summary>
-    private void ScheduleNextPeriodic() {
+    private void ScheduleNextPeriodicInterrupt() {
         if (_cmosRegisters.Timer.Delay <= 0) {
             return;
         }
-        double nowMs = GetElapsedMilliseconds();
-        double rem = nowMs % _cmosRegisters.Timer.Delay;
-        _nextPeriodicTriggerMs = nowMs + (_cmosRegisters.Timer.Delay - rem);
+        _scheduler.AddEvent(OnPeriodicInterrupt, _cmosRegisters.Timer.Delay);
     }
 
     /// <summary>
-    /// Processes pending periodic timer events.
+    /// Cancels all pending periodic interrupt events.
+    /// </summary>
+    private void CancelPeriodicInterrupts() {
+        _scheduler.RemoveEvents(OnPeriodicInterrupt);
+    }
+
+    /// <summary>
+    /// Handles the periodic interrupt event.
     /// <para>
-    /// This method is called lazily on I/O port access rather than using
-    /// real-time callbacks. When a periodic event is due:
+    /// This method is called by the EmulationLoopScheduler when the periodic timer expires.
+    /// When called:
     /// 1. Sets interrupt flags in Status Register C (0xC0 = IRQF + PF)
     /// 2. Triggers IRQ 8 via the PIC
     /// 3. Schedules the next event
@@ -333,23 +336,16 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Note: Contraption Zack (music) relies on the 0xC0 flag pattern.
     /// </para>
     /// </summary>
-    private void ProcessPendingPeriodicEvents() {
-        if (_isPaused) {
-            return;
-        }
+    private void OnPeriodicInterrupt(uint value) {
         if (!_cmosRegisters.Timer.Enabled || _cmosRegisters.Timer.Delay <= 0) {
             return;
         }
+        _cmosRegisters[CmosRegisterAddresses.StatusRegisterC] |= 0xC0;
+        _cmosRegisters.Timer.Acknowledged = false;
         double nowMs = GetElapsedMilliseconds();
-        if (nowMs >= _nextPeriodicTriggerMs) {
-            _cmosRegisters[CmosRegisterAddresses.StatusRegisterC] |= 0xC0;
-            _cmosRegisters.Timer.Acknowledged = false;
-            _cmosRegisters.Last.Timer = nowMs;
-            while (nowMs >= _nextPeriodicTriggerMs) {
-                _nextPeriodicTriggerMs += _cmosRegisters.Timer.Delay;
-            }
-            _dualPic.ProcessInterruptRequest(8);
-        }
+        _cmosRegisters.Last.Timer = nowMs;
+        _dualPic.ProcessInterruptRequest(8);
+        ScheduleNextPeriodicInterrupt();
     }
 
     /// <summary>
@@ -425,12 +421,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         long now = Stopwatch.GetTimestamp();
         _pausedAccumulatedTicks += (now - _pauseStartedTicks);
         _isPaused = false;
-        if (_cmosRegisters.Timer.Enabled && _cmosRegisters.Timer.Delay > 0) {
-            double nowMs = GetElapsedMilliseconds();
-            double period = _cmosRegisters.Timer.Delay;
-            double rem = nowMs % period;
-            _nextPeriodicTriggerMs = nowMs + (period - rem);
-        }
     }
 
     public void Dispose() {

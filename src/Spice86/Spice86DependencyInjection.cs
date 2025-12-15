@@ -183,7 +183,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         RealTimeClock realTimeClock = new(state, ioPortDispatcher, dualPic,
-            pauseHandler, configuration.FailOnUnhandledPort, loggerService);
+            emulationLoopScheduler, pauseHandler, configuration.FailOnUnhandledPort, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("RTC/CMOS created...");
