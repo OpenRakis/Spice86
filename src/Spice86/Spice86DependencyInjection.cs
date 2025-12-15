@@ -97,6 +97,12 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Pause handler created...");
         }
 
+        IWallClock wallClock = new WallClock();
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Wall clock created...");
+        }
+
         RecordedDataReader reader = new(dumpContext.DumpDirectory,
             loggerService);
 
@@ -183,7 +189,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         RealTimeClock realTimeClock = new(state, ioPortDispatcher, dualPic,
-            emulationLoopScheduler, pauseHandler, configuration.FailOnUnhandledPort, loggerService);
+            emulationLoopScheduler, pauseHandler, wallClock, configuration.FailOnUnhandledPort, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("RTC/CMOS created...");

@@ -4,13 +4,13 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
 using System;
-using System.Diagnostics;
 
 /// <summary>
 /// Emulates the MC146818 Real Time Clock (RTC) and CMOS RAM.
@@ -31,11 +31,12 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private readonly CmosRegisters _cmosRegisters = new();
     private readonly IPauseHandler _pauseHandler;
     private readonly EmulationLoopScheduler _scheduler;
+    private readonly IWallClock _wallClock;
 
-    private readonly long _startTimestamp = Stopwatch.GetTimestamp();
+    private readonly DateTime _startTime;
 
-    private long _pausedAccumulatedTicks;
-    private long _pauseStartedTicks;
+    private TimeSpan _pausedAccumulatedTime;
+    private DateTime _pauseStartedTime;
     private bool _isPaused;
     private bool _disposed;
 
@@ -43,11 +44,13 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Initializes the RTC/CMOS device with default register values.
     /// </summary>
     public RealTimeClock(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
-        EmulationLoopScheduler scheduler, IPauseHandler pauseHandler, bool failOnUnhandledPort, ILoggerService loggerService)
+        EmulationLoopScheduler scheduler, IPauseHandler pauseHandler, IWallClock wallClock, bool failOnUnhandledPort, ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         _pauseHandler = pauseHandler;
         _scheduler = scheduler;
+        _wallClock = wallClock;
+        _startTime = _wallClock.UtcNow;
 
         _pauseHandler.Pausing += OnPausing;
         _pauseHandler.Paused += OnPaused;
@@ -406,20 +409,20 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Gets elapsed time in milliseconds since RTC initialization, excluding paused time.
     /// <para>
-    /// Uses high-resolution Stopwatch for accurate timing. Pause events are tracked
+    /// Uses IWallClock for timing. Pause events are tracked
     /// to ensure that emulator pause time doesn't advance RTC state.
     /// </para>
     /// </summary>
     private double GetElapsedMilliseconds() {
-        long now = Stopwatch.GetTimestamp();
-        long effectiveTicks = now - _startTimestamp - _pausedAccumulatedTicks;
+        DateTime now = _wallClock.UtcNow;
+        TimeSpan elapsed = now - _startTime - _pausedAccumulatedTime;
         if (_isPaused) {
-            effectiveTicks -= (now - _pauseStartedTicks);
+            elapsed -= (now - _pauseStartedTime);
         }
-        if (effectiveTicks < 0) {
-            effectiveTicks = 0;
+        if (elapsed < TimeSpan.Zero) {
+            elapsed = TimeSpan.Zero;
         }
-        return effectiveTicks * (1000.0 / Stopwatch.Frequency);
+        return elapsed.TotalMilliseconds;
     }
 
     /// <summary>
@@ -436,7 +439,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         if (_isPaused) {
             return;
         }
-        _pauseStartedTicks = Stopwatch.GetTimestamp();
+        _pauseStartedTime = _wallClock.UtcNow;
         _isPaused = true;
     }
 
@@ -447,8 +450,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         if (!_isPaused) {
             return;
         }
-        long now = Stopwatch.GetTimestamp();
-        _pausedAccumulatedTicks += (now - _pauseStartedTicks);
+        DateTime now = _wallClock.UtcNow;
+        _pausedAccumulatedTime += (now - _pauseStartedTime);
         _isPaused = false;
     }
 
