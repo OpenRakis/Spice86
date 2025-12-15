@@ -35,6 +35,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private const int MinPlaybackRateHz = 5000;
     private const int NativeDacRateHz = 45454;
     private const ushort DefaultPlaybackRateHz = 22050;
+    
+    // Maximum frames to queue in channel buffer to prevent overflow
+    // Mirrors DOSBox Staging fix from PR #3915 for issue #3913
+    private const int MaxChannelFrames = 4096;
 
     private enum DspState { Reset, ResetWait, Normal, HighSpeed }
     private enum DmaMode { None, Adpcm2Bit, Adpcm3Bit, Adpcm4Bit, Pcm8Bit, Pcm16Bit, Pcm16BitAliased }
@@ -537,14 +541,29 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private void GenerateFrames(int framesRequested) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SB: GenerateFrames framesRequested={Frames} mode={Mode} dmaLeft={Left}", framesRequested, _sb.Mode, _sb.Dma.Left);
+            _loggerService.Verbose("SB: GenerateFrames framesRequested={Frames} mode={Mode} dmaLeft={Left} bufferSize={BufferSize}", 
+                framesRequested, _sb.Mode, _sb.Dma.Left, _dacChannel.AudioFrames.Count);
         }
+        
         // Callback from mixer requesting audio frames
-        // The mixer calls this with blocksize frames (typically 1024 @ 48kHz)
-        // This matches DOSBox's soundblaster.cpp GenerateFrames pattern
+        // Mirrors DOSBox's soundblaster.cpp GenerateFrames pattern
+        
+        // Prevent buffer overflow - mirrors DOSBox Staging fix from PR #3915
+        // Don't generate more frames if buffer is already full
+        int currentBufferSize = _dacChannel.AudioFrames.Count;
+        if (currentBufferSize >= MaxChannelFrames) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("SB: Channel buffer at max capacity ({Current}/{Max}), skipping frame generation", 
+                    currentBufferSize, MaxChannelFrames);
+            }
+            return;
+        }
+        
+        // Limit frames to generate to prevent overflow
+        int maxFramesToGenerate = Math.Min(framesRequested, MaxChannelFrames - currentBufferSize);
         
         int framesGenerated = 0;
-        while (framesGenerated < framesRequested) {
+        while (framesGenerated < maxFramesToGenerate) {
             AudioFrame frame = new(0.0f, 0.0f);
             
             switch (_sb.Mode) {
@@ -572,14 +591,28 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     }
                     
                     // Check if DMA transfer is now complete
+                    // IRQ is signaled immediately when DMA exhausts, before continuing to next frame
                     if (_sb.Dma.Left == 0 && _sb.Dma.Mode != DmaMode.None) {
                         OnDmaTransferComplete();
+                        
+                        // If not auto-init, stop generating frames after DMA completes
+                        // This prevents generating silence when DMA buffer is exhausted
+                        if (!_sb.Dma.AutoInit) {
+                            framesGenerated++;
+                            _dacChannel.AudioFrames.Add(frame);
+                            break;
+                        }
                     }
                     break;
             }
 
             _dacChannel.AudioFrames.Add(frame);
             framesGenerated++;
+        }
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SB: Generated {Generated}/{Requested} frames, buffer now at {BufferSize}", 
+                framesGenerated, framesRequested, _dacChannel.AudioFrames.Count);
         }
     }
 
@@ -1579,14 +1612,24 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Dma.Channel = dmaChannel;
         _sb.Dma.FirstTransfer = true;
         
+        // Update channel sample rate to match DMA rate
+        // This ensures the mixer can properly resample if needed
+        int dmaRateHz = (int)_sb.FreqHz;
+        if (dmaRateHz > 0 && dmaRateHz != _dacChannel.GetSampleRate()) {
+            _dacChannel.SetSampleRate(dmaRateHz);
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: Updated DAC channel sample rate to {Rate} Hz", dmaRateHz);
+            }
+        }
+        
         // Transition DSP mode to DMA if not already in DMA mode
         if (_sb.Mode != DspMode.Dma) {
             DspChangeMode(DspMode.Dma);
         }
         
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DMA prepared - Mode={Mode}, AutoInit={AutoInit}, Bits={Bits}, Left={Left}, Channel={Channel}",
-                mode, autoInit, _sb.Dma.Bits, _sb.Dma.Left, dmaChannel.ChannelNumber);
+            _loggerService.Debug("SOUNDBLASTER: DMA prepared - Mode={Mode}, AutoInit={AutoInit}, Bits={Bits}, Left={Left}, Channel={Channel}, Rate={Rate}Hz",
+                mode, autoInit, _sb.Dma.Bits, _sb.Dma.Left, dmaChannel.ChannelNumber, dmaRateHz);
         }
     }
     
@@ -1646,6 +1689,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _ => 8
         };
         
+        // Update channel sample rate to match DMA rate
+        // This ensures the mixer can properly resample if needed
+        int dmaRateHz = (int)_sb.FreqHz;
+        if (dmaRateHz > 0 && dmaRateHz != _dacChannel.GetSampleRate()) {
+            _dacChannel.SetSampleRate(dmaRateHz);
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: Updated DAC channel sample rate to {Rate} Hz (stereo={Stereo})", dmaRateHz, stereo);
+            }
+        }
+        
         // Transition to DMA mode
         if (_sb.Mode != DspMode.Dma) {
             DspChangeMode(DspMode.Dma);
@@ -1653,8 +1706,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA prepared (new) - Mode={Mode}, AutoInit={AutoInit}, " +
-                "Stereo={Stereo}, Bits={Bits}, Left={Left}, Channel={Channel}",
-                newMode, autoInit, stereo, _sb.Dma.Bits, _sb.Dma.Left, _sb.Dma.Channel.ChannelNumber);
+                "Stereo={Stereo}, Bits={Bits}, Left={Left}, Channel={Channel}, Rate={Rate}Hz",
+                newMode, autoInit, stereo, _sb.Dma.Bits, _sb.Dma.Left, _sb.Dma.Channel.ChannelNumber, dmaRateHz);
         }
     }
 
