@@ -1061,6 +1061,30 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 break;
 
+            case 0x08: // SB16 ASP get version
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("DSP Unhandled SB16ASP command {Cmd:X} sub {Sub:X}",
+                                        _currentCommand,
+                                        _commandData.Count > 0 ? _commandData[0] : 0);
+                }
+
+                if (_config.SbType == SbType.Sb16 && _commandData.Count >= 1) {
+                    switch (_commandData[0]) {
+                        case 0x03:
+                            DspAddData(0x18); // version ID (??)
+                            break;
+
+                        default:
+                            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                                _loggerService.Debug("DSP Unhandled SB16ASP command {Cmd:X} sub {Sub:X}",
+                                                    _currentCommand,
+                                                    _commandData[0]);
+                            }
+                            break;
+                    }
+                }
+                break;
+
             case 0x0e:
                 // Sb16 ASP set register
                 if (_config.SbType == SbType.Sb16) {
@@ -1107,6 +1131,20 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 break;
 
+            case 0x7f:
+            case 0x1f:
+                if (_config.SbType > SbType.SB1) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                        _loggerService.Error("DSP:Unimplemented auto-init DMA ADPCM command {Cmd:X2}",
+                                            _currentCommand);
+                    }
+                }
+                break;
+
+            case 0x20:
+                DspAddData(0x7f); // Fake silent input for Creative parrot
+                break;
+
             case 0x24:
                 // Single Cycle 8-Bit DMA ADC
                 _sb.Dma.Left = (uint)(1 + _commandData[0] + (_commandData[1] << 8));
@@ -1115,6 +1153,36 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     _loggerService.Debug("SB: Single-cycle 8-bit ADC size={Size}", _sb.Dma.Left);
                 }
                 DspPrepareDmaOld(DmaMode.Pcm8Bit, false, true);
+                break;
+
+            case 0x30:
+            case 0x31:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("DSP:Unimplemented MIDI I/O command {Cmd:X2}",
+                                        _currentCommand);
+                }
+                break;
+
+            case 0x34:
+            case 0x35:
+            case 0x36:
+            case 0x37:
+                if (_config.SbType > SbType.SB1) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                        _loggerService.Error("DSP:Unimplemented MIDI UART command {Cmd:X2}",
+                                            _currentCommand);
+                    }
+                }
+                break;
+
+            case 0x38:
+                // Write to SB MIDI Output
+                if (_sb.MidiEnabled && _commandData.Count >= 1) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                        _loggerService.Verbose("SB: MIDI output byte 0x{Byte:X2}", _commandData[0]);
+                    }
+                    // TODO: Forward to MIDI subsystem
+                }
                 break;
 
             case 0x40:
@@ -1189,6 +1257,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0x80:
                 // Silence DAC
+                break;
+
+            case 0x98:
+            case 0x99: // Documented only for DSP 2.x and 3.x
+            case 0xa0:
+            case 0xa8: // Documented only for DSP 3.x
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("DSP:Unimplemented input command {Cmd:X2}",
+                                        _currentCommand);
+                }
                 break;
 
             // Generic 8/16-bit DMA commands (SB16 only) - 0xB0-0xCF
@@ -1358,6 +1436,20 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0xe4:
                 // Write Test Register
                 _sb.Dsp.TestRegister = _commandData[0];
+                break;
+
+            case 0xe7: // ESS detect/read config
+                switch (_sb.EssType) {
+                    case EssType.None:
+                        break;
+
+                    case EssType.Es1688:
+                        DspFlushData();
+                        // Determined via Windows driver debugging.
+                        DspAddData(0x68);
+                        DspAddData(0x80 | 0x09);
+                        break;
+                }
                 break;
 
             case 0xe8:
