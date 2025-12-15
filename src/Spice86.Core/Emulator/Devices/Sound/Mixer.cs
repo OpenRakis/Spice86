@@ -6,6 +6,7 @@ using Spice86.Shared.Interfaces;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using HighPassFilter = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
 
 /// <summary>
 /// Central audio mixer that runs in its own thread and produces final mixed output.
@@ -80,6 +81,14 @@ public sealed class Mixer : IDisposable {
     private bool _doCrossfeed = false;
     private const float CrossfeedStrength = 0.3f; // 30% mix to opposite channel
     
+    // High-pass filters - mirrors DOSBox HighpassFilter
+    // Used on reverb input and master output
+    private readonly HighPassFilter[] _reverbHighPassFilter;
+    private readonly HighPassFilter[] _masterHighPassFilter;
+    private const int HighPassFilterOrder = 2; // 2nd-order Butterworth
+    private const float ReverbHighPassCutoffHz = 120.0f; // Low-frequency cutoff for reverb
+    private const float MasterHighPassCutoffHz = 3.0f; // Very low DC-blocking filter for master
+    
     // Final output queue is not used; mixer writes directly
     
     private bool _disposed;
@@ -90,6 +99,19 @@ public sealed class Mixer : IDisposable {
         
         // Create the audio player with our sample rate and blocksize
         _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize);
+        
+        // Initialize high-pass filters (2 channels - left and right)
+        // Mirrors DOSBox HighpassFilter = std::array<Iir::Butterworth::HighPass<2>, 2>
+        _reverbHighPassFilter = new HighPassFilter[2];
+        _masterHighPassFilter = new HighPassFilter[2];
+        
+        for (int i = 0; i < 2; i++) {
+            _reverbHighPassFilter[i] = new HighPassFilter(HighPassFilterOrder);
+            _reverbHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, ReverbHighPassCutoffHz);
+            
+            _masterHighPassFilter[i] = new HighPassFilter(HighPassFilterOrder);
+            _masterHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, MasterHighPassCutoffHz);
+        }
         
         // Initialize effect delay buffers with silence
         for (int i = 0; i < ReverbDelayFrames; i++) {
@@ -527,6 +549,17 @@ public sealed class Mixer : IDisposable {
 
         // Apply effects pipeline - mirrors DOSBox effects order
         if (_doReverb) {
+            // Apply high-pass filter to reverb aux buffer before reverb processing
+            // Mirrors DOSBox mixer.cpp:2453-2462
+            for (int i = 0; i < _reverbAuxBuffer.Count; i++) {
+                AudioFrame frame = _reverbAuxBuffer[i];
+                frame = new AudioFrame(
+                    _reverbHighPassFilter[0].Filter(frame.Left),
+                    _reverbHighPassFilter[1].Filter(frame.Right)
+                );
+                _reverbAuxBuffer[i] = frame;
+            }
+            
             ApplyReverb();
         }
         
@@ -536,6 +569,17 @@ public sealed class Mixer : IDisposable {
         
         if (_doCrossfeed) {
             ApplyCrossfeed();
+        }
+        
+        // Apply high-pass filter to master output - mirrors DOSBox mixer.cpp:2488-2491
+        // This is a DC-blocking filter to prevent low-frequency buildup
+        for (int i = 0; i < _outputBuffer.Count; i++) {
+            AudioFrame frame = _outputBuffer[i];
+            frame = new AudioFrame(
+                _masterHighPassFilter[0].Filter(frame.Left),
+                _masterHighPassFilter[1].Filter(frame.Right)
+            );
+            _outputBuffer[i] = frame;
         }
         
         // Apply compressor if enabled - mirrors DOSBox compressor

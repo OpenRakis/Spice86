@@ -35,6 +35,15 @@ public sealed class MixerChannel {
     private double _lerpPhase;
     private AudioFrame _lerpPrevFrame;
     private AudioFrame _lerpNextFrame;
+    
+    // Zero-order-hold upsampler state - mirrors DOSBox zoh_upsampler
+    private bool _doZohUpsample;
+    private float _zohStep;
+    private float _zohPos;
+    private int _zohTargetRateHz;
+    
+    // Resample method - mirrors DOSBox resample_method
+    private ResampleMethod _resampleMethod = ResampleMethod.LerpUpsampleOrResample;
 
     // Channel mapping
     private StereoLine _outputMap = new() { Left = LineIndex.Left, Right = LineIndex.Right };
@@ -168,12 +177,83 @@ public sealed class MixerChannel {
     
     /// <summary>
     /// Initializes the linear interpolation upsampler state.
-    /// Mirrors DOSBox InitLerpUpsamplerState().
+    /// Mirrors DOSBox InitLerpUpsamplerState() from mixer.cpp:1590
     /// </summary>
     private void InitLerpUpsamplerState() {
         _lerpPhase = 0.0;
         _lerpPrevFrame = new AudioFrame(0.0f, 0.0f);
         _lerpNextFrame = new AudioFrame(0.0f, 0.0f);
+    }
+    
+    /// <summary>
+    /// Initializes the zero-order-hold upsampler state.
+    /// Mirrors DOSBox InitZohUpsamplerState() from mixer.cpp:1577
+    /// </summary>
+    private void InitZohUpsamplerState() {
+        if (_sampleRateHz >= _zohTargetRateHz) {
+            throw new InvalidOperationException("ZoH upsampler requires channel rate < target rate");
+        }
+        
+        _zohStep = (float)_sampleRateHz / _zohTargetRateHz;
+        _zohPos = 0.0f;
+    }
+    
+    /// <summary>
+    /// Sets the zero-order-hold upsampler target rate.
+    /// Mirrors DOSBox SetZeroOrderHoldUpsamplerTargetRate() from mixer.cpp:1558
+    /// </summary>
+    public void SetZeroOrderHoldUpsamplerTargetRate(int targetRateHz) {
+        if (targetRateHz <= 0) {
+            throw new ArgumentException("Target rate must be positive", nameof(targetRateHz));
+        }
+        
+        lock (_mutex) {
+            _zohTargetRateHz = targetRateHz;
+            ConfigureResampler();
+        }
+    }
+    
+    /// <summary>
+    /// Sets the resample method for this channel.
+    /// Mirrors DOSBox SetResampleMethod() from mixer.cpp:1604
+    /// </summary>
+    public void SetResampleMethod(ResampleMethod method) {
+        lock (_mutex) {
+            _resampleMethod = method;
+            ConfigureResampler();
+        }
+    }
+    
+    /// <summary>
+    /// Configures the resampler based on channel rate and resample method.
+    /// Mirrors DOSBox ConfigureResampler() from mixer.cpp:935
+    /// </summary>
+    private void ConfigureResampler() {
+        // Reset all resampling flags
+        _doLerpUpsample = false;
+        _doZohUpsample = false;
+        
+        switch (_resampleMethod) {
+            case ResampleMethod.LerpUpsampleOrResample:
+                if (_sampleRateHz < _mixerSampleRateHz) {
+                    _doLerpUpsample = true;
+                    InitLerpUpsamplerState();
+                }
+                // Note: Speex downsampling not implemented yet
+                break;
+                
+            case ResampleMethod.ZeroOrderHoldAndResample:
+                if (_sampleRateHz < _zohTargetRateHz) {
+                    _doZohUpsample = true;
+                    InitZohUpsamplerState();
+                }
+                // Note: Speex resampling not implemented yet
+                break;
+                
+            case ResampleMethod.Resample:
+                // Note: Speex-only resampling not implemented yet
+                break;
+        }
     }
 
     /// <summary>
@@ -564,20 +644,56 @@ public sealed class MixerChannel {
     }
 
     /// <summary>
-    /// Adds mono 8-bit unsigned samples.
+    /// Converts and adds a single frame with optional ZoH upsampling.
+    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() logic from mixer.cpp:1871
+    /// </summary>
+    private void ConvertSamplesAndMaybeZohUpsample(AudioFrame frame, bool isStereo) {
+        _prevFrame = _nextFrame;
+        _nextFrame = frame;
+        
+        AudioFrame frameWithGain;
+        if (isStereo) {
+            frameWithGain = new AudioFrame(
+                _prevFrame[(int)_channelMap.Left],
+                _prevFrame[(int)_channelMap.Right]
+            );
+        } else {
+            frameWithGain = new AudioFrame(_prevFrame[(int)_channelMap.Left]);
+        }
+        
+        frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
+        
+        AudioFrame outFrame = new();
+        outFrame[(int)_outputMap.Left] = frameWithGain.Left;
+        outFrame[(int)_outputMap.Right] = frameWithGain.Right;
+        
+        AudioFrames.Add(outFrame);
+    }
+    
+    /// <summary>
+    /// Adds mono 8-bit unsigned samples with optional ZoH upsampling.
     /// </summary>
     public void AddSamples_m8(int numFrames, ReadOnlySpan<byte> data) {
         lock (_mutex) {
-            for (int i = 0; i < numFrames && i < data.Length; i++) {
-                float sample = LookupTables.U8To16[data[i]];
-                AudioFrame frame = new(sample * _combinedVolumeGain.Left, 
-                                      sample * _combinedVolumeGain.Right);
+            int pos = 0;
+            while (pos < numFrames && pos < data.Length) {
+                float sample = LookupTables.U8To16[data[pos]];
+                AudioFrame frame = new(sample, sample);
                 
-                AudioFrame outFrame = new();
-                outFrame[(int)_outputMap.Left] = frame.Left;
-                outFrame[(int)_outputMap.Right] = frame.Right;
+                ConvertSamplesAndMaybeZohUpsample(frame, false);
                 
-                AudioFrames.Add(outFrame);
+                if (_doZohUpsample) {
+                    _zohPos += _zohStep;
+                    while (_zohPos > 1.0f) {
+                        _zohPos -= 1.0f;
+                        pos++;
+                        if (pos >= numFrames || pos >= data.Length) {
+                            break;
+                        }
+                    }
+                } else {
+                    pos++;
+                }
             }
             
             _lastSamplesWereStereo = false;
@@ -585,20 +701,29 @@ public sealed class MixerChannel {
     }
 
     /// <summary>
-    /// Adds mono 16-bit signed samples.
+    /// Adds mono 16-bit signed samples with optional ZoH upsampling.
     /// </summary>
     public void AddSamples_m16(int numFrames, ReadOnlySpan<short> data) {
         lock (_mutex) {
-            for (int i = 0; i < numFrames && i < data.Length; i++) {
-                float sample = data[i];
-                AudioFrame frame = new(sample * _combinedVolumeGain.Left,
-                                      sample * _combinedVolumeGain.Right);
+            int pos = 0;
+            while (pos < numFrames && pos < data.Length) {
+                float sample = data[pos];
+                AudioFrame frame = new(sample, sample);
                 
-                AudioFrame outFrame = new();
-                outFrame[(int)_outputMap.Left] = frame.Left;
-                outFrame[(int)_outputMap.Right] = frame.Right;
+                ConvertSamplesAndMaybeZohUpsample(frame, false);
                 
-                AudioFrames.Add(outFrame);
+                if (_doZohUpsample) {
+                    _zohPos += _zohStep;
+                    while (_zohPos > 1.0f) {
+                        _zohPos -= 1.0f;
+                        pos++;
+                        if (pos >= numFrames || pos >= data.Length) {
+                            break;
+                        }
+                    }
+                } else {
+                    pos++;
+                }
             }
             
             _lastSamplesWereStereo = false;
@@ -606,22 +731,30 @@ public sealed class MixerChannel {
     }
 
     /// <summary>
-    /// Adds stereo 16-bit signed samples.
+    /// Adds stereo 16-bit signed samples with optional ZoH upsampling.
     /// </summary>
     public void AddSamples_s16(int numFrames, ReadOnlySpan<short> data) {
         lock (_mutex) {
-            for (int i = 0; i < numFrames && (i * 2 + 1) < data.Length; i++) {
-                float left = data[i * 2];
-                float right = data[i * 2 + 1];
+            int pos = 0;
+            while (pos < numFrames && (pos * 2 + 1) < data.Length) {
+                float left = data[pos * 2];
+                float right = data[pos * 2 + 1];
+                AudioFrame frame = new(left, right);
                 
-                AudioFrame frame = new(left * _combinedVolumeGain.Left,
-                                      right * _combinedVolumeGain.Right);
+                ConvertSamplesAndMaybeZohUpsample(frame, true);
                 
-                AudioFrame outFrame = new();
-                outFrame[(int)_outputMap.Left] = frame[(int)_channelMap.Left];
-                outFrame[(int)_outputMap.Right] = frame[(int)_channelMap.Right];
-                
-                AudioFrames.Add(outFrame);
+                if (_doZohUpsample) {
+                    _zohPos += _zohStep;
+                    while (_zohPos > 1.0f) {
+                        _zohPos -= 1.0f;
+                        pos++;
+                        if (pos >= numFrames || (pos * 2 + 1) >= data.Length) {
+                            break;
+                        }
+                    }
+                } else {
+                    pos++;
+                }
             }
             
             _lastSamplesWereStereo = true;
@@ -629,21 +762,30 @@ public sealed class MixerChannel {
     }
 
     /// <summary>
-    /// Adds mono 32-bit float samples.
+    /// Adds mono 32-bit float samples with optional ZoH upsampling.
     /// Mirrors DOSBox AddSamples_mfloat() from mixer.cpp:2287
     /// </summary>
     public void AddSamples_mfloat(int numFrames, ReadOnlySpan<float> data) {
         lock (_mutex) {
-            for (int i = 0; i < numFrames && i < data.Length; i++) {
-                float sample = data[i] * 32768.0f; // Convert normalized float to 16-bit range
-                AudioFrame frame = new(sample * _combinedVolumeGain.Left,
-                                      sample * _combinedVolumeGain.Right);
+            int pos = 0;
+            while (pos < numFrames && pos < data.Length) {
+                float sample = data[pos] * 32768.0f; // Convert normalized float to 16-bit range
+                AudioFrame frame = new(sample, sample);
                 
-                AudioFrame outFrame = new();
-                outFrame[(int)_outputMap.Left] = frame.Left;
-                outFrame[(int)_outputMap.Right] = frame.Right;
+                ConvertSamplesAndMaybeZohUpsample(frame, false);
                 
-                AudioFrames.Add(outFrame);
+                if (_doZohUpsample) {
+                    _zohPos += _zohStep;
+                    while (_zohPos > 1.0f) {
+                        _zohPos -= 1.0f;
+                        pos++;
+                        if (pos >= numFrames || pos >= data.Length) {
+                            break;
+                        }
+                    }
+                } else {
+                    pos++;
+                }
             }
             
             _lastSamplesWereStereo = false;
@@ -651,23 +793,31 @@ public sealed class MixerChannel {
     }
     
     /// <summary>
-    /// Adds stereo 32-bit float samples.
+    /// Adds stereo 32-bit float samples with optional ZoH upsampling.
     /// Mirrors DOSBox AddSamples_sfloat() from mixer.cpp:2292
     /// </summary>
     public void AddSamples_sfloat(int numFrames, ReadOnlySpan<float> data) {
         lock (_mutex) {
-            for (int i = 0; i < numFrames && (i * 2 + 1) < data.Length; i++) {
-                float left = data[i * 2] * 32768.0f; // Convert normalized float to 16-bit range
-                float right = data[i * 2 + 1] * 32768.0f;
+            int pos = 0;
+            while (pos < numFrames && (pos * 2 + 1) < data.Length) {
+                float left = data[pos * 2] * 32768.0f; // Convert normalized float to 16-bit range
+                float right = data[pos * 2 + 1] * 32768.0f;
+                AudioFrame frame = new(left, right);
                 
-                AudioFrame frame = new(left * _combinedVolumeGain.Left,
-                                      right * _combinedVolumeGain.Right);
+                ConvertSamplesAndMaybeZohUpsample(frame, true);
                 
-                AudioFrame outFrame = new();
-                outFrame[(int)_outputMap.Left] = frame[(int)_channelMap.Left];
-                outFrame[(int)_outputMap.Right] = frame[(int)_channelMap.Right];
-                
-                AudioFrames.Add(outFrame);
+                if (_doZohUpsample) {
+                    _zohPos += _zohStep;
+                    while (_zohPos > 1.0f) {
+                        _zohPos -= 1.0f;
+                        pos++;
+                        if (pos >= numFrames || (pos * 2 + 1) >= data.Length) {
+                            break;
+                        }
+                    }
+                } else {
+                    pos++;
+                }
             }
             
             _lastSamplesWereStereo = true;
@@ -675,21 +825,28 @@ public sealed class MixerChannel {
     }
 
     /// <summary>
-    /// Adds audio frames directly.
+    /// Adds audio frames directly with optional ZoH upsampling.
     /// </summary>
     public void AddAudioFrames(ReadOnlySpan<AudioFrame> frames) {
         lock (_mutex) {
-            foreach (AudioFrame frame in frames) {
-                AudioFrame scaledFrame = new(
-                    frame.Left * _combinedVolumeGain.Left,
-                    frame.Right * _combinedVolumeGain.Right
-                );
+            int pos = 0;
+            while (pos < frames.Length) {
+                AudioFrame frame = frames[pos];
                 
-                AudioFrame outFrame = new();
-                outFrame[(int)_outputMap.Left] = scaledFrame[(int)_channelMap.Left];
-                outFrame[(int)_outputMap.Right] = scaledFrame[(int)_channelMap.Right];
+                ConvertSamplesAndMaybeZohUpsample(frame, true);
                 
-                AudioFrames.Add(outFrame);
+                if (_doZohUpsample) {
+                    _zohPos += _zohStep;
+                    while (_zohPos > 1.0f) {
+                        _zohPos -= 1.0f;
+                        pos++;
+                        if (pos >= frames.Length) {
+                            break;
+                        }
+                    }
+                } else {
+                    pos++;
+                }
             }
             
             _lastSamplesWereStereo = true;
