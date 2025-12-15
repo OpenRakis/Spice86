@@ -351,9 +351,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    /// Schedules the next periodic interrupt event using the EmulationLoopScheduler.
-    /// Note: Currently using polling approach via ProcessPendingPeriodicEvents() for reliability.
-    /// Scheduler integration kept for future use but not actively scheduling events.
+    /// Schedules the next periodic interrupt event using both polling and EmulationLoopScheduler.
+    /// Polling ensures interrupts fire when CMOS is accessed, scheduler ensures they fire even without I/O.
     /// </summary>
     private void ScheduleNextPeriodicInterrupt() {
         if (_cmosRegisters.Timer.Delay <= 0) {
@@ -364,17 +363,36 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         }
         double nowMs = GetElapsedMilliseconds();
         _nextPeriodicTriggerMs = nowMs + _cmosRegisters.Timer.Delay;
+        _scheduler.AddEvent(_cmosRegisters.Timer.Delay, OnPeriodicInterrupt);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("RTC: Next periodic interrupt scheduled for {Time:F3}ms (delay={Delay:F3}ms)", _nextPeriodicTriggerMs, _cmosRegisters.Timer.Delay);
+            _loggerService.Debug("RTC: Next periodic interrupt scheduled for {Time:F3}ms (delay={Delay:F3}ms) via both polling and scheduler", _nextPeriodicTriggerMs, _cmosRegisters.Timer.Delay);
         }
     }
 
     /// <summary>
-    /// Cancels all pending periodic interrupt events.
-    /// Currently a no-op since we use polling approach via ProcessPendingPeriodicEvents().
+    /// Cancels all pending periodic interrupt events from both polling and scheduler.
     /// </summary>
     private void CancelPeriodicInterrupts() {
         _nextPeriodicTriggerMs = double.MaxValue;
+        _scheduler.RemoveEventsOfType(OnPeriodicInterrupt);
+    }
+    
+    /// <summary>
+    /// Callback invoked by EmulationLoopScheduler when periodic interrupt should fire.
+    /// Triggers the interrupt and schedules the next one.
+    /// </summary>
+    private void OnPeriodicInterrupt() {
+        if (!_cmosRegisters.Timer.Enabled || _isPaused) {
+            return;
+        }
+        _cmosRegisters[CmosRegisterAddresses.StatusRegisterC] |= 0xC0;
+        _cmosRegisters.Timer.Acknowledged = false;
+        _cmosRegisters.Last.Timer = GetElapsedMilliseconds();
+        _dualPic.ProcessInterruptRequest(8);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("RTC: Periodic interrupt fired via scheduler, raising IRQ 8");
+        }
+        ScheduleNextPeriodicInterrupt();
     }
 
     /// <summary>
