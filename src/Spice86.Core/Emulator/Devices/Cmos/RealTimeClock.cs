@@ -60,6 +60,13 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         _cmosRegisters[0x15] = 0x80;
         _cmosRegisters[0x16] = 0x02;
 
+        byte initialDiv = (byte)(0x26 & 0x0F);
+        if (initialDiv <= 2) {
+            initialDiv += 7;
+        }
+        _cmosRegisters.Timer.Divider = initialDiv;
+        RecalculatePeriodicDelay();
+
         ioPortDispatcher.AddIOPortHandler(CmosPorts.Address, this);
         ioPortDispatcher.AddIOPortHandler(CmosPorts.Data, this);
 
