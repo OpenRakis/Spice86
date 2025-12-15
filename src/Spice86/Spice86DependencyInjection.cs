@@ -355,7 +355,7 @@ public class Spice86DependencyInjection : IDisposable {
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SBPro2);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
         var soundBlaster = new SoundBlaster(ioPortDispatcher,
-            state, dmaSystem, dualPic, mixer, loggerService,
+            state, dmaSystem, dualPic, mixer, oplChannel, loggerService,
             emulationLoopScheduler, emulatedClock,
             soundBlasterHardwareConfig);
         var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,

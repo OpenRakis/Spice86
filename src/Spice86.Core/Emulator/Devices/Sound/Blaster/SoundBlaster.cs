@@ -453,6 +453,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private readonly MixerChannel _dacChannel;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
+    private readonly HardwareMixer _hardwareMixer;
 
     private Queue<byte> _outputData = new Queue<byte>();
     private List<byte> _commandData = new List<byte>();
@@ -466,6 +467,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         DmaBus dmaSystem,
         DualPic dualPic,
         Mixer mixer,
+        MixerChannel oplMixerChannel,
         ILoggerService loggerService,
         EmulationLoopScheduler scheduler,
         IEmulatedClock clock,
@@ -514,6 +516,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         _dacChannel = _mixer.AddChannel(GenerateFrames, (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
         _dacChannel.Enable(true);
+
+        _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, oplMixerChannel, loggerService);
+        _hardwareMixer.Reset();
 
         InitSpeakerState();
         InitPortHandlers(ioPortDispatcher);
@@ -906,10 +911,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 return 0xFF;
 
             case 0x04:
-                return _sb.Mixer.Index;
+                return (byte)_hardwareMixer.CurrentAddress;
 
             case 0x05:
-                return ReadMixerData();
+                return _hardwareMixer.ReadData();
 
             case 0x06:
             case 0x0C:
@@ -929,11 +934,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 break;
 
             case 0x04:
-                _sb.Mixer.Index = value;
+                _hardwareMixer.CurrentAddress = value;
                 break;
 
             case 0x05:
-                WriteMixerData(value);
+                _hardwareMixer.Write(value);
                 break;
 
             case 0x07:
@@ -1715,35 +1720,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
     }
 
-    private byte ReadMixerData() {
-        // Implementation from previous code block
-        return 0x0a;
-    }
 
-    private void WriteMixerData(byte value) {
-        // Implementation from previous code block
-    }
-
-    private byte ReadSbProVolume(byte[] volume) {
-        return (byte)((((volume[0] & 0x1e) << 3) | ((volume[1] & 0x1e) >> 1)) |
-            ((_config.SbType == SbType.SBPro1 || _config.SbType == SbType.SBPro2) ? 0x11 : 0x00));
-    }
-
-    private void WriteSbProVolume(byte[] dest, byte value) {
-        dest[0] = (byte)(((value & 0xf0) >> 3) | (_config.SbType == SbType.Sb16 ? 1 : 3));
-        dest[1] = (byte)(((value & 0x0f) << 1) | (_config.SbType == SbType.Sb16 ? 1 : 3));
-    }
-
-    private void MixerReset() {
-        const byte DefaultVolume = 31;
-        _sb.Mixer.Fm[0] = DefaultVolume;
-        _sb.Mixer.Fm[1] = DefaultVolume;
-        _sb.Mixer.Cda[0] = DefaultVolume;
-        _sb.Mixer.Cda[1] = DefaultVolume;
-        _sb.Mixer.Dac[0] = DefaultVolume;
-        _sb.Mixer.Dac[1] = DefaultVolume;
-        _sb.Mixer.Master[0] = DefaultVolume;
-        _sb.Mixer.Master[1] = DefaultVolume;
-    }
 
 }
