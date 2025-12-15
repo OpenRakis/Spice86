@@ -49,6 +49,20 @@ public sealed class MixerChannel {
     // State flags
     public bool IsEnabled { get; private set; }
     private bool _lastSamplesWereStereo;
+    
+    // Effect sends - mirrors DOSBox per-channel effect state
+    private bool _doCrossfeed;
+    private float _crossfeedStrength;
+    private float _crossfeedPanLeft;
+    private float _crossfeedPanRight;
+    
+    private bool _doReverbSend;
+    private float _reverbLevel;
+    private float _reverbSendGain;
+    
+    private bool _doChorusSend;
+    private float _chorusLevel;
+    private float _chorusSendGain;
 
     public MixerChannel(
         Action<int> handler,
@@ -68,6 +82,50 @@ public sealed class MixerChannel {
     public string GetName() {
         lock (_mutex) {
             return _name;
+        }
+    }
+    
+    /// <summary>
+    /// Gets whether reverb send is enabled for this channel.
+    /// </summary>
+    public bool DoReverbSend {
+        get {
+            lock (_mutex) {
+                return _doReverbSend;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets the reverb send gain for this channel.
+    /// </summary>
+    public float ReverbSendGain {
+        get {
+            lock (_mutex) {
+                return _reverbSendGain;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets whether chorus send is enabled for this channel.
+    /// </summary>
+    public bool DoChorusSend {
+        get {
+            lock (_mutex) {
+                return _doChorusSend;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets the chorus send gain for this channel.
+    /// </summary>
+    public float ChorusSendGain {
+        get {
+            lock (_mutex) {
+                return _chorusSendGain;
+            }
         }
     }
 
@@ -346,6 +404,131 @@ public sealed class MixerChannel {
     }
 
     /// <summary>
+    /// Sets the crossfeed strength for this channel.
+    /// Mirrors DOSBox SetCrossfeedStrength() from mixer.cpp:1617
+    /// </summary>
+    public void SetCrossfeedStrength(float strength) {
+        lock (_mutex) {
+            _crossfeedStrength = Math.Clamp(strength, 0.0f, 1.0f);
+            _doCrossfeed = HasFeature(ChannelFeature.Stereo) && _crossfeedStrength > 0.0f;
+            
+            if (!_doCrossfeed) {
+                _crossfeedStrength = 0.0f;
+                return;
+            }
+            
+            // Map [0, 1] range to [0.5, 0] - mirrors DOSBox logic
+            float p = (1.0f - _crossfeedStrength) / 2.0f;
+            const float center = 0.5f;
+            _crossfeedPanLeft = center - p;
+            _crossfeedPanRight = center + p;
+        }
+    }
+    
+    /// <summary>
+    /// Gets the crossfeed strength for this channel.
+    /// Mirrors DOSBox GetCrossfeedStrength() from mixer.cpp:1650
+    /// </summary>
+    public float GetCrossfeedStrength() {
+        lock (_mutex) {
+            return _crossfeedStrength;
+        }
+    }
+    
+    /// <summary>
+    /// Sets the reverb send level for this channel.
+    /// Mirrors DOSBox SetReverbLevel() from mixer.cpp:1656
+    /// </summary>
+    public void SetReverbLevel(float level) {
+        lock (_mutex) {
+            const float levelMin = 0.0f;
+            const float levelMax = 1.0f;
+            const float levelMinDb = -40.0f;
+            const float levelMaxDb = 0.0f;
+            
+            level = Math.Clamp(level, levelMin, levelMax);
+            _doReverbSend = HasFeature(ChannelFeature.ReverbSend) && level > levelMin;
+            
+            if (!_doReverbSend) {
+                _reverbLevel = levelMin;
+                _reverbSendGain = 0.0f;
+                return;
+            }
+            
+            _reverbLevel = level;
+            
+            // Remap level to decibels and convert to gain
+            float levelDb = Remap(levelMin, levelMax, levelMinDb, levelMaxDb, level);
+            _reverbSendGain = DecibelToGain(levelDb);
+        }
+    }
+    
+    /// <summary>
+    /// Gets the reverb send level for this channel.
+    /// Mirrors DOSBox GetReverbLevel() from mixer.cpp:1694
+    /// </summary>
+    public float GetReverbLevel() {
+        lock (_mutex) {
+            return _reverbLevel;
+        }
+    }
+    
+    /// <summary>
+    /// Sets the chorus send level for this channel.
+    /// Mirrors DOSBox SetChorusLevel() from mixer.cpp:1700
+    /// </summary>
+    public void SetChorusLevel(float level) {
+        lock (_mutex) {
+            const float levelMin = 0.0f;
+            const float levelMax = 1.0f;
+            const float levelMinDb = -24.0f;
+            const float levelMaxDb = 0.0f;
+            
+            level = Math.Clamp(level, levelMin, levelMax);
+            _doChorusSend = HasFeature(ChannelFeature.ChorusSend) && level > levelMin;
+            
+            if (!_doChorusSend) {
+                _chorusLevel = levelMin;
+                _chorusSendGain = 0.0f;
+                return;
+            }
+            
+            _chorusLevel = level;
+            
+            // Remap level to decibels and convert to gain
+            float levelDb = Remap(levelMin, levelMax, levelMinDb, levelMaxDb, level);
+            _chorusSendGain = DecibelToGain(levelDb);
+        }
+    }
+    
+    /// <summary>
+    /// Gets the chorus send level for this channel.
+    /// Mirrors DOSBox GetChorusLevel() from mixer.cpp:1738
+    /// </summary>
+    public float GetChorusLevel() {
+        lock (_mutex) {
+            return _chorusLevel;
+        }
+    }
+    
+    /// <summary>
+    /// Remaps a value from one range to another.
+    /// Helper for effect level calculations.
+    /// </summary>
+    private static float Remap(float inMin, float inMax, float outMin, float outMax, float value) {
+        float normalized = (value - inMin) / (inMax - inMin);
+        return outMin + normalized * (outMax - outMin);
+    }
+    
+    /// <summary>
+    /// Converts decibel value to linear gain.
+    /// Helper for effect level calculations.
+    /// </summary>
+    private static float DecibelToGain(float db) {
+        return (float)Math.Pow(10.0, db / 20.0);
+    }
+
+    /// <summary>
     /// Adds silence frames to fill the buffer.
     /// </summary>
     public void AddSilence() {
@@ -430,6 +613,52 @@ public sealed class MixerChannel {
             for (int i = 0; i < numFrames && (i * 2 + 1) < data.Length; i++) {
                 float left = data[i * 2];
                 float right = data[i * 2 + 1];
+                
+                AudioFrame frame = new(left * _combinedVolumeGain.Left,
+                                      right * _combinedVolumeGain.Right);
+                
+                AudioFrame outFrame = new();
+                outFrame[(int)_outputMap.Left] = frame[(int)_channelMap.Left];
+                outFrame[(int)_outputMap.Right] = frame[(int)_channelMap.Right];
+                
+                AudioFrames.Add(outFrame);
+            }
+            
+            _lastSamplesWereStereo = true;
+        }
+    }
+
+    /// <summary>
+    /// Adds mono 32-bit float samples.
+    /// Mirrors DOSBox AddSamples_mfloat() from mixer.cpp:2287
+    /// </summary>
+    public void AddSamples_mfloat(int numFrames, ReadOnlySpan<float> data) {
+        lock (_mutex) {
+            for (int i = 0; i < numFrames && i < data.Length; i++) {
+                float sample = data[i] * 32768.0f; // Convert normalized float to 16-bit range
+                AudioFrame frame = new(sample * _combinedVolumeGain.Left,
+                                      sample * _combinedVolumeGain.Right);
+                
+                AudioFrame outFrame = new();
+                outFrame[(int)_outputMap.Left] = frame.Left;
+                outFrame[(int)_outputMap.Right] = frame.Right;
+                
+                AudioFrames.Add(outFrame);
+            }
+            
+            _lastSamplesWereStereo = false;
+        }
+    }
+    
+    /// <summary>
+    /// Adds stereo 32-bit float samples.
+    /// Mirrors DOSBox AddSamples_sfloat() from mixer.cpp:2292
+    /// </summary>
+    public void AddSamples_sfloat(int numFrames, ReadOnlySpan<float> data) {
+        lock (_mutex) {
+            for (int i = 0; i < numFrames && (i * 2 + 1) < data.Length; i++) {
+                float left = data[i * 2] * 32768.0f; // Convert normalized float to 16-bit range
+                float right = data[i * 2 + 1] * 32768.0f;
                 
                 AudioFrame frame = new(left * _combinedVolumeGain.Left,
                                       right * _combinedVolumeGain.Right);

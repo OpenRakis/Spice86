@@ -21,7 +21,7 @@
 // - Mixer register read/write handlers (volume routing)
 // - Speaker warmup timing refinements
 
-// PHASE 2: Mixer.cpp - Core Mixing & Effects Pipeline [60% COMPLETE]
+// PHASE 2: Mixer.cpp - Core Mixing & Effects Pipeline [70% COMPLETE]
 // ====================================================================
 // ✓ COMPLETED:
 // - Basic mixer thread loop with direct PortAudio output
@@ -36,6 +36,11 @@
 // - Basic crossfeed (30% stereo mix)
 // - Basic compressor (4:1 ratio, -6dB threshold)
 // - Peak tracking normalization
+// - Per-channel effect send levels (SetReverbLevel, SetChorusLevel, SetCrossfeedStrength)
+// - Global effect helpers (SetGlobalReverb, SetGlobalChorus, SetGlobalCrossfeed)
+// - Effect aux buffers with proper send routing (mirrors mixer.cpp:2426-2434)
+// - LockMixerThread/UnlockMixerThread for critical operations
+// - AddSamples_mfloat/AddSamples_sfloat for 32-bit float samples
 //
 // REMAINING:
 // - Better resampling quality (currently linear interpolation only)
@@ -75,24 +80,27 @@
 
 // FILE COUNT (CURRENT vs TARGET)
 // ===============================
-// SoundBlaster.cs:  1772 lines (vs soundblaster.cpp: 3917 lines)
-// Mixer.cs:         640 lines  (vs mixer.cpp: 3276 lines)
-// MixerChannel.cs:  469 lines  (included in mixer.cpp)
+// SoundBlaster.cs:  1741 lines (vs soundblaster.cpp: 3917 lines - 44%)
+// Mixer.cs:         741 lines  (vs mixer.cpp: 3276 lines - 23%)
+// MixerChannel.cs:  698 lines  (included in mixer.cpp)
 // MixerTypes.cs:    198 lines  (mixer.h enums/types)
-// TOTAL:            3079 lines (vs 7193 lines combined - 43% complete)
+// TOTAL:            3378 lines (vs 7193 lines combined - 47% complete)
 //
 // Expected final: ~5000 lines total (C# is more verbose than C++)
 //
 // DSP Command Coverage: 95/96 unique case values (99%)
 // Mixer Preset Coverage: 4/4 enums (CrossfeedPreset, ReverbPreset, ChorusPreset, ResampleMethod)
+// Per-Channel Effect Sends: Complete (SetReverbLevel, SetChorusLevel, SetCrossfeedStrength)
 
 // PRIORITY ORDER (UPDATED)
 // =========================
 // 1. ✓ SoundBlaster DSP commands (DONE - 95/96 from DOSBox)
 // 2. ✓ Mixer preset system (DONE - all enums from DOSBox)
 // 3. ✓ Channel volume controls (DONE - user + app volumes)
-// 4. [ ] High-quality resampling (NEXT - critical for audio quality)
-// 5. [ ] DMA/IRQ coordination refinements (needed for perfect sync)
-// 6. [ ] Mixer effects upgrades (reverb/chorus quality)
-// 7. [ ] Output prebuffering (smooth startup)
-// 8. [ ] Integration testing with DOS games
+// 4. ✓ Per-channel effect sends (DONE - reverb/chorus/crossfeed levels)
+// 5. ✓ Global effect routing (DONE - SetGlobalReverb/Chorus/Crossfeed)
+// 6. [ ] High-quality resampling (NEXT - critical for audio quality)
+// 7. [ ] DMA/IRQ coordination refinements (needed for perfect sync)
+// 8. [ ] Mixer effects upgrades (reverb/chorus quality)
+// 9. [ ] Output prebuffering (smooth startup)
+// 10. [ ] Integration testing with DOS games
