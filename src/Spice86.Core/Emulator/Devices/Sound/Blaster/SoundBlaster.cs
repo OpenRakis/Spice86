@@ -101,6 +101,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             public uint Bits { get; set; }
             public DmaChannel? Channel { get; set; }
             public uint RemainSize { get; set; }
+            
+            // Performance metrics for DMA operations
+            public ulong TotalBytesRead { get; set; }
+            public ulong TotalFramesGenerated { get; set; }
+            public ulong BufferOverflowCount { get; set; }
+            public ulong DmaCompletionCount { get; set; }
         }
         public DmaState Dma { get; } = new();
         public bool SpeakerEnabled { get; set; }
@@ -331,7 +337,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         try {
             Span<byte> buffer = _sb.Dma.Buf8.AsSpan((int)bufferIndex, (int)clampedBytes);
             int bytesRead = _sb.Dma.Channel.Read((int)clampedBytes, buffer);
-            return (uint)Math.Max(0, bytesRead);
+            uint actualBytesRead = (uint)Math.Max(0, bytesRead);
+            
+            // Track performance metrics
+            _sb.Dma.TotalBytesRead += actualBytesRead;
+            
+            return actualBytesRead;
         } catch (Exception ex) {
             _loggerService.Error(ex, "SOUNDBLASTER: Exception during 8-bit DMA read");
             return 0;
@@ -383,7 +394,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             Span<byte> byteBuffer = System.Runtime.InteropServices.MemoryMarshal.Cast<short, byte>(_sb.Dma.Buf16.AsSpan());
             Span<byte> targetBuffer = byteBuffer.Slice(byteOffset);
             int wordsRead = _sb.Dma.Channel.Read((int)clampedWords, targetBuffer);
-            return (uint)Math.Max(0, wordsRead);
+            uint actualWordsRead = (uint)Math.Max(0, wordsRead);
+            
+            // Track performance metrics (count bytes, not words)
+            uint bytesRead = actualWordsRead * (is16BitChannel ? 2u : 1u);
+            _sb.Dma.TotalBytesRead += bytesRead;
+            
+            return actualWordsRead;
         } catch (Exception ex) {
             _loggerService.Error(ex, "SOUNDBLASTER: Exception during 16-bit DMA read");
             return 0;
@@ -552,9 +569,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Don't generate more frames if buffer is already full
         int currentBufferSize = _dacChannel.AudioFrames.Count;
         if (currentBufferSize >= MaxChannelFrames) {
+            _sb.Dma.BufferOverflowCount++;
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("SB: Channel buffer at max capacity ({Current}/{Max}), skipping frame generation", 
-                    currentBufferSize, MaxChannelFrames);
+                _loggerService.Warning("SB: Channel buffer at max capacity ({Current}/{Max}), skipping frame generation (overflow #{Count})", 
+                    currentBufferSize, MaxChannelFrames, _sb.Dma.BufferOverflowCount);
             }
             return;
         }
@@ -610,9 +628,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             framesGenerated++;
         }
         
+        // Track performance metrics
+        _sb.Dma.TotalFramesGenerated += (ulong)framesGenerated;
+        
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SB: Generated {Generated}/{Requested} frames, buffer now at {BufferSize}", 
-                framesGenerated, framesRequested, _dacChannel.AudioFrames.Count);
+            _loggerService.Verbose("SB: Generated {Generated}/{Requested} frames, buffer now at {BufferSize} (total frames: {TotalFrames})", 
+                framesGenerated, framesRequested, _dacChannel.AudioFrames.Count, _sb.Dma.TotalFramesGenerated);
         }
     }
 
@@ -884,8 +905,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// This signals the interrupt to wake the DOS driver.
     /// </summary>
     private void OnDmaTransferComplete() {
+        // Track DMA completion metrics
+        _sb.Dma.DmaCompletionCount++;
+        
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DMA transfer complete, signaling IRQ {Irq}; autoInit={AutoInit}", _sb.Hw.Irq, _sb.Dma.AutoInit);
+            _loggerService.Debug("SOUNDBLASTER: DMA transfer complete #{Count}, signaling IRQ {Irq}; autoInit={AutoInit}", 
+                _sb.Dma.DmaCompletionCount, _sb.Hw.Irq, _sb.Dma.AutoInit);
         }
 
         // Check if auto-init is enabled (continuous looping transfers)
@@ -1615,10 +1640,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Update channel sample rate to match DMA rate
         // This ensures the mixer can properly resample if needed
         int dmaRateHz = (int)_sb.FreqHz;
-        if (dmaRateHz > 0 && dmaRateHz != _dacChannel.GetSampleRate()) {
-            _dacChannel.SetSampleRate(dmaRateHz);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("SOUNDBLASTER: Updated DAC channel sample rate to {Rate} Hz", dmaRateHz);
+        if (dmaRateHz > 0) {
+            // Validate DMA rate is reasonable
+            ValidateDmaRate(dmaRateHz);
+            
+            if (dmaRateHz != _dacChannel.GetSampleRate()) {
+                _dacChannel.SetSampleRate(dmaRateHz);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Updated DAC channel sample rate to {Rate} Hz", dmaRateHz);
+                }
             }
         }
         
@@ -1692,10 +1722,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Update channel sample rate to match DMA rate
         // This ensures the mixer can properly resample if needed
         int dmaRateHz = (int)_sb.FreqHz;
-        if (dmaRateHz > 0 && dmaRateHz != _dacChannel.GetSampleRate()) {
-            _dacChannel.SetSampleRate(dmaRateHz);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("SOUNDBLASTER: Updated DAC channel sample rate to {Rate} Hz (stereo={Stereo})", dmaRateHz, stereo);
+        if (dmaRateHz > 0) {
+            // Validate DMA rate is reasonable
+            ValidateDmaRate(dmaRateHz);
+            
+            if (dmaRateHz != _dacChannel.GetSampleRate()) {
+                _dacChannel.SetSampleRate(dmaRateHz);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Updated DAC channel sample rate to {Rate} Hz (stereo={Stereo})", dmaRateHz, stereo);
+                }
             }
         }
         
@@ -1711,6 +1746,36 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
     }
 
+    /// <summary>
+    /// Validates DMA transfer rate against mixer capabilities.
+    /// Mirrors DOSBox Staging rate validation logic.
+    /// </summary>
+    private void ValidateDmaRate(int dmaRateHz) {
+        int mixerRateHz = _mixer.SampleRateHz;
+        
+        // Check if DMA rate is reasonable
+        if (dmaRateHz < MinPlaybackRateHz) {
+            _loggerService.Warning("SOUNDBLASTER: DMA rate {DmaRate} Hz is below minimum {MinRate} Hz", 
+                dmaRateHz, MinPlaybackRateHz);
+        }
+        
+        // Warn if DMA rate significantly exceeds mixer rate
+        // High upsampling ratios can cause performance issues
+        if (dmaRateHz > mixerRateHz * 2) {
+            _loggerService.Warning("SOUNDBLASTER: DMA rate {DmaRate} Hz is more than 2x mixer rate {MixerRate} Hz. " +
+                "This may cause performance issues and audio glitches.", 
+                dmaRateHz, mixerRateHz);
+        }
+        
+        // Log rate relationship for debugging
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            double ratio = (double)dmaRateHz / mixerRateHz;
+            string relationship = ratio > 1.0 ? "upsampling" : ratio < 1.0 ? "downsampling" : "matching";
+            _loggerService.Debug("SOUNDBLASTER: DMA rate {DmaRate} Hz vs mixer rate {MixerRate} Hz (ratio: {Ratio:F2}x, {Relationship})",
+                dmaRateHz, mixerRateHz, ratio, relationship);
+        }
+    }
+    
     private void SetSpeakerEnabled(bool enabled) {
         if (_sb.Type == SbType.Sb16) {
             return;
