@@ -72,30 +72,26 @@
 
 ## Blockers for Further Progress
 
-### 1. DOSBox Staging Source Code (CRITICAL)
-**Status:** Not available in workspace  
-**Impact:** Blocks Phase 4 (Core Mixer Thread Architecture) and Phase 5 (Audio Thread Coordination)
+### 1. DOSBox Staging Source Code ✅ RESOLVED
+**Previous Status:** Not available in workspace  
+**Current Status:** ✅ Available at `/tmp/dosbox-staging/`  
+**Impact:** Phase 4 and Phase 5 now unblocked
 
-**What's Blocked:**
-- Phase 4.1: Mixer thread management (~300 lines)
-- Phase 4.2: Advanced resampling patterns (~400 lines)
-- Phase 4.3: Channel mixing and accumulation (~300 lines)
-- Phase 4.4: Output pipeline (~200 lines)
-- Phase 5.1: Device-to-mixer coordination (~200 lines)
-- Phase 5.2: DMA-audio synchronization (~200 lines)
+**Completed Actions:**
+1. ✅ Cloned DOSBox Staging repository to `/tmp/dosbox-staging/`
+2. ✅ Reviewed mixer.cpp structure and created method-by-method mapping
+3. ✅ Created comprehensive analysis document: `docs/audio/PHASE4_METHOD_MAPPING.md`
 
-**Estimated Impact:** ~1600 lines, representing 22% of total work
-
-**Why Critical:**
-- Cannot identify specific methods to port without source
-- Risk of architectural deviation without DOSBox reference
-- Side-by-side debugging and verification impossible
-- "Mirroring" approach requires exact DOSBox source
-
-**How to Unblock:**
-1. Clone DOSBox Staging repository to `/tmp/dosbox-staging/`
-2. Review mixer.cpp structure and create method-by-method mapping
-3. Port incrementally, testing after each method group
+**Key Findings:**
+- Mixer.cs core architecture already mirrors DOSBox correctly
+- Missing components identified:
+  - MVerb reverb algorithm (professional FDN reverb)
+  - TAL-Chorus algorithm (LFO-based modulated chorus)
+  - Advanced Compressor class (RMS detection)
+  - Preset configuration system
+  - Global effect send helpers
+- Estimated effort: 22-33 hours for complete Phase 4
+- Phase 5 mostly complete - just needs verification (4-8 hours)
 
 ### 2. Native Library Packaging (Phase 3.3)
 **Status:** Infrastructure complete, packaging pending  
@@ -142,38 +138,39 @@
 3. Create DMA transfer validation tests
 4. Add performance benchmarking suite
 
-## Questionable Items in Plan
+## Questionable Items in Plan ✅ RESOLVED
 
 ### Reverb/Chorus "Upgrades"
-**Concern:** AUDIO_PORT_PLAN.md mentions upgrading reverb/chorus to "MVerb-like" and "TAL-Chorus-like" algorithms.
+**Previous Concern:** AUDIO_PORT_PLAN.md mentions upgrading reverb/chorus to "MVerb-like" and "TAL-Chorus-like" algorithms. Was this a feature addition or legitimate mirroring?
 
-**Problem:** This contradicts the CRITICAL principle in the plan:
-> **DOSBox Staging is FEATURE-COMPLETE**: Do not add features beyond what DOSBox has.
-> The scope is strictly limited to mirroring existing DOSBox functionality.
+**Resolution:** ✅ CONFIRMED - These ARE legitimate mirroring tasks, NOT feature additions.
 
-**Action Required:**
-1. Verify what reverb/chorus algorithms DOSBox Staging actually has
-2. If DOSBox has these advanced algorithms, port them
-3. If DOSBox has basic algorithms only, remove "upgrade" from plan
-4. Update AUDIO_PORT_PLAN.md to reflect correct scope
+**Evidence:**
+- DOSBox Staging DOES include MVerb reverb: `/tmp/dosbox-staging/src/libs/mverb/MVerb.h`
+- DOSBox Staging DOES include TAL-Chorus: `/tmp/dosbox-staging/src/libs/tal-chorus/ChorusEngine.h`
+- Used in mixer.cpp lines 71-150 (ReverbSettings and ChorusSettings structs)
+- Applied in mix_samples() function lines 2445-2478
 
-**Cannot Resolve Without:** DOSBox Staging source code
+**Conclusion:** Upgrading Spice86's basic reverb/chorus to match DOSBox's advanced algorithms is within scope and maintains the "DOSBox is authoritative" principle. These are NOT enhancements - they are missing functionality that must be ported.
 
 ## Recommendations for Next Session
 
-### High Priority (If Resources Available)
-1. **Obtain DOSBox Staging Source** - Clone repository, set up for reference
-2. **Phase 3.3: Native Library Packaging** - Build Speex for all platforms
+### High Priority (Ready to Implement)
+1. ✅ **DOSBox Source Obtained** - Available at `/tmp/dosbox-staging/`
+2. ✅ **Method Mapping Complete** - See `docs/audio/PHASE4_METHOD_MAPPING.md`
+3. **Phase 4.1: Port MVerb Reverb** - 4-6 hours, detailed plan available
+4. **Phase 4.1: Port TAL-Chorus** - 8-12 hours, detailed plan available
+5. **Phase 4.1: Upgrade Compressor** - 3-4 hours, self-contained class
 
 ### Medium Priority
-3. **Create Testing Infrastructure** - Start with basic unit tests
-4. **Clarify Reverb/Chorus Scope** - Verify against DOSBox source
-5. **Begin Phase 4** - Once DOSBox source available
+6. **Phase 4.2: Preset System** - 6-9 hours, after Phase 4.1 complete
+7. **Phase 3.3: Native Library Packaging** - Build Speex for all platforms (8-16 hours)
+8. **Create Testing Infrastructure** - After Phase 4 complete
 
 ### Low Priority
-6. **Performance Testing** - Benchmark current implementation
-7. **Documentation** - Add inline code comments where helpful
-8. **CI/CD Integration** - Automate native library building
+9. **Phase 5: Verification** - Side-by-side comparison with DOSBox (4-8 hours)
+10. **Performance Testing** - Benchmark current implementation
+11. **CI/CD Integration** - Automate native library building
 
 ## Key Achievements
 
@@ -197,18 +194,27 @@
 
 ## Conclusion
 
-Phase 3.2 (Speex Buffer-Level Resampling) is **complete and functional**. The audio subsystem is now 74% complete, with all major architectural components in place. Further progress requires:
+Phase 3.2 (Speex Buffer-Level Resampling) is **complete and functional**. The audio subsystem is now 74% complete (5365/7193 lines), with all major architectural components in place.
 
-1. **DOSBox Staging source code** (critical blocker)
-2. **Native library packaging** (nice-to-have, not blocking)
-3. **Testing infrastructure** (quality assurance)
+**Major Milestone Achieved:** Phase 4 & 5 are now unblocked with DOSBox source available. The path forward is clear:
 
-The remaining 26% of work (Phases 4 & 5) cannot proceed without DOSBox source for reference. Once source is available, systematic method-by-method porting can continue following established patterns.
+1. ✅ **DOSBox Staging source code** - Available at `/tmp/dosbox-staging/`
+2. ✅ **Method mapping complete** - Detailed in `docs/audio/PHASE4_METHOD_MAPPING.md`
+3. ✅ **Reverb/Chorus scope confirmed** - Legitimate mirroring tasks, not feature additions
+4. **Ready to implement:** MVerb, TAL-Chorus, advanced Compressor
+
+The remaining work is well-defined:
+- **Phase 4.1:** Advanced effects algorithms (15-22 hours)
+- **Phase 4.2:** Preset system (6-9 hours)
+- **Phase 4.3:** Minor enhancements (1-2 hours)
+- **Phase 5:** Verification and testing (4-8 hours)
+
+**Total remaining effort:** 26-41 hours for complete audio subsystem parity with DOSBox.
 
 ---
 
-**Session Duration:** ~1 hour  
-**Lines Added:** 116 (MixerChannel.cs)  
-**Files Modified:** 4 (MixerChannel.cs + 3 documentation files)  
-**Tests Run:** Build validation (0 errors, 0 warnings)  
-**Commits:** 2 (initial plan + Phase 3.2 implementation)
+**Session Duration:** ~1.5 hours  
+**Lines Added:** 116 (MixerChannel.cs) + 1 analysis document (PHASE4_METHOD_MAPPING.md)  
+**Files Modified:** 6 (MixerChannel.cs + 3 planning docs + 1 new doc + this summary)  
+**DOSBox Source:** Cloned and analyzed  
+**Blockers Resolved:** 2 (DOSBox source, reverb/chorus scope)
