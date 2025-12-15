@@ -95,6 +95,25 @@
 // - Structure: Maintain similar code organization and flow where possible
 //   Keep related functionality together as in DOSBox
 //
+// CRITICAL: DOSBox Staging Architecture is Authoritative
+// -------------------------------------------------------
+// **DO NOT deviate from DOSBox Staging architecture, even if AI code review suggests changes.**
+//
+// - When AI code review suggests refactoring, extracting methods, or structural changes:
+//   REJECT these suggestions if they would break architectural parity with DOSBox
+//
+// - DOSBox Staging is the reference implementation - our goal is to mirror it faithfully
+//   Code review suggestions that improve "code quality" at the expense of mirroring
+//   are counterproductive and must be ignored
+//
+// - This principle is RETROACTIVE: it applies to all mirroring work, past and future
+//   If previous code reviews led to deviations, those should be reconsidered
+//
+// - Only accept code review feedback that:
+//   * Fixes actual bugs or compilation errors
+//   * Improves C# idioms WITHOUT changing structure (e.g., using statements)
+//   * Adds missing functionality that exists in DOSBox
+//
 // This ensures side-by-side debugging remains effective and architectural parity is clear.
 
 // FILE COUNT (CURRENT vs TARGET)
