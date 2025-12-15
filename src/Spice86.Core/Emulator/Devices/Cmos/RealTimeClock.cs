@@ -38,7 +38,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private long _pauseStartedTicks;
     private bool _isPaused;
     private bool _disposed;
-    private double _nextPeriodicTriggerMs;
 
     /// <summary>
     /// Initializes the RTC/CMOS device with default register values.
@@ -86,11 +85,9 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         switch (port) {
             case CmosPorts.Address:
                 HandleAddressPortWrite(value);
-                ProcessPendingPeriodicEvents();
                 break;
             case CmosPorts.Data:
                 HandleDataPortWrite(value);
-                ProcessPendingPeriodicEvents();
                 break;
             default:
                 base.WriteByte(port, value);
@@ -105,7 +102,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     public override byte ReadByte(ushort port) {
         if (port == CmosPorts.Data) {
             byte result = HandleDataPortRead();
-            ProcessPendingPeriodicEvents();
             if (_loggerService.IsEnabled(LogEventLevel.Information) && _cmosRegisters.CurrentRegister == CmosRegisterAddresses.StatusRegisterB) {
                 _loggerService.Information("RTC: Port 0x71 read returning 0x{Result:X2} for register 0x{Reg:X2} (StatusB, PIE={PIE})",
                     result, _cmosRegisters.CurrentRegister, (result & 0x40) != 0);
@@ -178,12 +174,12 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
                     if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                         _loggerService.Information("RTC: Periodic interrupt enabled via Status Register B write");
                     }
-                    _nextPeriodicTriggerMs = GetElapsedMilliseconds() + _cmosRegisters.Timer.Delay;
+                    ScheduleNextPeriodicInterrupt();
                 } else if (!_cmosRegisters.Timer.Enabled && prevEnabled) {
                     if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                         _loggerService.Information("RTC: Periodic interrupt disabled via Status Register B write");
                     }
-                    _nextPeriodicTriggerMs = double.MaxValue;
+                    CancelPeriodicInterrupts();
                 }
                 return;
 
@@ -340,35 +336,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    /// Processes any pending periodic timer events.
-    /// Called on every I/O port access to ensure timely interrupt delivery (polling approach).
-    /// </summary>
-    private void ProcessPendingPeriodicEvents() {
-        if (_isPaused) {
-            return;
-        }
-        if (!_cmosRegisters.Timer.Enabled || _cmosRegisters.Timer.Delay <= 0) {
-            return;
-        }
-        double nowMs = GetElapsedMilliseconds();
-        if (nowMs >= _nextPeriodicTriggerMs) {
-            _cmosRegisters[CmosRegisterAddresses.StatusRegisterC] |= 0xC0;
-            _cmosRegisters.Timer.Acknowledged = false;
-            _cmosRegisters.Last.Timer = nowMs;
-            while (nowMs >= _nextPeriodicTriggerMs) {
-                _nextPeriodicTriggerMs += _cmosRegisters.Timer.Delay;
-            }
-            _dualPic.ProcessInterruptRequest(8);
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("RTC: Periodic interrupt fired via polling at nowMs={NowMs}, nextTrigger={NextTrigger}",
-                    nowMs, _nextPeriodicTriggerMs);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Schedules the next periodic interrupt event using both polling and EmulationLoopScheduler.
-    /// Polling ensures interrupts fire when CMOS is accessed, scheduler ensures they fire even without I/O.
+    /// Schedules the next periodic interrupt event using EmulationLoopScheduler.
     /// </summary>
     private void ScheduleNextPeriodicInterrupt() {
         if (_cmosRegisters.Timer.Delay <= 0) {
@@ -377,19 +345,16 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             }
             return;
         }
-        double nowMs = GetElapsedMilliseconds();
-        _nextPeriodicTriggerMs = nowMs + _cmosRegisters.Timer.Delay;
         _scheduler.AddEvent(OnPeriodicInterrupt, _cmosRegisters.Timer.Delay, 0);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("RTC: Next periodic interrupt scheduled for {Time:F3}ms (delay={Delay:F3}ms) via both polling and scheduler", _nextPeriodicTriggerMs, _cmosRegisters.Timer.Delay);
+            _loggerService.Debug("RTC: Next periodic interrupt scheduled (delay={Delay:F3}ms) via scheduler", _cmosRegisters.Timer.Delay);
         }
     }
 
     /// <summary>
-    /// Cancels all pending periodic interrupt events from both polling and scheduler.
+    /// Cancels all pending periodic interrupt events from the scheduler.
     /// </summary>
     private void CancelPeriodicInterrupts() {
-        _nextPeriodicTriggerMs = double.MaxValue;
         _scheduler.RemoveEvents(OnPeriodicInterrupt);
     }
     
