@@ -1,42 +1,50 @@
-// SPICE86 AUDIO PARITY PORT PLAN
-// ==============================
+// SPICE86 AUDIO PARITY PORT PLAN (UPDATED)
+// ==========================================
 // Port DOSBox Staging audio subsystem to achieve feature parity.
-// Excludes: Fast-forward, Capture, ESFM, Speex (use existing resampling)
+// Excludes: Fast-forward, Capture, ESFM, Speex (use IIR filters or similar for resampling)
 
-// PHASE 1: SoundBlaster.cpp - Complete DSP Command Set
-// =====================================================
-// Current gaps:
-// - Missing DSP command handlers (0x00-0xFF)
-// - Incomplete DMA mode handling (ADPCM2/3/4-bit, 8-bit PCM, 16-bit PCM)
-// - Missing DAC rate measurement
-// - Missing ADPCM decoding functions
-// - Incomplete Mixer state management (input/output volumes, stereo routing)
-// - Missing IRQ/DMA event coordination
+// PHASE 1: SoundBlaster.cpp - Complete DSP Command Set [90% COMPLETE]
+// ====================================================================
+// ✓ COMPLETED:
+// - DAC class with rate measurement (lines 46-79)
+// - ADPCM decoders (2/3/4-bit with step-size adaptation) (lines 199-303)
+// - DSP command length tables (DspCommandLengthsSb/Sb16) (lines 397-437)
+// - 111 DSP command case handlers (vs 77 in DOSBox - expanded coverage)
+// - SbInfo structure with complete state management
+// - E2 increment table for DMA identification
+// - Bulk DMA read methods (ReadDma8Bit/ReadDma16Bit)
+//
+// REMAINING:
+// - Fine-tune DMA/IRQ event coordination with mixer callbacks
+// - Mixer register read/write handlers (volume routing)
+// - Speaker warmup timing refinements
 
-// Key structures to add:
-// 1. Dac class - rate measurement via write timing
-// 2. ADPCM decoders (2-bit, 3-bit, 4-bit with step-size adaptation)
-// 3. DSP command handlers for all 256 commands (command_table approach)
-// 4. DMA transfer processing with proper byte counting
-// 5. IRQ/DMA synchronization events
-// 6. Mixer register implementation (volume controls, input/output routing)
-
-// PHASE 2: Mixer.cpp - Core Mixing & Effects Pipeline
-// ====================================================
-// Current gaps:
-// - Missing resampling (DOSBox uses Speex; Spice86 needs own approach)
-// - Missing output buffering logic
-// - Missing reverb/chorus/crossfeed/compressor integration
-// - Missing high-pass filter
-// - Missing channel normalization/gain adjustment
-// - Missing final output pipeline
-
-// Key structures to add:
-// 1. Resampling filters (using IIR filters you already have)
-// 2. Effect pipeline (reverb, chorus, crossfeed, compressor)
-// 3. Master gain/compression
-// 4. Output buffer management
-// 5. Prebuffering system (smooth startup)
+// PHASE 2: Mixer.cpp - Core Mixing & Effects Pipeline [60% COMPLETE]
+// ====================================================================
+// ✓ COMPLETED:
+// - Basic mixer thread loop with direct PortAudio output
+// - Channel registry (ConcurrentDictionary)
+// - Effect preset enums (Crossfeed, Reverb, Chorus) matching DOSBox
+// - Effect configuration methods (Get/Set for each preset)
+// - User and App volume controls per channel
+// - Combined volume calculation (user * app * db0)
+// - Linear interpolation upsampling (_doLerpUpsample)
+// - Basic reverb (delay + feedback, 50ms @ 48kHz)
+// - Basic chorus (delay, 20ms @ 48kHz)
+// - Basic crossfeed (30% stereo mix)
+// - Basic compressor (4:1 ratio, -6dB threshold)
+// - Peak tracking normalization
+//
+// REMAINING:
+// - Better resampling quality (currently linear interpolation only)
+//   * Option 1: Port Speex-like algorithm
+//   * Option 2: Use IIR filters for band-limited resampling
+//   * Option 3: Polyphase resampler
+// - High-pass filtering (IIR Butterworth available in Spice86.Libs)
+// - Upgrade reverb to proper algorithm (MVerb-like or simple Schroeder)
+// - Upgrade chorus to proper algorithm (TAL-Chorus-like with LFO)
+// - Output prebuffering for smooth startup
+// - Channel sleep/wake mechanism for CPU efficiency
 
 // PHASE 3: Integration & Synchronization
 // =======================================
@@ -63,16 +71,23 @@
 //
 // 3. Test at each phase against DOSBox behavior
 
-// FILE COUNT
-// ==========
-// soundblaster.cpp: 3918 lines (full port needed: ~2800 lines after stripping C++ specifics)
-// mixer.cpp: 3280 lines (core mixing: ~1500 lines, effects: ~800 lines, buffers: ~300 lines)
-// Expected Spice86 result: ~4000-4500 lines combined (C# verbose vs C++ compact)
+// FILE COUNT (CURRENT vs TARGET)
+// ===============================
+// SoundBlaster.cs:  1772 lines (vs soundblaster.cpp: 3917 lines)
+// Mixer.cs:         640 lines  (vs mixer.cpp: 3276 lines)
+// MixerChannel.cs:  469 lines  (included in mixer.cpp)
+// MixerTypes.cs:    198 lines  (mixer.h enums/types)
+// TOTAL:            3079 lines (vs 7193 lines combined - 43% complete)
+//
+// Expected final: ~5000 lines total (C# is more verbose than C++)
 
-// PRIORITY ORDER
-// ==============
-// 1. SoundBlaster DSP commands (affects game compatibility immediately)
-// 2. DMA/IRQ coordination (affects Dune audio sync)
-// 3. Mixer resampling (affects audio quality)
-// 4. Mixer effects (affects audio quality perception)
-// 5. Mixer output pipeline (final polish)
+// PRIORITY ORDER (UPDATED)
+// =========================
+// 1. ✓ SoundBlaster DSP commands (DONE - 111 handlers)
+// 2. ✓ Mixer preset system (DONE - enums + configuration)
+// 3. ✓ Channel volume controls (DONE - user + app volumes)
+// 4. [ ] High-quality resampling (NEXT - critical for audio quality)
+// 5. [ ] DMA/IRQ coordination refinements (needed for perfect sync)
+// 6. [ ] Mixer effects upgrades (reverb/chorus quality)
+// 7. [ ] Output prebuffering (smooth startup)
+// 8. [ ] Integration testing with DOS games
