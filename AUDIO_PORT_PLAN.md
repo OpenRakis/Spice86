@@ -77,6 +77,25 @@
 //    d. Output normalization
 //
 // 3. Test at each phase against DOSBox behavior
+//
+// MIRRORING CONVENTIONS
+// =====================
+// When mirroring DOSBox code to Spice86, maintain consistency:
+//
+// - Method Names: Use PascalCase (C# convention) for DOSBox method names
+//   Example: ConvertSamplesAndMaybeZohUpsample() mirrors convert_samples_and_maybe_zoh_upsample()
+//
+// - Class Names: Use PascalCase (C# convention) for DOSBox class/struct names
+//   Example: MixerChannel mirrors mixer_channel
+//
+// - Comments: Preserve DOSBox comments where relevant, adapting for C# context
+//   Include references to DOSBox source lines for traceability
+//   Example: // Mirrors DOSBox mixer.cpp:1871
+//
+// - Structure: Maintain similar code organization and flow where possible
+//   Keep related functionality together as in DOSBox
+//
+// This ensures side-by-side debugging remains effective and architectural parity is clear.
 
 // FILE COUNT (CURRENT vs TARGET)
 // ===============================
