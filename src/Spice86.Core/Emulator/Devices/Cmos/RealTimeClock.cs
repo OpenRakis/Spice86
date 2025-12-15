@@ -38,6 +38,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private long _pauseStartedTicks;
     private bool _isPaused;
     private bool _disposed;
+    private double _nextPeriodicTriggerMs;
 
     /// <summary>
     /// Initializes the RTC/CMOS device with default register values.
@@ -79,6 +80,9 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Handles writes to port 0x70 (address/index selection) and 0x71 (data).
     /// </summary>
     public override void WriteByte(ushort port, byte value) {
+        if (port == CmosPorts.Address || port == CmosPorts.Data) {
+            ProcessPendingPeriodicEvents();
+        }
         switch (port) {
             case CmosPorts.Address:
                 HandleAddressPortWrite(value);
@@ -98,6 +102,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </summary>
     public override byte ReadByte(ushort port) {
         if (port == CmosPorts.Data) {
+            ProcessPendingPeriodicEvents();
             return HandleDataPortRead();
         }
         return base.ReadByte(port);
@@ -320,7 +325,35 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
+    /// Processes any pending periodic timer events.
+    /// Called on every I/O port access to ensure timely interrupt delivery (polling approach).
+    /// </summary>
+    private void ProcessPendingPeriodicEvents() {
+        if (_isPaused) {
+            return;
+        }
+        if (!_cmosRegisters.Timer.Enabled || _cmosRegisters.Timer.Delay <= 0) {
+            return;
+        }
+        double nowMs = GetElapsedMilliseconds();
+        if (nowMs >= _nextPeriodicTriggerMs) {
+            _cmosRegisters[CmosRegisterAddresses.StatusRegisterC] |= 0xC0;
+            _cmosRegisters.Timer.Acknowledged = false;
+            _cmosRegisters.Last.Timer = nowMs;
+            while (nowMs >= _nextPeriodicTriggerMs) {
+                _nextPeriodicTriggerMs += _cmosRegisters.Timer.Delay;
+            }
+            _dualPic.ProcessInterruptRequest(8);
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("RTC: Periodic interrupt fired via polling, raising IRQ 8");
+            }
+        }
+    }
+
+    /// <summary>
     /// Schedules the next periodic interrupt event using the EmulationLoopScheduler.
+    /// Note: Currently using polling approach via ProcessPendingPeriodicEvents() for reliability.
+    /// Scheduler integration kept for future use but not actively scheduling events.
     /// </summary>
     private void ScheduleNextPeriodicInterrupt() {
         if (_cmosRegisters.Timer.Delay <= 0) {
@@ -329,48 +362,19 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             }
             return;
         }
+        double nowMs = GetElapsedMilliseconds();
+        _nextPeriodicTriggerMs = nowMs + _cmosRegisters.Timer.Delay;
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("RTC: Scheduling next periodic interrupt in {Delay:F3}ms", _cmosRegisters.Timer.Delay);
+            _loggerService.Debug("RTC: Next periodic interrupt scheduled for {Time:F3}ms (delay={Delay:F3}ms)", _nextPeriodicTriggerMs, _cmosRegisters.Timer.Delay);
         }
-        _scheduler.AddEvent(OnPeriodicInterrupt, _cmosRegisters.Timer.Delay);
     }
 
     /// <summary>
     /// Cancels all pending periodic interrupt events.
+    /// Currently a no-op since we use polling approach via ProcessPendingPeriodicEvents().
     /// </summary>
     private void CancelPeriodicInterrupts() {
-        _scheduler.RemoveEvents(OnPeriodicInterrupt);
-    }
-
-    /// <summary>
-    /// Handles the periodic interrupt event.
-    /// <para>
-    /// This method is called by the EmulationLoopScheduler when the periodic timer expires.
-    /// When called:
-    /// 1. Sets interrupt flags in Status Register C (0xC0 = IRQF + PF)
-    /// 2. Triggers IRQ 8 via the PIC
-    /// 3. Schedules the next event
-    /// </para>
-    /// <para>
-    /// Note: Contraption Zack (music) relies on the 0xC0 flag pattern.
-    /// </para>
-    /// </summary>
-    private void OnPeriodicInterrupt(uint value) {
-        if (!_cmosRegisters.Timer.Enabled || _cmosRegisters.Timer.Delay <= 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("RTC: Periodic interrupt fired but timer not enabled or delay invalid");
-            }
-            return;
-        }
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("RTC: Periodic interrupt fired, raising IRQ 8");
-        }
-        _cmosRegisters[CmosRegisterAddresses.StatusRegisterC] |= 0xC0;
-        _cmosRegisters.Timer.Acknowledged = false;
-        double nowMs = GetElapsedMilliseconds();
-        _cmosRegisters.Last.Timer = nowMs;
-        _dualPic.ProcessInterruptRequest(8);
-        ScheduleNextPeriodicInterrupt();
+        _nextPeriodicTriggerMs = double.MaxValue;
     }
 
     /// <summary>
