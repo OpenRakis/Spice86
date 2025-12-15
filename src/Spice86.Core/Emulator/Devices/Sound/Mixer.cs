@@ -113,6 +113,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Gets the current mixer sample rate.
+    /// Mirrors DOSBox MIXER_GetSampleRate() from mixer.cpp:250
     /// </summary>
     public int SampleRateHz => _sampleRateHz;
 
@@ -120,6 +121,33 @@ public sealed class Mixer : IDisposable {
     /// Gets the current blocksize.
     /// </summary>
     public int Blocksize => _blocksize;
+    
+    /// <summary>
+    /// Gets the prebuffer time in milliseconds.
+    /// Mirrors DOSBox MIXER_GetPreBufferMs() from mixer.cpp:242
+    /// </summary>
+    public int GetPreBufferMs() {
+        // For now return a constant; DOSBox calculates based on buffer size
+        return MaxPrebufferMs / 2; // Conservative default
+    }
+    
+    /// <summary>
+    /// Locks the mixer thread to prevent mixing during critical operations.
+    /// Mirrors DOSBox MIXER_LockMixerThread() from mixer.cpp:279
+    /// Note: DOSBox also stops device queues; we just lock the mixer.
+    /// Use within a using statement or with UnlockMixerThread().
+    /// </summary>
+    public void LockMixerThread() {
+        _mixerLock.Enter();
+    }
+    
+    /// <summary>
+    /// Unlocks the mixer thread after critical operations complete.
+    /// Mirrors DOSBox MIXER_UnlockMixerThread() from mixer.cpp:292
+    /// </summary>
+    public void UnlockMixerThread() {
+        _mixerLock.Exit();
+    }
 
     /// <summary>
     /// Gets or sets the master volume gain.
@@ -165,6 +193,27 @@ public sealed class Mixer : IDisposable {
             } else {
                 _loggerService.Information("MIXER: Crossfeed disabled");
             }
+            
+            // Update all registered channels - mirrors DOSBox set_global_crossfeed
+            SetGlobalCrossfeed();
+        }
+    }
+    
+    /// <summary>
+    /// Applies global crossfeed settings to all channels.
+    /// Mirrors DOSBox set_global_crossfeed() from mixer.cpp:333
+    /// </summary>
+    private void SetGlobalCrossfeed() {
+        // DOSBox applies crossfeed to OPL and CMS channels only
+        // For now, we apply based on channel features
+        float globalStrength = _doCrossfeed ? CrossfeedStrength : 0.0f;
+        
+        foreach (MixerChannel channel in _channels.Values) {
+            if (channel.HasFeature(ChannelFeature.Stereo)) {
+                channel.SetCrossfeedStrength(globalStrength);
+            } else {
+                channel.SetCrossfeedStrength(0.0f);
+            }
         }
     }
     
@@ -196,6 +245,28 @@ public sealed class Mixer : IDisposable {
             } else {
                 _loggerService.Information("MIXER: Reverb disabled");
             }
+            
+            // Update all registered channels - mirrors DOSBox set_global_reverb
+            SetGlobalReverb();
+        }
+    }
+    
+    /// <summary>
+    /// Applies global reverb settings to all channels.
+    /// Mirrors DOSBox set_global_reverb() from mixer.cpp:348
+    /// </summary>
+    private void SetGlobalReverb() {
+        const float synthLevel = 0.3f;      // Default synthesizer send level
+        const float digitalLevel = 0.2f;    // Default digital audio send level
+        
+        foreach (MixerChannel channel in _channels.Values) {
+            if (!_doReverb || !channel.HasFeature(ChannelFeature.ReverbSend)) {
+                channel.SetReverbLevel(0.0f);
+            } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
+                channel.SetReverbLevel(synthLevel);
+            } else if (channel.HasFeature(ChannelFeature.DigitalAudio)) {
+                channel.SetReverbLevel(digitalLevel);
+            }
         }
     }
     
@@ -226,6 +297,28 @@ public sealed class Mixer : IDisposable {
                 _loggerService.Information("MIXER: Chorus enabled ('{Preset}' preset)", preset);
             } else {
                 _loggerService.Information("MIXER: Chorus disabled");
+            }
+            
+            // Update all registered channels - mirrors DOSBox set_global_chorus
+            SetGlobalChorus();
+        }
+    }
+    
+    /// <summary>
+    /// Applies global chorus settings to all channels.
+    /// Mirrors DOSBox set_global_chorus() from mixer.cpp:363
+    /// </summary>
+    private void SetGlobalChorus() {
+        const float synthLevel = 0.25f;     // Default synthesizer send level
+        const float digitalLevel = 0.15f;   // Default digital audio send level
+        
+        foreach (MixerChannel channel in _channels.Values) {
+            if (!_doChorus || !channel.HasFeature(ChannelFeature.ChorusSend)) {
+                channel.SetChorusLevel(0.0f);
+            } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
+                channel.SetChorusLevel(synthLevel);
+            } else if (channel.HasFeature(ChannelFeature.DigitalAudio)) {
+                channel.SetChorusLevel(digitalLevel);
             }
         }
     }

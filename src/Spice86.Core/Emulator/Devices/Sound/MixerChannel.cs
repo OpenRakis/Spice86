@@ -629,6 +629,52 @@ public sealed class MixerChannel {
     }
 
     /// <summary>
+    /// Adds mono 32-bit float samples.
+    /// Mirrors DOSBox AddSamples_mfloat() from mixer.cpp:2287
+    /// </summary>
+    public void AddSamples_mfloat(int numFrames, ReadOnlySpan<float> data) {
+        lock (_mutex) {
+            for (int i = 0; i < numFrames && i < data.Length; i++) {
+                float sample = data[i] * 32768.0f; // Convert normalized float to 16-bit range
+                AudioFrame frame = new(sample * _combinedVolumeGain.Left,
+                                      sample * _combinedVolumeGain.Right);
+                
+                AudioFrame outFrame = new();
+                outFrame[(int)_outputMap.Left] = frame.Left;
+                outFrame[(int)_outputMap.Right] = frame.Right;
+                
+                AudioFrames.Add(outFrame);
+            }
+            
+            _lastSamplesWereStereo = false;
+        }
+    }
+    
+    /// <summary>
+    /// Adds stereo 32-bit float samples.
+    /// Mirrors DOSBox AddSamples_sfloat() from mixer.cpp:2292
+    /// </summary>
+    public void AddSamples_sfloat(int numFrames, ReadOnlySpan<float> data) {
+        lock (_mutex) {
+            for (int i = 0; i < numFrames && (i * 2 + 1) < data.Length; i++) {
+                float left = data[i * 2] * 32768.0f; // Convert normalized float to 16-bit range
+                float right = data[i * 2 + 1] * 32768.0f;
+                
+                AudioFrame frame = new(left * _combinedVolumeGain.Left,
+                                      right * _combinedVolumeGain.Right);
+                
+                AudioFrame outFrame = new();
+                outFrame[(int)_outputMap.Left] = frame[(int)_channelMap.Left];
+                outFrame[(int)_outputMap.Right] = frame[(int)_channelMap.Right];
+                
+                AudioFrames.Add(outFrame);
+            }
+            
+            _lastSamplesWereStereo = true;
+        }
+    }
+
+    /// <summary>
     /// Adds audio frames directly.
     /// </summary>
     public void AddAudioFrames(ReadOnlySpan<AudioFrame> frames) {
