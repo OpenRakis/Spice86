@@ -2326,8 +2326,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Setup DMA transfer rate and timing parameters - mirrors DOSBox calc_sbsample_rate()
         // Reference: src/hardware/audio/soundblaster.cpp lines 653-680
         _sb.Dma.Rate = _sb.FreqHz;
-        _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
-        _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
+        if (_sb.Dma.Rate > 0) {
+            _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
+            _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
+        } else {
+            _loggerService.Warning("SOUNDBLASTER: DMA Rate is 0, using default timing parameters");
+            _sb.Dma.Rate = DefaultPlaybackRateHz;
+            _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
+            _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
+        }
         
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA timing - Rate={Rate}Hz, Mul={Mul}, Min={Min}",
@@ -2428,8 +2435,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Setup DMA transfer rate and timing parameters - mirrors DOSBox calc_sbsample_rate()
         // Reference: src/hardware/audio/soundblaster.cpp lines 653-680
         _sb.Dma.Rate = _sb.FreqHz;
-        _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
-        _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
+        if (_sb.Dma.Rate > 0) {
+            _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
+            _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
+        } else {
+            _loggerService.Warning("SOUNDBLASTER: DMA Rate is 0 (new), using default timing parameters");
+            _sb.Dma.Rate = DefaultPlaybackRateHz;
+            _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
+            _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
+        }
         
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA timing (new) - Rate={Rate}Hz, Mul={Mul}, Min={Min}",
