@@ -43,7 +43,11 @@ public sealed class RtcInt70Handler : InterruptHandler {
     }
 
 
-    private void HandleRtcInterrupt() {
+    /// <summary>
+    /// Handles RTC interrupt by reading Status Register C to determine interrupt type (periodic or alarm),
+    /// then dispatches to appropriate handler. Acknowledges interrupt to PIC when done.
+    /// </summary>
+    public void HandleRtcInterrupt() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 70h - RTC Alarm/Periodic Interrupt Handler");
         }
@@ -72,8 +76,11 @@ public sealed class RtcInt70Handler : InterruptHandler {
         AcknowledgeInterrupt();
     }
 
-
-    private void HandlePeriodicInterrupt() {
+    /// <summary>
+    /// Handles RTC periodic interrupt for BIOS WAIT function (INT 15h, AH=83h).
+    /// Decrements wait timeout counter by interrupt period (~976μs). When timeout expires, calls CompleteWait().
+    /// </summary>
+    public void HandlePeriodicInterrupt() {
         if (_biosDataArea.RtcWaitFlag == 0) {
             return;
         }
@@ -90,8 +97,11 @@ public sealed class RtcInt70Handler : InterruptHandler {
         }
     }
 
-
-    private void CompleteWait() {
+    /// <summary>
+    /// Completes BIOS WAIT operation by clearing wait flag and setting bit 7 of user flag byte at ES:BX.
+    /// Does NOT clear PIE bit - periodic interrupts remain enabled. Only explicit cancel (INT 15h, AH=83h, AL=01h) clears PIE.
+    /// </summary>
+    public void CompleteWait() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("RTC wait completed");
         }
@@ -111,8 +121,10 @@ public sealed class RtcInt70Handler : InterruptHandler {
         }
     }
 
-
-    private void HandleAlarmInterrupt() {
+    /// <summary>
+    /// Handles RTC alarm interrupt. Logs detection and notes that INT 4Ah callback should be implemented by program if needed.
+    /// </summary>
+    public void HandleAlarmInterrupt() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("RTC alarm interrupt detected");
         }
@@ -123,8 +135,10 @@ public sealed class RtcInt70Handler : InterruptHandler {
         }
     }
 
-
-    private void AcknowledgeInterrupt() {
+    /// <summary>
+    /// Acknowledges RTC interrupt to PIC by reading Status Register D and sending EOI to IRQ 8.
+    /// </summary>
+    public void AcknowledgeInterrupt() {
         _ioPortDispatcher.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterD);
 
         _dualPic.AcknowledgeInterrupt(8);
