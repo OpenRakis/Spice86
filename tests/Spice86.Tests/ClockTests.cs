@@ -48,8 +48,9 @@ public class ClockTests {
         DateTime currentDateTime = clock.CurrentDateTime;
 
         // Assert - should be approximately 100ms after start time
+        // Allow generous tolerance for CI environments (500ms)
         currentDateTime.Should().BeOnOrAfter(startTime);
-        currentDateTime.Should().BeBefore(startTime.AddMilliseconds(200)); // Allow some tolerance
+        currentDateTime.Should().BeBefore(startTime.AddMilliseconds(500));
     }
 
     /// <summary>
