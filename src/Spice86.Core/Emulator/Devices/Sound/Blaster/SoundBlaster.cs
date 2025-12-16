@@ -361,6 +361,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return 0;
         }
         
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SOUNDBLASTER: ReadDma8Bit - Requesting {BytesToRead} bytes from channel {Channel}, bufferIndex={BufferIndex}",
+                bytesToRead, _sb.Dma.Channel.ChannelNumber, bufferIndex);
+        }
+        
         uint bytesAvailable = DmaBufSize - bufferIndex;
         uint clampedBytes = Math.Min(bytesToRead, bytesAvailable);
         
@@ -371,6 +376,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             
             // Track performance metrics
             _sb.Dma.TotalBytesRead += actualBytesRead;
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("SOUNDBLASTER: ReadDma8Bit - Read {ActualBytes}/{RequestedBytes} bytes from channel {Channel}",
+                    actualBytesRead, clampedBytes, _sb.Dma.Channel.ChannelNumber);
+            }
             
             return actualBytesRead;
         } catch (Exception ex) {
@@ -393,6 +403,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Dma.Channel is null) {
             _loggerService.Warning("SOUNDBLASTER: Attempted to read DMA with null channel");
             return 0;
+        }
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SOUNDBLASTER: ReadDma16Bit - Requesting {WordsToRead} words from channel {Channel}, bufferIndex={BufferIndex}",
+                wordsToRead, _sb.Dma.Channel.ChannelNumber, bufferIndex);
         }
         
         // In DMA controller, if channel is 16-bit, we're dealing with 16-bit words.
@@ -429,6 +444,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             // Track performance metrics (count bytes, not words)
             uint bytesRead = actualWordsRead * (is16BitChannel ? 2u : 1u);
             _sb.Dma.TotalBytesRead += bytesRead;
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("SOUNDBLASTER: ReadDma16Bit - Read {ActualWords}/{RequestedWords} words ({BytesRead} bytes) from channel {Channel}",
+                    actualWordsRead, clampedWords, bytesRead, _sb.Dma.Channel.ChannelNumber);
+            }
             
             return actualWordsRead;
         } catch (Exception ex) {
@@ -545,6 +565,22 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_primaryDmaChannel.ChannelNumber == 4 ||
             (_secondaryDmaChannel is not null && _secondaryDmaChannel.ChannelNumber == 4)) {
             throw new InvalidOperationException("Sound Blaster cannot attach to cascade DMA channel 4.");
+        }
+        
+        // Reserve DMA channels for Sound Blaster - mirrors DOSBox channel reservation pattern
+        // This prevents other devices from hijacking our channels
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: Reserving DMA channel {Channel} for Sound Blaster", 
+                _primaryDmaChannel.ChannelNumber);
+        }
+        _primaryDmaChannel.ReserveFor("SoundBlaster", OnDmaChannelEvicted);
+        
+        if (_secondaryDmaChannel is not null) {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: Reserving secondary DMA channel {Channel} for Sound Blaster 16-bit", 
+                    _secondaryDmaChannel.ChannelNumber);
+            }
+            _secondaryDmaChannel.ReserveFor("SoundBlaster16", OnDmaChannelEvicted);
         }
 
         _sb.Type = _config.SbType;
@@ -689,14 +725,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// </summary>
     private void DspDmaCallback(DmaChannel channel, DmaChannel.DmaEvent dmaEvent) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DMA callback - Event={Event}, Mode={Mode}, Left={Left}", 
-                dmaEvent, _sb.Mode, _sb.Dma.Left);
+            _loggerService.Debug("SOUNDBLASTER: DMA callback - Event={Event}, Mode={Mode}, DmaMode={DmaMode}, Left={Left}, Channel={Channel}, AutoInit={AutoInit}", 
+                dmaEvent, _sb.Mode, _sb.Dma.Mode, _sb.Dma.Left, channel.ChannelNumber, _sb.Dma.AutoInit);
         }
         
         switch (dmaEvent) {
             case DmaChannel.DmaEvent.ReachedTerminalCount:
                 // Terminal count reached - DMA transfer completed naturally
                 // This is handled by OnDmaTransferComplete() in GenerateFrames
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Terminal count reached on channel {Channel}, Left={Left}, AutoInit={AutoInit}",
+                        channel.ChannelNumber, _sb.Dma.Left, _sb.Dma.AutoInit);
+                }
                 break;
                 
             case DmaChannel.DmaEvent.IsMasked:
@@ -755,6 +795,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 
             case DmaChannel.DmaEvent.IsUnmasked:
                 // DMA channel has been unmasked (enabled) - mirrors DOSBox IsUnmasked case
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: DMA unmasked event - Mode={Mode}, DmaMode={DmaMode}, Channel={Channel}",
+                        _sb.Mode, _sb.Dma.Mode, channel.ChannelNumber);
+                }
+                
                 if (_sb.Mode == DspMode.DmaMasked && _sb.Dma.Mode != DmaMode.None) {
                     // Transition back to active DMA mode
                     DspChangeMode(DspMode.Dma);
@@ -764,8 +809,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     MaybeWakeUp();
                     
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output. IsAutoiniting={IsAutoiniting}, BaseCount={BaseCount}",
-                            channel.IsAutoiniting, channel.BaseCount);
+                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output. IsAutoiniting={IsAutoiniting}, BaseCount={BaseCount}, CurrentCount={CurrentCount}",
+                            channel.IsAutoiniting, channel.BaseCount, channel.CurrentCount);
+                    }
+                } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked but not in DmaMasked mode, ignoring");
                     }
                 }
                 break;
@@ -779,6 +828,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// </summary>
     /// <param name="bytesRequested">Number of bytes requested for this transfer</param>
     private void PlayDmaTransfer(uint bytesRequested) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SOUNDBLASTER: PlayDmaTransfer - BytesRequested={BytesRequested}, Left={Left}, Mode={Mode}, AutoInit={AutoInit}, Channel={Channel}",
+                bytesRequested, _sb.Dma.Left, _sb.Dma.Mode, _sb.Dma.AutoInit, _sb.Dma.Channel?.ChannelNumber);
+        }
+        
         // How many bytes should we read from DMA?
         uint lowerBound = _sb.Dma.AutoInit ? bytesRequested : _sb.Dma.Min;
         uint bytesToRead = _sb.Dma.Left <= lowerBound ? _sb.Dma.Left : bytesRequested;
@@ -2219,6 +2273,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Setup DMA transfer with given mode and parameters
         // Called when a DMA command (0x14, 0x1c, 0x24, etc) is executed
         
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DspPrepareDmaOld - Mode={Mode}, AutoInit={AutoInit}, RecordMode={RecordMode}, Left={Left}, AutoSize={AutoSize}",
+                mode, autoInit, recordMode, _sb.Dma.Left, _sb.Dma.AutoSize);
+        }
+        
         _sb.Dma.Mode = mode;
         _sb.Dma.AutoInit = autoInit;
         
@@ -2266,6 +2325,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         
         // Register DMA callback - mirrors DOSBox RegisterCallback(dsp_dma_callback)
         // Reference: src/hardware/audio/soundblaster.cpp line 1618
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: Registering DMA callback on channel {Channel}", dmaChannel.ChannelNumber);
+        }
         dmaChannel.RegisterCallback(DspDmaCallback);
         
         // Update channel sample rate to match DMA rate
@@ -2304,6 +2366,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp lines 1646-1690
     /// </summary>
     private void DspPrepareDmaNew(DmaMode mode, uint length, bool autoInit, bool stereo) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DspPrepareDmaNew - Mode={Mode}, Length={Length}, AutoInit={AutoInit}, Stereo={Stereo}",
+                mode, length, autoInit, stereo);
+        }
+        
         DmaMode newMode = mode;
         uint newLength = length;
         
@@ -2349,6 +2416,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         
         // Register DMA callback - mirrors DOSBox RegisterCallback(dsp_dma_callback)
         // Reference: src/hardware/audio/soundblaster.cpp line 2156
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: Registering DMA callback on channel {Channel} (new-style)", _sb.Dma.Channel.ChannelNumber);
+        }
         _sb.Dma.Channel.RegisterCallback(DspDmaCallback);
         
         // Determine bit depth
@@ -2456,6 +2526,27 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Type == SbType.Sb16) {
             ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x0F), this);
         }
+    }
+    
+    /// <summary>
+    /// Called when the Sound Blaster loses control of its DMA channel.
+    /// Mirrors DOSBox eviction callback pattern for DMA channel reservation.
+    /// </summary>
+    private void OnDmaChannelEvicted() {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning("SOUNDBLASTER: DMA channel evicted - stopping audio");
+        }
+        
+        // Stop any active DMA transfer
+        _sb.Mode = DspMode.None;
+        _sb.Dma.Mode = DmaMode.None;
+        _sb.Dma.Left = 0;
+        _sb.Dma.Channel = null;
+        
+        // Clear pending IRQs
+        _sb.Irq.Pending8Bit = false;
+        _sb.Irq.Pending16Bit = false;
+        _dualPic.DeactivateIrq(_config.Irq);
     }
 
     private void DspFlushData() {
