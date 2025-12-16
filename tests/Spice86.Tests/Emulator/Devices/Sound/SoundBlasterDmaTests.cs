@@ -35,12 +35,10 @@ public class SoundBlasterDmaTests {
         // Note: This test exercises full DMA transfer with IRQ signaling
         // Currently blocked because DMA transfers require the complete audio pipeline
         // including DMA callbacks, frame generation, and IRQ timing coordination
-        Machine machine = RunSoundBlasterMemoryTest("sb_dma_8bit_single.bin", MaxCycles);
+        SoundBlasterTestHandler testHandler = RunSoundBlasterTestFromFile("sb_dma_8bit_single.bin", MaxCycles);
         
-        IMemory memory = machine.Memory;
-        ushort testResult = memory.UInt16[TestResultOffset];
-        
-        testResult.Should().Be(0x0001, "8-bit single-cycle DMA transfer should complete successfully with IRQ signaling");
+        testHandler.Results.Should().Contain((byte)0x00, "8-bit single-cycle DMA transfer should complete successfully with IRQ signaling");
+        testHandler.Results.Should().NotContain((byte)0xFF, "should not report failure");
     }
     
     [Fact(Skip = "ASM test blocked by incomplete DMA transfer simulation - needs full audio pipeline")]
@@ -48,26 +46,21 @@ public class SoundBlasterDmaTests {
         // Note: This test exercises auto-init DMA mode with multiple IRQs
         // Currently blocked because auto-init mode requires continuous DMA operation
         // and proper IRQ signaling for each transfer completion
-        Machine machine = RunSoundBlasterMemoryTest("sb_dma_8bit_autoinit.bin", MaxCycles);
+        SoundBlasterTestHandler testHandler = RunSoundBlasterTestFromFile("sb_dma_8bit_autoinit.bin", MaxCycles);
         
-        IMemory memory = machine.Memory;
-        ushort testResult = memory.UInt16[TestResultOffset];
-        ushort irqCount = memory.UInt16[TestResultOffset + 2];
-        
-        testResult.Should().Be(0x0001, "8-bit auto-init DMA transfer should complete successfully");
-        irqCount.Should().BeGreaterThanOrEqualTo(2, "auto-init mode should trigger multiple IRQs for continuous transfers");
+        testHandler.Results.Should().Contain((byte)0x00, "8-bit auto-init DMA transfer should complete successfully");
+        testHandler.Results.Should().NotContain((byte)0xFF, "should not report failure");
+        // Note: IRQ count validation would require additional port for count output
     }
     
     [Fact(Skip = "ASM test blocked by incomplete DMA transfer simulation - needs full audio pipeline")]
     public void Test_16Bit_Single_Cycle_DMA_Transfer() {
         // Note: This test exercises 16-bit DMA transfer on SB16
         // Currently blocked because 16-bit transfers require proper high DMA channel handling
-        Machine machine = RunSoundBlasterMemoryTest("sb_dma_16bit_single.bin", MaxCycles);
+        SoundBlasterTestHandler testHandler = RunSoundBlasterTestFromFile("sb_dma_16bit_single.bin", MaxCycles);
         
-        IMemory memory = machine.Memory;
-        ushort testResult = memory.UInt16[TestResultOffset];
-        
-        testResult.Should().Be(0x0001, "16-bit single-cycle DMA transfer should complete successfully with 16-bit IRQ");
+        testHandler.Results.Should().Contain((byte)0x00, "16-bit single-cycle DMA transfer should complete successfully with 16-bit IRQ");
+        testHandler.Results.Should().NotContain((byte)0xFF, "should not report failure");
     }
     
     [Fact]
@@ -130,32 +123,6 @@ public class SoundBlasterDmaTests {
         byte[] program = File.ReadAllBytes(resourcePath);
         
         return RunSoundBlasterTest(program, maxCycles, unitTestName);
-    }
-    
-    private Machine RunSoundBlasterMemoryTest(string binFileName, long maxCycles,
-        [CallerMemberName] string unitTestName = "test") {
-        // Load program from Resources directory and run it
-        string resourcePath = Path.Combine("Resources", "SoundBlasterTests", binFileName);
-        byte[] program = File.ReadAllBytes(resourcePath);
-        
-        // Write program to temporary file
-        string filePath = Path.GetFullPath($"{unitTestName}.com");
-        File.WriteAllBytes(filePath, program);
-        
-        // Setup emulator following XMS/EMS pattern
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
-            binName: filePath,
-            enableCfgCpu: true,
-            enablePit: true,
-            recordData: false,
-            maxCycles: maxCycles,
-            installInterruptVectors: true,
-            failOnUnhandledPort: false
-        ).Create();
-        
-        spice86DependencyInjection.ProgramExecutor.Run();
-        
-        return spice86DependencyInjection.Machine;
     }
     
     private class SoundBlasterTestHandler : DefaultIOPortHandler {
