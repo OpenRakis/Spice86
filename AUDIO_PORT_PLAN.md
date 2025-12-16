@@ -256,18 +256,29 @@
 // 11. [ ] Mixer effects upgrades (reverb/chorus quality improvements)
 // 12. [ ] Output prebuffering (smooth startup - PortAudio already provides buffering)
 // 13. [ ] Integration testing with DOS games
-// 14. ⚠️ ASM Test Integration (IN PROGRESS - 2025-12-16)
-//     - ⚠️ Enabled 3 comprehensive Sound Blaster DMA ASM tests (removed Skip attributes)
-//     - ✓ Added immediate DMA processing in DspDmaCallback on channel unmask event
-//     - ✓ Added immediate DMA processing in DspPrepareDmaOld/New when channel already unmasked
-//     - ✓ Tests compile and framework loads test binaries correctly
-//     - ⚠️ BLOCKED: Tests fail with InvalidGroupIndexException: "Invalid group index 0x7" in Grp5
-//     - ⚠️ CAUSE: CPU emulator doesn't support Grp5/7 instruction (reserved/invalid in x86)
-//     - ⚠️ IMPACT: Test runs 15K cycles then crashes at CS:IP=0x3F:0x476 (beyond 266-byte binary)
-//     - ⚠️ ANALYSIS: Test likely completed and called INT 21h/4Ch to exit, then DOS code hit unsupported instruction
-//     - [ ] TODO: Add proper DOS exit handling to catch test completion before crash
-//     - [ ] TODO: Investigate if Grp5/7 is a valid but unimplemented instruction variant  
-//     - [ ] TODO: Or verify test binaries need recompilation from .asm sources with proper exit handling
-//     - [ ] TODO: Once CPU issue resolved, verify DMA transfers and IRQ signaling work correctly
-//     - ✓ Test framework ready: RunSoundBlasterMemoryTest() loads binaries and checks memory results
-//     - ✓ Test expectations defined: test_result @ offset 0x100 should be 0x0001 for success
+// 14. ⚠️ ASM Test Integration (BLOCKED - NEEDS ASM REWRITE - 2025-12-16)
+//     - ⚠️ GOAL: Enable 3 comprehensive Sound Blaster DMA ASM tests to validate full audio pipeline
+//     - ✓ Tests exist with proper framework: RunSoundBlasterMemoryTest() loads binaries and checks memory @ 0x100
+//     - ✓ Test binaries available: sb_dma_8bit_single.bin, sb_dma_8bit_autoinit.bin, sb_dma_16bit_single.bin
+//     - ✓ Tests use CfgCpu as required by project standards
+//     - ⚠️ BLOCKED: Tests currently have Skip attributes - "ASM test blocked by incomplete DMA transfer simulation"
+//     - ⚠️ ISSUE 1: When Skip removed, tests fail with InvalidGroupIndexException "Invalid group index 0x7" in Grp5
+//       * Cause: Grp5/7 (FF /7) is undefined/reserved in x86 - not a missing implementation
+//       * Occurs at CS:IP=0x3F:0x476 after 15K cycles (way beyond 266-byte binary)
+//       * Root cause: Test exits via INT 21h/4Ch, CPU executes one more instruction from uninitialized memory
+//       * Need: Fix emulation loop to check IsRunning BEFORE fetching next instruction (upstream CPU issue)
+//     - ⚠️ ISSUE 2: Tests require proper DMA/IRQ timing coordination between:
+//       * Mixer thread calling GenerateFrames() which calls PlayDmaTransfer()
+//       * DMA controller state (masked/unmasked) and channel setup
+//       * IRQ signaling via RaiseIrq() when DMA transfer completes
+//       * Proper synchronization between async mixer thread and synchronous test execution
+//       * Tests use DummyAudio which discards output - need real mixer ticking for DMA transfers
+//     - [ ] TODO: **CRITICAL** Rewrite ASM tests to use port-based output like XMS/EMS tests:
+//       * Replace memory write at test_result with: mov dx, 0x999; mov al, 0x00/0xFF; out dx, al
+//       * Replace INT 21h/4Ch exit with HLT instruction
+//       * This matches XMS/EMS test pattern and avoids CPU executing uninitialized memory after exit
+//       * Requires NASM to recompile .asm files to .bin
+//     - [ ] TODO: Ensure mixer thread runs and calls GenerateFrames during test execution
+//     - [ ] TODO: Add synchronization mechanism for test scenarios (manual mixer tick or wait for IRQ)
+//     - [ ] TODO: Once unblocked, verify full DMA → GenerateFrames → PlayDmaTransfer → RaiseIrq flow
+//     - NOTE: Removed kludge "ProcessImmediateDmaTransferIfNeeded()" - doesn't mirror DOSBox architecture
