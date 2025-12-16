@@ -1627,12 +1627,23 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     public override byte ReadByte(ushort port) {
         switch (port - _config.BaseAddress) {
             case 0x0A:
+                // DSP Read Data Port - returns queued output data
                 if (_outputData.Count > 0) {
                     return _outputData.Dequeue();
                 }
                 return 0;
 
+            case 0x0C:
+                // DSP Write Buffer Status Port (Write Command/Data)
+                // Bit 7: 0 = ready to accept commands, 1 = busy
+                // In emulation, we're always ready to accept writes immediately
+                // Mirrors DOSBox: always return 0x7F (ready, not busy)
+                return 0x7F;
+
             case 0x0E:
+                // DSP Read Buffer Status Port / 8-bit IRQ Acknowledge
+                // Bit 7: 1 = data available to read, 0 = no data
+                // Reading this port also acknowledges 8-bit DMA IRQ
                 if (_sb.Irq.Pending8Bit) {
                     _sb.Irq.Pending8Bit = false;
                     _dualPic.DeactivateIrq(_config.Irq);
@@ -1640,18 +1651,24 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 return (byte)(_outputData.Count > 0 ? 0x80 : 0x00);
 
             case 0x0F:
+                // 16-bit IRQ Acknowledge Port
                 _sb.Irq.Pending16Bit = false;
                 return 0xFF;
 
             case 0x04:
+                // Mixer Address Port (read)
                 return (byte)_hardwareMixer.CurrentAddress;
 
             case 0x05:
+                // Mixer Data Port (read)
                 return _hardwareMixer.ReadData();
 
             case 0x06:
-            case 0x0C:
+                // DSP Reset Port (read) - typically returns 0xFF
+                return 0xFF;
+
             default:
+                // Unknown ports return 0xFF
                 return 0xFF;
         }
     }

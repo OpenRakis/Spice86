@@ -2,18 +2,110 @@ namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
 
+using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
 using Xunit;
 
 /// <summary>
-/// Integration tests for Sound Blaster DMA channel setup and timing parameters.
-/// These tests verify the changes made in this PR:
-/// 1. Sound Blaster initializes without errors with DMA reservation
-/// 2. DMA channels do not conflict with other devices
-/// 3. The emulator can start successfully with Sound Blaster enabled
+/// Comprehensive ASM-based integration tests for Sound Blaster DMA transfers and playback.
+/// These tests verify full hardware simulation mirroring DOSBox Staging:
+/// 1. DSP reset and initialization sequence
+/// 2. DMA channel setup with proper address/count registers
+/// 3. DSP command processing (0x14, 0x1C, 0xB0)
+/// 4. DMA callbacks and data transfer
+/// 5. IRQ signaling on transfer completion
+/// 6. Auto-init vs single-cycle DMA modes
+/// 7. 8-bit and 16-bit PCM transfers
 /// </summary>
 public class SoundBlasterDmaTests {
+    private const int MaxCycles = 10000000; // Increased for actual hardware simulation
+    private const ushort TestResultOffset = 0x0100; // Offset where test_result is stored in .COM files
+    
+    [Fact]
+    public void Test_8Bit_Single_Cycle_DMA_Transfer() {
+        // Arrange: Create emulator with Sound Blaster enabled and DOS interrupts
+        string testBinary = "sb_dma_8bit_single";
+        Spice86Creator creator = new Spice86Creator(
+            binName: testBinary,
+            enableCfgCpu: false,
+            enablePit: true, // Timer needed for IRQ timing
+            recordData: false,
+            maxCycles: MaxCycles,
+            installInterruptVectors: true, // DOS interrupts needed for exit
+            failOnUnhandledPort: false);
+        
+        using Spice86DependencyInjection spice86 = creator.Create();
+        ProgramExecutor programExecutor = spice86.ProgramExecutor;
+        Machine machine = spice86.Machine;
+        
+        // Act: Run the test program
+        programExecutor.Run();
+        
+        // Assert: Check test result in memory
+        // The ASM test writes 0x0001 to test_result on success, 0xFFFF on failure
+        IMemory memory = machine.Memory;
+        ushort testResult = memory.UInt16[TestResultOffset];
+        
+        testResult.Should().Be(0x0001, "8-bit single-cycle DMA transfer should complete successfully with IRQ signaling");
+    }
+    
+    [Fact]
+    public void Test_8Bit_Auto_Init_DMA_Transfer() {
+        // Arrange: Create emulator with Sound Blaster and timer enabled
+        string testBinary = "sb_dma_8bit_autoinit";
+        Spice86Creator creator = new Spice86Creator(
+            binName: testBinary,
+            enableCfgCpu: false,
+            enablePit: true,
+            recordData: false,
+            maxCycles: MaxCycles,
+            installInterruptVectors: true,
+            failOnUnhandledPort: false);
+        
+        using Spice86DependencyInjection spice86 = creator.Create();
+        ProgramExecutor programExecutor = spice86.ProgramExecutor;
+        Machine machine = spice86.Machine;
+        
+        // Act: Run the test program
+        programExecutor.Run();
+        
+        // Assert: Check test result and IRQ count
+        IMemory memory = machine.Memory;
+        ushort testResult = memory.UInt16[TestResultOffset];
+        ushort irqCount = memory.UInt16[TestResultOffset + 2]; // irq_count is stored right after test_result
+        
+        testResult.Should().Be(0x0001, "8-bit auto-init DMA transfer should complete successfully");
+        irqCount.Should().BeGreaterThanOrEqualTo(2, "auto-init mode should trigger multiple IRQs for continuous transfers");
+    }
+    
+    [Fact]
+    public void Test_16Bit_Single_Cycle_DMA_Transfer() {
+        // Arrange: Create emulator with Sound Blaster 16 enabled
+        string testBinary = "sb_dma_16bit_single";
+        Spice86Creator creator = new Spice86Creator(
+            binName: testBinary,
+            enableCfgCpu: false,
+            enablePit: true,
+            recordData: false,
+            maxCycles: MaxCycles,
+            installInterruptVectors: true,
+            failOnUnhandledPort: false);
+        
+        using Spice86DependencyInjection spice86 = creator.Create();
+        ProgramExecutor programExecutor = spice86.ProgramExecutor;
+        Machine machine = spice86.Machine;
+        
+        // Act: Run the test program
+        programExecutor.Run();
+        
+        // Assert: Check test result
+        IMemory memory = machine.Memory;
+        ushort testResult = memory.UInt16[TestResultOffset];
+        
+        testResult.Should().Be(0x0001, "16-bit single-cycle DMA transfer should complete successfully with 16-bit IRQ");
+    }
     
     [Fact]
     public void Test_Sound_Blaster_Initialization_With_DMA_Reservation() {
