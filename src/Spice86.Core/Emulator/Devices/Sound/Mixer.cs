@@ -62,13 +62,12 @@ public sealed class Mixer : IDisposable {
     private float _peakRight = 0.0f;
     private const float PeakDecayCoeff = 0.995f; // Slow decay for peak tracking
     
-    // Reverb state - simplified implementation using delay + feedback
+    // Reverb state - MVerb professional algorithmic reverb
+    // Mirrors DOSBox mixer.cpp ReverbSettings (lines 78-120)
     private bool _doReverb = false;
-    private readonly List<AudioFrame> _reverbDelayBuffer = new();
-    private const int ReverbDelayFrames = 2400; // ~50ms at 48kHz
-    private const float ReverbFeedback = 0.3f;
-    private const float ReverbMix = 0.2f;
-    private int _reverbDelayIndex = 0;
+    private readonly MVerb _mverb = new();
+    private float _reverbSynthSendLevel = 0.0f;
+    private float _reverbDigitalSendLevel = 0.0f;
     
     // Chorus state - delay buffer with LFO
     private bool _doChorus = false;
@@ -113,10 +112,11 @@ public sealed class Mixer : IDisposable {
             _masterHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, MasterHighPassCutoffHz);
         }
         
-        // Initialize effect delay buffers with silence
-        for (int i = 0; i < ReverbDelayFrames; i++) {
-            _reverbDelayBuffer.Add(new AudioFrame(0.0f, 0.0f));
-        }
+        // Initialize MVerb with default parameters
+        // Mirrors DOSBox ReverbSettings setup (mixer.cpp lines 94-120)
+        _mverb.SetSampleRate(_sampleRateHz);
+        
+        // Initialize chorus delay buffer with silence
         for (int i = 0; i < ChorusDelayFrames; i++) {
             _chorusDelayBuffer.Add(new AudioFrame(0.0f, 0.0f));
         }
@@ -251,7 +251,7 @@ public sealed class Mixer : IDisposable {
     
     /// <summary>
     /// Sets the reverb preset and configures the effect.
-    /// Mirrors DOSBox MIXER_SetReverbPreset().
+    /// Mirrors DOSBox MIXER_SetReverbPreset() (mixer.cpp lines 519-558).
     /// </summary>
     public void SetReverbPreset(ReverbPreset preset) {
         lock (_mixerLock) {
@@ -260,6 +260,39 @@ public sealed class Mixer : IDisposable {
             }
             
             _reverbPreset = preset;
+            
+            // Configure MVerb based on preset - mirrors DOSBox switch statement (lines 534-540)
+            // Parameters: PREDLY EARLY  SIZE   DENSITY BW_FREQ DECAY  DAMP_LV SYN_LV DIG_LV HIPASS_HZ
+            switch (preset) {
+                case ReverbPreset.Tiny:
+                    SetupMVerb(predelay: 0.00f, earlyMix: 1.00f, size: 0.05f, density: 0.50f,
+                              bandwidthFreq: 0.50f, decay: 0.00f, dampingFreq: 1.00f,
+                              synthLevel: 0.65f, digitalLevel: 0.65f, highpassHz: 200.0f);
+                    break;
+                case ReverbPreset.Small:
+                    SetupMVerb(predelay: 0.00f, earlyMix: 1.00f, size: 0.17f, density: 0.42f,
+                              bandwidthFreq: 0.50f, decay: 0.50f, dampingFreq: 0.70f,
+                              synthLevel: 0.40f, digitalLevel: 0.08f, highpassHz: 200.0f);
+                    break;
+                case ReverbPreset.Medium:
+                    SetupMVerb(predelay: 0.00f, earlyMix: 0.75f, size: 0.50f, density: 0.50f,
+                              bandwidthFreq: 0.95f, decay: 0.42f, dampingFreq: 0.21f,
+                              synthLevel: 0.54f, digitalLevel: 0.07f, highpassHz: 170.0f);
+                    break;
+                case ReverbPreset.Large:
+                    SetupMVerb(predelay: 0.00f, earlyMix: 0.75f, size: 0.75f, density: 0.50f,
+                              bandwidthFreq: 0.95f, decay: 0.52f, dampingFreq: 0.21f,
+                              synthLevel: 0.70f, digitalLevel: 0.05f, highpassHz: 140.0f);
+                    break;
+                case ReverbPreset.Huge:
+                    SetupMVerb(predelay: 0.00f, earlyMix: 0.75f, size: 0.75f, density: 0.50f,
+                              bandwidthFreq: 0.95f, decay: 0.52f, dampingFreq: 0.21f,
+                              synthLevel: 0.85f, digitalLevel: 0.05f, highpassHz: 140.0f);
+                    break;
+                case ReverbPreset.None:
+                    break;
+            }
+            
             _doReverb = preset != ReverbPreset.None;
             
             if (_doReverb) {
@@ -270,6 +303,38 @@ public sealed class Mixer : IDisposable {
             
             // Update all registered channels - mirrors DOSBox set_global_reverb
             SetGlobalReverb();
+        }
+    }
+    
+    /// <summary>
+    /// Configures MVerb reverb parameters.
+    /// Mirrors DOSBox ReverbSettings::Setup() (mixer.cpp lines 94-120).
+    /// </summary>
+    private void SetupMVerb(float predelay, float earlyMix, float size, float density,
+                           float bandwidthFreq, float decay, float dampingFreq,
+                           float synthLevel, float digitalLevel, float highpassHz) {
+        _reverbSynthSendLevel = synthLevel;
+        _reverbDigitalSendLevel = digitalLevel;
+        
+        _mverb.SetParameter(MVerb.Parameter.Predelay, predelay);
+        _mverb.SetParameter(MVerb.Parameter.EarlyMix, earlyMix);
+        _mverb.SetParameter(MVerb.Parameter.Size, size);
+        _mverb.SetParameter(MVerb.Parameter.Density, density);
+        _mverb.SetParameter(MVerb.Parameter.BandwidthFreq, bandwidthFreq);
+        _mverb.SetParameter(MVerb.Parameter.Decay, decay);
+        _mverb.SetParameter(MVerb.Parameter.DampingFreq, dampingFreq);
+        
+        // Always max gain (no attenuation)
+        _mverb.SetParameter(MVerb.Parameter.Gain, 1.0f);
+        
+        // Always 100% wet output signal
+        _mverb.SetParameter(MVerb.Parameter.Mix, 1.0f);
+        
+        _mverb.SetSampleRate(_sampleRateHz);
+        
+        // Update reverb high-pass filter cutoff
+        for (int i = 0; i < 2; i++) {
+            _reverbHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, highpassHz);
         }
     }
     
@@ -688,36 +753,35 @@ public sealed class Mixer : IDisposable {
     }
     
     /// <summary>
-    /// Applies simple reverb effect using delay buffer with feedback.
-    /// Simplified implementation mirroring DOSBox reverb concept.
+    /// Applies MVerb professional algorithmic reverb effect.
+    /// Mirrors DOSBox reverb processing (mixer.cpp lines 2445-2467).
     /// </summary>
     private void ApplyReverb() {
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            AudioFrame dry = _outputBuffer[i];
-            
-            // Get delayed signal from circular buffer
-            AudioFrame delayed = _reverbDelayBuffer[_reverbDelayIndex];
-            
-            // Mix delayed signal back with feedback
-            AudioFrame feedback = new AudioFrame(
-                delayed.Left * ReverbFeedback,
-                delayed.Right * ReverbFeedback
-            );
-            
-            // Store new input + feedback in delay buffer
-            _reverbDelayBuffer[_reverbDelayIndex] = new AudioFrame(
-                dry.Left + feedback.Left,
-                dry.Right + feedback.Right
-            );
-            
-            // Mix wet (reverb) with dry signal
+        // Prepare buffers for MVerb processing
+        // MVerb operates on non-interleaved sample streams (separate L/R arrays)
+        int frameCount = _reverbAuxBuffer.Count;
+        float[] leftIn = new float[frameCount];
+        float[] rightIn = new float[frameCount];
+        float[] leftOut = new float[frameCount];
+        float[] rightOut = new float[frameCount];
+        
+        // Extract left and right channels from reverb aux buffer
+        // Apply high-pass filter to reverb input (removes low-frequency buildup)
+        for (int i = 0; i < frameCount; i++) {
+            AudioFrame frame = _reverbAuxBuffer[i];
+            leftIn[i] = (float)_reverbHighPassFilter[0].Filter(frame.Left);
+            rightIn[i] = (float)_reverbHighPassFilter[1].Filter(frame.Right);
+        }
+        
+        // Process through MVerb (FDN reverb algorithm)
+        _mverb.Process(leftIn, rightIn, leftOut, rightOut, frameCount);
+        
+        // Mix reverb output with main output buffer
+        for (int i = 0; i < frameCount; i++) {
             _outputBuffer[i] = new AudioFrame(
-                dry.Left + delayed.Left * ReverbMix,
-                dry.Right + delayed.Right * ReverbMix
+                _outputBuffer[i].Left + leftOut[i],
+                _outputBuffer[i].Right + rightOut[i]
             );
-            
-            // Advance delay index (circular buffer)
-            _reverbDelayIndex = (_reverbDelayIndex + 1) % ReverbDelayFrames;
         }
     }
     
