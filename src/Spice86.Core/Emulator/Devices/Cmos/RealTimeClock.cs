@@ -393,7 +393,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </para>
     /// </summary>
     private bool IsUpdateInProgress(DateTime now) {
-        double msInSecond = _clock.CurrentTimeMs % 1000.0;
+        double msInSecond = now.TimeOfDay.TotalMilliseconds % 1000.0;
         return msInSecond >= 998.0 || msInSecond < 2.0;
     }
 
