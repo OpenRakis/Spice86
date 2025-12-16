@@ -343,19 +343,18 @@ public sealed class Mixer : IDisposable {
     
     /// <summary>
     /// Applies global reverb settings to all channels.
-    /// Mirrors DOSBox set_global_reverb() from mixer.cpp:348
+    /// Mirrors DOSBox set_global_reverb() from mixer.cpp:348-362
     /// </summary>
     private void SetGlobalReverb() {
-        const float synthLevel = 0.3f;      // Default synthesizer send level
-        const float digitalLevel = 0.2f;    // Default digital audio send level
-        
         foreach (MixerChannel channel in _channels.Values) {
             if (!_doReverb || !channel.HasFeature(ChannelFeature.ReverbSend)) {
                 channel.SetReverbLevel(0.0f);
             } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
-                channel.SetReverbLevel(synthLevel);
+                // Use configured synth send level from preset
+                channel.SetReverbLevel(_reverbSynthSendLevel);
             } else if (channel.HasFeature(ChannelFeature.DigitalAudio)) {
-                channel.SetReverbLevel(digitalLevel);
+                // Use configured digital send level from preset
+                channel.SetReverbLevel(_reverbDigitalSendLevel);
             }
         }
     }
