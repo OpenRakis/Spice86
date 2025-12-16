@@ -37,6 +37,11 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private bool _disposed;
 
     /// <summary>
+    /// Gets the emulated clock used by the RTC for time calculations.
+    /// </summary>
+    public IEmulatedClock Clock => _clock;
+
+    /// <summary>
     /// Initializes the RTC/CMOS device with default register values.
     /// </summary>
     public RealTimeClock(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
