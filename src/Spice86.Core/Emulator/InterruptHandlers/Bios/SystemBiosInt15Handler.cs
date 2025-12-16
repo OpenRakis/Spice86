@@ -169,9 +169,17 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// INT 15h, AH=88h - Get Extended Memory Size.
-    /// Returns contiguous KB starting at 0x100000. Standard BIOS returns memory between 1MB and 16MB.
+    /// Reports  number of contiguous KB starting at absolute address 0x100000 <br/>
+    /// CF is cleared if successful, set otherwise. <br/> <br/>
+    /// Error is 0x80 (invalid command) for the IBM PC, Tandy, and PC Junior platforms. <br/>
+    /// Error is 0x86 (function not supported) for the IBM PC XT, and IBM PS/2.
     /// </summary>
+    /// <remarks>
+    /// TSRs which wish to allocate extended memory to themselves often hook
+    /// this call, and return a reduced memory size.
+    /// They are then free to use the memory between the new and old sizes at will. <br/><br/>
+    /// The standard BIOS only returns memory between 1MB and 16MB; use AH=0xC7 for memory beyond 16MB.
+    /// </remarks>
     public void GetExtendedMemorySize(bool calledFromVm) {
         if (_a20Gate.IsEnabled || _configuration.Xms is true) {
             State.AX = 0; //Either the HMA is not accessible, or the DOS driver protects it.
@@ -182,16 +190,29 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// INT 15h, AH=87h - Copy Extended Memory.
-    /// Copies data using global descriptor table. CX=words to copy (max 8000h), ES:SI=GDT pointer.
+    /// INT 15h, AH=87h - SYSTEM - COPY EXTENDED MEMORY
+    /// <para>
+    /// Copies data in extended memory using a global descriptor table.
+    /// This is a reimplementation of the SeaBIOS handle_1587 function.
+    /// </para><br/>
+    /// <b>Inputs:</b><br/>
+    /// AH = 87h<br/>
+    /// CX = number of words to copy (maximum 8000h)<br/>
+    /// ES:SI = pointer to global descriptor table (see RBIL #00499)<br/>
+    /// <b>Outputs:</b><br/>
+    /// CF set on error<br/>
+    /// CF clear if successful<br/>
+    /// AH = status (see RBIL #00498)<br/>
     /// </summary>
     public void CopyExtendedMemory(bool calledFromVm) {
+        // Save current A20 state and enable it for extended memory access
         bool prevA20Enable = _a20Gate.IsEnabled;
         _a20Gate.IsEnabled = true;
 
         uint wordCount = State.CX;
         uint byteCount = wordCount * 2;
-
+        
+        // Validate word count first
         if (wordCount == 0) {
             SetCarryFlag(false, calledFromVm);
             State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
@@ -199,6 +220,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
 
+        // Maximum 128K transfer on 386+ (following SeaBIOS comment)
         if (wordCount > 0x8000) {
             SetCarryFlag(true, calledFromVm);
             State.AH = (byte)ExtendedMemoryCopyStatus.InvalidLength;
@@ -212,6 +234,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         uint sourceAddress = gdt.LinearSourceAddress;
         uint destinationAddress = gdt.LinearDestAddress;
 
+        // Validate addresses for overflow
         if (sourceAddress + byteCount < sourceAddress) {
             SetCarryFlag(true, calledFromVm);
             State.AH = (byte)ExtendedMemoryCopyStatus.InvalidSource;
@@ -226,6 +249,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
 
+        // Validate memory bounds - ensure we don't exceed available memory
         uint maxMemoryAddress = (uint)Memory.Length;
         if (sourceAddress + byteCount > maxMemoryAddress) {
             SetCarryFlag(true, calledFromVm);
@@ -241,6 +265,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
 
+        // Check for problematic overlap where source == destination would be a no-op anyway
         if (sourceAddress == destinationAddress) {
             SetCarryFlag(false, calledFromVm);
             State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
@@ -248,11 +273,13 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
 
+        // Perform the memory copy using spans (following XMS pattern)
         IList<byte> sourceSpan = Memory.GetSlice((int)sourceAddress, (int)byteCount);
         IList<byte> destinationSpan = Memory.GetSlice((int)destinationAddress, (int)byteCount);
-
+        
         sourceSpan.CopyTo(destinationSpan);
 
+        // Restore A20 state
         _a20Gate.IsEnabled = prevA20Enable;
         SetCarryFlag(false, calledFromVm);
         State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
