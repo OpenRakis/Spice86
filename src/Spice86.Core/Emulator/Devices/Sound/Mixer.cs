@@ -69,12 +69,12 @@ public sealed class Mixer : IDisposable {
     private float _reverbSynthSendLevel = 0.0f;
     private float _reverbDigitalSendLevel = 0.0f;
     
-    // Chorus state - delay buffer with LFO
+    // Chorus state - TAL-Chorus professional modulated chorus
+    // Mirrors DOSBox mixer.cpp ChorusSettings (lines 127-151)
     private bool _doChorus = false;
-    private readonly List<AudioFrame> _chorusDelayBuffer = new();
-    private const int ChorusDelayFrames = 960; // ~20ms at 48kHz
-    private const float ChorusMix = 0.15f;
-    private int _chorusDelayIndex = 0;
+    private readonly ChorusEngine _chorusEngine;
+    private float _chorusSynthSendLevel = 0.0f;
+    private float _chorusDigitalSendLevel = 0.0f;
     
     // Crossfeed state - stereo mixing for headphone spatialization
     private bool _doCrossfeed = false;
@@ -116,10 +116,13 @@ public sealed class Mixer : IDisposable {
         // Mirrors DOSBox ReverbSettings setup (mixer.cpp lines 94-120)
         _mverb.SetSampleRate(_sampleRateHz);
         
-        // Initialize chorus delay buffer with silence
-        for (int i = 0; i < ChorusDelayFrames; i++) {
-            _chorusDelayBuffer.Add(new AudioFrame(0.0f, 0.0f));
-        }
+        // Initialize ChorusEngine with default sample rate
+        // Mirrors DOSBox ChorusSettings setup (mixer.cpp lines 127-151)
+        _chorusEngine = new ChorusEngine(_sampleRateHz);
+        
+        // Configure chorus: Chorus1 enabled, Chorus2 disabled (matches DOSBox)
+        // See DOSBox mixer.cpp lines 146-147
+        _chorusEngine.SetEnablesChorus(isChorus1Enabled: true, isChorus2Enabled: false);
         
         // Start mixer thread (produces frames and writes to PortAudio directly)
         _mixerThread = new Thread(MixerThreadLoop) {
@@ -369,7 +372,7 @@ public sealed class Mixer : IDisposable {
     
     /// <summary>
     /// Sets the chorus preset and configures the effect.
-    /// Mirrors DOSBox MIXER_SetChorusPreset().
+    /// Mirrors DOSBox MIXER_SetChorusPreset() from mixer.cpp:619-656.
     /// </summary>
     public void SetChorusPreset(ChorusPreset preset) {
         lock (_mixerLock) {
@@ -378,6 +381,33 @@ public sealed class Mixer : IDisposable {
             }
             
             _chorusPreset = preset;
+            
+            // Configure chorus with DOSBox preset values (mixer.cpp:633-636)
+            // Preset values: Light (0.33, 0.00), Normal (0.54, 0.00), Strong (0.75, 0.00)
+            // Format: (synth_level, digital_level)
+            switch (preset) {
+                case ChorusPreset.Light:
+                    _chorusSynthSendLevel = 0.33f;
+                    _chorusDigitalSendLevel = 0.00f;
+                    break;
+                case ChorusPreset.Normal:
+                    _chorusSynthSendLevel = 0.54f;
+                    _chorusDigitalSendLevel = 0.00f;
+                    break;
+                case ChorusPreset.Strong:
+                    _chorusSynthSendLevel = 0.75f;
+                    _chorusDigitalSendLevel = 0.00f;
+                    break;
+                case ChorusPreset.None:
+                    _chorusSynthSendLevel = 0.0f;
+                    _chorusDigitalSendLevel = 0.0f;
+                    break;
+            }
+            
+            // Update ChorusEngine configuration (matches DOSBox mixer.cpp:641-647)
+            _chorusEngine.SetSampleRate(_sampleRateHz);
+            _chorusEngine.SetEnablesChorus(isChorus1Enabled: true, isChorus2Enabled: false);
+            
             _doChorus = preset != ChorusPreset.None;
             
             if (_doChorus) {
@@ -393,19 +423,18 @@ public sealed class Mixer : IDisposable {
     
     /// <summary>
     /// Applies global chorus settings to all channels.
-    /// Mirrors DOSBox set_global_chorus() from mixer.cpp:363
+    /// Mirrors DOSBox set_global_chorus() from mixer.cpp:363-376.
     /// </summary>
     private void SetGlobalChorus() {
-        const float synthLevel = 0.25f;     // Default synthesizer send level
-        const float digitalLevel = 0.15f;   // Default digital audio send level
-        
         foreach (MixerChannel channel in _channels.Values) {
             if (!_doChorus || !channel.HasFeature(ChannelFeature.ChorusSend)) {
                 channel.SetChorusLevel(0.0f);
             } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
-                channel.SetChorusLevel(synthLevel);
+                // Use configured synth send level from preset
+                channel.SetChorusLevel(_chorusSynthSendLevel);
             } else if (channel.HasFeature(ChannelFeature.DigitalAudio)) {
-                channel.SetChorusLevel(digitalLevel);
+                // Use configured digital send level from preset
+                channel.SetChorusLevel(_chorusDigitalSendLevel);
             }
         }
     }
@@ -789,24 +818,33 @@ public sealed class Mixer : IDisposable {
     /// Applies simple chorus effect using fixed delay.
     /// Simplified implementation mirroring DOSBox chorus concept.
     /// </summary>
+    /// <summary>
+    /// Applies TAL-Chorus effect to the chorus aux buffer and mixes to output.
+    /// Mirrors DOSBox mixer.cpp:2470-2478.
+    /// </summary>
+    /// <remarks>
+    /// Processing flow:
+    /// 1. For each frame in chorus aux buffer (contains sum of channel chorus sends)
+    /// 2. Process through ChorusEngine (modulated delay with LFO)
+    /// 3. Add processed chorus output to master output buffer
+    /// 
+    /// The ChorusEngine processes samples in-place, modifying them with the chorus effect.
+    /// </remarks>
     private void ApplyChorus() {
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            AudioFrame dry = _outputBuffer[i];
+        // Apply chorus effect to the chorus aux buffer, then mix to master output
+        // Mirrors DOSBox mixer.cpp:2470-2478
+        for (int i = 0; i < _chorusAuxBuffer.Count; i++) {
+            float left = _chorusAuxBuffer[i].Left;
+            float right = _chorusAuxBuffer[i].Right;
             
-            // Get delayed signal
-            AudioFrame delayed = _chorusDelayBuffer[_chorusDelayIndex];
+            // Process through TAL-Chorus engine (in-place modification)
+            _chorusEngine.Process(ref left, ref right);
             
-            // Store current in delay buffer
-            _chorusDelayBuffer[_chorusDelayIndex] = dry;
-            
-            // Mix delayed signal with dry
+            // Add processed chorus to output buffer
             _outputBuffer[i] = new AudioFrame(
-                dry.Left + delayed.Left * ChorusMix,
-                dry.Right + delayed.Right * ChorusMix
+                _outputBuffer[i].Left + left,
+                _outputBuffer[i].Right + right
             );
-            
-            // Advance delay index
-            _chorusDelayIndex = (_chorusDelayIndex + 1) % ChorusDelayFrames;
         }
     }
     
@@ -848,6 +886,7 @@ public sealed class Mixer : IDisposable {
 
         _cancellationTokenSource.Dispose();
         _audioPlayer.Dispose();
+        _chorusEngine.Dispose();
 
         _disposed = true;
     }
