@@ -184,10 +184,4 @@ public sealed class Configuration {
 
     [Option(nameof(Xms), Default = null, Required = false, HelpText = "Enable XMS. Default is true.")]
     public bool? Xms { get; init; }
-
-    /// <summary>
-    /// Initial date/time for RTC. If not specified, uses current UTC time.
-    /// </summary>
-    [Option(nameof(InitialDateTime), Default = null, Required = false, HelpText = "Initial date/time for RTC (format: yyyy-MM-dd HH:mm:ss). If not specified, uses current UTC time.")]
-    public string? InitialDateTime { get; init; }
 }

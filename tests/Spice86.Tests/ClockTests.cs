@@ -64,9 +64,10 @@ public class ClockTests {
 
         // Act
         clock.StartTime = expectedStartTime;
+        DateTime actualStartTime = clock.StartTime;
 
         // Assert
-        clock.StartTime.Should().Be(expectedStartTime);
+        actualStartTime.Should().Be(expectedStartTime);
     }
 
     /// <summary>
@@ -78,8 +79,13 @@ public class ClockTests {
         State state = new State(CpuModel.INTEL_80286);
         CyclesClock clock = new CyclesClock(state, 1000);
 
-        // Act & Assert - should not throw
-        clock.OnPause();
-        clock.OnResume();
+        // Act
+        Action act = () => {
+            clock.OnPause();
+            clock.OnResume();
+        };
+
+        // Assert
+        act.Should().NotThrow();
     }
 }
