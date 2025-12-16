@@ -26,7 +26,7 @@ public class SoundBlasterDmaTests {
     [Fact]
     public void Test_8Bit_Single_Cycle_DMA_Transfer() {
         // Arrange: Create emulator with Sound Blaster enabled and DOS interrupts
-        string testBinary = "sb_dma_8bit_single";
+        string testBinary = "Resources/SoundBlasterTests/sb_dma_8bit_single.bin";
         Spice86Creator creator = new Spice86Creator(
             binName: testBinary,
             enableCfgCpu: false,
@@ -54,7 +54,7 @@ public class SoundBlasterDmaTests {
     [Fact]
     public void Test_8Bit_Auto_Init_DMA_Transfer() {
         // Arrange: Create emulator with Sound Blaster and timer enabled
-        string testBinary = "sb_dma_8bit_autoinit";
+        string testBinary = "Resources/SoundBlasterTests/sb_dma_8bit_autoinit.bin";
         Spice86Creator creator = new Spice86Creator(
             binName: testBinary,
             enableCfgCpu: false,
@@ -83,7 +83,7 @@ public class SoundBlasterDmaTests {
     [Fact]
     public void Test_16Bit_Single_Cycle_DMA_Transfer() {
         // Arrange: Create emulator with Sound Blaster 16 enabled
-        string testBinary = "sb_dma_16bit_single";
+        string testBinary = "Resources/SoundBlasterTests/sb_dma_16bit_single.bin";
         Spice86Creator creator = new Spice86Creator(
             binName: testBinary,
             enableCfgCpu: false,
@@ -111,7 +111,7 @@ public class SoundBlasterDmaTests {
     public void Test_Sound_Blaster_DSP_Basic_Commands() {
         // Arrange: Test basic DSP functionality without full DMA transfers
         // This test verifies: DSP reset, write buffer ready, version query, speaker control
-        string testBinary = "sb_dsp_test";
+        string testBinary = "Resources/SoundBlasterTests/sb_dsp_test.bin";
         Spice86Creator creator = new Spice86Creator(
             binName: testBinary,
             enableCfgCpu: false,
