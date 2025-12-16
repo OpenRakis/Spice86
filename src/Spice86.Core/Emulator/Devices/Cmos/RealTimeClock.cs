@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
@@ -31,26 +32,20 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private readonly CmosRegisters _cmosRegisters = new();
     private readonly IPauseHandler _pauseHandler;
     private readonly EmulationLoopScheduler _scheduler;
-    private readonly IWallClock _wallClock;
+    private readonly IEmulatedClock _clock;
 
-    private readonly DateTime _startTime;
-
-    private TimeSpan _pausedAccumulatedTime;
-    private DateTime _pauseStartedTime;
-    private bool _isPaused;
     private bool _disposed;
 
     /// <summary>
     /// Initializes the RTC/CMOS device with default register values.
     /// </summary>
     public RealTimeClock(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
-        EmulationLoopScheduler scheduler, IPauseHandler pauseHandler, IWallClock wallClock, bool failOnUnhandledPort, ILoggerService loggerService)
+        EmulationLoopScheduler scheduler, IPauseHandler pauseHandler, IEmulatedClock clock, bool failOnUnhandledPort, ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         _pauseHandler = pauseHandler;
         _scheduler = scheduler;
-        _wallClock = wallClock;
-        _startTime = _wallClock.UtcNow;
+        _clock = clock;
 
         _pauseHandler.Pausing += OnPausing;
         _pauseHandler.Paused += OnPaused;
@@ -217,7 +212,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             return 0xFF;
         }
 
-        DateTime now = DateTime.Now;
+        DateTime now = _clock.CurrentDateTime;
         switch (reg) {
             case CmosRegisterAddresses.Seconds: return EncodeTimeComponent(now.Second);
             case CmosRegisterAddresses.Minutes: return EncodeTimeComponent(now.Minute);
@@ -290,7 +285,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             return latched;
         }
 
-        double nowMs = GetElapsedMilliseconds();
+        double nowMs = _clock.CurrentTimeMs;
         byte value = 0;
 
         if (nowMs >= (_cmosRegisters.Last.Timer + _cmosRegisters.Timer.Delay)) {
@@ -367,12 +362,12 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </summary>
     /// <param name="value">Controller-supplied value (unused for RTC).</param>
     private void OnPeriodicInterrupt(uint value) {
-        if (!_cmosRegisters.Timer.Enabled || _isPaused) {
+        if (!_cmosRegisters.Timer.Enabled) {
             return;
         }
         _cmosRegisters[CmosRegisterAddresses.StatusRegisterC] |= 0xC0;
         _cmosRegisters.Timer.Acknowledged = false;
-        _cmosRegisters.Last.Timer = GetElapsedMilliseconds();
+        _cmosRegisters.Last.Timer = _clock.CurrentTimeMs;
         _dualPic.ProcessInterruptRequest(8);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("RTC: Periodic interrupt fired via scheduler, raising IRQ 8");
@@ -393,7 +388,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </para>
     /// </summary>
     private bool IsUpdateInProgress(DateTime now) {
-        double msInSecond = now.TimeOfDay.TotalMilliseconds % 1000.0;
+        double msInSecond = _clock.CurrentTimeMs % 1000.0;
         return msInSecond >= 998.0 || msInSecond < 2.0;
     }
 
@@ -407,25 +402,6 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         _cmosRegisters.IsBcdMode ? BcdConverter.ToBcd((byte)value) : (byte)value;
 
     /// <summary>
-    /// Gets elapsed time in milliseconds since RTC initialization, excluding paused time.
-    /// <para>
-    /// Uses IWallClock for timing. Pause events are tracked
-    /// to ensure that emulator pause time doesn't advance RTC state.
-    /// </para>
-    /// </summary>
-    private double GetElapsedMilliseconds() {
-        DateTime now = _wallClock.UtcNow;
-        TimeSpan elapsed = now - _startTime - _pausedAccumulatedTime;
-        if (_isPaused) {
-            elapsed -= (now - _pauseStartedTime);
-        }
-        if (elapsed < TimeSpan.Zero) {
-            elapsed = TimeSpan.Zero;
-        }
-        return elapsed.TotalMilliseconds;
-    }
-
-    /// <summary>
     /// Validates the 22-stage divider value in Status Register A.
     /// Logs a warning if bits 4-6 don't equal 0x20 (the standard value).
     /// </summary>
@@ -436,23 +412,14 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     }
 
     private void OnPausing() {
-        if (_isPaused) {
-            return;
-        }
-        _pauseStartedTime = _wallClock.UtcNow;
-        _isPaused = true;
+        _clock.OnPause();
     }
 
     private void OnPaused() {
     }
 
     private void OnResumed() {
-        if (!_isPaused) {
-            return;
-        }
-        DateTime now = _wallClock.UtcNow;
-        _pausedAccumulatedTime += (now - _pauseStartedTime);
-        _isPaused = false;
+        _clock.OnResume();
     }
 
     public void Dispose() {

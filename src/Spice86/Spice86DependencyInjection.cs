@@ -173,6 +173,24 @@ public class Spice86DependencyInjection : IDisposable {
         IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null
             ? new CyclesClock(state, configuration.InstructionsPerSecond.Value)
             : new EmulatedClock();
+
+        // Parse and set initial date/time for the clock
+        if (!string.IsNullOrWhiteSpace(configuration.InitialDateTime)) {
+            if (DateTime.TryParseExact(configuration.InitialDateTime, "yyyy-MM-dd HH:mm:ss",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal,
+                out DateTime parsedDateTime)) {
+                emulatedClock.StartTime = parsedDateTime;
+                if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                    loggerService.Information("Emulated clock start time set to: {StartTime}", parsedDateTime);
+                }
+            } else {
+                if (loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    loggerService.Warning("Failed to parse InitialDateTime '{InitialDateTime}', using current UTC time", configuration.InitialDateTime);
+                }
+            }
+        }
+
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
@@ -189,7 +207,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         RealTimeClock realTimeClock = new(state, ioPortDispatcher, dualPic,
-            emulationLoopScheduler, pauseHandler, wallClock, configuration.FailOnUnhandledPort, loggerService);
+            emulationLoopScheduler, pauseHandler, emulatedClock, configuration.FailOnUnhandledPort, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("RTC/CMOS created...");
