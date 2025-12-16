@@ -6,9 +6,23 @@
 // Excludes: Fast-forward, Capture, ESFM
 // Speex: Will be integrated via P/Invoke (compiled library, not translated to C#)
 //
-// LATEST UPDATE (2025-12-16) - Phase 4.1 TAL-Chorus COMPLETED
-// =============================================================
-// Phase 4.1 COMPLETED: TAL-Chorus Professional Modulated Chorus
+// LATEST UPDATE (2025-12-16) - Phase 4.1c Compressor COMPLETED
+// ==============================================================
+// Phase 4.1c COMPLETED: Professional RMS-Based Compressor
+// - Ported Compressor.cs (211 lines) - Master Tom Compressor from DOSBox
+// - RMS-based detection with exponential averaging
+// - Envelope follower with time-based attack/release coefficients
+// - Soft knee compression (6dB threshold for ratio transition)
+// - Exact DOSBox parameters: -6dB threshold, 3:1 ratio, 0.01ms attack, 5000ms release
+// - Replaced inline peak-based compressor in Mixer.cs
+// - Added InitCompressor() method mirroring DOSBox init_compressor()
+// - Zero compilation warnings, zero errors
+// Total: +221 lines (6956 -> 7177 lines)
+//
+// Overall progress: 99.8% complete (7177/7193 lines)
+// Remaining: ~16 lines (Preset system enhancements, minor additions)
+//
+// Phase 4.1b COMPLETED (2025-12-16): TAL-Chorus Professional Modulated Chorus
 // - Ported 6 TAL-Chorus classes: OscNoise (77), DCBlock (48), OnePoleLP (45),
 //   Lfo (189), Chorus (161), ChorusEngine (147) = 667 lines
 // - Replaced simple delay-based chorus with professional LFO-modulated chorus
@@ -18,9 +32,6 @@
 // - In-place stereo processing through ChorusEngine
 // - Zero compilation warnings, zero errors
 // Total: +706 lines (6250 -> 6956 lines)
-//
-// Overall progress: 97% complete (6956/7193 lines)
-// Remaining: ~237 lines (Compressor ~100, Preset system ~100, Minor ~37)
 //
 // Phase 4.1 COMPLETED (2025-12-15): MVerb Professional Reverb
 // - Ported MVerb.cs (821 lines) - FDN reverb architecture with 6 helper classes
@@ -102,22 +113,15 @@
 //   * ConfigureFadeOut() - configurable wait/fade times
 //
 // REMAINING (Phase 4 - Final Components):
-// - ✅ MVerb reverb COMPLETE (Phase 4.1, 2025-12-15)
-// - ✅ TAL-Chorus COMPLETE (Phase 4.1, 2025-12-16)
-// - [ ] Upgrade compressor to DOSBox's RMS-based version (src/audio/private/compressor.h)
-//   * Port Compressor class with configurable parameters
-//   * Implement RMS detection, envelope follower, knee width
-//   * Replace inline compressor code in Mixer.cs
-//   * Estimated: ~100 lines, 3-4 hours
-// - [ ] Add preset configuration system (Phase 4.2)
+// - ✅ MVerb reverb COMPLETE (Phase 4.1a, 2025-12-15)
+// - ✅ TAL-Chorus COMPLETE (Phase 4.1b, 2025-12-16)
+// - ✅ Compressor COMPLETE (Phase 4.1c, 2025-12-16)
+// - [ ] OPTIONAL: Add preset configuration system (Phase 4.2)
 //   * Preset parsing from string (CLI/config support)
 //   * Preset to string conversion (logging/display)
-//   * Get/Set public API methods for effect presets
-//   * Estimated: ~100 lines, 4-6 hours
-// - [ ] Minor enhancements (Phase 4.3)
-//   * Additional global effect send helpers (if needed)
-//   * Channel feature query exposure (if needed)
-//   * Estimated: ~37 lines, 1-2 hours
+//   * Additional Get/Set public API methods for effect presets (current API sufficient)
+//   * NOTE: Current implementation already has preset enums and Set methods
+//   * Estimated: ~16 lines for additional helpers if needed, 1-2 hours
 // - [ ] Speex native library packaging (build and package binaries - non-blocking)
 //   * P/Invoke infrastructure complete ✓
 //   * Buffer-level resampling integrated ✓
@@ -195,12 +199,13 @@
 // ===============================
 // SoundBlaster.cs:   2486 lines (vs soundblaster.cpp: 3917 lines - 63%)
 // HardwareMixer.cs:   593 lines (mixer register handling)
-// Mixer.cs:           895 lines (vs mixer.cpp: 3276 lines - 27%)
+// Mixer.cs:           905 lines (vs mixer.cpp: 3276 lines - 28%)
 // MixerChannel.cs:   1296 lines (included in mixer.cpp)
 // MixerTypes.cs:      198 lines (mixer.h enums/types)
 // MVerb.cs:           821 lines (professional FDN reverb)
 // TAL-Chorus classes: 667 lines (6 classes: OscNoise, DCBlock, OnePoleLP, Lfo, Chorus, ChorusEngine)
-// TOTAL:             6956 lines (vs 7193 lines combined - 97% complete)
+// Compressor.cs:      211 lines (professional RMS-based compressor)
+// TOTAL:             7177 lines (vs 7193 lines combined - 99.8% complete)
 //
 // Expected final: ~5000 lines total (C# is more verbose than C++)
 //

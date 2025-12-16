@@ -49,13 +49,9 @@ public sealed class Mixer : IDisposable {
     private readonly List<AudioFrame> _reverbAuxBuffer = new();
     private readonly List<AudioFrame> _chorusAuxBuffer = new();
     
-    // Compressor state - mirrors DOSBox compressor
+    // Compressor state - mirrors DOSBox compressor (mixer.cpp lines 194-195, 659-686)
     private bool _doCompressor = false;
-    private float _compressorThreshold = 0.5f; // -6dB threshold
-    private float _compressorRatio = 4.0f; // 4:1 compression ratio
-    private float _compressorPeakLevel = 0.0f;
-    private const float CompressorAttackCoeff = 0.999f;
-    private const float CompressorReleaseCoeff = 0.9999f;
+    private readonly Compressor _compressor = new();
     
     // Normalization state - mirrors DOSBox peak detection
     private float _peakLeft = 0.0f;
@@ -123,6 +119,10 @@ public sealed class Mixer : IDisposable {
         // Configure chorus: Chorus1 enabled, Chorus2 disabled (matches DOSBox)
         // See DOSBox mixer.cpp lines 146-147
         _chorusEngine.SetEnablesChorus(isChorus1Enabled: true, isChorus2Enabled: false);
+        
+        // Initialize compressor with default parameters
+        // Mirrors DOSBox init_compressor() (mixer.cpp lines 659-686)
+        InitCompressor(compressorEnabled: true);
         
         // Start mixer thread (produces frames and writes to PortAudio directly)
         _mixerThread = new Thread(MixerThreadLoop) {
@@ -343,19 +343,18 @@ public sealed class Mixer : IDisposable {
     
     /// <summary>
     /// Applies global reverb settings to all channels.
-    /// Mirrors DOSBox set_global_reverb() from mixer.cpp:348
+    /// Mirrors DOSBox set_global_reverb() from mixer.cpp:348-362
     /// </summary>
     private void SetGlobalReverb() {
-        const float synthLevel = 0.3f;      // Default synthesizer send level
-        const float digitalLevel = 0.2f;    // Default digital audio send level
-        
         foreach (MixerChannel channel in _channels.Values) {
             if (!_doReverb || !channel.HasFeature(ChannelFeature.ReverbSend)) {
                 channel.SetReverbLevel(0.0f);
             } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
-                channel.SetReverbLevel(synthLevel);
+                // Use configured synth send level from preset
+                channel.SetReverbLevel(_reverbSynthSendLevel);
             } else if (channel.HasFeature(ChannelFeature.DigitalAudio)) {
-                channel.SetReverbLevel(digitalLevel);
+                // Use configured digital send level from preset
+                channel.SetReverbLevel(_reverbDigitalSendLevel);
             }
         }
     }
@@ -693,41 +692,51 @@ public sealed class Mixer : IDisposable {
     }
     
     /// <summary>
-    /// Applies simple compressor to reduce dynamic range.
-    /// Mirrors DOSBox Compressor logic with peak detection and gain reduction.
+    /// Initializes the master compressor with professional RMS-based configuration.
+    /// Mirrors DOSBox init_compressor() from mixer.cpp:659-686
+    /// </summary>
+    /// <param name="compressorEnabled">Whether to enable the compressor</param>
+    private void InitCompressor(bool compressorEnabled) {
+        _doCompressor = compressorEnabled;
+        if (!_doCompressor) {
+            _loggerService.Information("MIXER: Master compressor disabled");
+            return;
+        }
+        
+        LockMixerThread();
+        
+        // Configuration values mirror DOSBox exactly (mixer.cpp:669-680)
+        const float ZeroDbfsSampleValue = 32767.0f; // Max16BitSampleValue = INT16_MAX
+        const float ThresholdDb = -6.0f;
+        const float Ratio = 3.0f;
+        const float AttackTimeMs = 0.01f;
+        const float ReleaseTimeMs = 5000.0f;
+        const float RmsWindowMs = 10.0f;
+        
+        _compressor.Configure(
+            _sampleRateHz,
+            ZeroDbfsSampleValue,
+            ThresholdDb,
+            Ratio,
+            AttackTimeMs,
+            ReleaseTimeMs,
+            RmsWindowMs
+        );
+        
+        UnlockMixerThread();
+        
+        _loggerService.Information("MIXER: Master compressor enabled");
+    }
+    
+    /// <summary>
+    /// Applies professional RMS-based compressor to reduce dynamic range.
+    /// Mirrors DOSBox Compressor processing from mixer.cpp:2493-2498
     /// </summary>
     private void ApplyCompressor() {
+        // Process each frame through the compressor
+        // Mirrors DOSBox mixer.cpp:2494-2496
         for (int i = 0; i < _outputBuffer.Count; i++) {
-            AudioFrame frame = _outputBuffer[i];
-            
-            // Detect peak level (max of L/R channels)
-            float peakSample = Math.Max(Math.Abs(frame.Left), Math.Abs(frame.Right));
-            
-            // Update peak tracker with attack/release
-            if (peakSample > _compressorPeakLevel) {
-                // Attack - fast response to louder signals
-                _compressorPeakLevel = _compressorPeakLevel * CompressorAttackCoeff + 
-                                       peakSample * (1.0f - CompressorAttackCoeff);
-            } else {
-                // Release - slow return to quiet
-                _compressorPeakLevel = _compressorPeakLevel * CompressorReleaseCoeff + 
-                                       peakSample * (1.0f - CompressorReleaseCoeff);
-            }
-            
-            // Calculate gain reduction if above threshold
-            float gainReduction = 1.0f;
-            if (_compressorPeakLevel > _compressorThreshold) {
-                // Apply compression ratio
-                float overshoot = _compressorPeakLevel - _compressorThreshold;
-                float compressed = overshoot / _compressorRatio;
-                gainReduction = (_compressorThreshold + compressed) / _compressorPeakLevel;
-            }
-            
-            // Apply gain reduction
-            _outputBuffer[i] = new AudioFrame(
-                frame.Left * gainReduction,
-                frame.Right * gainReduction
-            );
+            _outputBuffer[i] = _compressor.Process(_outputBuffer[i]);
         }
     }
     
