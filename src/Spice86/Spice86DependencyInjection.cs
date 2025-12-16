@@ -339,15 +339,25 @@ public class Spice86DependencyInjection : IDisposable {
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
+        // Create Opl3Fm FIRST, then register its handler with the mixer
+        // This is necessary because we need the OPL instance to get its GenerateOplFrames method
+        Opl3Fm opl3Fm = null!; // Will be assigned below
+
+        MixerChannel oplChannel = mixer.AddChannel(
+            framesRequested => opl3Fm.GenerateOplFrames(framesRequested), 49716, "OPL3FM",
+            new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
+        
+        opl3Fm = new(oplChannel, state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService, pauseHandler,
+            emulationLoopScheduler, emulatedClock, dualPic,
+            useAdlibGold: true, enableOplIrq: true);
+
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SBPro2);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
-        
-        // SoundBlaster now creates its own Opl3Fm internally with AdlibGold support
-        // Mirrors master branch architecture where SoundBlaster owns the FM synth
         var soundBlaster = new SoundBlaster(ioPortDispatcher,
-            state, dmaSystem, dualPic, mixer, loggerService,
+            state, dmaSystem, dualPic, mixer, oplChannel, loggerService,
             emulationLoopScheduler, emulatedClock,
-            soundBlasterHardwareConfig, pauseHandler);
+            soundBlasterHardwareConfig);
         var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
@@ -524,7 +534,7 @@ public class Spice86DependencyInjection : IDisposable {
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
-            dmaSystem, soundBlaster.Opl3Fm, mixer, mouse, mouseDriver,
+            dmaSystem, opl3Fm, mixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
