@@ -39,6 +39,11 @@ public sealed class Mixer : IDisposable {
     // Master volume (atomic via Interlocked operations)
     private AudioFrame _masterGain = new(Minus6db, Minus6db);
     
+    // Mixer state - mirrors DOSBox mixer.state (atomic)
+    // Controls whether audio is playing, muted, or disabled
+    private MixerState _state = MixerState.On;
+    private bool _isManuallyMuted = false;
+    
     // Effect presets - mirrors DOSBox preset system
     private CrossfeedPreset _crossfeedPreset = CrossfeedPreset.None;
     private ReverbPreset _reverbPreset = ReverbPreset.None;
@@ -187,6 +192,67 @@ public sealed class Mixer : IDisposable {
             lock (_mixerLock) {
                 _masterGain = value;
             }
+        }
+    }
+    
+    /// <summary>
+    /// Gets the current master volume gain.
+    /// Mirrors DOSBox MIXER_GetMasterVolume() from mixer.cpp:842-845.
+    /// </summary>
+    /// <returns>The current master gain as an AudioFrame.</returns>
+    public AudioFrame GetMasterVolume() {
+        lock (_mixerLock) {
+            return _masterGain;
+        }
+    }
+    
+    /// <summary>
+    /// Sets the master volume gain atomically.
+    /// Mirrors DOSBox MIXER_SetMasterVolume() from mixer.cpp:847-850.
+    /// </summary>
+    /// <param name="gain">The new master gain to apply.</param>
+    public void SetMasterVolume(AudioFrame gain) {
+        lock (_mixerLock) {
+            _masterGain = gain;
+        }
+    }
+    
+    /// <summary>
+    /// Mutes audio output while keeping the audio device active.
+    /// Mirrors DOSBox MIXER_Mute() from mixer.cpp:3025-3034.
+    /// </summary>
+    public void Mute() {
+        lock (_mixerLock) {
+            if (_state == MixerState.On) {
+                _state = MixerState.Muted;
+                _isManuallyMuted = true;
+                _loggerService.Information("MIXER: Muted audio output");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Unmutes audio output, resuming playback.
+    /// Mirrors DOSBox MIXER_Unmute() from mixer.cpp:3036-3044.
+    /// </summary>
+    public void Unmute() {
+        lock (_mixerLock) {
+            if (_state == MixerState.Muted) {
+                _state = MixerState.On;
+                _isManuallyMuted = false;
+                _loggerService.Information("MIXER: Unmuted audio output");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Returns whether audio has been manually muted by the user.
+    /// Mirrors DOSBox MIXER_IsManuallyMuted() from mixer.cpp:3047-3050.
+    /// </summary>
+    /// <returns>True if audio is manually muted, false otherwise.</returns>
+    public bool IsManuallyMuted() {
+        lock (_mixerLock) {
+            return _isManuallyMuted;
         }
     }
 
@@ -542,6 +608,21 @@ public sealed class Mixer : IDisposable {
                 }
 
                 // Write the mixed block directly to PortAudio (mirror DOSBox behavior)
+                // Skip writing if muted - mirrors DOSBox mixer.cpp:2657-2658
+                MixerState currentState;
+                lock (_mixerLock) {
+                    currentState = _state;
+                }
+                
+                if (currentState == MixerState.Muted) {
+                    // Muted state: continue mixing to keep channels synchronized,
+                    // but don't write output. Mirrors DOSBox mixer.cpp:2657-2658
+                    if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                        _loggerService.Verbose("MIXER: Skipping audio output (muted)");
+                    }
+                    continue;
+                }
+                
                 try {
                     int framesToWrite = _outputBuffer.Count;
                     if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {

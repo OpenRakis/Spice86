@@ -196,3 +196,24 @@ public enum ResampleMethod {
     /// </summary>
     Resample
 }
+
+/// <summary>
+/// Mixer operational state - mirrors DOSBox MixerState enum.
+/// Controls overall mixer behavior and audio output.
+/// </summary>
+public enum MixerState {
+    /// <summary>
+    /// Audio device is not initialized or disabled.
+    /// </summary>
+    NoSound,
+    
+    /// <summary>
+    /// Audio is actively playing and mixing.
+    /// </summary>
+    On,
+    
+    /// <summary>
+    /// Audio is muted (device active but producing silence).
+    /// </summary>
+    Muted
+}
