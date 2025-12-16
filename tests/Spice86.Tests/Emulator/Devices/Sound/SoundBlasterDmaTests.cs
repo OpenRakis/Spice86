@@ -108,6 +108,34 @@ public class SoundBlasterDmaTests {
     }
     
     [Fact]
+    public void Test_Sound_Blaster_DSP_Basic_Commands() {
+        // Arrange: Test basic DSP functionality without full DMA transfers
+        // This test verifies: DSP reset, write buffer ready, version query, speaker control
+        string testBinary = "sb_dsp_test";
+        Spice86Creator creator = new Spice86Creator(
+            binName: testBinary,
+            enableCfgCpu: false,
+            enablePit: false,
+            recordData: false,
+            maxCycles: 100000,  // Should complete quickly
+            installInterruptVectors: true,
+            failOnUnhandledPort: false);
+        
+        using Spice86DependencyInjection spice86 = creator.Create();
+        ProgramExecutor programExecutor = spice86.ProgramExecutor;
+        Machine machine = spice86.Machine;
+        
+        // Act: Run the test program
+        programExecutor.Run();
+        
+        // Assert: Check test result in memory
+        IMemory memory = machine.Memory;
+        ushort testResult = memory.UInt16[TestResultOffset];
+        
+        testResult.Should().Be(0x0001, "DSP basic commands (reset, status, version, speaker) should work correctly");
+    }
+    
+    [Fact]
     public void Test_Sound_Blaster_Initialization_With_DMA_Reservation() {
         // Arrange: Create emulator with Sound Blaster using default configuration
         string testBinary = "add"; // Use simple existing test
