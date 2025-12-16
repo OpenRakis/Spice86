@@ -143,9 +143,10 @@ public class SoundBlasterDmaTests {
         File.WriteAllBytes(filePath, program);
         
         // Setup emulator following XMS/EMS pattern
+        // Use standard CPU (not CfgCpu) to avoid instruction parsing issues with test binaries
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
-            enableCfgCpu: true,
+            enableCfgCpu: false,
             enablePit: true,
             recordData: false,
             maxCycles: maxCycles,
