@@ -30,7 +30,7 @@ public class SoundBlasterDmaTests {
     private const int MaxCycles = 10000000; // Increased for actual hardware simulation
     private const ushort TestResultOffset = 0x0100; // Offset where test_result is stored in .COM files
     
-    [Fact(Skip = "ASM test blocked by incomplete DMA transfer simulation - needs full audio pipeline")]
+    [Fact]
     public void Test_8Bit_Single_Cycle_DMA_Transfer() {
         // Note: This test exercises full DMA transfer with IRQ signaling
         // Currently blocked because DMA transfers require the complete audio pipeline
@@ -43,7 +43,7 @@ public class SoundBlasterDmaTests {
         testResult.Should().Be(0x0001, "8-bit single-cycle DMA transfer should complete successfully with IRQ signaling");
     }
     
-    [Fact(Skip = "ASM test blocked by incomplete DMA transfer simulation - needs full audio pipeline")]
+    [Fact]
     public void Test_8Bit_Auto_Init_DMA_Transfer() {
         // Note: This test exercises auto-init DMA mode with multiple IRQs
         // Currently blocked because auto-init mode requires continuous DMA operation
@@ -58,7 +58,7 @@ public class SoundBlasterDmaTests {
         irqCount.Should().BeGreaterThanOrEqualTo(2, "auto-init mode should trigger multiple IRQs for continuous transfers");
     }
     
-    [Fact(Skip = "ASM test blocked by incomplete DMA transfer simulation - needs full audio pipeline")]
+    [Fact]
     public void Test_16Bit_Single_Cycle_DMA_Transfer() {
         // Note: This test exercises 16-bit DMA transfer on SB16
         // Currently blocked because 16-bit transfers require proper high DMA channel handling

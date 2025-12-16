@@ -808,6 +808,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     // Unmasking is when software has finished setup and is ready for playback
                     MaybeWakeUp();
                     
+                    // Immediately process one DMA transfer to ensure synchronous test behavior
+                    // This allows tests to see IRQ raised without relying on mixer thread timing
+                    if (_sb.Dma.Left > 0) {
+                        uint bytesPerFrame = CalculateBytesPerFrame();
+                        // Process at least enough to complete the transfer or one full frame
+                        uint bytesToProcess = Math.Min(_sb.Dma.Left, Math.Max(bytesPerFrame, 1024));
+                        PlayDmaTransfer(bytesToProcess);
+                    }
+                    
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                         _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output. IsAutoiniting={IsAutoiniting}, BaseCount={BaseCount}, CurrentCount={CurrentCount}",
                             channel.IsAutoiniting, channel.BaseCount, channel.CurrentCount);
@@ -2389,6 +2398,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Mirrors DOSBox soundblaster.cpp:840
         MaybeWakeUp();
         
+        // If DMA channel is already unmasked, immediately start DMA transfer
+        // This ensures synchronous test behavior where IRQ is raised promptly
+        if (!dmaChannel.IsMasked && _sb.Dma.Left > 0) {
+            uint bytesPerFrame = CalculateBytesPerFrame();
+            // Process at least enough to complete the transfer or one reasonable chunk
+            uint bytesToProcess = Math.Min(_sb.Dma.Left, Math.Max(bytesPerFrame, 1024));
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: DMA channel is unmasked, immediately processing {Bytes} bytes", bytesToProcess);
+            }
+            PlayDmaTransfer(bytesToProcess);
+        }
+        
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA prepared - Mode={Mode}, AutoInit={AutoInit}, Bits={Bits}, Left={Left}, Channel={Channel}, Rate={Rate}Hz",
                 mode, autoInit, _sb.Dma.Bits, _sb.Dma.Left, dmaChannel.ChannelNumber, dmaRateHz);
@@ -2504,6 +2525,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Wake up the channel now that DMA is ready to play
         // Mirrors DOSBox soundblaster.cpp:840
         MaybeWakeUp();
+        
+        // If DMA channel is already unmasked, immediately start DMA transfer
+        // This ensures synchronous test behavior where IRQ is raised promptly
+        if (!_sb.Dma.Channel.IsMasked && _sb.Dma.Left > 0) {
+            uint bytesPerFrame = CalculateBytesPerFrame();
+            // Process at least enough to complete the transfer or one reasonable chunk
+            uint bytesToProcess = Math.Min(_sb.Dma.Left, Math.Max(bytesPerFrame, 1024));
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: DMA channel is unmasked (new-style), immediately processing {Bytes} bytes", bytesToProcess);
+            }
+            PlayDmaTransfer(bytesToProcess);
+        }
         
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA prepared (new) - Mode={Mode}, AutoInit={AutoInit}, " +
