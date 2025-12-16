@@ -11,8 +11,7 @@ start:
     mov ds, ax
     mov es, ax
     
-    ; Initialize test result
-    mov word [test_result], 0x0000
+    ; Initialize IRQ count
     mov word [irq_count], 0x0000
     
     ; Setup DMA channel 1 for Sound Blaster (auto-init mode)
@@ -194,19 +193,19 @@ start:
     cmp word [irq_count], 2
     jl test_failed
     
-    ; Test passed
-    mov word [test_result], 0x0001
-    jmp test_end
+    ; Test passed - write success to port 0x999
+    mov dx, 0x999
+    mov al, 0x00            ; Success
+    out dx, al
+    hlt                     ; Halt CPU
     
 test_failed:
-    mov word [test_result], 0xFFFF
-    
-test_end:
-    ; Exit
-    mov ax, 0x4C00
-    int 0x21
+    ; Test failed - write failure to port 0x999
+    mov dx, 0x999
+    mov al, 0xFF            ; Failure
+    out dx, al
+    hlt                     ; Halt CPU
 
 ; Data section
-test_result:    dw 0x0000
 irq_count:      dw 0x0000
 test_dma_buffer: times 32 db 0

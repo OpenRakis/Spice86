@@ -11,9 +11,6 @@ start:
     mov ds, ax
     mov es, ax
     
-    ; Initialize test result memory location
-    mov word [test_result], 0x0000
-    
     ; Setup DMA channel 1 for Sound Blaster
     ; DMA channel 1: address 0x0002-0x0003, count 0x0004-0x0005, page 0x83
     
@@ -162,18 +159,18 @@ start:
     mov al, 0xD3            ; Speaker off command
     out dx, al
     
-    ; Test passed - set result
-    mov word [test_result], 0x0001
-    jmp test_end
+    ; Test passed - write success to port 0x999
+    mov dx, 0x999
+    mov al, 0x00            ; Success
+    out dx, al
+    hlt                     ; Halt CPU
     
 test_failed:
-    mov word [test_result], 0xFFFF
-    
-test_end:
-    ; Exit
-    mov ax, 0x4C00
-    int 0x21
+    ; Test failed - write failure to port 0x999
+    mov dx, 0x999
+    mov al, 0xFF            ; Failure
+    out dx, al
+    hlt                     ; Halt CPU
 
 ; Data section
-test_result:    dw 0x0000
 test_dma_buffer: times 64 db 0
