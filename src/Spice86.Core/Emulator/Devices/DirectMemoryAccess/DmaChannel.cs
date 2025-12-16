@@ -369,7 +369,7 @@ public sealed class DmaChannel {
         }
 
         unchecked {
-            // DMA math must not raise an OverFlowException to simulate the ISA hardare
+            // DMA math must not raise an OverFlowException to simulate the ISA hardware
             ushort want = (ushort)Math.Clamp(words, 0, ushort.MaxValue);
             ushort done = 0;
             CurrentAddress &= _wrappingMask;
