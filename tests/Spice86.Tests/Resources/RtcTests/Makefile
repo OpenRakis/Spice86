@@ -1,5 +1,16 @@
 # Makefile for RTC/CMOS integration tests
 # Compiles assembly test files to DOS .COM format using NASM
+#
+# Prerequisites:
+#   - Install NASM (Netwide Assembler): https://www.nasm.us/
+#   - Linux/Mac: sudo apt-get install nasm  (Debian/Ubuntu) or brew install nasm (macOS)
+#   - Windows: Download from https://www.nasm.us/pub/nasm/releasebuilds/ and add to PATH
+#
+# Usage:
+#   make          - Build all .asm files to .com files
+#   make clean    - Remove all compiled .com files
+#   make rebuild  - Clean and rebuild all files
+#   make help     - Show detailed usage information
 
 # Assembler
 ASM = nasm

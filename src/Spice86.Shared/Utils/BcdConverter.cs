@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.Cmos;
+namespace Spice86.Shared.Utils;
 
 /// <summary>
 /// Utility class for converting between Binary Coded Decimal (BCD) and binary formats.

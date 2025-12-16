@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using System;
 

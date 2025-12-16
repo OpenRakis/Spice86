@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// INT 1Ah - BIOS Time Services.
