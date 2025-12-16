@@ -2323,6 +2323,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Dma.Channel = dmaChannel;
         _sb.Dma.FirstTransfer = true;
         
+        // Setup DMA transfer rate and timing parameters - mirrors DOSBox calc_sbsample_rate()
+        // Reference: src/hardware/audio/soundblaster.cpp lines 653-680
+        _sb.Dma.Rate = _sb.FreqHz;
+        _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
+        _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DMA timing - Rate={Rate}Hz, Mul={Mul}, Min={Min}",
+                _sb.Dma.Rate, _sb.Dma.Mul, _sb.Dma.Min);
+        }
+        
         // Register DMA callback - mirrors DOSBox RegisterCallback(dsp_dma_callback)
         // Reference: src/hardware/audio/soundblaster.cpp line 1618
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -2413,6 +2424,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Dma.Mode = newMode;
         _sb.Dma.AutoInit = autoInit;
         _sb.Dma.FirstTransfer = true;
+        
+        // Setup DMA transfer rate and timing parameters - mirrors DOSBox calc_sbsample_rate()
+        // Reference: src/hardware/audio/soundblaster.cpp lines 653-680
+        _sb.Dma.Rate = _sb.FreqHz;
+        _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
+        _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DMA timing (new) - Rate={Rate}Hz, Mul={Mul}, Min={Min}",
+                _sb.Dma.Rate, _sb.Dma.Mul, _sb.Dma.Min);
+        }
         
         // Register DMA callback - mirrors DOSBox RegisterCallback(dsp_dma_callback)
         // Reference: src/hardware/audio/soundblaster.cpp line 2156
