@@ -27,11 +27,15 @@ start:
     xor al, al
     out 0x0C, al
     
-    ; Set DMA address
-    mov ax, test_dma_buffer
-    out 0x02, al
+    ; Set DMA address (physical address = segment * 16 + offset)
+    mov ax, ds
+    mov cl, 4
+    shl ax, cl              ; DS * 16
+    mov bx, test_dma_buffer
+    add ax, bx              ; Add buffer offset
+    out 0x02, al            ; DMA address low byte
     mov al, ah
-    out 0x02, al
+    out 0x02, al            ; DMA address high byte
     
     ; Set DMA count (32 bytes - 1)
     mov ax, 0x001F
@@ -39,8 +43,12 @@ start:
     mov al, ah
     out 0x04, al
     
-    ; Set DMA page
-    xor al, al
+    ; Set DMA page (bits 16-23)
+    mov ax, ds
+    mov cl, 4
+    shr ax, cl
+    shr ax, cl
+    shr ax, cl              ; DS >> 12 = page number
     out 0x83, al
     
     ; Fill DMA buffer with test pattern

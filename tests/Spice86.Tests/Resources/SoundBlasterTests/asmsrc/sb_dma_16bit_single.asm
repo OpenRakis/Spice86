@@ -26,12 +26,17 @@ start:
     xor al, al
     out 0xD8, al            ; 16-bit DMA flip-flop clear
     
-    ; Set DMA address (word address, not byte address)
-    mov ax, test_dma_buffer
-    shr ax, 1               ; Convert to word address
-    out 0xC4, al            ; Low byte
+    ; Set DMA address (word address for 16-bit DMA)
+    ; Calculate physical address: segment * 16 + offset
+    mov ax, ds
+    mov cl, 4
+    shl ax, cl              ; DS * 16
+    mov bx, test_dma_buffer
+    add ax, bx              ; Add buffer offset
+    shr ax, 1               ; Convert to word address (16-bit DMA uses word addresses)
+    out 0xC4, al            ; DMA address low byte
     mov al, ah
-    out 0xC4, al            ; High byte
+    out 0xC4, al            ; DMA address high byte
     
     ; Set DMA count (number of words - 1)
     mov ax, 0x001F          ; 32 words - 1 (64 bytes)
@@ -39,8 +44,12 @@ start:
     mov al, ah
     out 0xC6, al            ; High byte
     
-    ; Set DMA page
-    xor al, al
+    ; Set DMA page (bits 16-23) - for 16-bit DMA
+    mov ax, ds
+    mov cl, 4
+    shr ax, cl
+    shr ax, cl
+    shr ax, cl              ; DS >> 12 = page number
     out 0x8B, al
     
     ; Fill DMA buffer with 16-bit test pattern
