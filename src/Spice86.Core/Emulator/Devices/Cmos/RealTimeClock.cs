@@ -30,7 +30,6 @@ using System;
 public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private readonly DualPic _dualPic;
     private readonly CmosRegisters _cmosRegisters = new();
-    private readonly IPauseHandler _pauseHandler;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
 
@@ -45,16 +44,11 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Initializes the RTC/CMOS device with default register values.
     /// </summary>
     public RealTimeClock(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
-        EmulationLoopScheduler scheduler, IPauseHandler pauseHandler, IEmulatedClock clock, bool failOnUnhandledPort, ILoggerService loggerService)
+        EmulationLoopScheduler scheduler, IEmulatedClock clock, bool failOnUnhandledPort, ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
-        _pauseHandler = pauseHandler;
         _scheduler = scheduler;
         _clock = clock;
-
-        _pauseHandler.Pausing += OnPausing;
-        _pauseHandler.Paused += OnPaused;
-        _pauseHandler.Resumed += OnResumed;
 
         _cmosRegisters[CmosRegisterAddresses.StatusRegisterA] = 0x26;
         _cmosRegisters[CmosRegisterAddresses.StatusRegisterB] = 0x02;
@@ -416,25 +410,11 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         }
     }
 
-    private void OnPausing() {
-        _clock.OnPause();
-    }
-
-    private void OnPaused() {
-    }
-
-    private void OnResumed() {
-        _clock.OnResume();
-    }
-
     public void Dispose() {
         if (_disposed) {
             return;
         }
         _disposed = true;
-        _pauseHandler.Pausing -= OnPausing;
-        _pauseHandler.Paused -= OnPaused;
-        _pauseHandler.Resumed -= OnResumed;
         GC.SuppressFinalize(this);
     }
 }

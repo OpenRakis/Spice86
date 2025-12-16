@@ -173,6 +173,11 @@ public class Spice86DependencyInjection : IDisposable {
         IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null
             ? new CyclesClock(state, configuration.InstructionsPerSecond.Value)
             : new EmulatedClock();
+        
+        // Register clock to pause/resume events
+        pauseHandler.Pausing += () => emulatedClock.OnPause();
+        pauseHandler.Resumed += () => emulatedClock.OnResume();
+        
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
@@ -189,7 +194,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         RealTimeClock realTimeClock = new(state, ioPortDispatcher, dualPic,
-            emulationLoopScheduler, pauseHandler, emulatedClock, configuration.FailOnUnhandledPort, loggerService);
+            emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("RTC/CMOS created...");

@@ -9,11 +9,9 @@ public class EmulatedClock : IEmulatedClock {
     private int _ticks;
     private readonly Stopwatch _stopwatch = new();
     private double _cachedTime;
-    private DateTime _pauseStartTime;
-    private TimeSpan _totalPausedTime = TimeSpan.Zero;
-    private bool _isPaused;
 
-    public EmulatedClock() {
+    public EmulatedClock(DateTime? startTime = null) {
+        StartTime = startTime ?? DateTime.UtcNow;
         _stopwatch.Start();
     }
 
@@ -24,35 +22,20 @@ public class EmulatedClock : IEmulatedClock {
                 return _cachedTime;
             }
             
-            double elapsedMs = _stopwatch.Elapsed.TotalMilliseconds;
-            double pausedMs = _totalPausedTime.TotalMilliseconds;
-            
-            if (_isPaused) {
-                pausedMs += (DateTime.UtcNow - _pauseStartTime).TotalMilliseconds;
-            }
-            
-            _cachedTime = Math.Max(0, elapsedMs - pausedMs);
+            _cachedTime = _stopwatch.Elapsed.TotalMilliseconds;
             return _cachedTime;
         }
     }
 
-    public DateTime StartTime { get; set; } = DateTime.UtcNow;
+    public DateTime StartTime { get; set; }
 
     public DateTime CurrentDateTime => StartTime.AddMilliseconds(CurrentTimeMs);
 
     public void OnPause() {
-        if (_isPaused) {
-            return;
-        }
-        _pauseStartTime = DateTime.UtcNow;
-        _isPaused = true;
+        _stopwatch.Stop();
     }
 
     public void OnResume() {
-        if (!_isPaused) {
-            return;
-        }
-        _totalPausedTime += DateTime.UtcNow - _pauseStartTime;
-        _isPaused = false;
+        _stopwatch.Start();
     }
 }

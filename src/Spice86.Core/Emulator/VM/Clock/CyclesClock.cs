@@ -2,43 +2,28 @@
 
 using Spice86.Core.Emulator.CPU;
 
-public class CyclesClock(State cpuState, long cyclesPerSecond) : IEmulatedClock {
-    private DateTime _pauseStartTime;
-    private TimeSpan _totalPausedTime = TimeSpan.Zero;
-    private bool _isPaused;
+public class CyclesClock : IEmulatedClock {
+    private readonly State _cpuState;
 
-    public long CyclesPerSecond { get; set; } = cyclesPerSecond;
-
-    public double CurrentTimeMs {
-        get {
-            double elapsedMs = (double)cpuState.Cycles * 1000 / CyclesPerSecond;
-            double pausedMs = _totalPausedTime.TotalMilliseconds;
-            
-            if (_isPaused) {
-                pausedMs += (DateTime.UtcNow - _pauseStartTime).TotalMilliseconds;
-            }
-            
-            return Math.Max(0, elapsedMs - pausedMs);
-        }
+    public CyclesClock(State cpuState, long cyclesPerSecond, DateTime? startTime = null) {
+        _cpuState = cpuState;
+        CyclesPerSecond = cyclesPerSecond;
+        StartTime = startTime ?? DateTime.UtcNow;
     }
 
-    public DateTime StartTime { get; set; } = DateTime.UtcNow;
+    public long CyclesPerSecond { get; set; }
+
+    public double CurrentTimeMs => (double)_cpuState.Cycles * 1000 / CyclesPerSecond;
+
+    public DateTime StartTime { get; set; }
 
     public DateTime CurrentDateTime => StartTime.AddMilliseconds(CurrentTimeMs);
 
     public void OnPause() {
-        if (_isPaused) {
-            return;
-        }
-        _pauseStartTime = DateTime.UtcNow;
-        _isPaused = true;
+        // No-op: when CPU is paused, cycles don't advance, so time naturally stops
     }
 
     public void OnResume() {
-        if (!_isPaused) {
-            return;
-        }
-        _totalPausedTime += DateTime.UtcNow - _pauseStartTime;
-        _isPaused = false;
+        // No-op: when CPU is paused, cycles don't advance, so time naturally stops
     }
 }
