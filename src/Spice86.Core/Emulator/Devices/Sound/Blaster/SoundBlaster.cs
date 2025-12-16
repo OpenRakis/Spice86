@@ -1642,13 +1642,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0x0E:
                 // DSP Read Buffer Status Port / 8-bit IRQ Acknowledge
-                // Bit 7: 1 = data available to read, 0 = no data
+                // Bit 7: 1 = data available to read OR 8-bit IRQ pending
                 // Reading this port also acknowledges 8-bit DMA IRQ
+                bool hasDataOrIrq = _outputData.Count > 0 || _sb.Irq.Pending8Bit;
                 if (_sb.Irq.Pending8Bit) {
                     _sb.Irq.Pending8Bit = false;
                     _dualPic.DeactivateIrq(_config.Irq);
                 }
-                return (byte)(_outputData.Count > 0 ? 0x80 : 0x00);
+                return (byte)(hasDataOrIrq ? 0x80 : 0x00);
 
             case 0x0F:
                 // 16-bit IRQ Acknowledge Port
