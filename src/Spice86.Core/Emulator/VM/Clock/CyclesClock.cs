@@ -13,11 +13,11 @@ public class CyclesClock : IEmulatedClock {
 
     public long CyclesPerSecond { get; set; }
 
-    public double CurrentTimeMs => (double)_cpuState.Cycles * 1000 / CyclesPerSecond;
+    public double ElapsedTimeMs => (double)_cpuState.Cycles * 1000 / CyclesPerSecond;
 
     public DateTime StartTime { get; set; }
 
-    public DateTime CurrentDateTime => StartTime.AddMilliseconds(CurrentTimeMs);
+    public DateTime CurrentDateTime => StartTime.AddMilliseconds(ElapsedTimeMs);
 
     public void OnPause() {
         // No-op: when CPU is paused, cycles don't advance, so time naturally stops

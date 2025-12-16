@@ -284,7 +284,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             return latched;
         }
 
-        double nowMs = _clock.CurrentTimeMs;
+        double nowMs = _clock.ElapsedTimeMs;
         byte value = 0;
 
         if (nowMs >= (_cmosRegisters.Last.Timer + _cmosRegisters.Timer.Delay)) {
@@ -366,7 +366,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         }
         _cmosRegisters[CmosRegisterAddresses.StatusRegisterC] |= 0xC0;
         _cmosRegisters.Timer.Acknowledged = false;
-        _cmosRegisters.Last.Timer = _clock.CurrentTimeMs;
+        _cmosRegisters.Last.Timer = _clock.ElapsedTimeMs;
         _dualPic.ProcessInterruptRequest(8);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("RTC: Periodic interrupt fired via scheduler, raising IRQ 8");

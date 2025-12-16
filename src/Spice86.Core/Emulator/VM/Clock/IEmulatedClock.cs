@@ -5,9 +5,9 @@
 /// </summary>
 public interface IEmulatedClock {
     /// <summary>
-    /// Gets the current time in milliseconds.
+    /// Gets the elapsed time in milliseconds since the clock started.
     /// </summary>
-    double CurrentTimeMs { get; }
+    double ElapsedTimeMs { get; }
 
     /// <summary>
     /// Gets or sets the start time for the emulated clock.
@@ -16,7 +16,7 @@ public interface IEmulatedClock {
     DateTime StartTime { get; set; }
 
     /// <summary>
-    /// Gets the current date and time, calculated as StartTime + TimeSpan.FromMilliseconds(CurrentTimeMs).
+    /// Gets the current date and time, calculated as StartTime + TimeSpan.FromMilliseconds(ElapsedTimeMs).
     /// </summary>
     DateTime CurrentDateTime { get; }
 

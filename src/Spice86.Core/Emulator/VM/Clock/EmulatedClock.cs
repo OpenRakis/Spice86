@@ -15,7 +15,7 @@ public class EmulatedClock : IEmulatedClock {
         _stopwatch.Start();
     }
 
-    public double CurrentTimeMs {
+    public double ElapsedTimeMs {
         get {
             // Stopwatch.GetTimestamp can be slow, so we only query it periodically.
             if (_ticks++ % 100 != 0) {
@@ -29,7 +29,7 @@ public class EmulatedClock : IEmulatedClock {
 
     public DateTime StartTime { get; set; }
 
-    public DateTime CurrentDateTime => StartTime.AddMilliseconds(CurrentTimeMs);
+    public DateTime CurrentDateTime => StartTime.AddMilliseconds(ElapsedTimeMs);
 
     public void OnPause() {
         _stopwatch.Stop();
