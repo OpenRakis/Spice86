@@ -58,50 +58,99 @@ public class OplGoldenReferenceTests {
     
     /// <summary>
     /// Golden reference audio data for comparison.
+    /// Uses WAV format for audio output and DRO format for OPL register sequences.
     /// </summary>
     private class GoldenAudioData {
         public List<AudioFrame> Frames { get; } = new();
         public int SampleRate { get; set; }
         public string Source { get; set; } = "DOSBox Staging";
         
-        public static GoldenAudioData LoadFromFile(string filePath) {
+        /// <summary>
+        /// Load golden reference audio from WAV file (DOSBox Staging format).
+        /// </summary>
+        public static GoldenAudioData LoadFromWavFile(string filePath) {
             if (!File.Exists(filePath)) {
                 return new GoldenAudioData(); // Return empty for missing golden files
             }
             
             GoldenAudioData data = new();
-            // Format: Simple text file with left,right float pairs per line
-            // This is a simplified format; real DOSBox DRO files are binary
-            string[] lines = File.ReadAllLines(filePath);
-            foreach (string line in lines) {
-                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#")) {
-                    continue;
-                }
-                
-                string[] parts = line.Split(',');
-                if (parts.Length >= 2 &&
-                    float.TryParse(parts[0], out float left) &&
-                    float.TryParse(parts[1], out float right)) {
-                    data.Frames.Add(new AudioFrame(left, right));
-                }
-            }
+            data.Frames.AddRange(WavFileFormat.ReadWavFile(filePath, out int sampleRate));
+            data.SampleRate = sampleRate;
             
             return data;
         }
         
-        public void SaveToFile(string filePath) {
+        /// <summary>
+        /// Save golden reference audio to WAV file (DOSBox Staging compatible).
+        /// </summary>
+        public void SaveToWavFile(string filePath) {
             Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? ".");
+            WavFileFormat.WriteWavFile(filePath, Frames, SampleRate);
+        }
+        
+        /// <summary>
+        /// Load OPL register sequence from DRO file (DOSBox Raw OPL format).
+        /// </summary>
+        public static OplRegisterSequence LoadDroFile(string filePath) {
+            DroFileFormat.DroFile droFile = DroFileFormat.DroFile.LoadFromFile(filePath);
             
-            using StreamWriter writer = new(filePath);
-            writer.WriteLine("# OPL Audio Golden Reference");
-            writer.WriteLine($"# Source: {Source}");
-            writer.WriteLine($"# Sample Rate: {SampleRate} Hz");
-            writer.WriteLine($"# Frame Count: {Frames.Count}");
-            writer.WriteLine("# Format: left,right (float per channel)");
+            OplRegisterSequence sequence = new() {
+                SampleRate = 49716, // OPL native rate
+                TestName = Path.GetFileNameWithoutExtension(filePath)
+            };
             
-            foreach (AudioFrame frame in Frames) {
-                writer.WriteLine($"{frame.Left},{frame.Right}");
+            foreach (DroFileFormat.DroCommand cmd in droFile.Commands) {
+                // Convert DRO register index to actual port/register
+                ushort port = 0x388; // Primary OPL port
+                sequence.AddWrite(port, cmd.Register, cmd.Value, (int)cmd.DelayMs);
             }
+            
+            return sequence;
+        }
+        
+        /// <summary>
+        /// Save OPL register sequence to DRO file (DOSBox Raw OPL format).
+        /// </summary>
+        public static void SaveDroFile(string filePath, OplRegisterSequence sequence) {
+            DroFileFormat.DroFile droFile = new() {
+                Header = DroFileFormat.DroHeader.CreateDefault()
+            };
+            
+            uint totalMs = 0;
+            uint totalCommands = 0;
+            
+            foreach (OplRegisterWrite write in sequence.Writes) {
+                // Count delay commands
+                if (write.DelayMs > 0) {
+                    uint delay = (uint)write.DelayMs;
+                    while (delay > 0) {
+                        if (delay < 257) {
+                            totalCommands++; // One delay256 command
+                            delay = 0;
+                        } else {
+                            uint shift = delay >> 8;
+                            totalCommands++; // One delayShift8 command
+                            delay -= shift << 8;
+                        }
+                    }
+                }
+                
+                droFile.Commands.Add(new DroFileFormat.DroCommand {
+                    Register = write.Register,
+                    Value = write.Value,
+                    DelayMs = (uint)write.DelayMs
+                });
+                totalMs += (uint)write.DelayMs;
+                totalCommands++; // Count the register write command
+            }
+            
+            // Update header with final counts (includes delay commands)
+            DroFileFormat.DroHeader header = droFile.Header;
+            header.Commands = totalCommands;
+            header.Milliseconds = totalMs;
+            droFile.Header = header;
+            
+            droFile.SaveToFile(filePath);
         }
     }
     
@@ -282,7 +331,7 @@ public class OplGoldenReferenceTests {
     
     [Fact]
     public void GoldenReferenceInfrastructureWorks() {
-        // This test validates the golden reference infrastructure itself
+        // This test validates the WAV file golden reference infrastructure
         
         // Arrange: Create test data
         GoldenAudioData testData = new() {
@@ -294,15 +343,46 @@ public class OplGoldenReferenceTests {
         testData.Frames.Add(new AudioFrame(0.25f, -0.25f));
         testData.Frames.Add(new AudioFrame(0.0f, 0.0f));
         
-        // Act: Save and load
-        string tempFile = Path.Combine(Path.GetTempPath(), "opl_test_golden.txt");
-        testData.SaveToFile(tempFile);
-        GoldenAudioData loaded = GoldenAudioData.LoadFromFile(tempFile);
+        // Act: Save and load as WAV (DOSBox Staging format)
+        string tempFile = Path.Combine(Path.GetTempPath(), "opl_test_golden.wav");
+        testData.SaveToWavFile(tempFile);
+        GoldenAudioData loaded = GoldenAudioData.LoadFromWavFile(tempFile);
         
-        // Assert: Should match
+        // Assert: Should match (allowing for int16 quantization)
         loaded.Frames.Count.Should().Be(testData.Frames.Count);
         AudioComparisonResult comparison = AudioComparisonResult.Compare(loaded.Frames, testData.Frames);
-        comparison.IsBitExact.Should().BeTrue();
+        comparison.IsStatisticallyEquivalent.Should().BeTrue("WAV format should preserve audio quality");
+        
+        // Cleanup
+        if (File.Exists(tempFile)) {
+            File.Delete(tempFile);
+        }
+    }
+    
+    [Fact]
+    public void DroFileFormatWorks() {
+        // This test validates the DRO file format support for OPL register sequences
+        
+        // Arrange: Create test OPL register sequence
+        OplRegisterSequence sequence = new() {
+            TestName = "test_tone",
+            SampleRate = 49716
+        };
+        
+        // Simple tone configuration
+        sequence.AddWrite(0x388, 0x01, 0x20); // Enable waveform selection
+        sequence.AddWrite(0x388, 0x20, 0x01, delayMs: 10); // Configure operator with 10ms delay
+        sequence.AddWrite(0x388, 0xA0, 0x41); // Set frequency
+        sequence.AddWrite(0x388, 0xB0, 0x32); // Key on
+        
+        // Act: Save and load as DRO
+        string tempFile = Path.Combine(Path.GetTempPath(), "opl_test.dro");
+        GoldenAudioData.SaveDroFile(tempFile, sequence);
+        OplRegisterSequence loaded = GoldenAudioData.LoadDroFile(tempFile);
+        
+        // Assert: Should match
+        loaded.Writes.Count.Should().Be(sequence.Writes.Count);
+        loaded.Writes[1].DelayMs.Should().Be(10, "DRO should preserve timing information");
         
         // Cleanup
         if (File.Exists(tempFile)) {

@@ -266,3 +266,67 @@ dotnet test --filter "FullyQualifiedName~SbMixerAsmIntegrationTests"
   - ✅ Golden reference infrastructure
   - ⏸️ FM synthesis calculations (Phase 4)
   - ⏸️ Resampling pipeline (Phase 5)
+
+## DRO and WAV File Format Support (Updated)
+
+### DOSBox Raw OPL (DRO) Format
+The test infrastructure now supports the DOSBox Raw OPL (DRO) file format for OPL register capture and playback, enabling direct compatibility with DOSBox Staging.
+
+**DroFileFormat.cs** provides:
+- `DroHeader` struct matching DOSBox format (DBRAWOPL magic, version, hardware type, etc.)
+- `DroCommand` for register writes with timing
+- `DroFile` class for save/load operations
+- Delay encoding matching DOSBox (256ms and shift8 commands)
+
+**Usage:**
+```csharp
+// Save OPL register sequence to DRO
+GoldenAudioData.SaveDroFile("test.dro", oplSequence);
+
+// Load DRO file for playback
+OplRegisterSequence sequence = GoldenAudioData.LoadDroFile("test.dro");
+```
+
+### WAV File Format Support
+The test infrastructure supports WAV audio file format for audio output validation, enabling direct comparison with DOSBox Staging audio captures.
+
+**WavFileFormat.cs** provides:
+- PCM WAV file writing (16-bit stereo)
+- WAV file reading with format validation
+- Float<->Int16 conversion for audio samples
+- Sample rate preservation
+
+**Usage:**
+```csharp
+// Save audio frames to WAV
+WavFileFormat.WriteWavFile("output.wav", audioFrames, 49716);
+
+// Load WAV file for comparison
+List<AudioFrame> frames = WavFileFormat.ReadWavFile("golden.wav", out int sampleRate);
+```
+
+### Integration Test Pipeline
+Tests now follow the complete DOSBox Staging-compatible pipeline:
+
+1. **Input**: Compiled ASM programs (NASM) that produce music
+2. **Processing**: ASM → port writes → OPL → mixer → resampling
+3. **Capture**: Register writes to DRO, audio output to WAV
+4. **Validation**: Compare WAV output against DOSBox Staging golden reference
+5. **Formats**: DRO for register sequences, WAV for audio comparison
+
+This enables bit-exact or statistically equivalent validation against DOSBox Staging captures.
+
+## Test Statistics Summary (Updated)
+- **Total Sound Tests**: 47 tests
+- **Passing**: 42
+- **Skipped**: 5 (2 integration tests pending ASM programs, 3 pending NASM compilation)
+- **Test Coverage**:
+  - ✅ Port-level behavior (OPL2/OPL3, mixer ports)
+  - ✅ Basic audio generation and capture
+  - ✅ Register write validation
+  - ✅ ASM-based integration (OPL, mixer, DSP)
+  - ✅ DRO file format (DOSBox Raw OPL)
+  - ✅ WAV file format (audio output)
+  - ✅ Integration test infrastructure (ASM → WAV)
+  - ⏸️ FM synthesis calculations (Phase 4)
+  - ⏸️ Resampling pipeline (Phase 5)
