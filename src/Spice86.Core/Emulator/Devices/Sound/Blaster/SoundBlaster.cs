@@ -608,7 +608,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        _dmaState.LastPumpTimeMs = _clock.CurrentTimeMs;
+        _dmaState.LastPumpTimeMs = _clock.ElapsedTimeMs;
 
         uint available = GetAvailableDmaBytes();
         uint chunk = chunkHint != 0 ? NormalizeDmaRequest(Math.Min(chunkHint, available), available) : 0;
@@ -774,7 +774,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        double nowMs = _clock.CurrentTimeMs;
+        double nowMs = _clock.ElapsedTimeMs;
         double elapsedMs = nowMs - _dmaState.LastPumpTimeMs;
         if (elapsedMs <= 0.0) {
             return;
@@ -831,7 +831,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         requestedBytes = NormalizeDmaRequest(requestedBytes, remainingBytes);
 
         if (requestedBytes == 0) {
-            _dmaState.LastPumpTimeMs = _clock.CurrentTimeMs;
+            _dmaState.LastPumpTimeMs = _clock.ElapsedTimeMs;
             if (!HandleDmaBlockCompletion()) {
                 return;
             }
@@ -861,7 +861,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        _dmaState.LastPumpTimeMs = _clock.CurrentTimeMs;
+        _dmaState.LastPumpTimeMs = _clock.ElapsedTimeMs;
 
         if (_dmaState.RemainingBytes == 0) {
             bool continuePlayback = HandleDmaBlockCompletion();
@@ -1016,7 +1016,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         _dmaState.AutoSizeBytes = 0;
         _dmaState.IrqRaisedForCurrentBlock = false;
         _dmaState.DmaMasked = false;
-        _dmaState.LastPumpTimeMs = _clock.CurrentTimeMs;
+        _dmaState.LastPumpTimeMs = _clock.ElapsedTimeMs;
         Volatile.Write(ref _pendingDmaCompletion, 0);
     }
 
@@ -1062,7 +1062,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         }
 
         UpdateActiveDmaRate();
-        _dmaState.LastPumpTimeMs = _clock.CurrentTimeMs;
+        _dmaState.LastPumpTimeMs = _clock.ElapsedTimeMs;
     }
 
     private void UpdateActiveDmaRate() {

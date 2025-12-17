@@ -90,7 +90,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
             LoggerService.Verbose("INT 1A, AH=02h - Read Time from RTC");
         }
 
-        DateTime now = DateTime.Now;
+        DateTime now = _realTimeClock.Clock.CurrentDateTime;
         State.CH = BcdConverter.ToBcd((byte)now.Hour);
         State.CL = BcdConverter.ToBcd((byte)now.Minute);
         State.DH = BcdConverter.ToBcd((byte)now.Second);
@@ -119,7 +119,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
             LoggerService.Verbose("INT 1A, AH=04h - Read Date from RTC");
         }
 
-        DateTime now = DateTime.Now;
+        DateTime now = _realTimeClock.Clock.CurrentDateTime;
         State.CH = BcdConverter.ToBcd((byte)(now.Year / 100));
         State.CL = BcdConverter.ToBcd((byte)(now.Year % 100));
         State.DH = BcdConverter.ToBcd((byte)now.Month);

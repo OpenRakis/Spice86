@@ -42,7 +42,7 @@ public class PitModeTests {
         ConfigureChannel2(PitMode.InterruptOnTerminalCount);
         WriteReloadValue(2, 3);
 
-        double gateIndex = _clock.CurrentTimeMs;
+        double gateIndex = _clock.ElapsedTimeMs;
         _pit.SetGate2(true);
 
         PitChannelSnapshot snapshot = _pit.GetChannelSnapshot(2);

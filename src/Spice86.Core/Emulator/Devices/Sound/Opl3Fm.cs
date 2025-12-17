@@ -76,7 +76,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         _oplFlushHandler = FlushOplWrites;
         _oplTimerHandler = ServiceOplTimers;
 
-        _oplIo = new Opl3Io(_chip, () => _clock.CurrentTimeMs) {
+        _oplIo = new Opl3Io(_chip, () => _clock.ElapsedTimeMs) {
             OnIrqChanged = OnOplIrqChanged
         };
 
@@ -239,7 +239,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 return;
         }
 
-        double now = _clock.CurrentTimeMs;
+        double now = _clock.ElapsedTimeMs;
 
         if (audioWrite) {
             ScheduleOplFlush(now);
@@ -380,7 +380,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// </summary>
     /// <param name="unusedTick">Unused parameter supplied by the EmulationLoopScheduler event system.</param>
     private void FlushOplWrites(uint unusedTick) {
-        double now = _clock.CurrentTimeMs;
+        double now = _clock.ElapsedTimeMs;
         double? delay;
 
         lock (_chipLock) {
@@ -408,7 +408,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <param name="unusedTick">Unused parameter supplied by the EmulationLoopScheduler event system.</param>
     private void ServiceOplTimers(uint unusedTick) {
         _ = unusedTick;
-        double now = _clock.CurrentTimeMs;
+        double now = _clock.ElapsedTimeMs;
         double? delay;
 
         lock (_chipLock) {
