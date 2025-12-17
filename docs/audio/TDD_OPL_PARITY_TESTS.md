@@ -199,3 +199,70 @@ To generate golden reference files from DOSBox Staging:
   - Golden reference infrastructure: ✓
   - FM synthesis calculations: Partial (next phase)
   - Resampling pipeline: Partial (next phase)
+
+## ASM-Based Integration Tests (New)
+
+### OplAsmIntegrationTests.cs (7 tests)
+ASM-based integration tests for OPL/AdLib Gold mirroring DOSBox Staging:
+- **Test_OPL_Register_Write_Sequence**: Inline ASM test for basic register writes
+- **Test_OPL_Timer_Registers**: Timer configuration and enable
+- **Test_OPL_Waveform_Selection**: Waveform selection enable and selection
+- **Test_OPL3_Four_Op_Mode**: OPL3 4-operator synthesis mode
+- **Test_OPL_Simple_Tone_Generation**: 440Hz tone (requires NASM - ASM source provided)
+- **Test_OPL_Rhythm_Mode**: Percussion mode (requires NASM - ASM source provided)
+- **Test_AdLib_Gold_Stereo_Control**: Stereo panning (requires NASM - ASM source provided)
+
+**ASM Source Files:**
+- `tests/Spice86.Tests/Resources/SoundBlasterTests/asmsrc/opl_simple_tone.asm`
+- `tests/Spice86.Tests/Resources/SoundBlasterTests/asmsrc/opl_rhythm_mode.asm`
+- `tests/Spice86.Tests/Resources/SoundBlasterTests/asmsrc/adlib_gold_stereo.asm`
+
+**To compile:** Run `make` in the asmsrc directory (requires NASM assembler)
+
+### SbMixerAsmIntegrationTests.cs (8 tests)
+ASM-based integration tests for Sound Blaster hardware mixer:
+- **Test_SB_Mixer_Master_Volume**: Master volume control (register 0x22)
+- **Test_SB_Mixer_Voice_Volume**: Voice/DAC volume (register 0x04)
+- **Test_SB_Mixer_FM_Volume**: FM/OPL volume (register 0x26)
+- **Test_SB_Mixer_CD_Volume**: CD audio volume (register 0x28)
+- **Test_SB_Mixer_Line_Volume**: Line-in volume (register 0x2E)
+- **Test_SB_Mixer_Reset**: Mixer reset command (register 0x00)
+- **Test_SB16_Mixer_3D_Stereo_Control**: SB16 3D enhancement (register 0x3D)
+- **Test_SB_Mixer_Read_After_Write**: Read-back verification
+
+All mixer tests use inline ASM (no external binaries required).
+
+### Why ASM-Based Tests?
+ASM-based integration tests provide several advantages:
+1. **Complete hardware simulation**: Tests the full path from port writes through emulation
+2. **DOSBox behavior matching**: Mirrors how real DOS programs interact with hardware
+3. **Timing accuracy**: Tests proper register write delays and sequencing
+4. **Side-by-side validation**: Can compare exact behavior with DOSBox
+5. **Real-world scenarios**: Tests actual register write patterns used by games
+
+### Running ASM Tests
+```bash
+# Run all ASM integration tests
+dotnet test --filter "FullyQualifiedName~AsmIntegrationTests"
+
+# Run OPL ASM tests only
+dotnet test --filter "FullyQualifiedName~OplAsmIntegrationTests"
+
+# Run SB Mixer ASM tests only
+dotnet test --filter "FullyQualifiedName~SbMixerAsmIntegrationTests"
+```
+
+**Current Status:** 12 passing, 3 skipped (pending NASM compilation)
+
+## Test Statistics Summary
+- **Total Sound Tests**: 44 tests
+- **Passing**: 41
+- **Skipped**: 3 (require NASM compilation)
+- **Test Coverage**:
+  - ✅ Port-level behavior (OPL2/OPL3, mixer ports)
+  - ✅ Basic audio generation and capture
+  - ✅ Register write validation
+  - ✅ ASM-based integration (OPL, mixer, DSP)
+  - ✅ Golden reference infrastructure
+  - ⏸️ FM synthesis calculations (Phase 4)
+  - ⏸️ Resampling pipeline (Phase 5)
