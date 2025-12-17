@@ -182,6 +182,13 @@ public sealed class Configuration {
     [Option(nameof(AudioEngine), Default = AudioEngine.PortAudio, Required = false, HelpText = "Audio engine to use. Values are PortAudio or Dummy")]
     public AudioEngine AudioEngine { get; init; }
 
+    /// <summary>
+    /// Select the OPL implementation to expose.
+    /// </summary>
+    [Option(nameof(OplType), Default = OplType.SbPro2, Required = false,
+        HelpText = "OPL backend to expose. Defaults to SbPro2. Use Gold to enable AdLib Gold filtering and IRQs.")]
+    public OplType OplType { get; init; }
+
     [Option(nameof(Xms), Default = null, Required = false, HelpText = "Enable XMS. Default is true.")]
     public bool? Xms { get; init; }
 }

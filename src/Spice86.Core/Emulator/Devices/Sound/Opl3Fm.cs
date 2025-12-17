@@ -29,6 +29,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly byte _oplIrqLine;
     private readonly EventHandler _oplTimerHandler;
     private readonly float[] _playBuffer = new float[2048];
+    private readonly bool _useAdLibGold;
 
     /// <summary>
     ///     The mixer channel used for the OPL3 FM synth.
@@ -69,7 +70,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         _scheduler = scheduler;
         _clock = clock;
         _dualPic = dualPic;
-        bool useAdLibGold = useAdlibGold;
+        _useAdLibGold = useAdlibGold;
         _useOplIrq = enableOplIrq;
         _oplIrqLine = oplIrqLine;
 
@@ -81,14 +82,14 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         };
 
         int sampleRate = _mixerChannel.GetSampleRate();
-        if (useAdLibGold) {
+        if (_useAdLibGold) {
             _adLibGold = new AdLibGoldDevice(sampleRate, loggerService);
             _adLibGoldIo = _adLibGold.CreateIoAttachedTo(_oplIo);
         }
 
         _loggerService.Debug(
             "Initializing OPL3 FM synth. AdLib Gold enabled: {AdLibGoldEnabled}, OPL IRQ enabled: {OplIrqEnabled}, Sample rate: {SampleRate}",
-            useAdLibGold, _useOplIrq, sampleRate);
+            _useAdLibGold, _useOplIrq, sampleRate);
 
         _oplIo.Reset((uint)sampleRate);
 
@@ -110,6 +111,11 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
+
+    /// <summary>
+    /// Gets a value indicating whether AdLib Gold processing is enabled.
+    /// </summary>
+    public bool IsAdlibGoldEnabled => _adLibGoldIo is not null;
 
     /// <summary>
     ///     Initializes default envelopes and rates for the OPL3 operators.
@@ -154,8 +160,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         ioPortDispatcher.AddIOPortHandler(IOplPort.PrimaryDataPortNumber, this);
         ioPortDispatcher.AddIOPortHandler(IOplPort.SecondaryAddressPortNumber, this);
         ioPortDispatcher.AddIOPortHandler(IOplPort.SecondaryDataPortNumber, this);
-        ioPortDispatcher.AddIOPortHandler(IOplPort.AdLibGoldAddressPortNumber, this);
-        ioPortDispatcher.AddIOPortHandler(IOplPort.AdLibGoldDataPortNumber, this);
+        if (_adLibGoldIo is not null) {
+            ioPortDispatcher.AddIOPortHandler(IOplPort.AdLibGoldAddressPortNumber, this);
+            ioPortDispatcher.AddIOPortHandler(IOplPort.AdLibGoldDataPortNumber, this);
+        }
     }
 
     /// <summary>

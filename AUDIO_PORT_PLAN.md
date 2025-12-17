@@ -8,6 +8,11 @@
 //
 // LATEST UPDATE (2025-12-16) - Mixer.cs PUBLIC API COMPLETED - 100% PARITY ✅
 // ============================================================================
+// LATEST UPDATE (2025-12-17) - OPL/AdLib Gold gating
+// - Added OplType CLI option (default SbPro2, Gold enables AdLib Gold path)
+// - AdLib Gold I/O ports are only registered when OplType=Gold; default is disabled
+// - Added unit tests verifying AdLib Gold port registration toggles
+//
 // Phase 4.1d COMPLETED: Mixer.cs Public API Full Parity
 // - Added MixerState enum (NoSound, On, Muted) to MixerTypes.cs
 // - Added GetMasterVolume() method mirroring DOSBox MIXER_GetMasterVolume()
