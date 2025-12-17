@@ -23,7 +23,7 @@ public class SbPcmAsmIntegrationTests {
     private const int MaxCycles = 50000000; // PCM playback can take longer
     private const string GoldenReferenceDir = "Resources/SbPcmGoldenReferences";
     
-    #region Basic 8-bit PCM Tests
+    // Basic 8-bit PCM Tests
     
     [Fact(Skip = "Integration test - Requires compiled ASM and DOSBox golden reference WAV")]
     public void Test_SB_PCM_8bit_Mono_Single_Cycle() {
@@ -85,9 +85,7 @@ public class SbPcmAsmIntegrationTests {
         result.ChannelSeparation.Should().BeGreaterThan(0.98, "Stereo channels should be well separated");
     }
     
-    #endregion
-    
-    #region 16-bit PCM Tests (SB16)
+    // 16-bit PCM Tests (SB16)
     
     [Fact(Skip = "Integration test - Requires SB16 support and DOSBox golden reference")]
     public void Test_SB_PCM_16bit_Mono() {
@@ -146,9 +144,7 @@ public class SbPcmAsmIntegrationTests {
         result.HasBufferGaps.Should().BeFalse();
     }
     
-    #endregion
-    
-    #region Sample Rate Tests
+    // Sample Rate Tests
     
     [Theory(Skip = "Integration test - Requires compiled ASM programs")]
     [InlineData(8000)]
@@ -172,9 +168,7 @@ public class SbPcmAsmIntegrationTests {
         result.FrequencyAccuracy.Should().BeGreaterThan(0.999, "Frequency should be within 1 Hz");
     }
     
-    #endregion
-    
-    #region DMA Transfer Tests
+    // DMA Transfer Tests
     
     [Fact(Skip = "Integration test - Tests small DMA buffer handling")]
     public void Test_SB_PCM_Small_Buffer() {
@@ -210,9 +204,7 @@ public class SbPcmAsmIntegrationTests {
         result.HasCorruption.Should().BeFalse("Large buffer should not have corruption at boundaries");
     }
     
-    #endregion
-    
-    #region Mixer Integration Tests
+    // Mixer Integration Tests
     
     [Fact(Skip = "Integration test - Tests PCM volume control via mixer")]
     public void Test_SB_PCM_Volume_Control() {
@@ -254,9 +246,7 @@ public class SbPcmAsmIntegrationTests {
         result.HasFmContent.Should().BeTrue("Should contain FM audio");
     }
     
-    #endregion
-    
-    #region Helper Methods
+    // Helper Methods
     
     /// <summary>
     /// Run PCM test ASM program and compare output WAV with golden reference.
@@ -349,9 +339,7 @@ public class SbPcmAsmIntegrationTests {
         return result;
     }
     
-    #endregion
-    
-    #region Result Classes
+    // Result Classes
     
     /// <summary>
     /// Result of WAV file comparison with golden reference.
@@ -375,6 +363,5 @@ public class SbPcmAsmIntegrationTests {
         public int StartSample { get; set; }
         public int EndSample { get; set; }
     }
-    
-    #endregion
 }
+
