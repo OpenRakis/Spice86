@@ -20,6 +20,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly AdLibGoldDevice? _adLibGold;
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
+    private readonly Action<Span<short>> _generateStream;
     private readonly object _chipLock = new();
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
@@ -59,10 +60,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <param name="useAdlibGold">True to enable AdLib Gold filtering and surround processing.</param>
     /// <param name="enableOplIrq">True to forward OPL IRQs to the PIC.</param>
     /// <param name="oplIrqLine">IRQ line used when OPL IRQs are enabled.</param>
+    /// <param name="sampleGenerator">Optional custom sample generator for testing; defaults to the internal OPL3 chip.</param>
     public Opl3Fm(Mixer mixer, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
         ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
-        bool useAdlibGold = false, bool enableOplIrq = false, byte oplIrqLine = 5)
+        bool useAdlibGold = false, bool enableOplIrq = false, byte oplIrqLine = 5,
+        Action<Span<short>>? sampleGenerator = null)
         : base(state, failOnUnhandledPort, loggerService) {
         // Create and register the OPL3 mixer channel internally following the SB PCM pattern
         HashSet<ChannelFeature> features = new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer };
@@ -73,6 +76,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         _useAdLibGold = useAdlibGold;
         _useOplIrq = enableOplIrq;
         _oplIrqLine = oplIrqLine;
+        _generateStream = sampleGenerator ?? (_chip.GenerateStream);
 
         _oplFlushHandler = FlushOplWrites;
         _oplTimerHandler = ServiceOplTimers;
@@ -310,14 +314,13 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             Span<short> interleaved = _tmpInterleaved.AsSpan(0, samplesToGenerate);
 
             lock (_chipLock) {
-                _chip.GenerateStream(interleaved);
+                _generateStream(interleaved);
             }
 
             // Convert interleaved int16 samples to AudioFrames
-            const float scale = 1.0f / 32768f;
             for (int i = 0; i < framesToGenerate; i++) {
-                float left = interleaved[i * 2] * scale;
-                float right = interleaved[i * 2 + 1] * scale;
+                float left = interleaved[i * 2];
+                float right = interleaved[i * 2 + 1];
 
                 // Apply AdLib Gold filtering if enabled
                 if (_adLibGold is not null) {
@@ -369,13 +372,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             generatedSamples += batchSamples;
         }
 
-        const float scale = 1.0f / 32768f;
-
         if (_adLibGold is null) {
-            SimdConversions.ConvertInt16ToScaledFloat(interleaved, destination, scale);
+            SimdConversions.ConvertInt16ToScaledFloat(interleaved, destination, 1.0f);
         } else {
             _adLibGold.Process(interleaved, frames, destination);
-            SimdConversions.ScaleInPlace(destination, scale);
         }
     }
 

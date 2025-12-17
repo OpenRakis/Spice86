@@ -54,4 +54,33 @@ public class Opl3FmTests {
         Action read = () => dispatcher.ReadByte(IOplPort.AdLibGoldAddressPortNumber);
         read.Should().NotThrow();
     }
+
+    [Fact]
+    public void AudioCallbackUsesRawShortAmplitude() {
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        AddressReadWriteBreakpoints breakpoints = new();
+        State state = new(CpuModel.INTEL_80286);
+        IOPortDispatcher dispatcher = new(breakpoints, state, loggerService, failOnUnhandledPort: false);
+        using Mixer mixer = new(loggerService, AudioEngine.Dummy);
+        EmulatedClock clock = new();
+        EmulationLoopScheduler scheduler = new(clock, loggerService);
+        DualPic dualPic = new(dispatcher, state, loggerService, false);
+
+        short sample = 12000;
+        void Generator(Span<short> buffer) {
+            for (int i = 0; i < buffer.Length; i += 2) {
+                buffer[i] = sample;
+                buffer[i + 1] = (short)-sample;
+            }
+        }
+
+        using Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+            useAdlibGold: false, enableOplIrq: false, sampleGenerator: Generator);
+
+        opl3.AudioCallback(4);
+
+        opl3.MixerChannel.AudioFrames.Should().NotBeEmpty();
+        opl3.MixerChannel.AudioFrames[0].Left.Should().Be(sample);
+        opl3.MixerChannel.AudioFrames[0].Right.Should().Be(-sample);
+    }
 }
