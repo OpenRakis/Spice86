@@ -44,7 +44,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     Initializes a new instance of the OPL3 FM synth chip.
     /// </summary>
-    /// <param name="fmSynthMixerChannel">The software mixer's channel for the OPL3 FM Synth chip.</param>
+    /// <param name="mixer">The global software mixer used to create the OPL3 channel and request frames.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="ioPortDispatcher">
     ///     The class that is responsible for dispatching ports reads and writes to classes that
@@ -52,19 +52,20 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// </param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="pauseHandler">Class for handling pausing the emulator.</param>
     /// <param name="scheduler">The event scheduler.</param>
     /// <param name="clock">The emulated clock.</param>
     /// <param name="dualPic">The shared dual PIC scheduler.</param>
     /// <param name="useAdlibGold">True to enable AdLib Gold filtering and surround processing.</param>
     /// <param name="enableOplIrq">True to forward OPL IRQs to the PIC.</param>
     /// <param name="oplIrqLine">IRQ line used when OPL IRQs are enabled.</param>
-    public Opl3Fm(MixerChannel fmSynthMixerChannel, State state,
+    public Opl3Fm(Mixer mixer, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
-        ILoggerService loggerService, IPauseHandler pauseHandler, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
+        ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
         bool useAdlibGold = false, bool enableOplIrq = false, byte oplIrqLine = 5)
         : base(state, failOnUnhandledPort, loggerService) {
-        _mixerChannel = fmSynthMixerChannel;
+        // Create and register the OPL3 mixer channel internally following the SB PCM pattern
+        HashSet<ChannelFeature> features = new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer };
+        _mixerChannel = mixer.AddChannel(framesRequested => AudioCallback(framesRequested), 49716, "OPL3FM", features);
         _scheduler = scheduler;
         _clock = clock;
         _dualPic = dualPic;
@@ -91,15 +92,18 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         _oplIo.Reset((uint)sampleRate);
 
-        // Register OPL3 as a mixer handler that will be called during mix cycles
-        // This is critical - the mixer calls our handler every blocksize frames
-        // We generate OPL audio directly in the handler, not via scheduler events
+        // Enable the channel now that it's registered
         _mixerChannel.Enable(true);
 
         InitializeToneGenerators();
 
         InitPortHandlers(ioPortDispatcher);
     }
+
+    /// <summary>
+    ///     Exposes the OPL3 mixer channel for other components (e.g., SoundBlaster hardware mixer).
+    /// </summary>
+    public MixerChannel MixerChannel => _mixerChannel;
 
     /// <inheritdoc />
     public void Dispose() {
@@ -277,7 +281,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     ///     This replaces the event-based scheduler approach with direct mixer integration.
     ///     Mirrors DOSBox Staging's Opl::AudioCallback()
     /// </summary>
-    public void GenerateOplFrames(int framesRequested) {
+    public void AudioCallback(int framesRequested) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("OPL3: Generate framesRequested={Frames}", framesRequested);
         }
@@ -325,19 +329,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("OPL3: Generated frames={Frames}", framesGenerated);
-        }
-    }
-
-    /// <summary>
-    ///     Generates and plays back output waveform data.
-    ///     DEPRECATED: Replaced by GenerateOplFrames for proper mixer integration.
-    /// </summary>
-    private void PlaybackLoopBody() {
-        RenderTo(_playBuffer);
-        
-        _mixerChannel.AudioFrames.Clear();
-        for (int i = 0; i < _playBuffer.Length; i += 2) {
-            _mixerChannel.AudioFrames.Add(new AudioFrame(_playBuffer[i], _playBuffer[i + 1]));
         }
     }
 

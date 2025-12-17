@@ -339,23 +339,16 @@ public class Spice86DependencyInjection : IDisposable {
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
-        // Create Opl3Fm FIRST, then register its handler with the mixer
-        // This is necessary because we need the OPL instance to get its GenerateOplFrames method
-        Opl3Fm opl3Fm = null!; // Will be assigned below
-
-        MixerChannel oplChannel = mixer.AddChannel(
-            framesRequested => opl3Fm.GenerateOplFrames(framesRequested), 49716, "OPL3FM",
-            new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
-        
-        opl3Fm = new(oplChannel, state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService, pauseHandler,
+        // Create OPL3 FM device; it creates and registers its own mixer channel internally
+        Opl3Fm opl3Fm = new(mixer, state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService,
             emulationLoopScheduler, emulatedClock, dualPic,
             useAdlibGold: true, enableOplIrq: true);
 
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SBPro2);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
         var soundBlaster = new SoundBlaster(ioPortDispatcher,
-            state, dmaSystem, dualPic, mixer, oplChannel, loggerService,
+            state, dmaSystem, dualPic, mixer, opl3Fm.MixerChannel, loggerService,
             emulationLoopScheduler, emulatedClock,
             soundBlasterHardwareConfig);
         var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
