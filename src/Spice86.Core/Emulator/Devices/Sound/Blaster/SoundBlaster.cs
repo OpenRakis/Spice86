@@ -690,9 +690,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                         PlayDmaTransfer(bytesRequested);
                         
                         // Frames were already enqueued by PlayDmaTransfer,
-                        // so break out of the frame generation loop
-                        framesGenerated = maxFramesToGenerate;
+                        // so return immediately without adding extra silence frame
+                        return;
                     }
+                    // If no DMA data, fall through to add silence frame
                     break;
             }
 
@@ -834,8 +835,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
         
         // How many bytes should we read from DMA?
-        uint lowerBound = _sb.Dma.AutoInit ? bytesRequested : _sb.Dma.Min;
-        uint bytesToRead = _sb.Dma.Left <= lowerBound ? _sb.Dma.Left : bytesRequested;
+        // For both auto-init and single-cycle, read min(Left, bytesRequested)
+        // This ensures we don't try to read more than available
+        uint bytesToRead = Math.Min(_sb.Dma.Left, bytesRequested);
         
         // All three of these must be populated during the DMA sequence to
         // ensure the proper quantities and unit are being accounted for.
