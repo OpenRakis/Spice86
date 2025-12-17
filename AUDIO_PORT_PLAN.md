@@ -12,6 +12,9 @@
 // - Added OplType CLI option (default SbPro2, Gold enables AdLib Gold path)
 // - AdLib Gold I/O ports are only registered when OplType=Gold; default is disabled
 // - Added unit tests verifying AdLib Gold port registration toggles
+// - TODO: Add ASM-based integration tests for OPL and AdLib Gold port read/write behavior (mirror DOSBox Staging)
+// - TODO: Add AdLib Gold subwoofer path parity (per DOSBox Staging)
+// - TODO: Add capture-based OPL/AdLib Gold parity checks to ensure identical resampling pipeline output
 //
 // Phase 4.1d COMPLETED: Mixer.cs Public API Full Parity
 // - Added MixerState enum (NoSound, On, Muted) to MixerTypes.cs
