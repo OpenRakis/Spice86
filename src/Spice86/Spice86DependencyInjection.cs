@@ -340,10 +340,11 @@ public class Spice86DependencyInjection : IDisposable {
         loggerService.Information("PIT created...");
 
         // Create OPL3 FM device; it creates and registers its own mixer channel internally
+        bool useAdlibGold = configuration.OplType == OplType.Gold;
         Opl3Fm opl3Fm = new(mixer, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService,
             emulationLoopScheduler, emulatedClock, dualPic,
-            useAdlibGold: true, enableOplIrq: true);
+            useAdlibGold: useAdlibGold, enableOplIrq: true);
 
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SBPro2);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);

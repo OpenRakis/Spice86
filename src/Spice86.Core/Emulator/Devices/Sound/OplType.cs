@@ -1,0 +1,17 @@
+namespace Spice86.Core.Emulator.Devices.Sound;
+
+/// <summary>
+/// Selectable OPL backend types.
+/// Mirrors DOSBox Staging opltype options.
+/// </summary>
+public enum OplType {
+    /// <summary>
+    /// Standard OPL3 as found on the Sound Blaster Pro 2 (default).
+    /// </summary>
+    SbPro2,
+
+    /// <summary>
+    /// AdLib Gold enhanced signal path.
+    /// </summary>
+    Gold
+}
