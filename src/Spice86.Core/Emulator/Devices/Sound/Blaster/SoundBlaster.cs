@@ -1618,7 +1618,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return;
         }
 
-        // Frame counter reset is handled by mixer blocks, not per-tick
+        // Trigger the mixer to process frames synchronously with the emulation loop
+        // This ensures DMA transfers and IRQs are processed at appropriate times
+        // Mirrors DOSBox's approach of calling the mixer from PIC timer events
+        _mixer.TickMixer();
+        
+        // Reschedule for next tick (1ms intervals)
         _scheduler.AddEvent(MixerTickCallback, 1.0);
     }
 
