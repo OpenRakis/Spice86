@@ -51,14 +51,20 @@ public class OplRegisterParityTests {
             useAdlibGold: false, enableOplIrq: false);
         
         // Act & Assert: OPL2 ports (0x388 address, 0x389 data) should be accessible
-        Action writeAddress = () => dispatcher.WriteByte(IOplPort.PrimaryAddressPortNumber, 0x01);
-        writeAddress.Should().NotThrow("OPL2 address port should be registered");
+        // Write to address port should succeed without throwing
+        dispatcher.WriteByte(IOplPort.PrimaryAddressPortNumber, 0x01);
         
-        Action writeData = () => dispatcher.WriteByte(IOplPort.PrimaryDataPortNumber, 0x20);
-        writeData.Should().NotThrow("OPL2 data port should be registered");
+        // Write to data port should succeed without throwing
+        dispatcher.WriteByte(IOplPort.PrimaryDataPortNumber, 0x20);
         
-        Action readStatus = () => dispatcher.ReadByte(IOplPort.PrimaryAddressPortNumber);
-        readStatus.Should().NotThrow("OPL2 status port should be readable");
+        // Read status from address port - should return valid status (typically 0x00 or timer flags)
+        byte status = dispatcher.ReadByte(IOplPort.PrimaryAddressPortNumber);
+        // OPL status register bits: bit 7-6 = timer overflow flags, bit 5 = unused, bit 0-4 = timer status
+        status.Should().BeLessThanOrEqualTo(0xE0, "OPL status register should return valid timer status bits");
+        
+        // Data port read should return 0xFF (not a valid read port)
+        byte dataRead = dispatcher.ReadByte(IOplPort.PrimaryDataPortNumber);
+        dataRead.Should().Be(0xFF, "OPL data port (0x389) should return 0xFF on read");
     }
     
     [Fact]
@@ -144,13 +150,18 @@ public class OplRegisterParityTests {
         dispatcher.WriteByte(IOplPort.PrimaryAddressPortNumber, 0xE0);
         dispatcher.WriteByte(IOplPort.PrimaryDataPortNumber, 0x03); // Waveform 3
         
-        // Assert: Should complete without error
-        // Actual waveform effect would be verified in audio output tests
-        Action act = () => {
-            dispatcher.WriteByte(IOplPort.PrimaryAddressPortNumber, 0x01);
-            dispatcher.WriteByte(IOplPort.PrimaryDataPortNumber, 0x20);
-        };
-        act.Should().NotThrow();
+        // Assert: Writing registers should complete successfully
+        // Read status to confirm OPL is responding
+        byte status = dispatcher.ReadByte(IOplPort.PrimaryAddressPortNumber);
+        status.Should().Match(b => b <= 0xE0, "OPL status should be valid after waveform write");
+        
+        // Verify we can write again after the waveform setting
+        dispatcher.WriteByte(IOplPort.PrimaryAddressPortNumber, 0x01);
+        dispatcher.WriteByte(IOplPort.PrimaryDataPortNumber, 0x20);
+        
+        // Confirm OPL is still responding
+        byte statusAfter = dispatcher.ReadByte(IOplPort.PrimaryAddressPortNumber);
+        statusAfter.Should().Match(b => b <= 0xE0, "OPL status should remain valid");
     }
     
     [Fact]
@@ -178,12 +189,17 @@ public class OplRegisterParityTests {
         dispatcher.WriteByte(IOplPort.PrimaryDataPortNumber, 0x32);
         
         // Assert: Register writes should complete successfully
-        // This tests that the register addressing works correctly
-        Action act = () => {
-            dispatcher.WriteByte(IOplPort.PrimaryAddressPortNumber, 0xA0);
-            dispatcher.WriteByte(IOplPort.PrimaryDataPortNumber, 0x00);
-        };
-        act.Should().NotThrow();
+        // Read status to verify OPL accepted the frequency registers
+        byte status = dispatcher.ReadByte(IOplPort.PrimaryAddressPortNumber);
+        status.Should().Match(b => b <= 0xE0, "OPL status should be valid after frequency write");
+        
+        // Write another frequency register to confirm addressing works
+        dispatcher.WriteByte(IOplPort.PrimaryAddressPortNumber, 0xA0);
+        dispatcher.WriteByte(IOplPort.PrimaryDataPortNumber, 0x00);
+        
+        // Verify OPL is still responding correctly
+        byte statusAfter = dispatcher.ReadByte(IOplPort.PrimaryAddressPortNumber);
+        statusAfter.Should().Match(b => b <= 0xE0, "OPL status should remain valid");
     }
     
     [Fact]
