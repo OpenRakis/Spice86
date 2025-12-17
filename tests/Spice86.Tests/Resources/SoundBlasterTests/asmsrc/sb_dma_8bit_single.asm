@@ -41,9 +41,9 @@ start:
     
     ; Set DMA count (number of bytes - 1)
     mov ax, 0x001F          ; 32 bytes - 1 (reduced from 64 to match working auto-init test)
-    out 0x04, al            ; Low byte
+    out 0x03, al            ; Low byte (port 0x03 for channel 1 count)
     mov al, ah
-    out 0x04, al            ; High byte
+    out 0x03, al            ; High byte
     
     ; Set DMA page (bits 16-23) - for DS=0x160, page = 0x01
     mov ax, ds
