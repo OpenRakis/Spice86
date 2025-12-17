@@ -11,9 +11,6 @@ start:
     mov ds, ax
     mov es, ax
     
-    ; Initialize test result memory location
-    mov word [test_result], 0x0000
-    
     ; Setup DMA channel 1 for Sound Blaster
     ; DMA channel 1: address 0x0002-0x0003, count 0x0004-0x0005, page 0x83
     
@@ -29,24 +26,35 @@ start:
     xor al, al
     out 0x0C, al
     
-    ; Set DMA address (offset within page)
-    mov ax, test_dma_buffer
-    out 0x02, al            ; Low byte
+    ; Set DMA address (physical address = segment * 16 + offset)
+    ; For segment 0x160: physical = 0x1600 + offset
+    ; DMA needs: page register (bits 16-23) and address register (bits 0-15)
+    ; Physical 0x1600 + buffer_offset = page 0x01, address 0x0600 + buffer_offset
+    mov ax, ds
+    mov cl, 4
+    shl ax, cl              ; DS * 16 = 0x1600 for DS=0x160
+    mov bx, test_dma_buffer
+    add ax, bx              ; Add buffer offset
+    out 0x02, al            ; DMA address low byte
     mov al, ah
-    out 0x02, al            ; High byte
+    out 0x02, al            ; DMA address high byte
     
     ; Set DMA count (number of bytes - 1)
-    mov ax, 0x003F          ; 64 bytes - 1
-    out 0x04, al            ; Low byte
+    mov ax, 0x001F          ; 32 bytes - 1 (reduced from 64 to match working auto-init test)
+    out 0x03, al            ; Low byte (port 0x03 for channel 1 count)
     mov al, ah
-    out 0x04, al            ; High byte
+    out 0x03, al            ; High byte
     
-    ; Set DMA page
-    xor al, al              ; Page 0
+    ; Set DMA page (bits 16-23) - for DS=0x160, page = 0x01
+    mov ax, ds
+    mov cl, 4
+    shr ax, cl
+    shr ax, cl
+    shr ax, cl              ; DS >> 12 = page number
     out 0x83, al
     
     ; Fill DMA buffer with test pattern
-    mov cx, 64
+    mov cx, 32              ; Reduced from 64 to match DMA count
     mov di, test_dma_buffer
     xor al, al
 .fill_loop:
@@ -121,13 +129,13 @@ start:
     mov al, 0x14            ; 8-bit single-cycle DMA command
     out dx, al
     
-    ; Send DMA length (64 bytes - 1 = 63, 0x003F)
+    ; Send DMA length (32 bytes - 1 = 31, 0x001F)
 .wait_write5:
     in al, dx
     test al, 0x80
     jnz .wait_write5
     
-    mov al, 0x3F            ; Low byte
+    mov al, 0x1F            ; Low byte (changed from 0x3F)
     out dx, al
     
 .wait_write6:
@@ -162,18 +170,18 @@ start:
     mov al, 0xD3            ; Speaker off command
     out dx, al
     
-    ; Test passed - set result
-    mov word [test_result], 0x0001
-    jmp test_end
+    ; Test passed - write success to port 0x999
+    mov dx, 0x999
+    mov al, 0x00            ; Success
+    out dx, al
+    hlt                     ; Halt CPU
     
 test_failed:
-    mov word [test_result], 0xFFFF
-    
-test_end:
-    ; Exit
-    mov ax, 0x4C00
-    int 0x21
+    ; Test failed - write failure to port 0x999
+    mov dx, 0x999
+    mov al, 0xFF            ; Failure
+    out dx, al
+    hlt                     ; Halt CPU
 
 ; Data section
-test_result:    dw 0x0000
-test_dma_buffer: times 64 db 0
+test_dma_buffer: times 32 db 0

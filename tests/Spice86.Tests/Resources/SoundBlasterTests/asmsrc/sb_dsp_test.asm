@@ -11,8 +11,7 @@ start:
     mov ds, ax
     mov es, ax
     
-    ; Initialize test result
-    mov word [test_result], 0x0000
+    ; Initialize test counters
     mov byte [tests_passed], 0
     
     ; Test 1: DSP Reset
@@ -107,20 +106,20 @@ start:
     cmp byte [tests_passed], 4
     jl test_failed
     
-    ; Success!
-    mov word [test_result], 0x0001
-    jmp test_end
+    ; Success! Write success to port 0x999
+    mov dx, 0x999
+    mov al, 0x00            ; Success
+    out dx, al
+    hlt                     ; Halt CPU
     
 test_failed:
-    mov word [test_result], 0xFFFF
-    
-test_end:
-    ; Exit
-    mov ax, 0x4C00
-    int 0x21
+    ; Test failed - write failure to port 0x999
+    mov dx, 0x999
+    mov al, 0xFF            ; Failure
+    out dx, al
+    hlt                     ; Halt CPU
 
 ; Data section
-test_result:        dw 0x0000
 tests_passed:       db 0
 sb_version_major:   db 0
 sb_version_minor:   db 0

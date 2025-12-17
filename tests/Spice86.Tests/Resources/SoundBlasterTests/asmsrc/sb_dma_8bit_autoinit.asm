@@ -11,8 +11,7 @@ start:
     mov ds, ax
     mov es, ax
     
-    ; Initialize test result
-    mov word [test_result], 0x0000
+    ; Initialize IRQ count
     mov word [irq_count], 0x0000
     
     ; Setup DMA channel 1 for Sound Blaster (auto-init mode)
@@ -28,11 +27,15 @@ start:
     xor al, al
     out 0x0C, al
     
-    ; Set DMA address
-    mov ax, test_dma_buffer
-    out 0x02, al
+    ; Set DMA address (physical address = segment * 16 + offset)
+    mov ax, ds
+    mov cl, 4
+    shl ax, cl              ; DS * 16
+    mov bx, test_dma_buffer
+    add ax, bx              ; Add buffer offset
+    out 0x02, al            ; DMA address low byte
     mov al, ah
-    out 0x02, al
+    out 0x02, al            ; DMA address high byte
     
     ; Set DMA count (32 bytes - 1)
     mov ax, 0x001F
@@ -40,8 +43,12 @@ start:
     mov al, ah
     out 0x04, al
     
-    ; Set DMA page
-    xor al, al
+    ; Set DMA page (bits 16-23)
+    mov ax, ds
+    mov cl, 4
+    shr ax, cl
+    shr ax, cl
+    shr ax, cl              ; DS >> 12 = page number
     out 0x83, al
     
     ; Fill DMA buffer with test pattern
@@ -194,19 +201,19 @@ start:
     cmp word [irq_count], 2
     jl test_failed
     
-    ; Test passed
-    mov word [test_result], 0x0001
-    jmp test_end
+    ; Test passed - write success to port 0x999
+    mov dx, 0x999
+    mov al, 0x00            ; Success
+    out dx, al
+    hlt                     ; Halt CPU
     
 test_failed:
-    mov word [test_result], 0xFFFF
-    
-test_end:
-    ; Exit
-    mov ax, 0x4C00
-    int 0x21
+    ; Test failed - write failure to port 0x999
+    mov dx, 0x999
+    mov al, 0xFF            ; Failure
+    out dx, al
+    hlt                     ; Halt CPU
 
 ; Data section
-test_result:    dw 0x0000
 irq_count:      dw 0x0000
 test_dma_buffer: times 32 db 0

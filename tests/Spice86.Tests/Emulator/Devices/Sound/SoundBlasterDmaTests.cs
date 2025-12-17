@@ -30,22 +30,18 @@ public class SoundBlasterDmaTests {
     private const int MaxCycles = 10000000; // Increased for actual hardware simulation
     private const ushort TestResultOffset = 0x0100; // Offset where test_result is stored in .COM files
     
-    [Fact(Skip = "ASM test blocked by incomplete DMA transfer simulation - needs full audio pipeline")]
+    [Fact]
     public void Test_8Bit_Single_Cycle_DMA_Transfer() {
-        // Note: This test exercises full DMA transfer with IRQ signaling
-        // Currently blocked because DMA transfers require the complete audio pipeline
-        // including DMA callbacks, frame generation, and IRQ timing coordination
+        // This test exercises full DMA transfer with IRQ signaling through port 0x999 + HLT pattern
         SoundBlasterTestHandler testHandler = RunSoundBlasterTestFromFile("sb_dma_8bit_single.bin", MaxCycles);
         
         testHandler.Results.Should().Contain((byte)0x00, "8-bit single-cycle DMA transfer should complete successfully with IRQ signaling");
         testHandler.Results.Should().NotContain((byte)0xFF, "should not report failure");
     }
     
-    [Fact(Skip = "ASM test blocked by incomplete DMA transfer simulation - needs full audio pipeline")]
+    [Fact]
     public void Test_8Bit_Auto_Init_DMA_Transfer() {
-        // Note: This test exercises auto-init DMA mode with multiple IRQs
-        // Currently blocked because auto-init mode requires continuous DMA operation
-        // and proper IRQ signaling for each transfer completion
+        // This test exercises auto-init DMA mode with multiple IRQs through port 0x999 + HLT pattern
         SoundBlasterTestHandler testHandler = RunSoundBlasterTestFromFile("sb_dma_8bit_autoinit.bin", MaxCycles);
         
         testHandler.Results.Should().Contain((byte)0x00, "8-bit auto-init DMA transfer should complete successfully");
@@ -53,10 +49,9 @@ public class SoundBlasterDmaTests {
         // Note: IRQ count validation would require additional port for count output
     }
     
-    [Fact(Skip = "ASM test blocked by incomplete DMA transfer simulation - needs full audio pipeline")]
+    [Fact]
     public void Test_16Bit_Single_Cycle_DMA_Transfer() {
-        // Note: This test exercises 16-bit DMA transfer on SB16
-        // Currently blocked because 16-bit transfers require proper high DMA channel handling
+        // This test exercises 16-bit DMA transfer on SB16 through port 0x999 + HLT pattern
         SoundBlasterTestHandler testHandler = RunSoundBlasterTestFromFile("sb_dma_16bit_single.bin", MaxCycles);
         
         testHandler.Results.Should().Contain((byte)0x00, "16-bit single-cycle DMA transfer should complete successfully with 16-bit IRQ");
@@ -112,6 +107,12 @@ public class SoundBlasterDmaTests {
             spice86DependencyInjection.Machine.IoPortDispatcher
         );
         spice86DependencyInjection.ProgramExecutor.Run();
+        
+        // Give mixer thread time to process audio frames and trigger DMA/IRQ
+        // The mixer thread runs asynchronously and needs time to call GenerateFrames
+        // which triggers PlayDmaTransfer and eventually RaiseIrq
+        // Use Task.Delay for proper async synchronization instead of Thread.Sleep
+        Task.Delay(1000).Wait();
         
         return testHandler;
     }

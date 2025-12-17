@@ -627,11 +627,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void GenerateFrames(int framesRequested) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SB: GenerateFrames framesRequested={Frames} mode={Mode} dmaLeft={Left} bufferSize={BufferSize}", 
-                framesRequested, _sb.Mode, _sb.Dma.Left, _dacChannel.AudioFrames.Count);
-        }
-        
         // Update DMA callback timestamp - mirrors DOSBox last_dma_callback
         // Reference: src/hardware/audio/soundblaster.cpp line 1139
         _lastDmaCallbackTime = _clock.CurrentTimeMs;
@@ -690,9 +685,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                         PlayDmaTransfer(bytesRequested);
                         
                         // Frames were already enqueued by PlayDmaTransfer,
-                        // so break out of the frame generation loop
-                        framesGenerated = maxFramesToGenerate;
+                        // so return immediately without adding extra silence frame
+                        return;
                     }
+                    // If no DMA data, fall through to add silence frame
                     break;
             }
 
@@ -834,8 +830,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
         
         // How many bytes should we read from DMA?
-        uint lowerBound = _sb.Dma.AutoInit ? bytesRequested : _sb.Dma.Min;
-        uint bytesToRead = _sb.Dma.Left <= lowerBound ? _sb.Dma.Left : bytesRequested;
+        // For both auto-init and single-cycle, read min(Left, bytesRequested)
+        // This ensures we don't try to read more than available
+        uint bytesToRead = Math.Min(_sb.Dma.Left, bytesRequested);
         
         // All three of these must be populated during the DMA sequence to
         // ensure the proper quantities and unit are being accounted for.
@@ -972,7 +969,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Deduct the DMA bytes read from the remaining to still read
         _sb.Dma.Left -= bytesRead;
         
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: PlayDmaTransfer complete - BytesRead={BytesRead}, Samples={Samples}, Frames={Frames}, NewLeft={Left}, AutoInit={AutoInit}",
+                bytesRead, samples, frames, _sb.Dma.Left, _sb.Dma.AutoInit);
+        }
+        
         if (_sb.Dma.Left == 0) {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: DMA transfer complete (Left=0), raising IRQ - Mode={Mode}, AutoInit={AutoInit}",
+                    _sb.Dma.Mode, _sb.Dma.AutoInit);
+            }
+                
             if (_sb.Dma.Mode >= DmaMode.Pcm16Bit) {
                 RaiseIrq(SbIrq.Irq16);
             } else {
@@ -1618,7 +1625,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return;
         }
 
-        // Frame counter reset is handled by mixer blocks, not per-tick
+        // Trigger the mixer to process frames synchronously with the emulation loop
+        // This ensures DMA transfers and IRQs are processed at appropriate times
+        // Mirrors DOSBox's approach of calling the mixer from PIC timer events
+        _mixer.TickMixer();
+        
+        // Reschedule for next tick (1ms intervals)
         _scheduler.AddEvent(MixerTickCallback, 1.0);
     }
 
@@ -1642,13 +1654,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0x0E:
                 // DSP Read Buffer Status Port / 8-bit IRQ Acknowledge
-                // Bit 7: 1 = data available to read, 0 = no data
+                // Bit 7: 1 = data available to read OR 8-bit IRQ pending
                 // Reading this port also acknowledges 8-bit DMA IRQ
+                bool hasDataOrIrq = _outputData.Count > 0 || _sb.Irq.Pending8Bit;
                 if (_sb.Irq.Pending8Bit) {
                     _sb.Irq.Pending8Bit = false;
                     _dualPic.DeactivateIrq(_config.Irq);
                 }
-                return (byte)(_outputData.Count > 0 ? 0x80 : 0x00);
+                return (byte)(hasDataOrIrq ? 0x80 : 0x00);
 
             case 0x0F:
                 // 16-bit IRQ Acknowledge Port
@@ -1881,7 +1894,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 if (_commandData.Count >= 2) {
                     _sb.Dma.Left = (uint)(1 + _commandData[0] + (_commandData[1] << 8));
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SB: Single-cycle 8-bit DMA size={Size}", _sb.Dma.Left);
+                        _loggerService.Debug("SOUNDBLASTER: Command 0x{Command:X2} - Single-cycle 8-bit DMA size={Size}", 
+                            _currentCommand, _sb.Dma.Left);
                     }
                     DspPrepareDmaOld(DmaMode.Pcm8Bit, false, false);
                 } else {

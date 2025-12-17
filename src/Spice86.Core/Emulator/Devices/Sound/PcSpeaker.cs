@@ -307,7 +307,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         }
         
         // Reschedule for the next tick
-        _scheduler.AddEvent(_tickHandler, 1,0);
+        _scheduler.AddEvent(_tickHandler, 1.0);
     }
 
     private void PicCallback(int requestedFrames) {
