@@ -627,10 +627,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void GenerateFrames(int framesRequested) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SB: GenerateFrames framesRequested={Frames} mode={Mode} dmaLeft={Left} bufferSize={BufferSize}", 
-                framesRequested, _sb.Mode, _sb.Dma.Left, _dacChannel.AudioFrames.Count);
-        }
+        _loggerService.Information("SB: GenerateFrames framesRequested={Frames} mode={Mode} dmaLeft={Left} bufferSize={BufferSize}", 
+            framesRequested, _sb.Mode, _sb.Dma.Left, _dacChannel.AudioFrames.Count);
         
         // Update DMA callback timestamp - mirrors DOSBox last_dma_callback
         // Reference: src/hardware/audio/soundblaster.cpp line 1139
@@ -974,7 +972,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Deduct the DMA bytes read from the remaining to still read
         _sb.Dma.Left -= bytesRead;
         
+        _loggerService.Information("SOUNDBLASTER: PlayDmaTransfer complete - BytesRead={BytesRead}, Samples={Samples}, Frames={Frames}, NewLeft={Left}, AutoInit={AutoInit}",
+            bytesRead, samples, frames, _sb.Dma.Left, _sb.Dma.AutoInit);
+        
         if (_sb.Dma.Left == 0) {
+            _loggerService.Information("SOUNDBLASTER: DMA transfer complete (Left=0), raising IRQ - Mode={Mode}, AutoInit={AutoInit}",
+                _sb.Dma.Mode, _sb.Dma.AutoInit);
+                
             if (_sb.Dma.Mode >= DmaMode.Pcm16Bit) {
                 RaiseIrq(SbIrq.Irq16);
             } else {
@@ -1888,9 +1892,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Size is in _commandData (command expects 2 bytes: size low, size high)
                 if (_commandData.Count >= 2) {
                     _sb.Dma.Left = (uint)(1 + _commandData[0] + (_commandData[1] << 8));
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SB: Single-cycle 8-bit DMA size={Size}", _sb.Dma.Left);
-                    }
+                    _loggerService.Information("SOUNDBLASTER: Command 0x{Command:X2} - Single-cycle 8-bit DMA size={Size}", 
+                        _currentCommand, _sb.Dma.Left);
                     DspPrepareDmaOld(DmaMode.Pcm8Bit, false, false);
                 } else {
                     _loggerService.Warning("SOUNDBLASTER: Command 0x{Command:X2} missing size parameters", _currentCommand);
