@@ -330,3 +330,69 @@ This enables bit-exact or statistically equivalent validation against DOSBox Sta
   - ✅ Integration test infrastructure (ASM → WAV)
   - ⏸️ FM synthesis calculations (Phase 4)
   - ⏸️ Resampling pipeline (Phase 5)
+
+## Sound Blaster PCM Integration Tests (Planned)
+
+### Overview
+Comprehensive plan for ASM-based PCM playback tests that validate complete audio pipeline against DOSBox Staging WAV captures. See `SB_PCM_INTEGRATION_TEST_PLAN.md` for full details.
+
+### Test Categories
+1. **Basic 8-bit PCM**: Mono/stereo, single-cycle/auto-init modes
+2. **16-bit SB16 PCM**: High-quality mono/stereo at 44.1kHz
+3. **Sample Rate Tests**: 8kHz to 48kHz validation
+4. **DMA Transfer Tests**: Small/large buffers, page boundaries
+5. **Mixer Integration**: Volume control, PCM+FM simultaneous
+6. **Edge Cases**: DSP reset, invalid rates, zero-length transfers
+
+### Test Infrastructure
+- **SbPcmAsmIntegrationTests.cs**: Test class with 11+ test methods (all currently skipped)
+- **WavComparisonResult**: Metrics for RMS error, peak error, frequency accuracy, channel separation
+- **Golden References**: WAV files captured from DOSBox Staging in `Resources/SbPcmGoldenReferences/`
+
+### Pipeline Tested
+```
+ASM Program → DSP Commands (0x14/0x1C/0xB6) → DMA Transfer → 
+DAC Playback → Mixer → WAV Output → Compare with DOSBox
+```
+
+### Implementation Status
+- [ ] Test infrastructure: ✅ Complete (class skeleton created)
+- [ ] ASM programs: ⏸️ Pending (11 programs to write)
+- [ ] Golden references: ⏸️ Pending (capture from DOSBox)
+- [ ] Test data generation: ⏸️ Pending (sine waves, music samples)
+- [ ] Full validation: ⏸️ Phase 4-5 work
+
+### Expected Tests (when complete)
+- 11 core PCM tests covering all SB modes
+- Multiple sample rate validation tests (4+)
+- DMA and mixer integration tests (5+)
+- Edge case tests (3+)
+- **Total: 20+ PCM integration tests**
+
+### Validation Criteria
+- **RMS Error**: < 1% for 8-bit, < 0.5% for 16-bit
+- **Peak Error**: < 5% for 8-bit, < 2% for 16-bit
+- **Frequency Accuracy**: ±1 Hz for tone tests
+- **Channel Separation**: > 0.98 correlation for stereo
+- **No Buffer Gaps**: Seamless auto-init transitions
+
+## Test Statistics Summary (Final)
+- **Total Sound Tests**: 58 tests
+- **Passing**: 42 (72%)
+- **Skipped**: 16 (28%)
+  - 11 SB PCM tests (infrastructure ready, need ASM + golden refs)
+  - 2 OPL ASM→WAV integration tests (need compiled ASM)
+  - 3 OPL tests (need NASM compilation)
+- **Test Coverage**:
+  - ✅ Port-level behavior (OPL2/OPL3, mixer ports)
+  - ✅ Basic audio generation and capture
+  - ✅ Register write validation
+  - ✅ ASM-based integration (OPL, mixer, DSP)
+  - ✅ DRO file format (DOSBox Raw OPL)
+  - ✅ WAV file format (audio output)
+  - ✅ Integration test infrastructure (ASM → WAV)
+  - ⏸️ SB PCM playback tests (infrastructure ready)
+  - ⏸️ FM synthesis calculations (Phase 4)
+  - ⏸️ Resampling pipeline (Phase 5)
+
+**Full DOSBox Staging Parity**: On track with comprehensive test infrastructure
