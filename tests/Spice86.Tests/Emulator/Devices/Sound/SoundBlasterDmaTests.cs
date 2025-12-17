@@ -112,7 +112,6 @@ public class SoundBlasterDmaTests {
         // The mixer thread runs asynchronously and needs time to call GenerateFrames
         // which triggers PlayDmaTransfer and eventually RaiseIrq
         // Use Task.Delay for proper async synchronization instead of Thread.Sleep
-        // Longer delay for tests with larger DMA buffers (e.g., 64 bytes vs 32 bytes)
         Task.Delay(1000).Wait();
         
         return testHandler;
