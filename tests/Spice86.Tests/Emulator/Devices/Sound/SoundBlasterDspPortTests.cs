@@ -3,6 +3,7 @@ namespace Spice86.Tests.Emulator.Devices.Sound;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 
 using FluentAssertions;
 
@@ -85,10 +86,71 @@ public class SoundBlasterDspPortTests {
         context.GetPending16BitIrq().Should().BeFalse("reading the 16-bit IRQ acknowledge port clears the pending flag");
     }
 
+    [Fact]
+    public void DspIdentificationReturnsOnesComplement() {
+        using SoundBlasterPortTestContext context = new SoundBlasterPortTestContext();
+        ushort basePort = context.Config.BaseAddress;
+
+        context.SendDspCommand(0xE0, 0xAA);
+        List<byte> data = context.ReadAllDspData();
+
+        data.Should().ContainSingle();
+        data[0].Should().Be((byte)0x55);
+    }
+
+    [Fact]
+    public void DspVersionMatchesSbPro2() {
+        using SoundBlasterPortTestContext context = new SoundBlasterPortTestContext(SbType.SBPro2);
+        List<byte> data = context.GetDspVersionBytes();
+
+        data.Should().Equal(0x03, 0x02);
+    }
+
+    [Fact]
+    public void DspVersionMatchesSb16() {
+        using SoundBlasterPortTestContext context = new SoundBlasterPortTestContext(SbType.Sb16);
+        List<byte> data = context.GetDspVersionBytes();
+
+        data.Should().Equal(0x04, 0x05);
+    }
+
+    [Fact]
+    public void SpeakerEnableDisableAffectsStatusCommand() {
+        using SoundBlasterPortTestContext context = new SoundBlasterPortTestContext(SbType.SBPro2);
+        ushort basePort = context.Config.BaseAddress;
+
+        // Disable speaker then query status
+        context.SendDspCommand(0xD3);
+        context.SpeakerEnabled.Should().BeFalse();
+        context.SendDspCommand(0xD8);
+        List<byte> disabledStatus = context.ReadAllDspData();
+        disabledStatus.Should().ContainSingle().Which.Should().Be(0x00);
+
+        // Enable speaker then query status
+        context.SendDspCommand(0xD1);
+        context.SpeakerEnabled.Should().BeTrue();
+        context.SendDspCommand(0xD8);
+        List<byte> enabledStatus = context.ReadAllDspData();
+        enabledStatus.Should().ContainSingle().Which.Should().Be(0xFF);
+    }
+
+    [Fact]
+    public void DspCopyrightStringMatchesCreative() {
+        using SoundBlasterPortTestContext context = new SoundBlasterPortTestContext();
+
+        context.SendDspCommand(0xE3);
+        List<byte> data = context.ReadAllDspData();
+
+        data.Count.Should().BeGreaterThan(10);
+        string copyright = System.Text.Encoding.ASCII.GetString(data.ToArray());
+        copyright.Should().StartWith("COPYRIGHT (C) CREATIVE TECHNOLOGY LTD");
+    }
+
     private sealed class SoundBlasterPortTestContext : IDisposable {
         private readonly object _irqState;
         private readonly PropertyInfo _pending8BitProperty;
         private readonly PropertyInfo _pending16BitProperty;
+        private readonly PropertyInfo _speakerEnabledProperty;
 
         public SoundBlasterPortTestContext(SbType sbType = SbType.SBPro2) {
             ILoggerService loggerService = Substitute.For<ILoggerService>();
@@ -147,6 +209,8 @@ public class SoundBlasterDspPortTests {
                 ?? throw new InvalidOperationException("Pending8Bit property not found");
             _pending16BitProperty = irqState.GetType().GetProperty("Pending16Bit")
                 ?? throw new InvalidOperationException("Pending16Bit property not found");
+            _speakerEnabledProperty = sbInfo.GetType().GetProperty("SpeakerEnabled")
+                ?? throw new InvalidOperationException("SpeakerEnabled property not found");
         }
 
         public SoundBlaster SoundBlaster { get; }
@@ -175,6 +239,57 @@ public class SoundBlasterDspPortTests {
         public bool GetPending16BitIrq() {
             object? value = _pending16BitProperty.GetValue(_irqState);
             return value is bool pending && pending;
+        }
+
+        public bool SpeakerEnabled {
+            get {
+                object? value = _speakerEnabledProperty.GetValue(SoundBlasterState);
+                return value is bool enabled && enabled;
+            }
+        }
+
+        private object SoundBlasterState {
+            get {
+                FieldInfo sbField = typeof(SoundBlaster).GetField("_sb", BindingFlags.NonPublic | BindingFlags.Instance)
+                    ?? throw new InvalidOperationException("SoundBlaster _sb field not found");
+                object sbInfo = sbField.GetValue(SoundBlaster)
+                    ?? throw new InvalidOperationException("SoundBlaster _sb field is null");
+                return sbInfo;
+            }
+        }
+
+        public void SendDspCommand(byte command, params byte[] parameters) {
+            ushort writePort = (ushort)(Config.BaseAddress + 0x0C);
+            Dispatcher.WriteByte(writePort, command);
+            foreach (byte parameter in parameters) {
+                Dispatcher.WriteByte(writePort, parameter);
+            }
+        }
+
+        public List<byte> ReadAllDspData() {
+            ushort readPort = (ushort)(Config.BaseAddress + 0x0A);
+            List<byte> data = new List<byte>();
+            byte value;
+            while ((value = Dispatcher.ReadByte(readPort)) != 0x00 || data.Count == 0) {
+                data.Add(value);
+                if (!HasMoreData()) {
+                    break;
+                }
+            }
+
+            return data;
+        }
+
+        public List<byte> GetDspVersionBytes() {
+            SendDspCommand(0xE1);
+            List<byte> data = ReadAllDspData();
+            return data;
+        }
+
+        private bool HasMoreData() {
+            ushort statusPort = (ushort)(Config.BaseAddress + 0x0E);
+            byte status = Dispatcher.ReadByte(statusPort);
+            return (status & 0x80) != 0;
         }
 
         public void Dispose() {
