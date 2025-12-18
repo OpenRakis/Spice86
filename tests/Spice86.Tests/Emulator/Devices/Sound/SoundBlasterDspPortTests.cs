@@ -182,6 +182,8 @@ public class SoundBlasterDspPortTests {
         private readonly PropertyInfo _freqHzProperty;
         private readonly PropertyInfo _dspStateProperty;
         private readonly PropertyInfo _dspTestRegisterProperty;
+        private readonly object _soundBlasterState;
+        private readonly object _dspStateInstance;
 
         public SoundBlasterPortTestContext(SbType sbType = SbType.SBPro2) {
             ILoggerService loggerService = Substitute.For<ILoggerService>();
@@ -251,6 +253,7 @@ public class SoundBlasterDspPortTests {
                 ?? throw new InvalidOperationException("Dsp state is null");
             _dspTestRegisterProperty = dspState.GetType().GetProperty("TestRegister")
                 ?? throw new InvalidOperationException("Dsp TestRegister property not found");
+            _soundBlasterState = sbInfo;
             _dspStateInstance = dspState;
         }
 
@@ -284,14 +287,14 @@ public class SoundBlasterDspPortTests {
 
         public bool SpeakerEnabled {
             get {
-                object? value = _speakerEnabledProperty.GetValue(SoundBlasterState);
+                object? value = _speakerEnabledProperty.GetValue(_soundBlasterState);
                 return value is bool enabled && enabled;
             }
         }
 
         public uint FreqHz {
             get {
-                object? value = _freqHzProperty.GetValue(SoundBlasterState);
+                object? value = _freqHzProperty.GetValue(_soundBlasterState);
                 return value is uint freq ? freq : 0;
             }
         }
@@ -303,17 +306,6 @@ public class SoundBlasterDspPortTests {
             }
         }
 
-        private object SoundBlasterState {
-            get {
-                FieldInfo sbField = typeof(SoundBlaster).GetField("_sb", BindingFlags.NonPublic | BindingFlags.Instance)
-                    ?? throw new InvalidOperationException("SoundBlaster _sb field not found");
-                object sbInfo = sbField.GetValue(SoundBlaster)
-                    ?? throw new InvalidOperationException("SoundBlaster _sb field is null");
-                return sbInfo;
-            }
-        }
-
-        private readonly object _dspStateInstance;
 
         public void SendDspCommand(byte command, params byte[] parameters) {
             ushort writePort = (ushort)(Config.BaseAddress + 0x0C);
