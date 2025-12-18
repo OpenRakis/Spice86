@@ -26,8 +26,11 @@ public sealed class Mixer : IDisposable {
     private readonly AudioPlayer _audioPlayer;
 
     // Channels registry - matches DOSBox mixer.channels (std::map protected by mutex)
-    // Using Dictionary + lock instead of ConcurrentDictionary mirrors DOSBox architecture
-    // and reduces iterator overhead
+    // Using Dictionary + lock instead of ConcurrentDictionary for performance reasons:
+    // 1. Mirrors DOSBox std::map + mutex pattern (architectural parity)
+    // 2. Reduces iterator allocation overhead (Dictionary.Values is cheaper than ConcurrentDictionary.Values)
+    // 3. Channel add/remove is infrequent; iteration happens every frame (lock is acceptable)
+    // 4. More predictable performance characteristics than ConcurrentDictionary
     private readonly Dictionary<string, MixerChannel> _channels = new();
 
     // Mixer thread that produces and writes directly to PortAudio
@@ -698,14 +701,19 @@ public sealed class Mixer : IDisposable {
         _reverbAuxBuffer.Clear();
         _chorusAuxBuffer.Clear();
 
-        // Ensure capacity is sufficient (avoid reallocation during Add)
+        // Ensure each buffer has sufficient capacity (check individually as they may differ)
         if (_outputBuffer.Capacity < framesRequested) {
             _outputBuffer.Capacity = framesRequested;
+        }
+        if (_reverbAuxBuffer.Capacity < framesRequested) {
             _reverbAuxBuffer.Capacity = framesRequested;
+        }
+        if (_chorusAuxBuffer.Capacity < framesRequested) {
             _chorusAuxBuffer.Capacity = framesRequested;
         }
 
-        // Initialize with silence using span for better performance
+        // Initialize with silence
+        // Note: Using Add() in a loop is acceptable here as capacity is pre-allocated
         AudioFrame silence = new(0.0f, 0.0f);
         for (int i = 0; i < framesRequested; i++) {
             _outputBuffer.Add(silence);
