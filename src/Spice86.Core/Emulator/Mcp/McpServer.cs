@@ -263,12 +263,18 @@ public sealed class McpServer : IMcpServer {
             } catch (InvalidOperationException ex) {
                 _loggerService.Error("Invalid operation for tool {ToolName}: {Error}", toolName, ex.Message);
                 return CreateErrorResponse(id, (int)JsonRpcErrorCode.InternalError, ex.Message);
-            } catch (Exception ex) {
+            } catch (Exception ex) when (!IsFatalException(ex)) {
                 _loggerService.Error(ex, "Unexpected error executing tool {ToolName}", toolName);
                 return CreateErrorResponse(id, -32603, $"Internal error: {ex.Message}");
             }
         }
     }
+
+    private static bool IsFatalException(Exception ex) =>
+        ex is OutOfMemoryException ||
+        ex is StackOverflowException ||
+        ex is ThreadAbortException ||
+        ex is AccessViolationException;
 
     private CpuRegistersResponse ReadCpuRegisters() {
         return new CpuRegistersResponse {
