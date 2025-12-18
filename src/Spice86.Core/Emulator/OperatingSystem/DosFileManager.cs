@@ -698,6 +698,17 @@ public class DosFileManager {
     internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.
         GetFullHostPathFromDosOrDefault(dosPath);
 
+    /// <summary>
+    /// Closes all non-standard file handles (5 and above).
+    /// </summary>
+    public void CloseAllNonStandardFileHandles() {
+        for (ushort handle = 5; handle < OpenFiles.Length; handle++) {
+            if (OpenFiles[handle] is not null) {
+                CloseFileOrDevice(handle);
+            }
+        }
+    }
+
     private static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
         int month = localDate.Month;

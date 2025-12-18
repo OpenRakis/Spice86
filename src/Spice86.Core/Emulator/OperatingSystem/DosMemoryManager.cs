@@ -147,6 +147,24 @@ public class DosMemoryManager {
     }
 
     /// <summary>
+    /// Frees all memory blocks owned by a given PSP segment (including its environment block).
+    /// </summary>
+    /// <param name="pspSegment">The PSP segment whose blocks should be freed.</param>
+    public void FreeProcessMemory(ushort pspSegment) {
+        DosMemoryControlBlock? current = _start;
+        while (current is not null) {
+            if (!current.IsFree && current.PspSegment == pspSegment) {
+                current.SetFree();
+                JoinBlocks(current, true);
+            }
+            if (current.IsLast) {
+                break;
+            }
+            current = current.GetNextOrDefault();
+        }
+    }
+
+    /// <summary>
     /// Extends or reduces a MCB.
     /// </summary>
     /// <param name="blockSegment">The segment number of the MCB.</param>

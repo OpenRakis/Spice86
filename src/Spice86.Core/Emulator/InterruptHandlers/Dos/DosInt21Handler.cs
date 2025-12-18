@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -26,6 +27,8 @@ using System.Text;
 /// Implementation of the DOS INT21H services.
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
+    private const byte CreateChildPspAlDestroyedValue = 0xF0;
+    private const ushort ExecFcbIgnorePointerValue = 0xFFFF;
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly DosDriveManager _dosDriveManager;
     private readonly DosProgramSegmentPrefixTracker _dosPspTracker;
@@ -106,6 +109,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
         AddAction(0x25, SetInterruptVector);
+        AddAction(0x26, CreateNewPsp);
         AddAction(0x2A, GetDate);
         AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
@@ -139,12 +143,14 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4A, () => ModifyMemoryBlock(true));
         AddAction(0x4B, () => LoadAndOrExecute(true));
         AddAction(0x4C, QuitWithExitCode);
+        AddAction(0x4D, GetChildReturnCode);
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
         AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
+        AddAction(0x55, CreateChildPsp);
     }
 
     public void SetDate() {
@@ -908,12 +914,43 @@ public class DosInt21Handler : InterruptHandler {
         State.CX = 0x00;
     }
 
-    /// <summary>
-    /// Terminate the current process, and either prepare unloading it, or keep it in memory.
-    /// </summary>
-    /// <exception cref="NotImplementedException">TSR Support is not implemented</exception>
     private void TerminateAndStayResident() {
-        throw new NotImplementedException("TSR Support is not implemented");
+        ushort paragraphsToKeep = State.DX;
+        byte returnCode = State.AL;
+        const ushort minimumParagraphs = 6;
+        if (paragraphsToKeep < minimumParagraphs) {
+            paragraphsToKeep = minimumParagraphs;
+        }
+
+        DosProgramSegmentPrefix? currentPsp = _dosPspTracker.GetCurrentPsp();
+        ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
+
+        _dosMemoryManager.TryModifyBlock(
+            currentPspSegment,
+            paragraphsToKeep,
+            out DosMemoryControlBlock _);
+
+        if (currentPsp is not null) {
+            uint terminateAddress = currentPsp.TerminateAddress;
+            ushort terminateSegment = (ushort)(terminateAddress >> 16);
+            ushort terminateOffset = (ushort)(terminateAddress & 0xFFFF);
+            ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
+            bool hasValidParent = terminateAddress != 0 &&
+                                  parentPspSegment != currentPspSegment &&
+                                  parentPspSegment != 0;
+
+            if (hasValidParent) {
+                uint savedStackPointer = currentPsp.StackPointer;
+                State.SS = (ushort)(savedStackPointer >> 16);
+                State.SP = (ushort)(savedStackPointer & 0xFFFF);
+                State.CS = terminateSegment;
+                State.IP = terminateOffset;
+                return;
+            }
+        }
+
+        State.IsRunning = false;
+        _dosProcessManager.LastChildReturnCode = (ushort)(((ushort)DosTerminationType.TerminateAndStayResident << 8) | returnCode);
     }
 
     /// <summary>
@@ -977,6 +1014,12 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("GET PSP ADDRESS {PspSegment}",
                 ConvertUtils.ToHex16(pspSegment));
         }
+    }
+
+    public void GetChildReturnCode() {
+        ushort returnCode = _dosProcessManager.LastChildReturnCode;
+        State.AX = returnCode;
+        _dosProcessManager.LastChildReturnCode = 0;
     }
 
     /// <summary>
@@ -1071,14 +1114,49 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
-    /// <summary>
-    /// Either only load a program or overlay, or load it and run it.
-    /// </summary>
-    /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
-    /// <exception cref="NotImplementedException">This function is not implemented</exception>
     public void LoadAndOrExecute(bool calledFromVm) {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        throw new NotImplementedException($"INT21H: load and/or execute program is not implemented. Emulated program tried to load and/or exec: {programName}");
+        DosExecLoadType loadType = (DosExecLoadType)State.AL;
+
+        uint paramBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
+        DosExecResult result;
+
+        if (loadType == DosExecLoadType.LoadOverlay) {
+            DosExecOverlayParameterBlock overlayParamBlock = new(Memory, paramBlockAddress);
+            result = _dosProcessManager.ExecOverlay(
+                programName,
+                overlayParamBlock.LoadSegment,
+                overlayParamBlock.RelocationFactor);
+        } else {
+            DosExecParameterBlock paramBlock = new(Memory, paramBlockAddress);
+            uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(
+                paramBlock.CommandTailSegment, paramBlock.CommandTailOffset);
+            DosCommandTail cmdTail = new(Memory, cmdTailAddress);
+            string commandTail = cmdTail.Length > 0 ? cmdTail.Command.TrimEnd('\r') : string.Empty;
+
+            result = _dosProcessManager.Exec(
+                programName,
+                commandTail,
+                loadType,
+                paramBlock.EnvironmentSegment,
+                GetExecFcbPointer(paramBlock.FirstFcbSegment, paramBlock.FirstFcbOffset),
+                GetExecFcbPointer(paramBlock.SecondFcbSegment, paramBlock.SecondFcbOffset));
+
+            if (result.Success && loadType == DosExecLoadType.LoadOnly) {
+                paramBlock.InitialSS = result.InitialSS;
+                paramBlock.InitialSP = result.InitialSP;
+                paramBlock.InitialCS = result.InitialCS;
+                paramBlock.InitialIP = result.InitialIP;
+            }
+        }
+
+        if (result.Success) {
+            SetCarryFlag(false, calledFromVm);
+        } else {
+            SetCarryFlag(true, calledFromVm);
+            State.AX = (ushort)result.ErrorCode;
+            LogDosError(calledFromVm);
+        }
     }
 
     /// <summary>
@@ -1145,16 +1223,16 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
-    /// <summary>
-    /// Quits the current DOS process and sets the exit code from the value in the AL register. <br/>
-    /// TODO: This is only a stub that sets the cpu state <see cref="State.IsRunning"/> property to <c>False</c>, thus ending the emulation loop !
-    /// </summary>
     public void QuitWithExitCode() {
         byte exitCode = State.AL;
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning("INT21H: QUIT WITH EXIT CODE {ExitCode}", ConvertUtils.ToHex8(exitCode));
+        bool shouldContinue = _dosProcessManager.TerminateProcess(
+            exitCode,
+            DosTerminationType.Normal,
+            _interruptVectorTable);
+
+        if (!shouldContinue) {
+            State.IsRunning = false;
         }
-        State.IsRunning = false;
     }
 
     /// <summary>
@@ -1247,6 +1325,19 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="offset">The address of the new interrupt vector, offset part.</param>
     public void SetInterruptVector(byte vectorNumber, ushort segment, ushort offset) {
         _interruptVectorTable[vectorNumber] = new(segment, offset);
+    }
+
+    public void CreateNewPsp() {
+        ushort newPspSegment = State.DX;
+        _dosProcessManager.CreateNewPsp(newPspSegment, _interruptVectorTable);
+    }
+
+    public void CreateChildPsp() {
+        ushort childSegment = State.DX;
+        ushort sizeInParagraphs = State.SI;
+        _dosProcessManager.CreateChildPsp(childSegment, sizeInParagraphs, _interruptVectorTable);
+        _dosPspTracker.SetCurrentPspSegment(childSegment);
+        State.AL = CreateChildPspAlDestroyedValue;
     }
 
     /// <summary>
@@ -1419,5 +1510,12 @@ public class DosInt21Handler : InterruptHandler {
     private void WriteCmosRegister(byte register, byte value) {
         _ioPortDispatcher.WriteByte(CmosPorts.Address, register);
         _ioPortDispatcher.WriteByte(CmosPorts.Data, value);
+    }
+
+    private SegmentedAddress? GetExecFcbPointer(ushort segment, ushort offset) {
+        if (segment == ExecFcbIgnorePointerValue && offset == ExecFcbIgnorePointerValue) {
+            return null;
+        }
+        return new SegmentedAddress(segment, offset);
     }
 }
