@@ -36,6 +36,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Value set in AL after CreateChildPsp (per DOSBox behavior: reg_al=0xf0, "destroyed" value).
     /// </summary>
     private const byte CreateChildPspAlDestroyedValue = 0xF0;
+    private const ushort ExecFcbIgnorePointerValue = 0xFFFF;
 
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly DosDriveManager _dosDriveManager;
@@ -242,6 +243,19 @@ public class DosInt21Handler : InterruptHandler {
                     year, month, day);
             }
         }
+    }
+
+    private static SegmentedAddress? GetExecFcbPointer(ushort segment, ushort offset) {
+        if (segment == 0 && offset == 0) {
+            return null;
+        }
+
+        if (segment == ExecFcbIgnorePointerValue && offset == ExecFcbIgnorePointerValue) {
+            // 0xFFFF:0xFFFF is the documented sentinel for "no FCB supplied" in the EXEC parameter block
+            return null;
+        }
+
+        return new SegmentedAddress(segment, offset);
     }
 
     /// <summary>
@@ -1653,7 +1667,9 @@ public class DosInt21Handler : InterruptHandler {
                 programName, 
                 commandTail,
                 loadType, 
-                paramBlock.EnvironmentSegment);
+                paramBlock.EnvironmentSegment,
+                GetExecFcbPointer(paramBlock.FirstFcbSegment, paramBlock.FirstFcbOffset),
+                GetExecFcbPointer(paramBlock.SecondFcbSegment, paramBlock.SecondFcbOffset));
 
             // For LoadOnly mode, fill in the entry point info in the parameter block
             if (result.Success && loadType == DosExecLoadType.LoadOnly) {
