@@ -97,7 +97,6 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Pause handler created...");
         }
 
-        IWallClock wallClock = new WallClock();
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Wall clock created...");
