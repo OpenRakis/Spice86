@@ -254,8 +254,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         }
     }
 
-
-
     /// <inheritdoc />
     public override void WriteWord(ushort port, ushort value) {
         if (port is not (IOplPort.PrimaryAddressPortNumber or IOplPort.SecondaryAddressPortNumber)) {
@@ -291,13 +289,15 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
             Span<short> interleaved = _tmpInterleaved.AsSpan(0, samplesToGenerate);
 
+            // Flush pending writes outside lock to reduce contention
+            double now = _clock.CurrentTimeMs;
+            
             // Minimize lock scope: only hold lock during chip operations
             lock (_chipLock) {
                 // Flush any pending OPL writes up to current time before generating audio
                 // Mirrors DOSBox Staging: ensures sub-ms register writes are processed
                 // Only flush if we're using the actual OPL chip (not a custom test generator)
                 if (!_isUsingCustomGenerator) {
-                    double now = _clock.CurrentTimeMs;
                     _oplIo.FlushDueWritesUpTo(now);
                 }
                 
