@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.IO;
 
 /// <summary>
 /// The class responsible for centralizing all the mounted DOS drives.
@@ -32,6 +33,8 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
         _driveMap.Add('A', null);
         _driveMap.Add('B', null);
         _driveMap.Add('C', new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath, CurrentDosDirectory = "" });
+        string zDriveFolderPath = CreateOrGetZDriveFolder();
+        _driveMap.Add('Z', new VirtualDrive { DriveLetter = 'Z', MountedHostDirectory = zDriveFolderPath, CurrentDosDirectory = "" });
         CurrentDrive = _driveMap.ElementAt(2).Value!;
         if(loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             loggerService.Verbose("DOS Drives initialized: {@Drives}", _driveMap.Values);
@@ -147,5 +150,15 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
 
     IEnumerator IEnumerable.GetEnumerator() {
         return ((IEnumerable)_driveMap).GetEnumerator();
+    }
+
+    private static string CreateOrGetZDriveFolder() {
+        string basePath = Path.Combine(Path.GetTempPath(), "spice86_zdrive");
+        Directory.CreateDirectory(basePath);
+        string autoexecPath = Path.Combine(basePath, "AUTOEXEC.BAT");
+        if (!File.Exists(autoexecPath)) {
+            File.WriteAllText(autoexecPath, "@ECHO OFF\r\nSET PATH=Z:\\;C:\\\r\n");
+        }
+        return ConvertUtils.ToSlashFolderPath(basePath);
     }
 }
