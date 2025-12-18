@@ -995,6 +995,12 @@ public class DosInt21Handler : InterruptHandler {
         // ES:BX points to offset 0 of the SYSVARS structure
         State.ES = DosSysVars.Segment;
         State.BX = 0;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose(
+                "GET LIST OF LISTS ES:BX={Es}:{Bx}",
+                ConvertUtils.ToHex16(State.ES),
+                ConvertUtils.ToHex16(State.BX));
+        }
     }
 
     /// <summary>
