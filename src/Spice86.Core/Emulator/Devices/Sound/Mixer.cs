@@ -4,8 +4,8 @@ using Spice86.Core.Backend.Audio;
 using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;
 
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 using HighPassFilter = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
@@ -25,8 +25,10 @@ public sealed class Mixer : IDisposable {
     private readonly AudioPlayerFactory _audioPlayerFactory;
     private readonly AudioPlayer _audioPlayer;
 
-    // Channels registry - matches DOSBox mixer.channels
-    private readonly ConcurrentDictionary<string, MixerChannel> _channels = new();
+    // Channels registry - matches DOSBox mixer.channels (std::map protected by mutex)
+    // Using Dictionary + lock instead of ConcurrentDictionary mirrors DOSBox architecture
+    // and reduces iterator overhead
+    private readonly Dictionary<string, MixerChannel> _channels = new();
 
     // Mixer thread that produces and writes directly to PortAudio
     private readonly Thread _mixerThread;
@@ -535,9 +537,8 @@ public sealed class Mixer : IDisposable {
                 channelRate > _sampleRateHz ? "downsampling" : "upsampling");
         }
 
-        // Add to channels registry
-        if (!_channels.TryAdd(name, channel)) {
-            // Replace existing
+        // Add to channels registry - protect with lock
+        lock (_mixerLock) {
             _channels[name] = channel;
         }
 
@@ -552,25 +553,34 @@ public sealed class Mixer : IDisposable {
     /// Finds a channel by name.
     /// </summary>
     public MixerChannel? FindChannel(string name) {
-        _channels.TryGetValue(name, out MixerChannel? channel);
-        return channel;
+        lock (_mixerLock) {
+            _channels.TryGetValue(name, out MixerChannel? channel);
+            return channel;
+        }
     }
 
     /// <summary>
     /// Removes a channel from the mixer.
+    /// Mirrors DOSBox remove_channel logic.
     /// </summary>
     public void DeregisterChannel(string name) {
-        if (_channels.TryRemove(name, out MixerChannel? channel)) {
-            channel.Enable(false);
-            _loggerService.Debug("MIXER: Deregistered channel {ChannelName}", name);
+        lock (_mixerLock) {
+            if (_channels.TryGetValue(name, out MixerChannel? channel)) {
+                channel.Enable(false);
+                _channels.Remove(name);
+                _loggerService.Debug("MIXER: Deregistered channel {ChannelName}", name);
+            }
         }
     }
 
     /// <summary>
     /// Gets all registered mixer channels.
+    /// Returns a snapshot to avoid holding lock during iteration.
     /// </summary>
     public IEnumerable<MixerChannel> GetAllChannels() {
-        return _channels.Values;
+        lock (_mixerLock) {
+            return _channels.Values.ToList();
+        }
     }
 
     /// <summary>
@@ -629,13 +639,13 @@ public sealed class Mixer : IDisposable {
         while (!_threadShouldQuit && !token.IsCancellationRequested) {
             int framesRequested = _blocksize;
 
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("MIXER: Begin mix cycle frames={FramesRequested} channels={ChannelCount}", framesRequested, _channels.Count);
-            }
-
             float[] rentedBuffer = Array.Empty<float>();
             try {
                 lock (_mixerLock) {
+                    if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                        _loggerService.Verbose("MIXER: Begin mix cycle frames={FramesRequested} channels={ChannelCount}", framesRequested, _channels.Count);
+                    }
+
                     MixSamples(framesRequested);
 
                     if (_state == MixerState.Muted) {
@@ -683,21 +693,27 @@ public sealed class Mixer : IDisposable {
     /// Mix samples from all channels - mirrors mix_samples from DOSBox.
     /// </summary>
     private void MixSamples(int framesRequested) {
-        // Clear output buffers
+        // Pre-size and clear output buffers (mirrors DOSBox vector.clear() + resize())
         _outputBuffer.Clear();
-        _outputBuffer.Capacity = Math.Max(_outputBuffer.Capacity, framesRequested);
-
         _reverbAuxBuffer.Clear();
         _chorusAuxBuffer.Clear();
 
-        // Initialize with silence
-        for (int i = 0; i < framesRequested; i++) {
-            _outputBuffer.Add(new AudioFrame(0.0f, 0.0f));
-            _reverbAuxBuffer.Add(new AudioFrame(0.0f, 0.0f));
-            _chorusAuxBuffer.Add(new AudioFrame(0.0f, 0.0f));
+        // Ensure capacity is sufficient (avoid reallocation during Add)
+        if (_outputBuffer.Capacity < framesRequested) {
+            _outputBuffer.Capacity = framesRequested;
+            _reverbAuxBuffer.Capacity = framesRequested;
+            _chorusAuxBuffer.Capacity = framesRequested;
         }
 
-        // Mix all enabled channels
+        // Initialize with silence using span for better performance
+        AudioFrame silence = new(0.0f, 0.0f);
+        for (int i = 0; i < framesRequested; i++) {
+            _outputBuffer.Add(silence);
+            _reverbAuxBuffer.Add(silence);
+            _chorusAuxBuffer.Add(silence);
+        }
+
+        // Mix all enabled channels - mirrors DOSBox range-based for loop
         foreach (MixerChannel channel in _channels.Values) {
             if (!channel.IsEnabled) {
                 continue;
