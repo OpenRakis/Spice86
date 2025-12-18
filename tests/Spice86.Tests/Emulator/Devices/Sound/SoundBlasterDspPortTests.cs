@@ -27,7 +27,7 @@ using Xunit;
 /// <summary>
 /// Port-level Sound Blaster DSP tests mirroring DOSBox Staging semantics.
 /// </summary>
-public class SoundBlasterDspPortTests {
+    public class SoundBlasterDspPortTests {
     [Fact]
     public void DspResetHandshakeMatchesDosboxStaging() {
         using SoundBlasterPortTestContext context = new SoundBlasterPortTestContext();
@@ -47,6 +47,113 @@ public class SoundBlasterDspPortTests {
 
         byte emptyData = context.Dispatcher.ReadByte((ushort)(basePort + 0x0A));
         emptyData.Should().Be(0x00, "DOSBox returns zero when no DSP data is queued");
+    }
+
+    public class SoundBlasterDspAsmIntegrationTests {
+        private const int MaxCycles = 200000;
+        private const ushort ResultPort = 0x999;
+
+        [Fact]
+        public void IdentificationCommandMatchesDosBoxStaging() {
+            byte[] program = BuildDspCommandProgram([0xE0, 0xAA], 1);
+            List<byte> results = RunProgram(program);
+            results.Should().Equal(0x55);
+        }
+
+        [Fact]
+        public void VersionCommandReturnsSbPro2Version() {
+            byte[] program = BuildDspCommandProgram([0xE1], 2);
+            List<byte> results = RunProgram(program);
+            results.Should().Equal(0x03, 0x02);
+        }
+
+        [Fact]
+        public void SpeakerEnabledStatusReturnsEnabledFlag() {
+            byte[] program = BuildDspCommandProgram([0xD1, 0xD8], 1);
+            List<byte> results = RunProgram(program);
+            results.Should().Equal(0xFF);
+        }
+
+        [Fact]
+        public void SpeakerDisabledStatusReturnsDisabledFlag() {
+            byte[] program = BuildDspCommandProgram([0xD3, 0xD8], 1);
+            List<byte> results = RunProgram(program);
+            results.Should().Equal(0x00);
+        }
+
+        private static List<byte> RunProgram(byte[] program) {
+            string filePath = Path.GetFullPath($"dsp_cmd_{Guid.NewGuid():N}.com");
+            File.WriteAllBytes(filePath, program);
+
+            Spice86DependencyInjection di = new Spice86Creator(
+                binName: filePath,
+                enableCfgCpu: true,
+                enablePit: true,
+                recordData: false,
+                maxCycles: MaxCycles,
+                installInterruptVectors: true,
+                failOnUnhandledPort: false).Create();
+
+            DspResultPortHandler handler = new(di.Machine.CpuState, Substitute.For<ILoggerService>(), di.Machine.IoPortDispatcher);
+
+            di.ProgramExecutor.Run();
+            return handler.Results;
+        }
+
+        private static byte[] BuildDspCommandProgram(ReadOnlySpan<byte> commandStream, byte responseCount) {
+            List<byte> p = new();
+
+            // Reset DSP: write 1 then 0 to 0x226 with small delay
+            p.AddRange([0xBA, 0x26, 0x02]); // mov dx,0x226
+            p.AddRange([0xB0, 0x01]);       // mov al,1
+            p.Add(0xEE);                    // out dx,al
+            p.AddRange([0xB9, 0x00, 0x01]); // mov cx,0x100
+            p.AddRange([0xE2, 0xFE]);       // loop delay
+            p.AddRange([0xB0, 0x00]);       // mov al,0
+            p.Add(0xEE);                    // out dx,al
+
+            // Send command stream
+            p.AddRange([0xBA, 0x2C, 0x02]); // mov dx,0x22C
+            foreach (byte b in commandStream) {
+                p.AddRange([0xB0, b]); // mov al,imm8
+                p.Add(0xEE);           // out dx,al
+            }
+
+            // Prepare to read responses
+            p.AddRange([0xB1, responseCount]); // mov cl,count
+
+            // resp_loop:
+            int loopStart = p.Count;
+            p.AddRange([0xBA, 0x2E, 0x02]); // mov dx,0x22E
+            p.Add(0xEC);                    // in al,dx
+            p.AddRange([0xA8, 0x80]);       // test al,80h
+            p.AddRange([0x74, 0xFB]);       // jz -5 to in al,dx
+            p.AddRange([0xBA, 0x2A, 0x02]); // mov dx,0x22A
+            p.Add(0xEC);                    // in al,dx
+            p.AddRange([0xBA, 0x99, 0x09]); // mov dx,0x0999
+            p.Add(0xEE);                    // out dx,al
+            p.AddRange([0xFE, 0xC9]);       // dec cl
+            // jnz back to loopStart
+            int rel = loopStart - (p.Count + 2);
+            p.AddRange([0x75, unchecked((byte)rel)]);
+
+            p.Add(0xF4); // hlt
+            return p.ToArray();
+        }
+
+        private sealed class DspResultPortHandler : DefaultIOPortHandler {
+            public List<byte> Results { get; } = new();
+
+            public DspResultPortHandler(State state, ILoggerService logger, IOPortDispatcher dispatcher) : base(state, true, logger) {
+                dispatcher.AddIOPortHandler(ResultPort, this);
+            }
+
+            public override void WriteByte(ushort port, byte value) {
+                if (port == ResultPort) {
+                    Results.Add(value);
+                }
+            }
+        }
     }
 
     [Fact]
