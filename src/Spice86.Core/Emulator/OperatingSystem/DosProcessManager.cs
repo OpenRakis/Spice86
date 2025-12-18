@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -187,10 +188,13 @@ public class DosProcessManager : DosFileLoader {
     /// <param name="arguments">Command line arguments for the program.</param>
     /// <param name="loadType">The type of load operation to perform.</param>
     /// <param name="environmentSegment">Environment segment to use (0 = inherit from parent).</param>
+    /// <param name="firstFcbPointer">Pointer to the first FCB to copy into the new PSP (ignored if null or FFFF:FFFF).</param>
+    /// <param name="secondFcbPointer">Pointer to the second FCB to copy into the new PSP (ignored if null or FFFF:FFFF).</param>
     /// <returns>The result of the EXEC operation.</returns>
     public DosExecResult Exec(string programPath, string? arguments, 
         DosExecLoadType loadType = DosExecLoadType.LoadAndExecute, 
-        ushort environmentSegment = 0) {
+        ushort environmentSegment = 0, SegmentedAddress? firstFcbPointer = null, 
+        SegmentedAddress? secondFcbPointer = null) {
         
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information(
@@ -224,49 +228,54 @@ public class DosProcessManager : DosFileLoader {
         }
 
         // Determine parent PSP
-        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
-        if (parentPspSegment == 0) {
-            // If no current PSP, use COMMAND.COM as parent
-            parentPspSegment = _commandCom.PspSegment;
-        }
-
         // For the first program, we use the original loading approach that gives the program
         // ALL remaining conventional memory (NextSegment = LastFreeSegment). This is how real DOS 
         // works and ensures programs that resize their memory block via INT 21h 4Ah have room to grow.
         // For child processes, we use proper MCB-based allocation.
         bool isFirstProgram = _pspTracker.PspCount == 0;
+        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
+        if (isFirstProgram || parentPspSegment == 0) {
+            // If no current PSP, use COMMAND.COM as parent
+            parentPspSegment = _commandCom.PspSegment;
+        }
+        DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
 
         // Create environment block
-        byte[] envBlockData = CreateEnvironmentBlock(programPath);
+        byte[]? envBlockData = null;
         ushort envSegment = environmentSegment;
         if (envSegment == 0) {
-            if (isFirstProgram) {
-                envSegment = (ushort)(_commandCom.NextSegment);
-                uint envAddress = MemoryUtils.ToPhysicalAddress(envSegment, 0);
-                _memory.LoadData(envAddress, envBlockData);
-                
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose(
-                        "Placed first program environment block at segment {Segment:X4} ({Size} bytes)",
-                        envSegment, envBlockData.Length);
-                }
+            if (!isFirstProgram && parentPsp.EnvironmentTableSegment != 0) {
+                envSegment = parentPsp.EnvironmentTableSegment;
             } else {
-                // For child processes, use MCB allocation as normal
-                envSegment = _memoryManager.AllocateEnvironmentBlock(envBlockData, parentPspSegment);
-                if (envSegment == 0) {
-                    return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
+                envBlockData = CreateEnvironmentBlock(programPath);
+                if (isFirstProgram) {
+                    envSegment = (ushort)(_commandCom.NextSegment);
+                    uint envAddress = MemoryUtils.ToPhysicalAddress(envSegment, 0);
+                    _memory.LoadData(envAddress, envBlockData);
+                
+                    if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                        _loggerService.Verbose(
+                            "Placed first program environment block at segment {Segment:X4} ({Size} bytes)",
+                            envSegment, envBlockData.Length);
+                    }
+                } else {
+                    // For child processes, use MCB allocation as normal
+                    envSegment = _memoryManager.AllocateEnvironmentBlock(envBlockData, parentPspSegment);
+                    if (envSegment == 0) {
+                        return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
+                    }
                 }
             }
         }
 
         // Allocate memory for the program and create PSP
         DosExecResult result = isFirstProgram 
-            ? LoadFirstProgram(fileBytes, hostPath, arguments, parentPspSegment, envSegment, loadType)
-            : LoadProgram(fileBytes, hostPath, arguments, parentPspSegment, envSegment, loadType);
+            ? LoadFirstProgram(fileBytes, hostPath, arguments, parentPspSegment, envSegment, loadType, firstFcbPointer, secondFcbPointer)
+            : LoadProgram(fileBytes, hostPath, arguments, parentPspSegment, envSegment, loadType, firstFcbPointer, secondFcbPointer);
 
         if (!result.Success) {
             // Free the environment block if we allocated it (only for non-first programs)
-            if (environmentSegment == 0 && envSegment != 0 && !isFirstProgram) {
+            if (environmentSegment == 0 && envSegment != 0 && !isFirstProgram && envBlockData is not null) {
                 _memoryManager.FreeMemoryBlock((ushort)(envSegment - 1));
             }
         }
@@ -391,7 +400,8 @@ public class DosProcessManager : DosFileLoader {
     /// Loads the program into memory and sets up the PSP.
     /// </summary>
     private DosExecResult LoadProgram(byte[] fileBytes, string hostPath, string? arguments,
-        ushort parentPspSegment, ushort envSegment, DosExecLoadType loadType) {
+        ushort parentPspSegment, ushort envSegment, DosExecLoadType loadType, SegmentedAddress? firstFcbPointer,
+        SegmentedAddress? secondFcbPointer) {
         
         // Determine if this is an EXE or COM file
         bool isExe = false;
@@ -441,7 +451,10 @@ public class DosProcessManager : DosFileLoader {
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
 
         // Initialize PSP
-        InitializePsp(psp, parentPspSegment, envSegment, arguments);
+        ushort nextSegment = memBlock is not null
+            ? (ushort)(memBlock.DataBlockSegment + memBlock.Size)
+            : DosMemoryManager.LastFreeSegment;
+        InitializePsp(psp, parentPspSegment, envSegment, arguments, nextSegment, firstFcbPointer, secondFcbPointer);
 
         // Set the disk transfer area address
         _fileManager.SetDiskTransferAreaAddress(pspSegment, DosCommandTail.OffsetInPspSegment);
@@ -452,6 +465,9 @@ public class DosProcessManager : DosFileLoader {
         if (isExe && exeFile is not null) {
             // For EXE files, memory was already reserved by ReserveSpaceForExe
             // Load directly without re-reserving
+            if (memBlock is null) {
+                return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
+            }
             LoadExeFileIntoReservedMemory(exeFile, memBlock, out cs, out ip, out ss, out sp);
         } else {
             LoadComFileInternal(fileBytes, out cs, out ip, out ss, out sp);
@@ -485,7 +501,8 @@ public class DosProcessManager : DosFileLoader {
     /// This is simpler and more compatible than MCB-based allocation for the initial program.
     /// </remarks>
     private DosExecResult LoadFirstProgram(byte[] fileBytes, string hostPath, string? arguments,
-        ushort parentPspSegment, ushort envSegment, DosExecLoadType loadType) {
+        ushort parentPspSegment, ushort envSegment, DosExecLoadType loadType, SegmentedAddress? firstFcbPointer,
+        SegmentedAddress? secondFcbPointer) {
         
         ushort pspSegment = _pspTracker.InitialPspSegment;
         
@@ -493,7 +510,7 @@ public class DosProcessManager : DosFileLoader {
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
 
         // Initialize PSP - this sets NextSegment = LastFreeSegment giving the program ALL memory
-        InitializePsp(psp, parentPspSegment, envSegment, arguments);
+        InitializePsp(psp, parentPspSegment, envSegment, arguments, DosMemoryManager.LastFreeSegment, firstFcbPointer, secondFcbPointer);
 
         // Set the disk transfer area address
         _fileManager.SetDiskTransferAreaAddress(pspSegment, DosCommandTail.OffsetInPspSegment);
@@ -592,12 +609,13 @@ public class DosProcessManager : DosFileLoader {
     /// Initializes a PSP with the given parameters.
     /// </summary>
     private void InitializePsp(DosProgramSegmentPrefix psp, ushort parentPspSegment, 
-        ushort envSegment, string? arguments) {
+        ushort envSegment, string? arguments, ushort nextSegment, SegmentedAddress? firstFcbPointer,
+        SegmentedAddress? secondFcbPointer) {
         
         // Initialize common PSP fields (INT 20h and parent PSP)
         InitializeCommonPspFields(psp, parentPspSegment);
 
-        psp.NextSegment = DosMemoryManager.LastFreeSegment;
+        psp.NextSegment = nextSegment;
         psp.EnvironmentTableSegment = envSegment;
 
         // Copy file handle table from parent PSP
@@ -609,6 +627,19 @@ public class DosProcessManager : DosFileLoader {
         // Load command-line arguments
         // Load the command-line arguments into the PSP's command tail.
         psp.DosCommandTail.Command = DosCommandTail.PrepareCommandlineString(arguments);
+        CopyExecFcb(firstFcbPointer, psp.FirstFileControlBlock);
+        CopyExecFcb(secondFcbPointer, psp.SecondFileControlBlock);
+    }
+
+    private void CopyExecFcb(SegmentedAddress? sourcePointer, UInt8Array destination) {
+        if (!sourcePointer.HasValue) {
+            return;
+        }
+
+        uint sourceAddress = MemoryUtils.ToPhysicalAddress(sourcePointer.Value.Segment, sourcePointer.Value.Offset);
+        for (int i = 0; i < FcbSize; i++) {
+            destination[i] = _memory.UInt8[sourceAddress + (uint)i];
+        }
     }
 
     /// <summary>

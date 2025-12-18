@@ -244,6 +244,14 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+    private static SegmentedAddress? GetExecFcbPointer(ushort segment, ushort offset) {
+        if ((segment == 0 && offset == 0) || (segment == ushort.MaxValue && offset == ushort.MaxValue)) {
+            return null;
+        }
+
+        return new SegmentedAddress(segment, offset);
+    }
+
     /// <summary>
     /// INT 21h, AH=2Dh - Set DOS Time.
     /// <para>
@@ -1653,7 +1661,9 @@ public class DosInt21Handler : InterruptHandler {
                 programName, 
                 commandTail,
                 loadType, 
-                paramBlock.EnvironmentSegment);
+                paramBlock.EnvironmentSegment,
+                GetExecFcbPointer(paramBlock.FirstFcbSegment, paramBlock.FirstFcbOffset),
+                GetExecFcbPointer(paramBlock.SecondFcbSegment, paramBlock.SecondFcbOffset));
 
             // For LoadOnly mode, fill in the entry point info in the parameter block
             if (result.Success && loadType == DosExecLoadType.LoadOnly) {
