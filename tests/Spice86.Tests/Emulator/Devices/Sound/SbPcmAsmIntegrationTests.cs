@@ -366,9 +366,6 @@ public class SbPcmAsmIntegrationTests {
             spice86.Machine.SoundBlaster.DacChannel.Should().NotBeNull("DacChannel property should be accessible");
             spice86.Machine.SoundBlaster.DacChannel.GetSampleRate().Should().BeGreaterThan(0, "DacChannel should have valid sample rate");
         }
-        
-        // Give time for disposal and timer cleanup to complete
-        System.Threading.Tasks.Task.Delay(100).Wait();
     }
     
     // Helper Methods
@@ -411,9 +408,6 @@ public class SbPcmAsmIntegrationTests {
             // Run program
             spice86DependencyInjection.ProgramExecutor.Run();
             
-            // Give mixer time to process
-            System.Threading.Tasks.Task.Delay(500).Wait();
-            
             MixerChannel dacChannel = spice86DependencyInjection.Machine.SoundBlaster.DacChannel;
             
             // Copy audio frames from the channel
@@ -426,10 +420,6 @@ public class SbPcmAsmIntegrationTests {
                 WavFileFormat.WriteWavFile(outputWavPath, capturedAudio, expectedSampleRate);
             }
         } // Dispose emulator here to stop rendering timer
-        
-        // Give time for disposal and timer cleanup to complete
-        // This helps avoid race conditions with the rendering timer
-        System.Threading.Tasks.Task.Delay(100).Wait();
         
         return new TestExecutionResult {
             CapturedFrames = capturedAudio,

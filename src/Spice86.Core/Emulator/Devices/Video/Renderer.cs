@@ -54,18 +54,24 @@ public class Renderer : IVgaRenderer {
         }
         try {
             BufferSize = frameBuffer.Length;
-            if (Width * Height > BufferSize) {
-                // Resolution change hasn't caught up yet. Skip a frame.
+            try {
+                if (Width * Height > BufferSize) {
+                    // Resolution change hasn't caught up yet. Skip a frame.
+                    return;
+                }
+            } catch (NullReferenceException) {
+                // State may be disposed during cleanup - skip this frame
                 return;
             }
 
-            // Some timing helpers.
-            long horizontalTickTarget = Stopwatch.Frequency / 31469L; // Number of ticks per horizontal line.
-            var waitSpinner = new SpinWait();
-            var stopwatch = Stopwatch.StartNew();
+            try {
+                // Some timing helpers.
+                long horizontalTickTarget = Stopwatch.Frequency / 31469L; // Number of ticks per horizontal line.
+                var waitSpinner = new SpinWait();
+                var stopwatch = Stopwatch.StartNew();
 
-            // I _think_ changes to these are ignored during the frame, so we latch them here.
-            int verticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
+                // I _think_ changes to these are ignored during the frame, so we latch them here.
+                int verticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
             int totalHeight = _state.CrtControllerRegisters.VerticalTotalValue + 2;
             int skew = _state.CrtControllerRegisters.HorizontalBlankingEndRegister.DisplayEnableSkew; // Skew controls the delay of enabling the display at the start of the line.
             int characterClockMask = _state.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour
@@ -175,7 +181,10 @@ public class Renderer : IVgaRenderer {
                 rowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
             } // End of vertical loop
 
-            LastFrameRenderTime = stopwatch.Elapsed;
+                LastFrameRenderTime = stopwatch.Elapsed;
+            } catch (NullReferenceException) {
+                // State may be disposed during rendering - skip rest of frame
+            }
         } catch (IndexOutOfRangeException) {
             // Resolution changed during rendering, discard the rest of this frame.
         } finally {
