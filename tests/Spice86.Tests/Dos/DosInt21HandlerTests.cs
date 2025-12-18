@@ -7,6 +7,7 @@ using NSubstitute;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -32,9 +33,8 @@ public class DosInt21HandlerTests {
         var recordingFile = new RecordingVirtualFile();
         const ushort fileHandle = 0x0003;
         dosFileManager.OpenFiles[fileHandle] = recordingFile;
-        var clock = new Clock(logger);
-        var ioPortDispatcher = new Spice86.Core.Emulator.IOPorts.IOPortDispatcher(
-            new Spice86.Core.Emulator.VM.Breakpoint.AddressReadWriteBreakpoints(), state, logger, false);
+        var ioPortBreakpoints = new Spice86.Core.Emulator.VM.Breakpoint.AddressReadWriteBreakpoints();
+        var ioPortDispatcher = new IOPortDispatcher(ioPortBreakpoints, state, logger, false);
         var dosTables = new DosTables();
         dosTables.Initialize(memory);
 
@@ -50,7 +50,6 @@ public class DosInt21HandlerTests {
             null!,
             dosFileManager,
             driveManager,
-            clock,
             null!,
             ioPortDispatcher,
             dosTables,

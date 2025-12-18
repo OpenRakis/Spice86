@@ -134,7 +134,7 @@ public class DosFileManagerTests {
             dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
             loggerService, executionFlowRecorder);
 
-        IFunctionHandlerProvider functionHandlerProvider =  cpu;
+        IFunctionHandlerProvider functionHandlerProvider = cpu;
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
@@ -159,8 +159,8 @@ public class DosFileManagerTests {
 
         InputEventHub inputEventQueue = new();
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
-            functionHandlerProvider, stack, state, a20Gate,
-            configuration.InitializeDOS is not false, loggerService);
+            functionHandlerProvider, stack, state, a20Gate, biosDataArea, emulationLoopScheduler,
+            ioPortDispatcher, loggerService, configuration.InitializeDOS is not false);
         Intel8042Controller intel8042Controller = new(
             state, ioPortDispatcher, a20Gate, dualPic, emulationLoopScheduler,
             configuration.FailOnUnhandledPort, loggerService, inputEventQueue);
@@ -175,7 +175,7 @@ public class DosFileManagerTests {
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
             vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
-            loggerService, ioPortDispatcher);
+            ioPortDispatcher, loggerService);
 
         return dos.FileManager;
     }

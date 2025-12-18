@@ -32,6 +32,7 @@ public class Spice86Creator {
             // when false: making sure int8 is not going to be triggered during the tests
             InitializeDOS = installInterruptVectors,
             ProvidedAsmHandlersSegment = 0xF000,
+            ProgramEntryPointSegment = 0x170, // Default from CLI, must be set explicitly for object initializer
             DumpDataOnExit = recordData,
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
