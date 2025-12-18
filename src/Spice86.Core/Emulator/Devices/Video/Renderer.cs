@@ -64,14 +64,24 @@ public class Renderer : IVgaRenderer {
                 return;
             }
 
-            try {
-                // Some timing helpers.
-                long horizontalTickTarget = Stopwatch.Frequency / 31469L; // Number of ticks per horizontal line.
-                var waitSpinner = new SpinWait();
-                var stopwatch = Stopwatch.StartNew();
+            // Proactive null checks to avoid NullReferenceException
+            if (_state == null || _state.CrtControllerRegisters == null || _state.GeneralRegisters == null
+                || _state.CrtControllerRegisters.HorizontalBlankingEndRegister == null
+                || _state.CrtControllerRegisters.UnderlineRowScanlineRegister == null
+                || _state.CrtControllerRegisters.CrtModeControlRegister == null
+                || _state.CrtControllerRegisters.PresetRowScanRegister == null
+                || _state.GeneralRegisters.InputStatusRegister1 == null) {
+                // Required state has been disposed or is not available - skip rendering
+                return;
+            }
 
-                // I _think_ changes to these are ignored during the frame, so we latch them here.
-                int verticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
+            // Some timing helpers.
+            long horizontalTickTarget = Stopwatch.Frequency / 31469L; // Number of ticks per horizontal line.
+            var waitSpinner = new SpinWait();
+            var stopwatch = Stopwatch.StartNew();
+
+            // I _think_ changes to these are ignored during the frame, so we latch them here.
+            int verticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
             int totalHeight = _state.CrtControllerRegisters.VerticalTotalValue + 2;
             int skew = _state.CrtControllerRegisters.HorizontalBlankingEndRegister.DisplayEnableSkew; // Skew controls the delay of enabling the display at the start of the line.
             int characterClockMask = _state.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour
@@ -182,12 +192,6 @@ public class Renderer : IVgaRenderer {
             } // End of vertical loop
 
                 LastFrameRenderTime = stopwatch.Elapsed;
-            } catch (NullReferenceException) {
-                // State may be disposed during rendering - skip rest of frame
-            }
-        } catch (IndexOutOfRangeException) {
-            // Resolution changed during rendering, discard the rest of this frame.
-        } finally {
             Monitor.Exit(RenderLock);
         }
     }
