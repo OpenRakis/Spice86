@@ -25,9 +25,9 @@ using System.Collections.Generic;
 /// <summary>
 /// Sound Blaster SB PRO 2 emulation - mirrors DOSBox Staging soundblaster.cpp
 /// </summary>
-public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider {
-    private const int DmaBufSize = 1024;
-    private const int DspBufSize = 64;
+    public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider {
+        private const int DmaBufSize = 1024;
+        private const int DspBufSize = 64;
     private const int SbShift = 14;
     private const ushort SbShiftMask = (1 << SbShift) - 1;
     private const byte MinAdaptiveStepSize = 0;
@@ -1633,6 +1633,22 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Reschedule for next tick (1ms intervals)
         _scheduler.AddEvent(MixerTickCallback, 1.0);
     }
+
+    public bool PendingIrq8Bit {
+        get => _sb.Irq.Pending8Bit;
+        set => _sb.Irq.Pending8Bit = value;
+    }
+
+    public bool PendingIrq16Bit {
+        get => _sb.Irq.Pending16Bit;
+        set => _sb.Irq.Pending16Bit = value;
+    }
+
+    public bool IsSpeakerEnabled => _sb.SpeakerEnabled;
+
+    public uint DspFrequencyHz => _sb.FreqHz;
+
+    public byte DspTestRegister => _sb.Dsp.TestRegister;
 
     // Command length tables - mirrors dsp_cmd_len_sb and dsp_cmd_len_sb16 from DOSBox
     // ReadByte, WriteByte, Reset, and other existing methods...

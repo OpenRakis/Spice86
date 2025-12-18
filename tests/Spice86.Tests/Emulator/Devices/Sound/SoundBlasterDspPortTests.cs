@@ -2,7 +2,7 @@ namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.IO;
 using System.Text;
 
 using FluentAssertions;
@@ -52,41 +52,16 @@ using Xunit;
     public class SoundBlasterDspAsmIntegrationTests {
         private const int MaxCycles = 200000;
         private const ushort ResultPort = 0x999;
+        private static readonly string SbDspTestBinary = Path.GetFullPath(
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Resources", "SoundBlasterTests", "sb_dsp_test.bin"));
 
         [Fact]
-        public void IdentificationCommandMatchesDosBoxStaging() {
-            byte[] program = BuildDspCommandProgram([0xE0, 0xAA], 1);
-            List<byte> results = RunProgram(program);
-            results.Should().Equal(0x55);
-        }
-
-        [Fact]
-        public void VersionCommandReturnsSbPro2Version() {
-            byte[] program = BuildDspCommandProgram([0xE1], 2);
-            List<byte> results = RunProgram(program);
-            results.Should().Equal(0x03, 0x02);
-        }
-
-        [Fact]
-        public void SpeakerEnabledStatusReturnsEnabledFlag() {
-            byte[] program = BuildDspCommandProgram([0xD1, 0xD8], 1);
-            List<byte> results = RunProgram(program);
-            results.Should().Equal(0xFF);
-        }
-
-        [Fact]
-        public void SpeakerDisabledStatusReturnsDisabledFlag() {
-            byte[] program = BuildDspCommandProgram([0xD3, 0xD8], 1);
-            List<byte> results = RunProgram(program);
-            results.Should().Equal(0x00);
-        }
-
-        private static List<byte> RunProgram(byte[] program) {
-            string filePath = Path.GetFullPath($"dsp_cmd_{Guid.NewGuid():N}.com");
-            File.WriteAllBytes(filePath, program);
+        public void SbDspTestBinaryPasses() {
+            string programPath = Path.Combine(Path.GetTempPath(), $"sb_dsp_test_{Guid.NewGuid():N}.com");
+            File.Copy(SbDspTestBinary, programPath, true);
 
             Spice86DependencyInjection di = new Spice86Creator(
-                binName: filePath,
+                binName: programPath,
                 enableCfgCpu: true,
                 enablePit: true,
                 recordData: false,
@@ -97,48 +72,9 @@ using Xunit;
             DspResultPortHandler handler = new(di.Machine.CpuState, Substitute.For<ILoggerService>(), di.Machine.IoPortDispatcher);
 
             di.ProgramExecutor.Run();
-            return handler.Results;
-        }
 
-        private static byte[] BuildDspCommandProgram(ReadOnlySpan<byte> commandStream, byte responseCount) {
-            List<byte> p = new();
-
-            // Reset DSP: write 1 then 0 to 0x226 with small delay
-            p.AddRange([0xBA, 0x26, 0x02]); // mov dx,0x226
-            p.AddRange([0xB0, 0x01]);       // mov al,1
-            p.Add(0xEE);                    // out dx,al
-            p.AddRange([0xB9, 0x00, 0x01]); // mov cx,0x100
-            p.AddRange([0xE2, 0xFE]);       // loop delay
-            p.AddRange([0xB0, 0x00]);       // mov al,0
-            p.Add(0xEE);                    // out dx,al
-
-            // Send command stream
-            p.AddRange([0xBA, 0x2C, 0x02]); // mov dx,0x22C
-            foreach (byte b in commandStream) {
-                p.AddRange([0xB0, b]); // mov al,imm8
-                p.Add(0xEE);           // out dx,al
-            }
-
-            // Prepare to read responses
-            p.AddRange([0xB1, responseCount]); // mov cl,count
-
-            // resp_loop:
-            int loopStart = p.Count;
-            p.AddRange([0xBA, 0x2E, 0x02]); // mov dx,0x22E
-            p.Add(0xEC);                    // in al,dx
-            p.AddRange([0xA8, 0x80]);       // test al,80h
-            p.AddRange([0x74, 0xFB]);       // jz -5 to in al,dx
-            p.AddRange([0xBA, 0x2A, 0x02]); // mov dx,0x22A
-            p.Add(0xEC);                    // in al,dx
-            p.AddRange([0xBA, 0x99, 0x09]); // mov dx,0x0999
-            p.Add(0xEE);                    // out dx,al
-            p.AddRange([0xFE, 0xC9]);       // dec cl
-            // jnz back to loopStart
-            int rel = loopStart - (p.Count + 2);
-            p.AddRange([0x75, unchecked((byte)rel)]);
-
-            p.Add(0xF4); // hlt
-            return p.ToArray();
+            handler.Results.Should().ContainSingle();
+            handler.Results[0].Should().Be(0x00);
         }
 
         private sealed class DspResultPortHandler : DefaultIOPortHandler {
@@ -282,16 +218,6 @@ using Xunit;
     }
 
     private sealed class SoundBlasterPortTestContext : IDisposable {
-        private readonly object _irqState;
-        private readonly PropertyInfo _pending8BitProperty;
-        private readonly PropertyInfo _pending16BitProperty;
-        private readonly PropertyInfo _speakerEnabledProperty;
-        private readonly PropertyInfo _freqHzProperty;
-        private readonly PropertyInfo _dspStateProperty;
-        private readonly PropertyInfo _dspTestRegisterProperty;
-        private readonly object _soundBlasterState;
-        private readonly object _dspStateInstance;
-
         public SoundBlasterPortTestContext(SbType sbType = SbType.SBPro2) {
             ILoggerService loggerService = Substitute.For<ILoggerService>();
             AddressReadWriteBreakpoints memoryBreakpoints = new();
@@ -334,34 +260,6 @@ using Xunit;
             Mixer = mixer;
             Config = config;
             SoundBlaster = soundBlaster;
-
-            FieldInfo sbField = typeof(SoundBlaster).GetField("_sb", BindingFlags.NonPublic | BindingFlags.Instance)
-                ?? throw new InvalidOperationException("SoundBlaster _sb field not found");
-            object sbInfo = sbField.GetValue(soundBlaster)
-                ?? throw new InvalidOperationException("SoundBlaster _sb field is null");
-            PropertyInfo irqProperty = sbInfo.GetType().GetProperty("Irq")
-                ?? throw new InvalidOperationException("SoundBlaster Irq property not found");
-            object irqState = irqProperty.GetValue(sbInfo)
-                ?? throw new InvalidOperationException("SoundBlaster Irq state is null");
-
-            _irqState = irqState;
-            _pending8BitProperty = irqState.GetType().GetProperty("Pending8Bit")
-                ?? throw new InvalidOperationException("Pending8Bit property not found");
-            _pending16BitProperty = irqState.GetType().GetProperty("Pending16Bit")
-                ?? throw new InvalidOperationException("Pending16Bit property not found");
-            _speakerEnabledProperty = sbInfo.GetType().GetProperty("SpeakerEnabled")
-                ?? throw new InvalidOperationException("SpeakerEnabled property not found");
-            _freqHzProperty = sbInfo.GetType().GetProperty("FreqHz")
-                ?? throw new InvalidOperationException("FreqHz property not found");
-            _dspStateProperty = sbInfo.GetType().GetProperty("Dsp")
-                ?? throw new InvalidOperationException("Dsp property not found");
-
-            object dspState = _dspStateProperty.GetValue(sbInfo)
-                ?? throw new InvalidOperationException("Dsp state is null");
-            _dspTestRegisterProperty = dspState.GetType().GetProperty("TestRegister")
-                ?? throw new InvalidOperationException("Dsp TestRegister property not found");
-            _soundBlasterState = sbInfo;
-            _dspStateInstance = dspState;
         }
 
         public SoundBlaster SoundBlaster { get; }
@@ -375,43 +273,26 @@ using Xunit;
         public SoundBlasterHardwareConfig Config { get; }
 
         public void SetPending8BitIrq(bool value) {
-            _pending8BitProperty.SetValue(_irqState, value);
+            SoundBlaster.PendingIrq8Bit = value;
         }
 
         public void SetPending16BitIrq(bool value) {
-            _pending16BitProperty.SetValue(_irqState, value);
+            SoundBlaster.PendingIrq16Bit = value;
         }
 
         public bool GetPending8BitIrq() {
-            object? value = _pending8BitProperty.GetValue(_irqState);
-            return value is bool pending && pending;
+            return SoundBlaster.PendingIrq8Bit;
         }
 
         public bool GetPending16BitIrq() {
-            object? value = _pending16BitProperty.GetValue(_irqState);
-            return value is bool pending && pending;
+            return SoundBlaster.PendingIrq16Bit;
         }
 
-        public bool SpeakerEnabled {
-            get {
-                object? value = _speakerEnabledProperty.GetValue(_soundBlasterState);
-                return value is bool enabled && enabled;
-            }
-        }
+        public bool SpeakerEnabled => SoundBlaster.IsSpeakerEnabled;
 
-        public uint FreqHz {
-            get {
-                object? value = _freqHzProperty.GetValue(_soundBlasterState);
-                return value is uint freq ? freq : 0;
-            }
-        }
+        public uint FreqHz => SoundBlaster.DspFrequencyHz;
 
-        public byte DspTestRegister {
-            get {
-                object? value = _dspTestRegisterProperty.GetValue(_dspStateInstance);
-                return value is byte reg ? reg : (byte)0;
-            }
-        }
+        public byte DspTestRegister => SoundBlaster.DspTestRegister;
 
 
         public void SendDspCommand(byte command, params byte[] parameters) {
