@@ -21,11 +21,11 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
     private readonly Action<Span<short>> _generateStream;
+    private readonly bool _isUsingCustomGenerator;
     private readonly object _chipLock = new();
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly DualPic _dualPic;
-    private readonly EventHandler _oplFlushHandler;
     private readonly Opl3Io _oplIo;
     private readonly byte _oplIrqLine;
     private readonly EventHandler _oplTimerHandler;
@@ -40,7 +40,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly short[] _tmpInterleaved = new short[2048];
     private readonly bool _useOplIrq;
     private bool _disposed;
-    private bool _oplFlushScheduled;
     private bool _oplTimerScheduled;
 
     /// <summary>
@@ -76,9 +75,9 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         _useAdLibGold = useAdlibGold;
         _useOplIrq = enableOplIrq;
         _oplIrqLine = oplIrqLine;
+        _isUsingCustomGenerator = sampleGenerator != null;
         _generateStream = sampleGenerator ?? (_chip.GenerateStream);
 
-        _oplFlushHandler = FlushOplWrites;
         _oplTimerHandler = ServiceOplTimers;
 
         _oplIo = new Opl3Io(_chip, () => _clock.CurrentTimeMs) {
@@ -180,11 +179,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         }
 
         if (disposing) {
-            if (_oplFlushScheduled) {
-                _scheduler.RemoveEvents(_oplFlushHandler);
-                _oplFlushScheduled = false;
-            }
-
             if (_oplTimerScheduled) {
                 _scheduler.RemoveEvents(_oplTimerHandler);
                 _oplTimerScheduled = false;
@@ -251,32 +245,16 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         bool audioWrite = (result & (Opl3WriteResult.DataWrite | Opl3WriteResult.AdLibGoldWrite)) != 0;
         bool timerWrite = (result & Opl3WriteResult.TimerUpdated) != 0;
 
-        switch (audioWrite) {
-            case true:
-                InitializePlaybackIfNeeded();
-                break;
-            case false when !timerWrite:
-                return;
-        }
-
-        double now = _clock.CurrentTimeMs;
-
-        if (audioWrite) {
-            ScheduleOplFlush(now);
-        }
-
+        // Only schedule timer events - audio writes are handled by the mixer callback
+        // The OPL chip automatically flushes buffered writes during GenerateStream
+        // Mirrors DOSBox Staging: no separate flush scheduling needed
         if (timerWrite) {
+            double now = _clock.CurrentTimeMs;
             ScheduleOplTimer(now);
         }
     }
 
-    /// <summary>
-    ///     Starts the playback thread if it is currently idle.
-    /// </summary>
-    private void InitializePlaybackIfNeeded() {
-        _loggerService.Debug("Starting OPL3 FM playback thread.");
-        RenderTo(_playBuffer);
-    }
+
 
     /// <inheritdoc />
     public override void WriteWord(ushort port, ushort value) {
@@ -313,7 +291,17 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
             Span<short> interleaved = _tmpInterleaved.AsSpan(0, samplesToGenerate);
 
+            // Minimize lock scope: only hold lock during chip operations
             lock (_chipLock) {
+                // Flush any pending OPL writes up to current time before generating audio
+                // Mirrors DOSBox Staging: ensures sub-ms register writes are processed
+                // Only flush if we're using the actual OPL chip (not a custom test generator)
+                if (!_isUsingCustomGenerator) {
+                    double now = _clock.CurrentTimeMs;
+                    _oplIo.FlushDueWritesUpTo(now);
+                }
+                
+                // Generate audio samples (write buffer is automatically processed during generation)
                 _generateStream(interleaved);
             }
 
@@ -378,33 +366,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    ///     Schedules the next flush of pending OPL register writes.
-    /// </summary>
-    /// <param name="currentTick">Current time in scheduler ticks.</param>
-    private void ScheduleOplFlush(double currentTick) {
-        double? delay;
-        lock (_chipLock) {
-            delay = GetNextFlushDelayUnsafe(currentTick, true);
-        }
-
-        if (_oplFlushScheduled) {
-            _scheduler.RemoveEvents(_oplFlushHandler);
-            _oplFlushScheduled = false;
-        }
-
-        if (delay is not { } d) {
-            return;
-        }
-
-        if (d < 0) {
-            d = 0;
-        }
-
-        _scheduler.AddEvent(_oplFlushHandler, d);
-        _oplFlushScheduled = true;
-    }
-
-    /// <summary>
     ///     Schedules servicing of the OPL timers based on the next overflow.
     /// </summary>
     /// <param name="currentTick">Current time in scheduler ticks.</param>
@@ -433,33 +394,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    ///     Flushes pending writes up to the current time and schedules the next flush if required.
-    /// </summary>
-    /// <param name="unusedTick">Unused parameter supplied by the EmulationLoopScheduler event system.</param>
-    private void FlushOplWrites(uint unusedTick) {
-        double now = _clock.CurrentTimeMs;
-        double? delay;
-
-        lock (_chipLock) {
-            _oplIo.FlushDueWritesUpTo(now);
-            delay = GetNextFlushDelayUnsafe(now, false);
-        }
-
-        _oplFlushScheduled = false;
-
-        if (delay is not { } d) {
-            return;
-        }
-
-        if (d < 0) {
-            d = 0;
-        }
-
-        _scheduler.AddEvent(_oplFlushHandler, d);
-        _oplFlushScheduled = true;
-    }
-
-    /// <summary>
     ///     Advances OPL timers to the current time and schedules the next timer event.
     /// </summary>
     /// <param name="unusedTick">Unused parameter supplied by the EmulationLoopScheduler event system.</param>
@@ -485,16 +419,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         _scheduler.AddEvent(_oplTimerHandler, d);
         _oplTimerScheduled = true;
-    }
-
-    private double? GetNextFlushDelayUnsafe(double currentTick, bool flushImmediately) {
-        double? delay = _oplIo.GetTicksUntilNextWrite(currentTick);
-        if (!flushImmediately || delay is not { } d || d > 0) {
-            return delay;
-        }
-
-        _oplIo.FlushDueWritesUpTo(currentTick);
-        return _oplIo.GetTicksUntilNextWrite(currentTick);
     }
 
     /// <summary>
