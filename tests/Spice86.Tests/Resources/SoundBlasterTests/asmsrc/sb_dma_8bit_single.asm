@@ -10,6 +10,10 @@ start:
     mov ax, cs
     mov ds, ax
     mov es, ax
+    mov ax, 0x0003
+    int 0x10
+    mov si, heading
+    call print_string
     
     ; Setup DMA channel 1 for Sound Blaster
     ; DMA channel 1: address 0x0002-0x0003, count 0x0004-0x0005, page 0x83
@@ -171,6 +175,8 @@ start:
     out dx, al
     
     ; Test passed - write success to port 0x999
+    mov si, success_msg
+    call print_string
     mov dx, 0x999
     mov al, 0x00            ; Success
     out dx, al
@@ -178,6 +184,8 @@ start:
     
 test_failed:
     ; Test failed - write failure to port 0x999
+    mov si, failure_msg
+    call print_string
     mov dx, 0x999
     mov al, 0xFF            ; Failure
     out dx, al
@@ -185,3 +193,23 @@ test_failed:
 
 ; Data section
 test_dma_buffer: times 32 db 0
+heading:        db 'SB DMA 8BIT SINGLE',13,10,0
+success_msg:    db 'DMA SINGLE PASS',13,10,0
+failure_msg:    db 'DMA SINGLE FAIL',13,10,0
+
+print_string:
+    push ax
+    push si
+.print_loop:
+    lodsb
+    or al, al
+    jz .done
+    mov ah, 0x0E
+    mov bh, 0x00
+    mov bl, 0x07
+    int 0x10
+    jmp .print_loop
+.done:
+    pop si
+    pop ax
+    ret

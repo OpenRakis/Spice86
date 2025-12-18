@@ -52,13 +52,39 @@ using Xunit;
     public class SoundBlasterDspAsmIntegrationTests {
         private const int MaxCycles = 200000;
         private const ushort ResultPort = 0x999;
-        private static readonly string SbDspTestBinary = Path.GetFullPath(
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Resources", "SoundBlasterTests", "sb_dsp_test.bin"));
+        private static readonly string SbDspTestBinary = GetResourcePath("sb_dsp_test.bin");
+        private static readonly string SbMixerRegisterBinary = GetResourcePath("sb_mixer_registers.bin");
 
         [Fact]
         public void SbDspTestBinaryPasses() {
             string programPath = Path.Combine(Path.GetTempPath(), $"sb_dsp_test_{Guid.NewGuid():N}.com");
             File.Copy(SbDspTestBinary, programPath, true);
+
+            Spice86DependencyInjection di = new Spice86Creator(
+                binName: programPath,
+                enableCfgCpu: true,
+                enablePit: true,
+                recordData: false,
+                maxCycles: MaxCycles,
+                installInterruptVectors: true,
+                failOnUnhandledPort: false).Create();
+
+            DspResultPortHandler handler = new(di.Machine.CpuState, Substitute.For<ILoggerService>(), di.Machine.IoPortDispatcher);
+
+            di.ProgramExecutor.Run();
+
+            handler.Results.Should().ContainSingle();
+            handler.Results[0].Should().Be(0x00);
+        }
+
+        private static string GetResourcePath(string fileName) {
+            return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Resources", "SoundBlasterTests", fileName));
+        }
+
+        [Fact]
+        public void SbHardwareMixerBinaryPasses() {
+            string programPath = Path.Combine(Path.GetTempPath(), $"sb_mixer_registers_{Guid.NewGuid():N}.com");
+            File.Copy(SbMixerRegisterBinary, programPath, true);
 
             Spice86DependencyInjection di = new Spice86Creator(
                 binName: programPath,
