@@ -351,7 +351,8 @@ public class SbPcmAsmIntegrationTests {
         string filePath = Path.GetFullPath("test_dac_property.com");
         File.WriteAllBytes(filePath, program);
         
-        Spice86DependencyInjection spice86 = new Spice86Creator(
+        // Use 'using' to ensure proper disposal and prevent rendering timer crashes
+        using (Spice86DependencyInjection spice86 = new Spice86Creator(
             binName: filePath,
             enableCfgCpu: true,
             enablePit: true,
@@ -359,11 +360,15 @@ public class SbPcmAsmIntegrationTests {
             maxCycles: MaxCycles,
             installInterruptVectors: true,
             failOnUnhandledPort: false
-        ).Create();
+        ).Create()) {
+            
+            // Assert: DacChannel should be accessible
+            spice86.Machine.SoundBlaster.DacChannel.Should().NotBeNull("DacChannel property should be accessible");
+            spice86.Machine.SoundBlaster.DacChannel.GetSampleRate().Should().BeGreaterThan(0, "DacChannel should have valid sample rate");
+        }
         
-        // Assert: DacChannel should be accessible
-        spice86.Machine.SoundBlaster.DacChannel.Should().NotBeNull("DacChannel property should be accessible");
-        spice86.Machine.SoundBlaster.DacChannel.GetSampleRate().Should().BeGreaterThan(0, "DacChannel should have valid sample rate");
+        // Give time for disposal and timer cleanup to complete
+        System.Threading.Tasks.Task.Delay(100).Wait();
     }
     
     // Helper Methods
@@ -388,8 +393,12 @@ public class SbPcmAsmIntegrationTests {
         string filePath = Path.GetFullPath($"{testName}.com");
         File.WriteAllBytes(filePath, program);
         
-        // Setup emulator with Sound Blaster
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+        // Capture audio frames from Sound Blaster DAC channel
+        List<AudioFrame> capturedAudio = new List<AudioFrame>();
+        string outputWavPath = Path.Combine(Path.GetTempPath(), $"{testName}_output.wav");
+        
+        // Setup emulator with Sound Blaster - use 'using' to ensure proper disposal
+        using (Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
             enableCfgCpu: true,
             enablePit: true,
@@ -397,28 +406,30 @@ public class SbPcmAsmIntegrationTests {
             maxCycles: MaxCycles,
             installInterruptVectors: true,
             failOnUnhandledPort: false
-        ).Create();
+        ).Create()) {
+            
+            // Run program
+            spice86DependencyInjection.ProgramExecutor.Run();
+            
+            // Give mixer time to process
+            System.Threading.Tasks.Task.Delay(500).Wait();
+            
+            MixerChannel dacChannel = spice86DependencyInjection.Machine.SoundBlaster.DacChannel;
+            
+            // Copy audio frames from the channel
+            if (dacChannel.AudioFrames.Count > 0) {
+                capturedAudio.AddRange(dacChannel.AudioFrames);
+            }
+            
+            // Optionally save to WAV file for manual inspection
+            if (capturedAudio.Count > 0) {
+                WavFileFormat.WriteWavFile(outputWavPath, capturedAudio, expectedSampleRate);
+            }
+        } // Dispose emulator here to stop rendering timer
         
-        // Run program
-        spice86DependencyInjection.ProgramExecutor.Run();
-        
-        // Give mixer time to process
-        System.Threading.Tasks.Task.Delay(500).Wait();
-        
-        // Capture audio frames from Sound Blaster DAC channel
-        List<AudioFrame> capturedAudio = new List<AudioFrame>();
-        MixerChannel dacChannel = spice86DependencyInjection.Machine.SoundBlaster.DacChannel;
-        
-        // Copy audio frames from the channel
-        if (dacChannel.AudioFrames.Count > 0) {
-            capturedAudio.AddRange(dacChannel.AudioFrames);
-        }
-        
-        // Optionally save to WAV file for manual inspection
-        string outputWavPath = Path.Combine(Path.GetTempPath(), $"{testName}_output.wav");
-        if (capturedAudio.Count > 0) {
-            WavFileFormat.WriteWavFile(outputWavPath, capturedAudio, expectedSampleRate);
-        }
+        // Give time for disposal and timer cleanup to complete
+        // This helps avoid race conditions with the rendering timer
+        System.Threading.Tasks.Task.Delay(100).Wait();
         
         return new TestExecutionResult {
             CapturedFrames = capturedAudio,
