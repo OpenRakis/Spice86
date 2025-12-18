@@ -120,13 +120,7 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
                 int length = rowBytes * Height / 4;
 
                 var uiRenderEventArgs = new UIRenderEventArgs((IntPtr)bufferPtr, length);
-                try {
-                    RenderScreen.Invoke(this, uiRenderEventArgs);
-                } catch (NullReferenceException) {
-                    // Renderer dependencies might have been disposed between timer ticks during tests; skip the frame.
-                } catch (ObjectDisposedException) {
-                    // Renderer was disposed while a tick was in flight; ignore.
-                }
+                RenderScreen.Invoke(this, uiRenderEventArgs);
             }
         } finally {
             if (!_disposed) {
