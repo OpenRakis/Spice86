@@ -54,15 +54,15 @@ start:
     mov si, test2_ok
     call print_string
 
-; Test 3: Enable stereo (bit1=1) with filter enabled and confirm readback is 0x13
+; Test 3: Enable stereo (bit1=1) and disable filter (bit5=1) and confirm readback is 0x33
     mov dx, 0x0224
     mov al, 0x0E
     out dx, al
     mov dx, 0x0225
-    mov al, 0x22            ; bit1 stereo, filter enabled (bit5 clear)
+    mov al, 0x22            ; bit1 stereo, filter disabled (bit5 set)
     out dx, al
     in al, dx
-    cmp al, 0x13
+    cmp al, 0x33
     jne test_failed
     inc byte [tests_passed]
     mov si, test3_ok
