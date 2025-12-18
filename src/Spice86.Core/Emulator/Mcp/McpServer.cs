@@ -606,7 +606,7 @@ public sealed class McpServer : IMcpServer {
 
     private XmsMemoryReadResponse ReadXmsMemory(JsonElement? arguments) {
         if (_xmsManager == null) {
-            throw new InvalidOperationException("XMS is not enabled");
+            throw new McpInternalErrorException("XMS is not enabled");
         }
 
         if (!arguments.HasValue) {
