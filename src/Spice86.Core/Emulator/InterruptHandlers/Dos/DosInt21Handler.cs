@@ -36,6 +36,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Value set in AL after CreateChildPsp (per DOSBox behavior: reg_al=0xf0, "destroyed" value).
     /// </summary>
     private const byte CreateChildPspAlDestroyedValue = 0xF0;
+    private const ushort ExecFcbIgnorePointerValue = 0xFFFF;
 
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly DosDriveManager _dosDriveManager;
@@ -245,7 +246,12 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     private static SegmentedAddress? GetExecFcbPointer(ushort segment, ushort offset) {
-        if ((segment == 0 && offset == 0) || (segment == ushort.MaxValue && offset == ushort.MaxValue)) {
+        if (segment == 0 && offset == 0) {
+            return null;
+        }
+
+        if (segment == ExecFcbIgnorePointerValue && offset == ExecFcbIgnorePointerValue) {
+            // 0xFFFF:0xFFFF is the documented sentinel for "no FCB supplied" in the EXEC parameter block
             return null;
         }
 

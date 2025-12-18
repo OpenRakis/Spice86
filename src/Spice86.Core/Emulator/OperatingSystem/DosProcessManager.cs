@@ -9,12 +9,10 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
-
 using System.Text;
 
 /// <summary>
@@ -238,12 +236,19 @@ public class DosProcessManager : DosFileLoader {
             // If no current PSP, use COMMAND.COM as parent
             parentPspSegment = _commandCom.PspSegment;
         }
-        DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
+        uint parentPspAddress = MemoryUtils.ToPhysicalAddress(parentPspSegment, 0);
+        if (parentPspAddress >= _memory.Ram.Size) {
+            parentPspSegment = _commandCom.PspSegment;
+            parentPspAddress = MemoryUtils.ToPhysicalAddress(parentPspSegment, 0);
+        }
+        DosProgramSegmentPrefix parentPsp = new(_memory, parentPspAddress);
 
         // Create environment block
         byte[]? envBlockData = null;
         ushort envSegment = environmentSegment;
         if (envSegment == 0) {
+            // Inherit the parent's environment when available; otherwise create a fresh block
+            // for the first program or for children whose parent environment is not set.
             if (!isFirstProgram && parentPsp.EnvironmentTableSegment != 0) {
                 envSegment = parentPsp.EnvironmentTableSegment;
             } else {
@@ -631,15 +636,34 @@ public class DosProcessManager : DosFileLoader {
         CopyExecFcb(secondFcbPointer, psp.SecondFileControlBlock);
     }
 
-    private void CopyExecFcb(SegmentedAddress? sourcePointer, UInt8Array destination) {
+    /// <summary>
+    /// Copies a File Control Block from the provided segmented address into the target PSP buffer when valid.
+    /// </summary>
+    /// <param name="sourcePointer">Source FCB pointer; ignored when null or out of bounds.</param>
+    /// <param name="destination">Destination FCB buffer within the PSP.</param>
+    private void CopyExecFcb(SegmentedAddress? sourcePointer, System.Collections.Generic.IList<byte> destination) {
         if (!sourcePointer.HasValue) {
             return;
         }
 
         uint sourceAddress = MemoryUtils.ToPhysicalAddress(sourcePointer.Value.Segment, sourcePointer.Value.Offset);
+        if (!IsValidMemoryRange(sourceAddress, FcbSize)) {
+            return;
+        }
         for (int i = 0; i < FcbSize; i++) {
             destination[i] = _memory.UInt8[sourceAddress + (uint)i];
         }
+    }
+
+    private bool IsValidMemoryRange(uint startAddress, int length) {
+        if (length <= 0) {
+            return false;
+        }
+
+        ulong ramSize = _memory.Ram.Size;
+        ulong start = startAddress;
+        ulong end = start + (ulong)length;
+        return start < ramSize && end <= ramSize;
     }
 
     /// <summary>
