@@ -146,11 +146,42 @@ public class SoundBlasterDspPortTests {
         copyright.Should().StartWith("COPYRIGHT (C) CREATIVE TECHNOLOGY LTD");
     }
 
+    [Fact]
+    public void TimeConstantSetsFrequency() {
+        using SoundBlasterPortTestContext context = new SoundBlasterPortTestContext(SbType.SBPro2);
+
+        context.SendDspCommand(0x40, 0xA5);
+
+        uint expected = (uint)(1000000 / (256 - 0xA5));
+        context.FreqHz.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Sb16SampleRateCommandSetsFrequency() {
+        using SoundBlasterPortTestContext context = new SoundBlasterPortTestContext(SbType.Sb16);
+
+        context.SendDspCommand(0x41, 0x1F, 0x40); // 0x1F40 = 8000 Hz
+
+        context.FreqHz.Should().Be(8000);
+    }
+
+    [Fact]
+    public void TestRegisterStoresLastValue() {
+        using SoundBlasterPortTestContext context = new SoundBlasterPortTestContext();
+
+        context.SendDspCommand(0xE4, 0x5A);
+
+        context.DspTestRegister.Should().Be(0x5A);
+    }
+
     private sealed class SoundBlasterPortTestContext : IDisposable {
         private readonly object _irqState;
         private readonly PropertyInfo _pending8BitProperty;
         private readonly PropertyInfo _pending16BitProperty;
         private readonly PropertyInfo _speakerEnabledProperty;
+        private readonly PropertyInfo _freqHzProperty;
+        private readonly PropertyInfo _dspStateProperty;
+        private readonly PropertyInfo _dspTestRegisterProperty;
 
         public SoundBlasterPortTestContext(SbType sbType = SbType.SBPro2) {
             ILoggerService loggerService = Substitute.For<ILoggerService>();
@@ -211,6 +242,16 @@ public class SoundBlasterDspPortTests {
                 ?? throw new InvalidOperationException("Pending16Bit property not found");
             _speakerEnabledProperty = sbInfo.GetType().GetProperty("SpeakerEnabled")
                 ?? throw new InvalidOperationException("SpeakerEnabled property not found");
+            _freqHzProperty = sbInfo.GetType().GetProperty("FreqHz")
+                ?? throw new InvalidOperationException("FreqHz property not found");
+            _dspStateProperty = sbInfo.GetType().GetProperty("Dsp")
+                ?? throw new InvalidOperationException("Dsp property not found");
+
+            object dspState = _dspStateProperty.GetValue(sbInfo)
+                ?? throw new InvalidOperationException("Dsp state is null");
+            _dspTestRegisterProperty = dspState.GetType().GetProperty("TestRegister")
+                ?? throw new InvalidOperationException("Dsp TestRegister property not found");
+            _dspStateInstance = dspState;
         }
 
         public SoundBlaster SoundBlaster { get; }
@@ -248,6 +289,20 @@ public class SoundBlasterDspPortTests {
             }
         }
 
+        public uint FreqHz {
+            get {
+                object? value = _freqHzProperty.GetValue(SoundBlasterState);
+                return value is uint freq ? freq : 0;
+            }
+        }
+
+        public byte DspTestRegister {
+            get {
+                object? value = _dspTestRegisterProperty.GetValue(_dspStateInstance);
+                return value is byte reg ? reg : (byte)0;
+            }
+        }
+
         private object SoundBlasterState {
             get {
                 FieldInfo sbField = typeof(SoundBlaster).GetField("_sb", BindingFlags.NonPublic | BindingFlags.Instance)
@@ -257,6 +312,8 @@ public class SoundBlasterDspPortTests {
                 return sbInfo;
             }
         }
+
+        private readonly object _dspStateInstance;
 
         public void SendDspCommand(byte command, params byte[] parameters) {
             ushort writePort = (ushort)(Config.BaseAddress + 0x0C);
