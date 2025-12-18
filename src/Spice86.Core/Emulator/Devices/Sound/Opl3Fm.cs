@@ -317,23 +317,21 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 _generateStream(interleaved);
             }
 
-            // Convert interleaved int16 samples to AudioFrames
-            for (int i = 0; i < framesToGenerate; i++) {
-                float left = interleaved[i * 2];
-                float right = interleaved[i * 2 + 1];
-
-                // Apply AdLib Gold filtering if enabled
-                if (_adLibGold is not null) {
-                    Span<float> frameBuffer = _playBuffer.AsSpan(i * 2, 2);
-                    frameBuffer[0] = left;
-                    frameBuffer[1] = right;
-                    // AdLib Gold processing would happen here
-                    left = frameBuffer[0];
-                    right = frameBuffer[1];
-                }
-
-                _mixerChannel.AudioFrames.Add(new AudioFrame(left, right));
+            // Convert interleaved int16 samples to normalized float for AddSamples_sfloat
+            // Mirrors DOSBox: AddSamples_sfloat expects normalized [-1.0, 1.0] floats
+            Span<float> floatBuffer = _playBuffer.AsSpan(0, samplesToGenerate);
+            for (int i = 0; i < samplesToGenerate; i++) {
+                floatBuffer[i] = interleaved[i] / 32768.0f; // Normalize to [-1.0, 1.0]
             }
+
+            // Apply AdLib Gold filtering if enabled
+            if (_adLibGold is not null) {
+                // AdLib Gold processing would happen here on floatBuffer
+                // TODO: Implement AdLib Gold filtering
+            }
+
+            // Use AddSamples_sfloat for bulk addition (mirrors DOSBox pattern)
+            _mixerChannel.AddSamples_sfloat(framesToGenerate, floatBuffer);
 
             framesGenerated += framesToGenerate;
         }
