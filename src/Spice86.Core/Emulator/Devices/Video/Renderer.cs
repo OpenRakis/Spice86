@@ -54,24 +54,8 @@ public class Renderer : IVgaRenderer {
         }
         try {
             BufferSize = frameBuffer.Length;
-            try {
-                if (Width * Height > BufferSize) {
-                    // Resolution change hasn't caught up yet. Skip a frame.
-                    return;
-                }
-            } catch (NullReferenceException) {
-                // State may be disposed during cleanup - skip this frame
-                return;
-            }
-
-            // Proactive null checks to avoid NullReferenceException
-            if (_state == null || _state.CrtControllerRegisters == null || _state.GeneralRegisters == null
-                || _state.CrtControllerRegisters.HorizontalBlankingEndRegister == null
-                || _state.CrtControllerRegisters.UnderlineRowScanlineRegister == null
-                || _state.CrtControllerRegisters.CrtModeControlRegister == null
-                || _state.CrtControllerRegisters.PresetRowScanRegister == null
-                || _state.GeneralRegisters.InputStatusRegister1 == null) {
-                // Required state has been disposed or is not available - skip rendering
+            if (Width * Height > BufferSize) {
+                // Resolution change hasn't caught up yet. Skip a frame.
                 return;
             }
 
@@ -191,7 +175,10 @@ public class Renderer : IVgaRenderer {
                 rowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
             } // End of vertical loop
 
-                LastFrameRenderTime = stopwatch.Elapsed;
+            LastFrameRenderTime = stopwatch.Elapsed;
+        } catch (IndexOutOfRangeException) {
+            // Resolution changed during rendering, discard the rest of this frame.
+        } finally {
             Monitor.Exit(RenderLock);
         }
     }
@@ -331,16 +318,16 @@ public class Renderer : IVgaRenderer {
             case true:
                 return _state.DacRegisters.ArgbPalette[index];
             default: {
-                int fromPaletteRam6Bits = _state.AttributeControllerRegisters.InternalPalette[index & 0x0F];
-                int bits0To3 = fromPaletteRam6Bits & 0b00001111;
-                int bits4And5 = _state.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select
-                    ? _state.AttributeControllerRegisters.ColorSelectRegister.Bits45 << 4
-                    : fromPaletteRam6Bits & 0b00110000;
-                int bits6And7 = _state.AttributeControllerRegisters.ColorSelectRegister.Bits67 << 6;
-                int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
-                int paletteIndex = dacIndex8Bits & _state.DacRegisters.PixelMask;
-                return _state.DacRegisters.ArgbPalette[paletteIndex];
-            }
+                    int fromPaletteRam6Bits = _state.AttributeControllerRegisters.InternalPalette[index & 0x0F];
+                    int bits0To3 = fromPaletteRam6Bits & 0b00001111;
+                    int bits4And5 = _state.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select
+                        ? _state.AttributeControllerRegisters.ColorSelectRegister.Bits45 << 4
+                        : fromPaletteRam6Bits & 0b00110000;
+                    int bits6And7 = _state.AttributeControllerRegisters.ColorSelectRegister.Bits67 << 6;
+                    int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
+                    int paletteIndex = dacIndex8Bits & _state.DacRegisters.PixelMask;
+                    return _state.DacRegisters.ArgbPalette[paletteIndex];
+                }
         }
     }
 }
