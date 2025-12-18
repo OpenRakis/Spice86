@@ -54,8 +54,24 @@ public class Renderer : IVgaRenderer {
         }
         try {
             BufferSize = frameBuffer.Length;
-            if (Width * Height > BufferSize) {
-                // Resolution change hasn't caught up yet. Skip a frame.
+            try {
+                if (Width * Height > BufferSize) {
+                    // Resolution change hasn't caught up yet. Skip a frame.
+                    return;
+                }
+            } catch (NullReferenceException) {
+                // State may be disposed during cleanup - skip this frame
+                return;
+            }
+
+            // Proactive null checks to avoid NullReferenceException
+            if (_state == null || _state.CrtControllerRegisters == null || _state.GeneralRegisters == null
+                || _state.CrtControllerRegisters.HorizontalBlankingEndRegister == null
+                || _state.CrtControllerRegisters.UnderlineRowScanlineRegister == null
+                || _state.CrtControllerRegisters.CrtModeControlRegister == null
+                || _state.CrtControllerRegisters.PresetRowScanRegister == null
+                || _state.GeneralRegisters.InputStatusRegister1 == null) {
+                // Required state has been disposed or is not available - skip rendering
                 return;
             }
 
@@ -175,10 +191,7 @@ public class Renderer : IVgaRenderer {
                 rowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
             } // End of vertical loop
 
-            LastFrameRenderTime = stopwatch.Elapsed;
-        } catch (IndexOutOfRangeException) {
-            // Resolution changed during rendering, discard the rest of this frame.
-        } finally {
+                LastFrameRenderTime = stopwatch.Elapsed;
             Monitor.Exit(RenderLock);
         }
     }

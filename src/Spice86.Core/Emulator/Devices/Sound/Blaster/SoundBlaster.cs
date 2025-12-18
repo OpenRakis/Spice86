@@ -1650,6 +1650,12 @@ using System.Collections.Generic;
 
     public byte DspTestRegister => _sb.Dsp.TestRegister;
 
+    /// <summary>
+    /// Gets the DAC mixer channel for audio capture in tests.
+    /// Exposes the internal DAC channel to allow test code to capture audio frames.
+    /// </summary>
+    public MixerChannel DacChannel => _dacChannel;
+
     // Command length tables - mirrors dsp_cmd_len_sb and dsp_cmd_len_sb16 from DOSBox
     // ReadByte, WriteByte, Reset, and other existing methods...
     public override byte ReadByte(ushort port) {
