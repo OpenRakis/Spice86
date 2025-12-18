@@ -10,6 +10,10 @@ start:
     mov ax, cs
     mov ds, ax
     mov es, ax
+    mov ax, 0x0003        ; text mode 80x25
+    int 0x10
+    mov si, heading
+    call print_string
     
     ; Initialize test counters
     mov byte [tests_passed], 0
@@ -107,6 +111,8 @@ start:
     jl test_failed
     
     ; Success! Write success to port 0x999
+    mov si, success_msg
+    call print_string
     mov dx, 0x999
     mov al, 0x00            ; Success
     out dx, al
@@ -114,6 +120,8 @@ start:
     
 test_failed:
     ; Test failed - write failure to port 0x999
+    mov si, failure_msg
+    call print_string
     mov dx, 0x999
     mov al, 0xFF            ; Failure
     out dx, al
@@ -123,3 +131,23 @@ test_failed:
 tests_passed:       db 0
 sb_version_major:   db 0
 sb_version_minor:   db 0
+heading:            db 'SB DSP BASIC TEST',13,10,0
+success_msg:        db 'DSP OK',13,10,0
+failure_msg:        db 'DSP FAIL',13,10,0
+
+print_string:
+    push ax
+    push si
+.print_loop:
+    lodsb
+    or al, al
+    jz .done
+    mov ah, 0x0E
+    mov bh, 0x00
+    mov bl, 0x07
+    int 0x10
+    jmp .print_loop
+.done:
+    pop si
+    pop ax
+    ret
