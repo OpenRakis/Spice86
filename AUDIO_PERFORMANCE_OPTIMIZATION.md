@@ -1,7 +1,13 @@
 # Audio Performance Optimization Summary
 
+## ⚠️ IMPORTANT: Dictionary + Lock Approach REVERTED
+
+**The Dictionary + lock optimization was reverted due to critical performance regression.**
+
+See "Critical Findings" section below for details.
+
 ## Overview
-This document summarizes the audio performance optimizations made to Spice86's mixer and audio subsystem, based on analysis of DOSBox Staging's architecture.
+This document summarizes the audio performance investigation for Spice86's mixer and audio subsystem, based on analysis of DOSBox Staging's architecture.
 
 ## Problem Statement
 The issue reported performance problems with PCM and OPL music, specifically:
@@ -26,23 +32,45 @@ The issue reported performance problems with PCM and OPL music, specifically:
 - List-based buffer operations (`List<AudioFrame>`)
 - `List.RemoveRange(0, n)` for consuming frames (O(n) operation)
 
-## Optimizations Implemented
+## Critical Findings
 
-### Phase 1: Channel Registry Optimization
-**Change:** Replaced `ConcurrentDictionary` with `Dictionary` + `lock`
+### ❌ Dictionary + Lock Caused Severe Performance Regression (REVERTED)
 
-**Rationale:**
-- DOSBox uses `std::map` with mutex protection
-- `ConcurrentDictionary` has overhead for concurrent reads/writes we don't need
-- Iterator creation overhead higher than simple lock in our access pattern
-- Channel registration/deregistration is infrequent; iteration is frequent
+**Attempted Change:** Replace `ConcurrentDictionary` with `Dictionary` + `lock`
 
-**Impact:**
-- Reduced iterator allocation overhead
-- More predictable performance characteristics
-- Matches DOSBox architectural pattern
+**Results:**
+- ⛔ **Critical regression**: OPL music became extremely slow
+- ⛔ CPU usage spiked to 100%
+- ⛔ Scheduler lag: 1ms → 826ms peak, 150ms average
+- ⛔ System unusable: "emulated CPU can't execute"
 
-### Phase 2: Buffer Allocation Optimization
+**Root Cause:**
+The mixer thread held `_mixerLock` for 10-100ms+ during:
+1. `MixSamples()` iteration over all channels
+2. `channel.Mix()` callbacks (expensive audio generation)
+3. Buffer processing and audio output
+
+This massive critical section blocked:
+- PC Speaker scheduler tick handlers
+- Channel registration/lookup operations
+- All audio subsystem operations
+
+**Why ConcurrentDictionary is Correct:**
+- **Lock-free iteration**: No blocking on hot path
+- **Concurrent access**: Reads don't block reads or writes
+- **Minimal overhead**: Nanoseconds vs milliseconds of lock contention
+- **Designed for this**: Exactly this scenario (frequent iteration, rare writes)
+
+**Lesson:** Lock-free data structures exist to avoid holding locks during expensive operations. The "overhead" of ConcurrentDictionary is negligible compared to lock contention.
+
+## Optimizations Investigated (Not Implemented)
+
+### ~~Phase 1: Channel Registry Optimization~~ ❌ FAILED
+**Attempted:** Replace `ConcurrentDictionary` with `Dictionary` + `lock`
+
+**Abandoned:** Caused critical performance regression (see above)
+
+### Phase 2: Buffer Allocation Optimization (Kept)
 **Change:** Pre-allocate buffer capacity instead of Clear/Add pattern
 
 **Before:**
@@ -68,8 +96,10 @@ for (int i = 0; i < framesRequested; i++) {
 - Reduced memory allocations
 - Avoided repeated capacity doubling
 
-### Phase 3: GetAllChannels Snapshot Pattern
+### ~~Phase 3: GetAllChannels Snapshot Pattern~~ ❌ REVERTED
 **Change:** Return a snapshot instead of direct collection access
+
+**Status:** Reverted along with Dictionary change (not needed with ConcurrentDictionary)
 
 **Before:**
 ```csharp
@@ -153,12 +183,14 @@ channel->audio_frames.erase(channel->audio_frames.begin(),
 
 Created `AudioPerformanceTest.cs` with 5 new tests:
 1. **MixerChannel_BasicOperations_Should_Work** - Validates enable/disable, volume control
-2. **Dictionary_vs_ConcurrentDictionary_StructuralTest** - Verifies Dictionary + lock pattern
+2. **Dictionary_vs_ConcurrentDictionary_StructuralTest** - Structural test (kept for reference)
 3. **AudioFrame_Operations_Should_Be_Accurate** - Tests arithmetic operations
 4. **MixerChannel_AudioFrames_Should_Accumulate** - Validates frame generation
 5. **AudioFrame_Normalization_Should_Be_Correct** - Verifies normalization factor
 
 **Results:** All 71 tests pass (66 existing + 5 new), 16 skipped
+
+**Note:** Test #2 kept as example but not used (ConcurrentDictionary approach retained)
 
 ## Benchmarking Created
 
@@ -201,7 +233,16 @@ Per AUDIO_PORT_PLAN.md: "DOSBox Staging Architecture is Authoritative"
 
 ## Conclusion
 
-The optimizations implemented address the most obvious performance issues related to data structure choice and memory allocation patterns. The changes are conservative, well-tested, and maintain compatibility with existing code.
+**The Dictionary + lock approach was a failed optimization** that caused severe performance regression. This investigation demonstrates that:
+
+1. **Lock-free data structures have their place**: ConcurrentDictionary's "overhead" is negligible compared to lock contention
+2. **Critical sections matter**: Holding locks during expensive operations (audio generation) is catastrophic
+3. **Profile before optimizing**: Assumptions about "better" data structures can be wrong without real-world testing
+
+The original performance issues remain **unaddressed** and require:
+- Real-world profiling with actual DOS games
+- Focus on actual bottlenecks (audio generation, buffer operations)
+- Smaller, targeted optimizations with validation
 
 For further performance improvements, profiling with real-world workloads is essential to identify actual bottlenecks. The analysis suggests that the reported "very slow" performance may be due to factors beyond the optimizations made here, such as:
 - Insufficient buffering
