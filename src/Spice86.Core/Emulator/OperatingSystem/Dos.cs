@@ -64,6 +64,11 @@ public sealed class Dos {
     public DosInt28Handler DosInt28Handler { get; }
 
     /// <summary>
+    /// Gets the INT 2Ah DOS services.
+    /// </summary>
+    public DosInt2AHandler DosInt2AHandler { get; }
+
+    /// <summary>
     /// The class that handles DOS drives, as a sorted dictionnary.
     /// </summary>
     public DosDriveManager DosDriveManager { get; }
@@ -193,6 +198,8 @@ public sealed class Dos {
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager,
             functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider,
+            stack, state, _loggerService);
+        DosInt2AHandler = new DosInt2AHandler(_memory, functionHandlerProvider,
             stack, state, _loggerService);
 
         if (configuration.InitializeDOS is false) {

@@ -380,6 +380,11 @@ public class DosProcessManager : DosFileLoader {
 
         ushort programEntryPointSegment = (ushort)(block.DataBlockSegment + 0x10);
 
+        if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
+            ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
+            programEntryPointSegment = (ushort)(block.DataBlockSegment + programEntryPointOffset);
+        }
+
         LoadExeFileInMemoryAndApplyRelocations(exeFile, programEntryPointSegment);
 
         cs = (ushort)(exeFile.InitCS + programEntryPointSegment);
