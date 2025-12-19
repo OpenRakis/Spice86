@@ -41,7 +41,6 @@ public abstract class Instructions16Or32 : Instructions {
     public abstract void ImulRmReg16Or32();
 
     public abstract void MovRmSreg();
-    public abstract void Bound();
     public abstract void Lea();
 
     public ushort ExtractLeaMemoryOffset16() {
