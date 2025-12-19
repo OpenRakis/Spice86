@@ -11,6 +11,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -96,6 +97,11 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Pause handler created...");
         }
 
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Wall clock created...");
+        }
+
         RecordedDataReader reader = new(dumpContext.DumpDirectory,
             loggerService);
 
@@ -166,6 +172,11 @@ public class Spice86DependencyInjection : IDisposable {
         IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null
             ? new CyclesClock(state, configuration.InstructionsPerSecond.Value)
             : new EmulatedClock();
+        
+        // Register clock to pause/resume events
+        pauseHandler.Pausing += () => emulatedClock.OnPause();
+        pauseHandler.Resumed += () => emulatedClock.OnResume();
+        
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
@@ -179,6 +190,13 @@ public class Spice86DependencyInjection : IDisposable {
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Dual PIC created...");
+        }
+
+        RealTimeClock realTimeClock = new(state, ioPortDispatcher, dualPic,
+            emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("RTC/CMOS created...");
         }
 
         CallbackHandler callbackHandler = new(state, loggerService);
@@ -312,15 +330,15 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
-            functionHandlerProvider, stack, state, a20Gate,
-            configuration.InitializeDOS is not false, loggerService);
-        var rtc = new Clock(loggerService);
+            functionHandlerProvider, stack, state, a20Gate, biosDataArea, emulationLoopScheduler,
+            ioPortDispatcher, loggerService, configuration.InitializeDOS is not false);
 
-        SystemClockInt1AHandler systemClockInt1AHandler = new(memory,
-            functionHandlerProvider, stack,
-            state, loggerService, timerInt8Handler, rtc);
+        SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea,
+            realTimeClock, functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
             functionHandlerProvider, stack, state, loggerService);
+        RtcInt70Handler rtcInt70Handler = new(memory, functionHandlerProvider, stack, state,
+            dualPic, biosDataArea, ioPortDispatcher, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("BIOS interrupt handlers created...");
@@ -478,6 +496,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
             interruptInstaller.InstallInterruptHandler(systemClockInt1AHandler);
             interruptInstaller.InstallInterruptHandler(systemBiosInt13Handler);
+            interruptInstaller.InstallInterruptHandler(rtcInt70Handler);
             mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
             InstallDefaultInterruptHandlers(interruptInstaller, dualPic, biosDataArea, loggerService);
@@ -487,8 +506,7 @@ public class Spice86DependencyInjection : IDisposable {
             state, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
-                { "BLASTER", soundBlaster.BlasterString }
-            }, loggerService, ioPortDispatcher,
+                { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             xms);
 
         if (configuration.InitializeDOS is not false) {
@@ -523,7 +541,7 @@ public class Spice86DependencyInjection : IDisposable {
             joystick, intel8042Controller, keyboardInt16Handler,
             emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler,
-            systemBiosInt15Handler, systemClockInt1AHandler,
+            systemBiosInt15Handler, systemClockInt1AHandler, realTimeClock,
             pitTimer,
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler,

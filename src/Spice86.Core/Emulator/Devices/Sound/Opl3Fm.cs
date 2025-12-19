@@ -74,7 +74,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         _oplTimerHandler = ServiceOplTimers;
 
-        _oplIo = new Opl3Io(_chip, () => _clock.CurrentTimeMs) {
+        _oplIo = new Opl3Io(_chip, () => _clock.ElapsedTimeMs) {
             OnIrqChanged = OnOplIrqChanged
         };
 
@@ -242,7 +242,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         // The OPL chip automatically flushes buffered writes during GenerateStream
         // Mirrors DOSBox Staging: no separate flush scheduling needed
         if (timerWrite) {
-            double now = _clock.CurrentTimeMs;
+            double now = _clock.ElapsedTimeMs;
             ScheduleOplTimer(now);
         }
     }
@@ -286,7 +286,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             lock (_chipLock) {
                 // Flush any pending OPL writes up to current time before generating audio
                 // Mirrors DOSBox Staging: ensures sub-ms register writes are processed
-                double now = _clock.CurrentTimeMs;
+                double now = _clock.ElapsedTimeMs;
                 _oplIo.FlushDueWritesUpTo(now);
                 
                 // Generate audio samples (write buffer is automatically processed during generation)
@@ -351,7 +351,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <param name="unusedTick">Unused parameter supplied by the EmulationLoopScheduler event system.</param>
     private void ServiceOplTimers(uint unusedTick) {
         _ = unusedTick;
-        double now = _clock.CurrentTimeMs;
+        double now = _clock.ElapsedTimeMs;
         double? delay;
 
         lock (_chipLock) {

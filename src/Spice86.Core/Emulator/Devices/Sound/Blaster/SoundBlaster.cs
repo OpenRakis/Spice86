@@ -629,7 +629,7 @@ using System.Collections.Generic;
     private void GenerateFrames(int framesRequested) {
         // Update DMA callback timestamp - mirrors DOSBox last_dma_callback
         // Reference: src/hardware/audio/soundblaster.cpp line 1139
-        _lastDmaCallbackTime = _clock.CurrentTimeMs;
+        _lastDmaCallbackTime = _clock.ElapsedTimeMs;
         
         // Callback from mixer requesting audio frames
         // Mirrors DOSBox's soundblaster.cpp GenerateFrames pattern
@@ -740,7 +740,7 @@ using System.Collections.Generic;
                 if (_sb.Mode == DspMode.Dma) {
                     // Catch up to current time but don't generate IRQ
                     // This fixes timing issues with later SCI games
-                    double currentTime = _clock.CurrentTimeMs;
+                    double currentTime = _clock.ElapsedTimeMs;
                     double elapsedTime = currentTime - _lastDmaCallbackTime;
                     
                     if (elapsedTime > 0 && _sb.Dma.Rate > 0) {
@@ -849,7 +849,7 @@ using System.Collections.Generic;
         // Used to convert from samples to frames (which is what AddSamples unintuitively uses..)
         byte channels = _sb.Dma.Stereo ? (byte)2 : (byte)1;
         
-        _lastDmaCallbackTime = _clock.CurrentTimeMs;
+        _lastDmaCallbackTime = _clock.ElapsedTimeMs;
         
         // Read the actual data, process it and send it off to the mixer
         switch (_sb.Dma.Mode) {

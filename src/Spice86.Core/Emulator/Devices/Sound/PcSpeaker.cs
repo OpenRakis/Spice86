@@ -604,7 +604,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     }
 
     private float GetPicTickIndex() {
-        double full = _clock.CurrentTimeMs;
+        double full = _clock.ElapsedTimeMs;
         return (float)(full - Math.Floor(full));
     }
 
