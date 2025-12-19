@@ -19,9 +19,9 @@ public class DosExecIntegrationTests {
         string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
         foreach (string file in new[] { "dos_exec_master.com", "child.com", "tsr_hook.com", "overlay_driver.bin" }) {
-            string source = Path.Join(resourceDir, file);
+            string source = Path.Combine(resourceDir, file);
             string targetName = file == "overlay_driver.bin" ? "overlay_driver.exe" : file;
-            File.Copy(source, Path.Join(tempDir, targetName), overwrite: true);
+            File.Copy(source, Path.Combine(tempDir, targetName), overwrite: true);
         }
 
         string programPath = Path.Combine(tempDir, "dos_exec_master.com");
@@ -56,9 +56,20 @@ public class DosExecIntegrationTests {
 
             output.ToString().Should().Be("SEMJCTLOAV");
         } finally {
-            if (Directory.Exists(tempDir)) {
-                Directory.Delete(tempDir, true);
-            }
+            TryDeleteDirectory(tempDir);
+        }
+    }
+
+    private static void TryDeleteDirectory(string directoryPath) {
+        if (!Directory.Exists(directoryPath)) {
+            return;
+        }
+
+        try {
+            Directory.Delete(directoryPath, true);
+        } catch (IOException) {
+        } catch (UnauthorizedAccessException) {
+        } catch (DirectoryNotFoundException) {
         }
     }
 }

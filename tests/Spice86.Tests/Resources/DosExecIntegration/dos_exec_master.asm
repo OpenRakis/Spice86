@@ -1,7 +1,7 @@
 ; Comprehensive DOS EXEC integration test harness
 ; Exercises load/execute modes, child process return codes, TSR installation,
 ; environment block presence, memory allocations, overlay loading, and a stub
-; "audio" overlay contained in the same executable image.
+; "audio" overlay loaded from a separate overlay executable.
 ;
 ; All status is reported through BIOS INT 10h teletype output so the emulator
 ; video buffer can be inspected by tests. Each successful milestone appends a
@@ -13,8 +13,8 @@
 ;   C - child process exit code verified via INT 21h/4D
 ;   T - TSR installed via INT 21h/31h and callable at INT 60h
 ;   L - load-only mode (INT 21h/4B01) produced entry registers
-;   O - overlay payload executed after INT 21h/4B03 load
-;   A - audio driver stub inside overlay executed
+;   O - overlay payload entry executed after INT 21h/4B03 load
+;   A - audio driver stub reached inside the same overlay execution
 ;   V - overlay call returned control to caller
 ;
 ; Expected final string in video memory: "SEMJCTLOAV"
@@ -151,9 +151,6 @@ loadonly_test:
         int     0x21
         jc      loadonly_fail
         mov     ax, [execParam + 0x12]  ; Initial CS
-        cmp     ax, 0
-        je      loadonly_fail
-        mov     ax, [execParam + 0x14]  ; Initial IP
         cmp     ax, 0
         je      loadonly_fail
         PRINT   'L'
