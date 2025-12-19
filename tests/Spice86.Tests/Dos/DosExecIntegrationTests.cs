@@ -15,7 +15,7 @@ using Xunit;
 public class DosExecIntegrationTests {
     [Fact]
     public void ExecModesAndOverlays_ShouldReportSuccessViaVideoMemory() {
-        string resourceDir = Path.GetFullPath(Path.Join("Resources", "DosExecIntegration"));
+        string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
         string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
         foreach (string file in new[] { "dos_exec_master.com", "child.com", "tsr_hook.com", "overlay_driver.exe" }) {

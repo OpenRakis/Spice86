@@ -11,7 +11,7 @@ using Xunit;
 public class DosExecRegisterInitializationTests {
     [Fact]
     public void ComLaunch_ShouldInitializeRegistersLikeDos() {
-        string resourceDir = Path.GetFullPath(Path.Join("Resources", "DosExecIntegration"));
+        string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
         string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_regs_com_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
         File.Copy(Path.Join(resourceDir, "child.com"), Path.Join(tempDir, "child.com"));
@@ -56,7 +56,7 @@ public class DosExecRegisterInitializationTests {
 
     [Fact]
     public void ExeLaunch_ShouldInitializeRegistersLikeDos() {
-        string resourceDir = Path.GetFullPath(Path.Join("Resources", "DosExecIntegration"));
+        string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
         string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_regs_exe_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
         File.Copy(Path.Join(resourceDir, "overlay_driver.exe"), Path.Join(tempDir, "overlay_driver.exe"));
