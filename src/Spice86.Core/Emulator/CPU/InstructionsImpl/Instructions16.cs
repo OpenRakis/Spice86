@@ -333,7 +333,6 @@ public class Instructions16 : Instructions16Or32 {
             3 => _alu16.Rcr(value, count),
             4 => _alu16.Shl(value, count),
             5 => _alu16.Shr(value, count),
-            6 => _alu16.Shl(value, count),
             7 => _alu16.Sar(value, count),
             _ => throw new InvalidGroupIndexException(State, groupIndex)
         };
@@ -460,22 +459,6 @@ public class Instructions16 : Instructions16Or32 {
         // MOV rmw sreg
         ModRM.Read();
         ModRM.SetRm16(ModRM.SegmentRegister);
-    }
-
-    public override void Bound() {
-        ModRM.Read();
-        uint? address = ModRM.MemoryAddress;
-        if (address is null) {
-            throw new InvalidOpCodeException(State, 0x62, false);
-        }
-
-        short lower = Memory.Int16[address.Value];
-        short upper = Memory.Int16[address.Value + 2];
-        short index = (short)ModRM.R16;
-        if (index < lower || index > upper) {
-            throw new CpuBoundRangeExceededException(
-                $"BOUND check failed: index={index}, lower={lower}, upper={upper}.");
-        }
     }
 
     // Only present in 16 bit

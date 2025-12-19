@@ -1,6 +1,5 @@
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
-using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
 
 public class Instructions32 : Instructions16Or32 {
@@ -329,7 +328,6 @@ public class Instructions32 : Instructions16Or32 {
             3 => _alu32.Rcr(value, count),
             4 => _alu32.Shl(value, count),
             5 => _alu32.Shr(value, count),
-            6 => _alu32.Shl(value, count),
             7 => _alu32.Sar(value, count),
             _ => throw new InvalidGroupIndexException(State, groupIndex)
         };
@@ -455,22 +453,6 @@ public class Instructions32 : Instructions16Or32 {
         // MOV rmdw sreg
         ModRM.Read();
         ModRM.SetRm32(ModRM.SegmentRegister);
-    }
-
-    public override void Bound() {
-        ModRM.Read();
-        uint? address = ModRM.MemoryAddress;
-        if (address is null) {
-            throw new InvalidOpCodeException(State, 0x62, false);
-        }
-
-        int lower = Memory.Int32[address.Value];
-        int upper = Memory.Int32[address.Value + 4];
-        int index = (int)ModRM.R32;
-        if (index < lower || index > upper) {
-            throw new CpuBoundRangeExceededException(
-                $"BOUND check failed: index={index}, lower={lower}, upper={upper}.");
-        }
     }
 
     public override void Lea() {

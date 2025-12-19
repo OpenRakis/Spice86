@@ -344,7 +344,6 @@ public class Instructions8 : Instructions {
             3 => _alu8.Rcr(value, count),
             4 => _alu8.Shl(value, count),
             5 => _alu8.Shr(value, count),
-            6 => _alu8.Shl(value, count),
             7 => _alu8.Sar(value, count),
             _ => throw new InvalidGroupIndexException(State, groupIndex)
         };
