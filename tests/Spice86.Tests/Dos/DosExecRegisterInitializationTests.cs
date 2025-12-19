@@ -14,7 +14,7 @@ public class DosExecRegisterInitializationTests {
         string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
         string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_regs_com_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
-        File.Copy(Path.Join(resourceDir, "child.com"), Path.Join(tempDir, "child.com"));
+        File.Copy(Path.Join(resourceDir, "child.com"), Path.Join(tempDir, "child.com"), true);
 
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
@@ -59,7 +59,7 @@ public class DosExecRegisterInitializationTests {
         string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
         string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_regs_exe_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
-        File.Copy(Path.Join(resourceDir, "overlay_driver.exe"), Path.Join(tempDir, "overlay_driver.exe"));
+        File.Copy(Path.Join(resourceDir, "overlay_driver.exe"), Path.Join(tempDir, "overlay_driver.exe"), true);
 
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(

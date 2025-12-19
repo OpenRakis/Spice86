@@ -19,7 +19,7 @@ public class DosExecIntegrationTests {
         string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
         foreach (string file in new[] { "dos_exec_master.com", "child.com", "tsr_hook.com", "overlay_driver.exe" }) {
-            File.Copy(Path.Join(resourceDir, file), Path.Join(tempDir, file));
+            File.Copy(Path.Join(resourceDir, file), Path.Join(tempDir, file), overwrite: true);
         }
 
         string programPath = @"C:\dos_exec_master.com";
