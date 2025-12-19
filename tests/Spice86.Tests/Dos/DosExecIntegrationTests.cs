@@ -18,11 +18,13 @@ public class DosExecIntegrationTests {
         string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
         string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
-        foreach (string file in new[] { "dos_exec_master.com", "child.com", "tsr_hook.com", "overlay_driver.exe" }) {
-            File.Copy(Path.Join(resourceDir, file), Path.Join(tempDir, file), overwrite: true);
+        foreach (string file in new[] { "dos_exec_master.com", "child.com", "tsr_hook.com", "overlay_driver.bin" }) {
+            string source = Path.Join(resourceDir, file);
+            string targetName = file == "overlay_driver.bin" ? "overlay_driver.exe" : file;
+            File.Copy(source, Path.Join(tempDir, targetName), overwrite: true);
         }
 
-        string programPath = @"C:\dos_exec_master.com";
+        string programPath = Path.Combine(tempDir, "dos_exec_master.com");
 
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(

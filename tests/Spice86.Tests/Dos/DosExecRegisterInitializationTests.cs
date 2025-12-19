@@ -18,7 +18,7 @@ public class DosExecRegisterInitializationTests {
 
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
-                binName: @"C:\child.com",
+                binName: Path.Combine(tempDir, "child.com"),
                 enableCfgCpu: false,
                 enablePit: false,
                 recordData: false,
@@ -59,11 +59,11 @@ public class DosExecRegisterInitializationTests {
         string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
         string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_regs_exe_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
-        File.Copy(Path.Join(resourceDir, "overlay_driver.exe"), Path.Join(tempDir, "overlay_driver.exe"), true);
+        File.Copy(Path.Join(resourceDir, "overlay_driver.bin"), Path.Join(tempDir, "overlay_driver.exe"), true);
 
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
-                binName: @"C:\overlay_driver.exe",
+                binName: Path.Combine(tempDir, "overlay_driver.exe"),
                 enableCfgCpu: false,
                 enablePit: false,
                 recordData: false,
