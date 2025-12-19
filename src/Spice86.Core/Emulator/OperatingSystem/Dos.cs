@@ -44,6 +44,11 @@ public sealed class Dos {
     public DosInt21Handler DosInt21Handler { get; }
 
     /// <summary>
+    /// Gets the INT 2Ah DOS services stub.
+    /// </summary>
+    public DosInt2AHandler DosInt2AHandler { get; }
+
+    /// <summary>
     /// Gets the INT 2Fh DOS services.
     /// </summary>
     public DosInt2fHandler DosInt2FHandler { get; }
@@ -186,6 +191,7 @@ public sealed class Dos {
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, ProcessManager, ioPortDispatcher, DosTables, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
+        DosInt2AHandler = new DosInt2AHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
             functionHandlerProvider, stack, state, _loggerService, xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
