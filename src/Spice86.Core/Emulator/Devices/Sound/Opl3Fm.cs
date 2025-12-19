@@ -318,42 +318,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    ///     Renders audio samples into the provided destination buffer.
-    /// </summary>
-    /// <param name="destination">Interleaved stereo output buffer that receives the generated samples.</param>
-    private void RenderTo(Span<float> destination) {
-        int frames = destination.Length / 2;
-        if (frames <= 0) {
-            destination.Clear();
-            return;
-        }
-
-        int samples = frames * 2;
-        if (samples > _tmpInterleaved.Length) {
-            throw new ArgumentException("Destination span is larger than the temporary buffer.", nameof(destination));
-        }
-
-        Span<short> interleaved = _tmpInterleaved.AsSpan(0, samples);
-
-        int generatedSamples = 0;
-        while (generatedSamples < samples) {
-            int batchSamples = Math.Min(MaxSamplesPerGenerationBatch, samples - generatedSamples);
-            Span<short> batch = interleaved.Slice(generatedSamples, batchSamples);
-            lock (_chipLock) {
-                _chip.GenerateStream(batch);
-            }
-
-            generatedSamples += batchSamples;
-        }
-
-        if (_adLibGold is null) {
-            SimdConversions.ConvertInt16ToScaledFloat(interleaved, destination, 1.0f);
-        } else {
-            _adLibGold.Process(interleaved, frames, destination);
-        }
-    }
-
-    /// <summary>
     ///     Schedules servicing of the OPL timers based on the next overflow.
     /// </summary>
     /// <param name="currentTick">Current time in scheduler ticks.</param>
