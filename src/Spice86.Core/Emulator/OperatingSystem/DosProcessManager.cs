@@ -386,11 +386,24 @@ public class DosProcessManager : DosFileLoader {
         }
 
         LoadExeFileInMemoryAndApplyRelocations(exeFile, programEntryPointSegment);
+        ZeroUninitializedData(block, exeFile, programEntryPointSegment);
 
         cs = (ushort)(exeFile.InitCS + programEntryPointSegment);
         ip = exeFile.InitIP;
         ss = (ushort)(exeFile.InitSS + programEntryPointSegment);
         sp = exeFile.InitSP;
+    }
+
+    private void ZeroUninitializedData(DosMemoryControlBlock block, DosExeFile exeFile, ushort startSegment) {
+        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, 0);
+        uint programSize = exeFile.ProgramSize;
+        uint allocatedSize = (uint)block.Size * 16;
+        if (programSize >= allocatedSize) {
+            return;
+        }
+        uint zeroStart = physicalStartAddress + programSize;
+        uint zeroLength = allocatedSize - programSize;
+        _memory.LoadData(zeroStart, new byte[zeroLength], (int)zeroLength);
     }
 
     private static void InitializeCommonPspFields(DosProgramSegmentPrefix psp, ushort parentPspSegment) {
