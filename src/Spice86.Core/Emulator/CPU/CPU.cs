@@ -588,6 +588,8 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
                 _instructions16Or32.Popa();
                 break;
             case 0x62: // BOUND
+                _instructions16Or32.Bound();
+                break;
             case 0x63: // ARPL
                 HandleInvalidOpcode(opcode);
                 break;

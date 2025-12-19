@@ -461,6 +461,22 @@ public class Instructions16 : Instructions16Or32 {
         ModRM.SetRm16(ModRM.SegmentRegister);
     }
 
+    public override void Bound() {
+        ModRM.Read();
+        uint? address = ModRM.MemoryAddress;
+        if (address is null) {
+            throw new InvalidOpCodeException(State, 0x62, false);
+        }
+
+        short lower = Memory.Int16[address.Value];
+        short upper = Memory.Int16[address.Value + 2];
+        short index = (short)ModRM.R16;
+        if (index < lower || index > upper) {
+            throw new CpuBoundRangeExceededException(
+                $"BOUND check failed: index={index}, lower={lower}, upper={upper}.");
+        }
+    }
+
     // Only present in 16 bit
     public void MovSregRm() {
         // MOV sreg rmw
