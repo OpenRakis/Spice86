@@ -93,9 +93,6 @@ public class DosProcessManager : DosFileLoader {
         }
 
         string? hostPath = ResolveToHostPath(programPath);
-        if (hostPath is null && Path.IsPathRooted(programPath) && File.Exists(programPath)) {
-            hostPath = programPath;
-        }
         if (hostPath is null || !File.Exists(hostPath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("EXEC: Program file not found: {Program}", programPath);
