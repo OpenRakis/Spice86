@@ -43,6 +43,8 @@ public abstract class Instructions16Or32 : Instructions {
     public abstract void MovRmSreg();
     public abstract void Lea();
 
+    public abstract void Bound();
+
     public ushort ExtractLeaMemoryOffset16() {
         ModRM.Read();
         ushort? memoryOffset = ModRM.MemoryOffset;
