@@ -98,6 +98,40 @@ public class DosExecIntegrationTests {
         }
     }
 
+    [Fact]
+    public void ExecLoadOnly_FromSameImage_ShouldResumeAfterLoad() {
+        string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
+        string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
+        Directory.CreateDirectory(tempDir);
+        string source = Path.Combine(resourceDir, "selfload.bin");
+        string target = Path.Combine(tempDir, "selfload.exe");
+        File.Copy(source, target, overwrite: true);
+
+        try {
+            Spice86DependencyInjection spice86 = new Spice86Creator(
+                binName: target,
+                enableCfgCpu: false,
+                enablePit: true,
+                recordData: false,
+                maxCycles: 200000,
+                installInterruptVectors: true,
+                enableA20Gate: false,
+                enableXms: true,
+                enableEms: true,
+                cDrive: tempDir
+            ).Create();
+
+            spice86.ProgramExecutor.Run();
+
+            IMemory memory = spice86.Machine.Memory;
+            uint videoBase = MemoryUtils.ToPhysicalAddress(0xB800, 0);
+            byte character = memory.UInt8[videoBase];
+            ((char)character).Should().Be('O');
+        } finally {
+            TryDeleteDirectory(tempDir);
+        }
+    }
+
     private static void TryDeleteDirectory(string directoryPath) {
         if (!Directory.Exists(directoryPath)) {
             return;
