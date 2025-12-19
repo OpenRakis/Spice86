@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.VM;
 
 public class Instructions32 : Instructions16Or32 {
     private readonly Alu32 _alu32;
@@ -453,6 +454,22 @@ public class Instructions32 : Instructions16Or32 {
         // MOV rmdw sreg
         ModRM.Read();
         ModRM.SetRm32(ModRM.SegmentRegister);
+    }
+
+    public override void Bound() {
+        ModRM.Read();
+        uint? memoryAddress = ModRM.MemoryAddress;
+        if (memoryAddress == null) {
+            throw new InvalidVMOperationException(State, "BOUND requires a memory operand.");
+        }
+
+        uint lowerBound = Memory.UInt32[memoryAddress.Value];
+        uint upperBound = Memory.UInt32[memoryAddress.Value + 4];
+        uint value = ModRM.R32;
+
+        if (value < lowerBound || value > upperBound) {
+            Cpu.Interrupt(5);
+        }
     }
 
     public override void Lea() {

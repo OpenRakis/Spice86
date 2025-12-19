@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 
 public class Instructions16 : Instructions16Or32 {
     private readonly Alu16 _alu16;
@@ -472,6 +473,22 @@ public class Instructions16 : Instructions16Or32 {
         if (ModRM.RegisterIndex == (uint)SegmentRegisterIndex.SsIndex) {
             // Loading SS requires interrupt shadowing for one subsequent instruction
             State.InterruptShadowing = true;
+        }
+    }
+
+    public override void Bound() {
+        ModRM.Read();
+        uint? memoryAddress = ModRM.MemoryAddress;
+        if (memoryAddress == null) {
+            throw new InvalidVMOperationException(State, "BOUND requires a memory operand.");
+        }
+
+        ushort lowerBound = Memory.UInt16[memoryAddress.Value];
+        ushort upperBound = Memory.UInt16[memoryAddress.Value + 2];
+        ushort value = ModRM.R16;
+
+        if (value < lowerBound || value > upperBound) {
+            Cpu.Interrupt(5);
         }
     }
 
