@@ -55,8 +55,7 @@ public class OplAudioCaptureTests {
     private Opl3Fm CreateOpl3ForTesting(
         out Mixer mixer,
         out IOPortDispatcher dispatcher,
-        bool useAdlibGold = false,
-        Action<Span<short>>? sampleGenerator = null) {
+        bool useAdlibGold = false) {
         
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         AddressReadWriteBreakpoints breakpoints = new();
@@ -68,7 +67,7 @@ public class OplAudioCaptureTests {
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
         Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
-            useAdlibGold: useAdlibGold, enableOplIrq: false, sampleGenerator: sampleGenerator);
+            useAdlibGold: useAdlibGold, enableOplIrq: false);
         
         return opl3;
     }
@@ -85,31 +84,6 @@ public class OplAudioCaptureTests {
         // Assert: Should generate frames at OPL rate (49716 Hz) which mixer resamples
         opl3.MixerChannel.Should().NotBeNull();
         opl3.MixerChannel.GetSampleRate().Should().Be(OplSampleRateHz);
-    }
-    
-    [Fact]
-    public void OplOutputMatchesCustomGeneratorWhenProvided() {
-        // Arrange: Use known sample pattern
-        short testSample = 12000;
-        void TestGenerator(Span<short> buffer) {
-            for (int i = 0; i < buffer.Length; i += 2) {
-                buffer[i] = testSample;      // Left
-                buffer[i + 1] = (short)-testSample;  // Right
-            }
-        }
-        
-        using Opl3Fm opl3 = CreateOpl3ForTesting(
-            out Mixer mixer, 
-            out IOPortDispatcher dispatcher,
-            sampleGenerator: TestGenerator);
-        
-        // Act
-        opl3.AudioCallback(4);
-        
-        // Assert: Output should match test generator
-        opl3.MixerChannel.AudioFrames.Should().NotBeEmpty();
-        opl3.MixerChannel.AudioFrames[0].Left.Should().Be(testSample);
-        opl3.MixerChannel.AudioFrames[0].Right.Should().Be(-testSample);
     }
     
     [Fact]
@@ -168,25 +142,15 @@ public class OplAudioCaptureTests {
     [Fact]
     public void AdLibGoldProcessingModifiesOplOutput() {
         // Arrange: Create two OPL instances - one plain, one with AdLib Gold
-        short testSample = 8000;
-        void TestGenerator(Span<short> buffer) {
-            for (int i = 0; i < buffer.Length; i += 2) {
-                buffer[i] = testSample;
-                buffer[i + 1] = testSample;
-            }
-        }
-        
         using Opl3Fm oplPlain = CreateOpl3ForTesting(
             out Mixer mixer1,
             out IOPortDispatcher dispatcher1,
-            useAdlibGold: false,
-            sampleGenerator: TestGenerator);
+            useAdlibGold: false);
         
         using Opl3Fm oplGold = CreateOpl3ForTesting(
             out Mixer mixer2,
             out IOPortDispatcher dispatcher2,
-            useAdlibGold: true,
-            sampleGenerator: TestGenerator);
+            useAdlibGold: true);
         
         // Act: Generate audio from both
         oplPlain.AudioCallback(10);
