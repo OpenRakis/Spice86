@@ -69,7 +69,6 @@ public class DosExecIntegrationTests {
             Directory.Delete(directoryPath, true);
         } catch (IOException) {
         } catch (UnauthorizedAccessException) {
-        } catch (DirectoryNotFoundException) {
         }
     }
 }
