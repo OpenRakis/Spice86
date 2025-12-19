@@ -20,8 +20,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly AdLibGoldDevice? _adLibGold;
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
-    private readonly Action<Span<short>> _generateStream;
-    private readonly bool _isUsingCustomGenerator;
     private readonly object _chipLock = new();
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
@@ -59,12 +57,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <param name="useAdlibGold">True to enable AdLib Gold filtering and surround processing.</param>
     /// <param name="enableOplIrq">True to forward OPL IRQs to the PIC.</param>
     /// <param name="oplIrqLine">IRQ line used when OPL IRQs are enabled.</param>
-    /// <param name="sampleGenerator">Optional custom sample generator for testing; defaults to the internal OPL3 chip.</param>
     public Opl3Fm(Mixer mixer, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
         ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
-        bool useAdlibGold = false, bool enableOplIrq = false, byte oplIrqLine = 5,
-        Action<Span<short>>? sampleGenerator = null)
+        bool useAdlibGold = false, bool enableOplIrq = false, byte oplIrqLine = 5)
         : base(state, failOnUnhandledPort, loggerService) {
         // Create and register the OPL3 mixer channel internally following the SB PCM pattern
         HashSet<ChannelFeature> features = new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer };
@@ -75,8 +71,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         _useAdLibGold = useAdlibGold;
         _useOplIrq = enableOplIrq;
         _oplIrqLine = oplIrqLine;
-        _isUsingCustomGenerator = sampleGenerator != null;
-        _generateStream = sampleGenerator ?? (_chip.GenerateStream);
 
         _oplTimerHandler = ServiceOplTimers;
 
@@ -242,7 +236,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 return;
         }
 
-        bool audioWrite = (result & (Opl3WriteResult.DataWrite | Opl3WriteResult.AdLibGoldWrite)) != 0;
         bool timerWrite = (result & Opl3WriteResult.TimerUpdated) != 0;
 
         // Only schedule timer events - audio writes are handled by the mixer callback
@@ -289,20 +282,15 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
             Span<short> interleaved = _tmpInterleaved.AsSpan(0, samplesToGenerate);
 
-            // Flush pending writes outside lock to reduce contention
-            double now = _clock.CurrentTimeMs;
-            
             // Minimize lock scope: only hold lock during chip operations
             lock (_chipLock) {
                 // Flush any pending OPL writes up to current time before generating audio
                 // Mirrors DOSBox Staging: ensures sub-ms register writes are processed
-                // Only flush if we're using the actual OPL chip (not a custom test generator)
-                if (!_isUsingCustomGenerator) {
-                    _oplIo.FlushDueWritesUpTo(now);
-                }
+                double now = _clock.CurrentTimeMs;
+                _oplIo.FlushDueWritesUpTo(now);
                 
                 // Generate audio samples (write buffer is automatically processed during generation)
-                _generateStream(interleaved);
+                _chip.GenerateStream(interleaved);
             }
 
             // Convert interleaved int16 samples to normalized float for AddSamples_sfloat
