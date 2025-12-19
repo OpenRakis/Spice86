@@ -15,6 +15,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.IO;
 using System.Text;
 
 /// <summary>
@@ -92,6 +93,9 @@ public class DosProcessManager : DosFileLoader {
         }
 
         string? hostPath = ResolveToHostPath(programPath);
+        if (hostPath is null && Path.IsPathRooted(programPath) && File.Exists(programPath)) {
+            hostPath = programPath;
+        }
         if (hostPath is null || !File.Exists(hostPath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("EXEC: Program file not found: {Program}", programPath);
