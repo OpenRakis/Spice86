@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.VM;
 
 public class Instructions32 : Instructions16Or32 {
     private readonly Alu32 _alu32;

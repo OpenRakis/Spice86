@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 
 public class Instructions16 : Instructions16Or32 {
     private readonly Alu16 _alu16;

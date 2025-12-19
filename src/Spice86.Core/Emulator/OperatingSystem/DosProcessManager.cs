@@ -15,6 +15,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.IO;
 using System.Text;
 
 /// <summary>
