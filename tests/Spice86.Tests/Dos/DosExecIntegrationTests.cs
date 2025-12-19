@@ -65,9 +65,10 @@ public class DosExecIntegrationTests {
         string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
         string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
-        foreach (string file in new[] { "tentacle.exe", "tentacle.000" }) {
+        foreach (string file in new[] { "tentacle.bin", "tentacle.000" }) {
             string source = Path.Combine(resourceDir, file);
-            File.Copy(source, Path.Combine(tempDir, file), overwrite: true);
+            string target = file == "tentacle.bin" ? "tentacle.exe" : file;
+            File.Copy(source, Path.Combine(tempDir, target), overwrite: true);
         }
 
         string programPath = Path.Combine(tempDir, "tentacle.exe");
