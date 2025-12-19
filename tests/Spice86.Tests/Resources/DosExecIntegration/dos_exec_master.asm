@@ -1,7 +1,8 @@
 ; Comprehensive DOS EXEC integration test harness
 ; Exercises load/execute modes, child process return codes, TSR installation,
 ; environment block presence, memory allocations, overlay loading, and a stub
-; "audio" overlay loaded from a separate overlay executable.
+; "audio" overlay loaded from the same base name (current executable renamed to
+; .000).
 ;
 ; All status is reported through BIOS INT 10h teletype output so the emulator
 ; video buffer can be inspected by tests. Each successful milestone appends a
@@ -45,7 +46,8 @@ start:
 
 ; ---------------------------------------------------------------------------
 ; Environment block verification: PSP:002Ch holds segment of environment.
-; Walk until a double NULL terminator to ensure block is present.
+; Walk until a double NULL terminator to ensure block is present and capture
+; the executable path for overlay name derivation.
 ; ---------------------------------------------------------------------------
         mov     bx, [PSP_ENV_PTR]
         cmp     bx, 0
@@ -65,6 +67,7 @@ env_scan:
         jne     env_fail
         push    ds
         pop     es
+        call    BuildOverlayName
         PRINT   'E'
         jmp     mem_test
 env_fail:
@@ -202,6 +205,53 @@ done:
 ; ---------------------------------------------------------------------------
 ; Helpers
 ; ---------------------------------------------------------------------------
+BuildOverlayName:
+        mov     bx, [PSP_ENV_PTR]
+        mov     es, bx
+        xor     di, di
+        mov     cx, 1024
+find_path_end:
+        cmp     cx, 0
+        je      overlayname_done
+        dec     cx
+        mov     al, [es:di]
+        inc     di
+        cmp     al, 0
+        jne     find_path_end
+        cmp     byte [es:di], 0
+        jne     find_path_end
+        inc     di                     ; skip second null
+        mov     si, di                ; SI -> program path
+        lea     di, [overlayName]
+copy_overlay_path:
+        mov     al, [es:si]
+        mov     [di], al
+        inc     si
+        inc     di
+        cmp     al, 0
+        jne     copy_overlay_path
+
+        dec     di                    ; back to null terminator
+search_dot_ovl:
+        cmp     di, overlayName
+        je      append_ext_ovl
+        dec     di
+        mov     al, [di]
+        cmp     al, '.'
+        je      write_ext_ovl
+        jmp     search_dot_ovl
+
+append_ext_ovl:
+        inc     di
+write_ext_ovl:
+        mov     byte [di], '.'
+        mov     byte [di + 1], '0'
+        mov     byte [di + 2], '0'
+        mov     byte [di + 3], '0'
+        mov     byte [di + 4], 0
+overlayname_done:
+        ret
+
 InitExecParamBlock:
         mov     word [execParam + 0x00], 0          ; inherit environment
         mov     word [execParam + 0x02], cmdTail
@@ -229,6 +279,7 @@ WriteTty:
 allocSeg        dw 0
 overlaySeg      dw 0
 overlayEntry    dd 0
+overlayName     times 128 db 0
 
 execParam       times 0x16 db 0
 overlayParam    dw 0, 0
@@ -239,4 +290,3 @@ cmdTail:
 
 childName       db "CHILD.COM", 0
 tsrName         db "TSR_HOOK.COM", 0
-overlayName     db "OVERLAY_DRIVER.EXE", 0
