@@ -356,6 +356,7 @@ public class DosProcessManager : DosFileLoader {
         }
 
         if (loadType == DosExecLoadType.LoadAndExecute) {
+            ResetGeneralRegisters();
             _state.DS = pspSegment;
             _state.ES = pspSegment;
             _state.SS = ss;
@@ -370,6 +371,18 @@ public class DosProcessManager : DosFileLoader {
         }
 
         return DosExecResult.Succeeded();
+    }
+
+    private void ResetGeneralRegisters() {
+        _state.AX = 0;
+        _state.BX = 0;
+        _state.CX = 0;
+        _state.DX = 0;
+        _state.SI = 0;
+        _state.DI = 0;
+        _state.BP = 0;
+        _state.DirectionFlag = false;
+        _state.CarryFlag = false;
     }
 
     private void LoadExeFileIntoReservedMemory(DosExeFile exeFile, DosMemoryControlBlock block,

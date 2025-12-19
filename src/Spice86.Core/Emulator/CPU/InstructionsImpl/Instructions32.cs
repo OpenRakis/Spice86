@@ -329,6 +329,7 @@ public class Instructions32 : Instructions16Or32 {
             3 => _alu32.Rcr(value, count),
             4 => _alu32.Shl(value, count),
             5 => _alu32.Shr(value, count),
+            6 => _alu32.Shl(value, count),
             7 => _alu32.Sar(value, count),
             _ => throw new InvalidGroupIndexException(State, groupIndex)
         };
