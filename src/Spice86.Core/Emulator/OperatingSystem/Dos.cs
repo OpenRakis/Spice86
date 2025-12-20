@@ -19,6 +19,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Linq;
 using System.Text;
 
 /// <summary>
@@ -177,6 +178,12 @@ public sealed class Dos {
         CountryInfo = new();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, Devices);
+        
+        // Wire up the FileManager as the filesystem for each drive
+        foreach (VirtualDrive drive in DosDriveManager.Values.Where(d => d is not null)) {
+            drive.FileSystem = FileManager;
+        }
+        
         DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, DosSwappableDataArea, loggerService);
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
         ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, loggerService);

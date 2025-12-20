@@ -21,7 +21,7 @@ using System.Text;
 public class DosProcessManager : DosFileLoader {
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
-    private readonly DosFileManager _fileManager;
+    private readonly IDosFileSystem _fileManager;
     private readonly DosDriveManager _driveManager;
 
     /// <summary>
@@ -34,12 +34,12 @@ public class DosProcessManager : DosFileLoader {
 
     public DosProcessManager(IMemory memory, State state,
         DosProgramSegmentPrefixTracker dosPspTracker, DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, DosDriveManager dosDriveManager,
+        IDosFileSystem dosFileManager, DosDriveManager dosDriveManager,
         IDictionary<string, string> envVars, ILoggerService loggerService)
         : base(memory, state, loggerService) {
         _pspTracker = dosPspTracker;
-        _memoryManager = dosMemoryManager;
         _fileManager = dosFileManager;
+        _memoryManager = dosMemoryManager;
         _driveManager = dosDriveManager;
         _environmentVariables = new();
 
@@ -112,13 +112,15 @@ public class DosProcessManager : DosFileLoader {
         ms.WriteByte(0);
     
         // Get the DOS path for the program (not the host path)
-        string dosPath = _fileManager.GetDosProgramPath(programPath);
+        string? dosPath = _driveManager.GetCurrentFileSystem()?.GetDosFilePath(programPath);
     
-        // Write the DOS path to the environment block
-        byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
-        ms.Write(programPathBytes, 0, programPathBytes.Length);
-        ms.WriteByte(0); // Null terminator for program path
-    
+        if(!string.IsNullOrWhiteSpace(dosPath)) {
+            // Write the DOS path to the environment block
+            byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
+            ms.Write(programPathBytes, 0, programPathBytes.Length);
+            ms.WriteByte(0); // Null terminator for program path
+        }
+
         return ms.ToArray();
     }
 
@@ -161,7 +163,7 @@ public class DosProcessManager : DosFileLoader {
     }
 
     private byte[] LoadExeOrComFile(string file, ushort pspSegment) {
-        byte[] fileBytes = ReadFile(file);
+        byte[] fileBytes = File.ReadAllBytes(file);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Executable file size: {Size}", fileBytes.Length);
         }

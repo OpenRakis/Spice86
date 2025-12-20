@@ -12,4 +12,10 @@ public class VirtualDrive : DosDriveBase {
     /// Gets the absolute path to the current DOS directory in use on the drive.
     /// </summary>
     public required string CurrentDosDirectory { get; set; }
+
+    /// <summary>
+    /// Gets the filesystem handler for this drive.
+    /// Each drive provides its own implementation for file operations.
+    /// </summary>
+    public IDosFileSystem? FileSystem { get; set; }
 }

@@ -31,7 +31,12 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
         cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
         _driveMap.Add('A', null);
         _driveMap.Add('B', null);
-        _driveMap.Add('C', new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath, CurrentDosDirectory = "" });
+        _driveMap.Add('C', new VirtualDrive { 
+            DriveLetter = 'C', 
+            MountedHostDirectory = cDriveFolderPath, 
+            CurrentDosDirectory = "",
+            FileSystem = null // Will be set by Dos class
+        });
         CurrentDrive = _driveMap.ElementAt(2).Value!;
         if(loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             loggerService.Verbose("DOS Drives initialized: {@Drives}", _driveMap.Values);
@@ -147,5 +152,28 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
 
     IEnumerator IEnumerable.GetEnumerator() {
         return ((IEnumerable)_driveMap).GetEnumerator();
+    }
+
+    /// <summary>
+    /// Gets the filesystem handler for the specified drive.
+    /// </summary>
+    /// <param name="driveLetter">The drive letter.</param>
+    /// <returns>The filesystem handler, or null if drive not mounted or has no filesystem.</returns>
+    public IDosFileSystem? GetFileSystem(char driveLetter) {
+        if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Getting filesystem for drive {DriveLetter}", driveLetter);
+        }
+        if (TryGetValue(driveLetter, out VirtualDrive? drive)) {
+            return drive.FileSystem;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the filesystem handler for the current drive.
+    /// </summary>
+    /// <returns>The filesystem handler, or null if current drive has no filesystem.</returns>
+    public IDosFileSystem? GetCurrentFileSystem() {
+        return CurrentDrive.FileSystem;
     }
 }

@@ -1,5 +1,4 @@
-﻿
-namespace Spice86.Core.Emulator.OperatingSystem;
+﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
@@ -15,13 +14,13 @@ using Spice86.Shared.Utils;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
 
 /// <summary>
 /// The class that implements DOS file operations, such as finding files,
 /// allocating file handles, and updating the Disk Transfer Area.
 /// </summary>
-public class DosFileManager {
+/// <inheritdoc cref="IDosFileSystem"/>
+public class DosFileManager : IDosFileSystem {
     private const int ExtDeviceBit = 0x0200;
     private static readonly char[] _directoryChars = {
         DosPathResolver.DirectorySeparatorChar,
@@ -82,31 +81,19 @@ public class DosFileManager {
         _dosVirtualDevices = dosVirtualDevices;
     }
 
-    /// <summary>
-    /// Gets the standard input, which is the first open character device with the <see cref="DeviceAttributes.CurrentStdin"/> attribute.
-    /// </summary>
-    /// <returns>The standard input device, or <c>null</c> if not found.</returns>
+    /// <inheritdoc/>
     public bool TryGetStandardInput([NotNullWhen(true)] out CharacterDevice? device) {
         bool result = TryGetOpenDeviceWithAttributes<CharacterDevice>(DeviceAttributes.CurrentStdin, out device);
         return result;
     }
 
-    /// <summary>
-    /// Gets the standard output, which is the first open character device with the <see cref="DeviceAttributes.CurrentStdout"/> attribute.
-    /// </summary>
-    /// <returns>The standard output device, or <c>null</c> if not found.</returns>
+    /// <inheritdoc/>
     public bool TryGetStandardOutput([NotNullWhen(true)] out CharacterDevice? device) {
         bool result = TryGetOpenDeviceWithAttributes<CharacterDevice>(DeviceAttributes.CurrentStdout, out device);
         return result;
     }
 
-    /// <summary>
-    /// Gets the device file handle of the first open character device with the specified attributes.
-    /// </summary>
-    /// <param name="attributes">The device attributes, such as <see cref="DeviceAttributes.CurrentStdin"/>. <br/>
-    /// There can be several.</param>
-    /// <param name="device">The DOS device if found, or <c>null</c> if not found.</param>
-    /// <returns>Whether the DOS Device was found.</returns>
+    /// <inheritdoc/>
     public bool TryGetOpenDeviceWithAttributes<T>(DeviceAttributes attributes,
         [NotNullWhen(true)] out T? device) where T : IVirtualDevice {
         device = OpenFiles.OfType<T>().FirstOrDefault(x => x is
@@ -115,12 +102,7 @@ public class DosFileManager {
         return device is not null;
     }
 
-    /// <summary>
-    /// Closes a file handle.
-    /// </summary>
-    /// <param name="fileHandle">The file handle to an open file.</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    /// <exception cref="UnrecoverableException">If the host OS refuses to close the file.</exception>
+    /// <inheritdoc/>
     public DosFileOperationResult CloseFileOrDevice(ushort fileHandle) {
         if (GetOpenFile(fileHandle) is not DosFile file) {
             return FileNotOpenedError(fileHandle);
@@ -144,13 +126,7 @@ public class DosFileManager {
         return DosFileOperationResult.NoValue();
     }
 
-    /// <summary>
-    /// Creates a file and returns the handle to the file.
-    /// </summary>
-    /// <param name="fileName">The target file name.</param>
-    /// <param name="fileAttribute">The file system attributes to set on the new file.</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    /// <exception cref="UnrecoverableException"></exception>
+    /// <inheritdoc/>
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
         CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
             .FirstOrDefault(device => device.IsName(fileName));
@@ -198,12 +174,7 @@ public class DosFileManager {
         return OpenFileInternal(fileName, newHostFilePath, FileAccessMode.ReadWrite);
     }
 
-    /// <summary>
-    /// Gets another file handle for the same file
-    /// </summary>
-    /// <param name="fileHandle">The handle to a file.</param>
-    /// <param name="newHandle">The new handle to a file.</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult ForceDuplicateFileHandle(ushort fileHandle, ushort newHandle) {
         if (fileHandle == newHandle) {
             return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
@@ -228,11 +199,7 @@ public class DosFileManager {
         return DosFileOperationResult.NoValue();
     }
 
-    /// <summary>
-    /// Gets another file handle for the same file
-    /// </summary>
-    /// <param name="fileHandle">The handle to a file.</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult DuplicateFileHandle(ushort fileHandle) {
         if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
@@ -248,13 +215,7 @@ public class DosFileManager {
         return DosFileOperationResult.Value16(dosIndex);
     }
 
-    /// <summary>
-    /// Returns the first matching file in the DTA, according to the <paramref name="fileSpec"/>
-    /// </summary>
-    /// <param name="fileSpec">a filename with ? when any character can match or * when multiple characters can match.
-    /// Case is insensitive</param>
-    /// <param name="searchAttributes">The MS-DOS file attributes, such as Directory.</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult FindFirstMatchingFile(string fileSpec, ushort searchAttributes) {
         if (string.IsNullOrWhiteSpace(fileSpec)) {
             return PathNotFoundError(fileSpec);
@@ -335,7 +296,6 @@ public class DosFileManager {
         return null;
     }
 
-
     private static string? GetFileSpecWithoutSubFolderOrDriveInIt(string fileSpec) {
         int index = fileSpec.LastIndexOfAny(_directoryChars);
         if (index == -1) {
@@ -391,10 +351,7 @@ public class DosFileManager {
         return enumerationOptions;
     }
 
-    /// <summary>
-    /// Returns the next matching file in the DTA, according to the stored file spec.
-    /// </summary>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult FindNextMatchingFile() {
         DosDiskTransferArea dta = GetDosDiskTransferArea();
         uint key = dta.SearchId;
@@ -431,27 +388,7 @@ public class DosFileManager {
         return DosFileOperationResult.NoValue();
     }
 
-    /// <summary>
-    /// The offset part of the segmented address to the DTA.
-    /// </summary>
-    public ushort DiskTransferAreaAddressOffset => _diskTransferAreaAddressOffset;
-
-    /// <summary>
-    /// The segment part of the segmented address to the DTA.
-    /// </summary>
-    public ushort DiskTransferAreaAddressSegment => _diskTransferAreaAddressSegment;
-
-    /// <summary>
-    /// Seeks to specified location in file.
-    /// </summary>
-    /// <param name="originOfMove">Can be one of those values: <br/>
-    /// 00 = beginning of file plus offset  (SEEK_SET) <br/>
-    /// 01 = current location plus offset	(SEEK_CUR) <br/>
-    /// 02 = end of file plus offset  (SEEK_END)
-    /// </param>
-    /// <param name="fileHandle">The handle to the file.</param>
-    /// <param name="offset">Number of bytes to move.</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult MoveFilePointerUsingHandle(SeekOrigin originOfMove, ushort fileHandle, int offset) {
         if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
@@ -477,12 +414,7 @@ public class DosFileManager {
         }
     }
 
-    /// <summary>
-    /// Opens a file and returns the file handle.
-    /// </summary>
-    /// <param name="fileName">The name of the file to open.</param>
-    /// <param name="accessMode">The access mode (read, write, or read+write)</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult OpenFileOrDevice(string fileName, FileAccessMode accessMode) {
         CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
             .FirstOrDefault(device => device.IsName(fileName));
@@ -508,11 +440,7 @@ public class DosFileManager {
         return OpenFileInternal(fileName, hostFileName, accessMode);
     }
 
-    /// <summary>
-    /// Returns a handle to a DOS <see cref="CharacterDevice"/>
-    /// </summary>
-    /// <param name="device">The character device</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult OpenDevice(VirtualFileBase device) {
         int? freeIndex = FindNextFreeFileIndex();
         if (freeIndex == null) {
@@ -525,13 +453,7 @@ public class DosFileManager {
         return DosFileOperationResult.Value16(dosIndex);
     }
 
-    /// <summary>
-    /// Read a file using a handle
-    /// </summary>
-    /// <param name="fileHandle">The handle to the file.</param>
-    /// <param name="readLength">The amount of data to read.</param>
-    /// <param name="targetAddress">The start address of the receiving buffer.</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult ReadFileOrDevice(ushort fileHandle, ushort readLength, uint targetAddress) {
         if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
@@ -565,11 +487,7 @@ public class DosFileManager {
         return DosFileOperationResult.Value16((ushort)actualReadLength);
     }
 
-    /// <summary>
-    /// Sets the current directory for the <see cref="DosFileManager"/>
-    /// </summary>
-    /// <param name="newPath">The new current directory path</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult SetCurrentDir(string newPath) => _dosPathResolver.SetCurrentDir(newPath);
 
     /// <summary>
@@ -583,12 +501,23 @@ public class DosFileManager {
     }
 
     /// <summary>
+    /// The offset part of the segmented address to the DTA.
+    /// </summary>
+    public ushort DiskTransferAreaAddressOffset => _diskTransferAreaAddressOffset;
+
+    /// <summary>
+    /// The segment part of the segmented address to the DTA.
+    /// </summary>
+    public ushort DiskTransferAreaAddressSegment => _diskTransferAreaAddressSegment;
+
+    /// <summary>
     /// Writes data to a file using a file handle.
     /// </summary>
     /// <param name="fileHandle">The file handle to use.</param>
     /// <param name="writeLength">The length of the data to write.</param>
     /// <param name="bufferAddress">The address of the buffer containing the data to write.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> object representing the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult WriteToFileOrDevice(ushort fileHandle, ushort writeLength, uint bufferAddress) {
         if (!IsHandleInRange(fileHandle)) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
@@ -823,11 +752,7 @@ public class DosFileManager {
         return dosDiskTransferArea;
     }
 
-    /// <summary>
-    /// Creates a directory on disk.
-    /// </summary>
-    /// <param name="dosDirectory">The directory name to create</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
         string? parentFolder = _dosPathResolver.GetFullHostParentPathFromDosOrDefault(dosDirectory);
         if (string.IsNullOrWhiteSpace(parentFolder)) {
@@ -855,11 +780,26 @@ public class DosFileManager {
         return PathNotFoundError(dosDirectory);
     }
 
-    /// <summary>
-    /// Removes a file on disk.
-    /// </summary>
-    /// <param name="dosFile">The file name to delete</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
+    public string GetDosFilePath(string programPath) {
+        string fileName = Path.GetFileName(programPath);
+        string currentDrive = _dosDriveManager.CurrentDrive.DosVolume;
+        string currentDir = _dosDriveManager.CurrentDrive.CurrentDosDirectory;
+
+        if (!string.IsNullOrEmpty(currentDir) && !currentDir.EndsWith('\\')) {
+            currentDir += '\\';
+        }
+
+        string dosPath = $"{currentDrive}\\{currentDir}{fileName}";
+        dosPath = dosPath.Replace('/', '\\').ToUpperInvariant();
+        while (dosPath.Contains("\\\\")) {
+            dosPath = dosPath.Replace("\\\\", "\\");
+        }
+
+        return dosPath;
+    }
+
+    /// <inheritdoc/>
     public DosFileOperationResult RemoveFile(string dosFile) {
         string? fullHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFile);
         if (string.IsNullOrWhiteSpace(fullHostPath)) {
@@ -883,11 +823,7 @@ public class DosFileManager {
         return PathNotFoundError(dosFile);
     }
 
-    /// <summary>
-    /// Removes a directory on disk.
-    /// </summary>
-    /// <param name="dosDirectory">The directory name to delete</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult RemoveDirectory(string dosDirectory) {
         string? hostDirToDelete = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosDirectory);
 
@@ -921,15 +857,11 @@ public class DosFileManager {
         return PathNotFoundError(dosDirectory);
     }
 
-    /// <summary>
-    /// Gets the current DOS directory.
-    /// </summary>
-    /// <param name="driveNumber">The drive number (0x0: default, 0x1: A:, 0x2: B:, 0x3: C:, ...)</param>
-    /// <param name="currentDir">The string variable receiving the current DOS directory.</param>
-    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    /// <inheritdoc/>
     public DosFileOperationResult GetCurrentDir(byte driveNumber, out string currentDir) =>
         _dosPathResolver.GetCurrentDosDirectory(driveNumber, out currentDir);
 
+    /// <inheritdoc/>
     public DosFileOperationResult IoControl(State state) {
         byte handle = 0;
         byte drive = 0;
@@ -1193,37 +1125,5 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
         }
-    }
-
-    /// <summary>
-    /// Gets the proper DOS path for the emulated program.
-    /// </summary>
-    /// <param name="programPath">The absolute host path to the executable file.</param>
-    /// <returns>A properly formatted DOS absolute path for the PSP env block.</returns>
-    internal string GetDosProgramPath(string programPath) {
-        // Extract just the filename without path if it's a full path
-        string fileName = Path.GetFileName(programPath);
-
-        // Create a DOS path using the current drive and directory
-        string currentDrive = _dosDriveManager.CurrentDrive.DosVolume;
-        string currentDir = _dosDriveManager.CurrentDrive.CurrentDosDirectory;
-
-        // Ensure current directory has trailing backslash
-        if (!string.IsNullOrEmpty(currentDir) && !currentDir.EndsWith('\\')) {
-            currentDir += '\\';
-        }
-
-        // Build the full DOS path
-        string dosPath = $"{currentDrive}\\{currentDir}{fileName}";
-
-        // Replace slashes and standardize
-        dosPath = dosPath.Replace('/', '\\').ToUpperInvariant();
-
-        // Clean up any double backslashes
-        while (dosPath.Contains("\\\\")) {
-            dosPath = dosPath.Replace("\\\\", "\\");
-        }
-
-        return dosPath;
     }
 }
