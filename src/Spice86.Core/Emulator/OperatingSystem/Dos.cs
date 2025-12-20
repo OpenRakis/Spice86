@@ -25,8 +25,6 @@ using System.Text;
 /// Represents the DOS kernel.
 /// </summary>
 public sealed class Dos {
-    //in DOSBox, this is the 'DOS_INFOBLOCK_SEG'
-    private const int DosSysVarSegment = 0x80;
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
@@ -161,7 +159,7 @@ public sealed class Dos {
 
         VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
         DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory,
-            MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
+            MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0x0));
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
 
