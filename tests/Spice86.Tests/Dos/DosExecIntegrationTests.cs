@@ -15,16 +15,16 @@ using Xunit;
 public class DosExecIntegrationTests {
     [Fact]
     public void ExecModesAndOverlays_ShouldReportSuccessViaVideoMemory() {
-        string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
-        string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
+        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
+        string tempDir = Path.Join(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
         foreach (string file in new[] { "dos_exec_master.com", "child.com", "tsr_hook.com", "overlay_driver.bin" }) {
-            string source = Path.Combine(resourceDir, file);
+            string source = Path.Join(resourceDir, file);
             string targetName = file == "overlay_driver.bin" ? "dos_exec_master.000" : file;
-            File.Copy(source, Path.Combine(tempDir, targetName), overwrite: true);
+            File.Copy(source, Path.Join(tempDir, targetName), overwrite: true);
         }
 
-        string programPath = Path.Combine(tempDir, "dos_exec_master.com");
+        string programPath = Path.Join(tempDir, "dos_exec_master.com");
 
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
@@ -62,16 +62,16 @@ public class DosExecIntegrationTests {
 
     [Fact]
     public void ExecLoadOnly_FromEnvName_ShouldLoadOverlayAndResume() {
-        string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
-        string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
+        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
+        string tempDir = Path.Join(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
         foreach (string file in new[] { "tentacle.bin", "tentacle.000" }) {
-            string source = Path.Combine(resourceDir, file);
+            string source = Path.Join(resourceDir, file);
             string target = file == "tentacle.bin" ? "tentacle.exe" : file;
-            File.Copy(source, Path.Combine(tempDir, target), overwrite: true);
+            File.Copy(source, Path.Join(tempDir, target), overwrite: true);
         }
 
-        string programPath = Path.Combine(tempDir, "tentacle.exe");
+        string programPath = Path.Join(tempDir, "tentacle.exe");
 
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
@@ -100,11 +100,11 @@ public class DosExecIntegrationTests {
 
     [Fact]
     public void ExecLoadOnly_FromSameImage_ShouldResumeAfterLoad() {
-        string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
-        string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
+        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
+        string tempDir = Path.Join(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
-        string source = Path.Combine(resourceDir, "selfload.bin");
-        string target = Path.Combine(tempDir, "selfload.exe");
+        string source = Path.Join(resourceDir, "selfload.bin");
+        string target = Path.Join(tempDir, "selfload.exe");
         File.Copy(source, target, overwrite: true);
 
         try {
