@@ -119,6 +119,11 @@ public static class WavFileFormat {
                 short right = channels == 2 ? reader.ReadInt16() : left;
                 
                 frames.Add(new AudioFrame(Int16ToFloat(left), Int16ToFloat(right)));
+            } else if (bitsPerSample == 8) {
+                byte left = reader.ReadByte();
+                byte right = channels == 2 ? reader.ReadByte() : left;
+                
+                frames.Add(new AudioFrame(UInt8ToFloat(left), UInt8ToFloat(right)));
             } else {
                 throw new NotSupportedException($"Unsupported bits per sample: {bitsPerSample}");
             }
@@ -143,5 +148,15 @@ public static class WavFileFormat {
     /// </summary>
     private static float Int16ToFloat(short sample) {
         return sample / (float)short.MaxValue;
+    }
+    
+    /// <summary>
+    /// Convert uint8 audio sample (0-255) to float (-1.0 to 1.0).
+    /// In 8-bit PCM: 0 = -1.0, 128 = 0.0, 255 = +1.0
+    /// </summary>
+    private static float UInt8ToFloat(byte sample) {
+        // Convert from [0, 255] to [-1.0, 1.0]
+        // 128 should map to 0.0 (silence)
+        return (sample - 128) / 128.0f;
     }
 }
