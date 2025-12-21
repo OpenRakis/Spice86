@@ -111,9 +111,12 @@ jobs:
           mkdir -p artifact/${{ matrix.config.rid }}/native
           cp install/lib/${{ matrix.config.lib }}* artifact/${{ matrix.config.rid }}/native/
           cd artifact/${{ matrix.config.rid }}/native
-          # Ensure consistent naming
+          # Ensure consistent naming - find the versioned file and link to it
           if [ ! -f ${{ matrix.config.lib }} ]; then
-            ln -s ${{ matrix.config.lib }}.* ${{ matrix.config.lib }}
+            VERSIONED_LIB=$(ls ${{ matrix.config.lib }}.* 2>/dev/null | head -1)
+            if [ -n "$VERSIONED_LIB" ]; then
+              ln -s "$(basename "$VERSIONED_LIB")" ${{ matrix.config.lib }}
+            fi
           fi
 
       - name: Upload artifact
