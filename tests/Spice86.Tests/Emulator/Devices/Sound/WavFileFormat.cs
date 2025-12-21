@@ -155,8 +155,8 @@ public static class WavFileFormat {
     /// In 8-bit PCM: 0 = -1.0, 128 = 0.0, 255 = +1.0
     /// </summary>
     private static float UInt8ToFloat(byte sample) {
-        // Convert from [0, 255] to [-1.0, 1.0]
-        // 128 should map to 0.0 (silence)
-        return (sample - 128) / 128.0f;
+        // Convert from [0, 255] to [-1.0, 1.0] with 128 mapped to 0.0.
+        float normalized = (sample - 128.0f) / 127.5f;
+        return Math.Clamp(normalized, -1.0f, 1.0f);
     }
 }
