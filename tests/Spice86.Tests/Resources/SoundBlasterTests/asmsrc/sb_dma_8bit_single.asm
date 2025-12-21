@@ -1,5 +1,5 @@
 ; Sound Blaster 8-bit PCM Playback Test
-; Plays 11025 Hz mono 8-bit PCM audio (440Hz sine wave, 1 second)
+; Plays 11025 Hz mono 8-bit PCM audio (440Hz sine wave, 1 second = 11025 samples)
 ; Based on DOSBox soundblaster.cpp DMA command handling
 
 use16
@@ -113,7 +113,7 @@ start:
     mov al, ah
     out dx, al              ; High byte
     
-    ; Wait for DMA transfer to complete (1 second at 11025 Hz)
+    ; Wait for DMA transfer to complete (1 second at 11025 Hz = 11025 samples)
     mov cx, 30000
 .wait_transfer:
     mov dx, 0x22E           ; DSP read-buffer status

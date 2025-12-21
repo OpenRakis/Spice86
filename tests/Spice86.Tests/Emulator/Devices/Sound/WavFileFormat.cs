@@ -151,8 +151,10 @@ public static class WavFileFormat {
     }
     
     /// <summary>
-    /// Convert uint8 audio sample (0-255) to float (-1.0 to 1.0).
-    /// In 8-bit PCM: 0 ≈ -1.0, 128 = 0.0, 255 ≈ +0.996
+    /// Convert uint8 audio sample (0-255) to float in the range [-1.0, 1.0].
+    /// Uses the formula (sample - 128.0f) / 127.5f so that 128 maps to 0.0 (silence).
+    /// For extreme values: 0 produces -1.0039 (clamped to -1.0), 255 produces +0.9961 (kept as-is).
+    /// Clamping ensures the result stays within [-1.0, 1.0] for all inputs.
     /// </summary>
     private static float UInt8ToFloat(byte sample) {
         // Convert from [0, 255] to [-1.0, 1.0] with 128 mapped to 0.0.
