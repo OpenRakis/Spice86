@@ -29,7 +29,8 @@ jobs:
           - { name: 'macOS x64', os: 'macos-13', arch: 'x86_64', rid: 'osx-x64', lib: 'libportaudio.2.dylib' }
           - { name: 'macOS ARM64', os: 'macos-14', arch: 'arm64', rid: 'osx-arm64', lib: 'libportaudio.2.dylib' }
           # Linux builds
-          - { name: 'Linux x64', os: 'ubuntu-latest', arch: 'x86_64', rid: 'linux-x64', lib: 'libportaudio.so.2' }
+          - { name: 'Linux x64', os: 'ubuntu-latest', arch: 'x86_64', rid: 'linux-x64', lib: 'libportaudio.so.2', cross_compile: false }
+          - { name: 'Linux ARM64', os: 'ubuntu-latest', arch: 'aarch64', rid: 'linux-arm64', lib: 'libportaudio.so.2', cross_compile: true }
 
     steps:
       - name: Checkout PortAudio
@@ -39,10 +40,17 @@ jobs:
           ref: ${{ env.PORTAUDIO_VERSION }}
 
       - name: Install Linux dependencies
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && !matrix.config.cross_compile
         run: |
           sudo apt-get update
           sudo apt-get install -y libasound2-dev
+
+      - name: Install Linux ARM64 cross-compilation dependencies
+        if: runner.os == 'Linux' && matrix.config.cross_compile
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libasound2-dev:arm64
 
       - name: Setup MSVC
         if: runner.os == 'Windows'
@@ -74,8 +82,8 @@ jobs:
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.config.arch }} \
             -DCMAKE_INSTALL_PREFIX=install
 
-      - name: Configure CMake (Linux)
-        if: runner.os == 'Linux'
+      - name: Configure CMake (Linux x64)
+        if: runner.os == 'Linux' && !matrix.config.cross_compile
         run: |
           cmake -B build -S . \
             -DCMAKE_BUILD_TYPE=Release \
@@ -84,6 +92,22 @@ jobs:
             -DPA_USE_ALSA=ON \
             -DPA_USE_JACK=OFF \
             -DPA_USE_OSS=OFF \
+            -DCMAKE_INSTALL_PREFIX=install
+
+      - name: Configure CMake (Linux ARM64 cross-compile)
+        if: runner.os == 'Linux' && matrix.config.cross_compile
+        run: |
+          cmake -B build -S . \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPA_BUILD_SHARED=ON \
+            -DPA_BUILD_STATIC=OFF \
+            -DPA_USE_ALSA=ON \
+            -DPA_USE_JACK=OFF \
+            -DPA_USE_OSS=OFF \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
             -DCMAKE_INSTALL_PREFIX=install
 
       - name: Build
@@ -125,6 +149,3 @@ jobs:
           name: portaudio-${{ matrix.config.rid }}
           path: artifact/
           retention-days: 90
-
-  # Note: Linux ARM64 would require cross-compilation or emulation
-  # Omitting for now as it requires more complex setup
