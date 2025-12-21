@@ -122,9 +122,8 @@ start:
     jnz .transfer_complete
     loop .wait_transfer
     
-    ; Fallback: acknowledge IRQ
-    mov dx, 0x22E
-    in al, dx
+    ; Timeout - DMA transfer did not complete
+    jmp test_failed
     
 .transfer_complete:
     ; Acknowledge IRQ
