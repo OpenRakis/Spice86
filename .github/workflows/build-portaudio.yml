@@ -152,3 +152,47 @@ jobs:
           name: portaudio-${{ matrix.config.rid }}
           path: artifact/
           retention-days: 90
+
+  commit-libraries:
+    name: Commit built libraries
+    needs: build-portaudio
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          
+      - name: Copy libraries to runtimes directory
+        run: |
+          mkdir -p src/Bufdio.Spice86/runtimes
+          for artifact in artifacts/portaudio-*; do
+            if [ -d "$artifact" ]; then
+              cp -r "$artifact"/* src/Bufdio.Spice86/runtimes/
+            fi
+          done
+          
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git add src/Bufdio.Spice86/runtimes/
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Commit and push libraries
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "ci: Update PortAudio native libraries [skip ci]"
+          git push
