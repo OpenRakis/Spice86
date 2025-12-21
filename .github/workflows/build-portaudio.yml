@@ -24,6 +24,7 @@ jobs:
         config:
           # Windows builds
           - { name: 'Windows x64', os: 'windows-latest', arch: 'x64', rid: 'win-x64', lib: 'libportaudio.dll' }
+          - { name: 'Windows x86', os: 'windows-latest', arch: 'Win32', rid: 'win-x86', lib: 'libportaudio.dll' }
           - { name: 'Windows ARM64', os: 'windows-latest', arch: 'ARM64', rid: 'win-arm64', lib: 'libportaudio.dll' }
           # macOS builds
           - { name: 'macOS x64', os: 'macos-13', arch: 'x86_64', rid: 'osx-x64', lib: 'libportaudio.2.dylib' }
@@ -62,6 +63,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           cmake -B build -S . `
+            -A ${{ matrix.config.arch }} `
             -DCMAKE_BUILD_TYPE=Release `
             -DPA_BUILD_SHARED=ON `
             -DPA_BUILD_STATIC=OFF `
@@ -71,6 +73,7 @@ jobs:
             -DPA_USE_WASAPI=ON `
             -DPA_USE_WDMKS=OFF `
             -DCMAKE_INSTALL_PREFIX=install
+
 
       - name: Configure CMake (macOS)
         if: runner.os == 'macOS'
