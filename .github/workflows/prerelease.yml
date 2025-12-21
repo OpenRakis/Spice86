@@ -10,12 +10,30 @@ permissions:
   packages: write
 
 jobs:
+  build-portaudio:
+    uses: ./.github/workflows/build-portaudio.yml
+    
   pre-release:
     name: "Pre Release"
     runs-on: "ubuntu-latest"
+    needs: build-portaudio
 
     steps:
        - uses: actions/checkout@v1
+       
+       - name: Download PortAudio artifacts
+         uses: actions/download-artifact@v4
+         with:
+           path: portaudio-artifacts
+           
+       - name: Copy PortAudio libraries to runtimes
+         run: |
+           mkdir -p src/Bufdio.Spice86/runtimes
+           for artifact in portaudio-artifacts/portaudio-*; do
+             if [ -d "$artifact" ]; then
+               cp -r "$artifact"/* src/Bufdio.Spice86/runtimes/
+             fi
+           done
 
        - name: Determine prerelease version
          run: |
