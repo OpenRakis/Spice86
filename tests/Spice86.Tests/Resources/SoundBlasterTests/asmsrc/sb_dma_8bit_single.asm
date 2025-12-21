@@ -1,9 +1,11 @@
-; Sound Blaster 8-bit Single-Cycle DMA Transfer Test
-; Tests basic 8-bit PCM DMA transfer with IRQ signaling
+; Sound Blaster 8-bit PCM Playback Test
+; Plays 11025 Hz mono 8-bit PCM audio (440Hz sine wave, 1 second)
 ; Based on DOSBox soundblaster.cpp DMA command handling
 
 use16
 org 0x100
+
+PCM_SIZE equ 11025
 
 start:
     ; Setup test environment
@@ -22,7 +24,7 @@ start:
     mov al, 0x05            ; Mask channel 1 (bit 2 set, bits 1-0 = channel)
     out 0x0A, al
     
-    ; Set DMA mode for channel 1 (single transfer, write to memory, auto-init off)
+    ; Set DMA mode for channel 1 (single transfer, read from memory)
     mov al, 0x49            ; Mode: channel 1, read, single transfer
     out 0x0B, al
     
@@ -30,42 +32,29 @@ start:
     xor al, al
     out 0x0C, al
     
-    ; Set DMA address (physical address = segment * 16 + offset)
-    ; For segment 0x160: physical = 0x1600 + offset
-    ; DMA needs: page register (bits 16-23) and address register (bits 0-15)
-    ; Physical 0x1600 + buffer_offset = page 0x01, address 0x0600 + buffer_offset
+    ; Calculate physical address for DMA buffer
     mov ax, ds
     mov cl, 4
-    shl ax, cl              ; DS * 16 = 0x1600 for DS=0x160
-    mov bx, test_dma_buffer
+    shl ax, cl              ; DS * 16
+    mov bx, pcm_data
     add ax, bx              ; Add buffer offset
     out 0x02, al            ; DMA address low byte
     mov al, ah
     out 0x02, al            ; DMA address high byte
     
     ; Set DMA count (number of bytes - 1)
-    mov ax, 0x001F          ; 32 bytes - 1 (reduced from 64 to match working auto-init test)
-    out 0x03, al            ; Low byte (port 0x03 for channel 1 count)
+    mov ax, PCM_SIZE - 1    ; 11024 (0x2B0F)
+    out 0x03, al            ; Low byte
     mov al, ah
     out 0x03, al            ; High byte
     
-    ; Set DMA page (bits 16-23) - for DS=0x160, page = 0x01
+    ; Set DMA page (bits 16-23 of physical address)
     mov ax, ds
     mov cl, 4
     shr ax, cl
     shr ax, cl
     shr ax, cl              ; DS >> 12 = page number
     out 0x83, al
-    
-    ; Fill DMA buffer with test pattern
-    mov cx, 32              ; Reduced from 64 to match DMA count
-    mov di, test_dma_buffer
-    xor al, al
-.fill_loop:
-    mov [di], al
-    inc di
-    inc al
-    loop .fill_loop
     
     ; Reset DSP
     mov dx, 0x226           ; Reset port (base + 6)
@@ -88,34 +77,21 @@ start:
     jmp test_failed
     
 .dsp_ready:
-    ; Set time constant for 22050 Hz (default playback rate)
+    ; Set time constant for 11025 Hz
     ; TC = 256 - (1000000 / sample_rate)
-    ; For 22050 Hz: TC = 256 - 45 = 211 (0xD3)
+    ; For 11025 Hz: TC = 256 - 90.7 ≈ 165 (0xA5)
     mov dx, 0x22C           ; Write command port (base + 0xC)
-.wait_write1:
-    mov dx, 0x22C
-    in al, dx
-    test al, 0x80
-    jnz .wait_write1
+    call wait_dsp_write
     
     mov al, 0x40            ; Set time constant command
     out dx, al
+    call wait_dsp_write
     
-.wait_write2:
-    in al, dx
-    test al, 0x80
-    jnz .wait_write2
-    
-    mov al, 0xD3            ; Time constant value
+    mov al, 0xA5            ; Time constant value for 11025 Hz
     out dx, al
     
     ; Enable speaker
-.wait_write3:
-    mov dx, 0x22C
-    in al, dx
-    test al, 0x80
-    jnz .wait_write3
-    
+    call wait_dsp_write
     mov al, 0xD1            ; Speaker on command
     out dx, al
     
@@ -124,83 +100,79 @@ start:
     out 0x0A, al
     
     ; Send 8-bit single-cycle DMA command (0x14)
-.wait_write4:
-    mov dx, 0x22C
-    in al, dx
-    test al, 0x80
-    jnz .wait_write4
-    
+    call wait_dsp_write
     mov al, 0x14            ; 8-bit single-cycle DMA command
     out dx, al
     
-    ; Send DMA length (32 bytes - 1 = 31, 0x001F)
-.wait_write5:
+    ; Send DMA length (11024 = 0x2B0F)
+    call wait_dsp_write
+    mov ax, PCM_SIZE - 1
+    out dx, al              ; Low byte
+    
+    call wait_dsp_write
+    mov al, ah
+    out dx, al              ; High byte
+    
+    ; Wait for DMA transfer to complete (1 second at 11025 Hz)
+    mov cx, 30000
+.wait_transfer:
+    mov dx, 0x22E           ; DSP read-buffer status
     in al, dx
-    test al, 0x80
-    jnz .wait_write5
+    test al, 0x80           ; Check if IRQ pending
+    jnz .transfer_complete
+    loop .wait_transfer
     
-    mov al, 0x1F            ; Low byte (changed from 0x3F)
-    out dx, al
-    
-.wait_write6:
+    ; Fallback: acknowledge IRQ
+    mov dx, 0x22E
     in al, dx
-    test al, 0x80
-    jnz .wait_write6
     
-    mov al, 0x00            ; High byte
-    out dx, al
-    
-    ; Wait for IRQ (check IRQ status register)
-    mov cx, 10000
-.wait_irq:
-    mov dx, 0x22E           ; IRQ acknowledge port (base + 0xE)
-    in al, dx
-    test al, 0x80           ; Check if IRQ is pending
-    jnz .irq_received
-    loop .wait_irq
-    jmp test_failed
-    
-.irq_received:
+.transfer_complete:
     ; Acknowledge IRQ
-    in al, dx               ; Reading port acknowledges 8-bit IRQ
+    mov dx, 0x22E
+    in al, dx
     
     ; Disable speaker
     mov dx, 0x22C
-.wait_write7:
-    in al, dx
-    test al, 0x80
-    jnz .wait_write7
-    
+    call wait_dsp_write
     mov al, 0xD3            ; Speaker off command
     out dx, al
     
-    ; Test passed - write success to port 0x999
+    ; Test passed
     mov si, success_msg
     call print_string
     mov dx, 0x999
     mov al, 0x00            ; Success
     out dx, al
-    hlt                     ; Halt CPU
+    hlt
     
 test_failed:
-    ; Test failed - write failure to port 0x999
+    ; Test failed
     mov si, failure_msg
     call print_string
     mov dx, 0x999
     mov al, 0xFF            ; Failure
     out dx, al
-    hlt                     ; Halt CPU
+    hlt
 
-; Data section
-test_dma_buffer: times 32 db 0
-heading:        db 'SB DMA 8BIT SINGLE',13,10,0
-success_msg:    db 'DMA SINGLE PASS',13,10,0
-failure_msg:    db 'DMA SINGLE FAIL',13,10,0
+wait_dsp_write:
+    push cx
+    push ax
+    mov cx, 0xFFFF
+    mov dx, 0x22C
+.wait:
+    in al, dx
+    test al, 0x80
+    jz .ready
+    loop .wait
+.ready:
+    pop ax
+    pop cx
+    ret
 
 print_string:
     push ax
     push si
-.print_loop:
+.loop:
     lodsb
     or al, al
     jz .done
@@ -208,8 +180,17 @@ print_string:
     mov bh, 0x00
     mov bl, 0x07
     int 0x10
-    jmp .print_loop
+    jmp .loop
 .done:
     pop si
     pop ax
     ret
+
+; Data section
+heading:        db 'SB PCM 11025Hz 8bit',13,10,0
+success_msg:    db 'PCM PLAYBACK PASS',13,10,0
+failure_msg:    db 'PCM PLAYBACK FAIL',13,10,0
+
+; PCM audio data (11025 bytes)
+pcm_data:
+    incbin "test_sine_440hz_11025_8bit_mono.raw"

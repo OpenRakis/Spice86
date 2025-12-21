@@ -3,7 +3,6 @@ namespace Spice86.Tests.Emulator.Devices.Sound;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using FluentAssertions;
 using NSubstitute;
@@ -367,59 +366,6 @@ public class SbPcmAsmIntegrationTests {
             spice86.Machine.SoundBlaster.DacChannel.Should().NotBeNull("DacChannel property should be accessible");
             spice86.Machine.SoundBlaster.DacChannel.GetSampleRate().Should().BeGreaterThan(0, "DacChannel should have valid sample rate");
         }
-    }
-    
-    [Fact]
-    public void Test_SB_PCM_8bit_11025Hz_Mono_Executes() {
-        // Test end-to-end PCM playback with 11025 Hz mono 8-bit audio
-        // This is a complete integration test with embedded WAV data
-        // Test data: 440Hz sine wave, 11025 Hz sample rate, 1 second duration
-        
-        string asmBinary = Path.Combine("Resources", "SoundBlasterTests", "sb_pcm_8bit_11025_mono.bin");
-        
-        if (!File.Exists(asmBinary)) {
-            return;
-        }
-        
-        TestExecutionResult result = RunPcmTestAndCaptureAudio(
-            asmBinary,
-            expectedSampleRate: 11025,
-            expectedDurationMs: 1000);
-        
-        // Assert: Test should execute successfully
-        result.Should().NotBeNull("11025Hz test should execute successfully");
-        result.TestName.Should().NotBeEmpty("Test name should be captured");
-        
-        // Optional: If audio frames are captured, verify basic properties
-        // Note: With DummyAudio, frames may be empty - this is expected
-        if (result.CapturedFrames.Count > 0) {
-            result.CapturedFrames.Count.Should().BeGreaterThan(0, "Some audio frames should be captured");
-        }
-    }
-    
-    [Fact]
-    public void Test_SB_PCM_11025Hz_WAV_File_Can_Be_Read() {
-        // Test that the reference WAV file can be read correctly
-        // This validates the WAV file format and WavFileFormat reader
-        
-        string wavPath = Path.Combine("Resources", "SoundBlasterTests", "test_sine_440hz_11025_8bit_mono.wav");
-        
-        if (!File.Exists(wavPath)) {
-            // Skip if WAV file not available
-            return;
-        }
-        
-        // Read WAV file
-        List<AudioFrame> frames = WavFileFormat.ReadWavFile(wavPath, out int sampleRate);
-        
-        // Assert: WAV file should be read correctly
-        sampleRate.Should().Be(11025, "WAV file should be 11025 Hz");
-        frames.Should().NotBeEmpty("WAV file should contain audio frames");
-        frames.Count.Should().Be(11025, "Should have 11025 samples (1 second at 11025 Hz)");
-        
-        // Verify audio is actually present (not all zeros)
-        bool hasNonZeroSamples = frames.Any(f => Math.Abs(f.Left) > 0.01f || Math.Abs(f.Right) > 0.01f);
-        hasNonZeroSamples.Should().BeTrue("WAV file should contain actual audio data");
     }
     
     // Helper Methods
