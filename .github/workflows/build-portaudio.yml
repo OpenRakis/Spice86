@@ -1,0 +1,127 @@
+name: Build and Cache PortAudio
+
+# This workflow builds PortAudio libraries for all target platforms
+# and caches them for use by other workflows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/build-portaudio.yml'
+
+env:
+  PORTAUDIO_VERSION: v19.7.0
+
+jobs:
+  build-portaudio:
+    name: Build PortAudio - ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          # Windows builds
+          - { name: 'Windows x64', os: 'windows-latest', arch: 'x64', rid: 'win-x64', lib: 'libportaudio.dll' }
+          - { name: 'Windows ARM64', os: 'windows-latest', arch: 'ARM64', rid: 'win-arm64', lib: 'libportaudio.dll' }
+          # macOS builds
+          - { name: 'macOS x64', os: 'macos-13', arch: 'x86_64', rid: 'osx-x64', lib: 'libportaudio.2.dylib' }
+          - { name: 'macOS ARM64', os: 'macos-14', arch: 'arm64', rid: 'osx-arm64', lib: 'libportaudio.2.dylib' }
+          # Linux builds
+          - { name: 'Linux x64', os: 'ubuntu-latest', arch: 'x86_64', rid: 'linux-x64', lib: 'libportaudio.so.2' }
+
+    steps:
+      - name: Checkout PortAudio
+        uses: actions/checkout@v4
+        with:
+          repository: PortAudio/portaudio
+          ref: ${{ env.PORTAUDIO_VERSION }}
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev
+
+      - name: Setup MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.config.arch }}
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cmake -B build -S . `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DPA_BUILD_SHARED=ON `
+            -DPA_BUILD_STATIC=OFF `
+            -DPA_USE_ASIO=OFF `
+            -DPA_USE_DS=OFF `
+            -DPA_USE_WMME=OFF `
+            -DPA_USE_WASAPI=ON `
+            -DPA_USE_WDMKS=OFF `
+            -DCMAKE_INSTALL_PREFIX=install
+
+      - name: Configure CMake (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cmake -B build -S . \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPA_BUILD_SHARED=ON \
+            -DPA_BUILD_STATIC=OFF \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.config.arch }} \
+            -DCMAKE_INSTALL_PREFIX=install
+
+      - name: Configure CMake (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cmake -B build -S . \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPA_BUILD_SHARED=ON \
+            -DPA_BUILD_STATIC=OFF \
+            -DPA_USE_ALSA=ON \
+            -DPA_USE_JACK=OFF \
+            -DPA_USE_OSS=OFF \
+            -DCMAKE_INSTALL_PREFIX=install
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Install
+        run: cmake --install build --config Release
+
+      - name: Prepare artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir -p artifact/${{ matrix.config.rid }}/native
+          cp install/bin/${{ matrix.config.lib }} artifact/${{ matrix.config.rid }}/native/
+
+      - name: Prepare artifact (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p artifact/${{ matrix.config.rid }}/native
+          cp install/lib/${{ matrix.config.lib }} artifact/${{ matrix.config.rid }}/native/
+
+      - name: Prepare artifact (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p artifact/${{ matrix.config.rid }}/native
+          cp install/lib/${{ matrix.config.lib }}* artifact/${{ matrix.config.rid }}/native/
+          cd artifact/${{ matrix.config.rid }}/native
+          # Ensure consistent naming
+          if [ ! -f ${{ matrix.config.lib }} ]; then
+            ln -s ${{ matrix.config.lib }}.* ${{ matrix.config.lib }}
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: portaudio-${{ matrix.config.rid }}
+          path: artifact/
+          retention-days: 90
+
+  # Note: Linux ARM64 would require cross-compilation or emulation
+  # Omitting for now as it requires more complex setup

@@ -16,13 +16,6 @@
             AVALONIA_TELEMETRY_OPTOUT=1
         </EnvironmentVariables>
     </PropertyGroup>
-    <ItemGroup>
-        <Content Include="libportaudio.dll">
-            <PackagePath>lib\net8.0\libportaudio.dll</PackagePath>
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-            <Pack>True</Pack>
-        </Content>
-    </ItemGroup>
     <!-- Package references -->
     <ItemGroup>
         <PackageReference Include="Avalonia" />
