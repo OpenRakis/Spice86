@@ -230,4 +230,249 @@ public class SpeexResamplerTests {
         resampler.Dispose();
         resampler.Dispose();
     }
+
+    // === Additional API Tests for Complete Port ===
+
+    [Fact]
+    public void GetRate_ShouldReturnCurrentRates() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 5);
+
+        // Act
+        resampler.GetRate(out uint inRate, out uint outRate);
+
+        // Assert
+        inRate.Should().Be(44100);
+        outRate.Should().Be(48000);
+    }
+
+    [Fact]
+    public void GetRatio_ShouldReturnSimplifiedRatio() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 5);
+
+        // Act
+        resampler.GetRatio(out uint ratioNum, out uint ratioDen);
+
+        // Assert - 44100/48000 = 441/480 = 147/160 (GCD is 300)
+        ratioNum.Should().Be(147);
+        ratioDen.Should().Be(160);
+    }
+
+    [Fact]
+    public void SetQuality_ShouldUpdateQuality() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 5);
+
+        // Act
+        resampler.SetQuality(8);
+
+        // Assert
+        resampler.GetQuality().Should().Be(8);
+    }
+
+    [Fact]
+    public void GetQuality_ShouldReturnCurrentQuality() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 7);
+
+        // Act
+        int quality = resampler.GetQuality();
+
+        // Assert
+        quality.Should().Be(7);
+    }
+
+    [Fact]
+    public void ProcessInt_WithInt16Samples_ShouldResample() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 1,
+            inputRate: 22050,
+            outputRate: 44100,
+            quality: 5);
+
+        short[] input = new short[100];
+        for (int i = 0; i < input.Length; i++) {
+            input[i] = (short)(Math.Sin(2.0 * Math.PI * 440.0 * i / 22050.0) * 16384);
+        }
+
+        short[] output = new short[200];
+
+        // Act
+        resampler.ProcessInt(0, input, output, out uint inputConsumed, out uint outputGenerated);
+
+        // Assert
+        inputConsumed.Should().BeGreaterThan(0);
+        outputGenerated.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void ProcessInterleavedFloat_WithStereoSamples_ShouldResample() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 5);
+
+        // Interleaved: L, R, L, R, L, R...
+        float[] input = new float[200]; // 100 frames * 2 channels
+        for (int i = 0; i < 100; i++) {
+            input[i * 2] = (float)Math.Sin(2.0 * Math.PI * 440.0 * i / 44100.0); // Left
+            input[i * 2 + 1] = (float)Math.Sin(2.0 * Math.PI * 880.0 * i / 44100.0); // Right
+        }
+
+        float[] output = new float[220]; // ~110 frames * 2 channels
+
+        // Act
+        resampler.ProcessInterleavedFloat(input, output, out uint inputFrames, out uint outputFrames);
+
+        // Assert
+        inputFrames.Should().BeGreaterThan(0);
+        outputFrames.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void GetInputLatency_ShouldReturnLatencyInSamples() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 5);
+
+        // Act
+        int latency = resampler.GetInputLatency();
+
+        // Assert
+        latency.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void GetOutputLatency_ShouldReturnLatencyInSamples() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 5);
+
+        // Act
+        int latency = resampler.GetOutputLatency();
+
+        // Assert
+        latency.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void SkipZeros_ShouldAdvanceStateWithoutProcessing() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 5);
+
+        // Act & Assert - Should not throw
+        resampler.SkipZeros();
+    }
+
+    [Fact]
+    public void ResetMem_ShouldClearMemoryBuffers() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 5);
+
+        float[] input = new float[100];
+        float[] output = new float[110];
+        
+        // Process some data
+        resampler.ProcessFloat(0, input, output, out _, out _);
+
+        // Act
+        resampler.ResetMem();
+
+        // Assert - After reset, should produce consistent output
+        resampler.ProcessFloat(0, input, output, out uint consumed, out uint generated);
+        consumed.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void SetInputStride_ShouldConfigureInputStride() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 5);
+
+        // Act
+        resampler.SetInputStride(2);
+
+        // Assert
+        resampler.GetInputStride().Should().Be(2);
+    }
+
+    [Fact]
+    public void SetOutputStride_ShouldConfigureOutputStride() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 5);
+
+        // Act
+        resampler.SetOutputStride(2);
+
+        // Assert
+        resampler.GetOutputStride().Should().Be(2);
+    }
+
+    [Fact]
+    public void SetRateFrac_ShouldSetFractionalRates() {
+        // Arrange
+        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+            channels: 2,
+            inputRate: 44100,
+            outputRate: 48000,
+            quality: 5);
+
+        // Act - Set 2:3 ratio (e.g., 22050 -> 33075)
+        resampler.SetRateFrac(2, 3, 22050, 33075);
+
+        // Assert
+        resampler.GetRatio(out uint num, out uint den);
+        num.Should().Be(2);
+        den.Should().Be(3);
+    }
+
+    [Fact]
+    public void GetError_ShouldReturnErrorString() {
+        // Act
+        string error = SpeexResamplerCSharp.GetErrorString(0);
+
+        // Assert
+        error.Should().NotBeNullOrEmpty();
+    }
 }

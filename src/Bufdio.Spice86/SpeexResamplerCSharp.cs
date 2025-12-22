@@ -530,6 +530,237 @@ public sealed class SpeexResamplerCSharp : IDisposable {
         }
     }
 
+    /// <summary>
+    /// Gets the current input and output sample rates.
+    /// Mirrors: speex_resampler_get_rate()
+    /// </summary>
+    public void GetRate(out uint inRate, out uint outRate) {
+        inRate = _inRate;
+        outRate = _outRate;
+    }
+
+    /// <summary>
+    /// Gets the resampling ratio as a fraction (numerator/denominator).
+    /// Mirrors: speex_resampler_get_ratio()
+    /// </summary>
+    public void GetRatio(out uint ratioNum, out uint ratioDen) {
+        ratioNum = _numRate;
+        ratioDen = _denRate;
+    }
+
+    /// <summary>
+    /// Sets the quality level (0-10).
+    /// Mirrors: speex_resampler_set_quality()
+    /// </summary>
+    public void SetQuality(int quality) {
+        if (quality < 0 || quality > 10) {
+            throw new ArgumentException("Quality must be between 0 and 10", nameof(quality));
+        }
+
+        if (_quality == quality) {
+            return;
+        }
+
+        _quality = quality;
+        UpdateFilter();
+    }
+
+    /// <summary>
+    /// Gets the current quality level.
+    /// Mirrors: speex_resampler_get_quality()
+    /// </summary>
+    public int GetQuality() {
+        return _quality;
+    }
+
+    /// <summary>
+    /// Sets the resampling rates using fractional representation.
+    /// Mirrors: speex_resampler_set_rate_frac()
+    /// </summary>
+    public void SetRateFrac(uint ratioNum, uint ratioDen, uint inRate, uint outRate) {
+        if (ratioNum == 0 || ratioDen == 0) {
+            throw new ArgumentException("Ratio numerator and denominator must be non-zero");
+        }
+
+        if (_inRate == inRate && _outRate == outRate && _numRate == ratioNum && _denRate == ratioDen) {
+            return;
+        }
+
+        _inRate = inRate;
+        _outRate = outRate;
+        _numRate = ratioNum;
+        _denRate = ratioDen;
+
+        // Calculate int/frac advance
+        uint intAdvance = ratioNum / ratioDen;
+        uint fracAdvance = ratioNum % ratioDen;
+        _intAdvance = (int)intAdvance;
+        _fracAdvance = (int)fracAdvance;
+
+        UpdateFilter();
+    }
+
+    /// <summary>
+    /// Processes integer (16-bit) samples.
+    /// Mirrors: speex_resampler_process_int()
+    /// </summary>
+    public void ProcessInt(uint channelIndex, ReadOnlySpan<short> input, Span<short> output,
+        out uint inputConsumed, out uint outputGenerated) {
+
+        if (channelIndex >= _nbChannels) {
+            throw new ArgumentException("Invalid channel index", nameof(channelIndex));
+        }
+
+        // Convert int16 to float
+        float[] floatInput = new float[input.Length];
+        for (int i = 0; i < input.Length; i++) {
+            floatInput[i] = input[i] / 32768.0f;
+        }
+
+        float[] floatOutput = new float[output.Length];
+
+        // Process as float
+        ProcessFloat(channelIndex, floatInput, floatOutput, out inputConsumed, out outputGenerated);
+
+        // Convert back to int16
+        for (int i = 0; i < (int)outputGenerated; i++) {
+            float sample = floatOutput[i] * 32768.0f;
+            if (sample > 32767.0f) {
+                sample = 32767.0f;
+            } else if (sample < -32768.0f) {
+                sample = -32768.0f;
+            }
+            output[i] = (short)sample;
+        }
+    }
+
+    /// <summary>
+    /// Processes interleaved floating-point samples.
+    /// Mirrors: speex_resampler_process_interleaved_float()
+    /// </summary>
+    public void ProcessInterleavedFloat(ReadOnlySpan<float> input, Span<float> output,
+        out uint inputFrames, out uint outputFrames) {
+
+        uint inLen = (uint)(input.Length / _nbChannels);
+        uint outLen = (uint)(output.Length / _nbChannels);
+
+        // Deinterleave, process each channel, then re-interleave
+        float[][] channelInputs = new float[_nbChannels][];
+        float[][] channelOutputs = new float[_nbChannels][];
+
+        for (uint ch = 0; ch < _nbChannels; ch++) {
+            channelInputs[ch] = new float[inLen];
+            channelOutputs[ch] = new float[outLen];
+
+            // Deinterleave input
+            for (uint i = 0; i < inLen; i++) {
+                channelInputs[ch][i] = input[(int)(i * _nbChannels + ch)];
+            }
+        }
+
+        uint minConsumed = uint.MaxValue;
+        uint minGenerated = uint.MaxValue;
+
+        // Process each channel
+        for (uint ch = 0; ch < _nbChannels; ch++) {
+            ProcessFloat(ch, channelInputs[ch], channelOutputs[ch],
+                out uint consumed, out uint generated);
+            minConsumed = Math.Min(minConsumed, consumed);
+            minGenerated = Math.Min(minGenerated, generated);
+        }
+
+        // Re-interleave output
+        for (uint i = 0; i < minGenerated; i++) {
+            for (uint ch = 0; ch < _nbChannels; ch++) {
+                output[(int)(i * _nbChannels + ch)] = channelOutputs[ch][i];
+            }
+        }
+
+        inputFrames = minConsumed;
+        outputFrames = minGenerated;
+    }
+
+    /// <summary>
+    /// Gets the algorithmic delay for input.
+    /// Mirrors: speex_resampler_get_input_latency()
+    /// </summary>
+    public int GetInputLatency() {
+        return (int)(_filtLen / 2);
+    }
+
+    /// <summary>
+    /// Gets the algorithmic delay for output.
+    /// Mirrors: speex_resampler_get_output_latency()
+    /// </summary>
+    public int GetOutputLatency() {
+        return (int)((_filtLen / 2) * _denRate / _numRate);
+    }
+
+    /// <summary>
+    /// Skips zeros at the beginning (used to reduce latency).
+    /// Mirrors: speex_resampler_skip_zeros()
+    /// </summary>
+    public void SkipZeros() {
+        for (uint i = 0; i < _nbChannels; i++) {
+            _lastSample[i] = (int)(_filtLen / 2);
+        }
+    }
+
+    /// <summary>
+    /// Resets memory buffers (same as Reset but explicit name from C API).
+    /// Mirrors: speex_resampler_reset_mem()
+    /// </summary>
+    public void ResetMem() {
+        Reset();
+    }
+
+    /// <summary>
+    /// Sets the input stride (for non-contiguous samples).
+    /// Mirrors: speex_resampler_set_input_stride()
+    /// </summary>
+    public void SetInputStride(uint stride) {
+        _inStride = (int)stride;
+    }
+
+    /// <summary>
+    /// Gets the input stride.
+    /// Mirrors: speex_resampler_get_input_stride()
+    /// </summary>
+    public uint GetInputStride() {
+        return (uint)_inStride;
+    }
+
+    /// <summary>
+    /// Sets the output stride (for non-contiguous samples).
+    /// Mirrors: speex_resampler_set_output_stride()
+    /// </summary>
+    public void SetOutputStride(uint stride) {
+        _outStride = (int)stride;
+    }
+
+    /// <summary>
+    /// Gets the output stride.
+    /// Mirrors: speex_resampler_get_output_stride()
+    /// </summary>
+    public uint GetOutputStride() {
+        return (uint)_outStride;
+    }
+
+    /// <summary>
+    /// Gets an error string for an error code.
+    /// Mirrors: speex_resampler_strerror()
+    /// </summary>
+    public static string GetErrorString(int errorCode) {
+        return errorCode switch {
+            0 => "Success",
+            1 => "Memory allocation failed",
+            2 => "Bad resampler state",
+            3 => "Invalid argument",
+            4 => "Input and output buffers overlap",
+            _ => "Unknown error"
+        };
+    }
+
     public void Dispose() {
         if (_disposed) {
             return;
