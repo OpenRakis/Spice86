@@ -12,7 +12,10 @@ using Spice86.Shared.Interfaces;
 /// Represents a single audio channel in the mixer.
 /// Mirrors DOSBox Staging's MixerChannel class.
 /// </summary>
-public sealed class MixerChannel {
+public sealed class MixerChannel : IDisposable {
+    private const uint SpeexChannels = 2; // Always use stereo for processing
+    private const int SpeexQuality = 5; // Medium quality - good balance between CPU and quality
+    
     private readonly Action<int> _handler;
     private readonly string _name;
     private readonly HashSet<ChannelFeature> _features;
@@ -42,10 +45,10 @@ public sealed class MixerChannel {
     private float _zohPos;
     private int _zohTargetRateHz;
     
-    // Speex resampler state - mirrors DOSBox Speex integration
-    // NOTE: Infrastructure ready, but Speex resampling requires batch processing
-    // which needs integration into the Mix() method for buffer-level resampling
-    private Bufdio.Spice86.SpeexResampler? _speexResampler;
+    // Speex resampler state - pure C# implementation
+    // Replaces P/Invoke version with faithful C# port
+    // Initialized once and reused throughout the channel's lifetime
+    private readonly Bufdio.Spice86.SpeexResamplerCSharp _speexResampler;
     
     // Resample method - mirrors DOSBox resample_method
     private ResampleMethod _resampleMethod = ResampleMethod.LerpUpsampleOrResample;
@@ -92,6 +95,14 @@ public sealed class MixerChannel {
         _name = name ?? throw new ArgumentNullException(nameof(name));
         _features = features ?? throw new ArgumentNullException(nameof(features));
         _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
+        
+        // Initialize Speex resampler - will be configured with correct rates when SetSampleRate is called
+        // Using default rates initially (will be updated in ConfigureResampler)
+        _speexResampler = new Bufdio.Spice86.SpeexResamplerCSharp(
+            SpeexChannels,
+            (uint)_sampleRateHz,
+            (uint)_mixerSampleRateHz,
+            SpeexQuality);
         
         // Initialize sleep/wake mechanism - mirrors DOSBox mixer.cpp:313
         _doSleep = HasFeature(ChannelFeature.Sleep);
@@ -246,11 +257,8 @@ public sealed class MixerChannel {
         _doLerpUpsample = false;
         _doZohUpsample = false;
         
-        // Dispose existing Speex resampler if any
-        if (_speexResampler != null) {
-            _speexResampler.Dispose();
-            _speexResampler = null;
-        }
+        // Update Speex resampler rates (will be used only when needed)
+        _speexResampler.SetRate((uint)_sampleRateHz, (uint)_mixerSampleRateHz);
         
         switch (_resampleMethod) {
             case ResampleMethod.LerpUpsampleOrResample:
@@ -259,7 +267,7 @@ public sealed class MixerChannel {
                     InitLerpUpsamplerState();
                 } else if (_sampleRateHz > _mixerSampleRateHz) {
                     // Use Speex for downsampling - mirrors DOSBox behavior
-                    InitSpeexResampler();
+                    LogSpeexInitialization();
                 }
                 break;
                 
@@ -269,60 +277,30 @@ public sealed class MixerChannel {
                     InitZohUpsamplerState();
                 } else if (_sampleRateHz != _mixerSampleRateHz) {
                     // Use Speex for any rate conversion after ZoH - mirrors DOSBox
-                    InitSpeexResampler();
+                    LogSpeexInitialization();
                 }
                 break;
                 
             case ResampleMethod.Resample:
                 // Speex-only resampling for all rate conversions
                 if (_sampleRateHz != _mixerSampleRateHz) {
-                    InitSpeexResampler();
+                    LogSpeexInitialization();
                 }
                 break;
         }
     }
     
     /// <summary>
-    /// Initializes the Speex resampler for high-quality rate conversion.
-    /// Mirrors DOSBox Speex initialization from mixer.cpp
-    /// NOTE: Infrastructure ready but not yet integrated into sample processing.
-    /// Requires buffer-level resampling implementation in Mix() method.
+    /// Logs Speex resampler initialization for debugging.
     /// </summary>
-    private void InitSpeexResampler() {
-        try {
-            // Always use stereo (2 channels) for processing - mirrors DOSBox approach
-            // Channel samples will be processed separately through the resampler
-            uint channels = 2;
-            
-            // Use medium quality by default - good balance between CPU and quality
-            // Mirrors DOSBox's typical Speex quality setting
-            Bufdio.Spice86.Bindings.Speex.SpeexResamplerQuality quality = 
-                Bufdio.Spice86.Bindings.Speex.SpeexResamplerQuality.Medium;
-            
-            _speexResampler = new Bufdio.Spice86.SpeexResampler(
-                channels,
-                (uint)_sampleRateHz,
-                (uint)_mixerSampleRateHz,
-                quality);
-            
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _loggerService.Debug(
-                    "MIXER: Channel {Name} initialized Speex resampler {InRate}Hz -> {OutRate}Hz (infrastructure ready, not yet active)",
-                    _name, _sampleRateHz, _mixerSampleRateHz);
-            }
-        } catch (Exception ex) {
-            // If Speex library is not available, log warning and fall back to no resampling
-            // This allows the code to run even without Speex binaries installed
-            _loggerService.Warning(
-                "MIXER: Channel {Name} failed to initialize Speex resampler: {Error}. " +
-                "Speex resampling disabled. Install libspeexdsp for high-quality resampling.",
-                _name, ex.Message);
-            
-            _speexResampler?.Dispose();
-            _speexResampler = null;
+    private void LogSpeexInitialization() {
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug(
+                "MIXER: Channel {Name} using Speex resampler (C#) {InRate}Hz -> {OutRate}Hz",
+                _name, _sampleRateHz, _mixerSampleRateHz);
         }
     }
-
+    
     /// <summary>
     /// Checks if the channel has a specific feature.
     /// </summary>
@@ -483,7 +461,7 @@ public sealed class MixerChannel {
                 
                 // Perform linear interpolation upsampling
                 ApplyLerpUpsampling(framesRequested);
-            } else if (_speexResampler?.IsInitialized == true && _sampleRateHz != _mixerSampleRateHz) {
+            } else if (_speexResampler.IsInitialized && _sampleRateHz != _mixerSampleRateHz) {
                 // Use Speex resampler for high-quality rate conversion
                 // Calculate how many input frames we need to produce the requested output
                 int inputFramesNeeded = (int)Math.Ceiling(
@@ -570,7 +548,7 @@ public sealed class MixerChannel {
     /// </summary>
     /// <param name="targetFrames">Number of output frames required</param>
     private void SpeexResampleBuffer(int targetFrames) {
-        if (_speexResampler?.IsInitialized != true) {
+        if (!_speexResampler.IsInitialized) {
             return;
         }
         
@@ -627,8 +605,8 @@ public sealed class MixerChannel {
             
             // If we didn't produce enough frames, pad with the last frame or silence
             while (AudioFrames.Count < targetFrames) {
-                AudioFrame lastFrame = AudioFrames.Count > 0 
-                    ? AudioFrames[AudioFrames.Count - 1] 
+                AudioFrame lastFrame = AudioFrames.Count > 0
+                    ? AudioFrames[AudioFrames.Count - 1]
                     : new AudioFrame(0.0f, 0.0f);
                 AudioFrames.Add(lastFrame);
             }
@@ -658,8 +636,8 @@ public sealed class MixerChannel {
             
             // Pad if necessary
             while (AudioFrames.Count < targetFrames) {
-                AudioFrame lastFrame = AudioFrames.Count > 0 
-                    ? AudioFrames[AudioFrames.Count - 1] 
+                AudioFrame lastFrame = AudioFrames.Count > 0
+                    ? AudioFrames[AudioFrames.Count - 1]
                     : new AudioFrame(0.0f, 0.0f);
                 AudioFrames.Add(lastFrame);
             }
@@ -804,15 +782,31 @@ public sealed class MixerChannel {
                 } else {
                     // Fade to silence to avoid clicks
                     const float fadeAmount = 4.0f;
-                    float nextLeft = _prevFrame.Left > fadeAmount ? _prevFrame.Left - fadeAmount :
-                                     _prevFrame.Left < -fadeAmount ? _prevFrame.Left + fadeAmount : 0.0f;
-                    float nextRight = _prevFrame.Right > fadeAmount ? _prevFrame.Right - fadeAmount :
-                                      _prevFrame.Right < -fadeAmount ? _prevFrame.Right + fadeAmount : 0.0f;
+                    
+                    float nextLeft;
+                    if (_prevFrame.Left > fadeAmount) {
+                        nextLeft = _prevFrame.Left - fadeAmount;
+                    } else if (_prevFrame.Left < -fadeAmount) {
+                        nextLeft = _prevFrame.Left + fadeAmount;
+                    } else {
+                        nextLeft = 0.0f;
+                    }
+                    
+                    float nextRight;
+                    if (_prevFrame.Right > fadeAmount) {
+                        nextRight = _prevFrame.Right - fadeAmount;
+                    } else if (_prevFrame.Right < -fadeAmount) {
+                        nextRight = _prevFrame.Right + fadeAmount;
+                    } else {
+                        nextRight = 0.0f;
+                    }
                     
                     _nextFrame = new AudioFrame(nextLeft, nextRight);
                     
-                    frameWithGain = (_lastSamplesWereStereo ? _prevFrame : new AudioFrame(_prevFrame.Left))
-                        .Multiply(_combinedVolumeGain);
+                    AudioFrame baseFrame = _lastSamplesWereStereo
+                        ? _prevFrame
+                        : new AudioFrame(_prevFrame.Left);
+                    frameWithGain = baseFrame.Multiply(_combinedVolumeGain);
                     
                     _prevFrame = _nextFrame;
                 }
@@ -1292,5 +1286,12 @@ public sealed class MixerChannel {
                    string.Equals(value, "on", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(value, "1", StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    /// <summary>
+    /// Disposes the MixerChannel and its resources.
+    /// </summary>
+    public void Dispose() {
+        _speexResampler.Dispose();
     }
 }
