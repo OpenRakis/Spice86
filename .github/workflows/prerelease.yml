@@ -24,7 +24,9 @@ jobs:
        - name: Download PortAudio artifacts
          uses: actions/download-artifact@v4
          with:
+           pattern: portaudio-*
            path: portaudio-artifacts
+           merge-multiple: true
            
        - name: Copy PortAudio libraries to runtimes
          run: |

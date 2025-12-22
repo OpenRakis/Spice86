@@ -1,15 +1,14 @@
-name: Build and Cache PortAudio
+name: Build PortAudio
 
 # This workflow builds PortAudio libraries for all target platforms
-# and caches them for use by other workflows
+# and uploads them as artifacts for use by other workflows
 
 on:
+  workflow_call:
   workflow_dispatch:
   push:
     branches:
       - master
-    paths:
-      - '.github/workflows/build-portaudio.yml'
 
 env:
   PORTAUDIO_VERSION: v19.7.0
@@ -41,13 +40,13 @@ jobs:
           ref: ${{ env.PORTAUDIO_VERSION }}
 
       - name: Install Linux dependencies
-        if: runner.os == 'Linux' && !matrix.config.cross_compile
+        if: runner.os == 'Linux' && matrix.config.cross_compile == false
         run: |
           sudo apt-get update
           sudo apt-get install -y libasound2-dev
 
       - name: Install Linux ARM64 cross-compilation dependencies
-        if: runner.os == 'Linux' && matrix.config.cross_compile
+        if: runner.os == 'Linux' && matrix.config.cross_compile == true
         run: |
           sudo dpkg --add-architecture arm64
           sudo apt-get update
@@ -73,7 +72,6 @@ jobs:
             -DPA_USE_WASAPI=ON `
             -DPA_USE_WDMKS=OFF `
             -DCMAKE_INSTALL_PREFIX=install
-
 
       - name: Configure CMake (macOS)
         if: runner.os == 'macOS'
@@ -142,7 +140,10 @@ jobs:
           if [ ! -f ${{ matrix.config.lib }} ]; then
             VERSIONED_LIB=$(ls ${{ matrix.config.lib }}.* 2>/dev/null | head -1)
             if [ -n "$VERSIONED_LIB" ]; then
-              ln -s "$(basename "$VERSIONED_LIB")" ${{ matrix.config.lib }}
+              ln -s "$(basename "$VERSIONED_LIB")" ${{ matrix.config.lib }} || {
+                echo "Failed to create symbolic link for ${{ matrix.config.lib }} pointing to $VERSIONED_LIB" >&2
+                exit 1
+              }
             fi
           fi
 
