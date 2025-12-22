@@ -5,8 +5,11 @@ on:
     pull_request
 
 jobs:
+  build-portaudio:
+    uses: ./.github/workflows/build-portaudio.yml
+    
   build:
-
+    needs: build-portaudio
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
@@ -16,6 +19,23 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    
+    - name: Download PortAudio artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: portaudio-*
+        path: portaudio-artifacts
+        merge-multiple: true
+        
+    - name: Copy PortAudio libraries to runtimes
+      shell: bash
+      run: |
+        mkdir -p src/Bufdio.Spice86/runtimes
+        for artifact in portaudio-artifacts/portaudio-*; do
+          if [ -d "$artifact" ]; then
+            cp -r "$artifact"/* src/Bufdio.Spice86/runtimes/
+          fi
+        done
       
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
