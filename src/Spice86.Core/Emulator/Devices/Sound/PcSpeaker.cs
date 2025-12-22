@@ -8,13 +8,16 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Libs.Sound.Common;
 using Spice86.Libs.Sound.Filters.IirFilters.Filters.RBJ;
 using Spice86.Shared.Interfaces;
+
+using System.Threading;
 
 /// <summary>
 ///     PC speaker device
 /// </summary>
-public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
+public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     private const int PcSpeakerPortNumber = 0x61;
 
     private const float PwmScalar = 0.5f;
@@ -37,21 +40,16 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     private const float NegativeAmplitude = -PositiveAmplitude;
     private const float MsPerPitTick = 1000.0f / PitTimer.PitTickRate;
     private static readonly int MinimumCounter = Math.Max(1, 2 * PitTimer.PitTickRate / SampleRateHz);
-    private readonly float[] _audioBuffer = new float[FramesPerBuffer * Channels];
-    private readonly DeviceThread _deviceThread;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
-    private readonly float[] _frameBuffer = new float[FramesPerBuffer];
     private readonly HighPass _highPassFilter = new();
     private readonly float[] _impulseLookup = new float[SincFilterWidth];
     private readonly ILoggerService _logger;
     private readonly LowPass _lowPassFilter = new();
-    private readonly object _outputLock = new();
+    private readonly Lock _outputLock = new();
     private readonly Queue<float> _outputQueue = new();
-
     private readonly PitState _pit = new();
-
-    private readonly SoundChannel _soundChannel;
+    private readonly MixerChannel _mixerChannel;
     private readonly EventHandler _tickHandler;
     private readonly float[] _waveform = new float[WaveformSize];
     private float _accumulator;
@@ -67,7 +65,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     /// <summary>
     ///     Initializes a new instance of the <see cref="PcSpeaker" /> class.
     /// </summary>
-    /// <param name="softwareMixer">The shared software mixer used to render output.</param>
+    /// <param name="mixer">The shared software mixer used to render output.</param>
     /// <param name="state">Machine state for registering I/O handlers.</param>
     /// <param name="ioPortDispatcher">Dispatcher used to register the speaker port.</param>
     /// <param name="pauseHandler">Handler used to honor emulator pause requests.</param>
@@ -77,7 +75,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     /// <param name="failOnUnhandledPort">Indicates whether unhandled port accesses should throw.</param>
     /// <param name="pitControl">Optional PIT control used to synchronize channel 2 output.</param>
     public PcSpeaker(
-        SoftwareMixer softwareMixer,
+        Mixer mixer,
         State state,
         IOPortDispatcher ioPortDispatcher,
         IPauseHandler pauseHandler,
@@ -91,10 +89,11 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         _scheduler = scheduler;
         _clock = clock;
         _pitControl = pitControl;
-
-        _soundChannel = softwareMixer.CreateChannel(nameof(PcSpeaker), SampleRateHz);
-        _soundChannel.Volume = 100;
-        _soundChannel.StereoSeparation = 0;
+        _mixerChannel = mixer.AddChannel(RenderCallback, SampleRateHz,
+            nameof(PcSpeaker), [ChannelFeature.Stereo]);
+        _mixerChannel.SetAppVolume(new AudioFrame(1.0f, 1.0f));
+        _mixerChannel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Left });
+        _mixerChannel.Enable(true);
 
         _highPassFilter.Setup(SampleRateHz, 120, FilterQ);
         _lowPassFilter.Setup(SampleRateHz, 4300, FilterQ);
@@ -106,13 +105,12 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
 
         _tickHandler = OnSchedulerTick;
         _scheduler.AddEvent(_tickHandler, 1.0);
-
-        _deviceThread = new DeviceThread(nameof(PcSpeaker), PlaybackLoop, pauseHandler, loggerService);
     }
 
     /// <inheritdoc />
     public void Dispose() {
         Dispose(true);
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -290,12 +288,9 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         if (_disposed) {
             return;
         }
-
         if (disposing) {
             _scheduler.RemoveEvents(_tickHandler);
-            _deviceThread.Dispose();
         }
-
         _disposed = true;
     }
 
@@ -305,11 +300,14 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         _frameCounter -= requestedFrames;
 
         if (requestedFrames > 0) {
+            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                _logger.Verbose("PCSPEAKER: Scheduler tick requestedFrames={Frames}", requestedFrames);
+            }
             PicCallback(requestedFrames);
         }
         
         // Reschedule for the next tick
-        _scheduler.AddEvent(_tickHandler, 1,0);
+        _scheduler.AddEvent(_tickHandler, 1.0);
     }
 
     private void PicCallback(int requestedFrames) {
@@ -317,6 +315,9 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
             return;
         }
 
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("PCSPEAKER: PicCallback start requestedFrames={Frames}", requestedFrames);
+        }
         ForwardPit(1.0f);
         _pit.LastIndex = 0.0f;
 
@@ -340,6 +341,10 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
             EnqueueSample(NeutralAmplitude);
             _tallyOfSilence++;
             remainingFrames--;
+        }
+
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("PCSPEAKER: PicCallback end enqueued={Frames} silenceTally={Silence}", requestedFrames, _tallyOfSilence);
         }
     }
 
@@ -517,10 +522,6 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     }
 
     private void AddImpulse(float index, float amplitude) {
-        if (!_deviceThread.Active) {
-            _pit.PreviousAmplitude = NeutralAmplitude;
-        }
-
         if (Math.Abs(amplitude - _pit.PreviousAmplitude) < 1e-6f) {
             return;
         }
@@ -576,49 +577,30 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
 
             _outputQueue.Enqueue(value);
         }
-
-        _deviceThread.StartThreadIfNeeded();
     }
 
-    private void PlaybackLoop() {
-        while (true) {
-            int framesToProcess;
-            lock (_outputLock) {
-                framesToProcess = Math.Min(_outputQueue.Count, FramesPerBuffer);
-                if (_outputQueue.Count < FramesPerBuffer) {
-                    break;
-                }
-
-                for (int i = 0; i < framesToProcess; i++) {
-                    _frameBuffer[i] = _outputQueue.Dequeue();
-                }
+    private void RenderCallback(int framesRequested) {
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("PCSPEAKER: RenderCallback framesRequested={Frames} queueCount={Count}", framesRequested, _outputQueue.Count);
+        }
+        lock (_outputLock) {
+            int framesToAdd = Math.Min(framesRequested, _outputQueue.Count);
+            
+            for (int i = 0; i < framesToAdd; i++) {
+                float sample = _outputQueue.Dequeue();
+                
+                // Apply filters
+                sample = _highPassFilter.Filter(sample);
+                sample = _lowPassFilter.Filter(sample);
+                
+                // Normalize and add to channel
+                float normalized = Math.Clamp(sample / short.MaxValue, -1.0f, 1.0f);
+                _mixerChannel.AddAudioFrames([new AudioFrame(normalized, normalized)]);
             }
-
-            if (framesToProcess == 0) {
-                break;
-            }
-
-            ApplyFiltersAndRender(framesToProcess);
         }
-    }
-
-    private void ApplyFiltersAndRender(int frames) {
-        for (int i = 0; i < frames; i++) {
-            _frameBuffer[i] = _highPassFilter.Filter(_frameBuffer[i]);
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("PCSPEAKER: RenderCallback addedFrames={Frames}", Math.Min(framesRequested, _outputQueue.Count));
         }
-
-        for (int i = 0; i < frames; i++) {
-            _frameBuffer[i] = _lowPassFilter.Filter(_frameBuffer[i]);
-        }
-
-        int sampleIndex = 0;
-        for (int i = 0; i < frames; i++) {
-            float sample = Math.Clamp(_frameBuffer[i] / short.MaxValue, -1.0f, 1.0f);
-            _audioBuffer[sampleIndex++] = sample;
-            _audioBuffer[sampleIndex++] = sample;
-        }
-
-        _soundChannel.Render(_audioBuffer.AsSpan(0, frames * Channels));
     }
 
     private float GetPicTickIndex() {

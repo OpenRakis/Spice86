@@ -204,7 +204,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The internal software mixer for all sound channels.
     /// </summary>
-    public SoftwareMixer SoftwareMixer { get; }
+    public Mixer Mixer { get; }
 
     /// <summary>
     /// The size of the conventional memory in kilobytes.
@@ -267,7 +267,7 @@ public sealed class Machine : IDisposable {
         VgaRom vgaRom,
         DmaBus dmaSystem,
         Opl3Fm opl3Fm,
-        SoftwareMixer softwareMixer,
+        Mixer mixer,
         IMouseDevice mouseDevice,
         IMouseDriver mouseDriver,
         IVgaFunctionality vgaFunctions,
@@ -306,7 +306,7 @@ public sealed class Machine : IDisposable {
         VgaRom = vgaRom;
         DmaSystem = dmaSystem;
         OPL3FM = opl3Fm;
-        SoftwareMixer = softwareMixer;
+        Mixer = mixer;
         MouseDevice = mouseDevice;
         MouseDriver = mouseDriver;
         VgaFunctions = vgaFunctions;
@@ -321,10 +321,9 @@ public sealed class Machine : IDisposable {
         if (!_disposed) {
             if (disposing) {
                 MidiDevice.Dispose();
-                SoundBlaster.Dispose();
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
-                SoftwareMixer.Dispose();
+                Mixer.Dispose();
                 RealTimeClock.Dispose();
             }
             _disposed = true;

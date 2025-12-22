@@ -1,26 +1,31 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using System;
 
 /// <summary>
-/// Represents the contents of the Interrupt Status register.
+/// Represents the interrupt status register for the SoundBlaster hardware mixer.
 /// </summary>
 [Flags]
-public enum InterruptStatus {
+public enum InterruptStatus : byte {
     /// <summary>
-    /// The register is clear.
+    /// No interrupts pending.
     /// </summary>
-    None = 0,
+    None = 0x00,
+    
     /// <summary>
-    /// An 8-bit DMA IRQ occurred.
+    /// 8-bit DMA interrupt pending (bit 0).
     /// </summary>
-    Dma8 = 1,
+    Dma8Bit = 0x01,
+    
     /// <summary>
-    /// A 16-bit DMA IRQ occurred.
+    /// 16-bit DMA interrupt pending (bit 1).
     /// </summary>
-    Dma16 = 2,
+    Dma16Bit = 0x02,
+    
     /// <summary>
-    /// An MPU-401 IRQ occurred.
+    /// MPU-401 MIDI interrupt pending (bit 2).
     /// </summary>
-    Mpu401 = 4
+    Mpu401 = 0x04
 }

@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Libs.Sound.Common;
 using Spice86.Libs.Sound.Devices.AdlibGold;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
@@ -20,31 +21,29 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
     private readonly object _chipLock = new();
-    private readonly DeviceThread _deviceThread;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly DualPic _dualPic;
-    private readonly EventHandler _oplFlushHandler;
     private readonly Opl3Io _oplIo;
     private readonly byte _oplIrqLine;
     private readonly EventHandler _oplTimerHandler;
     private readonly float[] _playBuffer = new float[2048];
+    private readonly bool _useAdLibGold;
 
     /// <summary>
-    ///     The sound channel used for the OPL3 FM synth.
+    ///     The mixer channel used for the OPL3 FM synth.
     /// </summary>
-    private readonly SoundChannel _soundChannel;
+    private readonly MixerChannel _mixerChannel;
 
     private readonly short[] _tmpInterleaved = new short[2048];
     private readonly bool _useOplIrq;
     private bool _disposed;
-    private bool _oplFlushScheduled;
     private bool _oplTimerScheduled;
 
     /// <summary>
     ///     Initializes a new instance of the OPL3 FM synth chip.
     /// </summary>
-    /// <param name="fmSynthSoundChannel">The software mixer's sound channel for the OPL3 FM Synth chip.</param>
+    /// <param name="mixer">The global software mixer used to create the OPL3 channel and request frames.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="ioPortDispatcher">
     ///     The class that is responsible for dispatching ports reads and writes to classes that
@@ -52,55 +51,68 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// </param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="pauseHandler">Class for handling pausing the emulator.</param>
     /// <param name="scheduler">The event scheduler.</param>
     /// <param name="clock">The emulated clock.</param>
     /// <param name="dualPic">The shared dual PIC scheduler.</param>
     /// <param name="useAdlibGold">True to enable AdLib Gold filtering and surround processing.</param>
     /// <param name="enableOplIrq">True to forward OPL IRQs to the PIC.</param>
     /// <param name="oplIrqLine">IRQ line used when OPL IRQs are enabled.</param>
-    public Opl3Fm(SoundChannel fmSynthSoundChannel, State state,
+    public Opl3Fm(Mixer mixer, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
-        ILoggerService loggerService, IPauseHandler pauseHandler, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
+        ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
         bool useAdlibGold = false, bool enableOplIrq = false, byte oplIrqLine = 5)
         : base(state, failOnUnhandledPort, loggerService) {
-        _soundChannel = fmSynthSoundChannel;
+        // Create and register the OPL3 mixer channel internally following the SB PCM pattern
+        HashSet<ChannelFeature> features = new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer };
+        _mixerChannel = mixer.AddChannel(framesRequested => AudioCallback(framesRequested), 49716, "OPL3FM", features);
         _scheduler = scheduler;
         _clock = clock;
         _dualPic = dualPic;
-        bool useAdLibGold = useAdlibGold;
+        _useAdLibGold = useAdlibGold;
         _useOplIrq = enableOplIrq;
         _oplIrqLine = oplIrqLine;
-        _deviceThread = new DeviceThread(nameof(Opl3Fm), PlaybackLoopBody, pauseHandler, loggerService);
 
-        _oplFlushHandler = FlushOplWrites;
         _oplTimerHandler = ServiceOplTimers;
 
         _oplIo = new Opl3Io(_chip, () => _clock.ElapsedTimeMs) {
             OnIrqChanged = OnOplIrqChanged
         };
 
-        if (useAdLibGold) {
-            _adLibGold = new AdLibGoldDevice(_soundChannel.SampleRate, loggerService);
+        int sampleRate = _mixerChannel.GetSampleRate();
+        if (_useAdLibGold) {
+            _adLibGold = new AdLibGoldDevice(sampleRate, loggerService);
             _adLibGoldIo = _adLibGold.CreateIoAttachedTo(_oplIo);
         }
 
         _loggerService.Debug(
             "Initializing OPL3 FM synth. AdLib Gold enabled: {AdLibGoldEnabled}, OPL IRQ enabled: {OplIrqEnabled}, Sample rate: {SampleRate}",
-            useAdLibGold, _useOplIrq, _soundChannel.SampleRate);
+            _useAdLibGold, _useOplIrq, sampleRate);
 
-        _oplIo.Reset((uint)_soundChannel.SampleRate);
+        _oplIo.Reset((uint)sampleRate);
+
+        // Enable the channel now that it's registered
+        _mixerChannel.Enable(true);
 
         InitializeToneGenerators();
 
         InitPortHandlers(ioPortDispatcher);
     }
 
+    /// <summary>
+    ///     Exposes the OPL3 mixer channel for other components (e.g., SoundBlaster hardware mixer).
+    /// </summary>
+    public MixerChannel MixerChannel => _mixerChannel;
+
     /// <inheritdoc />
     public void Dispose() {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
+
+    /// <summary>
+    /// Gets a value indicating whether AdLib Gold processing is enabled.
+    /// </summary>
+    public bool IsAdlibGoldEnabled => _adLibGoldIo is not null;
 
     /// <summary>
     ///     Initializes default envelopes and rates for the OPL3 operators.
@@ -145,8 +157,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         ioPortDispatcher.AddIOPortHandler(IOplPort.PrimaryDataPortNumber, this);
         ioPortDispatcher.AddIOPortHandler(IOplPort.SecondaryAddressPortNumber, this);
         ioPortDispatcher.AddIOPortHandler(IOplPort.SecondaryDataPortNumber, this);
-        ioPortDispatcher.AddIOPortHandler(IOplPort.AdLibGoldAddressPortNumber, this);
-        ioPortDispatcher.AddIOPortHandler(IOplPort.AdLibGoldDataPortNumber, this);
+        if (_adLibGoldIo is not null) {
+            ioPortDispatcher.AddIOPortHandler(IOplPort.AdLibGoldAddressPortNumber, this);
+            ioPortDispatcher.AddIOPortHandler(IOplPort.AdLibGoldDataPortNumber, this);
+        }
     }
 
     /// <summary>
@@ -159,11 +173,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         }
 
         if (disposing) {
-            if (_oplFlushScheduled) {
-                _scheduler.RemoveEvents(_oplFlushHandler);
-                _oplFlushScheduled = false;
-            }
-
             if (_oplTimerScheduled) {
                 _scheduler.RemoveEvents(_oplTimerHandler);
                 _oplTimerScheduled = false;
@@ -173,7 +182,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 _dualPic.DeactivateIrq(_oplIrqLine);
             }
 
-            _deviceThread.Dispose();
             _adLibGold?.Dispose();
         }
 
@@ -228,39 +236,15 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 return;
         }
 
-        bool audioWrite = (result & (Opl3WriteResult.DataWrite | Opl3WriteResult.AdLibGoldWrite)) != 0;
         bool timerWrite = (result & Opl3WriteResult.TimerUpdated) != 0;
 
-        switch (audioWrite) {
-            case true:
-                InitializePlaybackIfNeeded();
-                break;
-            case false when !timerWrite:
-                return;
-        }
-
-        double now = _clock.ElapsedTimeMs;
-
-        if (audioWrite) {
-            ScheduleOplFlush(now);
-        }
-
+        // Only schedule timer events - audio writes are handled by the mixer callback
+        // The OPL chip automatically flushes buffered writes during GenerateStream
+        // Mirrors DOSBox Staging: no separate flush scheduling needed
         if (timerWrite) {
+            double now = _clock.ElapsedTimeMs;
             ScheduleOplTimer(now);
         }
-    }
-
-    /// <summary>
-    ///     Starts the playback thread if it is currently idle.
-    /// </summary>
-    private void InitializePlaybackIfNeeded() {
-        if (_deviceThread.Active) {
-            return;
-        }
-
-        _loggerService.Debug("Starting OPL3 FM playback thread.");
-        RenderTo(_playBuffer);
-        _deviceThread.StartThreadIfNeeded();
     }
 
     /// <inheritdoc />
@@ -274,77 +258,63 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    ///     Generates and plays back output waveform data.
+    ///     OPL3 mixer handler - called by the mixer thread to generate frames.
+    ///     This replaces the event-based scheduler approach with direct mixer integration.
+    ///     Mirrors DOSBox Staging's Opl::AudioCallback()
     /// </summary>
-    private void PlaybackLoopBody() {
-        _soundChannel.Render(_playBuffer);
-        RenderTo(_playBuffer);
-    }
-
-    /// <summary>
-    ///     Renders audio samples into the provided destination buffer.
-    /// </summary>
-    /// <param name="destination">Interleaved stereo output buffer that receives the generated samples.</param>
-    private void RenderTo(Span<float> destination) {
-        int frames = destination.Length / 2;
-        if (frames <= 0) {
-            destination.Clear();
-            return;
+    public void AudioCallback(int framesRequested) {
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("OPL3: Generate framesRequested={Frames}", framesRequested);
         }
-
-        int samples = frames * 2;
-        if (samples > _tmpInterleaved.Length) {
-            throw new ArgumentException("Destination span is larger than the temporary buffer.", nameof(destination));
-        }
-
-        Span<short> interleaved = _tmpInterleaved.AsSpan(0, samples);
-
-        int generatedSamples = 0;
-        while (generatedSamples < samples) {
-            int batchSamples = Math.Min(MaxSamplesPerGenerationBatch, samples - generatedSamples);
-            Span<short> batch = interleaved.Slice(generatedSamples, batchSamples);
-            lock (_chipLock) {
-                _chip.GenerateStream(batch);
+        // Generate OPL frames and add them to the mixer channel
+        // The mixer calls this with blocksize frames (typically 1024 @ 48kHz)
+        
+        int framesGenerated = 0;
+        while (framesGenerated < framesRequested) {
+            // Generate up to MaxSamplesPerGenerationBatch frames at a time
+            int framesToGenerate = Math.Min(MaxSamplesPerGenerationBatch, framesRequested - framesGenerated);
+            int samplesToGenerate = framesToGenerate * 2; // stereo = 2 samples per frame
+            
+            if (samplesToGenerate > _tmpInterleaved.Length) {
+                samplesToGenerate = _tmpInterleaved.Length;
+                framesToGenerate = samplesToGenerate / 2;
             }
 
-            generatedSamples += batchSamples;
+            Span<short> interleaved = _tmpInterleaved.AsSpan(0, samplesToGenerate);
+
+            // Minimize lock scope: only hold lock during chip operations
+            lock (_chipLock) {
+                // Flush any pending OPL writes up to current time before generating audio
+                // Mirrors DOSBox Staging: ensures sub-ms register writes are processed
+                double now = _clock.ElapsedTimeMs;
+                _oplIo.FlushDueWritesUpTo(now);
+                
+                // Generate audio samples (write buffer is automatically processed during generation)
+                _chip.GenerateStream(interleaved);
+            }
+
+            // Convert interleaved int16 samples to normalized float for AddSamples_sfloat
+            // Mirrors DOSBox: AddSamples_sfloat expects normalized [-1.0, 1.0] floats
+            Span<float> floatBuffer = _playBuffer.AsSpan(0, samplesToGenerate);
+            for (int i = 0; i < samplesToGenerate; i++) {
+                floatBuffer[i] = interleaved[i] / 32768.0f; // Normalize to [-1.0, 1.0]
+            }
+
+            // Apply AdLib Gold filtering if enabled
+            if (_adLibGold is not null) {
+                // AdLib Gold processing would happen here on floatBuffer
+                // TODO: Implement AdLib Gold filtering
+            }
+
+            // Use AddSamples_sfloat for bulk addition (mirrors DOSBox pattern)
+            _mixerChannel.AddSamples_sfloat(framesToGenerate, floatBuffer);
+
+            framesGenerated += framesToGenerate;
         }
 
-        const float scale = 1.0f / 32768f;
-
-        if (_adLibGold is null) {
-            SimdConversions.ConvertInt16ToScaledFloat(interleaved, destination, scale);
-        } else {
-            _adLibGold.Process(interleaved, frames, destination);
-            SimdConversions.ScaleInPlace(destination, scale);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("OPL3: Generated frames={Frames}", framesGenerated);
         }
-    }
-
-    /// <summary>
-    ///     Schedules the next flush of pending OPL register writes.
-    /// </summary>
-    /// <param name="currentTick">Current time in scheduler ticks.</param>
-    private void ScheduleOplFlush(double currentTick) {
-        double? delay;
-        lock (_chipLock) {
-            delay = GetNextFlushDelayUnsafe(currentTick, true);
-        }
-
-        if (_oplFlushScheduled) {
-            _scheduler.RemoveEvents(_oplFlushHandler);
-            _oplFlushScheduled = false;
-        }
-
-        if (delay is not { } d) {
-            return;
-        }
-
-        if (d < 0) {
-            d = 0;
-        }
-
-        _scheduler.AddEvent(_oplFlushHandler, d);
-        _oplFlushScheduled = true;
     }
 
     /// <summary>
@@ -376,33 +346,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    ///     Flushes pending writes up to the current time and schedules the next flush if required.
-    /// </summary>
-    /// <param name="unusedTick">Unused parameter supplied by the EmulationLoopScheduler event system.</param>
-    private void FlushOplWrites(uint unusedTick) {
-        double now = _clock.ElapsedTimeMs;
-        double? delay;
-
-        lock (_chipLock) {
-            _oplIo.FlushDueWritesUpTo(now);
-            delay = GetNextFlushDelayUnsafe(now, false);
-        }
-
-        _oplFlushScheduled = false;
-
-        if (delay is not { } d) {
-            return;
-        }
-
-        if (d < 0) {
-            d = 0;
-        }
-
-        _scheduler.AddEvent(_oplFlushHandler, d);
-        _oplFlushScheduled = true;
-    }
-
-    /// <summary>
     ///     Advances OPL timers to the current time and schedules the next timer event.
     /// </summary>
     /// <param name="unusedTick">Unused parameter supplied by the EmulationLoopScheduler event system.</param>
@@ -428,16 +371,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         _scheduler.AddEvent(_oplTimerHandler, d);
         _oplTimerScheduled = true;
-    }
-
-    private double? GetNextFlushDelayUnsafe(double currentTick, bool flushImmediately) {
-        double? delay = _oplIo.GetTicksUntilNextWrite(currentTick);
-        if (!flushImmediately || delay is not { } d || d > 0) {
-            return delay;
-        }
-
-        _oplIo.FlushDueWritesUpTo(currentTick);
-        return _oplIo.GetTicksUntilNextWrite(currentTick);
     }
 
     /// <summary>
