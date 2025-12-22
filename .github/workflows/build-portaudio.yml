@@ -153,3 +153,32 @@ jobs:
           name: portaudio-${{ matrix.config.rid }}
           path: artifact/
           retention-days: 90
+  
+  # Combine all artifacts for easier download in calling workflows
+  combine-artifacts:
+    name: Combine all platform artifacts
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: portaudio-*
+          path: all-artifacts
+          
+      - name: Reorganize artifacts
+        run: |
+          mkdir -p combined/runtimes
+          for artifact_dir in all-artifacts/portaudio-*; do
+            if [ -d "$artifact_dir" ]; then
+              cp -rv "$artifact_dir"/* combined/runtimes/ || true
+            fi
+          done
+          ls -R combined/
+          
+      - name: Upload combined artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: portaudio-all
+          path: combined/runtimes/
+          retention-days: 90

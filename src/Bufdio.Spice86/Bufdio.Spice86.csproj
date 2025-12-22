@@ -31,7 +31,7 @@
     </ItemGroup>
 
     <!-- Pre-build target to build PortAudio locally if not present -->
-    <Target Name="BuildPortAudio" BeforeTargets="BeforeBuild">
+    <Target Name="BuildPortAudio" BeforeTargets="BeforeBuild" Condition="'$(CI)' != 'true'">
         <PropertyGroup>
             <PortAudioBuildScript Condition="'$(OS)' == 'Windows_NT'">$(MSBuildProjectDirectory)/../../build-portaudio-local.ps1</PortAudioBuildScript>
             <PortAudioBuildScript Condition="'$(OS)' != 'Windows_NT'">$(MSBuildProjectDirectory)/../../build-portaudio-local.sh</PortAudioBuildScript>
