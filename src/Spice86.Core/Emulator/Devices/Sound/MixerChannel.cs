@@ -42,10 +42,9 @@ public sealed class MixerChannel {
     private float _zohPos;
     private int _zohTargetRateHz;
     
-    // Speex resampler state - mirrors DOSBox Speex integration
-    // NOTE: Infrastructure ready, but Speex resampling requires batch processing
-    // which needs integration into the Mix() method for buffer-level resampling
-    private Bufdio.Spice86.SpeexResampler? _speexResampler;
+    // Speex resampler state - pure C# implementation
+    // Replaces P/Invoke version with faithful C# port
+    private Bufdio.Spice86.SpeexResamplerCSharp? _speexResampler;
     
     // Resample method - mirrors DOSBox resample_method
     private ResampleMethod _resampleMethod = ResampleMethod.LerpUpsampleOrResample;
@@ -284,9 +283,8 @@ public sealed class MixerChannel {
     
     /// <summary>
     /// Initializes the Speex resampler for high-quality rate conversion.
+    /// Now using pure C# implementation - no P/Invoke dependency.
     /// Mirrors DOSBox Speex initialization from mixer.cpp
-    /// NOTE: Infrastructure ready but not yet integrated into sample processing.
-    /// Requires buffer-level resampling implementation in Mix() method.
     /// </summary>
     private void InitSpeexResampler() {
         try {
@@ -294,12 +292,11 @@ public sealed class MixerChannel {
             // Channel samples will be processed separately through the resampler
             uint channels = 2;
             
-            // Use medium quality by default - good balance between CPU and quality
+            // Use medium quality by default (5) - good balance between CPU and quality
             // Mirrors DOSBox's typical Speex quality setting
-            Bufdio.Spice86.Bindings.Speex.SpeexResamplerQuality quality = 
-                Bufdio.Spice86.Bindings.Speex.SpeexResamplerQuality.Medium;
+            int quality = 5; // Medium quality
             
-            _speexResampler = new Bufdio.Spice86.SpeexResampler(
+            _speexResampler = new Bufdio.Spice86.SpeexResamplerCSharp(
                 channels,
                 (uint)_sampleRateHz,
                 (uint)_mixerSampleRateHz,
@@ -307,15 +304,14 @@ public sealed class MixerChannel {
             
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
                 _loggerService.Debug(
-                    "MIXER: Channel {Name} initialized Speex resampler {InRate}Hz -> {OutRate}Hz (infrastructure ready, not yet active)",
+                    "MIXER: Channel {Name} initialized Speex resampler (C#) {InRate}Hz -> {OutRate}Hz",
                     _name, _sampleRateHz, _mixerSampleRateHz);
             }
         } catch (Exception ex) {
-            // If Speex library is not available, log warning and fall back to no resampling
-            // This allows the code to run even without Speex binaries installed
+            // If initialization fails, log warning and fall back to no resampling
             _loggerService.Warning(
                 "MIXER: Channel {Name} failed to initialize Speex resampler: {Error}. " +
-                "Speex resampling disabled. Install libspeexdsp for high-quality resampling.",
+                "Speex resampling disabled.",
                 _name, ex.Message);
             
             _speexResampler?.Dispose();
