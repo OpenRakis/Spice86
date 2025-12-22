@@ -28,9 +28,8 @@ public sealed class GdbIo : IDisposable {
     /// <param name="loggerService">The logger service implementation.</param>
     public GdbIo(int port, ILoggerService loggerService) {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
-        // Listen to connections in IPv4 or IPv6
-        _tcpListener = new TcpListener(IPAddress.IPv6Any, port);
-        _tcpListener.Server.DualMode = true;
+        // Listen to connections on IPv4 for maximum platform compatibility
+        _tcpListener = new TcpListener(IPAddress.Any, port);
     }
 
     /// <summary>
