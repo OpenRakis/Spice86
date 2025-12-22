@@ -12,7 +12,7 @@ using Spice86.Shared.Interfaces;
 /// Represents a single audio channel in the mixer.
 /// Mirrors DOSBox Staging's MixerChannel class.
 /// </summary>
-public sealed class MixerChannel {
+public sealed class MixerChannel : IDisposable {
     private const uint SpeexChannels = 2; // Always use stereo for processing
     private const int SpeexQuality = 5; // Medium quality - good balance between CPU and quality
     
@@ -1270,5 +1270,12 @@ public sealed class MixerChannel {
                    string.Equals(value, "on", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(value, "1", StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    /// <summary>
+    /// Disposes the MixerChannel and its resources.
+    /// </summary>
+    public void Dispose() {
+        _speexResampler?.Dispose();
     }
 }

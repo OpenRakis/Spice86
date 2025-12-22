@@ -167,21 +167,21 @@ public sealed class SpeexResamplerCSharp : IDisposable {
     private uint _denRate;
     
     private int _quality;
-    private uint _nbChannels;
+    private readonly uint _nbChannels;
     private uint _filtLen;
     private uint _memAllocSize;
-    private uint _bufferSize;
+    private readonly uint _bufferSize;
     private int _intAdvance;
     private int _fracAdvance;
     private float _cutoff;
     private uint _oversample;
-    private bool _initialised;
+    private readonly bool _initialised;
     private bool _started;
     
     // Per-channel arrays
-    private int[] _lastSample;
-    private uint[] _sampFracNum;
-    private uint[] _magicSamples;
+    private readonly int[] _lastSample;
+    private readonly uint[] _sampFracNum;
+    private readonly uint[] _magicSamples;
     
     private float[] _mem;
     private float[]? _sincTable;
@@ -189,6 +189,9 @@ public sealed class SpeexResamplerCSharp : IDisposable {
     
     private int _inStride;
     private int _outStride;
+    
+    // Pre-allocated buffers to avoid allocations in hot paths
+    private readonly float[] _cubicInterpBuffer = new float[4];
     
     private bool _disposed;
 
@@ -289,6 +292,12 @@ public sealed class SpeexResamplerCSharp : IDisposable {
         interp[1] = 1.0 - interp[3] - interp[2] - interp[0];
 
         /*sum = frac*accum[1] + (1-frac)*accum[2];*/
+        // Bounds check: ensure ind + 3 doesn't exceed table length
+        int maxInd = func.Table.Length - 4;
+        if (ind > maxInd) {
+            ind = maxInd;
+        }
+        
         return interp[0] * func.Table[ind] + interp[1] * func.Table[ind + 1] + 
                interp[2] * func.Table[ind + 2] + interp[3] * func.Table[ind + 3];
     }
@@ -323,9 +332,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
     // UpdateFilter() - Update filter parameters and regenerate sinc table
     // Mirrors: static int update_filter(SpeexResamplerState *st)
     private void UpdateFilter() {
-        uint oldLength = _filtLen;
-        uint oldAllocSize = _memAllocSize;
-
         if (_numRate == 0 || _denRate == 0) {
             uint fact;
             uint intAdvance;
@@ -360,6 +366,7 @@ public sealed class SpeexResamplerCSharp : IDisposable {
         QualityMapping qm = QualityMap[_quality];
         _filtLen = (uint)qm.BaseLength;
         
+        // Replace ternary with if/else for better readability
         if (_numRate > _denRate) {
             // Downsampling - use downsampling bandwidth
             _cutoff = qm.DownsampleBandwidth;
@@ -377,7 +384,8 @@ public sealed class SpeexResamplerCSharp : IDisposable {
         _sincTable = new float[_sincTableLength];
         
         for (int i = 0; i < (int)_sincTableLength; i++) {
-            _sincTable[i] = Sinc(_cutoff, (float)(i / (float)_oversample - (int)_filtLen / 2), (int)_filtLen, windowFunc);
+            // Fix precision loss: use proper float division
+            _sincTable[i] = Sinc(_cutoff, (float)i / (float)_oversample - (float)_filtLen / 2.0f, (int)_filtLen, windowFunc);
         }
 
         // Allocate memory for channel state
@@ -459,19 +467,26 @@ public sealed class SpeexResamplerCSharp : IDisposable {
         }
 
         while (!(lastSample >= (int)inLen || outSample >= (int)outLen)) {
-            int offset = (int)(sampFracNum * n / denRate);
-            float frac = (float)(sampFracNum * n) / denRate - offset;
+            // Fix overflow: use double precision for phase calculation
+            double phase = (double)sampFracNum * (double)n / (double)denRate;
+            int offset = (int)phase;
+            float frac = (float)(phase - offset);
             
-            // Apply cubic interpolation
-            float[] interp = new float[4];
-            CubicCoef(frac, interp);
+            // Use pre-allocated buffer to avoid allocation in hot path
+            CubicCoef(frac, _cubicInterpBuffer);
             
             double sum = 0;
             
             // Apply sinc filter with cubic interpolation
             if (_sincTable != null) {
                 for (int j = 0; j < n; j++) {
-                    float sincVal = _sincTable[Math.Abs(offset - j) * (int)_oversample];
+                    // Bounds checking for sinc table access
+                    int sincIndex = Math.Abs(offset - j) * (int)_oversample;
+                    if (sincIndex >= _sincTableLength) {
+                        sincIndex = (int)_sincTableLength - 1;
+                    }
+                    
+                    float sincVal = _sincTable[sincIndex];
                     sum += _mem[channelOffset + n - 1 - j + lastSample] * sincVal;
                 }
             }
@@ -611,26 +626,33 @@ public sealed class SpeexResamplerCSharp : IDisposable {
             throw new ArgumentException("Invalid channel index", nameof(channelIndex));
         }
 
-        // Convert int16 to float
-        float[] floatInput = new float[input.Length];
-        for (int i = 0; i < input.Length; i++) {
-            floatInput[i] = input[i] / 32768.0f;
-        }
-
-        float[] floatOutput = new float[output.Length];
-
-        // Process as float
-        ProcessFloat(channelIndex, floatInput, floatOutput, out inputConsumed, out outputGenerated);
-
-        // Convert back to int16
-        for (int i = 0; i < (int)outputGenerated; i++) {
-            float sample = floatOutput[i] * 32768.0f;
-            if (sample > 32767.0f) {
-                sample = 32767.0f;
-            } else if (sample < -32768.0f) {
-                sample = -32768.0f;
+        // Use ArrayPool to avoid allocations in hot path
+        float[] floatInput = System.Buffers.ArrayPool<float>.Shared.Rent(input.Length);
+        float[] floatOutput = System.Buffers.ArrayPool<float>.Shared.Rent(output.Length);
+        
+        try {
+            // Convert int16 to float
+            for (int i = 0; i < input.Length; i++) {
+                floatInput[i] = input[i] / 32768.0f;
             }
-            output[i] = (short)sample;
+
+            // Process as float
+            ProcessFloat(channelIndex, floatInput.AsSpan(0, input.Length), 
+                floatOutput.AsSpan(0, output.Length), out inputConsumed, out outputGenerated);
+
+            // Convert back to int16
+            for (int i = 0; i < (int)outputGenerated; i++) {
+                float sample = floatOutput[i] * 32768.0f;
+                if (sample > 32767.0f) {
+                    sample = 32767.0f;
+                } else if (sample < -32768.0f) {
+                    sample = -32768.0f;
+                }
+                output[i] = (short)sample;
+            }
+        } finally {
+            System.Buffers.ArrayPool<float>.Shared.Return(floatInput);
+            System.Buffers.ArrayPool<float>.Shared.Return(floatOutput);
         }
     }
 
@@ -644,40 +666,53 @@ public sealed class SpeexResamplerCSharp : IDisposable {
         uint inLen = (uint)(input.Length / _nbChannels);
         uint outLen = (uint)(output.Length / _nbChannels);
 
-        // Deinterleave, process each channel, then re-interleave
+        // Use ArrayPool to avoid allocations in hot path
         float[][] channelInputs = new float[_nbChannels][];
         float[][] channelOutputs = new float[_nbChannels][];
-
-        for (uint ch = 0; ch < _nbChannels; ch++) {
-            channelInputs[ch] = new float[inLen];
-            channelOutputs[ch] = new float[outLen];
-
-            // Deinterleave input
-            for (uint i = 0; i < inLen; i++) {
-                channelInputs[ch][i] = input[(int)(i * _nbChannels + ch)];
-            }
-        }
-
-        uint minConsumed = uint.MaxValue;
-        uint minGenerated = uint.MaxValue;
-
-        // Process each channel
-        for (uint ch = 0; ch < _nbChannels; ch++) {
-            ProcessFloat(ch, channelInputs[ch], channelOutputs[ch],
-                out uint consumed, out uint generated);
-            minConsumed = Math.Min(minConsumed, consumed);
-            minGenerated = Math.Min(minGenerated, generated);
-        }
-
-        // Re-interleave output
-        for (uint i = 0; i < minGenerated; i++) {
+        
+        try {
             for (uint ch = 0; ch < _nbChannels; ch++) {
-                output[(int)(i * _nbChannels + ch)] = channelOutputs[ch][i];
+                channelInputs[ch] = System.Buffers.ArrayPool<float>.Shared.Rent((int)inLen);
+                channelOutputs[ch] = System.Buffers.ArrayPool<float>.Shared.Rent((int)outLen);
+
+                // Deinterleave input
+                for (uint i = 0; i < inLen; i++) {
+                    channelInputs[ch][i] = input[(int)(i * _nbChannels + ch)];
+                }
+            }
+
+            uint minConsumed = uint.MaxValue;
+            uint minGenerated = uint.MaxValue;
+
+            // Process each channel
+            for (uint ch = 0; ch < _nbChannels; ch++) {
+                ProcessFloat(ch, channelInputs[ch].AsSpan(0, (int)inLen), 
+                    channelOutputs[ch].AsSpan(0, (int)outLen),
+                    out uint consumed, out uint generated);
+                minConsumed = Math.Min(minConsumed, consumed);
+                minGenerated = Math.Min(minGenerated, generated);
+            }
+
+            // Re-interleave output
+            for (uint i = 0; i < minGenerated; i++) {
+                for (uint ch = 0; ch < _nbChannels; ch++) {
+                    output[(int)(i * _nbChannels + ch)] = channelOutputs[ch][i];
+                }
+            }
+
+            inputFrames = minConsumed;
+            outputFrames = minGenerated;
+        } finally {
+            // Return all rented arrays
+            for (uint ch = 0; ch < _nbChannels; ch++) {
+                if (channelInputs[ch] != null) {
+                    System.Buffers.ArrayPool<float>.Shared.Return(channelInputs[ch]);
+                }
+                if (channelOutputs[ch] != null) {
+                    System.Buffers.ArrayPool<float>.Shared.Return(channelOutputs[ch]);
+                }
             }
         }
-
-        inputFrames = minConsumed;
-        outputFrames = minGenerated;
     }
 
     /// <summary>
