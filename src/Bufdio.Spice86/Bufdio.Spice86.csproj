@@ -33,8 +33,10 @@
     <!-- Pre-build target to build PortAudio locally if not present -->
     <Target Name="BuildPortAudio" BeforeTargets="BeforeBuild" Condition="'$(CI)' != 'true'">
         <PropertyGroup>
-            <PortAudioBuildScript Condition="'$(OS)' == 'Windows_NT'">$(MSBuildProjectDirectory)/../../build-portaudio-local.ps1</PortAudioBuildScript>
-            <PortAudioBuildScript Condition="'$(OS)' != 'Windows_NT'">$(MSBuildProjectDirectory)/../../build-portaudio-local.sh</PortAudioBuildScript>
+            <PortAudioBuilderTool>$(MSBuildProjectDirectory)/../../tools/BuildPortAudio/bin/$(Configuration)/net8.0/BuildPortAudio</PortAudioBuilderTool>
+            <PortAudioBuilderTool Condition="'$(OS)' == 'Windows_NT'">$(PortAudioBuilderTool).exe</PortAudioBuilderTool>
+            <PortAudioArchArg Condition="'$(Platform)' == 'x86'">x86</PortAudioArchArg>
+            <PortAudioArchArg Condition="'$(Platform)' == 'ARM64'">arm64</PortAudioArchArg>
             <PortAudioLibPath Condition="'$(OS)' == 'Windows_NT' AND '$(Platform)' == 'ARM64'">$(MSBuildProjectDirectory)/runtimes/win-arm64/native/libportaudio.dll</PortAudioLibPath>
             <PortAudioLibPath Condition="'$(OS)' == 'Windows_NT' AND '$(Platform)' != 'ARM64' AND '$(Platform)' != 'x86'">$(MSBuildProjectDirectory)/runtimes/win-x64/native/libportaudio.dll</PortAudioLibPath>
             <PortAudioLibPath Condition="'$(OS)' == 'Windows_NT' AND '$(Platform)' == 'x86'">$(MSBuildProjectDirectory)/runtimes/win-x86/native/libportaudio.dll</PortAudioLibPath>
@@ -44,17 +46,19 @@
             <PortAudioLibPath Condition="'$(OS)' != 'Windows_NT' AND $([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux))) AND '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' != 'Arm64'">$(MSBuildProjectDirectory)/runtimes/linux-x64/native/libportaudio.so.2</PortAudioLibPath>
         </PropertyGroup>
         
-        <!-- Only build if library doesn't exist and build script exists -->
+        <!-- Build the BuildPortAudio tool if it doesn't exist -->
+        <MSBuild Projects="$(MSBuildProjectDirectory)/../../tools/BuildPortAudio/BuildPortAudio.csproj"
+                 Targets="Build"
+                 Properties="Configuration=$(Configuration)"
+                 Condition="!Exists('$(PortAudioBuilderTool)')" />
+        
+        <!-- Run the tool to build PortAudio if library doesn't exist -->
         <Message Text="Checking for PortAudio library at: $(PortAudioLibPath)" Importance="high" />
-        <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(PortAudioBuildScript)&quot;" 
-              Condition="'$(OS)' == 'Windows_NT' AND !Exists('$(PortAudioLibPath)') AND Exists('$(PortAudioBuildScript)')"
+        <Exec Command="&quot;$(PortAudioBuilderTool)&quot; $(PortAudioArchArg)" 
+              Condition="!Exists('$(PortAudioLibPath)') AND Exists('$(PortAudioBuilderTool)')"
               ContinueOnError="true"
               IgnoreExitCode="false" />
-        <Exec Command="bash &quot;$(PortAudioBuildScript)&quot;" 
-              Condition="'$(OS)' != 'Windows_NT' AND !Exists('$(PortAudioLibPath)') AND Exists('$(PortAudioBuildScript)')"
-              ContinueOnError="true"
-              IgnoreExitCode="false" />
-        <Warning Text="PortAudio library not found and build script missing. Audio may not work. Run build-portaudio-local script manually or let CI build it."
-                 Condition="!Exists('$(PortAudioLibPath)') AND !Exists('$(PortAudioBuildScript)')" />
+        <Warning Text="PortAudio library not found. Audio may not work. Build BuildPortAudio tool first or let CI build it."
+                 Condition="!Exists('$(PortAudioLibPath)') AND !Exists('$(PortAudioBuilderTool)')" />
     </Target>
 </Project>
