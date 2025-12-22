@@ -605,9 +605,12 @@ public sealed class MixerChannel : IDisposable {
             
             // If we didn't produce enough frames, pad with the last frame or silence
             while (AudioFrames.Count < targetFrames) {
-                AudioFrame lastFrame = AudioFrames.Count > 0 
-                    ? AudioFrames[AudioFrames.Count - 1] 
-                    : new AudioFrame(0.0f, 0.0f);
+                AudioFrame lastFrame;
+                if (AudioFrames.Count > 0) {
+                    lastFrame = AudioFrames[AudioFrames.Count - 1];
+                } else {
+                    lastFrame = new AudioFrame(0.0f, 0.0f);
+                }
                 AudioFrames.Add(lastFrame);
             }
             
@@ -636,9 +639,12 @@ public sealed class MixerChannel : IDisposable {
             
             // Pad if necessary
             while (AudioFrames.Count < targetFrames) {
-                AudioFrame lastFrame = AudioFrames.Count > 0 
-                    ? AudioFrames[AudioFrames.Count - 1] 
-                    : new AudioFrame(0.0f, 0.0f);
+                AudioFrame lastFrame;
+                if (AudioFrames.Count > 0) {
+                    lastFrame = AudioFrames[AudioFrames.Count - 1];
+                } else {
+                    lastFrame = new AudioFrame(0.0f, 0.0f);
+                }
                 AudioFrames.Add(lastFrame);
             }
         }
@@ -782,15 +788,34 @@ public sealed class MixerChannel : IDisposable {
                 } else {
                     // Fade to silence to avoid clicks
                     const float fadeAmount = 4.0f;
-                    float nextLeft = _prevFrame.Left > fadeAmount ? _prevFrame.Left - fadeAmount :
-                                     _prevFrame.Left < -fadeAmount ? _prevFrame.Left + fadeAmount : 0.0f;
-                    float nextRight = _prevFrame.Right > fadeAmount ? _prevFrame.Right - fadeAmount :
-                                      _prevFrame.Right < -fadeAmount ? _prevFrame.Right + fadeAmount : 0.0f;
+                    
+                    float nextLeft;
+                    if (_prevFrame.Left > fadeAmount) {
+                        nextLeft = _prevFrame.Left - fadeAmount;
+                    } else if (_prevFrame.Left < -fadeAmount) {
+                        nextLeft = _prevFrame.Left + fadeAmount;
+                    } else {
+                        nextLeft = 0.0f;
+                    }
+                    
+                    float nextRight;
+                    if (_prevFrame.Right > fadeAmount) {
+                        nextRight = _prevFrame.Right - fadeAmount;
+                    } else if (_prevFrame.Right < -fadeAmount) {
+                        nextRight = _prevFrame.Right + fadeAmount;
+                    } else {
+                        nextRight = 0.0f;
+                    }
                     
                     _nextFrame = new AudioFrame(nextLeft, nextRight);
                     
-                    frameWithGain = (_lastSamplesWereStereo ? _prevFrame : new AudioFrame(_prevFrame.Left))
-                        .Multiply(_combinedVolumeGain);
+                    AudioFrame baseFrame;
+                    if (_lastSamplesWereStereo) {
+                        baseFrame = _prevFrame;
+                    } else {
+                        baseFrame = new AudioFrame(_prevFrame.Left);
+                    }
+                    frameWithGain = baseFrame.Multiply(_combinedVolumeGain);
                     
                     _prevFrame = _nextFrame;
                 }
