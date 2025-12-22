@@ -262,7 +262,7 @@ public class SpeexResamplerTests {
         // Act
         resampler.GetRatio(out uint ratioNum, out uint ratioDen);
 
-        // Assert - 44100/48000 = 441/480 = 147/160 (GCD is 300)
+        // Assert - 44100/48000 simplified by GCD(44100, 48000) = 300 gives 147/160
         ratioNum.Should().Be(147);
         ratioDen.Should().Be(160);
     }

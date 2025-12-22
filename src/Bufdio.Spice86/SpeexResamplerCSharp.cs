@@ -366,14 +366,8 @@ public sealed class SpeexResamplerCSharp : IDisposable {
         QualityMapping qm = QualityMap[_quality];
         _filtLen = (uint)qm.BaseLength;
         
-        // Replace ternary with if/else for better readability
-        if (_numRate > _denRate) {
-            // Downsampling - use downsampling bandwidth
-            _cutoff = qm.DownsampleBandwidth;
-        } else {
-            // Upsampling - use upsampling bandwidth
-            _cutoff = qm.UpsampleBandwidth;
-        }
+        // Downsampling uses downsample bandwidth; upsampling uses upsample bandwidth
+        _cutoff = _numRate > _denRate ? qm.DownsampleBandwidth : qm.UpsampleBandwidth;
         
         _oversample = (uint)qm.Oversample;
         

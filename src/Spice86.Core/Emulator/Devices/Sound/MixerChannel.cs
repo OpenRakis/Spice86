@@ -605,12 +605,9 @@ public sealed class MixerChannel : IDisposable {
             
             // If we didn't produce enough frames, pad with the last frame or silence
             while (AudioFrames.Count < targetFrames) {
-                AudioFrame lastFrame;
-                if (AudioFrames.Count > 0) {
-                    lastFrame = AudioFrames[AudioFrames.Count - 1];
-                } else {
-                    lastFrame = new AudioFrame(0.0f, 0.0f);
-                }
+                AudioFrame lastFrame = AudioFrames.Count > 0
+                    ? AudioFrames[AudioFrames.Count - 1]
+                    : new AudioFrame(0.0f, 0.0f);
                 AudioFrames.Add(lastFrame);
             }
             
@@ -639,12 +636,9 @@ public sealed class MixerChannel : IDisposable {
             
             // Pad if necessary
             while (AudioFrames.Count < targetFrames) {
-                AudioFrame lastFrame;
-                if (AudioFrames.Count > 0) {
-                    lastFrame = AudioFrames[AudioFrames.Count - 1];
-                } else {
-                    lastFrame = new AudioFrame(0.0f, 0.0f);
-                }
+                AudioFrame lastFrame = AudioFrames.Count > 0
+                    ? AudioFrames[AudioFrames.Count - 1]
+                    : new AudioFrame(0.0f, 0.0f);
                 AudioFrames.Add(lastFrame);
             }
         }
@@ -809,12 +803,9 @@ public sealed class MixerChannel : IDisposable {
                     
                     _nextFrame = new AudioFrame(nextLeft, nextRight);
                     
-                    AudioFrame baseFrame;
-                    if (_lastSamplesWereStereo) {
-                        baseFrame = _prevFrame;
-                    } else {
-                        baseFrame = new AudioFrame(_prevFrame.Left);
-                    }
+                    AudioFrame baseFrame = _lastSamplesWereStereo
+                        ? _prevFrame
+                        : new AudioFrame(_prevFrame.Left);
                     frameWithGain = baseFrame.Multiply(_combinedVolumeGain);
                     
                     _prevFrame = _nextFrame;
@@ -1301,6 +1292,6 @@ public sealed class MixerChannel : IDisposable {
     /// Disposes the MixerChannel and its resources.
     /// </summary>
     public void Dispose() {
-        _speexResampler?.Dispose();
+        _speexResampler.Dispose();
     }
 }
