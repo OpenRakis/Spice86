@@ -33,7 +33,7 @@
     <!-- Pre-build target to build PortAudio locally if not present -->
     <Target Name="BuildPortAudio" BeforeTargets="BeforeBuild" Condition="'$(CI)' != 'true'">
         <PropertyGroup>
-            <PortAudioBuilderTool>$(MSBuildProjectDirectory)/../../tools/BuildPortAudio/bin/$(Configuration)/net8.0/BuildPortAudio</PortAudioBuilderTool>
+            <PortAudioBuilderTool>$(MSBuildProjectDirectory)/../../tools/BuildPortAudio/bin/$(Configuration)/net10.0/BuildPortAudio</PortAudioBuilderTool>
             <PortAudioBuilderTool Condition="'$(OS)' == 'Windows_NT'">$(PortAudioBuilderTool).exe</PortAudioBuilderTool>
             <PortAudioArchArg Condition="'$(Platform)' == 'x86'">x86</PortAudioArchArg>
             <PortAudioArchArg Condition="'$(Platform)' == 'ARM64'">arm64</PortAudioArchArg>
