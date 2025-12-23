@@ -10,8 +10,9 @@ internal static class Program {
         string? architecture = args.Length > 0 ? args[0] : null;
         
         try {
-            string scriptDir = AppContext.BaseDirectory;
-            string projectRoot = Path.GetFullPath(Path.Combine(scriptDir, "..", "..", ".."));
+            // Find project root by looking for the solution file
+            string currentDir = AppContext.BaseDirectory;
+            string projectRoot = FindProjectRoot(currentDir);
             string buildDir = Path.Combine(projectRoot, "build", "portaudio");
             string installDir = Path.Combine(projectRoot, "src", "Bufdio.Spice86", "runtimes");
             
@@ -19,6 +20,18 @@ internal static class Program {
             
             // Detect platform and RID
             (string rid, string libName, string cmakeArgs) = DetectPlatformAndGetConfig(architecture);
+            
+            Console.WriteLine($"Platform: {GetPlatformName()}");
+            Console.WriteLine($"RID: {rid}");
+            Console.WriteLine($"Library: {libName}");
+            
+            // Check if library already exists
+            string targetLibPath = Path.Combine(installDir, rid, "native", libName);
+            if (File.Exists(targetLibPath)) {
+                Console.WriteLine($"✓ PortAudio library already exists at: {targetLibPath}");
+                Console.WriteLine("Skipping build.");
+                return 0;
+            }
             
             Console.WriteLine($"Platform: {GetPlatformName()}");
             Console.WriteLine($"RID: {rid}");
@@ -47,6 +60,18 @@ internal static class Program {
             Console.Error.WriteLine($"Error: {ex.Message}");
             return 1;
         }
+    }
+    
+    private static string FindProjectRoot(string startPath) {
+        string? currentDir = startPath;
+        while (currentDir != null) {
+            if (File.Exists(Path.Combine(currentDir, "Spice86.sln")) ||
+                File.Exists(Path.Combine(currentDir, "src", "Spice86.sln"))) {
+                return currentDir;
+            }
+            currentDir = Directory.GetParent(currentDir)?.FullName;
+        }
+        throw new InvalidOperationException("Could not find project root (Spice86.sln)");
     }
     
     private static string GetPlatformName() {
