@@ -211,7 +211,7 @@ internal static class Program {
         
         return toolName switch {
             "cmake" => $"https://github.com/Kitware/CMake/releases/download/v{version}/cmake-{version}-{GetCMakePlatformString()}.zip",
-            "git" => $"https://github.com/git-for-windows/git/releases/download/v{version}.windows.1/PortableGit-{version}-64-bit.7z.exe",
+            "git" => $"https://github.com/git-for-windows/git/releases/download/v{version}.windows.1/MinGit-{version}-64-bit.zip",
             _ => throw new NotSupportedException($"Unknown tool: {toolName}")
         };
     }
