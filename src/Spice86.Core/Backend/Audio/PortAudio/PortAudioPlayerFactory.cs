@@ -22,19 +22,9 @@ public class PortAudioPlayerFactory {
     public PortAudioPlayerFactory(ILoggerService loggerService) => _loggerService = loggerService;
 
     private PortAudioLib LoadPortAudioLibrary() {
-        if (OperatingSystem.IsWindows() && Environment.Is64BitOperatingSystem) {
-            const string path = "libportaudio.dll";
-            if (File.Exists(path)) {
-                return new PortAudioLib(path);
-            }
-        }
-
-        if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) {
-            //rely on system-provided libportaudio.
-            return new PortAudioLib();
-        }
-
-        throw new PlatformNotSupportedException();
+        // Use .NET's RID system to automatically load the correct platform-specific library
+        // from the runtimes/{RID}/native/ directory structure
+        return new PortAudioLib();
     }
 
     /// <summary>
