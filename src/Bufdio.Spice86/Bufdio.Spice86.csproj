@@ -38,10 +38,11 @@
             <PortAudioArchArg Condition="'$(Platform)' == 'ARM64'">arm64</PortAudioArchArg>
         </PropertyGroup>
         
-        <!-- Always build and run the tool - it checks if library exists -->
-        <Message Text="Building PortAudio via BuildPortAudio tool..." Importance="high" />
+        <!-- Build and run the tool - it checks if library exists and uses cache -->
+        <Message Text="Building PortAudio via BuildPortAudio tool (current platform only)..." Importance="high" />
         <Exec Command="dotnet run --project &quot;$(PortAudioBuilderProject)&quot; --configuration $(Configuration) -- $(PortAudioArchArg)" 
               WorkingDirectory="$(MSBuildProjectDirectory)/../.."
-              ContinueOnError="true" />
+              ContinueOnError="false"
+              IgnoreExitCode="false" />
     </Target>
 </Project>

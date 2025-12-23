@@ -389,8 +389,9 @@ Knowledge/
 
 #Lost Dump files
 spice86dump*.json
-# PortAudio build artifacts
+# PortAudio build artifacts and tools cache
 build/portaudio/
+build/tools/
 src/Bufdio.Spice86/runtimes/**/native/*.dll
 src/Bufdio.Spice86/runtimes/**/native/*.so*
 src/Bufdio.Spice86/runtimes/**/native/*.dylib

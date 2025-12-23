@@ -1,12 +1,18 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.IO.Compression;
+using System.Net.Http;
 
 namespace BuildPortAudio;
 
 internal static class Program {
     private const string PortAudioVersion = "v19.7.0";
+    private const string CMakeVersion = "3.28.1";
+    private const string GitVersion = "2.43.0";
     
-    private static int Main(string[] args) {
+    private static readonly HttpClient HttpClient = new();
+    
+    private static async Task<int> Main(string[] args) {
         string? architecture = args.Length > 0 ? args[0] : null;
         
         try {
@@ -14,50 +20,63 @@ internal static class Program {
             string currentDir = AppContext.BaseDirectory;
             string projectRoot = FindProjectRoot(currentDir);
             string buildDir = Path.Combine(projectRoot, "build", "portaudio");
+            string toolsDir = Path.Combine(projectRoot, "build", "tools");
             string installDir = Path.Combine(projectRoot, "src", "Bufdio.Spice86", "runtimes");
             
-            Console.WriteLine($"Building PortAudio {PortAudioVersion} for local development...");
+            Console.WriteLine($"Building PortAudio {PortAudioVersion} for {GetPlatformName()}...");
             
             // Detect platform and RID
             (string rid, string libName, string cmakeArgs) = DetectPlatformAndGetConfig(architecture);
             
             Console.WriteLine($"Platform: {GetPlatformName()}");
             Console.WriteLine($"RID: {rid}");
-            Console.WriteLine($"Library: {libName}");
+            Console.WriteLine($"Architecture: {RuntimeInformation.OSArchitecture}");
             
-            // Check if library already exists
+            // Check if library already exists (cached build result)
             string targetLibPath = Path.Combine(installDir, rid, "native", libName);
             if (File.Exists(targetLibPath)) {
-                Console.WriteLine($"✓ PortAudio library already exists at: {targetLibPath}");
-                Console.WriteLine("Skipping build.");
+                Console.WriteLine($"✓ PortAudio library already cached at: {targetLibPath}");
+                Console.WriteLine("Skipping build (using cached library).");
                 return 0;
             }
             
-            Console.WriteLine($"Platform: {GetPlatformName()}");
-            Console.WriteLine($"RID: {rid}");
-            Console.WriteLine($"Library: {libName}");
+            Console.WriteLine("Library not found in cache. Building from source...");
             
-            // Check dependencies
-            CheckDependencies();
+            // Ensure build tools are available (download if needed)
+            string cmakePath = await EnsureToolAvailable(toolsDir, "cmake", CMakeVersion);
+            string gitPath = await EnsureToolAvailable(toolsDir, "git", GitVersion);
             
-            // Clone PortAudio if needed
-            ClonePortAudioIfNeeded(buildDir);
+            // Clone PortAudio if needed (cache source)
+            await ClonePortAudioIfNeeded(buildDir, gitPath);
+            
+            // Check for platform-specific dependencies
+            CheckPlatformDependencies();
             
             // Build PortAudio
-            BuildPortAudio(buildDir, cmakeArgs);
+            BuildPortAudio(buildDir, cmakeArgs, cmakePath);
             
             // Copy to runtimes directory
             CopyLibraryToRuntimes(buildDir, installDir, rid, libName);
             
             Console.WriteLine();
-            Console.WriteLine("✓ PortAudio built successfully!");
+            Console.WriteLine("✓ PortAudio built successfully and cached!");
             Console.WriteLine($"✓ Library installed to: {Path.Combine(installDir, rid, "native")}");
             Console.WriteLine();
-            Console.WriteLine("You can now build and debug Spice86 with audio support.");
             
             return 0;
         } catch (Exception ex) {
+            Console.Error.WriteLine();
+            Console.Error.WriteLine("╔═══════════════════════════════════════════════════╗");
+            Console.Error.WriteLine("║  ERROR: Failed to build PortAudio                 ║");
+            Console.Error.WriteLine("╚═══════════════════════════════════════════════════╝");
+            Console.Error.WriteLine();
             Console.Error.WriteLine($"Error: {ex.Message}");
+            if (ex.InnerException != null) {
+                Console.Error.WriteLine($"Details: {ex.InnerException.Message}");
+            }
+            Console.Error.WriteLine();
+            Console.Error.WriteLine("This build failure will stop the compilation.");
+            Console.Error.WriteLine();
             return 1;
         }
     }
@@ -145,15 +164,96 @@ internal static class Program {
         return (rid, "libportaudio.2.dylib", cmakeArgs);
     }
     
-    private static void CheckDependencies() {
-        if (!IsCommandAvailable("cmake")) {
-            throw new InvalidOperationException("CMake is not installed. Please install CMake first.");
+    private static async Task<string> EnsureToolAvailable(string toolsDir, string toolName, string version) {
+        string toolDir = Path.Combine(toolsDir, toolName);
+        string markerFile = Path.Combine(toolDir, $".version-{version}");
+        
+        // Check if tool is already cached
+        if (File.Exists(markerFile)) {
+            Console.WriteLine($"✓ {toolName} {version} found in cache");
+            return GetToolExecutable(toolDir, toolName);
         }
         
-        if (!IsCommandAvailable("git")) {
-            throw new InvalidOperationException("Git is not installed. Please install Git first.");
+        Console.WriteLine($"Downloading {toolName} {version}...");
+        Directory.CreateDirectory(toolDir);
+        
+        string downloadUrl = GetToolDownloadUrl(toolName, version);
+        string downloadPath = Path.Combine(toolsDir, $"{toolName}-{version}.zip");
+        
+        try {
+            // Download tool
+            using (HttpResponseMessage response = await HttpClient.GetAsync(downloadUrl)) {
+                response.EnsureSuccessStatusCode();
+                await using FileStream fs = File.Create(downloadPath);
+                await response.Content.CopyToAsync(fs);
+            }
+            
+            // Extract tool
+            Console.WriteLine($"Extracting {toolName}...");
+            ZipFile.ExtractToDirectory(downloadPath, toolDir, overwriteFiles: true);
+            
+            // Create version marker
+            await File.WriteAllTextAsync(markerFile, version);
+            
+            // Cleanup download
+            File.Delete(downloadPath);
+            
+            Console.WriteLine($"✓ {toolName} {version} installed and cached");
+            return GetToolExecutable(toolDir, toolName);
+        } catch (Exception ex) {
+            throw new InvalidOperationException($"Failed to download/extract {toolName}: {ex.Message}", ex);
+        }
+    }
+    
+    private static string GetToolDownloadUrl(string toolName, string version) {
+        string platform = GetPlatformName().ToLower();
+        string arch = RuntimeInformation.OSArchitecture.ToString().ToLower();
+        
+        return toolName switch {
+            "cmake" => $"https://github.com/Kitware/CMake/releases/download/v{version}/cmake-{version}-{GetCMakePlatformString()}.zip",
+            "git" => $"https://github.com/git-for-windows/git/releases/download/v{version}.windows.1/PortableGit-{version}-64-bit.7z.exe",
+            _ => throw new NotSupportedException($"Unknown tool: {toolName}")
+        };
+    }
+    
+    private static string GetCMakePlatformString() {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            return RuntimeInformation.OSArchitecture == Architecture.X64 ? "windows-x86_64" : "windows-i386";
+        }
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+            return RuntimeInformation.OSArchitecture == Architecture.X64 ? "linux-x86_64" : "linux-aarch64";
+        }
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+            return "macos-universal";
+        }
+        throw new PlatformNotSupportedException();
+    }
+    
+    private static string GetToolExecutable(string toolDir, string toolName) {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            string exeName = toolName == "cmake" ? "cmake.exe" : "git.exe";
+            string binPath = Path.Combine(toolDir, "bin", exeName);
+            if (File.Exists(binPath)) return binPath;
+            
+            // Try cmake-x.x.x-platform/bin structure
+            foreach (string dir in Directory.GetDirectories(toolDir)) {
+                binPath = Path.Combine(dir, "bin", exeName);
+                if (File.Exists(binPath)) return binPath;
+            }
+        } else {
+            string binPath = Path.Combine(toolDir, "bin", toolName);
+            if (File.Exists(binPath)) return binPath;
+            
+            foreach (string dir in Directory.GetDirectories(toolDir)) {
+                binPath = Path.Combine(dir, "bin", toolName);
+                if (File.Exists(binPath)) return binPath;
+            }
         }
         
+        throw new FileNotFoundException($"{toolName} executable not found in {toolDir}");
+    }
+    
+    private static void CheckPlatformDependencies() {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
             Console.WriteLine("Checking for ALSA development libraries...");
             if (!IsCommandAvailable("pkg-config") || !RunCommand("pkg-config", "--exists alsa", quiet: true)) {
@@ -182,35 +282,36 @@ internal static class Program {
         }
     }
     
-    private static void ClonePortAudioIfNeeded(string buildDir) {
+    private static async Task ClonePortAudioIfNeeded(string buildDir, string gitPath) {
         if (Directory.Exists(buildDir)) {
-            Console.WriteLine("PortAudio repository already exists.");
+            Console.WriteLine("✓ PortAudio source already cached.");
             return;
         }
         
         Console.WriteLine("Cloning PortAudio repository...");
         Directory.CreateDirectory(Path.GetDirectoryName(buildDir)!);
         
-        if (!RunCommand("git", $"clone --depth 1 --branch {PortAudioVersion} https://github.com/PortAudio/portaudio.git \"{buildDir}\"")) {
+        if (!RunCommand(gitPath, $"clone --depth 1 --branch {PortAudioVersion} https://github.com/PortAudio/portaudio.git \"{buildDir}\"")) {
             throw new InvalidOperationException("Failed to clone PortAudio repository");
         }
+        Console.WriteLine("✓ PortAudio source cached");
     }
     
-    private static void BuildPortAudio(string buildDir, string cmakeArgs) {
+    private static void BuildPortAudio(string buildDir, string cmakeArgs, string cmakePath) {
         string buildSubDir = Path.Combine(buildDir, "build");
         
         Console.WriteLine("Configuring CMake...");
-        if (!RunCommand("cmake", $"-B \"{buildSubDir}\" -S \"{buildDir}\" {cmakeArgs} -DCMAKE_INSTALL_PREFIX=install", buildDir)) {
+        if (!RunCommand(cmakePath, $"-B \"{buildSubDir}\" -S \"{buildDir}\" {cmakeArgs} -DCMAKE_INSTALL_PREFIX=install", buildDir)) {
             throw new InvalidOperationException("CMake configuration failed");
         }
         
-        Console.WriteLine("Building...");
-        if (!RunCommand("cmake", $"--build \"{buildSubDir}\" --config Release", buildDir)) {
+        Console.WriteLine("Building PortAudio...");
+        if (!RunCommand(cmakePath, $"--build \"{buildSubDir}\" --config Release", buildDir)) {
             throw new InvalidOperationException("Build failed");
         }
         
-        Console.WriteLine("Installing...");
-        if (!RunCommand("cmake", $"--install \"{buildSubDir}\" --config Release", buildDir)) {
+        Console.WriteLine("Installing PortAudio...");
+        if (!RunCommand(cmakePath, $"--install \"{buildSubDir}\" --config Release", buildDir)) {
             throw new InvalidOperationException("Installation failed");
         }
     }
