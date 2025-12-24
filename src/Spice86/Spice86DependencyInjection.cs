@@ -79,6 +79,7 @@ public class Spice86DependencyInjection : IDisposable {
     public FunctionCatalogue FunctionCatalogue { get; }
 
     private readonly McpStdioTransport _mcpStdioTransport;
+    private readonly McpHttpTransport _mcpHttpTransport;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -566,7 +567,8 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         McpServer mcpServer = new(memory, state, functionCatalogue, cfgCpu, 
-            ioPortDispatcher, vgaRenderer, pauseHandler, dos.Ems, xms, loggerService);
+            ioPortDispatcher, vgaRenderer, pauseHandler, dos.Ems, xms,
+            emulatorBreakpointsManager, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("MCP server created...");
@@ -579,8 +581,11 @@ public class Spice86DependencyInjection : IDisposable {
         McpStdioTransport mcpStdioTransport = new(mcpServer, loggerService);
         mcpStdioTransport.Start();
 
+        McpHttpTransport mcpHttpTransport = new(mcpServer, loggerService);
+        mcpHttpTransport.Start();
+
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("MCP stdio transport started...");
+            loggerService.Information("MCP transports started (Stdio and HTTP)");
         }
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -591,6 +596,7 @@ public class Spice86DependencyInjection : IDisposable {
         ProgramExecutor = programExecutor;
         McpServer = mcpServer;
         _mcpStdioTransport = mcpStdioTransport;
+        _mcpHttpTransport = mcpHttpTransport;
         ProgramExecutor.EmulationStopped += OnProgramExecutorEmulationStopped;
 
         if (mainWindow != null && uiDispatcher != null &&
@@ -726,6 +732,7 @@ public class Spice86DependencyInjection : IDisposable {
                 ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
 
                 _mcpStdioTransport.Stop();
+                _mcpHttpTransport.Dispose();
 
                 ProgramExecutor.Dispose();
 

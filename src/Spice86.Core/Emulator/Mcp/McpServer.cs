@@ -7,6 +7,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
@@ -27,6 +29,7 @@ using Spice86.Core.Emulator.Mcp.Schema;
 /// MCP server exposing emulator inspection and control tools.
 /// </summary>
 public sealed class McpServer : IMcpServer {
+    public event EventHandler<string>? OnNotification;
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly FunctionCatalogue _functionCatalogue;
@@ -37,13 +40,16 @@ public sealed class McpServer : IMcpServer {
     private readonly ExpandedMemoryManager? _emsManager;
     private readonly ExtendedMemoryManager? _xmsManager;
     private readonly ILoggerService _loggerService;
+    private readonly EmulatorBreakpointsManager _breakpointsManager;
     private readonly Tool[] _tools;
     private readonly object _requestLock = new object();
+    private readonly Dictionary<string, BreakPoint> _mcpBreakpoints = new();
+    private int _nextBreakpointId = 1;
 
     public McpServer(IMemory memory, State state, FunctionCatalogue functionCatalogue, CfgCpu cfgCpu,
         IOPortDispatcher ioPortDispatcher, IVgaRenderer vgaRenderer, 
         IPauseHandler pauseHandler, ExpandedMemoryManager? emsManager, ExtendedMemoryManager? xmsManager,
-        ILoggerService loggerService) {
+        EmulatorBreakpointsManager breakpointsManager, ILoggerService loggerService) {
         _memory = memory;
         _state = state;
         _functionCatalogue = functionCatalogue;
@@ -53,6 +59,7 @@ public sealed class McpServer : IMcpServer {
         _pauseHandler = pauseHandler;
         _emsManager = emsManager;
         _xmsManager = xmsManager;
+        _breakpointsManager = breakpointsManager;
         _loggerService = loggerService;
         _tools = CreateTools();
     }
@@ -96,13 +103,28 @@ public sealed class McpServer : IMcpServer {
             },
             new Tool {
                 Name = "pause_emulator",
-                Description = "Pause emulator",
+                Description = "Immediately stop the emulation. Use this to inspect state at an arbitrary point.",
                 InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
             },
             new Tool {
                 Name = "resume_emulator",
-                Description = "Resume emulator",
+                Description = "Resume continuous execution of the emulator. Also known as 'go'.",
                 InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+            },
+            new Tool {
+                Name = "go",
+                Description = "Alias for resume_emulator. Resumes continuous execution.",
+                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+            },
+            new Tool {
+                Name = "step",
+                Description = "Execute exactly one CPU instruction and then pause again. Useful for trace analysis.",
+                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+            },
+            new Tool {
+                Name = "read_stack",
+                Description = "Read the top values of the stack (SS:SP). Returns addresses and 16-bit values.",
+                InputSchema = ConvertToJsonElement(CreateReadStackInputSchema())
             }
         };
 
@@ -112,31 +134,51 @@ public sealed class McpServer : IMcpServer {
             InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
         });
 
-        if (_emsManager != null) {
-            tools.Add(new Tool {
-                Name = "query_ems",
-                Description = "Query EMS (Expanded Memory Manager) state",
-                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
-            });
-            tools.Add(new Tool {
-                Name = "read_ems_memory",
-                Description = "Read EMS (Expanded Memory) from a specific handle and page",
-                InputSchema = ConvertToJsonElement(CreateEmsMemoryReadInputSchema())
-            });
-        }
+        tools.Add(new Tool {
+            Name = "query_ems",
+            Description = "Query EMS (Expanded Memory Manager) state",
+            InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+        });
+        tools.Add(new Tool {
+            Name = "read_ems_memory",
+            Description = "Read EMS (Expanded Memory) from a specific handle and page",
+            InputSchema = ConvertToJsonElement(CreateEmsMemoryReadInputSchema())
+        });
 
-        if (_xmsManager != null) {
-            tools.Add(new Tool {
-                Name = "query_xms",
-                Description = "Query XMS (Extended Memory Manager) state",
-                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
-            });
-            tools.Add(new Tool {
-                Name = "read_xms_memory",
-                Description = "Read XMS (Extended Memory) from a specific handle",
-                InputSchema = ConvertToJsonElement(CreateXmsMemoryReadInputSchema())
-            });
-        }
+        tools.Add(new Tool {
+            Name = "query_xms",
+            Description = "Query XMS (Extended Memory Manager) state",
+            InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+        });
+        tools.Add(new Tool {
+            Name = "read_xms_memory",
+            Description = "Read XMS (Extended Memory) from a specific handle",
+            InputSchema = ConvertToJsonElement(CreateXmsMemoryReadInputSchema())
+        });
+
+        tools.Add(new Tool {
+            Name = "add_breakpoint",
+            Description = "Add a breakpoint (execution, memory, or IO)",
+            InputSchema = ConvertToJsonElement(CreateAddBreakpointInputSchema())
+        });
+
+        tools.Add(new Tool {
+            Name = "list_breakpoints",
+            Description = "List all MCP-managed breakpoints",
+            InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+        });
+
+        tools.Add(new Tool {
+            Name = "remove_breakpoint",
+            Description = "Remove an MCP-managed breakpoint by ID",
+            InputSchema = ConvertToJsonElement(CreateRemoveBreakpointInputSchema())
+        });
+        
+        tools.Add(new Tool {
+            Name = "clear_breakpoints",
+            Description = "Remove ALL breakpoints currently managed by the MCP server.",
+            InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+        });
 
         return tools.ToArray();
     }
@@ -246,10 +288,17 @@ public sealed class McpServer : IMcpServer {
                     "screenshot" => TakeScreenshot(),
                     "pause_emulator" => PauseEmulator(),
                     "resume_emulator" => ResumeEmulator(),
+                    "go" => ResumeEmulator(),
+                    "step" => Step(),
+                    "read_stack" => ReadStack(argumentsElement),
                     "query_ems" => QueryEms(),
-                    "query_xms" => QueryXms(),
                     "read_ems_memory" => ReadEmsMemory(argumentsElement),
+                    "query_xms" => QueryXms(),
                     "read_xms_memory" => ReadXmsMemory(argumentsElement),
+                    "add_breakpoint" => AddBreakpoint(argumentsElement),
+                    "list_breakpoints" => ListBreakpoints(),
+                    "remove_breakpoint" => RemoveBreakpoint(argumentsElement),
+                    "clear_breakpoints" => ClearBreakpoints(),
                     _ => throw new McpMethodNotFoundException(toolName)
                 };
 
@@ -486,6 +535,57 @@ public sealed class McpServer : IMcpServer {
         }
         _pauseHandler.Resume();
         return new EmulatorControlResponse { Success = true, Message = "Resumed" };
+    }
+
+    private EmulatorControlResponse Step() {
+        if (!_pauseHandler.IsPaused) {
+             _pauseHandler.RequestPause("Step requested while running");
+        }
+
+        string id = "step-" + _nextBreakpointId++;
+        
+        Action<BreakPoint> onReached = (bp) => {
+            _pauseHandler.RequestPause($"Single step hit");
+            SendBreakpointHitNotification(id, bp);
+        };
+
+        // One-shot unconditional breakpoint for the next execution
+        UnconditionalBreakPoint stepBp = new(BreakPointType.CPU_EXECUTION_ADDRESS, onReached, true);
+        _breakpointsManager.ToggleBreakPoint(stepBp, true);
+
+        _pauseHandler.Resume();
+        
+        return new EmulatorControlResponse { Success = true, Message = "Stepping..." };
+    }
+
+    private StackResponse ReadStack(JsonElement? arguments) {
+        int count = 10;
+        if (arguments != null && arguments.Value.TryGetProperty("count", out JsonElement countElem)) {
+            count = countElem.GetInt32();
+        }
+
+        if (count <= 0 || count > 100) {
+            throw new McpInvalidParametersException("Count must be between 1 and 100");
+        }
+
+        ushort ss = _state.SS;
+        ushort sp = _state.SP;
+        uint baseAddress = (uint)(ss << 4) + sp;
+        
+        List<StackValue> values = new();
+        for (int i = 0; i < count; i++) {
+            uint addr = baseAddress + (uint)(i * 2);
+            if (addr + 1 >= _memory.Length) break;
+            
+            ushort val = _memory.UInt16[addr];
+            values.Add(new StackValue { Address = addr, Value = val });
+        }
+
+        return new StackResponse {
+            Ss = ss,
+            Sp = sp,
+            Values = values
+        };
     }
 
     private EmsStateResponse QueryEms() {
@@ -770,6 +870,148 @@ public sealed class McpServer : IMcpServer {
                 }
             },
             Required = new string[] { "handle", "offset", "length" }
+        };
+    }
+
+    private BreakpointInfo AddBreakpoint(JsonElement? arguments) {
+        if (!arguments.HasValue) {
+            throw new McpInvalidParametersException("Missing arguments for add_breakpoint");
+        }
+
+        JsonElement args = arguments.Value;
+        if (!args.TryGetProperty("address", out JsonElement addrElem)) {
+            throw new McpInvalidParametersException("Missing address");
+        }
+        if (!args.TryGetProperty("type", out JsonElement typeElem)) {
+            throw new McpInvalidParametersException("Missing type");
+        }
+
+        long address = addrElem.GetInt64();
+        string typeStr = typeElem.GetString() ?? "";
+        if (!Enum.TryParse(typeStr, out BreakPointType type)) {
+            throw new McpInvalidParametersException($"Invalid breakpoint type: {typeStr}");
+        }
+
+        string? condition = args.TryGetProperty("condition", out JsonElement condElem) ? condElem.GetString() : null;
+
+        string id = _nextBreakpointId++.ToString();
+        
+        Action<BreakPoint> onReached = (bp) => {
+            _pauseHandler.RequestPause($"MCP Breakpoint {id} hit");
+            SendBreakpointHitNotification(id, bp);
+        };
+
+        BreakPoint breakPoint;
+        if (string.IsNullOrWhiteSpace(condition)) {
+            breakPoint = new AddressBreakPoint(type, address, onReached, false);
+        } else {
+            try {
+                BreakpointConditionCompiler compiler = new(_state, _memory as Memory ?? throw new InvalidOperationException("Memory must be of type Memory"));
+                Func<long, bool> compiledCondition = compiler.Compile(condition);
+                breakPoint = new AddressBreakPoint(type, address, onReached, false, compiledCondition, condition);
+            } catch (Exception ex) {
+                throw new McpInvalidParametersException($"Failed to compile condition: {ex.Message}");
+            }
+        }
+
+        _breakpointsManager.ToggleBreakPoint(breakPoint, true);
+        _mcpBreakpoints[id] = breakPoint;
+
+        return new BreakpointInfo {
+            Id = id,
+            Address = address,
+            Type = typeStr,
+            Condition = condition,
+            IsEnabled = true
+        };
+    }
+
+    private BreakpointListResponse ListBreakpoints() {
+        var list = _mcpBreakpoints.Select(kvp => new BreakpointInfo {
+            Id = kvp.Key,
+            Address = (kvp.Value as AddressBreakPoint)?.Address ?? 0,
+            Type = kvp.Value.BreakPointType.ToString(),
+            Condition = (kvp.Value as AddressBreakPoint)?.ConditionExpression,
+            IsEnabled = kvp.Value.IsEnabled
+        }).ToList();
+
+        return new BreakpointListResponse {
+            Breakpoints = list
+        };
+    }
+
+    private EmulatorControlResponse RemoveBreakpoint(JsonElement? arguments) {
+        if (!arguments.HasValue || !arguments.Value.TryGetProperty("id", out JsonElement idElem)) {
+            throw new McpInvalidParametersException("Missing breakpoint id");
+        }
+
+        string id = idElem.GetString() ?? "";
+        if (_mcpBreakpoints.Remove(id, out BreakPoint? bp)) {
+            _breakpointsManager.ToggleBreakPoint(bp, false);
+            return new EmulatorControlResponse { Success = true, Message = $"Breakpoint {id} removed." };
+        }
+
+        throw new McpInvalidParametersException($"Breakpoint {id} not found.");
+    }
+
+    private EmulatorControlResponse ClearBreakpoints() {
+        int count = _mcpBreakpoints.Count;
+        foreach (var bp in _mcpBreakpoints.Values) {
+            _breakpointsManager.ToggleBreakPoint(bp, false);
+        }
+        _mcpBreakpoints.Clear();
+        return new EmulatorControlResponse { Success = true, Message = $"{count} breakpoints removed." };
+    }
+
+    private void SendBreakpointHitNotification(string id, BreakPoint bp) {
+        var notification = new {
+            method = "notifications/emulator/breakpoint_hit",
+            @params = new {
+                breakpointId = id,
+                address = (bp as AddressBreakPoint)?.Address,
+                registers = ReadCpuRegisters()
+            }
+        };
+
+        string json = JsonSerializer.Serialize(notification, new JsonSerializerOptions {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+        
+        OnNotification?.Invoke(this, json);
+    }
+
+    private object CreateAddBreakpointInputSchema() {
+        return new {
+            type = "object",
+            properties = new {
+                address = new { type = "integer", description = "Memory address, IO port, or cycle count" },
+                type = new { 
+                    type = "string", 
+                    description = "Breakpoint type",
+                    @enum = Enum.GetNames(typeof(BreakPointType))
+                },
+                condition = new { type = "string", description = "Optional conditional expression (e.g. 'ax == 0x300')" }
+            },
+            required = new[] { "address", "type" }
+        };
+    }
+
+    private object CreateRemoveBreakpointInputSchema() {
+        return new {
+            type = "object",
+            properties = new {
+                id = new { type = "string", description = "The ID of the breakpoint to remove" }
+            },
+            required = new[] { "id" }
+        };
+    }
+
+    private static object CreateReadStackInputSchema() {
+        return new {
+            type = "object",
+            properties = new {
+                count = new { type = "integer", description = "Number of words to read from the stack top (default 10)" }
+            }
         };
     }
 

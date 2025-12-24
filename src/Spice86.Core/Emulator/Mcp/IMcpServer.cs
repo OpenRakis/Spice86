@@ -6,6 +6,7 @@ using ModelContextProtocol.Protocol;
 /// MCP server for AI tools to inspect emulator state via JSON-RPC.
 /// </summary>
 public interface IMcpServer {
+    event EventHandler<string>? OnNotification;
     string HandleRequest(string requestJson);
     Tool[] GetAvailableTools();
 }

@@ -29,6 +29,12 @@ public sealed class McpStdioTransport {
         _inputReader = inputReader;
         _outputWriter = outputWriter;
         _cancellationTokenSource = new CancellationTokenSource();
+        _mcpServer.OnNotification += HandleNotification;
+    }
+
+    private void HandleNotification(object? sender, string json) {
+        _outputWriter.WriteLine(json);
+        _outputWriter.Flush();
     }
 
     public void Start() {
@@ -42,6 +48,7 @@ public sealed class McpStdioTransport {
     }
 
     public void Stop() {
+        _mcpServer.OnNotification -= HandleNotification;
         if (_readerThread == null) {
             return;
         }
