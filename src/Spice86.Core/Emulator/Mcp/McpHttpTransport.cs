@@ -27,6 +27,23 @@ public sealed class McpHttpTransport : IDisposable {
         _port = port;
         _listener = new HttpListener();
         _listener.Prefixes.Add($"http://localhost:{_port}/");
+        _mcpServer.OnNotification += HandleNotification;
+    }
+
+    private void HandleNotification(object? sender, string json) {
+        _ = BroadcastNotificationAsync(json);
+    }
+
+    private async Task BroadcastNotificationAsync(string json) {
+        byte[] buffer = Encoding.UTF8.GetBytes($"data: {json}\n\n");
+        foreach (var client in _clients) {
+            try {
+                await client.Value.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                await client.Value.OutputStream.FlushAsync();
+            } catch {
+                // Client probably disconnected
+            }
+        }
     }
 
     public void Start() {
@@ -163,6 +180,7 @@ public sealed class McpHttpTransport : IDisposable {
         }
 
         _cts.Cancel();
+        _mcpServer.OnNotification -= HandleNotification;
         _listener.Stop();
         _listener.Close();
         _cts.Dispose();

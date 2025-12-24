@@ -567,7 +567,8 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         McpServer mcpServer = new(memory, state, functionCatalogue, cfgCpu, 
-            ioPortDispatcher, vgaRenderer, pauseHandler, dos.Ems, xms, loggerService);
+            ioPortDispatcher, vgaRenderer, pauseHandler, dos.Ems, xms,
+            emulatorBreakpointsManager, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("MCP server created...");
