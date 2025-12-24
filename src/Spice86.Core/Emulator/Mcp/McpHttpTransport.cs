@@ -62,11 +62,13 @@ public sealed class McpHttpTransport : IDisposable {
 
     private async Task ListenLoop() {
         try {
-            while (_listener.IsListening && !_cts.Token.IsCancellationRequested) {
+            while (!_cts.Token.IsCancellationRequested && _listener.IsListening) {
                 var context = await _listener.GetContextAsync();
                 _ = HandleRequestAsync(context);
             }
-        } catch (Exception ex) when (ex is not ObjectDisposedException && ex is not HttpListenerException) {
+        } catch (Exception ex) when (ex is ObjectDisposedException or HttpListenerException) {
+            // Normal shutdown
+        } catch (Exception ex) {
             _loggerService.Error(ex, "Error in MCP HTTP listen loop");
         }
     }
@@ -181,8 +183,23 @@ public sealed class McpHttpTransport : IDisposable {
 
         _cts.Cancel();
         _mcpServer.OnNotification -= HandleNotification;
-        _listener.Stop();
-        _listener.Close();
+        
+        try {
+            if (_listener.IsListening) {
+                _listener.Stop();
+            }
+        } catch (ObjectDisposedException) {
+            // Already disposed
+        } catch (Exception ex) {
+            _loggerService.Error(ex, "Error stopping MCP HTTP listener");
+        }
+
+        try {
+            _listener.Close();
+        } catch (ObjectDisposedException) {
+            // Already disposed
+        }
+
         _cts.Dispose();
 
         foreach (var client in _clients.Values) {

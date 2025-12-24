@@ -134,31 +134,27 @@ public sealed class McpServer : IMcpServer {
             InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
         });
 
-        if (_emsManager != null) {
-            tools.Add(new Tool {
-                Name = "query_ems",
-                Description = "Query EMS (Expanded Memory Manager) state",
-                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
-            });
-            tools.Add(new Tool {
-                Name = "read_ems_memory",
-                Description = "Read EMS (Expanded Memory) from a specific handle and page",
-                InputSchema = ConvertToJsonElement(CreateEmsMemoryReadInputSchema())
-            });
-        }
+        tools.Add(new Tool {
+            Name = "query_ems",
+            Description = "Query EMS (Expanded Memory Manager) state",
+            InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+        });
+        tools.Add(new Tool {
+            Name = "read_ems_memory",
+            Description = "Read EMS (Expanded Memory) from a specific handle and page",
+            InputSchema = ConvertToJsonElement(CreateEmsMemoryReadInputSchema())
+        });
 
-        if (_xmsManager != null) {
-            tools.Add(new Tool {
-                Name = "query_xms",
-                Description = "Query XMS (Extended Memory Manager) state",
-                InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
-            });
-            tools.Add(new Tool {
-                Name = "read_xms_memory",
-                Description = "Read XMS (Extended Memory) from a specific handle",
-                InputSchema = ConvertToJsonElement(CreateXmsMemoryReadInputSchema())
-            });
-        }
+        tools.Add(new Tool {
+            Name = "query_xms",
+            Description = "Query XMS (Extended Memory Manager) state",
+            InputSchema = ConvertToJsonElement(CreateEmptyInputSchema())
+        });
+        tools.Add(new Tool {
+            Name = "read_xms_memory",
+            Description = "Read XMS (Extended Memory) from a specific handle",
+            InputSchema = ConvertToJsonElement(CreateXmsMemoryReadInputSchema())
+        });
 
         tools.Add(new Tool {
             Name = "add_breakpoint",
@@ -296,6 +292,7 @@ public sealed class McpServer : IMcpServer {
                     "step" => Step(),
                     "read_stack" => ReadStack(argumentsElement),
                     "query_ems" => QueryEms(),
+                    "read_ems_memory" => ReadEmsMemory(argumentsElement),
                     "query_xms" => QueryXms(),
                     "read_xms_memory" => ReadXmsMemory(argumentsElement),
                     "add_breakpoint" => AddBreakpoint(argumentsElement),
