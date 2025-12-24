@@ -52,6 +52,9 @@ public class Renderer : IVgaRenderer {
             // We're already rendering. Get out of here.
             return;
         }
+        if (_state == null || _memory == null) {
+            return;
+        }
         try {
             BufferSize = frameBuffer.Length;
             if (Width * Height > BufferSize) {
@@ -257,10 +260,15 @@ public class Renderer : IVgaRenderer {
             (foreGroundColor, backGroundColor) = (backGroundColor & 0x7, foreGroundColor);
         }
         // The 8 pixels to render this line come from the font which is stored in plane 2.
+        if (_memory == null || _memory.Planes == null) {
+            return;
+        }
         byte fontByte = _memory.Planes[2, fontAddress + scanline];
         for (int x = 0; x < _state.SequencerRegisters.ClockingModeRegister.DotsPerClock; x++) {
             uint pixel = (fontByte & 0x80 >> x) != 0 ? foreGroundColor : backGroundColor;
-            frameBuffer[destinationAddress++] = pixel;
+            if (destinationAddress < frameBuffer.Length) {
+                frameBuffer[destinationAddress++] = pixel;
+            }
         }
     }
 
