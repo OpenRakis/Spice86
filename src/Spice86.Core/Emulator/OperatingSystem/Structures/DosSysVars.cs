@@ -17,6 +17,8 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 public class DosSysVars : MemoryBasedDataStructure {
     public const int FirstMcbSegment = 0x16F;
     private readonly DosDeviceHeader _nullDeviceHeader;
+    public const int Segment = 0x80;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DosSysVars"/> class.
     /// </summary>

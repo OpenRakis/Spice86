@@ -357,7 +357,7 @@ Compatibility list available [here](COMPATIBILITY.md).
 
 ### How to build on your machine
 
-- Install the [.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (once)
+- Install the [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) (once)
 - clone the repo
 - run this where Spice86.sln is located:
 
