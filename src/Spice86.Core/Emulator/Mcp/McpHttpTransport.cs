@@ -186,7 +186,7 @@ public sealed class McpHttpTransport : IDisposable {
         
         try {
             if (_listener.IsListening) {
-                _listener.Stop();
+        _listener.Stop();
             }
         } catch (ObjectDisposedException) {
             // Already disposed
@@ -195,7 +195,7 @@ public sealed class McpHttpTransport : IDisposable {
         }
 
         try {
-            _listener.Close();
+        _listener.Close();
         } catch (ObjectDisposedException) {
             // Already disposed
         }
