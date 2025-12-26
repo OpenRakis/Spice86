@@ -38,6 +38,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly PerformanceViewModel _performanceViewModel;
     private readonly IExceptionHandler _exceptionHandler;
 
+    public McpStatusViewModel? McpStatusViewModel { get; set; }
+
     private int? _targetCyclesPerMs;
 
     public int? TargetCyclesPerMs {
