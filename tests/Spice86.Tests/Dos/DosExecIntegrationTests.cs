@@ -29,7 +29,6 @@ public class DosExecIntegrationTests {
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
                 binName: programPath,
-                enableCfgCpu: false,
                 enablePit: true,
                 recordData: false,
                 maxCycles: 300000,
@@ -76,7 +75,6 @@ public class DosExecIntegrationTests {
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
                 binName: programPath,
-                enableCfgCpu: false,
                 enablePit: true,
                 recordData: false,
                 maxCycles: 200000,
@@ -110,7 +108,6 @@ public class DosExecIntegrationTests {
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
                 binName: target,
-                enableCfgCpu: false,
                 enablePit: true,
                 recordData: false,
                 maxCycles: 200000,
@@ -136,11 +133,6 @@ public class DosExecIntegrationTests {
         if (!Directory.Exists(directoryPath)) {
             return;
         }
-
-        try {
-            Directory.Delete(directoryPath, true);
-        } catch (IOException) {
-        } catch (UnauthorizedAccessException) {
-        }
+        Directory.Delete(directoryPath, true);
     }
 }

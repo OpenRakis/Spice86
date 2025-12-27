@@ -19,7 +19,6 @@ public class DosExecRegisterInitializationTests {
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
                 binName: Path.Combine(tempDir, "child.com"),
-                enableCfgCpu: false,
                 enablePit: false,
                 recordData: false,
                 maxCycles: 50000,
@@ -62,7 +61,6 @@ public class DosExecRegisterInitializationTests {
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
                 binName: Path.Combine(tempDir, "overlay_driver.exe"),
-                enableCfgCpu: false,
                 enablePit: false,
                 recordData: false,
                 maxCycles: 50000,
@@ -96,11 +94,6 @@ public class DosExecRegisterInitializationTests {
         if (!Directory.Exists(directoryPath)) {
             return;
         }
-
-        try {
-            Directory.Delete(directoryPath, true);
-        } catch (IOException) {
-        } catch (UnauthorizedAccessException) {
-        }
+        Directory.Delete(directoryPath, true);
     }
 }

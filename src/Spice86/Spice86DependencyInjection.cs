@@ -530,7 +530,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         ProgramExecutor programExecutor = new(configuration, emulationLoop,
             emulatorBreakpointsManager, emulatorStateSerializer, memory,
-            cfgCpu, memoryDataExporter, state, dos,
+            cfgCpu, memoryDataExporter, state, dos.DosInt21Handler,
             functionCatalogue, cfgCpuFlowDumper, pauseHandler,
             mainWindowViewModel, dumpContext, loggerService);
 
