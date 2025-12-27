@@ -1096,13 +1096,55 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Either only load a program or overlay, or load it and run it.
+    /// INT 21h, AH=4Bh - EXEC: Load and/or Execute Program.
     /// </summary>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
-    /// <exception cref="NotImplementedException">This function is not implemented</exception>
     public void LoadAndOrExecute(bool calledFromVm) {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        throw new NotImplementedException($"INT21H: load and/or execute program is not implemented. Emulated program tried to load and/or exec: {programName}");
+        DosExecLoadType loadType = (DosExecLoadType)State.AL;
+        uint paramBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
+
+        DosExecResult result;
+
+        if (loadType == DosExecLoadType.LoadOverlay) {
+            DosExecOverlayParameterBlock overlayParamBlock = new(Memory, paramBlockAddress);
+            result = _dosProcessManager.LoadOverlay(programName, overlayParamBlock.LoadSegment, overlayParamBlock.RelocationFactor);
+        } else {
+            DosExecParameterBlock paramBlock = new(Memory, paramBlockAddress);
+            uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(paramBlock.CommandTailSegment, paramBlock.CommandTailOffset);
+            DosCommandTail cmdTail = new(Memory, cmdTailAddress);
+            string commandTail = cmdTail.Length > 0 ? cmdTail.Command.TrimEnd('\r') : string.Empty;
+            result = _dosProcessManager.LoadOrLoadAndExecute(programName, commandTail, loadType, paramBlock.EnvironmentSegment);
+        }
+        HandleDosExecResult(calledFromVm, result);
+    }
+
+    private void HandleDosExecResult(bool calledFromVm, DosExecResult result) {
+        if (result.Success) {
+            SetCarryFlag(false, calledFromVm);
+        } else {
+            SetCarryFlag(true, calledFromVm);
+            State.AX = (ushort)result.ErrorCode;
+            LogDosError(calledFromVm);
+        }
+    }
+
+    public DosExecResult LoadOverlay(string programName, DosExecOverlayParameterBlock overlayParamBlock) {
+        DosExecResult result = _dosProcessManager.LoadOverlay(programName, overlayParamBlock.LoadSegment, overlayParamBlock.RelocationFactor);
+        HandleDosExecResult(calledFromVm: true, result);
+        return result;
+    }
+
+    public DosExecResult LoadOnly(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, commandTail ?? "", DosExecLoadType.LoadOnly, paramBlock.EnvironmentSegment);
+        HandleDosExecResult(calledFromVm: true, result);
+        return result;
+    }
+
+    public DosExecResult LoadAndExecute(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, commandTail ?? "", DosExecLoadType.LoadAndExecute, paramBlock.EnvironmentSegment);
+        HandleDosExecResult(calledFromVm: true, result);
+        return result;
     }
 
     /// <summary>
