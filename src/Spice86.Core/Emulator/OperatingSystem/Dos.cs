@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
@@ -24,8 +25,6 @@ using System.Text;
 /// Represents the DOS kernel.
 /// </summary>
 public sealed class Dos {
-    //in DOSBox, this is the 'DOS_INFOBLOCK_SEG'
-    private const int DosSysVarSegment = 0x80;
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
@@ -116,6 +115,11 @@ public sealed class Dos {
     public DosSysVars DosSysVars { get; }
 
     /// <summary>
+    /// The DOS tables including CDS and DBCS structures.
+    /// </summary>
+    public DosTables DosTables { get; }
+
+    /// <summary>
     /// The EMS device driver.
     /// </summary>
     public ExpandedMemoryManager? Ems { get; private set; }
@@ -135,14 +139,14 @@ public sealed class Dos {
     /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="envVars">The DOS environment variables.</param>
-    /// <param name="clock">Monotonic clock used by DOS timers.</param>
+    /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="xms">Optional XMS manager to expose through DOS.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        IDictionary<string, string> envVars, Clock clock, ILoggerService loggerService,
+        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
         ExtendedMemoryManager? xms = null) {
         _loggerService = loggerService;
         Xms = xms;
@@ -155,9 +159,15 @@ public sealed class Dos {
 
         VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
         DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory,
-            MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
+            MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0x0));
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
+
+        DosTables = new DosTables();
+        DosTables.Initialize(memory);
+
+        DosSysVars.CurrentDirectoryStructureListPointer = DosTables.CurrentDirectoryStructure.BaseAddress;
+        DosSysVars.CurrentDirectoryStructureCount = 26;
 
         DosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
@@ -170,15 +180,18 @@ public sealed class Dos {
         DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, DosSwappableDataArea, loggerService);
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
         ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, loggerService);
-        DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
-            MemoryManager, FileManager, DosDriveManager, clock, _loggerService);
+            MemoryManager, FileManager, DosDriveManager, ProcessManager, ioPortDispatcher, DosTables, _loggerService);
+        DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
             functionHandlerProvider, stack, state, _loggerService, xms);
-        DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
-        DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
-        DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
+        DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
+            functionHandlerProvider, stack, state, _loggerService);
+        DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager,
+            functionHandlerProvider, stack, state, _loggerService);
+        DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider,
+            stack, state, _loggerService);
 
         if (configuration.InitializeDOS is false) {
             return;

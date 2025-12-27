@@ -3,9 +3,11 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -13,6 +15,8 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System;
 
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -30,10 +34,14 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
+    private readonly DosProcessManager _dosProcessManager;
+    private readonly IOPortDispatcher _ioPortDispatcher;
+    private readonly DosTables _dosTables;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
-    private readonly Clock _clock;
+    
+    private const ushort OffsetMask = 0x0F;
 
     /// <summary>
     /// Initializes a new instance.
@@ -49,13 +57,17 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
     /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
     /// <param name="dosDriveManager">The DOS class responsible for DOS volumes.</param>
-    /// <param name="clock">The class responsible for the clock exposed to DOS programs.</param>
+    /// <param name="dosProcessManager">The DOS class responsible for program loading and execution.</param>
+    /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports (e.g., CMOS).</param>
+    /// <param name="dosTables">The DOS tables structure containing CDS and DBCS information.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt21Handler(IMemory memory, DosProgramSegmentPrefixTracker dosPspTracker,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, DosDriveManager dosDriveManager, Clock clock, ILoggerService loggerService)
+        DosFileManager dosFileManager, DosDriveManager dosDriveManager,
+        DosProcessManager dosProcessManager,
+        IOPortDispatcher ioPortDispatcher, DosTables dosTables, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
         _dosPspTracker = dosPspTracker;
@@ -64,8 +76,10 @@ public class DosInt21Handler : InterruptHandler {
         _dosMemoryManager = dosMemoryManager;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
+        _dosProcessManager = dosProcessManager;
+        _ioPortDispatcher = ioPortDispatcher;
+        _dosTables = dosTables;
         _interruptVectorTable = new InterruptVectorTable(memory);
-        _clock = clock;
         FillDispatchTable();
     }
 
@@ -128,49 +142,149 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
+        AddAction(0x52, GetListOfLists);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
+        AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
     }
 
     public void SetDate() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("SET DATE");
-        }
-
         ushort year = State.CX;
         byte month = State.DH;
         byte day = State.DL;
 
-        if (!_clock.SetDate(year, month, day)) {
-            State.AL = 0xFF; // Invalid date
+        bool valid = false;
+        try {
+            if (year >= 1980 && year <= 2099 && month >= 1 && month <= 12 && day >= 1) {
+                _ = new DateTime(year, month, day);
+                valid = true;
+            }
+        } catch (ArgumentOutOfRangeException) {
+            valid = false;
+        }
+
+        if (valid) {
+            int century = year / 100;
+            int yearPart = year % 100;
+
+            byte yearBcd = BcdConverter.ToBcd((byte)yearPart);
+            byte monthBcd = BcdConverter.ToBcd(month);
+            byte dayBcd = BcdConverter.ToBcd(day);
+            byte centuryBcd = BcdConverter.ToBcd((byte)century);
+
+            WriteCmosRegister(CmosRegisterAddresses.Year, yearBcd);
+            WriteCmosRegister(CmosRegisterAddresses.Month, monthBcd);
+            WriteCmosRegister(CmosRegisterAddresses.DayOfMonth, dayBcd);
+            WriteCmosRegister(CmosRegisterAddresses.Century, centuryBcd);
+
+            State.AL = 0;
+
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("SET DOS DATE to CMOS: {Year}-{Month:D2}-{Day:D2}",
+                    year, month, day);
+            }
+        } else {
+            State.AL = 0xFF;
+
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("SET DOS DATE called with invalid date: {Year}-{Month:D2}-{Day:D2}",
+                    year, month, day);
+            }
         }
     }
 
     public void SetTime() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("SET TIME");
-        }
-
-        byte hours = State.CH;
+        byte hour = State.CH;
         byte minutes = State.CL;
         byte seconds = State.DH;
         byte hundredths = State.DL;
 
-        if (!_clock.SetTime(hours, minutes, seconds, hundredths)) {
-            State.AL = 0xFF; // Invalid time
+        bool valid = hour <= 23 &&
+                     minutes <= 59 &&
+                     seconds <= 59 &&
+                     hundredths <= 99;
+
+        if (valid) {
+            byte hourBcd = BcdConverter.ToBcd(hour);
+            byte minutesBcd = BcdConverter.ToBcd(minutes);
+            byte secondsBcd = BcdConverter.ToBcd(seconds);
+
+            WriteCmosRegister(CmosRegisterAddresses.Hours, hourBcd);
+            WriteCmosRegister(CmosRegisterAddresses.Minutes, minutesBcd);
+            WriteCmosRegister(CmosRegisterAddresses.Seconds, secondsBcd);
+
+            State.AL = 0;
+
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("SET DOS TIME to CMOS: {Hour:D2}:{Minutes:D2}:{Seconds:D2}.{Hundredths:D2}",
+                    hour, minutes, seconds, hundredths);
+            }
+        } else {
+            State.AL = 0xFF;
+
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("SET DOS TIME called with invalid time: {Hour:D2}:{Minutes:D2}:{Seconds:D2}.{Hundredths:D2}",
+                    hour, minutes, seconds, hundredths);
+            }
         }
     }
 
     /// <summary>
-    /// Get a pointer to the "lead byte" table, for foreign character sets.
-    /// This is a table that tells DOS which bytes are the first byte of a double-byte character.
-    /// We don't support double-byte characters (yet), so we just return 0.
+    /// INT 21h, AH=63h - Get Double Byte Character Set (DBCS) Lead Byte Table.
+    /// <para>
+    /// Returns a pointer to the DBCS lead-byte table, which indicates which byte values
+    /// are lead bytes in double-byte character sequences (e.g., Japanese, Chinese, Korean).
+    /// An empty table (value 0) indicates no DBCS ranges are defined.
+    /// </para>
+    /// <b>Expects:</b><br/>
+    /// AL = 0 to get DBCS lead byte table pointer
+    /// <b>Returns:</b><br/>
+    /// If AL was 0:<br/>
+    /// - DS:SI = pointer to DBCS lead byte table<br/>
+    /// - AL = 0<br/>
+    /// - CF = 0 (undocumented)<br/>
+    /// If AL was not 0:<br/>
+    /// - AL = 0xFF<br/>
     /// </summary>
     private void GetLeadByteTable() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET LEAD BYTE TABLE");
+            LoggerService.Verbose("INT 21h AH=63h - Get DBCS Lead Byte Table, AL={AL:X2}", State.AL);
         }
-        State.AX = 0;
+
+        if (State.AL == 0) {
+            uint dbcsAddress = _dosTables.DoubleByteCharacterSet.BaseAddress;
+            ushort segment = MemoryUtils.ToSegment(dbcsAddress);
+            ushort offset = (ushort)(dbcsAddress & OffsetMask);
+
+            State.DS = segment;
+            State.SI = offset;
+            State.AL = 0;
+            State.CarryFlag = false; // FreeDOS clears carry flag on success
+
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("Returning DBCS table pointer at {Segment:X4}:{Offset:X4}", segment, offset);
+            }
+        } else {
+            // FreeDOS returns error without modifying carry flag for invalid subfunction
+            State.AL = 0xFF;
+        }
+    }
+
+    /// <summary>
+    /// Obtains or selects the current code page.
+    /// </summary>
+    /// <remarks>Setting the global loaded code page table is not supported and has no effect.</remarks>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    public void GetSetGlobalLoadedCodePageTable(bool calledFromVm) {
+        if (State.AL == 1) {
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("Getting the global loaded code page is not supported - returned 0 which passes test programs...");
+            }
+            State.BX = State.DX = 0;
+            SetCarryFlag(false, calledFromVm);
+        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("Setting the global loaded code page is not supported.");
+        }
     }
 
     /// <summary>
@@ -731,14 +845,39 @@ public class DosInt21Handler : InterruptHandler {
     /// DL = day <br/>
     /// </returns>
     public void GetDate() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET DATE");
+        byte yearBcd = ReadCmosRegister(CmosRegisterAddresses.Year);
+        byte monthBcd = ReadCmosRegister(CmosRegisterAddresses.Month);
+        byte dayBcd = ReadCmosRegister(CmosRegisterAddresses.DayOfMonth);
+        byte dayOfWeekBcd = ReadCmosRegister(CmosRegisterAddresses.DayOfWeek);
+        byte centuryBcd = ReadCmosRegister(CmosRegisterAddresses.Century);
+
+        int year = BcdConverter.FromBcd(yearBcd);
+        int century = BcdConverter.FromBcd(centuryBcd);
+        int month = BcdConverter.FromBcd(monthBcd);
+        int day = BcdConverter.FromBcd(dayBcd);
+        int dayOfWeek = BcdConverter.FromBcd(dayOfWeekBcd);
+
+        int fullYear = century * 100 + year;
+
+        int dosDayOfWeek;
+        if (dayOfWeek == 0) {
+            dosDayOfWeek = 0;
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("CMOS DayOfWeek register returned 0 (invalid). Defaulting DOS day of week to Sunday (0).");
+            }
+        } else {
+            dosDayOfWeek = dayOfWeek - 1;
         }
-        (ushort year, byte month, byte day, byte dayOfWeek) = _clock.GetDate();
-        State.AL = dayOfWeek;
-        State.CX = year;
-        State.DH = month;
-        State.DL = day;
+
+        State.CX = (ushort)fullYear;
+        State.DH = (byte)month;
+        State.DL = (byte)day;
+        State.AL = (byte)dosDayOfWeek;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET DOS DATE from CMOS: {Year}-{Month:D2}-{Day:D2} (day of week: {DayOfWeek})",
+                fullYear, month, day, dosDayOfWeek);
+        }
     }
 
     /// <summary>
@@ -842,6 +981,29 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// INT 21h, AH=52h - Get List of Lists (SYSVARS).
+    /// <para>
+    /// Returns a pointer to the DOS internal tables (also known as the "List of Lists" or SYSVARS).
+    /// </para>
+    /// <remarks>
+    /// Like FREEDOS and MS-DOS, this actually returns a pointer to the first drive DOS Parameter Block, which is the "official" start of the structure. <br/>
+    /// This is used by (for example) the game 'Day of the Tentacle' and 'Indiana Jones and the Fate of Atlantis'.
+    /// </remarks>
+    /// </summary>
+    private void GetListOfLists() {
+        // Return pointer to the List of Lists (SYSVARS)
+        // ES:BX points to offset 0 of the SYSVARS structure
+        State.ES = DosSysVars.Segment;
+        State.BX = 0;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose(
+                "GET LIST OF LISTS ES:BX={Es}:{Bx}",
+                ConvertUtils.ToHex16(State.ES),
+                ConvertUtils.ToHex16(State.BX));
+        }
+    }
+
+    /// <summary>
     /// Gets or sets the Ctrl-C flag. AL: 0 = get, 1 or 2 = set it from DL.
     /// </summary>
     /// <returns>
@@ -880,14 +1042,25 @@ public class DosInt21Handler : InterruptHandler {
     /// Returns the current MS-DOS time in CH (hour), CL (minute), DH (second), and DL (millisecond) from the host's DateTime.Now.
     /// </summary>
     public void GetTime() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET TIME");
-        }
-        (byte hours, byte minutes, byte seconds, byte hundredths) = _clock.GetTime();
-        State.CH = hours;
-        State.CL = minutes;
-        State.DH = seconds;
+        byte hourBcd = ReadCmosRegister(CmosRegisterAddresses.Hours);
+        byte minuteBcd = ReadCmosRegister(CmosRegisterAddresses.Minutes);
+        byte secondBcd = ReadCmosRegister(CmosRegisterAddresses.Seconds);
+
+        byte hour = BcdConverter.FromBcd(hourBcd);
+        byte minute = BcdConverter.FromBcd(minuteBcd);
+        byte second = BcdConverter.FromBcd(secondBcd);
+
+        byte hundredths = 0;
+
+        State.CH = hour;
+        State.CL = minute;
+        State.DH = second;
         State.DL = hundredths;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET DOS TIME from CMOS: {Hour:D2}:{Minute:D2}:{Second:D2}.{Hundredths:D2}",
+                hour, minute, second, hundredths);
+        }
     }
 
     /// <summary>
@@ -1252,5 +1425,23 @@ public class DosInt21Handler : InterruptHandler {
         if (dosFileOperationResult.IsValueIsUint32) {
             State.DX = (ushort)(value >> 16);
         }
+    }
+
+    /// <summary>
+    /// Reads a value from a CMOS register via I/O ports.
+    /// Writes the register index to the address port and reads the value from the data port.
+    /// </summary>
+    private byte ReadCmosRegister(byte register) {
+        _ioPortDispatcher.WriteByte(CmosPorts.Address, register);
+        return _ioPortDispatcher.ReadByte(CmosPorts.Data);
+    }
+
+    /// <summary>
+    /// Writes a value to a CMOS register via I/O ports.
+    /// Writes the register index to the address port and the value to the data port.
+    /// </summary>
+    private void WriteCmosRegister(byte register, byte value) {
+        _ioPortDispatcher.WriteByte(CmosPorts.Address, register);
+        _ioPortDispatcher.WriteByte(CmosPorts.Data, value);
     }
 }

@@ -58,7 +58,7 @@ public class EmulationLoopScheduler {
             return;
         }
 
-        double baseTime = _isServicingEvents ? _activeEventScheduledTime : _clock.CurrentTimeMs;
+        double baseTime = _isServicingEvents ? _activeEventScheduledTime : _clock.ElapsedTimeMs;
         double absoluteScheduledTime = baseTime + delay;
 
         ScheduledEntry entry = GetEntry(handler, absoluteScheduledTime, val);
@@ -106,7 +106,7 @@ public class EmulationLoopScheduler {
         }
 
         _isServicingEvents = true;
-        double currentTime = _clock.CurrentTimeMs;
+        double currentTime = _clock.ElapsedTimeMs;
 
         while (_queue.Count > 0 && _queue.First.ScheduledTime <= currentTime) {
             ScheduledEntry entry = _queue.Dequeue();
