@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -790,7 +791,7 @@ public class DosInt21Handler : InterruptHandler {
     /// CF and AX are cleared on success. <br/>
     /// CF is set on error. Possible error code in AX: 0x09 (Invalid memory block address). <br/>
     /// </returns>
-    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void FreeMemoryBlock(bool calledFromVm) {
         ushort blockSegment = State.ES;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -921,9 +922,7 @@ public class DosInt21Handler : InterruptHandler {
         ushort paragraphsToKeep = State.DX;
         byte returnCode = State.AL;
 
-        // FreeDOS enforces a minimum of 6 paragraphs (96 bytes)
-        // This is less than the PSP size (16 paragraphs = 256 bytes), but it's what FreeDOS does
-        const ushort MinimumParagraphs = 6;
+        const ushort MinimumParagraphs = DosProgramSegmentPrefix.PspSizeInParagraphs;
         if (paragraphsToKeep < MinimumParagraphs) {
             paragraphsToKeep = MinimumParagraphs;
         }
@@ -959,56 +958,7 @@ public class DosInt21Handler : InterruptHandler {
         // becomes the current process again. This allows the parent to make subsequent
         // EXEC calls without the stale TSR PSP being treated as current.
         _dosPspTracker.PopCurrentPspSegment();
-
-        // Check if we have a valid PSP with a terminate address
-        // If the current PSP has a valid terminate address, return to the parent
-        // Otherwise, stop the emulation (for initial programs or test environments)
-        if (currentPsp is not null) {
-            uint terminateAddress = currentPsp.TerminateAddress;
-            ushort terminateSegment = (ushort)(terminateAddress >> 16);
-            ushort terminateOffset = (ushort)(terminateAddress & 0xFFFF);
-
-            // Check if we have a valid parent to return to:
-            // - terminateAddress must be non-zero (was saved when program was loaded)
-            // - parentPspSegment must not be ourselves (we're not the root shell)
-            // - parentPspSegment must not be zero (there is a parent)
-            ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
-            bool hasValidParent = terminateAddress != 0 &&
-                                  parentPspSegment != currentPspSegment &&
-                                  parentPspSegment != 0;
-
-            if (hasValidParent) {
-                // Restore the CPU stack to the state it was in when the program started.
-                // The PSP stores the parent's SS:SP at offset 0x2E, which was saved by
-                // INT 21h/4Bh (EXEC) when this program was loaded. Restoring it allows
-                // the parent to continue execution from where it called EXEC.
-                uint savedStackPointer = currentPsp.StackPointer;
-                State.SS = (ushort)(savedStackPointer >> 16);
-                State.SP = (ushort)(savedStackPointer & 0xFFFF);
-
-                // Jump to the terminate address (INT 22h handler saved in PSP at offset 0x0A).
-                // This was set when the program was loaded and points back to the parent's
-                // continuation point.
-                //
-                // Reference: FreeDOS kernel/task.c return_user() (line ~420):
-                // https://github.com/FDOS/kernel/blob/master/kernel/task.c
-                //   irp->CS = FP_SEG(p->ps_isv22);
-                //   irp->IP = FP_OFF(p->ps_isv22);
-                // FreeDOS reads ps_isv22 from the PSP (terminate address at offset 0x0A)
-                // and sets CS:IP to return control to the parent process.
-                //
-                // The CfgCpu callback node (Grp4Callback) detects when the callback handler
-                // changes CS:IP and will NOT add the instruction length in that case.
-                State.CS = terminateSegment;
-                State.IP = terminateOffset;
-
-                if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    LoggerService.Verbose(
-                        "TSR: Returning to parent at {Segment:X4}:{Offset:X4}, stack {SS:X4}:{SP:X4}",
-                        terminateSegment, terminateOffset, State.SS, State.SP);
-                }
-            }
-        }
+        _dosProcessManager.TerminateProcess(0, DosTerminationType.TSR, _interruptVectorTable);
     }
 
     /// <summary>
@@ -1197,7 +1147,6 @@ public class DosInt21Handler : InterruptHandler {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         DosExecLoadType loadType = (DosExecLoadType)State.AL;
         uint paramBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
-
         DosExecResult result;
 
         if (loadType == DosExecLoadType.LoadOverlay) {
@@ -1208,7 +1157,7 @@ public class DosInt21Handler : InterruptHandler {
             uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(paramBlock.CommandTailSegment, paramBlock.CommandTailOffset);
             DosCommandTail cmdTail = new(Memory, cmdTailAddress);
             string commandTail = cmdTail.Length > 0 ? cmdTail.Command.TrimEnd('\r') : string.Empty;
-            result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail, loadType, paramBlock.EnvironmentSegment);
+            result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail, loadType, paramBlock.EnvironmentSegment, _interruptVectorTable);
         }
         HandleDosExecResult(calledFromVm, result);
     }
@@ -1230,13 +1179,13 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public DosExecResult LoadOnly(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
-        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadOnly, paramBlock.EnvironmentSegment);
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadOnly, paramBlock.EnvironmentSegment, _interruptVectorTable);
         HandleDosExecResult(calledFromVm: true, result);
         return result;
     }
 
     public DosExecResult LoadAndExecute(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
-        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadAndExecute, paramBlock.EnvironmentSegment);
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadAndExecute, paramBlock.EnvironmentSegment, _interruptVectorTable);
         HandleDosExecResult(calledFromVm: true, result);
         return result;
     }
