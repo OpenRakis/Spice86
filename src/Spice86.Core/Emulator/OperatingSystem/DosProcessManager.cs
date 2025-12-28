@@ -55,7 +55,8 @@ public class DosProcessManager {
         }
     }
 
-    public DosExecResult LoadOrLoadAndExecute(string programName, string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
+    public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
+        string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
         string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
@@ -89,7 +90,7 @@ public class DosProcessManager {
                 loadImageSegment = (ushort)(block.DataBlockSegment + imageDistanceInParagraphs);
             }
 
-            DosExecResult execResult = loadType == DosExecLoadType.LoadOnly
+            DosExecResult result = loadType == DosExecLoadType.LoadOnly
                 ? DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
                     (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP)
                 : DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
@@ -99,7 +100,16 @@ public class DosProcessManager {
                 _pspTracker.SetCurrentPspSegment(parentPspSegment);
             }
 
-            return execResult;
+            
+            // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
+            if (loadType == DosExecLoadType.LoadOnly && result.Success) {
+                paramBlock.InitialCS = result.InitialCS;
+                paramBlock.InitialIP = result.InitialIP;
+                paramBlock.InitialSS = result.InitialSS;
+                paramBlock.InitialSP = result.InitialSP;
+            }
+
+            return result;
         }
 
         ushort paragraphsNeeded = (ushort)((DosProgramSegmentPrefix.PspSize + fileBytes.Length + 15) / 16);
