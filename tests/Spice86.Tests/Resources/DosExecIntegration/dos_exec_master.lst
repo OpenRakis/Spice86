@@ -1,0 +1,320 @@
+     1                                  ; Comprehensive DOS EXEC integration test harness
+     2                                  ; Exercises load/execute modes, child process return codes, TSR installation,
+     3                                  ; environment block presence, memory allocations, overlay loading, and a stub
+     4                                  ; "audio" overlay loaded from the same base name (current executable renamed to
+     5                                  ; .000).
+     6                                  ;
+     7                                  ; All status is reported through BIOS INT 10h teletype output so the emulator
+     8                                  ; video buffer can be inspected by tests. Each successful milestone appends a
+     9                                  ; single character to the screen:
+    10                                  ;   S - start banner
+    11                                  ;   E - environment block detected and double-null terminated
+    12                                  ;   M - INT 21h allocate/free after load succeeds
+    13                                  ;   J - child process output (printed by child.com)
+    14                                  ;   C - child process exit code verified via INT 21h/4D
+    15                                  ;   T - TSR installed via INT 21h/31h and callable at INT 60h
+    16                                  ;   L - load-only mode (INT 21h/4B01) produced entry registers
+    17                                  ;   O - overlay payload entry executed after INT 21h/4B03 load
+    18                                  ;   A - audio driver stub reached inside the same overlay execution
+    19                                  ;   V - overlay call returned control to caller
+    20                                  ;
+    21                                  ; Expected final string in video memory: "SEMJCTLOAV"
+    22                                  ;
+    23                                  ; NASM syntax, assembled with: nasm -f bin dos_exec_master.asm -o dos_exec_master.com
+    24                                  
+    25                                          BITS 16
+    26                                          ORG 0x100
+    27                                  
+    28                                  PSP_ENV_PTR        EQU 0x2C
+    29                                  TTY_FUNC           EQU 0x0E
+    30                                  TTY_ATTR           EQU 0x07
+    31                                  TTY_PAGE           EQU 0x00
+    32                                  
+    33                                  %macro PRINT 1
+    34                                          mov     al, %1
+    35                                          call    WriteTty
+    36                                  %endmacro
+    37                                  
+    38                                  start:
+    39                                          ; ensure segment registers point to PSP/code
+    40 00000000 0E                              push    cs
+    41 00000001 1F                              pop     ds
+    42 00000002 1E                              push    ds
+    43 00000003 07                              pop     es
+    44                                  
+    45                                          PRINT   'S'
+    34 00000004 B053                <1>  mov al, %1
+    35 00000006 E8B601              <1>  call WriteTty
+    46                                  
+    47                                  ; ---------------------------------------------------------------------------
+    48                                  ; Environment block verification: PSP:002Ch holds segment of environment.
+    49                                  ; Walk until a double NULL terminator to ensure block is present and capture
+    50                                  ; the executable path for overlay name derivation.
+    51                                  ; ---------------------------------------------------------------------------
+    52 00000009 8B1E2C00                        mov     bx, [PSP_ENV_PTR]
+    53 0000000D 83FB00                          cmp     bx, 0
+    54 00000010 7427                            je      env_fail
+    55 00000012 8EC3                            mov     es, bx
+    56 00000014 31FF                            xor     di, di
+    57 00000016 B90004                          mov     cx, 1024                ; guard against malformed env blocks
+    58                                  env_scan:
+    59 00000019 83F900                          cmp     cx, 0
+    60 0000001C 741B                            je      env_fail
+    61 0000001E 49                              dec     cx
+    62 0000001F 268A05                          mov     al, [es:di]
+    63 00000022 47                              inc     di
+    64 00000023 3C00                            cmp     al, 0
+    65 00000025 75F2                            jne     env_scan
+    66 00000027 26803D00                        cmp     byte [es:di], 0
+    67 0000002B 750C                            jne     env_fail
+    68 0000002D 1E                              push    ds
+    69 0000002E 07                              pop     es
+    70 0000002F E8F600                          call    BuildOverlayName
+    71                                          PRINT   'E'
+    34 00000032 B045                <1>  mov al, %1
+    35 00000034 E88801              <1>  call WriteTty
+    72 00000037 EB07                            jmp     mem_test
+    73                                  env_fail:
+    74 00000039 1E                              push    ds
+    75 0000003A 07                              pop     es
+    76                                          PRINT   'e'
+    34 0000003B B065                <1>  mov al, %1
+    35 0000003D E87F01              <1>  call WriteTty
+    77                                  
+    78                                  ; ---------------------------------------------------------------------------
+    79                                  ; INT 21h/48h allocation after load, immediately freed via 49h.
+    80                                  ; ---------------------------------------------------------------------------
+    81                                  mem_test:
+    82 00000040 B448                            mov     ah, 0x48
+    83 00000042 BB2000                          mov     bx, 0x20                ; request 0x20 paragraphs
+    84 00000045 CD21                            int     0x21
+    85 00000047 7214                            jc      mem_fail
+    86 00000049 A3[C801]                        mov     [allocSeg], ax
+    87 0000004C 8EC0                            mov     es, ax
+    88 0000004E B449                            mov     ah, 0x49
+    89 00000050 CD21                            int     0x21
+    90 00000052 7209                            jc      mem_fail
+    91 00000054 1E                              push    ds
+    92 00000055 07                              pop     es
+    93                                          PRINT   'M'
+    34 00000056 B04D                <1>  mov al, %1
+    35 00000058 E86401              <1>  call WriteTty
+    94 0000005B EB07                            jmp     child_test
+    95                                  mem_fail:
+    96 0000005D 1E                              push    ds
+    97 0000005E 07                              pop     es
+    98                                          PRINT   'm'
+    34 0000005F B06D                <1>  mov al, %1
+    35 00000061 E85B01              <1>  call WriteTty
+    99                                  
+   100                                  ; ---------------------------------------------------------------------------
+   101                                  ; Load and execute CHILD.COM (AL=00). Child prints 'J' and exits with code 0x42.
+   102                                  ; Parent validates return code via INT 21h/4D.
+   103                                  ; ---------------------------------------------------------------------------
+   104                                  child_test:
+   105 00000064 E81701                          call    InitExecParamBlock
+   106 00000067 8D16[6C02]                      lea     dx, [childName]
+   107 0000006B B8004B                          mov     ax, 0x4B00
+   108 0000006E 0E                              push    cs
+   109 0000006F 07                              pop     es
+   110 00000070 BB[5002]                        mov     bx, execParam
+   111 00000073 CD21                            int     0x21
+   112 00000075 720F                            jc      child_fail
+   113 00000077 B44D                            mov     ah, 0x4D
+   114 00000079 CD21                            int     0x21
+   115 0000007B 3C42                            cmp     al, 0x42
+   116 0000007D 7507                            jne     child_fail
+   117                                          PRINT   'C'
+    34 0000007F B043                <1>  mov al, %1
+    35 00000081 E83B01              <1>  call WriteTty
+   118 00000084 EB07                            jmp     tsr_test
+   119                                  child_fail:
+   120                                          PRINT   'c'
+    34 00000086 B063                <1>  mov al, %1
+    35 00000088 E83401              <1>  call WriteTty
+   121 0000008B EB00                            jmp     tsr_test
+   122                                  
+   123                                  ; ---------------------------------------------------------------------------
+   124                                  ; Install TSR (tsr_hook.com) which exposes INT 60h returning AL=0x5A.
+   125                                  ; ---------------------------------------------------------------------------
+   126                                  tsr_test:
+   127 0000008D E8EE00                          call    InitExecParamBlock
+   128 00000090 8D16[7602]                      lea     dx, [tsrName]
+   129 00000094 B8004B                          mov     ax, 0x4B00
+   130 00000097 0E                              push    cs
+   131 00000098 07                              pop     es
+   132 00000099 BB[5002]                        mov     bx, execParam
+   133 0000009C CD21                            int     0x21
+   134 0000009E 720D                            jc      tsr_fail
+   135 000000A0 CD60                            int     0x60
+   136 000000A2 3C5A                            cmp     al, 0x5A
+   137 000000A4 7507                            jne     tsr_fail
+   138                                          PRINT   'T'
+    34 000000A6 B054                <1>  mov al, %1
+    35 000000A8 E81401              <1>  call WriteTty
+   139 000000AB EB07                            jmp     loadonly_test
+   140                                  tsr_fail:
+   141                                          PRINT   't'
+    34 000000AD B074                <1>  mov al, %1
+    35 000000AF E80D01              <1>  call WriteTty
+   142 000000B2 EB00                            jmp     loadonly_test
+   143                                  
+   144                                  ; ---------------------------------------------------------------------------
+   145                                  ; Load-only mode against overlay_driver.exe (AL=01) should populate entry regs.
+   146                                  ; ---------------------------------------------------------------------------
+   147                                  loadonly_test:
+   148 000000B4 E8C700                          call    InitExecParamBlock
+   149 000000B7 8D16[D001]                      lea     dx, [overlayName]
+   150 000000BB B8014B                          mov     ax, 0x4B01
+   151 000000BE 0E                              push    cs
+   152 000000BF 07                              pop     es
+   153 000000C0 BB[5002]                        mov     bx, execParam
+   154 000000C3 CD21                            int     0x21
+   155 000000C5 720F                            jc      loadonly_fail
+   156 000000C7 A1[6202]                        mov     ax, [execParam + 0x12]  ; Initial CS
+   157 000000CA 83F800                          cmp     ax, 0
+   158 000000CD 7407                            je      loadonly_fail
+   159                                          PRINT   'L'
+    34 000000CF B04C                <1>  mov al, %1
+    35 000000D1 E8EB00              <1>  call WriteTty
+   160 000000D4 EB07                            jmp     overlay_test
+   161                                  loadonly_fail:
+   162                                          PRINT   'l'
+    34 000000D6 B06C                <1>  mov al, %1
+    35 000000D8 E8E400              <1>  call WriteTty
+   163 000000DB EB00                            jmp     overlay_test
+   164                                  
+   165                                  ; ---------------------------------------------------------------------------
+   166                                  ; Overlay load (AL=03) into freshly allocated memory, then far call entry.
+   167                                  ; Overlay prints 'O' and 'A' to represent driver + audio overlay.
+   168                                  ; ---------------------------------------------------------------------------
+   169                                  overlay_test:
+   170 000000DD B448                            mov     ah, 0x48
+   171 000000DF BB4000                          mov     bx, 0x40                ; paragraphs for overlay target
+   172 000000E2 CD21                            int     0x21
+   173 000000E4 723C                            jc      overlay_fail
+   174 000000E6 A3[CA01]                        mov     [overlaySeg], ax
+   175 000000E9 A3[6602]                        mov     word [overlayParam], ax
+   176 000000EC C706[6802]0000                  mov     word [overlayParam + 2], 0
+   177                                  
+   178 000000F2 8D16[D001]                      lea     dx, [overlayName]
+   179 000000F6 B8034B                          mov     ax, 0x4B03
+   180 000000F9 0E                              push    cs
+   181 000000FA 07                              pop     es
+   182 000000FB BB[6602]                        mov     bx, overlayParam
+   183 000000FE CD21                            int     0x21
+   184 00000100 7220                            jc      overlay_fail
+   185                                  
+   186 00000102 C706[CC01]0000                  mov     word [overlayEntry], 0
+   187 00000108 A1[CA01]                        mov     ax, [overlaySeg]
+   188 0000010B A3[CE01]                        mov     word [overlayEntry + 2], ax
+   189                                          ; manual far call using RETF so overlay can RETF back here
+   190 0000010E 68[1B01]                        push    word overlay_return       ; return IP
+   191 00000111 0E                              push    cs                   ; return CS
+   192 00000112 FF36[CE01]                      push    word [overlayEntry + 2] ; dest CS
+   193 00000116 FF36[CC01]                      push    word [overlayEntry]  ; dest IP
+   194 0000011A CB                              retf
+   195                                  overlay_return:
+   196                                  
+   197                                          PRINT   'V'
+    34 0000011B B056                <1>  mov al, %1
+    35 0000011D E89F00              <1>  call WriteTty
+   198 00000120 EB05                            jmp     done
+   199                                  overlay_fail:
+   200                                          PRINT   'v'
+    34 00000122 B076                <1>  mov al, %1
+    35 00000124 E89800              <1>  call WriteTty
+   201                                  
+   202                                  done:
+   203 00000127 F4                              hlt
+   204                                  
+   205                                  ; ---------------------------------------------------------------------------
+   206                                  ; Helpers
+   207                                  ; ---------------------------------------------------------------------------
+   208                                  BuildOverlayName:
+   209 00000128 8B1E2C00                        mov     bx, [PSP_ENV_PTR]
+   210 0000012C 8EC3                            mov     es, bx
+   211 0000012E 31FF                            xor     di, di
+   212 00000130 B90004                          mov     cx, 1024
+   213                                  find_path_end:
+   214 00000133 83F900                          cmp     cx, 0
+   215 00000136 7445                            je      overlayname_done
+   216 00000138 49                              dec     cx
+   217 00000139 268A05                          mov     al, [es:di]
+   218 0000013C 47                              inc     di
+   219 0000013D 3C00                            cmp     al, 0
+   220 0000013F 75F2                            jne     find_path_end
+   221 00000141 26803D00                        cmp     byte [es:di], 0
+   222 00000145 75EC                            jne     find_path_end
+   223 00000147 47                              inc     di                     ; skip second null
+   224 00000148 89FE                            mov     si, di                ; SI -> program path
+   225 0000014A 8D3E[D001]                      lea     di, [overlayName]
+   226                                  copy_overlay_path:
+   227 0000014E 268A04                          mov     al, [es:si]
+   228 00000151 8805                            mov     [di], al
+   229 00000153 46                              inc     si
+   230 00000154 47                              inc     di
+   231 00000155 3C00                            cmp     al, 0
+   232 00000157 75F5                            jne     copy_overlay_path
+   233                                  
+   234 00000159 4F                              dec     di                    ; back to null terminator
+   235                                  search_dot_ovl:
+   236 0000015A 81FF[D001]                      cmp     di, overlayName
+   237 0000015E 7409                            je      append_ext_ovl
+   238 00000160 4F                              dec     di
+   239 00000161 8A05                            mov     al, [di]
+   240 00000163 3C2E                            cmp     al, '.'
+   241 00000165 7403                            je      write_ext_ovl
+   242 00000167 EBF1                            jmp     search_dot_ovl
+   243                                  
+   244                                  append_ext_ovl:
+   245 00000169 47                              inc     di
+   246                                  write_ext_ovl:
+   247 0000016A C6052E                          mov     byte [di], '.'
+   248 0000016D C6450130                        mov     byte [di + 1], '0'
+   249 00000171 C6450230                        mov     byte [di + 2], '0'
+   250 00000175 C6450330                        mov     byte [di + 3], '0'
+   251 00000179 C6450400                        mov     byte [di + 4], 0
+   252                                  overlayname_done:
+   253 0000017D C3                              ret
+   254                                  
+   255                                  InitExecParamBlock:
+   256 0000017E C706[5002]0000                  mov     word [execParam + 0x00], 0          ; inherit environment
+   257 00000184 C706[5202][6A02]                mov     word [execParam + 0x02], cmdTail
+   258 0000018A 8C0E[5402]                      mov     word [execParam + 0x04], cs
+   259 0000018E C706[5602]FFFF                  mov     word [execParam + 0x06], 0xFFFF     ; FCB1 offset ignored
+   260 00000194 C706[5802]FFFF                  mov     word [execParam + 0x08], 0xFFFF     ; FCB1 segment ignored
+   261 0000019A C706[5A02]FFFF                  mov     word [execParam + 0x0A], 0xFFFF     ; FCB2 offset ignored
+   262 000001A0 C706[5C02]FFFF                  mov     word [execParam + 0x0C], 0xFFFF     ; FCB2 segment ignored
+   263 000001A6 C706[5E02]0000                  mov     word [execParam + 0x0E], 0
+   264 000001AC C706[6002]0000                  mov     word [execParam + 0x10], 0
+   265 000001B2 C706[6202]0000                  mov     word [execParam + 0x12], 0
+   266 000001B8 C706[6402]0000                  mov     word [execParam + 0x14], 0
+   267 000001BE C3                              ret
+   268                                  
+   269                                  WriteTty:
+   270 000001BF B40E                            mov     ah, TTY_FUNC
+   271 000001C1 B700                            mov     bh, TTY_PAGE
+   272 000001C3 B307                            mov     bl, TTY_ATTR
+   273 000001C5 CD10                            int     0x10
+   274 000001C7 C3                              ret
+   275                                  
+   276                                  ; ---------------------------------------------------------------------------
+   277                                  ; Data
+   278                                  ; ---------------------------------------------------------------------------
+   279 000001C8 0000                    allocSeg        dw 0
+   280 000001CA 0000                    overlaySeg      dw 0
+   281 000001CC 00000000                overlayEntry    dd 0
+   282 000001D0 00<rep 80h>             overlayName     times 128 db 0
+   283                                  
+   284 00000250 00<rep 16h>             execParam       times 0x16 db 0
+   285 00000266 00000000                overlayParam    dw 0, 0
+   286                                  
+   287                                  cmdTail:
+   288 0000026A 00                              db 0                       ; length = 0
+   289 0000026B 0D                              db 0x0D                    ; terminating carriage return
+   290                                  
+   291 0000026C 4348494C442E434F4D-     childName       db "CHILD.COM", 0
+   291 00000275 00                 
+   292 00000276 5453525F484F4F4B2E-     tsrName         db "TSR_HOOK.COM", 0
+   292 0000027F 434F4D00           

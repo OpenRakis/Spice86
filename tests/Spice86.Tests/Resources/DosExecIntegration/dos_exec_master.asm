@@ -64,7 +64,7 @@ env_scan:
         cmp     al, 0
         jne     env_scan
         cmp     byte [es:di], 0
-        jne     env_fail
+        jne     env_scan
         push    ds
         pop     es
         call    BuildOverlayName
