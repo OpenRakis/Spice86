@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
 
+using System.IO;
 using System.Runtime.CompilerServices;
 
 using Xunit;
@@ -601,6 +602,32 @@ public class EmsIntegrationTests {
         EmsTestHandler testHandler = RunEmsTest(program, enableEms: true);
 
         testHandler.Results.Should().Contain((byte)TestResult.Success, "Logical pages should maintain independent data");
+    }
+
+    /// <summary>
+    /// Tests that physical page 4 is rejected (only 0-3 are valid).
+    /// This tests for the off-by-one bug where > was used instead of >= in bounds checking.
+    /// </summary>
+    [Fact]
+    public void EmsMapWithPhysicalPage4_ShouldFail() {
+        byte[] program = File.ReadAllBytes("Resources/emsTests/physical_page_4_test.bin");
+
+        EmsTestHandler testHandler = RunEmsTest(program, enableEms: true);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success, "Physical page 4 should be rejected (only 0-3 valid)");
+    }
+
+    /// <summary>
+    /// Tests that handles allocated after deallocation don't collide with existing handles.
+    /// This tests for the handle ID reuse bug where EmmHandles.Count was used for new IDs.
+    /// </summary>
+    [Fact]
+    public void EmsHandleAllocationAfterDeallocation_ShouldNotCollide() {
+        byte[] program = File.ReadAllBytes("Resources/emsTests/handle_allocation_collision_test.bin");
+
+        EmsTestHandler testHandler = RunEmsTest(program, enableEms: true);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success, "Handle2's data should not be corrupted after handle1 deallocation");
     }
 
     /// <summary>
