@@ -80,7 +80,7 @@ public class DosProcessManager {
                 return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
             }
 
-            InitializePsp(block.DataBlockSegment, hostPath, commandTail);
+            InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment);
 
             LoadExeFile(exeFile, block.DataBlockSegment, block, updateCpuState);
 
@@ -156,7 +156,7 @@ public class DosProcessManager {
             (ushort)(exeFile.InitSS + loadSegment), exeFile.InitSP);
     }
 
-    private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments) {
+    private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment) {
         // Establish parent-child PSP relationship and create the new PSP
         ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
@@ -185,17 +185,22 @@ public class DosProcessManager {
 
         psp.DosCommandTail.Command = DosCommandTail.PrepareCommandlineString(arguments);
 
-        byte[] environmentBlock = CreateEnvironmentBlock(programHostPath);
-        // In the PSP, the Environment Block Segment field (defined at offset 0x2C) is a word, and is a pointer.
-        ushort envBlockPointer = (ushort)(pspSegment + 1);
-        SegmentedAddress envBlockSegmentAddress = new SegmentedAddress(envBlockPointer, 0);
+        // Honor caller-provided environment segment (EPB). If non-zero, use it; otherwise create a new block.
+        if (environmentSegment != 0) {
+            psp.EnvironmentTableSegment = environmentSegment;
+        } else {
+            byte[] environmentBlock = CreateEnvironmentBlock(programHostPath);
+            // In the PSP, the Environment Block Segment field (defined at offset 0x2C) is a word, and is a pointer.
+            ushort envBlockPointer = (ushort)(pspSegment + 1);
+            SegmentedAddress envBlockSegmentAddress = new SegmentedAddress(envBlockPointer, 0);
 
-        // Copy the environment block to memory in a separated segment.
-        _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlockSegmentAddress.Segment,
-            envBlockSegmentAddress.Offset), environmentBlock);
+            // Copy the environment block to memory in a separated segment (adjacent to PSP).
+            _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlockSegmentAddress.Segment,
+                envBlockSegmentAddress.Offset), environmentBlock);
 
-        // Point the PSP's environment segment to the environment block.
-        psp.EnvironmentTableSegment = envBlockSegmentAddress.Segment;
+            // Point the PSP's environment segment to the environment block.
+            psp.EnvironmentTableSegment = envBlockSegmentAddress.Segment;
+        }
 
         // Set the disk transfer area address to the command-line offset in the PSP.
         _fileManager.SetDiskTransferAreaAddress(
