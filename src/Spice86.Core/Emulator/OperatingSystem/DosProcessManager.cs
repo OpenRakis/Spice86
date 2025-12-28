@@ -119,6 +119,8 @@ public class DosProcessManager {
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
 
+        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment);
+
         LoadComFile(fileBytes, comBlock.DataBlockSegment);
 
         DosExecResult comResult = loadType == DosExecLoadType.LoadOnly
@@ -129,6 +131,14 @@ public class DosProcessManager {
 
         if (!updateCpuState) {
             _pspTracker.SetCurrentPspSegment(parentPspSegment);
+        }
+
+        // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
+        if (loadType == DosExecLoadType.LoadOnly && comResult.Success) {
+            paramBlock.InitialCS = comResult.InitialCS;
+            paramBlock.InitialIP = comResult.InitialIP;
+            paramBlock.InitialSS = comResult.InitialSS;
+            paramBlock.InitialSP = comResult.InitialSP;
         }
 
         return comResult;
