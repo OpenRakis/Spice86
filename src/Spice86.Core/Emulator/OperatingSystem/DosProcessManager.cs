@@ -69,49 +69,68 @@ public class DosProcessManager {
         ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
         bool updateCpuState = loadType == DosExecLoadType.LoadAndExecute;
 
-        if (isExeCandidate) {
-            DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
-            if (!exeFile.IsValid) {
-                return DosExecResult.Fail(DosErrorCode.FormatInvalid);
-            }
-
-            DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
-            if (block is null) {
-                return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
-            }
-
-            InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment);
-
-            LoadExeFile(exeFile, block.DataBlockSegment, block, updateCpuState);
-
-            ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
-            if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
-                ushort imageDistanceInParagraphs = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
-                loadImageSegment = (ushort)(block.DataBlockSegment + imageDistanceInParagraphs);
-            }
-
-            DosExecResult result = loadType == DosExecLoadType.LoadOnly
-                ? DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
-                    (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP)
-                : DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
-                    (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
-
-            if (!updateCpuState) {
-                _pspTracker.SetCurrentPspSegment(parentPspSegment);
-            }
-
-            
-            // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
-            if (loadType == DosExecLoadType.LoadOnly && result.Success) {
-                paramBlock.InitialCS = result.InitialCS;
-                paramBlock.InitialIP = result.InitialIP;
-                paramBlock.InitialSS = result.InitialSS;
-                paramBlock.InitialSP = result.InitialSP;
-            }
-
-            return result;
+        // Save CPU state for LoadOnly operations so we can restore it after loading
+        ushort savedCS = 0, savedIP = 0, savedSS = 0, savedSP = 0, savedDS = 0, savedES = 0;
+        if (!updateCpuState) {
+            savedCS = _state.CS;
+            savedIP = _state.IP;
+            savedSS = _state.SS;
+            savedSP = _state.SP;
+            savedDS = _state.DS;
+            savedES = _state.ES;
         }
 
+        // Try to load as EXE first if it looks like an EXE file
+        if (isExeCandidate) {
+            DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
+            if (exeFile.IsValid) {
+                DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
+                if (block is null) {
+                    return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
+                }
+
+                InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment);
+
+                LoadExeFile(exeFile, block.DataBlockSegment, block, updateCpuState);
+
+                ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
+                if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
+                    ushort imageDistanceInParagraphs = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
+                    loadImageSegment = (ushort)(block.DataBlockSegment + imageDistanceInParagraphs);
+                }
+
+                DosExecResult result = loadType == DosExecLoadType.LoadOnly
+                    ? DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
+                        (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP)
+                    : DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
+                        (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
+
+                if (!updateCpuState) {
+                    _pspTracker.SetCurrentPspSegment(parentPspSegment);
+                    // Restore caller's CPU state for LoadOnly
+                    _state.CS = savedCS;
+                    _state.IP = savedIP;
+                    _state.SS = savedSS;
+                    _state.SP = savedSP;
+                    _state.DS = savedDS;
+                    _state.ES = savedES;
+                }
+
+                // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
+                if (loadType == DosExecLoadType.LoadOnly && result.Success) {
+                    paramBlock.InitialCS = result.InitialCS;
+                    paramBlock.InitialIP = result.InitialIP;
+                    paramBlock.InitialSS = result.InitialSS;
+                    paramBlock.InitialSP = result.InitialSP;
+                }
+
+                return result;
+            }
+            // If file has .EXE extension but isn't a valid EXE, fall through to try COM loading
+            // This matches FreeDOS behavior where DosExec falls back to DosComLoader if DosExeLoader fails
+        }
+
+        // Load as COM file (either explicitly .COM or invalid .EXE that we'll try as COM)
         ushort paragraphsNeeded = (ushort)((DosProgramSegmentPrefix.PspSize + fileBytes.Length + 15) / 16);
         paragraphsNeeded = (ushort)(paragraphsNeeded == 0 ? 1 : paragraphsNeeded);
         DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
@@ -121,7 +140,7 @@ public class DosProcessManager {
 
         InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment);
 
-        LoadComFile(fileBytes, comBlock.DataBlockSegment);
+        LoadComFile(fileBytes, comBlock.DataBlockSegment, updateCpuState);
 
         DosExecResult comResult = loadType == DosExecLoadType.LoadOnly
             ? DosExecResult.SuccessLoadOnly(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
@@ -131,6 +150,13 @@ public class DosProcessManager {
 
         if (!updateCpuState) {
             _pspTracker.SetCurrentPspSegment(parentPspSegment);
+            // Restore caller's CPU state for LoadOnly
+            _state.CS = savedCS;
+            _state.IP = savedIP;
+            _state.SS = savedSS;
+            _state.SP = savedSP;
+            _state.DS = savedDS;
+            _state.ES = savedES;
         }
 
         // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
@@ -258,20 +284,22 @@ public class DosProcessManager {
         return ms.ToArray();
     }
 
-    private void LoadComFile(byte[] com, ushort pspSegment) {
+    private void LoadComFile(byte[] com, ushort pspSegment, bool updateCpuState) {
         uint physicalLoadAddress = MemoryUtils.ToPhysicalAddress(pspSegment, DosProgramSegmentPrefix.PspSize);
         _memory.LoadData(physicalLoadAddress, com);
 
-        _state.CS = pspSegment;
-        _state.IP = DosProgramSegmentPrefix.PspSize;
-        _state.DS = pspSegment;
-        _state.ES = pspSegment;
-        _state.SS = pspSegment;
-        _state.SP = 0xFFFE; // Standard COM file stack
-        _state.InterruptFlag = true;
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("COM load register state CS:IP={Cs}:{Ip} DS=ES=SS={Segment} SP={Sp}",
-                ConvertUtils.ToHex16(_state.CS), ConvertUtils.ToHex16(_state.IP), ConvertUtils.ToHex16(pspSegment), ConvertUtils.ToHex16(_state.SP));
+        if (updateCpuState) {
+            _state.CS = pspSegment;
+            _state.IP = DosProgramSegmentPrefix.PspSize;
+            _state.DS = pspSegment;
+            _state.ES = pspSegment;
+            _state.SS = pspSegment;
+            _state.SP = 0xFFFE; // Standard COM file stack
+            _state.InterruptFlag = true;
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("COM load register state CS:IP={Cs}:{Ip} DS=ES=SS={Segment} SP={Sp}",
+                    ConvertUtils.ToHex16(_state.CS), ConvertUtils.ToHex16(_state.IP), ConvertUtils.ToHex16(pspSegment), ConvertUtils.ToHex16(_state.SP));
+            }
         }
     }
 
