@@ -157,11 +157,31 @@ public class DosProcessManager {
     }
 
     private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments) {
+        // Establish parent-child PSP relationship and create the new PSP
+        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
 
         psp.Exit[0] = 0xCD;
         psp.Exit[1] = 0x20;
         psp.NextSegment = DosMemoryManager.LastFreeSegment;
+
+        // Link to parent PSP and initialize file table
+        psp.ParentProgramSegmentPrefix = parentPspSegment;
+        psp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
+        psp.FileTableAddress = pspSegment;
+        // Always set previous PSP pointer
+        psp.PreviousPspAddress = parentPspSegment;
+
+        // Inherit parent's JFT entries except those marked as DoNotInherit or Unused
+        DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
+        for (int i = 0; i < parentPsp.Files.Count; i++) {
+            byte parentEntry = parentPsp.Files[i];
+            if ((parentEntry & (byte)Enums.DosPspFileTableEntry.DoNotInherit) != 0) {
+                // do not inherit
+                continue;
+            }
+            psp.Files[i] = parentEntry;
+        }
 
         psp.DosCommandTail.Command = DosCommandTail.PrepareCommandlineString(arguments);
 
