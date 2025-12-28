@@ -74,19 +74,6 @@ public class DosMemoryManager {
     }
 
     /// <summary>
-    /// Reinitializes the MCB chain to a single free block covering conventional memory.
-    /// </summary>
-    public void ResetMcbChain() {
-        ushort loadSegment = (ushort)(_pspTracker.InitialPspSegment - 1);
-        ushort size = (ushort)((LastFreeSegment - loadSegment) + 1);
-        _start.TypeField = 0;
-        _start.PspSegment = 0;
-        _start.Size = (ushort)(size - 1);
-        _start.SetFree();
-        _start.SetLast();
-    }
-
-    /// <summary>
     /// Gets or sets the current memory allocation strategy (INT 21h/58h).
     /// </summary>
     public DosMemoryAllocationStrategy AllocationStrategy {

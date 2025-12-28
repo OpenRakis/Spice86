@@ -28,7 +28,6 @@ public class DosProcessManager {
     private readonly ILoggerService _loggerService;
     private const ushort CommandComSegment = 0x0160;
     private readonly InterruptVectorTable _interruptVectorTable;
-    private readonly Dictionary<ushort, ParentProcessContext> _parentProcessContexts = new();
 
     /// <summary>
     /// The master environment block that all DOS PSPs inherit.
@@ -120,21 +119,6 @@ public class DosProcessManager {
         uint breakAddr = currentPsp.BreakAddress;
         uint criticalErrorAddr = currentPsp.CriticalErrorAddress;
 
-        if (hasParentToReturnTo) {
-            if (_parentProcessContexts.TryGetValue(parentPspSegment, out ParentProcessContext parentContext)) {
-                _state.SS = parentContext.StackSegment;
-                _state.SP = parentContext.StackPointer;
-                _state.DS = parentContext.DataSegment;
-                _state.ES = parentPspSegment;
-            } else {
-                DosProgramSegmentPrefix parentPsp = new DosProgramSegmentPrefix(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
-                _state.SS = (ushort)(parentPsp.StackPointer >> 16);
-                _state.SP = (ushort)(parentPsp.StackPointer & 0xFFFF);
-                _state.DS = parentPspSegment;
-                _state.ES = parentPspSegment;
-            }
-        }
-
         // Free all memory blocks owned by this process (including environment block)
         // This follows FreeDOS kernel FreeProcessMem() pattern
         // TSR (term_type == 3) does NOT free memory - it keeps the program resident
@@ -151,21 +135,13 @@ public class DosProcessManager {
         _pspTracker.PopCurrentPspSegment();
 
         if (hasParentToReturnTo) {
-            if (_parentProcessContexts.TryGetValue(parentPspSegment, out ParentProcessContext parentContext)) {
-                _state.SS = parentContext.StackSegment;
-                _state.SP = parentContext.StackPointer;
-                _state.DS = parentContext.DataSegment;
-                _state.ES = parentPspSegment;
-                _parentProcessContexts.Remove(parentPspSegment);
-            } else {
-                DosProgramSegmentPrefix? parentPsp = _pspTracker.GetCurrentPsp();
-                if (parentPsp != null) {
-                    _state.SS = (ushort)(parentPsp.StackPointer >> 16);
-                    _state.SP = (ushort)(parentPsp.StackPointer & 0xFFFF);
-                }
-                _state.DS = parentPspSegment;
-                _state.ES = parentPspSegment;
+            DosProgramSegmentPrefix? parentPsp = _pspTracker.GetCurrentPsp();
+            if (parentPsp != null) {
+                _state.SS = (ushort)(parentPsp.StackPointer >> 16);
+                _state.SP = (ushort)((parentPsp.StackPointer & 0xFFFF) + 6);
             }
+            _state.DS = parentPspSegment;
+            _state.ES = parentPspSegment;
             // Get the terminate address from the interrupt vector table
             // The INT 22h vector was just restored from the PSP above, so it now
             // contains the return address for the parent process
@@ -240,11 +216,6 @@ public class DosProcessManager {
             _loggerService.Information("EXEC: Loading program={Program}, loadType={LoadType}, envSeg={EnvSeg:X4}",
                 programName, loadType, environmentSegment);
         }
-
-        if (!_memoryManager.CheckMcbChain()) {
-            _memoryManager.ResetMcbChain();
-            _pspTracker.SetCurrentPspSegment(_pspTracker.InitialPspSegment);
-        }
         
         // FreeDOS task.c line 366: q->ps_stack = (BYTE FAR *)user_r;
         // where user_r is the saved CPU state at the time INT 21h AH=4Bh was called.
@@ -283,12 +254,6 @@ public class DosProcessManager {
         // Save parent's current SS:SP BEFORE any CPU state changes (FreeDOS: q->ps_stack = user_r)
         // This captures the parent's stack context before the child modifies anything
         uint parentStackPointer = ((uint)_state.SS << 16) | _state.SP;
-
-        if (updateCpuState) {
-            ParentProcessContext parentContext = new ParentProcessContext(_state.DS, _state.ES, _state.SS, _state.SP);
-            _parentProcessContexts[parentPspSegment] = parentContext;
-            _interruptVectorTable[0x22] = new SegmentedAddress(callerCS, callerIP);
-        }
 
         // Save CPU state for LoadOnly operations so we can restore it after loading
         ushort savedCS = 0, savedIP = 0, savedSS = 0, savedSP = 0, savedDS = 0, savedES = 0;
@@ -358,8 +323,6 @@ public class DosProcessManager {
         if (comBlock is null) {
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
-
-        comBlock.PspSegment = comBlock.DataBlockSegment;
         InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP);
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -631,23 +594,6 @@ public class DosProcessManager {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Program entry point is {ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }
-    }
-
-    private readonly struct ParentProcessContext {
-        public ParentProcessContext(ushort dataSegment, ushort extraSegment, ushort stackSegment, ushort stackPointer) {
-            DataSegment = dataSegment;
-            ExtraSegment = extraSegment;
-            StackSegment = stackSegment;
-            StackPointer = stackPointer;
-        }
-
-        public ushort DataSegment { get; }
-
-        public ushort ExtraSegment { get; }
-
-        public ushort StackSegment { get; }
-
-        public ushort StackPointer { get; }
     }
 
 }
