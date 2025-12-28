@@ -1114,7 +1114,7 @@ public class DosInt21Handler : InterruptHandler {
             uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(paramBlock.CommandTailSegment, paramBlock.CommandTailOffset);
             DosCommandTail cmdTail = new(Memory, cmdTailAddress);
             string commandTail = cmdTail.Length > 0 ? cmdTail.Command.TrimEnd('\r') : string.Empty;
-            result = _dosProcessManager.LoadOrLoadAndExecute(programName, commandTail, loadType, paramBlock.EnvironmentSegment);
+            result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail, loadType, paramBlock.EnvironmentSegment);
         }
         HandleDosExecResult(calledFromVm, result);
     }
@@ -1136,13 +1136,13 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public DosExecResult LoadOnly(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
-        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, commandTail ?? "", DosExecLoadType.LoadOnly, paramBlock.EnvironmentSegment);
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadOnly, paramBlock.EnvironmentSegment);
         HandleDosExecResult(calledFromVm: true, result);
         return result;
     }
 
     public DosExecResult LoadAndExecute(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
-        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, commandTail ?? "", DosExecLoadType.LoadAndExecute, paramBlock.EnvironmentSegment);
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadAndExecute, paramBlock.EnvironmentSegment);
         HandleDosExecResult(calledFromVm: true, result);
         return result;
     }

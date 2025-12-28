@@ -11,14 +11,14 @@ using Xunit;
 public class DosExecRegisterInitializationTests {
     [Fact]
     public void ComLaunch_ShouldInitializeRegistersLikeDos() {
-        string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
-        string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_regs_com_{Guid.NewGuid()}");
+        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
+        string tempDir = Path.Join(Path.GetTempPath(), $"dos_exec_regs_com_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
-        File.Copy(Path.Combine(resourceDir, "child.com"), Path.Combine(tempDir, "child.com"), true);
+        File.Copy(Path.Join(resourceDir, "child.com"), Path.Join(tempDir, "child.com"), true);
 
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
-                binName: Path.Combine(tempDir, "child.com"),
+                binName: Path.Join(tempDir, "child.com"),
                 enableCfgCpu: false,
                 enablePit: false,
                 recordData: false,
@@ -58,14 +58,14 @@ public class DosExecRegisterInitializationTests {
 
     [Fact]
     public void ExeLaunch_ShouldInitializeRegistersLikeDos() {
-        string resourceDir = Path.Combine(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
-        string tempDir = Path.Combine(Path.GetTempPath(), $"dos_exec_regs_exe_{Guid.NewGuid()}");
+        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
+        string tempDir = Path.Join(Path.GetTempPath(), $"dos_exec_regs_exe_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
-        File.Copy(Path.Combine(resourceDir, "overlay_driver.bin"), Path.Combine(tempDir, "overlay_driver.exe"), true);
+        File.Copy(Path.Join(resourceDir, "overlay_driver.bin"), Path.Join(tempDir, "overlay_driver.exe"), true);
 
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
-                binName: Path.Combine(tempDir, "overlay_driver.exe"),
+                binName: Path.Join(tempDir, "overlay_driver.exe"),
                 enableCfgCpu: false,
                 enablePit: false,
                 recordData: false,
