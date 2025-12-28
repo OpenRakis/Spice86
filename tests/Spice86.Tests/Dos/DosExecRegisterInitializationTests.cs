@@ -105,11 +105,6 @@ public class DosExecRegisterInitializationTests {
         if (!Directory.Exists(directoryPath)) {
             return;
         }
-
-        try {
-            Directory.Delete(directoryPath, true);
-        } catch (IOException) {
-        } catch (UnauthorizedAccessException) {
-        }
+        Directory.Delete(directoryPath, true);
     }
 }
