@@ -31,13 +31,17 @@ public class DosExecRegisterInitializationTests {
             ).Create();
 
             State state = spice86.Machine.CpuState;
+            // COM files load at offset 0x100 in their PSP segment
             state.CS.Should().NotBe(0);
             state.IP.Should().Be(0x100);
+            // For COM files, all segment registers point to the PSP
             state.DS.Should().Be(state.CS);
             state.ES.Should().Be(state.CS);
             state.SS.Should().Be(state.CS);
+            // Stack pointer initialized to end of segment
             state.SP.Should().Be(0xFFFE);
 
+            // All general purpose registers initialized to zero
             state.AX.Should().Be(0);
             state.BX.Should().Be(0);
             state.CX.Should().Be(0);
@@ -74,10 +78,15 @@ public class DosExecRegisterInitializationTests {
             ).Create();
 
             State state = spice86.Machine.CpuState;
-            state.CS.Should().NotBe(0);
-            state.IP.Should().NotBe(0);
+            // EXE header specifies InitCS=0, InitIP=0, InitSS=0, InitSP=0xFFFE
+            // These are adjusted by loadImageSegment = pspSegment + 0x10
+            state.CS.Should().Be(state.SS);
+            state.IP.Should().Be(0);
+            state.SP.Should().Be(0xFFFE);
+            // DS and ES both point to PSP (pspSegment), which is 0x10 less than CS/SS
             state.DS.Should().Be(state.ES);
-            state.SS.Should().NotBe(0);
+            state.CS.Should().Be((ushort)(state.DS + 0x10));
+            // All general purpose registers initialized to zero
             state.AX.Should().Be(0);
             state.BX.Should().Be(0);
             state.CX.Should().Be(0);
