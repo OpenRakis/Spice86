@@ -26,6 +26,7 @@ public class DosProcessManager {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly ILoggerService _loggerService;
+    private const ushort CommandComSegment = 0x60;
 
     /// <summary>
     /// The master environment block that all DOS PSPs inherit.
@@ -34,6 +35,16 @@ public class DosProcessManager {
     /// Not stored in emulated memory, so no one can modify it.
     /// </remarks>
     private readonly EnvironmentVariables _environmentVariables;
+
+    /// <summary>
+    /// Stack to track parent process CPU states for proper restoration on child termination.
+    /// </summary>
+    private readonly Stack<ParentProcessState> _parentProcessStack = new();
+
+    /// <summary>
+    /// The last child process exit code. Used by INT 21h AH=4Dh.
+    /// </summary>
+    private ushort _lastChildExitCode = 0;
 
     public DosProcessManager(IMemory memory, State state,
         DosProgramSegmentPrefixTracker dosPspTracker, DosMemoryManager dosMemoryManager,
@@ -55,6 +66,144 @@ public class DosProcessManager {
         }
     }
 
+    /// <summary>
+    /// Gets or sets the return code of the last terminated child process.
+    /// </summary>
+    /// <remarks>
+    /// The low byte (AL) contains the exit code, and the high byte (AH) contains
+    /// the termination type. See <see cref="DosTerminationType"/> for termination types.
+    /// In MS-DOS, this value is only valid for one read after EXEC returns - subsequent
+    /// reads return 0.
+    /// </remarks>
+    public ushort LastChildReturnCode { get; private set; }
+
+
+    public bool TerminateProcess(byte exitCode, DosTerminationType terminationType,
+         InterruptVectorTable interruptVectorTable) {
+
+        // Store the return code for parent to retrieve via INT 21h AH=4Dh
+        // Format: AH = termination type, AL = exit code
+        LastChildReturnCode = (ushort)(((ushort)terminationType << 8) | exitCode);
+
+        DosProgramSegmentPrefix? currentPsp = _pspTracker.GetCurrentPsp();
+        if (currentPsp is null) {
+            // No PSP means we're terminating before any program was loaded
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("TerminateProcess called with no current PSP");
+            }
+            return false;
+        }
+
+        ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
+        ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "Terminating process at PSP {CurrentPsp:X4}, exit code {ExitCode:X2}, type {Type}, parent PSP {ParentPsp:X4}",
+                currentPspSegment, exitCode, terminationType, parentPspSegment);
+        }
+
+        // Check if this is the root process (PSP = parent PSP, like COMMAND.COM)
+        // or if parent is COMMAND.COM (the shell)
+        bool isRootProcess = currentPspSegment == parentPspSegment ||
+                            parentPspSegment == 0x60;
+
+        // If this is a child process (not the main program), we have a parent to return to
+        bool hasParentToReturnTo = !isRootProcess && _pspTracker.PspCount > 1;
+
+        // Close all non-standard file handles (5+) opened by this process
+        // Standard handles 0-4 (stdin, stdout, stderr, stdaux, stdprn) are inherited and not closed
+        _fileManager.CloseAllNonStandardFileHandles();
+
+        // Cache interrupt vectors and stack pointer from PSP before freeing memory
+        // INT 22h = Terminate address, INT 23h = Ctrl-C, INT 24h = Critical error
+        // Must read these BEFORE freeing the PSP memory to avoid accessing freed memory
+        uint terminateAddr = currentPsp.TerminateAddress;
+        uint breakAddr = currentPsp.BreakAddress;
+        uint criticalErrorAddr = currentPsp.CriticalErrorAddress;
+        uint savedStackPointer = currentPsp.StackPointer;
+
+        // Free all memory blocks owned by this process (including environment block)
+        // This follows FreeDOS kernel FreeProcessMem() pattern
+        _memoryManager.FreeProcessMemory(currentPspSegment);
+
+        // Restore interrupt vectors from cached values
+        RestoreInterruptVector(0x22, terminateAddr, interruptVectorTable);
+        RestoreInterruptVector(0x23, breakAddr, interruptVectorTable);
+        RestoreInterruptVector(0x24, criticalErrorAddr, interruptVectorTable);
+
+        // Remove the PSP from the tracker
+        _pspTracker.PopCurrentPspSegment();
+
+        if (hasParentToReturnTo) {
+            // Restore the parent's stack pointer from the child's PSP.
+            // The stack pointer was saved at PSP offset 0x2E when the child was loaded via EXEC.
+            // This ensures the parent continues with its original stack state.
+            if (savedStackPointer != 0) {
+                _state.SS = (ushort)(savedStackPointer >> 16);
+                _state.SP = (ushort)(savedStackPointer & 0xFFFF);
+            }
+
+            // Set up return to parent process
+            // DS and ES should point to parent's PSP
+            _state.DS = parentPspSegment;
+            _state.ES = parentPspSegment;
+
+            // Get the terminate address from the interrupt vector table
+            // The INT 22h vector was just restored from the PSP above, so it now
+            // contains the return address for the parent process
+            SegmentedAddress returnAddress = interruptVectorTable[0x22];
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug(
+                    "Returning to parent at {Segment:X4}:{Offset:X4}",
+                    returnAddress.Segment, returnAddress.Offset);
+            }
+
+            // Set up CPU to continue at the return address stored in PSP offset 0x0A.
+            //
+            // Reference: FreeDOS kernel/task.c return_user() (line ~420):
+            // https://github.com/FDOS/kernel/blob/master/kernel/task.c
+            //   irp->CS = FP_SEG(p->ps_isv22);
+            //   irp->IP = FP_OFF(p->ps_isv22);
+            // FreeDOS reads the terminate address from ps_isv22 (PSP offset 0x0A) and
+            // sets CS:IP to return to the parent process.
+            //
+            // Reference: MS-DOS 4.0 EXEC.ASM exec_set_return: (line ~650):
+            // https://github.com/microsoft/MS-DOS/blob/main/v4.0/src/DOS/EXEC.ASM
+            //   POP DS:[addr_int_terminate]
+            //   POP DS:[addr_int_terminate+2]
+            // MS-DOS pops the return address from stack into INT 22h vector.
+            //
+            // The CfgCpu callback node (Grp4Callback) detects when the callback handler
+            // changes CS:IP and will NOT add the instruction length in that case.
+            _state.CS = returnAddress.Segment;
+            _state.IP = returnAddress.Offset;
+
+            return true; // Continue execution at parent
+        }
+
+        // No parent to return to - this is the main program terminating
+        return false;
+    }
+
+    private static void RestoreInterruptVector(byte vectorNumber, uint storedFarPointer,
+        InterruptVectorTable interruptVectorTable) {
+        if (storedFarPointer != 0) {
+            ushort offset = (ushort)(storedFarPointer & 0xFFFF);
+            ushort segment = (ushort)(storedFarPointer >> 16);
+            interruptVectorTable[vectorNumber] = new SegmentedAddress(segment, offset);
+        }
+    }
+
+    /// <summary>
+    /// Gets the last child process exit code. Used by INT 21h AH=4Dh.
+    /// </summary>
+    /// <returns>Exit code in AL, termination type in AH (always 0 for normal termination).</returns>
+    public ushort GetLastChildExitCode() {
+        return _lastChildExitCode;
+    }
+
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
         string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
@@ -68,6 +217,32 @@ public class DosProcessManager {
         bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && upperCaseExtension == ".EXE";
         ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
         bool updateCpuState = loadType == DosExecLoadType.LoadAndExecute;
+
+        // Save parent CPU state if we're about to execute (not just load)
+        if (updateCpuState) {
+            ParentProcessState parentState = new ParentProcessState {
+                PspSegment = parentPspSegment,
+                CS = _state.CS,
+                IP = _state.IP,
+                SS = _state.SS,
+                SP = _state.SP,
+                DS = _state.DS,
+                ES = _state.ES,
+                AX = _state.AX,
+                BX = _state.BX,
+                CX = _state.CX,
+                DX = _state.DX,
+                SI = _state.SI,
+                DI = _state.DI,
+                BP = _state.BP
+            };
+            _parentProcessStack.Push(parentState);
+
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Saved parent process state: PSP={Psp:X4} CS:IP={Cs:X4}:{Ip:X4} SS:SP={Ss:X4}:{Sp:X4}",
+                    parentState.PspSegment, parentState.CS, parentState.IP, parentState.SS, parentState.SP);
+            }
+        }
 
         // Save CPU state for LoadOnly operations so we can restore it after loading
         ushort savedCS = 0, savedIP = 0, savedSS = 0, savedSP = 0, savedDS = 0, savedES = 0;
@@ -371,5 +546,25 @@ public class DosProcessManager {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Program entry point is {ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }
+    }
+
+    /// <summary>
+    /// Represents the saved state of a parent process when a child is executing.
+    /// </summary>
+    private class ParentProcessState {
+        public ushort PspSegment { get; set; }
+        public ushort CS { get; set; }
+        public ushort IP { get; set; }
+        public ushort SS { get; set; }
+        public ushort SP { get; set; }
+        public ushort DS { get; set; }
+        public ushort ES { get; set; }
+        public ushort AX { get; set; }
+        public ushort BX { get; set; }
+        public ushort CX { get; set; }
+        public ushort DX { get; set; }
+        public ushort SI { get; set; }
+        public ushort DI { get; set; }
+        public ushort BP { get; set; }
     }
 }
