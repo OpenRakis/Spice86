@@ -145,6 +145,11 @@ public class DosProcessManager {
                     "Returning to parent at {Segment:X4}:{Offset:X4} from child PSP {ChildPsp:X4}, parent PSP {ParentPsp:X4}",
                     returnAddress.Segment, returnAddress.Offset, currentPspSegment, parentPspSegment);
             }
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Before return: CS:IP={Cs:X4}:{Ip:X4}, setting to {ReturnCs:X4}:{ReturnIp:X4}",
+                    _state.CS, _state.IP, returnAddress.Segment, returnAddress.Offset);
+            }
 
             // Set up CPU to continue at the return address stored in PSP offset 0x0A.
             //
@@ -165,11 +170,19 @@ public class DosProcessManager {
             // changes CS:IP and will NOT add the instruction length in that case.
             _state.CS = returnAddress.Segment;
             _state.IP = returnAddress.Offset;
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("After setting return: CS:IP now={Cs:X4}:{Ip:X4}",
+                    _state.CS, _state.IP);
+            }
 
             return true; // Continue execution at parent
         }
 
         // No parent to return to - this is the main program terminating
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("No parent to return to - main program terminating");
+        }
         return false;
     }
 
@@ -192,17 +205,33 @@ public class DosProcessManager {
 
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment, InterruptVectorTable interruptVectorTable) {
-        // Read the return address from the interrupt stack. When INT21h AH=4Bh is called,
-        // the CPU pushes FLAGS, CS, IP onto the stack. The stack pointer currently points
-        // to the pushed IP (the return address).
-        // Stack layout after INT instruction:
-        //   [SP+0] = IP (return offset)
-        //   [SP+2] = CS (return segment)  
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("EXEC: Loading program={Program}, loadType={LoadType}, envSeg={EnvSeg:X4}",
+                programName, loadType, environmentSegment);
+        }
+        
+        // FreeDOS task.c line 366: q->ps_stack = (BYTE FAR *)user_r;
+        // where user_r is the saved CPU state at the time INT 21h AH=4Bh was called.
+        // When INT 21h executes, the CPU pushes IP, CS, FLAGS onto the stack, then jumps to the handler.
+        // Stack layout when we're in the handler:
+        //   [SP+0] = IP (return address to user code)
+        //   [SP+2] = CS (return segment to user code)
         //   [SP+4] = FLAGS
-        // This matches FreeDOS where user_r contains the saved register state with CS:IP
-        // being the address to return to after the child terminates.
+        // We read CS:IP from the stack to get the address where the parent will resume.
         ushort callerIP = _memory.UInt16[_state.StackPhysicalAddress];
         ushort callerCS = _memory.UInt16[_state.StackPhysicalAddress + 2];
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("EXEC: Stack at SS:SP={StackSeg:X4}:{StackOff:X4}, read caller CS:IP={CallerCs:X4}:{CallerIp:X4}",
+                _state.SS, _state.SP, callerCS, callerIP);
+        }
+        
+        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("EXEC: Current PSP={CurrentPsp:X4}, will become parent",
+                parentPspSegment);
+        }
         
         string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
@@ -213,7 +242,6 @@ public class DosProcessManager {
 
         string upperCaseExtension = Path.GetExtension(hostPath).ToUpperInvariant();
         bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && upperCaseExtension == ".EXE";
-        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
         bool updateCpuState = loadType == DosExecLoadType.LoadAndExecute;
 
         // Save parent's current SS:SP BEFORE any CPU state changes (FreeDOS: q->ps_stack = user_r)
@@ -291,6 +319,11 @@ public class DosProcessManager {
 
         InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP);
 
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("EXEC: Loading COM at PSP={PspSeg:X4}, size={Size} bytes",
+                comBlock.DataBlockSegment, fileBytes.Length);
+        }
+        
         LoadComFile(fileBytes, comBlock.DataBlockSegment, updateCpuState);
 
         DosExecResult comResult = loadType == DosExecLoadType.LoadOnly
@@ -298,8 +331,17 @@ public class DosProcessManager {
                 comBlock.DataBlockSegment, 0xFFFE)
             : DosExecResult.SuccessExecute(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
                 comBlock.DataBlockSegment, 0xFFFE);
+                
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("EXEC: COM loaded successfully, CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
+                comResult.InitialCS, comResult.InitialIP, comResult.InitialSS, comResult.InitialSP);
+        }
 
         if (!updateCpuState) {
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("EXEC: COM LoadOnly - restoring parent PSP={ParentPsp:X4} and CPU state CS:IP={Cs:X4}:{Ip:X4}",
+                    parentPspSegment, savedCS, savedIP);
+            }
             _pspTracker.SetCurrentPspSegment(parentPspSegment);
             // Restore caller's CPU state for LoadOnly
             _state.CS = savedCS;
@@ -308,6 +350,11 @@ public class DosProcessManager {
             _state.SP = savedSP;
             _state.DS = savedDS;
             _state.ES = savedES;
+        } else {
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("EXEC: COM LoadAndExecute - CPU state updated, now at CS:IP={Cs:X4}:{Ip:X4}, current PSP={CurrentPsp:X4}",
+                    _state.CS, _state.IP, _pspTracker.GetCurrentPspSegment());
+            }
         }
 
         // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
