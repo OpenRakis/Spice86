@@ -139,6 +139,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4A, () => ModifyMemoryBlock(true));
         AddAction(0x4B, () => LoadAndOrExecute(true));
         AddAction(0x4C, QuitWithExitCode);
+        AddAction(0x4D, GetReturnCode);
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
@@ -910,11 +911,104 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Terminate the current process, and either prepare unloading it, or keep it in memory.
+    /// INT 21h, AH=31h - Terminate and Stay Resident.
+    /// Keeps the program in memory and returns control to the parent process.
     /// </summary>
-    /// <exception cref="NotImplementedException">TSR Support is not implemented</exception>
+    /// <remarks>
+    /// Input: AL = return code, DX = number of paragraphs to keep resident
+    /// </remarks>
     private void TerminateAndStayResident() {
-        throw new NotImplementedException("TSR Support is not implemented");
+        ushort paragraphsToKeep = State.DX;
+        byte returnCode = State.AL;
+
+        // FreeDOS enforces a minimum of 6 paragraphs (96 bytes)
+        // This is less than the PSP size (16 paragraphs = 256 bytes), but it's what FreeDOS does
+        const ushort MinimumParagraphs = 6;
+        if (paragraphsToKeep < MinimumParagraphs) {
+            paragraphsToKeep = MinimumParagraphs;
+        }
+
+        // Get the current PSP
+        DosProgramSegmentPrefix? currentPsp = _dosPspTracker.GetCurrentPsp();
+        ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
+
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information(
+                "TSR: Terminating with return code {ReturnCode}, keeping {Paragraphs} paragraphs at PSP {PspSegment:X4}",
+                returnCode, paragraphsToKeep, currentPspSegment);
+        }
+
+        // Resize the memory block for the current PSP
+        // The memory block starts at PSP segment, and we resize it to keep only the requested paragraphs
+        DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(
+            currentPspSegment,
+            paragraphsToKeep,
+            out DosMemoryControlBlock _);
+
+        // Even if resize fails, we still terminate as a TSR
+        // This matches FreeDOS behavior - it doesn't check the return value of DosMemChange
+        if (errorCode != DosErrorCode.NoError && LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning(
+                "TSR: Failed to resize memory block to {Paragraphs} paragraphs, error: {Error}",
+                paragraphsToKeep, errorCode);
+        }
+
+        // TSR terminates execution but keeps memory resident.
+        // Unlike normal termination (AH=4Ch), TSR does NOT free the process memory.
+        // However, TSR DOES pop the PSP from the tracker because the parent process
+        // becomes the current process again. This allows the parent to make subsequent
+        // EXEC calls without the stale TSR PSP being treated as current.
+        _dosPspTracker.PopCurrentPspSegment();
+
+        // Check if we have a valid PSP with a terminate address
+        // If the current PSP has a valid terminate address, return to the parent
+        // Otherwise, stop the emulation (for initial programs or test environments)
+        if (currentPsp is not null) {
+            uint terminateAddress = currentPsp.TerminateAddress;
+            ushort terminateSegment = (ushort)(terminateAddress >> 16);
+            ushort terminateOffset = (ushort)(terminateAddress & 0xFFFF);
+
+            // Check if we have a valid parent to return to:
+            // - terminateAddress must be non-zero (was saved when program was loaded)
+            // - parentPspSegment must not be ourselves (we're not the root shell)
+            // - parentPspSegment must not be zero (there is a parent)
+            ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
+            bool hasValidParent = terminateAddress != 0 &&
+                                  parentPspSegment != currentPspSegment &&
+                                  parentPspSegment != 0;
+
+            if (hasValidParent) {
+                // Restore the CPU stack to the state it was in when the program started.
+                // The PSP stores the parent's SS:SP at offset 0x2E, which was saved by
+                // INT 21h/4Bh (EXEC) when this program was loaded. Restoring it allows
+                // the parent to continue execution from where it called EXEC.
+                uint savedStackPointer = currentPsp.StackPointer;
+                State.SS = (ushort)(savedStackPointer >> 16);
+                State.SP = (ushort)(savedStackPointer & 0xFFFF);
+
+                // Jump to the terminate address (INT 22h handler saved in PSP at offset 0x0A).
+                // This was set when the program was loaded and points back to the parent's
+                // continuation point.
+                //
+                // Reference: FreeDOS kernel/task.c return_user() (line ~420):
+                // https://github.com/FDOS/kernel/blob/master/kernel/task.c
+                //   irp->CS = FP_SEG(p->ps_isv22);
+                //   irp->IP = FP_OFF(p->ps_isv22);
+                // FreeDOS reads ps_isv22 from the PSP (terminate address at offset 0x0A)
+                // and sets CS:IP to return control to the parent process.
+                //
+                // The CfgCpu callback node (Grp4Callback) detects when the callback handler
+                // changes CS:IP and will NOT add the instruction length in that case.
+                State.CS = terminateSegment;
+                State.IP = terminateOffset;
+
+                if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    LoggerService.Verbose(
+                        "TSR: Returning to parent at {Segment:X4}:{Offset:X4}, stack {SS:X4}:{SP:X4}",
+                        terminateSegment, terminateOffset, State.SS, State.SP);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -1213,14 +1307,43 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// Quits the current DOS process and sets the exit code from the value in the AL register. <br/>
-    /// TODO: This is only a stub that sets the cpu state <see cref="State.IsRunning"/> property to <c>False</c>, thus ending the emulation loop !
+    /// If this is a child process, restores the parent's state. Otherwise, terminates the emulator.
     /// </summary>
     public void QuitWithExitCode() {
         byte exitCode = State.AL;
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning("INT21H: QUIT WITH EXIT CODE {ExitCode}", ConvertUtils.ToHex8(exitCode));
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2}", exitCode);
         }
-        State.IsRunning = false;
+
+        bool shouldContinue = _dosProcessManager.TerminateProcess(
+            exitCode,
+            DosTerminationType.Normal,
+            _interruptVectorTable);
+
+        if (!shouldContinue) {
+            // No parent to return to - stop emulation
+            State.IsRunning = false;
+        }
+        // If shouldContinue is true, TerminateProcess has set CS:IP (with -4 adjustment)
+        // to the parent's return address. MoveIpAndSetNextNode will add 4 after this
+        // handler returns, and execution will continue at the parent's correct address.
+    }
+
+    /// <summary>
+    /// INT 21h, AH=4Dh - Get Return Code of Subprogram (WAIT).
+    /// Returns the exit code of a terminated child process.
+    /// </summary>
+    /// <remarks>
+    /// Returns:
+    /// AH = termination type (00h = normal, 01h = Ctrl-C, 02h = critical error, 03h = TSR)
+    /// AL = return code
+    /// </remarks>
+    public void GetReturnCode() {
+        ushort returnCode = _dosProcessManager.GetLastChildExitCode();
+        State.AX = returnCode;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET RETURN CODE: AX={Ax:X4}", returnCode);
+        }
     }
 
     /// <summary>
