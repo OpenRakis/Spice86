@@ -127,8 +127,16 @@ public class DosProcessManager {
         rootPsp.ParentProgramSegmentPrefix = rootBlock.DataBlockSegment;
         rootPsp.PreviousPspAddress = rootBlock.DataBlockSegment;
 
-        // Set terminate address to a safe value (could be INT 20H handler)
-        rootPsp.TerminateAddress = 0; // Command.COM never terminates
+
+        // Initialize interrupt vectors from IVT so child PSPs inherit proper addresses
+        SegmentedAddress int22 = _interruptVectorTable[0x22];
+        rootPsp.TerminateAddress = ((uint)int22.Segment << 16) | int22.Offset;
+
+        SegmentedAddress int23 = _interruptVectorTable[0x23];
+        rootPsp.BreakAddress = ((uint)int23.Segment << 16) | int23.Offset;
+
+        SegmentedAddress int24 = _interruptVectorTable[0x24];
+        rootPsp.CriticalErrorAddress = ((uint)int24.Segment << 16) | int24.Offset;
 
         // Initialize file table
         rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
