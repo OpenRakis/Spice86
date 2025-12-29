@@ -31,9 +31,6 @@ public class DosInt22Handler : InterruptHandler {
             LoggerService.Information("INT 22h: Terminate address invoked, terminating current process.");
         }
 
-        bool shouldContinue = _dosProcessManager.TerminateProcess(0, DosTerminationType.Normal, _interruptVectorTable);
-        if (!shouldContinue) {
-            State.IsRunning = false;
-        }
+        _dosProcessManager.TerminateProcess(0, DosTerminationType.Normal, _interruptVectorTable);
     }
 }
