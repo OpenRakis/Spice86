@@ -109,7 +109,7 @@ public class DosProcessManager {
         }
 
         // Allocate memory for the root PSP (1 paragraph = 16 bytes, PSP is 256 bytes)
-        // 10 paragraphs covers the entire PSP, but then Dune won't start (not enough conventionnal memory)
+        // 10 paragraphs covers the entire PSP, but then Dune won't start (not enough conventionlal memory)
         DosMemoryControlBlock? rootBlock = _memoryManager.AllocateMemoryBlock(0x9);
         if (rootBlock is null) {
             throw new InvalidOperationException("Failed to allocate memory for root COMMAND.COM PSP");
@@ -814,10 +814,12 @@ public class DosProcessManager {
         // Add final null byte to mark end of environment block
         ms.WriteByte(0);
 
-        // FreeDOS and DOSBox write the program path immediately after the double null
-        // WITHOUT an intermediate word count. The format is: "VAR=VAL\0...\0\0PATH\0"
-        // Some documentation mentions a word with value 1, but actual implementations
-        // (FreeDOS kernel, DOSBox staging) write the path directly after the double null.
+        // MS-DOS format: after the double null, write a WORD with value 1 to indicate
+        // that one additional string (the program path) follows.
+        // This is the correct DOS format, even though some sources suggest it's optional.
+        ms.WriteByte(1); // Low byte of WORD = 1
+        ms.WriteByte(0); // High byte of WORD = 0
+
         // Get the DOS path for the program (not the host path)
         string dosPath = _fileManager.GetDosProgramPath(programPath);
 
