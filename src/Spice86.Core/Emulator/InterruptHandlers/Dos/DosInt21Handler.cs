@@ -106,6 +106,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
         AddAction(0x25, SetInterruptVector);
+        AddAction(0x26, CreateNewPsp);
         AddAction(0x2A, GetDate);
         AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
@@ -143,6 +144,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
         AddAction(0x52, GetListOfLists);
+        AddAction(0x55, CreateChildPsp);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
         AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
@@ -1443,5 +1445,87 @@ public class DosInt21Handler : InterruptHandler {
     private void WriteCmosRegister(byte register, byte value) {
         _ioPortDispatcher.WriteByte(CmosPorts.Address, register);
         _ioPortDispatcher.WriteByte(CmosPorts.Data, value);
+    }
+
+    /// <summary>
+    /// INT 21h, AH=26h - Create New PSP.
+    /// <para>
+    /// Creates a new Program Segment Prefix at the specified segment address by copying
+    /// the current PSP and updating relevant fields.
+    /// </para>
+    /// <b>Expects:</b><br/>
+    /// DX = segment for new PSP
+    /// </summary>
+    /// <remarks>
+    /// This function copies the current PSP to the specified segment and updates:
+    /// <list type="bullet">
+    /// <item>Interrupt vectors (INT 22h, 23h, 24h) from the interrupt vector table</item>
+    /// <item>DOS version</item>
+    /// </list>
+    /// The parent PSP field is preserved from the copy (not zeroed), matching FreeDOS behavior.
+    /// </remarks>
+    public void CreateNewPsp() {
+        ushort newPspSegment = State.DX;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE NEW PSP at segment {Segment:X4}",
+                newPspSegment);
+        }
+        
+        // Create the new PSP by copying the current one
+        _dosProcessManager.CreateNewPsp(newPspSegment, _interruptVectorTable);
+    }
+
+    /// <summary>
+    /// INT 21h, AH=55h - Create Child PSP.
+    /// <para>
+    /// Creates a new Program Segment Prefix at the specified segment address,
+    /// copying relevant data from the parent (current) PSP.
+    /// </para>
+    /// <b>Expects:</b><br/>
+    /// DX = segment for new PSP<br/>
+    /// SI = size in paragraphs (16-byte units)
+    /// <b>Returns:</b><br/>
+    /// AL = 0xF0 (destroyed - per DOSBox behavior)<br/>
+    /// Current PSP is set to DX
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Based on DOSBox staging implementation and DOS 4.0 behavior.
+    /// This function is typically used by:
+    /// <list type="bullet">
+    /// <item>Debuggers that need to create process contexts</item>
+    /// <item>Overlay managers</item>
+    /// <item>Programs that manage multiple execution contexts</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// The child PSP inherits:
+    /// <list type="bullet">
+    /// <item>File handle table from parent</item>
+    /// <item>Command tail from parent (offset 0x80)</item>
+    /// <item>FCB1 and FCB2 from parent</item>
+    /// <item>Environment segment from parent</item>
+    /// <item>Stack pointer from parent</item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public void CreateChildPsp() {
+        ushort childSegment = State.DX;
+        ushort sizeInParagraphs = State.SI;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE CHILD PSP at segment {Segment:X4}, size {Size} paragraphs",
+                childSegment, sizeInParagraphs);
+        }
+        
+        // Create the child PSP
+        _dosProcessManager.CreateChildPsp(childSegment, sizeInParagraphs, _interruptVectorTable);
+        
+        // Set current PSP to the new child PSP (per DOSBox behavior: dos.psp(reg_dx))
+        _dosPspTracker.SetCurrentPspSegment(childSegment);
+        
+        // Set AL to 0xF0 (DOSBox-compatible behavior - AL value is "destroyed")
+        State.AL = 0xF0;
     }
 }
