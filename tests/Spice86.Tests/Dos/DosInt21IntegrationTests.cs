@@ -272,7 +272,6 @@ public class DosInt21IntegrationTests {
     /// This test catches a specific bug where the environment block was being
     /// allocated at the same segment as the PSP, causing PSP initialization to
     /// overwrite various offsets in the environment block.
-    /// See: https://github.com/maximilien-noal/Spice86/issues/XXX
     /// </remarks>
     [Fact]
     public void EnvironmentBlock_NotCorruptedByPsp() {
