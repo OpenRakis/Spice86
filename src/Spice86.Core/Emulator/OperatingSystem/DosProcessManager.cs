@@ -137,10 +137,11 @@ public class DosProcessManager {
         if (hasParentToReturnTo) {
             DosProgramSegmentPrefix? parentPsp = _pspTracker.GetCurrentPsp();
             if (parentPsp != null) {
-                // Restore parent's stack pointer to where the INT 21H/4B interrupt frame is located
-                // DOSBox approach: restore SS:SP WITHOUT skipping the frame, then let IRET handle it
+                // Restore parent's stack pointer AND skip the INT 21H/4B interrupt frame
+                // Since we're manually setting CS:IP below, the IRET won't execute properly
+                // So we need to manually skip the interrupt frame (6 bytes: IP, CS, FLAGS)
                 _state.SS = (ushort)(parentPsp.StackPointer >> 16);
-                _state.SP = (ushort)(parentPsp.StackPointer & 0xFFFF);
+                _state.SP = (ushort)((parentPsp.StackPointer & 0xFFFF) + 6);
             }
             _state.DS = parentPspSegment;
             _state.ES = parentPspSegment;
@@ -152,15 +153,17 @@ public class DosProcessManager {
                 _loggerService.Information(
                     "Returning to parent at {Segment:X4}:{Offset:X4} from child PSP {ChildPsp:X4}, parent PSP {ParentPsp:X4}",
                     returnAddress.Segment, returnAddress.Offset, currentPspSegment, parentPspSegment);
-                _loggerService.Information("Parent stack restored to SS:SP={Ss:X4}:{Sp:X4}, IRET will pop frame and return to caller",
+                _loggerService.Information("Parent stack restored to SS:SP={Ss:X4}:{Sp:X4} (after skipping interrupt frame)",
                     _state.SS, _state.SP);
             }
 
-            // DOSBox approach: DON'T manually set CS:IP
-            // Instead, let the IRET instruction in the callback stub pop the parent's interrupt frame
-            // The frame contains the correct return address from the original INT 21H/4B call
+            // Manually set CS:IP to return address
+            // The callback infrastructure will detect this change and jump to the new address
+            // Since we're not using IRET, we manually skipped the interrupt frame above
+            _state.CS = returnAddress.Segment;
+            _state.IP = returnAddress.Offset;
             
-            return true; // Continue execution - IRET will handle the return
+            return true; // Continue execution at parent
         }
 
         // No parent to return to - this is the main program terminating
