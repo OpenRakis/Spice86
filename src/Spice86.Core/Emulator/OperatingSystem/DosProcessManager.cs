@@ -504,8 +504,8 @@ public class DosProcessManager {
         }
         
         // For overlays, DOS doesn't return anything in the parameter block
-        // Just return success with zeros (overlay entry point is not returned by DOS)
-        return DosExecResult.SuccessLoadOnly(0, 0, 0, 0);
+        // Just return success with AX=0 and DX=0 per DOSBox staging behavior (dos_execute.cpp line 417-418)
+        return DosExecResult.SuccessLoadOverlay();
     }
 
     private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP) {
