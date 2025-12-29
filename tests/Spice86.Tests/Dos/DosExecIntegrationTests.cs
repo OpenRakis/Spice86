@@ -74,7 +74,7 @@ public class DosExecIntegrationTests {
         // A = All validations pass
         // V = Verification complete
         const string expectation = "SEMJCTLOAV";
-        output.ToString().Should().MatchRegex(expectation,
+        output.ToString().Should().Be(expectation,
             "All DOS EXEC environment block validation tests should pass");
     }
 
