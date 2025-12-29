@@ -45,13 +45,13 @@ public class TsrIntegrationTests {
     [Fact]
     public void TerminateAndStayResident_BasicTermination_Succeeds() {
         // This test calls INT 21h, AH=31h (Terminate and Stay Resident)
-        // DX = paragraphs to keep (0x10 = 16 paragraphs = 256 bytes, enough for PSP)
+        // DX = paragraphs to keep (0x08 = 8 paragraphs = 128 bytes, above minimum 6)
         // AL = return code (0x00 = success)
         // Expected: Program terminates without error (no exception thrown)
         byte[] program = new byte[] {
             // Set up TSR parameters
             0xB8, 0x00, 0x31,       // mov ax, 3100h - TSR with return code 0
-            0xBA, 0x10, 0x00,       // mov dx, 0010h - keep 16 paragraphs (256 bytes)
+            0xBA, 0x08, 0x00,       // mov dx, 0008h - keep 8 paragraphs (128 bytes)
             0xCD, 0x21,             // int 21h - TSR call
             
             // If we reach here, something went wrong (TSR should have terminated)
@@ -124,7 +124,7 @@ public class TsrIntegrationTests {
         // Use return code 0x42 to verify it's passed correctly
         byte[] program = new byte[] {
             0xB8, 0x42, 0x31,       // mov ax, 3142h - TSR with return code 0x42
-            0xBA, 0x10, 0x00,       // mov dx, 0010h - keep 16 paragraphs
+            0xBA, 0x08, 0x00,       // mov dx, 0008h - keep 8 paragraphs
             0xCD, 0x21,             // int 21h - TSR call
             
             0xF4                    // hlt (never reached)
@@ -182,7 +182,7 @@ public class TsrIntegrationTests {
             
             // tsr:
             0xB8, 0x00, 0x31,       // 0x30: mov ax, 3100h - TSR
-            0xBA, 0x10, 0x00,       // 0x33: mov dx, 0010h - 16 paragraphs
+            0xBA, 0x08, 0x00,       // 0x33: mov dx, 0008h - 8 paragraphs
             0xCD, 0x21,             // 0x36: int 21h
             0xF4                    // 0x38: hlt (never reached)
         };
