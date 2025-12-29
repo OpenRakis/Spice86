@@ -255,17 +255,6 @@ public class DosProcessManager {
         // This captures the parent's stack context before the child modifies anything
         uint parentStackPointer = ((uint)_state.SS << 16) | _state.SP;
 
-        // Save CPU state for LoadOnly operations so we can restore it after loading
-        ushort savedCS = 0, savedIP = 0, savedSS = 0, savedSP = 0, savedDS = 0, savedES = 0;
-        if (!updateCpuState) {
-            savedCS = _state.CS;
-            savedIP = _state.IP;
-            savedSS = _state.SS;
-            savedSP = _state.SP;
-            savedDS = _state.DS;
-            savedES = _state.ES;
-        }
-
         // Try to load as EXE first if it looks like an EXE file
         if (isExeCandidate) {
             DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
@@ -292,14 +281,9 @@ public class DosProcessManager {
                         (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
 
                 if (!updateCpuState) {
+                    // LoadOnly: restore parent PSP as current
+                    // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
                     _pspTracker.SetCurrentPspSegment(parentPspSegment);
-                    // Restore caller's CPU state for LoadOnly
-                    _state.CS = savedCS;
-                    _state.IP = savedIP;
-                    _state.SS = savedSS;
-                    _state.SP = savedSP;
-                    _state.DS = savedDS;
-                    _state.ES = savedES;
                 }
 
                 // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
@@ -344,18 +328,14 @@ public class DosProcessManager {
         }
 
         if (!updateCpuState) {
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("EXEC: COM LoadOnly - restoring parent PSP={ParentPsp:X4} and CPU state CS:IP={Cs:X4}:{Ip:X4}",
-                    parentPspSegment, savedCS, savedIP);
-            }
+            // LoadOnly: restore parent PSP as current
+            // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
             _pspTracker.SetCurrentPspSegment(parentPspSegment);
-            // Restore caller's CPU state for LoadOnly
-            _state.CS = savedCS;
-            _state.IP = savedIP;
-            _state.SS = savedSS;
-            _state.SP = savedSP;
-            _state.DS = savedDS;
-            _state.ES = savedES;
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("EXEC: COM LoadOnly - restoring parent PSP={ParentPsp:X4}, IRET will restore caller's CS:IP",
+                    parentPspSegment);
+            }
         } else {
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information("EXEC: COM LoadAndExecute - CPU state updated, now at CS:IP={Cs:X4}:{Ip:X4}, current PSP={CurrentPsp:X4}",
