@@ -13,6 +13,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.IO;
+using System.Linq;
 using System.Text;
 
 /// <summary>
@@ -494,6 +495,12 @@ public class DosProcessManager {
         
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("LoadOverlay: Successfully loaded overlay");
+            // Log first few bytes at load segment to verify code is there
+            uint physicalAddress = MemoryUtils.ToPhysicalAddress(loadSegment, 0);
+            string bytesHex = string.Join(" ", Enumerable.Range(0, Math.Min(16, (int)exeFile.ProgramSize))
+                .Select(i => _memory.UInt8[physicalAddress + (uint)i].ToString("X2")));
+            _loggerService.Information("LoadOverlay: First 16 bytes at {LoadSegment:X4}:0000 (physical {PhysicalAddress:X5}): {Bytes}",
+                loadSegment, physicalAddress, bytesHex);
         }
         
         // For overlays, DOS doesn't return anything in the parameter block

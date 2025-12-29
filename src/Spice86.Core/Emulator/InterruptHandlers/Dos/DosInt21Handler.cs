@@ -1161,6 +1161,11 @@ public class DosInt21Handler : InterruptHandler {
         if (loadType == DosExecLoadType.LoadOverlay) {
             DosExecOverlayParameterBlock overlayParamBlock = new(Memory, paramBlockAddress);
             result = _dosProcessManager.LoadOverlay(programName, overlayParamBlock.LoadSegment, overlayParamBlock.RelocationFactor);
+            // DOSBox sets AX=0 and DX=0 after successful overlay load
+            if (result.Success) {
+                State.AX = 0;
+                State.DX = 0;
+            }
         } else {
             DosExecParameterBlock paramBlock = new(Memory, paramBlockAddress);
             uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(paramBlock.CommandTailSegment, paramBlock.CommandTailOffset);
