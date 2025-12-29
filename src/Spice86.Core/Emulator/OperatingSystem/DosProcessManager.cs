@@ -114,7 +114,7 @@ public class DosProcessManager {
         rootPsp.PreviousPspAddress = rootBlock.DataBlockSegment;
 
         // Set terminate address to a safe value (could be INT 20H handler)
-        rootPsp.TerminateAddress = 0xF0000000; // Command.COM never terminates
+        rootPsp.TerminateAddress = 0; // Command.COM never terminates
 
         // Initialize file table
         rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
