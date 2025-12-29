@@ -562,11 +562,10 @@ public class DosProcessManager {
         // Add final null byte to mark end of environment block
         ms.WriteByte(0);
 
-        // Write a word with value 1 after the environment variables
-        // This is required by DOS
-        ms.WriteByte(1);
-        ms.WriteByte(0);
-
+        // FreeDOS and DOSBox write the program path immediately after the double null
+        // WITHOUT an intermediate word count. The format is: "VAR=VAL\0...\0\0PATH\0"
+        // Some documentation mentions a word with value 1, but actual implementations
+        // (FreeDOS kernel, DOSBox staging) write the path directly after the double null.
         // Get the DOS path for the program (not the host path)
         string dosPath = _fileManager.GetDosProgramPath(programPath);
 
