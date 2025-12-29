@@ -491,8 +491,7 @@ public class DosProcessManager {
 
         // For overlays, load at loadSegment but relocate using relocationFactor
         // This matches DOSBox staging behavior where overlay relocation uses the relocation factor parameter
-        ushort relocationSegment = relocationFactor == 0 ? loadSegment : relocationFactor;
-        LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment, relocationSegment);
+        LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment, relocationFactor);
         
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("LoadOverlay: Successfully loaded overlay");
