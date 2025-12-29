@@ -927,10 +927,9 @@ public class DosInt21Handler : InterruptHandler {
         ushort paragraphsToKeep = State.DX;
         byte returnCode = State.AL;
 
-        const ushort MinimumParagraphs = DosProgramSegmentPrefix.PspSizeInParagraphs;
-        if (paragraphsToKeep < MinimumParagraphs) {
-            paragraphsToKeep = MinimumParagraphs;
-        }
+        // Note: DOSBox-staging does not enforce a minimum paragraph count
+        // It directly calls DOS_ResizeMemory with the requested value
+        // No minimum check is applied here to match DOSBox behavior
 
         // Get the current PSP
         DosProgramSegmentPrefix currentPsp = _dosPspTracker.GetCurrentPsp();
@@ -950,7 +949,7 @@ public class DosInt21Handler : InterruptHandler {
             out DosMemoryControlBlock _);
 
         // Even if resize fails, we still terminate as a TSR
-        // This matches FreeDOS behavior - it doesn't check the return value of DosMemChange
+        // This matches FreeDOS/DOSBox behavior - they don't check the return value
         if (errorCode != DosErrorCode.NoError && LoggerService.IsEnabled(LogEventLevel.Warning)) {
             LoggerService.Warning(
                 "TSR: Failed to resize memory block to {Paragraphs} paragraphs, error: {Error}",
@@ -961,7 +960,15 @@ public class DosInt21Handler : InterruptHandler {
         // Unlike normal termination (AH=4Ch), TSR does NOT free the process memory.
         // Call TerminateProcess to handle the return to parent.
         // Note: TerminateProcess will Pop the PSP and restore parent context.
-        _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR, _interruptVectorTable);
+        bool shouldContinue = _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR, _interruptVectorTable);
+
+        if (!shouldContinue) {
+            // No parent to return to - stop emulation
+            State.IsRunning = false;
+        }
+        // If shouldContinue is true, TerminateProcess has set CS:IP (with -4 adjustment)
+        // to the parent's return address. MoveIpAndSetNextNode will add 4 after this
+        // handler returns, and execution will continue at the parent's correct address.
     }
 
     /// <summary>
