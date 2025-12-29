@@ -156,14 +156,21 @@ public class DosProcessManager {
             _loggerService.Information(
                 "Terminating process at PSP {CurrentPsp:X4}, exit code {ExitCode:X2}, type {Type}, parent PSP {ParentPsp:X4}",
                 currentPspSegment, exitCode, terminationType, parentPspSegment);
+            _loggerService.Information(
+                "Root check: isRootProcess={IsRoot}, parentIsRootCommandCom={ParentIsRoot}, hasParentToReturnTo={HasParent}",
+                isRootProcess, parentIsRootCommandCom, hasParentToReturnTo);
         }
 
         // Check if this is the root process (current PSP = parent PSP, which means this IS the shell itself terminating)
         // In that case, there's no parent to return to
         bool isRootProcess = currentPspSegment == parentPspSegment;
+        
+        // Check if parent is the root COMMAND.COM PSP - if so, we shouldn't try to return to it
+        // because it has no valid stack or execution context. Instead, we halt like a normal program exit.
+        bool parentIsRootCommandCom = parentPspSegment == CommandComSegment;
 
-        // If this is a child process (not the main program), we have a parent to return to
-        bool hasParentToReturnTo = !isRootProcess && _pspTracker.PspCount > 1;
+        // If this is a child process (not the main program) with a real parent (not root COMMAND.COM), we have a parent to return to
+        bool hasParentToReturnTo = !isRootProcess && !parentIsRootCommandCom && _pspTracker.PspCount > 1;
 
         // Close all non-standard file handles (5+) opened by this process
         // Standard handles 0-4 (stdin, stdout, stderr, stdaux, stdprn) are inherited and not closed
