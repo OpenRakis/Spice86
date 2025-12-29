@@ -328,7 +328,7 @@ public class DosProcessManager {
     /// <summary>
     /// Implements INT 21h, AH=26h - Create New PSP.
     /// Copies the current PSP to a new segment and updates INT 22h/23h/24h vectors and DOS version.
-    /// Parent PSP in the new copy points to the current PSP (matching DOS behavior).
+    /// The new PSP's parent field is set to the current PSP segment (matching DOS reference behavior).
     /// </summary>
     /// <param name="newPspSegment">The segment address where the new PSP will be created.</param>
     /// <param name="interruptVectorTable">The interrupt vector table for reading current vectors.</param>
