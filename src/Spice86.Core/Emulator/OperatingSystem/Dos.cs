@@ -190,7 +190,7 @@ public sealed class Dos {
             _loggerService, Devices);
         DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, DosSwappableDataArea, loggerService);
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
-        ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, loggerService);
+        ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, interruptVectorTable, loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, ProcessManager, ioPortDispatcher, DosTables, _loggerService);
