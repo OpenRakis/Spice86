@@ -328,7 +328,7 @@ public class DosProcessManager {
     /// <summary>
     /// Implements INT 21h, AH=26h - Create New PSP.
     /// Copies the current PSP to a new segment and updates INT 22h/23h/24h vectors and DOS version.
-    /// Parent PSP is preserved (matching FreeDOS behavior).
+    /// Parent PSP in the new copy points to the current PSP (matching DOS behavior).
     /// </summary>
     /// <param name="newPspSegment">The segment address where the new PSP will be created.</param>
     /// <param name="interruptVectorTable">The interrupt vector table for reading current vectors.</param>
@@ -353,7 +353,7 @@ public class DosProcessManager {
         newPsp.Exit[0] = 0xCD;
         newPsp.Exit[1] = 0x20;
 
-        newPsp.ParentProgramSegmentPrefix = currentPsp.ParentProgramSegmentPrefix;
+        newPsp.ParentProgramSegmentPrefix = currentPspSegment;
         newPsp.EnvironmentTableSegment = currentPsp.EnvironmentTableSegment;
 
         SegmentedAddress int22 = interruptVectorTable[0x22];
