@@ -484,18 +484,21 @@ public class DosProcessManager {
         }
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("LoadOverlay: Loading EXE at segment {LoadSegment:X4}, InitCS={InitCS:X4}, InitIP={InitIP:X4}, InitSS={InitSS:X4}, InitSP={InitSP:X4}",
-                loadSegment, exeFile.InitCS, exeFile.InitIP, exeFile.InitSS, exeFile.InitSP);
+            _loggerService.Information("LoadOverlay: Loading EXE at segment {LoadSegment:X4}, relocation factor={RelocationFactor:X4}, InitCS={InitCS:X4}, InitIP={InitIP:X4}",
+                loadSegment, relocationFactor, exeFile.InitCS, exeFile.InitIP);
         }
 
-        LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment);
+        // For overlays, load at loadSegment but relocate using relocationFactor
+        // This matches DOSBox staging behavior where overlay relocation uses the relocation factor parameter
+        LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment, relocationFactor);
         
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("LoadOverlay: Successfully loaded overlay");
         }
         
-        return DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadSegment), exeFile.InitIP,
-            (ushort)(exeFile.InitSS + loadSegment), exeFile.InitSP);
+        // For overlays, DOS doesn't return anything in the parameter block
+        // Just return success with zeros (overlay entry point is not returned by DOS)
+        return DosExecResult.SuccessLoadOnly(0, 0, 0, 0);
     }
 
     private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP) {
@@ -647,7 +650,7 @@ public class DosProcessManager {
             ushort imageDistanceInParagraphs = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
             loadImageSegment = (ushort)(pspLoadSegment + imageDistanceInParagraphs);
         }
-        LoadExeFileInMemoryAndApplyRelocations(exeFile, loadImageSegment);
+        LoadExeFileInMemoryAndApplyRelocations(exeFile, loadImageSegment, loadImageSegment);
         if (updateCpuState) {
             SetupCpuForExe(exeFile, loadImageSegment, pspSegment);
         }
@@ -657,15 +660,16 @@ public class DosProcessManager {
     /// Loads the program image and applies any necessary relocations to it.
     /// </summary>
     /// <param name="exeFile">The EXE file to load.</param>
-    /// <param name="loadImageSegment">The load segment for the program.</param>
-    private void LoadExeFileInMemoryAndApplyRelocations(DosExeFile exeFile, ushort loadImageSegment) {
+    /// <param name="loadImageSegment">The segment where the program image will be loaded.</param>
+    /// <param name="relocationSegment">The segment value to add to relocation table entries. For normal EXE loading, this is the same as loadImageSegment. For overlays, this is the relocation factor from the parameter block.</param>
+    private void LoadExeFileInMemoryAndApplyRelocations(DosExeFile exeFile, ushort loadImageSegment, ushort relocationSegment) {
         uint physicalLoadAddress = MemoryUtils.ToPhysicalAddress(loadImageSegment, 0);
         _memory.LoadData(physicalLoadAddress, exeFile.ProgramImage, (int)exeFile.ProgramSize);
         foreach (SegmentedAddress address in exeFile.RelocationTable) {
-            // Read value from memory, add the start segment offset and write back
+            // Read value from memory, add the relocation segment offset and write back
             uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset)
                 + physicalLoadAddress;
-            _memory.UInt16[addressToEdit] += loadImageSegment;
+            _memory.UInt16[addressToEdit] += relocationSegment;
         }
     }
 
