@@ -221,6 +221,7 @@ find_path_end:
         cmp     byte [es:di], 0
         jne     find_path_end
         inc     di                     ; skip second null
+        add     di, 2                  ; skip WORD count (DOS 3.0+ environment format)
         mov     si, di                ; SI -> program path
         lea     di, [overlayName]
 copy_overlay_path:

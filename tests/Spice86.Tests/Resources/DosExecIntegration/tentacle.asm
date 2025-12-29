@@ -49,6 +49,7 @@ find_env_path:
         cmp     byte [es:di], 0
         jne     find_env_path
         inc     di                     ; skip second null
+        add     di, 2                  ; skip WORD count (DOS 3.0+ environment format)
         mov     si, di                ; SI -> program path
         lea     di, [pathBuf]
 

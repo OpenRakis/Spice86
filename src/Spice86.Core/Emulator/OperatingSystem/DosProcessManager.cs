@@ -817,7 +817,7 @@ public class DosProcessManager {
 
         // MS-DOS format: after the double null, write a WORD with value 1 to indicate
         // that one additional string (the program path) follows.
-        // This is the correct DOS format, even though some sources suggest it's optional.
+        // This is the correct DOS format
         ms.WriteByte(1); // Low byte of WORD = 1
         ms.WriteByte(0); // High byte of WORD = 0
 
