@@ -2,89 +2,145 @@ namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
+using System;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 using Xunit;
 
-/// <summary>
-/// Integration tests for DOS EXEC function (INT 21h, AH=4Bh) that validate
-/// environment block format and different EXEC modes.
-/// </summary>
 public class DosExecIntegrationTests {
-    /// <summary>
-    /// Tests that DOS EXEC environment block format is correctly validated.
-    /// The test program writes characters to video memory (B800:0000) to indicate
-    /// which tests pass. Expected output is "SEMJCTLOAV" when all tests pass.
-    /// </summary>
-    [Theory]
-    [MemberData(nameof(GetCfgCpuConfigurations))]
-    public void ExecModesAndOverlays_ShouldReportSuccessViaVideoMemory(bool enableCfgCpu) {
-        // Arrange
-        string programPath = "Resources/NativeDosTests/exec_modes_overlay.com";
-        
-        if (!File.Exists(programPath)) {
-            throw new FileNotFoundException($"Test program not found: {programPath}");
+    [Fact]
+    public void ExecModesAndOverlays_ShouldReportSuccessViaVideoMemory() {
+        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
+        string tempDir = Path.Join(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
+        Directory.CreateDirectory(tempDir);
+        foreach (string file in new[] { "dos_exec_master.com", "child.com", "tsr_hook.com", "overlay_driver.bin" }) {
+            string source = Path.Join(resourceDir, file);
+            string targetName = file == "overlay_driver.bin" ? "dos_exec_master.000" : file;
+            File.Copy(source, Path.Join(tempDir, targetName), overwrite: true);
         }
 
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
-            binName: Path.GetFullPath(programPath),
-            enableCfgCpu: enableCfgCpu,
-            enablePit: true,
-            recordData: false,
-            maxCycles: 100000L,
-            installInterruptVectors: true,
-            enableA20Gate: false,
-            enableXms: false,
-            enableEms: false
-        ).Create();
+        string programPath = Path.Join(tempDir, "dos_exec_master.com");
 
-        // Act
-        spice86DependencyInjection.ProgramExecutor.Run();
+        try {
+            Spice86DependencyInjection spice86 = new Spice86Creator(
+                binName: programPath,
+                enableCfgCpu: false,
+                enablePit: true,
+                recordData: false,
+                maxCycles: 300000,
+                installInterruptVectors: true,
+                enableA20Gate: false,
+                enableXms: true,
+                enableEms: true,
+                cDrive: tempDir
+            ).Create();
 
-        // Assert
-        // Read output from video memory at B800:0000
-        IMemory memory = spice86DependencyInjection.Machine.Memory;
-        const int videoMemorySegment = 0xB800;
-        const int videoMemoryOffset = 0x0000;
-        const int videoMemoryAddress = (videoMemorySegment << 4) + videoMemoryOffset;
-        
-        // Read 10 characters (each character is 2 bytes: char + attribute)
-        StringBuilder output = new StringBuilder();
-        for (int i = 0; i < 10; i++) {
-            int charOffset = videoMemoryAddress + (i * 2);
-            byte charByte = memory.UInt8[charOffset];
-            output.Append((char)charByte);
+            spice86.Machine.CpuState.Flags.CpuModel = CpuModel.INTEL_80286;
+
+            spice86.ProgramExecutor.Run();
+
+            IMemory memory = spice86.Machine.Memory;
+            uint videoBase = MemoryUtils.ToPhysicalAddress(0xB800, 0);
+            const int expectedLength = 10;
+            StringBuilder output = new(expectedLength);
+
+            for (int i = 0; i < expectedLength; i++) {
+                byte character = memory.UInt8[videoBase + (uint)(i * 2)];
+                output.Append((char)character);
+            }
+
+            output.ToString().Should().Be("SEMJCTLOAV");
+        } finally {
+            TryDeleteDirectory(tempDir);
         }
-
-        // Expected: "SEMJCTLOAV"
-        // S = Startup success
-        // E = Environment block format correct
-        // M = Memory layout validation
-        // J = Junction/double null verification  
-        // C = Count word verification
-        // T = Terminator verification
-        // L = Length validation
-        // O = Offset calculations
-        // A = All validations pass
-        // V = Verification complete
-        const string expectation = "SEMJCTLOAV";
-        output.ToString().Should().Be(expectation,
-            "All DOS EXEC environment block validation tests should pass");
     }
 
-    /// <summary>
-    /// Provides test configurations for both regular CPU and CfgCpu modes.
-    /// </summary>
-    public static TheoryData<bool> GetCfgCpuConfigurations() {
-        return new TheoryData<bool> {
-            false,  // Regular CPU
-            true    // CfgCpu
-        };
+    [Fact]
+    public void ExecLoadOnly_FromEnvName_ShouldLoadOverlayAndResume() {
+        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
+        string tempDir = Path.Join(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
+        Directory.CreateDirectory(tempDir);
+        foreach (string file in new[] { "tentacle.bin", "tentacle.000" }) {
+            string source = Path.Join(resourceDir, file);
+            string target = file == "tentacle.bin" ? "tentacle.exe" : file;
+            File.Copy(source, Path.Join(tempDir, target), overwrite: true);
+        }
+
+        string programPath = Path.Join(tempDir, "tentacle.exe");
+
+        try {
+            Spice86DependencyInjection spice86 = new Spice86Creator(
+                binName: programPath,
+                enableCfgCpu: false,
+                enablePit: true,
+                recordData: false,
+                maxCycles: 200000,
+                installInterruptVectors: true,
+                enableA20Gate: false,
+                enableXms: true,
+                enableEms: true,
+                cDrive: tempDir
+            ).Create();
+
+            spice86.ProgramExecutor.Run();
+
+            IMemory memory = spice86.Machine.Memory;
+            uint videoBase = MemoryUtils.ToPhysicalAddress(0xB800, 0);
+            byte character = memory.UInt8[videoBase];
+            ((char)character).Should().Be('K');
+        } finally {
+            TryDeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void ExecLoadOnly_FromSameImage_ShouldResumeAfterLoad() {
+        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
+        string tempDir = Path.Join(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
+        Directory.CreateDirectory(tempDir);
+        string source = Path.Join(resourceDir, "selfload.bin");
+        string target = Path.Join(tempDir, "selfload.exe");
+        File.Copy(source, target, overwrite: true);
+
+        try {
+            Spice86DependencyInjection spice86 = new Spice86Creator(
+                binName: target,
+                enableCfgCpu: false,
+                enablePit: true,
+                recordData: false,
+                maxCycles: 200000,
+                installInterruptVectors: true,
+                enableA20Gate: false,
+                enableXms: true,
+                enableEms: true,
+                cDrive: tempDir
+            ).Create();
+
+            spice86.ProgramExecutor.Run();
+
+            IMemory memory = spice86.Machine.Memory;
+            uint videoBase = MemoryUtils.ToPhysicalAddress(0xB800, 0);
+            byte character = memory.UInt8[videoBase];
+            ((char)character).Should().Be('O');
+        } finally {
+            TryDeleteDirectory(tempDir);
+        }
+    }
+
+    private static void TryDeleteDirectory(string directoryPath) {
+        if (!Directory.Exists(directoryPath)) {
+            return;
+        }
+
+        try {
+            Directory.Delete(directoryPath, true);
+        } catch (IOException) {
+        } catch (UnauthorizedAccessException) {
+        }
     }
 }

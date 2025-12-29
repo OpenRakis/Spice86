@@ -81,13 +81,14 @@ public class DosProgramSegmentPrefixTracker {
     /// <summary>
     /// Gets the PSP for the program that is currently loaded.
     /// </summary>
-    /// <returns>
-    /// Returns the PSP for the current program if one is loaded, or <c>null</c> if no program has
-    /// been loaded by the emulator yet.
-    /// </returns>
-    public DosProgramSegmentPrefix? GetCurrentPsp() {
+    /// <remarks>
+    /// Since a root COMMAND.COM PSP is always created at initialization,
+    /// this will never return null.
+    /// </remarks>
+    /// <returns>Returns the PSP for the current program.</returns>
+    public DosProgramSegmentPrefix GetCurrentPsp() {
         if (_loadedPsps.Count <= 0) {
-            return null;
+            throw new InvalidOperationException("No PSP loaded. Root COMMAND.COM PSP should have been created at initialization.");
         }
         return _loadedPsps[_loadedPsps.Count - 1];
     }
@@ -155,19 +156,22 @@ public class DosProgramSegmentPrefixTracker {
     /// Removes the last PSP segment from the top of the stack.
     /// </summary>
     public void PopCurrentPspSegment() {
-        DosProgramSegmentPrefix? currentPsp = GetCurrentPsp();
-        if (currentPsp != null) {
-            _loadedPsps.Remove(currentPsp);
-            UpdateSdaFromStack();
-        }
+        DosProgramSegmentPrefix currentPsp = GetCurrentPsp();
+        _loadedPsps.Remove(currentPsp);
+        UpdateSdaFromStack();
     }
 
     /// <summary>
     /// Updates the SDA's current PSP segment to match the top of the internal stack.
     /// </summary>
     private void UpdateSdaFromStack() {
-        DosProgramSegmentPrefix? currentPsp = GetCurrentPsp();
-        ushort segment = currentPsp == null ? InitialPspSegment : MemoryUtils.ToSegment(currentPsp.BaseAddress);
-        _dosSwappableDataArea.CurrentProgramSegmentPrefix = segment;
+        if (_loadedPsps.Count == 0) {
+            // This should never happen after root PSP is created
+            _dosSwappableDataArea.CurrentProgramSegmentPrefix = InitialPspSegment;
+        } else {
+            DosProgramSegmentPrefix currentPsp = GetCurrentPsp();
+            ushort segment = MemoryUtils.ToSegment(currentPsp.BaseAddress);
+            _dosSwappableDataArea.CurrentProgramSegmentPrefix = segment;
+        }
     }
 }
