@@ -961,7 +961,15 @@ public class DosInt21Handler : InterruptHandler {
         // Unlike normal termination (AH=4Ch), TSR does NOT free the process memory.
         // Call TerminateProcess to handle the return to parent.
         // Note: TerminateProcess will Pop the PSP and restore parent context.
-        _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR, _interruptVectorTable);
+        bool shouldContinue = _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR, _interruptVectorTable);
+
+        if (!shouldContinue) {
+            // No parent to return to - stop emulation
+            State.IsRunning = false;
+        }
+        // If shouldContinue is true, TerminateProcess has set CS:IP (with -4 adjustment)
+        // to the parent's return address. MoveIpAndSetNextNode will add 4 after this
+        // handler returns, and execution will continue at the parent's correct address.
     }
 
     /// <summary>
