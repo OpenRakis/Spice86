@@ -152,15 +152,6 @@ public class DosProcessManager {
         ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
         ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information(
-                "Terminating process at PSP {CurrentPsp:X4}, exit code {ExitCode:X2}, type {Type}, parent PSP {ParentPsp:X4}",
-                currentPspSegment, exitCode, terminationType, parentPspSegment);
-            _loggerService.Information(
-                "Root check: isRootProcess={IsRoot}, parentIsRootCommandCom={ParentIsRoot}, hasParentToReturnTo={HasParent}",
-                isRootProcess, parentIsRootCommandCom, hasParentToReturnTo);
-        }
-
         // Check if this is the root process (current PSP = parent PSP, which means this IS the shell itself terminating)
         // In that case, there's no parent to return to
         bool isRootProcess = currentPspSegment == parentPspSegment;
@@ -171,6 +162,15 @@ public class DosProcessManager {
 
         // If this is a child process (not the main program) with a real parent (not root COMMAND.COM), we have a parent to return to
         bool hasParentToReturnTo = !isRootProcess && !parentIsRootCommandCom && _pspTracker.PspCount > 1;
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "Terminating process at PSP {CurrentPsp:X4}, exit code {ExitCode:X2}, type {Type}, parent PSP {ParentPsp:X4}",
+                currentPspSegment, exitCode, terminationType, parentPspSegment);
+            _loggerService.Information(
+                "Root check: isRootProcess={IsRoot}, parentIsRootCommandCom={ParentIsRoot}, hasParentToReturnTo={HasParent}",
+                isRootProcess, parentIsRootCommandCom, hasParentToReturnTo);
+        }
 
         // Close all non-standard file handles (5+) opened by this process
         // Standard handles 0-4 (stdin, stdout, stderr, stdaux, stdprn) are inherited and not closed
@@ -453,23 +453,47 @@ public class DosProcessManager {
     }
 
     public DosExecResult LoadOverlay(string programName, ushort loadSegment, ushort relocationFactor) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("LoadOverlay: programName={ProgramName}, loadSegment={LoadSegment:X4}, relocationFactor={RelocationFactor:X4}",
+                programName, loadSegment, relocationFactor);
+        }
+        
         string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("LoadOverlay: File not found - hostPath={HostPath}", hostPath ?? "null");
+            }
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
         }
 
         byte[] fileBytes = ReadFileBytes(hostPath);
 
         if (fileBytes.Length < DosExeFile.MinExeSize) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("LoadOverlay: File too small - length={Length}, min={Min}", fileBytes.Length, DosExeFile.MinExeSize);
+            }
             return DosExecResult.Fail(DosErrorCode.FormatInvalid);
         }
 
         DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
         if (!exeFile.IsValid) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("LoadOverlay: Invalid EXE file format");
+            }
             return DosExecResult.Fail(DosErrorCode.FormatInvalid);
         }
 
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("LoadOverlay: Loading EXE at segment {LoadSegment:X4}, InitCS={InitCS:X4}, InitIP={InitIP:X4}, InitSS={InitSS:X4}, InitSP={InitSP:X4}",
+                loadSegment, exeFile.InitCS, exeFile.InitIP, exeFile.InitSS, exeFile.InitSP);
+        }
+
         LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment);
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("LoadOverlay: Successfully loaded overlay");
+        }
+        
         return DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadSegment), exeFile.InitIP,
             (ushort)(exeFile.InitSS + loadSegment), exeFile.InitSP);
     }
