@@ -14,14 +14,15 @@ using Xunit;
 
 /// <summary>
 /// Integration tests for DOS INT 21h, AH=31h - Terminate and Stay Resident (TSR).
-/// Tests verify proper TSR behavior including memory retention and minimum paragraph requirements.
+/// Tests verify proper TSR behavior including memory retention and paragraph handling.
 /// </summary>
 /// <remarks>
-/// These tests compare and contrast TSR support with FreeDOS kernel behavior.
-/// Based on FreeDOS FDOS/kernel inthndlr.c implementation:
-/// - DosMemChange(cu_psp, lr.DX < 6 ? 6 : lr.DX, 0)
-/// - return_code = lr.AL | 0x300
-/// - term_type = 3 (TSR terminate)
+/// These tests follow DOSBox-staging behavior as reference implementation.
+/// Based on DOSBox-staging dos.cpp and dos_execute.cpp:
+/// - No minimum paragraph enforcement (FreeDOS enforces 6, but DOSBox does not)
+/// - DOS_ResizeMemory(dos.psp(),&reg_dx) called directly
+/// - DOS_Terminate(dos.psp(),true,reg_al) handles termination
+/// - A parent always exists (at least COMMAND.COM PSP)
 /// 
 /// Note: The $clock device absence is intentionally ignored as per the problem statement.
 /// </remarks>
@@ -68,25 +69,25 @@ public class TsrIntegrationTests {
     }
 
     /// <summary>
-    /// Tests that TSR enforces minimum 6 paragraphs as per FreeDOS behavior.
-    /// Even when requesting 0 paragraphs, the implementation should keep at least 6.
+    /// Tests that TSR accepts 0 paragraphs request as per DOSBox-staging behavior.
+    /// DOSBox-staging does not enforce a minimum and passes the value directly to DOS_ResizeMemory.
     /// </summary>
     /// <remarks>
-    /// Based on FreeDOS kernel: lr.DX < 6 ? 6 : lr.DX
-    /// This ensures that even with DX=0, the TSR keeps at least 6 paragraphs.
+    /// Based on DOSBox-staging dos.cpp: DOS_ResizeMemory(dos.psp(),&reg_dx) with no minimum check.
+    /// Note: FreeDOS enforces minimum 6 paragraphs, but DOSBox does not.
     /// </remarks>
     [Fact]
-    public void TerminateAndStayResident_WithZeroParagraphs_KeepsMinimum() {
-        // Request 0 paragraphs - should still keep minimum of 6
+    public void TerminateAndStayResident_WithZeroParagraphs_AcceptsValue() {
+        // Request 0 paragraphs - DOSBox accepts this without enforcing a minimum
         byte[] program = new byte[] {
             0xB8, 0x00, 0x31,       // mov ax, 3100h - TSR with return code 0
             0xBA, 0x00, 0x00,       // mov dx, 0000h - request 0 paragraphs
-            0xCD, 0x21,             // int 21h - TSR call (should enforce minimum 6)
+            0xCD, 0x21,             // int 21h - TSR call (no minimum enforced per DOSBox)
             
             0xF4                    // hlt (never reached)
         };
 
-        // Should complete without error, even with 0 paragraphs requested
+        // Should complete without error
         RunDosTestWithTsr(program);
     }
 
