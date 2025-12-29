@@ -60,7 +60,7 @@ public class DosProcessManager {
     public DosProcessManager(IMemory memory, State state,
         DosProgramSegmentPrefixTracker dosPspTracker, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
-        IDictionary<string, string> envVars, ILoggerService loggerService) {
+        IDictionary<string, string> envVars, InterruptVectorTable interruptVectorTable, ILoggerService loggerService) {
         _memory = memory;
         _pspTracker = dosPspTracker;
         _memoryManager = dosMemoryManager;
@@ -69,7 +69,7 @@ public class DosProcessManager {
         _state = state;
         _loggerService = loggerService;
         _environmentVariables = new();
-        _interruptVectorTable = new(_memory);
+        _interruptVectorTable = interruptVectorTable;
 
         envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
 
@@ -107,11 +107,6 @@ public class DosProcessManager {
             _loggerService.Information("Creating root COMMAND.COM PSP at segment {CommandComSegment:X4}",
                 CommandComSegment);
         }
-
-        // Initialize DOS terminate/break/critical error vectors if not already set
-        // These vectors must be initialized before creating the PSP because CreateRootCommandComPsp
-        // reads them from the IVT to store in the PSP
-        InitializeDosVectorsIfNeeded();
 
         // Allocate memory for the root PSP (1 paragraph = 16 bytes, PSP is 256 bytes)
         // 10 paragraphs covers the entire PSP, but then Dune won't start (not enough conventionlal memory)
@@ -932,38 +927,4 @@ public class DosProcessManager {
         }
     }
 
-    /// <summary>
-    /// Initializes DOS interrupt vectors (INT 22h, 23h, 24h) if they are not already set.
-    /// These vectors are required for PSP creation as they are stored in the PSP structure.
-    /// </summary>
-    private void InitializeDosVectorsIfNeeded() {
-        // Check if INT 22h (Terminate) is already initialized
-        SegmentedAddress int22 = _interruptVectorTable[0x22];
-        if (int22.Segment == 0 && int22.Offset == 0) {
-            // Set to a dummy IRET handler at F000:FFF0 (BIOS area)
-            // Real DOS would set these to actual handlers, but for now a dummy is sufficient
-            _interruptVectorTable[0x22] = new SegmentedAddress(0xF000, 0xFFF0);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Initialized INT 22h (Terminate) vector to F000:FFF0");
-            }
-        }
-
-        // Check if INT 23h (Ctrl-C/Break) is already initialized
-        SegmentedAddress int23 = _interruptVectorTable[0x23];
-        if (int23.Segment == 0 && int23.Offset == 0) {
-            _interruptVectorTable[0x23] = new SegmentedAddress(0xF000, 0xFFF0);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Initialized INT 23h (Break) vector to F000:FFF0");
-            }
-        }
-
-        // Check if INT 24h (Critical Error) is already initialized
-        SegmentedAddress int24 = _interruptVectorTable[0x24];
-        if (int24.Segment == 0 && int24.Offset == 0) {
-            _interruptVectorTable[0x24] = new SegmentedAddress(0xF000, 0xFFF0);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Initialized INT 24h (Critical Error) vector to F000:FFF0");
-            }
-        }
-    }
 }
