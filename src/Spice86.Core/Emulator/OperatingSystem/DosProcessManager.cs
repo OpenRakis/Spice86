@@ -135,6 +135,13 @@ public class DosProcessManager {
         _pspTracker.PopCurrentPspSegment();
 
         if (hasParentToReturnTo) {
+            DosProgramSegmentPrefix? parentPsp = _pspTracker.GetCurrentPsp();
+            if (parentPsp != null) {
+                _state.SS = (ushort)(parentPsp.StackPointer >> 16);
+                _state.SP = (ushort)((parentPsp.StackPointer & 0xFFFF) + 6);
+            }
+            _state.DS = parentPspSegment;
+            _state.ES = parentPspSegment;
             // Get the terminate address from the interrupt vector table
             // The INT 22h vector was just restored from the PSP above, so it now
             // contains the return address for the parent process
@@ -316,7 +323,6 @@ public class DosProcessManager {
         if (comBlock is null) {
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
-
         InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP);
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
