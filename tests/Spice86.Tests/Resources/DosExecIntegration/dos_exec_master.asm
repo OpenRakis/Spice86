@@ -187,8 +187,8 @@ overlay_test:
         mov     ax, [overlaySeg]
         mov     word [overlayEntry + 2], ax
         ; manual far call using RETF so overlay can RETF back here
-        push    word overlay_return       ; return IP
         push    cs                   ; return CS
+        push    word overlay_return       ; return IP
         push    word [overlayEntry + 2] ; dest CS
         push    word [overlayEntry]  ; dest IP
         retf
