@@ -142,6 +142,17 @@ public class DosProcessManager {
         rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
         rootPsp.FileTableAddress = ((uint)rootBlock.DataBlockSegment << 16) | 0x18;
 
+        // Initialize standard file handles in the PSP file handle table
+        // Standard handles: 0=stdin, 1=stdout, 2=stderr, 3=stdaux, 4=stdprn
+        // These correspond to the devices opened in Dos.OpenDefaultFileHandles()
+        for (byte i = 0; i < 5; i++) {
+            rootPsp.Files[i] = i;
+        }
+        // Mark remaining handles as unused
+        for (byte i = 5; i < 20; i++) {
+            rootPsp.Files[i] = UnusedFileHandle;
+        }
+
         // Create a minimal environment block for the root
         byte[] environmentBlock = CreateEnvironmentBlock("C:\\COMMAND.COM");
         ushort paragraphsNeeded = (ushort)((environmentBlock.Length + 15) / 16);
