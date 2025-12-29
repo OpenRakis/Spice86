@@ -31,6 +31,6 @@ public class DosInt23Handler : InterruptHandler {
             LoggerService.Information("INT 23h: Control-Break handler invoked, terminating current process with Ctrl+C status.");
         }
 
-        _dosProcessManager.TerminateProcess(0, DosTerminationType.CtrlC, _interruptVectorTable);
+        _dosProcessManager.TerminateProcess(0xFF, DosTerminationType.CtrlC, _interruptVectorTable);
     }
 }
