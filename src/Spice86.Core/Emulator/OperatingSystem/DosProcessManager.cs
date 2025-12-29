@@ -94,8 +94,9 @@ public class DosProcessManager {
                 CommandComSegment);
         }
 
-        // Allocate memory for the root PSP (1 paragraph = 16 bytes, PSP is 256 bytes = 16 paragraphs)
-        DosMemoryControlBlock? rootBlock = _memoryManager.AllocateMemoryBlock(0x10);
+        // Allocate memory for the root PSP (1 paragraph = 16 bytes, PSP is 256 bytes)
+        // 10 paragraphs covers the entire PSP, but then Dune won't start (not enough conventionnal memory)
+        DosMemoryControlBlock? rootBlock = _memoryManager.AllocateMemoryBlock(0x9);
         if (rootBlock is null) {
             throw new InvalidOperationException("Failed to allocate memory for root COMMAND.COM PSP");
         }
@@ -113,7 +114,7 @@ public class DosProcessManager {
         rootPsp.PreviousPspAddress = rootBlock.DataBlockSegment;
 
         // Set terminate address to a safe value (could be INT 20H handler)
-        rootPsp.TerminateAddress = 0xF0000000; // BIOS segment, safe placeholder
+        rootPsp.TerminateAddress = 0xF0000000; // Command.COM never terminates
 
         // Initialize file table
         rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
