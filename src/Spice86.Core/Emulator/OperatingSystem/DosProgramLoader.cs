@@ -14,16 +14,21 @@ using System.Text;
 internal class DosProgramLoader : DosFileLoader {
     private readonly Configuration _configuration;
     private readonly DosInt21Handler _int21;
+    private readonly DosProcessManager _processManager;
     
     public DosProgramLoader(Configuration configuration, IMemory memory,
-        State state,DosInt21Handler int21Handler,
+        State state, DosInt21Handler int21Handler, DosProcessManager processManager,
         ILoggerService loggerService)
         : base(memory, state, loggerService) {
         _configuration = configuration;
         _int21 = int21Handler;
+        _processManager = processManager;
     }
 
     public override byte[] LoadFile(string file, string? arguments) {
+        // Ensure root COMMAND.COM PSP exists before loading any programs
+        _processManager.CreateRootCommandComPsp();
+
         // Determine C drive base path
         string? cDrive = _configuration.CDrive;
 
