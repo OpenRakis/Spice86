@@ -85,6 +85,11 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Gets the DOS process manager for accessing process management functionality.
+    /// </summary>
+    internal DosProcessManager ProcessManager => _dosProcessManager;
+
+    /// <summary>
     /// Register the handlers for the DOS INT21H services that we support.
     /// </summary>
     private void FillDispatchTable() {
@@ -928,7 +933,7 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         // Get the current PSP
-        DosProgramSegmentPrefix? currentPsp = _dosPspTracker.GetCurrentPsp();
+        DosProgramSegmentPrefix currentPsp = _dosPspTracker.GetCurrentPsp();
         ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
 
         if (LoggerService.IsEnabled(LogEventLevel.Information)) {

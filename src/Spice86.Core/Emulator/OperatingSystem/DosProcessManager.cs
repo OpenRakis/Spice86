@@ -74,6 +74,70 @@ public class DosProcessManager {
     /// </remarks>
     public ushort LastChildReturnCode { get; private set; }
 
+    /// <summary>
+    /// Creates the root COMMAND.COM PSP that acts as the parent for all programs.
+    /// This PSP has its parent field pointing to itself, indicating it's the root.
+    /// </summary>
+    /// <remarks>
+    /// This should be called once before loading any programs, typically from DosProgramLoader.
+    /// Following DOSBox staging's approach where there's always a root commandCom PSP.
+    /// </remarks>
+    public void CreateRootCommandComPsp() {
+        if (_pspTracker.PspCount > 0) {
+            // Root PSP already exists
+            return;
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Creating root COMMAND.COM PSP at segment {CommandComSegment:X4}",
+                CommandComSegment);
+        }
+
+        // Allocate memory for the root PSP (1 paragraph = 16 bytes, PSP is 256 bytes = 16 paragraphs)
+        DosMemoryControlBlock? rootBlock = _memoryManager.AllocateMemoryBlock(0x10);
+        if (rootBlock is null) {
+            throw new InvalidOperationException("Failed to allocate memory for root COMMAND.COM PSP");
+        }
+
+        // Push the root PSP onto the tracker
+        DosProgramSegmentPrefix rootPsp = _pspTracker.PushPspSegment(rootBlock.DataBlockSegment);
+
+        // Initialize basic PSP structure
+        rootPsp.Exit[0] = 0xCD;
+        rootPsp.Exit[1] = 0x20;
+        rootPsp.NextSegment = DosMemoryManager.LastFreeSegment;
+
+        // Root PSP: parent points to itself
+        rootPsp.ParentProgramSegmentPrefix = rootBlock.DataBlockSegment;
+        rootPsp.PreviousPspAddress = rootBlock.DataBlockSegment;
+
+        // Set terminate address to a safe value (could be INT 20H handler)
+        rootPsp.TerminateAddress = 0xF0000000; // BIOS segment, safe placeholder
+
+        // Initialize file table
+        rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
+        rootPsp.FileTableAddress = ((uint)rootBlock.DataBlockSegment << 16) | 0x18;
+
+        // Create a minimal environment block for the root
+        byte[] environmentBlock = CreateEnvironmentBlock("C:\\COMMAND.COM");
+        ushort paragraphsNeeded = (ushort)((environmentBlock.Length + 15) / 16);
+        paragraphsNeeded = paragraphsNeeded == 0 ? (ushort)1 : paragraphsNeeded;
+        DosMemoryControlBlock? envBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
+
+        if (envBlock != null) {
+            _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
+            rootPsp.EnvironmentTableSegment = envBlock.DataBlockSegment;
+        }
+
+        // Set initial DTA to command tail area in root PSP
+        _fileManager.SetDiskTransferAreaAddress(rootBlock.DataBlockSegment, DosCommandTail.OffsetInPspSegment);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Root COMMAND.COM PSP created at {PspSegment:X4}, parent points to itself",
+                rootBlock.DataBlockSegment);
+        }
+    }
+
 
     public bool TerminateProcess(byte exitCode, DosTerminationType terminationType,
          InterruptVectorTable interruptVectorTable) {
@@ -83,14 +147,7 @@ public class DosProcessManager {
         LastChildReturnCode = (ushort)(((ushort)terminationType << 8) | exitCode);
         _lastChildExitCode = LastChildReturnCode;
 
-        DosProgramSegmentPrefix? currentPsp = _pspTracker.GetCurrentPsp();
-        if (currentPsp is null) {
-            // No PSP means we're terminating before any program was loaded
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("TerminateProcess called with no current PSP");
-            }
-            return false;
-        }
+        DosProgramSegmentPrefix currentPsp = _pspTracker.GetCurrentPsp();
 
         ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
         ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
@@ -135,14 +192,12 @@ public class DosProcessManager {
         _pspTracker.PopCurrentPspSegment();
 
         if (hasParentToReturnTo) {
-            DosProgramSegmentPrefix? parentPsp = _pspTracker.GetCurrentPsp();
-            if (parentPsp != null) {
-                // Restore parent's stack pointer AND skip the INT 21H/4B interrupt frame
-                // Since we're manually setting CS:IP below, the IRET won't execute properly
-                // So we need to manually skip the interrupt frame (6 bytes: IP, CS, FLAGS)
-                _state.SS = (ushort)(parentPsp.StackPointer >> 16);
-                _state.SP = (ushort)((parentPsp.StackPointer & 0xFFFF) + 6);
-            }
+            DosProgramSegmentPrefix parentPsp = _pspTracker.GetCurrentPsp();
+            // Restore parent's stack pointer AND skip the INT 21H/4B interrupt frame
+            // Since we're manually setting CS:IP below, the IRET won't execute properly
+            // So we need to manually skip the interrupt frame (6 bytes: IP, CS, FLAGS)
+            _state.SS = (ushort)(parentPsp.StackPointer >> 16);
+            _state.SP = (ushort)((parentPsp.StackPointer & 0xFFFF) + 6);
             _state.DS = parentPspSegment;
             _state.ES = parentPspSegment;
             
