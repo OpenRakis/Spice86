@@ -20,6 +20,13 @@ using System.Text;
 /// Setups the loading and execution of DOS programs and maintains the DOS PSP chains in memory.
 /// </summary>
 public class DosProcessManager {
+    private const byte FarCallOpcode = 0x9A;
+    private const byte IntOpcode = 0xCD;
+    private const byte Int21Number = 0x21;
+    private const byte RetfOpcode = 0xCB;
+    private const ushort FakeCpmSegment = 0xDEAD;
+    private const ushort FakeCpmOffset = 0xFFFF;
+    private const uint NoPreviousPsp = 0xFFFFFFFF;
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
@@ -28,6 +35,13 @@ public class DosProcessManager {
     private readonly State _state;
     private readonly ILoggerService _loggerService;
     private const ushort CommandComSegment = 0x0160;
+    private const byte DefaultDosVersionMajor = 5;
+    private const byte DefaultDosVersionMinor = 0;
+    private const ushort FileTableOffset = 0x18;
+    private const byte DefaultMaxOpenFiles = 20;
+    private const byte UnusedFileHandle = 0xFF;
+    private const ushort CommandTailDataOffset = 0x81;
+    private const int FcbSize = 16;
     private readonly InterruptVectorTable _interruptVectorTable;
 
     /// <summary>
@@ -290,6 +304,183 @@ public class DosProcessManager {
     /// <returns>Exit code in AL, termination type in AH (always 0 for normal termination).</returns>
     public ushort GetLastChildExitCode() {
         return _lastChildExitCode;
+    }
+
+    /// <summary>
+    /// Implements INT 21h, AH=26h - Create New PSP.
+    /// Copies the current PSP to a new segment and updates INT 22h/23h/24h vectors and DOS version.
+    /// Parent PSP is preserved (matching FreeDOS behavior).
+    /// </summary>
+    /// <param name="newPspSegment">The segment address where the new PSP will be created.</param>
+    /// <param name="interruptVectorTable">The interrupt vector table for reading current vectors.</param>
+    public void CreateNewPsp(ushort newPspSegment, InterruptVectorTable interruptVectorTable) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "CreateNewPsp: Copying current PSP to segment {NewPspSegment:X4}",
+                newPspSegment);
+        }
+
+        ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
+
+        uint currentPspAddress = MemoryUtils.ToPhysicalAddress(currentPspSegment, 0);
+        uint newPspAddress = MemoryUtils.ToPhysicalAddress(newPspSegment, 0);
+
+        byte[] pspData = _memory.ReadRam(DosProgramSegmentPrefix.MaxLength, currentPspAddress);
+        _memory.LoadData(newPspAddress, pspData);
+
+        DosProgramSegmentPrefix currentPsp = _pspTracker.GetCurrentPsp();
+        DosProgramSegmentPrefix newPsp = new(_memory, newPspAddress);
+
+        newPsp.Exit[0] = 0xCD;
+        newPsp.Exit[1] = 0x20;
+
+        newPsp.ParentProgramSegmentPrefix = currentPsp.ParentProgramSegmentPrefix;
+        newPsp.EnvironmentTableSegment = currentPsp.EnvironmentTableSegment;
+
+        SegmentedAddress int22 = interruptVectorTable[0x22];
+        if (int22.Offset == 0 && int22.Segment == 0) {
+            int22 = new SegmentedAddress(_state.CS, _state.IP);
+        }
+        newPsp.TerminateAddress = (uint)((int22.Segment << 16) | int22.Offset);
+
+        SegmentedAddress int23 = interruptVectorTable[0x23];
+        newPsp.BreakAddress = (uint)((int23.Segment << 16) | int23.Offset);
+
+        SegmentedAddress int24 = interruptVectorTable[0x24];
+        newPsp.CriticalErrorAddress = (uint)((int24.Segment << 16) | int24.Offset);
+
+        newPsp.DosVersionMajor = DefaultDosVersionMajor;
+        newPsp.DosVersionMinor = DefaultDosVersionMinor;
+
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            newPsp = new(_memory, newPspAddress);
+            _loggerService.Debug(
+                "CreateNewPsp: Created PSP at {NewPspSegment:X4} from {CurrentPspSegment:X4}, Parent={Parent:X4}",
+                newPspSegment, currentPspSegment, newPsp.ParentProgramSegmentPrefix);
+        }
+    }
+
+    /// <summary>
+    /// Implements INT 21h, AH=55h - Create Child PSP.
+    /// Creates a child PSP initialized from the current PSP, copying handles, FCBs, command tail, and environment.
+    /// </summary>
+    public void CreateChildPsp(ushort childSegment, ushort sizeInParagraphs, InterruptVectorTable interruptVectorTable) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "CreateChildPsp: Creating child PSP at segment {ChildSegment:X4}, size {Size} paragraphs",
+                childSegment, sizeInParagraphs);
+        }
+
+        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
+        uint childPspAddress = MemoryUtils.ToPhysicalAddress(childSegment, 0);
+        DosProgramSegmentPrefix childPsp = new(_memory, childPspAddress);
+
+        InitializeChildPsp(childPsp, childSegment, parentPspSegment, sizeInParagraphs, interruptVectorTable);
+
+        uint parentPspAddress = MemoryUtils.ToPhysicalAddress(parentPspSegment, 0);
+        DosProgramSegmentPrefix parentPsp = new(_memory, parentPspAddress);
+
+        CopyFileTableFromParent(childPsp, parentPsp);
+        CopyCommandTailFromParent(childPsp, parentPsp);
+        CopyFcb1FromParent(childPsp, parentPsp);
+        CopyFcb2FromParent(childPsp, parentPsp);
+
+        childPsp.EnvironmentTableSegment = parentPsp.EnvironmentTableSegment;
+        childPsp.StackPointer = parentPsp.StackPointer;
+
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug(
+                "CreateChildPsp: Parent={Parent:X4}, Env={Env:X4}, NextSeg={Next:X4}",
+                parentPspSegment, childPsp.EnvironmentTableSegment, childPsp.NextSegment);
+        }
+    }
+
+    private void InitializeChildPsp(DosProgramSegmentPrefix psp, ushort pspSegment,
+        ushort parentPspSegment, ushort sizeInParagraphs, InterruptVectorTable interruptVectorTable) {
+        for (int i = 0; i < DosProgramSegmentPrefix.MaxLength; i++) {
+            _memory.UInt8[psp.BaseAddress + (uint)i] = 0;
+        }
+
+        InitializeCommonPspFields(psp, parentPspSegment);
+
+        psp.NextSegment = (ushort)(pspSegment + sizeInParagraphs);
+        psp.FarCall = FarCallOpcode;
+        psp.CpmServiceRequestAddress = MakeFarPointer(FakeCpmSegment, FakeCpmOffset);
+
+        psp.Service[0] = IntOpcode;
+        psp.Service[1] = Int21Number;
+        psp.Service[2] = RetfOpcode;
+
+        psp.PreviousPspAddress = NoPreviousPsp;
+        psp.DosVersionMajor = DefaultDosVersionMajor;
+        psp.DosVersionMinor = DefaultDosVersionMinor;
+
+        SaveInterruptVectors(psp, interruptVectorTable);
+
+        psp.FileTableAddress = MakeFarPointer(pspSegment, FileTableOffset);
+        psp.MaximumOpenFiles = DefaultMaxOpenFiles;
+        for (int i = 0; i < DefaultMaxOpenFiles; i++) {
+            psp.Files[i] = UnusedFileHandle;
+        }
+    }
+
+    private static void SaveInterruptVectors(DosProgramSegmentPrefix psp, InterruptVectorTable ivt) {
+        SegmentedAddress int22 = ivt[0x22];
+        psp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
+
+        SegmentedAddress int23 = ivt[0x23];
+        psp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
+
+        SegmentedAddress int24 = ivt[0x24];
+        psp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
+    }
+
+    private static void InitializeCommonPspFields(DosProgramSegmentPrefix psp, ushort parentPspSegment) {
+        psp.Exit[0] = IntOpcode;
+        psp.Exit[1] = 0x20;
+        psp.ParentProgramSegmentPrefix = parentPspSegment;
+        psp.PreviousPspAddress = NoPreviousPsp;
+    }
+
+    private void CopyFileTableFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        for (int i = 0; i < DefaultMaxOpenFiles; i++) {
+            byte parentHandle = parentPsp.Files[i];
+
+            if (parentHandle == UnusedFileHandle) {
+                childPsp.Files[i] = UnusedFileHandle;
+                continue;
+            }
+
+            if (parentHandle < _fileManager.OpenFiles.Length) {
+                VirtualFileBase? file = _fileManager.OpenFiles[parentHandle];
+                if (file is DosFile dosFile && (dosFile.Flags & (byte)FileAccessMode.Private) != 0) {
+                    childPsp.Files[i] = UnusedFileHandle;
+                    continue;
+                }
+            }
+
+            childPsp.Files[i] = parentHandle;
+        }
+    }
+
+    private static void CopyCommandTailFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        childPsp.DosCommandTail.Command = parentPsp.DosCommandTail.Command;
+    }
+
+    private static void CopyFcb1FromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        for (int i = 0; i < FcbSize; i++) {
+            childPsp.FirstFileControlBlock[i] = parentPsp.FirstFileControlBlock[i];
+        }
+    }
+
+    private static void CopyFcb2FromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        for (int i = 0; i < FcbSize; i++) {
+            childPsp.SecondFileControlBlock[i] = parentPsp.SecondFileControlBlock[i];
+        }
+    }
+
+    private static uint MakeFarPointer(ushort segment, ushort offset) {
+        return (uint)((segment << 16) | offset);
     }
 
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,

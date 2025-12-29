@@ -43,6 +43,7 @@ public class DosInt21Handler : InterruptHandler {
     private bool _isCtrlCFlag;
     
     private const ushort OffsetMask = 0x0F;
+    private const byte CreateChildPspAlDestroyedValue = 0xF0;
 
     /// <summary>
     /// Initializes a new instance.
@@ -112,6 +113,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
         AddAction(0x25, SetInterruptVector);
+        AddAction(0x26, CreateNewPsp);
         AddAction(0x2A, GetDate);
         AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
@@ -150,6 +152,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
         AddAction(0x52, GetListOfLists);
+        AddAction(0x55, CreateChildPsp);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
         AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
@@ -1316,6 +1319,42 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET RETURN CODE: AX={Ax:X4}", returnCode);
         }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=26h - Create New PSP.
+    /// Creates a copy of the current PSP at the segment specified in DX.
+    /// </summary>
+    /// <remarks>
+    /// Copies the entire PSP and updates INT 22h/23h/24h vectors and DOS version in the new PSP.
+    /// Parent PSP is preserved (matches FreeDOS behavior).
+    /// </remarks>
+    public void CreateNewPsp() {
+        ushort newPspSegment = State.DX;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE NEW PSP at segment {Segment:X4}", newPspSegment);
+        }
+
+        _dosProcessManager.CreateNewPsp(newPspSegment, _interruptVectorTable);
+    }
+
+    /// <summary>
+    /// INT 21h, AH=55h - Create Child PSP.
+    /// Creates a child PSP at DX with size SI paragraphs, sets current PSP to the child, and sets AL to destroyed value (0xF0).
+    /// </summary>
+    public void CreateChildPsp() {
+        ushort childSegment = State.DX;
+        ushort sizeInParagraphs = State.SI;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE CHILD PSP at segment {Segment:X4}, size {Size} paragraphs",
+                childSegment, sizeInParagraphs);
+        }
+
+        _dosProcessManager.CreateChildPsp(childSegment, sizeInParagraphs, _interruptVectorTable);
+        _dosPspTracker.SetCurrentPspSegment(childSegment);
+        State.AL = CreateChildPspAlDestroyedValue;
     }
 
     /// <summary>
