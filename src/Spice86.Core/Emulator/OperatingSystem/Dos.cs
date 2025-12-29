@@ -42,6 +42,16 @@ public sealed class Dos {
     public DosInt21Handler DosInt21Handler { get; }
 
     /// <summary>
+    /// Gets the INT 23h DOS Control-Break handler.
+    /// </summary>
+    public DosInt23Handler DosInt23Handler { get; }
+
+    /// <summary>
+    /// Gets the INT 24h DOS Critical Error handler.
+    /// </summary>
+    public DosInt24Handler DosInt24Handler { get; }
+
+    /// <summary>
     /// Gets the INT 2Fh DOS services.
     /// </summary>
     public DosInt2fHandler DosInt2FHandler { get; }
@@ -140,13 +150,14 @@ public sealed class Dos {
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
+    /// <param name="interruptVectorTable">The shared interrupt vector table.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="xms">Optional XMS manager to expose through DOS.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
+        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, InterruptVectorTable interruptVectorTable, ILoggerService loggerService,
         ExtendedMemoryManager? xms = null) {
         _loggerService = loggerService;
         Xms = xms;
@@ -183,6 +194,8 @@ public sealed class Dos {
         DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, ProcessManager, ioPortDispatcher, DosTables, _loggerService);
+        DosInt23Handler = new DosInt23Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, interruptVectorTable, _loggerService);
+        DosInt24Handler = new DosInt24Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
             functionHandlerProvider, stack, state, _loggerService, xms);
