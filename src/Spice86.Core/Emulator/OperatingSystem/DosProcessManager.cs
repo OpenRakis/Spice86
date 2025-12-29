@@ -373,6 +373,11 @@ public class DosProcessManager {
                     paramBlock.InitialIP = result.InitialIP;
                     paramBlock.InitialSS = result.InitialSS;
                     paramBlock.InitialSP = result.InitialSP;
+                    
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("EXEC: LoadOnly filled parameter block at ES:BX with CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
+                            paramBlock.InitialCS, paramBlock.InitialIP, paramBlock.InitialSS, paramBlock.InitialSP);
+                    }
                 }
 
                 return result;
@@ -430,6 +435,11 @@ public class DosProcessManager {
             paramBlock.InitialIP = comResult.InitialIP;
             paramBlock.InitialSS = comResult.InitialSS;
             paramBlock.InitialSP = comResult.InitialSP;
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("EXEC: LoadOnly filled parameter block at ES:BX with CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
+                    paramBlock.InitialCS, paramBlock.InitialIP, paramBlock.InitialSS, paramBlock.InitialSP);
+            }
         }
 
         return comResult;
@@ -559,6 +569,11 @@ public class DosProcessManager {
 
         // Get the DOS path for the program (not the host path)
         string dosPath = _fileManager.GetDosProgramPath(programPath);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Environment block: writing program path \"{DosPath}\" after variables",
+                dosPath);
+        }
 
         // Write the DOS path to the environment block
         byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);

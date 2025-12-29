@@ -1150,6 +1150,12 @@ public class DosInt21Handler : InterruptHandler {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         DosExecLoadType loadType = (DosExecLoadType)State.AL;
         uint paramBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("INT21H/4B: DS:DX={Ds:X4}:{Dx:X4}, programName=\"{ProgramName}\", loadType={LoadType}",
+                State.DS, State.DX, programName, loadType);
+        }
+        
         DosExecResult result;
 
         if (loadType == DosExecLoadType.LoadOverlay) {
