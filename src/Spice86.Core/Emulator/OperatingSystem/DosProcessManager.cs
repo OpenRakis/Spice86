@@ -193,11 +193,10 @@ public class DosProcessManager {
 
         if (hasParentToReturnTo) {
             DosProgramSegmentPrefix parentPsp = _pspTracker.GetCurrentPsp();
-            // Restore parent's stack pointer AND skip the INT 21H/4B interrupt frame
-            // Since we're manually setting CS:IP below, the IRET won't execute properly
-            // So we need to manually skip the interrupt frame (6 bytes: IP, CS, FLAGS)
+            // Restore parent's stack pointer WITHOUT skipping the interrupt frame
+            // We'll modify the frame contents so IRET goes to the right place
             _state.SS = (ushort)(parentPsp.StackPointer >> 16);
-            _state.SP = (ushort)((parentPsp.StackPointer & 0xFFFF) + 6);
+            _state.SP = (ushort)(parentPsp.StackPointer & 0xFFFF);
             _state.DS = parentPspSegment;
             _state.ES = parentPspSegment;
             
@@ -208,17 +207,25 @@ public class DosProcessManager {
                 _loggerService.Information(
                     "Returning to parent at {Segment:X4}:{Offset:X4} from child PSP {ChildPsp:X4}, parent PSP {ParentPsp:X4}",
                     returnAddress.Segment, returnAddress.Offset, currentPspSegment, parentPspSegment);
-                _loggerService.Information("Parent stack restored to SS:SP={Ss:X4}:{Sp:X4} (after skipping interrupt frame)",
+                _loggerService.Information("Parent stack restored to SS:SP={Ss:X4}:{Sp:X4} (pointing to interrupt frame)",
                     _state.SS, _state.SP);
             }
 
-            // Manually set CS:IP to return address
-            // The callback infrastructure will detect this change and jump to the new address
-            // Since we're not using IRET, we manually skipped the interrupt frame above
-            _state.CS = returnAddress.Segment;
-            _state.IP = returnAddress.Offset;
+            // DOSBox/FreeDOS approach: Modify the interrupt frame on the stack
+            // so that when IRET pops it, execution continues at the return address
+            uint stackPhysicalAddress = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
+            _memory.UInt16[stackPhysicalAddress] = returnAddress.Offset;     // IP
+            _memory.UInt16[stackPhysicalAddress + 2] = returnAddress.Segment; // CS
+            // FLAGS at stackPhysicalAddress + 4 can stay as-is
             
-            return true; // Continue execution at parent
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Modified interrupt frame on stack: CS:IP will be {Cs:X4}:{Ip:X4} after IRET",
+                    returnAddress.Segment, returnAddress.Offset);
+            }
+            
+            // DON'T manually set CS:IP - let IRET handle it by popping the modified frame
+            
+            return true; // Continue execution - IRET will pop frame and jump to parent
         }
 
         // No parent to return to - this is the main program terminating
