@@ -137,53 +137,30 @@ public class DosProcessManager {
         if (hasParentToReturnTo) {
             DosProgramSegmentPrefix? parentPsp = _pspTracker.GetCurrentPsp();
             if (parentPsp != null) {
+                // Restore parent's stack pointer to where the INT 21H/4B interrupt frame is located
+                // DOSBox approach: restore SS:SP WITHOUT skipping the frame, then let IRET handle it
                 _state.SS = (ushort)(parentPsp.StackPointer >> 16);
-                _state.SP = (ushort)((parentPsp.StackPointer & 0xFFFF) + 6);
+                _state.SP = (ushort)(parentPsp.StackPointer & 0xFFFF);
             }
             _state.DS = parentPspSegment;
             _state.ES = parentPspSegment;
-            // Get the terminate address from the interrupt vector table
-            // The INT 22h vector was just restored from the PSP above, so it now
-            // contains the return address for the parent process
+            
+            // Get the terminate address from INT 22h vector (restored from child PSP)
             SegmentedAddress returnAddress = interruptVectorTable[0x22];
 
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information(
                     "Returning to parent at {Segment:X4}:{Offset:X4} from child PSP {ChildPsp:X4}, parent PSP {ParentPsp:X4}",
                     returnAddress.Segment, returnAddress.Offset, currentPspSegment, parentPspSegment);
-            }
-            
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("Before return: CS:IP={Cs:X4}:{Ip:X4}, setting to {ReturnCs:X4}:{ReturnIp:X4}",
-                    _state.CS, _state.IP, returnAddress.Segment, returnAddress.Offset);
+                _loggerService.Information("Parent stack restored to SS:SP={Ss:X4}:{Sp:X4}, IRET will pop frame and return to caller",
+                    _state.SS, _state.SP);
             }
 
-            // Set up CPU to continue at the return address stored in PSP offset 0x0A.
-            //
-            // Reference: FreeDOS kernel/task.c return_user() (line ~420):
-            // https://github.com/FDOS/kernel/blob/master/kernel/task.c
-            //   irp->CS = FP_SEG(p->ps_isv22);
-            //   irp->IP = FP_OFF(p->ps_isv22);
-            // FreeDOS reads the terminate address from ps_isv22 (PSP offset 0x0A) and
-            // sets CS:IP to return to the parent process.
-            //
-            // Reference: MS-DOS 4.0 EXEC.ASM exec_set_return: (line ~650):
-            // https://github.com/microsoft/MS-DOS/blob/main/v4.0/src/DOS/EXEC.ASM
-            //   POP DS:[addr_int_terminate]
-            //   POP DS:[addr_int_terminate+2]
-            // MS-DOS pops the return address from stack into INT 22h vector.
-            //
-            // The CfgCpu callback node (Grp4Callback) detects when the callback handler
-            // changes CS:IP and will NOT add the instruction length in that case.
-            _state.CS = returnAddress.Segment;
-            _state.IP = returnAddress.Offset;
+            // DOSBox approach: DON'T manually set CS:IP
+            // Instead, let the IRET instruction in the callback stub pop the parent's interrupt frame
+            // The frame contains the correct return address from the original INT 21H/4B call
             
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("After setting return: CS:IP now={Cs:X4}:{Ip:X4}",
-                    _state.CS, _state.IP);
-            }
-
-            return true; // Continue execution at parent
+            return true; // Continue execution - IRET will handle the return
         }
 
         // No parent to return to - this is the main program terminating
@@ -227,10 +204,18 @@ public class DosProcessManager {
         // We read CS:IP from the stack to get the address where the parent will resume.
         ushort callerIP = _memory.UInt16[_state.StackPhysicalAddress];
         ushort callerCS = _memory.UInt16[_state.StackPhysicalAddress + 2];
+        ushort callerFlags = _memory.UInt16[_state.StackPhysicalAddress + 4];
         
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("EXEC: Stack at SS:SP={StackSeg:X4}:{StackOff:X4}, read caller CS:IP={CallerCs:X4}:{CallerIp:X4}",
-                _state.SS, _state.SP, callerCS, callerIP);
+            _loggerService.Information("EXEC: Stack at SS:SP={StackSeg:X4}:{StackOff:X4}, read caller CS:IP={CallerCs:X4}:{CallerIp:X4}, FLAGS={Flags:X4}",
+                _state.SS, _state.SP, callerCS, callerIP, callerFlags);
+            _loggerService.Information("EXEC: Bytes at return-2: {Byte0:X2} {Byte1:X2}, Bytes at return address: {Byte2:X2} {Byte3:X2} {Byte4:X2} {Byte5:X2}",
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP - 2))],
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP - 1))],
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, callerIP)],
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP + 1))],
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP + 2))],
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP + 3))]);
         }
         
         ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
