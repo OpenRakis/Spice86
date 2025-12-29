@@ -155,7 +155,7 @@ public sealed class ProgramExecutor : IDisposable {
             } catch (IOException e) {
                 throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
             }
-            DosProgramLoader dosProgramLoader = new(configuration, memory, state, int21Handler, _loggerService);
+            DosProgramLoader dosProgramLoader = new(configuration, memory, state, int21Handler, int21Handler.ProcessManager, _loggerService);
             dosProgramLoader.LoadFile(executableFileName, configuration.ExeArgs);
         } else {
             BiosLoader loader = new(memory, state, _loggerService);
