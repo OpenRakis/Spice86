@@ -193,12 +193,25 @@ public class DosProcessManager {
 
         if (hasParentToReturnTo) {
             DosProgramSegmentPrefix parentPsp = _pspTracker.GetCurrentPsp();
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("BEFORE parent stack restore: Current SS:SP={CurrentSs:X4}:{CurrentSp:X4}, CS:IP={CurrentCs:X4}:{CurrentIp:X4}",
+                    _state.SS, _state.SP, _state.CS, _state.IP);
+                _loggerService.Information("Parent PSP StackPointer field = {ParentStack:X8}, will restore SS:SP to {Ss:X4}:{Sp:X4}",
+                    parentPsp.StackPointer, (ushort)(parentPsp.StackPointer >> 16), (ushort)(parentPsp.StackPointer & 0xFFFF));
+            }
+            
             // Restore parent's stack pointer WITHOUT skipping the interrupt frame
             // We'll modify the frame contents so IRET goes to the right place
             _state.SS = (ushort)(parentPsp.StackPointer >> 16);
             _state.SP = (ushort)(parentPsp.StackPointer & 0xFFFF);
             _state.DS = parentPspSegment;
             _state.ES = parentPspSegment;
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("AFTER parent stack restore: SS:SP={Ss:X4}:{Sp:X4}, DS={Ds:X4}, ES={Es:X4}",
+                    _state.SS, _state.SP, _state.DS, _state.ES);
+            }
             
             // Get the terminate address from INT 22h vector (restored from child PSP)
             SegmentedAddress returnAddress = interruptVectorTable[0x22];
@@ -207,23 +220,41 @@ public class DosProcessManager {
                 _loggerService.Information(
                     "Returning to parent at {Segment:X4}:{Offset:X4} from child PSP {ChildPsp:X4}, parent PSP {ParentPsp:X4}",
                     returnAddress.Segment, returnAddress.Offset, currentPspSegment, parentPspSegment);
-                _loggerService.Information("Parent stack restored to SS:SP={Ss:X4}:{Sp:X4} (pointing to interrupt frame)",
-                    _state.SS, _state.SP);
             }
 
             // DOSBox/FreeDOS approach: Modify the interrupt frame on the stack
             // so that when IRET pops it, execution continues at the return address
             uint stackPhysicalAddress = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Stack physical address = {StackPhys:X8}, reading current frame values...",
+                    stackPhysicalAddress);
+                ushort oldIP = _memory.UInt16[stackPhysicalAddress];
+                ushort oldCS = _memory.UInt16[stackPhysicalAddress + 2];
+                ushort oldFlags = _memory.UInt16[stackPhysicalAddress + 4];
+                _loggerService.Information("OLD interrupt frame on stack: IP={OldIp:X4}, CS={OldCs:X4}, FLAGS={OldFlags:X4}",
+                    oldIP, oldCS, oldFlags);
+            }
+            
             _memory.UInt16[stackPhysicalAddress] = returnAddress.Offset;     // IP
             _memory.UInt16[stackPhysicalAddress + 2] = returnAddress.Segment; // CS
             // FLAGS at stackPhysicalAddress + 4 can stay as-is
             
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("Modified interrupt frame on stack: CS:IP will be {Cs:X4}:{Ip:X4} after IRET",
-                    returnAddress.Segment, returnAddress.Offset);
+                ushort newIP = _memory.UInt16[stackPhysicalAddress];
+                ushort newCS = _memory.UInt16[stackPhysicalAddress + 2];
+                ushort newFlags = _memory.UInt16[stackPhysicalAddress + 4];
+                _loggerService.Information("NEW interrupt frame on stack: IP={NewIp:X4}, CS={NewCs:X4}, FLAGS={NewFlags:X4}",
+                    newIP, newCS, newFlags);
+                _loggerService.Information("IRET will pop these values and jump to {Cs:X4}:{Ip:X4}",
+                    newCS, newIP);
             }
             
             // DON'T manually set CS:IP - let IRET handle it by popping the modified frame
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Returning TRUE from TerminateProcess, callback will execute IRET");
+            }
             
             return true; // Continue execution - IRET will pop frame and jump to parent
         }
