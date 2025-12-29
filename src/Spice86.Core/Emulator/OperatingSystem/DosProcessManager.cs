@@ -28,6 +28,8 @@ public class DosProcessManager {
     private readonly State _state;
     private readonly ILoggerService _loggerService;
     private const ushort CommandComSegment = 0x0160;
+    private const byte DefaultDosVersionMajor = 5;
+    private const byte DefaultDosVersionMinor = 0;
     private readonly InterruptVectorTable _interruptVectorTable;
 
     /// <summary>
@@ -290,6 +292,60 @@ public class DosProcessManager {
     /// <returns>Exit code in AL, termination type in AH (always 0 for normal termination).</returns>
     public ushort GetLastChildExitCode() {
         return _lastChildExitCode;
+    }
+
+    /// <summary>
+    /// Implements INT 21h, AH=26h - Create New PSP.
+    /// Copies the current PSP to a new segment and updates INT 22h/23h/24h vectors and DOS version.
+    /// Parent PSP is preserved (matching FreeDOS behavior).
+    /// </summary>
+    /// <param name="newPspSegment">The segment address where the new PSP will be created.</param>
+    /// <param name="interruptVectorTable">The interrupt vector table for reading current vectors.</param>
+    public void CreateNewPsp(ushort newPspSegment, InterruptVectorTable interruptVectorTable) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "CreateNewPsp: Copying current PSP to segment {NewPspSegment:X4}",
+                newPspSegment);
+        }
+
+        ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
+
+        uint currentPspAddress = MemoryUtils.ToPhysicalAddress(currentPspSegment, 0);
+        uint newPspAddress = MemoryUtils.ToPhysicalAddress(newPspSegment, 0);
+
+        byte[] pspData = _memory.ReadRam(DosProgramSegmentPrefix.MaxLength, currentPspAddress);
+        _memory.LoadData(newPspAddress, pspData);
+
+        DosProgramSegmentPrefix currentPsp = _pspTracker.GetCurrentPsp();
+        DosProgramSegmentPrefix newPsp = new(_memory, newPspAddress);
+
+        newPsp.Exit[0] = 0xCD;
+        newPsp.Exit[1] = 0x20;
+
+        newPsp.ParentProgramSegmentPrefix = currentPsp.ParentProgramSegmentPrefix;
+        newPsp.EnvironmentTableSegment = currentPsp.EnvironmentTableSegment;
+
+        SegmentedAddress int22 = interruptVectorTable[0x22];
+        if (int22.Offset == 0 && int22.Segment == 0) {
+            int22 = new SegmentedAddress(_state.CS, _state.IP);
+        }
+        newPsp.TerminateAddress = (uint)((int22.Segment << 16) | int22.Offset);
+
+        SegmentedAddress int23 = interruptVectorTable[0x23];
+        newPsp.BreakAddress = (uint)((int23.Segment << 16) | int23.Offset);
+
+        SegmentedAddress int24 = interruptVectorTable[0x24];
+        newPsp.CriticalErrorAddress = (uint)((int24.Segment << 16) | int24.Offset);
+
+        newPsp.DosVersionMajor = DefaultDosVersionMajor;
+        newPsp.DosVersionMinor = DefaultDosVersionMinor;
+
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            newPsp = new(_memory, newPspAddress);
+            _loggerService.Debug(
+                "CreateNewPsp: Created PSP at {NewPspSegment:X4} from {CurrentPspSegment:X4}, Parent={Parent:X4}",
+                newPspSegment, currentPspSegment, newPsp.ParentProgramSegmentPrefix);
+        }
     }
 
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,

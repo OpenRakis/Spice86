@@ -112,6 +112,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
         AddAction(0x25, SetInterruptVector);
+        AddAction(0x26, CreateNewPsp);
         AddAction(0x2A, GetDate);
         AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
@@ -1316,6 +1317,24 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET RETURN CODE: AX={Ax:X4}", returnCode);
         }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=26h - Create New PSP.
+    /// Creates a copy of the current PSP at the segment specified in DX.
+    /// </summary>
+    /// <remarks>
+    /// Copies the entire PSP and updates INT 22h/23h/24h vectors and DOS version in the new PSP.
+    /// Parent PSP is preserved (matches FreeDOS behavior).
+    /// </remarks>
+    public void CreateNewPsp() {
+        ushort newPspSegment = State.DX;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE NEW PSP at segment {Segment:X4}", newPspSegment);
+        }
+
+        _dosProcessManager.CreateNewPsp(newPspSegment, _interruptVectorTable);
     }
 
     /// <summary>
