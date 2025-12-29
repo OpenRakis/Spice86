@@ -13,6 +13,9 @@
 BITS 16
 ORG 100h
 
+; Constants
+BACKSLASH equ 92    ; ASCII code for backslash character
+
 section .text
 start:
     ; Test 1: Write 'S' - Startup success
@@ -287,10 +290,10 @@ section .data
     ; - Word count (0x0001) indicating program path follows
     ; - Full program path as null-terminated string
     env_block:
-        db "PATH=C:", 92, "DOS", 0         ; 92 is backslash (avoid escaping issues)
-        db "PROMPT=$P$G", 0                ; Another environment variable
-        db 0                                ; Second null byte (DOUBLE NULL terminator)
-        dw 1                                ; Count word: 1 program name string follows
-        db "C:", 92, "TEST", 92, "HELLO.COM", 0  ; Full path to program
+        db "PATH=C:", BACKSLASH, "DOS", 0         ; Environment variable with path
+        db "PROMPT=$P$G", 0                       ; Another environment variable
+        db 0                                      ; Second null byte (DOUBLE NULL terminator)
+        dw 1                                      ; Count word: 1 program name string follows
+        db "C:", BACKSLASH, "TEST", BACKSLASH, "HELLO.COM", 0  ; Full path to program
     env_block_end:
 
