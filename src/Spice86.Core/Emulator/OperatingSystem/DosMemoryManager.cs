@@ -661,4 +661,38 @@ public class DosMemoryManager {
         }
         return false;
     }
+
+    /// <summary>
+    /// Frees all memory blocks owned by a specific PSP segment.
+    /// </summary>
+    /// <param name="pspSegment">The PSP segment whose memory should be freed.</param>
+    /// <returns><c>true</c> if all blocks were freed successfully, <c>false</c> if an error occurred.</returns>
+    public bool FreeProcessMemory(ushort pspSegment) {
+        DosMemoryControlBlock? current = _start;
+
+        while (current is not null) {
+            if (!current.IsValid) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("MCB chain corrupted while freeing process memory");
+                }
+                return false;
+            }
+
+            // Free blocks owned by this PSP
+            if (current.PspSegment == pspSegment) {
+                current.SetFree();
+            }
+
+            if (current.IsLast) {
+                break;
+            }
+
+            current = current.GetNextOrDefault();
+        }
+
+        // Now coalesce adjacent free blocks
+        JoinBlocks(_start, true);
+
+        return true;
+    }
 }

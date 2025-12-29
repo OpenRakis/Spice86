@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -42,6 +43,7 @@ public class DosInt21Handler : InterruptHandler {
     private bool _isCtrlCFlag;
     
     private const ushort OffsetMask = 0x0F;
+    private const byte CreateChildPspAlDestroyedValue = 0xF0;
 
     /// <summary>
     /// Initializes a new instance.
@@ -84,6 +86,11 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Gets the DOS process manager for accessing process management functionality.
+    /// </summary>
+    internal DosProcessManager ProcessManager => _dosProcessManager;
+
+    /// <summary>
     /// Register the handlers for the DOS INT21H services that we support.
     /// </summary>
     private void FillDispatchTable() {
@@ -106,6 +113,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
         AddAction(0x25, SetInterruptVector);
+        AddAction(0x26, CreateNewPsp);
         AddAction(0x2A, GetDate);
         AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
@@ -139,10 +147,12 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4A, () => ModifyMemoryBlock(true));
         AddAction(0x4B, () => LoadAndOrExecute(true));
         AddAction(0x4C, QuitWithExitCode);
+        AddAction(0x4D, GetReturnCode);
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
         AddAction(0x52, GetListOfLists);
+        AddAction(0x55, CreateChildPsp);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
         AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
@@ -789,7 +799,7 @@ public class DosInt21Handler : InterruptHandler {
     /// CF and AX are cleared on success. <br/>
     /// CF is set on error. Possible error code in AX: 0x09 (Invalid memory block address). <br/>
     /// </returns>
-    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void FreeMemoryBlock(bool calledFromVm) {
         ushort blockSegment = State.ES;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -910,11 +920,58 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Terminate the current process, and either prepare unloading it, or keep it in memory.
+    /// INT 21h, AH=31h - Terminate and Stay Resident.
+    /// Keeps the program in memory and returns control to the parent process.
     /// </summary>
-    /// <exception cref="NotImplementedException">TSR Support is not implemented</exception>
+    /// <remarks>
+    /// Input: AL = return code, DX = number of paragraphs to keep resident
+    /// </remarks>
     private void TerminateAndStayResident() {
-        throw new NotImplementedException("TSR Support is not implemented");
+        ushort paragraphsToKeep = State.DX;
+        byte returnCode = State.AL;
+
+        // Note: DOSBox-staging does not enforce a minimum paragraph count
+        // It directly calls DOS_ResizeMemory with the requested value
+        // No minimum check is applied here to match DOSBox behavior
+
+        // Get the current PSP
+        DosProgramSegmentPrefix currentPsp = _dosPspTracker.GetCurrentPsp();
+        ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
+
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information(
+                "TSR: Terminating with return code {ReturnCode}, keeping {Paragraphs} paragraphs at PSP {PspSegment:X4}",
+                returnCode, paragraphsToKeep, currentPspSegment);
+        }
+
+        // Resize the memory block for the current PSP
+        // The memory block starts at PSP segment, and we resize it to keep only the requested paragraphs
+        DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(
+            currentPspSegment,
+            paragraphsToKeep,
+            out DosMemoryControlBlock _);
+
+        // Even if resize fails, we still terminate as a TSR
+        // This matches FreeDOS/DOSBox behavior - they don't check the return value
+        if (errorCode != DosErrorCode.NoError && LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning(
+                "TSR: Failed to resize memory block to {Paragraphs} paragraphs, error: {Error}",
+                paragraphsToKeep, errorCode);
+        }
+
+        // TSR terminates execution but keeps memory resident.
+        // Unlike normal termination (AH=4Ch), TSR does NOT free the process memory.
+        // Call TerminateProcess to handle the return to parent.
+        // Note: TerminateProcess will Pop the PSP and restore parent context.
+        bool shouldContinue = _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR, _interruptVectorTable);
+
+        if (!shouldContinue) {
+            // No parent to return to - stop emulation
+            State.IsRunning = false;
+        }
+        // If shouldContinue is true, TerminateProcess has set CS:IP (with -4 adjustment)
+        // to the parent's return address. MoveIpAndSetNextNode will add 4 after this
+        // handler returns, and execution will continue at the parent's correct address.
     }
 
     /// <summary>
@@ -1096,13 +1153,67 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Either only load a program or overlay, or load it and run it.
+    /// INT 21h, AH=4Bh - EXEC: Load and/or Execute Program.
     /// </summary>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
-    /// <exception cref="NotImplementedException">This function is not implemented</exception>
     public void LoadAndOrExecute(bool calledFromVm) {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        throw new NotImplementedException($"INT21H: load and/or execute program is not implemented. Emulated program tried to load and/or exec: {programName}");
+        DosExecLoadType loadType = (DosExecLoadType)State.AL;
+        uint paramBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("INT21H/4B: DS:DX={Ds:X4}:{Dx:X4}, programName=\"{ProgramName}\", loadType={LoadType}",
+                State.DS, State.DX, programName, loadType);
+        }
+        
+        DosExecResult result;
+
+        if (loadType == DosExecLoadType.LoadOverlay) {
+            DosExecOverlayParameterBlock overlayParamBlock = new(Memory, paramBlockAddress);
+            result = _dosProcessManager.LoadOverlay(programName, overlayParamBlock.LoadSegment, overlayParamBlock.RelocationFactor);
+        } else {
+            DosExecParameterBlock paramBlock = new(Memory, paramBlockAddress);
+            uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(paramBlock.CommandTailSegment, paramBlock.CommandTailOffset);
+            DosCommandTail cmdTail = new(Memory, cmdTailAddress);
+            string commandTail = cmdTail.Length > 0 ? cmdTail.Command.TrimEnd('\r') : string.Empty;
+            result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail, loadType, paramBlock.EnvironmentSegment, _interruptVectorTable);
+        }
+        HandleDosExecResult(calledFromVm, result);
+    }
+
+    private void HandleDosExecResult(bool calledFromVm, DosExecResult result) {
+        if (result.Success) {
+            SetCarryFlag(false, calledFromVm);
+            // Set AX and DX if the result specifies values (e.g., LoadOverlay returns AX=0, DX=0)
+            if (result.AX.HasValue) {
+                State.AX = result.AX.Value;
+            }
+            if (result.DX.HasValue) {
+                State.DX = result.DX.Value;
+            }
+        } else {
+            SetCarryFlag(true, calledFromVm);
+            State.AX = (ushort)result.ErrorCode;
+            LogDosError(calledFromVm);
+        }
+    }
+
+    public DosExecResult LoadOverlay(string programName, DosExecOverlayParameterBlock overlayParamBlock) {
+        DosExecResult result = _dosProcessManager.LoadOverlay(programName, overlayParamBlock.LoadSegment, overlayParamBlock.RelocationFactor);
+        HandleDosExecResult(calledFromVm: true, result);
+        return result;
+    }
+
+    public DosExecResult LoadOnly(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadOnly, paramBlock.EnvironmentSegment, _interruptVectorTable);
+        HandleDosExecResult(calledFromVm: true, result);
+        return result;
+    }
+
+    public DosExecResult LoadAndExecute(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadAndExecute, paramBlock.EnvironmentSegment, _interruptVectorTable);
+        HandleDosExecResult(calledFromVm: true, result);
+        return result;
     }
 
     /// <summary>
@@ -1171,14 +1282,79 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// Quits the current DOS process and sets the exit code from the value in the AL register. <br/>
-    /// TODO: This is only a stub that sets the cpu state <see cref="State.IsRunning"/> property to <c>False</c>, thus ending the emulation loop !
+    /// If this is a child process, restores the parent's state. Otherwise, terminates the emulator.
     /// </summary>
     public void QuitWithExitCode() {
         byte exitCode = State.AL;
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning("INT21H: QUIT WITH EXIT CODE {ExitCode}", ConvertUtils.ToHex8(exitCode));
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2}", exitCode);
         }
-        State.IsRunning = false;
+
+        bool shouldContinue = _dosProcessManager.TerminateProcess(
+            exitCode,
+            DosTerminationType.Normal,
+            _interruptVectorTable);
+
+        if (!shouldContinue) {
+            // No parent to return to - stop emulation
+            State.IsRunning = false;
+        }
+        // If shouldContinue is true, TerminateProcess has set CS:IP (with -4 adjustment)
+        // to the parent's return address. MoveIpAndSetNextNode will add 4 after this
+        // handler returns, and execution will continue at the parent's correct address.
+    }
+
+    /// <summary>
+    /// INT 21h, AH=4Dh - Get Return Code of Subprogram (WAIT).
+    /// Returns the exit code of a terminated child process.
+    /// </summary>
+    /// <remarks>
+    /// Returns:
+    /// AH = termination type (00h = normal, 01h = Ctrl-C, 02h = critical error, 03h = TSR)
+    /// AL = return code
+    /// </remarks>
+    public void GetReturnCode() {
+        ushort returnCode = _dosProcessManager.GetLastChildExitCode();
+        State.AX = returnCode;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET RETURN CODE: AX={Ax:X4}", returnCode);
+        }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=26h - Create New PSP.
+    /// Creates a copy of the current PSP at the segment specified in DX.
+    /// </summary>
+    /// <remarks>
+    /// Copies the entire PSP and updates INT 22h/23h/24h vectors and DOS version in the new PSP.
+    /// Parent PSP is preserved (matches FreeDOS behavior).
+    /// </remarks>
+    public void CreateNewPsp() {
+        ushort newPspSegment = State.DX;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE NEW PSP at segment {Segment:X4}", newPspSegment);
+        }
+
+        _dosProcessManager.CreateNewPsp(newPspSegment, _interruptVectorTable);
+    }
+
+    /// <summary>
+    /// INT 21h, AH=55h - Create Child PSP.
+    /// Creates a child PSP at DX with size SI paragraphs, sets current PSP to the child, and sets AL to destroyed value (0xF0).
+    /// </summary>
+    public void CreateChildPsp() {
+        ushort childSegment = State.DX;
+        ushort sizeInParagraphs = State.SI;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE CHILD PSP at segment {Segment:X4}, size {Size} paragraphs",
+                childSegment, sizeInParagraphs);
+        }
+
+        _dosProcessManager.CreateChildPsp(childSegment, sizeInParagraphs, _interruptVectorTable);
+        _dosPspTracker.SetCurrentPspSegment(childSegment);
+        State.AL = CreateChildPspAlDestroyedValue;
     }
 
     /// <summary>

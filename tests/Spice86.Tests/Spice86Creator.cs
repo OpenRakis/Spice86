@@ -16,7 +16,7 @@ public class Spice86Creator {
 
     public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
-        bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null) {
+        bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, string? cDrive = null) {
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
             CommandLineParser parser = new();
@@ -46,6 +46,7 @@ public class Spice86Creator {
             OverrideSupplier = overrideSupplier,
             Xms = enableXms,
             Ems = enableEms,
+            CDrive = cDrive
         };
 
         _maxCycles = maxCycles;
