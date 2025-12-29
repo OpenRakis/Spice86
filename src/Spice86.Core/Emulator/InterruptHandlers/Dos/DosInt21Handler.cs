@@ -934,8 +934,6 @@ public class DosInt21Handler : InterruptHandler {
         // It directly calls DOS_ResizeMemory with the requested value
         // No minimum check is applied here to match DOSBox behavior
 
-        // Get the current PSP
-        DosProgramSegmentPrefix currentPsp = _dosPspTracker.GetCurrentPsp();
         ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
 
         if (LoggerService.IsEnabled(LogEventLevel.Information)) {
