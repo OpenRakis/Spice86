@@ -85,6 +85,11 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Gets the DOS process manager for accessing process management functionality.
+    /// </summary>
+    internal DosProcessManager ProcessManager => _dosProcessManager;
+
+    /// <summary>
     /// Register the handlers for the DOS INT21H services that we support.
     /// </summary>
     private void FillDispatchTable() {
@@ -928,7 +933,7 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         // Get the current PSP
-        DosProgramSegmentPrefix? currentPsp = _dosPspTracker.GetCurrentPsp();
+        DosProgramSegmentPrefix currentPsp = _dosPspTracker.GetCurrentPsp();
         ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
 
         if (LoggerService.IsEnabled(LogEventLevel.Information)) {
@@ -954,11 +959,9 @@ public class DosInt21Handler : InterruptHandler {
 
         // TSR terminates execution but keeps memory resident.
         // Unlike normal termination (AH=4Ch), TSR does NOT free the process memory.
-        // However, TSR DOES pop the PSP from the tracker because the parent process
-        // becomes the current process again. This allows the parent to make subsequent
-        // EXEC calls without the stale TSR PSP being treated as current.
-        _dosPspTracker.PopCurrentPspSegment();
-        _dosProcessManager.TerminateProcess(0, DosTerminationType.TSR, _interruptVectorTable);
+        // Call TerminateProcess to handle the return to parent.
+        // Note: TerminateProcess will Pop the PSP and restore parent context.
+        _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR, _interruptVectorTable);
     }
 
     /// <summary>
@@ -1147,6 +1150,12 @@ public class DosInt21Handler : InterruptHandler {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         DosExecLoadType loadType = (DosExecLoadType)State.AL;
         uint paramBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("INT21H/4B: DS:DX={Ds:X4}:{Dx:X4}, programName=\"{ProgramName}\", loadType={LoadType}",
+                State.DS, State.DX, programName, loadType);
+        }
+        
         DosExecResult result;
 
         if (loadType == DosExecLoadType.LoadOverlay) {
@@ -1165,6 +1174,13 @@ public class DosInt21Handler : InterruptHandler {
     private void HandleDosExecResult(bool calledFromVm, DosExecResult result) {
         if (result.Success) {
             SetCarryFlag(false, calledFromVm);
+            // Set AX and DX if the result specifies values (e.g., LoadOverlay returns AX=0, DX=0)
+            if (result.AX.HasValue) {
+                State.AX = result.AX.Value;
+            }
+            if (result.DX.HasValue) {
+                State.DX = result.DX.Value;
+            }
         } else {
             SetCarryFlag(true, calledFromVm);
             State.AX = (ushort)result.ErrorCode;

@@ -102,24 +102,24 @@ public class DosExecParameterBlock : MemoryBasedDataStructure {
     /// <summary>
     /// Gets or sets the initial SP value for the child process (AL=01h only).
     /// </summary>
-    /// <remarks>Offset 0x0E, 2 bytes. Filled in by DOS after loading.</remarks>
-    public ushort InitialSP { get => UInt16[0x0E]; set => UInt16[0x0E] = value; }
+    /// <remarks>Offset 0x0C (12 decimal), 2 bytes. Filled in by DOS after loading.</remarks>
+    public ushort InitialSP { get => UInt16[0x0C]; set => UInt16[0x0C] = value; }
 
     /// <summary>
     /// Gets or sets the initial SS value for the child process (AL=01h only).
     /// </summary>
-    /// <remarks>Offset 0x10, 2 bytes. Filled in by DOS after loading.</remarks>
-    public ushort InitialSS { get => UInt16[0x10]; set => UInt16[0x10] = value; }
+    /// <remarks>Offset 0x0E (14 decimal), 2 bytes. Filled in by DOS after loading.</remarks>
+    public ushort InitialSS { get => UInt16[0x0E]; set => UInt16[0x0E] = value; }
 
     /// <summary>
     /// Gets or sets the initial IP value for the child process (AL=01h only).
     /// </summary>
-    /// <remarks>Offset 0x12, 2 bytes. Filled in by DOS after loading.</remarks>
-    public ushort InitialIP { get => UInt16[0x12]; set => UInt16[0x12] = value; }
+    /// <remarks>Offset 0x10 (16 decimal), 2 bytes. Filled in by DOS after loading.</remarks>
+    public ushort InitialIP { get => UInt16[0x10]; set => UInt16[0x10] = value; }
 
     /// <summary>
     /// Gets or sets the initial CS value for the child process (AL=01h only).
     /// </summary>
-    /// <remarks>Offset 0x14, 2 bytes. Filled in by DOS after loading.</remarks>
-    public ushort InitialCS { get => UInt16[0x14]; set => UInt16[0x14] = value; }
+    /// <remarks>Offset 0x12 (18 decimal), 2 bytes. Filled in by DOS after loading.</remarks>
+    public ushort InitialCS { get => UInt16[0x12]; set => UInt16[0x12] = value; }
 }
