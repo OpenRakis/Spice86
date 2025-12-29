@@ -42,6 +42,11 @@ public sealed class Dos {
     public DosInt21Handler DosInt21Handler { get; }
 
     /// <summary>
+    /// Gets the INT 22h DOS terminate address handler.
+    /// </summary>
+    public DosInt22Handler DosInt22Handler { get; }
+
+    /// <summary>
     /// Gets the INT 23h DOS Control-Break handler.
     /// </summary>
     public DosInt23Handler DosInt23Handler { get; }
@@ -191,6 +196,7 @@ public sealed class Dos {
         DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, DosSwappableDataArea, loggerService);
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
         ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, interruptVectorTable, loggerService);
+        DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, interruptVectorTable, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, ProcessManager, ioPortDispatcher, DosTables, _loggerService);

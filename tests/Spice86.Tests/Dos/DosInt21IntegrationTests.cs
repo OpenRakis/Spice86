@@ -1078,11 +1078,12 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
-    /// Verifies that INT 21h, INT 23h, and INT 24h vectors are installed and not left at the dummy F000:FFF0 address.
+    /// Verifies that INT 21h, INT 22h, INT 23h, and INT 24h vectors are installed and not left at the dummy F000:FFF0 address.
     /// </summary>
     [Fact]
-    public void InterruptVectors_For21_23_24_AreInstalled() {
+    public void InterruptVectors_For21_22_23_24_AreInstalled() {
         byte[] program = new byte[] {
+            // INT 21h (already expected to be present, sanity check)
             0xB8, 0x21, 0x35,       // mov ax, 3521h
             0xCD, 0x21,             // int 21h
             0x81, 0xFB, 0xF0, 0xFF, // cmp bx, 0FFF0h
@@ -1092,7 +1093,17 @@ public class DosInt21IntegrationTests {
             0x75, 0x02,             // jne next_int23
             0xEB, 0x2E,             // jmp failed
 
-            // next_int23:
+            // INT 22h
+            0xB8, 0x22, 0x35,       // mov ax, 3522h
+            0xCD, 0x21,             // int 21h
+            0x81, 0xFB, 0xF0, 0xFF, // cmp bx, 0FFF0h
+            0x75, 0x0A,             // jne next_int23b
+            0x8C, 0xDA,             // mov dx, es
+            0x81, 0xFA, 0x00, 0xF0, // cmp dx, 0F000h
+            0x75, 0x02,             // jne next_int23b
+            0xEB, 0x21,             // jmp failed
+
+            // next_int23b:
             0xB8, 0x23, 0x35,       // mov ax, 3523h
             0xCD, 0x21,             // int 21h
             0x81, 0xFB, 0xF0, 0xFF, // cmp bx, 0FFF0h

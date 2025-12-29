@@ -504,6 +504,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers
+            interruptInstaller.InstallInterruptHandler(dos.DosInt22Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt20Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt21Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt23Handler);
