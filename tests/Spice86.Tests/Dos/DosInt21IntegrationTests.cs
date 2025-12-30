@@ -502,7 +502,12 @@ public class DosInt21IntegrationTests {
             // Terminate using INT 20h (legacy method)
             0xCD, 0x20,             // int 20h - should terminate
             
-            // This should never be reached
+            // Verify return code (AL should be 0)
+            0x3C, 0x00,             // cmp al, 0
+            0x75, 0x01,             // jne failure
+            0xF4,                   // hlt
+            
+            // failure:
             0xB0, 0xFF,             // mov al, TestResult.Failure
             0xBA, 0x99, 0x09,       // mov dx, ResultPort
             0xEE,                   // out dx, al
