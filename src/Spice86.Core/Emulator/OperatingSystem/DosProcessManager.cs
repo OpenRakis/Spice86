@@ -144,7 +144,7 @@ public class DosProcessManager {
     }
 
 
-    public bool TerminateProcess(byte exitCode, DosTerminationType terminationType,
+    public void TerminateProcess(byte exitCode, DosTerminationType terminationType,
          InterruptVectorTable interruptVectorTable) {
 
         // Store the return code for parent to retrieve via INT 21h AH=4Dh
@@ -197,7 +197,6 @@ public class DosProcessManager {
         RestoreInterruptVector(0x23, breakAddr, interruptVectorTable);
         RestoreInterruptVector(0x24, criticalErrorAddr, interruptVectorTable);
 
-        // Remove the PSP from the tracker
         _pspTracker.PopCurrentPspSegment();
 
         if (hasParentToReturnTo) {
@@ -264,15 +263,11 @@ public class DosProcessManager {
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information("Returning TRUE from TerminateProcess, callback will execute IRET");
             }
-            
-            return true; // Continue execution - IRET will pop frame and jump to parent
         }
 
-        // No parent to return to - this is the main program terminating
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("No parent to return to - main program terminating");
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning("No parent to return to - returning to command.com PSP!");
         }
-        return false;
     }
 
     private static void RestoreInterruptVector(byte vectorNumber, uint storedFarPointer,
