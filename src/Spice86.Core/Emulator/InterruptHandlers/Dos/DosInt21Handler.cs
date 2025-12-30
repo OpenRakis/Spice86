@@ -930,10 +930,6 @@ public class DosInt21Handler : InterruptHandler {
         ushort paragraphsToKeep = State.DX;
         byte returnCode = State.AL;
 
-        // Note: DOSBox-staging does not enforce a minimum paragraph count
-        // It directly calls DOS_ResizeMemory with the requested value
-        // No minimum check is applied here to match DOSBox behavior
-
         ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
 
         if (LoggerService.IsEnabled(LogEventLevel.Information)) {
@@ -941,16 +937,14 @@ public class DosInt21Handler : InterruptHandler {
                 "TSR: Terminating with return code {ReturnCode}, keeping {Paragraphs} paragraphs at PSP {PspSegment:X4}",
                 returnCode, paragraphsToKeep, currentPspSegment);
         }
-
-        // Resize the memory block for the current PSP
-        // The memory block starts at PSP segment, and we resize it to keep only the requested paragraphs
+        
         DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(
             currentPspSegment,
             paragraphsToKeep,
             out DosMemoryControlBlock _);
 
         // Even if resize fails, we still terminate as a TSR
-        // This matches FreeDOS/DOSBox behavior - they don't check the return value
+        // This matches FreeDOS behavior
         if (errorCode != DosErrorCode.NoError && LoggerService.IsEnabled(LogEventLevel.Warning)) {
             LoggerService.Warning(
                 "TSR: Failed to resize memory block to {Paragraphs} paragraphs, error: {Error}",
