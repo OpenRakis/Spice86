@@ -107,16 +107,16 @@ public class DosProcessManager {
 
         // Initialize interrupt vectors from IVT so child PSPs inherit proper addresses
         SegmentedAddress int22 = _interruptVectorTable[0x22];
-        rootPsp.TerminateAddress = ((uint)int22.Segment << 16) | int22.Offset;
+        rootPsp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
 
         SegmentedAddress int23 = _interruptVectorTable[0x23];
-        rootPsp.BreakAddress = ((uint)int23.Segment << 16) | int23.Offset;
+        rootPsp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
 
         SegmentedAddress int24 = _interruptVectorTable[0x24];
-        rootPsp.CriticalErrorAddress = ((uint)int24.Segment << 16) | int24.Offset;
+        rootPsp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
 
         rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
-        rootPsp.FileTableAddress = ((uint)CommandComSegment << 16) | 0x18;
+        rootPsp.FileTableAddress = MakeFarPointer(CommandComSegment, 0x18);
 
         // Initialize standard file handles in the PSP file handle table
         // Standard handles: 0=stdin, 1=stdout, 2=stderr, 3=stdaux, 4=stdprn
@@ -322,13 +322,13 @@ public class DosProcessManager {
         newPsp.EnvironmentTableSegment = currentPsp.EnvironmentTableSegment;
 
         SegmentedAddress int22 = interruptVectorTable[0x22];
-        newPsp.TerminateAddress = (uint)((int22.Segment << 16) | int22.Offset);
+        newPsp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
 
         SegmentedAddress int23 = interruptVectorTable[0x23];
-        newPsp.BreakAddress = (uint)((int23.Segment << 16) | int23.Offset);
+        newPsp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
 
         SegmentedAddress int24 = interruptVectorTable[0x24];
-        newPsp.CriticalErrorAddress = (uint)((int24.Segment << 16) | int24.Offset);
+        newPsp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
 
         newPsp.DosVersionMajor = DefaultDosVersionMajor;
         newPsp.DosVersionMinor = DefaultDosVersionMinor;
@@ -687,13 +687,12 @@ public class DosProcessManager {
         psp.NextSegment = DosMemoryManager.LastFreeSegment;
 
         // This sets INT 22h to point to the CALLER'S return address
-        psp.TerminateAddress = ((uint)callerCS << 16) | callerIP;
+        psp.TerminateAddress = MakeFarPointer(callerCS, callerIP);
         
-        // Save current interrupt vectors for Ctrl-C and Critical Error in child PSP
         SegmentedAddress breakVector = interruptVectorTable[0x23];
         SegmentedAddress criticalErrorVector = interruptVectorTable[0x24];
-        psp.BreakAddress = ((uint)breakVector.Segment << 16) | breakVector.Offset;
-        psp.CriticalErrorAddress = ((uint)criticalErrorVector.Segment << 16) | criticalErrorVector.Offset;
+        psp.BreakAddress = MakeFarPointer(breakVector.Segment, breakVector.Offset);
+        psp.CriticalErrorAddress = MakeFarPointer(criticalErrorVector.Segment, criticalErrorVector.Offset);
         
         // Save parent's stack pointer in the PARENT PSP's StackPointer field (offset 0x2E)
         // This mirrors FreeDOS task.c
