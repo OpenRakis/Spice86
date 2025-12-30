@@ -268,17 +268,8 @@ public class DosInt21IntegrationTests {
     /// Also verifies that bytes at offset 0x16 and 0x2C (PSP offsets for ParentPspSegment
     /// and EnvironmentTableSegment) are not corrupted with 0x60 0x01 pattern.
     /// </summary>
-    /// <remarks>
-    /// This test catches a specific bug where the environment block was being
-    /// allocated at the same segment as the PSP, causing PSP initialization to
-    /// overwrite various offsets in the environment block.
-    /// </remarks>
     [Fact]
     public void EnvironmentBlock_NotCorruptedByPsp() {
-        // This test verifies the environment block starts correctly with 'B' (from BLASTER)
-        // and not garbage like 0xCD (INT 20h opcode) from PSP corruption.
-        // It also checks that offset 0x16 (22) doesn't contain 0x60 (PSP ParentPspSegment corruption)
-        // and offset 0x2C (44) doesn't contain 0x60 (PSP EnvironmentTableSegment corruption).
         byte[] program = new byte[] {
             // Get current PSP address
             0xB4, 0x62,             // 0x00: mov ah, 62h - Get PSP address
@@ -345,20 +336,8 @@ public class DosInt21IntegrationTests {
     /// This verifies the DOS environment block contains the ASCIZ program path after
     /// the environment variables (double null + WORD count + path).
     /// </summary>
-    /// <remarks>
-    /// DOS environment block structure:
-    /// - Environment variables as "KEY=VALUE\0" strings
-    /// - Double null (\0\0) to terminate the list
-    /// - WORD containing count of additional strings (usually 1)
-    /// - ASCIZ full path to the program
-    /// 
-    /// PSP offsets used:
-    /// - 0x2C: Environment segment
-    /// </remarks>
     [Fact]
     public void EnvironmentBlock_ContainsProgramPath() {
-        // This test verifies the environment segment is valid
-        // and contains the expected program path structure
         byte[] program = new byte[] {
             // Get current PSP address
             0xB4, 0x62,             // 0x00: mov ah, 62h - Get PSP address
@@ -438,18 +417,8 @@ public class DosInt21IntegrationTests {
     /// Tests INT 21h, AH=4Dh - Get Return Code of Child Process.
     /// Verifies that after a child process terminates, the parent can retrieve the exit code.
     /// </summary>
-    /// <remarks>
-    /// This test verifies the basic functionality of INT 21h AH=4Dh by checking that
-    /// the return code is 0 initially (no child has terminated yet).
-    /// The value returned by AH=4Dh contains:
-    /// - AL = exit code (should be 0 initially or from last child)
-    /// - AH = termination type (see DosTerminationType enum)
-    /// </remarks>
     [Fact]
     public void GetChildReturnCode_ReturnsReturnCode() {
-        // This test calls INT 21h AH=4Dh to get the return code
-        // Initially, the return code should be 0 (no child has terminated)
-        // AL = exit code, AH = termination type
         byte[] program = new byte[] {
             // Get child return code
             0xB4, 0x4D,             // mov ah, 4Dh - Get child return code
@@ -484,11 +453,6 @@ public class DosInt21IntegrationTests {
     /// <summary>
     /// Tests that subsequent calls to INT 21h AH=4Dh return 0 (MS-DOS behavior).
     /// </summary>
-    /// <remarks>
-    /// In MS-DOS, the return code is only valid for the first read after a child
-    /// process terminates. Subsequent reads should return 0. This test verifies
-    /// that calling AH=4Dh twice in a row returns 0 on the second call.
-    /// </remarks>
     [Fact]
     public void GetChildReturnCode_SubsequentCallsReturnZero() {
         // This test calls INT 21h AH=4Dh twice and verifies the second call returns 0
@@ -526,12 +490,6 @@ public class DosInt21IntegrationTests {
 
     /// <summary>
     /// Tests that INT 20h properly terminates the program (legacy method).
-    /// </summary>
-    /// <remarks>
-    /// INT 20h is the legacy DOS termination method used by COM files.
-    /// Unlike INT 21h/4Ch, it doesn't allow specifying an exit code.
-    /// The exit code is always 0.
-    /// </remarks>
     [Fact]
     public void Int20h_TerminatesProgramNormally() {
         // This test calls INT 20h to terminate the program
@@ -562,38 +520,6 @@ public class DosInt21IntegrationTests {
     /// Tests INT 21h, AH=26h - Create New PSP.
     /// Verifies that a new PSP is created by copying the current PSP.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// This test verifies the basic functionality of INT 21h AH=26h:
-    /// <list type="number">
-    /// <item>Gets the current PSP segment</item>
-    /// <item>Creates a new PSP at segment 0x2000 using INT 21h, AH=26h</item>
-    /// <item>Verifies the INT 20h instruction is at the start of the new PSP</item>
-    /// <item>Verifies the parent PSP segment matches the original PSP</item>
-    /// <item>Verifies the environment segment was copied</item>
-    /// <item>Verifies the terminate address (INT 22h) was updated</item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// Based on FreeDOS kernel behavior: the function copies the entire current PSP
-    /// to the new segment and updates the interrupt vectors. Unlike CreateChildPsp (55h),
-    /// this doesn't set up file handles or change the current PSP.
-    /// </para>
-    /// <para>
-    /// <strong>Test Memory Layout:</strong> Segment 0x2000 (128KB) is well above the
-    /// test program's PSP (typically ~0x0100) and environment blocks (~0x0070-0x0100),
-    /// ensuring no conflicts with allocated memory. The test program is small (~100 bytes)
-    /// and runs at 0x0100:0x0100, so 0x2000 provides safe separation.
-    /// </para>
-    /// <para>
-    /// PSP offsets used:
-    /// <list type="bullet">
-    /// <item>0x00-0x01: INT 20h instruction (0xCD, 0x20)</item>
-    /// <item>0x0A-0x0D: Terminate address (INT 22h vector)</item>
-    /// <item>0x16: Parent PSP segment</item>
-    /// <item>0x2C: Environment segment</item>
-    /// </list>
-    /// </para>
     /// </remarks>
     [Fact]
     public void CreateNewPsp_CreatesValidPspCopy() {
@@ -674,43 +600,6 @@ public class DosInt21IntegrationTests {
     /// Tests INT 21h, AH=55h - Create Child PSP.
     /// Verifies that a child PSP is created at the specified segment with proper initialization.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// This test:
-    /// <list type="number">
-    /// <item>Gets the current PSP segment via INT 21h, AH=62h</item>
-    /// <item>Creates a child PSP at a target segment using INT 21h, AH=55h</item>
-    /// <item>Verifies the new PSP segment is now the current PSP</item>
-    /// <item>Verifies the child PSP's parent pointer points to the original PSP</item>
-    /// <item>Verifies the INT 20h instruction is at the start of the PSP</item>
-    /// <item>Verifies the environment segment was inherited</item>
-    /// <item>Verifies AL is set to 0xF0 (DOSBox-compatible behavior - AL value is "destroyed")</item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// Note: The AL=0xF0 check validates Spice86's DOSBox-compatible behavior. In DOS, AL is 
-    /// considered "destroyed" after this call, meaning its value is undefined. DOSBox happens 
-    /// to set it to 0xF0, and we match that behavior for compatibility.
-    /// </para>
-    /// <para>
-    /// Based on DOSBox staging implementation:
-    /// <code>
-    /// case 0x55: /* Create Child PSP */
-    ///     DOS_ChildPSP(reg_dx, reg_si);
-    ///     dos.psp(reg_dx);
-    ///     reg_al = 0xf0; /* al destroyed */
-    ///     break;
-    /// </code>
-    /// </para>
-    /// <para>
-    /// PSP offsets used:
-    /// <list type="bullet">
-    /// <item>0x00-0x01: INT 20h instruction (0xCD, 0x20)</item>
-    /// <item>0x16: Parent PSP segment</item>
-    /// <item>0x2C: Environment segment</item>
-    /// </list>
-    /// </para>
-    /// </remarks>
     [Fact]
     public void CreateChildPsp_CreatesValidPsp() {
         // This test creates a child PSP and verifies:
@@ -798,31 +687,6 @@ public class DosInt21IntegrationTests {
     /// Tests accessing program arguments (argc/argv) from DOS environment block.
     /// This simulates what C runtime libraries do when initializing argc and argv.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// DOS C programs determine argc and argv by:
-    /// <list type="number">
-    /// <item>Reading argv[0] from the environment block (after double-null, WORD count, then path)</item>
-    /// <item>Reading additional arguments from the command tail in the PSP (offset 0x80)</item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// The environment block structure:
-    /// - Environment variables as "KEY=VALUE\0" strings
-    /// - Double null (\0\0) terminator
-    /// - WORD count (usually 1)
-    /// - ASCIZ program path (e.g., "C:\PATH\PROGRAM.COM\0")
-    /// </para>
-    /// <para>
-    /// This test verifies that:
-    /// <list type="bullet">
-    /// <item>The environment segment in the PSP is valid</item>
-    /// <item>The environment block has the double-null terminator</item>
-    /// <item>The WORD count after double-null is 1</item>
-    /// <item>The program path starts with "C:\" and is null-terminated</item>
-    /// </list>
-    /// </para>
-    /// </remarks>
     [Fact]
     public void ProgramArguments_CanAccessArgvFromEnvironmentBlock() {
         // This test simulates a C program accessing argv[0] from the environment block.
@@ -914,7 +778,7 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
-    /// Tests that a program can print its path using INT 21h AH=02h after reading from environment. 
+    /// Tests that a program can print its path using INT 21h AH=02h after reading from environment.
     /// This simulates what printf("[%i] %s\n", 0, argv[0]) would do in the C program.
     /// </summary>
     [Fact]
@@ -988,33 +852,9 @@ public class DosInt21IntegrationTests {
 
     /// <summary>
     /// Tests that standard file handles (STDIN/STDOUT/STDERR) are inherited from parent PSP.
-    /// This is critical for C programs that use stdin/stdout/stderr.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// In DOS, when a program is loaded, it should inherit file handles 0, 1, and 2
-    /// (STDIN, STDOUT, STDERR) from its parent (COMMAND.COM). The parent's file handle
-    /// table should be copied to the child's PSP.
-    /// </para>
-    /// <para>
-    /// This test verifies that:
-    /// <list type="bullet">
-    /// <item>File handle 0 (STDIN) is 0 (pointing to SFT entry 0, CON device)</item>
-    /// <item>File handle 1 (STDOUT) is 1 (pointing to SFT entry 1, CON device)</item>
-    /// <item>File handle 2 (STDERR) is 2 (pointing to SFT entry 2, CON device)</item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// Without this fix, C programs crash when trying to use printf() or getch()
-    /// because those functions try to use file handles that point to the wrong SFT entries
-    /// or are uninitialized.
-    /// </para>
-    /// </remarks>
     [Fact]
     public void StandardFileHandles_AreInheritedFromParentPsp() {
-        // This test checks that the PSP file handle table has been copied from the parent.
-        // COMMAND.COM has Files[0]=0, Files[1]=1, Files[2]=2.
-        // The child program should have the same values.
         byte[] program = new byte[] {
             // Get current PSP address
             0xB4, 0x62,             // mov ah, 62h
@@ -1109,9 +949,6 @@ public class DosInt21IntegrationTests {
         return testHandler;
     }
 
-    /// <summary>
-    /// Captures DOS test results from designated I/O ports
-    /// </summary>
     private class DosTestHandler : DefaultIOPortHandler {
         public List<byte> Results { get; } = new();
         public List<byte> Details { get; } = new();

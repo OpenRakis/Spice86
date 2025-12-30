@@ -52,11 +52,6 @@ public class DosProcessManager {
     /// </remarks>
     private readonly EnvironmentVariables _environmentVariables;
 
-    /// <summary>
-    /// The last child process exit code. Used by INT 21h AH=4Dh.
-    /// </summary>
-    private ushort _lastChildExitCode = 0;
-
     public DosProcessManager(IMemory memory, State state,
         DosProgramSegmentPrefixTracker dosPspTracker, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
@@ -93,10 +88,6 @@ public class DosProcessManager {
     /// Creates the root COMMAND.COM PSP that acts as the parent for all programs.
     /// This PSP has its parent field pointing to itself, indicating it's the root.
     /// </summary>
-    /// <remarks>
-    /// This should be called once before loading any programs, typically from DosProgramLoader.
-    /// Following DOSBox staging's approach where there's always a root commandCom PSP.
-    /// </remarks>
     public void CreateRootCommandComPsp() {
         if (_pspTracker.PspCount > 0) {
             // Root PSP already exists
@@ -180,7 +171,7 @@ public class DosProcessManager {
         // Store the return code for parent to retrieve via INT 21h AH=4Dh
         // Format: AH = termination type, AL = exit code
         LastChildReturnCode = (ushort)(((ushort)terminationType << 8) | exitCode);
-        _lastChildExitCode = LastChildReturnCode;
+        LastChildExitCode = LastChildReturnCode;
 
         DosProgramSegmentPrefix currentPsp = _pspTracker.GetCurrentPsp();
 
@@ -212,14 +203,11 @@ public class DosProcessManager {
         _fileManager.CloseAllNonStandardFileHandles();
 
         // Cache interrupt vectors from child PSP before freeing memory
-        // INT 22h = Terminate address, INT 23h = Ctrl-C, INT 24h = Critical error
-        // Must read these BEFORE freeing the PSP memory to avoid accessing freed memory
         uint terminateAddr = currentPsp.TerminateAddress;
         uint breakAddr = currentPsp.BreakAddress;
         uint criticalErrorAddr = currentPsp.CriticalErrorAddress;
 
-        // Free all memory blocks owned by this process (including environment block)
-        // This follows FreeDOS kernel FreeProcessMem() pattern
+        // This follows FreeDOS
         // TSR (term_type == 3) does NOT free memory - it keeps the program resident
         if (terminationType != DosTerminationType.TSR) {
             _memoryManager.FreeProcessMemory(currentPspSegment);
@@ -243,6 +231,7 @@ public class DosProcessManager {
                     parentPsp.StackPointer, (ushort)(parentPsp.StackPointer >> 16), (ushort)(parentPsp.StackPointer & 0xFFFF));
             }
             
+            // We are in an interrupt handler, so the solution is not in freeDOS but DOSBOX:
             // Restore parent's stack pointer WITHOUT skipping the interrupt frame
             // We'll modify the frame contents so IRET goes to the right place
             _state.SS = (ushort)(parentPsp.StackPointer >> 16);
@@ -264,7 +253,7 @@ public class DosProcessManager {
                     returnAddress.Segment, returnAddress.Offset, currentPspSegment, parentPspSegment);
             }
 
-            // DOSBox/FreeDOS approach: Modify the interrupt frame on the stack
+            // Modify the interrupt frame on the stack
             // so that when IRET pops it, execution continues at the return address
             uint stackPhysicalAddress = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
             
@@ -280,7 +269,6 @@ public class DosProcessManager {
             
             _memory.UInt16[stackPhysicalAddress] = returnAddress.Offset;     // IP
             _memory.UInt16[stackPhysicalAddress + 2] = returnAddress.Segment; // CS
-            // FLAGS at stackPhysicalAddress + 4 can stay as-is
             
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 ushort newIP = _memory.UInt16[stackPhysicalAddress];
@@ -321,9 +309,7 @@ public class DosProcessManager {
     /// Gets the last child process exit code. Used by INT 21h AH=4Dh.
     /// </summary>
     /// <returns>Exit code in AL, termination type in AH (always 0 for normal termination).</returns>
-    public ushort GetLastChildExitCode() {
-        return _lastChildExitCode;
-    }
+    public ushort LastChildExitCode { get; private set; } = 0;
 
     /// <summary>
     /// Implements INT 21h, AH=26h - Create New PSP.
@@ -509,19 +495,12 @@ public class DosProcessManager {
             _loggerService.Information("EXEC: Loading program={Program}, loadType={LoadType}, envSeg={EnvSeg:X4}",
                 programName, loadType, environmentSegment);
         }
-        
-        // FreeDOS task.c line 366: q->ps_stack = (BYTE FAR *)user_r;
-        // where user_r is the saved CPU state at the time INT 21h AH=4Bh was called.
-        // When INT 21h executes, the CPU pushes IP, CS, FLAGS onto the stack, then jumps to the handler.
-        // Stack layout when we're in the handler:
-        //   [SP+0] = IP (return address to user code)
-        //   [SP+2] = CS (return segment to user code)
-        //   [SP+4] = FLAGS
+
         // We read CS:IP from the stack to get the address where the parent will resume.
         ushort callerIP = _memory.UInt16[_state.StackPhysicalAddress];
         ushort callerCS = _memory.UInt16[_state.StackPhysicalAddress + 2];
         ushort callerFlags = _memory.UInt16[_state.StackPhysicalAddress + 4];
-        
+
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("EXEC: Stack at SS:SP={StackSeg:X4}:{StackOff:X4}, read caller CS:IP={CallerCs:X4}:{CallerIp:X4}, FLAGS={Flags:X4}",
                 _state.SS, _state.SP, callerCS, callerIP, callerFlags);
@@ -552,7 +531,7 @@ public class DosProcessManager {
         bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && upperCaseExtension == ".EXE";
         bool updateCpuState = loadType == DosExecLoadType.LoadAndExecute;
 
-        // Save parent's current SS:SP BEFORE any CPU state changes (FreeDOS: q->ps_stack = user_r)
+        // Save parent's current SS:SP BEFORE any CPU state changes
         // This captures the parent's stack context before the child modifies anything
         uint parentStackPointer = ((uint)_state.SS << 16) | _state.SP;
 
@@ -603,7 +582,7 @@ public class DosProcessManager {
                 return result;
             }
             // If file has .EXE extension but isn't a valid EXE, fall through to try COM loading
-            // This matches FreeDOS behavior where DosExec falls back to DosComLoader if DosExeLoader fails
+            // This matches FreeDOS behavior
         }
 
         // Load as COM file (either explicitly .COM or invalid .EXE that we'll try as COM)
@@ -716,7 +695,7 @@ public class DosProcessManager {
         }
         
         // For overlays, DOS doesn't return anything in the parameter block
-        // Just return success with AX=0 and DX=0 per DOSBox staging behavior (dos_execute.cpp line 417-418)
+        // Just return success with AX=0 and DX=0
         return DosExecResult.SuccessLoadOverlay();
     }
 
@@ -728,12 +707,7 @@ public class DosProcessManager {
         psp.Exit[1] = 0x20;
         psp.NextSegment = DosMemoryManager.LastFreeSegment;
 
-        // FreeDOS task.c setvec(0x22, MK_FP(user_r->CS, user_r->IP)) at line 626
-        // This sets INT 22h to point to the CALLER'S return address BEFORE child_psp() creates the child PSP.
-        // The child PSP then inherits this as its terminate address via new_psp() -> getvec(0x22).
-        // When the child terminates, return_user() restores CS:IP from p->ps_isv22 (the child PSP's INT 22h).
-        // We must save the caller's CS:IP (read from the interrupt stack) as the child's terminate address
-        // so the parent can resume execution at the correct location.
+        // This sets INT 22h to point to the CALLER'S return address
         psp.TerminateAddress = ((uint)callerCS << 16) | callerIP;
         
         // Save current interrupt vectors for Ctrl-C and Critical Error in child PSP
@@ -743,9 +717,7 @@ public class DosProcessManager {
         psp.CriticalErrorAddress = ((uint)criticalErrorVector.Segment << 16) | criticalErrorVector.Offset;
         
         // Save parent's stack pointer in the PARENT PSP's StackPointer field (offset 0x2E)
-        // This mirrors FreeDOS task.c load_transfer() line 366: q->ps_stack = (BYTE FAR *)user_r;
-        // where q is the parent PSP. When the child terminates, return_user() reads this
-        // from the parent PSP (line 614) to restore the parent's execution context.
+        // This mirrors FreeDOS task.c
         DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
         parentPsp.StackPointer = parentStackPointer;
 
@@ -847,7 +819,7 @@ public class DosProcessManager {
             _state.DS = pspSegment;
             _state.ES = pspSegment;
             _state.SS = pspSegment;
-            _state.SP = 0xFFFE; // Standard COM file stack
+            _state.SP = 0xFFFE; // Expected stack pointer value
             _state.InterruptFlag = true;
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("COM load register state CS:IP={Cs}:{Ip} DS=ES=SS={Segment} SP={Sp}",
