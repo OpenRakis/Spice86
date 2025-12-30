@@ -34,7 +34,12 @@ public class DosProcessManager {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly ILoggerService _loggerService;
-    private const ushort CommandComSegment = 0x0160;
+
+    /// <summary>
+    /// The segment address where the root COMMAND.COM PSP is created.
+    /// Follows FreeDOS convention: at 0x0060, and with no PSP MCB.
+    /// </summary>
+    public const ushort CommandComSegment = 0x60;
     private const byte DefaultDosVersionMajor = 5;
     private const byte DefaultDosVersionMinor = 0;
     private const ushort FileTableOffset = 0x18;
@@ -90,29 +95,15 @@ public class DosProcessManager {
             // Root PSP already exists
             return;
         }
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Creating root COMMAND.COM PSP at segment {CommandComSegment:X4}",
-                CommandComSegment);
-        }
-
-        // Allocate memory for the root PSP (1 paragraph = 16 bytes, PSP is 256 bytes)
-        // 10 paragraphs covers the entire PSP, but then Dune won't start (not enough conventionlal memory)
-        DosMemoryControlBlock? rootBlock = _memoryManager.AllocateMemoryBlock(0x9);
-        if (rootBlock is null) {
-            throw new InvalidOperationException("Failed to allocate memory for root COMMAND.COM PSP");
-        }
-
-        DosProgramSegmentPrefix rootPsp = _pspTracker.PushPspSegment(rootBlock.DataBlockSegment);
+        DosProgramSegmentPrefix rootPsp = _pspTracker.PushPspSegment(CommandComSegment);
 
         rootPsp.Exit[0] = 0xCD;
         rootPsp.Exit[1] = 0x20;
         rootPsp.NextSegment = DosMemoryManager.LastFreeSegment;
 
         // Root PSP: parent points to itself
-        rootPsp.ParentProgramSegmentPrefix = rootBlock.DataBlockSegment;
-        rootPsp.PreviousPspAddress = rootBlock.DataBlockSegment;
-
+        rootPsp.ParentProgramSegmentPrefix =CommandComSegment;
+        rootPsp.PreviousPspAddress = CommandComSegment;
 
         // Initialize interrupt vectors from IVT so child PSPs inherit proper addresses
         SegmentedAddress int22 = _interruptVectorTable[0x22];
@@ -125,7 +116,7 @@ public class DosProcessManager {
         rootPsp.CriticalErrorAddress = ((uint)int24.Segment << 16) | int24.Offset;
 
         rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
-        rootPsp.FileTableAddress = ((uint)rootBlock.DataBlockSegment << 16) | 0x18;
+        rootPsp.FileTableAddress = ((uint)CommandComSegment << 16) | 0x18;
 
         // Initialize standard file handles in the PSP file handle table
         // Standard handles: 0=stdin, 1=stdout, 2=stderr, 3=stdaux, 4=stdprn
@@ -148,12 +139,8 @@ public class DosProcessManager {
             rootPsp.EnvironmentTableSegment = envBlock.DataBlockSegment;
         }
 
-        _fileManager.SetDiskTransferAreaAddress(rootBlock.DataBlockSegment, DosCommandTail.OffsetInPspSegment);
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Root COMMAND.COM PSP created at {PspSegment:X4}, parent points to itself",
-                rootBlock.DataBlockSegment);
-        }
+        _fileManager.SetDiskTransferAreaAddress(
+            CommandComSegment, DosCommandTail.OffsetInPspSegment);
     }
 
 

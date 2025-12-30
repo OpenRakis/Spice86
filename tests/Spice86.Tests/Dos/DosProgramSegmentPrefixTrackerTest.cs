@@ -60,12 +60,11 @@ public class DosProgramSegmentPrefixTrackerTests {
     }
 
     /// <summary>
-    /// Ensures that the initial PSP is calculated from the program entry point segment in the
-    /// configuration correctly.
+    /// Ensures that the root PSP corresponds to the FreeDOS convention for COMMAND.COM
     /// </summary>
     [Fact]
     public void CheckInitialPspSegment() {
-        //Arrange
+        //Act
         // Push the root PSP onto the tracker
         // Ensure root COMMAND.COM PSP exists
         _processManager.CreateRootCommandComPsp();
@@ -73,7 +72,7 @@ public class DosProgramSegmentPrefixTrackerTests {
         // Assert
         _pspTracker.InitialPspSegment.Should().Be(0xFF0);
         _pspTracker.PspCount.Should().Be(1);
-        _pspTracker.GetCurrentPspSegment().Should().Be(0xFF0);
+        _pspTracker.GetCurrentPspSegment().Should().Be(DosProcessManager.CommandComSegment);
     }
 
     /// <summary>
