@@ -86,7 +86,6 @@ public class DosProcessManager {
 
     /// <summary>
     /// Creates the root COMMAND.COM PSP that acts as the parent for all programs.
-    /// This PSP has its parent field pointing to itself, indicating it's the root.
     /// </summary>
     public void CreateRootCommandComPsp() {
         if (_pspTracker.PspCount > 0) {
