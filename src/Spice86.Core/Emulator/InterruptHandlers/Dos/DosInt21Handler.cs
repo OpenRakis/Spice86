@@ -40,7 +40,7 @@ public class DosInt21Handler : InterruptHandler {
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
-    
+
     private const ushort OffsetMask = 0x0F;
     private const byte ExpectedValueOfALInCreateChildPsp = 0xF0;
 
@@ -505,7 +505,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void ClearKeyboardBufferAndInvokeKeyboardFunction() {
         byte operation = State.AL;
-        if(LoggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
             LoggerService.Debug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", operation);
         }
         if (operation is not 0x0 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
@@ -569,7 +569,7 @@ public class DosInt21Handler : InterruptHandler {
         }
         dosInputBuffer.Characters = string.Empty;
 
-        while(State.IsRunning) {
+        while (State.IsRunning) {
             byte[] inputBuffer = new byte[1];
             readCount = standardInput.Read(inputBuffer, 0, 1);
             if (readCount < 1) {
@@ -597,7 +597,7 @@ public class DosInt21Handler : InterruptHandler {
                 standardOutput.Write(bell);
                 continue;
             }
-            if(standardOutput.CanWrite) {
+            if (standardOutput.CanWrite) {
                 standardOutput.Write(c);
             }
             dosInputBuffer.Characters += c;
@@ -624,7 +624,7 @@ public class DosInt21Handler : InterruptHandler {
     public void DirectConsoleIo(bool calledFromVm) {
         byte character = State.DL;
         if (character == 0xFF) {
-            if(LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("DOS INT21H DirectConsoleIo, INPUT REQUESTED");
             }
             if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn)
@@ -651,11 +651,11 @@ public class DosInt21Handler : InterruptHandler {
             }
             if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)
                 && stdOut.CanWrite) {
-                if(stdOut is ConsoleDevice consoleDeviceBefore) {
+                if (stdOut is ConsoleDevice consoleDeviceBefore) {
                     consoleDeviceBefore.DirectOutput = true;
                 }
                 stdOut.Write(character);
-                if(stdOut is ConsoleDevice consoleDeviceAfter) {
+                if (stdOut is ConsoleDevice consoleDeviceAfter) {
                     consoleDeviceAfter.DirectOutput = false;
                 }
                 State.AL = character;
@@ -695,7 +695,7 @@ public class DosInt21Handler : InterruptHandler {
             stdOut.CanWrite) {
             // Write to the standard output device
             stdOut.Write(characterByte);
-        } else if(LoggerService.IsEnabled(LogEventLevel.Warning)) {
+        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
             LoggerService.Warning("DOS INT21H DisplayOutput: Cannot write to standard output device.");
         }
         State.AL = _lastDisplayOutputCharacter;
@@ -936,7 +936,7 @@ public class DosInt21Handler : InterruptHandler {
                 "TSR: Terminating with return code {ReturnCode}, keeping {Paragraphs} paragraphs at PSP {PspSegment:X4}",
                 returnCode, paragraphsToKeep, currentPspSegment);
         }
-        
+
         DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(
             currentPspSegment,
             paragraphsToKeep,
@@ -1139,12 +1139,12 @@ public class DosInt21Handler : InterruptHandler {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         DosExecLoadType loadType = (DosExecLoadType)State.AL;
         uint paramBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
-        
+
         if (LoggerService.IsEnabled(LogEventLevel.Information)) {
             LoggerService.Information("INT21H/4B: DS:DX={Ds:X4}:{Dx:X4}, programName=\"{ProgramName}\", loadType={LoadType}",
                 State.DS, State.DX, programName, loadType);
         }
-        
+
         DosExecResult result;
 
         if (loadType == DosExecLoadType.LoadOverlay) {
@@ -1208,7 +1208,7 @@ public class DosInt21Handler : InterruptHandler {
         ushort fileHandle = State.BX;
         int offset = (State.CX << 16) | State.DX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("MOVE FILE POINTER USING HANDLE. {OriginOfMove}, {FileHandle}, {Offset}", 
+            LoggerService.Verbose("MOVE FILE POINTER USING HANDLE. {OriginOfMove}, {FileHandle}, {Offset}",
                 originOfMove, fileHandle, offset);
         }
 
@@ -1230,7 +1230,7 @@ public class DosInt21Handler : InterruptHandler {
         byte accessMode = State.AL;
         FileAccessMode fileAccessMode = (FileAccessMode)(accessMode & 0b111);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMode} : {FileAccessModeByte}", 
+            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMode} : {FileAccessModeByte}",
                 fileName, fileAccessMode,
                 ConvertUtils.ToHex8(State.AL));
         }
@@ -1260,24 +1260,33 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Quits the current DOS process and sets the exit code from the value in the AL register. <br/>
-    /// If this is a child process, restores the parent's state. Otherwise, terminates the emulator.
+    /// INT 21h, AH=4Ch - Terminate Program.
+    /// Terminates the current process and returns control to the parent via INT 22h.
+    /// If Ctrl-C was detected, termination type is set to CtrlC (1) instead of Normal (0).
     /// </summary>
+    /// <remarks>
+    /// INT 20h is an alias for this function with AL=0.
+    /// </remarks>
     public void QuitWithExitCode() {
         byte exitCode = State.AL;
-        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+        // Determine termination type based on break flag
+        DosTerminationType terminationType = DosTerminationType.Normal;
+        if (_isCtrlCFlag) {
+            terminationType = DosTerminationType.CtrlC;
+            _isCtrlCFlag = false;
+
+            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+                LoggerService.Information(
+                    "INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2} (Ctrl-C break detected)",
+                    exitCode);
+            }
+        } else if (LoggerService.IsEnabled(LogEventLevel.Information)) {
             LoggerService.Information("INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2}", exitCode);
         }
-
-        bool shouldContinue = _dosProcessManager.TerminateProcess(
-              exitCode,
-              DosTerminationType.Normal,
-              _interruptVectorTable);
-
-        if (!shouldContinue) {
-            // No parent to return to - stop emulation
-            State.IsRunning = false;
-        }
+        _dosProcessManager.TerminateProcess(
+            exitCode,
+            terminationType,
+            _interruptVectorTable);
     }
 
     /// <summary>
@@ -1360,9 +1369,9 @@ public class DosInt21Handler : InterruptHandler {
     /// The number of potentially valid drive letters in AL.
     /// </returns>
     public void SelectDefaultDrive() {
-        if(_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAtOrDefault(State.DL).Key, out VirtualDrive? mountedDrive)) {
+        if (_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAtOrDefault(State.DL).Key, out VirtualDrive? mountedDrive)) {
             _dosDriveManager.CurrentDrive = mountedDrive;
-        } 
+        }
         if (State.DL > DosDriveManager.MaxDriveCount && LoggerService.IsEnabled(LogEventLevel.Error)) {
             LoggerService.Error("DOS INT21H: Could not set default drive! Unrecognized index in State.DL: {DriveIndex}", State.DL);
         }
