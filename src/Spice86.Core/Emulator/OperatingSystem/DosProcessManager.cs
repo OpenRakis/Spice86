@@ -102,7 +102,7 @@ public class DosProcessManager {
         rootPsp.NextSegment = DosMemoryManager.LastFreeSegment;
 
         // Root PSP: parent points to itself
-        rootPsp.ParentProgramSegmentPrefix =CommandComSegment;
+        rootPsp.ParentProgramSegmentPrefix = CommandComSegment;
         rootPsp.PreviousPspAddress = CommandComSegment;
 
         // Initialize interrupt vectors from IVT so child PSPs inherit proper addresses
@@ -160,7 +160,7 @@ public class DosProcessManager {
         // Check if this is the root process (current PSP = parent PSP, which means this IS the shell itself terminating)
         // In that case, there's no parent to return to
         bool isRootProcess = currentPspSegment == parentPspSegment;
-        
+
         // Check if parent is the root COMMAND.COM PSP - if so, we shouldn't try to return to it
         // because it has no valid stack or execution context. Instead, we halt like a normal program exit.
         bool parentIsRootCommandCom = parentPspSegment == CommandComSegment;
@@ -201,14 +201,14 @@ public class DosProcessManager {
 
         if (hasParentToReturnTo) {
             DosProgramSegmentPrefix parentPsp = _pspTracker.GetCurrentPsp();
-            
+
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information("BEFORE parent stack restore: Current SS:SP={CurrentSs:X4}:{CurrentSp:X4}, CS:IP={CurrentCs:X4}:{CurrentIp:X4}",
                     _state.SS, _state.SP, _state.CS, _state.IP);
                 _loggerService.Information("Parent PSP StackPointer field = {ParentStack:X8}, will restore SS:SP to {Ss:X4}:{Sp:X4}",
                     parentPsp.StackPointer, (ushort)(parentPsp.StackPointer >> 16), (ushort)(parentPsp.StackPointer & 0xFFFF));
             }
-            
+
             // We are in an interrupt handler, so the solution is not in freeDOS but DOSBOX:
             // Restore parent's stack pointer WITHOUT skipping the interrupt frame
             // We'll modify the frame contents so IRET goes to the right place
@@ -216,12 +216,12 @@ public class DosProcessManager {
             _state.SP = (ushort)(parentPsp.StackPointer & 0xFFFF);
             _state.DS = parentPspSegment;
             _state.ES = parentPspSegment;
-            
+
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information("AFTER parent stack restore: SS:SP={Ss:X4}:{Sp:X4}, DS={Ds:X4}, ES={Es:X4}",
                     _state.SS, _state.SP, _state.DS, _state.ES);
             }
-            
+
             // Get the terminate address from INT 22h vector (restored from child PSP)
             SegmentedAddress returnAddress = interruptVectorTable[0x22];
 
@@ -234,7 +234,7 @@ public class DosProcessManager {
             // Modify the interrupt frame on the stack
             // so that when IRET pops it, execution continues at the return address
             uint stackPhysicalAddress = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
-            
+
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information("Stack physical address = {StackPhys:X8}, reading current frame values...",
                     stackPhysicalAddress);
@@ -244,10 +244,10 @@ public class DosProcessManager {
                 _loggerService.Information("OLD interrupt frame on stack: IP={OldIp:X4}, CS={OldCs:X4}, FLAGS={OldFlags:X4}",
                     oldIP, oldCS, oldFlags);
             }
-            
+
             _memory.UInt16[stackPhysicalAddress] = returnAddress.Offset;     // IP
             _memory.UInt16[stackPhysicalAddress + 2] = returnAddress.Segment; // CS
-            
+
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 ushort newIP = _memory.UInt16[stackPhysicalAddress];
                 ushort newCS = _memory.UInt16[stackPhysicalAddress + 2];
@@ -257,9 +257,9 @@ public class DosProcessManager {
                 _loggerService.Information("IRET will pop these values and jump to {Cs:X4}:{Ip:X4}",
                     newCS, newIP);
             }
-            
+
             // DON'T manually set CS:IP - let IRET handle it by popping the modified frame
-            
+
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information("Returning TRUE from TerminateProcess, callback will execute IRET");
             }
@@ -486,14 +486,14 @@ public class DosProcessManager {
                 _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP + 2))],
                 _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP + 3))]);
         }
-        
+
         ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
-        
+
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("EXEC: Current PSP={CurrentPsp:X4}, will become parent",
                 parentPspSegment);
         }
-        
+
         string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
@@ -546,7 +546,7 @@ public class DosProcessManager {
                     paramBlock.InitialIP = result.InitialIP;
                     paramBlock.InitialSS = result.InitialSS;
                     paramBlock.InitialSP = result.InitialSP;
-                    
+
                     if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                         _loggerService.Information("EXEC: LoadOnly filled parameter block at ES:BX with CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
                             paramBlock.InitialCS, paramBlock.InitialIP, paramBlock.InitialSS, paramBlock.InitialSP);
@@ -572,7 +572,7 @@ public class DosProcessManager {
             _loggerService.Information("EXEC: Loading COM at PSP={PspSeg:X4}, size={Size} bytes",
                 comBlock.DataBlockSegment, fileBytes.Length);
         }
-        
+
         LoadComFile(fileBytes, comBlock.DataBlockSegment, updateCpuState);
 
         DosExecResult comResult = loadType == DosExecLoadType.LoadOnly
@@ -580,7 +580,7 @@ public class DosProcessManager {
                 comBlock.DataBlockSegment, 0xFFFE)
             : DosExecResult.SuccessExecute(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
                 comBlock.DataBlockSegment, 0xFFFE);
-                
+
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("EXEC: COM loaded successfully, CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
                 comResult.InitialCS, comResult.InitialIP, comResult.InitialSS, comResult.InitialSP);
@@ -590,7 +590,7 @@ public class DosProcessManager {
             // LoadOnly: restore parent PSP as current
             // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
             _pspTracker.SetCurrentPspSegment(parentPspSegment);
-            
+
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information("EXEC: COM LoadOnly - restoring parent PSP={ParentPsp:X4}, IRET will restore caller's CS:IP",
                     parentPspSegment);
@@ -608,7 +608,7 @@ public class DosProcessManager {
             paramBlock.InitialIP = comResult.InitialIP;
             paramBlock.InitialSS = comResult.InitialSS;
             paramBlock.InitialSP = comResult.InitialSP;
-            
+
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information("EXEC: LoadOnly filled parameter block at ES:BX with CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
                     paramBlock.InitialCS, paramBlock.InitialIP, paramBlock.InitialSS, paramBlock.InitialSP);
@@ -623,7 +623,7 @@ public class DosProcessManager {
             _loggerService.Information("LoadOverlay: programName={ProgramName}, loadSegment={LoadSegment:X4}, relocationFactor={RelocationFactor:X4}",
                 programName, loadSegment, relocationFactor);
         }
-        
+
         string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -657,7 +657,7 @@ public class DosProcessManager {
         // For overlays, load at loadSegment but relocate using relocationFactor
         // This matches DOSBox staging behavior where overlay relocation uses the relocation factor parameter
         LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment, relocationFactor);
-        
+
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("LoadOverlay: Successfully loaded overlay");
             // Log first few bytes at load segment to verify code is there
@@ -667,7 +667,7 @@ public class DosProcessManager {
             _loggerService.Information("LoadOverlay: First 16 bytes at {LoadSegment:X4}:0000 (physical {PhysicalAddress:X5}): {Bytes}",
                 loadSegment, physicalAddress, bytesHex);
         }
-        
+
         // For overlays, DOS doesn't return anything in the parameter block
         // Just return success with AX=0 and DX=0
         return DosExecResult.SuccessLoadOverlay();
@@ -683,12 +683,12 @@ public class DosProcessManager {
 
         // This sets INT 22h to point to the CALLER'S return address
         psp.TerminateAddress = MakeFarPointer(callerCS, callerIP);
-        
+
         SegmentedAddress breakVector = interruptVectorTable[0x23];
         SegmentedAddress criticalErrorVector = interruptVectorTable[0x24];
         psp.BreakAddress = MakeFarPointer(breakVector.Segment, breakVector.Offset);
         psp.CriticalErrorAddress = MakeFarPointer(criticalErrorVector.Segment, criticalErrorVector.Offset);
-        
+
         // Save parent's stack pointer in the PARENT PSP's StackPointer field (offset 0x2E)
         // This mirrors FreeDOS task.c
         DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
