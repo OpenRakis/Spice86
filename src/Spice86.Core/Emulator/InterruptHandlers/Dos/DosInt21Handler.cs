@@ -1289,6 +1289,8 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET RETURN CODE: AX={Ax:X4}", returnCode);
         }
+        // Clear the stored return code after reading it (RBIL)
+        _dosProcessManager.LastChildExitCode = 0;
     }
 
     /// <summary>

@@ -309,7 +309,7 @@ public class DosProcessManager {
     /// Gets the last child process exit code. Used by INT 21h AH=4Dh.
     /// </summary>
     /// <returns>Exit code in AL, termination type in AH (always 0 for normal termination).</returns>
-    public ushort LastChildExitCode { get; private set; } = 0;
+    public ushort LastChildExitCode { get; set; } = 0;
 
     /// <summary>
     /// Implements INT 21h, AH=26h - Create New PSP.
