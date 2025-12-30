@@ -13,7 +13,6 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -43,7 +42,7 @@ public class DosInt21Handler : InterruptHandler {
     private bool _isCtrlCFlag;
     
     private const ushort OffsetMask = 0x0F;
-    private const byte CreateChildPspAlDestroyedValue = 0xF0;
+    private const byte ExpectedValueOfALInCreateChildPsp = 0xF0;
 
     /// <summary>
     /// Initializes a new instance.
@@ -1271,30 +1270,21 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         bool shouldContinue = _dosProcessManager.TerminateProcess(
-            exitCode,
-            DosTerminationType.Normal,
-            _interruptVectorTable);
+              exitCode,
+              DosTerminationType.Normal,
+              _interruptVectorTable);
 
         if (!shouldContinue) {
             // No parent to return to - stop emulation
             State.IsRunning = false;
         }
-        // If shouldContinue is true, TerminateProcess has set CS:IP (with -4 adjustment)
-        // to the parent's return address. MoveIpAndSetNextNode will add 4 after this
-        // handler returns, and execution will continue at the parent's correct address.
     }
 
     /// <summary>
-    /// INT 21h, AH=4Dh - Get Return Code of Subprogram (WAIT).
-    /// Returns the exit code of a terminated child process.
+    /// INT 21h, AH=4Dh - Get Return Code of Subprogram.
     /// </summary>
-    /// <remarks>
-    /// Returns:
-    /// AH = termination type (00h = normal, 01h = Ctrl-C, 02h = critical error, 03h = TSR)
-    /// AL = return code
-    /// </remarks>
     public void GetReturnCode() {
-        ushort returnCode = _dosProcessManager.GetLastChildExitCode();
+        ushort returnCode = _dosProcessManager.LastChildExitCode;
         State.AX = returnCode;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET RETURN CODE: AX={Ax:X4}", returnCode);
@@ -1305,10 +1295,6 @@ public class DosInt21Handler : InterruptHandler {
     /// INT 21h, AH=26h - Create New PSP.
     /// Creates a copy of the current PSP at the segment specified in DX.
     /// </summary>
-    /// <remarks>
-    /// Copies the entire PSP and updates INT 22h/23h/24h vectors and DOS version in the new PSP.
-    /// Parent PSP is preserved (matches FreeDOS behavior).
-    /// </remarks>
     public void CreateNewPsp() {
         ushort newPspSegment = State.DX;
 
@@ -1321,7 +1307,7 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// INT 21h, AH=55h - Create Child PSP.
-    /// Creates a child PSP at DX with size SI paragraphs, sets current PSP to the child, and sets AL to destroyed value (0xF0).
+    /// Creates a child PSP at DX with size SI paragraphs, sets current PSP to the child, and sets AL 0xF0.
     /// </summary>
     public void CreateChildPsp() {
         ushort childSegment = State.DX;
@@ -1334,7 +1320,7 @@ public class DosInt21Handler : InterruptHandler {
 
         _dosProcessManager.CreateChildPsp(childSegment, sizeInParagraphs, _interruptVectorTable);
         _dosPspTracker.SetCurrentPspSegment(childSegment);
-        State.AL = CreateChildPspAlDestroyedValue;
+        State.AL = ExpectedValueOfALInCreateChildPsp;
     }
 
     /// <summary>
