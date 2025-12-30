@@ -79,8 +79,6 @@ public class DosProcessManager {
     /// <remarks>
     /// The low byte (AL) contains the exit code, and the high byte (AH) contains
     /// the termination type. See <see cref="DosTerminationType"/> for termination types.
-    /// In MS-DOS, this value is only valid for one read after EXEC returns - subsequent
-    /// reads return 0.
     /// </remarks>
     public ushort LastChildReturnCode { get; private set; }
 
