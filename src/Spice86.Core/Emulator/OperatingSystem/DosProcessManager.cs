@@ -713,12 +713,10 @@ public class DosProcessManager {
         DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
         parentPsp.StackPointer = parentStackPointer;
 
-        // Link to parent PSP and initialize file table
         psp.ParentProgramSegmentPrefix = parentPspSegment;
         psp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
-        // ps_filetab points to JFT at offset 0x18 inside this PSP
+        // file table address points to file table at offset 0x18 inside this PSP
         psp.FileTableAddress = ((uint)pspSegment << 16) | 0x18;
-        // Always set previous PSP pointer
         psp.PreviousPspAddress = parentPspSegment;
 
         // Inherit parent's JFT entries except those marked as DoNotInherit or Unused
@@ -751,7 +749,6 @@ public class DosProcessManager {
             }
         }
 
-        // Set the disk transfer area address to the command-line offset in the PSP.
         _fileManager.SetDiskTransferAreaAddress(
             pspSegment, DosCommandTail.OffsetInPspSegment);
     }
