@@ -873,5 +873,4 @@ public class DosProcessManager {
             _loggerService.Verbose("Program entry point is {ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }
     }
-
 }
