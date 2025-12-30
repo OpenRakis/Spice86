@@ -7,12 +7,15 @@ using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Gdb;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.LoadableFile;
+using Spice86.Core.Emulator.LoadableFile.Bios;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.LoadableFile.Bios;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Logging;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
@@ -20,7 +23,6 @@ using Spice86.Shared.Utils;
 
 using System.IO;
 using System.Security.Cryptography;
-using Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 /// <summary>
 /// The class that is responsible for executing a program in the emulator. Supports COM, EXE, and BIOS files.
@@ -75,13 +77,6 @@ public sealed class ProgramExecutor : IDisposable {
             state, functionCatalogue,
             cfgCpuFlowDumper,
             emulatorBreakpointsManager, pauseHandler, dumpContext, _loggerService);
-
-        if (configuration.InitializeDOS is null) {
-            configuration.InitializeDOS = true;
-            if (loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                loggerService.Verbose("InitializeDOS parameter not provided. Defaulting to true for EXEC path.");
-            }
-        }
 
         if (screenPresenter is not null) {
             screenPresenter.UserInterfaceInitialized += Run;
@@ -148,23 +143,25 @@ public sealed class ProgramExecutor : IDisposable {
             _loggerService.Verbose("Preparing initial load for {FileName} (DOS program: {IsDosProgram})", executableFileName, isDosProgram);
         }
 
+        ExecutableFileLoader loader;
+
         if (isDosProgram) {
-            try {
-                byte[] fileContent = File.ReadAllBytes(executableFileName);
-                CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
-            } catch (IOException e) {
-                throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
-            }
-            DosProgramLoader dosProgramLoader = new(configuration, memory, state, int21Handler, int21Handler.ProcessManager, _loggerService);
-            dosProgramLoader.LoadFile(executableFileName, configuration.ExeArgs);
+            loader = new DosProgramLoader(configuration, memory, state, int21Handler, int21Handler.ProcessManager, _loggerService);
         } else {
-            BiosLoader loader = new(memory, state, _loggerService);
-            try {
-                byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
-                CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
-            } catch (IOException e) {
-                throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
+            loader = new BiosLoader(memory, state, _loggerService);
+        }
+
+        try {
+            if (configuration.InitializeDOS is null) {
+                configuration.InitializeDOS = loader.DosInitializationNeeded;
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", configuration.InitializeDOS);
+                }
             }
+            byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
+            CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
+        } catch (IOException e) {
+            throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
         }
     }
 
