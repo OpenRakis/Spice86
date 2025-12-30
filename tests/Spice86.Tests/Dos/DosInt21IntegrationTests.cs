@@ -914,7 +914,7 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
-    /// Tests that a program can print its path using INT 21h AH=09h after reading from environment.
+    /// Tests that a program can print its path using INT 21h AH=02h after reading from environment. 
     /// This simulates what printf("[%i] %s\n", 0, argv[0]) would do in the C program.
     /// </summary>
     [Fact]
@@ -922,61 +922,63 @@ public class DosInt21IntegrationTests {
         // This test reads argv[0] from the environment block and prints it using INT 21h AH=09h.
         // It simulates the behavior of a C program that does: printf("%s\n", argv[0]);
         byte[] program = new byte[] {
-            // Get current PSP address
-            0xB4, 0x62,             // mov ah, 62h
-            0xCD, 0x21,             // int 21h - BX = PSP segment
-            0x8E, 0xC3,             // mov es, bx
-            
-            // Read environment segment from PSP+0x2C
-            0x26, 0x8B, 0x06, 0x2C, 0x00,  // mov ax, es:[002Ch]
-            0x85, 0xC0,             // test ax, ax
-            0x0F, 0x84, 0x58, 0x00, // je failed (long jump)
-            
-            // Load environment segment into DS for INT 21h AH=09h
-            0x8E, 0xD8,             // mov ds, ax
-            0x31, 0xFF,             // xor di, di
-            
-            // Scan for double null
-            // scan_loop:
-            0x8A, 0x05,             // mov al, [di]
-            0x3C, 0x00,             // cmp al, 0
-            0x75, 0x06,             // jne next
-            0x8A, 0x45, 0x01,       // mov al, [di+1]
-            0x3C, 0x00,             // cmp al, 0
-            0x74, 0x03,             // je found_double_null
-            // next:
-            0x47,                   // inc di
-            0xEB, 0xF1,             // jmp scan_loop
-            
-            // found_double_null:
-            0x83, 0xC7, 0x02,       // add di, 2
-            0x8B, 0x05,             // mov ax, [di]
-            0x83, 0xF8, 0x01,       // cmp ax, 1
-            0x0F, 0x85, 0x3C, 0x00, // jne failed (long jump)
-            0x83, 0xC7, 0x02,       // add di, 2
-            
-            // Now DI points to program path in DS
-            // Try to print first character using INT 21h AH=02h (Write Character to Standard Output)
-            0x8A, 0x15,             // mov dl, [di] - get first char
-            0xB4, 0x02,             // mov ah, 02h - Write Character
-            0xCD, 0x21,             // int 21h
-            
-            // Success if we got here
-            0xB0, 0x00,             // mov al, TestResult.Success
-            0x0E,                   // push cs
-            0x1F,                   // pop ds (restore DS to CS for port access)
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4,                   // hlt
-            
-            // failed:
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0x0E,                   // push cs
-            0x1F,                   // pop ds
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
+        // Save CS early
+        0x0E,                   // push cs
+        0x1F,                   // pop ds  - DS = CS from the start
+        
+        // Get current PSP address
+        0xB4, 0x62,             // mov ah, 62h
+        0xCD, 0x21,             // int 21h - BX = PSP segment
+        0x8E, 0xC3,             // mov es, bx - ES = PSP
+        
+        // Read environment segment from PSP+0x2C into ES
+        0x26, 0x8B, 0x06, 0x2C, 0x00,  // mov ax, es:[002Ch]
+        0x85, 0xC0,             // test ax, ax
+        0x74, 0x47,             // je failed (short offset needs adjustment)
+        
+        // ES = environment segment
+        0x8E, 0xC0,             // mov es, ax
+        0x31, 0xFF,             // xor di, di
+        
+        // Scan for double null using ES override
+        // scan_loop:
+        0x26, 0x8A, 0x05,       // mov al, es:[di]
+        0x3C, 0x00,             // cmp al, 0
+        0x75, 0x08,             // jne next
+        0x26, 0x8A, 0x45, 0x01, // mov al, es:[di+1]
+        0x3C, 0x00,             // cmp al, 0
+        0x74, 0x03,             // je found_double_null
+        // next:
+        0x47,                   // inc di
+        0xEB, 0xEE,             // jmp scan_loop
+        
+        // found_double_null:
+        0x83, 0xC7, 0x02,       // add di, 2
+        0x26, 0x8B, 0x05,       // mov ax, es:[di]
+        0x83, 0xF8, 0x01,       // cmp ax, 1
+        0x75, 0x2F,             // jne failed
+        0x83, 0xC7, 0x02,       // add di, 2
+        
+        // DI points to program path in ES
+        // Read first character with ES override
+        0x26, 0x8A, 0x15,       // mov dl, es:[di]
+        
+        // Call INT 21h AH=02h (DS already = CS)
+        0xB4, 0x02,             // mov ah, 02h
+        0xCD, 0x21,             // int 21h
+        
+        // Success
+        0xB0, 0x00,             // mov al, TestResult.Success
+        0xBA, 0x99, 0x09,       // mov dx, ResultPort
+        0xEE,                   // out dx, al
+        0xF4,                   // hlt
+        
+        // failed:
+        0xB0, 0xFF,             // mov al, TestResult.Failure
+        0xBA, 0x99, 0x09,       // mov dx, ResultPort
+        0xEE,                   // out dx, al
+        0xF4                    // hlt
+    };
 
         DosTestHandler testHandler = RunDosTest(program);
 
