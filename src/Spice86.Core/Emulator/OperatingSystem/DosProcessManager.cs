@@ -106,10 +106,8 @@ public class DosProcessManager {
             throw new InvalidOperationException("Failed to allocate memory for root COMMAND.COM PSP");
         }
 
-        // Push the root PSP onto the tracker
         DosProgramSegmentPrefix rootPsp = _pspTracker.PushPspSegment(rootBlock.DataBlockSegment);
 
-        // Initialize basic PSP structure
         rootPsp.Exit[0] = 0xCD;
         rootPsp.Exit[1] = 0x20;
         rootPsp.NextSegment = DosMemoryManager.LastFreeSegment;
@@ -129,7 +127,6 @@ public class DosProcessManager {
         SegmentedAddress int24 = _interruptVectorTable[0x24];
         rootPsp.CriticalErrorAddress = ((uint)int24.Segment << 16) | int24.Offset;
 
-        // Initialize file table
         rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
         rootPsp.FileTableAddress = ((uint)rootBlock.DataBlockSegment << 16) | 0x18;
 
@@ -144,7 +141,6 @@ public class DosProcessManager {
             rootPsp.Files[i] = UnusedFileHandle;
         }
 
-        // Create a minimal environment block for the root
         byte[] environmentBlock = CreateEnvironmentBlock("C:\\COMMAND.COM");
         ushort paragraphsNeeded = (ushort)((environmentBlock.Length + 15) / 16);
         paragraphsNeeded = paragraphsNeeded == 0 ? (ushort)1 : paragraphsNeeded;
@@ -155,7 +151,6 @@ public class DosProcessManager {
             rootPsp.EnvironmentTableSegment = envBlock.DataBlockSegment;
         }
 
-        // Set initial DTA to command tail area in root PSP
         _fileManager.SetDiskTransferAreaAddress(rootBlock.DataBlockSegment, DosCommandTail.OffsetInPspSegment);
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
