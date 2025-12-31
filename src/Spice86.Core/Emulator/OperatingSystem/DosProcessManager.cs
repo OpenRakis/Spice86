@@ -736,30 +736,35 @@ public class DosProcessManager {
 
         psp.DosCommandTail.Command = DosCommandTail.PrepareCommandlineString(arguments);
 
-        // Honor caller-provided environment segment (EPB). If non-zero, use it; otherwise clone the parent's env.
-        if (environmentSegment != 0) {
-            psp.EnvironmentTableSegment = environmentSegment;
-        } else {
-            byte[] environmentBlock;
-
-            if (parentPsp.EnvironmentTableSegment != 0) {
-                environmentBlock = CreateEnvironmentBlockFromParent(parentPsp.EnvironmentTableSegment, programHostPath);
-            } else {
-                environmentBlock = CreateEnvironmentBlock(programHostPath);
-            }
-
-            ushort paragraphsNeeded = (ushort)((environmentBlock.Length + 15) / 16);
-            paragraphsNeeded = paragraphsNeeded == 0 ? (ushort)1 : paragraphsNeeded;
-            DosMemoryControlBlock? envBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
-
-            if (envBlock != null) {
-                _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
-                psp.EnvironmentTableSegment = envBlock.DataBlockSegment;
-            }
-        }
+        // Always clone the environment into a fresh block (FreeDOS ChildEnv behavior).
+        SetupEnvironmentForProcess(programHostPath, environmentSegment, psp, parentPsp);
 
         _fileManager.SetDiskTransferAreaAddress(
             pspSegment, DosCommandTail.OffsetInPspSegment);
+    }
+
+    private void SetupEnvironmentForProcess(string programHostPath,
+        ushort environmentSegment, DosProgramSegmentPrefix psp,
+        DosProgramSegmentPrefix parentPsp) {
+        ushort sourceEnvironmentSegment = environmentSegment != 0
+                    ? environmentSegment
+                    : parentPsp.EnvironmentTableSegment;
+
+        byte[] environmentBlock;
+        if (sourceEnvironmentSegment != 0) {
+            environmentBlock = CreateEnvironmentBlockFromParent(sourceEnvironmentSegment, programHostPath);
+        } else {
+            environmentBlock = CreateEnvironmentBlock(programHostPath);
+        }
+
+        ushort paragraphsNeeded = (ushort)((environmentBlock.Length + 15) / 16);
+        paragraphsNeeded = paragraphsNeeded == 0 ? (ushort)1 : paragraphsNeeded;
+        DosMemoryControlBlock? envBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
+
+        if (envBlock != null) {
+            _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
+            psp.EnvironmentTableSegment = envBlock.DataBlockSegment;
+        }
     }
 
     private byte[] ReadFileBytes(string file) {
