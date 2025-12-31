@@ -13,6 +13,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -219,8 +220,7 @@ public class DosProcessManager {
 
         // Close non-standard handles only when the process fully terminates; TSR keeps them resident
         if (terminationType != DosTerminationType.TSR) {
-            // Standard handles 0-4 (stdin, stdout, stderr, stdaux, stdprn) are inherited and not closed
-            _fileManager.CloseAllNonStandardFileHandles();
+            CloseProcessFileHandles(currentPsp, currentPspSegment);
         }
 
         // Cache interrupt vectors from child PSP before freeing memory
@@ -487,6 +487,31 @@ public class DosProcessManager {
             }
 
             childPsp.Files[i] = parentHandle;
+        }
+    }
+
+    /// <summary>
+    /// Closes every non-standard handle owned by the specified PSP without affecting the parent's table.
+    /// </summary>
+    private void CloseProcessFileHandles(DosProgramSegmentPrefix psp, ushort pspSegment) {
+        HashSet<byte> closedHandles = new();
+
+        for (byte i = StandardFileHandleCount; i < DefaultMaxOpenFiles; i++) {
+            byte handle = psp.Files[i];
+            if (handle == UnusedFileHandle) {
+                continue;
+            }
+
+            if (!closedHandles.Add(handle)) {
+                continue;
+            }
+
+            DosFileOperationResult result = _fileManager.CloseFileOrDevice(handle);
+            if (result.IsError && _loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("Failed to close file handle {Handle} for PSP {PspSegment:X4}", handle, pspSegment);
+            }
+
+            psp.Files[i] = UnusedFileHandle;
         }
     }
 
