@@ -19,9 +19,11 @@ using Spice86.Shared.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using Xunit;
 
 public class DosProcessManagerTests {
+    private const ushort AdditionalEnvironmentStringsCount = 1;
     [Fact]
     public void CreateRootCommandComPsp_MatchesFreeDosLayout() {
         DosProcessManagerTestContext context = CreateContext();
@@ -85,6 +87,7 @@ public class DosProcessManagerTests {
         context.State.SP = 0x00FE;
 
         string comFilePath = CreateTemporaryComFile();
+        string expectedDosFileName = Path.GetFileName(comFilePath).ToUpperInvariant();
         try {
             DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
@@ -165,6 +168,7 @@ public class DosProcessManagerTests {
         string comFilePath = CreateTemporaryComFile();
         try {
             DosExecParameterBlock parameterBlock = CreateParameterBlock();
+            string expectedDosFileName = Path.GetFileName(comFilePath).ToUpperInvariant();
 
             DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
                 comFilePath,
@@ -278,6 +282,50 @@ public class DosProcessManagerTests {
             residentBlock.PspSegment.Should().Be(tsrSegment);
             residentBlock.Owner.Should().Be(resizedBlock.Owner);
             tsrPsp.NextSegment.Should().Be(expectedNextSegment);
+        } finally {
+            DeleteIfExists(comFilePath);
+        }
+    }
+
+    [Fact]
+    public void LoadAndExecute_Com_ClonesEnvironmentWithinDosLimits() {
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        DosProgramSegmentPrefix rootPsp = GetRootPsp(context);
+
+        byte[] largeEnvironment = BuildLargeEnvironmentBytes(DosProcessManager.EnvironmentMaximumBytes - 2);
+        ushort paragraphsNeeded = (ushort)Math.Max(1, (largeEnvironment.Length + 15) / 16);
+        DosMemoryControlBlock? parentEnvBlock = context.MemoryManager.AllocateMemoryBlock(paragraphsNeeded);
+        parentEnvBlock.Should().NotBeNull();
+
+        DosMemoryControlBlock envBlock = parentEnvBlock ?? throw new InvalidOperationException("Unable to allocate parent environment block.");
+
+        context.Memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), largeEnvironment);
+        rootPsp.EnvironmentTableSegment = envBlock.DataBlockSegment;
+
+        string comFilePath = CreateTemporaryComFile();
+        try {
+            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+            string expectedDosFileName = Path.GetFileName(comFilePath).ToUpperInvariant();
+
+            DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
+                comFilePath,
+                parameterBlock,
+                string.Empty,
+                DosExecLoadType.LoadAndExecute,
+                environmentSegment: 0,
+                context.InterruptVectorTable);
+
+            execResult.Success.Should().BeTrue();
+
+            ushort childSegment = context.Tracker.GetCurrentPspSegment();
+            DosProgramSegmentPrefix childPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(childSegment, 0));
+
+            EnvironmentBlockInfo environmentInfo = ReadEnvironmentBlockInfo(context.Memory, childPsp.EnvironmentTableSegment);
+            environmentInfo.TotalLength.Should().BeLessThanOrEqualTo(DosProcessManager.EnvironmentMaximumBytes);
+            environmentInfo.AdditionalStringCount.Should().Be(AdditionalEnvironmentStringsCount);
+            environmentInfo.ProgramPath.Should().EndWith(expectedDosFileName);
         } finally {
             DeleteIfExists(comFilePath);
         }
@@ -418,6 +466,80 @@ public class DosProcessManagerTests {
             File.Delete(path);
         }
     }
+
+    private static byte[] BuildLargeEnvironmentBytes(int totalLength) {
+        if (totalLength < 2) {
+            totalLength = 2;
+        }
+
+        byte[] buffer = new byte[totalLength];
+        int offset = 0;
+        int variableIndex = 0;
+
+        while (offset + 2 < totalLength - 2) {
+            string entry = $"VAR{variableIndex}=VALUE{variableIndex}";
+            byte[] entryBytes = Encoding.ASCII.GetBytes(entry);
+            if (offset + entryBytes.Length + 1 > totalLength - 2) {
+                break;
+            }
+            Array.Copy(entryBytes, 0, buffer, offset, entryBytes.Length);
+            offset += entryBytes.Length;
+            buffer[offset++] = 0;
+            variableIndex++;
+        }
+
+        while (offset < totalLength - 2) {
+            buffer[offset++] = (byte)'A';
+        }
+
+        buffer[totalLength - 2] = 0;
+        buffer[totalLength - 1] = 0;
+        return buffer;
+    }
+
+    private static EnvironmentBlockInfo ReadEnvironmentBlockInfo(Memory memory, ushort environmentSegment) {
+        if (environmentSegment == 0) {
+            return new EnvironmentBlockInfo(0, 0, string.Empty);
+        }
+
+        uint baseAddress = MemoryUtils.ToPhysicalAddress(environmentSegment, 0);
+        int offset = 0;
+        int guardLimit = DosProcessManager.EnvironmentMaximumBytes * 2;
+        bool doubleNullFound = false;
+
+        while (offset + 1 < guardLimit) {
+            byte current = memory.UInt8[baseAddress + (uint)offset];
+            byte next = memory.UInt8[baseAddress + (uint)(offset + 1)];
+            offset++;
+            if (current == 0 && next == 0) {
+                offset++;
+                doubleNullFound = true;
+                break;
+            }
+        }
+
+        if (!doubleNullFound) {
+            return new EnvironmentBlockInfo(offset, 0, string.Empty);
+        }
+
+        ushort additionalStringCount = memory.UInt16[baseAddress + (uint)offset];
+        offset += 2;
+
+        List<byte> pathBytes = new();
+        while (offset < guardLimit) {
+            byte value = memory.UInt8[baseAddress + (uint)offset];
+            offset++;
+            if (value == 0) {
+                break;
+            }
+            pathBytes.Add(value);
+        }
+
+        string programPath = Encoding.ASCII.GetString(pathBytes.ToArray());
+        return new EnvironmentBlockInfo(offset, additionalStringCount, programPath);
+    }
+
+    private sealed record EnvironmentBlockInfo(int TotalLength, ushort AdditionalStringCount, string ProgramPath);
 
     private sealed class DosProcessManagerTestContext {
         public DosProcessManagerTestContext(Memory memory, DosProcessManager processManager,
