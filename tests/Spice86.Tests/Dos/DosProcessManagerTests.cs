@@ -233,6 +233,57 @@ public class DosProcessManagerTests {
     }
 
     [Fact]
+    public void TerminateProcess_TsrRetainsResidentBlockMetadata() {
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        string comFilePath = CreateTemporaryComFile(0x200);
+        try {
+            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+
+            DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
+                comFilePath,
+                parameterBlock,
+                string.Empty,
+                DosExecLoadType.LoadAndExecute,
+                environmentSegment: 0,
+                context.InterruptVectorTable);
+
+            execResult.Success.Should().BeTrue();
+
+            ushort tsrSegment = context.Tracker.GetCurrentPspSegment();
+            DosProgramSegmentPrefix tsrPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(tsrSegment, 0));
+
+            ushort paragraphsToKeep = (ushort)(DosProgramSegmentPrefix.PspSizeInParagraphs + 0x10);
+            DosErrorCode resizeResult = context.MemoryManager.TryModifyBlock(
+                tsrSegment,
+                paragraphsToKeep,
+                out DosMemoryControlBlock resizedBlock);
+
+            resizeResult.Should().Be(DosErrorCode.NoError);
+            context.ProcessManager.TrackResidentBlock(tsrSegment, resizedBlock);
+
+            ushort expectedNextSegment = (ushort)(resizedBlock.DataBlockSegment + resizedBlock.Size);
+
+            DosProgramSegmentPrefix parentPsp = GetRootPsp(context);
+            parentPsp.NextSegment.Should().NotBe(expectedNextSegment, "TSR should adjust the parent's next segment only after termination");
+
+            context.ProcessManager.TerminateProcess(0x00, DosTerminationType.TSR, context.InterruptVectorTable);
+
+            parentPsp = GetRootPsp(context);
+            parentPsp.NextSegment.Should().Be(expectedNextSegment);
+
+            DosMemoryControlBlock residentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(tsrSegment - 1), 0));
+            residentBlock.Size.Should().Be(paragraphsToKeep);
+            residentBlock.PspSegment.Should().Be(tsrSegment);
+            residentBlock.Owner.Should().Be(resizedBlock.Owner);
+            tsrPsp.NextSegment.Should().Be(expectedNextSegment);
+        } finally {
+            DeleteIfExists(comFilePath);
+        }
+    }
+
+    [Fact]
     public void LoadAndExecuteExe_SetsRegistersPerDosContract() {
         DosProcessManagerTestContext context = CreateContext();
         context.ProcessManager.CreateRootCommandComPsp();
