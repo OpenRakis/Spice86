@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -459,6 +460,18 @@ public class DosProcessManager {
         }
     }
 
+    private void CopyFcbFromPointer(SegmentedAddress pointer, UInt8Array destination) {
+        // FreeDOS treats 0000:0000 and FFFF:FFFF as "no FCB" markers.
+        if ((pointer.Segment == 0 && pointer.Offset == 0) || (pointer.Segment == 0xFFFF && pointer.Offset == 0xFFFF)) {
+            return;
+        }
+
+        uint source = MemoryUtils.ToPhysicalAddress(pointer.Segment, pointer.Offset);
+        for (int i = 0; i < FcbSize; i++) {
+            destination[i] = _memory.UInt8[source + (uint)i];
+        }
+    }
+
     private static uint MakeFarPointer(ushort segment, ushort offset) {
         return (uint)((segment << 16) | offset);
     }
@@ -503,7 +516,7 @@ public class DosProcessManager {
 
         string upperCaseExtension = Path.GetExtension(hostPath).ToUpperInvariant();
         bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && upperCaseExtension == ".EXE";
-        bool updateCpuState = loadType == DosExecLoadType.LoadAndExecute;
+        bool isLoadAndExecute = loadType == DosExecLoadType.LoadAndExecute;
 
         // Save parent's current SS:SP BEFORE any CPU state changes
         // This captures the parent's stack context before the child modifies anything
@@ -520,7 +533,11 @@ public class DosProcessManager {
 
                 InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP);
 
-                LoadExeFile(exeFile, block.DataBlockSegment, block, updateCpuState);
+                DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
+                CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
+                CopyFcbFromPointer(paramBlock.SecondFcbPointer, exePsp.SecondFileControlBlock);
+
+                LoadExeFile(exeFile, block.DataBlockSegment, block, isLoadAndExecute);
 
                 ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
                 if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
@@ -534,7 +551,7 @@ public class DosProcessManager {
                     : DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
                         (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
 
-                if (!updateCpuState) {
+                if (!isLoadAndExecute) {
                     // LoadOnly: restore parent PSP as current
                     // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
                     _pspTracker.SetCurrentPspSegment(parentPspSegment);
@@ -568,12 +585,16 @@ public class DosProcessManager {
         }
         InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP);
 
+        DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
+        CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
+        CopyFcbFromPointer(paramBlock.SecondFcbPointer, comPsp.SecondFileControlBlock);
+
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("EXEC: Loading COM at PSP={PspSeg:X4}, size={Size} bytes",
                 comBlock.DataBlockSegment, fileBytes.Length);
         }
 
-        LoadComFile(fileBytes, comBlock.DataBlockSegment, updateCpuState);
+        LoadComFile(fileBytes, comBlock.DataBlockSegment, isLoadAndExecute);
 
         DosExecResult comResult = loadType == DosExecLoadType.LoadOnly
             ? DosExecResult.SuccessLoadOnly(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
@@ -586,7 +607,7 @@ public class DosProcessManager {
                 comResult.InitialCS, comResult.InitialIP, comResult.InitialSS, comResult.InitialSP);
         }
 
-        if (!updateCpuState) {
+        if (!isLoadAndExecute) {
             // LoadOnly: restore parent PSP as current
             // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
             _pspTracker.SetCurrentPspSegment(parentPspSegment);
@@ -779,11 +800,11 @@ public class DosProcessManager {
         return ms.ToArray();
     }
 
-    private void LoadComFile(byte[] com, ushort pspSegment, bool updateCpuState) {
+    private void LoadComFile(byte[] com, ushort pspSegment, bool isLoadAndExecute) {
         uint physicalLoadAddress = MemoryUtils.ToPhysicalAddress(pspSegment, DosProgramSegmentPrefix.PspSize);
         _memory.LoadData(physicalLoadAddress, com);
 
-        if (updateCpuState) {
+        if (isLoadAndExecute) {
             _state.CS = pspSegment;
             _state.IP = DosProgramSegmentPrefix.PspSize;
             _state.DS = pspSegment;
