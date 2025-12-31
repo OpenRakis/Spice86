@@ -541,12 +541,6 @@ public class DosProcessManager {
         }
     }
 
-    private static void ResetJobFileTable(DosProgramSegmentPrefix psp) {
-        for (int i = 0; i < psp.Files.Count; i++) {
-            psp.Files[i] = UnusedFileHandle;
-        }
-    }
-
     /// <summary>
     /// Copies an FCB from memory into the destination structure unless the pointer is one of the DOS sentinel values.
     /// </summary>
@@ -592,13 +586,6 @@ public class DosProcessManager {
         uint destinationAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
         byte[] zeros = new byte[DosProgramSegmentPrefix.PspSize];
         _memory.LoadData(destinationAddress, zeros);
-    }
-
-    private void CopyParentPspTemplate(ushort parentSegment, ushort destinationSegment) {
-        uint parentAddress = MemoryUtils.ToPhysicalAddress(parentSegment, 0);
-        byte[] parentData = _memory.ReadRam(DosProgramSegmentPrefix.PspSize, parentAddress);
-        uint destinationAddress = MemoryUtils.ToPhysicalAddress(destinationSegment, 0);
-        _memory.LoadData(destinationAddress, parentData);
     }
 
     private void InitializeRootEnvironment(DosProgramSegmentPrefix rootPsp, byte[] environmentBlock) {
