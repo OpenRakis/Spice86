@@ -138,12 +138,12 @@ public class DosProcessManager {
         if (envBlock != null) {
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
             rootPsp.EnvironmentTableSegment = envBlock.DataBlockSegment;
+            envBlock.Owner = BuildMcbOwnerName("COMMAND");
         }
 
         _fileManager.SetDiskTransferAreaAddress(
             CommandComSegment, DosCommandTail.OffsetInPspSegment);
     }
-
 
     public void TerminateProcess(byte exitCode, DosTerminationType terminationType,
          InterruptVectorTable interruptVectorTable) {
@@ -474,6 +474,17 @@ public class DosProcessManager {
 
     private static uint MakeFarPointer(ushort segment, ushort offset) {
         return (uint)((segment << 16) | offset);
+    }
+
+    private static string BuildMcbOwnerName(string programPath) {
+        string name = Path.GetFileNameWithoutExtension(programPath).ToUpperInvariant();
+        // The MCB owner field is 8 bytes and this setter writes a zero terminator,
+        // so keep the textual portion to at most 7 characters.
+        if (name.Length > 7) {
+            name = name[..7];
+        }
+
+        return name;
     }
 
     private ushort ComputeFcbCode(DosProgramSegmentPrefix psp) {
@@ -811,6 +822,7 @@ public class DosProcessManager {
         if (envBlock != null) {
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
             psp.EnvironmentTableSegment = envBlock.DataBlockSegment;
+                envBlock.Owner = BuildMcbOwnerName(programHostPath);
         }
     }
 
@@ -859,6 +871,9 @@ public class DosProcessManager {
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// Creates an environment block from the parent process.
+    /// </summary>
     private byte[] CreateEnvironmentBlockFromParent(ushort environmentSegment, string programPath) {
         using MemoryStream ms = new();
 
