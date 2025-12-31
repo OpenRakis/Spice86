@@ -736,11 +736,18 @@ public class DosProcessManager {
 
         psp.DosCommandTail.Command = DosCommandTail.PrepareCommandlineString(arguments);
 
-        // Honor caller-provided environment segment (EPB). If non-zero, use it; otherwise create a new block.
+        // Honor caller-provided environment segment (EPB). If non-zero, use it; otherwise clone the parent's env.
         if (environmentSegment != 0) {
             psp.EnvironmentTableSegment = environmentSegment;
         } else {
-            byte[] environmentBlock = CreateEnvironmentBlock(programHostPath);
+            byte[] environmentBlock;
+
+            if (parentPsp.EnvironmentTableSegment != 0) {
+                environmentBlock = CreateEnvironmentBlockFromParent(parentPsp.EnvironmentTableSegment, programHostPath);
+            } else {
+                environmentBlock = CreateEnvironmentBlock(programHostPath);
+            }
+
             ushort paragraphsNeeded = (ushort)((environmentBlock.Length + 15) / 16);
             paragraphsNeeded = paragraphsNeeded == 0 ? (ushort)1 : paragraphsNeeded;
             DosMemoryControlBlock? envBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
@@ -796,6 +803,47 @@ public class DosProcessManager {
         byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
         ms.Write(programPathBytes, 0, programPathBytes.Length);
         ms.WriteByte(0); // Null terminator for program path
+
+        return ms.ToArray();
+    }
+
+    private byte[] CreateEnvironmentBlockFromParent(ushort environmentSegment, string programPath) {
+        using MemoryStream ms = new();
+
+        uint environmentBaseAddress = MemoryUtils.ToPhysicalAddress(environmentSegment, 0);
+        int offset = 0;
+        // Match FreeDOS env scan ceiling (MAXENV) to avoid walking huge memory regions.
+        const int maximumScanLength = 32768;
+        bool doubleNullFound = false;
+
+        // Copy the parent's environment variables up to and including the double null terminator.
+        while (offset + 1 < maximumScanLength) {
+            byte current = _memory.UInt8[environmentBaseAddress + (uint)offset];
+            byte next = _memory.UInt8[environmentBaseAddress + (uint)(offset + 1)];
+
+            ms.WriteByte(current);
+            offset++;
+
+            if (current == 0 && next == 0) {
+                ms.WriteByte(next);
+                offset++;
+                doubleNullFound = true;
+                break;
+            }
+        }
+
+        if (!doubleNullFound) {
+            return CreateEnvironmentBlock(programPath);
+        }
+
+        // Replace the extra strings section with the current program path.
+        ms.WriteByte(1);
+        ms.WriteByte(0);
+
+        string dosPath = _fileManager.GetDosProgramPath(programPath);
+        byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
+        ms.Write(programPathBytes, 0, programPathBytes.Length);
+        ms.WriteByte(0);
 
         return ms.ToArray();
     }
