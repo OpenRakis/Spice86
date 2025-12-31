@@ -75,8 +75,9 @@ public class DosProcessManager {
     private const ushort SentinelOffset = 0xFFFF;
     private const ushort AdditionalEnvironmentStringsCount = 1;
     private const int MaximumEnvironmentScanLength = 32768;
+    internal const int EnvironmentMaximumBytes = MaximumEnvironmentScanLength;
+    internal const int EnvironmentKeepFreeBytes = 0x83;
     private const string RootCommandPath = "C:\\COMMAND.COM";
-    private const string RootCommandMcbName = "COMMAND";
     private const ushort ExecRegisterContractCxValue = 0x00FF;
     private const ushort ExecRegisterContractBpValue = 0x091E;
     private readonly InterruptVectorTable _interruptVectorTable;
@@ -1157,11 +1158,18 @@ public class DosProcessManager {
 
         uint environmentBaseAddress = MemoryUtils.ToPhysicalAddress(environmentSegment, 0);
         int offset = 0;
-        // Match FreeDOS env scan ceiling (MAXENV) to avoid walking huge memory regions.
         bool doubleNullFound = false;
+        int maxParentBytes = MaximumEnvironmentScanLength - EnvironmentKeepFreeBytes;
 
         // Copy the parent's environment variables up to and including the double null terminator.
         while (offset + 1 < MaximumEnvironmentScanLength) {
+            if (offset >= maxParentBytes) {
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("Environment block exceeded {Max} bytes, rebuilding from defaults.", maxParentBytes);
+                }
+                return CreateEnvironmentBlock(programPath);
+            }
+
             byte current = _memory.UInt8[environmentBaseAddress + (uint)offset];
             byte next = _memory.UInt8[environmentBaseAddress + (uint)(offset + 1)];
 
