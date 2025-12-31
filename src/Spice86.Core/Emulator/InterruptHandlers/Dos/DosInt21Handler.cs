@@ -1293,13 +1293,13 @@ public class DosInt21Handler : InterruptHandler {
     /// INT 21h, AH=4Dh - Get Return Code of Subprogram.
     /// </summary>
     public void GetReturnCode() {
-        ushort returnCode = _dosProcessManager.LastChildExitCode;
+        ushort returnCode = _dosProcessManager.LastChildReturnCode;
         State.AX = returnCode;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET RETURN CODE: AX={Ax:X4}", returnCode);
         }
         // Clear the stored return code after reading it (RBIL)
-        _dosProcessManager.LastChildExitCode = 0;
+        _dosProcessManager.LastChildReturnCode = 0;
     }
 
     /// <summary>
