@@ -48,6 +48,7 @@ public class DosProcessManager {
     private const byte DefaultDosVersionMajor = 5;
     private const byte DefaultDosVersionMinor = 0;
     private const ushort FileTableOffset = 0x18;
+    private const ushort Call5StubOffset = 0x50;
     private const byte DefaultMaxOpenFiles = 20;
     private const byte StandardFileHandleCount = 5;
     private const byte UnusedFileHandle = 0xFF;
@@ -140,7 +141,13 @@ public class DosProcessManager {
 
         // Root PSP: parent points to itself
         rootPsp.ParentProgramSegmentPrefix = CommandComSegment;
-        rootPsp.PreviousPspAddress = CommandComSegment;
+        rootPsp.PreviousPspAddress = MakeFarPointer(SentinelSegment, SentinelOffset);
+
+        rootPsp.FarCall = FarCallOpcode;
+        rootPsp.CpmServiceRequestAddress = MakeFarPointer(CommandComSegment, Call5StubOffset);
+        rootPsp.Service[0] = IntOpcode;
+        rootPsp.Service[1] = Int21Number;
+        rootPsp.Service[2] = RetfOpcode;
 
         // Initialize interrupt vectors from IVT so child PSPs inherit proper addresses
         SegmentedAddress int22 = _interruptVectorTable[TerminateVectorNumber];
@@ -152,8 +159,11 @@ public class DosProcessManager {
         SegmentedAddress int24 = _interruptVectorTable[CriticalErrorVectorNumber];
         rootPsp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
 
-        rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
+        rootPsp.MaximumOpenFiles = DefaultMaxOpenFiles;
         rootPsp.FileTableAddress = MakeFarPointer(CommandComSegment, FileTableOffset);
+
+        rootPsp.DosVersionMajor = DefaultDosVersionMajor;
+        rootPsp.DosVersionMinor = DefaultDosVersionMinor;
 
         // Initialize standard file handles in the PSP file handle table
         // Standard handles: 0=stdin, 1=stdout, 2=stderr, 3=stdaux, 4=stdprn
@@ -165,6 +175,10 @@ public class DosProcessManager {
         for (byte i = StandardFileHandleCount; i < DefaultMaxOpenFiles; i++) {
             rootPsp.Files[i] = UnusedFileHandle;
         }
+
+        ResetFcb(rootPsp.FirstFileControlBlock);
+        ResetFcb(rootPsp.SecondFileControlBlock);
+        rootPsp.DosCommandTail.Command = string.Empty;
 
         byte[] environmentBlock = CreateEnvironmentBlock(RootCommandPath);
         ushort paragraphsNeeded = CalculateParagraphsNeeded(environmentBlock.Length);
@@ -436,7 +450,7 @@ public class DosProcessManager {
 
         // Keep INT 21h entry and CP/M far call consistent with FreeDOS child_psp.
         childPsp.FarCall = FarCallOpcode;
-        childPsp.CpmServiceRequestAddress = MakeFarPointer(childSegment, 0x50);
+        childPsp.CpmServiceRequestAddress = MakeFarPointer(childSegment, Call5StubOffset);
         childPsp.Service[0] = IntOpcode;
         childPsp.Service[1] = Int21Number;
         childPsp.Service[2] = RetfOpcode;
@@ -951,6 +965,14 @@ public class DosProcessManager {
         psp.Exit[1] = Int20TerminateNumber;
         psp.NextSegment = (ushort)(pspSegment + allocatedBlockSizeInParagraphs);
 
+        psp.FarCall = FarCallOpcode;
+        psp.CpmServiceRequestAddress = MakeFarPointer(pspSegment, Call5StubOffset);
+        psp.Service[0] = IntOpcode;
+        psp.Service[1] = Int21Number;
+        psp.Service[2] = RetfOpcode;
+        psp.DosVersionMajor = DefaultDosVersionMajor;
+        psp.DosVersionMinor = DefaultDosVersionMinor;
+
         // This sets INT 22h to point to the CALLER'S return address
         psp.TerminateAddress = MakeFarPointer(callerCS, callerIP);
 
@@ -965,10 +987,10 @@ public class DosProcessManager {
         parentPsp.StackPointer = parentStackPointer;
 
         psp.ParentProgramSegmentPrefix = parentPspSegment;
-        psp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
+        psp.MaximumOpenFiles = DefaultMaxOpenFiles;
         // file table address points to file table at offset FileTableOffset inside this PSP
         psp.FileTableAddress = ((uint)pspSegment << 16) | FileTableOffset;
-        psp.PreviousPspAddress = parentPspSegment;
+        psp.PreviousPspAddress = MakeFarPointer(parentPspSegment, 0);
 
         for (int i = 0; i < psp.Files.Count; i++) {
             psp.Files[i] = (byte)Enums.DosPspFileTableEntry.Unused;
