@@ -84,7 +84,7 @@ public class DosProcessManager {
     /// The low byte (AL) contains the exit code, and the high byte (AH) contains
     /// the termination type. See <see cref="DosTerminationType"/> for termination types.
     /// </remarks>
-    public ushort LastChildReturnCode { get; private set; }
+    public ushort LastChildReturnCode { get; set; }
 
     /// <summary>
     /// Creates the root COMMAND.COM PSP that acts as the parent for all programs.
@@ -149,7 +149,6 @@ public class DosProcessManager {
         // Store the return code for parent to retrieve via INT 21h AH=4Dh
         // Format: AH = termination type, AL = exit code
         LastChildReturnCode = (ushort)(((ushort)terminationType << 8) | exitCode);
-        LastChildExitCode = LastChildReturnCode;
 
         DosProgramSegmentPrefix currentPsp = _pspTracker.GetCurrentPsp();
 
@@ -282,7 +281,6 @@ public class DosProcessManager {
     /// Gets the last child process exit code. Used by INT 21h AH=4Dh.
     /// </summary>
     /// <returns>Exit code in AL, termination type in AH (always 0 for normal termination).</returns>
-    public ushort LastChildExitCode { get; set; } = 0;
 
     /// <summary>
     /// Implements INT 21h, AH=26h - Create New PSP.
