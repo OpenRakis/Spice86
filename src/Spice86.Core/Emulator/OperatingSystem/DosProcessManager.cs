@@ -63,7 +63,6 @@ public class DosProcessManager {
     private const int FcbMetadataStartIndex = 12;
     private const byte FcbFilenamePaddingByte = 0x20;
     private const byte FcbUnusedDriveMarker = 0xFF;
-    private const byte MaxLogicalDriveCount = 26;
     private const ushort FirstFcbInvalidMask = 0x00FF;
     private const ushort SecondFcbInvalidMask = 0xFF00;
     private const ushort ComDefaultStackPointer = 0xFFFE;
@@ -713,7 +712,7 @@ public class DosProcessManager {
             return false;
         }
 
-        if (driveByte > MaxLogicalDriveCount) {
+        if (driveByte > DosDriveManager.MaxDriveCount) {
             return false;
         }
 
@@ -767,7 +766,7 @@ public class DosProcessManager {
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
         }
 
-        byte[] fileBytes = ReadFileBytes(hostPath);
+        byte[] fileBytes = File.ReadAllBytes(hostPath);
 
         string upperCaseExtension = Path.GetExtension(hostPath).ToUpperInvariant();
         bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && upperCaseExtension == ".EXE";
@@ -936,7 +935,7 @@ public class DosProcessManager {
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
         }
 
-        byte[] fileBytes = ReadFileBytes(hostPath);
+        byte[] fileBytes = File.ReadAllBytes(hostPath);
 
         if (fileBytes.Length < DosExeFile.MinExeSize) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -1095,15 +1094,6 @@ public class DosProcessManager {
             psp.EnvironmentTableSegment = envBlock.DataBlockSegment;
             envBlock.Owner = BuildMcbOwnerName(programHostPath);
         }
-    }
-
-    /// <summary>
-    /// Reads the full contents of a host file into memory for loading as a DOS program image.
-    /// </summary>
-    /// <param name="file">Host filesystem path to read.</param>
-    /// <returns>Byte array containing the file data.</returns>
-    private byte[] ReadFileBytes(string file) {
-        return File.ReadAllBytes(file);
     }
 
     /// <summary>
