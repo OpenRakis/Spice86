@@ -353,54 +353,54 @@ public class DosProcessManager {
 
         ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
         uint childPspAddress = MemoryUtils.ToPhysicalAddress(childSegment, 0);
-        DosProgramSegmentPrefix childPsp = new(_memory, childPspAddress);
-
-        InitializeChildPsp(childPsp, childSegment, parentPspSegment, sizeInParagraphs, interruptVectorTable);
-
         uint parentPspAddress = MemoryUtils.ToPhysicalAddress(parentPspSegment, 0);
+
         DosProgramSegmentPrefix parentPsp = new(_memory, parentPspAddress);
 
-        CopyFileTableFromParent(childPsp, parentPsp);
-        CopyCommandTailFromParent(childPsp, parentPsp);
-        CopyFcb1FromParent(childPsp, parentPsp);
-        CopyFcb2FromParent(childPsp, parentPsp);
+        // FreeDOS child_psp starts from a memcpy of the current PSP, then patches fields.
+        CloneCurrentPspTo(childSegment);
+        DosProgramSegmentPrefix childPsp = new(_memory, childPspAddress);
 
+        // Update vectors like FreeDOS new_psp.
+        SaveInterruptVectors(childPsp, interruptVectorTable);
+
+        // Parent/previous links.
+        childPsp.ParentProgramSegmentPrefix = parentPspSegment;
+        childPsp.PreviousPspAddress = MakeFarPointer(parentPspSegment, 0);
+
+        // Size/next segment (ps_size in FreeDOS).
+        childPsp.NextSegment = (ushort)(childSegment + sizeInParagraphs);
+
+        // File table layout and cloning (start unused then clone handles).
+        childPsp.MaximumOpenFiles = DefaultMaxOpenFiles;
+        childPsp.FileTableAddress = MakeFarPointer(childSegment, FileTableOffset);
+        for (int i = 0; i < DefaultMaxOpenFiles; i++) {
+            childPsp.Files[i] = UnusedFileHandle;
+        }
+        CopyFileTableFromParent(childPsp, parentPsp);
+
+        // FCBs cleared (FreeDOS resets to drive 0, space-filled names).
+        ResetFcb(childPsp.FirstFileControlBlock);
+        ResetFcb(childPsp.SecondFileControlBlock);
+
+        // Command tail cleared (ctCount=0, CR sentinel set via Command setter).
+        childPsp.DosCommandTail.Command = string.Empty;
+
+        // Environment/stack mirror parent.
         childPsp.EnvironmentTableSegment = parentPsp.EnvironmentTableSegment;
         childPsp.StackPointer = parentPsp.StackPointer;
+
+        // Keep INT 21h entry and CP/M far call consistent with FreeDOS child_psp.
+        childPsp.FarCall = FarCallOpcode;
+        childPsp.CpmServiceRequestAddress = MakeFarPointer(FakeCpmSegment, FakeCpmOffset);
+        childPsp.Service[0] = IntOpcode;
+        childPsp.Service[1] = Int21Number;
+        childPsp.Service[2] = RetfOpcode;
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug(
                 "CreateChildPsp: Parent={Parent:X4}, Env={Env:X4}, NextSeg={Next:X4}",
                 parentPspSegment, childPsp.EnvironmentTableSegment, childPsp.NextSegment);
-        }
-    }
-
-    private void InitializeChildPsp(DosProgramSegmentPrefix psp, ushort pspSegment,
-        ushort parentPspSegment, ushort sizeInParagraphs, InterruptVectorTable interruptVectorTable) {
-        for (int i = 0; i < DosProgramSegmentPrefix.MaxLength; i++) {
-            _memory.UInt8[psp.BaseAddress + (uint)i] = 0;
-        }
-
-        InitializeCommonPspFields(psp, parentPspSegment);
-
-        psp.NextSegment = (ushort)(pspSegment + sizeInParagraphs);
-        psp.FarCall = FarCallOpcode;
-        psp.CpmServiceRequestAddress = MakeFarPointer(FakeCpmSegment, FakeCpmOffset);
-
-        psp.Service[0] = IntOpcode;
-        psp.Service[1] = Int21Number;
-        psp.Service[2] = RetfOpcode;
-
-        psp.PreviousPspAddress = NoPreviousPsp;
-        psp.DosVersionMajor = DefaultDosVersionMajor;
-        psp.DosVersionMinor = DefaultDosVersionMinor;
-
-        SaveInterruptVectors(psp, interruptVectorTable);
-
-        psp.FileTableAddress = MakeFarPointer(pspSegment, FileTableOffset);
-        psp.MaximumOpenFiles = DefaultMaxOpenFiles;
-        for (int i = 0; i < DefaultMaxOpenFiles; i++) {
-            psp.Files[i] = UnusedFileHandle;
         }
     }
 
@@ -443,19 +443,13 @@ public class DosProcessManager {
         }
     }
 
-    private static void CopyCommandTailFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
-        childPsp.DosCommandTail.Command = parentPsp.DosCommandTail.Command;
-    }
-
-    private static void CopyFcb1FromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
-        for (int i = 0; i < FcbSize; i++) {
-            childPsp.FirstFileControlBlock[i] = parentPsp.FirstFileControlBlock[i];
+    private static void ResetFcb(UInt8Array fcb) {
+        fcb[0] = 0;
+        for (int i = 1; i <= 11 && i < FcbSize; i++) {
+            fcb[i] = 0x20;
         }
-    }
-
-    private static void CopyFcb2FromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
-        for (int i = 0; i < FcbSize; i++) {
-            childPsp.SecondFileControlBlock[i] = parentPsp.SecondFileControlBlock[i];
+        for (int i = 12; i < FcbSize; i++) {
+            fcb[i] = 0;
         }
     }
 
@@ -469,6 +463,16 @@ public class DosProcessManager {
         for (int i = 0; i < FcbSize; i++) {
             destination[i] = _memory.UInt8[source + (uint)i];
         }
+    }
+
+    private void CloneCurrentPspTo(ushort destinationSegment) {
+        ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
+        uint currentPspAddress = MemoryUtils.ToPhysicalAddress(currentPspSegment, 0);
+        uint destinationAddress = MemoryUtils.ToPhysicalAddress(destinationSegment, 0);
+
+        // FreeDOS new_psp copies the entire PSP structure before patching.
+        byte[] pspData = _memory.ReadRam(DosProgramSegmentPrefix.PspSize, currentPspAddress);
+        _memory.LoadData(destinationAddress, pspData);
     }
 
     private static uint MakeFarPointer(ushort segment, ushort offset) {
