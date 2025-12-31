@@ -24,6 +24,10 @@ public class DosProcessManager {
     private const byte FarCallOpcode = 0x9A;
     private const byte IntOpcode = 0xCD;
     private const byte Int21Number = 0x21;
+    private const byte Int20TerminateNumber = 0x20;
+    private const byte TerminateVectorNumber = 0x22;
+    private const byte CtrlBreakVectorNumber = 0x23;
+    private const byte CriticalErrorVectorNumber = 0x24;
     private const byte RetfOpcode = 0xCB;
     private const ushort FakeCpmSegment = 0xDEAD;
     private const ushort FakeCpmOffset = 0xFFFF;
@@ -44,8 +48,27 @@ public class DosProcessManager {
     private const byte DefaultDosVersionMinor = 0;
     private const ushort FileTableOffset = 0x18;
     private const byte DefaultMaxOpenFiles = 20;
+    private const byte StandardFileHandleCount = 5;
     private const byte UnusedFileHandle = 0xFF;
     private const int FcbSize = 16;
+    private const int FcbFilenameLength = 11;
+    private const int FcbMetadataStartIndex = 12;
+    private const byte FcbFilenamePaddingByte = 0x20;
+    private const byte FcbUnusedDriveMarker = 0xFF;
+    private const byte MaxLogicalDriveCount = 26;
+    private const ushort FirstFcbInvalidMask = 0x00FF;
+    private const ushort SecondFcbInvalidMask = 0xFF00;
+    private const ushort ComDefaultStackPointer = 0xFFFE;
+    private const int ParagraphSizeBytes = 16;
+    private const int ParagraphRoundingMask = ParagraphSizeBytes - 1;
+    private const ushort NullSegment = 0x0000;
+    private const ushort NullOffset = 0x0000;
+    private const ushort SentinelSegment = 0xFFFF;
+    private const ushort SentinelOffset = 0xFFFF;
+    private const ushort AdditionalEnvironmentStringsCount = 1;
+    private const int MaximumEnvironmentScanLength = 32768;
+    private const string RootCommandPath = "C:\\COMMAND.COM";
+    private const string RootCommandMcbName = "COMMAND";
     private readonly InterruptVectorTable _interruptVectorTable;
 
     /// <summary>
@@ -96,8 +119,8 @@ public class DosProcessManager {
         }
         DosProgramSegmentPrefix rootPsp = _pspTracker.PushPspSegment(CommandComSegment);
 
-        rootPsp.Exit[0] = 0xCD;
-        rootPsp.Exit[1] = 0x20;
+        rootPsp.Exit[0] = IntOpcode;
+        rootPsp.Exit[1] = Int20TerminateNumber;
         rootPsp.NextSegment = DosMemoryManager.LastFreeSegment;
 
         // Root PSP: parent points to itself
@@ -105,38 +128,37 @@ public class DosProcessManager {
         rootPsp.PreviousPspAddress = CommandComSegment;
 
         // Initialize interrupt vectors from IVT so child PSPs inherit proper addresses
-        SegmentedAddress int22 = _interruptVectorTable[0x22];
+        SegmentedAddress int22 = _interruptVectorTable[TerminateVectorNumber];
         rootPsp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
 
-        SegmentedAddress int23 = _interruptVectorTable[0x23];
+        SegmentedAddress int23 = _interruptVectorTable[CtrlBreakVectorNumber];
         rootPsp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
 
-        SegmentedAddress int24 = _interruptVectorTable[0x24];
+        SegmentedAddress int24 = _interruptVectorTable[CriticalErrorVectorNumber];
         rootPsp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
 
         rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
-        rootPsp.FileTableAddress = MakeFarPointer(CommandComSegment, 0x18);
+        rootPsp.FileTableAddress = MakeFarPointer(CommandComSegment, FileTableOffset);
 
         // Initialize standard file handles in the PSP file handle table
         // Standard handles: 0=stdin, 1=stdout, 2=stderr, 3=stdaux, 4=stdprn
         // These correspond to the devices opened in Dos.OpenDefaultFileHandles()
-        for (byte i = 0; i < 5; i++) {
+        for (byte i = 0; i < StandardFileHandleCount; i++) {
             rootPsp.Files[i] = i;
         }
         // Mark remaining handles as unused
-        for (byte i = 5; i < 20; i++) {
+        for (byte i = StandardFileHandleCount; i < DefaultMaxOpenFiles; i++) {
             rootPsp.Files[i] = UnusedFileHandle;
         }
 
-        byte[] environmentBlock = CreateEnvironmentBlock("C:\\COMMAND.COM");
-        ushort paragraphsNeeded = (ushort)((environmentBlock.Length + 15) / 16);
-        paragraphsNeeded = paragraphsNeeded == 0 ? (ushort)1 : paragraphsNeeded;
+        byte[] environmentBlock = CreateEnvironmentBlock(RootCommandPath);
+        ushort paragraphsNeeded = CalculateParagraphsNeeded(environmentBlock.Length);
         DosMemoryControlBlock? envBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
 
         if (envBlock != null) {
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
             rootPsp.EnvironmentTableSegment = envBlock.DataBlockSegment;
-            envBlock.Owner = BuildMcbOwnerName("COMMAND");
+            envBlock.Owner = BuildMcbOwnerName(RootCommandMcbName);
         }
 
         _fileManager.SetDiskTransferAreaAddress(
@@ -175,7 +197,7 @@ public class DosProcessManager {
                 isRootProcess, parentIsRootCommandCom, hasParentToReturnTo);
         }
 
-        // Close all non-standard file handles (5+) opened by this process
+        // Close all non-standard file handles (>= StandardFileHandleCount) opened by this process
         // Standard handles 0-4 (stdin, stdout, stderr, stdaux, stdprn) are inherited and not closed
         _fileManager.CloseAllNonStandardFileHandles();
 
@@ -191,9 +213,9 @@ public class DosProcessManager {
         }
 
         // Restore interrupt vectors from cached values
-        RestoreInterruptVector(0x22, terminateAddr, interruptVectorTable);
-        RestoreInterruptVector(0x23, breakAddr, interruptVectorTable);
-        RestoreInterruptVector(0x24, criticalErrorAddr, interruptVectorTable);
+        RestoreInterruptVector(TerminateVectorNumber, terminateAddr, interruptVectorTable);
+        RestoreInterruptVector(CtrlBreakVectorNumber, breakAddr, interruptVectorTable);
+        RestoreInterruptVector(CriticalErrorVectorNumber, criticalErrorAddr, interruptVectorTable);
 
         _pspTracker.PopCurrentPspSegment();
 
@@ -221,7 +243,7 @@ public class DosProcessManager {
             }
 
             // Get the terminate address from INT 22h vector (restored from child PSP)
-            SegmentedAddress returnAddress = interruptVectorTable[0x22];
+            SegmentedAddress returnAddress = interruptVectorTable[TerminateVectorNumber];
 
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information(
@@ -307,19 +329,19 @@ public class DosProcessManager {
         DosProgramSegmentPrefix currentPsp = _pspTracker.GetCurrentPsp();
         DosProgramSegmentPrefix newPsp = new(_memory, newPspAddress);
 
-        newPsp.Exit[0] = 0xCD;
-        newPsp.Exit[1] = 0x20;
+        newPsp.Exit[0] = IntOpcode;
+        newPsp.Exit[1] = Int20TerminateNumber;
 
         newPsp.ParentProgramSegmentPrefix = currentPspSegment;
         newPsp.EnvironmentTableSegment = currentPsp.EnvironmentTableSegment;
 
-        SegmentedAddress int22 = interruptVectorTable[0x22];
+        SegmentedAddress int22 = interruptVectorTable[TerminateVectorNumber];
         newPsp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
 
-        SegmentedAddress int23 = interruptVectorTable[0x23];
+        SegmentedAddress int23 = interruptVectorTable[CtrlBreakVectorNumber];
         newPsp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
 
-        SegmentedAddress int24 = interruptVectorTable[0x24];
+        SegmentedAddress int24 = interruptVectorTable[CriticalErrorVectorNumber];
         newPsp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
 
         newPsp.DosVersionMajor = DefaultDosVersionMajor;
@@ -402,13 +424,13 @@ public class DosProcessManager {
     }
 
     private static void SaveInterruptVectors(DosProgramSegmentPrefix psp, InterruptVectorTable ivt) {
-        SegmentedAddress int22 = ivt[0x22];
+        SegmentedAddress int22 = ivt[TerminateVectorNumber];
         psp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
 
-        SegmentedAddress int23 = ivt[0x23];
+        SegmentedAddress int23 = ivt[CtrlBreakVectorNumber];
         psp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
 
-        SegmentedAddress int24 = ivt[0x24];
+        SegmentedAddress int24 = ivt[CriticalErrorVectorNumber];
         psp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
     }
 
@@ -435,17 +457,17 @@ public class DosProcessManager {
 
     private static void ResetFcb(UInt8Array fcb) {
         fcb[0] = 0;
-        for (int i = 1; i <= 11 && i < FcbSize; i++) {
-            fcb[i] = 0x20;
+        for (int i = 1; i <= FcbFilenameLength && i < FcbSize; i++) {
+            fcb[i] = FcbFilenamePaddingByte;
         }
-        for (int i = 12; i < FcbSize; i++) {
+        for (int i = FcbMetadataStartIndex; i < FcbSize; i++) {
             fcb[i] = 0;
         }
     }
 
     private void CopyFcbFromPointer(SegmentedAddress pointer, UInt8Array destination) {
         // FreeDOS treats 0000:0000 and FFFF:FFFF as "no FCB" markers.
-        if ((pointer.Segment == 0 && pointer.Offset == 0) || (pointer.Segment == 0xFFFF && pointer.Offset == 0xFFFF)) {
+        if (IsNoFcbPointer(pointer)) {
             return;
         }
 
@@ -453,6 +475,11 @@ public class DosProcessManager {
         for (int i = 0; i < FcbSize; i++) {
             destination[i] = _memory.UInt8[source + (uint)i];
         }
+    }
+
+    private static bool IsNoFcbPointer(SegmentedAddress pointer) {
+        return (pointer.Segment == NullSegment && pointer.Offset == NullOffset)
+            || (pointer.Segment == SentinelSegment && pointer.Offset == SentinelOffset);
     }
 
     private void CloneCurrentPspTo(ushort destinationSegment) {
@@ -467,6 +494,12 @@ public class DosProcessManager {
 
     private static uint MakeFarPointer(ushort segment, ushort offset) {
         return (uint)((segment << 16) | offset);
+    }
+
+    private static ushort CalculateParagraphsNeeded(int lengthInBytes) {
+        int paragraphs = (lengthInBytes + ParagraphRoundingMask) / ParagraphSizeBytes;
+        paragraphs = paragraphs == 0 ? 1 : paragraphs;
+        return (ushort)paragraphs;
     }
 
     private static string BuildMcbOwnerName(string programPath) {
@@ -485,12 +518,12 @@ public class DosProcessManager {
 
         byte drive1 = psp.FirstFileControlBlock[0];
         if (!IsFcbDriveValid(drive1)) {
-            code |= 0x00FF;
+            code |= FirstFcbInvalidMask;
         }
 
         byte drive2 = psp.SecondFileControlBlock[0];
         if (!IsFcbDriveValid(drive2)) {
-            code |= 0xFF00;
+            code |= SecondFcbInvalidMask;
         }
 
         return code;
@@ -501,11 +534,11 @@ public class DosProcessManager {
             return true;
         }
 
-        if (driveByte == 0xFF) {
+        if (driveByte == FcbUnusedDriveMarker) {
             return false;
         }
 
-        if (driveByte > 26) {
+        if (driveByte > MaxLogicalDriveCount) {
             return false;
         }
 
@@ -621,8 +654,7 @@ public class DosProcessManager {
         }
 
         // Load as COM file (either explicitly .COM or invalid .EXE that we'll try as COM)
-        ushort paragraphsNeeded = (ushort)((DosProgramSegmentPrefix.PspSize + fileBytes.Length + 15) / 16);
-        paragraphsNeeded = (ushort)(paragraphsNeeded == 0 ? 1 : paragraphsNeeded);
+        ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
         DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
         if (comBlock is null) {
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
@@ -644,9 +676,9 @@ public class DosProcessManager {
 
         DosExecResult comResult = loadType == DosExecLoadType.LoadOnly
             ? DosExecResult.SuccessLoadOnly(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
-                comBlock.DataBlockSegment, 0xFFFE)
+                comBlock.DataBlockSegment, ComDefaultStackPointer)
             : DosExecResult.SuccessExecute(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
-                comBlock.DataBlockSegment, 0xFFFE);
+                comBlock.DataBlockSegment, ComDefaultStackPointer);
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("EXEC: COM loaded successfully, CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
@@ -749,15 +781,15 @@ public class DosProcessManager {
         // Establish parent-child PSP relationship and create the new PSP
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
 
-        psp.Exit[0] = 0xCD;
-        psp.Exit[1] = 0x20;
+        psp.Exit[0] = IntOpcode;
+        psp.Exit[1] = Int20TerminateNumber;
         psp.NextSegment = DosMemoryManager.LastFreeSegment;
 
         // This sets INT 22h to point to the CALLER'S return address
         psp.TerminateAddress = MakeFarPointer(callerCS, callerIP);
 
-        SegmentedAddress breakVector = interruptVectorTable[0x23];
-        SegmentedAddress criticalErrorVector = interruptVectorTable[0x24];
+        SegmentedAddress breakVector = interruptVectorTable[CtrlBreakVectorNumber];
+        SegmentedAddress criticalErrorVector = interruptVectorTable[CriticalErrorVectorNumber];
         psp.BreakAddress = MakeFarPointer(breakVector.Segment, breakVector.Offset);
         psp.CriticalErrorAddress = MakeFarPointer(criticalErrorVector.Segment, criticalErrorVector.Offset);
 
@@ -768,8 +800,8 @@ public class DosProcessManager {
 
         psp.ParentProgramSegmentPrefix = parentPspSegment;
         psp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
-        // file table address points to file table at offset 0x18 inside this PSP
-        psp.FileTableAddress = ((uint)pspSegment << 16) | 0x18;
+        // file table address points to file table at offset FileTableOffset inside this PSP
+        psp.FileTableAddress = ((uint)pspSegment << 16) | FileTableOffset;
         psp.PreviousPspAddress = parentPspSegment;
 
         // Inherit parent's JFT entries except those marked as DoNotInherit or Unused
@@ -808,8 +840,7 @@ public class DosProcessManager {
             environmentBlock = CreateEnvironmentBlock(programHostPath);
         }
 
-        ushort paragraphsNeeded = (ushort)((environmentBlock.Length + 15) / 16);
-        paragraphsNeeded = paragraphsNeeded == 0 ? (ushort)1 : paragraphsNeeded;
+        ushort paragraphsNeeded = CalculateParagraphsNeeded(environmentBlock.Length);
         DosMemoryControlBlock? envBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
 
         if (envBlock != null) {
@@ -845,8 +876,8 @@ public class DosProcessManager {
         // MS-DOS format: after the double null, write a WORD with value 1 to indicate
         // that one additional string (the program path) follows.
         // This is the correct DOS format
-        ms.WriteByte(1); // Low byte of WORD = 1
-        ms.WriteByte(0); // High byte of WORD = 0
+        ms.WriteByte((byte)(AdditionalEnvironmentStringsCount & 0xFF)); // Low byte of WORD
+        ms.WriteByte((byte)(AdditionalEnvironmentStringsCount >> 8));   // High byte of WORD
 
         // Get the DOS path for the program (not the host path)
         string dosPath = _fileManager.GetDosProgramPath(programPath);
@@ -873,11 +904,10 @@ public class DosProcessManager {
         uint environmentBaseAddress = MemoryUtils.ToPhysicalAddress(environmentSegment, 0);
         int offset = 0;
         // Match FreeDOS env scan ceiling (MAXENV) to avoid walking huge memory regions.
-        const int maximumScanLength = 32768;
         bool doubleNullFound = false;
 
         // Copy the parent's environment variables up to and including the double null terminator.
-        while (offset + 1 < maximumScanLength) {
+        while (offset + 1 < MaximumEnvironmentScanLength) {
             byte current = _memory.UInt8[environmentBaseAddress + (uint)offset];
             byte next = _memory.UInt8[environmentBaseAddress + (uint)(offset + 1)];
 
@@ -897,8 +927,8 @@ public class DosProcessManager {
         }
 
         // Replace the extra strings section with the current program path.
-        ms.WriteByte(1);
-        ms.WriteByte(0);
+        ms.WriteByte((byte)(AdditionalEnvironmentStringsCount & 0xFF));
+        ms.WriteByte((byte)(AdditionalEnvironmentStringsCount >> 8));
 
         string dosPath = _fileManager.GetDosProgramPath(programPath);
         byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
@@ -918,7 +948,7 @@ public class DosProcessManager {
             _state.DS = pspSegment;
             _state.ES = pspSegment;
             _state.SS = pspSegment;
-            _state.SP = 0xFFFE; // Expected stack pointer value
+            _state.SP = ComDefaultStackPointer; // Expected stack pointer value
             _state.InterruptFlag = true;
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("COM load register state CS:IP={Cs}:{Ip} DS=ES=SS={Segment} SP={Sp}",
