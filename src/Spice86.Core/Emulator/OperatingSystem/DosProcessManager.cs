@@ -49,7 +49,8 @@ public class DosProcessManager {
     private const byte DefaultDosVersionMinor = 0;
     private const ushort FileTableOffset = 0x18;
     private const ushort Call5StubOffset = 0x50;
-    private const byte DefaultMaxOpenFiles = 20;
+    private const ushort RootEnvironmentParagraphOffset = 0x8;
+    private const int JobFileTableLength = DosFileManager.MaxOpenFilesPerProcess;
     private const byte StandardFileHandleCount = 5;
     private const byte UnusedFileHandle = 0xFF;
     private const int FcbSize = 16;
@@ -133,11 +134,12 @@ public class DosProcessManager {
             // Root PSP already exists
             return;
         }
+        ClearPspMemory(CommandComSegment);
         DosProgramSegmentPrefix rootPsp = _pspTracker.PushPspSegment(CommandComSegment);
 
         rootPsp.Exit[0] = IntOpcode;
         rootPsp.Exit[1] = Int20TerminateNumber;
-        rootPsp.NextSegment = DosMemoryManager.LastFreeSegment;
+        rootPsp.NextSegment = (ushort)(CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
 
         // Root PSP: parent points to itself
         rootPsp.ParentProgramSegmentPrefix = CommandComSegment;
@@ -159,7 +161,7 @@ public class DosProcessManager {
         SegmentedAddress int24 = _interruptVectorTable[CriticalErrorVectorNumber];
         rootPsp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
 
-        rootPsp.MaximumOpenFiles = DefaultMaxOpenFiles;
+        rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
         rootPsp.FileTableAddress = MakeFarPointer(CommandComSegment, FileTableOffset);
 
         rootPsp.DosVersionMajor = DefaultDosVersionMajor;
@@ -172,23 +174,13 @@ public class DosProcessManager {
             rootPsp.Files[i] = i;
         }
         // Mark remaining handles as unused
-        for (byte i = StandardFileHandleCount; i < DefaultMaxOpenFiles; i++) {
+        for (int i = StandardFileHandleCount; i < JobFileTableLength; i++) {
             rootPsp.Files[i] = UnusedFileHandle;
         }
 
         ResetFcb(rootPsp.FirstFileControlBlock);
         ResetFcb(rootPsp.SecondFileControlBlock);
-        rootPsp.DosCommandTail.Command = string.Empty;
-
-        byte[] environmentBlock = CreateEnvironmentBlock(RootCommandPath);
-        ushort paragraphsNeeded = CalculateParagraphsNeeded(environmentBlock.Length);
-        DosMemoryControlBlock? envBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
-
-        if (envBlock != null) {
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
-            rootPsp.EnvironmentTableSegment = envBlock.DataBlockSegment;
-            envBlock.Owner = BuildMcbOwnerName(RootCommandMcbName);
-        }
+        InitializeRootEnvironment(rootPsp, CreateEnvironmentBlock(RootCommandPath));
 
         _fileManager.SetDiskTransferAreaAddress(
             CommandComSegment, DosCommandTail.OffsetInPspSegment);
@@ -430,9 +422,9 @@ public class DosProcessManager {
         childPsp.NextSegment = (ushort)(childSegment + sizeInParagraphs);
 
         // File table layout and cloning (start unused then clone handles).
-        childPsp.MaximumOpenFiles = DefaultMaxOpenFiles;
+        childPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
         childPsp.FileTableAddress = MakeFarPointer(childSegment, FileTableOffset);
-        for (int i = 0; i < DefaultMaxOpenFiles; i++) {
+        for (int i = 0; i < JobFileTableLength; i++) {
             childPsp.Files[i] = UnusedFileHandle;
         }
         CopyFileTableFromParent(childPsp, parentPsp);
@@ -484,7 +476,7 @@ public class DosProcessManager {
     /// <param name="childPsp">The destination PSP whose file table will be initialized.</param>
     /// <param name="parentPsp">The source PSP that holds the current process file handle table.</param>
     private void CopyFileTableFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
-        for (int i = 0; i < DefaultMaxOpenFiles; i++) {
+        for (int i = 0; i < JobFileTableLength; i++) {
             byte parentHandle = parentPsp.Files[i];
 
             if (parentHandle == UnusedFileHandle) {
@@ -516,7 +508,7 @@ public class DosProcessManager {
     private void CloseProcessFileHandles(DosProgramSegmentPrefix psp, ushort pspSegment) {
         HashSet<byte> closedHandles = new();
 
-        for (byte i = StandardFileHandleCount; i < DefaultMaxOpenFiles; i++) {
+        for (int i = StandardFileHandleCount; i < JobFileTableLength; i++) {
             byte handle = psp.Files[i];
             if (handle == UnusedFileHandle) {
                 continue;
@@ -596,11 +588,34 @@ public class DosProcessManager {
         _memory.LoadData(destinationAddress, pspData);
     }
 
+    private void ClearPspMemory(ushort pspSegment) {
+        uint destinationAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
+        byte[] zeros = new byte[DosProgramSegmentPrefix.PspSize];
+        _memory.LoadData(destinationAddress, zeros);
+    }
+
     private void CopyParentPspTemplate(ushort parentSegment, ushort destinationSegment) {
         uint parentAddress = MemoryUtils.ToPhysicalAddress(parentSegment, 0);
         byte[] parentData = _memory.ReadRam(DosProgramSegmentPrefix.PspSize, parentAddress);
         uint destinationAddress = MemoryUtils.ToPhysicalAddress(destinationSegment, 0);
         _memory.LoadData(destinationAddress, parentData);
+    }
+
+    private void InitializeRootEnvironment(DosProgramSegmentPrefix rootPsp, byte[] environmentBlock) {
+        ushort environmentSegment = (ushort)(CommandComSegment + RootEnvironmentParagraphOffset);
+        int capacityBytes = (DosProgramSegmentPrefix.PspSizeInParagraphs - RootEnvironmentParagraphOffset) * ParagraphSizeBytes;
+        if (environmentBlock.Length > capacityBytes && _loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning(
+                "Root environment block truncated from {Original} to {Capacity} bytes to fit inside COMMAND.COM PSP.",
+                environmentBlock.Length,
+                capacityBytes);
+        }
+
+        byte[] buffer = new byte[capacityBytes];
+        Array.Copy(environmentBlock, buffer, Math.Min(environmentBlock.Length, capacityBytes));
+        uint environmentAddress = MemoryUtils.ToPhysicalAddress(environmentSegment, 0);
+        _memory.LoadData(environmentAddress, buffer);
+        rootPsp.EnvironmentTableSegment = environmentSegment;
     }
 
     /// <summary>
@@ -953,11 +968,7 @@ public class DosProcessManager {
     /// <param name="callerIP">Caller IP for INT 22h return address.</param>
     /// <param name="allocatedBlockSizeInParagraphs">Total paragraphs reserved for the PSP and program image.</param>
     private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP, ushort allocatedBlockSizeInParagraphs) {
-        if (_pspTracker.PspCount > 0) {
-            // FreeDOS child_psp starts from a memcpy of the current PSP
-            CloneCurrentPspTo(pspSegment);
-        }
-
+        ClearPspMemory(pspSegment);
         // Establish parent-child PSP relationship and create the new PSP
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
 
@@ -987,7 +998,7 @@ public class DosProcessManager {
         parentPsp.StackPointer = parentStackPointer;
 
         psp.ParentProgramSegmentPrefix = parentPspSegment;
-        psp.MaximumOpenFiles = DefaultMaxOpenFiles;
+        psp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
         // file table address points to file table at offset FileTableOffset inside this PSP
         psp.FileTableAddress = ((uint)pspSegment << 16) | FileTableOffset;
         psp.PreviousPspAddress = MakeFarPointer(parentPspSegment, 0);

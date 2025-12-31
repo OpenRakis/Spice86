@@ -23,7 +23,7 @@ using System.Text;
 /// </summary>
 public class DosFileManager {
     private const int ExtDeviceBit = 0x0200;
-    public const ushort MaxOpenFilesPerProcess = 0x20;
+    public const ushort MaxOpenFilesPerProcess = 0x14;
     private static readonly char[] _directoryChars = {
         DosPathResolver.DirectorySeparatorChar,
         DosPathResolver.AltDirectorySeparatorChar };
