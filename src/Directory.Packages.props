@@ -4,14 +4,14 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Avalonia" Version="11.3.8" />
+    <PackageVersion Include="Avalonia" Version="11.3.10" />
     <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
     <PackageVersion Include="Avalonia.Desktop" Version="11.3.8" />
     <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.7" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.8" />
     <PackageVersion Include="Avalonia.Headless" Version="11.3.8" />
     <PackageVersion Include="AvaloniaGraphControl" Version="0.6.1" />
-    <PackageVersion Include="AvaloniaHex" Version="0.1.10" />
+    <PackageVersion Include="AvaloniaHex" Version="0.1.11" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.6" />
     <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="11.3.3.2" />
     <PackageVersion Include="bodong.PropertyModels" Version="11.3.3.2" />
