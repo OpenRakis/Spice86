@@ -105,7 +105,9 @@ public class DosProcessManager {
         _environmentVariables = new();
         _interruptVectorTable = interruptVectorTable;
 
-        envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
+        if (!envVars.ContainsKey("PATH")) {
+            envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
+        }
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
             _environmentVariables.Add(envVar.Key, envVar.Value);
@@ -215,9 +217,11 @@ public class DosProcessManager {
                 isRootProcess, parentIsRootCommandCom, hasParentToReturnTo);
         }
 
-        // Close all non-standard file handles (>= StandardFileHandleCount) opened by this process
-        // Standard handles 0-4 (stdin, stdout, stderr, stdaux, stdprn) are inherited and not closed
-        _fileManager.CloseAllNonStandardFileHandles();
+        // Close non-standard handles only when the process fully terminates; TSR keeps them resident
+        if (terminationType != DosTerminationType.TSR) {
+            // Standard handles 0-4 (stdin, stdout, stderr, stdaux, stdprn) are inherited and not closed
+            _fileManager.CloseAllNonStandardFileHandles();
+        }
 
         // Cache interrupt vectors from child PSP before freeing memory
         uint terminateAddr = currentPsp.TerminateAddress;
@@ -303,7 +307,7 @@ public class DosProcessManager {
             }
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+        if (!hasParentToReturnTo && _loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning("No parent to return to - returning to command.com PSP!");
         }
     }
@@ -686,7 +690,7 @@ public class DosProcessManager {
                     return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
                 }
 
-                InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP);
+                InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, block.Size);
 
                 DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
                 CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
@@ -744,7 +748,7 @@ public class DosProcessManager {
         if (comBlock is null) {
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
-        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP);
+        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, comBlock.Size);
 
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
@@ -881,13 +885,14 @@ public class DosProcessManager {
     /// <param name="parentStackPointer">Saved SS:SP of the parent encoded as a 32-bit value.</param>
     /// <param name="callerCS">Caller CS for INT 22h return address.</param>
     /// <param name="callerIP">Caller IP for INT 22h return address.</param>
-    private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP) {
+    /// <param name="allocatedBlockSizeInParagraphs">Total paragraphs reserved for the PSP and program image.</param>
+    private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP, ushort allocatedBlockSizeInParagraphs) {
         // Establish parent-child PSP relationship and create the new PSP
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
 
         psp.Exit[0] = IntOpcode;
         psp.Exit[1] = Int20TerminateNumber;
-        psp.NextSegment = DosMemoryManager.LastFreeSegment;
+        psp.NextSegment = (ushort)(pspSegment + allocatedBlockSizeInParagraphs);
 
         // This sets INT 22h to point to the CALLER'S return address
         psp.TerminateAddress = MakeFarPointer(callerCS, callerIP);
@@ -940,9 +945,18 @@ public class DosProcessManager {
     private void SetupEnvironmentForProcess(string programHostPath,
         ushort environmentSegment, DosProgramSegmentPrefix psp,
         DosProgramSegmentPrefix parentPsp) {
-        ushort sourceEnvironmentSegment = environmentSegment != 0
-                    ? environmentSegment
-                    : parentPsp.EnvironmentTableSegment;
+        if (environmentSegment != 0) {
+            // Caller supplied an environment; use it directly and mark ownership if possible.
+            psp.EnvironmentTableSegment = environmentSegment;
+            ushort mcbSegment = (ushort)(environmentSegment - 1);
+            DosMemoryControlBlock existing = new(_memory, MemoryUtils.ToPhysicalAddress(mcbSegment, 0));
+            if (existing.IsValid) {
+                existing.Owner = BuildMcbOwnerName(programHostPath);
+            }
+            return;
+        }
+
+        ushort sourceEnvironmentSegment = parentPsp.EnvironmentTableSegment;
 
         byte[] environmentBlock;
         if (sourceEnvironmentSegment != 0) {
