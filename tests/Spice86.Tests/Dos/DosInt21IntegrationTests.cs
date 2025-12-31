@@ -608,7 +608,7 @@ public class DosInt21IntegrationTests {
     [Fact]
     public void CreateChildPsp_CreatesValidPsp() {
         // This test creates a child PSP and verifies:
-        // 1. Current PSP changes to the new segment
+        // 1. Current PSP remains pointing to the parent PSP (matching DOS/FreeDOS)
         // 2. Parent PSP in child points to original PSP
         // 3. INT 20h instruction at start of PSP
         // 4. Environment segment is inherited
@@ -635,39 +635,40 @@ public class DosInt21IntegrationTests {
             0xB4, 0x55,             // mov ah, 55h - Create Child PSP
             0xCD, 0x21,             // int 21h
             
-            // Check AL = 0xF0 (destroyed value per DOSBox)
+            // Check AL = 0xF0 (destroyed value per DOS/FreeDOS)
             0x3C, 0xF0,             // cmp al, 0F0h
-            0x0F, 0x85, 0x3E, 0x00, // jne failed (near jump)
+            0x0F, 0x85, 0x3F, 0x00, // jne failed (near jump)
             
-            // Get current PSP to verify it changed to 0x2000
+            // Get current PSP to verify it remained the original parent PSP
             0xB4, 0x62,             // mov ah, 62h
-            0xCD, 0x21,             // int 21h - BX = current PSP (should be 2000h)
+            0xCD, 0x21,             // int 21h - BX = current PSP (should still be original PSP in BP)
             
-            // Check if current PSP is 0x2000
-            0x81, 0xFB, 0x00, 0x20, // cmp bx, 2000h
-            0x0F, 0x85, 0x32, 0x00, // jne failed (near jump)
+            // Check if current PSP is still the parent (value saved in BP)
+            0x39, 0xEB,             // cmp bx, bp
+            0x0F, 0x85, 0x35, 0x00, // jne failed (near jump)
             
-            // Load new PSP segment to verify its contents
-            0x8E, 0xC3,             // mov es, bx - ES = child PSP (0x2000)
+            // Load the child PSP segment (constant since DX may be clobbered)
+            0xB8, 0x00, 0x20,       // mov ax, 2000h
+            0x8E, 0xC0,             // mov es, ax - ES = child PSP (0x2000)
             
             // Check INT 20h instruction at offset 0 (0xCD, 0x20)
             0x26, 0x8A, 0x06, 0x00, 0x00,  // mov al, es:[0000h]
             0x3C, 0xCD,             // cmp al, 0CDh
-            0x0F, 0x85, 0x23, 0x00, // jne failed
+            0x0F, 0x85, 0x25, 0x00, // jne failed
             
             0x26, 0x8A, 0x06, 0x01, 0x00,  // mov al, es:[0001h]
             0x3C, 0x20,             // cmp al, 20h
-            0x0F, 0x85, 0x18, 0x00, // jne failed
+            0x0F, 0x85, 0x1A, 0x00, // jne failed
             
             // Check parent PSP segment at offset 0x16 matches original PSP (in BP)
             0x26, 0x8B, 0x1E, 0x16, 0x00,  // mov bx, es:[0016h] - parent PSP
             0x39, 0xEB,             // cmp bx, bp - compare with original PSP
-            0x0F, 0x85, 0x0D, 0x00, // jne failed
+            0x0F, 0x85, 0x0F, 0x00, // jne failed
             
             // Check environment segment at offset 0x2C matches original (in DI)
             0x26, 0x8B, 0x1E, 0x2C, 0x00,  // mov bx, es:[002Ch] - env segment
             0x39, 0xFB,             // cmp bx, di - compare with original env
-            0x0F, 0x85, 0x02, 0x00, // jne failed
+            0x0F, 0x85, 0x04, 0x00, // jne failed
             
             // Success
             0xB0, 0x00,             // mov al, TestResult.Success
