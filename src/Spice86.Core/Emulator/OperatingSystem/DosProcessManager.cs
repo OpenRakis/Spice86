@@ -30,8 +30,6 @@ public class DosProcessManager {
     private const byte CtrlBreakVectorNumber = 0x23;
     private const byte CriticalErrorVectorNumber = 0x24;
     private const byte RetfOpcode = 0xCB;
-    private const ushort FakeCpmSegment = 0xDEAD;
-    private const ushort FakeCpmOffset = 0xFFFF;
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
@@ -39,6 +37,7 @@ public class DosProcessManager {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly ILoggerService _loggerService;
+    private readonly Dictionary<ushort, uint> _pendingParentStackPointers = new();
 
     /// <summary>
     /// The segment address where the root COMMAND.COM PSP is created.
@@ -247,21 +246,28 @@ public class DosProcessManager {
 
         _pspTracker.PopCurrentPspSegment();
 
+        bool hasSavedParentStackPointer = _pendingParentStackPointers.TryGetValue(parentPspSegment, out uint savedParentStackPointer);
+        if (hasSavedParentStackPointer) {
+            _pendingParentStackPointers.Remove(parentPspSegment);
+        }
+
         if (hasParentToReturnTo) {
             DosProgramSegmentPrefix parentPsp = _pspTracker.GetCurrentPsp();
+            uint stackPointerToRestore = hasSavedParentStackPointer ? savedParentStackPointer : parentPsp.StackPointer;
+            parentPsp.StackPointer = stackPointerToRestore;
 
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information("BEFORE parent stack restore: Current SS:SP={CurrentSs:X4}:{CurrentSp:X4}, CS:IP={CurrentCs:X4}:{CurrentIp:X4}",
                     _state.SS, _state.SP, _state.CS, _state.IP);
                 _loggerService.Information("Parent PSP StackPointer field = {ParentStack:X8}, will restore SS:SP to {Ss:X4}:{Sp:X4}",
-                    parentPsp.StackPointer, (ushort)(parentPsp.StackPointer >> 16), (ushort)(parentPsp.StackPointer & 0xFFFF));
+                    stackPointerToRestore, (ushort)(stackPointerToRestore >> 16), (ushort)(stackPointerToRestore & 0xFFFF));
             }
 
             // We are in an interrupt handler, so the solution is not in freeDOS but DOSBOX:
             // Restore parent's stack pointer WITHOUT skipping the interrupt frame
             // We'll modify the frame contents so IRET goes to the right place
-            _state.SS = (ushort)(parentPsp.StackPointer >> 16);
-            _state.SP = (ushort)(parentPsp.StackPointer & 0xFFFF);
+            _state.SS = (ushort)(stackPointerToRestore >> 16);
+            _state.SP = (ushort)(stackPointerToRestore & 0xFFFF);
             _state.DS = parentPspSegment;
             _state.ES = parentPspSegment;
 
@@ -754,7 +760,7 @@ public class DosProcessManager {
                 block.PspSegment = block.DataBlockSegment;
                 block.Owner = BuildMcbOwnerName(hostPath);
 
-                InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, block.Size);
+                InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, block.Size, isLoadAndExecute);
 
                 DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
                 CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
@@ -816,7 +822,7 @@ public class DosProcessManager {
         // Align MCB ownership with the child PSP rather than the parent loader.
         comBlock.PspSegment = comBlock.DataBlockSegment;
         comBlock.Owner = BuildMcbOwnerName(hostPath);
-        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, comBlock.Size);
+        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, comBlock.Size, isLoadAndExecute);
 
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
@@ -954,7 +960,8 @@ public class DosProcessManager {
     /// <param name="callerCS">Caller CS for INT 22h return address.</param>
     /// <param name="callerIP">Caller IP for INT 22h return address.</param>
     /// <param name="allocatedBlockSizeInParagraphs">Total paragraphs reserved for the PSP and program image.</param>
-    private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP, ushort allocatedBlockSizeInParagraphs) {
+    /// <param name="trackParentStackPointer">True when the child will execute immediately and the parent's stack pointer must be tracked for restoration.</param>
+    private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP, ushort allocatedBlockSizeInParagraphs, bool trackParentStackPointer) {
         ClearPspMemory(pspSegment);
         // Establish parent-child PSP relationship and create the new PSP
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
@@ -979,10 +986,11 @@ public class DosProcessManager {
         psp.BreakAddress = MakeFarPointer(breakVector.Segment, breakVector.Offset);
         psp.CriticalErrorAddress = MakeFarPointer(criticalErrorVector.Segment, criticalErrorVector.Offset);
 
-        // Save parent's stack pointer in the PARENT PSP's StackPointer field (offset 0x2E)
-        // This mirrors FreeDOS task.c
+        // Save parent's stack pointer only when the child will run, mirroring FreeDOS load_transfer semantics.
         DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
-        parentPsp.StackPointer = parentStackPointer;
+        if (trackParentStackPointer) {
+            _pendingParentStackPointers[parentPspSegment] = parentStackPointer;
+        }
 
         psp.ParentProgramSegmentPrefix = parentPspSegment;
         psp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
