@@ -704,4 +704,35 @@ public class DosMemoryManager {
 
         return true;
     }
+
+    /// <summary>
+    /// Frees an environment block when the owning PSP terminates but stays resident.
+    /// </summary>
+    /// <param name="environmentSegment">Segment of the environment data block (PSP field).</param>
+    /// <param name="ownerPspSegment">Segment of the PSP that owns the environment.</param>
+    /// <returns><c>true</c> if the block was freed or no action was required.</returns>
+    public bool FreeEnvironmentBlock(ushort environmentSegment, ushort ownerPspSegment) {
+        if (environmentSegment == 0) {
+            return true;
+        }
+
+        ushort mcbSegment = (ushort)(environmentSegment - 1);
+        DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(mcbSegment);
+        if (!CheckValidOrLogError(block)) {
+            return false;
+        }
+
+        if (block.PspSegment != ownerPspSegment) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose(
+                    "Environment block at {EnvSegment:X4} not owned by PSP {Owner:X4}, skipping free",
+                    environmentSegment, ownerPspSegment);
+            }
+            return true;
+        }
+
+        block.SetFree();
+        JoinBlocks(_start, true);
+        return true;
+    }
 }

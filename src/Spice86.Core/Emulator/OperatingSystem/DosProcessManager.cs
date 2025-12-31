@@ -237,6 +237,8 @@ public class DosProcessManager {
         // TSR (term_type == 3) does NOT free memory - it keeps the program resident
         if (terminationType != DosTerminationType.TSR) {
             _memoryManager.FreeProcessMemory(currentPspSegment);
+        } else {
+            _memoryManager.FreeEnvironmentBlock(currentPsp.EnvironmentTableSegment, currentPspSegment);
         }
 
         // Restore interrupt vectors from cached values
