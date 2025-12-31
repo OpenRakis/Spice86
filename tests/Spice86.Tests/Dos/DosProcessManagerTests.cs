@@ -74,6 +74,85 @@ public class DosProcessManagerTests {
         }
     }
 
+    [Fact]
+    public void ExecLoadOnly_DoesNotAlterParentStackPointer() {
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        DosProgramSegmentPrefix rootPsp = GetRootPsp(context);
+        rootPsp.StackPointer = 0x12345678;
+
+        context.State.SS = 0x3000;
+        context.State.SP = 0x00FE;
+
+        string comFilePath = CreateTemporaryComFile();
+        try {
+            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+
+            DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
+                comFilePath,
+                parameterBlock,
+                string.Empty,
+                DosExecLoadType.LoadOnly,
+                environmentSegment: 0,
+                context.InterruptVectorTable);
+
+            result.Success.Should().BeTrue();
+            rootPsp.StackPointer.Should().Be(0x12345678);
+        } finally {
+            DeleteIfExists(comFilePath);
+        }
+    }
+
+    [Fact]
+    public void TerminateProcess_RestoresParentStackPointer() {
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        string comFilePath = CreateTemporaryComFile();
+        try {
+            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+            DosExecResult parentExec = context.ProcessManager.LoadOrLoadAndExecute(
+                comFilePath,
+                parameterBlock,
+                string.Empty,
+                DosExecLoadType.LoadAndExecute,
+                environmentSegment: 0,
+                context.InterruptVectorTable);
+
+            parentExec.Success.Should().BeTrue();
+            ushort parentSegment = context.Tracker.GetCurrentPspSegment();
+
+            context.State.SS = 0x2222;
+            context.State.SP = 0x0FF0;
+
+            parameterBlock = CreateParameterBlock();
+
+            DosExecResult childExec = context.ProcessManager.LoadOrLoadAndExecute(
+                comFilePath,
+                parameterBlock,
+                string.Empty,
+                DosExecLoadType.LoadAndExecute,
+                environmentSegment: 0,
+                context.InterruptVectorTable);
+
+            childExec.Success.Should().BeTrue();
+
+            context.State.SS = 0x3333;
+            context.State.SP = 0x0100;
+
+            context.ProcessManager.TerminateProcess(0, DosTerminationType.Normal, context.InterruptVectorTable);
+
+            context.State.SS.Should().Be(0x2222);
+            context.State.SP.Should().Be(0x0FF0);
+
+            DosProgramSegmentPrefix parentPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(parentSegment, 0));
+            parentPsp.StackPointer.Should().Be(0x22220FF0);
+        } finally {
+            DeleteIfExists(comFilePath);
+        }
+    }
+
     private static DosProcessManagerTestContext CreateContext() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
 
@@ -105,7 +184,7 @@ public class DosProcessManagerTests {
             interruptVectorTable,
             loggerService);
 
-        return new DosProcessManagerTestContext(memory, processManager, tracker, interruptVectorTable);
+        return new DosProcessManagerTestContext(memory, processManager, tracker, interruptVectorTable, state);
     }
 
     private static DosProgramSegmentPrefix GetRootPsp(DosProcessManagerTestContext context) {
@@ -117,18 +196,32 @@ public class DosProcessManagerTests {
         return new DosExecParameterBlock(buffer.ReaderWriter, 0);
     }
 
+    private static string CreateTemporaryComFile() {
+        string comFilePath = Path.Combine(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
+        File.WriteAllBytes(comFilePath, new byte[] { 0xC3 });
+        return comFilePath;
+    }
+
+    private static void DeleteIfExists(string path) {
+        if (File.Exists(path)) {
+            File.Delete(path);
+        }
+    }
+
     private sealed class DosProcessManagerTestContext {
         public DosProcessManagerTestContext(Memory memory, DosProcessManager processManager,
-            DosProgramSegmentPrefixTracker tracker, InterruptVectorTable interruptVectorTable) {
+            DosProgramSegmentPrefixTracker tracker, InterruptVectorTable interruptVectorTable, State state) {
             Memory = memory;
             ProcessManager = processManager;
             Tracker = tracker;
             InterruptVectorTable = interruptVectorTable;
+            State = state;
         }
 
         public Memory Memory { get; }
         public DosProcessManager ProcessManager { get; }
         public DosProgramSegmentPrefixTracker Tracker { get; }
         public InterruptVectorTable InterruptVectorTable { get; }
+        public State State { get; }
     }
 }
