@@ -476,6 +476,39 @@ public class DosProcessManager {
         return (uint)((segment << 16) | offset);
     }
 
+    private ushort ComputeFcbCode(DosProgramSegmentPrefix psp) {
+        ushort code = 0;
+
+        byte drive1 = psp.FirstFileControlBlock[0];
+        if (!IsFcbDriveValid(drive1)) {
+            code |= 0x00FF;
+        }
+
+        byte drive2 = psp.SecondFileControlBlock[0];
+        if (!IsFcbDriveValid(drive2)) {
+            code |= 0xFF00;
+        }
+
+        return code;
+    }
+
+    private bool IsFcbDriveValid(byte driveByte) {
+        if (driveByte == 0) {
+            return true;
+        }
+
+        if (driveByte == 0xFF) {
+            return false;
+        }
+
+        if (driveByte > 26) {
+            return false;
+        }
+
+        ushort zeroBasedIndex = (ushort)(driveByte - 1);
+        return _driveManager.HasDriveAtIndex(zeroBasedIndex);
+    }
+
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment, InterruptVectorTable interruptVectorTable) {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -537,6 +570,8 @@ public class DosProcessManager {
                 CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
                 CopyFcbFromPointer(paramBlock.SecondFcbPointer, exePsp.SecondFileControlBlock);
 
+                ushort fcbCode = ComputeFcbCode(exePsp);
+
                 LoadExeFile(exeFile, block.DataBlockSegment, block, isLoadAndExecute);
 
                 ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
@@ -550,6 +585,11 @@ public class DosProcessManager {
                         (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP)
                     : DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
                         (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
+
+                if (isLoadAndExecute) {
+                    _state.AX = fcbCode;
+                    _state.BX = fcbCode;
+                }
 
                 if (!isLoadAndExecute) {
                     // LoadOnly: restore parent PSP as current
@@ -588,6 +628,8 @@ public class DosProcessManager {
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
         CopyFcbFromPointer(paramBlock.SecondFcbPointer, comPsp.SecondFileControlBlock);
+
+        ushort comFcbCode = ComputeFcbCode(comPsp);
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("EXEC: Loading COM at PSP={PspSeg:X4}, size={Size} bytes",
@@ -634,6 +676,11 @@ public class DosProcessManager {
                 _loggerService.Information("EXEC: LoadOnly filled parameter block at ES:BX with CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
                     paramBlock.InitialCS, paramBlock.InitialIP, paramBlock.InitialSS, paramBlock.InitialSP);
             }
+        }
+
+        if (isLoadAndExecute) {
+            _state.AX = comFcbCode;
+            _state.BX = comFcbCode;
         }
 
         return comResult;
