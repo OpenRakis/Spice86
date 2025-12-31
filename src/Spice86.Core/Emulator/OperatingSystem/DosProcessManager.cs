@@ -79,6 +79,18 @@ public class DosProcessManager {
     /// </remarks>
     private readonly EnvironmentVariables _environmentVariables;
 
+    /// <summary>
+    /// Builds the DOS process manager with the components required to create, clone, and tear down PSPs while managing file handles and environment blocks.
+    /// </summary>
+    /// <param name="memory">The emulated memory interface used to read and write PSP and environment data.</param>
+    /// <param name="state">The CPU state that is adjusted during EXEC operations.</param>
+    /// <param name="dosPspTracker">Tracks the current and historical PSP segments to maintain parent-child relationships.</param>
+    /// <param name="dosMemoryManager">Allocates and frees DOS memory control blocks for PSPs and environments.</param>
+    /// <param name="dosFileManager">Resolves DOS paths and manages open file tables shared across processes.</param>
+    /// <param name="dosDriveManager">Provides drive metadata and current drive context for path resolution.</param>
+    /// <param name="envVars">The initial host environment variables to seed the master environment block.</param>
+    /// <param name="interruptVectorTable">The IVT used to seed and restore INT 22h/23h/24h for PSPs.</param>
+    /// <param name="loggerService">Logger for emitting diagnostic information during process lifecycle changes.</param>
     public DosProcessManager(IMemory memory, State state,
         DosProgramSegmentPrefixTracker dosPspTracker, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
@@ -165,8 +177,14 @@ public class DosProcessManager {
             CommandComSegment, DosCommandTail.OffsetInPspSegment);
     }
 
+    /// <summary>
+    /// Terminates the current DOS process, records the return code for the parent, restores interrupt vectors, and optionally frees memory depending on the termination type.
+    /// </summary>
+    /// <param name="exitCode">The DOS exit code to report to the parent in AL.</param>
+    /// <param name="terminationType">The termination category stored in AH (normal, error, TSR).</param>
+    /// <param name="interruptVectorTable">The IVT instance used to restore INT 22h/23h/24h after teardown.</param>
     public void TerminateProcess(byte exitCode, DosTerminationType terminationType,
-         InterruptVectorTable interruptVectorTable) {
+        InterruptVectorTable interruptVectorTable) {
 
         // Store the return code for parent to retrieve via INT 21h AH=4Dh
         // Format: AH = termination type, AL = exit code
@@ -290,6 +308,12 @@ public class DosProcessManager {
         }
     }
 
+    /// <summary>
+    /// Restores an interrupt vector from a cached far pointer if the pointer is non-zero.
+    /// </summary>
+    /// <param name="vectorNumber">The interrupt vector index to restore (e.g., 0x22, 0x23, 0x24).</param>
+    /// <param name="storedFarPointer">The previously saved segment:offset encoded as a 32-bit value.</param>
+    /// <param name="interruptVectorTable">The IVT instance to write the restored vector into.</param>
     private static void RestoreInterruptVector(byte vectorNumber, uint storedFarPointer,
         InterruptVectorTable interruptVectorTable) {
         if (storedFarPointer != 0) {
@@ -305,9 +329,7 @@ public class DosProcessManager {
     /// <returns>Exit code in AL, termination type in AH (always 0 for normal termination).</returns>
 
     /// <summary>
-    /// Implements INT 21h, AH=26h - Create New PSP.
-    /// Copies the current PSP to a new segment and updates INT 22h/23h/24h vectors and DOS version.
-    /// The new PSP's parent field is set to the current PSP segment (matching DOS reference behavior).
+    /// Implements INT 21h, AH=26h by cloning the current PSP to a new segment and patching the parent pointer, DOS version fields, and INT 22h/23h/24h vectors so the child inherits the caller’s termination context.
     /// </summary>
     /// <param name="newPspSegment">The segment address where the new PSP will be created.</param>
     /// <param name="interruptVectorTable">The interrupt vector table for reading current vectors.</param>
@@ -360,8 +382,7 @@ public class DosProcessManager {
     }
 
     /// <summary>
-    /// Implements INT 21h, AH=55h - Create Child PSP.
-    /// Creates a child PSP initialized from the current PSP, copying handles, FCBs, command tail, and environment.
+    /// Implements INT 21h, AH=55h by cloning the current PSP to the target segment, wiring parent links, refreshing INT 22h/23h/24h vectors, rebuilding the file table, and clearing FCBs and command tail to FreeDOS defaults.
     /// </summary>
     public void CreateChildPsp(ushort childSegment, ushort sizeInParagraphs, InterruptVectorTable interruptVectorTable) {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -423,6 +444,11 @@ public class DosProcessManager {
         }
     }
 
+    /// <summary>
+    /// Captures the current INT 22h, 23h, and 24h vectors into the specified PSP so child processes inherit correct return, Ctrl-Break, and critical error handlers.
+    /// </summary>
+    /// <param name="psp">The PSP structure to receive the vector values.</param>
+    /// <param name="ivt">The interrupt vector table to read from.</param>
     private static void SaveInterruptVectors(DosProgramSegmentPrefix psp, InterruptVectorTable ivt) {
         SegmentedAddress int22 = ivt[TerminateVectorNumber];
         psp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
@@ -434,6 +460,11 @@ public class DosProcessManager {
         psp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
     }
 
+    /// <summary>
+    /// Copies the parent's job file table into the child PSP while skipping unused entries and private handles that must not be inherited.
+    /// </summary>
+    /// <param name="childPsp">The destination PSP whose file table will be initialized.</param>
+    /// <param name="parentPsp">The source PSP that holds the current process file handle table.</param>
     private void CopyFileTableFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
         for (int i = 0; i < DefaultMaxOpenFiles; i++) {
             byte parentHandle = parentPsp.Files[i];
@@ -455,6 +486,10 @@ public class DosProcessManager {
         }
     }
 
+    /// <summary>
+    /// Initializes an FCB to the DOS default layout with drive 0, space-padded filename, and zeroed metadata fields.
+    /// </summary>
+    /// <param name="fcb">The FCB buffer to clear.</param>
     private static void ResetFcb(UInt8Array fcb) {
         fcb[0] = 0;
         for (int i = 1; i <= FcbFilenameLength && i < FcbSize; i++) {
@@ -465,6 +500,11 @@ public class DosProcessManager {
         }
     }
 
+    /// <summary>
+    /// Copies an FCB from memory into the destination structure unless the pointer is one of the DOS sentinel values.
+    /// </summary>
+    /// <param name="pointer">Segment:offset of the source FCB.</param>
+    /// <param name="destination">The destination FCB buffer within the PSP.</param>
     private void CopyFcbFromPointer(SegmentedAddress pointer, UInt8Array destination) {
         // FreeDOS treats 0000:0000 and FFFF:FFFF as "no FCB" markers.
         if (IsNoFcbPointer(pointer)) {
@@ -477,11 +517,20 @@ public class DosProcessManager {
         }
     }
 
+    /// <summary>
+    /// Determines whether an FCB pointer refers to the DOS sentinel values 0000:0000 or FFFF:FFFF meaning “no FCB present”.
+    /// </summary>
+    /// <param name="pointer">The FCB pointer to inspect.</param>
+    /// <returns>True when the pointer is one of the sentinel addresses.</returns>
     private static bool IsNoFcbPointer(SegmentedAddress pointer) {
         return (pointer.Segment == NullSegment && pointer.Offset == NullOffset)
             || (pointer.Segment == SentinelSegment && pointer.Offset == SentinelOffset);
     }
 
+    /// <summary>
+    /// Performs a byte-for-byte copy of the current PSP into the destination segment before patching fields for child creation.
+    /// </summary>
+    /// <param name="destinationSegment">The segment where the cloned PSP will be written.</param>
     private void CloneCurrentPspTo(ushort destinationSegment) {
         ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
         uint currentPspAddress = MemoryUtils.ToPhysicalAddress(currentPspSegment, 0);
@@ -492,16 +541,32 @@ public class DosProcessManager {
         _memory.LoadData(destinationAddress, pspData);
     }
 
+    /// <summary>
+    /// Builds a far pointer encoded as a 32-bit value from a segment and offset.
+    /// </summary>
+    /// <param name="segment">The segment part of the pointer.</param>
+    /// <param name="offset">The offset part of the pointer.</param>
+    /// <returns>The combined segment:offset as a 32-bit integer.</returns>
     private static uint MakeFarPointer(ushort segment, ushort offset) {
         return (uint)((segment << 16) | offset);
     }
 
+    /// <summary>
+    /// Rounds a byte length up to the number of 16-byte paragraphs required, returning at least one paragraph.
+    /// </summary>
+    /// <param name="lengthInBytes">The byte length to round.</param>
+    /// <returns>The paragraph count needed to hold the data.</returns>
     private static ushort CalculateParagraphsNeeded(int lengthInBytes) {
         int paragraphs = (lengthInBytes + ParagraphRoundingMask) / ParagraphSizeBytes;
         paragraphs = paragraphs == 0 ? 1 : paragraphs;
         return (ushort)paragraphs;
     }
 
+    /// <summary>
+    /// Generates the MCB owner name from a program path, uppercasing and truncating to seven characters so the trailing terminator fits.
+    /// </summary>
+    /// <param name="programPath">The program path used to derive the owner label.</param>
+    /// <returns>An uppercase owner string suitable for an MCB header.</returns>
     private static string BuildMcbOwnerName(string programPath) {
         string name = Path.GetFileNameWithoutExtension(programPath).ToUpperInvariant();
         // The MCB owner field is 8 bytes and this setter writes a zero terminator,
@@ -513,6 +578,11 @@ public class DosProcessManager {
         return name;
     }
 
+    /// <summary>
+    /// Computes the combined FCB status word used by INT 21h AH=4B to reflect invalid drive selectors in the two default FCBs.
+    /// </summary>
+    /// <param name="psp">The PSP whose default FCBs are examined.</param>
+    /// <returns>A word with FF in the low or high byte when the corresponding FCB drive is invalid.</returns>
     private ushort ComputeFcbCode(DosProgramSegmentPrefix psp) {
         ushort code = 0;
 
@@ -529,6 +599,11 @@ public class DosProcessManager {
         return code;
     }
 
+    /// <summary>
+    /// Checks whether an FCB drive byte references a valid DOS drive or the default drive selector.
+    /// </summary>
+    /// <param name="driveByte">The drive byte from an FCB (0 for default, 1=A:, etc.).</param>
+    /// <returns>True when the drive is valid or default; otherwise false.</returns>
     private bool IsFcbDriveValid(byte driveByte) {
         if (driveByte == 0) {
             return true;
@@ -546,6 +621,16 @@ public class DosProcessManager {
         return _driveManager.HasDriveAtIndex(zeroBasedIndex);
     }
 
+    /// <summary>
+    /// Implements INT 21h AH=4Bh loading logic: resolves the DOS path, allocates memory, builds a PSP, loads EXE or COM images, updates CPU registers, and optionally executes or returns load metadata.
+    /// </summary>
+    /// <param name="programName">DOS path to the program to load.</param>
+    /// <param name="paramBlock">The EXEC parameter block containing FCB pointers and initial register outputs.</param>
+    /// <param name="commandTail">The command tail passed to the child process.</param>
+    /// <param name="loadType">Whether to load-only or load-and-execute.</param>
+    /// <param name="environmentSegment">Optional environment block to inherit; 0 clones the parent’s environment.</param>
+    /// <param name="interruptVectorTable">The IVT used to seed INT 22h/23h/24h in the new PSP.</param>
+    /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment, InterruptVectorTable interruptVectorTable) {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -722,6 +807,13 @@ public class DosProcessManager {
         return comResult;
     }
 
+    /// <summary>
+    /// Loads an EXE overlay at a specified segment and applies relocation using the provided factor without altering the current PSP or CPU entry state.
+    /// </summary>
+    /// <param name="programName">DOS path of the overlay module.</param>
+    /// <param name="loadSegment">Segment where the overlay image should be written.</param>
+    /// <param name="relocationFactor">Relocation adjustment applied to each relocation entry.</param>
+    /// <returns>A result indicating success or the DOS error encountered.</returns>
     public DosExecResult LoadOverlay(string programName, ushort loadSegment, ushort relocationFactor) {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("LoadOverlay: programName={ProgramName}, loadSegment={LoadSegment:X4}, relocationFactor={RelocationFactor:X4}",
@@ -777,6 +869,18 @@ public class DosProcessManager {
         return DosExecResult.SuccessLoadOverlay();
     }
 
+    /// <summary>
+    /// Creates and initializes a PSP for a newly loaded program, wiring parent linkage, INT vectors, file table inheritance, command tail, environment, and disk transfer area.
+    /// </summary>
+    /// <param name="pspSegment">Target segment for the PSP.</param>
+    /// <param name="programHostPath">Host path of the program being loaded.</param>
+    /// <param name="arguments">Raw command tail text to embed.</param>
+    /// <param name="environmentSegment">Optional environment segment to use instead of cloning the parent.</param>
+    /// <param name="interruptVectorTable">The IVT for reading INT 22h/23h/24h handlers.</param>
+    /// <param name="parentPspSegment">Segment of the parent PSP.</param>
+    /// <param name="parentStackPointer">Saved SS:SP of the parent encoded as a 32-bit value.</param>
+    /// <param name="callerCS">Caller CS for INT 22h return address.</param>
+    /// <param name="callerIP">Caller IP for INT 22h return address.</param>
     private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP) {
         // Establish parent-child PSP relationship and create the new PSP
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
@@ -826,6 +930,13 @@ public class DosProcessManager {
             pspSegment, DosCommandTail.OffsetInPspSegment);
     }
 
+    /// <summary>
+    /// Allocates and assigns an environment block to the PSP, cloning the parent block or generating a fresh block and recording ownership for memory tracking.
+    /// </summary>
+    /// <param name="programHostPath">Host path of the program whose path is appended after environment strings.</param>
+    /// <param name="environmentSegment">Optional segment of an existing environment to reuse; zero clones the parent.</param>
+    /// <param name="psp">The child PSP receiving the environment pointer.</param>
+    /// <param name="parentPsp">Parent PSP used when cloning or resolving default environment.</param>
     private void SetupEnvironmentForProcess(string programHostPath,
         ushort environmentSegment, DosProgramSegmentPrefix psp,
         DosProgramSegmentPrefix parentPsp) {
@@ -850,6 +961,11 @@ public class DosProcessManager {
         }
     }
 
+    /// <summary>
+    /// Reads the full contents of a host file into memory for loading as a DOS program image.
+    /// </summary>
+    /// <param name="file">Host filesystem path to read.</param>
+    /// <returns>Byte array containing the file data.</returns>
     private byte[] ReadFileBytes(string file) {
         return File.ReadAllBytes(file);
     }
@@ -896,8 +1012,11 @@ public class DosProcessManager {
     }
 
     /// <summary>
-    /// Creates an environment block from the parent process.
+    /// Clones an existing environment segment, bounded by the FreeDOS scan limit, and replaces the extra strings section with the current program path.
     /// </summary>
+    /// <param name="environmentSegment">Segment of the parent environment to duplicate.</param>
+    /// <param name="programPath">Host path of the program being launched, written after the variables.</param>
+    /// <returns>The serialized environment block for the child.</returns>
     private byte[] CreateEnvironmentBlockFromParent(ushort environmentSegment, string programPath) {
         using MemoryStream ms = new();
 
@@ -938,6 +1057,12 @@ public class DosProcessManager {
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// Loads a COM image directly above its PSP, and when executing, seeds the CPU registers with PSP-based segments and the default stack pointer.
+    /// </summary>
+    /// <param name="com">Raw COM file bytes.</param>
+    /// <param name="pspSegment">Segment where the PSP and COM image reside.</param>
+    /// <param name="isLoadAndExecute">True to update CPU state for immediate execution; false for load-only.</param>
     private void LoadComFile(byte[] com, ushort pspSegment, bool isLoadAndExecute) {
         uint physicalLoadAddress = MemoryUtils.ToPhysicalAddress(pspSegment, DosProgramSegmentPrefix.PspSize);
         _memory.LoadData(physicalLoadAddress, com);
@@ -957,6 +1082,13 @@ public class DosProcessManager {
         }
     }
 
+    /// <summary>
+    /// Loads an EXE image above its PSP, applies relocation, and optionally updates CPU registers for execution.
+    /// </summary>
+    /// <param name="exeFile">Parsed EXE structure containing headers and relocation table.</param>
+    /// <param name="pspSegment">Segment of the associated PSP.</param>
+    /// <param name="block">Memory control block describing the allocated region for the EXE.</param>
+    /// <param name="updateCpuState">True to set CS:IP/SS:SP for execution, false for load-only.</param>
     private void LoadExeFile(DosExeFile exeFile, ushort pspSegment, DosMemoryControlBlock block, bool updateCpuState) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Read header: {ReadHeader}", exeFile);
@@ -1020,6 +1152,11 @@ public class DosProcessManager {
         SetEntryPoint((ushort)(exeFile.InitCS + loadSegment), exeFile.InitIP);
     }
 
+    /// <summary>
+    /// Writes the CPU entry point registers used to start execution of the loaded program and logs them at verbose level.
+    /// </summary>
+    /// <param name="cs">Code segment for program entry.</param>
+    /// <param name="ip">Instruction pointer for program entry.</param>
     private void SetEntryPoint(ushort cs, ushort ip) {
         _state.CS = cs;
         _state.IP = ip;
