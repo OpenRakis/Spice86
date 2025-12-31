@@ -153,6 +153,51 @@ public class DosProcessManagerTests {
         }
     }
 
+    [Fact]
+    public void TerminateProcess_TsrFreesEnvironmentBlock() {
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        string comFilePath = CreateTemporaryComFile(0x200);
+        try {
+            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+
+            DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
+                comFilePath,
+                parameterBlock,
+                string.Empty,
+                DosExecLoadType.LoadAndExecute,
+                environmentSegment: 0,
+                context.InterruptVectorTable);
+
+            execResult.Success.Should().BeTrue();
+
+            ushort tsrSegment = context.Tracker.GetCurrentPspSegment();
+            DosProgramSegmentPrefix tsrPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(tsrSegment, 0));
+
+            ushort environmentSegment = tsrPsp.EnvironmentTableSegment;
+            environmentSegment.Should().NotBe(0);
+
+            DosMemoryControlBlock environmentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(environmentSegment - 1), 0));
+            environmentBlock.IsFree.Should().BeFalse();
+
+            DosMemoryControlBlock residentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(tsrSegment - 1), 0));
+            ushort requestedResidentSize = (ushort)(residentBlock.Size - 4);
+            requestedResidentSize.Should().BeGreaterThan(DosProgramSegmentPrefix.PspSizeInParagraphs);
+
+            DosErrorCode resizeResult = context.MemoryManager.TryModifyBlock(tsrSegment, requestedResidentSize, out DosMemoryControlBlock resizedBlock);
+            resizeResult.Should().Be(DosErrorCode.NoError);
+            resizedBlock.Size.Should().Be(requestedResidentSize);
+
+            context.ProcessManager.TerminateProcess(0, DosTerminationType.TSR, context.InterruptVectorTable);
+
+            environmentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(environmentSegment - 1), 0));
+            environmentBlock.IsFree.Should().BeTrue("TSR termination should free the child environment block");
+        } finally {
+            DeleteIfExists(comFilePath);
+        }
+    }
+
     private static DosProcessManagerTestContext CreateContext() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
 
@@ -184,7 +229,7 @@ public class DosProcessManagerTests {
             interruptVectorTable,
             loggerService);
 
-        return new DosProcessManagerTestContext(memory, processManager, tracker, interruptVectorTable, state);
+        return new DosProcessManagerTestContext(memory, processManager, tracker, interruptVectorTable, state, memoryManager);
     }
 
     private static DosProgramSegmentPrefix GetRootPsp(DosProcessManagerTestContext context) {
@@ -196,9 +241,18 @@ public class DosProcessManagerTests {
         return new DosExecParameterBlock(buffer.ReaderWriter, 0);
     }
 
-    private static string CreateTemporaryComFile() {
+    private static string CreateTemporaryComFile(int payloadLength = 1) {
+        if (payloadLength < 1) {
+            payloadLength = 1;
+        }
+
         string comFilePath = Path.Combine(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
-        File.WriteAllBytes(comFilePath, new byte[] { 0xC3 });
+        byte[] bytes = new byte[payloadLength];
+        for (int i = 0; i < payloadLength - 1; i++) {
+            bytes[i] = 0x90;
+        }
+        bytes[payloadLength - 1] = 0xC3;
+        File.WriteAllBytes(comFilePath, bytes);
         return comFilePath;
     }
 
@@ -210,12 +264,13 @@ public class DosProcessManagerTests {
 
     private sealed class DosProcessManagerTestContext {
         public DosProcessManagerTestContext(Memory memory, DosProcessManager processManager,
-            DosProgramSegmentPrefixTracker tracker, InterruptVectorTable interruptVectorTable, State state) {
+            DosProgramSegmentPrefixTracker tracker, InterruptVectorTable interruptVectorTable, State state, DosMemoryManager memoryManager) {
             Memory = memory;
             ProcessManager = processManager;
             Tracker = tracker;
             InterruptVectorTable = interruptVectorTable;
             State = state;
+            MemoryManager = memoryManager;
         }
 
         public Memory Memory { get; }
@@ -223,5 +278,6 @@ public class DosProcessManagerTests {
         public DosProgramSegmentPrefixTracker Tracker { get; }
         public InterruptVectorTable InterruptVectorTable { get; }
         public State State { get; }
+        public DosMemoryManager MemoryManager { get; }
     }
 }
