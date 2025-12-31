@@ -12,9 +12,9 @@ using System.Diagnostics;
 [DebuggerDisplay("BaseAddress={BaseAddress}, Parent={ParentProgramSegmentPrefix}, EnvSegment={EnvironmentTableSegment}, NextSegment={NextSegment}, StackPointer={StackPointer}, Cmd={DosCommandTail.Command}")]
 public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     /// <summary>
-    /// PSP size but also includes the maximum possible length of the DOS command tail.
+    /// PSP size; last 0x80 bytes (0x80-0xFF) are the 128-byte command tail (count + buffer).
     /// </summary>
-    public const ushort MaxLength = 0x80 + 128;
+    public const ushort MaxLength = 0x100;
     /// <summary>
     /// The size of the PSP struct. Important for program loading.
     /// </summary>
