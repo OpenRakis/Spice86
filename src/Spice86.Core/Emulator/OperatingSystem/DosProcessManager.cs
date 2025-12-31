@@ -436,7 +436,7 @@ public class DosProcessManager {
 
         // Keep INT 21h entry and CP/M far call consistent with FreeDOS child_psp.
         childPsp.FarCall = FarCallOpcode;
-        childPsp.CpmServiceRequestAddress = MakeFarPointer(FakeCpmSegment, FakeCpmOffset);
+        childPsp.CpmServiceRequestAddress = MakeFarPointer(childSegment, 0x50);
         childPsp.Service[0] = IntOpcode;
         childPsp.Service[1] = Int21Number;
         childPsp.Service[2] = RetfOpcode;
