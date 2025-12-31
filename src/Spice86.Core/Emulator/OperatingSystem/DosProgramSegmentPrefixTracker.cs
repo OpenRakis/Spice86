@@ -88,7 +88,7 @@ public class DosProgramSegmentPrefixTracker {
     /// <returns>Returns the PSP for the current program.</returns>
     public DosProgramSegmentPrefix GetCurrentPsp() {
         if (_loadedPsps.Count <= 0) {
-            throw new InvalidOperationException("No PSP loaded. Root COMMAND.COM PSP should have been created at initialization.");
+            return new DosProgramSegmentPrefix(_memory, MemoryUtils.ToPhysicalAddress(_dosSwappableDataArea.CurrentProgramSegmentPrefix, 0));
         }
         return _loadedPsps[_loadedPsps.Count - 1];
     }
