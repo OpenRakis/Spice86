@@ -486,7 +486,13 @@ public class DosProcessManager {
                 }
             }
 
-            childPsp.Files[i] = parentHandle;
+            DosFileOperationResult duplicationResult = _fileManager.DuplicateHandleForChild(parentHandle);
+            if (duplicationResult.IsError || duplicationResult.Value == null) {
+                childPsp.Files[i] = UnusedFileHandle;
+                continue;
+            }
+
+            childPsp.Files[i] = (byte)duplicationResult.Value.Value;
         }
     }
 
