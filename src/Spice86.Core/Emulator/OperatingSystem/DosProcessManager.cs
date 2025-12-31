@@ -38,6 +38,7 @@ public class DosProcessManager {
     private readonly State _state;
     private readonly ILoggerService _loggerService;
     private readonly Dictionary<ushort, uint> _pendingParentStackPointers = new();
+    public IReadOnlyDictionary<ushort, uint> PendingParentStackPointers => _pendingParentStackPointers;
 
     /// <summary>
     /// The segment address where the root COMMAND.COM PSP is created.
@@ -250,9 +251,9 @@ public class DosProcessManager {
 
         _pspTracker.PopCurrentPspSegment();
 
-        bool hasSavedParentStackPointer = _pendingParentStackPointers.TryGetValue(parentPspSegment, out uint savedParentStackPointer);
+        bool hasSavedParentStackPointer = _pendingParentStackPointers.TryGetValue(currentPspSegment, out uint savedParentStackPointer);
         if (hasSavedParentStackPointer) {
-            _pendingParentStackPointers.Remove(parentPspSegment);
+            _pendingParentStackPointers.Remove(currentPspSegment);
         }
 
         if (hasParentToReturnTo) {
@@ -993,7 +994,7 @@ public class DosProcessManager {
         // Save parent's stack pointer only when the child will run, mirroring FreeDOS load_transfer semantics.
         DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
         if (trackParentStackPointer) {
-            _pendingParentStackPointers[parentPspSegment] = parentStackPointer;
+            _pendingParentStackPointers[pspSegment] = parentStackPointer;
         }
 
         psp.ParentProgramSegmentPrefix = parentPspSegment;
