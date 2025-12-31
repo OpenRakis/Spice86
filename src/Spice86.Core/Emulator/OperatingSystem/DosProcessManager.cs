@@ -825,7 +825,7 @@ public class DosProcessManager {
         if (envBlock != null) {
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
             psp.EnvironmentTableSegment = envBlock.DataBlockSegment;
-                envBlock.Owner = BuildMcbOwnerName(programHostPath);
+            envBlock.Owner = BuildMcbOwnerName(programHostPath);
         }
     }
 
