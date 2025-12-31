@@ -366,6 +366,38 @@ public class DosProcessManagerTests {
         }
     }
 
+    [Fact]
+    public void LoadOverlay_AppliesRelocationFactorToRelocationEntries() {
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        const ushort relocationTargetOffset = 0;
+        const ushort relocationInitialValue = 0x0042;
+        byte[] overlayBytes = BuildOverlayExeImageWithRelocation(relocationTargetOffset, relocationInitialValue);
+
+        string overlayFilePath = Path.Combine(Path.GetTempPath(), $"dos_overlay_{Guid.NewGuid():N}.exe");
+        try {
+            File.WriteAllBytes(overlayFilePath, overlayBytes);
+
+            const ushort loadSegment = 0x4000;
+            const ushort relocationFactor = 0x1234;
+
+            DosExecResult execResult = context.ProcessManager.LoadOverlay(
+                overlayFilePath,
+                loadSegment,
+                relocationFactor);
+
+            execResult.Success.Should().BeTrue();
+
+            uint relocatedWordAddress = MemoryUtils.ToPhysicalAddress(loadSegment, relocationTargetOffset);
+            ushort relocatedWord = context.Memory.UInt16[relocatedWordAddress];
+            relocatedWord.Should().Be((ushort)(relocationInitialValue + relocationFactor));
+            relocatedWord.Should().NotBe((ushort)(relocationInitialValue + loadSegment));
+        } finally {
+            DeleteIfExists(overlayFilePath);
+        }
+    }
+
     private static DosProcessManagerTestContext CreateContext() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
 
@@ -409,6 +441,11 @@ public class DosProcessManagerTests {
         return new DosExecParameterBlock(buffer.ReaderWriter, 0);
     }
 
+    private static void WriteUInt16LittleEndian(byte[] buffer, int offset, ushort value) {
+        buffer[offset] = (byte)(value & 0xFF);
+        buffer[offset + 1] = (byte)(value >> 8);
+    }
+
     private static string CreateTemporaryComFile(int payloadLength = 1) {
         if (payloadLength < 1) {
             payloadLength = 1;
@@ -434,29 +471,54 @@ public class DosProcessManagerTests {
     private static byte[] BuildMinimalExeImage() {
         byte[] image = new byte[512];
 
-        static void WriteUInt16(byte[] buffer, int offset, ushort value) {
-            buffer[offset] = (byte)(value & 0xFF);
-            buffer[offset + 1] = (byte)(value >> 8);
-        }
-
         image[0] = (byte)'M';
         image[1] = (byte)'Z';
-        WriteUInt16(image, 0x02, 0);
-        WriteUInt16(image, 0x04, 1);
-        WriteUInt16(image, 0x06, 0);
-        WriteUInt16(image, 0x08, 4);
-        WriteUInt16(image, 0x0A, 0);
-        WriteUInt16(image, 0x0C, 0xFFFF);
-        WriteUInt16(image, 0x0E, 0);
-        WriteUInt16(image, 0x10, 0xFFFE);
-        WriteUInt16(image, 0x12, 0);
-        WriteUInt16(image, 0x14, 0);
-        WriteUInt16(image, 0x16, 0);
-        WriteUInt16(image, 0x18, 0x40);
-        WriteUInt16(image, 0x1A, 0);
+        WriteUInt16LittleEndian(image, 0x02, 0);
+        WriteUInt16LittleEndian(image, 0x04, 1);
+        WriteUInt16LittleEndian(image, 0x06, 0);
+        WriteUInt16LittleEndian(image, 0x08, 4);
+        WriteUInt16LittleEndian(image, 0x0A, 0);
+        WriteUInt16LittleEndian(image, 0x0C, 0xFFFF);
+        WriteUInt16LittleEndian(image, 0x0E, 0);
+        WriteUInt16LittleEndian(image, 0x10, 0xFFFE);
+        WriteUInt16LittleEndian(image, 0x12, 0);
+        WriteUInt16LittleEndian(image, 0x14, 0);
+        WriteUInt16LittleEndian(image, 0x16, 0);
+        WriteUInt16LittleEndian(image, 0x18, 0x40);
+        WriteUInt16LittleEndian(image, 0x1A, 0);
 
         byte[] program = new byte[] { 0xB8, 0x00, 0x4C, 0xCD, 0x21 };
         Array.Copy(program, 0, image, 0x40, program.Length);
+
+        return image;
+    }
+
+    private static byte[] BuildOverlayExeImageWithRelocation(ushort relocationTargetOffset, ushort initialWordValue) {
+        const ushort headerParagraphs = 2;
+        int headerSizeBytes = headerParagraphs * 16;
+        byte[] image = new byte[512];
+
+        image[0] = (byte)'M';
+        image[1] = (byte)'Z';
+        WriteUInt16LittleEndian(image, 0x02, 0);
+        WriteUInt16LittleEndian(image, 0x04, 1);
+        WriteUInt16LittleEndian(image, 0x06, 1);
+        WriteUInt16LittleEndian(image, 0x08, headerParagraphs);
+        WriteUInt16LittleEndian(image, 0x0A, 0);
+        WriteUInt16LittleEndian(image, 0x0C, 0);
+        WriteUInt16LittleEndian(image, 0x0E, 0);
+        WriteUInt16LittleEndian(image, 0x10, 0);
+        WriteUInt16LittleEndian(image, 0x12, 0);
+        WriteUInt16LittleEndian(image, 0x14, 0);
+        WriteUInt16LittleEndian(image, 0x16, 0);
+        WriteUInt16LittleEndian(image, 0x18, 0x1C);
+        WriteUInt16LittleEndian(image, 0x1A, 0);
+
+        WriteUInt16LittleEndian(image, 0x1C, relocationTargetOffset);
+        WriteUInt16LittleEndian(image, 0x1E, 0);
+
+        int wordOffset = headerSizeBytes + relocationTargetOffset;
+        WriteUInt16LittleEndian(image, wordOffset, initialWordValue);
 
         return image;
     }
