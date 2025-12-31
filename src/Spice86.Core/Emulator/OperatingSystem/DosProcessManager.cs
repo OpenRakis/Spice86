@@ -46,7 +46,6 @@ public class DosProcessManager {
     private const ushort FileTableOffset = 0x18;
     private const byte DefaultMaxOpenFiles = 20;
     private const byte UnusedFileHandle = 0xFF;
-    private const ushort CommandTailDataOffset = 0x81;
     private const int FcbSize = 16;
     private readonly InterruptVectorTable _interruptVectorTable;
 
