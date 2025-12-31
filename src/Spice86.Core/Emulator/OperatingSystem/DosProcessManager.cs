@@ -690,6 +690,10 @@ public class DosProcessManager {
                     return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
                 }
 
+                // Mark the MCB with the owning PSP segment and label for diagnostics, matching DOS 4+ owner naming.
+                block.PspSegment = block.DataBlockSegment;
+                block.Owner = BuildMcbOwnerName(hostPath);
+
                 InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, block.Size);
 
                 DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
@@ -748,6 +752,10 @@ public class DosProcessManager {
         if (comBlock is null) {
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
+
+        // Align MCB ownership with the child PSP rather than the parent loader.
+        comBlock.PspSegment = comBlock.DataBlockSegment;
+        comBlock.Owner = BuildMcbOwnerName(hostPath);
         InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, comBlock.Size);
 
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
