@@ -40,7 +40,7 @@ public class DosExecRegisterInitializationTests {
             // Stack pointer initialized to end of segment
             state.SP.Should().Be(0xFFFE);
 
-            // All general purpose registers initialized to zero
+            // COM programs see registers cleared
             state.AX.Should().Be(0);
             state.BX.Should().Be(0);
             state.CX.Should().Be(0);
@@ -84,14 +84,14 @@ public class DosExecRegisterInitializationTests {
             // DS and ES both point to PSP (pspSegment), which is 0x10 less than CS/SS
             state.DS.Should().Be(state.ES);
             state.CS.Should().Be((ushort)(state.DS + 0x10));
-            // All general purpose registers initialized to zero
+            // Register contract matches INT 21h AH=4Bh behavior
             state.AX.Should().Be(0);
             state.BX.Should().Be(0);
-            state.CX.Should().Be(0);
-            state.DX.Should().Be(0);
+            state.CX.Should().Be(0x00FF);
+            state.DX.Should().Be(state.DS);
             state.SI.Should().Be(0);
             state.DI.Should().Be(0);
-            state.BP.Should().Be(0);
+            state.BP.Should().Be(0x091E);
             state.DirectionFlag.Should().BeFalse();
             state.CarryFlag.Should().BeFalse();
         } finally {
