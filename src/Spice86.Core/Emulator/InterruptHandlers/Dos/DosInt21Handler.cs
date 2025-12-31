@@ -940,7 +940,11 @@ public class DosInt21Handler : InterruptHandler {
         DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(
             currentPspSegment,
             paragraphsToKeep,
-            out DosMemoryControlBlock _);
+            out DosMemoryControlBlock resizedBlock);
+
+        if (errorCode == DosErrorCode.NoError) {
+            _dosProcessManager.TrackResidentBlock(currentPspSegment, resizedBlock);
+        }
 
         // Even if resize fails, we still terminate as a TSR
         // This matches FreeDOS behavior
