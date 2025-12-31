@@ -38,7 +38,12 @@ public class DosProcessManager {
     private readonly State _state;
     private readonly ILoggerService _loggerService;
     private readonly Dictionary<ushort, uint> _pendingParentStackPointers = new();
+    private readonly Dictionary<ushort, ResidentBlockInfo> _pendingResidentBlocks = new();
     public IReadOnlyDictionary<ushort, uint> PendingParentStackPointers => _pendingParentStackPointers;
+    public void TrackResidentBlock(ushort pspSegment, DosMemoryControlBlock block) {
+        ushort mcbSegment = (ushort)(block.DataBlockSegment - 1);
+        _pendingResidentBlocks[pspSegment] = new ResidentBlockInfo(mcbSegment);
+    }
 
     /// <summary>
     /// The segment address where the root COMMAND.COM PSP is created.
@@ -205,6 +210,14 @@ public class DosProcessManager {
 
         ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
         ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
+        bool hasResidentBlock = _pendingResidentBlocks.TryGetValue(currentPspSegment, out ResidentBlockInfo residentBlockInfo);
+        DosMemoryControlBlock? residentBlock = null;
+        ushort? residentNextSegment = null;
+
+        if (hasResidentBlock) {
+            _pendingResidentBlocks.Remove(currentPspSegment);
+            residentBlock = new DosMemoryControlBlock(_memory, MemoryUtils.ToPhysicalAddress(residentBlockInfo.McbSegment, 0));
+        }
 
         // Check if this is the root process (current PSP = parent PSP, which means this IS the shell itself terminating)
         // In that case, there's no parent to return to
@@ -242,6 +255,11 @@ public class DosProcessManager {
             _memoryManager.FreeProcessMemory(currentPspSegment);
         } else {
             _memoryManager.FreeEnvironmentBlock(currentPsp.EnvironmentTableSegment, currentPspSegment);
+            if (residentBlock is not null) {
+                residentBlock.PspSegment = currentPspSegment;
+                residentNextSegment = (ushort)(residentBlock.DataBlockSegment + residentBlock.Size);
+                currentPsp.NextSegment = residentNextSegment.Value;
+            }
         }
 
         // Restore interrupt vectors from cached values
@@ -251,13 +269,19 @@ public class DosProcessManager {
 
         _pspTracker.PopCurrentPspSegment();
 
+        DosProgramSegmentPrefix? parentPspOptional = _pspTracker.PspCount > 0 ? _pspTracker.GetCurrentPsp() : null;
+
+        if (residentNextSegment.HasValue && parentPspOptional is not null) {
+            parentPspOptional.NextSegment = residentNextSegment.Value;
+        }
+
         bool hasSavedParentStackPointer = _pendingParentStackPointers.TryGetValue(currentPspSegment, out uint savedParentStackPointer);
         if (hasSavedParentStackPointer) {
             _pendingParentStackPointers.Remove(currentPspSegment);
         }
 
-        if (hasParentToReturnTo) {
-            DosProgramSegmentPrefix parentPsp = _pspTracker.GetCurrentPsp();
+        if (hasParentToReturnTo && parentPspOptional is not null) {
+            DosProgramSegmentPrefix parentPsp = parentPspOptional;
             uint stackPointerToRestore = hasSavedParentStackPointer ? savedParentStackPointer : parentPsp.StackPointer;
             parentPsp.StackPointer = stackPointerToRestore;
 
@@ -1281,4 +1305,6 @@ public class DosProcessManager {
             _loggerService.Verbose("Program entry point is {ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }
     }
+
+    private readonly record struct ResidentBlockInfo(ushort McbSegment);
 }
