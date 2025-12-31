@@ -19,7 +19,6 @@ using Spice86.Shared.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
-
 using Xunit;
 
 public class DosProcessManagerTests {
@@ -148,6 +147,41 @@ public class DosProcessManagerTests {
 
             DosProgramSegmentPrefix parentPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(parentSegment, 0));
             parentPsp.StackPointer.Should().Be(0x22220FF0);
+        } finally {
+            DeleteIfExists(comFilePath);
+        }
+    }
+
+    [Fact]
+    public void LoadAndExecute_TracksParentStackPointerPerChildPsp() {
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        context.State.SS = 0x2640;
+        context.State.SP = 0x00F8;
+
+        uint expectedStackPointer = ((uint)context.State.SS << 16) | context.State.SP;
+
+        string comFilePath = CreateTemporaryComFile();
+        try {
+            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+
+            DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
+                comFilePath,
+                parameterBlock,
+                string.Empty,
+                DosExecLoadType.LoadAndExecute,
+                environmentSegment: 0,
+                context.InterruptVectorTable);
+
+            execResult.Success.Should().BeTrue();
+
+            ushort childSegment = context.Tracker.GetCurrentPspSegment();
+
+            IReadOnlyDictionary<ushort, uint> tracker = context.ProcessManager.PendingParentStackPointers;
+
+            tracker.Should().ContainKey(childSegment, "EXEC should track the launch stack pointer per child PSP");
+            tracker[childSegment].Should().Be(expectedStackPointer);
         } finally {
             DeleteIfExists(comFilePath);
         }
