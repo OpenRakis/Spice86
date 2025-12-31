@@ -1318,7 +1318,7 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// INT 21h, AH=55h - Create Child PSP.
-    /// Creates a child PSP at DX with size SI paragraphs, sets current PSP to the child, and sets AL 0xF0.
+    /// Creates a child PSP at DX with size SI paragraphs and returns AL=0xF0 without switching the current PSP.
     /// </summary>
     public void CreateChildPsp() {
         ushort childSegment = State.DX;
@@ -1330,7 +1330,6 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         _dosProcessManager.CreateChildPsp(childSegment, sizeInParagraphs, _interruptVectorTable);
-        _dosPspTracker.SetCurrentPspSegment(childSegment);
         State.AL = ExpectedValueOfALInCreateChildPsp;
     }
 

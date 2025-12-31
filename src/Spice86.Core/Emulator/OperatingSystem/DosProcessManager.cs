@@ -504,6 +504,12 @@ public class DosProcessManager {
         }
     }
 
+    private static void ResetJobFileTable(DosProgramSegmentPrefix psp) {
+        for (int i = 0; i < psp.Files.Count; i++) {
+            psp.Files[i] = UnusedFileHandle;
+        }
+    }
+
     /// <summary>
     /// Copies an FCB from memory into the destination structure unless the pointer is one of the DOS sentinel values.
     /// </summary>
@@ -543,6 +549,13 @@ public class DosProcessManager {
         // FreeDOS new_psp copies the entire PSP structure before patching.
         byte[] pspData = _memory.ReadRam(DosProgramSegmentPrefix.PspSize, currentPspAddress);
         _memory.LoadData(destinationAddress, pspData);
+    }
+
+    private void CopyParentPspTemplate(ushort parentSegment, ushort destinationSegment) {
+        uint parentAddress = MemoryUtils.ToPhysicalAddress(parentSegment, 0);
+        byte[] parentData = _memory.ReadRam(DosProgramSegmentPrefix.PspSize, parentAddress);
+        uint destinationAddress = MemoryUtils.ToPhysicalAddress(destinationSegment, 0);
+        _memory.LoadData(destinationAddress, parentData);
     }
 
     /// <summary>
@@ -895,6 +908,11 @@ public class DosProcessManager {
     /// <param name="callerIP">Caller IP for INT 22h return address.</param>
     /// <param name="allocatedBlockSizeInParagraphs">Total paragraphs reserved for the PSP and program image.</param>
     private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP, ushort allocatedBlockSizeInParagraphs) {
+        if (_pspTracker.PspCount > 0) {
+            // FreeDOS child_psp starts from a memcpy of the current PSP
+            CloneCurrentPspTo(pspSegment);
+        }
+
         // Establish parent-child PSP relationship and create the new PSP
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
 
@@ -921,6 +939,10 @@ public class DosProcessManager {
         psp.FileTableAddress = ((uint)pspSegment << 16) | FileTableOffset;
         psp.PreviousPspAddress = parentPspSegment;
 
+        for (int i = 0; i < psp.Files.Count; i++) {
+            psp.Files[i] = (byte)Enums.DosPspFileTableEntry.Unused;
+        }
+
         // Inherit parent's JFT entries except those marked as DoNotInherit or Unused
         for (int i = 0; i < parentPsp.Files.Count; i++) {
             byte parentEntry = parentPsp.Files[i];
@@ -933,6 +955,9 @@ public class DosProcessManager {
             }
             psp.Files[i] = parentEntry;
         }
+
+        ResetFcb(psp.FirstFileControlBlock);
+        ResetFcb(psp.SecondFileControlBlock);
 
         psp.DosCommandTail.Command = DosCommandTail.PrepareCommandlineString(arguments);
 
