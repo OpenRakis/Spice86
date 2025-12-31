@@ -71,6 +71,8 @@ public class DosProcessManager {
     private const int MaximumEnvironmentScanLength = 32768;
     private const string RootCommandPath = "C:\\COMMAND.COM";
     private const string RootCommandMcbName = "COMMAND";
+    private const ushort ExecRegisterContractCxValue = 0x00FF;
+    private const ushort ExecRegisterContractBpValue = 0x091E;
     private readonly InterruptVectorTable _interruptVectorTable;
 
     /// <summary>
@@ -1251,6 +1253,12 @@ public class DosProcessManager {
         // Make DS and ES point to the PSP
         _state.DS = pspSegment;
         _state.ES = pspSegment;
+
+        // INT 21h AH=4Bh register contract documented in RBIL
+        _state.DX = pspSegment;
+        _state.CX = ExecRegisterContractCxValue;
+        _state.BP = ExecRegisterContractBpValue;
+        _state.DI = 0;
 
         _state.InterruptFlag = true;
 

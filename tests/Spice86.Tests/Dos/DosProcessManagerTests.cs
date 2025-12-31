@@ -198,6 +198,41 @@ public class DosProcessManagerTests {
         }
     }
 
+    [Fact]
+    public void LoadAndExecuteExe_SetsRegistersPerDosContract() {
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        context.State.DX = 0xFFFF;
+        context.State.CX = 0x0000;
+        context.State.BP = 0x0000;
+        context.State.DI = 0xFFFF;
+
+        string exeFilePath = CreateTemporaryExeFile();
+        try {
+            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+
+            DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
+                exeFilePath,
+                parameterBlock,
+                string.Empty,
+                DosExecLoadType.LoadAndExecute,
+                environmentSegment: 0,
+                context.InterruptVectorTable);
+
+            execResult.Success.Should().BeTrue();
+
+            ushort childPspSegment = context.Tracker.GetCurrentPspSegment();
+
+            context.State.DX.Should().Be(childPspSegment);
+            context.State.CX.Should().Be(0x00FF);
+            context.State.BP.Should().Be(0x091E);
+            context.State.DI.Should().Be(0x0000);
+        } finally {
+            DeleteIfExists(exeFilePath);
+        }
+    }
+
     private static DosProcessManagerTestContext CreateContext() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
 
@@ -254,6 +289,43 @@ public class DosProcessManagerTests {
         bytes[payloadLength - 1] = 0xC3;
         File.WriteAllBytes(comFilePath, bytes);
         return comFilePath;
+    }
+
+    private static string CreateTemporaryExeFile() {
+        string exeFilePath = Path.Combine(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.exe");
+        byte[] exeBytes = BuildMinimalExeImage();
+        File.WriteAllBytes(exeFilePath, exeBytes);
+        return exeFilePath;
+    }
+
+    private static byte[] BuildMinimalExeImage() {
+        byte[] image = new byte[512];
+
+        static void WriteUInt16(byte[] buffer, int offset, ushort value) {
+            buffer[offset] = (byte)(value & 0xFF);
+            buffer[offset + 1] = (byte)(value >> 8);
+        }
+
+        image[0] = (byte)'M';
+        image[1] = (byte)'Z';
+        WriteUInt16(image, 0x02, 0);
+        WriteUInt16(image, 0x04, 1);
+        WriteUInt16(image, 0x06, 0);
+        WriteUInt16(image, 0x08, 4);
+        WriteUInt16(image, 0x0A, 0);
+        WriteUInt16(image, 0x0C, 0xFFFF);
+        WriteUInt16(image, 0x0E, 0);
+        WriteUInt16(image, 0x10, 0xFFFE);
+        WriteUInt16(image, 0x12, 0);
+        WriteUInt16(image, 0x14, 0);
+        WriteUInt16(image, 0x16, 0);
+        WriteUInt16(image, 0x18, 0x40);
+        WriteUInt16(image, 0x1A, 0);
+
+        byte[] program = new byte[] { 0xB8, 0x00, 0x4C, 0xCD, 0x21 };
+        Array.Copy(program, 0, image, 0x40, program.Length);
+
+        return image;
     }
 
     private static void DeleteIfExists(string path) {
