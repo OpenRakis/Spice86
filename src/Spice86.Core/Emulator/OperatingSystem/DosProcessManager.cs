@@ -27,7 +27,6 @@ public class DosProcessManager {
     private const byte RetfOpcode = 0xCB;
     private const ushort FakeCpmSegment = 0xDEAD;
     private const ushort FakeCpmOffset = 0xFFFF;
-    private const uint NoPreviousPsp = 0xFFFFFFFF;
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
@@ -413,13 +412,6 @@ public class DosProcessManager {
 
         SegmentedAddress int24 = ivt[0x24];
         psp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
-    }
-
-    private static void InitializeCommonPspFields(DosProgramSegmentPrefix psp, ushort parentPspSegment) {
-        psp.Exit[0] = IntOpcode;
-        psp.Exit[1] = 0x20;
-        psp.ParentProgramSegmentPrefix = parentPspSegment;
-        psp.PreviousPspAddress = NoPreviousPsp;
     }
 
     private void CopyFileTableFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
