@@ -75,7 +75,7 @@ When there is already data in the specified location, the emulator will load it 
   -f, --FailOnUnhandledPort          (Default: false) If true, will fail when encountering an unhandled IO port. Useful to check for unimplemented hardware. false by default.
   -g, --GdbPort                      GDB port. If 0, GDB server will be disabled. Default is 10000.
   -o, --OverrideSupplierClassName    Name of a class that will generate the initial function information. See documentation for more information.
-  -p, --ProgramEntryPointSegment     (Default: 4096) Segment where to load the program. DOS PSP and MCB will be created before it.
+  -p, --ProgramEntryPointSegment     (Default: 128) Segment where to load the program. DOS PSP and MCB will be created before it.
   -u, --UseCodeOverride              (Default: true) <true or false> if false it will use the names provided by overrideSupplierClassName but not the code
   -i, --InstructionsPerSecond        <number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.
   -t, --TimeMultiplier               (Default: 1) <time multiplier> if >1 will go faster, if <1 will go slower.

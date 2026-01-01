@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -398,7 +399,35 @@ public class DosProcessManagerTests {
         }
     }
 
-    private static DosProcessManagerTestContext CreateContext() {
+    [Fact]
+    public void LoadAndExecuteExe_WithSixHundredFortyKilobyteRequirement_Succeeds() {
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        // 640 KB expressed in paragraphs so we mirror the FreeDOS allocation threshold.
+        const ushort desiredMinimumParagraphs = (ushort)(Machine.ConventionalMemorySizeKb * 64);
+        const ushort programParagraphsFromHeader = 0x001C; // Derived from BuildExeImage layout.
+        const ushort requiredMinAlloc = (ushort)(desiredMinimumParagraphs - (DosProgramSegmentPrefix.PspSizeInParagraphs + programParagraphsFromHeader));
+
+        string exeFilePath = CreateTemporaryExeFile(requiredMinAlloc, requiredMinAlloc);
+        try {
+            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+
+            DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
+                exeFilePath,
+                parameterBlock,
+                string.Empty,
+                DosExecLoadType.LoadAndExecute,
+                environmentSegment: 0,
+                context.InterruptVectorTable);
+
+            execResult.Success.Should().BeTrue("EXEC should provide {0} paragraphs for the child process", desiredMinimumParagraphs);
+        } finally {
+            DeleteIfExists(exeFilePath);
+        }
+    }
+
+    private static DosProcessManagerTestContext CreateContext(ushort? programEntryPointSegment = null) {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
 
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
@@ -407,9 +436,9 @@ public class DosProcessManagerTests {
         Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
         InterruptVectorTable interruptVectorTable = new(memory);
 
-        Configuration configuration = new() {
-            ProgramEntryPointSegment = 0x1000
-        };
+        Configuration configuration = programEntryPointSegment.HasValue
+            ? new Configuration { ProgramEntryPointSegment = programEntryPointSegment.Value }
+            : new Configuration();
 
         DosSwappableDataArea sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         DosProgramSegmentPrefixTracker tracker = new(configuration, memory, sda, loggerService);
@@ -462,13 +491,17 @@ public class DosProcessManagerTests {
     }
 
     private static string CreateTemporaryExeFile() {
+        return CreateTemporaryExeFile(0, 0xFFFF);
+    }
+
+    private static string CreateTemporaryExeFile(ushort minExtraParagraphs, ushort maxExtraParagraphs) {
         string exeFilePath = Path.Combine(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.exe");
-        byte[] exeBytes = BuildMinimalExeImage();
+        byte[] exeBytes = BuildExeImage(minExtraParagraphs, maxExtraParagraphs);
         File.WriteAllBytes(exeFilePath, exeBytes);
         return exeFilePath;
     }
 
-    private static byte[] BuildMinimalExeImage() {
+    private static byte[] BuildExeImage(ushort minExtraParagraphs, ushort maxExtraParagraphs) {
         byte[] image = new byte[512];
 
         image[0] = (byte)'M';
@@ -477,8 +510,8 @@ public class DosProcessManagerTests {
         WriteUInt16LittleEndian(image, 0x04, 1);
         WriteUInt16LittleEndian(image, 0x06, 0);
         WriteUInt16LittleEndian(image, 0x08, 4);
-        WriteUInt16LittleEndian(image, 0x0A, 0);
-        WriteUInt16LittleEndian(image, 0x0C, 0xFFFF);
+        WriteUInt16LittleEndian(image, 0x0A, minExtraParagraphs);
+        WriteUInt16LittleEndian(image, 0x0C, maxExtraParagraphs);
         WriteUInt16LittleEndian(image, 0x0E, 0);
         WriteUInt16LittleEndian(image, 0x10, 0xFFFE);
         WriteUInt16LittleEndian(image, 0x12, 0);
