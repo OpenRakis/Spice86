@@ -1086,7 +1086,10 @@ public class DosProcessManager {
             environmentBlock = CreateEnvironmentBlock(programHostPath);
         }
 
-        ushort paragraphsNeeded = CalculateParagraphsNeeded(environmentBlock.Length);
+        // FreeDOS ChildEnv always keeps ENV_KEEPFREE bytes reserved for argv[0] and future strings.
+        int bytesToAllocate = environmentBlock.Length + EnvironmentKeepFreeBytes;
+
+        ushort paragraphsNeeded = CalculateParagraphsNeeded(bytesToAllocate);
         DosMemoryControlBlock? envBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
 
         if (envBlock != null) {
