@@ -228,7 +228,6 @@ public class TsrIntegrationTests {
         // Setup emulator with DOS initialized
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
-            enableCfgCpu: true,
             enablePit: false,
             recordData: false,
             maxCycles: 100000L,
