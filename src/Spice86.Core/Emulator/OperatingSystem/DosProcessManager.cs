@@ -348,8 +348,12 @@ public class DosProcessManager {
             }
         }
 
-        if (!hasParentToReturnTo && _loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("No parent to return to - returning to command.com PSP!");
+        if (!hasParentToReturnTo) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("No parent to return to - returning to command.com PSP!");
+            }
+            // When returning to COMMAND.COM with no parent to resume, halt emulation
+            _state.IsRunning = false;
         }
     }
 
@@ -1291,6 +1295,10 @@ public class DosProcessManager {
         // Finally, MS-DOS reads the initial CS and IP values from the program's file
         // header, adjusts the CS register value by adding the start-segment address to
         // it, and transfers control to the program at the adjusted address.
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SetupCpuForExe: InitCS={InitCS:X4}, InitIP={InitIP:X4}, loadSegment={LoadSegment:X4}, final CS={FinalCS:X4}",
+                exeFile.InitCS, exeFile.InitIP, loadSegment, (ushort)(exeFile.InitCS + loadSegment));
+        }
         SetEntryPoint((ushort)(exeFile.InitCS + loadSegment), exeFile.InitIP);
     }
 
