@@ -15,9 +15,12 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 /// In DOSBox, this is the 'DOS_InfoBlock' class 
 /// </remarks>
 public class DosSysVars : MemoryBasedDataStructure {
-    public const int FirstMcbSegment = 0x16F;
+    private const ushort ParagraphSizeBytes = 0x10;
+    private const ushort SizeInBytes = 0x8C;
+    public const ushort SizeInParagraphs = (SizeInBytes + ParagraphSizeBytes - 1) / ParagraphSizeBytes;
+    public const int FirstMcbSegment = DosSysVars.Segment + DosSysVars.SizeInParagraphs;
     private readonly DosDeviceHeader _nullDeviceHeader;
-    public const int Segment = 0x80;
+    public const int Segment = DosProcessManager.CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DosSysVars"/> class.
