@@ -18,6 +18,14 @@
 	
 	<UserControl.Styles>
     	<StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+		<Style Selector="agc|TextSticker">
+			<Setter Property="TextForeground" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
+			<Setter Property="BorderForeground" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
+			<Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+		</Style>
+		<Style Selector="agc|Connection">
+			<Setter Property="Brush" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
+		</Style>
 	</UserControl.Styles>
 	
 	<Grid RowDefinitions="Auto,Auto,*,Auto">
@@ -88,7 +96,7 @@
                         
                     <!-- Graph display -->
                     <ScrollViewer IsVisible="{Binding !IsLoading}" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
-                        <Border Background="White">
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
                             <ZoomBorder 
                                 Name="ZoomBorder"
                                 ToolTip.Tip="Middle click to pan, mouse wheel to zoom/dezoom"

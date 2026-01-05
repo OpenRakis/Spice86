@@ -17,6 +17,11 @@ namespace AvaloniaGraphControl
       set => SetValue(BrushProperty, value);
     }
 
+    static Connection()
+    {
+      AffectsArrange<Connection>(BrushProperty);
+    }
+
     private readonly List<Drawing> Drawings;
 
     public Connection()
