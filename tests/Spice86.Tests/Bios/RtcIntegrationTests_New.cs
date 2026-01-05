@@ -128,7 +128,6 @@ public class RtcIntegrationTests_New {
         // Setup emulator
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
-            enableCfgCpu: false,
             enablePit: true,
             recordData: false,
             maxCycles: 100000L,

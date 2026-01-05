@@ -3,6 +3,7 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
@@ -37,7 +38,7 @@ public class GdbCustomCommandsHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="functionCatalogue">List of encountered functions.</param>
     /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
-    /// <param name="executionDumpFactory">The class that records machine code execution flow.</param>
+    /// <param name="cfgCpuFlowDumper">The class that records machine code execution flow.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
@@ -49,7 +50,7 @@ public class GdbCustomCommandsHandler {
         IFunctionHandlerProvider functionHandlerProvider,
         FunctionCatalogue functionCatalogue,
         MemoryDataExporter memoryDataExporter,
-        IExecutionDumpFactory executionDumpFactory,
+        CfgCpuFlowDumper cfgCpuFlowDumper,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         GdbIo gdbIo,
         ILoggerService loggerService,
@@ -62,7 +63,7 @@ public class GdbCustomCommandsHandler {
         _functionHandlerProvider = functionHandlerProvider;
         _gdbIo = gdbIo;
         _onBreakpointReached = onBreakpointReached;
-        _recordedDataWriter = new RecordedDataWriter(state, executionDumpFactory, memoryDataExporter, functionCatalogue, recordedDataDirectory, _loggerService);
+        _recordedDataWriter = new RecordedDataWriter(state, cfgCpuFlowDumper, memoryDataExporter, functionCatalogue, recordedDataDirectory, _loggerService);
     }
 
     /// <summary>
@@ -143,7 +144,7 @@ public class GdbCustomCommandsHandler {
     /// <returns>A string laying out the call stack.</returns>
     public string DumpCallStack() {
         StringBuilder sb = new();
-        if (_functionHandlerProvider.IsInitialExecutionContext) {
+        if (!_functionHandlerProvider.IsInitialExecutionContext) {
             sb.AppendLine("From external interrupt:");
         }
 
