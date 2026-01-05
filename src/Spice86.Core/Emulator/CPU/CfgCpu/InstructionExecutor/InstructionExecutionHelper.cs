@@ -15,7 +15,6 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -27,7 +26,7 @@ public class InstructionExecutionHelper {
     private readonly ILoggerService _loggerService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly ExecutionContextManager _executionContextManager;
-
+    private readonly ReturnOperationsHelper _returnOperationsHelper;
     public InstructionExecutionHelper(State state,
         IMemory memory,
         IOPortDispatcher ioPortDispatcher,
@@ -47,6 +46,7 @@ public class InstructionExecutionHelper {
         CallbackHandler = callbackHandler;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _executionContextManager = executionContextManager;
+        _returnOperationsHelper = new (state, Stack);
         InstructionFieldValueRetriever = new(memory);
         ModRm = new(state, memory, InstructionFieldValueRetriever);
     }
@@ -160,14 +160,14 @@ public class InstructionExecutionHelper {
         _emulatorBreakpointsManager.InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
         MoveIpToEndOfInstruction(instruction);
         (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterruptWithoutBreakpoint(vectorNumber);
-        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
+        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleInterruptCall(CfgInstruction instruction, byte vectorNumber) {
         (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterrupt(vectorNumber);
-        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
+        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
     
@@ -194,41 +194,35 @@ public class InstructionExecutionHelper {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleInterruptRet<T>(T instruction) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.INTERRUPT, instruction);
-        State.IpSegmentedAddress = Stack.PopSegmentedAddress();
-        State.Flags.FlagRegister = Stack.Pop16();
+        _returnOperationsHelper.InterruptRet();
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HandleNearRet16<T>(T instruction, int numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
+    public void HandleNearRet16<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.NEAR16, instruction);
-        State.IP = Stack.Pop16();
-        Stack.Discard(numberOfBytesToPop);
+        _returnOperationsHelper.NearRet16(numberOfBytesToPop);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HandleNearRet32<T>(T instruction, int numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
+    public void HandleNearRet32<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.NEAR32, instruction);
-        State.IP = (ushort)Stack.Pop32();
-        Stack.Discard(numberOfBytesToPop);
+        _returnOperationsHelper.NearRet32(numberOfBytesToPop);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HandleFarRet16<T>(T instruction, int numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
+    public void HandleFarRet16<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.FAR16, instruction);
-        State.IpSegmentedAddress = Stack.PopSegmentedAddress();
-        Stack.Discard(numberOfBytesToPop);
+        _returnOperationsHelper.FarRet16(numberOfBytesToPop);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HandleFarRet32<T>(T instruction, int numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
+    public void HandleFarRet32<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.FAR32, instruction);
-        State.IpSegmentedAddress = Stack.PopSegmentedAddress32();
-        // CS padding, discard at least 2
-        Stack.Discard(numberOfBytesToPop + 2);
+        _returnOperationsHelper.FarRet32(numberOfBytesToPop);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
 

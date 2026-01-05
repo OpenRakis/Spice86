@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
@@ -22,7 +23,7 @@ public sealed class GdbServer : IDisposable {
     private readonly IPauseHandler _pauseHandler;
     private readonly IMemory _memory;
     private readonly State _state;
-    private readonly IExecutionDumpFactory _executionDumpFactory;
+    private readonly CfgCpuFlowDumper _cfgCpuFlowDumper;
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
 
@@ -38,7 +39,7 @@ public sealed class GdbServer : IDisposable {
     /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
-    /// <param name="executionDumpFactory">The class that dumps machine code execution flow.</param>
+    /// <param name="cfgCpuFlowDumper">The class that dumps machine code execution flow.</param>
     /// <param name="emulatorBreakpointsManager">The class that handles breakpoints.</param>
     /// <param name="pauseHandler">The class used to support pausing/resuming the emulation via GDB commands.</param>
     /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
@@ -46,7 +47,7 @@ public sealed class GdbServer : IDisposable {
     public GdbServer(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, 
         State state, MemoryDataExporter memoryDataExporter, FunctionCatalogue functionCatalogue, 
-        IExecutionDumpFactory executionDumpFactory,
+        CfgCpuFlowDumper cfgCpuFlowDumper,
         EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler,
         DumpFolderMetadata dumpContext, ILoggerService loggerService) {
         _loggerService = loggerService;
@@ -55,7 +56,7 @@ public sealed class GdbServer : IDisposable {
         _functionCatalogue = functionCatalogue;
         _state = state;
         _memory = memory;
-        _executionDumpFactory = executionDumpFactory;
+        _cfgCpuFlowDumper = cfgCpuFlowDumper;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _configuration = configuration;
         _functionHandlerProvider = functionHandlerProvider;
@@ -93,7 +94,7 @@ public sealed class GdbServer : IDisposable {
         gdbIo.WaitForConnection();
         GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(
             _memory, _functionHandlerProvider, _state, _memoryDataExporter, _pauseHandler,
-            _emulatorBreakpointsManager, _executionDumpFactory, _functionCatalogue,
+            _emulatorBreakpointsManager, _cfgCpuFlowDumper, _functionCatalogue,
             gdbIo,
             _loggerService,
             _dumpContext);

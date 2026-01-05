@@ -3,6 +3,7 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Gdb;
@@ -47,7 +48,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
-    /// <param name="executionDumpFactory">To dump execution flow.</param>
+    /// <param name="cfgCpuFlowDumper">To dump execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
     /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
@@ -59,7 +60,7 @@ public sealed class ProgramExecutor : IDisposable {
         IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         MemoryDataExporter memoryDataExporter, State state, Dos dos,
         FunctionCatalogue functionCatalogue,
-        IExecutionDumpFactory executionDumpFactory, IPauseHandler pauseHandler,
+        CfgCpuFlowDumper cfgCpuFlowDumper, IPauseHandler pauseHandler,
         IGuiVideoPresentation? screenPresenter, DumpFolderMetadata dumpContext, ILoggerService loggerService) {
         _configuration = configuration;
         _emulationLoop = emulationLoop;
@@ -70,7 +71,7 @@ public sealed class ProgramExecutor : IDisposable {
         _dumpContext = dumpContext;
         _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, functionHandlerProvider,
             state, functionCatalogue,
-            executionDumpFactory,
+            cfgCpuFlowDumper,
             emulatorBreakpointsManager, pauseHandler, dumpContext, _loggerService);
         ExecutableFileLoader loader = CreateExecutableFileLoader(configuration,
             memory, state, dos);
@@ -149,7 +150,7 @@ public sealed class ProgramExecutor : IDisposable {
 
     private static GdbServer? CreateGdbServer(Configuration configuration, IMemory memory,
         MemoryDataExporter memoryDataExporter, IFunctionHandlerProvider functionHandlerProvider, State state,
-        FunctionCatalogue functionCatalogue, IExecutionDumpFactory executionDumpFactory,
+        FunctionCatalogue functionCatalogue, CfgCpuFlowDumper cfgCpuFlowDumper,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, DumpFolderMetadata dumpContext, ILoggerService loggerService) {
         if (configuration.GdbPort == 0) {
@@ -159,7 +160,7 @@ public sealed class ProgramExecutor : IDisposable {
             return null;
         }
         return new GdbServer(configuration, memory, functionHandlerProvider, state, memoryDataExporter,
-                functionCatalogue, executionDumpFactory,
+                functionCatalogue, cfgCpuFlowDumper,
             emulatorBreakpointsManager, pauseHandler, dumpContext, loggerService);
     }
 

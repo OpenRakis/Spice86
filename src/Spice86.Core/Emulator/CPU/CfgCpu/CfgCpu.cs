@@ -16,7 +16,7 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
+public class CfgCpu : IFunctionHandlerProvider {
     private readonly ILoggerService _loggerService;
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly State _state;

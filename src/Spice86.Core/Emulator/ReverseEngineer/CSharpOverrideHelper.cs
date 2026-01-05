@@ -55,11 +55,6 @@ public class CSharpOverrideHelper {
     protected Configuration Configuration { get; }
 
     /// <summary>
-    /// The emulated CPU.
-    /// </summary>
-    public Cpu Cpu { get; }
-
-    /// <summary>
     /// The emulator machine.
     /// </summary>
     public Machine Machine { get; }
@@ -303,6 +298,8 @@ public class CSharpOverrideHelper {
     /// Gets or sets the <see cref="JumpDispatcher"/>
     /// </summary>
     public JumpDispatcher JumpDispatcher { get; set; }
+    
+    public ReturnOperationsHelper ReturnOperationsHelper { get; }
 
     /// <summary>
     /// Initializes a new instance.
@@ -314,7 +311,6 @@ public class CSharpOverrideHelper {
     public CSharpOverrideHelper(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine, ILoggerService loggerService, Configuration configuration) {
         Machine = machine;
-        Cpu = machine.Cpu;
         Memory = machine.Memory;
         _dualPic = machine.DualPic;
         _timer = machine.Timer;
@@ -325,9 +321,10 @@ public class CSharpOverrideHelper {
         FunctionInformations = functionInformations;
         Machine = machine;
         JumpDispatcher = new();
-        Alu8 = new(machine.Cpu.State);
-        Alu16 = new(machine.Cpu.State);
-        Alu32 = new(machine.Cpu.State);
+        Alu8 = new(machine.CpuState);
+        Alu16 = new(machine.CpuState);
+        Alu32 = new(machine.CpuState);
+        ReturnOperationsHelper = new(State, Stack);
     }
 
     /// <summary>
@@ -428,19 +425,23 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
-    /// Returns an <see cref="Action"/> than makes the CPU perform a <see cref="Cpu.FarRet"/> instruction when invoked.
+    /// Returns an <see cref="Action"/> that performs a far return instruction when invoked.
     /// </summary>
-    /// <returns>returns an <see cref="Action"/>than makes the CPU perform a <see cref="Cpu.FarRet"/> instruction when invoked.</returns>
+    /// <returns>returns an <see cref="Action"/> that performs a far return instruction when invoked.</returns>
     public Action FarRet(ushort numberOfBytesToPop = 0) {
-        return () => Cpu.FarRet(numberOfBytesToPop);
+        return () => ReturnOperationsHelper.FarRet16(numberOfBytesToPop);
+    }
+    
+    public Action FarRet32(ushort numberOfBytesToPop = 0) {
+        return () => ReturnOperationsHelper.FarRet32(numberOfBytesToPop);
     }
 
     /// <summary>
-    /// Returns an <see cref="Action"/> than makes the CPU perform an IRET instruction when invoked.
+    /// Returns an <see cref="Action"/> that performs an IRET instruction when invoked.
     /// </summary>
-    /// <returns>returns an <see cref="Action"/> that runs the <see cref="InterruptRet"/> method from the CPU when invoked.</returns>
+    /// <returns>returns an <see cref="Action"/> that performs an interrupt return when invoked.</returns>
     public Action InterruptRet() {
-        return () => Cpu.InterruptRet();
+        return () => ReturnOperationsHelper.InterruptRet();
     }
 
     /// <summary>
@@ -458,7 +459,11 @@ public class CSharpOverrideHelper {
     /// <param name="numberOfBytesToPop">The number of bytes to remove from the stack.</param>
     /// <returns>An action that performs a near return.</returns>
     public Action NearRet(ushort numberOfBytesToPop = 0) {
-        return () => Cpu.NearRet(numberOfBytesToPop);
+        return () => ReturnOperationsHelper.NearRet16(numberOfBytesToPop);
+    }
+    
+    public Action NearRet32(ushort numberOfBytesToPop = 0) {
+        return () => ReturnOperationsHelper.NearRet32(numberOfBytesToPop);
     }
 
     /// <summary>
@@ -523,7 +528,7 @@ public class CSharpOverrideHelper {
     /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
     /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
-        SegmentedAddress target = Cpu.InterruptVectorTable[vectorNumber];
+        SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber];
         Func<int, Action>? function = SearchFunctionOverride(target);
         if (function is null) {
             throw FailAsUntested($"Could not find an override at address {target}");
