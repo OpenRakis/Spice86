@@ -80,8 +80,9 @@ public sealed class Mixer : IDisposable {
     private float _chorusDigitalSendLevel = 0.0f;
 
     // Crossfeed state - stereo mixing for headphone spatialization
+    // Mirrors DOSBox mixer.crossfeed (mixer.cpp lines 187-191)
     private bool _doCrossfeed = false;
-    private const float CrossfeedStrength = 0.3f; // 30% mix to opposite channel
+    private float _crossfeedGlobalStrength = 0.0f; // Varies by preset: Light=0.20f, Normal=0.40f, Strong=0.60f
 
     // High-pass filters - mirrors DOSBox HighpassFilter
     // Used on reverb input and master output
@@ -151,7 +152,7 @@ public sealed class Mixer : IDisposable {
     
     /// <summary>
     /// Gets the mixer sample rate.
-    /// Mirrors DOSBox MIXER_GetSampleRate() function signature.
+    /// Mirrors DOSBox MIXER_GetSampleRate() from mixer.cpp:250-255
     /// </summary>
     public int GetSampleRate() {
         return _sampleRateHz;
@@ -164,7 +165,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Gets the prebuffer time in milliseconds.
-    /// Mirrors DOSBox MIXER_GetPreBufferMs() from mixer.cpp:242
+    /// Mirrors DOSBox MIXER_GetPreBufferMs() from mixer.cpp:242-248
     /// </summary>
     public int GetPreBufferMs() {
         // For now return a constant; DOSBox calculates based on buffer size
@@ -173,7 +174,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Locks the mixer thread to prevent mixing during critical operations.
-    /// Mirrors DOSBox MIXER_LockMixerThread() from mixer.cpp:279
+    /// Mirrors DOSBox MIXER_LockMixerThread() from mixer.cpp:279-290
     /// Note: DOSBox also stops device queues; we just lock the mixer.
     /// Use within a using statement or with UnlockMixerThread().
     /// </summary>
@@ -183,7 +184,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Unlocks the mixer thread after critical operations complete.
-    /// Mirrors DOSBox MIXER_UnlockMixerThread() from mixer.cpp:292
+    /// Mirrors DOSBox MIXER_UnlockMixerThread() from mixer.cpp:292-304
     /// </summary>
     public void UnlockMixerThread() {
         _mixerLock.Exit();
@@ -207,7 +208,8 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Gets the current master volume gain.
-    /// Mirrors DOSBox MIXER_GetMasterVolume() from mixer.cpp:842-845.
+    /// Mirrors DOSBox MIXER_GetMasterVolume() implementation (similar to mixer.cpp:847 setter).
+    /// DOSBox doesn't have a getter function; this provides read access to master_gain.
     /// </summary>
     /// <returns>The current master gain as an AudioFrame.</returns>
     public AudioFrame GetMasterVolume() {
@@ -218,7 +220,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Sets the master volume gain atomically.
-    /// Mirrors DOSBox MIXER_SetMasterVolume() from mixer.cpp:847-850.
+    /// Mirrors DOSBox MIXER_SetMasterVolume() from mixer.cpp:847-850
     /// </summary>
     /// <param name="gain">The new master gain to apply.</param>
     public void SetMasterVolume(AudioFrame gain) {
@@ -229,7 +231,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Mutes audio output while keeping the audio device active.
-    /// Mirrors DOSBox MIXER_Mute() from mixer.cpp:3025-3034.
+    /// Mirrors DOSBox MIXER_Mute() from mixer.cpp:3030-3039
     /// </summary>
     public void Mute() {
         lock (_mixerLock) {
@@ -243,7 +245,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Unmutes audio output, resuming playback.
-    /// Mirrors DOSBox MIXER_Unmute() from mixer.cpp:3036-3044.
+    /// Mirrors DOSBox MIXER_Unmute() from mixer.cpp:3041-3050
     /// </summary>
     public void Unmute() {
         lock (_mixerLock) {
@@ -257,7 +259,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Returns whether audio has been manually muted by the user.
-    /// Mirrors DOSBox MIXER_IsManuallyMuted() from mixer.cpp:3047-3050.
+    /// Mirrors DOSBox MIXER_IsManuallyMuted() from mixer.cpp:3052-3055
     /// </summary>
     /// <returns>True if audio is manually muted, false otherwise.</returns>
     public bool IsManuallyMuted() {
@@ -268,7 +270,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Gets the current crossfeed preset.
-    /// Mirrors DOSBox MIXER_GetCrossfeedPreset().
+    /// DOSBox doesn't have a getter; this provides read access to mixer.crossfeed.preset
     /// </summary>
     public CrossfeedPreset GetCrossfeedPreset() {
         lock (_mixerLock) {
@@ -278,36 +280,55 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Sets the crossfeed preset and configures the effect.
-    /// Mirrors DOSBox MIXER_SetCrossfeedPreset().
+    /// Mirrors DOSBox MIXER_SetCrossfeedPreset() from mixer.cpp:420-460
     /// </summary>
     public void SetCrossfeedPreset(CrossfeedPreset preset) {
         lock (_mixerLock) {
+            // Unchanged?
             if (_crossfeedPreset == preset) {
                 return;
             }
 
+            // Set new preset and strength values matching DOSBox mixer.cpp:434-436
             _crossfeedPreset = preset;
-            _doCrossfeed = preset != CrossfeedPreset.None;
+            switch (preset) {
+                case CrossfeedPreset.None:
+                    _crossfeedGlobalStrength = 0.0f;
+                    break;
+                case CrossfeedPreset.Light:
+                    _crossfeedGlobalStrength = 0.20f; // DOSBox: 0.20f
+                    break;
+                case CrossfeedPreset.Normal:
+                    _crossfeedGlobalStrength = 0.40f; // DOSBox: 0.40f
+                    break;
+                case CrossfeedPreset.Strong:
+                    _crossfeedGlobalStrength = 0.60f; // DOSBox: 0.60f
+                    break;
+            }
 
+            // Configure the channels
+            _doCrossfeed = (preset != CrossfeedPreset.None);
+
+            // Update all registered channels - mirrors DOSBox set_global_crossfeed
+            SetGlobalCrossfeed();
+
+            // Log the change
             if (_doCrossfeed) {
                 _loggerService.Information("MIXER: Crossfeed enabled ('{Preset}' preset)", preset);
             } else {
                 _loggerService.Information("MIXER: Crossfeed disabled");
             }
-
-            // Update all registered channels - mirrors DOSBox set_global_crossfeed
-            SetGlobalCrossfeed();
         }
     }
 
     /// <summary>
     /// Applies global crossfeed settings to all channels.
-    /// Mirrors DOSBox set_global_crossfeed() from mixer.cpp:333
+    /// Mirrors DOSBox set_global_crossfeed() from mixer.cpp:333-346
     /// </summary>
     private void SetGlobalCrossfeed() {
-        // DOSBox applies crossfeed to OPL and CMS channels only
-        // For now, we apply based on channel features
-        float globalStrength = _doCrossfeed ? CrossfeedStrength : 0.0f;
+        // Apply preset-specific crossfeed strength to stereo channels
+        // DOSBox applies to OPL and CMS channels; we apply to all stereo channels
+        float globalStrength = _doCrossfeed ? _crossfeedGlobalStrength : 0.0f;
 
         foreach (MixerChannel channel in _channels.Values) {
             if (channel.HasFeature(ChannelFeature.Stereo)) {
@@ -320,7 +341,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Gets the current reverb preset.
-    /// Mirrors DOSBox MIXER_GetReverbPreset().
+    /// DOSBox doesn't have a getter; this provides read access to mixer.reverb.preset
     /// </summary>
     public ReverbPreset GetReverbPreset() {
         lock (_mixerLock) {
@@ -330,7 +351,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Sets the reverb preset and configures the effect.
-    /// Mirrors DOSBox MIXER_SetReverbPreset() (mixer.cpp lines 519-558).
+    /// Mirrors DOSBox MIXER_SetReverbPreset() from mixer.cpp:523-560
     /// </summary>
     public void SetReverbPreset(ReverbPreset preset) {
         lock (_mixerLock) {
@@ -340,7 +361,7 @@ public sealed class Mixer : IDisposable {
 
             _reverbPreset = preset;
 
-            // Configure MVerb based on preset - mirrors DOSBox switch statement (lines 534-540)
+            // Configure MVerb based on preset - mirrors DOSBox switch statement (lines 534-556)
             // Parameters: PREDLY EARLY  SIZE   DENSITY BW_FREQ DECAY  DAMP_LV SYN_LV DIG_LV HIPASS_HZ
             switch (preset) {
                 case ReverbPreset.Tiny:
@@ -437,7 +458,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Gets the current chorus preset.
-    /// Mirrors DOSBox MIXER_GetChorusPreset().
+    /// DOSBox doesn't have a getter; this provides read access to mixer.chorus.preset
     /// </summary>
     public ChorusPreset GetChorusPreset() {
         lock (_mixerLock) {
@@ -447,7 +468,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Sets the chorus preset and configures the effect.
-    /// Mirrors DOSBox MIXER_SetChorusPreset() from mixer.cpp:619-656.
+    /// Mirrors DOSBox MIXER_SetChorusPreset() from mixer.cpp:615-656
     /// </summary>
     public void SetChorusPreset(ChorusPreset preset) {
         lock (_mixerLock) {
@@ -498,7 +519,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies global chorus settings to all channels.
-    /// Mirrors DOSBox set_global_chorus() from mixer.cpp:363-376.
+    /// Mirrors DOSBox set_global_chorus() from mixer.cpp:363-376
     /// </summary>
     private void SetGlobalChorus() {
         foreach (MixerChannel channel in _channels.Values) {
@@ -566,6 +587,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Removes a channel from the mixer.
+    /// Mirrors DOSBox MIXER_DeregisterChannel() from mixer.cpp:689-776
     /// </summary>
     public void DeregisterChannel(string name) {
         if (_channels.TryRemove(name, out MixerChannel? channel)) {
@@ -626,7 +648,8 @@ public sealed class Mixer : IDisposable {
     }
 
     /// <summary>
-    /// Main mixer thread loop - mirrors mixer_thread_loop from DOSBox.
+    /// Main mixer thread loop.
+    /// Mirrors DOSBox mixer_thread_loop() from mixer.cpp:2605-2712
     /// </summary>
     private void MixerThreadLoop() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
@@ -688,7 +711,8 @@ public sealed class Mixer : IDisposable {
     // No consumer thread: mixer thread writes directly to the audio backend
 
     /// <summary>
-    /// Mix samples from all channels - mirrors mix_samples from DOSBox.
+    /// Mixes samples from all channels into the output buffer.
+    /// Mirrors DOSBox mix_samples() from mixer.cpp:2394-2539
     /// </summary>
     private void MixSamples(int framesRequested) {
         // Clear output buffers
@@ -775,6 +799,7 @@ public sealed class Mixer : IDisposable {
             ApplyChorus();
         }
 
+        // Apply crossfeed if enabled (uses per-channel strength set by SetGlobalCrossfeed)
         if (_doCrossfeed) {
             ApplyCrossfeed();
         }
@@ -850,7 +875,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies master normalization to prevent clipping and maintain consistent levels.
-    /// Mirrors DOSBox peak detection and soft limiting.
+    /// Mirrors DOSBox normalize_sample() (mixer.cpp:2388-2391) and peak tracking logic
     /// </summary>
     private void ApplyMasterNormalization() {
         // Track peaks for adaptive gain
@@ -883,6 +908,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies soft-knee limiting to a single sample to prevent harsh clipping.
+    /// Similar to DOSBox normalize_sample() soft-limiting approach
     /// </summary>
     private static float ApplySoftClipping(float sample) {
         const float softClipThreshold = 32000.0f;
@@ -900,7 +926,7 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies MVerb professional algorithmic reverb effect.
-    /// Mirrors DOSBox reverb processing (mixer.cpp lines 2445-2467).
+    /// Mirrors DOSBox reverb processing from mixer.cpp:2445-2467
     /// </summary>
     private void ApplyReverb() {
         // Prepare buffers for MVerb processing
@@ -932,12 +958,8 @@ public sealed class Mixer : IDisposable {
     }
 
     /// <summary>
-    /// Applies simple chorus effect using fixed delay.
-    /// Simplified implementation mirroring DOSBox chorus concept.
-    /// </summary>
-    /// <summary>
     /// Applies TAL-Chorus effect to the chorus aux buffer and mixes to output.
-    /// Mirrors DOSBox mixer.cpp:2470-2478.
+    /// Mirrors DOSBox chorus processing from mixer.cpp:2470-2478
     /// </summary>
     /// <remarks>
     /// Processing flow:
@@ -967,7 +989,8 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies crossfeed effect for headphone spatialization.
-    /// Mirrors DOSBox crossfeed mixing matrix.
+    /// Note: In DOSBox, crossfeed is applied per-channel in MixerChannel::ApplyCrossfeed.
+    /// This is a master-level crossfeed for any remaining unmixed channels.
     /// </summary>
     private void ApplyCrossfeed() {
         for (int i = 0; i < _outputBuffer.Count; i++) {
@@ -975,8 +998,8 @@ public sealed class Mixer : IDisposable {
 
             // Mix some of each channel into the opposite channel
             // This simulates speaker crosstalk for headphone listening
-            float newLeft = frame.Left + frame.Right * CrossfeedStrength;
-            float newRight = frame.Right + frame.Left * CrossfeedStrength;
+            float newLeft = frame.Left + frame.Right * _crossfeedGlobalStrength;
+            float newRight = frame.Right + frame.Left * _crossfeedGlobalStrength;
 
             _outputBuffer[i] = new AudioFrame(newLeft, newRight);
         }
@@ -986,7 +1009,7 @@ public sealed class Mixer : IDisposable {
     
     /// <summary>
     /// Closes the audio device and stops all channels.
-    /// Mirrors DOSBox MIXER_CloseAudioDevice() from mixer.cpp
+    /// Mirrors DOSBox MIXER_CloseAudioDevice() from mixer.cpp:2732-2751
     /// </summary>
     public void CloseAudioDevice() {
         lock (_mixerLock) {
