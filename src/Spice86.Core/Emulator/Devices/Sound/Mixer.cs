@@ -148,6 +148,14 @@ public sealed class Mixer : IDisposable {
     /// Mirrors DOSBox MIXER_GetSampleRate() from mixer.cpp:250
     /// </summary>
     public int SampleRateHz => _sampleRateHz;
+    
+    /// <summary>
+    /// Gets the mixer sample rate.
+    /// Mirrors DOSBox MIXER_GetSampleRate() function signature.
+    /// </summary>
+    public int GetSampleRate() {
+        return _sampleRateHz;
+    }
 
     /// <summary>
     /// Gets the current blocksize.
@@ -975,6 +983,31 @@ public sealed class Mixer : IDisposable {
     }
 
     // ConsumeOutputQueue removed; direct write path used
+    
+    /// <summary>
+    /// Closes the audio device and stops all channels.
+    /// Mirrors DOSBox MIXER_CloseAudioDevice() from mixer.cpp
+    /// </summary>
+    public void CloseAudioDevice() {
+        lock (_mixerLock) {
+            // Stop mixer thread
+            if (_mixerThread.IsAlive) {
+                _threadShouldQuit = true;
+                _cancellationTokenSource.Cancel();
+                _mixerThread.Join(TimeSpan.FromSeconds(5));
+            }
+            
+            // Disable all channels
+            foreach (MixerChannel channel in _channels.Values) {
+                channel.Enable(false);
+            }
+            
+            // Close audio player
+            _audioPlayer.Dispose();
+            
+            _loggerService.Information("MIXER: Closed audio device");
+        }
+    }
 
     public void Dispose() {
         if (_disposed) {
