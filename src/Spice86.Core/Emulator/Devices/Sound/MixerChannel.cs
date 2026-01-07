@@ -25,7 +25,7 @@ public sealed class MixerChannel : IDisposable {
     private readonly Lock _mutex = new();
 
     // Sample rate and timing
-    private int _sampleRateHz;
+    private int _sampleRateHz = 22050; // fixes speex resampler input simplerate exception, but this whole ctor init is not correct for speex resampler!
     private int _framesNeeded;
     private int _mixerSampleRateHz = 48000; // Default mixer rate
 
