@@ -6,6 +6,60 @@
 // Excludes: Fast-forward, Capture, ESFM
 // Speex: Pure C# port (SpeexResamplerCSharp.cs) - NO P/Invoke needed!
 //
+// ⚠️ LATEST UPDATE (2026-01-07) - ARCHITECTURE ANALYSIS & SIDE-BY-SIDE DEBUGGING ⚠️
+// ===================================================================================
+// **GOAL**: Enable perfect side-by-side debugging between DOSBox Staging and Spice86
+// **ISSUE IDENTIFIED**: "I can't debug side by side each code base"
+// 
+// **ROOT CAUSE ANALYSIS**:
+// While Spice86 has achieved substantial functional parity, structural differences
+// make it difficult to map concepts between the two codebases:
+//
+// 1. **Field Organization**: DOSBox uses nested structs (lerp_upsampler, zoh_upsampler, 
+//    speex_resampler, noise_gate, filters, crossfeed), Spice86 flattens into individual fields
+// 2. **Missing Components**: NoiseGate processor, per-channel filters (high-pass/low-pass)
+// 3. **Comment Coverage**: DOSBox line-number references needed for traceability
+//
+// **COMPLETED (2026-01-07)**:
+// ✅ NoiseGate.cs - Full port from DOSBox noise_gate.h/cpp
+//    - Implements threshold-based noise gating with attack/release
+//    - Uses Butterworth high-pass filter for DC offset removal
+//    - 105 lines, complete implementation
+// ✅ FilterState enum - Added to MixerTypes.cs (mirrors DOSBox FilterState)
+//    - Required for per-channel filter On/Off state tracking
+// ✅ MixerChannel Noise Gate Integration - COMPLETE (2026-01-07)
+//    - ConfigureNoiseGate() / EnableNoiseGate() / InitNoiseGate() methods
+//    - _noiseGate processor instance with threshold/attack/release state
+//    - Mirrors DOSBox mixer.h lines 209-211 exactly
+// ✅ MixerChannel Per-Channel Filter Integration - COMPLETE (2026-01-07)
+//    - High-pass filter: Configure/Set/Get/Init methods (4 methods)
+//    - Low-pass filter: Configure/Set/Get/Init methods (4 methods)
+//    - Butterworth IIR filters (stereo, order 1-16)
+//    - Mirrors DOSBox mixer.h lines 213-218 exactly
+//    - +250 lines of filter/noise gate infrastructure
+//
+// **REVISED STRATEGY** (Pragmatic C#/C++ Mapping):
+// Rather than forcing C++ nested struct patterns onto C# (which fights idioms),
+// we achieve side-by-side debuggability through:
+//
+// 1. **Method Signature Parity**: All DOSBox methods have C# equivalents with matching names
+// 2. **Behavior Parity**: Identical algorithms and audio flow paths
+// 3. **Comment Traceability**: Every field/method references DOSBox source line numbers
+// 4. **Logical Organization**: Fields organized in same order as DOSBox (even if flattened)
+// 5. **Complete Feature Set**: All DOSBox features implemented (noise gate, filters, etc.)
+//
+// This approach enables debugging by:
+// - Setting breakpoints at equivalent methods (ConfigureResampler ↔ configure_resampler)
+// - Inspecting equivalent state (_doResample ↔ do_resample) 
+// - Following same execution flow (AddSamples → Convert → Resample → Process)
+// - Reading comments with exact DOSBox line references
+//
+// **REMAINING WORK**:
+// - [ ] Wire noise gate and filters into ApplyInPlaceProcessing() audio pipeline
+// - [ ] Add comprehensive DOSBox line-number comments to all remaining methods
+// - [ ] Test noise gate and filters with DOS programs
+// - [ ] Verify side-by-side debugging works as expected
+//
 // ⚠️ CRITICAL UPDATE (2026-01-07) - RESAMPLING ARCHITECTURE FIX ✅
 // ==================================================================
 // **PROBLEM IDENTIFIED**: Resampling code existed but was NEVER CALLED
