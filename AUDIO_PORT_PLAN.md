@@ -24,9 +24,19 @@
 // ✅ NoiseGate.cs - Full port from DOSBox noise_gate.h/cpp
 //    - Implements threshold-based noise gating with attack/release
 //    - Uses Butterworth high-pass filter for DC offset removal
-//    - Ready for integration into MixerChannel
+//    - 105 lines, complete implementation
 // ✅ FilterState enum - Added to MixerTypes.cs (mirrors DOSBox FilterState)
 //    - Required for per-channel filter On/Off state tracking
+// ✅ MixerChannel Noise Gate Integration - COMPLETE (2026-01-07)
+//    - ConfigureNoiseGate() / EnableNoiseGate() / InitNoiseGate() methods
+//    - _noiseGate processor instance with threshold/attack/release state
+//    - Mirrors DOSBox mixer.h lines 209-211 exactly
+// ✅ MixerChannel Per-Channel Filter Integration - COMPLETE (2026-01-07)
+//    - High-pass filter: Configure/Set/Get/Init methods (4 methods)
+//    - Low-pass filter: Configure/Set/Get/Init methods (4 methods)
+//    - Butterworth IIR filters (stereo, order 1-16)
+//    - Mirrors DOSBox mixer.h lines 213-218 exactly
+//    - +250 lines of filter/noise gate infrastructure
 //
 // **REVISED STRATEGY** (Pragmatic C#/C++ Mapping):
 // Rather than forcing C++ nested struct patterns onto C# (which fights idioms),
@@ -45,12 +55,10 @@
 // - Reading comments with exact DOSBox line references
 //
 // **REMAINING WORK**:
-// - [ ] Integrate NoiseGate into MixerChannel (ConfigureNoiseGate, EnableNoiseGate methods)
-// - [ ] Implement per-channel high-pass filter (ConfigureHighPassFilter, SetHighPassFilter)
-// - [ ] Implement per-channel low-pass filter (ConfigureLowPassFilter, SetLowPassFilter)
-// - [ ] Add comprehensive DOSBox line-number comments throughout
-// - [ ] Verify audio flow paths match exactly (device → mixer → resampler → output)
-// - [ ] Test noise gate and filters with real DOS programs
+// - [ ] Wire noise gate and filters into ApplyInPlaceProcessing() audio pipeline
+// - [ ] Add comprehensive DOSBox line-number comments to all remaining methods
+// - [ ] Test noise gate and filters with DOS programs
+// - [ ] Verify side-by-side debugging works as expected
 //
 // ⚠️ CRITICAL UPDATE (2026-01-07) - RESAMPLING ARCHITECTURE FIX ✅
 // ==================================================================
