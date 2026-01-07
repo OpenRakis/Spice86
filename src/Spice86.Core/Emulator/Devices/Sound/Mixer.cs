@@ -80,8 +80,9 @@ public sealed class Mixer : IDisposable {
     private float _chorusDigitalSendLevel = 0.0f;
 
     // Crossfeed state - stereo mixing for headphone spatialization
+    // Mirrors DOSBox mixer.crossfeed (mixer.cpp lines 187-191)
     private bool _doCrossfeed = false;
-    private const float CrossfeedStrength = 0.3f; // 30% mix to opposite channel
+    private float _crossfeedGlobalStrength = 0.0f; // Varies by preset: Light=0.20f, Normal=0.40f, Strong=0.60f
 
     // High-pass filters - mirrors DOSBox HighpassFilter
     // Used on reverb input and master output
@@ -278,36 +279,55 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Sets the crossfeed preset and configures the effect.
-    /// Mirrors DOSBox MIXER_SetCrossfeedPreset().
+    /// Mirrors DOSBox MIXER_SetCrossfeedPreset() from mixer.cpp:420-460
     /// </summary>
     public void SetCrossfeedPreset(CrossfeedPreset preset) {
         lock (_mixerLock) {
+            // Unchanged?
             if (_crossfeedPreset == preset) {
                 return;
             }
 
+            // Set new preset and strength values matching DOSBox mixer.cpp:434-436
             _crossfeedPreset = preset;
-            _doCrossfeed = preset != CrossfeedPreset.None;
+            switch (preset) {
+                case CrossfeedPreset.None:
+                    _crossfeedGlobalStrength = 0.0f;
+                    break;
+                case CrossfeedPreset.Light:
+                    _crossfeedGlobalStrength = 0.20f; // DOSBox: 0.20f
+                    break;
+                case CrossfeedPreset.Normal:
+                    _crossfeedGlobalStrength = 0.40f; // DOSBox: 0.40f
+                    break;
+                case CrossfeedPreset.Strong:
+                    _crossfeedGlobalStrength = 0.60f; // DOSBox: 0.60f
+                    break;
+            }
 
+            // Configure the channels
+            _doCrossfeed = (preset != CrossfeedPreset.None);
+
+            // Update all registered channels - mirrors DOSBox set_global_crossfeed
+            SetGlobalCrossfeed();
+
+            // Log the change
             if (_doCrossfeed) {
                 _loggerService.Information("MIXER: Crossfeed enabled ('{Preset}' preset)", preset);
             } else {
                 _loggerService.Information("MIXER: Crossfeed disabled");
             }
-
-            // Update all registered channels - mirrors DOSBox set_global_crossfeed
-            SetGlobalCrossfeed();
         }
     }
 
     /// <summary>
     /// Applies global crossfeed settings to all channels.
-    /// Mirrors DOSBox set_global_crossfeed() from mixer.cpp:333
+    /// Mirrors DOSBox set_global_crossfeed() from mixer.cpp:333-346
     /// </summary>
     private void SetGlobalCrossfeed() {
-        // DOSBox applies crossfeed to OPL and CMS channels only
-        // For now, we apply based on channel features
-        float globalStrength = _doCrossfeed ? CrossfeedStrength : 0.0f;
+        // Apply preset-specific crossfeed strength to stereo channels
+        // DOSBox applies to OPL and CMS channels; we apply to all stereo channels
+        float globalStrength = _doCrossfeed ? _crossfeedGlobalStrength : 0.0f;
 
         foreach (MixerChannel channel in _channels.Values) {
             if (channel.HasFeature(ChannelFeature.Stereo)) {
@@ -775,6 +795,7 @@ public sealed class Mixer : IDisposable {
             ApplyChorus();
         }
 
+        // Apply crossfeed if enabled (uses per-channel strength set by SetGlobalCrossfeed)
         if (_doCrossfeed) {
             ApplyCrossfeed();
         }
@@ -967,7 +988,8 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies crossfeed effect for headphone spatialization.
-    /// Mirrors DOSBox crossfeed mixing matrix.
+    /// Note: In DOSBox, crossfeed is applied per-channel in MixerChannel::ApplyCrossfeed.
+    /// This is a master-level crossfeed for any remaining unmixed channels.
     /// </summary>
     private void ApplyCrossfeed() {
         for (int i = 0; i < _outputBuffer.Count; i++) {
@@ -975,8 +997,8 @@ public sealed class Mixer : IDisposable {
 
             // Mix some of each channel into the opposite channel
             // This simulates speaker crosstalk for headphone listening
-            float newLeft = frame.Left + frame.Right * CrossfeedStrength;
-            float newRight = frame.Right + frame.Left * CrossfeedStrength;
+            float newLeft = frame.Left + frame.Right * _crossfeedGlobalStrength;
+            float newRight = frame.Right + frame.Left * _crossfeedGlobalStrength;
 
             _outputBuffer[i] = new AudioFrame(newLeft, newRight);
         }
