@@ -246,14 +246,21 @@ public sealed class MixerChannel : IDisposable {
                            EnvelopeMaxExpansionOverMs, 
                            EnvelopeExpiresAfterSeconds);
             
-            // Configure resampling if channel rate differs from mixer rate
-            // Mirrors DOSBox resample configuration logic
-            if (_sampleRateHz < _mixerSampleRateHz) {
-                _doLerpUpsample = true;
-                InitLerpUpsamplerState();
-            } else {
-                _doLerpUpsample = false;
+            // Initialize noise gate if enabled - mirrors DOSBox mixer.cpp:1111-1113
+            if (_doNoiseGate) {
+                InitNoiseGate();
             }
+            
+            // Initialize filters if enabled - mirrors DOSBox mixer.cpp:1115-1120
+            if (_highPassFilterState == FilterState.On) {
+                InitHighPassFilter();
+            }
+            if (_lowPassFilterState == FilterState.On) {
+                InitLowPassFilter();
+            }
+            
+            // Configure resampler - mirrors DOSBox mixer.cpp:1122
+            ConfigureResampler();
         }
     }
     
