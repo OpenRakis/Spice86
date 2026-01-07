@@ -83,6 +83,27 @@ public sealed class MixerChannel : IDisposable {
     public bool IsEnabled { get; private set; }
     private bool _lastSamplesWereStereo;
     
+    // mirrors DOSBox mixer.h:392
+    // Tracks whether last AddSamples call was silence (for debugging/optimization)
+    private bool _lastSamplesWereSilence = true;
+    
+    /// <summary>
+    /// Gets whether the last samples added were silence.
+    /// Mirrors DOSBox mixer.h:392
+    /// </summary>
+    public bool LastSamplesWereSilence {
+        get {
+            lock (_mutex) {
+                return _lastSamplesWereSilence;
+            }
+        }
+    }
+    
+    // Peak amplitude - mirrors DOSBox mixer.h:381
+    // Defines the peak sample amplitude we can expect in this channel.
+    // Default to signed 16bit max
+    private int _peakAmplitude = 32767; // Max16BitSampleValue
+    
     // Effect sends - mirrors DOSBox per-channel effect state
     private bool _doCrossfeed;
     private float _crossfeedStrength;
@@ -232,6 +253,56 @@ public sealed class MixerChannel : IDisposable {
     public void SetMixerSampleRate(int mixerSampleRateHz) {
         lock (_mutex) {
             _mixerSampleRateHz = mixerSampleRateHz;
+        }
+    }
+    
+    /// <summary>
+    /// Gets the number of frames per tick.
+    /// Mirrors DOSBox GetFramesPerTick() from mixer.cpp
+    /// </summary>
+    public float GetFramesPerTick() {
+        lock (_mutex) {
+            float stretchFactor = (float)_sampleRateHz / _mixerSampleRateHz;
+            // PIT_TICK_RATE is 1000.0f in DOSBox (1 ms per tick)
+            const float MillisPerTick = 1.0f;
+            return (_sampleRateHz / 1000.0f) * MillisPerTick * stretchFactor;
+        }
+    }
+    
+    /// <summary>
+    /// Gets the number of frames per block.
+    /// Mirrors DOSBox GetFramesPerBlock() from mixer.cpp
+    /// </summary>
+    public float GetFramesPerBlock() {
+        lock (_mutex) {
+            float stretchFactor = (float)_sampleRateHz / _mixerSampleRateHz;
+            // Assuming default blocksize of 1024 (would need to get from mixer)
+            int blocksize = 1024;
+            return blocksize * stretchFactor;
+        }
+    }
+    
+    /// <summary>
+    /// Gets milliseconds per frame for this channel.
+    /// Mirrors DOSBox GetMillisPerFrame() from mixer.cpp
+    /// </summary>
+    public double GetMillisPerFrame() {
+        lock (_mutex) {
+            return 1000.0 / _sampleRateHz;
+        }
+    }
+    
+    /// <summary>
+    /// Sets the peak amplitude for this channel.
+    /// Mirrors DOSBox SetPeakAmplitude() from mixer.cpp
+    /// Reference: DOSBox mixer.cpp lines for SetPeakAmplitude
+    /// </summary>
+    public void SetPeakAmplitude(int peak) {
+        lock (_mutex) {
+            _peakAmplitude = peak;
+            // Update envelope with new peak amplitude
+            // Note: Envelope.Update() would need sample rate and other params
+            // For now, just set the peak - full envelope integration would need more work
         }
     }
     
@@ -476,6 +547,64 @@ public sealed class MixerChannel : IDisposable {
     public StereoLine GetLineoutMap() {
         lock (_mutex) {
             return _outputMap;
+        }
+    }
+    
+    /// <summary>
+    /// Describes the lineout configuration in human-readable form.
+    /// Mirrors DOSBox DescribeLineout() from mixer.cpp
+    /// </summary>
+    public string DescribeLineout() {
+        lock (_mutex) {
+            if (!HasFeature(ChannelFeature.Stereo)) {
+                return "Mono";
+            }
+            if (_outputMap.Equals(StereoLine.StereoMap)) {
+                return "Stereo";
+            }
+            if (_outputMap.Equals(StereoLine.ReverseMap)) {
+                return "Reverse";
+            }
+            return "Unknown";
+        }
+    }
+    
+    /// <summary>
+    /// Gets the current channel settings.
+    /// Mirrors DOSBox GetSettings() from mixer.cpp
+    /// Reference: DOSBox mixer.cpp GetSettings implementation
+    /// </summary>
+    public MixerChannelSettings GetSettings() {
+        lock (_mutex) {
+            MixerChannelSettings settings = new() {
+                IsEnabled = IsEnabled,
+                UserVolumeGain = GetUserVolume(),
+                LineoutMap = GetLineoutMap(),
+                CrossfeedStrength = GetCrossfeedStrength(),
+                ReverbLevel = GetReverbLevel(),
+                ChorusLevel = GetChorusLevel()
+            };
+            return settings;
+        }
+    }
+    
+    /// <summary>
+    /// Sets the channel settings from a saved configuration.
+    /// Mirrors DOSBox SetSettings() from mixer.cpp
+    /// Reference: DOSBox mixer.cpp SetSettings implementation
+    /// </summary>
+    public void SetSettings(MixerChannelSettings settings) {
+        lock (_mutex) {
+            IsEnabled = settings.IsEnabled;
+            SetUserVolume(settings.UserVolumeGain);
+            SetLineoutMap(settings.LineoutMap);
+            
+            // Only set effect levels if effects are enabled
+            // (would need access to mixer state to check do_crossfeed, do_reverb, do_chorus)
+            // For now, always set them
+            SetCrossfeedStrength(settings.CrossfeedStrength);
+            SetReverbLevel(settings.ReverbLevel);
+            SetChorusLevel(settings.ChorusLevel);
         }
     }
 
@@ -970,6 +1099,9 @@ public sealed class MixerChannel : IDisposable {
                 
                 AudioFrames.Add(outFrame);
             }
+            
+            // mirrors DOSBox mixer.cpp:1264
+            _lastSamplesWereSilence = true;
         }
     }
 
