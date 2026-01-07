@@ -97,6 +97,9 @@ public sealed class MixerChannel : IDisposable {
     private readonly Sleeper _sleeper;
     private bool _doSleep;
 
+    // Envelope - mirrors DOSBox envelope
+    private readonly Envelope _envelope;
+
     public MixerChannel(
         Action<int> handler,
         string name,
@@ -115,6 +118,9 @@ public sealed class MixerChannel : IDisposable {
         // Initialize sleep/wake mechanism - mirrors DOSBox mixer.cpp:313
         _doSleep = HasFeature(ChannelFeature.Sleep);
         _sleeper = new Sleeper(this);
+        
+        // Initialize envelope - mirrors DOSBox mixer.cpp:305
+        _envelope = new Envelope(name);
     }
 
     /// <summary>
@@ -542,160 +548,6 @@ public sealed class MixerChannel : IDisposable {
     }
     
     /// <summary>
-    /// Applies linear interpolation upsampling to reach the mixer sample rate.
-    /// Mirrors DOSBox lerp_upsample logic.
-    /// </summary>
-    private void ApplyLerpUpsampling(int targetFrames) {
-        // Store input frames and clear buffer for output
-        List<AudioFrame> inputFrames = new List<AudioFrame>(AudioFrames);
-        AudioFrames.Clear();
-        
-        // If no input, fill with silence or last known frame
-        if (inputFrames.Count == 0) {
-            for (int i = 0; i < targetFrames; i++) {
-                AudioFrames.Add(_lerpPrevFrame); // Use last frame or silence
-            }
-            return;
-        }
-        
-        double stepSize = (double)_sampleRateHz / _mixerSampleRateHz;
-        int inputIndex = 0;
-        
-        // Always produce targetFrames output
-        for (int i = 0; i < targetFrames; i++) {
-            // Ensure we have valid prev and next frames
-            if (inputIndex < inputFrames.Count) {
-                _lerpNextFrame = inputFrames[inputIndex];
-            }
-            // else keep using the last _lerpNextFrame
-            
-            // Linear interpolation
-            float t = (float)(_lerpPhase - Math.Floor(_lerpPhase));
-            AudioFrame interpolated = new AudioFrame(
-                _lerpPrevFrame.Left * (1.0f - t) + _lerpNextFrame.Left * t,
-                _lerpPrevFrame.Right * (1.0f - t) + _lerpNextFrame.Right * t
-            );
-            
-            AudioFrames.Add(interpolated);
-            
-            // Advance phase
-            _lerpPhase += stepSize;
-            while (_lerpPhase >= 1.0) {
-                _lerpPhase -= 1.0;
-                _lerpPrevFrame = _lerpNextFrame;
-                inputIndex++;
-                if (inputIndex < inputFrames.Count) {
-                    _lerpNextFrame = inputFrames[inputIndex];
-                }
-            }
-        }
-    }
-    
-    /// <summary>
-    /// Applies Speex resampling to the collected AudioFrames buffer.
-    /// Processes stereo channels separately through the Speex resampler.
-    /// Mirrors DOSBox Speex resampling integration from mixer.cpp
-    /// </summary>
-    /// <param name="targetFrames">Number of output frames required</param>
-    private void SpeexResampleBuffer(int targetFrames) {
-        // Null check since resampler is lazily initialized
-        if (_speexResampler == null || !_speexResampler.IsInitialized) {
-            return;
-        }
-        
-        // Store input frames and clear buffer for output
-        List<AudioFrame> inputFrames = new List<AudioFrame>(AudioFrames);
-        AudioFrames.Clear();
-        
-        // If no input, fill with silence
-        if (inputFrames.Count == 0) {
-            for (int i = 0; i < targetFrames; i++) {
-                AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
-            }
-            return;
-        }
-        
-        try {
-            // Prepare separate channel buffers for Speex processing
-            // Speex processes each channel independently
-            int inputCount = inputFrames.Count;
-            float[] leftInput = new float[inputCount];
-            float[] rightInput = new float[inputCount];
-            float[] leftOutput = new float[targetFrames];
-            float[] rightOutput = new float[targetFrames];
-            
-            // Extract left and right channels from AudioFrames
-            for (int i = 0; i < inputCount; i++) {
-                leftInput[i] = inputFrames[i].Left;
-                rightInput[i] = inputFrames[i].Right;
-            }
-            
-            // Process left channel (channel index 0)
-            _speexResampler.ProcessFloat(
-                0, // Left channel
-                leftInput.AsSpan(),
-                leftOutput.AsSpan(),
-                out uint leftConsumed,
-                out uint leftGenerated);
-            
-            // Process right channel (channel index 1)
-            _speexResampler.ProcessFloat(
-                1, // Right channel
-                rightInput.AsSpan(),
-                rightOutput.AsSpan(),
-                out uint rightConsumed,
-                out uint rightGenerated);
-            
-            // Rebuild AudioFrames with resampled data
-            // Use the minimum of left/right generated frames to keep channels synchronized
-            int outputCount = (int)Math.Min(leftGenerated, rightGenerated);
-            
-            for (int i = 0; i < outputCount; i++) {
-                AudioFrames.Add(new AudioFrame(leftOutput[i], rightOutput[i]));
-            }
-            
-            // If we didn't produce enough frames, pad with the last frame or silence
-            while (AudioFrames.Count < targetFrames) {
-                AudioFrame lastFrame = AudioFrames.Count > 0
-                    ? AudioFrames[AudioFrames.Count - 1]
-                    : new AudioFrame(0.0f, 0.0f);
-                AudioFrames.Add(lastFrame);
-            }
-            
-            // If we produced too many frames, truncate to target
-            if (AudioFrames.Count > targetFrames) {
-                AudioFrames.RemoveRange(targetFrames, AudioFrames.Count - targetFrames);
-            }
-            
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose(
-                    "MIXER: Channel {Name} Speex resampled {InputFrames} -> {OutputFrames} frames " +
-                    "(L consumed: {LeftConsumed}, R consumed: {RightConsumed})",
-                    _name, inputCount, AudioFrames.Count, leftConsumed, rightConsumed);
-            }
-        } catch (Exception ex) {
-            // If Speex resampling fails, log error and fall back to pass-through
-            _loggerService.Error(
-                "MIXER: Channel {Name} Speex resampling failed: {Error}. Falling back to pass-through.",
-                _name, ex.Message);
-            
-            // Restore original frames or pad/truncate as needed
-            AudioFrames.Clear();
-            for (int i = 0; i < Math.Min(inputFrames.Count, targetFrames); i++) {
-                AudioFrames.Add(inputFrames[i]);
-            }
-            
-            // Pad if necessary
-            while (AudioFrames.Count < targetFrames) {
-                AudioFrame lastFrame = AudioFrames.Count > 0
-                    ? AudioFrames[AudioFrames.Count - 1]
-                    : new AudioFrame(0.0f, 0.0f);
-                AudioFrames.Add(lastFrame);
-            }
-        }
-    }
-
-    /// <summary>
     /// Sets the crossfeed strength for this channel.
     /// Mirrors DOSBox SetCrossfeedStrength() from mixer.cpp:1617
     /// </summary>
@@ -872,212 +724,738 @@ public sealed class MixerChannel : IDisposable {
     }
 
     /// <summary>
-    /// Converts and adds a single frame with optional ZoH upsampling.
-    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() logic from mixer.cpp:1871
+    /// Converts mono 8-bit unsigned samples to AudioFrames with optional ZoH upsampling.
+    /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
+    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() from mixer.cpp:1869
     /// </summary>
-    private void ConvertSamplesAndMaybeZohUpsample(AudioFrame frame, bool isStereo) {
-        _prevFrame = _nextFrame;
-        _nextFrame = frame;
+    private void ConvertSamplesAndMaybeZohUpsample_m8(ReadOnlySpan<byte> data, int numFrames) {
+        _convertBuffer.Clear();
         
-        AudioFrame frameWithGain;
-        if (isStereo) {
-            frameWithGain = new AudioFrame(
-                _prevFrame[(int)_channelMap.Left],
-                _prevFrame[(int)_channelMap.Right]
-            );
-        } else {
-            frameWithGain = new AudioFrame(_prevFrame[(int)_channelMap.Left]);
+        LineIndex mappedOutputLeft = _outputMap.Left;
+        LineIndex mappedOutputRight = _outputMap.Right;
+        LineIndex mappedChannelLeft = _channelMap.Left;
+        
+        int pos = 0;
+        while (pos < numFrames) {
+            _prevFrame = _nextFrame;
+            
+            // Convert 8-bit unsigned to float
+            _nextFrame = new AudioFrame(LookupTables.U8To16[data[pos]], LookupTables.U8To16[data[pos]]);
+            
+            // Apply channel mapping (mono uses left channel)
+            AudioFrame frameWithGain = new AudioFrame(_prevFrame[(int)mappedChannelLeft]);
+            frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
+            
+            // Process through envelope to prevent clicks
+            _envelope.Process(false, ref frameWithGain);
+            
+            // Apply output mapping
+            AudioFrame outFrame = new();
+            outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
+            outFrame[(int)mappedOutputRight] = frameWithGain.Right;
+            
+            _convertBuffer.Add(outFrame);
+            
+            if (_doZohUpsample) {
+                _zohPos += _zohStep;
+                if (_zohPos > 1.0f) {
+                    _zohPos -= 1.0f;
+                    pos++;
+                }
+            } else {
+                pos++;
+            }
         }
-        
-        frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
-        
-        AudioFrame outFrame = new();
-        outFrame[(int)_outputMap.Left] = frameWithGain.Left;
-        outFrame[(int)_outputMap.Right] = frameWithGain.Right;
-        
-        AudioFrames.Add(outFrame);
     }
     
     /// <summary>
-    /// Adds mono 8-bit unsigned samples with optional ZoH upsampling.
+    /// Converts mono 16-bit signed samples to AudioFrames with optional ZoH upsampling.
+    /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
+    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() from mixer.cpp:1869
+    /// </summary>
+    private void ConvertSamplesAndMaybeZohUpsample_m16(ReadOnlySpan<short> data, int numFrames) {
+        _convertBuffer.Clear();
+        
+        LineIndex mappedOutputLeft = _outputMap.Left;
+        LineIndex mappedOutputRight = _outputMap.Right;
+        LineIndex mappedChannelLeft = _channelMap.Left;
+        
+        int pos = 0;
+        while (pos < numFrames) {
+            _prevFrame = _nextFrame;
+            
+            // Convert 16-bit signed to float
+            _nextFrame = new AudioFrame(data[pos], data[pos]);
+            
+            // Apply channel mapping (mono uses left channel)
+            AudioFrame frameWithGain = new AudioFrame(_prevFrame[(int)mappedChannelLeft]);
+            frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
+            
+            // Process through envelope to prevent clicks
+            _envelope.Process(false, ref frameWithGain);
+            
+            // Apply output mapping
+            AudioFrame outFrame = new();
+            outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
+            outFrame[(int)mappedOutputRight] = frameWithGain.Right;
+            
+            _convertBuffer.Add(outFrame);
+            
+            if (_doZohUpsample) {
+                _zohPos += _zohStep;
+                if (_zohPos > 1.0f) {
+                    _zohPos -= 1.0f;
+                    pos++;
+                }
+            } else {
+                pos++;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Converts stereo 16-bit signed samples to AudioFrames with optional ZoH upsampling.
+    /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
+    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() from mixer.cpp:1869
+    /// </summary>
+    private void ConvertSamplesAndMaybeZohUpsample_s16(ReadOnlySpan<short> data, int numFrames) {
+        _convertBuffer.Clear();
+        
+        LineIndex mappedOutputLeft = _outputMap.Left;
+        LineIndex mappedOutputRight = _outputMap.Right;
+        LineIndex mappedChannelLeft = _channelMap.Left;
+        LineIndex mappedChannelRight = _channelMap.Right;
+        
+        int pos = 0;
+        while (pos < numFrames) {
+            _prevFrame = _nextFrame;
+            
+            // Convert stereo 16-bit signed to float
+            _nextFrame = new AudioFrame(data[pos * 2], data[pos * 2 + 1]);
+            
+            // Apply channel mapping (stereo)
+            AudioFrame frameWithGain = new AudioFrame(
+                _prevFrame[(int)mappedChannelLeft],
+                _prevFrame[(int)mappedChannelRight]
+            );
+            frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
+            
+            // Process through envelope to prevent clicks
+            _envelope.Process(true, ref frameWithGain);
+            
+            // Apply output mapping
+            AudioFrame outFrame = new();
+            outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
+            outFrame[(int)mappedOutputRight] = frameWithGain.Right;
+            
+            _convertBuffer.Add(outFrame);
+            
+            if (_doZohUpsample) {
+                _zohPos += _zohStep;
+                if (_zohPos > 1.0f) {
+                    _zohPos -= 1.0f;
+                    pos++;
+                }
+            } else {
+                pos++;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Converts mono 32-bit float samples to AudioFrames with optional ZoH upsampling.
+    /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
+    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() from mixer.cpp:1869
+    /// </summary>
+    private void ConvertSamplesAndMaybeZohUpsample_mfloat(ReadOnlySpan<float> data, int numFrames) {
+        _convertBuffer.Clear();
+        
+        LineIndex mappedOutputLeft = _outputMap.Left;
+        LineIndex mappedOutputRight = _outputMap.Right;
+        LineIndex mappedChannelLeft = _channelMap.Left;
+        
+        int pos = 0;
+        while (pos < numFrames) {
+            _prevFrame = _nextFrame;
+            
+            // Float samples are already in the correct format
+            float sample = data[pos] * 32768.0f; // Convert normalized to 16-bit range
+            _nextFrame = new AudioFrame(sample, sample);
+            
+            // Apply channel mapping (mono uses left channel)
+            AudioFrame frameWithGain = new AudioFrame(_prevFrame[(int)mappedChannelLeft]);
+            frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
+            
+            // Process through envelope to prevent clicks
+            _envelope.Process(false, ref frameWithGain);
+            
+            // Apply output mapping
+            AudioFrame outFrame = new();
+            outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
+            outFrame[(int)mappedOutputRight] = frameWithGain.Right;
+            
+            _convertBuffer.Add(outFrame);
+            
+            if (_doZohUpsample) {
+                _zohPos += _zohStep;
+                if (_zohPos > 1.0f) {
+                    _zohPos -= 1.0f;
+                    pos++;
+                }
+            } else {
+                pos++;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Converts stereo 32-bit float samples to AudioFrames with optional ZoH upsampling.
+    /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
+    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() from mixer.cpp:1869
+    /// </summary>
+    private void ConvertSamplesAndMaybeZohUpsample_sfloat(ReadOnlySpan<float> data, int numFrames) {
+        _convertBuffer.Clear();
+        
+        LineIndex mappedOutputLeft = _outputMap.Left;
+        LineIndex mappedOutputRight = _outputMap.Right;
+        LineIndex mappedChannelLeft = _channelMap.Left;
+        LineIndex mappedChannelRight = _channelMap.Right;
+        
+        int pos = 0;
+        while (pos < numFrames) {
+            _prevFrame = _nextFrame;
+            
+            // Float samples are already in the correct format
+            float left = data[pos * 2] * 32768.0f; // Convert normalized to 16-bit range
+            float right = data[pos * 2 + 1] * 32768.0f;
+            _nextFrame = new AudioFrame(left, right);
+            
+            // Apply channel mapping (stereo)
+            AudioFrame frameWithGain = new AudioFrame(
+                _prevFrame[(int)mappedChannelLeft],
+                _prevFrame[(int)mappedChannelRight]
+            );
+            frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
+            
+            // Process through envelope to prevent clicks
+            _envelope.Process(true, ref frameWithGain);
+            
+            // Apply output mapping
+            AudioFrame outFrame = new();
+            outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
+            outFrame[(int)mappedOutputRight] = frameWithGain.Right;
+            
+            _convertBuffer.Add(outFrame);
+            
+            if (_doZohUpsample) {
+                _zohPos += _zohStep;
+                if (_zohPos > 1.0f) {
+                    _zohPos -= 1.0f;
+                    pos++;
+                }
+            } else {
+                pos++;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Adds mono 8-bit unsigned samples with resampling.
+    /// Mirrors DOSBox AddSamples() template from mixer.cpp:2125
     /// </summary>
     public void AddSamples_m8(int numFrames, ReadOnlySpan<byte> data) {
+        if (numFrames <= 0) {
+            return;
+        }
+
         lock (_mutex) {
-            int pos = 0;
-            while (pos < numFrames && pos < data.Length) {
-                float sample = LookupTables.U8To16[data[pos]];
-                AudioFrame frame = new(sample, sample);
-                
-                ConvertSamplesAndMaybeZohUpsample(frame, false);
-                
-                if (_doZohUpsample) {
-                    _zohPos += _zohStep;
-                    while (_zohPos > 1.0f) {
-                        _zohPos -= 1.0f;
-                        pos++;
-                        if (pos >= numFrames || pos >= data.Length) {
-                            break;
-                        }
-                    }
-                } else {
-                    pos++;
-                }
-            }
-            
             _lastSamplesWereStereo = false;
+
+            // All possible resampling scenarios (mirrors DOSBox mixer.cpp:2136-2149):
+            // - No upsampling or resampling
+            // - LERP  upsampling only
+            // - ZoH   upsampling only
+            // - Speex resampling only
+            // - ZoH upsampling followed by Speex resampling
+
+            // Zero-order-hold upsampling is performed in ConvertSamplesAndMaybeZohUpsample
+            // to reduce the number of temporary buffers and simplify the code.
+
+            // Assert that we're not attempting to do both LERP and Speex resample
+            // We can do one or neither
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
+
+            // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
+            ConvertSamplesAndMaybeZohUpsample_m8(data, numFrames);
+
+            // Starting index this function will start writing to
+            // The audio_frames vector can contain previously converted/resampled audio
+            int audioFramesStartingSize = AudioFrames.Count;
+
+            // Step 2: Apply resampling if needed
+            if (_doLerpUpsample) {
+                // LERP upsampling - mirrors DOSBox mixer.cpp:2163-2202
+                for (int i = 0; i < _convertBuffer.Count;) {
+                    AudioFrame currFrame = _convertBuffer[i];
+
+                    float t = (float)_lerpPhase;
+                    AudioFrame lerpedFrame = new AudioFrame(
+                        Lerp(_lerpPrevFrame.Left, currFrame.Left, t),
+                        Lerp(_lerpPrevFrame.Right, currFrame.Right, t)
+                    );
+
+                    AudioFrames.Add(lerpedFrame);
+
+                    _lerpPhase += (double)_sampleRateHz / _mixerSampleRateHz;
+
+                    if (_lerpPhase > 1.0) {
+                        _lerpPhase -= 1.0;
+                        _lerpPrevFrame = currFrame;
+                        i++; // Move to next input frame
+                    }
+                }
+            } else if (_doResample) {
+                // Speex resampling - mirrors DOSBox mixer.cpp:2203-2243
+                ApplySpeexResampling(audioFramesStartingSize);
+            } else {
+                // No resampling - just copy convert_buffer to audio_frames
+                // Mirrors DOSBox mixer.cpp:2244-2246
+                AudioFrames.AddRange(_convertBuffer);
+            }
+
+            // Step 3: Apply in-place processing to newly added frames
+            // Mirrors DOSBox mixer.cpp:2248-2268
+            ApplyInPlaceProcessing(audioFramesStartingSize);
         }
     }
 
     /// <summary>
-    /// Adds mono 16-bit signed samples with optional ZoH upsampling.
+    /// Linear interpolation helper function.
+    /// Mirrors DOSBox lerp() function.
+    /// </summary>
+    private static float Lerp(float a, float b, float t) {
+        return a * (1.0f - t) + b * t;
+    }
+
+    /// <summary>
+    /// Applies Speex resampling to convert_buffer → audio_frames.
+    /// Mirrors DOSBox Speex resampling logic from mixer.cpp:2203-2243
+    /// </summary>
+    private void ApplySpeexResampling(int audioFramesStartingSize) {
+        if (_speexResampler == null || !_speexResampler.IsInitialized) {
+            // Fallback: just copy convert_buffer if resampler isn't ready
+            AudioFrames.AddRange(_convertBuffer);
+            return;
+        }
+
+        int inFrames = _convertBuffer.Count;
+        if (inFrames == 0) {
+            return;
+        }
+
+        // Estimate maximum output frames needed
+        // Mirrors DOSBox estimate_max_out_frames() from mixer.cpp:1937-1948
+        _speexResampler.GetRatio(out uint ratioNum, out uint ratioDen);
+        int estimatedOutFrames = (int)Math.Ceiling((double)inFrames * ratioDen / ratioNum);
+
+        // Resize audio_frames to accommodate new frames
+        int targetSize = audioFramesStartingSize + estimatedOutFrames;
+        while (AudioFrames.Count < targetSize) {
+            AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+        }
+
+        // Prepare input buffer - convert AudioFrame[] to interleaved float[]
+        float[] inputBuffer = new float[inFrames * 2];
+        for (int i = 0; i < inFrames; i++) {
+            inputBuffer[i * 2] = _convertBuffer[i].Left;
+            inputBuffer[i * 2 + 1] = _convertBuffer[i].Right;
+        }
+
+        // Prepare output buffer
+        float[] outputBuffer = new float[estimatedOutFrames * 2];
+
+        // Process through Speex resampler (interleaved stereo)
+        _speexResampler.ProcessInterleavedFloat(
+            inputBuffer.AsSpan(),
+            outputBuffer.AsSpan(),
+            out uint inFramesConsumed,
+            out uint outFramesGenerated);
+
+        // Copy resampled frames back to audio_frames
+        for (int i = 0; i < (int)outFramesGenerated; i++) {
+            AudioFrames[audioFramesStartingSize + i] = new AudioFrame(
+                outputBuffer[i * 2],
+                outputBuffer[i * 2 + 1]);
+        }
+
+        // Trim audio_frames to actual size
+        int actualSize = audioFramesStartingSize + (int)outFramesGenerated;
+        if (AudioFrames.Count > actualSize) {
+            AudioFrames.RemoveRange(actualSize, AudioFrames.Count - actualSize);
+        }
+    }
+
+    /// <summary>
+    /// Applies in-place processing (filters, crossfeed) to newly added frames.
+    /// Mirrors DOSBox mixer.cpp:2248-2268
+    /// </summary>
+    private void ApplyInPlaceProcessing(int startIndex) {
+        // Optionally gate, filter, and apply crossfeed.
+        // Runs in-place over newly added frames.
+        for (int i = startIndex; i < AudioFrames.Count; i++) {
+            // Note: Noise gate not implemented yet
+            // Note: Per-channel high-pass/low-pass filters not implemented yet
+
+            // Apply crossfeed if enabled
+            if (_doCrossfeed) {
+                AudioFrames[i] = ApplyCrossfeed(AudioFrames[i]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Applies crossfeed to a single frame.
+    /// Mirrors DOSBox ApplyCrossfeed() from mixer.cpp:1951-1960
+    /// </summary>
+    private AudioFrame ApplyCrossfeed(AudioFrame frame) {
+        // Pan mono sample using -6dB linear pan law in the stereo field
+        // pan: 0.0 = left, 0.5 = center, 1.0 = right
+        AudioFrame PanSample(float sample, float pan) {
+            return new AudioFrame((1.0f - pan) * sample, pan * sample);
+        }
+
+        AudioFrame a = PanSample(frame.Left, _crossfeedPanLeft);
+        AudioFrame b = PanSample(frame.Right, _crossfeedPanRight);
+        return new AudioFrame(a.Left + b.Left, a.Right + b.Right);
+    }
+
+    /// <summary>
+    /// Adds mono 16-bit signed samples with resampling.
+    /// Mirrors DOSBox AddSamples() template from mixer.cpp:2125
     /// </summary>
     public void AddSamples_m16(int numFrames, ReadOnlySpan<short> data) {
+        if (numFrames <= 0) {
+            return;
+        }
+
         lock (_mutex) {
-            int pos = 0;
-            while (pos < numFrames && pos < data.Length) {
-                float sample = data[pos];
-                AudioFrame frame = new(sample, sample);
-                
-                ConvertSamplesAndMaybeZohUpsample(frame, false);
-                
-                if (_doZohUpsample) {
-                    _zohPos += _zohStep;
-                    while (_zohPos > 1.0f) {
-                        _zohPos -= 1.0f;
-                        pos++;
-                        if (pos >= numFrames || pos >= data.Length) {
-                            break;
-                        }
-                    }
-                } else {
-                    pos++;
-                }
-            }
-            
             _lastSamplesWereStereo = false;
+
+            // Assert that we're not attempting to do both LERP and Speex resample
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
+
+            // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
+            ConvertSamplesAndMaybeZohUpsample_m16(data, numFrames);
+
+            // Starting index this function will start writing to
+            int audioFramesStartingSize = AudioFrames.Count;
+
+            // Step 2: Apply resampling if needed
+            if (_doLerpUpsample) {
+                // LERP upsampling
+                for (int i = 0; i < _convertBuffer.Count;) {
+                    AudioFrame currFrame = _convertBuffer[i];
+
+                    float t = (float)_lerpPhase;
+                    AudioFrame lerpedFrame = new AudioFrame(
+                        Lerp(_lerpPrevFrame.Left, currFrame.Left, t),
+                        Lerp(_lerpPrevFrame.Right, currFrame.Right, t)
+                    );
+
+                    AudioFrames.Add(lerpedFrame);
+
+                    _lerpPhase += (double)_sampleRateHz / _mixerSampleRateHz;
+
+                    if (_lerpPhase > 1.0) {
+                        _lerpPhase -= 1.0;
+                        _lerpPrevFrame = currFrame;
+                        i++;
+                    }
+                }
+            } else if (_doResample) {
+                // Speex resampling
+                ApplySpeexResampling(audioFramesStartingSize);
+            } else {
+                // No resampling
+                AudioFrames.AddRange(_convertBuffer);
+            }
+
+            // Step 3: Apply in-place processing to newly added frames
+            ApplyInPlaceProcessing(audioFramesStartingSize);
         }
     }
 
     /// <summary>
-    /// Adds stereo 16-bit signed samples with optional ZoH upsampling.
+    /// Adds stereo 16-bit signed samples with resampling.
+    /// Mirrors DOSBox AddSamples() template from mixer.cpp:2125
     /// </summary>
     public void AddSamples_s16(int numFrames, ReadOnlySpan<short> data) {
+        if (numFrames <= 0) {
+            return;
+        }
+
         lock (_mutex) {
-            int pos = 0;
-            while (pos < numFrames && (pos * 2 + 1) < data.Length) {
-                float left = data[pos * 2];
-                float right = data[pos * 2 + 1];
-                AudioFrame frame = new(left, right);
-                
-                ConvertSamplesAndMaybeZohUpsample(frame, true);
-                
-                if (_doZohUpsample) {
-                    _zohPos += _zohStep;
-                    while (_zohPos > 1.0f) {
-                        _zohPos -= 1.0f;
-                        pos++;
-                        if (pos >= numFrames || (pos * 2 + 1) >= data.Length) {
-                            break;
-                        }
-                    }
-                } else {
-                    pos++;
-                }
-            }
-            
             _lastSamplesWereStereo = true;
+
+            // Assert that we're not attempting to do both LERP and Speex resample
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
+
+            // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
+            ConvertSamplesAndMaybeZohUpsample_s16(data, numFrames);
+
+            // Starting index this function will start writing to
+            int audioFramesStartingSize = AudioFrames.Count;
+
+            // Step 2: Apply resampling if needed
+            if (_doLerpUpsample) {
+                // LERP upsampling
+                for (int i = 0; i < _convertBuffer.Count;) {
+                    AudioFrame currFrame = _convertBuffer[i];
+
+                    float t = (float)_lerpPhase;
+                    AudioFrame lerpedFrame = new AudioFrame(
+                        Lerp(_lerpPrevFrame.Left, currFrame.Left, t),
+                        Lerp(_lerpPrevFrame.Right, currFrame.Right, t)
+                    );
+
+                    AudioFrames.Add(lerpedFrame);
+
+                    _lerpPhase += (double)_sampleRateHz / _mixerSampleRateHz;
+
+                    if (_lerpPhase > 1.0) {
+                        _lerpPhase -= 1.0;
+                        _lerpPrevFrame = currFrame;
+                        i++;
+                    }
+                }
+            } else if (_doResample) {
+                // Speex resampling
+                ApplySpeexResampling(audioFramesStartingSize);
+            } else {
+                // No resampling
+                AudioFrames.AddRange(_convertBuffer);
+            }
+
+            // Step 3: Apply in-place processing to newly added frames
+            ApplyInPlaceProcessing(audioFramesStartingSize);
         }
     }
 
     /// <summary>
-    /// Adds mono 32-bit float samples with optional ZoH upsampling.
-    /// Mirrors DOSBox AddSamples_mfloat() from mixer.cpp:2287
+    /// Adds mono 32-bit float samples with resampling.
+    /// Mirrors DOSBox AddSamples_mfloat() from mixer.cpp:2285
     /// </summary>
     public void AddSamples_mfloat(int numFrames, ReadOnlySpan<float> data) {
+        if (numFrames <= 0) {
+            return;
+        }
+
         lock (_mutex) {
-            int pos = 0;
-            while (pos < numFrames && pos < data.Length) {
-                float sample = data[pos] * 32768.0f; // Convert normalized float to 16-bit range
-                AudioFrame frame = new(sample, sample);
-                
-                ConvertSamplesAndMaybeZohUpsample(frame, false);
-                
-                if (_doZohUpsample) {
-                    _zohPos += _zohStep;
-                    while (_zohPos > 1.0f) {
-                        _zohPos -= 1.0f;
-                        pos++;
-                        if (pos >= numFrames || pos >= data.Length) {
-                            break;
-                        }
-                    }
-                } else {
-                    pos++;
-                }
-            }
-            
             _lastSamplesWereStereo = false;
+
+            // Assert that we're not attempting to do both LERP and Speex resample
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
+
+            // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
+            ConvertSamplesAndMaybeZohUpsample_mfloat(data, numFrames);
+
+            // Starting index this function will start writing to
+            int audioFramesStartingSize = AudioFrames.Count;
+
+            // Step 2: Apply resampling if needed
+            if (_doLerpUpsample) {
+                // LERP upsampling
+                for (int i = 0; i < _convertBuffer.Count;) {
+                    AudioFrame currFrame = _convertBuffer[i];
+
+                    float t = (float)_lerpPhase;
+                    AudioFrame lerpedFrame = new AudioFrame(
+                        Lerp(_lerpPrevFrame.Left, currFrame.Left, t),
+                        Lerp(_lerpPrevFrame.Right, currFrame.Right, t)
+                    );
+
+                    AudioFrames.Add(lerpedFrame);
+
+                    _lerpPhase += (double)_sampleRateHz / _mixerSampleRateHz;
+
+                    if (_lerpPhase > 1.0) {
+                        _lerpPhase -= 1.0;
+                        _lerpPrevFrame = currFrame;
+                        i++;
+                    }
+                }
+            } else if (_doResample) {
+                // Speex resampling
+                ApplySpeexResampling(audioFramesStartingSize);
+            } else {
+                // No resampling
+                AudioFrames.AddRange(_convertBuffer);
+            }
+
+            // Step 3: Apply in-place processing to newly added frames
+            ApplyInPlaceProcessing(audioFramesStartingSize);
         }
     }
     
     /// <summary>
-    /// Adds stereo 32-bit float samples with optional ZoH upsampling.
-    /// Mirrors DOSBox AddSamples_sfloat() from mixer.cpp:2292
+    /// Adds stereo 32-bit float samples with resampling.
+    /// Mirrors DOSBox AddSamples_sfloat() from mixer.cpp:2290
     /// </summary>
     public void AddSamples_sfloat(int numFrames, ReadOnlySpan<float> data) {
+        if (numFrames <= 0) {
+            return;
+        }
+
         lock (_mutex) {
-            int pos = 0;
-            while (pos < numFrames && (pos * 2 + 1) < data.Length) {
-                float left = data[pos * 2] * 32768.0f; // Convert normalized float to 16-bit range
-                float right = data[pos * 2 + 1] * 32768.0f;
-                AudioFrame frame = new(left, right);
-                
-                ConvertSamplesAndMaybeZohUpsample(frame, true);
-                
-                if (_doZohUpsample) {
-                    _zohPos += _zohStep;
-                    while (_zohPos > 1.0f) {
-                        _zohPos -= 1.0f;
-                        pos++;
-                        if (pos >= numFrames || (pos * 2 + 1) >= data.Length) {
-                            break;
-                        }
-                    }
-                } else {
-                    pos++;
-                }
-            }
-            
             _lastSamplesWereStereo = true;
+
+            // Assert that we're not attempting to do both LERP and Speex resample
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
+
+            // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
+            ConvertSamplesAndMaybeZohUpsample_sfloat(data, numFrames);
+
+            // Starting index this function will start writing to
+            int audioFramesStartingSize = AudioFrames.Count;
+
+            // Step 2: Apply resampling if needed
+            if (_doLerpUpsample) {
+                // LERP upsampling
+                for (int i = 0; i < _convertBuffer.Count;) {
+                    AudioFrame currFrame = _convertBuffer[i];
+
+                    float t = (float)_lerpPhase;
+                    AudioFrame lerpedFrame = new AudioFrame(
+                        Lerp(_lerpPrevFrame.Left, currFrame.Left, t),
+                        Lerp(_lerpPrevFrame.Right, currFrame.Right, t)
+                    );
+
+                    AudioFrames.Add(lerpedFrame);
+
+                    _lerpPhase += (double)_sampleRateHz / _mixerSampleRateHz;
+
+                    if (_lerpPhase > 1.0) {
+                        _lerpPhase -= 1.0;
+                        _lerpPrevFrame = currFrame;
+                        i++;
+                    }
+                }
+            } else if (_doResample) {
+                // Speex resampling
+                ApplySpeexResampling(audioFramesStartingSize);
+            } else {
+                // No resampling
+                AudioFrames.AddRange(_convertBuffer);
+            }
+
+            // Step 3: Apply in-place processing to newly added frames
+            ApplyInPlaceProcessing(audioFramesStartingSize);
         }
     }
 
     /// <summary>
-    /// Adds audio frames directly with optional ZoH upsampling.
+    /// Adds audio frames directly with resampling.
+    /// Used for direct AudioFrame input from sources.
     /// </summary>
     public void AddAudioFrames(ReadOnlySpan<AudioFrame> frames) {
+        if (frames.Length <= 0) {
+            return;
+        }
+
         lock (_mutex) {
+            _lastSamplesWereStereo = true;
+
+            // Assert that we're not attempting to do both LERP and Speex resample
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
+
+            // Convert AudioFrame[] to convert_buffer with ZoH if needed
+            _convertBuffer.Clear();
+            
+            LineIndex mappedOutputLeft = _outputMap.Left;
+            LineIndex mappedOutputRight = _outputMap.Right;
+            LineIndex mappedChannelLeft = _channelMap.Left;
+            LineIndex mappedChannelRight = _channelMap.Right;
+            
             int pos = 0;
             while (pos < frames.Length) {
-                AudioFrame frame = frames[pos];
+                _prevFrame = _nextFrame;
+                _nextFrame = frames[pos];
                 
-                ConvertSamplesAndMaybeZohUpsample(frame, true);
+                // Apply channel mapping
+                AudioFrame frameWithGain = new AudioFrame(
+                    _prevFrame[(int)mappedChannelLeft],
+                    _prevFrame[(int)mappedChannelRight]
+                );
+                frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
+                
+                // Process through envelope
+                _envelope.Process(true, ref frameWithGain);
+                
+                // Apply output mapping
+                AudioFrame outFrame = new();
+                outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
+                outFrame[(int)mappedOutputRight] = frameWithGain.Right;
+                
+                _convertBuffer.Add(outFrame);
                 
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
-                    while (_zohPos > 1.0f) {
+                    if (_zohPos > 1.0f) {
                         _zohPos -= 1.0f;
                         pos++;
-                        if (pos >= frames.Length) {
-                            break;
-                        }
                     }
                 } else {
                     pos++;
                 }
             }
-            
-            _lastSamplesWereStereo = true;
+
+            // Starting index this function will start writing to
+            int audioFramesStartingSize = AudioFrames.Count;
+
+            // Apply resampling if needed
+            if (_doLerpUpsample) {
+                // LERP upsampling
+                for (int i = 0; i < _convertBuffer.Count;) {
+                    AudioFrame currFrame = _convertBuffer[i];
+
+                    float t = (float)_lerpPhase;
+                    AudioFrame lerpedFrame = new AudioFrame(
+                        Lerp(_lerpPrevFrame.Left, currFrame.Left, t),
+                        Lerp(_lerpPrevFrame.Right, currFrame.Right, t)
+                    );
+
+                    AudioFrames.Add(lerpedFrame);
+
+                    _lerpPhase += (double)_sampleRateHz / _mixerSampleRateHz;
+
+                    if (_lerpPhase > 1.0) {
+                        _lerpPhase -= 1.0;
+                        _lerpPrevFrame = currFrame;
+                        i++;
+                    }
+                }
+            } else if (_doResample) {
+                // Speex resampling
+                ApplySpeexResampling(audioFramesStartingSize);
+            } else {
+                // No resampling
+                AudioFrames.AddRange(_convertBuffer);
+            }
+
+            // Apply in-place processing to newly added frames
+            ApplyInPlaceProcessing(audioFramesStartingSize);
         }
     }
     
