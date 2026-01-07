@@ -6,6 +6,52 @@
 // Excludes: Fast-forward, Capture, ESFM
 // Speex: Pure C# port (SpeexResamplerCSharp.cs) - NO P/Invoke needed!
 //
+// ⚠️ LATEST UPDATE (2026-01-07) - ARCHITECTURE ANALYSIS & SIDE-BY-SIDE DEBUGGING ⚠️
+// ===================================================================================
+// **GOAL**: Enable perfect side-by-side debugging between DOSBox Staging and Spice86
+// **ISSUE IDENTIFIED**: "I can't debug side by side each code base"
+// 
+// **ROOT CAUSE ANALYSIS**:
+// While Spice86 has achieved substantial functional parity, structural differences
+// make it difficult to map concepts between the two codebases:
+//
+// 1. **Field Organization**: DOSBox uses nested structs (lerp_upsampler, zoh_upsampler, 
+//    speex_resampler, noise_gate, filters, crossfeed), Spice86 flattens into individual fields
+// 2. **Missing Components**: NoiseGate processor, per-channel filters (high-pass/low-pass)
+// 3. **Comment Coverage**: DOSBox line-number references needed for traceability
+//
+// **COMPLETED (2026-01-07)**:
+// ✅ NoiseGate.cs - Full port from DOSBox noise_gate.h/cpp
+//    - Implements threshold-based noise gating with attack/release
+//    - Uses Butterworth high-pass filter for DC offset removal
+//    - Ready for integration into MixerChannel
+// ✅ FilterState enum - Added to MixerTypes.cs (mirrors DOSBox FilterState)
+//    - Required for per-channel filter On/Off state tracking
+//
+// **REVISED STRATEGY** (Pragmatic C#/C++ Mapping):
+// Rather than forcing C++ nested struct patterns onto C# (which fights idioms),
+// we achieve side-by-side debuggability through:
+//
+// 1. **Method Signature Parity**: All DOSBox methods have C# equivalents with matching names
+// 2. **Behavior Parity**: Identical algorithms and audio flow paths
+// 3. **Comment Traceability**: Every field/method references DOSBox source line numbers
+// 4. **Logical Organization**: Fields organized in same order as DOSBox (even if flattened)
+// 5. **Complete Feature Set**: All DOSBox features implemented (noise gate, filters, etc.)
+//
+// This approach enables debugging by:
+// - Setting breakpoints at equivalent methods (ConfigureResampler ↔ configure_resampler)
+// - Inspecting equivalent state (_doResample ↔ do_resample) 
+// - Following same execution flow (AddSamples → Convert → Resample → Process)
+// - Reading comments with exact DOSBox line references
+//
+// **REMAINING WORK**:
+// - [ ] Integrate NoiseGate into MixerChannel (ConfigureNoiseGate, EnableNoiseGate methods)
+// - [ ] Implement per-channel high-pass filter (ConfigureHighPassFilter, SetHighPassFilter)
+// - [ ] Implement per-channel low-pass filter (ConfigureLowPassFilter, SetLowPassFilter)
+// - [ ] Add comprehensive DOSBox line-number comments throughout
+// - [ ] Verify audio flow paths match exactly (device → mixer → resampler → output)
+// - [ ] Test noise gate and filters with real DOS programs
+//
 // ⚠️ CRITICAL UPDATE (2026-01-07) - RESAMPLING ARCHITECTURE FIX ✅
 // ==================================================================
 // **PROBLEM IDENTIFIED**: Resampling code existed but was NEVER CALLED
