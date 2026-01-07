@@ -519,6 +519,7 @@ public sealed class MixerChannel : IDisposable {
         // Mirrors DOSBox mixer.cpp:1193-1210
         // Simple loop that calls handler until we have enough frames
         while (_framesNeeded > AudioFrames.Count) {
+            int framesRemaining;
             lock (_mutex) {
                 // Calculate stretch factor based on sample rates
                 // Mirrors DOSBox mixer.cpp:1196-1197
@@ -526,7 +527,7 @@ public sealed class MixerChannel : IDisposable {
                 
                 // Calculate how many frames we still need
                 // Mirrors DOSBox mixer.cpp:1199-1201
-                int framesRemaining = (int)Math.Ceiling(
+                framesRemaining = (int)Math.Ceiling(
                     (_framesNeeded - AudioFrames.Count) * stretchFactor);
                 
                 // Avoid underflow - mirrors DOSBox mixer.cpp:1203-1206
