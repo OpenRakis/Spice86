@@ -59,6 +59,11 @@ public sealed class MixerChannel : IDisposable {
     // Resample method - mirrors DOSBox resample_method
     // DOSBox default: ResampleMethod::Resample (always use Speex)
     private ResampleMethod _resampleMethod = ResampleMethod.Resample;
+    
+    // Convert buffer - mirrors DOSBox convert_buffer
+    // Used as intermediate buffer during sample conversion and resampling
+    // Matches DOSBox: std::vector<AudioFrame> convert_buffer
+    private readonly List<AudioFrame> _convertBuffer = new();
 
     // Channel mapping
     private StereoLine _outputMap = new() { Left = LineIndex.Left, Right = LineIndex.Right };
@@ -498,57 +503,40 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Requests frames from the channel handler and fills the audio buffer.
-    /// Mirrors the Mix() method from DOSBox with resampling support.
+    /// Mirrors DOSBox Mix() from mixer.cpp:1183-1211 EXACTLY
     /// </summary>
     public void Mix(int framesRequested) {
+        if (framesRequested <= 0) {
+            throw new ArgumentException("Frames requested must be positive", nameof(framesRequested));
+        }
+        
         if (!IsEnabled) {
             return;
         }
 
         _framesNeeded = framesRequested;
 
-        // If resampling is enabled, request proportionally more/fewer frames
-        lock (_mutex) {
-            if (_doLerpUpsample && _sampleRateHz < _mixerSampleRateHz) {
-                // Need to upsample - request fewer input frames
-                int inputFramesNeeded = (int)Math.Ceiling(
-                    framesRequested * (double)_sampleRateHz / _mixerSampleRateHz);
+        // Mirrors DOSBox mixer.cpp:1193-1210
+        // Simple loop that calls handler until we have enough frames
+        while (_framesNeeded > AudioFrames.Count) {
+            lock (_mutex) {
+                // Calculate stretch factor based on sample rates
+                // Mirrors DOSBox mixer.cpp:1196-1197
+                float stretchFactor = (float)_sampleRateHz / (float)_mixerSampleRateHz;
                 
-                // Request frames from handler
-                if (inputFramesNeeded > 0) {
-                    _handler(inputFramesNeeded);
-                }
+                // Calculate how many frames we still need
+                // Mirrors DOSBox mixer.cpp:1199-1201
+                int framesRemaining = (int)Math.Ceiling(
+                    (_framesNeeded - AudioFrames.Count) * stretchFactor);
                 
-                // Perform linear interpolation upsampling
-                ApplyLerpUpsampling(framesRequested);
-            } else if (_doResample) {
-                // Use Speex resampler for high-quality rate conversion
-                // Mirrors DOSBox mixer.cpp check: if (do_resample)
-                // Calculate how many input frames we need to produce the requested output
-                int inputFramesNeeded = (int)Math.Ceiling(
-                    framesRequested * (double)_sampleRateHz / _mixerSampleRateHz);
-                
-                // Request frames from handler
-                if (inputFramesNeeded > 0) {
-                    _handler(inputFramesNeeded);
-                }
-                
-                // Apply Speex resampling on the collected buffer
-                SpeexResampleBuffer(framesRequested);
-            } else {
-                // No resampling or downsampling - request frames directly
-                while (_framesNeeded > AudioFrames.Count) {
-                    float stretchFactor = (float)_sampleRateHz / _mixerSampleRateHz;
-                    int framesRemaining = (int)Math.Ceiling(
-                        (_framesNeeded - AudioFrames.Count) * stretchFactor);
-
-                    if (framesRemaining <= 0) {
-                        break;
-                    }
-
-                    _handler(Math.Max(1, framesRemaining));
+                // Avoid underflow - mirrors DOSBox mixer.cpp:1203-1206
+                if (framesRemaining <= 0) {
+                    break;
                 }
             }
+            
+            // Call handler outside the lock - mirrors DOSBox mixer.cpp:1208-1209
+            _handler(framesRemaining);
         }
     }
     
