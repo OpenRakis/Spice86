@@ -6,9 +6,13 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Libs.Sound.Common;
+using Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth;
 using Spice86.Shared.Interfaces;
 
 using System.Threading;
+
+using HighPass = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
+using LowPass = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.LowPass;
 
 /// <summary>
 /// Represents a single audio channel in the mixer.
@@ -92,6 +96,24 @@ public sealed class MixerChannel : IDisposable {
     private bool _doChorusSend;
     private float _chorusLevel;
     private float _chorusSendGain;
+
+    // Noise gate state - mirrors DOSBox noise_gate struct
+    private readonly NoiseGate _noiseGate = new();
+    private float _noiseGateThresholdDb = -60.0f;
+    private float _noiseGateAttackTimeMs = 1.0f;
+    private float _noiseGateReleaseTimeMs = 20.0f;
+    private bool _doNoiseGate;
+
+    // Per-channel filter state - mirrors DOSBox filters struct
+    private readonly HighPass[] _highPassFilters = new HighPass[2] { new HighPass(), new HighPass() };
+    private FilterState _highPassFilterState = FilterState.Off;
+    private int _highPassFilterOrder;
+    private int _highPassFilterCutoffHz;
+
+    private readonly LowPass[] _lowPassFilters = new LowPass[2] { new LowPass(), new LowPass() };
+    private FilterState _lowPassFilterState = FilterState.Off;
+    private int _lowPassFilterOrder;
+    private int _lowPassFilterCutoffHz;
     
     // Sleep/wake state - mirrors DOSBox sleeper
     private readonly Sleeper _sleeper;
@@ -652,6 +674,234 @@ public sealed class MixerChannel : IDisposable {
     public float GetChorusLevel() {
         lock (_mutex) {
             return _chorusLevel;
+        }
+    }
+
+    // Noise Gate Configuration
+    // =========================
+    // Mirrors DOSBox mixer.h lines 209-211
+
+    /// <summary>
+    /// Configures the noise gate with operating parameters.
+    /// Mirrors DOSBox ConfigureNoiseGate() from mixer.cpp (referenced in mixer.h:209-210)
+    /// </summary>
+    /// <param name="thresholdDb">Threshold in dB below which signal is gated</param>
+    /// <param name="attackTimeMs">Attack time in milliseconds</param>
+    /// <param name="releaseTimeMs">Release time in milliseconds</param>
+    public void ConfigureNoiseGate(float thresholdDb, float attackTimeMs, float releaseTimeMs) {
+        if (attackTimeMs <= 0.0f) {
+            throw new ArgumentOutOfRangeException(nameof(attackTimeMs), "Attack time must be positive");
+        }
+        if (releaseTimeMs <= 0.0f) {
+            throw new ArgumentOutOfRangeException(nameof(releaseTimeMs), "Release time must be positive");
+        }
+
+        lock (_mutex) {
+            _noiseGateThresholdDb = thresholdDb;
+            _noiseGateAttackTimeMs = attackTimeMs;
+            _noiseGateReleaseTimeMs = releaseTimeMs;
+
+            InitNoiseGate();
+        }
+    }
+
+    /// <summary>
+    /// Enables or disables the noise gate processor.
+    /// Mirrors DOSBox EnableNoiseGate() from mixer.cpp (referenced in mixer.h:211)
+    /// </summary>
+    /// <param name="enabled">True to enable, false to disable</param>
+    public void EnableNoiseGate(bool enabled) {
+        lock (_mutex) {
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("{Channel}: Noise gate {State}",
+                    _name, enabled ? "enabled" : "disabled");
+            }
+            _doNoiseGate = enabled;
+        }
+    }
+
+    /// <summary>
+    /// Initializes the noise gate processor with current configuration.
+    /// Mirrors DOSBox InitNoiseGate() from mixer.cpp
+    /// </summary>
+    private void InitNoiseGate() {
+        if (_noiseGateAttackTimeMs <= 0.0f || _noiseGateReleaseTimeMs <= 0.0f) {
+            throw new InvalidOperationException("Noise gate attack and release times must be positive");
+        }
+
+        lock (_mutex) {
+            const int Db0fsSampleValue = short.MaxValue; // Max16BitSampleValue
+            _noiseGate.Configure(_sampleRateHz,
+                                Db0fsSampleValue,
+                                _noiseGateThresholdDb,
+                                _noiseGateAttackTimeMs,
+                                _noiseGateReleaseTimeMs);
+        }
+    }
+
+    // Per-Channel Filter Configuration
+    // =================================
+    // Mirrors DOSBox mixer.h lines 213-218
+
+    /// <summary>
+    /// Gets the state of the high-pass filter.
+    /// Mirrors DOSBox GetHighPassFilterState() from mixer.cpp (referenced in mixer.h:217)
+    /// </summary>
+    public FilterState GetHighPassFilterState() {
+        lock (_mutex) {
+            return _highPassFilterState;
+        }
+    }
+
+    /// <summary>
+    /// Sets the high-pass filter on or off.
+    /// Mirrors DOSBox SetHighPassFilter() from mixer.cpp (referenced in mixer.h:213)
+    /// </summary>
+    public void SetHighPassFilter(FilterState state) {
+        lock (_mutex) {
+            _highPassFilterState = state;
+
+            if (_highPassFilterState == FilterState.On) {
+                if (_highPassFilterOrder <= 0 || _highPassFilterCutoffHz <= 0) {
+                    throw new InvalidOperationException(
+                        "High-pass filter must be configured before enabling");
+                }
+
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information(
+                        "{Channel}: High-pass filter enabled (order={Order}, cutoff={Cutoff}Hz)",
+                        _name, _highPassFilterOrder, _highPassFilterCutoffHz);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the state of the low-pass filter.
+    /// Mirrors DOSBox GetLowPassFilterState() from mixer.cpp (referenced in mixer.h:217)
+    /// </summary>
+    public FilterState GetLowPassFilterState() {
+        lock (_mutex) {
+            return _lowPassFilterState;
+        }
+    }
+
+    /// <summary>
+    /// Sets the low-pass filter on or off.
+    /// Mirrors DOSBox SetLowPassFilter() from mixer.cpp (referenced in mixer.h:214)
+    /// </summary>
+    public void SetLowPassFilter(FilterState state) {
+        lock (_mutex) {
+            _lowPassFilterState = state;
+
+            if (_lowPassFilterState == FilterState.On) {
+                if (_lowPassFilterOrder <= 0 || _lowPassFilterCutoffHz <= 0) {
+                    throw new InvalidOperationException(
+                        "Low-pass filter must be configured before enabling");
+                }
+
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information(
+                        "{Channel}: Low-pass filter enabled (order={Order}, cutoff={Cutoff}Hz)",
+                        _name, _lowPassFilterOrder, _lowPassFilterCutoffHz);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Configures the high-pass filter parameters.
+    /// Mirrors DOSBox ConfigureHighPassFilter() from mixer.cpp (referenced in mixer.h:217)
+    /// </summary>
+    /// <param name="order">Filter order (1-16)</param>
+    /// <param name="cutoffFreqHz">Cutoff frequency in Hz</param>
+    public void ConfigureHighPassFilter(int order, int cutoffFreqHz) {
+        const int MaxFilterOrder = 16; // Mirrors DOSBox MaxFilterOrder
+
+        if (order <= 0 || order > MaxFilterOrder) {
+            throw new ArgumentOutOfRangeException(nameof(order),
+                $"Filter order must be between 1 and {MaxFilterOrder}");
+        }
+        if (cutoffFreqHz <= 0) {
+            throw new ArgumentOutOfRangeException(nameof(cutoffFreqHz),
+                "Cutoff frequency must be positive");
+        }
+
+        lock (_mutex) {
+            _highPassFilterOrder = order;
+            _highPassFilterCutoffHz = cutoffFreqHz;
+
+            InitHighPassFilter();
+        }
+    }
+
+    /// <summary>
+    /// Initializes the high-pass filter with current configuration.
+    /// Mirrors DOSBox InitHighPassFilter() from mixer.cpp
+    /// </summary>
+    private void InitHighPassFilter() {
+        const int MaxFilterOrder = 16;
+
+        if (_highPassFilterOrder <= 0 || _highPassFilterOrder > MaxFilterOrder) {
+            throw new InvalidOperationException("High-pass filter order is invalid");
+        }
+        if (_highPassFilterCutoffHz <= 0) {
+            throw new InvalidOperationException("High-pass filter cutoff frequency is invalid");
+        }
+
+        lock (_mutex) {
+            int mixerSampleRateHz = 48000; // TODO: Get from mixer
+            foreach (HighPass filter in _highPassFilters) {
+                filter.Setup(_highPassFilterOrder, mixerSampleRateHz, _highPassFilterCutoffHz);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Configures the low-pass filter parameters.
+    /// Mirrors DOSBox ConfigureLowPassFilter() from mixer.cpp (referenced in mixer.h:218)
+    /// </summary>
+    /// <param name="order">Filter order (1-16)</param>
+    /// <param name="cutoffFreqHz">Cutoff frequency in Hz</param>
+    public void ConfigureLowPassFilter(int order, int cutoffFreqHz) {
+        const int MaxFilterOrder = 16; // Mirrors DOSBox MaxFilterOrder
+
+        if (order <= 0 || order > MaxFilterOrder) {
+            throw new ArgumentOutOfRangeException(nameof(order),
+                $"Filter order must be between 1 and {MaxFilterOrder}");
+        }
+        if (cutoffFreqHz <= 0) {
+            throw new ArgumentOutOfRangeException(nameof(cutoffFreqHz),
+                "Cutoff frequency must be positive");
+        }
+
+        lock (_mutex) {
+            _lowPassFilterOrder = order;
+            _lowPassFilterCutoffHz = cutoffFreqHz;
+
+            InitLowPassFilter();
+        }
+    }
+
+    /// <summary>
+    /// Initializes the low-pass filter with current configuration.
+    /// Mirrors DOSBox InitLowPassFilter() from mixer.cpp
+    /// </summary>
+    private void InitLowPassFilter() {
+        const int MaxFilterOrder = 16;
+
+        if (_lowPassFilterOrder <= 0 || _lowPassFilterOrder > MaxFilterOrder) {
+            throw new InvalidOperationException("Low-pass filter order is invalid");
+        }
+        if (_lowPassFilterCutoffHz <= 0) {
+            throw new InvalidOperationException("Low-pass filter cutoff frequency is invalid");
+        }
+
+        lock (_mutex) {
+            int mixerSampleRateHz = 48000; // TODO: Get from mixer
+            foreach (LowPass filter in _lowPassFilters) {
+                filter.Setup(_lowPassFilterOrder, mixerSampleRateHz, _lowPassFilterCutoffHz);
+            }
         }
     }
     
