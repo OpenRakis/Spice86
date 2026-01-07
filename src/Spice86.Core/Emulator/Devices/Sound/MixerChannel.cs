@@ -8,6 +8,8 @@ using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;
 
+using System.Threading;
+
 /// <summary>
 /// Represents a single audio channel in the mixer.
 /// Mirrors DOSBox Staging's MixerChannel class.
@@ -20,7 +22,7 @@ public sealed class MixerChannel : IDisposable {
     private readonly string _name;
     private readonly HashSet<ChannelFeature> _features;
     private readonly ILoggerService _loggerService;
-    private readonly object _mutex = new();
+    private readonly Lock _mutex = new();
 
     // Sample rate and timing
     private int _sampleRateHz;

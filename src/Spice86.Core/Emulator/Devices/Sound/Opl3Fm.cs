@@ -12,6 +12,8 @@ using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Threading;
+
 /// <summary>
 ///     Virtual device which emulates OPL3 FM sound.
 /// </summary>
@@ -20,7 +22,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly AdLibGoldDevice? _adLibGold;
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
-    private readonly object _chipLock = new();
+    private readonly Lock _chipLock = new();
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly DualPic _dualPic;
