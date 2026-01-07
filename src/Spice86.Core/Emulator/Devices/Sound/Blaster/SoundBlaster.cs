@@ -19,6 +19,7 @@ using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 
@@ -526,6 +527,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private readonly IEmulatedClock _clock;
     private readonly HardwareMixer _hardwareMixer;
 
+    // Output queue for audio frames - mirrors DOSBox output_queue
+    // Frames are enqueued during DMA transfer and dequeued by mixer callback
+    // This ensures proper resampling through AddSamples methods
+    private readonly ConcurrentQueue<AudioFrame> _outputQueue = new();
+
     private Queue<byte> _outputData = new Queue<byte>();
     private List<byte> _commandData = new List<byte>();
     private byte _currentCommand;
@@ -632,76 +638,43 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _lastDmaCallbackTime = _clock.ElapsedTimeMs;
 
         // Callback from mixer requesting audio frames
-        // Mirrors DOSBox's soundblaster.cpp GenerateFrames pattern
+        // Mirrors DOSBox's SoundBlaster::MixerCallback and MIXER_PullFromQueueCallback pattern
+        // Reference: src/hardware/audio/soundblaster.cpp lines 3160-3179
+        // Reference: src/audio/mixer.h lines 498-553
 
-        // Prevent buffer overflow - mirrors DOSBox Staging fix from PR #3915
-        // Don't generate more frames if buffer is already full
-        int currentBufferSize = _dacChannel.AudioFrames.Count;
-        if (currentBufferSize >= MaxChannelFrames) {
-            _sb.Dma.BufferOverflowCount++;
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("SB: Channel buffer at max capacity ({Current}/{Max}), skipping frame generation (overflow #{Count})",
-                    currentBufferSize, MaxChannelFrames, _sb.Dma.BufferOverflowCount);
-            }
-            return;
+        // Keep channel awake during any activity - mirrors DOSBox soundblaster.cpp:3200
+        if (_sb.Mode == DspMode.Dma) {
+            MaybeWakeUp();
         }
 
-        // Limit frames to generate to prevent overflow
-        int maxFramesToGenerate = Math.Min(framesRequested, MaxChannelFrames - currentBufferSize);
+        // Pull frames from output_queue and add them to the channel
+        // This mirrors MIXER_PullFromQueueCallback behavior
+        int framesReceived = 0;
+        List<AudioFrame> framesToMix = new();
 
-        int framesGenerated = 0;
-        while (framesGenerated < maxFramesToGenerate) {
-            AudioFrame frame = new(0.0f, 0.0f);
+        while (framesReceived < framesRequested && _outputQueue.TryDequeue(out AudioFrame frame)) {
+            framesToMix.Add(frame);
+            framesReceived++;
+        }
 
-            switch (_sb.Mode) {
-                case DspMode.None:
-                case DspMode.DmaPause:
-                case DspMode.DmaMasked:
-                    // Generate silence
-                    frame = new AudioFrame(0.0f, 0.0f);
-                    break;
+        // Add the frames through AddAudioFrames to ensure proper resampling
+        // Mirrors DOSBox: channel->AddAudioFrames(to_mix)
+        if (framesReceived > 0) {
+            _dacChannel.AddAudioFrames(framesToMix.ToArray().AsSpan());
+        }
 
-                case DspMode.Dac:
-                    // DAC mode - render current DAC sample
-                    if (_sb.Dsp.In.Data.Length > 0) {
-                        byte dacSample = _sb.Dsp.In.Data[0];
-                        frame = MaybeSilenceFrame(dacSample);
-                    }
-                    break;
-
-                case DspMode.Dma:
-                    // Keep channel awake during DMA processing - mirrors DOSBox soundblaster.cpp:3200
-                    // This is a no-op if the channel is already running
-                    MaybeWakeUp();
-
-                    // Use bulk DMA transfer if there's data to process
-                    // Calculate bytes needed for requested frames
-                    if (_sb.Dma.Left > 0 && _sb.Dma.Channel != null) {
-                        // Calculate bytes per frame based on mode
-                        uint bytesPerFrame = CalculateBytesPerFrame();
-                        uint bytesRequested = (uint)maxFramesToGenerate * bytesPerFrame;
-
-                        // Perform bulk DMA transfer
-                        PlayDmaTransfer(bytesRequested);
-
-                        // Frames were already enqueued by PlayDmaTransfer,
-                        // so return immediately without adding extra silence frame
-                        return;
-                    }
-                    // If no DMA data, fall through to add silence frame
-                    break;
-            }
-
-            _dacChannel.AudioFrames.Add(frame);
-            framesGenerated++;
+        // Fill any shortfall with silence
+        // Mirrors DOSBox: if (frames_received < frames_requested) { device->channel->AddSilence(); }
+        if (framesReceived < framesRequested) {
+            _dacChannel.AddSilence();
         }
 
         // Track performance metrics
-        _sb.Dma.TotalFramesGenerated += (ulong)framesGenerated;
+        _sb.Dma.TotalFramesGenerated += (ulong)framesReceived;
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SB: Generated {Generated}/{Requested} frames, buffer now at {BufferSize} (total frames: {TotalFrames})",
-                framesGenerated, framesRequested, _dacChannel.AudioFrames.Count, _sb.Dma.TotalFramesGenerated);
+            _loggerService.Verbose("SB: Pulled {Received}/{Requested} frames from queue (queue size: {QueueSize}), total frames: {TotalFrames}",
+                framesReceived, framesRequested, _outputQueue.Count, _sb.Dma.TotalFramesGenerated);
         }
     }
 
@@ -1070,7 +1043,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Dsp.WarmupRemainingMs > 0) {
             _sb.Dsp.WarmupRemainingMs--;
             for (uint i = 0; i < numSamples; i++) {
-                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
             return;
         }
@@ -1078,15 +1051,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Return silent frames if speaker is disabled
         if (!_sb.SpeakerEnabled) {
             for (uint i = 0; i < numSamples; i++) {
-                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
             return;
         }
 
-        // Process samples into AudioFrames
+        // Process samples into AudioFrames and enqueue to output_queue
+        // Mirrors DOSBox enqueue_frames() pattern
         for (uint i = 0; i < numSamples; i++) {
             float value = signed ? LookupTables.S8To16[samples[i]] : LookupTables.U8To16[samples[i]];
-            _dacChannel.AudioFrames.Add(new AudioFrame(value, value));
+            _outputQueue.Enqueue(new AudioFrame(value, value));
         }
     }
 
@@ -1106,7 +1080,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Dsp.WarmupRemainingMs > 0) {
             _sb.Dsp.WarmupRemainingMs--;
             for (uint i = 0; i < numFrames; i++) {
-                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
             return;
         }
@@ -1114,12 +1088,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Return silent frames if speaker is disabled
         if (!_sb.SpeakerEnabled) {
             for (uint i = 0; i < numFrames; i++) {
-                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
             return;
         }
 
-        // Process samples into AudioFrames
+        // Process samples into AudioFrames and enqueue to output_queue
+        // Mirrors DOSBox enqueue_frames() pattern
         // Note: SB Pro 1 and 2 swap left/right channels
         bool swapChannels = _sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2;
 
@@ -1128,9 +1103,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             float right = signed ? LookupTables.S8To16[samples[i * 2 + 1]] : LookupTables.U8To16[samples[i * 2 + 1]];
 
             if (swapChannels) {
-                _dacChannel.AudioFrames.Add(new AudioFrame(right, left));
+                _outputQueue.Enqueue(new AudioFrame(right, left));
             } else {
-                _dacChannel.AudioFrames.Add(new AudioFrame(left, right));
+                _outputQueue.Enqueue(new AudioFrame(left, right));
             }
         }
     }
@@ -1149,7 +1124,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Dsp.WarmupRemainingMs > 0) {
             _sb.Dsp.WarmupRemainingMs--;
             for (uint i = 0; i < numSamples; i++) {
-                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
             return;
         }
@@ -1157,12 +1132,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Return silent frames if speaker is disabled
         if (!_sb.SpeakerEnabled) {
             for (uint i = 0; i < numSamples; i++) {
-                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
             return;
         }
 
-        // Process samples into AudioFrames
+        // Process samples into AudioFrames and enqueue to output_queue
+        // Mirrors DOSBox enqueue_frames() pattern
         for (uint i = 0; i < numSamples; i++) {
             float value;
             if (signed) {
@@ -1171,7 +1147,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Unsigned 16-bit: convert to signed by subtracting 32768
                 value = (ushort)samples[i] - 32768;
             }
-            _dacChannel.AudioFrames.Add(new AudioFrame(value, value));
+            _outputQueue.Enqueue(new AudioFrame(value, value));
         }
     }
 
@@ -1191,7 +1167,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Dsp.WarmupRemainingMs > 0) {
             _sb.Dsp.WarmupRemainingMs--;
             for (uint i = 0; i < numFrames; i++) {
-                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
             return;
         }
@@ -1199,12 +1175,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Return silent frames if speaker is disabled
         if (!_sb.SpeakerEnabled) {
             for (uint i = 0; i < numFrames; i++) {
-                _dacChannel.AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
             return;
         }
 
-        // Process samples into AudioFrames
+        // Process samples into AudioFrames and enqueue to output_queue
+        // Mirrors DOSBox enqueue_frames() pattern
         // Note: SB Pro 1 and 2 swap left/right channels
         bool swapChannels = _sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2;
 
@@ -1222,9 +1199,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
 
             if (swapChannels) {
-                _dacChannel.AudioFrames.Add(new AudioFrame(right, left));
+                _outputQueue.Enqueue(new AudioFrame(right, left));
             } else {
-                _dacChannel.AudioFrames.Add(new AudioFrame(left, right));
+                _outputQueue.Enqueue(new AudioFrame(left, right));
             }
         }
     }
@@ -1625,9 +1602,61 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return;
         }
 
-        // Trigger the mixer to process frames synchronously with the emulation loop
-        // This ensures DMA transfers and IRQs are processed at appropriate times
-        // Mirrors DOSBox's approach of calling the mixer from PIC timer events
+        // Generate frames into output_queue for the mixer callback to pull
+        // Mirrors DOSBox per_tick_callback and generate_frames pattern
+        // Reference: src/hardware/audio/soundblaster.cpp lines 3112-3144
+
+        // Calculate how many frames to generate for this tick
+        // The DAC channel runs at _sb.FreqHz rate
+        float framesPerMs = _sb.FreqHz / 1000.0f;
+        int framesToGenerate = (int)Math.Ceiling(framesPerMs);
+
+        // Generate frames based on current DSP mode
+        switch (_sb.Mode) {
+            case DspMode.None:
+            case DspMode.DmaPause:
+            case DspMode.DmaMasked:
+                // Generate silence
+                for (int i = 0; i < framesToGenerate; i++) {
+                    _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
+                }
+                break;
+
+            case DspMode.Dac:
+                // DAC mode - render current DAC sample
+                for (int i = 0; i < framesToGenerate; i++) {
+                    if (_sb.Dsp.In.Data.Length > 0) {
+                        byte dacSample = _sb.Dsp.In.Data[0];
+                        AudioFrame frame = MaybeSilenceFrame(dacSample);
+                        _outputQueue.Enqueue(frame);
+                    } else {
+                        _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
+                    }
+                }
+                break;
+
+            case DspMode.Dma:
+                // DMA mode - process DMA transfers
+                // Keep channel awake during DMA processing
+                MaybeWakeUp();
+
+                // Calculate bytes needed for requested frames
+                if (_sb.Dma.Left > 0 && _sb.Dma.Channel != null) {
+                    uint bytesPerFrame = CalculateBytesPerFrame();
+                    uint bytesRequested = (uint)framesToGenerate * bytesPerFrame;
+
+                    // Perform bulk DMA transfer which enqueues frames to output_queue
+                    PlayDmaTransfer(bytesRequested);
+                } else {
+                    // No DMA data, generate silence
+                    for (int i = 0; i < framesToGenerate; i++) {
+                        _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
+                    }
+                }
+                break;
+        }
+
+        // Trigger the mixer to process frames from the output_queue
         _mixer.TickMixer();
 
         // Reschedule for next tick (1ms intervals)
