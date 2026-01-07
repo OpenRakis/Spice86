@@ -16,7 +16,7 @@
     <PackageVersion Include="SingleStepTests.Intel8086.00-FF" Version="2025.6.8" />
     <PackageVersion Include="SingleStepTests.Intel80286.00-3F" Version="2025.10.8" />
     <PackageVersion Include="SingleStepTests.Intel80286.40-7F" Version="2025.10.8" />
-    <PackageVersion Include="SingleStepTests.Intel80286.80-BF" Version="2025.10.8" />
+    <PackageVersion Include="SingleStepTests.Intel80286.80-BF" Version="2025.11.2" />
     <PackageVersion Include="SingleStepTests.Intel80286.C0-FF" Version="2025.10.8" />
     <PackageVersion Include="System.Text.Json" Version="10.0.0" />
     <PackageVersion Include="Avalonia.Headless" Version="11.3.8" />
