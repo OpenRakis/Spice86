@@ -258,7 +258,7 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Gets the number of frames per tick.
-    /// Mirrors DOSBox GetFramesPerTick() from mixer.cpp
+    /// Mirrors DOSBox GetFramesPerTick() from mixer.cpp:1142
     /// </summary>
     public float GetFramesPerTick() {
         lock (_mutex) {
@@ -271,7 +271,7 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Gets the number of frames per block.
-    /// Mirrors DOSBox GetFramesPerBlock() from mixer.cpp
+    /// Mirrors DOSBox GetFramesPerBlock() from mixer.cpp:1152
     /// </summary>
     public float GetFramesPerBlock() {
         lock (_mutex) {
@@ -284,7 +284,7 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Gets milliseconds per frame for this channel.
-    /// Mirrors DOSBox GetMillisPerFrame() from mixer.cpp
+    /// Mirrors DOSBox GetMillisPerFrame() from mixer.cpp:1162
     /// </summary>
     public double GetMillisPerFrame() {
         lock (_mutex) {
@@ -294,8 +294,7 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Sets the peak amplitude for this channel.
-    /// Mirrors DOSBox SetPeakAmplitude() from mixer.cpp
-    /// Reference: DOSBox mixer.cpp lines for SetPeakAmplitude
+    /// Mirrors DOSBox SetPeakAmplitude() from mixer.cpp:1172
     /// </summary>
     public void SetPeakAmplitude(int peak) {
         lock (_mutex) {
@@ -552,7 +551,7 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Describes the lineout configuration in human-readable form.
-    /// Mirrors DOSBox DescribeLineout() from mixer.cpp
+    /// Mirrors DOSBox DescribeLineout() from mixer.cpp:2319
     /// </summary>
     public string DescribeLineout() {
         lock (_mutex) {
@@ -571,8 +570,7 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Gets the current channel settings.
-    /// Mirrors DOSBox GetSettings() from mixer.cpp
-    /// Reference: DOSBox mixer.cpp GetSettings implementation
+    /// Mirrors DOSBox GetSettings() from mixer.cpp:2339
     /// </summary>
     public MixerChannelSettings GetSettings() {
         lock (_mutex) {
@@ -590,8 +588,7 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Sets the channel settings from a saved configuration.
-    /// Mirrors DOSBox SetSettings() from mixer.cpp
-    /// Reference: DOSBox mixer.cpp SetSettings implementation
+    /// Mirrors DOSBox SetSettings() from mixer.cpp:2355
     /// </summary>
     public void SetSettings(MixerChannelSettings settings) {
         lock (_mutex) {
