@@ -4,7 +4,32 @@
 // Reference: https://github.com/dosbox-staging/dosbox-staging
 //
 // Excludes: Fast-forward, Capture, ESFM
-// Speex: Will be integrated via P/Invoke (compiled library, not translated to C#)
+// Speex: Pure C# port (SpeexResamplerCSharp.cs) - NO P/Invoke needed!
+//
+// LATEST UPDATE (2026-01-07) - SPEEX RESAMPLER ARCHITECTURE CORRECTION ✅
+// ========================================================================
+// CRITICAL FIX: MixerChannel Speex Resampler Initialization
+// - **REMOVED** Speex resampler creation from MixerChannel constructor
+// - **CHANGED** _speexResampler from readonly to nullable field
+// - **ADDED** _doResample flag to track when Speex should be used (mirrors DOSBox)
+// - **IMPLEMENTED** lazy initialization pattern matching DOSBox exactly:
+//   * Resampler created ONCE in ConfigureResampler() when first needed
+//   * Rates updated via SetRate() on subsequent calls
+//   * Always uses 2 channels (stereo) and quality 5 (medium)
+// - **FIXED** default resample method: ResampleMethod.Resample (was LerpUpsampleOrResample)
+//   * Mirrors DOSBox: resample_method = ResampleMethod::Resample
+// - **ADDED** ClearResampler() method matching DOSBox mixer.cpp:1055-1076
+//   * Calls Reset() and SkipZeros() on Speex resampler
+//   * Called from Enable(false) to clear state
+// - **UPDATED** ConfigureResampler() to mirror DOSBox mixer.cpp:935-1052 EXACTLY
+//   * Lambda-based Speex initialization logic
+//   * Proper flag management (do_lerp_upsample, do_zoh_upsample, do_resample)
+//   * Correct switch-case handling for all ResampleMethod variants
+// - **IMPACT**: OPL audio at 49716Hz should now downsample correctly to 48000Hz
+//
+// This fixes the root cause of silent OPL music after C# Speex resampler port.
+// The premature initialization in the constructor created the resampler before
+// SetSampleRate() was called, causing incorrect rate configuration.
 //
 // LATEST UPDATE (2025-12-16) - Mixer.cs PUBLIC API COMPLETED - 100% PARITY ✅
 // ============================================================================

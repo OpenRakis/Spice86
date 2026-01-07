@@ -57,7 +57,8 @@ public sealed class MixerChannel : IDisposable {
     private bool _doResample;
     
     // Resample method - mirrors DOSBox resample_method
-    private ResampleMethod _resampleMethod = ResampleMethod.LerpUpsampleOrResample;
+    // DOSBox default: ResampleMethod::Resample (always use Speex)
+    private ResampleMethod _resampleMethod = ResampleMethod.Resample;
 
     // Channel mapping
     private StereoLine _outputMap = new() { Left = LineIndex.Left, Right = LineIndex.Right };
@@ -455,14 +456,43 @@ public sealed class MixerChannel : IDisposable {
 
         lock (_mutex) {
             if (!shouldEnable) {
-                // Clear state when disabling
+                // Clear state when disabling - mirrors DOSBox mixer.cpp:886-892
                 _framesNeeded = 0;
                 AudioFrames.Clear();
                 _prevFrame = new AudioFrame(0.0f, 0.0f);
                 _nextFrame = new AudioFrame(0.0f, 0.0f);
+                
+                // Clear resampler state - mirrors DOSBox mixer.cpp:892
+                ClearResampler();
             }
 
             IsEnabled = shouldEnable;
+        }
+    }
+    
+    /// <summary>
+    /// Clears and resets all resampler state.
+    /// Mirrors DOSBox ClearResampler() from mixer.cpp:1055-1076
+    /// </summary>
+    private void ClearResampler() {
+        if (_doLerpUpsample) {
+            InitLerpUpsamplerState();
+        }
+        if (_doZohUpsample) {
+            InitZohUpsamplerState();
+        }
+        if (_doResample && _speexResampler != null) {
+            // Reset Speex resampler memory and skip zeros
+            // Mirrors DOSBox mixer.cpp:1067-1068
+            _speexResampler.Reset();
+            _speexResampler.SkipZeros();
+            
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                int inputLatency = _speexResampler.GetInputLatency();
+                _loggerService.Debug(
+                    "MIXER: {Name}: Speex resampler cleared and primed {Latency}-frame input queue",
+                    _name, inputLatency);
+            }
         }
     }
 
