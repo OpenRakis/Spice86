@@ -49,6 +49,22 @@ public enum ChannelFeature {
 }
 
 /// <summary>
+/// Filter state - on or off.
+/// Mirrors DOSBox Staging's FilterState enum.
+/// </summary>
+public enum FilterState {
+    /// <summary>
+    /// Filter is disabled.
+    /// </summary>
+    Off,
+    
+    /// <summary>
+    /// Filter is enabled.
+    /// </summary>
+    On
+}
+
+/// <summary>
 /// Represents a line index in the audio output (left or right).
 /// </summary>
 public enum LineIndex {
