@@ -6,6 +6,48 @@
 // Excludes: Fast-forward, Capture, ESFM
 // Speex: Pure C# port (SpeexResamplerCSharp.cs) - NO P/Invoke needed!
 //
+// ⚠️ CRITICAL UPDATE (2026-01-07) - RESAMPLING ARCHITECTURE FIX ✅
+// ==================================================================
+// **PROBLEM IDENTIFIED**: Resampling code existed but was NEVER CALLED
+// - ApplyLerpUpsampling() and SpeexResampleBuffer() methods existed in MixerChannel
+// - BUT: They were orphaned - Mix() never called them
+// - RESULT: NO resampling was happening! OPL at 49716Hz played at wrong speed
+//
+// **ARCHITECTURAL DEVIATION FROM DOSBOX**:
+// DOSBox: Device → output_queue → MixerCallback → MIXER_PullFromQueueCallback → **AddSamples** → Resampling
+// Spice86 (BEFORE): Device → direct AudioFrames.Add() → NO AddSamples → NO resampling
+//
+// **FIX APPLIED** (Phase 1 - MixerChannel):
+// 1. ✅ Added Envelope class for click prevention (mirrors DOSBox Envelope)
+// 2. ✅ Completely refactored ALL AddSamples methods (m8, m16, s16, mfloat, sfloat, AudioFrames)
+// 3. ✅ Created type-specific ConvertSamplesAndMaybeZohUpsample_XXX methods
+// 4. ✅ Moved resampling INTO AddSamples methods (matches DOSBox exactly):
+//    - Step 1: Convert samples → convert_buffer (with optional ZoH upsampling)
+//    - Step 2: Apply resampling (LERP or Speex) from convert_buffer → audio_frames
+//    - Step 3: Apply in-place processing (crossfeed, filters) to audio_frames
+// 5. ✅ Added helper methods: Lerp(), ApplySpeexResampling(), ApplyInPlaceProcessing(), ApplyCrossfeed()
+// 6. ✅ Removed orphaned ApplyLerpUpsampling() and SpeexResampleBuffer() methods
+// 7. ✅ Architecture now matches DOSBox: Convert → Resample → Process pattern
+//
+// **REMAINING CRITICAL ISSUE** (Phase 2 - SoundBlaster Integration):
+// ⚠️ SoundBlaster.cs BYPASSES AddSamples entirely!
+// - PlayDmaTransfer() → EnqueueFramesMono/Stereo() → Direct AudioFrames.Add()
+// - This means SoundBlaster PCM audio is NOT resampled!
+// - REQUIRED FIX: Implement output_queue pattern from DOSBox:
+//   * SoundBlaster generates frames → output_queue (new)
+//   * GenerateFrames() pulls from queue → Calls AddSamples_m8/m16/s16
+//   * AddSamples applies resampling (now that it's fixed)
+//
+// **IMPACT**:
+// - OPL: ✅ FIXED - Now properly resamples (calls AddSamples_sfloat)
+// - PcSpeaker: ✅ SHOULD BE FIXED - Need to verify it calls AddSamples
+// - SoundBlaster PCM: ❌ STILL BROKEN - Bypasses AddSamples, no resampling
+//
+// TODO (URGENT):
+// - [ ] Fix SoundBlaster.cs to use output_queue pattern
+// - [ ] Verify PcSpeaker integration
+// - [ ] Run comprehensive audio tests
+//
 // LATEST UPDATE (2026-01-07) - SPEEX RESAMPLER ARCHITECTURE CORRECTION ✅
 // ========================================================================
 // CRITICAL FIX: MixerChannel Speex Resampler Initialization
