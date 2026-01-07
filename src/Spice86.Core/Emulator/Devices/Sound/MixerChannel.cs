@@ -22,6 +22,10 @@ public sealed class MixerChannel : IDisposable {
     private const uint SpeexChannels = 2; // Always use stereo for processing
     private const int SpeexQuality = 5; // Medium quality - good balance between CPU and quality
     
+    // Envelope constants - mirrors DOSBox mixer.cpp lines 58-62
+    private const byte EnvelopeMaxExpansionOverMs = 15; // Envelope expands over 15ms
+    private const byte EnvelopeExpiresAfterSeconds = 10; // Envelope expires after 10s
+    
     private readonly Action<int> _handler;
     private readonly string _name;
     private readonly HashSet<ChannelFeature> _features;
@@ -236,14 +240,27 @@ public sealed class MixerChannel : IDisposable {
         lock (_mutex) {
             _sampleRateHz = sampleRateHz;
             
-            // Configure resampling if channel rate differs from mixer rate
-            // Mirrors DOSBox resample configuration logic
-            if (_sampleRateHz < _mixerSampleRateHz) {
-                _doLerpUpsample = true;
-                InitLerpUpsamplerState();
-            } else {
-                _doLerpUpsample = false;
+            // Update envelope with new sample rate - mirrors DOSBox mixer.cpp:1106-1109
+            _envelope.Update(_sampleRateHz, 
+                           _peakAmplitude, 
+                           EnvelopeMaxExpansionOverMs, 
+                           EnvelopeExpiresAfterSeconds);
+            
+            // Initialize noise gate if enabled - mirrors DOSBox mixer.cpp:1111-1113
+            if (_doNoiseGate) {
+                InitNoiseGate();
             }
+            
+            // Initialize filters if enabled - mirrors DOSBox mixer.cpp:1115-1120
+            if (_highPassFilterState == FilterState.On) {
+                InitHighPassFilter();
+            }
+            if (_lowPassFilterState == FilterState.On) {
+                InitLowPassFilter();
+            }
+            
+            // Configure resampler - mirrors DOSBox mixer.cpp:1122
+            ConfigureResampler();
         }
     }
     
@@ -299,9 +316,11 @@ public sealed class MixerChannel : IDisposable {
     public void SetPeakAmplitude(int peak) {
         lock (_mutex) {
             _peakAmplitude = peak;
-            // Update envelope with new peak amplitude
-            // Note: Envelope.Update() would need sample rate and other params
-            // For now, just set the peak - full envelope integration would need more work
+            // Update envelope with new peak amplitude - mirrors DOSBox mixer.cpp:1177-1180
+            _envelope.Update(_sampleRateHz, 
+                           _peakAmplitude, 
+                           EnvelopeMaxExpansionOverMs, 
+                           EnvelopeExpiresAfterSeconds);
         }
     }
     

@@ -541,6 +541,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     // DMA callback timing tracking - mirrors DOSBox last_dma_callback
     // Tracks the last time DMA callback was invoked for timing measurements
     private double _lastDmaCallbackTime;
+    
+    // Frame counter for fractional frame accumulation - mirrors DOSBox per_tick_callback frame_counter
+    // Accumulates fractional frames across ticks to avoid systematic drift
+    // Reference: src/hardware/audio/soundblaster.cpp line 3235
+    private float _frameCounter = 0.0f;
 
     public SoundBlaster(
         IOPortDispatcher ioPortDispatcher,
@@ -1602,15 +1607,42 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return;
         }
 
-        // Generate frames into output_queue for the mixer callback to pull
-        // Mirrors DOSBox per_tick_callback and generate_frames pattern
-        // Reference: src/hardware/audio/soundblaster.cpp lines 3112-3144
+        // Mirrors DOSBox per_tick_callback() from soundblaster.cpp:3225-3248
+        // Uses fractional frame accumulation to prevent systematic drift
+        // Reference: src/hardware/audio/soundblaster.cpp lines 3225-3248
+        
+        // Accumulate fractional frames - mirrors DOSBox frame_counter logic
+        // This prevents systematic drift for non-integer frame rates like 22.05 frames/ms (22050 Hz)
+        float framesPerTick = _dacChannel.GetFramesPerTick();
+        _frameCounter += framesPerTick;
+        
+        // Generate only the integer part of accumulated frames
+        // Mirrors DOSBox: ifloor(frame_counter)
+        int totalFrames = (int)Math.Floor(_frameCounter);
+        
+        // Retain the fractional remainder for next tick
+        // Mirrors DOSBox: frame_counter -= static_cast<float>(total_frames)
+        _frameCounter -= totalFrames;
+        
+        // Generate the requested frames
+        // Mirrors DOSBox: generate_frames(total_frames)
+        if (totalFrames > 0) {
+            GenerateFramesInternal(totalFrames);
+        }
 
-        // Calculate how many frames to generate for this tick
-        // The DAC channel runs at _sb.FreqHz rate
-        float framesPerMs = _sb.FreqHz / 1000.0f;
-        int framesToGenerate = (int)Math.Ceiling(framesPerMs);
+        // Trigger the mixer to process frames from the output_queue
+        _mixer.TickMixer();
 
+        // Reschedule for next tick (1ms intervals)
+        _scheduler.AddEvent(MixerTickCallback, 1.0);
+    }
+    
+    /// <summary>
+    /// Generates frames into output_queue based on current DSP mode.
+    /// Mirrors DOSBox generate_frames() from soundblaster.cpp:3168-3222
+    /// Reference: src/hardware/audio/soundblaster.cpp lines 3168-3222
+    /// </summary>
+    private void GenerateFramesInternal(int framesToGenerate) {
         // Generate frames based on current DSP mode
         switch (_sb.Mode) {
             case DspMode.None:
@@ -1624,6 +1656,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case DspMode.Dac:
                 // DAC mode - render current DAC sample
+                // Mirrors DOSBox DspMode::Dac case (lines 3184-3197)
                 for (int i = 0; i < framesToGenerate; i++) {
                     if (_sb.Dsp.In.Data.Length > 0) {
                         byte dacSample = _sb.Dsp.In.Data[0];
@@ -1637,16 +1670,28 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case DspMode.Dma:
                 // DMA mode - process DMA transfers
+                // Mirrors DOSBox DspMode::Dma case (lines 3199-3220)
+                
                 // Keep channel awake during DMA processing
                 MaybeWakeUp();
 
                 // Calculate bytes needed for requested frames
                 if (_sb.Dma.Left > 0 && _sb.Dma.Channel != null) {
-                    uint bytesPerFrame = CalculateBytesPerFrame();
-                    uint bytesRequested = (uint)framesToGenerate * bytesPerFrame;
+                    // Mirrors DOSBox len calculation (lines 3206-3212)
+                    uint len = (uint)framesToGenerate;
+                    len *= _sb.Dma.Mul;
+                    if ((len & SbShiftMask) != 0) {
+                        len += 1 << SbShift;
+                    }
+                    len >>= SbShift;
+                    
+                    if (len > _sb.Dma.Left) {
+                        len = _sb.Dma.Left;
+                    }
 
                     // Perform bulk DMA transfer which enqueues frames to output_queue
-                    PlayDmaTransfer(bytesRequested);
+                    // Mirrors DOSBox ProcessDMATransfer(len)
+                    PlayDmaTransfer(len);
                 } else {
                     // No DMA data, generate silence
                     for (int i = 0; i < framesToGenerate; i++) {
@@ -1655,12 +1700,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 break;
         }
-
-        // Trigger the mixer to process frames from the output_queue
-        _mixer.TickMixer();
-
-        // Reschedule for next tick (1ms intervals)
-        _scheduler.AddEvent(MixerTickCallback, 1.0);
     }
 
     public bool PendingIrq8Bit {
