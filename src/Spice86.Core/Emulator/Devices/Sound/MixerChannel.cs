@@ -1051,6 +1051,87 @@ public sealed class MixerChannel : IDisposable {
     }
     
     /// <summary>
+    /// Attempts to parse and set a custom filter configuration from a preference string.
+    /// Mirrors DOSBox TryParseAndSetCustomFilter() from mixer.cpp:1378-1450
+    /// </summary>
+    /// <param name="filterPrefs">Filter preference string, e.g., "lpf 2 8000" or "hpf 4 120 lpf 2 8000"</param>
+    /// <returns>True if the filter was successfully parsed and applied, false otherwise</returns>
+    public bool TryParseAndSetCustomFilter(string filterPrefs) {
+        lock (_mutex) {
+            // Turn off both filters first
+            SetLowPassFilter(FilterState.Off);
+            SetHighPassFilter(FilterState.Off);
+
+            if (!filterPrefs.StartsWith("lpf") && !filterPrefs.StartsWith("hpf")) {
+                return false;
+            }
+
+            string[] parts = filterPrefs.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            bool singleFilter = (parts.Length == 3);
+            bool dualFilter = (parts.Length == 6);
+
+            if (!singleFilter && !dualFilter) {
+                _loggerService.Warning($"Invalid custom filter format for channel {_name}: {filterPrefs}");
+                return false;
+            }
+
+            // Parse and apply filters
+            try {
+                if (singleFilter) {
+                    string filterType = parts[0];
+                    int order = int.Parse(parts[1]);
+                    int cutoffHz = int.Parse(parts[2]);
+
+                    if (filterType == "lpf") {
+                        ConfigureLowPassFilter(order, cutoffHz);
+                        SetLowPassFilter(FilterState.On);
+                    } else if (filterType == "hpf") {
+                        ConfigureHighPassFilter(order, cutoffHz);
+                        SetHighPassFilter(FilterState.On);
+                    } else {
+                        return false;
+                    }
+                } else if (dualFilter) {
+                    string filter1Type = parts[0];
+                    int order1 = int.Parse(parts[1]);
+                    int cutoff1Hz = int.Parse(parts[2]);
+                    string filter2Type = parts[3];
+                    int order2 = int.Parse(parts[4]);
+                    int cutoff2Hz = int.Parse(parts[5]);
+
+                    // Apply first filter
+                    if (filter1Type == "lpf") {
+                        ConfigureLowPassFilter(order1, cutoff1Hz);
+                        SetLowPassFilter(FilterState.On);
+                    } else if (filter1Type == "hpf") {
+                        ConfigureHighPassFilter(order1, cutoff1Hz);
+                        SetHighPassFilter(FilterState.On);
+                    } else {
+                        return false;
+                    }
+
+                    // Apply second filter
+                    if (filter2Type == "lpf") {
+                        ConfigureLowPassFilter(order2, cutoff2Hz);
+                        SetLowPassFilter(FilterState.On);
+                    } else if (filter2Type == "hpf") {
+                        ConfigureHighPassFilter(order2, cutoff2Hz);
+                        SetHighPassFilter(FilterState.On);
+                    } else {
+                        return false;
+                    }
+                }
+
+                return true;
+            } catch (Exception) {
+                _loggerService.Warning($"Failed to parse custom filter for channel {_name}: {filterPrefs}");
+                return false;
+            }
+        }
+    }
+    
+    /// <summary>
     /// Remaps a value from one range to another.
     /// Helper for effect level calculations.
     /// </summary>
@@ -1857,6 +1938,36 @@ public sealed class MixerChannel : IDisposable {
         }
     }
     
+    /// <summary>
+    /// Adds mono 16-bit signed samples with non-native (big-endian) byte order.
+    /// Mirrors DOSBox AddSamples_m16_nonnative() from mixer.cpp:1817-1820
+    /// </summary>
+    /// <param name="numFrames">Number of frames (samples) to add</param>
+    /// <param name="data">Pointer to non-native byte order 16-bit sample data</param>
+    public void AddSamples_m16_nonnative(int numFrames, ReadOnlySpan<short> data) {
+        // Need to byte-swap for non-native (big-endian) order
+        Span<short> swapped = stackalloc short[data.Length];
+        for (int i = 0; i < data.Length; i++) {
+            swapped[i] = System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(data[i]);
+        }
+        AddSamples_m16(numFrames, swapped);
+    }
+
+    /// <summary>
+    /// Adds stereo 16-bit signed samples with non-native (big-endian) byte order.
+    /// Mirrors DOSBox AddSamples_s16_nonnative() from mixer.cpp:1822-1825
+    /// </summary>
+    /// <param name="numFrames">Number of frames to add (each frame has 2 samples: L+R)</param>
+    /// <param name="data">Pointer to non-native byte order 16-bit sample data</param>
+    public void AddSamples_s16_nonnative(int numFrames, ReadOnlySpan<short> data) {
+        // Need to byte-swap for non-native (big-endian) order
+        Span<short> swapped = stackalloc short[data.Length];
+        for (int i = 0; i < data.Length; i++) {
+            swapped[i] = System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(data[i]);
+        }
+        AddSamples_s16(numFrames, swapped);
+    }
+
     /// <summary>
     /// Applies fade-out or signal detection to a frame if sleep is enabled.
     /// Called by mixer during frame processing.

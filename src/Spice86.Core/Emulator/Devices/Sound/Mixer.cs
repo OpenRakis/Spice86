@@ -45,6 +45,10 @@ public sealed class Mixer : IDisposable {
     // Controls whether audio is playing, muted, or disabled
     private MixerState _state = MixerState.On;
     private bool _isManuallyMuted = false;
+    
+    // Fast-forward mode - mirrors DOSBox mixer.fast_forward_mode
+    // Used to increase audio buffer sizes during fast-forward (Alt+F12 hotkey in DOSBox)
+    private volatile bool _fastForwardMode = false;
 
     // Effect presets - mirrors DOSBox preset system
     private CrossfeedPreset _crossfeedPreset = CrossfeedPreset.None;
@@ -170,6 +174,30 @@ public sealed class Mixer : IDisposable {
     public int GetPreBufferMs() {
         // For now return a constant; DOSBox calculates based on buffer size
         return MaxPrebufferMs / 2; // Conservative default
+    }
+
+    /// <summary>
+    /// Enables fast-forward mode, increasing audio buffer sizes for high-speed emulation.
+    /// Mirrors DOSBox MIXER_EnableFastForwardMode() from mixer.cpp:257-260
+    /// </summary>
+    public void EnableFastForwardMode() {
+        _fastForwardMode = true;
+    }
+
+    /// <summary>
+    /// Disables fast-forward mode, returning audio buffer sizes to normal.
+    /// Mirrors DOSBox MIXER_DisableFastForwardMode() from mixer.cpp:262-265
+    /// </summary>
+    public void DisableFastForwardMode() {
+        _fastForwardMode = false;
+    }
+
+    /// <summary>
+    /// Returns whether fast-forward mode is currently enabled.
+    /// Mirrors DOSBox MIXER_FastForwardModeEnabled() from mixer.cpp:267-270
+    /// </summary>
+    public bool FastForwardModeEnabled() {
+        return _fastForwardMode;
     }
 
     /// <summary>
