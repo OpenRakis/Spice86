@@ -1,10 +1,54 @@
-// SPICE86 AUDIO PARITY PORT PLAN (UPDATED)
-// ==========================================
+// SPICE86 AUDIO PARITY PORT PLAN (UPDATED 2026-01-07 PM)
+// ========================================================
 // Port DOSBox Staging audio subsystem to achieve feature parity.
-// Reference: https://github.com/dosbox-staging/dosbox-staging
+// Reference: https://github.com/dosbox-staging/dosbox-staging (latest commit)
 //
 // Excludes: Fast-forward, Capture, ESFM
 // Speex: Pure C# port (SpeexResamplerCSharp.cs) - NO P/Invoke needed!
+//
+// ⚠️ LATEST UPDATE (2026-01-07 PM) - SIDE-BY-SIDE DEBUGGING IMPROVEMENTS ✅ ⚠️
+// ===================================================================================
+// **GOAL**: Enable perfect side-by-side debugging by fixing architectural deviations
+// **ISSUE**: "I can't debug side by side each code base" - structural differences
+//
+// **COMPLETED FIXES** (Atomic Commits):
+//
+// 1. ✅ **Crossfeed Preset Behavioral Deviation** (Commit 1/N)
+//    - **PROBLEM**: All presets used constant 0.3f strength value
+//      * Light/Normal/Strong all had same crossfeed strength
+//      * DOSBox uses different values: Light=0.20f, Normal=0.40f, Strong=0.60f
+//    - **FIX**: Implement preset-specific crossfeed strength matching DOSBox mixer.cpp:434-436
+//      * Changed _crossfeedGlobalStrength from const to variable field
+//      * SetCrossfeedPreset() now sets correct strength per preset in switch statement
+//      * SetGlobalCrossfeed() uses the variable strength value
+//    - **REFERENCE**: mixer.cpp:420-460 (MIXER_SetCrossfeedPreset), mixer.cpp:333-346 (set_global_crossfeed)
+//    - **COMMIT**: "Fix crossfeed preset strength values to match DOSBox exactly"
+//
+// 2. ✅ **Mixer.cs Complete Line-Number Comment Coverage** (Commit 2/N)
+//    - **PROBLEM**: Only ~26 DOSBox line references in Mixer.cs (out of ~40 methods)
+//      * Many methods had no line references or outdated line numbers
+//      * Mute() referenced lines 3025-3034 but DOSBox has it at 3030-3039
+//      * Made side-by-side debugging difficult
+//    - **FIX**: Added/updated DOSBox line references to ALL methods in Mixer.cs
+//      * Public API: GetSampleRate (250-255), LockMixerThread (279-290), Mute (3030-3039), etc.
+//      * Internal methods: MixSamples (2394-2539), MixerThreadLoop (2605-2712), etc.
+//      * Effect methods: ApplyReverb (2445-2467), ApplyChorus (2470-2478), etc.
+//      * Total: ~40 methods now have accurate line references
+//    - **REFERENCE**: All methods now directly traceable to DOSBox mixer.cpp
+//    - **COMMIT**: "Add comprehensive DOSBox line-number comments to Mixer.cs"
+//
+// **REMAINING WORK** (Next Atomic Commits):
+// - [ ] MixerChannel.cs: Verify/update line references (~83 existing, need verification against latest DOSBox)
+// - [ ] SoundBlaster.cs: Add line references to ~90 methods (currently only 7!)
+// - [ ] Verify behavioral parity for reverb/chorus/compressor parameters
+// - [ ] Add line references to effect classes (NoiseGate, Envelope, Compressor, MVerb, ChorusEngine)
+// - [ ] Update this plan document with final status
+//
+// **IMPACT**:
+// - ✅ Developers can now open DOSBox mixer.cpp and Spice86 Mixer.cs side-by-side
+// - ✅ Every Mixer.cs method has exact DOSBox line number for verification
+// - ✅ Crossfeed behavior now matches DOSBox exactly (was wrong for all presets)
+// - 🔄 MixerChannel and SoundBlaster still need complete line reference coverage
 //
 // ⚠️ CRITICAL FIXES (2026-01-07) - PCM LAG & AUDIO QUALITY ISSUES RESOLVED ✅ ⚠️
 // ==================================================================================
