@@ -377,15 +377,16 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 framesRemaining--;
             }
             
-            // If the FIFO ran dry, generate the remaining frames and sync up our time datum
-            // Mirrors DOSBox Staging opl.cpp:454-459
+            // If the FIFO ran dry, generate the remaining frames
+            // Mirrors DOSBox Staging opl.cpp:454-458
             if (framesRemaining > 0) {
                 GenerateFramesBatch(framesRemaining);
-                
-                // Sync time datum to current atomic time
-                // Mirrors DOSBox Staging opl.cpp:459
-                _lastRenderedMs = _clock.ElapsedTimeMs;
             }
+            
+            // Always sync time datum to current atomic time after AudioCallback
+            // Mirrors DOSBox Staging opl.cpp:459
+            // This prevents unbounded accumulation in RenderUpToNow()
+            _lastRenderedMs = _clock.ElapsedTimeMs;
         }
 
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
