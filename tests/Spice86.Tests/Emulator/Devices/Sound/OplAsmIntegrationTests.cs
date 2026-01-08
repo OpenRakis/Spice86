@@ -18,33 +18,33 @@ using Xunit;
 public class OplAsmIntegrationTests {
     private const int MaxCycles = 10000000;
     
-    [Fact(Skip = "Requires NASM-compiled binary - ASM source available in Resources/SoundBlasterTests/asmsrc/")]
+    [Fact]
     public void Test_OPL_Simple_Tone_Generation() {
         // This test exercises OPL register writes for a simple 440Hz tone
         // Mirrors DOSBox OPL tone generation behavior
-        // To enable: compile opl_simple_tone.asm with NASM
+        // Compiled from opl_simple_tone.asm with NASM
         OplTestHandler testHandler = RunOplTestFromFile("opl_simple_tone.bin", MaxCycles);
         
         testHandler.Results.Should().Contain((byte)0x00, "OPL simple tone generation should complete successfully");
         testHandler.Results.Should().NotContain((byte)0xFF, "should not report failure");
     }
     
-    [Fact(Skip = "Requires NASM-compiled binary - ASM source available in Resources/SoundBlasterTests/asmsrc/")]
+    [Fact]
     public void Test_OPL_Rhythm_Mode() {
         // This test exercises OPL rhythm/percussion mode
         // Validates bass drum, snare drum, tom-tom, cymbal, and hi-hat triggering
-        // To enable: compile opl_rhythm_mode.asm with NASM
+        // Compiled from opl_rhythm_mode.asm with NASM
         OplTestHandler testHandler = RunOplTestFromFile("opl_rhythm_mode.bin", MaxCycles);
         
         testHandler.Results.Should().Contain((byte)0x00, "OPL rhythm mode should work correctly");
         testHandler.Results.Should().NotContain((byte)0xFF, "should not report failure");
     }
     
-    [Fact(Skip = "Requires NASM-compiled binary - ASM source available in Resources/SoundBlasterTests/asmsrc/")]
+    [Fact]
     public void Test_AdLib_Gold_Stereo_Control() {
         // This test exercises AdLib Gold stereo control via OPL3 extended registers
         // Tests 0x38A/0x38B port writes and stereo panning
-        // To enable: compile adlib_gold_stereo.asm with NASM
+        // Compiled from adlib_gold_stereo.asm with NASM
         OplTestHandler testHandler = RunOplTestFromFile("adlib_gold_stereo.bin", MaxCycles);
         
         testHandler.Results.Should().Contain((byte)0x00, "AdLib Gold stereo control should work");
