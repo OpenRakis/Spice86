@@ -301,21 +301,27 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 _chip.GenerateStream(interleaved);
             }
 
-            // Convert interleaved int16 samples to normalized float for AddSamples_sfloat
-            // Mirrors DOSBox: AddSamples_sfloat expects normalized [-1.0, 1.0] floats
-            Span<float> floatBuffer = _playBuffer.AsSpan(0, samplesToGenerate);
-            for (int i = 0; i < samplesToGenerate; i++) {
-                floatBuffer[i] = interleaved[i] / 32768.0f; // Normalize to [-1.0, 1.0]
-            }
-
-            // Apply AdLib Gold filtering if enabled
+            // Apply AdLib Gold filtering if enabled (before float conversion)
+            // Mirrors DOSBox: adlib_gold.cpp - surround and stereo processing on int16 samples
             if (_adLibGold is not null) {
-                // AdLib Gold processing would happen here on floatBuffer
-                // TODO: Implement AdLib Gold filtering
-            }
+                // Process int16 samples through AdLib Gold surround and stereo stages
+                // AdLibGoldDevice.Process expects: (ReadOnlySpan<short> input, int frames, Span<float> output)
+                Span<float> floatBuffer = _playBuffer.AsSpan(0, samplesToGenerate);
+                _adLibGold.Process(interleaved, framesToGenerate, floatBuffer);
+                
+                // AdLib Gold.Process already outputs normalized floats, so use floatBuffer directly
+                _mixerChannel.AddSamples_sfloat(framesToGenerate, floatBuffer);
+            } else {
+                // Convert interleaved int16 samples to normalized float for AddSamples_sfloat
+                // Mirrors DOSBox: AddSamples_sfloat expects normalized [-1.0, 1.0] floats
+                Span<float> floatBuffer = _playBuffer.AsSpan(0, samplesToGenerate);
+                for (int i = 0; i < samplesToGenerate; i++) {
+                    floatBuffer[i] = interleaved[i] / 32768.0f; // Normalize to [-1.0, 1.0]
+                }
 
-            // Use AddSamples_sfloat for bulk addition (mirrors DOSBox pattern)
-            _mixerChannel.AddSamples_sfloat(framesToGenerate, floatBuffer);
+                // Use AddSamples_sfloat for bulk addition (mirrors DOSBox pattern)
+                _mixerChannel.AddSamples_sfloat(framesToGenerate, floatBuffer);
+            }
 
             framesGenerated += framesToGenerate;
         }
