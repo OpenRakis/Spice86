@@ -1089,8 +1089,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Enqueues mono 8-bit frames, applying warmup and speaker state.
     /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
     /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// Made internal for unit testing.
     /// </summary>
-    private void EnqueueFramesMono(byte[] samples, uint numSamples, bool signed) {
+    internal void EnqueueFramesMono(byte[] samples, uint numSamples, bool signed) {
         if (numSamples == 0) {
             return;
         }
@@ -1124,8 +1125,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Enqueues stereo 8-bit frames, applying warmup and speaker state.
     /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
     /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// Made internal for unit testing.
     /// </summary>
-    private void EnqueueFramesStereo(byte[] samples, uint numSamples, bool signed) {
+    internal void EnqueueFramesStereo(byte[] samples, uint numSamples, bool signed) {
         if (numSamples == 0) {
             return;
         }
@@ -1170,8 +1172,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Enqueues mono 16-bit frames, applying warmup and speaker state.
     /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
     /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// Made internal for unit testing.
     /// </summary>
-    private void EnqueueFramesMono16(short[] samples, uint numSamples, bool signed) {
+    internal void EnqueueFramesMono16(short[] samples, uint numSamples, bool signed) {
         if (numSamples == 0) {
             return;
         }
@@ -1211,8 +1214,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Enqueues stereo 16-bit frames, applying warmup and speaker state.
     /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
     /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// Made internal for unit testing.
     /// </summary>
-    private void EnqueueFramesStereo16(short[] samples, uint numSamples, bool signed) {
+    internal void EnqueueFramesStereo16(short[] samples, uint numSamples, bool signed) {
         if (numSamples == 0) {
             return;
         }
