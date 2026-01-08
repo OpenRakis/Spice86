@@ -89,8 +89,18 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         _scheduler = scheduler;
         _clock = clock;
         _pitControl = pitControl;
-        _mixerChannel = mixer.AddChannel(RenderCallback, SampleRateHz,
-            nameof(PcSpeaker), [ChannelFeature.Stereo]);
+        
+        // Create and register the PC Speaker mixer channel
+        // Mirrors DOSBox Staging pcspeaker_discrete.cpp:455-465 (channel features)
+        // Features: Sleep (CPU efficiency), ChorusSend, ReverbSend (effect sends), Synthesizer (square wave)
+        // Note: PC Speaker is mono but uses stereo channel for left output only (SetChannelMap below)
+        HashSet<ChannelFeature> features = new HashSet<ChannelFeature> {
+            ChannelFeature.Sleep,
+            ChannelFeature.ChorusSend,
+            ChannelFeature.ReverbSend,
+            ChannelFeature.Synthesizer
+        };
+        _mixerChannel = mixer.AddChannel(RenderCallback, SampleRateHz, nameof(PcSpeaker), features);
         _mixerChannel.SetAppVolume(new AudioFrame(1.0f, 1.0f));
         _mixerChannel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Left });
         // DON'T enable the channel here - it starts disabled and wakes up on first use
