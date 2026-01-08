@@ -2503,7 +2503,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
         }
 
-        // Set to masked state - the DMA unmask event will change this to Dma mode
+        // Set initial state to masked - this is the correct DOSBox behavior
+        // The DOS program will unmask the DMA channel when ready, triggering DmaEvent.IsUnmasked
+        // which will then transition the mode to Dma and wake up the channel
         // Mirrors DOSBox: sb.mode = DspMode::DmaMasked (line 1617)
         // Reference: src/hardware/audio/soundblaster.cpp line 1617
         _sb.Mode = DspMode.DmaMasked;
@@ -2618,7 +2620,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
         }
 
-        // Set to masked state - the DMA unmask event will change this to Dma mode
+        // Set initial state to masked - this is the correct DOSBox behavior
+        // The DOS program will unmask the DMA channel when ready, triggering DmaEvent.IsUnmasked
+        // which will then transition the mode to Dma and wake up the channel
         // Mirrors DOSBox: sb.mode = DspMode::DmaMasked (line 1617)
         // Reference: src/hardware/audio/soundblaster.cpp line 1617
         _sb.Mode = DspMode.DmaMasked;
