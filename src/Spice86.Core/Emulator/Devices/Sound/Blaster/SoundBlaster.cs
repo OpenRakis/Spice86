@@ -560,6 +560,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         SoundBlasterHardwareConfig soundBlasterHardwareConfig)
         : base(state, false, loggerService) {
 
+        // Lock mixer thread during construction to prevent concurrent modifications
+        // Mirrors DOSBox Staging SBLASTER_Init() wrapper pattern
+        // Reference: src/hardware/audio/soundblaster.cpp:3858
+        mixer.LockMixerThread();
+
         _config = soundBlasterHardwareConfig;
         _dualPic = dualPic;
         _mixer = mixer;
@@ -648,6 +653,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 "SoundBlaster: Initialized {SbType} on port {Port:X3}, IRQ {Irq}, DMA {LowDma}{HighDmaSegment}",
                 _sb.Type, _sb.Hw.Base, _sb.Hw.Irq, _sb.Hw.Dma8, highDmaSegment);
         }
+
+        // Unlock mixer thread after construction completes
+        // Mirrors DOSBox Staging SBLASTER_Init() wrapper pattern
+        // Reference: src/hardware/audio/soundblaster.cpp:3860
+        mixer.UnlockMixerThread();
     }
 
     private void GenerateFrames(int framesRequested) {

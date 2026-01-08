@@ -85,6 +85,11 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         bool failOnUnhandledPort,
         IPitControl? pitControl = null)
         : base(state, failOnUnhandledPort, loggerService) {
+        // Lock mixer thread during construction to prevent concurrent modifications
+        // Mirrors DOSBox Staging PCSPEAKER_Init() pattern
+        // Reference: src/hardware/audio/pcspeaker.cpp:119
+        mixer.LockMixerThread();
+
         _logger = loggerService;
         _scheduler = scheduler;
         _clock = clock;
@@ -117,6 +122,11 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
 
         _tickHandler = OnSchedulerTick;
         _scheduler.AddEvent(_tickHandler, 1.0);
+
+        // Unlock mixer thread after construction completes
+        // Mirrors DOSBox Staging PCSPEAKER_Init() pattern
+        // Reference: src/hardware/audio/pcspeaker.cpp:136
+        mixer.UnlockMixerThread();
     }
 
     /// <inheritdoc />
