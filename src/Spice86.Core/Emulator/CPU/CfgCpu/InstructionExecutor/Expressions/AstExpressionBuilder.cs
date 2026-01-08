@@ -16,15 +16,18 @@ using System.Linq.Expressions;
 using System.Reflection;
 
 public class AstExpressionBuilder : IAstVisitor<Expression> {
-    private readonly ParameterExpression _memoryParameter = Expression.Parameter(typeof(Memory), "memory");
-    private readonly ParameterExpression _stateParameter = Expression.Parameter(typeof(State), "cpuState");
+    private readonly ParameterExpression _helperParameter = Expression.Parameter(typeof(InstructionExecutionHelper), "helper");
+    private readonly Expression _stateExpression;
+    private readonly Expression _memoryExpression;
 
     private readonly ParameterExpression[] _allParameters;
 
     private readonly RegisterRenderer _registerRenderer = new();
 
     public AstExpressionBuilder() {
-        _allParameters = [_stateParameter, _memoryParameter];
+        _allParameters = [_helperParameter];
+        _stateExpression = Expression.Property(_helperParameter, nameof(InstructionExecutionHelper.State));
+        _memoryExpression = Expression.Property(_helperParameter, nameof(InstructionExecutionHelper.Memory));
     }
 
     private Type FromDataType(DataType dataType) {
@@ -168,7 +171,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     private MemberExpression ToMemoryIndexerProperty(DataType dataType) {
         string propertyName = ToMemoryPropertyName(dataType);
         PropertyInfo memoryIndexerProperty = EnsureNonNull(typeof(Memory).GetProperty(propertyName));
-        return Expression.Property(_memoryParameter, memoryIndexerProperty);
+        return Expression.Property(_memoryExpression, memoryIndexerProperty);
     }
 
     private IndexExpression ToMemoryIndexer(DataType dataType, Expression indexExpression) {
@@ -186,7 +189,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     private MemberExpression ToRegisterProperty(int registerIndex, DataType dataType, bool isSegmentRegister) {
         string name = isSegmentRegister ? _registerRenderer.ToStringSegmentRegister(registerIndex) : _registerRenderer.ToStringRegister(dataType.BitWidth, registerIndex);
         PropertyInfo stateRegisterProperty = EnsureNonNull(typeof(State).GetProperty(name));
-        return Expression.Property(_stateParameter, stateRegisterProperty);
+        return Expression.Property(_stateExpression, stateRegisterProperty);
     }
 
     public Expression VisitSegmentRegisterNode(SegmentRegisterNode node) {
@@ -243,15 +246,17 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         Expression[] arguments = node.Arguments.Select(arg => arg.Accept(this)).ToArray();
         
         if (node.HelperName == null) {
-            throw new NotImplementedException("Root helper calls not yet supported");
+            // Root helper method (e.g., MoveIpAndSetNextNode)
+            MethodInfo method = EnsureNonNull(typeof(InstructionExecutionHelper).GetMethod(node.MethodName));
+            return Expression.Call(_helperParameter, method, arguments);
         }
         
+        // Helper property method (e.g., Alu8.Add)
         PropertyInfo helperProperty = EnsureNonNull(typeof(InstructionExecutionHelper).GetProperty(node.HelperName));
-        Expression helperInstance = Expression.Constant(null, typeof(InstructionExecutionHelper));
-        Expression helperPropertyAccess = Expression.Property(helperInstance, helperProperty);
+        Expression helperPropertyAccess = Expression.Property(_helperParameter, helperProperty);
         
-        MethodInfo method = EnsureNonNull(helperProperty.PropertyType.GetMethod(node.MethodName));
-        return Expression.Call(helperPropertyAccess, method, arguments);
+        MethodInfo propertyMethod = EnsureNonNull(helperProperty.PropertyType.GetMethod(node.MethodName));
+        return Expression.Call(helperPropertyAccess, propertyMethod, arguments);
     }
 
     public Expression VisitBlockNode(BlockNode node) {
@@ -265,35 +270,67 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         return Expression.Assign(target, value);
     }
 
-    public Expression<Action<State, Memory>> ToAction(Expression expression) {
-        return Expression.Lambda<Action<State, Memory>>(expression, _allParameters);
+    public Expression<Action<InstructionExecutionHelper>> ToAction(Expression expression) {
+        return Expression.Lambda<Action<InstructionExecutionHelper>>(expression, _allParameters);
     }
     
-    public Expression<Func<State, Memory, byte>> ToFuncUInt8(Expression expression) {
-        return Expression.Lambda<Func<State, Memory, byte>>(expression, _allParameters);
+    public Expression<Func<InstructionExecutionHelper, byte>> ToFuncUInt8(Expression expression) {
+        return Expression.Lambda<Func<InstructionExecutionHelper, byte>>(expression, _allParameters);
     }
     
-    public Expression<Func<State, Memory, sbyte>> ToFuncInt8(Expression expression) {
-        return Expression.Lambda<Func<State, Memory, sbyte>>(expression, _allParameters);
+    public Expression<Func<InstructionExecutionHelper, sbyte>> ToFuncInt8(Expression expression) {
+        return Expression.Lambda<Func<InstructionExecutionHelper, sbyte>>(expression, _allParameters);
     }
     
-    public Expression<Func<State, Memory, ushort>> ToFuncUInt16(Expression expression) {
-        return Expression.Lambda<Func<State, Memory, ushort>>(expression, _allParameters);
+    public Expression<Func<InstructionExecutionHelper, ushort>> ToFuncUInt16(Expression expression) {
+        return Expression.Lambda<Func<InstructionExecutionHelper, ushort>>(expression, _allParameters);
     }
     
-    public Expression<Func<State, Memory, short>> ToFuncInt16(Expression expression) {
-        return Expression.Lambda<Func<State, Memory, short>>(expression, _allParameters);
+    public Expression<Func<InstructionExecutionHelper, short>> ToFuncInt16(Expression expression) {
+        return Expression.Lambda<Func<InstructionExecutionHelper, short>>(expression, _allParameters);
     }
 
-    public Expression<Func<State, Memory, uint>> ToFuncUInt32(Expression expression) {
-        return Expression.Lambda<Func<State, Memory, uint>>(expression, _allParameters);
+    public Expression<Func<InstructionExecutionHelper, uint>> ToFuncUInt32(Expression expression) {
+        return Expression.Lambda<Func<InstructionExecutionHelper, uint>>(expression, _allParameters);
     }
     
-    public Expression<Func<State, Memory, int>> ToFuncInt32(Expression expression) {
-        return Expression.Lambda<Func<State, Memory, int>>(expression, _allParameters);
+    public Expression<Func<InstructionExecutionHelper, int>> ToFuncInt32(Expression expression) {
+        return Expression.Lambda<Func<InstructionExecutionHelper, int>>(expression, _allParameters);
     }
     
     public Expression<Func<State, Memory, bool>> ToFuncBool(Expression expression) {
-        return Expression.Lambda<Func<State, Memory, bool>>(expression, _allParameters);
+        ParameterExpression stateParam = Expression.Parameter(typeof(State), "state");
+        ParameterExpression memoryParam = Expression.Parameter(typeof(Memory), "memory");
+        // Replace helper.State with state and helper.Memory with memory in the expression
+        ParameterReplacer replacer = new(_stateExpression, stateParam, _memoryExpression, memoryParam);
+        Expression? replacedExpression = replacer.Visit(expression);
+        if (replacedExpression == null) {
+            throw new InvalidOperationException("Expression replacement resulted in null");
+        }
+        return Expression.Lambda<Func<State, Memory, bool>>(replacedExpression, stateParam, memoryParam);
+    }
+    
+    private class ParameterReplacer : ExpressionVisitor {
+        private readonly Expression _oldState;
+        private readonly Expression _newState;
+        private readonly Expression _oldMemory;
+        private readonly Expression _newMemory;
+        
+        public ParameterReplacer(Expression oldState, Expression newState, Expression oldMemory, Expression newMemory) {
+            _oldState = oldState;
+            _newState = newState;
+            _oldMemory = oldMemory;
+            _newMemory = newMemory;
+        }
+        
+        public override Expression? Visit(Expression? node) {
+            if (node == _oldState) {
+                return _newState;
+            }
+            if (node == _oldMemory) {
+                return _newMemory;
+            }
+            return base.Visit(node);
+        }
     }
 }
