@@ -206,6 +206,23 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         };
     }
 
+    public string VisitHelperCallNode(HelperCallNode node) {
+        string helperPrefix = node.HelperName != null ? node.HelperName + "." : "";
+        string arguments = string.Join(", ", node.Arguments.Select(arg => arg.Accept(this)));
+        return $"{helperPrefix}{node.MethodName}({arguments})";
+    }
+
+    public string VisitBlockNode(BlockNode node) {
+        string statements = string.Join("; ", node.Statements.Select(stmt => stmt.Accept(this)));
+        return $"{{ {statements} }}";
+    }
+
+    public string VisitAssignmentNode(AssignmentNode node) {
+        string target = node.Target.Accept(this);
+        string value = node.Value.Accept(this);
+        return $"{target} = {value}";
+    }
+
     private string PointerDataTypeToString(DataType dataType) {
         return dataType.BitWidth switch {
             BitWidth.BYTE_8 => "byte ptr",

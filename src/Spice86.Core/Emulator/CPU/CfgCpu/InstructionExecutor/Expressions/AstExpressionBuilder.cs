@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Shared.Emulator.Memory;
 
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -236,6 +237,32 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         Type type = FromDataType(node.DataType);
         object castValue = Convert.ChangeType(node.Value, type);
         return Expression.Constant(castValue, type);
+    }
+
+    public Expression VisitHelperCallNode(HelperCallNode node) {
+        Expression[] arguments = node.Arguments.Select(arg => arg.Accept(this)).ToArray();
+        
+        if (node.HelperName == null) {
+            throw new NotImplementedException("Root helper calls not yet supported");
+        }
+        
+        PropertyInfo helperProperty = EnsureNonNull(typeof(InstructionExecutionHelper).GetProperty(node.HelperName));
+        Expression helperInstance = Expression.Constant(null, typeof(InstructionExecutionHelper));
+        Expression helperPropertyAccess = Expression.Property(helperInstance, helperProperty);
+        
+        MethodInfo method = EnsureNonNull(helperProperty.PropertyType.GetMethod(node.MethodName));
+        return Expression.Call(helperPropertyAccess, method, arguments);
+    }
+
+    public Expression VisitBlockNode(BlockNode node) {
+        Expression[] statements = node.Statements.Select(stmt => stmt.Accept(this)).ToArray();
+        return Expression.Block(statements);
+    }
+
+    public Expression VisitAssignmentNode(AssignmentNode node) {
+        Expression target = node.Target.Accept(this);
+        Expression value = node.Value.Accept(this);
+        return Expression.Assign(target, value);
     }
 
     public Expression<Action<State, Memory>> ToAction(Expression expression) {

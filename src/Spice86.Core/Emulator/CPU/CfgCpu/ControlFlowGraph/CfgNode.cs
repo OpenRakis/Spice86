@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
@@ -26,6 +27,8 @@ public abstract class CfgNode : ICfgNode {
     public abstract void Execute(InstructionExecutionHelper helper);
 
     public abstract InstructionNode ToInstructionAst(AstBuilder builder);
+
+    public abstract IVisitableAstNode GetExecutionAst(AstBuilder builder);
 
     public int? MaxSuccessorsCount { get; set; }
 

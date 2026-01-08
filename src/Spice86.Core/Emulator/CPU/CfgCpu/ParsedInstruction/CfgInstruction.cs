@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -139,5 +141,9 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
             // Reset it. Will not be used anymore if MaxSuccessorsCount is now more than 1 or null.
             UniqueSuccessor = null;
         }
+    }
+
+    public override IVisitableAstNode GetExecutionAst(AstBuilder builder) {
+        throw new NotImplementedException($"GetExecutionAst not implemented for {GetType().Name}");
     }
 }

@@ -16,4 +16,7 @@ public interface IAstVisitor<T> {
     public T VisitTypeConversionNode(TypeConversionNode node);
     public T VisitInstructionNode(InstructionNode node);
     public T VisitConstantNode(ConstantNode node);
+    public T VisitHelperCallNode(HelperCallNode node);
+    public T VisitBlockNode(BlockNode node);
+    public T VisitAssignmentNode(AssignmentNode node);
 }
