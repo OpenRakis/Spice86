@@ -1089,8 +1089,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Enqueues mono 8-bit frames, applying warmup and speaker state.
     /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
     /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// Made internal for unit testing.
     /// </summary>
-    private void EnqueueFramesMono(byte[] samples, uint numSamples, bool signed) {
+    internal void EnqueueFramesMono(byte[] samples, uint numSamples, bool signed) {
         if (numSamples == 0) {
             return;
         }
@@ -1115,7 +1116,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Process samples into AudioFrames and enqueue to output_queue
         // Mirrors DOSBox enqueue_frames() pattern
         for (uint i = 0; i < numSamples; i++) {
-            float value = signed ? LookupTables.S8To16[samples[i]] : LookupTables.U8To16[samples[i]];
+            float value;
+            if (signed) {
+                // For signed samples, interpret byte as sbyte and convert to lookup index
+                // Mirrors DOSBox: lut_s8to16[static_cast<int8_t>(sample)]
+                // In C#: sbyte value maps to index via (byte)(sbyteValue + 128)
+                sbyte signedSample = unchecked((sbyte)samples[i]);
+                byte lookupIndex = (byte)(signedSample + 128);
+                value = LookupTables.S8To16[lookupIndex];
+            } else {
+                value = LookupTables.U8To16[samples[i]];
+            }
             _outputQueue.Enqueue(new AudioFrame(value, value));
         }
     }
@@ -1124,8 +1135,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Enqueues stereo 8-bit frames, applying warmup and speaker state.
     /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
     /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// Made internal for unit testing.
     /// </summary>
-    private void EnqueueFramesStereo(byte[] samples, uint numSamples, bool signed) {
+    internal void EnqueueFramesStereo(byte[] samples, uint numSamples, bool signed) {
         if (numSamples == 0) {
             return;
         }
@@ -1155,8 +1167,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         bool swapChannels = _sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2;
 
         for (uint i = 0; i < numFrames; i++) {
-            float left = signed ? LookupTables.S8To16[samples[i * 2]] : LookupTables.U8To16[samples[i * 2]];
-            float right = signed ? LookupTables.S8To16[samples[i * 2 + 1]] : LookupTables.U8To16[samples[i * 2 + 1]];
+            float left, right;
+            if (signed) {
+                // For signed samples, interpret bytes as sbytes and convert to lookup indices
+                // Mirrors DOSBox: lut_s8to16[static_cast<int8_t>(sample)]
+                sbyte signedLeft = unchecked((sbyte)samples[i * 2]);
+                sbyte signedRight = unchecked((sbyte)samples[i * 2 + 1]);
+                left = LookupTables.S8To16[(byte)(signedLeft + 128)];
+                right = LookupTables.S8To16[(byte)(signedRight + 128)];
+            } else {
+                left = LookupTables.U8To16[samples[i * 2]];
+                right = LookupTables.U8To16[samples[i * 2 + 1]];
+            }
 
             if (swapChannels) {
                 _outputQueue.Enqueue(new AudioFrame(right, left));
@@ -1170,8 +1192,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Enqueues mono 16-bit frames, applying warmup and speaker state.
     /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
     /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// Made internal for unit testing.
     /// </summary>
-    private void EnqueueFramesMono16(short[] samples, uint numSamples, bool signed) {
+    internal void EnqueueFramesMono16(short[] samples, uint numSamples, bool signed) {
         if (numSamples == 0) {
             return;
         }
@@ -1211,8 +1234,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Enqueues stereo 16-bit frames, applying warmup and speaker state.
     /// Mirrors the maybe_silence + enqueue_frames pattern from DOSBox.
     /// Reference: src/hardware/audio/soundblaster.cpp lines 988-1030, 1107-1112
+    /// Made internal for unit testing.
     /// </summary>
-    private void EnqueueFramesStereo16(short[] samples, uint numSamples, bool signed) {
+    internal void EnqueueFramesStereo16(short[] samples, uint numSamples, bool signed) {
         if (numSamples == 0) {
             return;
         }

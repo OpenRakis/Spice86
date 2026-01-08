@@ -32,6 +32,15 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly EventHandler _oplTimerHandler;
     private readonly float[] _playBuffer = new float[2048];
     private readonly bool _useAdLibGold;
+    
+    // FIFO queue for cycle-accurate OPL frame generation
+    // Mirrors DOSBox Staging opl.h:103
+    private readonly Queue<AudioFrame> _fifo = new();
+    
+    // Time tracking for cycle-accurate rendering
+    // Mirrors DOSBox Staging opl.h:122-123
+    private double _lastRenderedMs;
+    private double _msPerFrame;
 
     /// <summary>
     ///     The mixer channel used for the OPL3 FM synth.
@@ -139,6 +148,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         // Enable noise gate by default for OPL (mirrors DOSBox denoiser setting)
         // In DOSBox this is controlled by mixer's "denoiser" setting, we enable it by default
         _mixerChannel.EnableNoiseGate(true);
+
+        // Initialize cycle-accurate timing for FIFO rendering
+        // Mirrors DOSBox Staging opl.cpp:272
+        const double MillisInSecond = 1000.0;
+        _msPerFrame = MillisInSecond / 49716; // OplSampleRateHz
+        _lastRenderedMs = _clock.ElapsedTimeMs;
 
         // DON'T enable the channel here - it starts disabled and wakes up on first port write
         // Mirrors DOSBox Staging opl.cpp:843-846 where MIXER_AddChannel doesn't call Enable(true)
@@ -282,9 +297,14 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     public override void WriteByte(ushort port, byte value) {
         Opl3WriteResult result = Opl3WriteResult.None;
 
-        // Wake up the channel on any port write
+        // Render cycle-accurate frames up to current time before processing write
         // Mirrors DOSBox Staging opl.cpp:573 (PortWrite calls RenderUpToNow)
-        // RenderUpToNow at opl.cpp:417-432 calls channel->WakeUp() at line 423
+        // RenderUpToNow at opl.cpp:417-432 generates frames based on elapsed time
+        // and queues them in FIFO for later consumption by AudioCallback
+        RenderUpToNow();
+        
+        // Wake up the channel on any port write
+        // Mirrors DOSBox Staging opl.cpp:423 (RenderUpToNow calls channel->WakeUp())
         // This ensures the channel is enabled when OPL receives data
         _mixerChannel.WakeUp();
 
@@ -339,15 +359,106 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// </summary>
     public void AudioCallback(int framesRequested) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("OPL3: Generate framesRequested={Frames}", framesRequested);
+            _loggerService.Verbose("OPL3: AudioCallback framesRequested={Frames}, FIFO size={FifoSize}", 
+                framesRequested, _fifo.Count);
         }
-        // Generate OPL frames and add them to the mixer channel
-        // The mixer calls this with blocksize frames (typically 1024 @ 48kHz)
         
+        lock (_chipLock) {
+            int framesRemaining = framesRequested;
+            Span<float> frameData = stackalloc float[2];
+            
+            // First, drain any cycle-accurate frames we've queued in the FIFO
+            // Mirrors DOSBox Staging opl.cpp:448-451
+            while (framesRemaining > 0 && _fifo.Count > 0) {
+                AudioFrame frame = _fifo.Dequeue();
+                frameData[0] = frame.Left;
+                frameData[1] = frame.Right;
+                _mixerChannel.AddSamples_sfloat(1, frameData);
+                framesRemaining--;
+            }
+            
+            // If the FIFO ran dry, generate the remaining frames and sync up our time datum
+            // Mirrors DOSBox Staging opl.cpp:454-459
+            if (framesRemaining > 0) {
+                GenerateFramesBatch(framesRemaining);
+                
+                // Sync time datum to current atomic time
+                // Mirrors DOSBox Staging opl.cpp:459
+                _lastRenderedMs = _clock.ElapsedTimeMs;
+            }
+        }
+
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("OPL3: AudioCallback completed, FIFO size now={FifoSize}", _fifo.Count);
+        }
+    }
+    
+    /// <summary>
+    ///     Renders cycle-accurate OPL frames up to the current emulated time.
+    ///     Called on every port write to maintain synchronization between CPU and audio.
+    ///     Mirrors DOSBox Staging Opl::RenderUpToNow() from opl.cpp:417-432
+    /// </summary>
+    private void RenderUpToNow() {
+        double now = _clock.ElapsedTimeMs;
+        
+        // Wake up the channel if it was sleeping
+        // Mirrors DOSBox Staging opl.cpp:423
+        if (_mixerChannel.WakeUp()) {
+            _lastRenderedMs = now;
+            return;
+        }
+        
+        // Keep rendering frames until we're caught up to current time
+        // Mirrors DOSBox Staging opl.cpp:428-431
+        while (_lastRenderedMs < now) {
+            _lastRenderedMs += _msPerFrame;
+            AudioFrame frame = RenderSingleFrame();
+            _fifo.Enqueue(frame);
+        }
+    }
+    
+    /// <summary>
+    ///     Renders a single OPL audio frame.
+    ///     Mirrors DOSBox Staging Opl::RenderFrame() from opl.cpp:380-414
+    /// </summary>
+    private AudioFrame RenderSingleFrame() {
+        // Generate one frame (2 samples for stereo)
+        Span<short> buf = stackalloc short[2];
+        
+        // Flush any pending OPL writes before generating audio
+        double now = _clock.ElapsedTimeMs;
+        _oplIo.FlushDueWritesUpTo(now);
+        
+        // Generate audio samples
+        // Mirrors DOSBox Staging opl.cpp:399 (OPL3_GenerateStream)
+        _chip.GenerateStream(buf);
+        
+        AudioFrame frame;
+        
+        // Apply AdLib Gold filtering if enabled
+        // Mirrors DOSBox Staging opl.cpp:407-412
+        if (_adLibGold is not null) {
+            Span<float> floatBuf = stackalloc float[2];
+            _adLibGold.Process(buf, 1, floatBuf);
+            frame = new AudioFrame { Left = floatBuf[0], Right = floatBuf[1] };
+        } else {
+            // Convert int16 to float directly (no normalization)
+            // Mirrors DOSBox Staging opl.cpp:410-411
+            frame = new AudioFrame { Left = (float)buf[0], Right = (float)buf[1] };
+        }
+        
+        return frame;
+    }
+    
+    /// <summary>
+    ///     Generates a batch of OPL frames directly (used when FIFO is empty).
+    ///     Mirrors the frame generation logic from DOSBox Staging opl.cpp:454-458
+    /// </summary>
+    private void GenerateFramesBatch(int frameCount) {
         int framesGenerated = 0;
-        while (framesGenerated < framesRequested) {
+        while (framesGenerated < frameCount) {
             // Generate up to MaxSamplesPerGenerationBatch frames at a time
-            int framesToGenerate = Math.Min(MaxSamplesPerGenerationBatch, framesRequested - framesGenerated);
+            int framesToGenerate = Math.Min(MaxSamplesPerGenerationBatch, frameCount - framesGenerated);
             int samplesToGenerate = framesToGenerate * 2; // stereo = 2 samples per frame
             
             if (samplesToGenerate > _tmpInterleaved.Length) {
@@ -357,17 +468,14 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
             Span<short> interleaved = _tmpInterleaved.AsSpan(0, samplesToGenerate);
 
-            // Minimize lock scope: only hold lock during chip operations
-            lock (_chipLock) {
-                // Flush any pending OPL writes up to current time before generating audio
-                // Mirrors DOSBox Staging opl.cpp:572-573 (RenderUpToNow pattern)
-                double now = _clock.ElapsedTimeMs;
-                _oplIo.FlushDueWritesUpTo(now);
-                
-                // Generate audio samples
-                // Mirrors DOSBox Staging opl.cpp:455 (RenderFrame call) and opl.cpp:399 (OPL3_GenerateStream)
-                _chip.GenerateStream(interleaved);
-            }
+            // Flush any pending OPL writes up to current time before generating audio
+            // Mirrors DOSBox Staging opl.cpp:572-573 (RenderUpToNow pattern)
+            double now = _clock.ElapsedTimeMs;
+            _oplIo.FlushDueWritesUpTo(now);
+            
+            // Generate audio samples
+            // Mirrors DOSBox Staging opl.cpp:455 (RenderFrame call) and opl.cpp:399 (OPL3_GenerateStream)
+            _chip.GenerateStream(interleaved);
 
             // Apply AdLib Gold filtering if enabled (before float conversion)
             // Mirrors DOSBox Staging opl.cpp:407-412 (RenderFrame with adlib_gold->Process)
@@ -381,11 +489,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 // Mirrors DOSBox Staging opl.cpp:449 (AddSamples_sfloat call)
                 _mixerChannel.AddSamples_sfloat(framesToGenerate, floatBuffer);
             } else {
-                // Convert interleaved int16 samples to normalized float
+                // Convert interleaved int16 samples directly to int16-ranged floats
                 // Mirrors DOSBox Staging opl.cpp:410-411 (frame.left/right = buf[0]/buf[1])
+                // DOSBox does NOT normalize - just casts int16 to float
                 Span<float> floatBuffer = _playBuffer.AsSpan(0, samplesToGenerate);
                 for (int i = 0; i < samplesToGenerate; i++) {
-                    floatBuffer[i] = interleaved[i] / 32768.0f; // Normalize to [-1.0, 1.0]
+                    floatBuffer[i] = (float)interleaved[i]; // Keep in int16 range, no normalization
                 }
 
                 // Mirrors DOSBox Staging opl.cpp:456 (AddSamples_sfloat call in AudioCallback)
@@ -393,10 +502,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             }
 
             framesGenerated += framesToGenerate;
-        }
-
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("OPL3: Generated frames={Frames}", framesGenerated);
         }
     }
 

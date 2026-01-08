@@ -1323,9 +1323,11 @@ public sealed class MixerChannel : IDisposable {
         while (pos < numFrames) {
             _prevFrame = _nextFrame;
             
-            // Float samples are already in the correct format
-            float left = data[pos * 2] * 32768.0f; // Convert normalized to 16-bit range
-            float right = data[pos * 2 + 1] * 32768.0f;
+            // Float samples are already in int16-ranged format (like DOSBox staging)
+            // DOSBox: just does static_cast<float> with no conversion
+            // Mirrors DOSBox mixer.cpp:1885-1892
+            float left = data[pos * 2];
+            float right = data[pos * 2 + 1];
             _nextFrame = new AudioFrame(left, right);
             
             // Apply channel mapping (stereo)
