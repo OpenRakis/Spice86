@@ -546,6 +546,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     // Accumulates fractional frames across ticks to avoid systematic drift
     // Reference: src/hardware/audio/soundblaster.cpp line 3235
     private float _frameCounter = 0.0f;
+    
+    // Frames needed counter - mirrors DOSBox sblaster->frames_needed
+    // Set by GenerateFrames (mixer callback) to request more frames when output queue is low
+    // Used by MixerTickCallback to generate additional frames on demand
+    // Reference: src/hardware/audio/soundblaster.cpp line 3295
+    private int _framesNeeded = 0;
 
     public SoundBlaster(
         IOPortDispatcher ioPortDispatcher,
@@ -673,6 +679,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Keep channel awake during any activity - mirrors DOSBox soundblaster.cpp:3200
         if (_sb.Mode == DspMode.Dma) {
             MaybeWakeUp();
+        }
+        
+        // Request more frames if output queue is running low
+        // Mirrors DOSBox soundblaster.cpp:3295
+        // This ensures DMA processing can speed up when the mixer needs more data
+        int queueSize = _outputQueue.Count;
+        int shortage = Math.Max(framesRequested - queueSize, 0);
+        if (shortage > 0) {
+            System.Threading.Interlocked.Exchange(ref _framesNeeded, shortage);
         }
 
         // Pull frames from output_queue and add them to the channel
@@ -1653,8 +1668,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         
         // Accumulate fractional frames - mirrors DOSBox frame_counter logic
         // This prevents systematic drift for non-integer frame rates like 22.05 frames/ms (22050 Hz)
+        // Also considers frames_needed to generate additional frames when output queue is low
+        // Reference: src/hardware/audio/soundblaster.cpp line 3237
+        int framesNeeded = System.Threading.Interlocked.Exchange(ref _framesNeeded, 0);
         float framesPerTick = _dacChannel.GetFramesPerTick();
-        _frameCounter += framesPerTick;
+        _frameCounter += Math.Max(framesNeeded, framesPerTick);
         
         // Generate only the integer part of accumulated frames
         // Mirrors DOSBox: ifloor(frame_counter)
@@ -2489,25 +2507,35 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Dma.Channel = dmaChannel;
         _sb.Dma.FirstTransfer = true;
 
-        // Setup DMA transfer rate and timing parameters - mirrors DOSBox calc_sbsample_rate()
-        // Reference: src/hardware/audio/soundblaster.cpp lines 653-680
-        _sb.Dma.Rate = _sb.FreqHz;
-        if (_sb.Dma.Rate > 0) {
-            _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
-            _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
-        } else {
-            _loggerService.Warning("SOUNDBLASTER: DMA Rate is 0, using default timing parameters");
-            _sb.Dma.Rate = DefaultPlaybackRateHz;
-            _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
-            _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
+        // Setup DMA multiplier based on mode - mirrors DOSBox dsp_do_dma_transfer()
+        // Reference: src/hardware/audio/soundblaster.cpp lines 1575-1580
+        // The multiplier determines how many bytes to process per frame
+        _sb.Dma.Mul = mode switch {
+            DmaMode.Adpcm2Bit => (1 << SbShift) / 4,
+            DmaMode.Adpcm3Bit => (1 << SbShift) / 3,
+            DmaMode.Adpcm4Bit => (1 << SbShift) / 2,
+            DmaMode.Pcm8Bit => (1 << SbShift),
+            DmaMode.Pcm16Bit => (1 << SbShift),
+            DmaMode.Pcm16BitAliased => (1 << SbShift) * 2,
+            _ => (1 << SbShift)
+        };
+        
+        // Double the reading speed for stereo mode - mirrors DOSBox line 1604
+        if (_sb.Dma.Stereo) {
+            _sb.Dma.Mul *= 2;
         }
+        
+        // Calculate DMA rate - mirrors DOSBox line 1609
+        // Reference: src/hardware/audio/soundblaster.cpp line 1609
+        _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
+        _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DMA timing - Rate={Rate}Hz, Mul={Mul}, Min={Min}",
-                _sb.Dma.Rate, _sb.Dma.Mul, _sb.Dma.Min);
+            _loggerService.Debug("SOUNDBLASTER: DMA timing - FreqHz={FreqHz}, Mul={Mul}, Rate={Rate}Hz, Min={Min}",
+                _sb.FreqHz, _sb.Dma.Mul, _sb.Dma.Rate, _sb.Dma.Min);
         }
 
-        // Update channel sample rate to match DMA rate
+        // Update channel sample rate to match DMA frequency
         // This ensures the mixer can properly resample if needed
         int dmaRateHz = (int)_sb.FreqHz;
         if (dmaRateHz > 0) {
