@@ -68,7 +68,17 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         : base(state, failOnUnhandledPort, loggerService) {
         // Create and register the OPL3 mixer channel
         // Mirrors DOSBox Staging opl.cpp:825-846 (channel_features and MIXER_AddChannel)
-        HashSet<ChannelFeature> features = new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer };
+        // Features: Sleep (CPU efficiency), FadeOut (smooth stop), NoiseGate (residual noise removal),
+        //           ReverbSend (reverb effect), ChorusSend (chorus effect), Synthesizer (FM synth), Stereo (OPL3)
+        HashSet<ChannelFeature> features = new HashSet<ChannelFeature> {
+            ChannelFeature.Sleep,
+            ChannelFeature.FadeOut,
+            ChannelFeature.NoiseGate,
+            ChannelFeature.ReverbSend,
+            ChannelFeature.ChorusSend,
+            ChannelFeature.Synthesizer,
+            ChannelFeature.Stereo  // OPL3 is stereo (dual_opl in DOSBox)
+        };
         _mixerChannel = mixer.AddChannel(framesRequested => AudioCallback(framesRequested), 49716, "OPL3FM", features);
         _scheduler = scheduler;
         _clock = clock;
