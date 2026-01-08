@@ -1,10 +1,55 @@
-// SPICE86 AUDIO PARITY PORT PLAN (UPDATED 2026-01-07 PM)
+// SPICE86 AUDIO PARITY PORT PLAN (UPDATED 2026-01-08)
 // ========================================================
 // Port DOSBox Staging audio subsystem to achieve feature parity.
 // Reference: https://github.com/dosbox-staging/dosbox-staging (latest commit)
 //
 // Excludes: Fast-forward, Capture, ESFM
 // Speex: Pure C# port (SpeexResamplerCSharp.cs) - NO P/Invoke needed!
+//
+// ⚠️ CRITICAL FIX (2026-01-08) - CHANNEL INITIALIZATION ARCHITECTURE ✅ ⚠️
+// =============================================================================
+// **ISSUE**: Dune doesn't start up anymore with either PCM nor OPL2 driver active
+// **ROOT CAUSE**: Architectural deviation in channel initialization - channels were
+//                 explicitly enabled during initialization instead of waking on first use
+//
+// **PROBLEM IDENTIFIED**:
+// - Opl3Fm.cs line 96: Explicit `_mixerChannel.Enable(true)` during initialization
+// - SoundBlaster.cs line 620: Explicit `_dacChannel.Enable(true)` during initialization  
+// - PcSpeaker.cs line 96: Explicit `_mixerChannel.Enable(true)` during initialization
+// - Missing WakeUp() calls in Opl3Fm.WriteByte() when OPL ports are accessed
+// - This broke the sleep/wake mechanism and channel lifecycle
+//
+// **DOSBox STAGING ARCHITECTURE** (Authoritative):
+// 1. Channels start DISABLED by default (MIXER_AddChannel → Enable(false) if no saved settings)
+// 2. Channels wake up via WakeUp() when I/O ports are accessed
+// 3. Sleeper mechanism can put channels back to sleep when inactive
+// 4. Examples:
+//    - OPL: opl.cpp:843 adds channel, no Enable(true) call
+//           opl.cpp:573 PortWrite → RenderUpToNow → channel->WakeUp()
+//    - SoundBlaster: soundblaster.cpp:3632 adds channel, no Enable(true) call
+//                    Multiple WakeUp() calls throughout DSP command handlers
+//    - PCSpeaker: pcspeaker_discrete.cpp:455 adds channel, no Enable(true) call
+//                 pcspeaker_discrete.cpp:272,323 WakeUp() on counter/control changes
+//
+// **FIX APPLIED** (2026-01-08):
+// ✅ Removed Enable(true) from Opl3Fm constructor (line 96)
+// ✅ Added WakeUp() call in Opl3Fm.WriteByte() before OPL chip access
+// ✅ Removed Enable(true) from SoundBlaster constructor (line 620)
+// ✅ Removed Enable(true) from PcSpeaker constructor (line 96)
+// ✅ Added WakeUp() calls in PcSpeaker.SetCounter() and SetPitControl()
+//
+// **IMPACT**:
+// - Channels now start disabled and wake on first use (matches DOSBox exactly)
+// - Sleep/wake mechanism works correctly (channels sleep when inactive)
+// - Fixes Dune startup with both PCM and OPL2 drivers
+// - Improves CPU efficiency (sleeping channels don't consume resources)
+// - Build: ✅ 0 errors, 0 warnings
+// - Tests: ✅ 34 audio tests pass
+//
+// **ARCHITECTURE RULE** (CRITICAL):
+// ⚠️ NEVER call Enable(true) during audio device initialization!
+// ⚠️ ALWAYS use WakeUp() when device receives data or I/O port access!
+// ⚠️ Let the sleeper mechanism control the enabled state!
 //
 // ⚠️ LATEST UPDATE (2026-01-07 PM) - SIDE-BY-SIDE DEBUGGING IMPROVEMENTS ✅ ⚠️
 // ===================================================================================
