@@ -618,13 +618,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         _dacChannel = _mixer.AddChannel(GenerateFrames, (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
         
-        // Configure Zero-Order-Hold upsampler and resample method
+        // Configure Zero-Order-Hold upsampler and resample method for SB Pro 2 only
         // Mirrors DOSBox Staging soundblaster.cpp:645-646
         // ZOH upsampler provides vintage DAC sound characteristic
         // Native DAC rate is 49716 Hz, then resampled to host rate (typically 48000 Hz)
-        const int NativeDacRateHz = 49716;
-        _dacChannel.SetZeroOrderHoldUpsamplerTargetRate(NativeDacRateHz);
-        _dacChannel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
+        if (_config.SbType == SbType.SBPro2) {
+            const int NativeDacRateHz = 49716;
+            _dacChannel.SetZeroOrderHoldUpsamplerTargetRate(NativeDacRateHz);
+            _dacChannel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
+        }
         
         // DON'T enable the channel here - it starts disabled and wakes up on first use
         // This mirrors DOSBox where channels start disabled and wake via WakeUp()
