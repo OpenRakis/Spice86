@@ -64,15 +64,15 @@ public class HardwareMixerTests {
         mixer.Write(0x00);
 
         AudioFrame mutedVolume = pcmChannel.GetAppVolume();
-        mutedVolume.Left.Should().Be(0.0f, "attenuation below 4 maps to mute in DOSBox Staging");
-        mutedVolume.Right.Should().Be(0.0f, "attenuation below 4 maps to mute in DOSBox Staging");
+        mutedVolume.Left.Should().Be(0.0f, "0x00 maps to volume 0 which is muted");
+        mutedVolume.Right.Should().Be(0.0f, "0x00 maps to volume 0 which is muted");
 
         mixer.CurrentAddress = MixerRegisters.DacVolume;
         mixer.Write(0xFF);
 
         AudioFrame maxVolume = pcmChannel.GetAppVolume();
-        maxVolume.Left.Should().Be(1.0f, "0xFF maps to 31 which DOSBox Staging treats as unity gain");
-        maxVolume.Right.Should().Be(1.0f, "0xFF maps to 31 which DOSBox Staging treats as unity gain");
+        maxVolume.Left.Should().Be(1.0f, "0xFF maps to volume 31 (count=0) which DOSBox calculates as 10^(-0.05*0) = 1.0");
+        maxVolume.Right.Should().Be(1.0f, "0xFF maps to volume 31 (count=0) which DOSBox calculates as 10^(-0.05*0) = 1.0");
 
         AudioFrame oplVolume = oplChannel.GetAppVolume();
         oplVolume.Left.Should().Be(1.0f, "FM channel mirrors master volume scaling");
@@ -102,12 +102,14 @@ public class HardwareMixerTests {
         right.Should().Be(0x08, "SB16 stores five-bit volume shifted left per DOSBox Staging");
 
         AudioFrame pcmVolume = pcmChannel.GetAppVolume();
-        pcmVolume.Left.Should().Be(1.0f, "0xE0 maps to five-bit 28 which DOSBox treats as unity");
-        pcmVolume.Right.Should().Be(0.0f, "0x08 maps to five-bit value 1 which DOSBox treats as muted");
+        // Volume 28: count=3, db=3*2=6, 10^(-0.05*6) ≈ 0.501187
+        pcmVolume.Left.Should().BeApproximately(0.501187f, 0.001f, "0xE0 >> 3 = 28, DOSBox SB16 calc: count=3, db=6, vol=0.501");
+        // Volume 1: count=30, db=30*2=60, 10^(-0.05*60) ≈ 0.001
+        pcmVolume.Right.Should().BeApproximately(0.001f, 0.001f, "0x08 >> 3 = 1, DOSBox SB16 calc: count=30, db=60, vol≈0.001");
 
         AudioFrame oplVolume = oplChannel.GetAppVolume();
-        oplVolume.Left.Should().Be(1.0f);
-        oplVolume.Right.Should().Be(0.0f);
+        oplVolume.Left.Should().BeApproximately(0.501187f, 0.001f, "OPL mirrors master volume");
+        oplVolume.Right.Should().BeApproximately(0.001f, 0.001f, "OPL mirrors master volume");
     }
 
     [Fact]

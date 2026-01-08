@@ -579,16 +579,40 @@ public class HardwareMixer {
         _opl3fmMixerChannel.SetAppVolume(new AudioFrame(fmLeft, fmRight));
     }
 
-    private static float CalculatePercentage(byte volume) {
+    private float CalculatePercentage(byte volume) {
         // The SB Pro volume values are attenuation values (31=max volume, 0=mute)
-        if (volume >= 28) {
-            return 1.0f;  // Full volume
-        }
-        if (volume <= 4) {
-            return 0.0f;   // Mute
+        // Mirrors DOSBox Staging calc_vol() function from soundblaster.cpp
+        // Reference: src/hardware/audio/soundblaster.cpp calc_vol()
+        
+        byte count = (byte)(31 - volume);
+        float db = count;
+
+        // Apply Sound Blaster type-specific adjustments
+        if (_blasterHardwareConfig.SbType == SbType.SBPro1 || _blasterHardwareConfig.SbType == SbType.SBPro2) {
+            if (count != 0) {
+                if (count < 16) {
+                    db -= 1.0f;
+                } else if (count > 16) {
+                    db += 1.0f;
+                }
+                if (count == 24) {
+                    db += 2.0f;
+                }
+                if (count > 27) {
+                    // Turn it off
+                    return 0.0f;
+                }
+            }
+        } else {
+            // SB16 scale (and other SB types without specific data)
+            db *= 2.0f;
+            if (count > 20) {
+                db -= 1.0f;
+            }
         }
 
-        // Linear interpolation between 0.0 and 1.0
-        return (volume - 4) / 24.0f;
+        // Convert dB to linear scale: 10^(-0.05 * db)
+        // This is the inverse of the formula: dB = 20 * log10(linear)
+        return (float)Math.Pow(10.0, -0.05 * db);
     }
 }
