@@ -383,7 +383,8 @@ public sealed class SpeexResamplerCSharp : IDisposable {
         }
 
         // Allocate memory for channel state
-        uint minAllocSize = _filtLen * _nbChannels;
+        // Mirrors C code: min_alloc_size = st->filt_len-1 + st->buffer_size
+        uint minAllocSize = (_filtLen - 1 + _bufferSize) * _nbChannels;
         if (_memAllocSize < minAllocSize) {
             float[] newMem = new float[minAllocSize * 2];  // Allocate extra space
             if (_mem.Length > 0) {
@@ -455,9 +456,11 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
         int channelOffset = (int)(channelIndex * (_memAllocSize / _nbChannels));
 
-        // Copy input samples to memory buffer
+        // Copy input samples to memory buffer at offset (n-1)
+        // This mirrors the C code: x[j+filt_offs] = in[j*istride] where filt_offs = n-1
+        // The lastSample offset is used when reading, not when writing
         for (int i = 0; i < (int)inLen; i++) {
-            _mem[channelOffset + n - 1 + lastSample + i] = input[i];
+            _mem[channelOffset + (n - 1) + i] = input[i];
         }
 
         while (!(lastSample >= (int)inLen || outSample >= (int)outLen)) {
