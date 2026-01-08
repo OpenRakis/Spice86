@@ -806,15 +806,25 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
                     // Wake up the mixer channel for playback
                     // Unmasking is when software has finished setup and is ready for playback
-                    MaybeWakeUp();
+                    bool wasWokenUp = MaybeWakeUp();
+                    
+                    // Ensure channel is enabled - critical for DMA processing to start
+                    // If WakeUp didn't enable it (e.g., already awake), enable it explicitly
+                    if (!_dacChannel.IsEnabled) {
+                        _dacChannel.Enable(true);
+                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                            _loggerService.Debug("SOUNDBLASTER: Explicitly enabled DAC channel after unmask");
+                        }
+                    }
 
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output. IsAutoiniting={IsAutoiniting}, BaseCount={BaseCount}, CurrentCount={CurrentCount}",
-                            channel.IsAutoiniting, channel.BaseCount, channel.CurrentCount);
+                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output. WokenUp={WokenUp}, ChannelEnabled={Enabled}, IsAutoiniting={IsAutoiniting}, BaseCount={BaseCount}, CurrentCount={CurrentCount}, Left={Left}",
+                            wasWokenUp, _dacChannel.IsEnabled, channel.IsAutoiniting, channel.BaseCount, channel.CurrentCount, _sb.Dma.Left);
                     }
                 } else {
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked but not in DmaMasked mode, ignoring");
+                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked but not in DmaMasked mode, ignoring - Mode={Mode}, DmaMode={DmaMode}",
+                            _sb.Mode, _sb.Dma.Mode);
                     }
                 }
                 break;
@@ -1629,6 +1639,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private void MixerTickCallback(uint unusedTick) {
         if (!_dacChannel.IsEnabled) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("SOUNDBLASTER: MixerTickCallback - channel not enabled, skipping. Mode={Mode}, DmaMode={DmaMode}",
+                    _sb.Mode, _sb.Dma.Mode);
+            }
             _scheduler.AddEvent(MixerTickCallback, 1.0);
             return;
         }
@@ -1697,6 +1711,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case DspMode.Dma:
                 // DMA mode - process DMA transfers
                 // Mirrors DOSBox DspMode::Dma case (lines 3199-3220)
+                
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SOUNDBLASTER: GenerateFramesInternal DMA mode - frames={Frames}, Left={Left}, Channel={Channel}",
+                        framesToGenerate, _sb.Dma.Left, _sb.Dma.Channel?.ChannelNumber);
+                }
                 
                 // Keep channel awake during DMA processing
                 MaybeWakeUp();
