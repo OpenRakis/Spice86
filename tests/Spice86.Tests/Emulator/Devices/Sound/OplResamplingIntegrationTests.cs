@@ -19,6 +19,10 @@ using Xunit.Abstractions;
 /// <summary>
 /// Integration test for the complete OPL audio pipeline including resampling.
 /// Tests: OPL chip → AddSamples_sfloat → MixerChannel resampling → Output
+/// 
+/// NOTE: Following DOSBox Staging architecture, AudioFrame stores int16-ranged floats
+/// (approximately [-32768, 32767]) throughout the pipeline. These are normalized to
+/// [-1.0, 1.0] only at the final mixer output before sending to PortAudio.
 /// </summary>
 public class OplResamplingIntegrationTests {
     private readonly ITestOutputHelper _output;
@@ -110,9 +114,11 @@ public class OplResamplingIntegrationTests {
         _output.WriteLine($"Saved audio to: {wavPath}");
         
         // Validate
+        // Note: AudioFrame uses int16-ranged floats (like DOSBox Staging), not normalized [-1.0, 1.0]
+        // Max int16 value is 32767, so reasonable audio should be in that range
         nonZeroPercent.Should().BeGreaterThan(90, "Resampled OPL audio should be non-silent");
-        maxAmp.Should().BeGreaterThan(0.01f, "Resampled OPL audio should have reasonable amplitude");
-        maxAmp.Should().BeLessThan(2.0f, "Resampled OPL audio should not clip excessively");
+        maxAmp.Should().BeGreaterThan(100, "Resampled OPL audio should have reasonable amplitude");
+        maxAmp.Should().BeLessThan(32767, "Resampled OPL audio should not exceed int16 range");
         
         // Clean up
         opl.Dispose();

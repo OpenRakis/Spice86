@@ -21,6 +21,10 @@ using Xunit.Abstractions;
 /// End-to-end audio capture tests that validate the complete audio pipeline:
 /// OPL/PCM → Mixer → AudioPlayer output
 /// These tests capture actual mixed audio to diagnose static/silence issues.
+/// 
+/// NOTE: AudioFrame uses int16-ranged floats (not normalized [-1.0, 1.0]) throughout
+/// the Spice86 audio pipeline, matching DOSBox Staging's architecture. Values are
+/// only normalized to [-1.0, 1.0] at the final output step before PortAudio.
 /// </summary>
 public class AudioEndToEndCaptureTests {
     private readonly ITestOutputHelper _output;
@@ -153,9 +157,11 @@ public class AudioEndToEndCaptureTests {
         WavFileFormat.WriteWavFile(wavPath, frames, OplSampleRateHz);
         _output.WriteLine($"Saved audio to: {wavPath}");
         
-        // Validate
+        // Validate - AudioFrame uses int16-ranged floats (like DOSBox Staging)
+        // Valid range is approximately [-32768, 32767] for int16
         nonZeroCount.Should().BeGreaterThan(0, "OPL should produce non-zero audio when key is ON");
-        maxAmplitude.Should().BeGreaterThan(0.001f, "OPL audio should have measurable amplitude");
+        maxAmplitude.Should().BeGreaterThan(100, "OPL audio should have measurable amplitude");
+        maxAmplitude.Should().BeLessThan(32767, "OPL audio should not exceed int16 max range");
         
         // Clean up
         opl.Dispose();
@@ -202,8 +208,9 @@ public class AudioEndToEndCaptureTests {
         _output.WriteLine($"Max amplitude: {maxAmplitude:F6}");
         
         // Allow for small noise gate residuals but should be mostly silent
+        // AudioFrame uses int16-ranged floats, so noise should be minimal (< 100)
         nonZeroPercent.Should().BeLessThan(10, "OPL should be mostly silent with no keys pressed");
-        maxAmplitude.Should().BeLessThan(0.01f, "OPL noise should be very low with no keys pressed");
+        maxAmplitude.Should().BeLessThan(100, "OPL noise should be very low with no keys pressed");
         
         // Clean up
         opl.Dispose();

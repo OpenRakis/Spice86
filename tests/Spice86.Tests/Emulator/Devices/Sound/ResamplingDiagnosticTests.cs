@@ -9,6 +9,11 @@ using global::Bufdio.Spice86;
 /// <summary>
 /// Diagnostic tests for the Speex resampler with OPL-specific rates.
 /// Tests the exact scenario: 49716 Hz (OPL) → 48000 Hz (Mixer)
+/// 
+/// NOTE: These tests use normalized float input ([-1.0, 1.0]) for the sine wave generator,
+/// but in the actual Spice86 pipeline, AudioFrame uses int16-ranged floats matching DOSBox.
+/// The Speex resampler preserves the input scale regardless of whether it's normalized
+/// or int16-ranged.
 /// </summary>
 public class ResamplingDiagnosticTests {
     private readonly ITestOutputHelper _output;
@@ -54,6 +59,7 @@ public class ResamplingDiagnosticTests {
         _output.WriteLine($"Consumed: {inFramesConsumed} frames, Generated: {outFramesGenerated} frames");
         
         // Assert: Should generate frames
+        // Note: Speex resampler outputs in the SAME scale as input (int16-ranged floats)
         outFramesGenerated.Should().BeGreaterThan(0, "Resampler should generate output frames");
         inFramesConsumed.Should().Be((uint)inputFrames, "Resampler should consume all input");
         
@@ -74,8 +80,10 @@ public class ResamplingDiagnosticTests {
         _output.WriteLine($"Non-zero samples: {nonZeroCount}/{(int)outFramesGenerated * 2} ({nonZeroPercent:F1}%)");
         _output.WriteLine($"Max amplitude: {maxAmp:F6}");
         
+        // Validate - output should maintain input scale (normalized float [-1.0, 1.0] in this test)
         nonZeroCount.Should().BeGreaterThan(0, "Resampled audio should not be silent");
         maxAmp.Should().BeGreaterThan(0.1f, "Resampled audio should have reasonable amplitude");
+        maxAmp.Should().BeLessThan(2.0f, "Resampled normalized audio should stay near [-1.0, 1.0] range");
         nonZeroPercent.Should().BeGreaterThan(90, "Most samples should be non-zero for sine wave");
         
         // Save output for manual inspection
