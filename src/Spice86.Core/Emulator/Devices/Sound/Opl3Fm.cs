@@ -20,12 +20,6 @@ using System.Threading;
 /// </summary>
 public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private const int MaxSamplesPerGenerationBatch = 512;
-    
-    // Maximum frames to render per RenderUpToNow() call to prevent blocking emulation
-    // This prevents the while loop from running for tens of thousands of iterations
-    // when large time gaps occur between port writes
-    private const int MaxFramesPerRenderBatch = 512;
-    
     private readonly AdLibGoldDevice? _adLibGold;
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
@@ -403,7 +397,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     ///     Renders cycle-accurate OPL frames up to the current emulated time.
     ///     Called on every port write to maintain synchronization between CPU and audio.
     ///     Mirrors DOSBox Staging Opl::RenderUpToNow() from opl.cpp:417-432
-    ///     NOTE: Modified to limit frames per call to prevent emulation blocking.
     /// </summary>
     private void RenderUpToNow() {
         double now = _clock.ElapsedTimeMs;
@@ -415,19 +408,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             return;
         }
         
-        // Limit frame generation to prevent blocking emulation thread.
-        // DOSBox can afford unbounded rendering because it runs in a different architecture,
-        // but Spice86 needs to limit batch size when called from emulation thread.
-        // The FIFO will accumulate frames across multiple calls if needed.
-        int framesGenerated = 0;
-        
         // Keep rendering frames until we're caught up to current time
         // Mirrors DOSBox Staging opl.cpp:428-431
-        while (_lastRenderedMs < now && framesGenerated < MaxFramesPerRenderBatch) {
+        while (_lastRenderedMs < now) {
             _lastRenderedMs += _msPerFrame;
             AudioFrame frame = RenderSingleFrame();
             _fifo.Enqueue(frame);
-            framesGenerated++;
         }
     }
     
