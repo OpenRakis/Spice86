@@ -774,9 +774,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                                 samplesToGenerate = 0;
                             }
 
-                            // Process remaining DMA samples
-                            // This would normally call ProcessDMATransfer(samplesToGenerate)
-                            // but in our architecture, we let GenerateFrames handle it
+                            // Process remaining DMA samples before masking
+                            // Mirrors DOSBox: if (s) { ProcessDMATransfer(s); }
+                            // Reference: src/hardware/audio/soundblaster.cpp lines 810-812
+                            if (samplesToGenerate > 0) {
+                                PlayDmaTransfer(samplesToGenerate);
+                            }
                         }
                     }
 
@@ -2485,13 +2488,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 _sb.Dma.Rate, _sb.Dma.Mul, _sb.Dma.Min);
         }
 
-        // Register DMA callback - mirrors DOSBox RegisterCallback(dsp_dma_callback)
-        // Reference: src/hardware/audio/soundblaster.cpp line 1618
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: Registering DMA callback on channel {Channel}", dmaChannel.ChannelNumber);
-        }
-        dmaChannel.RegisterCallback(DspDmaCallback);
-
         // Update channel sample rate to match DMA rate
         // This ensures the mixer can properly resample if needed
         int dmaRateHz = (int)_sb.FreqHz;
@@ -2507,14 +2503,22 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
         }
 
-        // Transition DSP mode to DMA if not already in DMA mode
-        if (_sb.Mode != DspMode.Dma) {
-            DspChangeMode(DspMode.Dma);
-        }
+        // Set initial state to masked - this is the correct DOSBox behavior
+        // The DOS program will unmask the DMA channel when ready, triggering DmaEvent.IsUnmasked
+        // which will then transition the mode to Dma and wake up the channel
+        // Mirrors DOSBox: sb.mode = DspMode::DmaMasked (line 1617)
+        // Reference: src/hardware/audio/soundblaster.cpp line 1617
+        _sb.Mode = DspMode.DmaMasked;
 
-        // Wake up the channel now that DMA is ready to play
-        // Mirrors DOSBox soundblaster.cpp:840
-        MaybeWakeUp();
+        // Register DMA callback - mirrors DOSBox RegisterCallback(dsp_dma_callback)
+        // Reference: src/hardware/audio/soundblaster.cpp line 1618
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: Registering DMA callback on channel {Channel}", dmaChannel.ChannelNumber);
+        }
+        dmaChannel.RegisterCallback(DspDmaCallback);
+
+        // Note: We do NOT call MaybeWakeUp() here or transition to Dma mode
+        // The channel will wake up and mode will transition when the DMA channel is unmasked (DmaEvent.IsUnmasked)
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA prepared - Mode={Mode}, AutoInit={AutoInit}, Bits={Bits}, Left={Left}, Channel={Channel}, Rate={Rate}Hz",
@@ -2594,13 +2598,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 _sb.Dma.Rate, _sb.Dma.Mul, _sb.Dma.Min);
         }
 
-        // Register DMA callback - mirrors DOSBox RegisterCallback(dsp_dma_callback)
-        // Reference: src/hardware/audio/soundblaster.cpp line 2156
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: Registering DMA callback on channel {Channel} (new-style)", _sb.Dma.Channel.ChannelNumber);
-        }
-        _sb.Dma.Channel.RegisterCallback(DspDmaCallback);
-
         // Determine bit depth
         _sb.Dma.Bits = newMode switch {
             DmaMode.Pcm8Bit => 8,
@@ -2623,14 +2620,22 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
         }
 
-        // Transition to DMA mode
-        if (_sb.Mode != DspMode.Dma) {
-            DspChangeMode(DspMode.Dma);
-        }
+        // Set initial state to masked - this is the correct DOSBox behavior
+        // The DOS program will unmask the DMA channel when ready, triggering DmaEvent.IsUnmasked
+        // which will then transition the mode to Dma and wake up the channel
+        // Mirrors DOSBox: sb.mode = DspMode::DmaMasked (line 1617)
+        // Reference: src/hardware/audio/soundblaster.cpp line 1617
+        _sb.Mode = DspMode.DmaMasked;
 
-        // Wake up the channel now that DMA is ready to play
-        // Mirrors DOSBox soundblaster.cpp:840
-        MaybeWakeUp();
+        // Register DMA callback - mirrors DOSBox RegisterCallback(dsp_dma_callback)
+        // Reference: src/hardware/audio/soundblaster.cpp line 1618
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: Registering DMA callback on channel {Channel} (new-style)", _sb.Dma.Channel.ChannelNumber);
+        }
+        _sb.Dma.Channel.RegisterCallback(DspDmaCallback);
+
+        // Note: We do NOT call MaybeWakeUp() here or transition to Dma mode
+        // The channel will wake up and mode will transition when the DMA channel is unmasked (DmaEvent.IsUnmasked)
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA prepared (new) - Mode={Mode}, AutoInit={AutoInit}, " +
