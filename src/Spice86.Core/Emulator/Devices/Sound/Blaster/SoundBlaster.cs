@@ -774,9 +774,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                                 samplesToGenerate = 0;
                             }
 
-                            // Process remaining DMA samples
-                            // This would normally call ProcessDMATransfer(samplesToGenerate)
-                            // but in our architecture, we let GenerateFrames handle it
+                            // Process remaining DMA samples before masking
+                            // Mirrors DOSBox: if (s) { ProcessDMATransfer(s); }
+                            // Reference: src/hardware/audio/soundblaster.cpp lines 810-812
+                            if (samplesToGenerate > 0) {
+                                PlayDmaTransfer(samplesToGenerate);
+                            }
                         }
                     }
 
