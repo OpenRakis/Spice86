@@ -92,8 +92,9 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         _oplIo.Reset((uint)sampleRate);
 
-        // Enable the channel now that it's registered
-        _mixerChannel.Enable(true);
+        // DON'T enable the channel here - it starts disabled and wakes up on first port write
+        // This mirrors DOSBox Staging where channels start disabled and wake via WakeUp()
+        // The channel will be enabled by WakeUp() call in WriteByte() when OPL ports are accessed
 
         InitializeToneGenerators();
 
@@ -213,6 +214,11 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
         Opl3WriteResult result = Opl3WriteResult.None;
+
+        // Wake up the channel on any port write - mirrors DOSBox RenderUpToNow() pattern
+        // DOSBox: opl.cpp:573 - PortWrite calls RenderUpToNow which calls channel->WakeUp()
+        // This ensures the channel is enabled when OPL receives data
+        _mixerChannel.WakeUp();
 
         switch (port) {
             case IOplPort.PrimaryAddressPortNumber:

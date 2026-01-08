@@ -93,7 +93,9 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
             nameof(PcSpeaker), [ChannelFeature.Stereo]);
         _mixerChannel.SetAppVolume(new AudioFrame(1.0f, 1.0f));
         _mixerChannel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Left });
-        _mixerChannel.Enable(true);
+        // DON'T enable the channel here - it starts disabled and wakes up on first use
+        // This mirrors DOSBox where PC speaker channel starts disabled and wakes via WakeUp()
+        // The channel will be enabled by WakeUp() calls in SetCounter() and SetPitControl()
 
         _highPassFilter.Setup(SampleRateHz, 120, FilterQ);
         _lowPassFilter.Setup(SampleRateHz, 4300, FilterQ);
@@ -120,6 +122,9 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     /// <param name="mode">The PIT operating mode that should be used.</param>
     public void SetCounter(int count, PitMode mode) {
         _logger.Debug("PCSPEAKER: Configuring counter with value {Count} in mode {Mode}", count, mode);
+
+        // Wake up the channel on counter changes - mirrors DOSBox pcspeaker_discrete.cpp:272
+        _mixerChannel.WakeUp();
 
         float newIndex = GetPicTickIndex();
         float durationMs = MsPerPitTick * count;
@@ -203,6 +208,9 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     /// <param name="mode">The PIT mode that should now be active for the speaker.</param>
     public void SetPitControl(PitMode mode) {
         _logger.Debug("PCSPEAKER: Updating PIT control for mode {Mode}", mode);
+
+        // Wake up the channel on PIT control changes - mirrors DOSBox pcspeaker_discrete.cpp:323
+        _mixerChannel.WakeUp();
 
         float newIndex = GetPicTickIndex();
         ForwardPit(newIndex);

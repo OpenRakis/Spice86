@@ -617,7 +617,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
 
         _dacChannel = _mixer.AddChannel(GenerateFrames, (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
-        _dacChannel.Enable(true);
+        // DON'T enable the channel here - it starts disabled and wakes up on first use
+        // This mirrors DOSBox where channels start disabled and wake via WakeUp()
+        // MaybeWakeUp() is called throughout the DSP command handlers when audio data flows
 
         _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, oplMixerChannel, loggerService);
         _hardwareMixer.Reset();
