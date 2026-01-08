@@ -97,6 +97,30 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         // Mirrors DOSBox Staging opl.cpp:267 (OPL3_Reset call in Init())
         _oplIo.Reset((uint)sampleRate);
 
+        // Set OPL volume gain to 1.5x
+        // Mirrors DOSBox Staging opl.cpp:850-863
+        // This effectively adds a 1.5x gain factor to OPL output.
+        // Used to be 2.0, which was measured to be too high. Exact value depends on card/clone.
+        // CRITICAL: Don't touch this value as many people fine-tune their mixer volumes per game.
+        const float OplVolumeGain = 1.5f;
+        _mixerChannel.Set0dbScalar(OplVolumeGain);
+
+        // Configure noise gate to remove OPL chip residual noise
+        // Mirrors DOSBox Staging opl.cpp:865-899
+        // Gets rid of residual noise in [-8, 0] range on OPL2 and [-18, 0] range on OPL3
+        // This is accurate hardware behavior but annoying - OPL chips use bitwise inversion
+        // for negative sine, causing small oscillations even when envelope generator is muted.
+        // Threshold is fine-tuned to remove noise while leaving low level signals intact.
+        // gain_to_decibel(1.5f) = 20 * log10(1.5) ≈ 3.52dB
+        const float thresholdDb = -65.0f + 3.52f; // -65.0f + gain_to_decibel(OplVolumeGain)
+        const float attackTimeMs = 1.0f;
+        const float releaseTimeMs = 100.0f;
+        _mixerChannel.ConfigureNoiseGate(thresholdDb, attackTimeMs, releaseTimeMs);
+        
+        // Enable noise gate by default for OPL (mirrors DOSBox denoiser setting)
+        // In DOSBox this is controlled by mixer's "denoiser" setting, we enable it by default
+        _mixerChannel.EnableNoiseGate(true);
+
         // DON'T enable the channel here - it starts disabled and wakes up on first port write
         // Mirrors DOSBox Staging opl.cpp:843-846 where MIXER_AddChannel doesn't call Enable(true)
         // The channel will be enabled by WakeUp() call in WriteByte() when OPL ports are accessed
