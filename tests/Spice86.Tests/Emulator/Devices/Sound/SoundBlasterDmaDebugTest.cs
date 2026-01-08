@@ -20,7 +20,7 @@ public class SoundBlasterDmaDebugTest {
     }
     
     [Fact]
-    public void Debug_8Bit_Single_Cycle_DMA_With_Logging() {
+    public async System.Threading.Tasks.Task Debug_8Bit_Single_Cycle_DMA_With_Logging() {
         // Load the test binary
         string asmBinary = Path.Combine("Resources", "SoundBlasterTests", "sb_dma_8bit_single.bin");
         if (!File.Exists(asmBinary)) {
@@ -64,7 +64,7 @@ public class SoundBlasterDmaDebugTest {
         
         // Wait for mixer thread to process
         _output.WriteLine("Waiting 1 second for mixer thread...");
-        System.Threading.Tasks.Task.Delay(1000).Wait();
+        await System.Threading.Tasks.Task.Delay(1000);
         
         _output.WriteLine($"After wait - IRQ pending 8-bit: {spice86.Machine.SoundBlaster.PendingIrq8Bit}");
         _output.WriteLine($"Test results: {string.Join(", ", testHandler.Results.Select(r => $"0x{r:X2}"))}");
