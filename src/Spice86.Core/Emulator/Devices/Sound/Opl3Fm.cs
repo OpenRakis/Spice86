@@ -381,11 +381,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 // Mirrors DOSBox Staging opl.cpp:449 (AddSamples_sfloat call)
                 _mixerChannel.AddSamples_sfloat(framesToGenerate, floatBuffer);
             } else {
-                // Convert interleaved int16 samples to normalized float
+                // Convert interleaved int16 samples directly to int16-ranged floats
                 // Mirrors DOSBox Staging opl.cpp:410-411 (frame.left/right = buf[0]/buf[1])
+                // DOSBox does NOT normalize - just casts int16 to float
                 Span<float> floatBuffer = _playBuffer.AsSpan(0, samplesToGenerate);
                 for (int i = 0; i < samplesToGenerate; i++) {
-                    floatBuffer[i] = interleaved[i] / 32768.0f; // Normalize to [-1.0, 1.0]
+                    floatBuffer[i] = (float)interleaved[i]; // Keep in int16 range, no normalization
                 }
 
                 // Mirrors DOSBox Staging opl.cpp:456 (AddSamples_sfloat call in AudioCallback)
