@@ -66,6 +66,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
         bool useAdlibGold = false, bool enableOplIrq = false, byte oplIrqLine = 5)
         : base(state, failOnUnhandledPort, loggerService) {
+        // Lock mixer thread during construction to prevent concurrent modifications
+        // Mirrors DOSBox Staging opl.cpp:816 (MIXER_LockMixerThread)
+        mixer.LockMixerThread();
+
         // Create and register the OPL3 mixer channel
         // Mirrors DOSBox Staging opl.cpp:825-846 (channel_features and MIXER_AddChannel)
         // Features: Sleep (CPU efficiency), FadeOut (smooth stop), NoiseGate (residual noise removal),
@@ -80,6 +84,11 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             ChannelFeature.Stereo  // OPL3 is stereo (dual_opl in DOSBox)
         };
         _mixerChannel = mixer.AddChannel(framesRequested => AudioCallback(framesRequested), 49716, "OPL3FM", features);
+
+        // Set resample method to always use Speex resampling (no upsampling)
+        // Mirrors DOSBox Staging opl.cpp:848
+        _mixerChannel.SetResampleMethod(ResampleMethod.Resample);
+
         _scheduler = scheduler;
         _clock = clock;
         _dualPic = dualPic;
@@ -140,6 +149,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         InitializeToneGenerators();
 
         InitPortHandlers(ioPortDispatcher);
+
+        // Unlock mixer thread after construction completes
+        // Mirrors DOSBox Staging opl.cpp:941 (MIXER_UnlockMixerThread)
+        mixer.UnlockMixerThread();
     }
 
     /// <summary>
