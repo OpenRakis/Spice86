@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Serilog.Events;
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
@@ -20,9 +18,9 @@ using System.Threading;
 ///     Virtual device which emulates OPL3 FM sound.
 ///     Mirrors DOSBox Staging Opl class from src/hardware/audio/opl.cpp:84-163 and opl.h:84-163
 /// </summary>
-    public class Opl3Fm : DefaultIOPortHandler, IDisposable {
-        private const int MaxCatchUpFrames = 4096;
-        private readonly AdLibGoldDevice? _adLibGold;
+public class Opl3Fm : DefaultIOPortHandler, IDisposable {
+    private const int MaxCatchUpFrames = 4096;
+    private readonly AdLibGoldDevice? _adLibGold;
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
     private readonly Lock _chipLock = new();
@@ -419,7 +417,7 @@ using System.Threading;
 
         int framesToGenerate = (int)Math.Ceiling(deltaMs / _msPerFrame);
         if (framesToGenerate > MaxCatchUpFrames) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 _loggerService.Warning(
                     "OPL3: Capping RenderUpToNow catch-up from {FramesRequested} to {FramesCapped} to avoid blocking.",
                     framesToGenerate, MaxCatchUpFrames);
@@ -434,7 +432,11 @@ using System.Threading;
         }
 
         double advancedMs = framesToGenerate * _msPerFrame;
-        _lastRenderedMs = framesToGenerate * _msPerFrame >= deltaMs ? _lastRenderedMs + advancedMs : now;
+        if (advancedMs >= deltaMs) {
+            _lastRenderedMs += advancedMs;
+        } else {
+            _lastRenderedMs = now;
+        }
     }
     
     /// <summary>
