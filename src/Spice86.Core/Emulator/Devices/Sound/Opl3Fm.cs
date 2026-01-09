@@ -19,6 +19,8 @@ using System.Threading;
 ///     Mirrors DOSBox Staging Opl class from src/hardware/audio/opl.cpp:84-163 and opl.h:84-163
 /// </summary>
 public class Opl3Fm : DefaultIOPortHandler, IDisposable {
+    // Cap per-call catch-up to avoid long blocking loops when large time deltas accumulate.
+    // Aligns with the Sound Blaster MaxChannelFrames guard.
     private const int MaxCatchUpFrames = 4096;
     private readonly AdLibGoldDevice? _adLibGold;
     private readonly AdLibGoldIo? _adLibGoldIo;
@@ -432,6 +434,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         }
 
         double advancedMs = framesToGenerate * _msPerFrame;
+        // If we generated all required frames, advance normally; otherwise we capped and must resync to "now".
         if (advancedMs >= deltaMs) {
             _lastRenderedMs += advancedMs;
         } else {
