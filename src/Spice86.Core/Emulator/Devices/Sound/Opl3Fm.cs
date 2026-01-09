@@ -19,7 +19,6 @@ using System.Threading;
 ///     Mirrors DOSBox Staging Opl class from src/hardware/audio/opl.cpp:84-163 and opl.h:84-163
 /// </summary>
 public class Opl3Fm : DefaultIOPortHandler, IDisposable {
-    private const int MaxSamplesPerGenerationBatch = 512;
     private readonly AdLibGoldDevice? _adLibGold;
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
@@ -30,7 +29,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly Opl3Io _oplIo;
     private readonly byte _oplIrqLine;
     private readonly EventHandler _oplTimerHandler;
-    private readonly float[] _playBuffer = new float[2048];
     private readonly bool _useAdLibGold;
     
     // FIFO queue for cycle-accurate OPL frame generation
@@ -47,7 +45,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private readonly MixerChannel _mixerChannel;
 
-    private readonly short[] _tmpInterleaved = new short[2048];
     private readonly bool _useOplIrq;
     private bool _disposed;
     private bool _oplTimerScheduled;
@@ -377,15 +374,18 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 framesRemaining--;
             }
             
-            // If the FIFO ran dry, generate the remaining frames
-            // Mirrors DOSBox Staging opl.cpp:454-458
-            if (framesRemaining > 0) {
-                GenerateFramesBatch(framesRemaining);
+            // If the FIFO ran dry, render the remainder and sync-up our time datum
+            // Mirrors DOSBox Staging opl.cpp:453-458
+            while (framesRemaining > 0) {
+                AudioFrame frame = RenderSingleFrame();
+                frameData[0] = frame.Left;
+                frameData[1] = frame.Right;
+                _mixerChannel.AddSamples_sfloat(1, frameData);
+                framesRemaining--;
             }
             
-            // Always sync time datum to current atomic time after AudioCallback
+            // Sync time datum to current atomic time
             // Mirrors DOSBox Staging opl.cpp:459
-            // This prevents unbounded accumulation in RenderUpToNow()
             _lastRenderedMs = _clock.ElapsedTimeMs;
         }
 
@@ -447,56 +447,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         return frame;
     }
     
-    /// <summary>
-    ///     Generates a batch of OPL frames directly (used when FIFO is empty).
-    ///     Mirrors the frame generation logic from DOSBox Staging opl.cpp:454-458
-    /// </summary>
-    private void GenerateFramesBatch(int frameCount) {
-        int framesGenerated = 0;
-        while (framesGenerated < frameCount) {
-            // Generate up to MaxSamplesPerGenerationBatch frames at a time
-            int framesToGenerate = Math.Min(MaxSamplesPerGenerationBatch, frameCount - framesGenerated);
-            int samplesToGenerate = framesToGenerate * 2; // stereo = 2 samples per frame
-            
-            if (samplesToGenerate > _tmpInterleaved.Length) {
-                samplesToGenerate = _tmpInterleaved.Length;
-                framesToGenerate = samplesToGenerate / 2;
-            }
-
-            Span<short> interleaved = _tmpInterleaved.AsSpan(0, samplesToGenerate);
-
-            // Generate audio samples
-            // Mirrors DOSBox Staging opl.cpp:455 (RenderFrame call) and opl.cpp:399 (OPL3_GenerateStream)
-            _chip.GenerateStream(interleaved);
-
-            // Apply AdLib Gold filtering if enabled (before float conversion)
-            // Mirrors DOSBox Staging opl.cpp:407-412 (RenderFrame with adlib_gold->Process)
-            if (_adLibGold is not null) {
-                // Process int16 samples through AdLib Gold surround and stereo stages
-                // Mirrors DOSBox Staging adlib_gold.cpp:335-358 (AdlibGold::Process method)
-                Span<float> floatBuffer = _playBuffer.AsSpan(0, samplesToGenerate);
-                _adLibGold.Process(interleaved, framesToGenerate, floatBuffer);
-                
-                // AdLib Gold.Process already outputs normalized floats
-                // Mirrors DOSBox Staging opl.cpp:449 (AddSamples_sfloat call)
-                _mixerChannel.AddSamples_sfloat(framesToGenerate, floatBuffer);
-            } else {
-                // Convert interleaved int16 samples directly to int16-ranged floats
-                // Mirrors DOSBox Staging opl.cpp:410-411 (frame.left/right = buf[0]/buf[1])
-                // DOSBox does NOT normalize - just casts int16 to float
-                Span<float> floatBuffer = _playBuffer.AsSpan(0, samplesToGenerate);
-                for (int i = 0; i < samplesToGenerate; i++) {
-                    floatBuffer[i] = (float)interleaved[i]; // Keep in int16 range, no normalization
-                }
-
-                // Mirrors DOSBox Staging opl.cpp:456 (AddSamples_sfloat call in AudioCallback)
-                _mixerChannel.AddSamples_sfloat(framesToGenerate, floatBuffer);
-            }
-
-            framesGenerated += framesToGenerate;
-        }
-    }
-
     /// <summary>
     ///     Schedules servicing of the OPL timers based on the next overflow.
     ///     Timer management is handled by Opl3Io which wraps OplChip timer logic.
