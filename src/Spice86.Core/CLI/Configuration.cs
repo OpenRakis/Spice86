@@ -118,7 +118,7 @@ public sealed class Configuration {
     /// <summary>
     /// The memory segment where the program will be loaded. The DOS PSP (Program Segment Prefix) and MCB (Memory Control Block) will be created before it.
     /// </summary>
-    [Option('p', nameof(ProgramEntryPointSegment), Default = (ushort)0x80, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
+    [Option('p', nameof(ProgramEntryPointSegment), Default = (ushort)0x62, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it. Default 0x62 provides ~640KB conventional memory.")]
     public ushort ProgramEntryPointSegment { get; init; }
 
 
