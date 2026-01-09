@@ -417,7 +417,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             return;
         }
 
-        int framesToGenerate = (int)Math.Ceiling(deltaMs / _msPerFrame);
+        int framesToGenerate = Math.Max(1, (int)Math.Round(deltaMs / _msPerFrame, MidpointRounding.AwayFromZero));
         if (framesToGenerate > MaxCatchUpFrames) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 _loggerService.Warning(
@@ -435,7 +435,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         double advancedMs = framesToGenerate * _msPerFrame;
         // If we generated all required frames, advance normally; otherwise we capped and must resync to "now".
-        if (advancedMs >= deltaMs) {
+        if (advancedMs > deltaMs) {
             _lastRenderedMs += advancedMs;
         } else {
             _lastRenderedMs = now;
