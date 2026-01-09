@@ -2,7 +2,6 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 
 /// <summary>
 /// Selectable OPL backend types.
-/// Mirrors DOSBox Staging opltype options.
 /// </summary>
 public enum OplType {
     /// <summary>

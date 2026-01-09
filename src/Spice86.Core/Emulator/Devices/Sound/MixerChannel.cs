@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// MixerChannel implementation mirrored from DOSBox Staging
 // Reference: src/audio/mixer.h and mixer.cpp
 
 namespace Spice86.Core.Emulator.Devices.Sound;
@@ -16,13 +15,11 @@ using LowPass = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.LowPas
 
 /// <summary>
 /// Represents a single audio channel in the mixer.
-/// Mirrors DOSBox Staging's MixerChannel class.
 /// </summary>
-public sealed class MixerChannel : IDisposable {
+public sealed class MixerChannel {
     private const uint SpeexChannels = 2; // Always use stereo for processing
     private const int SpeexQuality = 5; // Medium quality - good balance between CPU and quality
     
-    // Envelope constants - mirrors DOSBox mixer.cpp lines 58-62
     private const byte EnvelopeMaxExpansionOverMs = 15; // Envelope expands over 15ms
     private const byte EnvelopeExpiresAfterSeconds = 10; // Envelope expires after 10s
     
@@ -37,38 +34,31 @@ public sealed class MixerChannel : IDisposable {
     private int _framesNeeded;
     private int _mixerSampleRateHz = 48000; // Default mixer rate
 
-    // Volume gains - mirrors DOSBox volume system
     private AudioFrame _userVolumeGain = new(1.0f, 1.0f);
     private AudioFrame _appVolumeGain = new(1.0f, 1.0f);
     private float _db0VolumeGain = 1.0f;
     private AudioFrame _combinedVolumeGain = new(1.0f, 1.0f);
     
-    // Resampling state - mirrors DOSBox lerp_upsampler
     private bool _doLerpUpsample;
     private double _lerpPhase;
     private AudioFrame _lerpPrevFrame;
     private AudioFrame _lerpNextFrame;
     
-    // Zero-order-hold upsampler state - mirrors DOSBox zoh_upsampler
     private bool _doZohUpsample;
     private float _zohStep;
     private float _zohPos;
     private int _zohTargetRateHz;
     
     // Speex resampler state - pure C# implementation
-    // Mirrors DOSBox: lazily initialized, not created in constructor
     // Replaces P/Invoke version with faithful C# port
     // Initialized ONCE when first needed (see ConfigureResampler)
     private Bufdio.Spice86.SpeexResamplerCSharp? _speexResampler;
     
-    // Resampling mode flag - mirrors DOSBox do_resample
     private bool _doResample;
     
-    // Resample method - mirrors DOSBox resample_method
     // DOSBox default: ResampleMethod::Resample (always use Speex)
     private ResampleMethod _resampleMethod = ResampleMethod.Resample;
     
-    // Convert buffer - mirrors DOSBox convert_buffer
     // Used as intermediate buffer during sample conversion and resampling
     // Matches DOSBox: std::vector<AudioFrame> convert_buffer
     private readonly List<AudioFrame> _convertBuffer = new();
@@ -87,13 +77,11 @@ public sealed class MixerChannel : IDisposable {
     public bool IsEnabled { get; private set; }
     private bool _lastSamplesWereStereo;
     
-    // mirrors DOSBox mixer.h:392
     // Tracks whether last AddSamples call was silence (for debugging/optimization)
     private bool _lastSamplesWereSilence = true;
     
     /// <summary>
     /// Gets whether the last samples added were silence.
-    /// Mirrors DOSBox mixer.h:392
     /// </summary>
     public bool LastSamplesWereSilence {
         get {
@@ -103,12 +91,10 @@ public sealed class MixerChannel : IDisposable {
         }
     }
     
-    // Peak amplitude - mirrors DOSBox mixer.h:381
     // Defines the peak sample amplitude we can expect in this channel.
     // Default to signed 16bit max
     private int _peakAmplitude = 32767; // Max16BitSampleValue
     
-    // Effect sends - mirrors DOSBox per-channel effect state
     private bool _doCrossfeed;
     private float _crossfeedStrength;
     private float _crossfeedPanLeft;
@@ -122,14 +108,12 @@ public sealed class MixerChannel : IDisposable {
     private float _chorusLevel;
     private float _chorusSendGain;
 
-    // Noise gate state - mirrors DOSBox noise_gate struct
     private readonly NoiseGate _noiseGate = new();
     private float _noiseGateThresholdDb = -60.0f;
     private float _noiseGateAttackTimeMs = 1.0f;
     private float _noiseGateReleaseTimeMs = 20.0f;
     private bool _doNoiseGate;
 
-    // Per-channel filter state - mirrors DOSBox filters struct
     private readonly HighPass[] _highPassFilters = new HighPass[2] { new HighPass(), new HighPass() };
     private FilterState _highPassFilterState = FilterState.Off;
     private int _highPassFilterOrder;
@@ -140,11 +124,9 @@ public sealed class MixerChannel : IDisposable {
     private int _lowPassFilterOrder;
     private int _lowPassFilterCutoffHz;
     
-    // Sleep/wake state - mirrors DOSBox sleeper
     private readonly Sleeper _sleeper;
     private bool _doSleep;
 
-    // Envelope - mirrors DOSBox envelope
     private readonly Envelope _envelope;
 
     public MixerChannel(
@@ -158,15 +140,9 @@ public sealed class MixerChannel : IDisposable {
         _features = features ?? throw new ArgumentNullException(nameof(features));
         _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
         
-        // Mirrors DOSBox Staging MixerChannel constructor (mixer.cpp:305-314)
-        // NO Speex resampler initialization here - it's created lazily in ConfigureResampler()
-        // This ensures the resampler is only created when actually needed
-        
-        // Initialize sleep/wake mechanism - mirrors DOSBox mixer.cpp:313
         _doSleep = HasFeature(ChannelFeature.Sleep);
         _sleeper = new Sleeper(this);
         
-        // Initialize envelope - mirrors DOSBox mixer.cpp:305
         _envelope = new Envelope(name);
     }
 
@@ -234,24 +210,20 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Sets the channel sample rate.
-    /// Mirrors DOSBox SetSampleRate() with resampler configuration.
     /// </summary>
     public void SetSampleRate(int sampleRateHz) {
         lock (_mutex) {
             _sampleRateHz = sampleRateHz;
             
-            // Update envelope with new sample rate - mirrors DOSBox mixer.cpp:1106-1109
             _envelope.Update(_sampleRateHz, 
                            _peakAmplitude, 
                            EnvelopeMaxExpansionOverMs, 
                            EnvelopeExpiresAfterSeconds);
             
-            // Initialize noise gate if enabled - mirrors DOSBox mixer.cpp:1111-1113
             if (_doNoiseGate) {
                 InitNoiseGate();
             }
             
-            // Initialize filters if enabled - mirrors DOSBox mixer.cpp:1115-1120
             if (_highPassFilterState == FilterState.On) {
                 InitHighPassFilter();
             }
@@ -259,7 +231,6 @@ public sealed class MixerChannel : IDisposable {
                 InitLowPassFilter();
             }
             
-            // Configure resampler - mirrors DOSBox mixer.cpp:1122
             ConfigureResampler();
         }
     }
@@ -275,7 +246,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Gets the number of frames per tick.
-    /// Mirrors DOSBox GetFramesPerTick() from mixer.cpp:1142
     /// </summary>
     public float GetFramesPerTick() {
         lock (_mutex) {
@@ -288,7 +258,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Gets the number of frames per block.
-    /// Mirrors DOSBox GetFramesPerBlock() from mixer.cpp:1152
     /// </summary>
     public float GetFramesPerBlock() {
         lock (_mutex) {
@@ -301,7 +270,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Gets milliseconds per frame for this channel.
-    /// Mirrors DOSBox GetMillisPerFrame() from mixer.cpp:1162
     /// </summary>
     public double GetMillisPerFrame() {
         lock (_mutex) {
@@ -311,12 +279,10 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Sets the peak amplitude for this channel.
-    /// Mirrors DOSBox SetPeakAmplitude() from mixer.cpp:1172
     /// </summary>
     public void SetPeakAmplitude(int peak) {
         lock (_mutex) {
             _peakAmplitude = peak;
-            // Update envelope with new peak amplitude - mirrors DOSBox mixer.cpp:1177-1180
             _envelope.Update(_sampleRateHz, 
                            _peakAmplitude, 
                            EnvelopeMaxExpansionOverMs, 
@@ -326,7 +292,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Initializes the linear interpolation upsampler state.
-    /// Mirrors DOSBox InitLerpUpsamplerState() from mixer.cpp:1590
     /// </summary>
     private void InitLerpUpsamplerState() {
         _lerpPhase = 0.0;
@@ -336,7 +301,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Initializes the zero-order-hold upsampler state.
-    /// Mirrors DOSBox InitZohUpsamplerState() from mixer.cpp:1577
     /// </summary>
     private void InitZohUpsamplerState() {
         if (_sampleRateHz >= _zohTargetRateHz) {
@@ -349,7 +313,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Sets the zero-order-hold upsampler target rate.
-    /// Mirrors DOSBox SetZeroOrderHoldUpsamplerTargetRate() from mixer.cpp:1558
     /// </summary>
     public void SetZeroOrderHoldUpsamplerTargetRate(int targetRateHz) {
         if (targetRateHz <= 0) {
@@ -364,7 +327,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Sets the resample method for this channel.
-    /// Mirrors DOSBox SetResampleMethod() from mixer.cpp:1604
     /// </summary>
     public void SetResampleMethod(ResampleMethod method) {
         lock (_mutex) {
@@ -375,26 +337,20 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Configures the resampler based on channel rate and resample method.
-    /// Mirrors DOSBox ConfigureResampler() from mixer.cpp:935-1052
     /// </summary>
     private void ConfigureResampler() {
         int channelRateHz = _sampleRateHz;
         int mixerRateHz = _mixerSampleRateHz;
         
-        // Reset all resampling flags - mirrors DOSBox mixer.cpp:946-948
         _doLerpUpsample = false;
         _doZohUpsample = false;
         _doResample = false;
         
-        // Lambda to configure Speex resampler - mirrors DOSBox mixer.cpp:950-999
         void ConfigureSpeexResampler(int inRateHz) {
             uint speexInRate = (uint)inRateHz;
             uint speexOutRate = (uint)mixerRateHz;
             
-            // Only init the resampler once - mirrors DOSBox mixer.cpp:955
             if (_speexResampler == null) {
-                // Always stereo - mirrors DOSBox mixer.cpp:958
-                // Quality 5 - mirrors DOSBox mixer.cpp:984
                 _speexResampler = new Bufdio.Spice86.SpeexResamplerCSharp(
                     SpeexChannels,
                     speexInRate,
@@ -402,7 +358,6 @@ public sealed class MixerChannel : IDisposable {
                     SpeexQuality);
             }
             
-            // Update rates if resampler exists - mirrors DOSBox mixer.cpp:993
             _speexResampler.SetRate(speexInRate, speexOutRate);
             
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
@@ -412,7 +367,6 @@ public sealed class MixerChannel : IDisposable {
             }
         }
         
-        // Configure resampling based on method - mirrors DOSBox mixer.cpp:1001-1051
         switch (_resampleMethod) {
             case ResampleMethod.LerpUpsampleOrResample:
                 if (channelRateHz < mixerRateHz) {
@@ -570,7 +524,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Describes the lineout configuration in human-readable form.
-    /// Mirrors DOSBox DescribeLineout() from mixer.cpp:2319
     /// </summary>
     public string DescribeLineout() {
         lock (_mutex) {
@@ -589,7 +542,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Gets the current channel settings.
-    /// Mirrors DOSBox GetSettings() from mixer.cpp:2339
     /// </summary>
     public MixerChannelSettings GetSettings() {
         lock (_mutex) {
@@ -607,7 +559,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Sets the channel settings from a saved configuration.
-    /// Mirrors DOSBox SetSettings() from mixer.cpp:2355
     /// </summary>
     public void SetSettings(MixerChannelSettings settings) {
         lock (_mutex) {
@@ -634,13 +585,11 @@ public sealed class MixerChannel : IDisposable {
 
         lock (_mutex) {
             if (!shouldEnable) {
-                // Clear state when disabling - mirrors DOSBox mixer.cpp:886-892
                 _framesNeeded = 0;
                 AudioFrames.Clear();
                 _prevFrame = new AudioFrame(0.0f, 0.0f);
                 _nextFrame = new AudioFrame(0.0f, 0.0f);
                 
-                // Clear resampler state - mirrors DOSBox mixer.cpp:892
                 ClearResampler();
             }
 
@@ -650,7 +599,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Clears and resets all resampler state.
-    /// Mirrors DOSBox ClearResampler() from mixer.cpp:1055-1076
     /// </summary>
     private void ClearResampler() {
         if (_doLerpUpsample) {
@@ -661,7 +609,6 @@ public sealed class MixerChannel : IDisposable {
         }
         if (_doResample && _speexResampler != null) {
             // Reset Speex resampler memory and skip zeros
-            // Mirrors DOSBox mixer.cpp:1067-1068
             _speexResampler.Reset();
             _speexResampler.SkipZeros();
             
@@ -676,7 +623,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Requests frames from the channel handler and fills the audio buffer.
-    /// Mirrors DOSBox Mix() from mixer.cpp:1183-1211 EXACTLY
     /// </summary>
     public void Mix(int framesRequested) {
         if (framesRequested <= 0) {
@@ -689,34 +635,28 @@ public sealed class MixerChannel : IDisposable {
 
         _framesNeeded = framesRequested;
 
-        // Mirrors DOSBox mixer.cpp:1193-1210
         // Simple loop that calls handler until we have enough frames
         while (_framesNeeded > AudioFrames.Count) {
             int framesRemaining;
             lock (_mutex) {
                 // Calculate stretch factor based on sample rates
-                // Mirrors DOSBox mixer.cpp:1196-1197
                 float stretchFactor = (float)_sampleRateHz / (float)_mixerSampleRateHz;
                 
                 // Calculate how many frames we still need
-                // Mirrors DOSBox mixer.cpp:1199-1201
                 framesRemaining = (int)Math.Ceiling(
                     (_framesNeeded - AudioFrames.Count) * stretchFactor);
                 
-                // Avoid underflow - mirrors DOSBox mixer.cpp:1203-1206
                 if (framesRemaining <= 0) {
                     break;
                 }
             }
             
-            // Call handler outside the lock - mirrors DOSBox mixer.cpp:1208-1209
             _handler(framesRemaining);
         }
     }
     
     /// <summary>
     /// Sets the crossfeed strength for this channel.
-    /// Mirrors DOSBox SetCrossfeedStrength() from mixer.cpp:1617
     /// </summary>
     public void SetCrossfeedStrength(float strength) {
         lock (_mutex) {
@@ -728,7 +668,6 @@ public sealed class MixerChannel : IDisposable {
                 return;
             }
             
-            // Map [0, 1] range to [0.5, 0] - mirrors DOSBox logic
             float p = (1.0f - _crossfeedStrength) / 2.0f;
             const float center = 0.5f;
             _crossfeedPanLeft = center - p;
@@ -738,7 +677,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Gets the crossfeed strength for this channel.
-    /// Mirrors DOSBox GetCrossfeedStrength() from mixer.cpp:1650
     /// </summary>
     public float GetCrossfeedStrength() {
         lock (_mutex) {
@@ -748,7 +686,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Sets the reverb send level for this channel.
-    /// Mirrors DOSBox SetReverbLevel() from mixer.cpp:1656
     /// </summary>
     public void SetReverbLevel(float level) {
         lock (_mutex) {
@@ -776,7 +713,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Gets the reverb send level for this channel.
-    /// Mirrors DOSBox GetReverbLevel() from mixer.cpp:1694
     /// </summary>
     public float GetReverbLevel() {
         lock (_mutex) {
@@ -786,7 +722,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Sets the chorus send level for this channel.
-    /// Mirrors DOSBox SetChorusLevel() from mixer.cpp:1700
     /// </summary>
     public void SetChorusLevel(float level) {
         lock (_mutex) {
@@ -814,7 +749,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Gets the chorus send level for this channel.
-    /// Mirrors DOSBox GetChorusLevel() from mixer.cpp:1738
     /// </summary>
     public float GetChorusLevel() {
         lock (_mutex) {
@@ -824,11 +758,9 @@ public sealed class MixerChannel : IDisposable {
 
     // Noise Gate Configuration
     // =========================
-    // Mirrors DOSBox mixer.h lines 209-211
 
     /// <summary>
     /// Configures the noise gate with operating parameters.
-    /// Mirrors DOSBox ConfigureNoiseGate() from mixer.cpp (referenced in mixer.h:209-210)
     /// </summary>
     /// <param name="thresholdDb">Threshold in dB below which signal is gated</param>
     /// <param name="attackTimeMs">Attack time in milliseconds</param>
@@ -852,7 +784,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Enables or disables the noise gate processor.
-    /// Mirrors DOSBox EnableNoiseGate() from mixer.cpp (referenced in mixer.h:211)
     /// </summary>
     /// <param name="enabled">True to enable, false to disable</param>
     public void EnableNoiseGate(bool enabled) {
@@ -867,7 +798,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Initializes the noise gate processor with current configuration.
-    /// Mirrors DOSBox InitNoiseGate() from mixer.cpp
     /// </summary>
     private void InitNoiseGate() {
         if (_noiseGateAttackTimeMs <= 0.0f || _noiseGateReleaseTimeMs <= 0.0f) {
@@ -886,11 +816,9 @@ public sealed class MixerChannel : IDisposable {
 
     // Per-Channel Filter Configuration
     // =================================
-    // Mirrors DOSBox mixer.h lines 213-218
 
     /// <summary>
     /// Gets the state of the high-pass filter.
-    /// Mirrors DOSBox GetHighPassFilterState() from mixer.cpp (referenced in mixer.h:217)
     /// </summary>
     public FilterState GetHighPassFilterState() {
         lock (_mutex) {
@@ -900,7 +828,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Sets the high-pass filter on or off.
-    /// Mirrors DOSBox SetHighPassFilter() from mixer.cpp (referenced in mixer.h:213)
     /// </summary>
     public void SetHighPassFilter(FilterState state) {
         lock (_mutex) {
@@ -923,7 +850,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Gets the state of the low-pass filter.
-    /// Mirrors DOSBox GetLowPassFilterState() from mixer.cpp (referenced in mixer.h:217)
     /// </summary>
     public FilterState GetLowPassFilterState() {
         lock (_mutex) {
@@ -933,7 +859,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Sets the low-pass filter on or off.
-    /// Mirrors DOSBox SetLowPassFilter() from mixer.cpp (referenced in mixer.h:214)
     /// </summary>
     public void SetLowPassFilter(FilterState state) {
         lock (_mutex) {
@@ -956,12 +881,11 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Configures the high-pass filter parameters.
-    /// Mirrors DOSBox ConfigureHighPassFilter() from mixer.cpp (referenced in mixer.h:217)
     /// </summary>
     /// <param name="order">Filter order (1-16)</param>
     /// <param name="cutoffFreqHz">Cutoff frequency in Hz</param>
     public void ConfigureHighPassFilter(int order, int cutoffFreqHz) {
-        const int MaxFilterOrder = 16; // Mirrors DOSBox MaxFilterOrder
+        const int MaxFilterOrder = 16;
 
         if (order <= 0 || order > MaxFilterOrder) {
             throw new ArgumentOutOfRangeException(nameof(order),
@@ -982,7 +906,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Initializes the high-pass filter with current configuration.
-    /// Mirrors DOSBox InitHighPassFilter() from mixer.cpp
     /// </summary>
     private void InitHighPassFilter() {
         const int MaxFilterOrder = 16;
@@ -1004,12 +927,11 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Configures the low-pass filter parameters.
-    /// Mirrors DOSBox ConfigureLowPassFilter() from mixer.cpp (referenced in mixer.h:218)
     /// </summary>
     /// <param name="order">Filter order (1-16)</param>
     /// <param name="cutoffFreqHz">Cutoff frequency in Hz</param>
     public void ConfigureLowPassFilter(int order, int cutoffFreqHz) {
-        const int MaxFilterOrder = 16; // Mirrors DOSBox MaxFilterOrder
+        const int MaxFilterOrder = 16;
 
         if (order <= 0 || order > MaxFilterOrder) {
             throw new ArgumentOutOfRangeException(nameof(order),
@@ -1030,7 +952,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Initializes the low-pass filter with current configuration.
-    /// Mirrors DOSBox InitLowPassFilter() from mixer.cpp
     /// </summary>
     private void InitLowPassFilter() {
         const int MaxFilterOrder = 16;
@@ -1116,7 +1037,6 @@ public sealed class MixerChannel : IDisposable {
                 AudioFrames.Add(outFrame);
             }
             
-            // mirrors DOSBox mixer.cpp:1264
             _lastSamplesWereSilence = true;
         }
     }
@@ -1124,7 +1044,6 @@ public sealed class MixerChannel : IDisposable {
     /// <summary>
     /// Converts mono 8-bit unsigned samples to AudioFrames with optional ZoH upsampling.
     /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
-    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() from mixer.cpp:1869
     /// </summary>
     private void ConvertSamplesAndMaybeZohUpsample_m8(ReadOnlySpan<byte> data, int numFrames) {
         _convertBuffer.Clear();
@@ -1169,7 +1088,6 @@ public sealed class MixerChannel : IDisposable {
     /// <summary>
     /// Converts mono 16-bit signed samples to AudioFrames with optional ZoH upsampling.
     /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
-    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() from mixer.cpp:1869
     /// </summary>
     private void ConvertSamplesAndMaybeZohUpsample_m16(ReadOnlySpan<short> data, int numFrames) {
         _convertBuffer.Clear();
@@ -1214,7 +1132,6 @@ public sealed class MixerChannel : IDisposable {
     /// <summary>
     /// Converts stereo 16-bit signed samples to AudioFrames with optional ZoH upsampling.
     /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
-    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() from mixer.cpp:1869
     /// </summary>
     private void ConvertSamplesAndMaybeZohUpsample_s16(ReadOnlySpan<short> data, int numFrames) {
         _convertBuffer.Clear();
@@ -1263,7 +1180,6 @@ public sealed class MixerChannel : IDisposable {
     /// <summary>
     /// Converts mono 32-bit float samples to AudioFrames with optional ZoH upsampling.
     /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
-    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() from mixer.cpp:1869
     /// </summary>
     private void ConvertSamplesAndMaybeZohUpsample_mfloat(ReadOnlySpan<float> data, int numFrames) {
         _convertBuffer.Clear();
@@ -1309,7 +1225,6 @@ public sealed class MixerChannel : IDisposable {
     /// <summary>
     /// Converts stereo 32-bit float samples to AudioFrames with optional ZoH upsampling.
     /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
-    /// Mirrors DOSBox ConvertSamplesAndMaybeZohUpsample() from mixer.cpp:1869
     /// </summary>
     private void ConvertSamplesAndMaybeZohUpsample_sfloat(ReadOnlySpan<float> data, int numFrames) {
         _convertBuffer.Clear();
@@ -1325,7 +1240,6 @@ public sealed class MixerChannel : IDisposable {
             
             // Float samples are already in int16-ranged format (like DOSBox staging)
             // DOSBox: just does static_cast<float> with no conversion
-            // Mirrors DOSBox mixer.cpp:1885-1892
             float left = data[pos * 2];
             float right = data[pos * 2 + 1];
             _nextFrame = new AudioFrame(left, right);
@@ -1361,7 +1275,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Adds mono 8-bit unsigned samples with resampling.
-    /// Mirrors DOSBox AddSamples() template from mixer.cpp:2125
     /// </summary>
     public void AddSamples_m8(int numFrames, ReadOnlySpan<byte> data) {
         if (numFrames <= 0) {
@@ -1371,7 +1284,6 @@ public sealed class MixerChannel : IDisposable {
         lock (_mutex) {
             _lastSamplesWereStereo = false;
 
-            // All possible resampling scenarios (mirrors DOSBox mixer.cpp:2136-2149):
             // - No upsampling or resampling
             // - LERP  upsampling only
             // - ZoH   upsampling only
@@ -1396,7 +1308,6 @@ public sealed class MixerChannel : IDisposable {
 
             // Step 2: Apply resampling if needed
             if (_doLerpUpsample) {
-                // LERP upsampling - mirrors DOSBox mixer.cpp:2163-2202
                 for (int i = 0; i < _convertBuffer.Count;) {
                     AudioFrame currFrame = _convertBuffer[i];
 
@@ -1417,23 +1328,19 @@ public sealed class MixerChannel : IDisposable {
                     }
                 }
             } else if (_doResample) {
-                // Speex resampling - mirrors DOSBox mixer.cpp:2203-2243
                 ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling - just copy convert_buffer to audio_frames
-                // Mirrors DOSBox mixer.cpp:2244-2246
                 AudioFrames.AddRange(_convertBuffer);
             }
 
             // Step 3: Apply in-place processing to newly added frames
-            // Mirrors DOSBox mixer.cpp:2248-2268
             ApplyInPlaceProcessing(audioFramesStartingSize);
         }
     }
 
     /// <summary>
     /// Linear interpolation helper function.
-    /// Mirrors DOSBox lerp() function.
     /// </summary>
     private static float Lerp(float a, float b, float t) {
         return a * (1.0f - t) + b * t;
@@ -1441,7 +1348,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Applies Speex resampling to convert_buffer → audio_frames.
-    /// Mirrors DOSBox Speex resampling logic from mixer.cpp:2203-2243
     /// </summary>
     private void ApplySpeexResampling(int audioFramesStartingSize) {
         if (_speexResampler == null || !_speexResampler.IsInitialized) {
@@ -1456,7 +1362,6 @@ public sealed class MixerChannel : IDisposable {
         }
 
         // Estimate maximum output frames needed
-        // Mirrors DOSBox estimate_max_out_frames() from mixer.cpp:1937-1948
         _speexResampler.GetRatio(out uint ratioNum, out uint ratioDen);
         int estimatedOutFrames = (int)Math.Ceiling((double)inFrames * ratioDen / ratioNum);
 
@@ -1499,7 +1404,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Applies in-place processing (filters, crossfeed) to newly added frames.
-    /// Mirrors DOSBox mixer.cpp:2248-2268
     /// </summary>
     private void ApplyInPlaceProcessing(int startIndex) {
         // Optionally gate, filter, and apply crossfeed.
@@ -1517,7 +1421,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Applies crossfeed to a single frame.
-    /// Mirrors DOSBox ApplyCrossfeed() from mixer.cpp:1951-1960
     /// </summary>
     private AudioFrame ApplyCrossfeed(AudioFrame frame) {
         // Pan mono sample using -6dB linear pan law in the stereo field
@@ -1533,7 +1436,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Adds mono 16-bit signed samples with resampling.
-    /// Mirrors DOSBox AddSamples() template from mixer.cpp:2125
     /// </summary>
     public void AddSamples_m16(int numFrames, ReadOnlySpan<short> data) {
         if (numFrames <= 0) {
@@ -1591,7 +1493,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Adds stereo 16-bit signed samples with resampling.
-    /// Mirrors DOSBox AddSamples() template from mixer.cpp:2125
     /// </summary>
     public void AddSamples_s16(int numFrames, ReadOnlySpan<short> data) {
         if (numFrames <= 0) {
@@ -1649,7 +1550,6 @@ public sealed class MixerChannel : IDisposable {
 
     /// <summary>
     /// Adds mono 32-bit float samples with resampling.
-    /// Mirrors DOSBox AddSamples_mfloat() from mixer.cpp:2285
     /// </summary>
     public void AddSamples_mfloat(int numFrames, ReadOnlySpan<float> data) {
         if (numFrames <= 0) {
@@ -1707,7 +1607,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Adds stereo 32-bit float samples with resampling.
-    /// Mirrors DOSBox AddSamples_sfloat() from mixer.cpp:2290
     /// </summary>
     public void AddSamples_sfloat(int numFrames, ReadOnlySpan<float> data) {
         if (numFrames <= 0) {
@@ -1862,7 +1761,6 @@ public sealed class MixerChannel : IDisposable {
     /// <summary>
     /// Applies fade-out or signal detection to a frame if sleep is enabled.
     /// Called by mixer during frame processing.
-    /// Mirrors DOSBox mixer.cpp:2420
     /// </summary>
     internal AudioFrame MaybeFadeOrListen(AudioFrame frame) {
         if (!_doSleep) {
@@ -1876,7 +1774,6 @@ public sealed class MixerChannel : IDisposable {
     /// <summary>
     /// Attempts to put the channel to sleep if conditions are met.
     /// Called by mixer after frame processing.
-    /// Mirrors DOSBox mixer.cpp:2441
     /// </summary>
     internal void MaybeSleep() {
         if (!_doSleep) {
@@ -1891,7 +1788,6 @@ public sealed class MixerChannel : IDisposable {
     /// Wakes up a sleeping channel.
     /// Audio devices that use the sleep feature need to wake up the channel whenever
     /// they might prepare new samples for it (typically on IO port writes).
-    /// Mirrors DOSBox mixer.cpp:2120-2125
     /// </summary>
     /// <returns>True if the channel was actually sleeping, false if already awake</returns>
     public bool WakeUp() {
@@ -1906,7 +1802,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Configures fade-out behavior for this channel.
-    /// Mirrors DOSBox mixer.cpp:1961-1967
     /// </summary>
     /// <param name="prefs">Configuration string (e.g., "true", "false", "500 500" for wait_ms and fade_ms)</param>
     /// <returns>True if configuration succeeded, false otherwise</returns>
@@ -1918,7 +1813,6 @@ public sealed class MixerChannel : IDisposable {
     
     /// <summary>
     /// Nested class that manages channel sleep/wake behavior with optional fade-out.
-    /// Mirrors DOSBox Staging's MixerChannel::Sleeper class.
     /// Reference: DOSBox mixer.cpp lines 1960-2130
     /// </summary>
     private sealed class Sleeper {
@@ -1951,7 +1845,6 @@ public sealed class MixerChannel : IDisposable {
         
         /// <summary>
         /// Configures fade-out behavior.
-        /// Mirrors DOSBox mixer.cpp:1968-2042
         /// </summary>
         public bool ConfigureFadeOut(string prefs) {
             void SetWaitAndFade(int waitMs, int fadeMs) {
@@ -2013,7 +1906,6 @@ public sealed class MixerChannel : IDisposable {
         
         /// <summary>
         /// Decrements the fade level based on elapsed time.
-        /// Mirrors DOSBox mixer.cpp:2029-2041
         /// </summary>
         private void DecrementFadeLevel(int awakeForMs) {
             if (awakeForMs < _fadeoutOrSleepAfterMs) {
@@ -2030,7 +1922,6 @@ public sealed class MixerChannel : IDisposable {
         
         /// <summary>
         /// Either fades the frame or checks if the channel had any signal output.
-        /// Mirrors DOSBox mixer.cpp:2055-2071
         /// </summary>
         public AudioFrame MaybeFadeOrListen(AudioFrame frame) {
             if (_wantsFadeout) {
@@ -2053,7 +1944,6 @@ public sealed class MixerChannel : IDisposable {
         
         /// <summary>
         /// Attempts to put the channel to sleep if conditions are met.
-        /// Mirrors DOSBox mixer.cpp:2073-2099
         /// </summary>
         public void MaybeSleep() {
             // A signed integer can hold a duration of ~24 days in milliseconds
@@ -2085,7 +1975,6 @@ public sealed class MixerChannel : IDisposable {
         
         /// <summary>
         /// Wakes up the channel.
-        /// Mirrors DOSBox mixer.cpp:2101-2119
         /// </summary>
         /// <returns>True when actually awoken, false if already awake</returns>
         public bool WakeUp() {
@@ -2115,12 +2004,5 @@ public sealed class MixerChannel : IDisposable {
                    string.Equals(value, "on", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(value, "1", StringComparison.OrdinalIgnoreCase);
         }
-    }
-
-    /// <summary>
-    /// Disposes the MixerChannel and its resources.
-    /// </summary>
-    public void Dispose() {
-        _speexResampler?.Dispose();
     }
 }

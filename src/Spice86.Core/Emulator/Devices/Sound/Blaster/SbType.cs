@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
+namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 /// <summary>
 /// Sound Blaster type enum

@@ -21,7 +21,7 @@ using System;
 /// 3. The varying delay time creates pitch modulation (chorus/thickening)
 /// 4. Linear interpolation between samples ensures smooth modulation
 /// </remarks>
-public sealed class Chorus : IDisposable {
+public sealed class Chorus {
     private readonly float _sampleRate;
     private readonly float _delayTime;
     private readonly Lfo _lfo;
@@ -149,13 +149,5 @@ public sealed class Chorus : IDisposable {
         _lfoPhase += _lfoStepSize * _lfoSign;
 
         return _lfoPhase;
-    }
-
-    /// <summary>
-    /// Disposes resources used by the Chorus instance.
-    /// </summary>
-    public void Dispose() {
-        // Delay line is managed by GC, no explicit cleanup needed
-        // This method exists for consistency with C++ destructor pattern
     }
 }

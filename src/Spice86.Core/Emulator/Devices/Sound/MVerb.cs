@@ -19,7 +19,6 @@ using System;
 
 /// <summary>
 /// Professional algorithmic reverb using Feedback Delay Network (FDN) architecture.
-/// Mirrors DOSBox Staging's MVerb implementation from /tmp/dosbox-staging/src/libs/mverb/MVerb.h
 /// </summary>
 public sealed class MVerb {
     private const int MaxLength = 96000; // Maximum buffer length for 96kHz sample rate
@@ -83,7 +82,6 @@ public sealed class MVerb {
     
     /// <summary>
     /// Initializes a new instance of the MVerb reverb processor.
-    /// Mirrors DOSBox MVerb.h constructor (lines 88-105).
     /// </summary>
     public MVerb() {
         // Initialize components
@@ -124,7 +122,6 @@ public sealed class MVerb {
     
     /// <summary>
     /// Processes stereo audio through the reverb.
-    /// Mirrors DOSBox MVerb.h process() method (lines 111-210).
     /// </summary>
     /// <param name="leftInput">Left channel input samples</param>
     /// <param name="rightInput">Right channel input samples</param>
@@ -263,7 +260,6 @@ public sealed class MVerb {
     
     /// <summary>
     /// Resets all delay lines and filters to initial state.
-    /// Mirrors DOSBox MVerb.h reset() method (lines 212-270).
     /// </summary>
     public void Reset() {
         _controlRateCounter = 0;
@@ -345,7 +341,6 @@ public sealed class MVerb {
     
     /// <summary>
     /// Sets a reverb parameter.
-    /// Mirrors DOSBox MVerb.h setParameter() method (lines 272-324).
     /// </summary>
     public void SetParameter(Parameter index, float value) {
         switch (index) {
@@ -403,7 +398,6 @@ public sealed class MVerb {
     
     /// <summary>
     /// Gets a reverb parameter value.
-    /// Mirrors DOSBox MVerb.h getParameter() method (lines 326-359).
     /// </summary>
     public float GetParameter(Parameter index) {
         switch (index) {
@@ -432,7 +426,6 @@ public sealed class MVerb {
     
     /// <summary>
     /// Sets the sample rate and recalculates all internal parameters.
-    /// Mirrors DOSBox MVerb.h setSampleRate() method (lines 361-366).
     /// </summary>
     public void SetSampleRate(float sampleRate) {
         _sampleRate = sampleRate;
@@ -441,11 +434,9 @@ public sealed class MVerb {
         Reset();
     }
     
-    // Helper classes - mirrors DOSBox MVerb.h (lines 371-893)
     
     /// <summary>
     /// Allpass filter for diffusion.
-    /// Mirrors DOSBox Allpass template class (lines 371-426).
     /// </summary>
     private sealed class Allpass {
         private readonly float[] _buffer = new float[MaxLength];
@@ -489,7 +480,6 @@ public sealed class MVerb {
     
     /// <summary>
     /// Allpass filter with four tap points for complex reflections.
-    /// Mirrors DOSBox StaticAllpassFourTap template class (lines 428-528).
     /// </summary>
     private sealed class StaticAllpassFourTap {
         private readonly float[] _buffer = new float[MaxLength];
@@ -561,7 +551,6 @@ public sealed class MVerb {
     
     /// <summary>
     /// Simple delay line without feedback.
-    /// Mirrors DOSBox StaticDelayLine template class (lines 530-576).
     /// </summary>
     private sealed class StaticDelayLine {
         private readonly float[] _buffer = new float[MaxLength];
@@ -597,7 +586,6 @@ public sealed class MVerb {
     
     /// <summary>
     /// Delay line with four tap points for complex delay patterns.
-    /// Mirrors DOSBox StaticDelayLineFourTap template class (lines 578-668).
     /// </summary>
     private sealed class StaticDelayLineFourTap {
         private readonly float[] _buffer = new float[MaxLength];
@@ -659,7 +647,6 @@ public sealed class MVerb {
     
     /// <summary>
     /// Delay line with eight tap points for early reflections.
-    /// Mirrors DOSBox StaticDelayLineEightTap template class (lines 670-788).
     /// </summary>
     private sealed class StaticDelayLineEightTap {
         private readonly float[] _buffer = new float[MaxLength];
@@ -742,7 +729,6 @@ public sealed class MVerb {
     
     /// <summary>
     /// State variable filter for frequency-dependent damping.
-    /// Mirrors DOSBox StateVariable template class (lines 790-893).
     /// </summary>
     private sealed class StateVariable {
         private const int OverSampleCount = 4;

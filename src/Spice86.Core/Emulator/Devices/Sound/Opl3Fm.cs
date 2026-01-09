@@ -1,22 +1,19 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound;
+namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Common;
 using Spice86.Libs.Sound.Devices.AdlibGold;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
 
 using System.Threading;
 
 /// <summary>
 ///     Virtual device which emulates OPL3 FM sound.
-///     Mirrors DOSBox Staging Opl class from src/hardware/audio/opl.cpp:84-163 and opl.h:84-163
 /// </summary>
 public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly AdLibGoldDevice? _adLibGold;
@@ -32,11 +29,9 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly bool _useAdLibGold;
     
     // FIFO queue for cycle-accurate OPL frame generation
-    // Mirrors DOSBox Staging opl.h:103
     private readonly Queue<AudioFrame> _fifo = new();
     
     // Time tracking for cycle-accurate rendering
-    // Mirrors DOSBox Staging opl.h:122-123
     private double _lastRenderedMs;
     private double _msPerFrame;
 
@@ -51,7 +46,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
     /// <summary>
     ///     Initializes a new instance of the OPL3 FM synth chip.
-    ///     Mirrors DOSBox Staging Opl::Opl() constructor from opl.cpp:812-942
     /// </summary>
     /// <param name="mixer">The global software mixer used to create the OPL3 channel and request frames.</param>
     /// <param name="state">The CPU registers and flags.</param>
@@ -73,11 +67,9 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         bool useAdlibGold = false, bool enableOplIrq = false, byte oplIrqLine = 5)
         : base(state, failOnUnhandledPort, loggerService) {
         // Lock mixer thread during construction to prevent concurrent modifications
-        // Mirrors DOSBox Staging opl.cpp:816 (MIXER_LockMixerThread)
         mixer.LockMixerThread();
 
         // Create and register the OPL3 mixer channel
-        // Mirrors DOSBox Staging opl.cpp:825-846 (channel_features and MIXER_AddChannel)
         // Features: Sleep (CPU efficiency), FadeOut (smooth stop), NoiseGate (residual noise removal),
         //           ReverbSend (reverb effect), ChorusSend (chorus effect), Synthesizer (FM synth), Stereo (OPL3)
         HashSet<ChannelFeature> features = new HashSet<ChannelFeature> {
@@ -92,7 +84,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         _mixerChannel = mixer.AddChannel(framesRequested => AudioCallback(framesRequested), 49716, "OPL3FM", features);
 
         // Set resample method to always use Speex resampling (no upsampling)
-        // Mirrors DOSBox Staging opl.cpp:848
         _mixerChannel.SetResampleMethod(ResampleMethod.Resample);
 
         _scheduler = scheduler;
@@ -109,7 +100,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         };
 
         int sampleRate = _mixerChannel.GetSampleRate();
-        // Mirrors DOSBox Staging opl.cpp:289-290 (AdlibGold initialization for Opl3Gold mode)
         if (_useAdLibGold) {
             _adLibGold = new AdLibGoldDevice(sampleRate, loggerService);
             _adLibGoldIo = _adLibGold.CreateIoAttachedTo(_oplIo);
@@ -119,11 +109,9 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             "Initializing OPL3 FM synth. AdLib Gold enabled: {AdLibGoldEnabled}, OPL IRQ enabled: {OplIrqEnabled}, Sample rate: {SampleRate}",
             _useAdLibGold, _useOplIrq, sampleRate);
 
-        // Mirrors DOSBox Staging opl.cpp:267 (OPL3_Reset call in Init())
         _oplIo.Reset((uint)sampleRate);
 
         // Set OPL volume gain to 1.5x
-        // Mirrors DOSBox Staging opl.cpp:850-863
         // This effectively adds a 1.5x gain factor to OPL output.
         // Used to be 2.0, which was measured to be too high. Exact value depends on card/clone.
         // CRITICAL: Don't touch this value as many people fine-tune their mixer volumes per game.
@@ -131,7 +119,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         _mixerChannel.Set0dbScalar(OplVolumeGain);
 
         // Configure noise gate to remove OPL chip residual noise
-        // Mirrors DOSBox Staging opl.cpp:865-899
         // Gets rid of residual noise in [-8, 0] range on OPL2 and [-18, 0] range on OPL3
         // This is accurate hardware behavior but annoying - OPL chips use bitwise inversion
         // for negative sine, causing small oscillations even when envelope generator is muted.
@@ -142,28 +129,23 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         const float releaseTimeMs = 100.0f;
         _mixerChannel.ConfigureNoiseGate(thresholdDb, attackTimeMs, releaseTimeMs);
         
-        // Enable noise gate by default for OPL (mirrors DOSBox denoiser setting)
         // In DOSBox this is controlled by mixer's "denoiser" setting, we enable it by default
         _mixerChannel.EnableNoiseGate(true);
 
         // Initialize cycle-accurate timing for FIFO rendering
-        // Mirrors DOSBox Staging opl.cpp:272
         const double MillisInSecond = 1000.0;
         _msPerFrame = MillisInSecond / 49716; // OplSampleRateHz
         _lastRenderedMs = _clock.ElapsedTimeMs;
 
         // DON'T enable the channel here - it starts disabled and wakes up on first port write
-        // Mirrors DOSBox Staging opl.cpp:843-846 where MIXER_AddChannel doesn't call Enable(true)
         // The channel will be enabled by WakeUp() call in WriteByte() when OPL ports are accessed
         // This follows the WakeUp pattern from opl.cpp:423 (RenderUpToNow calls channel->WakeUp())
 
-        // Mirrors DOSBox Staging opl.cpp:269 (initialize_opl_tone_generators call in Init())
         InitializeToneGenerators();
 
         InitPortHandlers(ioPortDispatcher);
 
         // Unlock mixer thread after construction completes
-        // Mirrors DOSBox Staging opl.cpp:941 (MIXER_UnlockMixerThread)
         mixer.UnlockMixerThread();
     }
 
@@ -185,11 +167,9 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
     /// <summary>
     ///     Initializes default envelopes and rates for the OPL3 operators.
-    ///     Mirrors DOSBox Staging initialize_opl_tone_generators() from opl.cpp:64-97
     /// </summary>
     private void InitializeToneGenerators() {
         // First 9 operators used for 4-op FM synthesis
-        // Mirrors DOSBox Staging opl.cpp:67-80
         int[] fourOp = [0, 1, 2, 6, 7, 8, 12, 13, 14];
         foreach (int index in fourOp) {
             Opl3Operator slot = _chip.Slots[index];
@@ -206,7 +186,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         }
 
         // Remaining 9 operators used for 2-op FM synthesis
-        // Mirrors DOSBox Staging opl.cpp:84-96
         int[] twoOp = [3, 4, 5, 9, 10, 11, 15, 16, 17];
         foreach (int index in twoOp) {
             Opl3Operator slot = _chip.Slots[index];
@@ -265,7 +244,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <inheritdoc />
     /// <summary>
     ///     Reads from OPL3 or AdLib Gold I/O ports.
-    ///     Mirrors DOSBox Staging Opl::PortRead() from opl.cpp:711-785
     /// </summary>
     public override byte ReadByte(ushort port) {
         lock (_chipLock) {
@@ -289,19 +267,16 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <inheritdoc />
     /// <summary>
     ///     Writes to OPL3 or AdLib Gold I/O ports.
-    ///     Mirrors DOSBox Staging Opl::PortWrite() from opl.cpp:570-709
     /// </summary>
     public override void WriteByte(ushort port, byte value) {
         Opl3WriteResult result = Opl3WriteResult.None;
 
         // Render cycle-accurate frames up to current time before processing write
-        // Mirrors DOSBox Staging opl.cpp:573 (PortWrite calls RenderUpToNow)
         // RenderUpToNow at opl.cpp:417-432 generates frames based on elapsed time
         // and queues them in FIFO for later consumption by AudioCallback
         RenderUpToNow();
         
         // Wake up the channel on any port write
-        // Mirrors DOSBox Staging opl.cpp:423 (RenderUpToNow calls channel->WakeUp())
         // This ensures the channel is enabled when OPL receives data
         _mixerChannel.WakeUp();
 
@@ -333,7 +308,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         // Only schedule timer events - audio writes are handled by the mixer callback
         // The OPL chip automatically flushes buffered writes during GenerateStream
-        // Mirrors DOSBox Staging: no separate flush scheduling needed
         if (timerWrite) {
             double now = _clock.ElapsedTimeMs;
             ScheduleOplTimer(now);
@@ -352,7 +326,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
     /// <summary>
     ///     OPL3 mixer handler - called by the mixer thread to generate frames.
-    ///     Mirrors DOSBox Staging Opl::AudioCallback() from opl.cpp:434-460
     /// </summary>
     public void AudioCallback(int framesRequested) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
@@ -365,7 +338,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             Span<float> frameData = stackalloc float[2];
             
             // First, drain any cycle-accurate frames we've queued in the FIFO
-            // Mirrors DOSBox Staging opl.cpp:448-451
             while (framesRemaining > 0 && _fifo.Count > 0) {
                 AudioFrame frame = _fifo.Dequeue();
                 frameData[0] = frame.Left;
@@ -375,7 +347,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             }
             
             // If the FIFO ran dry, render the remainder and sync-up our time datum
-            // Mirrors DOSBox Staging opl.cpp:453-458
             while (framesRemaining > 0) {
                 AudioFrame frame = RenderSingleFrame();
                 frameData[0] = frame.Left;
@@ -385,7 +356,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             }
             
             // Sync time datum to current atomic time
-            // Mirrors DOSBox Staging opl.cpp:459
             _lastRenderedMs = _clock.ElapsedTimeMs;
         }
 
@@ -397,20 +367,17 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     Renders cycle-accurate OPL frames up to the current emulated time.
     ///     Called on every port write to maintain synchronization between CPU and audio.
-    ///     Mirrors DOSBox Staging Opl::RenderUpToNow() from opl.cpp:417-432
     /// </summary>
     private void RenderUpToNow() {
         double now = _clock.ElapsedTimeMs;
         
         // Wake up the channel if it was sleeping
-        // Mirrors DOSBox Staging opl.cpp:423
         if (_mixerChannel.WakeUp()) {
             _lastRenderedMs = now;
             return;
         }
         
         // Keep rendering frames until we're caught up to current time
-        // Mirrors DOSBox Staging opl.cpp:428-431
         while (_lastRenderedMs < now) {
             _lastRenderedMs += _msPerFrame;
             AudioFrame frame = RenderSingleFrame();
@@ -420,27 +387,23 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     
     /// <summary>
     ///     Renders a single OPL audio frame.
-    ///     Mirrors DOSBox Staging Opl::RenderFrame() from opl.cpp:383-415
     /// </summary>
     private AudioFrame RenderSingleFrame() {
         // Generate one frame (2 samples for stereo)
         Span<short> buf = stackalloc short[2];
         
         // Generate audio samples
-        // Mirrors DOSBox Staging opl.cpp:399 (OPL3_GenerateStream)
         _chip.GenerateStream(buf);
         
         AudioFrame frame;
         
         // Apply AdLib Gold filtering if enabled
-        // Mirrors DOSBox Staging opl.cpp:407-412
         if (_adLibGold is not null) {
             Span<float> floatBuf = stackalloc float[2];
             _adLibGold.Process(buf, 1, floatBuf);
             frame = new AudioFrame { Left = floatBuf[0], Right = floatBuf[1] };
         } else {
             // Convert int16 to float directly (no normalization)
-            // Mirrors DOSBox Staging opl.cpp:410-411
             frame = new AudioFrame { Left = (float)buf[0], Right = (float)buf[1] };
         }
         
@@ -450,7 +413,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     Schedules servicing of the OPL timers based on the next overflow.
     ///     Timer management is handled by Opl3Io which wraps OplChip timer logic.
-    ///     Mirrors DOSBox Staging OplChip timer handling from opl.cpp:99-227
     /// </summary>
     /// <param name="currentTick">Current time in scheduler ticks.</param>
     private void ScheduleOplTimer(double currentTick) {
@@ -479,7 +441,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
     /// <summary>
     ///     Advances OPL timers to the current time and schedules the next timer event.
-    ///     Mirrors DOSBox Staging Timer::Update() logic from opl.cpp:107-121
     /// </summary>
     /// <param name="unusedTick">Unused parameter supplied by the EmulationLoopScheduler event system.</param>
     private void ServiceOplTimers(uint unusedTick) {
@@ -509,7 +470,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     Handles changes in the OPL IRQ line state.
     ///     OPL timers can trigger IRQs when enabled (not default behavior).
-    ///     Mirrors DOSBox Staging timer overflow handling from opl.cpp:229-242 (OplChip::Read)
     /// </summary>
     /// <param name="asserted">True when the OPL IRQ is asserted.</param>
     private void OnOplIrqChanged(bool asserted) {

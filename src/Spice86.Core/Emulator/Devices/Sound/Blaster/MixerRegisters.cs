@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
+namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 /// <summary>
 /// This class contains the register addresses for the SoundBlaster mixer.

@@ -66,7 +66,7 @@ namespace Bufdio.Spice86;
 /// Provides arbitrary sample rate conversion with configurable quality levels.
 /// This is a faithful port maintaining the exact algorithms and structure from the C implementation.
 /// </summary>
-public sealed class SpeexResamplerCSharp : IDisposable {
+public sealed class SpeexResamplerCSharp {
     private const double MPI = 3.14159265358979323846;
     
     // Kaiser window tables - exact values from resample.c
@@ -512,8 +512,11 @@ public sealed class SpeexResamplerCSharp : IDisposable {
         }
     }
 
-    // SetRate() - Change sample rates
-    // Mirrors: speex_resampler_set_rate()
+    /// <summary>
+    /// SetRate() - Change sample rates
+    /// </summary>
+    /// <param name="inRate"></param>
+    /// <param name="outRate"></param>
     public void SetRate(uint inRate, uint outRate) {
         if (_inRate == inRate && _outRate == outRate) {
             return;
@@ -527,8 +530,9 @@ public sealed class SpeexResamplerCSharp : IDisposable {
         UpdateFilter();
     }
 
-    // Reset() - Reset memory
-    // Mirrors: speex_resampler_reset_mem()
+    /// <summary>
+    /// Reset() - Reset memory
+    /// </summary>
     public void Reset() {
         for (uint i = 0; i < _nbChannels; i++) {
             _lastSample[i] = 0;
@@ -544,7 +548,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Gets the current input and output sample rates.
-    /// Mirrors: speex_resampler_get_rate()
     /// </summary>
     public void GetRate(out uint inRate, out uint outRate) {
         inRate = _inRate;
@@ -553,7 +556,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Gets the resampling ratio as a fraction (numerator/denominator).
-    /// Mirrors: speex_resampler_get_ratio()
     /// </summary>
     public void GetRatio(out uint ratioNum, out uint ratioDen) {
         ratioNum = _numRate;
@@ -562,7 +564,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Sets the quality level (0-10).
-    /// Mirrors: speex_resampler_set_quality()
     /// </summary>
     public void SetQuality(int quality) {
         if (quality < 0 || quality > 10) {
@@ -579,7 +580,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Gets the current quality level.
-    /// Mirrors: speex_resampler_get_quality()
     /// </summary>
     public int GetQuality() {
         return _quality;
@@ -587,7 +587,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Sets the resampling rates using fractional representation.
-    /// Mirrors: speex_resampler_set_rate_frac()
     /// </summary>
     public void SetRateFrac(uint ratioNum, uint ratioDen, uint inRate, uint outRate) {
         if (ratioNum == 0 || ratioDen == 0) {
@@ -614,7 +613,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Processes integer (16-bit) samples.
-    /// Mirrors: speex_resampler_process_int()
     /// </summary>
     public void ProcessInt(uint channelIndex, ReadOnlySpan<short> input, Span<short> output,
         out uint inputConsumed, out uint outputGenerated) {
@@ -655,7 +653,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Processes interleaved floating-point samples.
-    /// Mirrors: speex_resampler_process_interleaved_float()
     /// </summary>
     public void ProcessInterleavedFloat(ReadOnlySpan<float> input, Span<float> output,
         out uint inputFrames, out uint outputFrames) {
@@ -714,7 +711,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Gets the algorithmic delay for input.
-    /// Mirrors: speex_resampler_get_input_latency()
     /// </summary>
     public int GetInputLatency() {
         return (int)(_filtLen / 2);
@@ -722,7 +718,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Gets the algorithmic delay for output.
-    /// Mirrors: speex_resampler_get_output_latency()
     /// </summary>
     public int GetOutputLatency() {
         return (int)((_filtLen / 2) * _denRate / _numRate);
@@ -730,7 +725,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Skips zeros at the beginning (used to reduce latency).
-    /// Mirrors: speex_resampler_skip_zeros()
     /// </summary>
     public void SkipZeros() {
         for (uint i = 0; i < _nbChannels; i++) {
@@ -740,7 +734,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Resets memory buffers (same as Reset but explicit name from C API).
-    /// Mirrors: speex_resampler_reset_mem()
     /// </summary>
     public void ResetMem() {
         Reset();
@@ -748,7 +741,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Sets the input stride (for non-contiguous samples).
-    /// Mirrors: speex_resampler_set_input_stride()
     /// </summary>
     public void SetInputStride(uint stride) {
         _inStride = (int)stride;
@@ -756,7 +748,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Gets the input stride.
-    /// Mirrors: speex_resampler_get_input_stride()
     /// </summary>
     public uint GetInputStride() {
         return (uint)_inStride;
@@ -764,7 +755,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Sets the output stride (for non-contiguous samples).
-    /// Mirrors: speex_resampler_set_output_stride()
     /// </summary>
     public void SetOutputStride(uint stride) {
         _outStride = (int)stride;
@@ -772,7 +762,6 @@ public sealed class SpeexResamplerCSharp : IDisposable {
 
     /// <summary>
     /// Gets the output stride.
-    /// Mirrors: speex_resampler_get_output_stride()
     /// </summary>
     public uint GetOutputStride() {
         return (uint)_outStride;
@@ -791,16 +780,5 @@ public sealed class SpeexResamplerCSharp : IDisposable {
             4 => "Input and output buffers overlap",
             _ => "Unknown error"
         };
-    }
-
-    public void Dispose() {
-        if (_disposed) {
-            return;
-        }
-
-        _sincTable = null;
-        _mem = Array.Empty<float>();
-        _disposed = true;
-        GC.SuppressFinalize(this);
     }
 }

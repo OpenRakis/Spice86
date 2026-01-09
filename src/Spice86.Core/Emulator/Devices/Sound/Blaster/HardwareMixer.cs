@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
+namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Libs.Sound.Common;
@@ -581,7 +581,6 @@ public class HardwareMixer {
 
     private float CalculatePercentage(byte volume) {
         // The SB Pro volume values are attenuation values (31=max volume, 0=mute)
-        // Mirrors DOSBox Staging calc_vol() function from soundblaster.cpp
         // Reference: src/hardware/audio/soundblaster.cpp calc_vol()
         
         byte count = (byte)(31 - volume);

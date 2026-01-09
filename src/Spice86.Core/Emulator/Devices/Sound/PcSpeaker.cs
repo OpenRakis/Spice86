@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound;
+namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Serilog.Events;
 
@@ -86,7 +86,6 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         IPitControl? pitControl = null)
         : base(state, failOnUnhandledPort, loggerService) {
         // Lock mixer thread during construction to prevent concurrent modifications
-        // Mirrors DOSBox Staging PCSPEAKER_Init() pattern
         // Reference: src/hardware/audio/pcspeaker.cpp:119
         mixer.LockMixerThread();
 
@@ -96,7 +95,6 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         _pitControl = pitControl;
         
         // Create and register the PC Speaker mixer channel
-        // Mirrors DOSBox Staging pcspeaker_discrete.cpp:455-465 (channel features)
         // Features: Sleep (CPU efficiency), ChorusSend, ReverbSend (effect sends), Synthesizer (square wave)
         // Note: PC Speaker is mono but uses stereo channel for left output only (SetChannelMap below)
         HashSet<ChannelFeature> features = new HashSet<ChannelFeature> {
@@ -109,7 +107,6 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         _mixerChannel.SetAppVolume(new AudioFrame(1.0f, 1.0f));
         _mixerChannel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Left });
         // DON'T enable the channel here - it starts disabled and wakes up on first use
-        // This mirrors DOSBox where PC speaker channel starts disabled and wakes via WakeUp()
         // The channel will be enabled by WakeUp() calls in SetCounter() and SetPitControl()
 
         _highPassFilter.Setup(SampleRateHz, 120, FilterQ);
@@ -124,7 +121,6 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         _scheduler.AddEvent(_tickHandler, 1.0);
 
         // Unlock mixer thread after construction completes
-        // Mirrors DOSBox Staging PCSPEAKER_Init() pattern
         // Reference: src/hardware/audio/pcspeaker.cpp:136
         mixer.UnlockMixerThread();
     }
@@ -143,7 +139,6 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     public void SetCounter(int count, PitMode mode) {
         _logger.Debug("PCSPEAKER: Configuring counter with value {Count} in mode {Mode}", count, mode);
 
-        // Wake up the channel on counter changes - mirrors DOSBox pcspeaker_discrete.cpp:272
         _mixerChannel.WakeUp();
 
         float newIndex = GetPicTickIndex();
@@ -229,7 +224,6 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     public void SetPitControl(PitMode mode) {
         _logger.Debug("PCSPEAKER: Updating PIT control for mode {Mode}", mode);
 
-        // Wake up the channel on PIT control changes - mirrors DOSBox pcspeaker_discrete.cpp:323
         _mixerChannel.WakeUp();
 
         float newIndex = GetPicTickIndex();

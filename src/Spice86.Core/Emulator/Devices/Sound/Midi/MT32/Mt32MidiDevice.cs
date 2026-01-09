@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
+namespace Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 
 using Mt32emu;
 
@@ -50,14 +50,12 @@ public sealed class Mt32MidiDevice : MidiDevice {
         _context.SetSampleRate(48000);
         _context.OpenSynth();
         // DON'T enable the channel here - it starts disabled and wakes up on first MIDI message
-        // This mirrors DOSBox MT32 where channel starts disabled and wakes via WakeUp()
         // The channel will be enabled when MIDI messages are played (via WakeUp call)
     }
 
     /// <inheritdoc/>
     protected override void PlayShortMessage(uint message) {
         if (!_disposed) {
-            // Wake up the channel on MIDI message - mirrors DOSBox MT32 GetNumPendingAudioFrames → WakeUp
             _mixerChannel?.WakeUp();
             _context.PlayMessage(message);
         }
@@ -66,7 +64,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <inheritdoc/>
     protected override void PlaySysex(ReadOnlySpan<byte> data) {
         if (!_disposed) {
-            // Wake up the channel on MIDI sysex - mirrors DOSBox MT32 GetNumPendingAudioFrames → WakeUp
             _mixerChannel?.WakeUp();
             _context.PlaySysex(data);
         }

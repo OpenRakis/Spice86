@@ -4,7 +4,6 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 
 /// <summary>
 /// Features that a mixer channel can have.
-/// Mirrors DOSBox Staging's ChannelFeature enum.
 /// </summary>
 public enum ChannelFeature {
     /// <summary>
@@ -50,7 +49,6 @@ public enum ChannelFeature {
 
 /// <summary>
 /// Filter state - on or off.
-/// Mirrors DOSBox Staging's FilterState enum.
 /// </summary>
 public enum FilterState {
     /// <summary>
@@ -104,7 +102,6 @@ public struct StereoLine {
 }
 
 /// <summary>
-/// Crossfeed effect presets - mirrors DOSBox CrossfeedPreset.
 /// Crossfeed mixes a portion of the left channel into the right and vice-versa,
 /// creating a more natural stereo image for headphone listening.
 /// </summary>
@@ -131,7 +128,6 @@ public enum CrossfeedPreset {
 }
 
 /// <summary>
-/// Reverb effect presets - mirrors DOSBox ReverbPreset.
 /// Reverb simulates acoustic reflections in various room sizes.
 /// </summary>
 public enum ReverbPreset {
@@ -167,7 +163,6 @@ public enum ReverbPreset {
 }
 
 /// <summary>
-/// Chorus effect presets - mirrors DOSBox ChorusPreset.
 /// Chorus creates a thicker, richer sound by adding delayed copies with pitch variation.
 /// </summary>
 public enum ChorusPreset {
@@ -193,7 +188,6 @@ public enum ChorusPreset {
 }
 
 /// <summary>
-/// Resampling method - mirrors DOSBox ResampleMethod.
 /// Controls how audio is resampled when channel rate differs from mixer rate.
 /// </summary>
 public enum ResampleMethod {
@@ -214,7 +208,6 @@ public enum ResampleMethod {
 }
 
 /// <summary>
-/// Mixer operational state - mirrors DOSBox MixerState enum.
 /// Controls overall mixer behavior and audio output.
 /// </summary>
 public enum MixerState {
@@ -235,7 +228,6 @@ public enum MixerState {
 }
 
 /// <summary>
-/// Settings for a mixer channel - mirrors DOSBox MixerChannelSettings struct.
 /// Used to save and restore channel configuration.
 /// Reference: DOSBox mixer.h lines 114-121
 /// </summary>

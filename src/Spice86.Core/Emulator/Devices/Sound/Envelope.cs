@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Envelope implementation mirrored from DOSBox Staging
 // Reference: src/audio/private/envelope.h
 
 namespace Spice86.Core.Emulator.Devices.Sound;
@@ -8,7 +7,6 @@ using Spice86.Libs.Sound.Common;
 
 /// <summary>
 /// Audio envelope that applies a step-wise earned-volume envelope.
-/// Mirrors DOSBox Staging's Envelope class.
 /// The envelope is "earned" in the sense that the edge is expanded when
 /// a sample meets or exceeds it. This helps minimize the impact of
 /// unnatural waveforms.
@@ -30,7 +28,6 @@ public sealed class Envelope {
     /// <summary>
     /// Processes a frame through the envelope.
     /// When the envelope is fully expanded or has expired, this becomes a null-call.
-    /// Mirrors DOSBox Envelope::Process() from envelope.cpp
     /// </summary>
     public void Process(bool isStereo, ref AudioFrame frame) {
         if (!_isActive) {
@@ -63,7 +60,6 @@ public sealed class Envelope {
 
     /// <summary>
     /// Updates the envelope with audio stream characteristics.
-    /// Mirrors DOSBox Envelope::Update() from envelope.cpp
     /// </summary>
     public void Update(int sampleRateHz, int peakAmplitude, byte expansionPhaseMs, byte expireAfterSeconds) {
         if (sampleRateHz <= 0 || peakAmplitude <= 0 || expansionPhaseMs == 0 || expireAfterSeconds == 0) {
@@ -88,7 +84,6 @@ public sealed class Envelope {
 
     /// <summary>
     /// Reactivates the envelope for another round of enveloping.
-    /// Mirrors DOSBox Envelope::Reactivate() from envelope.cpp
     /// </summary>
     public void Reactivate() {
         _edge = 0.0f;

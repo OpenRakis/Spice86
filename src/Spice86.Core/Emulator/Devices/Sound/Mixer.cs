@@ -41,12 +41,10 @@ public sealed class Mixer : IDisposable {
     // Master volume (atomic via Interlocked operations)
     private AudioFrame _masterGain = new(Minus6db, Minus6db);
 
-    // Mixer state - mirrors DOSBox mixer.state (atomic)
     // Controls whether audio is playing, muted, or disabled
     private MixerState _state = MixerState.On;
     private bool _isManuallyMuted = false;
 
-    // Effect presets - mirrors DOSBox preset system
     private CrossfeedPreset _crossfeedPreset = CrossfeedPreset.None;
     private ReverbPreset _reverbPreset = ReverbPreset.None;
     private ChorusPreset _chorusPreset = ChorusPreset.None;
@@ -56,35 +54,29 @@ public sealed class Mixer : IDisposable {
     private readonly List<AudioFrame> _reverbAuxBuffer = new();
     private readonly List<AudioFrame> _chorusAuxBuffer = new();
 
-    // Compressor state - mirrors DOSBox compressor (mixer.cpp lines 194-195, 659-686)
     private bool _doCompressor = false;
     private readonly Compressor _compressor = new();
 
-    // Normalization state - mirrors DOSBox peak detection
     private float _peakLeft = 0.0f;
     private float _peakRight = 0.0f;
     private const float PeakDecayCoeff = 0.995f; // Slow decay for peak tracking
 
     // Reverb state - MVerb professional algorithmic reverb
-    // Mirrors DOSBox mixer.cpp ReverbSettings (lines 78-120)
     private bool _doReverb = false;
     private readonly MVerb _mverb = new();
     private float _reverbSynthSendLevel = 0.0f;
     private float _reverbDigitalSendLevel = 0.0f;
 
     // Chorus state - TAL-Chorus professional modulated chorus
-    // Mirrors DOSBox mixer.cpp ChorusSettings (lines 127-151)
     private bool _doChorus = false;
     private readonly ChorusEngine _chorusEngine;
     private float _chorusSynthSendLevel = 0.0f;
     private float _chorusDigitalSendLevel = 0.0f;
 
     // Crossfeed state - stereo mixing for headphone spatialization
-    // Mirrors DOSBox mixer.crossfeed (mixer.cpp lines 187-191)
     private bool _doCrossfeed = false;
     private float _crossfeedGlobalStrength = 0.0f; // Varies by preset: Light=0.20f, Normal=0.40f, Strong=0.60f
 
-    // High-pass filters - mirrors DOSBox HighpassFilter
     // Used on reverb input and master output
     private readonly HighPassFilter[] _reverbHighPassFilter;
     private readonly HighPassFilter[] _masterHighPassFilter;
@@ -104,7 +96,6 @@ public sealed class Mixer : IDisposable {
         _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize);
 
         // Initialize high-pass filters (2 channels - left and right)
-        // Mirrors DOSBox HighpassFilter = std::array<Iir::Butterworth::HighPass<2>, 2>
         _reverbHighPassFilter = new HighPassFilter[2];
         _masterHighPassFilter = new HighPassFilter[2];
 
@@ -117,11 +108,9 @@ public sealed class Mixer : IDisposable {
         }
 
         // Initialize MVerb with default parameters
-        // Mirrors DOSBox ReverbSettings setup (mixer.cpp lines 94-120)
         _mverb.SetSampleRate(_sampleRateHz);
 
         // Initialize ChorusEngine with default sample rate
-        // Mirrors DOSBox ChorusSettings setup (mixer.cpp lines 127-151)
         _chorusEngine = new ChorusEngine(_sampleRateHz);
 
         // Configure chorus: Chorus1 enabled, Chorus2 disabled (matches DOSBox)
@@ -129,7 +118,6 @@ public sealed class Mixer : IDisposable {
         _chorusEngine.SetEnablesChorus(isChorus1Enabled: true, isChorus2Enabled: false);
 
         // Initialize compressor with default parameters
-        // Mirrors DOSBox init_compressor() (mixer.cpp lines 659-686)
         InitCompressor(compressorEnabled: true);
 
         // Start mixer thread (produces frames and writes to PortAudio directly)
@@ -146,13 +134,11 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Gets the current mixer sample rate.
-    /// Mirrors DOSBox MIXER_GetSampleRate() from mixer.cpp:250
     /// </summary>
     public int SampleRateHz => _sampleRateHz;
     
     /// <summary>
     /// Gets the mixer sample rate.
-    /// Mirrors DOSBox MIXER_GetSampleRate() from mixer.cpp:250-255
     /// </summary>
     public int GetSampleRate() {
         return _sampleRateHz;
@@ -165,7 +151,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Gets the prebuffer time in milliseconds.
-    /// Mirrors DOSBox MIXER_GetPreBufferMs() from mixer.cpp:242-248
     /// </summary>
     public int GetPreBufferMs() {
         // For now return a constant; DOSBox calculates based on buffer size
@@ -174,7 +159,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Locks the mixer thread to prevent mixing during critical operations.
-    /// Mirrors DOSBox MIXER_LockMixerThread() from mixer.cpp:279-290
     /// Note: DOSBox also stops device queues; we just lock the mixer.
     /// Use within a using statement or with UnlockMixerThread().
     /// </summary>
@@ -184,7 +168,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Unlocks the mixer thread after critical operations complete.
-    /// Mirrors DOSBox MIXER_UnlockMixerThread() from mixer.cpp:292-304
     /// </summary>
     public void UnlockMixerThread() {
         _mixerLock.Exit();
@@ -208,7 +191,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Gets the current master volume gain.
-    /// Mirrors DOSBox MIXER_GetMasterVolume() implementation (similar to mixer.cpp:847 setter).
     /// DOSBox doesn't have a getter function; this provides read access to master_gain.
     /// </summary>
     /// <returns>The current master gain as an AudioFrame.</returns>
@@ -220,7 +202,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Sets the master volume gain atomically.
-    /// Mirrors DOSBox MIXER_SetMasterVolume() from mixer.cpp:847-850
     /// </summary>
     /// <param name="gain">The new master gain to apply.</param>
     public void SetMasterVolume(AudioFrame gain) {
@@ -231,7 +212,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Mutes audio output while keeping the audio device active.
-    /// Mirrors DOSBox MIXER_Mute() from mixer.cpp:3030-3039
     /// </summary>
     public void Mute() {
         lock (_mixerLock) {
@@ -245,7 +225,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Unmutes audio output, resuming playback.
-    /// Mirrors DOSBox MIXER_Unmute() from mixer.cpp:3041-3050
     /// </summary>
     public void Unmute() {
         lock (_mixerLock) {
@@ -259,7 +238,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Returns whether audio has been manually muted by the user.
-    /// Mirrors DOSBox MIXER_IsManuallyMuted() from mixer.cpp:3052-3055
     /// </summary>
     /// <returns>True if audio is manually muted, false otherwise.</returns>
     public bool IsManuallyMuted() {
@@ -280,7 +258,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Sets the crossfeed preset and configures the effect.
-    /// Mirrors DOSBox MIXER_SetCrossfeedPreset() from mixer.cpp:420-460
     /// </summary>
     public void SetCrossfeedPreset(CrossfeedPreset preset) {
         lock (_mixerLock) {
@@ -309,7 +286,6 @@ public sealed class Mixer : IDisposable {
             // Configure the channels
             _doCrossfeed = (preset != CrossfeedPreset.None);
 
-            // Update all registered channels - mirrors DOSBox set_global_crossfeed
             SetGlobalCrossfeed();
 
             // Log the change
@@ -323,7 +299,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies global crossfeed settings to all channels.
-    /// Mirrors DOSBox set_global_crossfeed() from mixer.cpp:333-346
     /// </summary>
     private void SetGlobalCrossfeed() {
         // Apply preset-specific crossfeed strength to stereo channels
@@ -351,7 +326,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Sets the reverb preset and configures the effect.
-    /// Mirrors DOSBox MIXER_SetReverbPreset() from mixer.cpp:523-560
     /// </summary>
     public void SetReverbPreset(ReverbPreset preset) {
         lock (_mixerLock) {
@@ -361,7 +335,6 @@ public sealed class Mixer : IDisposable {
 
             _reverbPreset = preset;
 
-            // Configure MVerb based on preset - mirrors DOSBox switch statement (lines 534-556)
             // Parameters: PREDLY EARLY  SIZE   DENSITY BW_FREQ DECAY  DAMP_LV SYN_LV DIG_LV HIPASS_HZ
             switch (preset) {
                 case ReverbPreset.Tiny:
@@ -401,14 +374,12 @@ public sealed class Mixer : IDisposable {
                 _loggerService.Information("MIXER: Reverb disabled");
             }
 
-            // Update all registered channels - mirrors DOSBox set_global_reverb
             SetGlobalReverb();
         }
     }
 
     /// <summary>
     /// Configures MVerb reverb parameters.
-    /// Mirrors DOSBox ReverbSettings::Setup() (mixer.cpp lines 94-120).
     /// </summary>
     private void SetupMVerb(float predelay, float earlyMix, float size, float density,
                            float bandwidthFreq, float decay, float dampingFreq,
@@ -440,7 +411,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies global reverb settings to all channels.
-    /// Mirrors DOSBox set_global_reverb() from mixer.cpp:348-362
     /// </summary>
     private void SetGlobalReverb() {
         foreach (MixerChannel channel in _channels.Values) {
@@ -468,7 +438,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Sets the chorus preset and configures the effect.
-    /// Mirrors DOSBox MIXER_SetChorusPreset() from mixer.cpp:615-656
     /// </summary>
     public void SetChorusPreset(ChorusPreset preset) {
         lock (_mixerLock) {
@@ -512,14 +481,12 @@ public sealed class Mixer : IDisposable {
                 _loggerService.Information("MIXER: Chorus disabled");
             }
 
-            // Update all registered channels - mirrors DOSBox set_global_chorus
             SetGlobalChorus();
         }
     }
 
     /// <summary>
     /// Applies global chorus settings to all channels.
-    /// Mirrors DOSBox set_global_chorus() from mixer.cpp:363-376
     /// </summary>
     private void SetGlobalChorus() {
         foreach (MixerChannel channel in _channels.Values) {
@@ -587,7 +554,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Removes a channel from the mixer.
-    /// Mirrors DOSBox MIXER_DeregisterChannel() from mixer.cpp:689-776
     /// </summary>
     public void DeregisterChannel(string name) {
         if (_channels.TryRemove(name, out MixerChannel? channel)) {
@@ -606,7 +572,6 @@ public sealed class Mixer : IDisposable {
     /// <summary>
     /// Triggers a single mix cycle from the emulation loop scheduler.
     /// This allows the mixer to be synchronized with the emulation loop for deterministic behavior.
-    /// Mirrors DOSBox's approach of calling the mixer from PIC timer events.
     /// </summary>
     public void TickMixer() {
         // Only process if not already being processed by the mixer thread
@@ -649,7 +614,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Main mixer thread loop.
-    /// Mirrors DOSBox mixer_thread_loop() from mixer.cpp:2605-2712
     /// </summary>
     private void MixerThreadLoop() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
@@ -712,7 +676,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Mixes samples from all channels into the output buffer.
-    /// Mirrors DOSBox mix_samples() from mixer.cpp:2394-2539
     /// </summary>
     private void MixSamples(int framesRequested) {
         // Clear output buffers
@@ -739,19 +702,16 @@ public sealed class Mixer : IDisposable {
             channel.Mix(framesRequested);
 
             // Accumulate channel output into master mix
-            // Mirrors DOSBox mixer.cpp:2418-2435
             int numFrames = Math.Min(framesRequested, channel.AudioFrames.Count);
             for (int i = 0; i < numFrames; i++) {
                 AudioFrame channelFrame = channel.AudioFrames[i];
 
                 // Apply sleep/wake fade-out or signal detection if enabled
-                // Mirrors DOSBox mixer.cpp:2419-2425
                 channelFrame = channel.MaybeFadeOrListen(channelFrame);
 
                 // Add to master output using operator
                 _outputBuffer[i] = _outputBuffer[i] + channelFrame;
 
-                // Reverb and chorus sends - mirrors DOSBox logic
                 if (_doReverb && channel.DoReverbSend) {
                     _reverbAuxBuffer[i] = _reverbAuxBuffer[i] + (channelFrame * channel.ReverbSendGain);
                 }
@@ -769,7 +729,6 @@ public sealed class Mixer : IDisposable {
                 }
             }
 
-            // Check if channel should sleep - mirrors DOSBox mixer.cpp:2440-2442
             channel.MaybeSleep();
         }
 
@@ -779,10 +738,8 @@ public sealed class Mixer : IDisposable {
             _outputBuffer[i] = _outputBuffer[i] * masterGainSnapshot;
         }
 
-        // Apply effects pipeline - mirrors DOSBox effects order
         if (_doReverb) {
             // Apply high-pass filter to reverb aux buffer before reverb processing
-            // Mirrors DOSBox mixer.cpp:2453-2462
             for (int i = 0; i < _reverbAuxBuffer.Count; i++) {
                 AudioFrame frame = _reverbAuxBuffer[i];
                 frame = new AudioFrame(
@@ -804,7 +761,6 @@ public sealed class Mixer : IDisposable {
             ApplyCrossfeed();
         }
 
-        // Apply high-pass filter to master output - mirrors DOSBox mixer.cpp:2488-2491
         // This is a DC-blocking filter to prevent low-frequency buildup
         for (int i = 0; i < _outputBuffer.Count; i++) {
             AudioFrame frame = _outputBuffer[i];
@@ -815,18 +771,15 @@ public sealed class Mixer : IDisposable {
             _outputBuffer[i] = frame;
         }
 
-        // Apply compressor if enabled - mirrors DOSBox compressor
         if (_doCompressor) {
             ApplyCompressor();
         }
 
-        // Apply master normalization - mirrors DOSBox peak detection
         ApplyMasterNormalization();
     }
 
     /// <summary>
     /// Initializes the master compressor with professional RMS-based configuration.
-    /// Mirrors DOSBox init_compressor() from mixer.cpp:659-686
     /// </summary>
     /// <param name="compressorEnabled">Whether to enable the compressor</param>
     private void InitCompressor(bool compressorEnabled) {
@@ -838,7 +791,6 @@ public sealed class Mixer : IDisposable {
 
         LockMixerThread();
 
-        // Configuration values mirror DOSBox exactly (mixer.cpp:669-680)
         const float ZeroDbfsSampleValue = 32767.0f; // Max16BitSampleValue = INT16_MAX
         const float ThresholdDb = -6.0f;
         const float Ratio = 3.0f;
@@ -863,11 +815,9 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies professional RMS-based compressor to reduce dynamic range.
-    /// Mirrors DOSBox Compressor processing from mixer.cpp:2493-2498
     /// </summary>
     private void ApplyCompressor() {
         // Process each frame through the compressor
-        // Mirrors DOSBox mixer.cpp:2494-2496
         for (int i = 0; i < _outputBuffer.Count; i++) {
             _outputBuffer[i] = _compressor.Process(_outputBuffer[i]);
         }
@@ -875,7 +825,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies master normalization to prevent clipping and maintain consistent levels.
-    /// Mirrors DOSBox normalize_sample() (mixer.cpp:2388-2391) and peak tracking logic
     /// </summary>
     private void ApplyMasterNormalization() {
         // Track peaks for adaptive gain
@@ -926,7 +875,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies MVerb professional algorithmic reverb effect.
-    /// Mirrors DOSBox reverb processing from mixer.cpp:2445-2467
     /// </summary>
     private void ApplyReverb() {
         // Prepare buffers for MVerb processing
@@ -959,7 +907,6 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Applies TAL-Chorus effect to the chorus aux buffer and mixes to output.
-    /// Mirrors DOSBox chorus processing from mixer.cpp:2470-2478
     /// </summary>
     /// <remarks>
     /// Processing flow:
@@ -971,7 +918,6 @@ public sealed class Mixer : IDisposable {
     /// </remarks>
     private void ApplyChorus() {
         // Apply chorus effect to the chorus aux buffer, then mix to master output
-        // Mirrors DOSBox mixer.cpp:2470-2478
         for (int i = 0; i < _chorusAuxBuffer.Count; i++) {
             float left = _chorusAuxBuffer[i].Left;
             float right = _chorusAuxBuffer[i].Right;
@@ -1004,12 +950,9 @@ public sealed class Mixer : IDisposable {
             _outputBuffer[i] = new AudioFrame(newLeft, newRight);
         }
     }
-
-    // ConsumeOutputQueue removed; direct write path used
     
     /// <summary>
     /// Closes the audio device and stops all channels.
-    /// Mirrors DOSBox MIXER_CloseAudioDevice() from mixer.cpp:2732-2751
     /// </summary>
     public void CloseAudioDevice() {
         lock (_mixerLock) {
@@ -1042,12 +985,9 @@ public sealed class Mixer : IDisposable {
         _threadShouldQuit = true;
         _cancellationTokenSource.Cancel();
 
-        // Wait for mixer thread to stop producing frames
         if (_mixerThread.IsAlive) {
-            _mixerThread.Join(TimeSpan.FromSeconds(5));
+            _mixerThread.Join(TimeSpan.FromSeconds(1));
         }
-
-        // No output queue or consumer thread to stop in direct-write mode
 
         _cancellationTokenSource.Dispose();
         _audioPlayer.Dispose();
@@ -1055,6 +995,4 @@ public sealed class Mixer : IDisposable {
 
         _disposed = true;
     }
-
-    // AudioFrameQueue removed: DOSBox writes directly from mixer thread
 }

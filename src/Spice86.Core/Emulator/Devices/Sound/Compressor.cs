@@ -42,11 +42,9 @@ using System;
 /// <summary>
 /// Dynamic-range reducing audio signal compressor to reduce the volume of loud sounds above a given threshold.
 /// Implements RMS-based detection with feedforward compression path.
-/// Mirrors DOSBox Staging's Compressor implementation from /tmp/dosbox-staging/src/audio/compressor.cpp
 /// </summary>
 public sealed class Compressor {
     // Conversion constants
-    // Mirrors DOSBox compressor.cpp:16-17
     private const float LogToDb = 8.685889638065035f;  // 20.0 / log(10.0)
     private const float DbToLog = 0.1151292546497022f; // log(10.0) / 20.0
     private const float MillisInSecondF = 1000.0f;
@@ -61,7 +59,6 @@ public sealed class Compressor {
     private float _releaseCoeff;
     private float _rmsCoeff;
     
-    // State variables - mirrors DOSBox compressor.h:90-95
     private float _compRatio;
     private float _runDb;
     private float _runSumSquares;
@@ -71,7 +68,6 @@ public sealed class Compressor {
     
     /// <summary>
     /// Initializes a new instance of the Compressor class.
-    /// Mirrors DOSBox compressor.cpp:19
     /// </summary>
     public Compressor() {
         Reset();
@@ -79,7 +75,6 @@ public sealed class Compressor {
     
     /// <summary>
     /// Configures the compressor with the specified parameters.
-    /// Mirrors DOSBox compressor.cpp:23-49
     /// </summary>
     /// <param name="sampleRateHz">Sample rate in Hz (must be positive)</param>
     /// <param name="zeroDbfsSampleValue">Sample value representing 0 dBFS (must be positive)</param>
@@ -119,13 +114,10 @@ public sealed class Compressor {
         _thresholdValue = MathF.Exp(thresholdDb * DbToLog);
         _ratio = ratio;
         
-        // Attack coefficient - mirrors DOSBox compressor.cpp:43
         _attackCoeff = MathF.Exp(-1.0f / (attackTimeMs * _sampleRateHz));
         
-        // Release coefficient - mirrors DOSBox compressor.cpp:44
         _releaseCoeff = MathF.Exp(-MillisInSecondF / (releaseTimeMs * _sampleRateHz));
         
-        // RMS coefficient - mirrors DOSBox compressor.cpp:46
         _rmsCoeff = MathF.Exp(-MillisInSecondF / (rmsWindowMs * _sampleRateHz));
         
         Reset();
@@ -133,7 +125,6 @@ public sealed class Compressor {
     
     /// <summary>
     /// Resets the compressor state to initial values.
-    /// Mirrors DOSBox compressor.cpp:51-59
     /// </summary>
     public void Reset() {
         _compRatio = 0.0f;
@@ -146,61 +137,49 @@ public sealed class Compressor {
     
     /// <summary>
     /// Processes a single audio frame through the compressor.
-    /// Mirrors DOSBox compressor.cpp:61-96
     /// </summary>
     /// <param name="input">Input audio frame</param>
     /// <returns>Compressed audio frame</returns>
     public AudioFrame Process(AudioFrame input) {
         // Scale input to normalized range
-        // Mirrors DOSBox compressor.cpp:63-64
         float left = input.Left * _scaleIn;
         float right = input.Right * _scaleIn;
         
         // Calculate RMS using sum of squares with exponential averaging
-        // Mirrors DOSBox compressor.cpp:66-68
         float sumSquares = (left * left) + (right * right);
         _runSumSquares = sumSquares + _rmsCoeff * (_runSumSquares - sumSquares);
         float det = MathF.Sqrt(Math.Max(0.0f, _runSumSquares));
         
         // Calculate how much signal exceeds threshold in dB
-        // Mirrors DOSBox compressor.cpp:70
         _overDb = 2.08136898f * MathF.Log(det / _thresholdValue) * LogToDb;
         
         // Track maximum overshoot
-        // Mirrors DOSBox compressor.cpp:72-74
         if (_overDb > _maxOverDb) {
             _maxOverDb = _overDb;
         }
         
         // Clamp to positive values only
-        // Mirrors DOSBox compressor.cpp:76
         _overDb = Math.Max(0.0f, _overDb);
         
         // Apply attack/release envelope to overshoot
-        // Mirrors DOSBox compressor.cpp:78-79
         _runDb = _overDb + (_runDb - _overDb) * (_overDb > _runDb ? _attackCoeff : _releaseCoeff);
         
         // Use the envelope-smoothed overshoot
-        // Mirrors DOSBox compressor.cpp:81
         _overDb = _runDb;
         
         // Calculate compression ratio with knee (soft transition around threshold)
-        // Mirrors DOSBox compressor.cpp:83-85
         const float RatioThresholdDb = 6.0f;
         _compRatio = 1.0f + _ratio * Math.Min(_overDb, RatioThresholdDb) / RatioThresholdDb;
         
         // Calculate gain reduction in dB
-        // Mirrors DOSBox compressor.cpp:87-88
         float gainReductionDb = -_overDb * (_compRatio - 1.0f) / _compRatio;
         float gainReductionFactor = MathF.Exp(gainReductionDb * DbToLog);
         
         // Update running maximum with release
-        // Mirrors DOSBox compressor.cpp:90-91
         _runMaxDb = _maxOverDb + _releaseCoeff * (_runMaxDb - _maxOverDb);
         _maxOverDb = _runMaxDb;
         
         // Apply gain reduction and scale back to output range
-        // Mirrors DOSBox compressor.cpp:93-95
         float gainScalar = gainReductionFactor * _scaleOut;
         
         return new AudioFrame(

@@ -21,7 +21,7 @@ using System;
 /// Each chorus pair processes stereo signals independently with different LFO phases
 /// to create a wider, more natural stereo chorus effect.
 /// </remarks>
-public sealed class ChorusEngine : IDisposable {
+public sealed class ChorusEngine {
     private Chorus? _chorus1L;
     private Chorus? _chorus1R;
     private Chorus? _chorus2L;
@@ -78,12 +78,6 @@ public sealed class ChorusEngine : IDisposable {
     /// - Chorus2R: phase=1.0, rate=0.83Hz, delayTime=7.0ms
     /// </remarks>
     private void SetUpChorus(float sampleRate) {
-        // Dispose old chorus instances if they exist
-        _chorus1L?.Dispose();
-        _chorus1R?.Dispose();
-        _chorus2L?.Dispose();
-        _chorus2R?.Dispose();
-
         // Create new chorus instances with DOSBox parameters
         _chorus1L = new Chorus(sampleRate, phase: 1.0f, rate: 0.5f, delayTime: 7.0f);
         _chorus1R = new Chorus(sampleRate, phase: 0.0f, rate: 0.5f, delayTime: 7.0f);
@@ -98,7 +92,6 @@ public sealed class ChorusEngine : IDisposable {
     /// <param name="sampleL">Left channel sample (modified in-place).</param>
     /// <param name="sampleR">Right channel sample (modified in-place).</param>
     /// <remarks>
-    /// Processing flow (mirrors DOSBox ChorusEngine.h:80-100):
     /// 1. Process enabled chorus lines
     /// 2. Apply DC blocking to each output
     /// 3. Mix wet signal back with dry input (1.4x wet gain)
@@ -126,22 +119,7 @@ public sealed class ChorusEngine : IDisposable {
 
         // Mix wet (chorus output) with dry (original input)
         // 1.4x gain on wet signal for prominence
-        sampleL = sampleL + resultL * 1.4f;
-        sampleR = sampleR + resultR * 1.4f;
-    }
-
-    /// <summary>
-    /// Disposes resources used by the ChorusEngine.
-    /// </summary>
-    public void Dispose() {
-        _chorus1L?.Dispose();
-        _chorus1R?.Dispose();
-        _chorus2L?.Dispose();
-        _chorus2R?.Dispose();
-
-        _chorus1L = null;
-        _chorus1R = null;
-        _chorus2L = null;
-        _chorus2R = null;
+        sampleL += resultL * 1.4f;
+        sampleR += resultR * 1.4f;
     }
 }

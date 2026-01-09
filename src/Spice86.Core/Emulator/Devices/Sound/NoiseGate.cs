@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// NoiseGate implementation mirrored from DOSBox Staging
 // Reference: src/audio/private/noise_gate.h and noise_gate.cpp
 
 namespace Spice86.Core.Emulator.Devices.Sound;
@@ -11,7 +10,6 @@ using Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth;
 /// Implements a simple noise gate that mutes the signal below a given threshold.
 /// The release and attack parameters control how quickly will the signal get
 /// muted or brought back from the muted state, respectively.
-/// Mirrors DOSBox Staging's NoiseGate class.
 /// </summary>
 public sealed class NoiseGate {
     private float _scaleIn;
@@ -33,7 +31,6 @@ public sealed class NoiseGate {
 
     /// <summary>
     /// Configures the noise gate with operating parameters.
-    /// Mirrors DOSBox NoiseGate::Configure() from noise_gate.cpp:18-48
     /// </summary>
     /// <param name="sampleRateHz">Sample rate in Hz</param>
     /// <param name="db0fsSampleValue">The 0dBFS sample value (peak amplitude)</param>
@@ -77,7 +74,6 @@ public sealed class NoiseGate {
 
     /// <summary>
     /// Processes an audio frame through the noise gate.
-    /// Mirrors DOSBox NoiseGate::Process() from noise_gate.cpp:50-71
     /// </summary>
     /// <param name="input">Input audio frame</param>
     /// <returns>Processed audio frame with noise gating applied</returns>

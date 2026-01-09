@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound.Midi;
+namespace Spice86.Core.Emulator.Devices.Sound.Midi;
 
 using MeltySynth;
 
@@ -58,7 +58,6 @@ public sealed class GeneralMidiDevice : MidiDevice {
         if (!OperatingSystem.IsWindows() && configuration.AudioEngine != AudioEngine.Dummy) {
             _mixerChannel = mixer.AddChannel(RenderCallback, 48000, nameof(GeneralMidiDevice), new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
             // DON'T enable the channel here - it starts disabled and wakes up on first MIDI message
-            // This mirrors DOSBox where MIDI channels start disabled and wake via WakeUp()
             // The channel will be enabled when MIDI messages are played (via WakeUp call)
         }
         
@@ -98,7 +97,6 @@ public sealed class GeneralMidiDevice : MidiDevice {
         if (OperatingSystem.IsWindows() && _configuration.AudioEngine != AudioEngine.Dummy) {
             NativeMethods.midiOutShortMsg(_midiOutHandle, message);
         } else {
-            // Wake up the channel on MIDI message - mirrors DOSBox MIDI channel WakeUp pattern
             _mixerChannel?.WakeUp();
             _message = message;
         }

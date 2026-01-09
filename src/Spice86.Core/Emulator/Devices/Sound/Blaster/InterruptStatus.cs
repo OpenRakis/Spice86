@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using System;
