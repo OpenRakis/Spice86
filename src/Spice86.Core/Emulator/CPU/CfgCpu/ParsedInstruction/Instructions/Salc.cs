@@ -12,7 +12,7 @@ public class Salc(SegmentedAddress address, InstructionField<ushort> opcodeField
     : CfgInstruction(address, opcodeField, 1) {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.State.AL = helper.State.CarryFlag ? (byte)0xFF : (byte)0;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

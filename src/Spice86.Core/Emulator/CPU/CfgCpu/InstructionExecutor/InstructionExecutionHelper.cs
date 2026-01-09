@@ -66,7 +66,6 @@ public class InstructionExecutionHelper {
     public UInt16RegistersIndexer SegmentRegisters => State.SegmentRegisters.UInt16;
     private FunctionHandler CurrentFunctionHandler => _executionContextManager.CurrentExecutionContext.FunctionHandler;
     private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
-    public ICfgNode? NextNode { get; set; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort SegmentValue(IInstructionWithSegmentRegisterIndex instruction) {
@@ -99,12 +98,10 @@ public class InstructionExecutionHelper {
     public void JumpFar(CfgInstruction instruction, ushort cs, ushort ip) {
         State.CS = cs;
         State.IP = ip;
-        SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     public void JumpNear(CfgInstruction instruction, ushort ip) {
         State.IP = ip;
-        SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -145,7 +142,6 @@ public class InstructionExecutionHelper {
         State.CS = target.Segment;
         State.IP = target.Offset;
         CurrentFunctionHandler.Call(callType, target, returnAddress, instruction);
-        SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     /// <summary>
@@ -161,14 +157,12 @@ public class InstructionExecutionHelper {
         MoveIpToEndOfInstruction(instruction);
         (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterruptWithoutBreakpoint(vectorNumber);
         CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber);
-        SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleInterruptCall(CfgInstruction instruction, byte vectorNumber) {
         (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterrupt(vectorNumber);
         CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber);
-        SetNextNodeToSuccessorAtCsIp(instruction);
     }
     
     public (SegmentedAddress, SegmentedAddress) DoInterrupt(byte vectorNumber) {
@@ -195,56 +189,34 @@ public class InstructionExecutionHelper {
     public void HandleInterruptRet<T>(T instruction) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.INTERRUPT, instruction);
         _returnOperationsHelper.InterruptRet();
-        SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleNearRet16<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.NEAR16, instruction);
         _returnOperationsHelper.NearRet16(numberOfBytesToPop);
-        SetNextNodeToSuccessorAtCsIp(instruction);
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleNearRet32<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.NEAR32, instruction);
         _returnOperationsHelper.NearRet32(numberOfBytesToPop);
-        SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleFarRet16<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.FAR16, instruction);
         _returnOperationsHelper.FarRet16(numberOfBytesToPop);
-        SetNextNodeToSuccessorAtCsIp(instruction);
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleFarRet32<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.FAR32, instruction);
         _returnOperationsHelper.FarRet32(numberOfBytesToPop);
-        SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     public void MoveIpToEndOfInstruction(CfgInstruction instruction) {
-        State.IP = (ushort)(State.IP + instruction.Length);
-    }
-
-    public ICfgNode? GetSuccessorAtCsIp(CfgInstruction instruction) {
-        if (instruction.UniqueSuccessor is not null) {
-            return instruction.UniqueSuccessor;
-        }
-        instruction.SuccessorsPerAddress.TryGetValue(State.IpSegmentedAddress, out ICfgNode? res);
-        return res;
-    }
-
-    public void SetNextNodeToSuccessorAtCsIp(CfgInstruction instruction) {
-        NextNode = GetSuccessorAtCsIp(instruction);
-    }
-
-    public void MoveIpAndSetNextNode(CfgInstruction instruction) {
-        MoveIpToEndOfInstruction(instruction);
-        SetNextNodeToSuccessorAtCsIp(instruction);
+        State.IP = instruction.NextInMemoryAddress.Offset;
     }
 
     public byte In8(ushort port) {

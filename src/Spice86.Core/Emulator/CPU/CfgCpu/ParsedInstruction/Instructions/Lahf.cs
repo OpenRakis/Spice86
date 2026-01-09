@@ -12,7 +12,7 @@ public class Lahf : CfgInstruction {
 
     public override void Execute(InstructionExecutionHelper helper) {
         helper.State.AH = (byte)helper.State.Flags.FlagRegister;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

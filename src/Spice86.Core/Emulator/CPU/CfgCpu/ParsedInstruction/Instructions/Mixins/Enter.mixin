@@ -46,7 +46,7 @@ public partial class {{ moxy.Class.Name }} : EnterInstruction {
         helper.State.{{BasePointerRegister}} = framePtr;
         spIndex = unchecked(({{StackPointerType}})(spIndex - ({{StackPointerType}})storage));
         helper.State.{{StackPointerRegister}} = spIndex;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

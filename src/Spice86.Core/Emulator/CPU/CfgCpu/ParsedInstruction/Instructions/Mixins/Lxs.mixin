@@ -24,7 +24,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         helper.State.{{SegmentRegister}} = helper.Memory.UInt16[memoryAddress + ({{Size}}/8)];
         {{ if SegmentRegister == "SS" }}helper.State.InterruptShadowing = true;
         {{ end }}        
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
