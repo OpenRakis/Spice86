@@ -54,11 +54,6 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The emulated CPU.
     /// </summary>
-    public Cpu Cpu { get; }
-
-    /// <summary>
-    /// The emulated CPU.
-    /// </summary>
     public CfgCpu CfgCpu { get; }
 
     /// <summary>
@@ -95,6 +90,11 @@ public sealed class Machine : IDisposable {
     /// Gets the controller used to manage keyboard input via the Intel 8042 interface.
     /// </summary>
     public Intel8042Controller KeyboardController { get; }
+
+    /// <summary>
+    /// The interrupt vector table.
+    /// </summary>
+    public InterruptVectorTable InterruptVectorTable { get; }
 
     /// <summary>
     /// INT16H handler.
@@ -238,14 +238,15 @@ public sealed class Machine : IDisposable {
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler,
         BiosKeyboardInt9Handler biosKeyboardInt9Handler,
         CallbackHandler callbackHandler,
-        Cpu cpu,
         CfgCpu cfgCpu,
         State cpuState,
+        Stack stack,
         Dos dos,
         GravisUltraSound gravisUltraSound,
         IOPortDispatcher ioPortDispatcher,
         Joystick joystick,
         Intel8042Controller keyboardController,
+        InterruptVectorTable interruptVectorTable,
         KeyboardInt16Handler keyboardInt16Handler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IMemory memory,
@@ -276,15 +277,15 @@ public sealed class Machine : IDisposable {
         BiosEquipmentDeterminationInt11Handler = biosEquipmentDeterminationInt11Handler;
         BiosKeyboardInt9Handler = biosKeyboardInt9Handler;
         CallbackHandler = callbackHandler;
-        Cpu = cpu;
         CfgCpu = cfgCpu;
         CpuState = cpuState;
-        Stack = cpu.Stack;
+        Stack = stack;
         Dos = dos;
         GravisUltraSound = gravisUltraSound;
         IoPortDispatcher = ioPortDispatcher;
         Joystick = joystick;
         KeyboardController = keyboardController;
+        InterruptVectorTable = interruptVectorTable;
         KeyboardInt16Handler = keyboardInt16Handler;
         EmulatorBreakpointsManager = emulatorBreakpointsManager;
         Memory = memory;

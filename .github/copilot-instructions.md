@@ -20,16 +20,15 @@ The entire emulator is assembled in `Spice86DependencyInjection.cs` (~600 lines)
 - Components are wired together with event handlers and shared state
 - Entry point is `Program.cs` which instantiates `Spice86DependencyInjection`
 - **`Spice86DependencyInjection` is the central composition root** - understand its structure when working with dependencies
-- The `Machine` class is less important - focus on `Spice86DependencyInjection` for understanding component relationships
+- The `Machine` class aggregates emulator components (CPU, memory, devices) - access via properties like `CfgCpu`, `Memory`, `Stack`
+- `InterruptVectorTable` and `Stack` are now passed directly to `Machine` constructor
 
-### CPU Execution Models
-Two CPU implementations coexist via `IInstructionExecutor`:
-- **`Cpu`**: Traditional interpreter with instruction-by-instruction execution
-- **`CfgCpu`**: Control Flow Graph-based executor that builds dynamic CFG for analysis and future JIT
-  - Tracks instruction variants for self-modifying code via selector nodes
-  - Maintains execution context hierarchy for hardware interrupts
-  - See `doc/cfgcpuReadme.md` for CFG architecture details
-- Toggle via `--CfgCpu` flag; CfgCpu is the future direction
+### CPU Execution Model
+**`CfgCpu`** is the sole CPU implementation (Control Flow Graph-based executor):
+- Builds dynamic CFG for analysis and future JIT compilation
+- Tracks instruction variants for self-modifying code via selector nodes
+- Maintains execution context hierarchy for hardware interrupts
+- See `doc/cfgcpuReadme.md` for detailed CFG architecture
 
 ## Critical Workflows
 
@@ -109,6 +108,15 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 
 ## Project-Specific Conventions
 
+### Critical AI Agent Guidelines
+- **This is a C# project** - never suggest Python solutions
+- **Avoid complexity** - keep cyclomatic complexity low, prefer simple, linear code over nested conditionals
+- **No optional parameters** - avoid nullable or optional parameters in new code
+- **Minimal comments** - write self-documenting code with clear names; avoid obvious comments
+- **Test before submit** - always run tests after code changes to verify functionality
+- **Concise documentation** - XML docs should be precise and complete but not verbose; avoid excessive remarks
+- **Ignore Machine class** - this is a legacy aggregator class; work directly with specific components (`CfgCpu`, `Memory`, `Stack`, etc.) instead
+
 ### Avalonia Telemetry
 - **Avalonia telemetry must be disabled** when working on the codebase.
 - The repository already has telemetry disabled in code, but it may still cause issues for AI agents.
@@ -126,16 +134,16 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **One top-level type per file**: Do not place multiple classes/structs/enums in the same file
   - Exception: private nested/inner types declared inside a class are allowed
   - Group related types via namespaces, not by co-locating multiple top-level types
-- **No generic catch clauses**: Catch specific exceptions only
+- **No generic catch clauses**: Catch specific exceptions only - **this is strictly enforced**
   ```csharp
-  // Wrong
+  // WRONG - NEVER DO THIS
   try {
       // code
   } catch (Exception ex) {
       // handling
   }
   
-  // Correct
+  // CORRECT - Catch specific exceptions
   try {
       // code
   } catch (IOException ex) {
@@ -144,8 +152,9 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
       // handling
   }
   ```
-  - **NEVER use generic `catch (Exception)` or empty `catch`**
+  - **NEVER use generic `catch (Exception)`, `catch (Exception e)`, or empty `catch`**
   - Each exception type must be caught explicitly
+  - This is non-negotiable - the .editorconfig enforces this rule
   
 - **No null-forgiving operator (!)**: The null-forgiving operator is **BANNED**
   ```csharp
@@ -190,7 +199,6 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   - Use assembly-based integration tests for comprehensive emulator validation
 - Use FluentAssertions for assertions: `result.Should().Be(expected)`
 - Mock with NSubstitute: `Substitute.For<IInterface>()`
-- Theory tests for CPU configurations: `[Theory] [MemberData(nameof(GetCfgCpuConfigurations))]`
 - CPU tests in `tests/Spice86.Tests/CpuTests/` use SingleStepTests NuGet packages for validation
 
 ### Logging

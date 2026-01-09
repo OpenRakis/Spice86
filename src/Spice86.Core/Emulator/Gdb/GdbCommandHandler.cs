@@ -33,13 +33,13 @@ public class GdbCommandHandler {
     /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="pauseHandler">The class that enables us to pause the emulator.</param>
     /// <param name="emulatorBreakpointsManager">The class used to store and retrieve breakpoints.</param>
-    /// <param name="executionDumpFactory">The class that dumps machine code execution flow.</param>
+    /// <param name="cfgCpuFlowDumper">The class that dumps machine code execution flow.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
     public GdbCommandHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, State state, MemoryDataExporter memoryDataExporter, IPauseHandler pauseHandler,
-        EmulatorBreakpointsManager emulatorBreakpointsManager, IExecutionDumpFactory executionDumpFactory,
+        EmulatorBreakpointsManager emulatorBreakpointsManager, CfgCpuFlowDumper cfgCpuFlowDumper,
         FunctionCatalogue functionCatalogue, GdbIo gdbIo, ILoggerService loggerService, DumpFolderMetadata dumpContext) {
         _loggerService = loggerService;
         _state = state;
@@ -49,7 +49,7 @@ public class GdbCommandHandler {
         _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(memory, gdbIo, _loggerService);
         _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(emulatorBreakpointsManager, pauseHandler, gdbIo, _loggerService, state, memory);
         _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(
-            memory, state, functionHandlerProvider, functionCatalogue, memoryDataExporter, executionDumpFactory, emulatorBreakpointsManager, gdbIo,
+            memory, state, functionHandlerProvider, functionCatalogue, memoryDataExporter, cfgCpuFlowDumper, emulatorBreakpointsManager, gdbIo,
             _loggerService,
             _gdbCommandBreakpointHandler.OnBreakPointReached, dumpContext.DumpDirectory);
     }

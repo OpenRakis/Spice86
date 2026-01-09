@@ -9,16 +9,10 @@ using Spice86.Shared.Utils;
 public record FunctionInformation : IComparable<FunctionInformation> {
     private readonly SegmentedAddress _address;
 
-    private ISet<FunctionInformation>? _callers;
-
     /// <summary>
     /// Gets the C# override of the machine code.
     /// </summary>
     public Func<int, Action>? FunctionOverride { get; }
-
-    private Dictionary<FunctionReturn, HashSet<SegmentedAddress>>? _returns;
-
-    private Dictionary<FunctionReturn, HashSet<SegmentedAddress>>? _unalignedReturns;
 
     /// <summary>
     /// Initializes a new instance.
@@ -45,8 +39,8 @@ public record FunctionInformation : IComparable<FunctionInformation> {
     /// </summary>
     public Dictionary<FunctionReturn, HashSet<SegmentedAddress>> Returns {
         get {
-            _returns ??= new();
-            return _returns;
+            field ??= new();
+            return field;
         }
     }
 
@@ -55,11 +49,12 @@ public record FunctionInformation : IComparable<FunctionInformation> {
     /// </summary>
     public Dictionary<FunctionReturn, HashSet<SegmentedAddress>> UnalignedReturns {
         get {
-            _unalignedReturns ??= new();
-            return _unalignedReturns;
+            field ??= new();
+            return field;
         }
     }
 
+    
     /// <summary>
     /// Adds the specified function return and target to the <see cref="Returns"/> dictionary property.
     /// </summary>
@@ -124,8 +119,8 @@ public record FunctionInformation : IComparable<FunctionInformation> {
     /// </summary>
     public ISet<FunctionInformation> Callers {
         get {
-            _callers ??= new HashSet<FunctionInformation>();
-            return _callers;
+            field ??= new HashSet<FunctionInformation>();
+            return field;
         }
     }
 

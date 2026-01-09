@@ -142,6 +142,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
+        AddAction(0x52, GetListOfLists);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
         AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
@@ -976,6 +977,29 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET PSP ADDRESS {PspSegment}",
                 ConvertUtils.ToHex16(pspSegment));
+        }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=52h - Get List of Lists (SYSVARS).
+    /// <para>
+    /// Returns a pointer to the DOS internal tables (also known as the "List of Lists" or SYSVARS).
+    /// </para>
+    /// <remarks>
+    /// Like FREEDOS and MS-DOS, this actually returns a pointer to the first drive DOS Parameter Block, which is the "official" start of the structure. <br/>
+    /// This is used by (for example) the game 'Day of the Tentacle' and 'Indiana Jones and the Fate of Atlantis'.
+    /// </remarks>
+    /// </summary>
+    private void GetListOfLists() {
+        // Return pointer to the List of Lists (SYSVARS)
+        // ES:BX points to offset 0 of the SYSVARS structure
+        State.ES = DosSysVars.Segment;
+        State.BX = 0;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose(
+                "GET LIST OF LISTS ES:BX={Es}:{Bx}",
+                ConvertUtils.ToHex16(State.ES),
+                ConvertUtils.ToHex16(State.BX));
         }
     }
 

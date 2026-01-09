@@ -6,6 +6,7 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
@@ -105,7 +106,6 @@ public class DosFileManagerTests {
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
         RecordedDataReader reader = new(configuration.RecordedDataDirectory!, loggerService);
-        ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, new());
         State state = new(CpuModel.INTEL_80286);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
@@ -126,14 +126,10 @@ public class DosFileManagerTests {
         InterruptVectorTable interruptVectorTable = new(memory);
         Stack stack = new(memory, state);
         FunctionCatalogue functionCatalogue = new FunctionCatalogue(reader.ReadGhidraSymbolsFromFileOrCreate());
-        FunctionHandler functionHandler = new(memory, state, executionFlowRecorder, functionCatalogue, false, loggerService);
-        FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, functionCatalogue, false, loggerService);
-        Cpu cpu = new(interruptVectorTable, stack,
-            functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
-            loggerService, executionFlowRecorder);
 
-        IFunctionHandlerProvider functionHandlerProvider = cpu;
+        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
+            dualPic, emulatorBreakpointsManager, functionCatalogue,
+            false, loggerService);
 
         Mixer mixer = new(loggerService, configuration.AudioEngine);
         PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
@@ -152,20 +148,20 @@ public class DosFileManagerTests {
 
         InputEventHub inputEventQueue = new();
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
-            functionHandlerProvider, stack, state, a20Gate, biosDataArea, emulationLoopScheduler,
+            cfgCpu, stack, state, a20Gate, biosDataArea, emulationLoopScheduler,
             ioPortDispatcher, loggerService, configuration.InitializeDOS is not false);
         Intel8042Controller intel8042Controller = new(
             state, ioPortDispatcher, a20Gate, dualPic, emulationLoopScheduler,
             configuration.FailOnUnhandledPort, loggerService, inputEventQueue);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
-            stack, state, functionHandlerProvider, dualPic, systemBiosInt15Handler,
+            stack, state, cfgCpu, dualPic, systemBiosInt15Handler,
             intel8042Controller, biosKeyboardBuffer, loggerService);
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
-            memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
+            memory, biosDataArea, cfgCpu, stack, state, loggerService,
         biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
-        Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
+        Dos dos = new Dos(configuration, memory, cfgCpu, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
             vgaFunctionality, new Dictionary<string, string> { { "BLASTER", "A220 I7 D1 H5 P330 T6" } },
             ioPortDispatcher, loggerService);

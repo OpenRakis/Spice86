@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Function.Dump;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 
@@ -12,7 +13,7 @@ using System.Text.Json;
 /// </summary>
 public class EmulatorStateSerializer {
     private readonly State _state;
-    private readonly IExecutionDumpFactory _executionDumpFactory;
+    private readonly CfgCpuFlowDumper _cfgCpuFlowDumper;
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly ILoggerService _loggerService;
     private readonly MemoryDataExporter _memoryDataExporter;
@@ -26,14 +27,14 @@ public class EmulatorStateSerializer {
     /// </summary>
     public EmulatorStateSerializer(DumpFolderMetadata dumpContext,
         MemoryDataExporter memoryDataExporter, 
-        State state, IExecutionDumpFactory executionDumpFactory,
+        State state, CfgCpuFlowDumper cfgCpuFlowDumper,
         FunctionCatalogue functionCatalogue,
         ISerializableBreakpointsSource serializableBreakpointsSource,
         ILoggerService loggerService) {
         _dumpContext = dumpContext;
         _state = state;
         _memoryDataExporter = memoryDataExporter;
-        _executionDumpFactory = executionDumpFactory;
+        _cfgCpuFlowDumper = cfgCpuFlowDumper;
         _functionCatalogue = functionCatalogue;
         _loggerService = loggerService;
         _serializableBreakpointsSource = serializableBreakpointsSource;
@@ -48,7 +49,7 @@ public class EmulatorStateSerializer {
         }
         new RecordedDataWriter(
                 _state,
-                _executionDumpFactory,
+                _cfgCpuFlowDumper,
                 _memoryDataExporter,
                 _functionCatalogue,
                 dirPath, 
