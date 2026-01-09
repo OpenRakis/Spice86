@@ -19,9 +19,6 @@ using System.Threading;
 ///     Mirrors DOSBox Staging Opl class from src/hardware/audio/opl.cpp:84-163 and opl.h:84-163
 /// </summary>
 public class Opl3Fm : DefaultIOPortHandler, IDisposable {
-    // Cap per-call catch-up to avoid long blocking loops when large time deltas accumulate.
-    // Aligns with the Sound Blaster MaxChannelFrames guard.
-    private const int MaxCatchUpFrames = 4096;
     private readonly AdLibGoldDevice? _adLibGold;
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
@@ -412,34 +409,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             return;
         }
 
-        double deltaMs = now - _lastRenderedMs;
-        if (deltaMs <= 0) {
-            return;
-        }
-
-        int requestedFrames = Math.Max(1, (int)Math.Round(deltaMs / _msPerFrame, MidpointRounding.AwayFromZero));
-        int framesToGenerate = requestedFrames;
-        if (framesToGenerate > MaxCatchUpFrames) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                _loggerService.Warning(
-                    "OPL3: Capping RenderUpToNow catch-up from {FramesRequested} to {FramesCapped} to avoid blocking.",
-                    framesToGenerate, MaxCatchUpFrames);
-            }
-
-            framesToGenerate = MaxCatchUpFrames;
-        }
-
-        for (int i = 0; i < framesToGenerate; i++) {
+        while (_lastRenderedMs < now) {
+            _lastRenderedMs += _msPerFrame;
             AudioFrame frame = RenderSingleFrame();
             _fifo.Enqueue(frame);
-        }
-
-        double advancedMs = framesToGenerate * _msPerFrame;
-        // If we generated all required frames, advance normally; otherwise we capped and must resync to "now".
-        if (framesToGenerate == requestedFrames) {
-            _lastRenderedMs += advancedMs;
-        } else {
-            _lastRenderedMs = now;
         }
     }
     
