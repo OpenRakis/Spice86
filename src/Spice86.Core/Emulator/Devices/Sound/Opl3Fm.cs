@@ -420,15 +420,11 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     
     /// <summary>
     ///     Renders a single OPL audio frame.
-    ///     Mirrors DOSBox Staging Opl::RenderFrame() from opl.cpp:380-414
+    ///     Mirrors DOSBox Staging Opl::RenderFrame() from opl.cpp:383-415
     /// </summary>
     private AudioFrame RenderSingleFrame() {
         // Generate one frame (2 samples for stereo)
         Span<short> buf = stackalloc short[2];
-        
-        // Flush any pending OPL writes before generating audio
-        double now = _clock.ElapsedTimeMs;
-        _oplIo.FlushDueWritesUpTo(now);
         
         // Generate audio samples
         // Mirrors DOSBox Staging opl.cpp:399 (OPL3_GenerateStream)
@@ -469,11 +465,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
             Span<short> interleaved = _tmpInterleaved.AsSpan(0, samplesToGenerate);
 
-            // Flush any pending OPL writes up to current time before generating audio
-            // Mirrors DOSBox Staging opl.cpp:572-573 (RenderUpToNow pattern)
-            double now = _clock.ElapsedTimeMs;
-            _oplIo.FlushDueWritesUpTo(now);
-            
             // Generate audio samples
             // Mirrors DOSBox Staging opl.cpp:455 (RenderFrame call) and opl.cpp:399 (OPL3_GenerateStream)
             _chip.GenerateStream(interleaved);
