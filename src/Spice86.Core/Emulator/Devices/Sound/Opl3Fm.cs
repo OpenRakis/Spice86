@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
@@ -18,8 +20,9 @@ using System.Threading;
 ///     Virtual device which emulates OPL3 FM sound.
 ///     Mirrors DOSBox Staging Opl class from src/hardware/audio/opl.cpp:84-163 and opl.h:84-163
 /// </summary>
-public class Opl3Fm : DefaultIOPortHandler, IDisposable {
-    private readonly AdLibGoldDevice? _adLibGold;
+    public class Opl3Fm : DefaultIOPortHandler, IDisposable {
+        private const int MaxCatchUpFrames = 4096;
+        private readonly AdLibGoldDevice? _adLibGold;
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
     private readonly Lock _chipLock = new();
@@ -401,21 +404,37 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private void RenderUpToNow() {
         double now = _clock.ElapsedTimeMs;
-        
+
         // Wake up the channel if it was sleeping
         // Mirrors DOSBox Staging opl.cpp:423
         if (_mixerChannel.WakeUp()) {
             _lastRenderedMs = now;
             return;
         }
-        
-        // Keep rendering frames until we're caught up to current time
-        // Mirrors DOSBox Staging opl.cpp:428-431
-        while (_lastRenderedMs < now) {
-            _lastRenderedMs += _msPerFrame;
+
+        double deltaMs = now - _lastRenderedMs;
+        if (deltaMs <= 0) {
+            return;
+        }
+
+        int framesToGenerate = (int)Math.Ceiling(deltaMs / _msPerFrame);
+        if (framesToGenerate > MaxCatchUpFrames) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(
+                    "OPL3: Capping RenderUpToNow catch-up from {FramesRequested} to {FramesCapped} to avoid blocking.",
+                    framesToGenerate, MaxCatchUpFrames);
+            }
+
+            framesToGenerate = MaxCatchUpFrames;
+        }
+
+        for (int i = 0; i < framesToGenerate; i++) {
             AudioFrame frame = RenderSingleFrame();
             _fifo.Enqueue(frame);
         }
+
+        double advancedMs = framesToGenerate * _msPerFrame;
+        _lastRenderedMs = framesToGenerate * _msPerFrame >= deltaMs ? _lastRenderedMs + advancedMs : now;
     }
     
     /// <summary>
