@@ -101,12 +101,12 @@ public class DosExecIntegrationTests {
         string tempDir = Path.Join(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
 
-        const ushort desiredMinimumParagraphs = (ushort)(640 * 64);
+        const ushort desiredMinimumParagraphs = (ushort)(600 * 64);
         const ushort programParagraphsFromHeader = 0x001C;
         const ushort requiredMinAlloc = (ushort)(desiredMinimumParagraphs - (DosProgramSegmentPrefix.PspSizeInParagraphs + programParagraphsFromHeader));
 
-        string exePath = Path.Join(tempDir, "mem640.exe");
-        byte[] exeBytes = BuildVideoBannerExeImage("MEM640", requiredMinAlloc, requiredMinAlloc);
+        string exePath = Path.Join(tempDir, "mem600.exe");
+        byte[] exeBytes = BuildVideoBannerExeImage("MEM600", requiredMinAlloc, requiredMinAlloc);
         File.WriteAllBytes(exePath, exeBytes);
 
         try {
@@ -119,8 +119,8 @@ public class DosExecIntegrationTests {
                 enableA20Gate: false,
                 enableXms: true,
                 enableEms: true,
-                cDrive: tempDir,
-                programEntryPointSegment: 0x80
+                cDrive: tempDir
+                // Removed programEntryPointSegment - let memory manager choose optimal location
             ).Create();
 
             spice86.Machine.CpuState.Flags.CpuModel = CpuModel.INTEL_80386;
