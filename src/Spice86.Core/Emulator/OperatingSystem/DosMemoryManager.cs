@@ -160,15 +160,6 @@ public class DosMemoryManager {
     }
 
     /// <summary>
-    /// Retrieves an MCB view at the specified block segment without altering its state.
-    /// </summary>
-    /// <param name="blockSegment">Segment address of the MCB header (not the data segment).</param>
-    /// <returns>The <see cref="DosMemoryControlBlock"/> mapped over the provided segment.</returns>
-    public DosMemoryControlBlock GetMemoryBlock(ushort blockSegment) {
-        return GetDosMemoryControlBlockFromSegment(blockSegment);
-    }
-
-    /// <summary>
     /// Releases an MCB.
     /// </summary>
     /// <param name="blockSegment">The segment number of the MCB.</param>
