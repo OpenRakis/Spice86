@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
 public sealed class Configuration {
@@ -118,7 +119,7 @@ public sealed class Configuration {
     /// <summary>
     /// The memory segment where the program will be loaded. The DOS PSP (Program Segment Prefix) and MCB (Memory Control Block) will be created before it.
     /// </summary>
-    [Option('p', nameof(ProgramEntryPointSegment), Default = (ushort)0x62, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it. Default 0x62 provides ~640KB conventional memory.")]
+    [Option('p', nameof(ProgramEntryPointSegment), Default = (ushort)0x90, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
     public ushort ProgramEntryPointSegment { get; init; }
 
 
