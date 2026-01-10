@@ -146,7 +146,7 @@ public class DosProcessManager {
 
         rootPsp.Exit[0] = IntOpcode;
         rootPsp.Exit[1] = Int20TerminateNumber;
-        rootPsp.NextSegment = DosMemoryManager.LastFreeSegment;
+        rootPsp.CurrentSize = DosMemoryManager.LastFreeSegment;
 
         // Root PSP: parent points to itself
         rootPsp.ParentProgramSegmentPrefix = CommandComSegment;
@@ -258,7 +258,7 @@ public class DosProcessManager {
             if (residentBlock is not null) {
                 residentBlock.PspSegment = currentPspSegment;
                 residentNextSegment = (ushort)(residentBlock.DataBlockSegment + residentBlock.Size);
-                currentPsp.NextSegment = residentNextSegment.Value;
+                currentPsp.CurrentSize = residentNextSegment.Value;
             }
         }
 
@@ -272,7 +272,7 @@ public class DosProcessManager {
         DosProgramSegmentPrefix? parentPspOptional = _pspTracker.PspCount > 0 ? _pspTracker.GetCurrentPsp() : null;
 
         if (residentNextSegment.HasValue && parentPspOptional is not null) {
-            parentPspOptional.NextSegment = residentNextSegment.Value;
+            parentPspOptional.CurrentSize = residentNextSegment.Value;
         }
 
         bool hasSavedParentStackPointer = _pendingParentStackPointers.TryGetValue(currentPspSegment, out uint savedParentStackPointer);
@@ -458,7 +458,7 @@ public class DosProcessManager {
         childPsp.PreviousPspAddress = MakeFarPointer(parentPspSegment, 0);
 
         // Size/next segment (ps_size in FreeDOS).
-        childPsp.NextSegment = (ushort)(childSegment + sizeInParagraphs);
+        childPsp.CurrentSize = sizeInParagraphs;
 
         // File table layout and cloning (start unused then clone handles).
         childPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
@@ -489,7 +489,7 @@ public class DosProcessManager {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug(
                 "CreateChildPsp: Parent={Parent:X4}, Env={Env:X4}, NextSeg={Next:X4}",
-                parentPspSegment, childPsp.EnvironmentTableSegment, childPsp.NextSegment);
+                parentPspSegment, childPsp.EnvironmentTableSegment, childPsp.CurrentSize);
         }
     }
 
@@ -1001,7 +1001,7 @@ public class DosProcessManager {
 
         psp.Exit[0] = IntOpcode;
         psp.Exit[1] = Int20TerminateNumber;
-        psp.NextSegment = DosMemoryManager.LastFreeSegment;
+        psp.CurrentSize = DosMemoryManager.LastFreeSegment;
 
         psp.FarCall = FarCallOpcode;
         psp.CpmServiceRequestAddress = MakeFarPointer(pspSegment, Call5StubOffset);
