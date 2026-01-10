@@ -9,7 +9,6 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 
 using System.IO;
-using System.Text;
 
 internal class DosProgramLoader : DosFileLoader {
     private readonly Configuration _configuration;
@@ -28,7 +27,7 @@ internal class DosProgramLoader : DosFileLoader {
     public override byte[] LoadFile(string file, string? arguments) {
         // Ensure root COMMAND.COM PSP exists before loading any programs
         _processManager.CreateRootCommandComPsp();
-
+        
         // Determine C drive base path
         string? cDrive = _configuration.CDrive;
 

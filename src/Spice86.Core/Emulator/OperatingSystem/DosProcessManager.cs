@@ -628,8 +628,12 @@ public class DosProcessManager {
     }
 
     private void InitializeRootEnvironment(DosProgramSegmentPrefix rootPsp, byte[] environmentBlock) {
+        // FreeDOS places the root COMMAND.COM environment at a fixed offset (DOS_PSP + 8)
+        // This is NOT managed by the memory manager's MCB chain - it's a pre-allocated reserved area
+        // The memory manager will start its MCB chain after this reserved space
         ushort environmentSegment = (ushort)(CommandComSegment + RootEnvironmentParagraphOffset);
-        int capacityBytes = (DosProgramSegmentPrefix.PspSizeInParagraphs - RootEnvironmentParagraphOffset) * ParagraphSizeBytes;
+        int capacityBytes = (DosProgramSegmentPrefix.PspSizeInParagraphs - RootEnvironmentParagraphOffset) * 16;
+        
         if (environmentBlock.Length > capacityBytes && _loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning(
                 "Root environment block truncated from {Original} to {Capacity} bytes to fit inside COMMAND.COM PSP.",
@@ -642,6 +646,12 @@ public class DosProcessManager {
         uint environmentAddress = MemoryUtils.ToPhysicalAddress(environmentSegment, 0);
         _memory.LoadData(environmentAddress, buffer);
         rootPsp.EnvironmentTableSegment = environmentSegment;
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "Root environment placed at fixed segment {EnvSegment:X4} (NOT managed by memory manager)",
+                environmentSegment);
+        }
     }
 
     /// <summary>
