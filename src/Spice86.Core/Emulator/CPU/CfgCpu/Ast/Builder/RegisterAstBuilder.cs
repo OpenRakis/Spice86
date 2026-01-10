@@ -4,24 +4,37 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.Registers;
 
 public class RegisterAstBuilder {
+    private readonly TypeConversionAstBuilder _typeConversion = new();
     public ValueNode Reg8(RegisterIndex registerIndex) {
         return Reg(DataType.UINT8, registerIndex);
+    }
+
+    public ValueNode Reg8Signed(RegisterIndex registerIndex) {
+        return _typeConversion.ToSigned(Reg8(registerIndex));
     }
 
     public ValueNode Reg16(RegisterIndex registerIndex) {
         return Reg(DataType.UINT16, registerIndex);
     }
-    
+
+    public ValueNode Reg16Signed(RegisterIndex registerIndex) {
+        return _typeConversion.ToSigned(Reg16(registerIndex));
+    }
+
     public ValueNode SReg(SegmentRegisterIndex registerIndex) {
         return SReg((int)registerIndex);
     }
-    
+
     public ValueNode SReg(int segmentRegisterIndex) {
         return new SegmentRegisterNode(segmentRegisterIndex);
     }
 
     public ValueNode Reg32(RegisterIndex registerIndex) {
         return Reg(DataType.UINT32, registerIndex);
+    }
+
+    public ValueNode Reg32Signed(RegisterIndex registerIndex) {
+        return _typeConversion.ToSigned(Reg32(registerIndex));
     }
 
     public ValueNode Accumulator(DataType dataType) {
