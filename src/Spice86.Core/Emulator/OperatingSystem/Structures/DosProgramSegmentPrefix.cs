@@ -25,7 +25,7 @@ public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     public const ushort PspSizeInParagraphs = 0x10;
 
     public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
-        NextSegment = DosMemoryManager.LastFreeSegment;
+        CurrentSize = DosMemoryManager.LastFreeSegment;
     }
 
     /// <summary>
@@ -34,9 +34,12 @@ public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     public UInt8Array Exit => GetUInt8Array(0x0, 2);
 
     /// <summary>
-    /// Segment of first byte beyond the end of the program image. Reserved.
+    /// Size of the Program. This is used to guess the size of conventionnal memory (Dune does this).
     /// </summary>
-    public ushort NextSegment { get => UInt16[0x2]; set => UInt16[0x2] = value; }
+    /// <remarks>
+    /// Specified in paragraphs. Create Child PSP has it as a parameter in BX register.
+    /// </remarks>
+    public ushort CurrentSize { get => UInt16[0x2]; set => UInt16[0x2] = value; }
 
     /// <summary>
     /// Reserved
