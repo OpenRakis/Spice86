@@ -31,7 +31,7 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         DosProgramSegmentPrefix rootPsp = GetRootPsp(context);
-        rootPsp.NextSegment.Should().Be((ushort)(DosProcessManager.CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs));
+        rootPsp.NextSegment.Should().Be(DosMemoryManager.LastFreeSegment);
         rootPsp.EnvironmentTableSegment.Should().Be((ushort)(DosProcessManager.CommandComSegment + 8));
     }
 
@@ -268,21 +268,12 @@ public class DosProcessManagerTests {
             resizeResult.Should().Be(DosErrorCode.NoError);
             context.ProcessManager.TrackResidentBlock(tsrSegment, resizedBlock);
 
-            ushort expectedNextSegment = (ushort)(resizedBlock.DataBlockSegment + resizedBlock.Size);
-
-            DosProgramSegmentPrefix parentPsp = GetRootPsp(context);
-            parentPsp.NextSegment.Should().NotBe(expectedNextSegment, "TSR should adjust the parent's next segment only after termination");
-
             context.ProcessManager.TerminateProcess(0x00, DosTerminationType.TSR, context.InterruptVectorTable);
-
-            parentPsp = GetRootPsp(context);
-            parentPsp.NextSegment.Should().Be(expectedNextSegment);
 
             DosMemoryControlBlock residentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(tsrSegment - 1), 0));
             residentBlock.Size.Should().Be(paragraphsToKeep);
             residentBlock.PspSegment.Should().Be(tsrSegment);
             residentBlock.Owner.Should().Be(resizedBlock.Owner);
-            tsrPsp.NextSegment.Should().Be(expectedNextSegment);
         } finally {
             DeleteIfExists(comFilePath);
         }

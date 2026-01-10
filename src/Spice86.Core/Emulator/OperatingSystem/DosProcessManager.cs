@@ -146,7 +146,7 @@ public class DosProcessManager {
 
         rootPsp.Exit[0] = IntOpcode;
         rootPsp.Exit[1] = Int20TerminateNumber;
-        rootPsp.NextSegment = (ushort)(CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
+        rootPsp.NextSegment = DosMemoryManager.LastFreeSegment;
 
         // Root PSP: parent points to itself
         rootPsp.ParentProgramSegmentPrefix = CommandComSegment;
@@ -1001,7 +1001,7 @@ public class DosProcessManager {
 
         psp.Exit[0] = IntOpcode;
         psp.Exit[1] = Int20TerminateNumber;
-        psp.NextSegment = (ushort)(pspSegment + allocatedBlockSizeInParagraphs);
+        psp.NextSegment = DosMemoryManager.LastFreeSegment;
 
         psp.FarCall = FarCallOpcode;
         psp.CpmServiceRequestAddress = MakeFarPointer(pspSegment, Call5StubOffset);
