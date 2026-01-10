@@ -67,7 +67,7 @@ public class CfgCpu : IFunctionHandlerProvider {
             }
         }
 
-        ICfgNode? nextToExecute = _instructionExecutionHelper.NextNode;
+        ICfgNode? nextToExecute = toExecute.GetNextSuccessor(_instructionExecutionHelper);
         
         _state.IncCycles();
 

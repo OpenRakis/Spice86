@@ -26,7 +26,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
             helper.State.ZeroFlag = false;
             helper.State.{{Accumulator}} = helper.ModRm.RM{{Size}};
         }
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

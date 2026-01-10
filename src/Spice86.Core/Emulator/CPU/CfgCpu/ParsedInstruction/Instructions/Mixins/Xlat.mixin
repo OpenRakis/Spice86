@@ -23,7 +23,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
     public override void Execute(InstructionExecutionHelper helper) {
         uint address = helper.PhysicalAddress(this, helper.State.{{LookupRegister}}) + helper.State.AL;
         helper.State.AL = helper.Memory.UInt8[address];
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

@@ -24,7 +24,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<b
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         uint bitIndex = helper.InstructionFieldValueRetriever.GetFieldValue(ValueField);
         ExecuteBitOperation(helper, bitIndex);
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     private void ExecuteBitOperation(InstructionExecutionHelper helper, uint bitIndex) {

@@ -17,7 +17,7 @@ public class BswapReg32(
                                                 | ((v >> 8) & 0x0000FF00u)
                                                 | ((v << 8) & 0x00FF0000u)
                                                 | (v << 24);
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
