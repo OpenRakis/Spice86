@@ -39,11 +39,6 @@ public class DosProcessManager {
     private readonly ILoggerService _loggerService;
     private readonly Dictionary<ushort, uint> _pendingParentStackPointers = new();
     private readonly Dictionary<ushort, ResidentBlockInfo> _pendingResidentBlocks = new();
-    public IReadOnlyDictionary<ushort, uint> PendingParentStackPointers => _pendingParentStackPointers;
-    public void TrackResidentBlock(ushort pspSegment, DosMemoryControlBlock block) {
-        ushort mcbSegment = (ushort)(block.DataBlockSegment - 1);
-        _pendingResidentBlocks[pspSegment] = new ResidentBlockInfo(mcbSegment);
-    }
 
     /// <summary>
     /// The segment address where the root COMMAND.COM PSP is created.
@@ -124,6 +119,13 @@ public class DosProcessManager {
         }
     }
 
+    public IReadOnlyDictionary<ushort, uint> PendingParentStackPointers => _pendingParentStackPointers;
+
+    public void TrackResidentBlock(ushort pspSegment, DosMemoryControlBlock block) {
+        ushort mcbSegment = (ushort)(block.DataBlockSegment - 1);
+        _pendingResidentBlocks[pspSegment] = new ResidentBlockInfo(mcbSegment);
+    }
+
     /// <summary>
     /// Gets or sets the return code of the last terminated child process.
     /// </summary>
@@ -191,6 +193,329 @@ public class DosProcessManager {
 
         _fileManager.SetDiskTransferAreaAddress(
             CommandComSegment, DosCommandTail.OffsetInPspSegment);
+    }
+
+
+    /// <summary>
+    /// Implements INT 21h AH=4Bh loading logic: resolves the DOS path, allocates memory, builds a PSP, loads EXE or COM images, updates CPU registers, and optionally executes or returns load metadata.
+    /// </summary>
+    /// <param name="programName">DOS path to the program to load.</param>
+    /// <param name="paramBlock">The EXEC parameter block containing FCB pointers and initial register outputs.</param>
+    /// <param name="commandTail">The command tail passed to the child process.</param>
+    /// <param name="loadType">Whether to load-only or load-and-execute.</param>
+    /// <param name="environmentSegment">Optional environment block to inherit; 0 clones the parent's environment.</param>
+    /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
+    public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
+        string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("EXEC: Loading program={Program}, loadType={LoadType}, envSeg={EnvSeg:X4}",
+                programName, loadType, environmentSegment);
+        }
+
+        // We read CS:IP from the stack to get the address where the parent will resume.
+        ushort callerIP = _memory.UInt16[_state.StackPhysicalAddress];
+        ushort callerCS = _memory.UInt16[_state.StackPhysicalAddress + 2];
+        ushort callerFlags = _memory.UInt16[_state.StackPhysicalAddress + 4];
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("EXEC: Stack at SS:SP={StackSeg:X4}:{StackOff:X4}, read caller CS:IP={CallerCs:X4}:{CallerIp:X4}, FLAGS={Flags:X4}",
+                _state.SS, _state.SP, callerCS, callerIP, callerFlags);
+            _loggerService.Information("EXEC: Bytes at return-2: {Byte0:X2} {Byte1:X2}, Bytes at return address: {Byte2:X2} {Byte3:X2} {Byte4:X2} {Byte5:X2}",
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP - 2))],
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP - 1))],
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, callerIP)],
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP + 1))],
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP + 2))],
+                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP + 3))]);
+        }
+
+        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("EXEC: Current PSP={CurrentPsp:X4}, will become parent",
+                parentPspSegment);
+        }
+
+        string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
+        if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
+            return DosExecResult.Fail(DosErrorCode.FileNotFound);
+        }
+
+        byte[] fileBytes = File.ReadAllBytes(hostPath);
+
+        string upperCaseExtension = Path.GetExtension(hostPath).ToUpperInvariant();
+        bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && upperCaseExtension == ".EXE";
+        bool isLoadAndExecute = loadType == DosExecLoadType.LoadAndExecute;
+
+        // Save parent's current SS:SP BEFORE any CPU state changes
+        // This captures the parent's stack context before the child modifies anything
+        uint parentStackPointer = ((uint)_state.SS << 16) | _state.SP;
+
+        // Allocate environment block FIRST before allocating program memory, as we might decide to take ALL the remaining free memory
+        DosMemoryControlBlock? envBlock = null;
+        if (environmentSegment == 0) {
+            // Need to allocate a new environment block
+            DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
+            ushort sourceEnvironmentSegment = parentPsp.EnvironmentTableSegment;
+
+            byte[] environmentBlock;
+            if (sourceEnvironmentSegment != 0) {
+                environmentBlock = CreateEnvironmentBlockFromParent(sourceEnvironmentSegment, hostPath);
+            } else {
+                environmentBlock = CreateEnvironmentBlock(hostPath);
+            }
+
+            int bytesToAllocate = environmentBlock.Length + EnvironmentKeepFreeBytes;
+            ushort envParagraphsNeeded = CalculateParagraphsNeeded(bytesToAllocate);
+
+            envBlock = _memoryManager.AllocateMemoryBlock(envParagraphsNeeded);
+            if (envBlock == null) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("EXEC: Failed to allocate environment block of {Size} paragraphs", envParagraphsNeeded);
+                }
+                return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
+            }
+
+            _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
+            envBlock.Owner = BuildMcbOwnerName(hostPath);
+
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("EXEC: Allocated environment block at {EnvSeg:X4}, size={Size} paragraphs",
+                    envBlock.DataBlockSegment, envBlock.Size);
+            }
+        }
+
+        // Try to load as EXE first if it looks like an EXE file
+        if (isExeCandidate) {
+            DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
+            if (exeFile.IsValid) {
+                DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
+                if (block is null) {
+                    // Free the environment block we just allocated
+                    if (envBlock is not null) {
+                        _memoryManager.FreeMemoryBlock(envBlock);
+                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                            _loggerService.Warning("EXEC: Failed to allocate EXE memory, freed environment block at {EnvSeg:X4}",
+                                envBlock.DataBlockSegment);
+                        }
+                    }
+                    return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
+                }
+
+                // Mark the MCB with the owning PSP segment and label for diagnostics, matching DOS 4+ owner naming.
+                block.PspSegment = block.DataBlockSegment;
+                block.Owner = BuildMcbOwnerName(hostPath);
+
+                // Set environment block ownership to the child PSP
+                if (envBlock is not null) {
+                    envBlock.PspSegment = block.DataBlockSegment;
+                }
+
+                // Use the pre-allocated environment segment or 0 if caller provided one
+                ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
+                InitializePsp(block.DataBlockSegment, hostPath, commandTail,
+                    finalEnvironmentSegment, parentPspSegment,
+                    parentStackPointer, callerCS, callerIP, isLoadAndExecute);
+
+                DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
+                CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
+                CopyFcbFromPointer(paramBlock.SecondFcbPointer, exePsp.SecondFileControlBlock);
+
+                ushort fcbCode = ComputeFcbCode(exePsp);
+
+                LoadExeFile(exeFile, block.DataBlockSegment, block, isLoadAndExecute);
+
+                ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
+                if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
+                    ushort imageDistanceInParagraphs = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
+                    loadImageSegment = (ushort)(block.DataBlockSegment + imageDistanceInParagraphs);
+                }
+
+                DosExecResult result = loadType == DosExecLoadType.LoadOnly
+                    ? DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
+                        (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP)
+                    : DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
+                        (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
+
+                if (isLoadAndExecute) {
+                    _state.AX = fcbCode;
+                    _state.BX = fcbCode;
+                }
+
+                if (!isLoadAndExecute) {
+                    // LoadOnly: restore parent PSP as current
+                    // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
+                    _pspTracker.SetCurrentPspSegment(parentPspSegment);
+                }
+
+                // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
+                if (loadType == DosExecLoadType.LoadOnly && result.Success) {
+                    paramBlock.InitialCS = result.InitialCS;
+                    paramBlock.InitialIP = result.InitialIP;
+                    paramBlock.InitialSS = result.InitialSS;
+                    paramBlock.InitialSP = result.InitialSP;
+
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("EXEC: LoadOnly filled parameter block at ES:BX with CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
+                            paramBlock.InitialCS, paramBlock.InitialIP, paramBlock.InitialSS, paramBlock.InitialSP);
+                    }
+                }
+
+                return result;
+            }
+            // If file has .EXE extension but isn't a valid EXE, fall through to try COM loading
+            // This matches FreeDOS behavior
+        }
+
+        // Load as COM file (either explicitly .COM or invalid .EXE that we'll try as COM)
+        ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
+        DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
+        if (comBlock is null) {
+            //Free the environment block we just allocated
+            if (envBlock is not null) {
+                _memoryManager.FreeMemoryBlock(envBlock);
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("EXEC: Failed to allocate COM memory, freed environment block at {EnvSeg:X4}",
+                        envBlock.DataBlockSegment);
+                }
+            }
+            return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
+        }
+
+        // Align MCB ownership with the child PSP rather than the parent loader.
+        comBlock.PspSegment = comBlock.DataBlockSegment;
+        comBlock.Owner = BuildMcbOwnerName(hostPath);
+
+        // Set environment block ownership to the child PSP
+        if (envBlock is not null) {
+            envBlock.PspSegment = comBlock.DataBlockSegment;
+        }
+
+        // Use the pre-allocated environment segment or 0 if caller provided one
+        ushort comFinalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
+        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, comFinalEnvironmentSegment, parentPspSegment, parentStackPointer, callerCS, callerIP, isLoadAndExecute);
+
+        DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
+        CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
+        CopyFcbFromPointer(paramBlock.SecondFcbPointer, comPsp.SecondFileControlBlock);
+
+        ushort comFcbCode = ComputeFcbCode(comPsp);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("EXEC: Loading COM at PSP={PspSeg:X4}, size={Size} bytes",
+                comBlock.DataBlockSegment, fileBytes.Length);
+        }
+
+        LoadComFile(fileBytes, comBlock.DataBlockSegment, isLoadAndExecute);
+
+        DosExecResult comResult = loadType == DosExecLoadType.LoadOnly
+            ? DosExecResult.SuccessLoadOnly(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
+                comBlock.DataBlockSegment, ComDefaultStackPointer)
+            : DosExecResult.SuccessExecute(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
+                comBlock.DataBlockSegment, ComDefaultStackPointer);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("EXEC: COM loaded successfully, CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
+                comResult.InitialCS, comResult.InitialIP, comResult.InitialSS, comResult.InitialSP);
+        }
+
+        if (!isLoadAndExecute) {
+            // LoadOnly: restore parent PSP as current
+            // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
+            _pspTracker.SetCurrentPspSegment(parentPspSegment);
+
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("EXEC: COM LoadOnly - restoring parent PSP={ParentPsp:X4}, IRET will restore caller's CS:IP",
+                    parentPspSegment);
+            }
+        } else {
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("EXEC: COM LoadAndExecute - CPU state updated, now at CS:IP={Cs:X4}:{Ip:X4}, current PSP={CurrentPsp:X4}",
+                    _state.CS, _state.IP, _pspTracker.GetCurrentPspSegment());
+            }
+        }
+
+        // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
+        if (loadType == DosExecLoadType.LoadOnly && comResult.Success) {
+            paramBlock.InitialCS = comResult.InitialCS;
+            paramBlock.InitialIP = comResult.InitialIP;
+            paramBlock.InitialSS = comResult.InitialSS;
+            paramBlock.InitialSP = comResult.InitialSP;
+
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("EXEC: LoadOnly filled parameter block at ES:BX with CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
+                    paramBlock.InitialCS, paramBlock.InitialIP, paramBlock.InitialSS, paramBlock.InitialSP);
+            }
+        }
+
+        if (isLoadAndExecute) {
+            _state.AX = comFcbCode;
+            _state.BX = comFcbCode;
+        }
+
+        return comResult;
+    }
+
+    /// <summary>
+    /// Loads an EXE overlay at a specified segment and applies relocation using the provided factor without altering the current PSP or CPU entry state.
+    /// </summary>
+    /// <param name="programName">DOS path of the overlay module.</param>
+    /// <param name="loadSegment">Segment where the overlay image should be written.</param>
+    /// <param name="relocationFactor">Relocation adjustment applied to each relocation entry.</param>
+    /// <returns>A result indicating success or the DOS error encountered.</returns>
+    public DosExecResult LoadOverlay(string programName, ushort loadSegment, ushort relocationFactor) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("LoadOverlay: programName={ProgramName}, loadSegment={LoadSegment:X4}, relocationFactor={RelocationFactor:X4}",
+                programName, loadSegment, relocationFactor);
+        }
+
+        string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
+        if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("LoadOverlay: File not found - hostPath={HostPath}", hostPath ?? "null");
+            }
+            return DosExecResult.Fail(DosErrorCode.FileNotFound);
+        }
+
+        byte[] fileBytes = File.ReadAllBytes(hostPath);
+
+        if (fileBytes.Length < DosExeFile.MinExeSize) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("LoadOverlay: File too small - length={Length}, min={Min}", fileBytes.Length, DosExeFile.MinExeSize);
+            }
+            return DosExecResult.Fail(DosErrorCode.FormatInvalid);
+        }
+
+        DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
+        if (!exeFile.IsValid) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("LoadOverlay: Invalid EXE file format");
+            }
+            return DosExecResult.Fail(DosErrorCode.FormatInvalid);
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("LoadOverlay: Loading EXE at segment {LoadSegment:X4}, relocation factor={RelocationFactor:X4}, InitCS={InitCS:X4}, InitIP={InitIP:X4}",
+                loadSegment, relocationFactor, exeFile.InitCS, exeFile.InitIP);
+        }
+
+        // For overlays, load at loadSegment but relocate using relocationFactor
+        // This matches DOSBox staging behavior where overlay relocation uses the relocation factor parameter
+        LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment, relocationFactor);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("LoadOverlay: Successfully loaded overlay");
+            // Log first few bytes at load segment to verify code is there
+            uint physicalAddress = MemoryUtils.ToPhysicalAddress(loadSegment, 0);
+            string bytesHex = string.Join(" ", Enumerable.Range(0, Math.Min(16, (int)exeFile.ProgramSize))
+                .Select(i => _memory.UInt8[physicalAddress + (uint)i].ToString("X2")));
+            _loggerService.Information("LoadOverlay: First 16 bytes at {LoadSegment:X4}:0000 (physical {PhysicalAddress:X5}): {Bytes}",
+                loadSegment, physicalAddress, bytesHex);
+        }
+
+        // For overlays, DOS doesn't return anything in the parameter block
+        // Just return success with AX=0 and DX=0
+        return DosExecResult.SuccessLoadOverlay();
     }
 
     /// <summary>
@@ -356,19 +681,6 @@ public class DosProcessManager {
     }
 
     /// <summary>
-    /// Restores an interrupt vector from a cached far pointer if the pointer is non-zero.
-    /// </summary>
-    /// <param name="vectorNumber">The interrupt vector index to restore (e.g., 0x22, 0x23, 0x24).</param>
-    /// <param name="storedFarPointer">The previously saved segment:offset encoded as a 32-bit value.</param>
-    private void RestoreInterruptVector(byte vectorNumber, uint storedFarPointer) {
-        if (storedFarPointer != 0) {
-            ushort offset = (ushort)(storedFarPointer & 0xFFFF);
-            ushort segment = (ushort)(storedFarPointer >> 16);
-            _interruptVectorTable[vectorNumber] = new SegmentedAddress(segment, offset);
-        }
-    }
-
-    /// <summary>
     /// Gets the last child process exit code. Used by INT 21h AH=4Dh.
     /// </summary>
     /// <returns>Exit code in AL, termination type in AH (always 0 for normal termination).</returns>
@@ -488,11 +800,14 @@ public class DosProcessManager {
         }
     }
 
-    /// <summary>
-    /// Captures the current INT 22h, 23h, and 24h vectors into the specified PSP so child processes inherit correct return, Ctrl-Break, and critical error handlers.
-    /// </summary>
-    /// <param name="psp">The PSP structure to receive the vector values.</param>
-    /// <param name="ivt">The interrupt vector table to read from.</param>
+    private void RestoreInterruptVector(byte vectorNumber, uint storedFarPointer) {
+        if (storedFarPointer != 0) {
+            ushort offset = (ushort)(storedFarPointer & 0xFFFF);
+            ushort segment = (ushort)(storedFarPointer >> 16);
+            _interruptVectorTable[vectorNumber] = new SegmentedAddress(segment, offset);
+        }
+    }
+    
     private static void SaveInterruptVectors(DosProgramSegmentPrefix psp, InterruptVectorTable ivt) {
         SegmentedAddress int22 = ivt[TerminateVectorNumber];
         psp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
@@ -504,11 +819,6 @@ public class DosProcessManager {
         psp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
     }
 
-    /// <summary>
-    /// Copies the parent's job file table into the child PSP while skipping unused entries and private handles that must not be inherited.
-    /// </summary>
-    /// <param name="childPsp">The destination PSP whose file table will be initialized.</param>
-    /// <param name="parentPsp">The source PSP that holds the current process file handle table.</param>
     private void CopyFileTableFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
         for (int i = 0; i < JobFileTableLength; i++) {
             byte parentHandle = parentPsp.Files[i];
@@ -536,9 +846,6 @@ public class DosProcessManager {
         }
     }
 
-    /// <summary>
-    /// Closes every non-standard handle owned by the specified PSP without affecting the parent's table.
-    /// </summary>
     private void CloseProcessFileHandles(DosProgramSegmentPrefix psp, ushort pspSegment) {
         HashSet<byte> closedHandles = new();
 
@@ -561,10 +868,6 @@ public class DosProcessManager {
         }
     }
 
-    /// <summary>
-    /// Initializes an FCB to the DOS default layout with drive 0, space-padded filename, and zeroed metadata fields.
-    /// </summary>
-    /// <param name="fcb">The FCB buffer to clear.</param>
     private static void ResetFcb(UInt8Array fcb) {
         fcb[0] = 0;
         for (int i = 1; i <= FcbFilenameLength && i < FcbSize; i++) {
@@ -575,11 +878,6 @@ public class DosProcessManager {
         }
     }
 
-    /// <summary>
-    /// Copies an FCB from memory into the destination structure unless the pointer is one of the DOS sentinel values.
-    /// </summary>
-    /// <param name="pointer">Segment:offset of the source FCB.</param>
-    /// <param name="destination">The destination FCB buffer within the PSP.</param>
     private void CopyFcbFromPointer(SegmentedAddress pointer, UInt8Array destination) {
         // FreeDOS treats 0000:0000 and FFFF:FFFF as "no FCB" markers.
         if (IsNoFcbPointer(pointer)) {
@@ -592,20 +890,11 @@ public class DosProcessManager {
         }
     }
 
-    /// <summary>
-    /// Determines whether an FCB pointer refers to the DOS sentinel values 0000:0000 or FFFF:FFFF meaning “no FCB present”.
-    /// </summary>
-    /// <param name="pointer">The FCB pointer to inspect.</param>
-    /// <returns>True when the pointer is one of the sentinel addresses.</returns>
     private static bool IsNoFcbPointer(SegmentedAddress pointer) {
         return (pointer.Segment == NullSegment && pointer.Offset == NullOffset)
             || (pointer.Segment == SentinelSegment && pointer.Offset == SentinelOffset);
     }
 
-    /// <summary>
-    /// Performs a byte-for-byte copy of the current PSP into the destination segment before patching fields for child creation.
-    /// </summary>
-    /// <param name="destinationSegment">The segment where the cloned PSP will be written.</param>
     private void CloneCurrentPspTo(ushort destinationSegment) {
         ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
         uint currentPspAddress = MemoryUtils.ToPhysicalAddress(currentPspSegment, 0);
@@ -649,32 +938,16 @@ public class DosProcessManager {
         }
     }
 
-    /// <summary>
-    /// Builds a far pointer encoded as a 32-bit value from a segment and offset.
-    /// </summary>
-    /// <param name="segment">The segment part of the pointer.</param>
-    /// <param name="offset">The offset part of the pointer.</param>
-    /// <returns>The combined segment:offset as a 32-bit integer.</returns>
     private static uint MakeFarPointer(ushort segment, ushort offset) {
         return (uint)((segment << 16) | offset);
     }
 
-    /// <summary>
-    /// Rounds a byte length up to the number of 16-byte paragraphs required, returning at least one paragraph.
-    /// </summary>
-    /// <param name="lengthInBytes">The byte length to round.</param>
-    /// <returns>The paragraph count needed to hold the data.</returns>
     private static ushort CalculateParagraphsNeeded(int lengthInBytes) {
         int paragraphs = (lengthInBytes + ParagraphRoundingMask) / ParagraphSizeBytes;
         paragraphs = paragraphs == 0 ? 1 : paragraphs;
         return (ushort)paragraphs;
     }
 
-    /// <summary>
-    /// Generates the MCB owner name from a program path, uppercasing and truncating to seven characters so the trailing terminator fits.
-    /// </summary>
-    /// <param name="programPath">The program path used to derive the owner label.</param>
-    /// <returns>An uppercase owner string suitable for an MCB header.</returns>
     private static string BuildMcbOwnerName(string programPath) {
         string name = Path.GetFileNameWithoutExtension(programPath).ToUpperInvariant();
         // The MCB owner field is 8 bytes and this setter writes a zero terminator,
@@ -686,11 +959,6 @@ public class DosProcessManager {
         return name;
     }
 
-    /// <summary>
-    /// Computes the combined FCB status word used by INT 21h AH=4B to reflect invalid drive selectors in the two default FCBs.
-    /// </summary>
-    /// <param name="psp">The PSP whose default FCBs are examined.</param>
-    /// <returns>A word with FF in the low or high byte when the corresponding FCB drive is invalid.</returns>
     private ushort ComputeFcbCode(DosProgramSegmentPrefix psp) {
         ushort code = 0;
 
@@ -707,11 +975,6 @@ public class DosProcessManager {
         return code;
     }
 
-    /// <summary>
-    /// Checks whether an FCB drive byte references a valid DOS drive or the default drive selector.
-    /// </summary>
-    /// <param name="driveByte">The drive byte from an FCB (0 for default, 1=A:, etc.).</param>
-    /// <returns>True when the drive is valid or default; otherwise false.</returns>
     private bool IsFcbDriveValid(byte driveByte) {
         if (driveByte == 0) {
             return true;
@@ -729,340 +992,6 @@ public class DosProcessManager {
         return _driveManager.HasDriveAtIndex(zeroBasedIndex);
     }
 
-    /// <summary>
-    /// Implements INT 21h AH=4Bh loading logic: resolves the DOS path, allocates memory, builds a PSP, loads EXE or COM images, updates CPU registers, and optionally executes or returns load metadata.
-    /// </summary>
-    /// <param name="programName">DOS path to the program to load.</param>
-    /// <param name="paramBlock">The EXEC parameter block containing FCB pointers and initial register outputs.</param>
-    /// <param name="commandTail">The command tail passed to the child process.</param>
-    /// <param name="loadType">Whether to load-only or load-and-execute.</param>
-    /// <param name="environmentSegment">Optional environment block to inherit; 0 clones the parent's environment.</param>
-    /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
-    public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
-        string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("EXEC: Loading program={Program}, loadType={LoadType}, envSeg={EnvSeg:X4}",
-                programName, loadType, environmentSegment);
-        }
-
-        // We read CS:IP from the stack to get the address where the parent will resume.
-        ushort callerIP = _memory.UInt16[_state.StackPhysicalAddress];
-        ushort callerCS = _memory.UInt16[_state.StackPhysicalAddress + 2];
-        ushort callerFlags = _memory.UInt16[_state.StackPhysicalAddress + 4];
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("EXEC: Stack at SS:SP={StackSeg:X4}:{StackOff:X4}, read caller CS:IP={CallerCs:X4}:{CallerIp:X4}, FLAGS={Flags:X4}",
-                _state.SS, _state.SP, callerCS, callerIP, callerFlags);
-            _loggerService.Information("EXEC: Bytes at return-2: {Byte0:X2} {Byte1:X2}, Bytes at return address: {Byte2:X2} {Byte3:X2} {Byte4:X2} {Byte5:X2}",
-                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP - 2))],
-                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP - 1))],
-                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, callerIP)],
-                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP + 1))],
-                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP + 2))],
-                _memory.UInt8[MemoryUtils.ToPhysicalAddress(callerCS, (ushort)(callerIP + 3))]);
-        }
-
-        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("EXEC: Current PSP={CurrentPsp:X4}, will become parent",
-                parentPspSegment);
-        }
-
-        string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
-        if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
-            return DosExecResult.Fail(DosErrorCode.FileNotFound);
-        }
-
-        byte[] fileBytes = File.ReadAllBytes(hostPath);
-
-        string upperCaseExtension = Path.GetExtension(hostPath).ToUpperInvariant();
-        bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && upperCaseExtension == ".EXE";
-        bool isLoadAndExecute = loadType == DosExecLoadType.LoadAndExecute;
-
-        // Save parent's current SS:SP BEFORE any CPU state changes
-        // This captures the parent's stack context before the child modifies anything
-        uint parentStackPointer = ((uint)_state.SS << 16) | _state.SP;
-
-        // Allocate environment block FIRST before allocating program memory, as we might decide to take ALL the remaining free memory
-        DosMemoryControlBlock? envBlock = null;
-        if (environmentSegment == 0) {
-            // Need to allocate a new environment block
-            DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
-            ushort sourceEnvironmentSegment = parentPsp.EnvironmentTableSegment;
-            
-            byte[] environmentBlock;
-            if (sourceEnvironmentSegment != 0) {
-                environmentBlock = CreateEnvironmentBlockFromParent(sourceEnvironmentSegment, hostPath);
-            } else {
-                environmentBlock = CreateEnvironmentBlock(hostPath);
-            }
-            
-            int bytesToAllocate = environmentBlock.Length + EnvironmentKeepFreeBytes;
-            ushort envParagraphsNeeded = CalculateParagraphsNeeded(bytesToAllocate);
-            
-            envBlock = _memoryManager.AllocateMemoryBlock(envParagraphsNeeded);
-            if (envBlock == null) {
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("EXEC: Failed to allocate environment block of {Size} paragraphs", envParagraphsNeeded);
-                }
-                return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
-            }
-            
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
-            envBlock.Owner = BuildMcbOwnerName(hostPath);
-            
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("EXEC: Allocated environment block at {EnvSeg:X4}, size={Size} paragraphs",
-                    envBlock.DataBlockSegment, envBlock.Size);
-            }
-        }
-
-        // Try to load as EXE first if it looks like an EXE file
-        if (isExeCandidate) {
-            DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
-            if (exeFile.IsValid) {
-                DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
-                if (block is null) {
-                    // Free the environment block we just allocated
-                    if (envBlock is not null) {
-                        _memoryManager.FreeMemoryBlock(envBlock);
-                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                            _loggerService.Warning("EXEC: Failed to allocate EXE memory, freed environment block at {EnvSeg:X4}",
-                                envBlock.DataBlockSegment);
-                        }
-                    }
-                    return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
-                }
-
-                // Mark the MCB with the owning PSP segment and label for diagnostics, matching DOS 4+ owner naming.
-                block.PspSegment = block.DataBlockSegment;
-                block.Owner = BuildMcbOwnerName(hostPath);
-                
-                // Set environment block ownership to the child PSP
-                if (envBlock is not null) {
-                    envBlock.PspSegment = block.DataBlockSegment;
-                }
-
-                // Use the pre-allocated environment segment or 0 if caller provided one
-                ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
-                InitializePsp(block.DataBlockSegment, hostPath, commandTail,
-                    finalEnvironmentSegment, parentPspSegment,
-                    parentStackPointer, callerCS, callerIP, isLoadAndExecute);
-
-                DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
-                CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
-                CopyFcbFromPointer(paramBlock.SecondFcbPointer, exePsp.SecondFileControlBlock);
-
-                ushort fcbCode = ComputeFcbCode(exePsp);
-
-                LoadExeFile(exeFile, block.DataBlockSegment, block, isLoadAndExecute);
-
-                ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
-                if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
-                    ushort imageDistanceInParagraphs = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
-                    loadImageSegment = (ushort)(block.DataBlockSegment + imageDistanceInParagraphs);
-                }
-
-                DosExecResult result = loadType == DosExecLoadType.LoadOnly
-                    ? DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
-                        (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP)
-                    : DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
-                        (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
-
-                if (isLoadAndExecute) {
-                    _state.AX = fcbCode;
-                    _state.BX = fcbCode;
-                }
-
-                if (!isLoadAndExecute) {
-                    // LoadOnly: restore parent PSP as current
-                    // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
-                    _pspTracker.SetCurrentPspSegment(parentPspSegment);
-                }
-
-                // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
-                if (loadType == DosExecLoadType.LoadOnly && result.Success) {
-                    paramBlock.InitialCS = result.InitialCS;
-                    paramBlock.InitialIP = result.InitialIP;
-                    paramBlock.InitialSS = result.InitialSS;
-                    paramBlock.InitialSP = result.InitialSP;
-
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("EXEC: LoadOnly filled parameter block at ES:BX with CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
-                            paramBlock.InitialCS, paramBlock.InitialIP, paramBlock.InitialSS, paramBlock.InitialSP);
-                    }
-                }
-
-                return result;
-            }
-            // If file has .EXE extension but isn't a valid EXE, fall through to try COM loading
-            // This matches FreeDOS behavior
-        }
-
-        // Load as COM file (either explicitly .COM or invalid .EXE that we'll try as COM)
-        ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
-        DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
-        if (comBlock is null) {
-            //Free the environment block we just allocated
-            if (envBlock is not null) {
-                _memoryManager.FreeMemoryBlock(envBlock);
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("EXEC: Failed to allocate COM memory, freed environment block at {EnvSeg:X4}",
-                        envBlock.DataBlockSegment);
-                }
-            }
-            return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
-        }
-
-        // Align MCB ownership with the child PSP rather than the parent loader.
-        comBlock.PspSegment = comBlock.DataBlockSegment;
-        comBlock.Owner = BuildMcbOwnerName(hostPath);
-        
-        // Set environment block ownership to the child PSP
-        if (envBlock is not null) {
-            envBlock.PspSegment = comBlock.DataBlockSegment;
-        }
-        
-        // Use the pre-allocated environment segment or 0 if caller provided one
-        ushort comFinalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
-        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, comFinalEnvironmentSegment, parentPspSegment, parentStackPointer, callerCS, callerIP, isLoadAndExecute);
-
-        DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
-        CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
-        CopyFcbFromPointer(paramBlock.SecondFcbPointer, comPsp.SecondFileControlBlock);
-
-        ushort comFcbCode = ComputeFcbCode(comPsp);
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("EXEC: Loading COM at PSP={PspSeg:X4}, size={Size} bytes",
-                comBlock.DataBlockSegment, fileBytes.Length);
-        }
-
-        LoadComFile(fileBytes, comBlock.DataBlockSegment, isLoadAndExecute);
-
-        DosExecResult comResult = loadType == DosExecLoadType.LoadOnly
-            ? DosExecResult.SuccessLoadOnly(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
-                comBlock.DataBlockSegment, ComDefaultStackPointer)
-            : DosExecResult.SuccessExecute(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
-                comBlock.DataBlockSegment, ComDefaultStackPointer);
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("EXEC: COM loaded successfully, CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
-                comResult.InitialCS, comResult.InitialIP, comResult.InitialSS, comResult.InitialSP);
-        }
-
-        if (!isLoadAndExecute) {
-            // LoadOnly: restore parent PSP as current
-            // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
-            _pspTracker.SetCurrentPspSegment(parentPspSegment);
-
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("EXEC: COM LoadOnly - restoring parent PSP={ParentPsp:X4}, IRET will restore caller's CS:IP",
-                    parentPspSegment);
-            }
-        } else {
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("EXEC: COM LoadAndExecute - CPU state updated, now at CS:IP={Cs:X4}:{Ip:X4}, current PSP={CurrentPsp:X4}",
-                    _state.CS, _state.IP, _pspTracker.GetCurrentPspSegment());
-            }
-        }
-
-        // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
-        if (loadType == DosExecLoadType.LoadOnly && comResult.Success) {
-            paramBlock.InitialCS = comResult.InitialCS;
-            paramBlock.InitialIP = comResult.InitialIP;
-            paramBlock.InitialSS = comResult.InitialSS;
-            paramBlock.InitialSP = comResult.InitialSP;
-
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("EXEC: LoadOnly filled parameter block at ES:BX with CS:IP={Cs:X4}:{Ip:X4}, SS:SP={Ss:X4}:{Sp:X4}",
-                    paramBlock.InitialCS, paramBlock.InitialIP, paramBlock.InitialSS, paramBlock.InitialSP);
-            }
-        }
-
-        if (isLoadAndExecute) {
-            _state.AX = comFcbCode;
-            _state.BX = comFcbCode;
-        }
-
-        return comResult;
-    }
-
-    /// <summary>
-    /// Loads an EXE overlay at a specified segment and applies relocation using the provided factor without altering the current PSP or CPU entry state.
-    /// </summary>
-    /// <param name="programName">DOS path of the overlay module.</param>
-    /// <param name="loadSegment">Segment where the overlay image should be written.</param>
-    /// <param name="relocationFactor">Relocation adjustment applied to each relocation entry.</param>
-    /// <returns>A result indicating success or the DOS error encountered.</returns>
-    public DosExecResult LoadOverlay(string programName, ushort loadSegment, ushort relocationFactor) {
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("LoadOverlay: programName={ProgramName}, loadSegment={LoadSegment:X4}, relocationFactor={RelocationFactor:X4}",
-                programName, loadSegment, relocationFactor);
-        }
-
-        string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
-        if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("LoadOverlay: File not found - hostPath={HostPath}", hostPath ?? "null");
-            }
-            return DosExecResult.Fail(DosErrorCode.FileNotFound);
-        }
-
-        byte[] fileBytes = File.ReadAllBytes(hostPath);
-
-        if (fileBytes.Length < DosExeFile.MinExeSize) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("LoadOverlay: File too small - length={Length}, min={Min}", fileBytes.Length, DosExeFile.MinExeSize);
-            }
-            return DosExecResult.Fail(DosErrorCode.FormatInvalid);
-        }
-
-        DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
-        if (!exeFile.IsValid) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("LoadOverlay: Invalid EXE file format");
-            }
-            return DosExecResult.Fail(DosErrorCode.FormatInvalid);
-        }
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("LoadOverlay: Loading EXE at segment {LoadSegment:X4}, relocation factor={RelocationFactor:X4}, InitCS={InitCS:X4}, InitIP={InitIP:X4}",
-                loadSegment, relocationFactor, exeFile.InitCS, exeFile.InitIP);
-        }
-
-        // For overlays, load at loadSegment but relocate using relocationFactor
-        // This matches DOSBox staging behavior where overlay relocation uses the relocation factor parameter
-        LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment, relocationFactor);
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("LoadOverlay: Successfully loaded overlay");
-            // Log first few bytes at load segment to verify code is there
-            uint physicalAddress = MemoryUtils.ToPhysicalAddress(loadSegment, 0);
-            string bytesHex = string.Join(" ", Enumerable.Range(0, Math.Min(16, (int)exeFile.ProgramSize))
-                .Select(i => _memory.UInt8[physicalAddress + (uint)i].ToString("X2")));
-            _loggerService.Information("LoadOverlay: First 16 bytes at {LoadSegment:X4}:0000 (physical {PhysicalAddress:X5}): {Bytes}",
-                loadSegment, physicalAddress, bytesHex);
-        }
-
-        // For overlays, DOS doesn't return anything in the parameter block
-        // Just return success with AX=0 and DX=0
-        return DosExecResult.SuccessLoadOverlay();
-    }
-
-    /// <summary>
-    /// Creates and initializes a PSP for a newly loaded program, wiring parent linkage, INT vectors, file table inheritance, command tail, environment, and disk transfer area.
-    /// </summary>
-    /// <param name="pspSegment">Target segment for the PSP.</param>
-    /// <param name="programHostPath">Host path of the program being loaded.</param>
-    /// <param name="arguments">Raw command tail text to embed.</param>
-    /// <param name="environmentSegment">Environment segment to use (0 means none provided, will not allocate).</param>
-    /// <param name="parentPspSegment">Segment of the parent PSP.</param>
-    /// <param name="parentStackPointer">Saved SS:SP of the parent encoded as a 32-bit value.</param>
-    /// <param name="callerCS">Caller CS for INT 22h return address.</param>
-    /// <param name="callerIP">Caller IP for INT 22h return address.</param>
-    /// <param name="trackParentStackPointer">True when the child will execute immediately and the parent's stack pointer must be tracked for restoration.</param>
     private void InitializePsp(ushort pspSegment, string programHostPath,
         string? arguments, ushort environmentSegment, ushort parentPspSegment,
         uint parentStackPointer, ushort callerCS, ushort callerIP, bool trackParentStackPointer) {
@@ -1131,14 +1060,6 @@ public class DosProcessManager {
             pspSegment, DosCommandTail.OffsetInPspSegment);
     }
 
-    /// <summary>
-    /// Assigns an environment block to the PSP. If environmentSegment is not 0, uses that segment directly.
-    /// Otherwise, inherits the parent's environment segment without allocating a new block.
-    /// </summary>
-    /// <param name="programHostPath">Host path of the program whose path is appended after environment strings.</param>
-    /// <param name="environmentSegment">Segment of an existing environment to use; zero inherits parent's segment directly.</param>
-    /// <param name="psp">The child PSP receiving the environment pointer.</param>
-    /// <param name="parentPsp">Parent PSP used when resolving default environment.</param>
     private void SetupEnvironmentForProcess(string programHostPath,
         ushort environmentSegment, DosProgramSegmentPrefix psp,
         DosProgramSegmentPrefix parentPsp) {
@@ -1158,11 +1079,6 @@ public class DosProcessManager {
         psp.EnvironmentTableSegment = sourceEnvironmentSegment;
     }
 
-    /// <summary>
-    /// Creates a DOS environment block from the current environment variables.
-    /// </summary>
-    /// <param name="programPath">The path to the program being executed.</param>
-    /// <returns>A byte array containing the DOS environment block.</returns>
     private byte[] CreateEnvironmentBlock(string programPath) {
         using MemoryStream ms = new();
 
@@ -1199,12 +1115,6 @@ public class DosProcessManager {
         return ms.ToArray();
     }
 
-    /// <summary>
-    /// Clones an existing environment segment, bounded by the FreeDOS scan limit, and replaces the extra strings section with the current program path.
-    /// </summary>
-    /// <param name="environmentSegment">Segment of the parent environment to duplicate.</param>
-    /// <param name="programPath">Host path of the program being launched, written after the variables.</param>
-    /// <returns>The serialized environment block for the child.</returns>
     private byte[] CreateEnvironmentBlockFromParent(ushort environmentSegment, string programPath) {
         using MemoryStream ms = new();
 
@@ -1252,12 +1162,6 @@ public class DosProcessManager {
         return ms.ToArray();
     }
 
-    /// <summary>
-    /// Loads a COM image directly above its PSP, and when executing, seeds the CPU registers with PSP-based segments and the default stack pointer.
-    /// </summary>
-    /// <param name="com">Raw COM file bytes.</param>
-    /// <param name="pspSegment">Segment where the PSP and COM image reside.</param>
-    /// <param name="isLoadAndExecute">True to update CPU state for immediate execution; false for load-only.</param>
     private void LoadComFile(byte[] com, ushort pspSegment, bool isLoadAndExecute) {
         uint physicalLoadAddress = MemoryUtils.ToPhysicalAddress(pspSegment, DosProgramSegmentPrefix.PspSize);
         _memory.LoadData(physicalLoadAddress, com);
@@ -1277,13 +1181,6 @@ public class DosProcessManager {
         }
     }
 
-    /// <summary>
-    /// Loads an EXE image above its PSP, applies relocation, and optionally updates CPU registers for execution.
-    /// </summary>
-    /// <param name="exeFile">Parsed EXE structure containing headers and relocation table.</param>
-    /// <param name="pspSegment">Segment of the associated PSP.</param>
-    /// <param name="block">Memory control block describing the allocated region for the EXE.</param>
-    /// <param name="updateCpuState">True to set CS:IP/SS:SP for execution, false for load-only.</param>
     private void LoadExeFile(DosExeFile exeFile, ushort pspSegment, DosMemoryControlBlock block, bool updateCpuState) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Read header: {ReadHeader}", exeFile);
@@ -1305,12 +1202,6 @@ public class DosProcessManager {
         }
     }
 
-    /// <summary>
-    /// Loads the program image and applies any necessary relocations to it.
-    /// </summary>
-    /// <param name="exeFile">The EXE file to load.</param>
-    /// <param name="loadImageSegment">The segment where the program image will be loaded.</param>
-    /// <param name="relocationSegment">The segment value to add to relocation table entries. For normal EXE loading, this is the same as loadImageSegment. For overlays, this is the relocation factor from the parameter block.</param>
     private void LoadExeFileInMemoryAndApplyRelocations(DosExeFile exeFile, ushort loadImageSegment, ushort relocationSegment) {
         uint physicalLoadAddress = MemoryUtils.ToPhysicalAddress(loadImageSegment, 0);
         _memory.LoadData(physicalLoadAddress, exeFile.ProgramImage, (int)exeFile.ProgramSize);
@@ -1322,12 +1213,6 @@ public class DosProcessManager {
         }
     }
 
-    /// <summary>
-    /// Sets up the CPU to execute the loaded program.
-    /// </summary>
-    /// <param name="exeFile">The EXE file that was loaded.</param>
-    /// <param name="loadSegment">The segment where the program has been loaded.</param>
-    /// <param name="pspSegment">The segment address of the program's PSP (Program Segment Prefix).</param>
     private void SetupCpuForExe(DosExeFile exeFile, ushort loadSegment, ushort pspSegment) {
         // MS-DOS uses the values in the file header to set the SP and SS registers and
         // adjusts the initial value of the SS register by adding the start-segment
@@ -1357,11 +1242,6 @@ public class DosProcessManager {
         SetEntryPoint((ushort)(exeFile.InitCS + loadSegment), exeFile.InitIP);
     }
 
-    /// <summary>
-    /// Writes the CPU entry point registers used to start execution of the loaded program and logs them at verbose level.
-    /// </summary>
-    /// <param name="cs">Code segment for program entry.</param>
-    /// <param name="ip">Instruction pointer for program entry.</param>
     private void SetEntryPoint(ushort cs, ushort ip) {
         _state.CS = cs;
         _state.IP = ip;
