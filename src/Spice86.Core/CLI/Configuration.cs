@@ -7,7 +7,6 @@ using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
 public sealed class Configuration {
