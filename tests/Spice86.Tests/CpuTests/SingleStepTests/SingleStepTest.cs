@@ -17,7 +17,30 @@ using Xunit;
 /// </summary>
 public class SingleStepTest {
     private SingleStepTestMinimalMachine _singleStepTestMinimalMachine = new(CpuModel.INTEL_80386);
-    [Theory(Skip = "Not ready yet to be run in CI")]
+    private readonly RevocationListHelper _revocationListHelper;
+
+    /// <summary>
+    /// Set to true to generate a revocation list file instead of failing tests.
+    /// The file will contain hashes of failing tests and statistics.
+    /// </summary>
+    private const bool GenerateRevocationList = false;
+
+    /// <summary>
+    /// Fix mode: When set to a specific opcode (e.g., "00", "66", "67.00"), the revocation list
+    /// will be respected for all opcodes EXCEPT the one specified here. This allows fixing
+    /// a specific opcode without running all other tests. Set to null to respect the full
+    /// revocation list or when GenerateRevocationList is true.
+    /// </summary>
+    private const string? OpcodeToFix = null;
+
+    public SingleStepTest() {
+        // Read from Resources/cpuTests/singleStepTests
+        // Write to tests/Spice86.Tests/Resources/cpuTests/singleStepTests/
+        string writeBasePath = Path.Combine(Environment.CurrentDirectory, "tests", "Spice86.Tests", "Resources", "cpuTests", "singleStepTests");
+        _revocationListHelper = new RevocationListHelper(readBasePath: "Resources/cpuTests/singleStepTests", writeBasePath: writeBasePath);
+    }
+
+    [Theory]
     [InlineData(CpuModel.INTEL_80386, "00-65", 2)]
     [InlineData(CpuModel.INTEL_80386, "66-66", 2)]
     [InlineData(CpuModel.INTEL_80386, "67.00-67.7F", 2)]
@@ -32,19 +55,58 @@ public class SingleStepTest {
             Assert.Fail($"Couldn't find test resource {resource} for {cpuModel} for range {range}");
         }
         using ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Read);
-        ISet<string> revocationList = ReadRevocationList(archive);
+        ISet<string> revocationList = _revocationListHelper.ReadCombinedRevocationLists(archive, cpuModelString, range);
+
+        TestStatistics stats = new TestStatistics();
+        RunAllTests(archive, revocationList, cpuModel, maxCycles, stats);
+
+        if (GenerateRevocationList) {
+            _revocationListHelper.WriteRevocationList(stats, cpuModelString, range);
+        }
+    }
+
+    private void RunAllTests(ZipArchive archive, ISet<string> revocationList, CpuModel cpuModel, int maxCycles, TestStatistics stats) {
         foreach (ZipArchiveEntry entry in archive.Entries) {
             List<CpuTest>? cpuTests = ReadCpuTests(entry);
             if (cpuTests is null) {
                 continue;
             }
 
+            string opcode = entry.Name.Replace(".json", "");
+
+            // In fix mode, only run tests for the specific opcode we're fixing
+            if (OpcodeToFix != null && opcode != OpcodeToFix) {
+                continue;
+            }
+
             int index = 0;
             foreach (CpuTest cpuTest in cpuTests) {
-                if (revocationList.Contains(cpuTest.Hash)) {
+                // In fix mode, ignore the revocation list for the opcode being fixed
+                // In normal mode, skip tests in the revocation list
+                bool shouldSkipRevokedTest = OpcodeToFix == null && revocationList.Contains(cpuTest.Hash);
+
+                if (shouldSkipRevokedTest) {
+                    stats.RecordFailingTest(opcode, cpuTest.Hash);
                     continue;
                 }
-                RunCpuTest(cpuTest, index++, entry.Name, cpuModel, maxCycles);
+
+                bool testPassed = true;
+                try {
+                    RunCpuTest(cpuTest, index++, entry.Name, cpuModel, maxCycles);
+                } catch (Exception ex) {
+                    testPassed = false;
+                    if (!GenerateRevocationList) {
+                        throw;
+                    }
+                    // Exception is intentionally swallowed when generating revocation list
+                    _ = ex;
+                }
+
+                if (testPassed) {
+                    stats.RecordPassingTest(opcode);
+                } else {
+                    stats.RecordFailingTest(opcode, cpuTest.Hash);
+                }
             }
         }
     }
@@ -56,23 +118,6 @@ public class SingleStepTest {
             CpuModel.INTEL_80386 => "80386",
             _ => throw new InvalidEnumArgumentException()
         };
-    }
-
-    private ISet<string> ReadRevocationList(ZipArchive archive) {
-        ZipArchiveEntry? revocationEntry = archive.GetEntry("revocation_list.txt");
-        if (revocationEntry is null) {
-            return new HashSet<string>();
-        }
-        using Stream entryStream = revocationEntry.Open();
-        using StreamReader reader = new StreamReader(entryStream);
-        HashSet<string> revocationList = [];
-        string? line;
-        while ((line = reader.ReadLine()) != null) {
-            if (!string.IsNullOrWhiteSpace(line)) {
-                revocationList.Add(line.Trim());
-            }
-        }
-        return revocationList;
     }
 
     private List<CpuTest>? ReadCpuTests(ZipArchiveEntry entry) {
@@ -87,24 +132,24 @@ public class SingleStepTest {
 
     private void InitializeRegistersFromTest(CpuState cpuState, State state) {
         Registers registers = cpuState.Registers;
-        state.EAX = ConvertReg(registers.AX);
-        state.EBX = ConvertReg(registers.BX);
-        state.ECX = ConvertReg(registers.CX);
-        state.EDX = ConvertReg(registers.DX);
-        state.EBP = ConvertReg(registers.BP);
-        state.ESP = ConvertReg(registers.SP);
-        state.ESI = ConvertReg(registers.SI);
-        state.EDI = ConvertReg(registers.DI);
-        
-        state.CS = ConvertReg(registers.CS);
-        state.DS = ConvertReg(registers.DS);
-        state.ES = ConvertReg(registers.ES);
-        state.SS = ConvertReg(registers.SS);
-        state.FS = ConvertReg(registers.FS);
-        state.GS = ConvertReg(registers.GS);
+        state.EAX = ConvertReg(registers.EAX);
+        state.EBX = ConvertReg(registers.EBX);
+        state.ECX = ConvertReg(registers.ECX);
+        state.EDX = ConvertReg(registers.EDX);
+        state.EBP = ConvertReg(registers.EBP);
+        state.ESP = ConvertReg(registers.ESP);
+        state.ESI = ConvertReg(registers.ESI);
+        state.EDI = ConvertReg(registers.EDI);
 
-        state.IP = ConvertReg(registers.IP);
-        state.Flags.FlagRegister = ConvertReg(registers.Flags);
+        state.CS = ConvertSReg(registers.CS);
+        state.DS = ConvertSReg(registers.DS);
+        state.ES = ConvertSReg(registers.ES);
+        state.SS = ConvertSReg(registers.SS);
+        state.FS = ConvertSReg(registers.FS);
+        state.GS = ConvertSReg(registers.GS);
+
+        state.IP = ConvertSReg(registers.EIP);
+        state.Flags.FlagRegister = ConvertReg(registers.EFlags);
     }
 
     private void InitializeMemoryFromTest(CpuState cpuState, Memory memory) {
@@ -122,14 +167,14 @@ public class SingleStepTest {
     
     private void CompareRegistersWithExpected(CpuState cpuState, State state) {
         Registers registers = cpuState.Registers;
-        CompareReg(nameof(state.EAX), registers.AX, state.EAX);
-        CompareReg(nameof(state.EBX), registers.BX, state.EBX);
-        CompareReg(nameof(state.ECX), registers.CX, state.ECX);
-        CompareReg(nameof(state.EDX), registers.DX, state.EDX);
-        CompareReg(nameof(state.EBP), registers.BP, state.EBP);
-        CompareReg(nameof(state.ESP), registers.SP, state.ESP);
-        CompareReg(nameof(state.ESI), registers.SI, state.ESI);
-        CompareReg(nameof(state.EDI), registers.DI, state.EDI);
+        CompareReg(nameof(state.EAX), registers.EAX, state.EAX);
+        CompareReg(nameof(state.EBX), registers.EBX, state.EBX);
+        CompareReg(nameof(state.ECX), registers.ECX, state.ECX);
+        CompareReg(nameof(state.EDX), registers.EDX, state.EDX);
+        CompareReg(nameof(state.EBP), registers.EBP, state.EBP);
+        CompareReg(nameof(state.ESP), registers.ESP, state.ESP);
+        CompareReg(nameof(state.ESI), registers.ESI, state.ESI);
+        CompareReg(nameof(state.EDI), registers.EDI, state.EDI);
 
         CompareReg(nameof(state.CS), registers.CS, state.CS);
         CompareReg(nameof(state.DS), registers.DS, state.DS);
@@ -138,8 +183,8 @@ public class SingleStepTest {
         CompareReg(nameof(state.FS), registers.FS, state.FS);
         CompareReg(nameof(state.GS), registers.GS, state.GS);
 
-        CompareReg(nameof(state.IP), registers.IP, state.IP);
-        CompareReg(nameof(state.Flags), registers.Flags, state.Flags.FlagRegister16, true);
+        CompareReg(nameof(state.IP), registers.EIP, state.IP);
+        CompareReg(nameof(state.Flags), registers.EFlags, state.Flags.FlagRegister, true);
     }
     
     private void CompareMemoryWithExpected(CpuState cpuState, Memory memory) {
@@ -204,15 +249,26 @@ public class SingleStepTest {
         return $"{flagname} differs";
     }
 
-    private ushort ConvertReg(uint? registerInJson) {
+    private uint ConvertReg(uint? registerInJson) {
         if (registerInJson == null) {
             return 0;
         }
+        return registerInJson.Value;
+    }
+
+    private ushort ConvertSReg(uint? registerInJson) {
+        if (registerInJson == null) {
+            return 0;
+        }
+
+        if (registerInJson > ushort.MaxValue) {
+            throw new ArgumentOutOfRangeException("registerInJson", $"Value {registerInJson} is not a 16bit value");
+        }
+
         return (ushort)registerInJson;
     }
 
     private void RunCpuTest(CpuTest cpuTest, int index, string fileName, CpuModel cpuModel, int maxCycles) {
-        string name = cpuTest.Name;
         try {
             InitializeMemoryFromTest(cpuTest.Initial, _singleStepTestMinimalMachine.Memory);
             InitializeRegistersFromTest(cpuTest.Initial, _singleStepTestMinimalMachine.State);
@@ -225,10 +281,20 @@ public class SingleStepTest {
 
             CompareRegistersWithExpected(cpuTest.Final, _singleStepTestMinimalMachine.State);
             CompareMemoryWithExpected(cpuTest.Final, _singleStepTestMinimalMachine.Memory);
-            _singleStepTestMinimalMachine.RestoreMemoryAfterTest();
         } catch (Exception e) {
             string instructionBytes = FormatBytesAsHex(cpuTest.Bytes);
-            throw new Exception($"An error occurred while running test {name} in {fileName} (index {index}) for {cpuModel} (Instruction bytes are {instructionBytes}): {e.Message}", e);
+
+            // Create State objects only when there's an error for debugging
+            State initialStateSnapshot = new State(cpuModel);
+            InitializeRegistersFromTest(cpuTest.Initial, initialStateSnapshot);
+            string initialState = initialStateSnapshot.ToString();
+            string finalState = _singleStepTestMinimalMachine.State.ToString();
+            string debugInfo = $"\n\nInitial State:\n{initialState}\n\nFinal State:\n{finalState}";
+
+            throw new Exception($"An error occurred while running test \"{cpuTest.Name}\" ({cpuTest.Hash}) in {fileName} (index {index}) for {cpuModel} (Instruction bytes are {instructionBytes}): {e.Message}{debugInfo}", e);
+        } finally {
+            _singleStepTestMinimalMachine.RestoreMemoryAfterTest();
+            _singleStepTestMinimalMachine.Cpu.Clear();
         }
     }
     

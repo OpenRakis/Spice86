@@ -58,30 +58,35 @@
         <EmbeddedResource Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.00-65/2025.11.5/content/tests/80386.00-65.zip">
             <Link>80386.00-65.zip</Link>
             <LogicalName>80386.00-65.zip</LogicalName>
+            <WithCulture>false</WithCulture>
         </EmbeddedResource>
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.66-66/2025.11.5/content/tests/80386.66-66.zip">
             <Link>80386.66-66.zip</Link>
             <LogicalName>80386.66-66.zip</LogicalName>
+            <WithCulture>false</WithCulture>
         </EmbeddedResource>
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.67.00-67.7f/2025.11.5/content/tests/80386.67.00-67.7F.zip">
             <Link>80386.67.00-67.7F.zip</Link>
             <LogicalName>80386.67.00-67.7F.zip</LogicalName>
+            <WithCulture>false</WithCulture>
         </EmbeddedResource>
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.67.80-67.ff/2025.11.5/content/tests/80386.67.80-67.FF.zip">
             <Link>80386.67.80-67.FF.zip</Link>
             <LogicalName>80386.67.80-67.FF.zip</LogicalName>
+            <WithCulture>false</WithCulture>
         </EmbeddedResource>
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.68-ff/2025.11.5/content/tests/80386.68-FF.zip">
             <Link>80386.68-FF.zip</Link>
             <LogicalName>80386.68-FF.zip</LogicalName>
+            <WithCulture>false</WithCulture>
         </EmbeddedResource>
     </ItemGroup>
 </Project>

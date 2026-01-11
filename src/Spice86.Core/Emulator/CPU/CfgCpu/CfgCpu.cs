@@ -101,7 +101,7 @@ public class CfgCpu : IFunctionHandlerProvider {
         // Before any external interrupt has a chance to execute, check if we landed in a place where context should be switched.
         if (toExecute.CanCauseContextRestore) {
             // We only attempt to restore contexts after IRET
-            // Otherwise, we may hit via regular flow an instruction that is at the return address of an existing IRET and that is waiting to be restored, and restore it. 
+            // Otherwise, we may hit via regular flow an instruction that is at the return address of an existing IRET and that is waiting to be restored, and restore it.
             _executionContextManager.RestoreExecutionContextIfNeeded(_state.IpSegmentedAddress);
         }
 
@@ -124,5 +124,14 @@ public class CfgCpu : IFunctionHandlerProvider {
 
         _executionContextManager.SignalNewExecutionContext(target, expectedReturn);
         _executionContextManager.CurrentExecutionContext.FunctionHandler.Call(CallType.EXTERNAL_INTERRUPT, _state.IpSegmentedAddress, expectedReturn, null);
+    }
+
+    /// <summary>
+    /// Clears all internal state of the CPU, including instruction caches.
+    /// This should be called between tests to ensure a clean state.
+    /// </summary>
+    public void Clear() {
+        CfgNodeFeeder.InstructionsFeeder.Clear();
+        _executionContextManager.Clear();
     }
 }
