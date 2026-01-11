@@ -1137,6 +1137,43 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// INT 21h, AH=4Bh - EXEC: Load and/or Execute Program.
+    /// <para>
+    /// <b>Call with:</b><br/>
+    /// AH = 4Bh<br/>
+    /// AL = 00h (Load and Execute), 01h (Load Only), 03h (Load Overlay)<br/>
+    /// DS:DX = ASCIIZ program path<br/>
+    /// ES:BX = parameter block
+    /// </para>
+    /// <para>
+    /// <b>Parameter Block (AL=00h/01h):</b><br/>
+    /// +00h WORD environment segment (0=inherit)<br/>
+    /// +02h DWORD command tail pointer<br/>
+    /// +06h DWORD FCB1 pointer<br/>
+    /// +0Ah DWORD FCB2 pointer<br/>
+    /// AL=01h returns: +0Eh SS, +10h SP, +12h CS, +14h IP
+    /// </para>
+    /// <para>
+    /// <b>Parameter Block (AL=03h):</b><br/>
+    /// +00h WORD load segment<br/>
+    /// +02h WORD relocation factor
+    /// </para>
+    /// <para>
+    /// <b>Returns:</b><br/>
+    /// CF=0: success (AL=00h: child terminated; AL=01h: param block filled; AL=03h: AX=DX=0)<br/>
+    /// CF=1: error (AX=02h file not found, 05h access denied, 08h insufficient memory, 0Bh invalid format)
+    /// </para>
+    /// <para>
+    /// <b>Behavior:</b><br/>
+    /// AL=00h: Creates child PSP, loads EXE/COM, executes, returns when child terminates via INT 21h/4Ch<br/>
+    /// AL=01h: Creates child PSP, loads program, fills param block with CS:IP/SS:SP, returns immediately without execution<br/>
+    /// AL=03h: Loads EXE overlay at specified segment with relocation, no PSP creation or execution<br/>
+    /// Child PSP inherits file handles (except DoNotInherit/Private), environment, parent's termination address from caller's CS:IP on stack<br/>
+    /// EXE: loads at PSP+10h, applies relocations, sets CS:IP/SS:SP from header<br/>
+    /// COM: loads at PSP:0100h, sets CS=DS=ES=SS=PSP, IP=0100h, SP=FFFEh<br/>
+    /// FCB pointers 0000:0000 and FFFF:FFFF treated as null<br/>
+    /// AX/BX return FCB validity code (00FFh=FCB1 invalid, FF00h=FCB2 invalid, 0000h=both valid)<br/>
+    /// Parent SS:SP saved; on child termination, restores parent context via modified interrupt frame and IRET to INT 22h vector
+    /// </para>
     /// </summary>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void LoadAndOrExecute(bool calledFromVm) {
