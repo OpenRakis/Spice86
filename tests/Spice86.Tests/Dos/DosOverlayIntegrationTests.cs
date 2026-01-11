@@ -54,7 +54,7 @@ public class DosOverlayIntegrationTests {
             // Parameter block structure for AL=03h:
             // +00h WORD load segment (0x3000)
             // +02h WORD relocation factor (0x3000)
-            0xBE, 0x60, 0x01,       // mov si, 0x160 - point to param block (at 0x60 in code)
+            0xBE, 0x60, 0x00,       // mov si, 0x0060 - point to param block (at offset 0x60 in code)
             
             // Setup filename pointer at DS:DX
             0xBA, 0x64, 0x01,       // mov dx, 0x164 - points to filename (at 0x64 in code)
@@ -62,6 +62,13 @@ public class DosOverlayIntegrationTests {
             // Call INT 21h AH=4Bh AL=03h (Load Overlay)
             0xB8, 0x03, 0x4B,       // mov ax, 4B03h - EXEC Load Overlay
             0xCD, 0x21,             // int 21h
+            
+            // Output AX to details port for debugging
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+            0xEE,                   // out dx, al
+            0x88, 0xE0,             // mov al, ah
+            0xEE,                   // out dx, al
+            
             0x72, 0x1A,             // jc failed (carry set = error)
             
             // Verify AX=0 and DX=0 on success (DOS convention for overlay load)
@@ -94,8 +101,7 @@ public class DosOverlayIntegrationTests {
             0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
             0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
             0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
-            0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
-            0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+            0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
             
             // Parameter block at offset 0x60 (relative to PSP:0x100 = absolute 0x160)
             // +00h WORD load segment
@@ -109,6 +115,11 @@ public class DosOverlayIntegrationTests {
         };
 
         OverlayTestHandler testHandler = RunOverlayTest(program, testDir);
+
+        // Log the details for debugging
+        if (testHandler.Details.Count >= 2) {
+            Console.WriteLine($"DOS Error Code: AX={testHandler.Details[1]:X2}{testHandler.Details[0]:X2}");
+        }
 
         testHandler.Results.Should().Contain((byte)TestResult.Success);
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
@@ -349,7 +360,8 @@ public class DosOverlayIntegrationTests {
             recordData: false,
             maxCycles: 200000L,
             installInterruptVectors: true,
-            enableA20Gate: true
+            enableA20Gate: true,
+            cDrive: workingDirectory  // Set the C: drive to our test directory
         ).Create();
 
         OverlayTestHandler testHandler = new(
@@ -365,6 +377,7 @@ public class DosOverlayIntegrationTests {
 
     private class OverlayTestHandler : DefaultIOPortHandler {
         public List<byte> Results { get; } = new();
+        public List<byte> Details { get; } = new();
 
         public OverlayTestHandler(State state, ILoggerService loggerService,
             IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
@@ -375,6 +388,8 @@ public class DosOverlayIntegrationTests {
         public override void WriteByte(ushort port, byte value) {
             if (port == ResultPort) {
                 Results.Add(value);
+            } else if (port == DetailsPort) {
+                Details.Add(value);
             }
         }
     }
