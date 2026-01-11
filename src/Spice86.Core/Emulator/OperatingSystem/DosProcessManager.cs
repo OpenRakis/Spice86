@@ -742,7 +742,7 @@ public class DosProcessManager {
     /// <param name="paramBlock">The EXEC parameter block containing FCB pointers and initial register outputs.</param>
     /// <param name="commandTail">The command tail passed to the child process.</param>
     /// <param name="loadType">Whether to load-only or load-and-execute.</param>
-    /// <param name="environmentSegment">Optional environment block to inherit; 0 clones the parent’s environment.</param>
+    /// <param name="environmentSegment">Optional environment block to inherit; 0 clones the parent's environment.</param>
     /// <param name="interruptVectorTable">The IVT used to seed and restore INT 22h/23h/24h in the new PSP.</param>
     /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
@@ -791,20 +791,69 @@ public class DosProcessManager {
         // This captures the parent's stack context before the child modifies anything
         uint parentStackPointer = ((uint)_state.SS << 16) | _state.SP;
 
+        // Allocate environment block FIRST before allocating program memory, as we might decide to take ALL the remaining free memory
+        DosMemoryControlBlock? envBlock = null;
+        if (environmentSegment == 0) {
+            // Need to allocate a new environment block
+            DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
+            ushort sourceEnvironmentSegment = parentPsp.EnvironmentTableSegment;
+            
+            byte[] environmentBlock;
+            if (sourceEnvironmentSegment != 0) {
+                environmentBlock = CreateEnvironmentBlockFromParent(sourceEnvironmentSegment, hostPath);
+            } else {
+                environmentBlock = CreateEnvironmentBlock(hostPath);
+            }
+            
+            int bytesToAllocate = environmentBlock.Length + EnvironmentKeepFreeBytes;
+            ushort envParagraphsNeeded = CalculateParagraphsNeeded(bytesToAllocate);
+            
+            envBlock = _memoryManager.AllocateMemoryBlock(envParagraphsNeeded);
+            if (envBlock == null) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("EXEC: Failed to allocate environment block of {Size} paragraphs", envParagraphsNeeded);
+                }
+                return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
+            }
+            
+            _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
+            envBlock.Owner = BuildMcbOwnerName(hostPath);
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("EXEC: Allocated environment block at {EnvSeg:X4}, size={Size} paragraphs",
+                    envBlock.DataBlockSegment, envBlock.Size);
+            }
+        }
+
         // Try to load as EXE first if it looks like an EXE file
         if (isExeCandidate) {
             DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
             if (exeFile.IsValid) {
                 DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
                 if (block is null) {
+                    // Free the environment block we just allocated
+                    if (envBlock is not null) {
+                        _memoryManager.FreeMemoryBlock(envBlock);
+                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                            _loggerService.Warning("EXEC: Failed to allocate EXE memory, freed environment block at {EnvSeg:X4}",
+                                envBlock.DataBlockSegment);
+                        }
+                    }
                     return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
                 }
 
                 // Mark the MCB with the owning PSP segment and label for diagnostics, matching DOS 4+ owner naming.
                 block.PspSegment = block.DataBlockSegment;
                 block.Owner = BuildMcbOwnerName(hostPath);
+                
+                // Set environment block ownership to the child PSP
+                if (envBlock is not null) {
+                    envBlock.PspSegment = block.DataBlockSegment;
+                }
 
-                InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, isLoadAndExecute);
+                // Use the pre-allocated environment segment or 0 if caller provided one
+                ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
+                InitializePsp(block.DataBlockSegment, hostPath, commandTail, finalEnvironmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, isLoadAndExecute);
 
                 DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
                 CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
@@ -860,13 +909,29 @@ public class DosProcessManager {
         ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
         DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
         if (comBlock is null) {
+            //Free the environment block we just allocated
+            if (envBlock is not null) {
+                _memoryManager.FreeMemoryBlock(envBlock);
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("EXEC: Failed to allocate COM memory, freed environment block at {EnvSeg:X4}",
+                        envBlock.DataBlockSegment);
+                }
+            }
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
 
         // Align MCB ownership with the child PSP rather than the parent loader.
         comBlock.PspSegment = comBlock.DataBlockSegment;
         comBlock.Owner = BuildMcbOwnerName(hostPath);
-        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, isLoadAndExecute);
+        
+        // Set environment block ownership to the child PSP
+        if (envBlock is not null) {
+            envBlock.PspSegment = comBlock.DataBlockSegment;
+        }
+        
+        // Use the pre-allocated environment segment or 0 if caller provided one
+        ushort comFinalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
+        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, comFinalEnvironmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, isLoadAndExecute);
 
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
@@ -997,7 +1062,7 @@ public class DosProcessManager {
     /// <param name="pspSegment">Target segment for the PSP.</param>
     /// <param name="programHostPath">Host path of the program being loaded.</param>
     /// <param name="arguments">Raw command tail text to embed.</param>
-    /// <param name="environmentSegment">Optional environment segment to use instead of cloning the parent.</param>
+    /// <param name="environmentSegment">Environment segment to use (0 means none provided, will not allocate).</param>
     /// <param name="interruptVectorTable">The IVT for reading INT 22h/23h/24h handlers.</param>
     /// <param name="parentPspSegment">Segment of the parent PSP.</param>
     /// <param name="parentStackPointer">Saved SS:SP of the parent encoded as a 32-bit value.</param>
@@ -1063,7 +1128,7 @@ public class DosProcessManager {
 
         psp.DosCommandTail.Command = DosCommandTail.PrepareCommandlineString(arguments);
 
-        // Always clone the environment into a fresh block (FreeDOS ChildEnv behavior).
+        // Assign the environment segment (already allocated by caller, or parent's environment if 0)
         SetupEnvironmentForProcess(programHostPath, environmentSegment, psp, parentPsp);
 
         _fileManager.SetDiskTransferAreaAddress(
@@ -1071,17 +1136,18 @@ public class DosProcessManager {
     }
 
     /// <summary>
-    /// Allocates and assigns an environment block to the PSP, cloning the parent block or generating a fresh block and recording ownership for memory tracking.
+    /// Assigns an environment block to the PSP. If environmentSegment is not 0, uses that segment directly.
+    /// Otherwise, inherits the parent's environment segment without allocating a new block.
     /// </summary>
     /// <param name="programHostPath">Host path of the program whose path is appended after environment strings.</param>
-    /// <param name="environmentSegment">Optional segment of an existing environment to reuse; zero clones the parent.</param>
+    /// <param name="environmentSegment">Segment of an existing environment to use; zero inherits parent's segment directly.</param>
     /// <param name="psp">The child PSP receiving the environment pointer.</param>
-    /// <param name="parentPsp">Parent PSP used when cloning or resolving default environment.</param>
+    /// <param name="parentPsp">Parent PSP used when resolving default environment.</param>
     private void SetupEnvironmentForProcess(string programHostPath,
         ushort environmentSegment, DosProgramSegmentPrefix psp,
         DosProgramSegmentPrefix parentPsp) {
         if (environmentSegment != 0) {
-            // Caller supplied an environment; use it directly and mark ownership if possible.
+            // Caller supplied an environment segment (already allocated); use it directly and mark ownership.
             psp.EnvironmentTableSegment = environmentSegment;
             ushort mcbSegment = (ushort)(environmentSegment - 1);
             DosMemoryControlBlock existing = new(_memory, MemoryUtils.ToPhysicalAddress(mcbSegment, 0));
@@ -1091,29 +1157,9 @@ public class DosProcessManager {
             return;
         }
 
+        // No environment provided, inherit parent's environment segment directly (no allocation)
         ushort sourceEnvironmentSegment = parentPsp.EnvironmentTableSegment;
-
-        byte[] environmentBlock;
-        if (sourceEnvironmentSegment != 0) {
-            environmentBlock = CreateEnvironmentBlockFromParent(sourceEnvironmentSegment, programHostPath);
-        } else {
-            environmentBlock = CreateEnvironmentBlock(programHostPath);
-        }
-
-        // FreeDOS ChildEnv always keeps ENV_KEEPFREE bytes reserved for argv[0] and future strings.
-        int bytesToAllocate = environmentBlock.Length + EnvironmentKeepFreeBytes;
-
-        ushort paragraphsNeeded = CalculateParagraphsNeeded(bytesToAllocate);
-        DosMemoryControlBlock? envBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
-
-        if (envBlock != null) {
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
-            psp.EnvironmentTableSegment = envBlock.DataBlockSegment;
-            envBlock.Owner = BuildMcbOwnerName(programHostPath);
-        }else {
-            //FIXME...
-            //throw new UnrecoverableException("Could not allocate MCB for the PSP environment block!");
-        }
+        psp.EnvironmentTableSegment = sourceEnvironmentSegment;
     }
 
     /// <summary>
