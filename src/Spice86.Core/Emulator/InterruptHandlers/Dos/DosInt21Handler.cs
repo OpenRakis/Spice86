@@ -954,7 +954,7 @@ public class DosInt21Handler : InterruptHandler {
                 paragraphsToKeep, errorCode);
         }
 
-        _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR, _interruptVectorTable);
+        _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR);
     }
 
     /// <summary>
@@ -1159,7 +1159,7 @@ public class DosInt21Handler : InterruptHandler {
             uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(paramBlock.CommandTailSegment, paramBlock.CommandTailOffset);
             DosCommandTail cmdTail = new(Memory, cmdTailAddress);
             string commandTail = cmdTail.Length > 0 ? cmdTail.Command.TrimEnd('\r') : string.Empty;
-            result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail, loadType, paramBlock.EnvironmentSegment, _interruptVectorTable);
+            result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail, loadType, paramBlock.EnvironmentSegment);
         }
         HandleDosExecResult(calledFromVm, result);
     }
@@ -1188,13 +1188,13 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     public DosExecResult LoadOnly(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
-        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadOnly, paramBlock.EnvironmentSegment, _interruptVectorTable);
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadOnly, paramBlock.EnvironmentSegment);
         HandleDosExecResult(calledFromVm: true, result);
         return result;
     }
 
     public DosExecResult LoadAndExecute(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
-        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadAndExecute, paramBlock.EnvironmentSegment, _interruptVectorTable);
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadAndExecute, paramBlock.EnvironmentSegment);
         HandleDosExecResult(calledFromVm: true, result);
         return result;
     }
@@ -1287,10 +1287,7 @@ public class DosInt21Handler : InterruptHandler {
         } else if (LoggerService.IsEnabled(LogEventLevel.Information)) {
             LoggerService.Information("INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2}", exitCode);
         }
-        _dosProcessManager.TerminateProcess(
-            exitCode,
-            terminationType,
-            _interruptVectorTable);
+        _dosProcessManager.TerminateProcess(exitCode, terminationType);
     }
 
     /// <summary>
@@ -1317,7 +1314,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("CREATE NEW PSP at segment {Segment:X4}", newPspSegment);
         }
 
-        _dosProcessManager.CreateNewPsp(newPspSegment, _interruptVectorTable);
+        _dosProcessManager.CreateNewPsp(newPspSegment);
     }
 
     /// <summary>

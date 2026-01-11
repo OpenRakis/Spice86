@@ -62,8 +62,7 @@ public class DosProcessManagerTests {
                 parameterBlock,
                 string.Empty,
                 DosExecLoadType.LoadOnly,
-                environmentSegment: 0,
-                context.InterruptVectorTable);
+                environmentSegment: 0);
 
             result.Success.Should().BeTrue();
             ushort childSegment = result.InitialCS;
@@ -97,8 +96,7 @@ public class DosProcessManagerTests {
                 parameterBlock,
                 string.Empty,
                 DosExecLoadType.LoadOnly,
-                environmentSegment: 0,
-                context.InterruptVectorTable);
+                environmentSegment: 0);
 
             result.Success.Should().BeTrue();
             rootPsp.StackPointer.Should().Be(0x12345678);
@@ -120,8 +118,7 @@ public class DosProcessManagerTests {
                 parameterBlock,
                 string.Empty,
                 DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0,
-                context.InterruptVectorTable);
+                environmentSegment: 0);
 
             parentExec.Success.Should().BeTrue();
             ushort parentSegment = context.Tracker.GetCurrentPspSegment();
@@ -136,15 +133,14 @@ public class DosProcessManagerTests {
                 parameterBlock,
                 string.Empty,
                 DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0,
-                context.InterruptVectorTable);
+                environmentSegment: 0);
 
             childExec.Success.Should().BeTrue();
 
             context.State.SS = 0x3333;
             context.State.SP = 0x0100;
 
-            context.ProcessManager.TerminateProcess(0, DosTerminationType.Normal, context.InterruptVectorTable);
+            context.ProcessManager.TerminateProcess(0, DosTerminationType.Normal);
 
             context.State.SS.Should().Be(0x2222);
             context.State.SP.Should().Be(0x0FF0);
@@ -176,8 +172,7 @@ public class DosProcessManagerTests {
                 parameterBlock,
                 string.Empty,
                 DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0,
-                context.InterruptVectorTable);
+                environmentSegment: 0);
 
             execResult.Success.Should().BeTrue();
 
@@ -206,8 +201,7 @@ public class DosProcessManagerTests {
                 parameterBlock,
                 string.Empty,
                 DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0,
-                context.InterruptVectorTable);
+                environmentSegment: 0);
 
             execResult.Success.Should().BeTrue();
 
@@ -228,7 +222,7 @@ public class DosProcessManagerTests {
             resizeResult.Should().Be(DosErrorCode.NoError);
             resizedBlock.Size.Should().Be(requestedResidentSize);
 
-            context.ProcessManager.TerminateProcess(0, DosTerminationType.TSR, context.InterruptVectorTable);
+            context.ProcessManager.TerminateProcess(0, DosTerminationType.TSR);
 
             environmentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(environmentSegment - 1), 0));
             environmentBlock.IsFree.Should().BeTrue("TSR termination should free the child environment block");
@@ -251,8 +245,7 @@ public class DosProcessManagerTests {
                 parameterBlock,
                 string.Empty,
                 DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0,
-                context.InterruptVectorTable);
+                environmentSegment: 0);
 
             execResult.Success.Should().BeTrue();
 
@@ -268,7 +261,7 @@ public class DosProcessManagerTests {
             resizeResult.Should().Be(DosErrorCode.NoError);
             context.ProcessManager.TrackResidentBlock(tsrSegment, resizedBlock);
 
-            context.ProcessManager.TerminateProcess(0x00, DosTerminationType.TSR, context.InterruptVectorTable);
+            context.ProcessManager.TerminateProcess(0x00, DosTerminationType.TSR);
 
             DosMemoryControlBlock residentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(tsrSegment - 1), 0));
             residentBlock.Size.Should().Be(paragraphsToKeep);
@@ -306,8 +299,7 @@ public class DosProcessManagerTests {
                 parameterBlock,
                 string.Empty,
                 DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0,
-                context.InterruptVectorTable);
+                environmentSegment: 0);
 
             execResult.Success.Should().BeTrue();
 
@@ -342,8 +334,7 @@ public class DosProcessManagerTests {
                 parameterBlock,
                 string.Empty,
                 DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0,
-                context.InterruptVectorTable);
+                environmentSegment: 0);
 
             execResult.Success.Should().BeTrue();
 
@@ -409,8 +400,7 @@ public class DosProcessManagerTests {
                 parameterBlock,
                 string.Empty,
                 DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0,
-                context.InterruptVectorTable);
+                environmentSegment: 0);
 
             execResult.Success.Should().BeTrue("EXEC should provide {0} paragraphs for the child process", desiredMinimumParagraphs);
         } finally {
@@ -449,7 +439,7 @@ public class DosProcessManagerTests {
             interruptVectorTable,
             loggerService);
 
-        return new DosProcessManagerTestContext(memory, processManager, tracker, interruptVectorTable, state, memoryManager);
+        return new DosProcessManagerTestContext(memory, processManager, tracker, state, memoryManager);
     }
 
     private static DosProgramSegmentPrefix GetRootPsp(DosProcessManagerTestContext context) {
@@ -629,11 +619,10 @@ public class DosProcessManagerTests {
 
     private sealed class DosProcessManagerTestContext {
         public DosProcessManagerTestContext(Memory memory, DosProcessManager processManager,
-            DosProgramSegmentPrefixTracker tracker, InterruptVectorTable interruptVectorTable, State state, DosMemoryManager memoryManager) {
+            DosProgramSegmentPrefixTracker tracker, State state, DosMemoryManager memoryManager) {
             Memory = memory;
             ProcessManager = processManager;
             Tracker = tracker;
-            InterruptVectorTable = interruptVectorTable;
             State = state;
             MemoryManager = memoryManager;
         }
@@ -641,7 +630,6 @@ public class DosProcessManagerTests {
         public Memory Memory { get; }
         public DosProcessManager ProcessManager { get; }
         public DosProgramSegmentPrefixTracker Tracker { get; }
-        public InterruptVectorTable InterruptVectorTable { get; }
         public State State { get; }
         public DosMemoryManager MemoryManager { get; }
     }
