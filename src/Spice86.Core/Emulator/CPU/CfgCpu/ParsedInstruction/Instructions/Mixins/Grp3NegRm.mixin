@@ -37,7 +37,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         // RM = Sub(0, RM) then CarryFlag = (RM != 0)
         ValueNode rmNode = builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext);
         ValueNode zeroNode = builder.Constant.ToNode(({{Type}})0);
-        MethodCallValueNode subCall = new MethodCallValueNode(builder.UType({{Size}}), "Alu{{Size}}", "Sub", zeroNode, rmNode);
+        MethodCallValueNode subCall = builder.AluCall(builder.UType({{Size}}), {{Size}}, "Sub", zeroNode, rmNode);
         BinaryOperationNode assignment = builder.Assign(builder.UType({{Size}}), rmNode, subCall);
 
         // CarryFlag = (value != 0) after assignment

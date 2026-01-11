@@ -40,7 +40,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<{{Type}}>
         // {{if Assign}}ACC = {{end}}{{Operation}}(ACC, IMM)
         ValueNode accNode = builder.Register.Accumulator(builder.UType({{Size}}));
         ValueNode immNode = builder.InstructionField.ToNode(ValueField);
-        MethodCallValueNode aluCall = new MethodCallValueNode(builder.UType({{Size}}), "Alu{{Size}}", "{{Operation}}", accNode, immNode);
+        MethodCallValueNode aluCall = builder.AluCall(builder.UType({{Size}}), {{Size}}, "{{Operation}}", accNode, immNode);
         IVisitableAstNode instructionLogic = builder.ConditionalAssign(builder.UType({{Size}}), accNode, aluCall, {{Assign}});
         return builder.WithIpAdvancement(this, instructionLogic);
     }

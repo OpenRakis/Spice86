@@ -27,6 +27,10 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
 
     private readonly RegisterRenderer _registerRenderer = new();
 
+    // Stack of variable scopes for nested blocks
+    // Each scope is a dictionary mapping variable names to their ParameterExpressions
+    private readonly Stack<Dictionary<string, ParameterExpression>> _variableScopes = new();
+
     public AstExpressionBuilder() {
         _allParameters = [_stateParameter, _memoryParameter];
         _allParametersWithHelper = [_helperParameter, _stateParameter, _memoryParameter];
@@ -40,6 +44,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             BitWidth.BYTE_8 => dataType.Signed ? typeof(sbyte) : typeof(byte),
             BitWidth.WORD_16 => dataType.Signed ? typeof(short) : typeof(ushort),
             BitWidth.DWORD_32 => dataType.Signed ? typeof(int) : typeof(uint),
+            BitWidth.QWORD_64 => dataType.Signed ? typeof(long) : typeof(ulong),
             _ => throw new UnsupportedBitWidthException(dataType.BitWidth)
         };
     }
@@ -449,10 +454,95 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression VisitBlockNode(BlockNode node) {
-        List<Expression> expressions = new();
-        foreach (IVisitableAstNode statement in node.Statements) {
-            expressions.Add(statement.Accept(this));
+        // Push a new scope for this block
+        Dictionary<string, ParameterExpression> blockScope = new();
+        _variableScopes.Push(blockScope);
+
+        try {
+            // Identify and register all VariableDeclarationNodes in this block
+            List<ParameterExpression> blockVariables = RegisterVariablesInScope(node.Statements, blockScope);
+
+            // Process all statements in order
+            List<Expression> expressions = new();
+            foreach (IVisitableAstNode statement in node.Statements) {
+                expressions.Add(statement.Accept(this));
+            }
+
+            return CreateBlockExpression(blockVariables, expressions);
+        } finally {
+            // Pop the scope when exiting the block
+            _variableScopes.Pop();
+        }
+    }
+
+    public Expression VisitIfElseNode(IfElseNode node) {
+        // Evaluate the condition
+        Expression condition = node.Condition.Accept(this);
+
+        // Ensure condition is boolean type
+        if (condition.Type != typeof(bool)) {
+            throw new InvalidOperationException(
+                $"If/else condition must be boolean, got {condition.Type.Name}");
+        }
+
+        // Generate the true and false blocks
+        Expression trueBlock = node.TrueCase.Accept(this);
+        Expression falseBlock = node.FalseCase.Accept(this);
+
+        // Create the conditional expression
+        return Expression.IfThenElse(condition, trueBlock, falseBlock);
+    }
+
+    private List<ParameterExpression> RegisterVariablesInScope(
+        IReadOnlyList<IVisitableAstNode> statements,
+        Dictionary<string, ParameterExpression> scope) {
+        List<ParameterExpression> variables = [];
+
+        foreach (IVisitableAstNode statement in statements) {
+            if (statement is VariableDeclarationNode varDecl) {
+                Type varType = FromDataType(varDecl.DataType);
+                ParameterExpression variable = Expression.Variable(varType, varDecl.VariableName);
+                // Register variable for block
+                scope[varDecl.VariableName] = variable;
+                variables.Add(variable);
+            }
+        }
+
+        return variables;
+    }
+
+    private static BlockExpression CreateBlockExpression(
+        List<ParameterExpression> variables,
+        List<Expression> expressions) {
+        if (variables.Count > 0) {
+            return Expression.Block(variables, expressions);
         }
         return Expression.Block(expressions);
+    }
+
+    public Expression VisitVariableReferenceNode(VariableReferenceNode node) {
+        // Search for the variable in the scope stack (innermost to outermost)
+        foreach (Dictionary<string, ParameterExpression> scope in _variableScopes) {
+            if (scope.TryGetValue(node.VariableName, out ParameterExpression? variable)) {
+                return variable;
+            }
+        }
+        throw new InvalidOperationException($"Variable '{node.VariableName}' not found in any scope");
+    }
+
+    public Expression VisitVariableDeclarationNode(VariableDeclarationNode node) {
+        // Get the variable from the current scope (top of stack)
+        if (_variableScopes.Count == 0) {
+            throw new InvalidOperationException($"Variable '{node.VariableName}' declared outside of any block");
+        }
+
+        Dictionary<string, ParameterExpression> currentScope = _variableScopes.Peek();
+        if (!currentScope.TryGetValue(node.VariableName, out ParameterExpression? variable)) {
+            throw new InvalidOperationException($"Variable '{node.VariableName}' was not pre-declared in current scope");
+        }
+
+        // Generate the initialization assignment: variable = initializer
+        Expression initializerExpr = node.Initializer.Accept(this);
+        return Expression.Assign(variable, initializerExpr);
     }
 }

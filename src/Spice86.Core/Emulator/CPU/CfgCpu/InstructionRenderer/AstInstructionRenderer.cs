@@ -239,12 +239,24 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         throw new NotSupportedException("BlockNode should not be rendered as assembly.");
     }
 
+    public string VisitIfElseNode(IfElseNode node) {
+        throw new NotSupportedException("IfElseNode should not be rendered as assembly.");
+    }
+
     public string VisitMethodCallValueNode(MethodCallValueNode node) {
         throw new NotSupportedException("MethodCallValueNode should not be rendered as assembly.");
     }
 
     public string VisitMoveIpNextNode(MoveIpNextNode node) {
         throw new NotSupportedException("MoveIpNextNode should not be rendered as assembly.");
+    }
+
+    public string VisitVariableReferenceNode(VariableReferenceNode node) {
+        throw new NotSupportedException("VariableReferenceNode should not be rendered as assembly.");
+    }
+
+    public string VisitVariableDeclarationNode(VariableDeclarationNode node) {
+        throw new NotSupportedException("VariableDeclarationNode should not be rendered as assembly.");
     }
 
     public string VisitCallNearNode(CallNearNode node) {

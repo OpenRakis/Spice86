@@ -32,7 +32,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
     public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
         // R = {{Operation}}(R)
         ValueNode regNode = builder.Register.Reg(builder.UType({{Size}}), RegisterIndex);
-        MethodCallValueNode aluCall = new MethodCallValueNode(builder.UType({{Size}}), "Alu{{Size}}", "{{Operation}}", regNode);
+        MethodCallValueNode aluCall = builder.AluCall(builder.UType({{Size}}), {{Size}}, "{{Operation}}", regNode);
         return builder.WithIpAdvancement(this, builder.Assign(builder.UType({{Size}}), regNode, aluCall));
     }
 }

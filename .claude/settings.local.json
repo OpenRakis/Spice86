@@ -5,7 +5,10 @@
       "Bash(grep:*)",
       "Bash(ls:*)",
       "Bash(Select-String -Pattern \"error|warning|succeeded\")",
-      "Bash(Select-Object -First 20)"
+      "Bash(Select-Object -First 20)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(dotnet clean:*)"
     ]
   }
 }

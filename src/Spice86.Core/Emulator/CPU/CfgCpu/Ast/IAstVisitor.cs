@@ -20,7 +20,10 @@ public interface IAstVisitor<T> {
     public T VisitMethodCallNode(MethodCallNode node);
     public T VisitMethodCallValueNode(MethodCallValueNode node);
     public T VisitBlockNode(BlockNode node);
+    public T VisitIfElseNode(IfElseNode node);
     public T VisitCpuFlagNode(CpuFlagNode node);
+    public T VisitVariableReferenceNode(VariableReferenceNode node);
+    public T VisitVariableDeclarationNode(VariableDeclarationNode node);
 
     // Control Flow
     public T VisitMoveIpNextNode(MoveIpNextNode node);

@@ -36,7 +36,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
     public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
         // {{if Assign}}RM = {{end}}{{Operation}}(RM, R)
         var (rNode, rmNode) = builder.ModRmOperands(builder.UType({{Size}}), ModRmContext);
-        MethodCallValueNode aluCall = new MethodCallValueNode(builder.UType({{Size}}), "Alu{{Size}}", "{{Operation}}", rmNode, rNode);
+        MethodCallValueNode aluCall = builder.AluCall(builder.UType({{Size}}), {{Size}}, "{{Operation}}", rmNode, rNode);
         IVisitableAstNode instructionLogic = builder.ConditionalAssign(builder.UType({{Size}}), rmNode, aluCall, {{Assign}});
         return builder.WithIpAdvancement(this, instructionLogic);
     }

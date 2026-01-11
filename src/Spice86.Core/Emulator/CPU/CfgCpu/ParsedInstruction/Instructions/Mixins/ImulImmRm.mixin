@@ -40,14 +40,15 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<{
     }
 
     public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
-        // R = (RmUnsignedType)Alu.Imul((signed)IMM, (signed)RM)
-        var (rNode, rmNode) = builder.ModRmOperands(builder.UType({{Size}}), ModRmContext);
-        ValueNode immNode = builder.InstructionField.ToNode(ValueField);
-        TypeConversionNode immSigned = builder.TypeConversion.ToSigned(immNode);
-        TypeConversionNode rmSigned = builder.TypeConversion.ToSigned(rmNode);
-        MethodCallValueNode imulCall = new MethodCallValueNode(builder.SType({{Size}} * 2), "Alu{{Size}}", "Imul", immSigned, rmSigned);
-        TypeConversionNode resultTruncated = builder.TypeConversion.Convert(builder.UType({{Size}}), imulCall);
-        IVisitableAstNode instructionLogic = builder.Assign(builder.UType({{Size}}), rNode, resultTruncated);
+        // R = (RmUnsignedType)Alu.Imul(IMM, (signed)RM)
+        // Note: IMM is already signed since ValueField is InstructionField<{{ImmSignedType}}>
+        DataType unsignedType = builder.UType({{Size}});
+        ValueNode rNode = builder.ModRm.RToNode(unsignedType, ModRmContext);
+        ValueNode immSigned = builder.InstructionField.ToNode(ValueField);
+        ValueNode rmSigned = builder.ModRm.RmToNodeSigned(unsignedType, ModRmContext);
+        MethodCallValueNode imulCall = builder.AluCall(builder.SType({{Size}} * 2), {{Size}}, "Imul", immSigned, rmSigned);
+        ValueNode resultTruncated = builder.TypeConversion.Convert(unsignedType, imulCall);
+        IVisitableAstNode instructionLogic = builder.Assign(unsignedType, rNode, resultTruncated);
         return builder.WithIpAdvancement(this, instructionLogic);
     }
 }

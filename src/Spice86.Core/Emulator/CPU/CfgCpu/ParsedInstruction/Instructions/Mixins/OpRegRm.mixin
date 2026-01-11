@@ -39,7 +39,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
     public override Spice86.Core.Emulator.CPU.CfgCpu.Ast.IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
         // {{if Assign}}R = {{end}}{{Operation}}(R, RM)
         var (rNode, rmNode) = builder.ModRmOperands(builder.UType({{Size}}), ModRmContext);
-        MethodCallValueNode aluCall = new MethodCallValueNode(builder.UType({{Size}}), "Alu{{Size}}", "{{Operation}}", rNode, rmNode);
+        MethodCallValueNode aluCall = builder.AluCall(builder.UType({{Size}}), {{Size}}, "{{Operation}}", rNode, rmNode);
         IVisitableAstNode instructionLogic = builder.ConditionalAssign(builder.UType({{Size}}), rNode, aluCall, {{Assign}});
         return builder.WithIpAdvancement(this, instructionLogic);
     }

@@ -35,7 +35,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         // RM = {{Operation}}(RM, {{if CountIsCl}}CL{{else}}1{{end}})
         ValueNode rmNode = builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext);
         ValueNode countNode = {{if CountIsCl}}builder.Register.Reg8(RegisterIndex.CxIndex){{else}}builder.Constant.ToNode(1){{end}};
-        MethodCallValueNode shiftCall = new MethodCallValueNode(builder.UType({{Size}}), "Alu{{Size}}", "{{Operation}}", rmNode, countNode);
+        MethodCallValueNode shiftCall = builder.AluCall(builder.UType({{Size}}), {{Size}}, "{{Operation}}", rmNode, countNode);
         IVisitableAstNode instructionLogic = builder.Assign(builder.UType({{Size}}), rmNode, shiftCall);
         return builder.WithIpAdvancement(this, instructionLogic);
     }

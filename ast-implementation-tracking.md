@@ -1,23 +1,24 @@
 # GenerateExecutionAst Implementation Tracking
 
-**Last Updated:** 2026-01-10
+**Last Updated:** 2026-01-11
 **Status:** Phase 1 Complete - Rolling out to remaining instructions
 
 ## Summary Statistics
 
 - **Total Instructions with MoveIpToEndOfInstruction:** 64 mixins + ~25 non-mixin files = ~89 total
-- **Implemented Mixins:** 22 (covering ~250 instruction variants)
-- **Remaining Mixins:** 42
+- **Implemented Mixins:** 26 (covering ~260 instruction variants)
+- **Remaining Mixins:** 38
 - **Implemented Non-Mixin:** 5
 - **Remaining Non-Mixin:** ~20
 - **Target:** All instructions should have GenerateExecutionAst before enabling AST execution
 
 **Recent Progress:**
+- Category D COMPLETE! All multiply/divide operations with register pairs
 - Category A COMPLETE! All ModRM ALU-like operations implemented
 - Category B COMPLETE! All shift/rotate operations including double-precision shifts
 - Move operations COMPLETE! All MOV variants including MOVSX/MOVZX
 - Simple type conversions: NOP, CBW, CWDE, CWD, CDQ
-- Added FlagAstBuilder helper for ergonomic flag operations
+- Added temporary variable infrastructure for splitting wide results
 
 ---
 
@@ -105,13 +106,13 @@ Specialized bit manipulation.
 - [ ] **BsrRm.mixin** - BSR (bit scan reverse)
 - [ ] **SetRmcc.mixin** - SETcc (set byte on condition)
 
-### Category D: Multiply/Divide (MEDIUM Priority)
-Complex ALU operations.
+### Category D: Multiply/Divide ✅ **COMPLETE**
+Complex ALU operations with register pairs.
 
-- [ ] **Grp3MulRmAcc.mixin** - MUL/IMUL RM
-- [ ] **Grp3DivRmAcc.mixin** - DIV/IDIV RM
-- [ ] **ImulRm.mixin** - IMUL R, RM
-- [ ] **ImulImmRm.mixin** - IMUL R, RM, IMM
+- ✅ **Grp3MulRmAcc.mixin** - MUL/IMUL RM - **COMPLETE**
+- ✅ **Grp3DivRmAcc.mixin** - DIV/IDIV RM - **COMPLETE**
+- ✅ **ImulRm.mixin** - IMUL R, RM - **COMPLETE** (from previous session)
+- ✅ **ImulImmRm.mixin** - IMUL R, RM, IMM - **COMPLETE** (from previous session)
 
 ### Category E: Stack Operations (MEDIUM Priority)
 Push/Pop instructions.
@@ -268,6 +269,51 @@ return builder.WithIpAdvancement(this, builder.Assign(dataType, operand, operati
 ValueNode destNode = builder.ModRm.RmToNode(dataType, modRmContext); // or builder.Register.Reg(dataType, registerIndex)
 ValueNode immNode = builder.InstructionField.ToNode(ValueField);
 return builder.WithIpAdvancement(this, builder.Assign(dataType, destNode, immNode));
+```
+
+**Pattern 5: Temporary Variables (MUL/DIV with register pair results)**
+```csharp
+// Declare a temporary variable to store intermediate result
+VariableDeclarationNode resultDecl = builder.DeclareVariable(wideType, "result", aluCall);
+VariableReferenceNode resultRef = builder.VariableReference(wideType, "result");
+
+// Use the result multiple times without duplicating the ALU call
+// Example: AH = (byte)(result >> 8), AL = (byte)result
+```
+
+### Infrastructure: Temporary Variable Support
+
+**Added in 2026-01-11** to support multiply/divide operations that need to split wide results across register pairs.
+
+**New AST Node Types:**
+- `VariableDeclarationNode` - Declares and initializes a local variable
+- `VariableReferenceNode` - References a previously declared variable
+
+**Scope Management:**
+- Variables are **properly scoped** to their declaring block (lexical scoping)
+- Supports **nested blocks** with inner scopes having access to outer scope variables
+- AstExpressionBuilder uses a **scope stack** (`Stack<Dictionary<string, ParameterExpression>>`)
+- Each block pushes a new scope on entry and pops it on exit (using try/finally)
+- Variable lookup searches from innermost to outermost scope
+- Variables are automatically cleaned up when exiting their declaring block
+
+**Usage Example:**
+```csharp
+// For MUL RM8: ushort result = Alu8.Mul(AL, RM8); AH = high byte; AL = low byte
+DataType wideType = builder.UType(16);
+MethodCallValueNode mulCall = new MethodCallValueNode(wideType, "Alu8", "Mul", alNode, rmNode);
+VariableDeclarationNode resultDecl = builder.DeclareVariable(wideType, "result", mulCall);
+VariableReferenceNode resultRef = builder.VariableReference(wideType, "result");
+
+// Extract high and low bytes
+BinaryOperationNode shiftRight = new BinaryOperationNode(wideType, resultRef,
+    BinaryOperation.RIGHT_SHIFT, builder.Constant.ToNode(8));
+TypeConversionNode highByte = builder.TypeConversion.Convert(builder.UType(8), shiftRight);
+TypeConversionNode lowByte = builder.TypeConversion.Convert(builder.UType(8), resultRef);
+BinaryOperationNode assignHigh = builder.Assign(builder.UType(8), ahNode, highByte);
+BinaryOperationNode assignLow = builder.Assign(builder.UType(8), alNode, lowByte);
+
+return builder.WithIpAdvancement(this, resultDecl, assignHigh, assignLow);
 ```
 
 ### Blockers & Special Cases

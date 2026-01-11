@@ -35,7 +35,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<{
         // And(RM, IMM) - flags only, no assignment
         ValueNode rmNode = builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext);
         ValueNode immNode = builder.InstructionField.ToNode(ValueField);
-        MethodCallValueNode andCall = new MethodCallValueNode(builder.UType({{Size}}), "Alu{{Size}}", "And", rmNode, immNode);
+        MethodCallValueNode andCall = builder.AluCall(builder.UType({{Size}}), {{Size}}, "And", rmNode, immNode);
         return builder.WithIpAdvancement(this, andCall);
     }
 }
