@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -742,7 +743,7 @@ public class DosProcessManager {
     /// <param name="commandTail">The command tail passed to the child process.</param>
     /// <param name="loadType">Whether to load-only or load-and-execute.</param>
     /// <param name="environmentSegment">Optional environment block to inherit; 0 clones the parent’s environment.</param>
-    /// <param name="interruptVectorTable">The IVT used to seed INT 22h/23h/24h in the new PSP.</param>
+    /// <param name="interruptVectorTable">The IVT used to seed and restore INT 22h/23h/24h in the new PSP.</param>
     /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment, InterruptVectorTable interruptVectorTable) {
@@ -803,7 +804,7 @@ public class DosProcessManager {
                 block.PspSegment = block.DataBlockSegment;
                 block.Owner = BuildMcbOwnerName(hostPath);
 
-                InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, block.Size, isLoadAndExecute);
+                InitializePsp(block.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, isLoadAndExecute);
 
                 DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
                 CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
@@ -865,7 +866,7 @@ public class DosProcessManager {
         // Align MCB ownership with the child PSP rather than the parent loader.
         comBlock.PspSegment = comBlock.DataBlockSegment;
         comBlock.Owner = BuildMcbOwnerName(hostPath);
-        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, comBlock.Size, isLoadAndExecute);
+        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, environmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, isLoadAndExecute);
 
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
@@ -1002,9 +1003,8 @@ public class DosProcessManager {
     /// <param name="parentStackPointer">Saved SS:SP of the parent encoded as a 32-bit value.</param>
     /// <param name="callerCS">Caller CS for INT 22h return address.</param>
     /// <param name="callerIP">Caller IP for INT 22h return address.</param>
-    /// <param name="allocatedBlockSizeInParagraphs">Total paragraphs reserved for the PSP and program image.</param>
     /// <param name="trackParentStackPointer">True when the child will execute immediately and the parent's stack pointer must be tracked for restoration.</param>
-    private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP, ushort allocatedBlockSizeInParagraphs, bool trackParentStackPointer) {
+    private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP, bool trackParentStackPointer) {
         ClearPspMemory(pspSegment);
         // Establish parent-child PSP relationship and create the new PSP
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
@@ -1110,6 +1110,9 @@ public class DosProcessManager {
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
             psp.EnvironmentTableSegment = envBlock.DataBlockSegment;
             envBlock.Owner = BuildMcbOwnerName(programHostPath);
+        }else {
+            //FIXME...
+            //throw new UnrecoverableException("Could not allocate MCB for the PSP environment block!");
         }
     }
 
