@@ -48,22 +48,11 @@ public class DosMemoryManager {
         _memory = memory;
 
         ushort pspSegment = _pspTracker.InitialPspSegment;
-        
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("DosMemoryManager init: InitialPspSegment={InitialPsp:X4}, PspCount={PspCount}",
-                pspSegment, _pspTracker.PspCount);
-        }
-        
         // The MCB starts 1 paragraph (16 bytes) before the 16 paragraph (256 bytes) PSP. Since
         // we're the memory manager, we're the one who needs to read the MCB, so we need to start
         // with its address by subtracting 1 paragraph from the PSP.
         ushort loadSegment = (ushort)(pspSegment - 1);
         _start = GetDosMemoryControlBlockFromSegment(loadSegment);
-
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("DosMemoryManager init: start MCB at segment {McbSegment:X4}, data block starts at {DataSegment:X4}",
-                loadSegment, (ushort)(pspSegment + 1));
-        }
         // LastFreeSegment and loadSegment are both valid segments that may be allocated, so we
         // need to add 1 paragraph to the result to ensure that our calculated size doesn't exclude
         // LastFreeSegment from being allocated. Some games do their own math to calculate the
@@ -75,21 +64,13 @@ public class DosMemoryManager {
         // Therefore subtract the size of the MCB (1 paragraph, which is 16 bytes) from the total
         // size to get the useable space that we can allocate.
         _start.Size = (ushort)(size - 1);
-        
-        _start.SetFree();
-        _start.SetLast();
-        
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information(
-                "DOS available memory: {ConventionalFree}KB - in paragraphs: {DosFreeParagraphs}",
-                _start.AllocationSizeInBytes / 1024, _start.Size);
-            _loggerService.Information(
-                "DosMemoryManager init: MCB chain: start segment={StartSeg:X4}, size={Size} paragraphs, end segment={EndSeg:X4}",
-                loadSegment, _start.Size, (ushort)(loadSegment + _start.Size));
-            _loggerService.Information(
-                "DosMemoryManager init: Initial MCB after setup: TypeField={Type}, Size={Size}, PSP={Psp:X4}, IsValid={Valid}, IsFree={Free}, IsLast={Last}",
-                _start.TypeField, _start.Size, _start.PspSegment, _start.IsValid, _start.IsFree, _start.IsLast);
+                "DOS available memory: {ConventionalFree} - in paragraphs: {DosFreeParagraphs}",
+                _start.AllocationSizeInBytes, _start.Size);
         }
+        _start.SetFree();
+        _start.SetLast();
     }
 
     /// <summary>
@@ -123,30 +104,19 @@ public class DosMemoryManager {
     /// <param name="requestedSizeInParagraphs">The requested size in paragraphs of the memory block.</param>
     /// <returns>The allocated <see cref="DosMemoryControlBlock"/> or <c>null</c> if no memory block could be found.</returns>
     public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSizeInParagraphs) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("AllocateMemoryBlock: requested {RequestedSize} paragraphs ({Bytes} bytes)",
-                requestedSizeInParagraphs, requestedSizeInParagraphs * 16);
-        }
-        
         IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSizeInParagraphs);
 
         // Select block based on allocation strategy
         DosMemoryControlBlock? blockOptional = SelectBlockByStrategy(candidates);
         if (blockOptional is null) {
             // Nothing found
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Error("Could not find any MCB to fit {RequestedSize} paragraphs", requestedSizeInParagraphs);
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("Could not find any MCB to fit {RequestedSize}", requestedSizeInParagraphs);
             }
             return null;
         }
 
         DosMemoryControlBlock block = blockOptional;
-        
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Selected MCB at segment {Seg:X4}, size={Size} paragraphs, will split to {RequestedSize}",
-                MemoryUtils.ToSegment(block.BaseAddress), block.Size, requestedSizeInParagraphs);
-        }
-        
         if (!SplitBlock(block, requestedSizeInParagraphs)) {
             // An issue occurred while splitting the block
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -156,12 +126,6 @@ public class DosMemoryManager {
         }
 
         block.PspSegment = _pspTracker.GetCurrentPspSegment();
-        
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Allocated MCB at segment {McbSeg:X4}, data at {DataSeg:X4}, size={Size} paragraphs, PSP={Psp:X4}",
-                MemoryUtils.ToSegment(block.BaseAddress), block.DataBlockSegment, block.Size, block.PspSegment);
-        }
-        
         return block;
     }
 
@@ -227,20 +191,10 @@ public class DosMemoryManager {
     /// <returns>Whether the operation was successful.</returns>
     public DosErrorCode TryModifyBlock(in ushort blockSegment, in ushort requestedSizeInParagraphs,
         out DosMemoryControlBlock block) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("TryModifyBlock: blockSegment={BlockSeg:X4}, requestedSize={Size} paragraphs",
-                blockSegment, requestedSizeInParagraphs);
-        }
-        
         block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
         if (!CheckValidOrLogError(block)) {
             block = this.FindLargestFree();
             return DosErrorCode.MemoryControlBlockDestroyed;
-        }
-
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Current MCB at {McbSeg:X4}: size={CurrentSize}, psp={Psp:X4}, free={IsFree}",
-                MemoryUtils.ToSegment(block.BaseAddress), block.Size, block.PspSegment, block.IsFree);
         }
 
         // Since the first thing we do is enlarge the block, we need to know the original size so
@@ -255,11 +209,6 @@ public class DosMemoryManager {
             }
             block = this.FindLargestFree();
             return DosErrorCode.InsufficientMemory;
-        }
-
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("After joining: MCB size={SizeAfterJoin}, requested={RequestedSize}",
-                block.Size, requestedSizeInParagraphs);
         }
 
         if (block.Size < requestedSizeInParagraphs) {
@@ -282,19 +231,9 @@ public class DosMemoryManager {
         }
 
         if (block.Size > requestedSizeInParagraphs) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Splitting block from {OldSize} to {NewSize} paragraphs",
-                    block.Size, requestedSizeInParagraphs);
-            }
             SplitBlock(block, requestedSizeInParagraphs);
         }
         block.PspSegment = _pspTracker.GetCurrentPspSegment();
-        
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Modified MCB at {McbSeg:X4} to size={Size} paragraphs, PSP={Psp:X4}",
-                MemoryUtils.ToSegment(block.BaseAddress), block.Size, block.PspSegment);
-        }
-        
         return DosErrorCode.NoError;
     }
 
@@ -327,17 +266,7 @@ public class DosMemoryManager {
     /// or <c>null</c> if no memory block was allocated.
     /// </returns>
     public DosMemoryControlBlock? ReserveSpaceForExe(DosExeFile exeFile, ushort pspSegment = 0) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("ReserveSpaceForExe: pspSegment={PspSeg:X4}, MinAlloc={MinAlloc}, MaxAlloc={MaxAlloc}, ProgramSize={ProgSize} paragraphs",
-                pspSegment, exeFile.MinAlloc, exeFile.MaxAlloc, exeFile.ProgramSizeInParagraphsPerHeader);
-        }
-        
         AllocRange size = CalculateSizeForExe(exeFile, pspSegment);
-
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Calculated allocation range: min={MinSize} paragraphs, max={MaxSize} paragraphs",
-                size.MinSizeInParagraphs, size.MaxSizeInParagraphs);
-        }
 
         // Since segment zero is well within the reserved space for interrupt vectors and BIOS data,
         // we use it as a sentinel to indicate that no specific segment address was requested, and
@@ -431,7 +360,7 @@ public class DosMemoryManager {
 
         ushort minSizeInParagraphs = (ushort)(baseSizeInParagraphs + exeFile.MinAlloc);
         ushort maxSizeInParagraphs = (ushort)(baseSizeInParagraphs + exeFile.MaxAlloc);
-        // Calculate maxSizeInParagraphs with overflow detection like FreeDOS
+        // Also calculate maxSizeInParagraphs with overflow detection like FreeDOS
         uint maxSizeWithOverflow = (uint)baseSizeInParagraphs + exeFile.MaxAlloc;
 
         // If both the minimum and maximum allocation fields in the EXE header are cleared, DOS will
