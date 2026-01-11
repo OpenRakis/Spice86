@@ -16,7 +16,11 @@ public class DosDoubleByteCharacterSet : MemoryBasedDataStructure {
     /// Size of the DBCS table in bytes.
     /// Allocates 12 paragraphs (192 bytes total).
     /// </summary>
-    public const int DbcsTableSize = 192; // 12 paragraphs * 16 bytes per paragraph
+    public const int DbcsTableSizeInBytes = 192;
+    /// <summary>
+    /// Represents the size of the DBCS table in paragraphs, where one paragraph is 16 bytes.
+    /// </summary>
+    public const int DbcsTableSizeInParagraphs = 192 / 16;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DosDoubleByteCharacterSet"/> class.
