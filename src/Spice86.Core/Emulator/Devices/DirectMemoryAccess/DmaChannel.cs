@@ -240,6 +240,17 @@ public sealed class DmaChannel {
                 nameof(destinationBuffer));
         }
 
+        // Check if channel is masked - masked channels cannot perform transfers
+        // Mirrors real DMA hardware behavior where masked channels block all transfers
+        if (IsMasked) {
+            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                _logger.Verbose(
+                    "DMA[{Channel}]: Read blocked - channel is masked",
+                    ChannelNumber);
+            }
+            return 0;
+        }
+
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose(
                 "DMA[{Channel}]: Read scheduled for {Words} words ({Bytes} bytes) into buffer length {BufferLength}",
@@ -260,6 +271,17 @@ public sealed class DmaChannel {
         if (sourceBuffer.Length < bytesRequested) {
             throw new ArgumentException($"Source buffer too small for DMA write of {bytesRequested} bytes.",
                 nameof(sourceBuffer));
+        }
+
+        // Check if channel is masked - masked channels cannot perform transfers
+        // Mirrors real DMA hardware behavior where masked channels block all transfers
+        if (IsMasked) {
+            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+                _logger.Verbose(
+                    "DMA[{Channel}]: Write blocked - channel is masked",
+                    ChannelNumber);
+            }
+            return 0;
         }
 
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
@@ -347,7 +369,7 @@ public sealed class DmaChannel {
         }
 
         unchecked {
-            // DMA math must not raise an OverFlowException to simulate the ISA hardare
+            // DMA math must not raise an OverFlowException to simulate the ISA hardware
             ushort want = (ushort)Math.Clamp(words, 0, ushort.MaxValue);
             ushort done = 0;
             CurrentAddress &= _wrappingMask;

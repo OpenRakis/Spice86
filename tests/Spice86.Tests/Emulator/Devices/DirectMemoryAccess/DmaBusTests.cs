@@ -72,6 +72,9 @@ public class DmaBusTests {
         system.WriteByte(0x01, 0x00);
         system.WriteByte(0x87, 0x00);
 
+        // Unmask the channel to allow transfers
+        system.WriteByte(0x0A, 0x00);
+
         memory[0] = 0xAA;
         memory[1] = 0xBB;
         memory[2] = 0xCC;
@@ -83,6 +86,68 @@ public class DmaBusTests {
         words.Should().Be(4);
         buffer.ToArray().Should().Equal(0xAA, 0xBB, 0xCC, 0xDD);
         channel.CurrentAddress.Should().Be(4);
+    }
+
+    [Fact]
+    public void Masked_channel_blocks_read_transfers() {
+        DmaBus system = CreateSystem(out Memory memory, out _, out _);
+        DmaChannel channel = system.GetChannel(0)!;
+
+        // Program address, count, and page registers for channel 0
+        system.WriteByte(0x0C, 0x00);
+        system.WriteByte(0x00, 0x00);
+        system.WriteByte(0x00, 0x00);
+        system.WriteByte(0x01, 0x03);
+        system.WriteByte(0x01, 0x00);
+        system.WriteByte(0x87, 0x00);
+
+        // Mask the channel (bit 2 = 1 means mask)
+        system.WriteByte(0x0A, 0x04);
+        channel.IsMasked.Should().BeTrue();
+
+        memory[0] = 0xAA;
+        memory[1] = 0xBB;
+        memory[2] = 0xCC;
+        memory[3] = 0xDD;
+
+        Span<byte> buffer = stackalloc byte[4];
+        int words = channel.Read(4, buffer);
+
+        // Masked channel should return 0 words transferred
+        words.Should().Be(0);
+        // Address should not advance
+        channel.CurrentAddress.Should().Be(0);
+    }
+
+    [Fact]
+    public void Masked_channel_blocks_write_transfers() {
+        DmaBus system = CreateSystem(out Memory memory, out _, out _);
+        DmaChannel channel = system.GetChannel(0)!;
+
+        // Program address, count, and page registers for channel 0
+        system.WriteByte(0x0C, 0x00);
+        system.WriteByte(0x00, 0x00);
+        system.WriteByte(0x00, 0x00);
+        system.WriteByte(0x01, 0x03);
+        system.WriteByte(0x01, 0x00);
+        system.WriteByte(0x87, 0x00);
+
+        // Mask the channel (bit 2 = 1 means mask)
+        system.WriteByte(0x0A, 0x04);
+        channel.IsMasked.Should().BeTrue();
+
+        ReadOnlySpan<byte> sourceBuffer = stackalloc byte[] { 0xAA, 0xBB, 0xCC, 0xDD };
+        int words = channel.Write(4, sourceBuffer);
+
+        // Masked channel should return 0 words transferred
+        words.Should().Be(0);
+        // Address should not advance
+        channel.CurrentAddress.Should().Be(0);
+        // Memory should remain unmodified
+        memory[0].Should().Be(0x00);
+        memory[1].Should().Be(0x00);
+        memory[2].Should().Be(0x00);
+        memory[3].Should().Be(0x00);
     }
 
     private static DmaBus CreateSystem(out Memory memory, out State state, out IOPortDispatcher dispatcher) {

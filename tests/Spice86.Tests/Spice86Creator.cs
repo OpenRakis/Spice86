@@ -16,7 +16,8 @@ public class Spice86Creator {
 
     public Spice86Creator(string binName, bool enablePit = false, bool recordData = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
-        bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null) {
+        bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, ushort? programEntryPointSegment = null,
+        bool verboseLogs = false) {
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
             CommandLineParser parser = new();
@@ -32,7 +33,8 @@ public class Spice86Creator {
             // when false: making sure int8 is not going to be triggered during the tests
             InitializeDOS = installInterruptVectors,
             ProvidedAsmHandlersSegment = 0xF000,
-            ProgramEntryPointSegment = 0x170, // Default from CLI, must be set explicitly for object initializer
+            // Default to 0x170 to avoid erasing IVT (0x0000-0x03FF), can be overridden
+            ProgramEntryPointSegment = programEntryPointSegment ?? 0x170,
             DumpDataOnExit = recordData,
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
@@ -45,6 +47,7 @@ public class Spice86Creator {
             OverrideSupplier = overrideSupplier,
             Xms = enableXms,
             Ems = enableEms,
+            VerboseLogs = verboseLogs,
         };
 
         _maxCycles = maxCycles;
