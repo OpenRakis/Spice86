@@ -164,7 +164,7 @@ public sealed class Dos {
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, InterruptVectorTable interruptVectorTable, ILoggerService loggerService,
         ExtendedMemoryManager? xms = null) {
-        _loggerService = loggerService;
+        _loggerService = loggerService;//.WithLogLevel(LogEventLevel.Verbose);
         Xms = xms;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
@@ -193,9 +193,14 @@ public sealed class Dos {
         CountryInfo = new();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, Devices);
-        DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, DosSwappableDataArea, loggerService);
+        DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, DosSwappableDataArea, _loggerService);
+
+        // Initialize memory manager first - it must know about the root COMMAND.COM reserved space
+        // Root PSP is at 0x60, environment at 0x68, so MCB chain starts after 0x6F
+        // This matches FreeDOS where DOS_PSP + 16 paragraphs is reserved
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
-        ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, interruptVectorTable, loggerService);
+
+        ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, interruptVectorTable, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, interruptVectorTable, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
@@ -274,12 +279,12 @@ public sealed class Dos {
         ushort index = (ushort)(offset.Value + 10); //10 bytes in our DosDeviceHeader structure.
         if (header.Attributes.HasFlag(DeviceAttributes.Character)) {
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
-                Encoding.ASCII.GetBytes( $"{device.Name,-8}"));
-        } else if(device is BlockDevice blockDevice) {
+                Encoding.ASCII.GetBytes($"{device.Name,-8}"));
+        } else if (device is BlockDevice blockDevice) {
             _memory.UInt8[segment.Value, index] = blockDevice.UnitCount;
             index++;
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
-                Encoding.ASCII.GetBytes($"{blockDevice.Signature, -7}"));
+                Encoding.ASCII.GetBytes($"{blockDevice.Signature,-7}"));
         }
 
         // Make the previous device point to this one
