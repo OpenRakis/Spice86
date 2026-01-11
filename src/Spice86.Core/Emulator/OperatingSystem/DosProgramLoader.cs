@@ -16,12 +16,12 @@ internal class DosProgramLoader : DosFileLoader {
     private readonly DosProcessManager _processManager;
     
     public DosProgramLoader(Configuration configuration, IMemory memory,
-        State state, DosInt21Handler int21Handler, DosProcessManager processManager,
+        State state, DosInt21Handler int21Handler,
         ILoggerService loggerService)
         : base(memory, state, loggerService) {
         _configuration = configuration;
         _int21 = int21Handler;
-        _processManager = processManager;
+        _processManager = int21Handler.ProcessManager;
     }
 
     public override byte[] LoadFile(string file, string? arguments) {

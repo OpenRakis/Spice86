@@ -85,7 +85,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Gets the DOS process manager for accessing process management functionality.
+    /// Gets the DOS process manager for the <see cref="DosProgramLoader"/>
     /// </summary>
     internal DosProcessManager ProcessManager => _dosProcessManager;
 

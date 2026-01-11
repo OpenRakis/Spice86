@@ -146,7 +146,7 @@ public sealed class ProgramExecutor : IDisposable {
         ExecutableFileLoader loader;
 
         if (isDosProgram) {
-            loader = new DosProgramLoader(configuration, memory, state, int21Handler, int21Handler.ProcessManager, _loggerService);
+            loader = new DosProgramLoader(configuration, memory, state, int21Handler, _loggerService);
         } else {
             loader = new BiosLoader(memory, state, _loggerService);
         }
