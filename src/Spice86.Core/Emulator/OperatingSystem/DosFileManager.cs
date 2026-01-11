@@ -23,6 +23,7 @@ using System.Text;
 /// </summary>
 public class DosFileManager {
     private const int ExtDeviceBit = 0x0200;
+    public const ushort MaxOpenFilesPerProcess = 0x14;
     private static readonly char[] _directoryChars = {
         DosPathResolver.DirectorySeparatorChar,
         DosPathResolver.AltDirectorySeparatorChar };
@@ -143,6 +144,14 @@ public class DosFileManager {
 
         return DosFileOperationResult.NoValue();
     }
+
+    /// <summary>
+    /// Attempts to duplicate an existing file handle for inheritance without exposing the new handle to callers.
+    /// Increments the underlying system file table reference count when successful.
+    /// </summary>
+    /// <param name="fileHandle">The original DOS handle.</param>
+    /// <returns>The new DOS handle or an error if duplication is not possible.</returns>
+    public DosFileOperationResult DuplicateHandleForChild(byte fileHandle) => DuplicateFileHandle(fileHandle);
 
     /// <summary>
     /// Creates a file and returns the handle to the file.
@@ -1225,5 +1234,37 @@ public class DosFileManager {
         }
 
         return dosPath;
+    }
+
+    /// <summary>
+    /// Closes all non-standard file handles (handles 5 and above) when a process terminates.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Standard file handles (0-4) are:
+    /// - 0: stdin
+    /// - 1: stdout
+    /// - 2: stderr
+    /// - 3: stdaux (auxiliary device)
+    /// - 4: stdprn (printer)
+    /// </para>
+    /// <para>
+    /// These are inherited from the parent and should not be closed when a child terminates.
+    /// Only handles 5 and above (user-opened files) are closed.
+    /// </para>
+    /// </remarks>
+    public void CloseAllNonStandardFileHandles() {
+        // Standard handles 0-4 are stdin, stdout, stderr, stdaux, stdprn
+        // These should not be closed when a process terminates
+        const ushort firstUserHandle = 5;
+
+        for (ushort handle = firstUserHandle; handle < OpenFiles.Length; handle++) {
+            if (OpenFiles[handle] is DosFile) {
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("Closing file handle {Handle} on process termination", handle);
+                }
+                CloseFileOrDevice(handle);
+            }
+        }
     }
 }
