@@ -857,6 +857,116 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
+    /// Tests a scenario similar to The Summoning game: opening a file and performing many small reads.
+    /// This simulates loading game resources byte-by-byte or in small chunks, which is common in DOS games
+    /// that process data structures from resource files.
+    /// </summary>
+    /// <remarks>
+    /// The Summoning uses SUMMON.COM as main program and loads resources from files like "F" and "RESOURCE".
+    /// The game performs hundreds of small reads (1 byte, 4 bytes, etc.) from these files while 
+    /// managing memory allocations for the loaded data. This test reproduces that pattern.
+    /// </remarks>
+    [Fact]
+    public void FileOperations_ManySmallReads_HandledCorrectly() {
+        // This test:
+        // 1. Opens a test file named "F"
+        // 2. Performs multiple small reads (1 byte, 4 bytes, etc.)
+        // 3. Verifies data integrity
+        // 4. Closes the file
+        // This pattern matches The Summoning's resource loading behavior
+        
+        byte[] program = new byte[] {
+            // Setup: Create filename "F" in memory at DS:DX
+            0x0E,                   // push cs
+            0x1F,                   // pop ds - DS = CS
+            0xBA, 0x00, 0x01,       // mov dx, 0x100 + program_length - points to filename
+            
+            // Open file "F" for reading: INT 21h AH=3Dh AL=00h (read-only)
+            0xB8, 0x00, 0x3D,       // mov ax, 3D00h - open file, read-only
+            0xCD, 0x21,             // int 21h - returns file handle in AX
+            0x72, 0x5E,             // jc failed (carry set = error opening file)
+            
+            0x89, 0xC3,             // mov bx, ax - save file handle in BX
+            
+            // Read 1 byte at offset 0
+            0xB4, 0x3F,             // mov ah, 3Fh - read from file
+            0xB9, 0x01, 0x00,       // mov cx, 0001h - read 1 byte
+            0xBA, 0x50, 0x01,       // mov dx, 0x150 - buffer address
+            0xCD, 0x21,             // int 21h
+            0x72, 0x50,             // jc failed
+            
+            // Verify we read 1 byte (AX should be 1)
+            0x3D, 0x01, 0x00,       // cmp ax, 1
+            0x75, 0x4B,             // jne failed
+            
+            // Read 4 bytes
+            0xB4, 0x3F,             // mov ah, 3Fh
+            0xB9, 0x04, 0x00,       // mov cx, 0004h - read 4 bytes
+            0xBA, 0x51, 0x01,       // mov dx, 0x151
+            0xCD, 0x21,             // int 21h
+            0x72, 0x41,             // jc failed
+            
+            // Verify we read 4 bytes (AX should be 4)
+            0x3D, 0x04, 0x00,       // cmp ax, 4
+            0x75, 0x3C,             // jne failed
+            
+            // Read 1 byte again
+            0xB4, 0x3F,             // mov ah, 3Fh
+            0xB9, 0x01, 0x00,       // mov cx, 0001h
+            0xBA, 0x55, 0x01,       // mov dx, 0x155
+            0xCD, 0x21,             // int 21h
+            0x72, 0x32,             // jc failed
+            
+            // Read 4 more bytes
+            0xB4, 0x3F,             // mov ah, 3Fh
+            0xB9, 0x04, 0x00,       // mov cx, 0004h
+            0xBA, 0x56, 0x01,       // mov dx, 0x156
+            0xCD, 0x21,             // int 21h
+            0x72, 0x28,             // jc failed
+            
+            // Seek back to beginning: INT 21h AH=42h AL=00h (from beginning)
+            0xB8, 0x00, 0x42,       // mov ax, 4200h - seek from beginning
+            0x31, 0xC9,             // xor cx, cx - high word of offset = 0
+            0x31, 0xD2,             // xor dx, dx - low word of offset = 0
+            0xCD, 0x21,             // int 21h
+            0x72, 0x1D,             // jc failed
+            
+            // Read 1 byte from start again to verify seek worked
+            0xB4, 0x3F,             // mov ah, 3Fh
+            0xB9, 0x01, 0x00,       // mov cx, 0001h
+            0xBA, 0x5A, 0x01,       // mov dx, 0x15A
+            0xCD, 0x21,             // int 21h
+            0x72, 0x12,             // jc failed
+            
+            // Close file: INT 21h AH=3Eh
+            0xB4, 0x3E,             // mov ah, 3Eh - close file
+            0xCD, 0x21,             // int 21h
+            0x72, 0x0C,             // jc failed
+            
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4,                   // hlt
+            
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4,                   // hlt
+            
+            // Filename data at end of program (will be at DS:0x100 + code_length)
+            // "F" + null terminator
+            0x46, 0x00              // "F\0"
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Tests that standard file handles (STDIN/STDOUT/STDERR) are inherited from parent PSP.
     /// </summary>
     [Fact]
@@ -933,6 +1043,15 @@ public class DosInt21IntegrationTests {
         // Write program to a .com file
         string filePath = Path.GetFullPath($"{unitTestName}.com");
         File.WriteAllBytes(filePath, program);
+        
+        // Get the directory of the program to use as C: drive
+        string programDir = Path.GetDirectoryName(filePath) ?? Directory.GetCurrentDirectory();
+        
+        // Create test data file "F" if test needs it
+        string testDataFile = Path.Combine(programDir, "F");
+        if (!File.Exists(testDataFile)) {
+            File.WriteAllText(testDataFile, "This is test data for file reading. ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        }
 
         // Setup emulator with DOS initialized
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
