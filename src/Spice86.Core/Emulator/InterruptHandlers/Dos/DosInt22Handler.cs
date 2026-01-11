@@ -15,13 +15,11 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class DosInt22Handler : InterruptHandler {
     private readonly DosProcessManager _dosProcessManager;
-    private readonly InterruptVectorTable _interruptVectorTable;
 
     public DosInt22Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        DosProcessManager dosProcessManager, InterruptVectorTable interruptVectorTable, ILoggerService loggerService)
+        DosProcessManager dosProcessManager, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosProcessManager = dosProcessManager;
-        _interruptVectorTable = interruptVectorTable;
     }
 
     public override byte VectorNumber => 0x22;
@@ -31,6 +29,6 @@ public class DosInt22Handler : InterruptHandler {
             LoggerService.Information("INT 22h: Terminate address invoked, terminating current process.");
         }
 
-        _dosProcessManager.TerminateProcess(0, DosTerminationType.Normal, _interruptVectorTable);
+        _dosProcessManager.TerminateProcess(0, DosTerminationType.Normal);
     }
 }

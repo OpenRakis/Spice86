@@ -9,7 +9,6 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
-using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -199,9 +198,7 @@ public class DosProcessManager {
     /// </summary>
     /// <param name="exitCode">The DOS exit code to report to the parent in AL.</param>
     /// <param name="terminationType">The termination category stored in AH (normal, error, TSR).</param>
-    /// <param name="interruptVectorTable">The IVT instance used to restore INT 22h/23h/24h after teardown.</param>
-    public void TerminateProcess(byte exitCode, DosTerminationType terminationType,
-        InterruptVectorTable interruptVectorTable) {
+    public void TerminateProcess(byte exitCode, DosTerminationType terminationType) {
 
         // Store the return code for parent to retrieve via INT 21h AH=4Dh
         // Format: AH = termination type, AL = exit code
@@ -264,9 +261,9 @@ public class DosProcessManager {
         }
 
         // Restore interrupt vectors from cached values
-        RestoreInterruptVector(TerminateVectorNumber, terminateAddr, interruptVectorTable);
-        RestoreInterruptVector(CtrlBreakVectorNumber, breakAddr, interruptVectorTable);
-        RestoreInterruptVector(CriticalErrorVectorNumber, criticalErrorAddr, interruptVectorTable);
+        RestoreInterruptVector(TerminateVectorNumber, terminateAddr);
+        RestoreInterruptVector(CtrlBreakVectorNumber, breakAddr);
+        RestoreInterruptVector(CriticalErrorVectorNumber, criticalErrorAddr);
 
         _pspTracker.PopCurrentPspSegment();
 
@@ -307,7 +304,7 @@ public class DosProcessManager {
             }
 
             // Get the terminate address from INT 22h vector (restored from child PSP)
-            SegmentedAddress returnAddress = interruptVectorTable[TerminateVectorNumber];
+            SegmentedAddress returnAddress = _interruptVectorTable[TerminateVectorNumber];
 
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information(
@@ -363,13 +360,11 @@ public class DosProcessManager {
     /// </summary>
     /// <param name="vectorNumber">The interrupt vector index to restore (e.g., 0x22, 0x23, 0x24).</param>
     /// <param name="storedFarPointer">The previously saved segment:offset encoded as a 32-bit value.</param>
-    /// <param name="interruptVectorTable">The IVT instance to write the restored vector into.</param>
-    private static void RestoreInterruptVector(byte vectorNumber, uint storedFarPointer,
-        InterruptVectorTable interruptVectorTable) {
+    private void RestoreInterruptVector(byte vectorNumber, uint storedFarPointer) {
         if (storedFarPointer != 0) {
             ushort offset = (ushort)(storedFarPointer & 0xFFFF);
             ushort segment = (ushort)(storedFarPointer >> 16);
-            interruptVectorTable[vectorNumber] = new SegmentedAddress(segment, offset);
+            _interruptVectorTable[vectorNumber] = new SegmentedAddress(segment, offset);
         }
     }
 
@@ -382,8 +377,7 @@ public class DosProcessManager {
     /// Implements INT 21h, AH=26h by cloning the current PSP to a new segment and patching the parent pointer, DOS version fields, and INT 22h/23h/24h vectors so the child inherits the caller’s termination context.
     /// </summary>
     /// <param name="newPspSegment">The segment address where the new PSP will be created.</param>
-    /// <param name="interruptVectorTable">The interrupt vector table for reading current vectors.</param>
-    public void CreateNewPsp(ushort newPspSegment, InterruptVectorTable interruptVectorTable) {
+    public void CreateNewPsp(ushort newPspSegment) {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information(
                 "CreateNewPsp: Copying current PSP to segment {NewPspSegment:X4}",
@@ -407,13 +401,13 @@ public class DosProcessManager {
         newPsp.ParentProgramSegmentPrefix = currentPspSegment;
         newPsp.EnvironmentTableSegment = currentPsp.EnvironmentTableSegment;
 
-        SegmentedAddress int22 = interruptVectorTable[TerminateVectorNumber];
+        SegmentedAddress int22 = _interruptVectorTable[TerminateVectorNumber];
         newPsp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
 
-        SegmentedAddress int23 = interruptVectorTable[CtrlBreakVectorNumber];
+        SegmentedAddress int23 = _interruptVectorTable[CtrlBreakVectorNumber];
         newPsp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
 
-        SegmentedAddress int24 = interruptVectorTable[CriticalErrorVectorNumber];
+        SegmentedAddress int24 = _interruptVectorTable[CriticalErrorVectorNumber];
         newPsp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
 
         newPsp.DosVersionMajor = DefaultDosVersionMajor;
@@ -743,10 +737,9 @@ public class DosProcessManager {
     /// <param name="commandTail">The command tail passed to the child process.</param>
     /// <param name="loadType">Whether to load-only or load-and-execute.</param>
     /// <param name="environmentSegment">Optional environment block to inherit; 0 clones the parent's environment.</param>
-    /// <param name="interruptVectorTable">The IVT used to seed and restore INT 22h/23h/24h in the new PSP.</param>
     /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
-        string commandTail, DosExecLoadType loadType, ushort environmentSegment, InterruptVectorTable interruptVectorTable) {
+        string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("EXEC: Loading program={Program}, loadType={LoadType}, envSeg={EnvSeg:X4}",
                 programName, loadType, environmentSegment);
@@ -853,7 +846,9 @@ public class DosProcessManager {
 
                 // Use the pre-allocated environment segment or 0 if caller provided one
                 ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
-                InitializePsp(block.DataBlockSegment, hostPath, commandTail, finalEnvironmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, isLoadAndExecute);
+                InitializePsp(block.DataBlockSegment, hostPath, commandTail,
+                    finalEnvironmentSegment, parentPspSegment,
+                    parentStackPointer, callerCS, callerIP, isLoadAndExecute);
 
                 DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
                 CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
@@ -931,7 +926,7 @@ public class DosProcessManager {
         
         // Use the pre-allocated environment segment or 0 if caller provided one
         ushort comFinalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
-        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, comFinalEnvironmentSegment, interruptVectorTable, parentPspSegment, parentStackPointer, callerCS, callerIP, isLoadAndExecute);
+        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail, comFinalEnvironmentSegment, parentPspSegment, parentStackPointer, callerCS, callerIP, isLoadAndExecute);
 
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
@@ -1063,13 +1058,14 @@ public class DosProcessManager {
     /// <param name="programHostPath">Host path of the program being loaded.</param>
     /// <param name="arguments">Raw command tail text to embed.</param>
     /// <param name="environmentSegment">Environment segment to use (0 means none provided, will not allocate).</param>
-    /// <param name="interruptVectorTable">The IVT for reading INT 22h/23h/24h handlers.</param>
     /// <param name="parentPspSegment">Segment of the parent PSP.</param>
     /// <param name="parentStackPointer">Saved SS:SP of the parent encoded as a 32-bit value.</param>
     /// <param name="callerCS">Caller CS for INT 22h return address.</param>
     /// <param name="callerIP">Caller IP for INT 22h return address.</param>
     /// <param name="trackParentStackPointer">True when the child will execute immediately and the parent's stack pointer must be tracked for restoration.</param>
-    private void InitializePsp(ushort pspSegment, string programHostPath, string? arguments, ushort environmentSegment, InterruptVectorTable interruptVectorTable, ushort parentPspSegment, uint parentStackPointer, ushort callerCS, ushort callerIP, bool trackParentStackPointer) {
+    private void InitializePsp(ushort pspSegment, string programHostPath,
+        string? arguments, ushort environmentSegment, ushort parentPspSegment,
+        uint parentStackPointer, ushort callerCS, ushort callerIP, bool trackParentStackPointer) {
         ClearPspMemory(pspSegment);
         // Establish parent-child PSP relationship and create the new PSP
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
@@ -1089,8 +1085,8 @@ public class DosProcessManager {
         // This sets INT 22h to point to the CALLER'S return address
         psp.TerminateAddress = MakeFarPointer(callerCS, callerIP);
 
-        SegmentedAddress breakVector = interruptVectorTable[CtrlBreakVectorNumber];
-        SegmentedAddress criticalErrorVector = interruptVectorTable[CriticalErrorVectorNumber];
+        SegmentedAddress breakVector = _interruptVectorTable[CtrlBreakVectorNumber];
+        SegmentedAddress criticalErrorVector = _interruptVectorTable[CriticalErrorVectorNumber];
         psp.BreakAddress = MakeFarPointer(breakVector.Segment, breakVector.Offset);
         psp.CriticalErrorAddress = MakeFarPointer(criticalErrorVector.Segment, criticalErrorVector.Offset);
 
