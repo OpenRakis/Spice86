@@ -247,12 +247,25 @@ public class DosProcessManager {
 
         byte[] fileBytes = File.ReadAllBytes(hostPath);
 
-        // DOS checks for EXE signature ("MZ") in the file header, not just the extension
-        // This matches FreeDOS and DOSBox behavior - files like CODE.1, CODE.2 can be EXE files
+        // FreeDOS DosExec logic (task.c): Check file signature, not extension
+        // Checks for MAGIC (0x5a4d "ZM") or OLD_MAGIC (0x4d5a "MZ") in exe_header
+        // If signature matches, load as EXE; otherwise load as COM
+        //
+        // Special case: Files with 3-digit numeric extensions (.000, .001, .999) are overlay files
+        // that may have MZ headers but should be loaded as COM when used with LoadOnly to save memory
+        // (they are meant to be used with LoadOverlay AL=03 which loads them into specific memory)
         string upperCaseExtension = Path.GetExtension(hostPath).ToUpperInvariant();
         bool hasExeExtension = upperCaseExtension == ".EXE";
-        bool hasExeSignature = fileBytes.Length >= 2 && fileBytes[0] == 0x4D && fileBytes[1] == 0x5A; // "MZ"
-        bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && (hasExeExtension || hasExeSignature);
+        bool hasMzSignature = fileBytes.Length >= 2 && fileBytes[0] == 0x4D && fileBytes[1] == 0x5A; // "MZ" (0x4d5a)
+        bool hasZmSignature = fileBytes.Length >= 2 && fileBytes[0] == 0x5A && fileBytes[1] == 0x4D; // "ZM" (0x5a4d)
+        bool hasThreeDigitExtension = upperCaseExtension.Length == 4 && upperCaseExtension[1..].All(char.IsDigit);
+        
+        // Try to load as EXE if:
+        // - File has .EXE extension (traditional check), OR
+        // - File has MZ or ZM signature AND does NOT have 3-digit numeric extension
+        // This allows CODE.1, CODE.2 to be detected as EXE, but keeps .000 overlay files as COM
+        bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && 
+                              (hasExeExtension || ((!hasThreeDigitExtension) && (hasMzSignature || hasZmSignature)));
         bool isLoadAndExecute = loadType == DosExecLoadType.LoadAndExecute;
 
         // Save parent's current SS:SP BEFORE any CPU state changes
