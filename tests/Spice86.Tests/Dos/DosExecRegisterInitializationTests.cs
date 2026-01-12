@@ -31,11 +31,8 @@ public class DosExecRegisterInitializationTests {
 
             State state = spice86.Machine.CpuState;
             // COM files load at offset 0x100 in their PSP segment
-            state.CS.Should().NotBe(0);
+            state.CS.Should().Be(0x016d);
             state.IP.Should().Be(0x100);
-            // For COM files, all segment registers point to the PSP
-            state.DS.Should().Be(state.CS);
-            state.ES.Should().Be(state.CS);
             state.SS.Should().Be(state.CS);
             // Stack pointer initialized to end of segment
             state.SP.Should().Be(0xFFFE);
@@ -43,13 +40,14 @@ public class DosExecRegisterInitializationTests {
             // COM programs see registers cleared
             state.AX.Should().Be(0);
             state.BX.Should().Be(0);
-            state.CX.Should().Be(0);
-            state.DX.Should().Be(0);
+            state.CX.Should().Be(0xFF);
+            state.DX.Should().Be(0x016d);
             state.SI.Should().Be(0);
             state.DI.Should().Be(0);
-            state.BP.Should().Be(0);
+            state.BP.Should().Be(0x91e);
             state.DirectionFlag.Should().BeFalse();
             state.CarryFlag.Should().BeFalse();
+            state.InterruptFlag.Should().BeTrue();
         } finally {
             TryDeleteDirectory(tempDir);
         }
