@@ -1,17 +1,12 @@
 namespace Spice86.Tests.Dos;
 
-using AvaloniaHex.Editing;
-
 using FluentAssertions;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
 
 using System;
