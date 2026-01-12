@@ -972,10 +972,17 @@ public class DosProcessManager {
         if (isLoadAndExecute) {
             _state.CS = pspSegment;
             _state.IP = DosProgramSegmentPrefix.PspSize;
+            // Make DS and ES point to the PSP
             _state.DS = pspSegment;
             _state.ES = pspSegment;
             _state.SS = pspSegment;
             _state.SP = ComDefaultStackPointer; // Expected stack pointer value
+            // INT 21h AH=4Bh register contract documented in RBIL
+            _state.DX = pspSegment;
+            _state.CX = ExecRegisterContractCxValue;
+            _state.BP = ExecRegisterContractBpValue;
+            _state.DI = 0;
+
             _state.InterruptFlag = true;
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("COM load register state CS:IP={Cs}:{Ip} DS=ES=SS={Segment} SP={Sp}",
