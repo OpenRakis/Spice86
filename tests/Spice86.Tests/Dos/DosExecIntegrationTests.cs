@@ -237,14 +237,14 @@ public class DosExecIntegrationTests {
         Directory.CreateDirectory(tempDir);
         string source = Path.Join(resourceDir, "the_summonning.zip");
         ZipFile.ExtractToDirectory(source, tempDir, overwriteFiles: true);
-        string programPath = Path.Join(tempDir, "summon.com");
+        string programPath = Path.Join(tempDir, "SUMMON.COM");
 
         try {
             Spice86DependencyInjection spice86 = new Spice86Creator(
                 binName: programPath,
                 enablePit: true,
                 recordData: false,
-                maxCycles: 200000,
+                maxCycles: 1000000,
                 installInterruptVectors: true,
                 enableA20Gate: false,
                 enableXms: true,
@@ -272,7 +272,7 @@ public class DosExecIntegrationTests {
                 binName: programPath,
                 enablePit: true,
                 recordData: false,
-                maxCycles: 200000,
+                maxCycles: 1000000,
                 installInterruptVectors: true,
                 enableA20Gate: false,
                 enableXms: true,

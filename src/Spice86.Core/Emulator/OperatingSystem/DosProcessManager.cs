@@ -247,8 +247,12 @@ public class DosProcessManager {
 
         byte[] fileBytes = File.ReadAllBytes(hostPath);
 
+        // DOS checks for EXE signature ("MZ") in the file header, not just the extension
+        // This matches FreeDOS and DOSBox behavior - files like CODE.1, CODE.2 can be EXE files
         string upperCaseExtension = Path.GetExtension(hostPath).ToUpperInvariant();
-        bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && upperCaseExtension == ".EXE";
+        bool hasExeExtension = upperCaseExtension == ".EXE";
+        bool hasExeSignature = fileBytes.Length >= 2 && fileBytes[0] == 0x4D && fileBytes[1] == 0x5A; // "MZ"
+        bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && (hasExeExtension || hasExeSignature);
         bool isLoadAndExecute = loadType == DosExecLoadType.LoadAndExecute;
 
         // Save parent's current SS:SP BEFORE any CPU state changes
