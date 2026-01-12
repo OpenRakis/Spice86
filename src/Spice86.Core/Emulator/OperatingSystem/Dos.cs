@@ -200,7 +200,7 @@ public sealed class Dos {
         // This matches FreeDOS where DOS_PSP + 16 paragraphs is reserved
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
 
-        ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, interruptVectorTable, _loggerService);
+        ProcessManager = new(_memory, stack, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
