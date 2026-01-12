@@ -158,26 +158,26 @@ public class DosProcessManager {
 
         // Root PSP: parent points to itself
         rootPsp.ParentProgramSegmentPrefix = CommandComSegment;
-        rootPsp.PreviousPspAddress = MakeFarPointer(SentinelSegment, SentinelOffset);
+        rootPsp.PreviousPspAddress = MemoryUtils.To32BitAddress(SentinelSegment, SentinelOffset);
 
         rootPsp.FarCall = FarCallOpcode;
-        rootPsp.CpmServiceRequestAddress = MakeFarPointer(CommandComSegment, Call5StubOffset);
+        rootPsp.CpmServiceRequestAddress = MemoryUtils.To32BitAddress(CommandComSegment, Call5StubOffset);
         rootPsp.Service[0] = IntOpcode;
         rootPsp.Service[1] = Int21Number;
         rootPsp.Service[2] = RetfOpcode;
 
         // Initialize interrupt vectors from IVT so child PSPs inherit proper addresses
         SegmentedAddress int22 = _interruptVectorTable[TerminateVectorNumber];
-        rootPsp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
+        rootPsp.TerminateAddress = MemoryUtils.To32BitAddress(int22.Segment, int22.Offset);
 
         SegmentedAddress int23 = _interruptVectorTable[CtrlBreakVectorNumber];
-        rootPsp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
+        rootPsp.BreakAddress = MemoryUtils.To32BitAddress(int23.Segment, int23.Offset);
 
         SegmentedAddress int24 = _interruptVectorTable[CriticalErrorVectorNumber];
-        rootPsp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
+        rootPsp.CriticalErrorAddress = MemoryUtils.To32BitAddress(int24.Segment, int24.Offset);
 
         rootPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
-        rootPsp.FileTableAddress = MakeFarPointer(CommandComSegment, FileTableOffset);
+        rootPsp.FileTableAddress = MemoryUtils.To32BitAddress(CommandComSegment, FileTableOffset);
 
         rootPsp.DosVersionMajor = DefaultDosVersionMajor;
         rootPsp.DosVersionMinor = DefaultDosVersionMinor;
@@ -243,7 +243,7 @@ public class DosProcessManager {
 
         // Save parent's current SS:SP BEFORE any CPU state changes
         // This captures the parent's stack context before the child modifies anything
-        uint parentStackPointer = ((uint)_state.SS << 16) | _state.SP;
+        uint parentStackPointer = MemoryUtils.To32BitAddress(_state.SS, _state.SP);
 
         // Allocate environment block FIRST before allocating program memory, as we might decide to take ALL the remaining free memory
         DosMemoryControlBlock? envBlock = null;
@@ -289,9 +289,7 @@ public class DosProcessManager {
                 block.Owner = BuildMcbOwnerName(hostPath);
 
                 // Set environment block ownership to the child PSP
-                if (envBlock is not null) {
-                    envBlock.PspSegment = block.DataBlockSegment;
-                }
+                envBlock?.PspSegment = block.DataBlockSegment;
 
                 // Use the pre-allocated environment segment or 0 if caller provided one
                 ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
@@ -360,9 +358,7 @@ public class DosProcessManager {
         comBlock.Owner = BuildMcbOwnerName(hostPath);
 
         // Set environment block ownership to the child PSP
-        if (envBlock is not null) {
-            envBlock.PspSegment = comBlock.DataBlockSegment;
-        }
+        envBlock?.PspSegment = comBlock.DataBlockSegment;
 
         // Use the pre-allocated environment segment or 0 if caller provided one
         ushort comFinalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
@@ -431,7 +427,7 @@ public class DosProcessManager {
         }
 
         // For overlays, load at loadSegment but relocate using relocationFactor
-        // This matches DOSBox staging behavior where overlay relocation uses the relocation factor parameter
+        // This matches FreeDOS behavior
         LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment, relocationFactor);
 
         // For overlays, DOS doesn't return anything in the parameter block
@@ -476,7 +472,7 @@ public class DosProcessManager {
 
         // Close non-standard handles only when the process fully terminates; TSR keeps them resident
         if (terminationType != DosTerminationType.TSR) {
-            CloseProcessFileHandles(currentPsp, currentPspSegment);
+            CloseProcessFileHandles(currentPsp);
         }
 
         // Cache interrupt vectors from child PSP before freeing memory
@@ -576,13 +572,13 @@ public class DosProcessManager {
         newPsp.EnvironmentTableSegment = currentPsp.EnvironmentTableSegment;
 
         SegmentedAddress int22 = _interruptVectorTable[TerminateVectorNumber];
-        newPsp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
+        newPsp.TerminateAddress = MemoryUtils.To32BitAddress(int22.Segment, int22.Offset);
 
         SegmentedAddress int23 = _interruptVectorTable[CtrlBreakVectorNumber];
-        newPsp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
+        newPsp.BreakAddress = MemoryUtils.To32BitAddress(int23.Segment, int23.Offset);
 
         SegmentedAddress int24 = _interruptVectorTable[CriticalErrorVectorNumber];
-        newPsp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
+        newPsp.CriticalErrorAddress = MemoryUtils.To32BitAddress(int24.Segment, int24.Offset);
 
         newPsp.DosVersionMajor = DefaultDosVersionMajor;
         newPsp.DosVersionMinor = DefaultDosVersionMinor;
@@ -607,14 +603,14 @@ public class DosProcessManager {
 
         // Parent/previous links.
         childPsp.ParentProgramSegmentPrefix = parentPspSegment;
-        childPsp.PreviousPspAddress = MakeFarPointer(parentPspSegment, 0);
+        childPsp.PreviousPspAddress = MemoryUtils.To32BitAddress(parentPspSegment, 0);
 
         // Size/next segment (ps_size in FreeDOS).
         childPsp.CurrentSize = sizeInParagraphs;
 
         // File table layout and cloning (start unused then clone handles).
         childPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
-        childPsp.FileTableAddress = MakeFarPointer(childSegment, FileTableOffset);
+        childPsp.FileTableAddress = MemoryUtils.To32BitAddress(childSegment, FileTableOffset);
         for (int i = 0; i < JobFileTableLength; i++) {
             childPsp.Files[i] = UnusedFileHandle;
         }
@@ -633,7 +629,7 @@ public class DosProcessManager {
 
         // Keep INT 21h entry and CP/M far call consistent with FreeDOS child_psp.
         childPsp.FarCall = FarCallOpcode;
-        childPsp.CpmServiceRequestAddress = MakeFarPointer(childSegment, Call5StubOffset);
+        childPsp.CpmServiceRequestAddress = MemoryUtils.To32BitAddress(childSegment, Call5StubOffset);
         childPsp.Service[0] = IntOpcode;
         childPsp.Service[1] = Int21Number;
         childPsp.Service[2] = RetfOpcode;
@@ -649,13 +645,13 @@ public class DosProcessManager {
 
     private static void SaveInterruptVectors(DosProgramSegmentPrefix psp, InterruptVectorTable ivt) {
         SegmentedAddress int22 = ivt[TerminateVectorNumber];
-        psp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
+        psp.TerminateAddress = MemoryUtils.To32BitAddress(int22.Segment, int22.Offset);
 
         SegmentedAddress int23 = ivt[CtrlBreakVectorNumber];
-        psp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
+        psp.BreakAddress = MemoryUtils.To32BitAddress(int23.Segment, int23.Offset);
 
         SegmentedAddress int24 = ivt[CriticalErrorVectorNumber];
-        psp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
+        psp.CriticalErrorAddress = MemoryUtils.To32BitAddress(int24.Segment, int24.Offset);
     }
 
     private void CopyFileTableFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
@@ -685,7 +681,7 @@ public class DosProcessManager {
         }
     }
 
-    private void CloseProcessFileHandles(DosProgramSegmentPrefix psp, ushort pspSegment) {
+    private void CloseProcessFileHandles(DosProgramSegmentPrefix psp) {
         HashSet<byte> closedHandles = new();
 
         for (int i = StandardFileHandleCount; i < JobFileTableLength; i++) {
@@ -699,7 +695,9 @@ public class DosProcessManager {
             }
 
             DosFileOperationResult result = _fileManager.CloseFileOrDevice(handle);
-            psp.Files[i] = UnusedFileHandle;
+            if(!result.IsError) {
+                psp.Files[i] = UnusedFileHandle;
+            }
         }
     }
 
@@ -757,10 +755,6 @@ public class DosProcessManager {
         uint environmentAddress = MemoryUtils.ToPhysicalAddress(environmentSegment, 0);
         _memory.LoadData(environmentAddress, buffer);
         rootPsp.EnvironmentTableSegment = environmentSegment;
-    }
-
-    private static uint MakeFarPointer(ushort segment, ushort offset) {
-        return (uint)((segment << 16) | offset);
     }
 
     private static ushort CalculateParagraphsNeeded(int lengthInBytes) {
@@ -825,7 +819,7 @@ public class DosProcessManager {
         psp.CurrentSize = DosMemoryManager.LastFreeSegment;
 
         psp.FarCall = FarCallOpcode;
-        psp.CpmServiceRequestAddress = MakeFarPointer(pspSegment, Call5StubOffset);
+        psp.CpmServiceRequestAddress = MemoryUtils.To32BitAddress(pspSegment, Call5StubOffset);
         psp.Service[0] = IntOpcode;
         psp.Service[1] = Int21Number;
         psp.Service[2] = RetfOpcode;
@@ -833,12 +827,12 @@ public class DosProcessManager {
         psp.DosVersionMinor = DefaultDosVersionMinor;
 
         // This sets INT 22h to point to the CALLER'S return address
-        psp.TerminateAddress = MakeFarPointer(callerCS, callerIP);
+        psp.TerminateAddress = MemoryUtils.To32BitAddress(callerCS, callerIP);
 
         SegmentedAddress breakVector = _interruptVectorTable[CtrlBreakVectorNumber];
         SegmentedAddress criticalErrorVector = _interruptVectorTable[CriticalErrorVectorNumber];
-        psp.BreakAddress = MakeFarPointer(breakVector.Segment, breakVector.Offset);
-        psp.CriticalErrorAddress = MakeFarPointer(criticalErrorVector.Segment, criticalErrorVector.Offset);
+        psp.BreakAddress = MemoryUtils.To32BitAddress(breakVector.Segment, breakVector.Offset);
+        psp.CriticalErrorAddress = MemoryUtils.To32BitAddress(criticalErrorVector.Segment, criticalErrorVector.Offset);
 
         // Save parent's stack pointer only when the child will run, mirroring FreeDOS load_transfer semantics.
         DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
@@ -849,8 +843,8 @@ public class DosProcessManager {
         psp.ParentProgramSegmentPrefix = parentPspSegment;
         psp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
         // file table address points to file table at offset FileTableOffset inside this PSP
-        psp.FileTableAddress = ((uint)pspSegment << 16) | FileTableOffset;
-        psp.PreviousPspAddress = MakeFarPointer(parentPspSegment, 0);
+        psp.FileTableAddress = MemoryUtils.To32BitAddress(pspSegment, FileTableOffset);
+        psp.PreviousPspAddress = MemoryUtils.To32BitAddress(parentPspSegment, 0);
 
         for (int i = 0; i < psp.Files.Count; i++) {
             psp.Files[i] = (byte)Enums.DosPspFileTableEntry.Unused;
