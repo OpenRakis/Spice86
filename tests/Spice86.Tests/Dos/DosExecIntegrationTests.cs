@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Utils;
