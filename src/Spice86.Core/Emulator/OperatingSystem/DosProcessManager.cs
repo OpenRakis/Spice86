@@ -13,9 +13,12 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+
+using Stack = CPU.Stack;
 
 /// <summary>
 /// Setups the loading and execution of DOS programs and maintains the DOS PSP chains in memory.
@@ -74,6 +77,7 @@ public class DosProcessManager {
     private const ushort ExecRegisterContractCxValue = 0x00FF;
     private const ushort ExecRegisterContractBpValue = 0x091E;
     private readonly InterruptVectorTable _interruptVectorTable;
+    private readonly Stack _stack;
 
     /// <summary>
     /// The master environment block that all DOS PSPs inherit.
@@ -87,27 +91,28 @@ public class DosProcessManager {
     /// Builds the DOS process manager with the components required to create, clone, and tear down PSPs while managing file handles and environment blocks.
     /// </summary>
     /// <param name="memory">The emulated memory interface used to read and write PSP and environment data.</param>
+    /// <param name="stack">The CPU stack, used to get the parent process CS and IP.</param>
     /// <param name="state">The CPU state that is adjusted during EXEC operations.</param>
     /// <param name="dosPspTracker">Tracks the current and historical PSP segments to maintain parent-child relationships.</param>
     /// <param name="dosMemoryManager">Allocates and frees DOS memory control blocks for PSPs and environments.</param>
     /// <param name="dosFileManager">Resolves DOS paths and manages open file tables shared across processes.</param>
     /// <param name="dosDriveManager">Provides drive metadata and current drive context for path resolution.</param>
     /// <param name="envVars">The initial host environment variables to seed the master environment block.</param>
-    /// <param name="interruptVectorTable">The IVT used to seed and restore INT 22h/23h/24h for PSPs.</param>
     /// <param name="loggerService">Logger for emitting diagnostic information during process lifecycle changes.</param>
-    public DosProcessManager(IMemory memory, State state,
+    public DosProcessManager(IMemory memory, Stack stack, State state,
         DosProgramSegmentPrefixTracker dosPspTracker, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
-        IDictionary<string, string> envVars, InterruptVectorTable interruptVectorTable, ILoggerService loggerService) {
+        IDictionary<string, string> envVars, ILoggerService loggerService) {
         _memory = memory;
         _pspTracker = dosPspTracker;
         _memoryManager = dosMemoryManager;
+        _stack = stack;
         _fileManager = dosFileManager;
         _driveManager = dosDriveManager;
         _state = state;
         _loggerService = loggerService;
         _environmentVariables = new();
-        _interruptVectorTable = interruptVectorTable;
+        _interruptVectorTable = new(memory);
 
         if (!envVars.ContainsKey("PATH")) {
             envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
@@ -206,10 +211,10 @@ public class DosProcessManager {
     /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
-        // Since we are in an interrupt handler, We read CS:IP from the stack to get the address where the parent will resume.
-        ushort callerIP = _memory.UInt16[_state.StackPhysicalAddress];
-        ushort callerCS = _memory.UInt16[_state.StackPhysicalAddress + 2];
-
+        // We read CS:IP from the stack to get the address where the parent will resume.
+        ushort callerIP = _stack.Peek16(0);
+        ushort callerCS = _stack.Peek16(2);
+        
         ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
