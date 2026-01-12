@@ -142,11 +142,7 @@ public class DosProcessManager {
     /// <summary>
     /// Creates the root COMMAND.COM PSP that acts as the parent for all programs.
     /// </summary>
-    public void CreateRootCommandComPsp() {
-        if (_pspTracker.PspCount > 0) {
-            // Root PSP already exists
-            return;
-        }
+    public DosProgramSegmentPrefix CreateRootCommandComPsp() {
         ClearPspMemory(CommandComSegment);
         DosProgramSegmentPrefix rootPsp = _pspTracker.PushPspSegment(CommandComSegment);
 
@@ -197,6 +193,9 @@ public class DosProcessManager {
 
         _fileManager.SetDiskTransferAreaAddress(
             CommandComSegment, DosCommandTail.OffsetInPspSegment);
+
+        SetupCpuRegistersForComFileExecution(CommandComSegment);
+        return rootPsp;
     }
 
 
@@ -638,7 +637,7 @@ public class DosProcessManager {
             _interruptVectorTable[vectorNumber] = new SegmentedAddress(segment, offset);
         }
     }
-    
+
     private static void SaveInterruptVectors(DosProgramSegmentPrefix psp, InterruptVectorTable ivt) {
         SegmentedAddress int22 = ivt[TerminateVectorNumber];
         psp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
@@ -975,25 +974,29 @@ public class DosProcessManager {
         _memory.LoadData(physicalLoadAddress, com);
 
         if (isLoadAndExecute) {
-            _state.CS = pspSegment;
-            _state.IP = DosProgramSegmentPrefix.PspSize;
-            // Make DS and ES point to the PSP
-            _state.DS = pspSegment;
-            _state.ES = pspSegment;
-            _state.SS = pspSegment;
-            _state.SP = ComDefaultStackPointer; // Expected stack pointer value
-            // INT 21h AH=4Bh register contract documented in RBIL
-            _state.DX = pspSegment;
-            _state.CX = ExecRegisterContractCxValue;
-            _state.BP = ExecRegisterContractBpValue;
-            _state.DI = 0;
-
-            _state.InterruptFlag = true;
+            SetupCpuRegistersForComFileExecution(pspSegment);
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("COM load register state CS:IP={Cs}:{Ip} DS=ES=SS={Segment} SP={Sp}",
                     ConvertUtils.ToHex16(_state.CS), ConvertUtils.ToHex16(_state.IP), ConvertUtils.ToHex16(pspSegment), ConvertUtils.ToHex16(_state.SP));
             }
         }
+    }
+
+    private void SetupCpuRegistersForComFileExecution(ushort pspSegment) {
+        _state.CS = pspSegment;
+        _state.IP = DosProgramSegmentPrefix.PspSize;
+        // Make DS and ES point to the PSP
+        _state.DS = pspSegment;
+        _state.ES = pspSegment;
+        _state.SS = pspSegment;
+        _state.SP = ComDefaultStackPointer; // Expected stack pointer value
+                                            // INT 21h AH=4Bh register contract documented in RBIL
+        _state.DX = pspSegment;
+        _state.CX = ExecRegisterContractCxValue;
+        _state.BP = ExecRegisterContractBpValue;
+        _state.DI = 0;
+
+        _state.InterruptFlag = true;
     }
 
     private void LoadExeFile(DosExeFile exeFile, ushort pspSegment, DosMemoryControlBlock block, bool updateCpuState) {
