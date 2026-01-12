@@ -16,19 +16,13 @@ using Xunit;
 /// Executes tests from https://github.com/SingleStepTests/
 /// </summary>
 public class SingleStepTest {
-    private SingleStepTestMinimalMachine _singleStepTestMinimalMachine = new(CpuModel.INTEL_8086);
-    private readonly ISet<string> _revocationList = new HashSet<string>([
-        "7df1d2a948c416f5a4416e2f747d2d357d497570",
-        "ab0cea0f2b89ae469a98eaf20dedc9ff2ca08c91",
-        "ba5bb16b5a4306333a359c3abd2169b871ffa42c",
-        "eaaf835a6600a351ee70375c7f6996931411bca5",
-        "1b586a46891182a22b3f55f71e4db4c601ac26e4"]);
+    private SingleStepTestMinimalMachine _singleStepTestMinimalMachine = new(CpuModel.INTEL_80386);
     [Theory(Skip = "Not ready yet to be run in CI")]
-    [InlineData(CpuModel.INTEL_8086, "00-FF", 1)]
-    [InlineData(CpuModel.INTEL_80286, "00-3F", 2)]
-    [InlineData(CpuModel.INTEL_80286, "40-7F", 2)]
-    [InlineData(CpuModel.INTEL_80286, "80-BF", 2)]
-    [InlineData(CpuModel.INTEL_80286, "C0-FF", 2)]
+    [InlineData(CpuModel.INTEL_80386, "00-65", 2)]
+    [InlineData(CpuModel.INTEL_80386, "66-66", 2)]
+    [InlineData(CpuModel.INTEL_80386, "67.00-67.7F", 2)]
+    [InlineData(CpuModel.INTEL_80386, "67.80-67.FF", 2)]
+    [InlineData(CpuModel.INTEL_80386, "68-FF", 2)]
     public void TestCpu(CpuModel cpuModel, string range, int maxCycles) {
         _singleStepTestMinimalMachine = new(cpuModel);
         string cpuModelString = FromCpuModel(cpuModel);
@@ -38,6 +32,7 @@ public class SingleStepTest {
             Assert.Fail($"Couldn't find test resource {resource} for {cpuModel} for range {range}");
         }
         using ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        ISet<string> revocationList = ReadRevocationList(archive);
         foreach (ZipArchiveEntry entry in archive.Entries) {
             List<CpuTest>? cpuTests = ReadCpuTests(entry);
             if (cpuTests is null) {
@@ -46,7 +41,7 @@ public class SingleStepTest {
 
             int index = 0;
             foreach (CpuTest cpuTest in cpuTests) {
-                if (_revocationList.Contains(cpuTest.Hash)) {
+                if (revocationList.Contains(cpuTest.Hash)) {
                     continue;
                 }
                 RunCpuTest(cpuTest, index++, entry.Name, cpuModel, maxCycles);
@@ -58,8 +53,26 @@ public class SingleStepTest {
         return cpuModel switch {
             CpuModel.INTEL_8086 => "8086",
             CpuModel.INTEL_80286 => "80286",
+            CpuModel.INTEL_80386 => "80386",
             _ => throw new InvalidEnumArgumentException()
         };
+    }
+
+    private ISet<string> ReadRevocationList(ZipArchive archive) {
+        ZipArchiveEntry? revocationEntry = archive.GetEntry("revocation_list.txt");
+        if (revocationEntry is null) {
+            return new HashSet<string>();
+        }
+        using Stream entryStream = revocationEntry.Open();
+        using StreamReader reader = new StreamReader(entryStream);
+        HashSet<string> revocationList = [];
+        string? line;
+        while ((line = reader.ReadLine()) != null) {
+            if (!string.IsNullOrWhiteSpace(line)) {
+                revocationList.Add(line.Trim());
+            }
+        }
+        return revocationList;
     }
 
     private List<CpuTest>? ReadCpuTests(ZipArchiveEntry entry) {
