@@ -41,7 +41,6 @@ public class DosProgramSegmentPrefixTrackerTests {
         A20Gate a20Gate = new(enabled: false);
         Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: true);
-        InterruptVectorTable interruptVectorTable = new(memory);
 
         var configuration = new Configuration {
             ProgramEntryPointSegment = (ushort)0x1000
@@ -51,12 +50,13 @@ public class DosProgramSegmentPrefixTrackerTests {
             MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0)),
             loggerService);
         State state = new(CpuModel.INTEL_80386);
+        Stack stack = new(memory, state);
         DosDriveManager dosDriveManager = new(loggerService, null, null);
         DosMemoryManager dosMemoryManager = new(memory, _pspTracker, loggerService);
         DosFileManager dosFileManager = new(memory, new DosStringDecoder(memory, state),
             dosDriveManager, loggerService, new List<IVirtualDevice>());
-        _processManager = new(memory, state, _pspTracker, dosMemoryManager, dosFileManager, dosDriveManager,
-            new Dictionary<string, string>(), interruptVectorTable, loggerService);
+        _processManager = new(memory, stack, state, _pspTracker, dosMemoryManager, dosFileManager, dosDriveManager,
+            new Dictionary<string, string>(), loggerService);
     }
 
     /// <summary>

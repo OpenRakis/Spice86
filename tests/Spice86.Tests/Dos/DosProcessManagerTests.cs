@@ -414,8 +414,9 @@ public class DosProcessManagerTests {
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
+        State state = new(CpuModel.INTEL_80386);
         Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
-        InterruptVectorTable interruptVectorTable = new(memory);
+        Stack stack = new(memory, state);
 
         Configuration configuration = programEntryPointSegment.HasValue
             ? new Configuration { ProgramEntryPointSegment = programEntryPointSegment.Value }
@@ -423,20 +424,19 @@ public class DosProcessManagerTests {
 
         DosSwappableDataArea sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         DosProgramSegmentPrefixTracker tracker = new(configuration, memory, sda, loggerService);
-        State state = new(CpuModel.INTEL_80386);
         DosDriveManager driveManager = new(loggerService, null, null);
         DosMemoryManager memoryManager = new(memory, tracker, loggerService);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state), driveManager, loggerService, new List<IVirtualDevice>());
 
         DosProcessManager processManager = new(
             memory,
+            stack,
             state,
             tracker,
             memoryManager,
             fileManager,
             driveManager,
             new Dictionary<string, string>(),
-            interruptVectorTable,
             loggerService);
 
         return new DosProcessManagerTestContext(memory, processManager, tracker, state, memoryManager);
