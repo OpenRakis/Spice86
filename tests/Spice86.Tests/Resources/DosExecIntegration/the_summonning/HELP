@@ -1,0 +1,76 @@
+The Summoning v1.2
+Copyright (C) 1992 Strategic Simulations, Inc.
+Created by Event Horizon Software, Inc.
+
+To run type SUMMON
+
+Supports VGA 256 color ONLY. It will play music on the SoundBlaster or Adlib, 
+Roland MT-32/LAPC-1, Tandy 3-voice, and IBM speaker. Sound effects play on
+the Soundblaster, Adlib, and Adlib compatibles.
+
+Run SETUP to select a sound device, to select an input device, and to 
+modify expanded memory usage.
+
+Press F9 to toggle sound on/off in the game.
+Press ALT-Q to quit the game.
+
+Save files in The Summoning start off fairly small, but increase in size as
+you progress through the game. As you reach the end of the game they will be
+up to 800K in size! If you like to save alot, be aware that you will need
+alot of space on your hard drive to do so!
+
+For proper map printing, your printer MUST be set up to print out using
+the full IBM character set. Otherwise you will not get lines for walls.
+If you are using a laser printer, this may require you to change the current 
+display font; Refer to your printer documentation for instructions on how 
+to do this. Also, if you are printing out conversations on a laser printer, 
+you might have to press the Form Feed button to see the end of your 
+conversation, as it might not have filled up a full page in the laser 
+printer's memory.
+
+****** Quick information on option menus *******
+
+Disk option menu contents:
+   SAVE        Save the current game
+   RESTORE     Restore a saved game
+   DELETE-SAVE Delete an old save game
+   CHANGE      Change the name of an old save game to a new name
+   GAME        Go to game options menu
+
+Game option menu contents:
+   PRINTER     Turn conversation printing on or off
+   MAGNIFY     Turn magnify mode on or off
+   TEXT        Turn battle text on or off
+   START       Start a new game
+   QUIT        Quit the game and return to DOS
+   DISK        Go to the disk options menu
+
+
+
+
+***** Quick information on character attributes *****
+
+For all attributes, a value of 10 is average. In general, values lower than
+10 will be detrimental, and values larger than 10 will be helpful.
+
+STRENGTH:  Strength affects the amount of weight you may carry, and it
+           increases the amount of damage you do with melee weapons.
+
+AGILITY:   Agility directly affects the speed of your character. An agility 
+           of 15 or greater will grant speed bonuses. Your agility will also 
+           affect your ability to hit opponents during combat.
+
+ENDURANCE: Endurance will reduce through tiring activities, such as
+           long combats, playing encumbered, or by pushing heavy objects
+           long distances. Reduced endurance will slow you down.
+
+ACCURACY:  Accuracy affects your ability to hit with any weapon, but it is 
+           more critical when you are using projectile weapons. 
+
+TALENT:    Talent directly affects the number of spells you may memorize.
+
+POWER:     Power directly affects the results of most spells. The higher 
+           your power, the greater the result. For example, power affects 
+           the damage of some spells, and the durations of others.
+
+

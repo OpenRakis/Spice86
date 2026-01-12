@@ -1,15 +1,19 @@
 namespace Spice86.Tests.Dos;
 
+using AvaloniaHex.Editing;
+
 using FluentAssertions;
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Utils;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Text;
 
 using Xunit;
 
@@ -221,6 +225,62 @@ public class DosExecIntegrationTests {
             uint videoBase = MemoryUtils.ToPhysicalAddress(0xB800, 0);
             byte character = memory.UInt8[videoBase];
             ((char)character).Should().Be('K');
+        } finally {
+            TryDeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void ExecTheSummonning_AndRuns() {
+        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
+        string tempDir = Path.Join(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
+        Directory.CreateDirectory(tempDir);
+        string source = Path.Join(resourceDir, "the_summonning.zip");
+        ZipFile.ExtractToDirectory(source, tempDir, overwriteFiles: true);
+        string programPath = Path.Join(tempDir, "summon.com");
+
+        try {
+            Spice86DependencyInjection spice86 = new Spice86Creator(
+                binName: programPath,
+                enablePit: true,
+                recordData: false,
+                maxCycles: 200000,
+                installInterruptVectors: true,
+                enableA20Gate: false,
+                enableXms: true,
+                enableEms: true,
+                cDrive: tempDir
+            ).Create();
+
+            spice86.ProgramExecutor.Run();
+        } finally {
+            TryDeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void ExecLandsOfLore_AndRuns() {
+        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosExecIntegration");
+        string tempDir = Path.Join(Path.GetTempPath(), $"dos_exec_{Guid.NewGuid()}");
+        Directory.CreateDirectory(tempDir);
+        string source = Path.Join(resourceDir, "LandsOfLore.zip");
+        ZipFile.ExtractToDirectory(source, tempDir, overwriteFiles: true);
+        string programPath = Path.Join(tempDir, "LANDS.EXE");
+
+        try {
+            Spice86DependencyInjection spice86 = new Spice86Creator(
+                binName: programPath,
+                enablePit: true,
+                recordData: false,
+                maxCycles: 200000,
+                installInterruptVectors: true,
+                enableA20Gate: false,
+                enableXms: true,
+                enableEms: true,
+                cDrive: tempDir
+            ).Create();
+
+            spice86.ProgramExecutor.Run();
         } finally {
             TryDeleteDirectory(tempDir);
         }
