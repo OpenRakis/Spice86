@@ -39,6 +39,9 @@ public class MouseInt33Handler : InterruptHandler {
     /// <inheritdoc />
     public override void Run() {
         byte operation = State.AL;
+        if(!HasRunnable(operation)) {
+            return;
+        }
         Run(operation);
     }
 
