@@ -244,7 +244,7 @@ public class DosExecIntegrationTests {
                 binName: programPath,
                 enablePit: true,
                 recordData: false,
-                maxCycles: 500000,
+                maxCycles: 500000, // The Summoning needs more cycles than simple tests as it loads multiple EXE files (CODE.1, CODE.2)
                 installInterruptVectors: true,
                 enableA20Gate: false,
                 enableXms: true,

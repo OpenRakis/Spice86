@@ -33,6 +33,12 @@ public class DosProcessManager {
     private const byte CtrlBreakVectorNumber = 0x23;
     private const byte CriticalErrorVectorNumber = 0x24;
     private const byte RetfOpcode = 0xCB;
+    
+    // EXE file signature constants (FreeDOS MAGIC and OLD_MAGIC from hdr/exe.h)
+    private const byte MzSignatureByte1 = 0x4D; // 'M'
+    private const byte MzSignatureByte2 = 0x5A; // 'Z'
+    private const byte ZmSignatureByte1 = 0x5A; // 'Z'
+    private const byte ZmSignatureByte2 = 0x4D; // 'M'
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
@@ -252,8 +258,8 @@ public class DosProcessManager {
         // If signature matches, load as EXE; otherwise load as COM
         string upperCaseExtension = Path.GetExtension(hostPath).ToUpperInvariant();
         bool hasExeExtension = upperCaseExtension == ".EXE";
-        bool hasMzSignature = fileBytes.Length >= 2 && fileBytes[0] == 0x4D && fileBytes[1] == 0x5A; // "MZ" (0x4d5a)
-        bool hasZmSignature = fileBytes.Length >= 2 && fileBytes[0] == 0x5A && fileBytes[1] == 0x4D; // "ZM" (0x5a4d)
+        bool hasMzSignature = fileBytes.Length >= 2 && fileBytes[0] == MzSignatureByte1 && fileBytes[1] == MzSignatureByte2;
+        bool hasZmSignature = fileBytes.Length >= 2 && fileBytes[0] == ZmSignatureByte1 && fileBytes[1] == ZmSignatureByte2;
         
         // Try to load as EXE if:
         // - File has .EXE extension (traditional check), OR
