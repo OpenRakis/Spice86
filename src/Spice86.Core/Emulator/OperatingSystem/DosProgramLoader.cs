@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
@@ -10,6 +11,7 @@ using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Command.BatchProcessing;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
@@ -146,11 +148,28 @@ internal class DosProgramLoader : DosFileLoader {
         private bool ProcessCommand(BatchCommand command, string batchDirDos) {
             switch (command.Type) {
                 case BatchCommandType.Empty:
+                    return true;
+
                 case BatchCommandType.PrintMessage:
+                    HandlePrintMessage(command);
+                    return true;
+
                 case BatchCommandType.SetVariable:
+                    HandleSetVariable(command);
+                    return true;
+
                 case BatchCommandType.ShowEchoState:
+                    HandleShowEchoState(command);
+                    return true;
+
                 case BatchCommandType.ShowVariables:
+                    HandleShowVariables();
+                    return true;
+
                 case BatchCommandType.ShowVariable:
+                    HandleShowVariable(command);
+                    return true;
+
                 case BatchCommandType.Shift:
                     return true;
 
@@ -170,6 +189,7 @@ internal class DosProgramLoader : DosFileLoader {
                     return false;
 
                 case BatchCommandType.Pause:
+                    HandlePause();
                     return true;
 
                 case BatchCommandType.If:
@@ -427,6 +447,66 @@ internal class DosProgramLoader : DosFileLoader {
                 return Array.Empty<string>();
             }
             return arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        private void HandlePrintMessage(BatchCommand command) {
+            string message = command.Value;
+            PrintToConsole(message);
+            PrintToConsole("\r\n");
+        }
+
+        private void HandleShowEchoState(BatchCommand command) {
+            string state = command.Value; // "ON" or "OFF"
+            PrintToConsole($"ECHO is {state}\r\n");
+        }
+
+        private void HandleSetVariable(BatchCommand command) {
+            string name = command.Value;
+            string value = command.Arguments;
+            _processManager.SetEnvironmentVariable(name, value);
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("BatchExecutor: SET {Name}={Value}", name, value);
+            }
+        }
+
+        private void HandleShowVariables() {
+            Dictionary<string, string> allVars = _processManager.GetAllEnvironmentVariables();
+            foreach (KeyValuePair<string, string> kvp in allVars) {
+                PrintToConsole($"{kvp.Key}={kvp.Value}\r\n");
+            }
+        }
+
+        private void HandleShowVariable(BatchCommand command) {
+            string name = command.Value;
+            string? value = _processManager.GetEnvironmentVariable(name);
+            if (value is not null) {
+                PrintToConsole($"{name}={value}\r\n");
+            }
+        }
+
+        private void HandlePause() {
+            PrintToConsole("Press any key to continue . . . ");
+            
+            // Wait for a key press using the file manager's standard input
+            if (_fileManager.TryGetStandardInput(out CharacterDevice? stdIn) && stdIn.CanRead) {
+                byte[] buffer = new byte[1];
+                int bytesRead = stdIn.Read(buffer, 0, 1);
+                if (bytesRead == 0 && _loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("BatchExecutor: No input available for PAUSE");
+                }
+            }
+            
+            PrintToConsole("\r\n");
+        }
+
+        private void PrintToConsole(string text) {
+            if (_fileManager.TryGetStandardOutput(out CharacterDevice? stdOut) && stdOut.CanWrite) {
+                byte[] bytes = Encoding.ASCII.GetBytes(text);
+                stdOut.Write(bytes, 0, bytes.Length);
+            } else if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("BatchExecutor: Cannot write to console: {Text}", text);
+            }
         }
 
         private readonly struct ProgramResolutionResult {
