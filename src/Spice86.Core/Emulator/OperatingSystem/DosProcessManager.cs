@@ -13,7 +13,6 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -33,11 +32,8 @@ public class DosProcessManager {
     private const byte CriticalErrorVectorNumber = 0x24;
     private const byte RetfOpcode = 0xCB;
     
-    // EXE file signature constants (FreeDOS MAGIC and OLD_MAGIC from hdr/exe.h)
-    private const byte MzSignatureByte1 = 0x4D; // 'M'
-    private const byte MzSignatureByte2 = 0x5A; // 'Z'
-    private const byte ZmSignatureByte1 = 0x5A; // 'Z'
-    private const byte ZmSignatureByte2 = 0x4D; // 'M'
+    private const byte MAscii = 0x4D; // 'M'
+    private const byte ZAscii = 0x5A; // 'Z'
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
@@ -50,7 +46,7 @@ public class DosProcessManager {
 
     /// <summary>
     /// The segment address where the root COMMAND.COM PSP is created.
-    /// Follows FreeDOS convention: at 0x0060, and with no PSP MCB.
+    /// Follows FreeDOS convention: at 0x60, and with no PSP MCB.
     /// </summary>
     public const ushort CommandComSegment = 0x60;
     private const byte DefaultDosVersionMajor = 5;
@@ -233,8 +229,8 @@ public class DosProcessManager {
 
         byte[] fileBytes = File.ReadAllBytes(hostPath);
 
-        bool hasMzSignature = fileBytes.Length >= 2 && fileBytes[0] == MzSignatureByte1 && fileBytes[1] == MzSignatureByte2;
-        bool hasZmSignature = fileBytes.Length >= 2 && fileBytes[0] == ZmSignatureByte1 && fileBytes[1] == ZmSignatureByte2;
+        bool hasMzSignature = fileBytes.Length >= 2 && fileBytes[0] == MAscii && fileBytes[1] == ZAscii;
+        bool hasZmSignature = fileBytes.Length >= 2 && fileBytes[0] == ZAscii && fileBytes[1] == MAscii;
         
         bool isExeCandidate = fileBytes.Length >= DosExeFile.MinExeSize && 
                               (hasMzSignature || hasZmSignature);
