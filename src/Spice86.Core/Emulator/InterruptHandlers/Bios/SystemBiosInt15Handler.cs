@@ -78,8 +78,23 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <inheritdoc />
     public override void Run() {
         byte operation = State.AH;
+        // from IBM PC BIOS code reconstruction - IBM PC ATv2 VARIANT: (also found in DOSBox INT15_Handler)
+        // https://github.com/gawlas/IBM-PC-BIOS
+        // ; ---INT 15 H------------------------------------------------------------------
+        // ;------------------------------------------------------------------------------:
+        //; INPUT - UNUSED FUNCTIONS:
+        // ; (AH) = 04H THROUGH 7FH:
+        // ; RETURNS FOR THESE FUNCTIONS ALWAYS(AH) = 86H, CY = 1)		       :
+        if (!HasRunnable(operation) && operation >= 0x4 && operation <= 0x7F) {
+            LoggerService.Warning("BIOS INT15H: Ignored specific unrecognized operation! {operation:X2}", operation);
+            //Makes (for example) Knights of Xentar work.
+            State.AH = 0x86;
+            SetCarryFlag(true, setOnStack: true);
+            return;
+        }
         Run(operation);
     }
+
 
     /// <summary>
     /// INT 15h, AH=83h - Event Wait Interval.
