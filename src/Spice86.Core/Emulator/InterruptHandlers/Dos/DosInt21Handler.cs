@@ -1352,6 +1352,7 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         _dosProcessManager.CreateNewPsp(newPspSegment);
+        State.AL = ExpectedValueOfALInCreateChildPsp;
     }
 
     /// <summary>
@@ -1367,7 +1368,7 @@ public class DosInt21Handler : InterruptHandler {
                 childSegment, sizeInParagraphs);
         }
 
-        _dosProcessManager.CreateChildPsp(childSegment, sizeInParagraphs, _interruptVectorTable);
+        _dosProcessManager.CreateChildPsp(childSegment, sizeInParagraphs);
         State.AL = ExpectedValueOfALInCreateChildPsp;
     }
 

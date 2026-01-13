@@ -587,7 +587,7 @@ public class DosProcessManager {
     /// <summary>
     /// Implements INT 21h, AH=55h by cloning the current PSP to the target segment, wiring parent links, refreshing INT 22h/23h/24h vectors, rebuilding the file table, and clearing FCBs and command tail to FreeDOS defaults.
     /// </summary>
-    public void CreateChildPsp(ushort childSegment, ushort sizeInParagraphs, InterruptVectorTable interruptVectorTable) {
+    public void CreateChildPsp(ushort childSegment, ushort sizeInParagraphs) {
         ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
         uint childPspAddress = MemoryUtils.ToPhysicalAddress(childSegment, 0);
         uint parentPspAddress = MemoryUtils.ToPhysicalAddress(parentPspSegment, 0);
@@ -599,7 +599,7 @@ public class DosProcessManager {
         DosProgramSegmentPrefix childPsp = new(_memory, childPspAddress);
 
         // Update vectors like FreeDOS new_psp.
-        SaveInterruptVectors(childPsp, interruptVectorTable);
+        SaveInterruptVectors(childPsp);
 
         // Parent/previous links.
         childPsp.ParentProgramSegmentPrefix = parentPspSegment;
@@ -643,14 +643,14 @@ public class DosProcessManager {
         }
     }
 
-    private static void SaveInterruptVectors(DosProgramSegmentPrefix psp, InterruptVectorTable ivt) {
-        SegmentedAddress int22 = ivt[TerminateVectorNumber];
+    private void SaveInterruptVectors(DosProgramSegmentPrefix psp) {
+        SegmentedAddress int22 = _interruptVectorTable[TerminateVectorNumber];
         psp.TerminateAddress = MemoryUtils.To32BitAddress(int22.Segment, int22.Offset);
 
-        SegmentedAddress int23 = ivt[CtrlBreakVectorNumber];
+        SegmentedAddress int23 = _interruptVectorTable[CtrlBreakVectorNumber];
         psp.BreakAddress = MemoryUtils.To32BitAddress(int23.Segment, int23.Offset);
 
-        SegmentedAddress int24 = ivt[CriticalErrorVectorNumber];
+        SegmentedAddress int24 = _interruptVectorTable[CriticalErrorVectorNumber];
         psp.CriticalErrorAddress = MemoryUtils.To32BitAddress(int24.Segment, int24.Offset);
     }
 
