@@ -47,6 +47,22 @@ public class DosProcessManager {
     private readonly Dictionary<ushort, uint> _pendingParentStackPointers = new();
     private readonly Dictionary<ushort, ResidentBlockInfo> _pendingResidentBlocks = new();
 
+    internal DosFileManager FileManager {
+        get { return _fileManager; }
+    }
+
+    public string? GetEnvironmentVariable(string name) {
+        if (string.IsNullOrWhiteSpace(name)) {
+            return null;
+        }
+
+        if (_environmentVariables.TryGetValue(name, out string value)) {
+            return value;
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// The segment address where the root COMMAND.COM PSP is created.
     /// Follows FreeDOS convention: at 0x60, and with no PSP MCB.
