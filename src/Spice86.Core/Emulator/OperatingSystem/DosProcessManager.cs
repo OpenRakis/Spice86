@@ -64,6 +64,31 @@ public class DosProcessManager {
     }
 
     /// <summary>
+    /// Sets an environment variable value.
+    /// </summary>
+    /// <param name="name">The variable name (case-insensitive).</param>
+    /// <param name="value">The variable value.</param>
+    public void SetEnvironmentVariable(string name, string value) {
+        if (string.IsNullOrWhiteSpace(name)) {
+            return;
+        }
+
+        _environmentVariables[name] = value;
+    }
+
+    /// <summary>
+    /// Gets all environment variables as a dictionary.
+    /// </summary>
+    /// <returns>A copy of all environment variables.</returns>
+    public Dictionary<string, string> GetAllEnvironmentVariables() {
+        Dictionary<string, string> result = new(StringComparer.OrdinalIgnoreCase);
+        foreach (KeyValuePair<string, string> kvp in _environmentVariables) {
+            result[kvp.Key] = kvp.Value;
+        }
+        return result;
+    }
+
+    /// <summary>
     /// The segment address where the root COMMAND.COM PSP is created.
     /// Follows FreeDOS convention: at 0x60, and with no PSP MCB.
     /// </summary>
