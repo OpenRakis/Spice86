@@ -144,7 +144,6 @@ public class DosProcessManager {
     /// Creates the root COMMAND.COM PSP that acts as the parent for all programs.
     /// </summary>
     public DosProgramSegmentPrefix CreateRootCommandComPsp() {
-        ClearPspMemory(CommandComSegment);
         DosProgramSegmentPrefix rootPsp = _pspTracker.PushPspSegment(CommandComSegment);
 
         rootPsp.Exit[0] = IntOpcode;
