@@ -37,8 +37,6 @@ public class DosProcessManager {
     private const byte CriticalErrorVectorNumber = 0x24;
     private const byte RetfOpcode = 0xCB;
 
-    private const byte MAscii = 0x4D; // 'M'
-    private const byte ZAscii = 0x5A; // 'Z'
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
