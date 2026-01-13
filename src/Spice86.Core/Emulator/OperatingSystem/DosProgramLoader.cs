@@ -503,7 +503,7 @@ internal class DosProgramLoader : DosFileLoader {
         private void PrintToConsole(string text) {
             if (_fileManager.TryGetStandardOutput(out CharacterDevice? stdOut) && stdOut.CanWrite) {
                 byte[] bytes = Encoding.ASCII.GetBytes(text);
-                stdOut.Write(bytes);
+                stdOut.Write(bytes, 0, bytes.Length);
             } else if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("BatchExecutor: Cannot write to console: {Text}", text);
             }

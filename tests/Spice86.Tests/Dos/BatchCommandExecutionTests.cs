@@ -4,6 +4,7 @@ using FluentAssertions;
 
 using NSubstitute;
 
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Command.BatchProcessing;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -268,7 +269,7 @@ public class BatchCommandExecutionTests : IDisposable {
         private int _inputPosition = 0;
 
         public MockConsoleDevice() 
-            : base(null!, 0, "CON", DeviceAttributes.CurrentStdout) {
+            : base(new MockByteReaderWriter(), 0, "CON", DeviceAttributes.CurrentStdout) {
         }
 
         public override string Name => "CON";
@@ -327,5 +328,34 @@ public class BatchCommandExecutionTests : IDisposable {
             returnCode = null;
             return false;
         }
+    }
+
+    /// <summary>
+    /// Minimal IByteReaderWriter implementation for testing.
+    /// </summary>
+    private sealed class MockByteReaderWriter : IByteReaderWriter {
+        public byte this[uint address] {
+            get => 0;
+            set { }
+        }
+
+        public ushort UInt16[uint address] {
+            get => 0;
+            set { }
+        }
+
+        public uint UInt32[uint address] {
+            get => 0;
+            set { }
+        }
+
+        public Span<byte> GetSpan(uint address, int length) => Span<byte>.Empty;
+        public byte[] GetData(uint address, int length) => Array.Empty<byte>();
+        public void SetData(uint address, byte[] data) { }
+        public void SetData(uint address, Span<byte> data) { }
+        public void LoadData(uint address, byte[] data) { }
+        public uint Length => 0;
+        public T Get<T>(uint address) where T : struct => default;
+        public void Set<T>(uint address, T value) where T : struct { }
     }
 }
