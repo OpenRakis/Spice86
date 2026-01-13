@@ -71,7 +71,6 @@ public class DosProcessManager {
     private const ushort NullOffset = 0x0000;
     private const ushort SentinelSegment = 0xFFFF;
     private const ushort SentinelOffset = 0xFFFF;
-    private const ushort AdditionalEnvironmentStringsCount = 1;
     private const int MaximumEnvironmentScanLength = 32768;
     internal const int EnvironmentKeepFreeBytes = 0x83;
     private const string RootCommandPath = "C:\\COMMAND.COM";
@@ -898,11 +897,7 @@ public class DosProcessManager {
         // Add final null byte to mark end of environment block
         ms.WriteByte(0);
 
-        // MS-DOS format: after the double null, write a WORD with value 1 to indicate
-        // that one additional string (the program path) follows.
-        // This is the correct DOS format
-        ms.WriteByte(AdditionalEnvironmentStringsCount & 0xFF); // Low byte of WORD
-        ms.WriteByte(AdditionalEnvironmentStringsCount >> 8);   // High byte of WORD
+        WriteAdditionalStringCountWord(ms);
 
         // Get the DOS path for the program (not the host path)
         string dosPath = _fileManager.GetDosProgramPath(programPath);
@@ -913,6 +908,14 @@ public class DosProcessManager {
         ms.WriteByte(0); // Null terminator for program path
 
         return ms.ToArray();
+    }
+
+    private static void WriteAdditionalStringCountWord(MemoryStream ms) {
+        // MS-DOS format: after the double null, write a WORD with value 1 to indicate
+        // that one additional string (the program path) follows.
+        // This is the correct DOS format
+        ms.WriteByte(1); // Low byte of WORD
+        ms.WriteByte(0);   // High byte of WORD
     }
 
     private byte[] CreateEnvironmentBlockFromParent(ushort environmentSegment, string programPath) {
@@ -950,9 +953,7 @@ public class DosProcessManager {
             return CreateEnvironmentBlock(programPath);
         }
 
-        // Replace the extra strings section with the current program path.
-        ms.WriteByte(AdditionalEnvironmentStringsCount & 0xFF);
-        ms.WriteByte(AdditionalEnvironmentStringsCount >> 8);
+        WriteAdditionalStringCountWord(ms);
 
         string dosPath = _fileManager.GetDosProgramPath(programPath);
         byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
