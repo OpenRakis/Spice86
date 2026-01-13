@@ -953,7 +953,6 @@ public class DosProcessManager {
 
             if (current == 0 && next == 0) {
                 ms.WriteByte(next);
-                offset++;
                 doubleNullFound = true;
                 break;
             }
