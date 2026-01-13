@@ -198,6 +198,7 @@ public class DosProcessManager {
         _fileManager.SetDiskTransferAreaAddress(
             CommandComSegment, DosCommandTail.OffsetInPspSegment);
 
+        //We 'executed' COMMAND.COM - setup CPU registers to reflect that, before launching the emulated program.
         SetupCpuRegistersForComFileExecution(CommandComSegment);
         return rootPsp;
     }
@@ -542,11 +543,6 @@ public class DosProcessManager {
             _state.IsRunning = false;
         }
     }
-
-    /// <summary>
-    /// Gets the last child process exit code. Used by INT 21h AH=4Dh.
-    /// </summary>
-    /// <returns>Exit code in AL, termination type in AH (always 0 for normal termination).</returns>
 
     /// <summary>
     /// Implements INT 21h, AH=26h by cloning the current PSP to a new segment and patching the parent pointer, DOS version fields, and INT 22h/23h/24h vectors so the child inherits the caller’s termination context.
