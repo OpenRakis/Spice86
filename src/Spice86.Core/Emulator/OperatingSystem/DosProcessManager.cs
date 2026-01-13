@@ -73,7 +73,6 @@ public class DosProcessManager {
     private const ushort SentinelOffset = 0xFFFF;
     private const ushort AdditionalEnvironmentStringsCount = 1;
     private const int MaximumEnvironmentScanLength = 32768;
-    internal const int EnvironmentMaximumBytes = MaximumEnvironmentScanLength;
     internal const int EnvironmentKeepFreeBytes = 0x83;
     private const string RootCommandPath = "C:\\COMMAND.COM";
     private const ushort ExecRegisterContractCxValue = 0x00FF;
@@ -739,7 +738,7 @@ public class DosProcessManager {
         // FreeDOS places the root COMMAND.COM environment at a fixed offset (DOS_PSP + 8)
         // This is NOT managed by the memory manager's MCB chain - it's a pre-allocated reserved area
         // The memory manager will start its MCB chain after this reserved space
-        ushort environmentSegment = (ushort)(CommandComSegment + RootEnvironmentParagraphOffset);
+        ushort environmentSegment = CommandComSegment + RootEnvironmentParagraphOffset;
         int capacityBytes = (DosProgramSegmentPrefix.PspSizeInParagraphs - RootEnvironmentParagraphOffset) * 16;
         byte[] buffer = new byte[capacityBytes];
         Array.Copy(environmentBlock, buffer, Math.Min(environmentBlock.Length, capacityBytes));
@@ -902,8 +901,8 @@ public class DosProcessManager {
         // MS-DOS format: after the double null, write a WORD with value 1 to indicate
         // that one additional string (the program path) follows.
         // This is the correct DOS format
-        ms.WriteByte((byte)(AdditionalEnvironmentStringsCount & 0xFF)); // Low byte of WORD
-        ms.WriteByte((byte)(AdditionalEnvironmentStringsCount >> 8));   // High byte of WORD
+        ms.WriteByte(AdditionalEnvironmentStringsCount & 0xFF); // Low byte of WORD
+        ms.WriteByte(AdditionalEnvironmentStringsCount >> 8);   // High byte of WORD
 
         // Get the DOS path for the program (not the host path)
         string dosPath = _fileManager.GetDosProgramPath(programPath);
@@ -952,8 +951,8 @@ public class DosProcessManager {
         }
 
         // Replace the extra strings section with the current program path.
-        ms.WriteByte((byte)(AdditionalEnvironmentStringsCount & 0xFF));
-        ms.WriteByte((byte)(AdditionalEnvironmentStringsCount >> 8));
+        ms.WriteByte(AdditionalEnvironmentStringsCount & 0xFF);
+        ms.WriteByte(AdditionalEnvironmentStringsCount >> 8);
 
         string dosPath = _fileManager.GetDosProgramPath(programPath);
         byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
