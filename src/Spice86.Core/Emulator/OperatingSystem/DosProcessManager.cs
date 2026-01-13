@@ -236,7 +236,7 @@ public class DosProcessManager {
         DosMemoryControlBlock? envBlock = null;
         if (environmentSegment == 0) {
             // Need to allocate a new environment block
-            if(!TryAllocateEnvironmentBlock(parentPspSegment, hostPath, out envBlock)) {
+            if (!TryAllocateEnvironmentBlock(parentPspSegment, hostPath, out envBlock)) {
                 return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
             }
         }
@@ -244,56 +244,76 @@ public class DosProcessManager {
         // Try to load as EXE first if it looks like an EXE file
         DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
         if (exeFile.IsValid) {
-            DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
-            if (block is null) {
-                // Free the environment block we just allocated
-                if (envBlock is not null) {
-                    _memoryManager.FreeMemoryBlock(envBlock);
-                }
-                return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
-            }
-
-            SetMemoryBlockOwnership(hostPath, envBlock, block);
-
-            // Use the pre-allocated environment segment or 0 if caller provided one
-            ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
-            InitializePsp(block.DataBlockSegment, hostPath, commandTail,
-                finalEnvironmentSegment, parentPspSegment,
-                parentStackPointer, callerCS, callerIP, loadType == DosExecLoadType.LoadAndExecute);
-
-            DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
-            CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
-            CopyFcbFromPointer(paramBlock.SecondFcbPointer, exePsp.SecondFileControlBlock);
-
-            LoadExeFile(exeFile, block.DataBlockSegment, block, loadType == DosExecLoadType.LoadAndExecute);
-
-            ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
-            if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
-                ushort imageDistanceInParagraphs = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
-                loadImageSegment = (ushort)(block.DataBlockSegment + imageDistanceInParagraphs);
-            }
-
-            SetupAxAndBxWithFcbValuesForExecute(loadType, exePsp);
-
-            RestoreParentPspForLoadOnly(loadType, parentPspSegment);
-
-            DosExecResult exeResult;
-            if (loadType == DosExecLoadType.LoadOnly) {
-                exeResult = DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
-                (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
-            } else {
-                exeResult = DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
-                (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
-            }
-
-            // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
-            FillEPBForLoadOnlyMode(paramBlock, loadType, exeResult);
-
-            return exeResult;
+            return HandleExeFileLoading(paramBlock, commandTail, loadType,
+                environmentSegment, callerIP, callerCS, parentPspSegment, hostPath,
+                parentStackPointer, envBlock, exeFile);
         }
+
         // If file has .EXE signature but isn't a valid EXE, fall through to try COM loading
         // This matches FreeDOS behavior
 
+        return HandleComFileLoading(paramBlock, commandTail, loadType,
+            environmentSegment, callerIP, callerCS, parentPspSegment,
+            hostPath, fileBytes, parentStackPointer, envBlock);
+    }
+
+    private DosExecResult HandleExeFileLoading(DosExecParameterBlock paramBlock,
+        string commandTail, DosExecLoadType loadType, ushort environmentSegment,
+        ushort callerIP, ushort callerCS, ushort parentPspSegment, string hostPath,
+        uint parentStackPointer, DosMemoryControlBlock? envBlock, DosExeFile exeFile) {
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
+        if (block is null) {
+            // Free the environment block we just allocated
+            if (envBlock is not null) {
+                _memoryManager.FreeMemoryBlock(envBlock);
+            }
+            return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
+        }
+
+        SetMemoryBlockOwnership(hostPath, envBlock, block);
+
+        // Use the pre-allocated environment segment or 0 if caller provided one
+        ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
+        InitializePsp(block.DataBlockSegment, hostPath, commandTail,
+            finalEnvironmentSegment, parentPspSegment,
+            parentStackPointer, callerCS, callerIP, loadType == DosExecLoadType.LoadAndExecute);
+
+        DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
+        CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
+        CopyFcbFromPointer(paramBlock.SecondFcbPointer, exePsp.SecondFileControlBlock);
+
+        LoadExeFile(exeFile, block.DataBlockSegment, block, loadType == DosExecLoadType.LoadAndExecute);
+
+        ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
+        if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
+            ushort imageDistanceInParagraphs = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
+            loadImageSegment = (ushort)(block.DataBlockSegment + imageDistanceInParagraphs);
+        }
+
+        SetupAxAndBxWithFcbValuesForExecute(loadType, exePsp);
+
+        RestoreParentPspForLoadOnly(loadType, parentPspSegment);
+
+        DosExecResult exeResult;
+        if (loadType == DosExecLoadType.LoadOnly) {
+            exeResult = DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
+            (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
+        } else {
+            exeResult = DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
+            (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
+        }
+
+        // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
+        FillEPBForLoadOnlyMode(paramBlock, loadType, exeResult);
+
+        return exeResult;
+    }
+
+
+    private DosExecResult HandleComFileLoading(DosExecParameterBlock paramBlock,
+        string commandTail, DosExecLoadType loadType, ushort environmentSegment,
+        ushort callerIP, ushort callerCS, ushort parentPspSegment, string hostPath,
+        byte[] fileBytes, uint parentStackPointer, DosMemoryControlBlock? envBlock) {
         ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
         DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
         if (comBlock is null) {
