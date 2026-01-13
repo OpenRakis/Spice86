@@ -230,7 +230,7 @@ public class DosProcessManager {
 
         // Save parent's current SS:SP BEFORE any CPU state changes
         // This captures the parent's stack context before the child modifies anything
-        uint parentStackPointer = MemoryUtils.To32BitAddress(_state.SS, _state.SP);
+        uint parentStackPointer = _state.StackPhysicalAddress;
 
         // Allocate environment block FIRST before allocating program memory, as we might decide to take ALL the remaining free memory
         DosMemoryControlBlock? envBlock = null;
