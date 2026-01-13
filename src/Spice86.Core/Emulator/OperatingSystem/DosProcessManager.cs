@@ -234,11 +234,8 @@ public class DosProcessManager {
 
         // Allocate environment block FIRST before allocating program memory, as we might decide to take ALL the remaining free memory
         DosMemoryControlBlock? envBlock = null;
-        if (environmentSegment == 0) {
-            // Need to allocate a new environment block
-            if (!TryAllocateEnvironmentBlock(parentPspSegment, hostPath, out envBlock)) {
-                return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
-            }
+        if (environmentSegment == 0 && !TryAllocateEnvironmentBlock(parentPspSegment, hostPath, out envBlock)) {
+            return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
 
         // Try to load as EXE first if it looks like an EXE file
