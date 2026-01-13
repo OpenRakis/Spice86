@@ -515,7 +515,7 @@ public class DosProcessManager {
 
             // Modify the interrupt frame on the stack
             // so that when IRET pops it, execution continues at the return address
-            uint stackPhysicalAddress = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
+            uint stackPhysicalAddress = _state.StackPhysicalAddress;
 
             _memory.UInt16[stackPhysicalAddress] = returnAddress.Offset;     // IP
             _memory.UInt16[stackPhysicalAddress + 2] = returnAddress.Segment; // CS
