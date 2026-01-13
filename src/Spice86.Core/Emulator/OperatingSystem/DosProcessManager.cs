@@ -20,8 +20,13 @@ using System.Text;
 using Stack = CPU.Stack;
 
 /// <summary>
-/// Setups the loading and execution of DOS programs and maintains the DOS PSP chains in memory.
+/// Manages the lifecycle of DOS processes, including creation, execution, termination, and environment management, by
+/// emulating the behavior of the DOS Program Segment Prefix (PSP) and related process structures.
 /// </summary>
+/// <remarks>The DosProcessManager provides high-level operations for loading and executing DOS programs (EXE and
+/// COM), cloning and terminating processes, and managing process-specific resources such as file handles and
+/// environment blocks. It emulates key DOS process management interrupts (such as INT 21h AH=4Bh, 26h, 55h) and ensures
+/// correct parent-child relationships, memory allocation, and file handles cleanup.</remarks>
 public class DosProcessManager {
     private const byte FarCallOpcode = 0x9A;
     private const byte IntOpcode = 0xCD;
