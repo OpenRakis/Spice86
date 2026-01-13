@@ -35,7 +35,7 @@ public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     public UInt8Array Exit => GetUInt8Array(0x0, 2);
 
     /// <summary>
-    /// Size of the Program. This is used to guess the size of conventionnal memory (Dune does this).
+    /// Size of the Program. This is used to guess the size of conventional memory (Dune does this).
     /// </summary>
     /// <remarks>
     /// Specified in paragraphs. Create Child PSP has it as a parameter in BX register.
