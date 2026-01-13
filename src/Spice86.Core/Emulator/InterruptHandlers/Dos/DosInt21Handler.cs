@@ -171,20 +171,20 @@ public class DosInt21Handler : InterruptHandler {
         if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) &&
             stdIn.CanRead) {
             ConsoleDevice? consoleDevice = stdIn as ConsoleDevice;
+            bool previousEchoState = false;
             if (consoleDevice != null) {
-                bool previousEchoState = consoleDevice.Echo;
+                previousEchoState = consoleDevice.Echo;
                 consoleDevice.Echo = true;
-                
-                byte[] bytes = new byte[1];
-                int readCount = stdIn.Read(bytes, 0, 1);
-                
-                consoleDevice.Echo = previousEchoState;
-                State.AL = readCount < 1 ? (byte)0 : bytes[0];
-            } else {
-                byte[] bytes = new byte[1];
-                int readCount = stdIn.Read(bytes, 0, 1);
-                State.AL = readCount < 1 ? (byte)0 : bytes[0];
             }
+            
+            byte[] bytes = new byte[1];
+            int readCount = stdIn.Read(bytes, 0, 1);
+            
+            if (consoleDevice != null) {
+                consoleDevice.Echo = previousEchoState;
+            }
+            
+            State.AL = readCount < 1 ? (byte)0 : bytes[0];
         } else {
             State.AL = 0;
         }
