@@ -155,16 +155,15 @@ public sealed class Dos {
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
-    /// <param name="interruptVectorTable">The shared interrupt vector table.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="xms">Optional XMS manager to expose through DOS.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, InterruptVectorTable interruptVectorTable, ILoggerService loggerService,
+        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
         ExtendedMemoryManager? xms = null) {
-        _loggerService = loggerService;//.WithLogLevel(LogEventLevel.Verbose);
+        _loggerService = loggerService;
         Xms = xms;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;

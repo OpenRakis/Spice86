@@ -162,7 +162,7 @@ public class RtcIntegrationTests {
         string tempFilePath = Path.Join(tempDir, $"{tempFilePrefix}{Guid.NewGuid()}.com");
         File.WriteAllBytes(tempFilePath, program);
         try {
-            // Setup emulator with .com extension - use default memory layout (0x62)
+            // Setup emulator with .com extension
             Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
                 binName: tempFilePath,
                 enablePit: true,
@@ -171,8 +171,7 @@ public class RtcIntegrationTests {
                 installInterruptVectors: true,
                 enableA20Gate: false,
                 enableXms: false,
-                enableEms: false,
-                programEntryPointSegment: 0x62  // Explicitly use new default
+                enableEms: false
             ).Create();
 
             RtcTestHandler testHandler = new(
