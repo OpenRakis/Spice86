@@ -36,7 +36,15 @@ internal class DosProgramLoader : DosFileLoader {
         }
 
         // Convert host file path to DOS path relative to C drive
-        string absoluteDosPath = $"C:{file[cDrive.Length..]}";
+        string absoluteDosPath;
+
+        if (file.Length >= cDrive.Length) {
+            absoluteDosPath = $"C:{file[cDrive.Length..]}";
+        } else {
+            string fileName = Path.GetFileName(file);
+            absoluteDosPath = $"C:{fileName}";
+        }
+
         DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
         _int21.LoadAndExecute(absoluteDosPath, paramBlock, commandTail: arguments);
         return File.ReadAllBytes(file);
