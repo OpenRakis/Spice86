@@ -687,7 +687,7 @@ public class DosProcessManager {
 
     private static void ResetFcb(UInt8Array fcb) {
         fcb[0] = 0;
-        for (int i = 1; i <= FcbFilenameLength && i < FcbSize; i++) {
+        for (int i = 1; i is <= FcbFilenameLength and < FcbSize; i++) {
             fcb[i] = FcbFilenamePaddingByte;
         }
         for (int i = FcbMetadataStartIndex; i < FcbSize; i++) {
