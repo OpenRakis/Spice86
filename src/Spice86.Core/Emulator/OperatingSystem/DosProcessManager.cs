@@ -129,8 +129,6 @@ public class DosProcessManager {
         }
     }
 
-    public IReadOnlyDictionary<ushort, uint> PendingParentStackPointers => _pendingParentStackPointers;
-
     public void TrackResidentBlock(ushort pspSegment, DosMemoryControlBlock block) {
         ushort mcbSegment = (ushort)(block.DataBlockSegment - 1);
         _pendingResidentBlocks[pspSegment] = new ResidentBlockInfo(mcbSegment);
@@ -521,6 +519,7 @@ public class DosProcessManager {
             // We'll modify the frame contents so IRET goes to the right place
             _state.SS = (ushort)(stackPointerToRestore >> 16);
             _state.SP = (ushort)(stackPointerToRestore & 0xFFFF);
+
             _state.DS = parentPspSegment;
             _state.ES = parentPspSegment;
 
