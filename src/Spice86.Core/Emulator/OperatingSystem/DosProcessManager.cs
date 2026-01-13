@@ -251,7 +251,6 @@ public class DosProcessManager {
 
         // If file has .EXE signature but isn't a valid EXE, fall through to try COM loading
         // This matches FreeDOS behavior
-
         return HandleComFileLoading(paramBlock, commandTail, loadType,
             environmentSegment, callerIP, callerCS, parentPspSegment,
             hostPath, fileBytes, parentStackPointer, envBlock);
