@@ -214,7 +214,6 @@ public class DosProcessManager {
         ushort callerCS = _stack.Peek16(2);
 
         ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
-
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("EXEC: Current PSP={CurrentPsp:X4}, will become parent",
                 parentPspSegment);
@@ -235,26 +234,9 @@ public class DosProcessManager {
         DosMemoryControlBlock? envBlock = null;
         if (environmentSegment == 0) {
             // Need to allocate a new environment block
-            DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
-            ushort sourceEnvironmentSegment = parentPsp.EnvironmentTableSegment;
-
-            byte[] environmentBlock;
-            if (sourceEnvironmentSegment != 0) {
-                environmentBlock = CreateEnvironmentBlockFromParent(sourceEnvironmentSegment, hostPath);
-            } else {
-                environmentBlock = CreateEnvironmentBlock(hostPath);
-            }
-
-            int bytesToAllocate = environmentBlock.Length + EnvironmentKeepFreeBytes;
-            ushort envParagraphsNeeded = CalculateParagraphsNeeded(bytesToAllocate);
-
-            envBlock = _memoryManager.AllocateMemoryBlock(envParagraphsNeeded);
-            if (envBlock == null) {
+            if(!TryAllocateEnvironmentBlock(parentPspSegment, hostPath, out envBlock)) {
                 return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
             }
-
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
-            envBlock.Owner = BuildMcbOwnerName(hostPath);
         }
 
         // Try to load as EXE first if it looks like an EXE file
@@ -269,12 +251,7 @@ public class DosProcessManager {
                 return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
             }
 
-            // Mark the MCB with the owning PSP segment, matching DOS 4+ behavior.
-            block.PspSegment = block.DataBlockSegment;
-            block.Owner = BuildMcbOwnerName(hostPath);
-
-            // Set environment block ownership to the child PSP
-            envBlock?.PspSegment = block.DataBlockSegment;
+            SetMemoryBlockOwnership(hostPath, envBlock, block);
 
             // Use the pre-allocated environment segment or 0 if caller provided one
             ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
@@ -286,8 +263,6 @@ public class DosProcessManager {
             CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
             CopyFcbFromPointer(paramBlock.SecondFcbPointer, exePsp.SecondFileControlBlock);
 
-            ushort fcbCode = ComputeFcbCode(exePsp);
-
             LoadExeFile(exeFile, block.DataBlockSegment, block, loadType == DosExecLoadType.LoadAndExecute);
 
             ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
@@ -296,35 +271,23 @@ public class DosProcessManager {
                 loadImageSegment = (ushort)(block.DataBlockSegment + imageDistanceInParagraphs);
             }
 
-            if (loadType == DosExecLoadType.LoadAndExecute) {
-                _state.AX = fcbCode;
-                _state.BX = fcbCode;
-            }
+            SetupAxAndBxWithFcbValuesForExecute(loadType, exePsp);
 
-            if (loadType == DosExecLoadType.LoadOnly) {
-                // LoadOnly: restore parent PSP as current
-                // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
-                _pspTracker.SetCurrentPspSegment(parentPspSegment);
-            }
+            RestoreParentPspForLoadOnly(loadType, parentPspSegment);
 
-            DosExecResult result;
+            DosExecResult exeResult;
             if (loadType == DosExecLoadType.LoadOnly) {
-                result = DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
+                exeResult = DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
                 (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
             } else {
-                result = DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
+                exeResult = DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
                 (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
             }
 
             // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
-            if (loadType == DosExecLoadType.LoadOnly) {
-                paramBlock.InitialCS = result.InitialCS;
-                paramBlock.InitialIP = result.InitialIP;
-                paramBlock.InitialSS = result.InitialSS;
-                paramBlock.InitialSP = result.InitialSP;
-            }
+            FillEPBForLoadOnlyMode(paramBlock, loadType, exeResult);
 
-            return result;
+            return exeResult;
         }
         // If file has .EXE signature but isn't a valid EXE, fall through to try COM loading
         // This matches FreeDOS behavior
@@ -339,12 +302,7 @@ public class DosProcessManager {
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
 
-        // Align MCB ownership with the child PSP rather than the parent loader.
-        comBlock.PspSegment = comBlock.DataBlockSegment;
-        comBlock.Owner = BuildMcbOwnerName(hostPath);
-
-        // Set environment block ownership to the child PSP
-        envBlock?.PspSegment = comBlock.DataBlockSegment;
+        SetMemoryBlockOwnership(hostPath, envBlock, comBlock);
 
         // Use the pre-allocated environment segment or 0 if caller provided one
         ushort comFinalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
@@ -356,8 +314,6 @@ public class DosProcessManager {
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
         CopyFcbFromPointer(paramBlock.SecondFcbPointer, comPsp.SecondFileControlBlock);
 
-        ushort comFcbCode = ComputeFcbCode(comPsp);
-
         LoadComFile(fileBytes, comBlock.DataBlockSegment, loadType == DosExecLoadType.LoadAndExecute);
 
         DosExecResult comResult = loadType == DosExecLoadType.LoadOnly
@@ -366,26 +322,69 @@ public class DosProcessManager {
             : DosExecResult.SuccessExecute(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
                 comBlock.DataBlockSegment, ComDefaultStackPointer);
 
+        RestoreParentPspForLoadOnly(loadType, parentPspSegment);
+        FillEPBForLoadOnlyMode(paramBlock, loadType, comResult);
+        SetupAxAndBxWithFcbValuesForExecute(loadType, comPsp);
+
+        return comResult;
+    }
+
+    private bool TryAllocateEnvironmentBlock(ushort parentPspSegment, string hostPath, out DosMemoryControlBlock? envBlock) {
+        DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
+        ushort sourceEnvironmentSegment = parentPsp.EnvironmentTableSegment;
+
+        byte[] environmentBlock;
+        if (sourceEnvironmentSegment != 0) {
+            environmentBlock = CreateEnvironmentBlockFromParent(sourceEnvironmentSegment, hostPath);
+        } else {
+            environmentBlock = CreateEnvironmentBlock(hostPath);
+        }
+
+        int bytesToAllocate = environmentBlock.Length + EnvironmentKeepFreeBytes;
+        ushort envParagraphsNeeded = CalculateParagraphsNeeded(bytesToAllocate);
+
+        envBlock = _memoryManager.AllocateMemoryBlock(envParagraphsNeeded);
+        if (envBlock == null) {
+            return false;
+        }
+
+        _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
+        envBlock.Owner = BuildMcbOwnerName(hostPath);
+        return true;
+    }
+
+    private static void SetMemoryBlockOwnership(string hostPath, DosMemoryControlBlock? envBlock, DosMemoryControlBlock block) {
+        // Mark the MCB with the owning PSP segment, matching DOS 4+ behavior.
+        block.PspSegment = block.DataBlockSegment;
+        block.Owner = BuildMcbOwnerName(hostPath);
+
+        // Set environment block ownership to the child PSP
+        envBlock?.PspSegment = block.DataBlockSegment;
+    }
+
+    private void SetupAxAndBxWithFcbValuesForExecute(DosExecLoadType loadType, DosProgramSegmentPrefix psp) {
+        ushort fcbCode = ComputeFcbCode(psp);
+        if (loadType == DosExecLoadType.LoadAndExecute) {
+            _state.AX = fcbCode;
+            _state.BX = fcbCode;
+        }
+    }
+
+    private void RestoreParentPspForLoadOnly(DosExecLoadType loadType, ushort parentPspSegment) {
         if (loadType == DosExecLoadType.LoadOnly) {
             // LoadOnly: restore parent PSP as current
             // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
             _pspTracker.SetCurrentPspSegment(parentPspSegment);
         }
+    }
 
-        // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
+    private static void FillEPBForLoadOnlyMode(DosExecParameterBlock paramBlock, DosExecLoadType loadType, DosExecResult execResult) {
         if (loadType == DosExecLoadType.LoadOnly) {
-            paramBlock.InitialCS = comResult.InitialCS;
-            paramBlock.InitialIP = comResult.InitialIP;
-            paramBlock.InitialSS = comResult.InitialSS;
-            paramBlock.InitialSP = comResult.InitialSP;
+            paramBlock.InitialCS = execResult.InitialCS;
+            paramBlock.InitialIP = execResult.InitialIP;
+            paramBlock.InitialSS = execResult.InitialSS;
+            paramBlock.InitialSP = execResult.InitialSP;
         }
-
-        if (loadType == DosExecLoadType.LoadAndExecute) {
-            _state.AX = comFcbCode;
-            _state.BX = comFcbCode;
-        }
-
-        return comResult;
     }
 
     /// <summary>
