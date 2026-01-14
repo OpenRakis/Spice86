@@ -15,6 +15,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -142,6 +143,17 @@ public sealed class Dos {
     public ExtendedMemoryManager? Xms { get; private set; }
 
     /// <summary>
+    /// Gets the batch file manager for handling batch file execution.
+    /// </summary>
+    /// <remarks>
+    /// This is used by the shell/command processor (COMMAND.COM), NOT by DOS INT 21h/4Bh.
+    /// Batch files are executed by the shell reading lines and executing them as commands,
+    /// similar to how DOSBox handles batch files through INT 2Eh (internal command execution).
+    /// The DOS kernel only loads and executes binary programs (.COM/.EXE files).
+    /// </remarks>
+    public BatchFileManager BatchFileManager { get; }
+
+    /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="configuration">An object that describes what to run and how.</param>
@@ -166,6 +178,7 @@ public sealed class Dos {
         _loggerService = loggerService;
         Xms = xms;
         _biosKeyboardBuffer = biosKeyboardBuffer;
+        BatchFileManager = new(_loggerService);
         _memory = memory;
         _biosDataArea = biosDataArea;
         _vgaFunctionality = vgaFunctionality;
@@ -199,7 +212,7 @@ public sealed class Dos {
         // This matches FreeDOS where DOS_PSP + 16 paragraphs is reserved
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
 
-        ProcessManager = new(_memory, stack, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, _loggerService);
+        ProcessManager = new(_memory, stack, state, pspTracker, MemoryManager, FileManager, DosDriveManager, BatchFileManager, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,

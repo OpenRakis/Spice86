@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -88,6 +89,14 @@ public class DosInt21Handler : InterruptHandler {
     /// Gets the DOS process manager for the <see cref="DosProgramLoader"/>
     /// </summary>
     internal DosProcessManager ProcessManager => _dosProcessManager;
+
+    internal DosFileManager FileManager => _dosFileManager;
+
+    internal DosDriveManager DriveManager => _dosDriveManager;
+
+    internal BatchFileManager BatchFileManager => _dosProcessManager.BatchFileManager;
+
+    internal EnvironmentVariables EnvironmentVariables => _dosProcessManager.EnvironmentVariables;
 
     /// <summary>
     /// Register the handlers for the DOS INT21H services that we support.

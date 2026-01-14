@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Gdb;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.LoadableFile.Bios;
@@ -37,6 +38,7 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
     private readonly DumpFolderMetadata _dumpContext;
+    private readonly CallbackHandler _callbackHandler;
     public event EventHandler? EmulationStopped;
 
     /// <summary>
@@ -56,6 +58,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
     /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
+    /// <param name="callbackHandler">The callback handler for CPU callbacks.</param>
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
         EmulationLoop emulationLoop,
@@ -65,7 +68,8 @@ public sealed class ProgramExecutor : IDisposable {
         MemoryDataExporter memoryDataExporter, State state, DosInt21Handler int21Handler,
         FunctionCatalogue functionCatalogue,
         CfgCpuFlowDumper cfgCpuFlowDumper, IPauseHandler pauseHandler,
-        IGuiVideoPresentation? screenPresenter, DumpFolderMetadata dumpContext, ILoggerService loggerService) {
+        IGuiVideoPresentation? screenPresenter, DumpFolderMetadata dumpContext,
+        CallbackHandler callbackHandler, ILoggerService loggerService) {
         _configuration = configuration;
         _emulationLoop = emulationLoop;
         _loggerService = loggerService;
@@ -73,6 +77,7 @@ public sealed class ProgramExecutor : IDisposable {
         _pauseHandler = pauseHandler;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _dumpContext = dumpContext;
+        _callbackHandler = callbackHandler;
         _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, functionHandlerProvider,
             state, functionCatalogue,
             cfgCpuFlowDumper,
@@ -136,8 +141,9 @@ public sealed class ProgramExecutor : IDisposable {
         string? executableFileName = configuration.Exe;
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
-        string upperCaseExtension = Path.GetExtension(executableFileName.ToUpperInvariant());
-        bool isDosProgram = upperCaseExtension is ".EXE" or ".COM";
+        string upperCaseExtension = Path.GetExtension(executableFileName).ToUpperInvariant();
+        bool isBatchProgram = upperCaseExtension == ".BAT";
+        bool isDosProgram = upperCaseExtension is ".EXE" or ".COM" or ".BAT";
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Preparing initial load for {FileName} (DOS program: {IsDosProgram})", executableFileName, isDosProgram);
@@ -145,7 +151,9 @@ public sealed class ProgramExecutor : IDisposable {
 
         ExecutableFileLoader loader;
 
-        if (isDosProgram) {
+        if (isBatchProgram) {
+            loader = new ShellLoader(configuration, memory, state, int21Handler, _callbackHandler, _loggerService);
+        } else if (isDosProgram) {
             loader = new DosProgramLoader(configuration, memory, state, int21Handler, _loggerService);
         } else {
             loader = new BiosLoader(memory, state, _loggerService);

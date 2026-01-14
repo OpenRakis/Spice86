@@ -13,6 +13,7 @@ using PauseHandler = Spice86.Core.Emulator.VM.PauseHandler;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
@@ -55,8 +56,9 @@ public class DosProgramSegmentPrefixTrackerTests {
         DosMemoryManager dosMemoryManager = new(memory, _pspTracker, loggerService);
         DosFileManager dosFileManager = new(memory, new DosStringDecoder(memory, state),
             dosDriveManager, loggerService, new List<IVirtualDevice>());
+        BatchFileManager batchFileManager = new(loggerService);
         _processManager = new(memory, stack, state, _pspTracker, dosMemoryManager, dosFileManager, dosDriveManager,
-            new Dictionary<string, string>(), loggerService);
+            batchFileManager, new Dictionary<string, string>(), loggerService);
     }
 
     /// <summary>

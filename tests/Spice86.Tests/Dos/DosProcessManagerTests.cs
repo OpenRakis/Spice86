@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -393,6 +394,7 @@ public class DosProcessManagerTests {
         DosDriveManager driveManager = new(loggerService, null, null);
         DosMemoryManager memoryManager = new(memory, tracker, loggerService);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state), driveManager, loggerService, new List<IVirtualDevice>());
+        BatchFileManager batchFileManager = new(loggerService);
 
         DosProcessManager processManager = new(
             memory,
@@ -402,6 +404,7 @@ public class DosProcessManagerTests {
             memoryManager,
             fileManager,
             driveManager,
+            batchFileManager,
             new Dictionary<string, string>(),
             loggerService);
 
