@@ -683,6 +683,8 @@ public class DosMemoryManager {
             // Free blocks owned by this PSP
             if (current.PspSegment == pspSegment) {
                 current.SetFree();
+                // Coalesce adjacent free blocks
+                JoinBlocks(current, true);
             }
 
             if (current.IsLast) {
@@ -691,9 +693,6 @@ public class DosMemoryManager {
 
             current = current.GetNextOrDefault();
         }
-
-        // Now coalesce adjacent free blocks
-        JoinBlocks(_start, true);
 
         return true;
     }
