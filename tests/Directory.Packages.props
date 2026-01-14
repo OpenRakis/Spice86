@@ -19,7 +19,7 @@
     <PackageVersion Include="SingleStepTests.Intel80286.80-BF" Version="2025.10.8" />
     <PackageVersion Include="SingleStepTests.Intel80286.C0-FF" Version="2025.10.8" />
     <PackageVersion Include="System.Text.Json" Version="10.0.0" />
-    <PackageVersion Include="Avalonia.Headless" Version="11.3.8" />
+    <PackageVersion Include="Avalonia.Headless" Version="11.3.11" />
     <PackageVersion Include="Avalonia.Headless.XUnit" Version="11.3.8" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
