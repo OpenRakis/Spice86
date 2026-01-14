@@ -4,7 +4,7 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Avalonia" Version="11.3.8" />
+    <PackageVersion Include="Avalonia" Version="11.3.9" />
     <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
     <PackageVersion Include="Avalonia.Desktop" Version="11.3.8" />
     <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.7" />
@@ -21,8 +21,8 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
     <PackageVersion Include="DialogHost.Avalonia" Version="0.9.3" />
-    <PackageVersion Include="Dock.Avalonia" Version="11.3.8" />
-    <PackageVersion Include="Dock.Avalonia.Themes.Fluent" Version="11.3.8" />
+    <PackageVersion Include="Dock.Avalonia" Version="11.3.9" />
+    <PackageVersion Include="Dock.Avalonia.Themes.Fluent" Version="11.3.9" />
     <PackageVersion Include="Dock.Model.Avalonia" Version="11.3.8" />
     <PackageVersion Include="Dock.Model.Mvvm" Version="11.3.8" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
