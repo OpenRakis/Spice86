@@ -28,6 +28,10 @@ internal class DosProgramLoader : DosFileLoader {
         // Ensure root COMMAND.COM PSP exists before loading any programs
         _processManager.CreateRootCommandComPsp();
         
+        // Mark the next program as the initial program so that when it terminates,
+        // the emulator halts instead of trying to return to a non-existent parent
+        _processManager.MarkNextProgramAsInitial();
+        
         // Determine C drive base path
         string? cDrive = _configuration.CDrive;
 
