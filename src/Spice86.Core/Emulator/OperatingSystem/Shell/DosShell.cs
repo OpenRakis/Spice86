@@ -490,6 +490,13 @@ public class DosShell {
     /// This is called via callback when the shell stub executes the FE 38 instruction.
     /// </summary>
     public void ExecuteAutoexec() {
+        // Don't execute AUTOEXEC.BAT if we're already in a batch file
+        // This prevents re-opening AUTOEXEC.BAT when the shell callback is invoked
+        // after a child program terminates
+        if (_batchManager.IsExecutingBatch) {
+            return;
+        }
+
         string dosPath = "AUTOEXEC.BAT";
         
         // Resolve DOS path to host path using DosFileManager
