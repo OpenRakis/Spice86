@@ -16,7 +16,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void Constructor_WithValidParameters_ShouldSucceed() {
         // Arrange & Act
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -51,7 +51,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void ProcessFloat_WithSimpleUpsample_ShouldProduceExpectedFrameCount() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 1,
             inputRate: 22050,
             outputRate: 44100,
@@ -80,7 +80,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void ProcessFloat_WithSimpleDownsample_ShouldProduceExpectedFrameCount() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 1,
             inputRate: 48000,
             outputRate: 44100,
@@ -109,7 +109,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void ProcessFloat_WithStereo_ShouldProcessBothChannelsIndependently() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -141,7 +141,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void SetRate_ShouldUpdateRates() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -158,7 +158,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void Reset_ShouldClearInternalState() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 1,
             inputRate: 44100,
             outputRate: 48000,
@@ -187,7 +187,7 @@ public class SpeexResamplerTests {
     [InlineData(10)] // Best/highest quality
     public void Constructor_WithDifferentQualitySettings_ShouldSucceed(int quality) {
         // Arrange & Act
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -200,7 +200,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void ProcessFloat_WithZeroInput_ShouldProduceZeroOutput() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 1,
             inputRate: 44100,
             outputRate: 48000,
@@ -217,26 +217,12 @@ public class SpeexResamplerTests {
         maxAmplitude.Should().BeLessThan(0.01f);
     }
 
-    [Fact]
-    public void Dispose_ShouldAllowMultipleCalls() {
-        // Arrange
-        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
-            channels: 2,
-            inputRate: 44100,
-            outputRate: 48000,
-            quality: 5);
-
-        // Act & Assert - Should not throw
-        resampler.Dispose();
-        resampler.Dispose();
-    }
-
     // === Additional API Tests for Complete Port ===
 
     [Fact]
     public void GetRate_ShouldReturnCurrentRates() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -253,7 +239,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void GetRatio_ShouldReturnSimplifiedRatio() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -270,7 +256,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void SetQuality_ShouldUpdateQuality() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -286,7 +272,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void GetQuality_ShouldReturnCurrentQuality() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -302,7 +288,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void ProcessInt_WithInt16Samples_ShouldResample() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 1,
             inputRate: 22050,
             outputRate: 44100,
@@ -326,7 +312,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void ProcessInterleavedFloat_WithStereoSamples_ShouldResample() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -352,7 +338,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void GetInputLatency_ShouldReturnLatencyInSamples() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -368,7 +354,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void GetOutputLatency_ShouldReturnLatencyInSamples() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -384,7 +370,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void SkipZeros_ShouldAdvanceStateWithoutProcessing() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -397,7 +383,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void ResetMem_ShouldClearMemoryBuffers() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -420,7 +406,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void SetInputStride_ShouldConfigureInputStride() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -436,7 +422,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void SetOutputStride_ShouldConfigureOutputStride() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,
@@ -452,7 +438,7 @@ public class SpeexResamplerTests {
     [Fact]
     public void SetRateFrac_ShouldSetFractionalRates() {
         // Arrange
-        using SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
+        SpeexResamplerCSharp resampler = new SpeexResamplerCSharp(
             channels: 2,
             inputRate: 44100,
             outputRate: 48000,

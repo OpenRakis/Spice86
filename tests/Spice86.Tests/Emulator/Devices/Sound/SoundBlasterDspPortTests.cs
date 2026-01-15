@@ -62,7 +62,7 @@ using Xunit;
 
             Spice86DependencyInjection di = new Spice86Creator(
                 binName: programPath,
-                enableCfgCpu: true,
+                
                 enablePit: true,
                 recordData: false,
                 maxCycles: MaxCycles,
@@ -88,7 +88,7 @@ using Xunit;
 
             Spice86DependencyInjection di = new Spice86Creator(
                 binName: programPath,
-                enableCfgCpu: true,
+                
                 enablePit: true,
                 recordData: false,
                 maxCycles: MaxCycles,

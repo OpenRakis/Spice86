@@ -354,7 +354,7 @@ public class SbPcmAsmIntegrationTests {
         // Use 'using' to ensure proper disposal and prevent rendering timer crashes
         using (Spice86DependencyInjection spice86 = new Spice86Creator(
             binName: filePath,
-            enableCfgCpu: true,
+            
             enablePit: true,
             recordData: false,
             maxCycles: MaxCycles,
@@ -397,7 +397,7 @@ public class SbPcmAsmIntegrationTests {
         // Setup emulator with Sound Blaster - use 'using' to ensure proper disposal
         using (Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
-            enableCfgCpu: true,
+            
             enablePit: true,
             recordData: false,
             maxCycles: MaxCycles,

@@ -38,7 +38,7 @@ public class SoundBlasterDmaDebugTest {
         // Create emulator with PIT enabled for timing and verbose logs enabled
         Spice86DependencyInjection spice86 = new Spice86Creator(
             binName: filePath,
-            enableCfgCpu: true,
+            
             enablePit: true,
             recordData: false,
             maxCycles: 50000000, // Increased for DMA processing
@@ -57,7 +57,7 @@ public class SoundBlasterDmaDebugTest {
         // Run the program
         spice86.ProgramExecutor.Run();
         
-        _output.WriteLine($"Emulator stopped after {spice86.Machine.Cpu.State.Cycles} cycles");
+        _output.WriteLine($"Emulator stopped after {spice86.Machine.CpuState.Cycles} cycles");
         _output.WriteLine($"Final DAC channel enabled: {spice86.Machine.SoundBlaster.DacChannel.IsEnabled}");
         _output.WriteLine($"IRQ pending 8-bit: {spice86.Machine.SoundBlaster.PendingIrq8Bit}");
         _output.WriteLine($"IRQ pending 16-bit: {spice86.Machine.SoundBlaster.PendingIrq16Bit}");

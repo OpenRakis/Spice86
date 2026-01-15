@@ -23,6 +23,7 @@ using System.Text;
 /// </summary>
 public class DosFileManager {
     private const int ExtDeviceBit = 0x0200;
+    public const ushort MaxOpenFilesPerProcess = 0x14;
     private static readonly char[] _directoryChars = {
         DosPathResolver.DirectorySeparatorChar,
         DosPathResolver.AltDirectorySeparatorChar };
@@ -143,6 +144,14 @@ public class DosFileManager {
 
         return DosFileOperationResult.NoValue();
     }
+
+    /// <summary>
+    /// Attempts to duplicate an existing file handle for inheritance without exposing the new handle to callers.
+    /// Increments the underlying system file table reference count when successful.
+    /// </summary>
+    /// <param name="fileHandle">The original DOS handle.</param>
+    /// <returns>The new DOS handle or an error if duplication is not possible.</returns>
+    public DosFileOperationResult DuplicateHandleForChild(byte fileHandle) => DuplicateFileHandle(fileHandle);
 
     /// <summary>
     /// Creates a file and returns the handle to the file.

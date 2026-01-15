@@ -15,7 +15,7 @@ public class Cbw32 : CfgInstruction {
         // CBW, Convert word to dword
         int shortValue = (short)helper.State.AX;
         helper.State.EAX = (uint)shortValue;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

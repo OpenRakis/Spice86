@@ -360,6 +360,8 @@ public class DosMemoryManager {
 
         ushort minSizeInParagraphs = (ushort)(baseSizeInParagraphs + exeFile.MinAlloc);
         ushort maxSizeInParagraphs = (ushort)(baseSizeInParagraphs + exeFile.MaxAlloc);
+        // Also calculate maxSizeInParagraphs with overflow detection like FreeDOS
+        uint maxSizeWithOverflow = (uint)baseSizeInParagraphs + exeFile.MaxAlloc;
 
         // If both the minimum and maximum allocation fields in the EXE header are cleared, DOS will
         // allocate the largest available block for it, and it will load the program image as high
@@ -368,7 +370,7 @@ public class DosMemoryManager {
         // block correct in this case, and that it still meets the minimum required size for the PSP
         // and program image (our baseSizeInParagraphs). See the osdev wiki entry on the DOS EXE
         // format (wiki.osdev.org/MZ) for more information.
-        if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
+        if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0 || maxSizeWithOverflow > maxSizeInParagraphs) {
             ushort freeSizeInParagraphs = 0;
             if (pspSegment == 0) {
                 // This is what real DOS does. It always finds the largest free block that it can
@@ -660,5 +662,69 @@ public class DosMemoryManager {
             _loggerService.Error("MCB chain ended unexpectedly without MCB_LAST marker");
         }
         return false;
+    }
+
+    /// <summary>
+    /// Frees all memory blocks owned by a specific PSP segment.
+    /// </summary>
+    /// <param name="pspSegment">The PSP segment whose memory should be freed.</param>
+    /// <returns><c>true</c> if all blocks were freed successfully, <c>false</c> if an error occurred.</returns>
+    public bool FreeProcessMemory(ushort pspSegment) {
+        DosMemoryControlBlock? current = _start;
+
+        while (current is not null) {
+            if (!current.IsValid) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("MCB chain corrupted while freeing process memory");
+                }
+                return false;
+            }
+
+            // Free blocks owned by this PSP
+            if (current.PspSegment == pspSegment) {
+                current.SetFree();
+                // Coalesce adjacent free blocks
+                JoinBlocks(current, true);
+            }
+
+            if (current.IsLast) {
+                break;
+            }
+
+            current = current.GetNextOrDefault();
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Frees an environment block when the owning PSP terminates but stays resident.
+    /// </summary>
+    /// <param name="environmentSegment">Segment of the environment data block (PSP field).</param>
+    /// <param name="ownerPspSegment">Segment of the PSP that owns the environment.</param>
+    /// <returns><c>true</c> if the block was freed or no action was required.</returns>
+    public bool FreeEnvironmentBlock(ushort environmentSegment, ushort ownerPspSegment) {
+        if (environmentSegment == 0) {
+            return true;
+        }
+
+        ushort mcbSegment = (ushort)(environmentSegment - 1);
+        DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(mcbSegment);
+        if (!CheckValidOrLogError(block)) {
+            return false;
+        }
+
+        if (block.PspSegment != ownerPspSegment) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose(
+                    "Environment block at {EnvSegment:X4} not owned by PSP {Owner:X4}, skipping free",
+                    environmentSegment, ownerPspSegment);
+            }
+            return true;
+        }
+
+        block.SetFree();
+        JoinBlocks(_start, true);
+        return true;
     }
 }

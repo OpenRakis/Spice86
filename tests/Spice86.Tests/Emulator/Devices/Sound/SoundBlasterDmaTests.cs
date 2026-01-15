@@ -93,7 +93,6 @@ public class SoundBlasterDmaTests {
         // Setup emulator following XMS/EMS pattern
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
-            enableCfgCpu: true,
             enablePit: true,
             recordData: false,
             maxCycles: maxCycles,
@@ -148,7 +147,6 @@ public class SoundBlasterDmaTests {
         string testBinary = "add"; // Use simple existing test
         Spice86Creator creator = new Spice86Creator(
             binName: testBinary,
-            enableCfgCpu: false,
             enablePit: false,
             recordData: false,
             maxCycles: 10000,
@@ -173,7 +171,6 @@ public class SoundBlasterDmaTests {
         string testBinary = "add";
         Spice86Creator creator1 = new Spice86Creator(
             binName: testBinary,
-            enableCfgCpu: false,
             enablePit: false,
             recordData: false,
             maxCycles: 10000,
@@ -182,7 +179,6 @@ public class SoundBlasterDmaTests {
         
         Spice86Creator creator2 = new Spice86Creator(
             binName: testBinary,
-            enableCfgCpu: false,
             enablePit: false,
             recordData: false,
             maxCycles: 10000,
@@ -207,7 +203,6 @@ public class SoundBlasterDmaTests {
         Action act = () => {
             Spice86Creator creator = new Spice86Creator(
                 binName: testBinary,
-                enableCfgCpu: false,
                 enablePit: false,
                 recordData: false,
                 maxCycles: 10000,
@@ -229,7 +224,6 @@ public class SoundBlasterDmaTests {
         string testBinary = "add";
         Spice86Creator creator = new Spice86Creator(
             binName: testBinary,
-            enableCfgCpu: false,
             enablePit: false,
             recordData: false,
             maxCycles: 10000,

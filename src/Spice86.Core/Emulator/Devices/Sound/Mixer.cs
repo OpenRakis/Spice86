@@ -991,7 +991,7 @@ public sealed class Mixer : IDisposable {
 
         _cancellationTokenSource.Dispose();
         _audioPlayer.Dispose();
-        _chorusEngine.Dispose();
+        //_chorusEngine.Dispose();
 
         _disposed = true;
     }

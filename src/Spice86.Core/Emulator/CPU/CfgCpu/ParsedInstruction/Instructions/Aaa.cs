@@ -24,7 +24,7 @@ public class Aaa : CfgInstruction {
         helper.Alu8.UpdateFlags(helper.State.AL);
         helper.State.AuxiliaryFlag = finalAuxillaryFlag;
         helper.State.CarryFlag = finalCarryFlag;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
     
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

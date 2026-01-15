@@ -486,8 +486,11 @@ public class Spice86DependencyInjection : IDisposable {
 
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers
+            interruptInstaller.InstallInterruptHandler(dos.DosInt22Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt20Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt21Handler);
+            interruptInstaller.InstallInterruptHandler(dos.DosInt23Handler);
+            interruptInstaller.InstallInterruptHandler(dos.DosInt24Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt2FHandler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt25Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt26Handler);
@@ -537,7 +540,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         ProgramExecutor programExecutor = new(configuration, emulationLoop,
             emulatorBreakpointsManager, emulatorStateSerializer, memory,
-            cfgCpu, memoryDataExporter, state, dos,
+            cfgCpu, memoryDataExporter, state, dos.DosInt21Handler,
             functionCatalogue, cfgCpuFlowDumper, pauseHandler,
             mainWindowViewModel, dumpContext, loggerService);
 

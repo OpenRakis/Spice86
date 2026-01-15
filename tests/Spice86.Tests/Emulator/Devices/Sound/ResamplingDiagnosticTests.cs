@@ -29,7 +29,7 @@ public class ResamplingDiagnosticTests {
     [Fact]
     public void Speex_Resampler_OPL_To_Mixer_Rates_Works() {
         // Arrange: Create Speex resampler with OPL → Mixer rates
-        using SpeexResamplerCSharp resampler = new(
+        SpeexResamplerCSharp resampler = new(
             SpeexChannels,
             (uint)OplSampleRateHz,
             (uint)MixerSampleRateHz,
@@ -99,7 +99,7 @@ public class ResamplingDiagnosticTests {
     [Fact]
     public void Speex_Multiple_Small_Chunks_Like_Mixer() {
         // Arrange: Test resampling in small chunks like the mixer does
-        using SpeexResamplerCSharp resampler = new(
+        SpeexResamplerCSharp resampler = new(
             SpeexChannels,
             (uint)OplSampleRateHz,
             (uint)MixerSampleRateHz,

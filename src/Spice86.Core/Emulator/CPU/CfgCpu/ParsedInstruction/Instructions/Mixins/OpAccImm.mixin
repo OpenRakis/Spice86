@@ -25,7 +25,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<{{Type}}>
     
     public override void Execute(InstructionExecutionHelper helper) {
         {{if Assign}}helper.State.{{Accumulator}} = {{end}}helper.Alu{{Size}}.{{Operation}}(helper.State.{{Accumulator}}, helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

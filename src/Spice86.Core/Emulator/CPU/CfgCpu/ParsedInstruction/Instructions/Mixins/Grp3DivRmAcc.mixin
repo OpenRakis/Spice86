@@ -31,7 +31,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         {{TypeSigned}} result = helper.Alu{{Size}}.{{Operation}}(v1, v2);
         helper.State.{{RegisterLow}} = ({{Type}})result;
         helper.State.{{RegisterHigh}} = ({{Type}})(v1 % v2);
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

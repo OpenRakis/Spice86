@@ -248,7 +248,7 @@ public class SbMixerAsmIntegrationTests {
         // Setup emulator
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
-            enableCfgCpu: true,
+            
             enablePit: true,
             recordData: false,
             maxCycles: maxCycles,
