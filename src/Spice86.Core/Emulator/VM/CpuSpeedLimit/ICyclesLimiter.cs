@@ -18,7 +18,8 @@ public interface ICyclesLimiter {
     /// Limits the number of emulated CPU cycles per ms, for speed sensitive games.
     /// </summary>
     /// <remarks>
-    /// Also, too much CPU cycles can make emulation performance worse, and sometimes even starves other threads (ie. sound/music gets cut off, UI freezes!)
+    /// Also, too many CPU cycles can make emulation performance worse,
+    /// and sometimes even starves other threads (ie. sound/music gets cut off, UI freezes!)
     /// </remarks>
     public void RegulateCycles();
 
