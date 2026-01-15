@@ -8,13 +8,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 
 /// <summary>
 /// The class responsible for centralizing all the mounted DOS drives.
 /// </summary>
 public class DosDriveManager : IDictionary<char, VirtualDrive> {
-    private readonly SortedDictionary<char, VirtualDrive?> _driveMap = new();
+    private readonly SortedDictionary<char, VirtualDrive> _driveMap = new();
     private readonly ILoggerService _loggerService;
 
     /// <summary>
@@ -29,10 +28,11 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
         }
         _loggerService = loggerService;
         cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
-        _driveMap.Add('A', null);
-        _driveMap.Add('B', null);
-        _driveMap.Add('C', new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath, CurrentDosDirectory = "" });
-        CurrentDrive = _driveMap.ElementAt(2).Value!;
+        _driveMap.Add('A', new() { DriveLetter = 'A', CurrentDosDirectory = "", MountedHostDirectory = "" });
+        _driveMap.Add('B', new() { DriveLetter = 'B', CurrentDosDirectory = "", MountedHostDirectory = "" });
+        var cDrive = new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath, CurrentDosDirectory = "" };
+        _driveMap.Add('C', cDrive);
+        CurrentDrive = cDrive;
         if(loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             loggerService.Verbose("DOS Drives initialized: {@Drives}", _driveMap.Values);
         }
