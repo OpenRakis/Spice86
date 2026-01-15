@@ -13,11 +13,11 @@
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.14.1" />
     <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.14.1" />
-    <PackageVersion Include="SingleStepTests.Intel8086.00-FF" Version="2025.6.8" />
-    <PackageVersion Include="SingleStepTests.Intel80286.00-3F" Version="2025.10.8" />
-    <PackageVersion Include="SingleStepTests.Intel80286.40-7F" Version="2025.10.8" />
-    <PackageVersion Include="SingleStepTests.Intel80286.80-BF" Version="2025.10.8" />
-    <PackageVersion Include="SingleStepTests.Intel80286.C0-FF" Version="2025.10.8" />
+    <PackageVersion Include="SingleStepTests.Intel80386.00-65" Version="2025.11.5" />
+    <PackageVersion Include="SingleStepTests.Intel80386.66-66" Version="2025.11.5" />
+    <PackageVersion Include="SingleStepTests.Intel80386.67.00-67.7F" Version="2025.11.5" />
+    <PackageVersion Include="SingleStepTests.Intel80386.67.80-67.FF" Version="2025.11.5" />
+    <PackageVersion Include="SingleStepTests.Intel80386.68-FF" Version="2025.11.5" />
     <PackageVersion Include="System.Text.Json" Version="10.0.0" />
     <PackageVersion Include="Avalonia.Headless" Version="11.3.8" />
     <PackageVersion Include="Avalonia.Headless.XUnit" Version="11.3.8" />
