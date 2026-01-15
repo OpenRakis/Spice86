@@ -154,7 +154,9 @@ public sealed class ProgramExecutor : IDisposable {
         if (isBatchProgram) {
             loader = new ShellLoader(configuration, memory, state, int21Handler, _callbackHandler, _loggerService);
         } else if (isDosProgram) {
-            loader = new DosProgramLoader(configuration, memory, state, int21Handler, _callbackHandler, _loggerService);
+            // Use CommandComLoader which loads a minimal COMMAND.COM and generates AUTOEXEC.BAT
+            // This provides authentic DOS program execution flow without callback architecture issues
+            loader = new CommandComLoader(configuration, memory, state, int21Handler, _loggerService);
         } else {
             loader = new BiosLoader(memory, state, _loggerService);
         }
