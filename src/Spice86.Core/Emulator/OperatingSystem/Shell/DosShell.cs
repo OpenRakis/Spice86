@@ -38,6 +38,11 @@ public class DosShell {
         get => _errorLevel;
         set => _errorLevel = value;
     }
+    
+    /// <summary>
+    /// Gets the batch file manager for accessing batch file state.
+    /// </summary>
+    public BatchFileManager BatchFileManager => _batchManager;
 
     /// <summary>
     /// Initializes a new instance of the DOS shell.

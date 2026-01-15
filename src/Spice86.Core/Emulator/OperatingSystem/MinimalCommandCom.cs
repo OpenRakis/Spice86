@@ -60,31 +60,31 @@ internal class MinimalCommandCom {
 
     /// <summary>
     /// Generates the machine code for a minimal shell that:
-    /// - Reads AUTOEXEC.BAT
-    /// - Executes programs
-    /// - Terminates on EXIT or EOF
+    /// - Loops calling shell processor via INT 21h with special function
+    /// - Shell processor handles AUTOEXEC.BAT line-by-line
+    /// - Terminates when shell processor signals exit
     /// </summary>
     private byte[] GenerateMinimalShell() {
-        // For initial implementation, create a shell that:
-        // 1. Opens AUTOEXEC.BAT (INT 21h/3Dh)
-        // 2. Reads a line (INT 21h/3Fh)
-        // 3. If empty or "EXIT", jump to terminate
-        // 4. Otherwise, execute via INT 21h/4Bh
-        // 5. Loop back to read next line
-        // 6. Terminate with INT 21h/4Ch
-
-        // Machine code will be generated here
-        // For now, create a simple version that just terminates
-        
-        // Minimal COMMAND.COM that terminates immediately:
-        // mov ah, 4Ch    ; B4 4C
-        // mov al, 00h    ; B0 00
-        // int 21h        ; CD 21
+        // COMMAND.COM loop:
+        // loop_start:
+        //   mov ah, FFh          ; B4 FF - special shell function: process next line
+        //   int 21h              ; CD 21 - call DOS INT 21h
+        //   cmp al, 00h          ; 3C 00 - check if should continue (0=continue, 1=exit)
+        //   je loop_start        ; 74 F8 - if continue, loop back
+        //   mov ah, 4Ch          ; B4 4C - terminate
+        //   mov al, 00h          ; B0 00 - return code 0
+        //   int 21h              ; CD 21 - DOS terminate
         
         return new byte[] {
-            0xB4, 0x4C,  // mov ah, 4Ch (terminate with return code)
-            0xB0, 0x00,  // mov al, 00h (return code 0)
-            0xCD, 0x21   // int 21h
+            // loop_start: (offset 0)
+            0xB4, 0xFF,        // mov ah, FFh - special shell function: process next line
+            0xCD, 0x21,        // int 21h - call DOS
+            0x3C, 0x00,        // cmp al, 00h - check return: 0=continue, 1=exit
+            0x74, 0xF8,        // je loop_start (jump back 8 bytes to offset 0)
+            // exit:
+            0xB4, 0x4C,        // mov ah, 4Ch - terminate with return code
+            0xB0, 0x00,        // mov al, 00h - return code 0
+            0xCD, 0x21         // int 21h - DOS terminate
         };
     }
 }

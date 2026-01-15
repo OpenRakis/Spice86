@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Shell;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -26,6 +27,7 @@ internal class CommandComLoader : DosFileLoader {
     private readonly Configuration _configuration;
     private readonly DosInt21Handler _int21;
     private readonly MinimalCommandCom _commandCom;
+    private readonly ShellProcessor _shellProcessor;
 
     public CommandComLoader(Configuration configuration, IMemory memory,
         State state, DosInt21Handler int21Handler,
@@ -34,6 +36,17 @@ internal class CommandComLoader : DosFileLoader {
         _configuration = configuration;
         _int21 = int21Handler;
         _commandCom = new MinimalCommandCom(memory, loggerService);
+        
+        // Create shell and shell processor
+        DosShell shell = new DosShell(
+            int21Handler.BatchFileManager,
+            int21Handler.FileManager,
+            int21Handler.DriveManager,
+            int21Handler.EnvironmentVariables,
+            configuration,
+            loggerService,
+            int21Handler);
+        _shellProcessor = new ShellProcessor(shell, state, int21Handler, loggerService);
     }
 
     public override byte[] LoadFile(string file, string? arguments) {
@@ -56,8 +69,11 @@ internal class CommandComLoader : DosFileLoader {
 
         // 3. Generate AUTOEXEC.BAT with program execution + EXIT
         CreateAutoexecBat(dosPath, arguments);
+        
+        // 4. Register shell processor with INT 21h handler
+        _int21.RegisterShellProcessor(_shellProcessor);
 
-        // 4. Load minimal COMMAND.COM binary at segment 0x60
+        // 5. Load minimal COMMAND.COM binary at segment 0x60
         ushort commandComSegment = DosProcessManager.CommandComSegment;
         byte[] commandComBinary = _commandCom.GenerateCommandComBinary(commandComSegment);
 
@@ -66,7 +82,7 @@ internal class CommandComLoader : DosFileLoader {
                 commandComBinary.Length, commandComSegment);
         }
 
-        // 5. CPU is already set up by CreateRootCommandComPsp to point to 0x60:0x100
+        // 6. CPU is already set up by CreateRootCommandComPsp to point to 0x60:0x100
         // COMMAND.COM will start executing and process AUTOEXEC.BAT
 
         return commandComBinary;
@@ -92,13 +108,22 @@ internal class CommandComLoader : DosFileLoader {
 
         byte[] autoexecBytes = Encoding.ASCII.GetBytes(content.ToString());
 
-        // Create AUTOEXEC.BAT via DosFileManager
-        DosFileOperationResult createResult = _int21.FileManager.CreateFileUsingHandle(dosAutoexecPath, 0);
-        if (createResult.IsError || !createResult.Value.HasValue) {
-            throw new InvalidOperationException("Failed to create AUTOEXEC.BAT");
+        // Try to open AUTOEXEC.BAT for writing (if it exists), or create it
+        DosFileOperationResult openResult = _int21.FileManager.OpenFileOrDevice(dosAutoexecPath, FileAccessMode.WriteOnly);
+        ushort handle;
+        
+        if (openResult.IsError || !openResult.Value.HasValue) {
+            // File doesn't exist, create it
+            DosFileOperationResult createResult = _int21.FileManager.CreateFileUsingHandle(dosAutoexecPath, 0);
+            if (createResult.IsError || !createResult.Value.HasValue) {
+                throw new InvalidOperationException("Failed to create AUTOEXEC.BAT");
+            }
+            handle = (ushort)createResult.Value.Value;
+        } else {
+            // File exists, use it
+            handle = (ushort)openResult.Value.Value;
         }
 
-        ushort handle = (ushort)createResult.Value.Value;
         WriteDataToFile(handle, autoexecBytes);
         _int21.FileManager.CloseFileOrDevice(handle);
 

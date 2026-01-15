@@ -38,6 +38,8 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosProcessManager _dosProcessManager;
     private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly DosTables _dosTables;
+    
+    private ShellProcessor? _shellProcessor; // Shell processor for COMMAND.COM
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
@@ -164,6 +166,31 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
         AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
+        AddAction(0xFF, ProcessShellCommand); // Shell processor for COMMAND.COM
+    }
+    
+    /// <summary>
+    /// Registers the shell processor for COMMAND.COM.
+    /// Called by CommandComLoader to enable shell command processing.
+    /// </summary>
+    public void RegisterShellProcessor(ShellProcessor shellProcessor) {
+        _shellProcessor = shellProcessor;
+    }
+    
+    /// <summary>
+    /// INT 21h/FFh - Process next shell command from AUTOEXEC.BAT.
+    /// This is called by the minimal COMMAND.COM loop.
+    /// Returns AL=0 to continue, AL=1 to exit.
+    /// </summary>
+    private void ProcessShellCommand() {
+        if (_shellProcessor == null) {
+            // No shell processor registered, exit
+            State.AL = 1;
+            return;
+        }
+        
+        byte result = _shellProcessor.ProcessNextCommand();
+        State.AL = result;
     }
 
     public void SetDate() {
