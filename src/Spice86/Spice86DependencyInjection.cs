@@ -359,7 +359,7 @@ public class Spice86DependencyInjection : IDisposable {
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
               emulatorStateSerializer.LoadBreakpoints(dumpContext.DumpDirectory);
 
-        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(configuration);
+        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(state, configuration);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");

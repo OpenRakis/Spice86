@@ -62,7 +62,7 @@ When there is already data in the specified location, the emulator will load it 
 
 ```
   --Debug                            (Default: false) Starts the program paused and pauses once again when stopping.
-  --Cycles                           (Default: null) Target CPU cycles per ms, for the rare speed sensitive game. Unused by default. Overrides Instructions per second option below if used.
+  --Cycles                           (Default: null) Target CPU cycles per ms, for the rare speed sensitive game. 3000 by default. Overrides Instructions per second option below if used.
   --Xms                              (Default: true) Enables 15 MB of XMS memory.
   --Ems                              (Default: true) Enables EMS memory. EMS adds 8 MB of memory accessible to DOS programs through the EMM Page Frame.
   --A20Gate                          (Default: false) Disables the 20th address line to support programs relying on the rollover of memory addresses above the HMA (slightly above 1 MB).
