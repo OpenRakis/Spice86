@@ -154,7 +154,7 @@ public sealed class ProgramExecutor : IDisposable {
         if (isBatchProgram) {
             loader = new ShellLoader(configuration, memory, state, int21Handler, _callbackHandler, _loggerService);
         } else if (isDosProgram) {
-            loader = new DosProgramLoader(configuration, memory, state, int21Handler, _loggerService);
+            loader = new DosProgramLoader(configuration, memory, state, int21Handler, _callbackHandler, _loggerService);
         } else {
             loader = new BiosLoader(memory, state, _loggerService);
         }

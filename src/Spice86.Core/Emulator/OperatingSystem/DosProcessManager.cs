@@ -48,7 +48,6 @@ public class DosProcessManager {
     private readonly ILoggerService _loggerService;
     private readonly Dictionary<ushort, (ushort SS, ushort SP)> _pendingParentStackPointers = new();
     private readonly Dictionary<ushort, ResidentBlockInfo> _pendingResidentBlocks = new();
-    private ushort? _initialProgramPspSegment;  // Track the PSP of the initial program loaded by DosProgramLoader
 
     /// <summary>
     /// The segment address where the root COMMAND.COM PSP is created.
@@ -216,17 +215,6 @@ public class DosProcessManager {
         //We 'executed' COMMAND.COM - setup CPU registers to reflect that, before launching the emulated program.
         SetupCpuRegistersForComFileExecution(CommandComSegment);
         return rootPsp;
-    }
-
-    /// <summary>
-    /// Marks the next loaded program as the initial program.
-    /// When this program terminates, the emulator will halt instead of trying to return to the parent.
-    /// This is used by DosProgramLoader to indicate that there's no real parent process to return to.
-    /// </summary>
-    internal void MarkNextProgramAsInitial() {
-        // Store a special marker value to indicate the next PSP should be marked as initial
-        // We use 0xFFFF as a marker because it's not a valid PSP segment
-        _initialProgramPspSegment = 0xFFFF;
     }
 
 
@@ -537,31 +525,9 @@ public class DosProcessManager {
             parentPspOptional.CurrentSize = residentNextSegment.Value;
         }
 
-        // Check if this is the initial program loaded by DosProgramLoader
-        // If so, halt the emulator instead of trying to return to the parent
-        bool isInitialProgram = _initialProgramPspSegment.HasValue && currentPspSegment == _initialProgramPspSegment.Value;
-        if (isInitialProgram) {
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("TerminateProcess: Initial program PSP {Psp:X4} terminated. Halting emulator.", currentPspSegment);
-            }
-            _state.IsRunning = false;
-            return;
-        }
-
         bool hasSavedParentStackPointer = _pendingParentStackPointers.TryGetValue(currentPspSegment, out (ushort SS, ushort SP) savedParentStackPointer);
         if (hasSavedParentStackPointer) {
             _pendingParentStackPointers.Remove(currentPspSegment);
-        }
-
-        // Check if we have a parent but no saved stack pointer (e.g., initial program loaded by DosProgramLoader)
-        // In this case, we cannot properly restore the parent context, so halt the emulator
-        if (hasParentToReturnTo && !hasSavedParentStackPointer) {
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("TerminateProcess: Child PSP {ChildPsp:X4} has parent {ParentPsp:X4} but no saved stack pointer. Halting emulator.",
-                    currentPspSegment, parentPspSegment);
-            }
-            _state.IsRunning = false;
-            return;
         }
 
         if (hasParentToReturnTo && parentPspOptional is not null && hasSavedParentStackPointer) {
@@ -968,13 +934,13 @@ public class DosProcessManager {
         psp.DosVersionMinor = DefaultDosVersionMinor;
 
         // Set INT 22h terminate vector:
-        // - If parent is shell (0x60) AND batch file execution is active, point to shell callback (0060:0100) so batch processing resumes
+        // - If parent is shell (0x60), point to shell callback (0060:0100) so batch processing resumes
         // - Otherwise, point to caller's return address as per DOS convention
-        if (parentPspSegment == CommandComSegment && _batchFileManager.IsExecutingBatch) {
-            // Parent is shell AND batch execution is active - point to shell callback stub for batch resume
+        if (parentPspSegment == CommandComSegment) {
+            // Parent is shell - point to shell callback stub for batch resume
             psp.TerminateAddress = MemoryUtils.To32BitAddress(CommandComSegment, 0x0100);
         } else {
-            // Normal DOS program or non-batch execution - point to caller's return address
+            // Normal DOS program - point to caller's return address
             psp.TerminateAddress = MemoryUtils.To32BitAddress(callerCS, callerIP);
         }
 
@@ -1092,14 +1058,6 @@ public class DosProcessManager {
 
         _fileManager.SetDiskTransferAreaAddress(
             pspSegment, DosCommandTail.OffsetInPspSegment);
-
-        // Check if this PSP should be marked as the initial program (set by DosProgramLoader)
-        if (_initialProgramPspSegment == 0xFFFF) {
-            _initialProgramPspSegment = pspSegment;
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("InitializePsp: Marked PSP {PspSegment:X4} as initial program", pspSegment);
-            }
-        }
     }
 
     private void SetupEnvironmentForProcess(string programHostPath,
