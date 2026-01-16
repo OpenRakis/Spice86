@@ -27,12 +27,14 @@ public class InstructionExecutionHelper {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly ReturnOperationsHelper _returnOperationsHelper;
+    private readonly bool _failOnInvalidOpcode;
     public InstructionExecutionHelper(State state,
         IMemory memory,
         IOPortDispatcher ioPortDispatcher,
         CallbackHandler callbackHandler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         ExecutionContextManager executionContextManager,
+        bool failOnInvalidOpcode,
         ILoggerService loggerService) {
         _loggerService = loggerService;
         State = state;
@@ -46,6 +48,7 @@ public class InstructionExecutionHelper {
         CallbackHandler = callbackHandler;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _executionContextManager = executionContextManager;
+        _failOnInvalidOpcode = failOnInvalidOpcode;
         _returnOperationsHelper = new (state, Stack);
         InstructionFieldValueRetriever = new(memory);
         ModRm = new(state, memory, InstructionFieldValueRetriever);
@@ -257,6 +260,11 @@ public class InstructionExecutionHelper {
     }
     
     public void HandleCpuException(CfgInstruction instruction, CpuException cpuException) {
+        // Check if this is an invalid opcode exception and we should fail the emulator
+        if (_failOnInvalidOpcode && cpuException is CpuInvalidOpcodeException) {
+            throw new InvalidVMOperationException(State, cpuException);
+        }
+
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug(cpuException,"{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
         }

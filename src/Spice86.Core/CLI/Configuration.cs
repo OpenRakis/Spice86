@@ -178,4 +178,13 @@ public sealed class Configuration {
 
     [Option(nameof(Xms), Default = null, Required = false, HelpText = "Enable XMS. Default is true.")]
     public bool? Xms { get; init; }
+
+    /// <summary>
+    /// If true, will throw an exception and crash when encountering an invalid opcode.
+    /// If false, will handle invalid opcodes as CPU faults (int 0x06).
+    /// Default is true because usually invalid opcode means emulator bug.
+    /// </summary>
+    [Option(nameof(FailOnInvalidOpcode), Default = true, Required = false,
+        HelpText = "If true, will throw an exception and crash when encountering an invalid opcode. If false, will handle invalid opcodes as CPU faults. Default is true.")]
+    public bool FailOnInvalidOpcode { get; init; }
 }
