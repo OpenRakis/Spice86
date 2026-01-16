@@ -16,7 +16,7 @@ using System.Diagnostics;
 /// Coordinates the execution of the emulated CPU, enforces timing limits, checks breakpoints,
 /// triggers hardware timers, and keeps DMA transfers moving forward.
 /// </summary>
-public class EmulationLoop : ICyclesLimiter {
+public class EmulationLoop {
     private readonly ILoggerService _loggerService;
     private readonly CfgCpu _cpu;
     private readonly FunctionHandler _functionHandler;
@@ -122,16 +122,14 @@ public class EmulationLoop : ICyclesLimiter {
         _performanceStopwatch.Start();
         _cpu.SignalEntry();
         while (_cpuState.IsRunning) {
-            do {
-                if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
-                    _emulatorBreakpointsManager.CheckExecutionBreakPoints();
-                }
-
-                _pauseHandler.WaitIfPaused();
-                _emulationLoopScheduler.ProcessEvents();
-                _cpu.ExecuteNext();
-                _inputEventQueue.ProcessAllPendingInputEvents();
-            } while (_cpuState.IsRunning);
+            if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
+                _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+            }
+            _pauseHandler.WaitIfPaused();
+            _emulationLoopScheduler.ProcessEvents();
+            _cpu.ExecuteNext();
+            _inputEventQueue.ProcessAllPendingInputEvents();
+            _cyclesLimiter.RegulateCycles();
         }
 
         _performanceStopwatch.Stop();

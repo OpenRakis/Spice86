@@ -129,7 +129,7 @@ public class DosFileManagerTests {
 
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, functionCatalogue,
-            false, loggerService);
+            false, true, loggerService);
 
         Mixer mixer = new(loggerService, configuration.AudioEngine);
         PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
