@@ -29,5 +29,9 @@
 		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<RepositoryType>git</RepositoryType>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
+	<ItemGroup>
+		<None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
 </Project>
