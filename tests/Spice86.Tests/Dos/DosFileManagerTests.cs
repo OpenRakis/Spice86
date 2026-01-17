@@ -165,7 +165,7 @@ public class DosFileManagerTests {
             stack, state, cfgCpu, dualPic, systemBiosInt15Handler,
             intel8042Controller, biosKeyboardBuffer, loggerService);
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
-            memory, biosDataArea, cfgCpu, stack, state, loggerService,
+            memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, loggerService,
         biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
         Dos dos = new Dos(configuration, memory, cfgCpu, stack, state,
