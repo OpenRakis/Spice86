@@ -103,14 +103,24 @@
 							</StackPanel>
 						</MenuItem.Header>
 					</MenuItem>
-					<Separator />
 					<MenuItem IsEnabled="False">
 						<MenuItem.Header>
 							<StackPanel Orientation="Horizontal">
-								<fluent:SymbolIcon Symbol="Code" />
-								<Label Content="{Binding McpStatusViewModel.AvailableToolsCount, StringFormat='{}{0} Tools Available'}" />
+								<fluent:SymbolIcon Symbol="Link" />
+								<Label Content="{Binding McpStatusViewModel.Port, StringFormat='Port: {0}'}" />
 							</StackPanel>
 						</MenuItem.Header>
+					</MenuItem>
+					<Separator />
+					<MenuItem Header="Tools" ItemsSource="{Binding McpStatusViewModel.Tools}">
+						<MenuItem.Styles>
+							<Style Selector="MenuItem" x:DataType="vm:McpToolViewModel">
+								<Setter Property="ToggleType" Value="CheckBox"/>
+								<Setter Property="IsChecked" Value="{Binding IsEnabled}"/>
+								<Setter Property="Header" Value="{Binding Name}"/>
+								<Setter Property="ToolTip.Tip" Value="{Binding Description}"/>
+							</Style>
+						</MenuItem.Styles>
 					</MenuItem>
 				</MenuItem>
 			</Menu>
