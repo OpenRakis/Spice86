@@ -56,7 +56,7 @@ public sealed class TimerInt8Handler : IInterruptHandler {
 
     private void IncTickCounterValue() {
         TickCounterValue++;
-        if(FloppyMotorCounterValue > 0) {
+        if (FloppyMotorCounterValue > 0) {
             FloppyMotorCounterValue--;
         }
     }
