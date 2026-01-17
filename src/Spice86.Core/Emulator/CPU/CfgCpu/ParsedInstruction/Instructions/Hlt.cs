@@ -13,7 +13,6 @@ public class Hlt : CfgInstruction {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.State.IsRunning = false;
         helper.MoveIpToEndOfInstruction(this);
-        helper.NextNode = null;
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

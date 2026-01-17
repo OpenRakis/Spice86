@@ -14,7 +14,7 @@ public class InterruptOverflow : CfgInstruction, ICallInstruction {
         if (helper.State.OverflowFlag) {
             helper.HandleInterruptInstruction(this, 4);
         } else {
-            helper.MoveIpAndSetNextNode(this);
+            helper.MoveIpToEndOfInstruction(this);
         }
     }
 

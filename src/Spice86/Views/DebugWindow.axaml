@@ -90,7 +90,6 @@
 						Title="Code Flow (Alt-F2)" 
 						HotKeyManager.HotKey="Alt+F2">
 						<ContentPresenter
-							IsVisible="{Binding $parent[Window].DataContext.CfgCpuViewModel.IsCfgCpuEnabled}"
 							Content="{Binding $parent[Window].DataContext.CfgCpuViewModel}" />
 					</dockModel:Document>
 					<dockModel:Document 

@@ -22,7 +22,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         uint bitIndex = helper.ModRm.R{{Size}};
         ExecuteBitOperation(helper, bitIndex);
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     private void ExecuteBitOperation(InstructionExecutionHelper helper, uint bitIndex) {

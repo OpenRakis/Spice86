@@ -24,14 +24,14 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         {{ if Size == 16 }}ushort{{ else }}uint{{ end }} source = helper.ModRm.RM{{Size}};
         if (source == 0) {
             helper.State.ZeroFlag = true;
-            helper.MoveIpAndSetNextNode(this);
+            helper.MoveIpToEndOfInstruction(this);
             return;
         }
 
         helper.State.ZeroFlag = false;
         uint index = (uint)BitOperations.TrailingZeroCount(source);
         helper.ModRm.R{{Size}} = ({{ if Size == 16 }}ushort{{ else }}uint{{ end }})index;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

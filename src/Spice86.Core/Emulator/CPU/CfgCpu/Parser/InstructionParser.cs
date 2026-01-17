@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 
 using System.Linq;
 
@@ -187,7 +188,8 @@ public class InstructionParser : BaseInstructionParser {
         ParsingContext context = new(address, opcodeField, prefixes);
         try {
             return ParseCfgInstruction(context);
-        } catch (CpuException e) {
+        } catch (CpuInvalidOpcodeException e) {
+            // Still create a node in the graph so that it is known that this place generated such exception
             return new InvalidInstruction(address, opcodeField, prefixes, e);
         }
     }
@@ -781,8 +783,10 @@ public class InstructionParser : BaseInstructionParser {
     }
 
     private CfgInstruction HandleInvalidOpcode(ParsingContext context) =>
-        throw new InvalidOpCodeException(_state, context.OpcodeField.Value, false);
+        throw new CpuInvalidOpcodeException(
+            $"Invalid opcode {ConvertUtils.ToHex(context.OpcodeField.Value)} at {context.Address}");
 
     private CfgInstruction HandleInvalidOpcodeBecausePrefix(ParsingContext context) =>
-        throw new InvalidOpCodeException(_state, context.OpcodeField.Value, true);
+        throw new CpuInvalidOpcodeException(
+            $"Invalid opcode {ConvertUtils.ToHex(context.OpcodeField.Value)} at {context.Address} - prefix is not allowed here");
 }

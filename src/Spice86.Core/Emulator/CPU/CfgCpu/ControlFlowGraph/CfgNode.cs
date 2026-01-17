@@ -25,6 +25,8 @@ public abstract class CfgNode : ICfgNode {
 
     public abstract void Execute(InstructionExecutionHelper helper);
 
+    public abstract ICfgNode? GetNextSuccessor(InstructionExecutionHelper helper);
+
     public abstract InstructionNode ToInstructionAst(AstBuilder builder);
 
     public int? MaxSuccessorsCount { get; set; }

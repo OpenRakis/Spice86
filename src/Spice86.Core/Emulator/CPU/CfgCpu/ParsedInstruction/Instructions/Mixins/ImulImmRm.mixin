@@ -27,7 +27,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<{
         {{RmSignedType}} value = ({{RmSignedType}})helper.InstructionFieldValueRetriever.GetFieldValue(ValueField);
         {{ResSignedType}} result = helper.Alu{{Size}}.Imul(value, ({{RmSignedType}})helper.ModRm.RM{{Size}});
         helper.ModRm.R{{Size}} = ({{RmUnsignedType}})result;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

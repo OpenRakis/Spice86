@@ -20,7 +20,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
     
     public override void Execute(InstructionExecutionHelper helper) {
         helper.State.{{Accumulator}} = helper.Memory.UInt{{Size}}[helper.GetSegmentedAddress(this)];
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
