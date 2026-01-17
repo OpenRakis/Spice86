@@ -156,6 +156,11 @@ public interface IMouseDriver : IAssemblyRoutineWriter {
     int GetButtonsReleaseCount(MouseButton button);
 
     /// <summary>
+    ///     Resets the accumulated mickey counters. Should be called after reading mickeys via GetDeltaXMickeys/GetDeltaYMickeys.
+    /// </summary>
+    void ResetDeltaMickeys();
+
+    /// <summary>
     ///     Resets the mouse driver to default values.
     /// </summary>
     void Reset();
