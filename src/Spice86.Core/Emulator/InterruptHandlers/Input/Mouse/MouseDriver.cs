@@ -322,6 +322,11 @@ public class MouseDriver : IMouseDriver {
     }
 
     /// <inheritdoc />
+    public void ResetDeltaMickeys() {
+        _mouseDevice.ResetDeltas();
+    }
+
+    /// <inheritdoc />
     public void Reset() {
         _vgaMode = _vgaFunctions.GetCurrentMode();
         SetCursorPosition(VirtualScreenWidth / 2, _vgaMode.Height / 2);
