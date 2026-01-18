@@ -749,9 +749,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
 
         // How many bytes should we read from DMA?
-        // For both auto-init and single-cycle, read min(Left, bytesRequested)
-        // This ensures we don't try to read more than available
-        uint bytesToRead = Math.Min(_sb.Dma.Left, bytesRequested);
+        uint lowerBound = _sb.Dma.AutoInit ? bytesRequested : _sb.Dma.Min;
+        uint bytesToRead = _sb.Dma.Left <= lowerBound ? _sb.Dma.Left : bytesRequested;
 
         // All three of these must be populated during the DMA sequence to
         // ensure the proper quantities and unit are being accounted for.
