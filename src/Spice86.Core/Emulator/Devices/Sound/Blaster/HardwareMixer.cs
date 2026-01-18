@@ -11,7 +11,7 @@ public class HardwareMixer {
     private readonly SoundBlasterHardwareConfig _blasterHardwareConfig;
     private readonly ILoggerService _logger;
     private readonly MixerChannel _pcmMixerChannel;
-    private readonly MixerChannel _opl3fmMixerChannel;
+    private readonly MixerChannel _OPLMixerChannel;
 
     // Mixer volume registers (0-31 range)
     private readonly byte[] _masterVolume = new byte[2] { 31, 31 }; // Left, Right
@@ -46,15 +46,15 @@ public class HardwareMixer {
     /// </summary>
     /// <param name="soundBlasterHardwareConfig">The SoundBlaster IRQs, and DMA information.</param>
     /// <param name="pcmMixerChannel">The mixer channel for PCM/DAC sound effects.</param>
-    /// <param name="opl3fmMixerChannel">The mixer channel for FM synth music.</param>
+    /// <param name="OPLMixerChannel">The mixer channel for FM synth music.</param>
     /// <param name="loggerService">The service used for logging.</param>
     public HardwareMixer(SoundBlasterHardwareConfig soundBlasterHardwareConfig,
-        MixerChannel pcmMixerChannel, MixerChannel opl3fmMixerChannel,
+        MixerChannel pcmMixerChannel, MixerChannel OPLMixerChannel,
         ILoggerService loggerService) {
         _logger = loggerService;
         _blasterHardwareConfig = soundBlasterHardwareConfig;
         _pcmMixerChannel = pcmMixerChannel;
-        _opl3fmMixerChannel = opl3fmMixerChannel;
+        _OPLMixerChannel = OPLMixerChannel;
     }
 
     /// <summary>
@@ -576,7 +576,7 @@ public class HardwareMixer {
         float fmRight = CalculatePercentage(_fmVolume[1]) * masterRight;
         
         // Set app volume on the mixer channel (programmatic control from DOS software)
-        _opl3fmMixerChannel.SetAppVolume(new AudioFrame(fmLeft, fmRight));
+        _OPLMixerChannel.SetAppVolume(new AudioFrame(fmLeft, fmRight));
     }
 
     private float CalculatePercentage(byte volume) {

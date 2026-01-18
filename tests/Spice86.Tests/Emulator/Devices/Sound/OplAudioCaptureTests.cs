@@ -1,7 +1,9 @@
 namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
+
 using NSubstitute;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -12,7 +14,9 @@ using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Common;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
+
 using System.Collections.Generic;
+
 using Xunit;
 
 /// <summary>
@@ -50,9 +54,9 @@ public class OplAudioCaptureTests {
     }
     
     /// <summary>
-    /// Helper to create OPL3 device configured for testing.
+    /// Helper to create opl device configured for testing.
     /// </summary>
-    private Opl3Fm CreateOpl3ForTesting(
+    private Opl CreateoplForTesting(
         out Mixer mixer,
         out IOPortDispatcher dispatcher,
         bool useAdlibGold = false) {
@@ -66,30 +70,30 @@ public class OplAudioCaptureTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: useAdlibGold, enableOplIrq: false);
         
-        return opl3;
+        return opl;
     }
     
     [Fact]
     public void OplGeneratesAudioFramesAtCorrectRate() {
         // Arrange
-        using Opl3Fm opl3 = CreateOpl3ForTesting(out Mixer mixer, out IOPortDispatcher dispatcher);
+        using Opl opl = CreateoplForTesting(out Mixer mixer, out IOPortDispatcher dispatcher);
         
         // Act: Request audio generation
         int framesRequested = 480; // 10ms worth at 48kHz
-        opl3.AudioCallback(framesRequested);
+        opl.AudioCallback(framesRequested);
         
         // Assert: Should generate frames at OPL rate (49716 Hz) which mixer resamples
-        opl3.MixerChannel.Should().NotBeNull();
-        opl3.MixerChannel.GetSampleRate().Should().Be(OplSampleRateHz);
+        opl.MixerChannel.Should().NotBeNull();
+        opl.MixerChannel.GetSampleRate().Should().Be(OplSampleRateHz);
     }
     
     [Fact(Skip = "doesn't pass for now")]
     public void OplRegisterWritesProduceAudioOutput() {
         // Arrange
-        using Opl3Fm opl3 = CreateOpl3ForTesting(out Mixer mixer, out IOPortDispatcher dispatcher);
+        using Opl opl = CreateoplForTesting(out Mixer mixer, out IOPortDispatcher dispatcher);
         
         // Act: Write to OPL registers to configure a simple tone
         // This mirrors DOSBox test pattern for 440Hz tone
@@ -115,26 +119,26 @@ public class OplAudioCaptureTests {
         dispatcher.WriteByte(IOplPort.PrimaryDataPortNumber, 0x32); // Key on + octave 3
         
         // Generate some audio
-        opl3.AudioCallback(100);
+        opl.AudioCallback(100);
         
         // Assert: Should have generated non-zero audio
-        opl3.MixerChannel.AudioFrames.Should().NotBeEmpty();
+        opl.MixerChannel.AudioFrames.Should().NotBeEmpty();
         // With key on, we should get non-silent output (not all zeros)
-        bool hasNonZeroOutput = opl3.MixerChannel.AudioFrames.Any(f => f.Left != 0 || f.Right != 0);
+        bool hasNonZeroOutput = opl.MixerChannel.AudioFrames.Any(f => f.Left != 0 || f.Right != 0);
         hasNonZeroOutput.Should().BeTrue("OPL should generate audio when key is on");
     }
     
     [Fact]
     public void OplSilentWhenNoKeysPressed() {
         // Arrange
-        using Opl3Fm opl3 = CreateOpl3ForTesting(out Mixer mixer, out IOPortDispatcher dispatcher);
+        using Opl opl = CreateoplForTesting(out Mixer mixer, out IOPortDispatcher dispatcher);
         
         // Act: Don't write any key-on commands, just generate audio
-        opl3.AudioCallback(100);
+        opl.AudioCallback(100);
         
         // Assert: Should produce silence (all zeros)
-        if (opl3.MixerChannel.AudioFrames.Count > 0) {
-            bool allSilent = opl3.MixerChannel.AudioFrames.All(f => f.Left == 0 && f.Right == 0);
+        if (opl.MixerChannel.AudioFrames.Count > 0) {
+            bool allSilent = opl.MixerChannel.AudioFrames.All(f => f.Left == 0 && f.Right == 0);
             allSilent.Should().BeTrue("OPL should be silent when no keys are pressed");
         }
     }
@@ -142,12 +146,12 @@ public class OplAudioCaptureTests {
     [Fact]
     public void AdLibGoldProcessingModifiesOplOutput() {
         // Arrange: Create two OPL instances - one plain, one with AdLib Gold
-        using Opl3Fm oplPlain = CreateOpl3ForTesting(
+        using Opl oplPlain = CreateoplForTesting(
             out Mixer mixer1,
             out IOPortDispatcher dispatcher1,
             useAdlibGold: false);
         
-        using Opl3Fm oplGold = CreateOpl3ForTesting(
+        using Opl oplGold = CreateoplForTesting(
             out Mixer mixer2,
             out IOPortDispatcher dispatcher2,
             useAdlibGold: true);
@@ -169,17 +173,17 @@ public class OplAudioCaptureTests {
     [Fact]
     public void OplResetsCleanly() {
         // Arrange
-        using Opl3Fm opl3 = CreateOpl3ForTesting(out Mixer mixer, out IOPortDispatcher dispatcher);
+        using Opl opl = CreateoplForTesting(out Mixer mixer, out IOPortDispatcher dispatcher);
         
         // Act: Write some registers, generate audio, then reset
         dispatcher.WriteByte(IOplPort.PrimaryAddressPortNumber, 0x01);
         dispatcher.WriteByte(IOplPort.PrimaryDataPortNumber, 0x20);
-        opl3.AudioCallback(10);
+        opl.AudioCallback(10);
         
-        int framesBeforeReset = opl3.MixerChannel.AudioFrames.Count;
+        int framesBeforeReset = opl.MixerChannel.AudioFrames.Count;
         
         // Dispose and recreate to simulate reset
-        opl3.Dispose();
+        opl.Dispose();
         
         // Assert: Should clean up properly
         // (actual reset test would require access to internal state)
@@ -198,18 +202,18 @@ public class OplAudioCaptureTests {
             return;
         }
         
-        using Opl3Fm opl3 = CreateOpl3ForTesting(out Mixer mixer, out IOPortDispatcher dispatcher);
+        using Opl opl = CreateoplForTesting(out Mixer mixer, out IOPortDispatcher dispatcher);
         
         // TODO: Load and run ASM program
         // TODO: Capture audio output to WAV
         // TODO: Compare with DOSBox Staging golden reference WAV
         
         // Act: Generate audio from ASM program execution
-        opl3.AudioCallback(1000);
+        opl.AudioCallback(1000);
         
         // Save output WAV
         string outputWav = Path.Combine(Path.GetTempPath(), "opl_simple_tone_output.wav");
-        WavFileFormat.WriteWavFile(outputWav, opl3.MixerChannel.AudioFrames.ToList(), OplSampleRateHz);
+        WavFileFormat.WriteWavFile(outputWav, opl.MixerChannel.AudioFrames.ToList(), OplSampleRateHz);
         
         // Assert: WAV file should exist
         File.Exists(outputWav).Should().BeTrue("Output WAV should be generated");
@@ -236,18 +240,18 @@ public class OplAudioCaptureTests {
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
         // Enable AdLib Gold for surround/stereo processing
-        using Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        using Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: true, enableOplIrq: false);
         
         // TODO: Load and run ASM program
         // TODO: Capture audio output with AdLib Gold processing
         
         // Act: Generate audio
-        opl3.AudioCallback(1000);
+        opl.AudioCallback(1000);
         
         // Save output WAV with AdLib Gold processing
         string outputWav = Path.Combine(Path.GetTempPath(), "adlib_gold_surround_output.wav");
-        WavFileFormat.WriteWavFile(outputWav, opl3.MixerChannel.AudioFrames.ToList(), OplSampleRateHz);
+        WavFileFormat.WriteWavFile(outputWav, opl.MixerChannel.AudioFrames.ToList(), OplSampleRateHz);
         
         // Assert: WAV file should exist and contain processed audio
         File.Exists(outputWav).Should().BeTrue("AdLib Gold output WAV should be generated");

@@ -8,15 +8,15 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
 
-public class Opl3FmTests {
+public class OPLTests {
     [Fact]
     public void AdlibGoldPortsAreNotRegisteredByDefault() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
@@ -28,10 +28,10 @@ public class Opl3FmTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, true);
 
-        using Opl3Fm opl3 = new(mixer, state, dispatcher, true, loggerService, scheduler, clock, dualPic,
+        using Opl opl = new(mixer, state, dispatcher, true, loggerService, scheduler, clock, dualPic,
             useAdlibGold: false, enableOplIrq: false);
 
-        opl3.IsAdlibGoldEnabled.Should().BeFalse();
+        opl.IsAdlibGoldEnabled.Should().BeFalse();
         Action read = () => dispatcher.ReadByte(IOplPort.AdLibGoldAddressPortNumber);
         read.Should().Throw<UnhandledIOPortException>();
     }
@@ -47,10 +47,10 @@ public class Opl3FmTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, true);
 
-        using Opl3Fm opl3 = new(mixer, state, dispatcher, true, loggerService, scheduler, clock, dualPic,
+        using Opl opl = new(mixer, state, dispatcher, true, loggerService, scheduler, clock, dualPic,
             useAdlibGold: true, enableOplIrq: false);
 
-        opl3.IsAdlibGoldEnabled.Should().BeTrue();
+        opl.IsAdlibGoldEnabled.Should().BeTrue();
         Action read = () => dispatcher.ReadByte(IOplPort.AdLibGoldAddressPortNumber);
         read.Should().NotThrow();
     }

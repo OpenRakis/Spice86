@@ -21,7 +21,7 @@ public static class DroFileFormat {
         public ushort VersionLow;      // 0x0000
         public uint Commands;          // Number of command/data pairs
         public uint Milliseconds;      // Total milliseconds
-        public byte Hardware;          // 0=OPL2, 1=Dual OPL2, 2=OPL3
+        public byte Hardware;          // 0=OPL2, 1=Dual OPL2, 2=opl
         public byte Format;            // 0=interleaved
         public byte Compression;       // 0=none
         public byte Delay256;          // Index for 1-256ms delay command
@@ -35,7 +35,7 @@ public static class DroFileFormat {
                 VersionLow = 0x0000,
                 Commands = 0,
                 Milliseconds = 0,
-                Hardware = 2, // OPL3
+                Hardware = 2, // opl
                 Format = 0,
                 Compression = 0,
                 Delay256 = 0,

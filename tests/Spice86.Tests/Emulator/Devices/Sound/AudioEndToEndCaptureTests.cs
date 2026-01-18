@@ -1,6 +1,7 @@
 namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -11,8 +12,9 @@ using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Common;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
+
 using System.Collections.Generic;
-using System.Diagnostics;
+
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,8 +30,6 @@ using Xunit.Abstractions;
 public class AudioEndToEndCaptureTests {
     private readonly ITestOutputHelper _output;
     private const int OplSampleRateHz = 49716;
-    private const int MixerSampleRateHz = 48000;
-    private const int MixerBlocksize = 1024;
     
     public AudioEndToEndCaptureTests(ITestOutputHelper output) {
         _output = output;
@@ -38,7 +38,7 @@ public class AudioEndToEndCaptureTests {
     /// <summary>
     /// Helper to create a complete audio system with real logging.
     /// </summary>
-    private (Opl3Fm opl, Mixer mixer, IOPortDispatcher dispatcher, ILoggerService logger) CreateAudioSystem(
+    private (Opl opl, Mixer mixer, IOPortDispatcher dispatcher, ILoggerService logger) CreateAudioSystem(
         bool useAdlibGold = false) {
         
         // Use REAL LoggerService so we can see logs
@@ -56,7 +56,7 @@ public class AudioEndToEndCaptureTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        Opl3Fm opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: useAdlibGold, enableOplIrq: false);
         
         return (opl, mixer, dispatcher, loggerService);
@@ -65,7 +65,7 @@ public class AudioEndToEndCaptureTests {
     [Fact(Skip = "doesn't pass for now")]
     public void OPL_Generates_NonSilent_Audio_When_Key_Pressed() {
         // Arrange
-        (Opl3Fm opl, Mixer mixer, IOPortDispatcher dispatcher, ILoggerService logger) = CreateAudioSystem();
+        (Opl opl, Mixer mixer, IOPortDispatcher dispatcher, ILoggerService logger) = CreateAudioSystem();
         
         _output.WriteLine("Configuring OPL to play 440Hz tone...");
         
@@ -173,7 +173,7 @@ public class AudioEndToEndCaptureTests {
     [Fact]
     public void OPL_Is_Silent_When_No_Keys_Pressed() {
         // Arrange
-        (Opl3Fm opl, Mixer mixer, IOPortDispatcher dispatcher, ILoggerService logger) = CreateAudioSystem();
+        (Opl opl, Mixer mixer, IOPortDispatcher dispatcher, ILoggerService logger) = CreateAudioSystem();
         
         _output.WriteLine("Generating audio with no key presses...");
         
@@ -222,7 +222,7 @@ public class AudioEndToEndCaptureTests {
     [Fact(Skip = "doesn't pass for now")]
     public void Mixer_Calls_OPL_Callback_During_Mix() {
         // Arrange
-        (Opl3Fm opl, Mixer mixer, IOPortDispatcher dispatcher, ILoggerService logger) = CreateAudioSystem();
+        (Opl opl, Mixer mixer, IOPortDispatcher dispatcher, ILoggerService logger) = CreateAudioSystem();
 
         // Configure a tone
         dispatcher.WriteByte(IOplPort.PrimaryAddressPortNumber, 0x20);

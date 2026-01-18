@@ -1,7 +1,9 @@
 namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
+
 using NSubstitute;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -12,7 +14,9 @@ using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Common;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
+
 using System.Collections.Generic;
+
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,7 +37,7 @@ public class OplResamplingIntegrationTests {
         _output = output;
     }
     
-    private (Opl3Fm opl, Mixer mixer, IOPortDispatcher dispatcher) CreateAudioSystem() {
+    private (Opl opl, Mixer mixer, IOPortDispatcher dispatcher) CreateAudioSystem() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         AddressReadWriteBreakpoints breakpoints = new();
         State state = new(CpuModel.INTEL_80286);
@@ -43,7 +47,7 @@ public class OplResamplingIntegrationTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        Opl3Fm opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: false, enableOplIrq: false);
         
         return (opl, mixer, dispatcher);
@@ -52,7 +56,7 @@ public class OplResamplingIntegrationTests {
     [Fact(Skip = "doesn't pass for now")]
     public void OPL_With_Resampling_Produces_Valid_Audio() {
         // Arrange
-        (Opl3Fm opl, Mixer mixer, IOPortDispatcher dispatcher) = CreateAudioSystem();
+        (Opl opl, Mixer mixer, IOPortDispatcher dispatcher) = CreateAudioSystem();
         
         MixerChannel channel = opl.MixerChannel;
         
@@ -129,7 +133,7 @@ public class OplResamplingIntegrationTests {
     [Fact(Skip = "doesn't pass for now")]
     public void OPL_Resampling_Maintains_Signal_Quality() {
         // Arrange
-        (Opl3Fm opl, Mixer mixer, IOPortDispatcher dispatcher) = CreateAudioSystem();
+        (Opl opl, Mixer mixer, IOPortDispatcher dispatcher) = CreateAudioSystem();
         
         // Configure tone
         dispatcher.WriteByte(IOplPort.PrimaryAddressPortNumber, 0x20);

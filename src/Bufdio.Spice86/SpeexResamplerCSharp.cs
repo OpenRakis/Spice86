@@ -193,8 +193,6 @@ public sealed class SpeexResamplerCSharp {
     // Pre-allocated buffers to avoid allocations in hot paths
     private readonly float[] _cubicInterpBuffer = new float[4];
     
-    private bool _disposed;
-
     /// <summary>
     /// Gets whether the resampler is initialized.
     /// </summary>

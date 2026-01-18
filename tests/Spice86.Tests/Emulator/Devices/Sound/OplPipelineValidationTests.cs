@@ -2,10 +2,8 @@ namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
 
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Interfaces;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
+using Spice86.Shared.Interfaces;
 
 using Xunit;
 
@@ -21,13 +19,13 @@ public class OplPipelineValidationTests {
     }
 
     /// <summary>
-    /// Tests that OPL3 chip GenerateStream produces int16 samples in the correct range.
-    /// Validates against DOSBox Staging opl.cpp:399 (OPL3_GenerateStream call).
+    /// Tests that opl chip GenerateStream produces int16 samples in the correct range.
+    /// Validates against DOSBox Staging opl.cpp:399 (opl_GenerateStream call).
     /// </summary>
     [Fact]
-    public void Opl3Chip_GenerateStream_Produces_Int16_Range_Samples() {
+    public void oplChip_GenerateStream_Produces_Int16_Range_Samples() {
         // Arrange
-        Opl3Chip chip = new Opl3Chip();
+        Opl3Chip chip = new();
         chip.Reset(49716); // OPL sample rate
         
         // Act - Generate from silent chip (no register writes)
@@ -39,7 +37,7 @@ public class OplPipelineValidationTests {
         // Values should be in valid int16 audio range
         foreach (short sample in buffer) {
             sample.Should().BeInRange((short)-32768, (short)32767, 
-                "OPL3_GenerateStream produces int16 samples matching DOSBox");
+                "opl_GenerateStream produces int16 samples matching DOSBox");
         }
         
         // Note: Without register writes, chip may produce silence or residual noise.
@@ -107,7 +105,7 @@ public class OplPipelineValidationTests {
         short[] int16Samples = { -16384, 8192, -4096, 2048 }; // Stereo pair: L1,R1,L2,R2
         float[] floatSamples = new float[4];
         
-        // Act - Convert as Spice86 does in Opl3Fm.AudioCallback (line 389)
+        // Act - Convert as Spice86 does in OPL.AudioCallback (line 389)
         for (int i = 0; i < int16Samples.Length; i++) {
             floatSamples[i] = (float)int16Samples[i]; // Cast, no normalization
         }
@@ -140,7 +138,7 @@ public class OplPipelineValidationTests {
         
         const float expectedGain = 1.5f;
         
-        // This value is hardcoded in Opl3Fm.cs line 124
+        // This value is hardcoded in OPL.cs line 124
         // Just validate it matches DOSBox
         expectedGain.Should().Be(1.5f, 
             "OPL volume gain must be 1.5x to match DOSBox Staging");
@@ -158,7 +156,7 @@ public class OplPipelineValidationTests {
     [Fact]
     public void Opl_Noise_Gate_Threshold_Matches_DOSBox() {
         // DOSBox Staging opl.cpp:865-899:
-        // Gets rid of residual noise in [-8, 0] range on OPL2, [-18, 0] on OPL3.
+        // Gets rid of residual noise in [-8, 0] range on OPL2, [-18, 0] on opl.
         // Threshold: -65.0dB + gain_to_decibel(1.5f) where gain_to_decibel(x) = 20*log10(x)
         //
         // gain_to_decibel(1.5f) = 20 * log10(1.5) ≈ 3.52dB
@@ -168,7 +166,7 @@ public class OplPipelineValidationTests {
         float gainDb = 20.0f * (float)Math.Log10(oplVolumeGain);
         float thresholdDb = -65.0f + gainDb;
         
-        // Assert - matches Opl3Fm.cs line 134
+        // Assert - matches OPL.cs line 134
         gainDb.Should().BeApproximately(3.52f, 0.01f,
             "gain_to_decibel(1.5) ≈ 3.52dB");
         thresholdDb.Should().BeApproximately(-61.48f, 0.01f,
@@ -191,11 +189,11 @@ public class OplPipelineValidationTests {
         // DOSBox Staging opl.cpp defines:
         // constexpr auto OplSampleRateHz = 49716;
         //
-        // This is the native OPL3 chip sample rate.
+        // This is the native opl chip sample rate.
         
         const int expectedSampleRate = 49716;
         
-        // Validate Spice86 uses the correct rate (Opl3Fm.cs line 86)
+        // Validate Spice86 uses the correct rate (OPL.cs line 86)
         expectedSampleRate.Should().Be(49716,
             "OPL sample rate must be 49716 Hz to match DOSBox Staging");
     }
@@ -213,7 +211,7 @@ public class OplPipelineValidationTests {
         // This is because OPL runs at 49716 Hz and mixer typically runs at 48000 Hz,
         // requiring downsampling.
         
-        // This is validated in Opl3Fm.cs line 90
+        // This is validated in OPL.cs line 90
         // Just document the expected behavior
         string expectedMethod = "Resample";
         expectedMethod.Should().Be("Resample",
@@ -233,7 +231,7 @@ public class OplPipelineValidationTests {
         // - ReverbSend: Can send to reverb effect
         // - ChorusSend: Can send to chorus effect
         // - Synthesizer: Marks as FM synthesis (not sampled)
-        // - Stereo: OPL3 is stereo (dual_opl mode)
+        // - Stereo: opl is stereo (dual_opl mode)
         
         HashSet<string> expectedFeatures = new HashSet<string> {
             "Sleep",
@@ -245,7 +243,7 @@ public class OplPipelineValidationTests {
             "Stereo"
         };
         
-        // Validate all features are present (Opl3Fm.cs lines 77-85)
+        // Validate all features are present (OPL.cs lines 77-85)
         expectedFeatures.Should().HaveCount(7, 
             "OPL channel should have 7 features matching DOSBox Staging");
         

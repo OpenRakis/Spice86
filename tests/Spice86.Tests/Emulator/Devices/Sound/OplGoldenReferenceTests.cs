@@ -1,7 +1,9 @@
 namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
+
 using NSubstitute;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -12,11 +14,13 @@ using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Common;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+
 using Xunit;
 
 /// <summary>
@@ -216,9 +220,9 @@ public class OplGoldenReferenceTests {
     }
     
     /// <summary>
-    /// Helper to create OPL3 device for golden reference testing.
+    /// Helper to create opl device for golden reference testing.
     /// </summary>
-    private Opl3Fm CreateOpl3ForGoldenTest(out IOPortDispatcher dispatcher) {
+    private Opl CreateoplForGoldenTest(out IOPortDispatcher dispatcher) {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         AddressReadWriteBreakpoints breakpoints = new();
         State state = new(CpuModel.INTEL_80286);
@@ -228,7 +232,7 @@ public class OplGoldenReferenceTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        return new Opl3Fm(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        return new Opl(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: false, enableOplIrq: false);
     }
     
@@ -238,7 +242,7 @@ public class OplGoldenReferenceTests {
     private List<AudioFrame> ExecuteSequenceAndCaptureAudio(
         OplRegisterSequence sequence,
         IOPortDispatcher dispatcher,
-        Opl3Fm opl3,
+        Opl opl,
         int framesToCapture) {
         
         List<AudioFrame> capturedFrames = new();
@@ -248,9 +252,9 @@ public class OplGoldenReferenceTests {
             if (write.DelayMs > 0) {
                 // Generate audio during delay
                 int framesForDelay = (write.DelayMs * OplSampleRateHz) / 1000;
-                opl3.AudioCallback(framesForDelay);
-                capturedFrames.AddRange(opl3.MixerChannel.AudioFrames);
-                opl3.MixerChannel.AudioFrames.Clear();
+                opl.AudioCallback(framesForDelay);
+                capturedFrames.AddRange(opl.MixerChannel.AudioFrames);
+                opl.MixerChannel.AudioFrames.Clear();
             }
             
             // Write register
@@ -261,8 +265,8 @@ public class OplGoldenReferenceTests {
         // Generate remaining frames
         int remainingFrames = framesToCapture - capturedFrames.Count;
         if (remainingFrames > 0) {
-            opl3.AudioCallback(remainingFrames);
-            capturedFrames.AddRange(opl3.MixerChannel.AudioFrames);
+            opl.AudioCallback(remainingFrames);
+            capturedFrames.AddRange(opl.MixerChannel.AudioFrames);
         }
         
         return capturedFrames.Take(framesToCapture).ToList();
@@ -290,12 +294,12 @@ public class OplGoldenReferenceTests {
         
         sequence.AddWrite(IOplPort.PrimaryAddressPortNumber, 0xB0, 0x12, delayMs: 100); // Key off after 100ms
         
-        using Opl3Fm opl3 = CreateOpl3ForGoldenTest(out IOPortDispatcher dispatcher);
+        using Opl opl = CreateoplForGoldenTest(out IOPortDispatcher dispatcher);
         
         // Act: Execute sequence and capture audio
         int framesToCapture = (OplSampleRateHz * 150) / 1000; // 150ms of audio
         List<AudioFrame> actualFrames = ExecuteSequenceAndCaptureAudio(
-            sequence, dispatcher, opl3, framesToCapture);
+            sequence, dispatcher, opl, framesToCapture);
         
         // Assert: For now, just verify we got audio
         actualFrames.Should().NotBeEmpty();
@@ -315,12 +319,12 @@ public class OplGoldenReferenceTests {
             TestName = "silence"
         };
         
-        using Opl3Fm opl3 = CreateOpl3ForGoldenTest(out IOPortDispatcher dispatcher);
+        using Opl opl = CreateoplForGoldenTest(out IOPortDispatcher dispatcher);
         
         // Act: Capture audio without any register writes
         int framesToCapture = 1000;
         List<AudioFrame> actualFrames = ExecuteSequenceAndCaptureAudio(
-            sequence, dispatcher, opl3, framesToCapture);
+            sequence, dispatcher, opl, framesToCapture);
         
         // Assert: Should be all zeros (silence)
         bool allSilent = actualFrames.All(f => Math.Abs(f.Left) < float.Epsilon && Math.Abs(f.Right) < float.Epsilon);

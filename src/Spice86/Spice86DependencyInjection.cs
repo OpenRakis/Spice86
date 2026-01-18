@@ -334,9 +334,9 @@ public class Spice86DependencyInjection : IDisposable {
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
-        // Create OPL3 FM device; it creates and registers its own mixer channel internally
+        // Create OPL FM device; it creates and registers its own mixer channel internally
         bool useAdlibGold = configuration.OplType == OplType.Gold;
-        Opl3Fm opl3Fm = new(mixer, state, ioPortDispatcher,
+        Opl OPL = new(mixer, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService,
             emulationLoopScheduler, emulatedClock, dualPic,
             useAdlibGold: useAdlibGold, enableOplIrq: true);
@@ -344,7 +344,7 @@ public class Spice86DependencyInjection : IDisposable {
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SBPro2);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
         var soundBlaster = new SoundBlaster(ioPortDispatcher,
-            state, dmaSystem, dualPic, mixer, opl3Fm.MixerChannel, loggerService,
+            state, dmaSystem, dualPic, mixer, OPL.MixerChannel, loggerService,
             emulationLoopScheduler, emulatedClock,
             soundBlasterHardwareConfig);
         var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
@@ -524,7 +524,7 @@ public class Spice86DependencyInjection : IDisposable {
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
-            dmaSystem, opl3Fm, mixer, mouse, mouseDriver,
+            dmaSystem, OPL, mixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {

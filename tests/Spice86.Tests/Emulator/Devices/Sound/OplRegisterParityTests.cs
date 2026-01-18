@@ -1,7 +1,9 @@
 namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
+
 using NSubstitute;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -11,6 +13,7 @@ using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
+
 using Xunit;
 
 /// <summary>
@@ -18,23 +21,6 @@ using Xunit;
 /// Validates that OPL register writes and reads behave identically to DOSBox.
 /// </summary>
 public class OplRegisterParityTests {
-    /// <summary>
-    /// Creates a minimal OPL3 setup for register testing.
-    /// </summary>
-    private Opl3Fm CreateOpl3() {
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
-        AddressReadWriteBreakpoints breakpoints = new();
-        State state = new(CpuModel.INTEL_80286);
-        IOPortDispatcher dispatcher = new(breakpoints, state, loggerService, failOnUnhandledPort: false);
-        using Mixer mixer = new(loggerService, AudioEngine.Dummy);
-        EmulatedClock clock = new();
-        EmulationLoopScheduler scheduler = new(clock, loggerService);
-        DualPic dualPic = new(dispatcher, state, loggerService, false);
-        
-        return new Opl3Fm(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
-            useAdlibGold: false, enableOplIrq: false);
-    }
-    
     [Fact]
     public void Opl2PortsAreAccessible() {
         // Arrange
@@ -47,7 +33,7 @@ public class OplRegisterParityTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        using Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        using Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: false, enableOplIrq: false);
         
         // Act & Assert: OPL2 ports (0x388 address, 0x389 data) should be accessible
@@ -68,8 +54,8 @@ public class OplRegisterParityTests {
     }
     
     [Fact]
-    public void Opl3PortsAreAccessible() {
-        // Arrange: AdLibGold ports are OPL3 extension and require AdLibGold enabled
+    public void oplPortsAreAccessible() {
+        // Arrange: AdLibGold ports are opl extension and require AdLibGold enabled
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         AddressReadWriteBreakpoints breakpoints = new();
         State state = new(CpuModel.INTEL_80286);
@@ -79,16 +65,16 @@ public class OplRegisterParityTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        // Enable AdLibGold to access the OPL3 extension ports (0x38A/0x38B)
-        using Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        // Enable AdLibGold to access the opl extension ports (0x38A/0x38B)
+        using Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: true, enableOplIrq: false);
         
-        // Act & Assert: OPL3 secondary ports (0x38A address, 0x38B data) should be accessible when AdLibGold enabled
+        // Act & Assert: opl secondary ports (0x38A address, 0x38B data) should be accessible when AdLibGold enabled
         Action writeAddress2 = () => dispatcher.WriteByte(IOplPort.AdLibGoldAddressPortNumber, 0x05);
-        writeAddress2.Should().NotThrow("OPL3 secondary address port should be registered when AdLibGold enabled");
+        writeAddress2.Should().NotThrow("opl secondary address port should be registered when AdLibGold enabled");
         
         Action writeData2 = () => dispatcher.WriteByte(IOplPort.AdLibGoldDataPortNumber, 0x01);
-        writeData2.Should().NotThrow("OPL3 secondary data port should be registered when AdLibGold enabled");
+        writeData2.Should().NotThrow("opl secondary data port should be registered when AdLibGold enabled");
     }
     
     [Fact]
@@ -103,7 +89,7 @@ public class OplRegisterParityTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        using Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        using Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: false, enableOplIrq: false);
         
         // Act: Configure Timer 1 (register 0x02)
@@ -139,7 +125,7 @@ public class OplRegisterParityTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        using Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        using Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: false, enableOplIrq: false);
         
         // Act: Enable waveform selection (register 0x01, bit 5)
@@ -176,7 +162,7 @@ public class OplRegisterParityTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        using Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        using Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: false, enableOplIrq: false);
         
         // Act: Write frequency for channel 0
@@ -214,7 +200,7 @@ public class OplRegisterParityTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        using Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        using Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: false, enableOplIrq: false);
         
         // Act: Configure operator 0 (modulator for channel 0)
@@ -254,7 +240,7 @@ public class OplRegisterParityTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        using Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        using Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: false, enableOplIrq: false);
         
         // Act: Enable rhythm mode (register 0xBD)
@@ -274,7 +260,7 @@ public class OplRegisterParityTests {
     }
     
     [Fact]
-    public void Opl3FourOpModeRegisterWorks() {
+    public void oplFourOpModeRegisterWorks() {
         // Arrange
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         AddressReadWriteBreakpoints breakpoints = new();
@@ -285,10 +271,10 @@ public class OplRegisterParityTests {
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         DualPic dualPic = new(dispatcher, state, loggerService, false);
         
-        using Opl3Fm opl3 = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
+        using Opl opl = new(mixer, state, dispatcher, false, loggerService, scheduler, clock, dualPic,
             useAdlibGold: false, enableOplIrq: false);
         
-        // Act: Enable OPL3 mode first (register 0x105)
+        // Act: Enable opl mode first (register 0x105)
         dispatcher.WriteByte(IOplPort.AdLibGoldAddressPortNumber, 0x05);
         dispatcher.WriteByte(IOplPort.AdLibGoldDataPortNumber, 0x01);
         
@@ -296,7 +282,7 @@ public class OplRegisterParityTests {
         dispatcher.WriteByte(IOplPort.AdLibGoldAddressPortNumber, 0x04);
         dispatcher.WriteByte(IOplPort.AdLibGoldDataPortNumber, 0x3F);
         
-        // Assert: OPL3-specific registers should work
+        // Assert: opl-specific registers should work
         Action act = () => {
             dispatcher.WriteByte(IOplPort.AdLibGoldAddressPortNumber, 0x05);
             dispatcher.WriteByte(IOplPort.AdLibGoldDataPortNumber, 0x00);

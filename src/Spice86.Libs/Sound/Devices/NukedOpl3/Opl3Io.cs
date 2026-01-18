@@ -6,7 +6,7 @@ namespace Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Libs.Sound.Devices.AdlibGold;
 
 [Flags]
-public enum Opl3WriteResult {
+public enum OplWriteResult {
     None = 0,
     TimerUpdated = 1 << 0,
     DataWrite = 1 << 1,
@@ -14,22 +14,21 @@ public enum Opl3WriteResult {
 }
 
 /// <summary>
-///     Mirrors DOSBox-staging's OPL3/AdLib Gold register I/O handling.
+///     Mirrors DOSBox-staging's OPL/AdLib Gold register I/O handling.
 /// </summary>
-public sealed class Opl3Io {
+public sealed class OplIo {
     private readonly Opl3Chip _chip;
     private readonly byte[] _registerCache = new byte[512];
     private readonly Func<double> _timeProvider;
     private readonly OplTimers _timers;
     private AdLibGoldIo? _adLibGold;
     private bool _irqAsserted;
-    private byte _latchedStatus;
     private double _samplesPerTick;
     private ushort _selectedRegister;
     private double _tickOrigin;
     private bool _timingInitialized;
 
-    public Opl3Io(Opl3Chip chip, Func<double>? timeProvider = null, AdLibGoldIo? adLibGold = null) {
+    public OplIo(Opl3Chip chip, Func<double>? timeProvider = null, AdLibGoldIo? adLibGold = null) {
         _chip = chip ?? throw new ArgumentNullException(nameof(chip));
         _timeProvider = timeProvider ?? (() => 0.0);
         _timers = new OplTimers(_timeProvider);
@@ -51,47 +50,46 @@ public sealed class Opl3Io {
         _samplesPerTick = sampleRate / 1000.0;
         _timingInitialized = _samplesPerTick > double.Epsilon;
         _tickOrigin = _timeProvider();
-        _latchedStatus = 0;
         UpdateIrqState(false);
     }
 
-    public Opl3WriteResult WritePort(ushort port, byte value) {
+    public OplWriteResult WritePort(ushort port, byte value) {
         bool isDataPort = (port & 0x01) != 0;
 
         if (isDataPort) {
             if (_adLibGold is { Active: true } && port == IOplPort.AdLibGoldDataPortNumber) {
                 _adLibGold.Write(value);
-                return Opl3WriteResult.AdLibGoldWrite;
+                return OplWriteResult.AdLibGoldWrite;
             }
 
             if (_timers.Write((byte)(_selectedRegister & 0xFF), value)) {
                 UpdateTimerStatus();
-                return Opl3WriteResult.TimerUpdated;
+                return OplWriteResult.TimerUpdated;
             }
 
             _chip.WriteRegisterBuffered(_selectedRegister, value);
             _registerCache[_selectedRegister & 0x1FF] = value;
-            return Opl3WriteResult.DataWrite;
+            return OplWriteResult.DataWrite;
         }
 
         if (_adLibGold != null && port == IOplPort.AdLibGoldAddressPortNumber) {
             switch (value) {
                 case 0xFF:
                     _adLibGold.Active = true;
-                    return Opl3WriteResult.None;
+                    return OplWriteResult.None;
                 case 0xFE:
                     _adLibGold.Active = false;
-                    return Opl3WriteResult.None;
+                    return OplWriteResult.None;
             }
 
             if (_adLibGold.Active) {
                 _adLibGold.Index = value;
-                return Opl3WriteResult.None;
+                return OplWriteResult.None;
             }
         }
 
         _selectedRegister = ComputeRegisterAddress(port, value);
-        return Opl3WriteResult.None;
+        return OplWriteResult.None;
     }
 
     public byte ReadPort(ushort port) {
@@ -159,7 +157,6 @@ public sealed class Opl3Io {
     private byte UpdateTimerStatus(double? explicitTime = null) {
         double time = explicitTime ?? _timeProvider();
         byte status = _timers.ReadStatus(time);
-        _latchedStatus = status;
         UpdateIrqState((status & 0x80) != 0);
         return status;
     }

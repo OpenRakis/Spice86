@@ -42,7 +42,7 @@ public class OplAsmIntegrationTests {
     
     [Fact]
     public void Test_AdLib_Gold_Stereo_Control() {
-        // This test exercises AdLib Gold stereo control via OPL3 extended registers
+        // This test exercises AdLib Gold stereo control via opl extended registers
         // Tests 0x38A/0x38B port writes and stereo panning
         // Compiled from adlib_gold_stereo.asm with NASM
         OplTestHandler testHandler = RunOplTestFromFile("adlib_gold_stereo.bin", MaxCycles);
@@ -148,17 +148,17 @@ public class OplAsmIntegrationTests {
     }
     
     [Fact]
-    public void Test_OPL3_Four_Op_Mode() {
-        // Arrange: Test OPL3 4-operator synthesis mode enable
+    public void Test_opl_Four_Op_Mode() {
+        // Arrange: Test opl 4-operator synthesis mode enable
         byte[] program = new byte[] {
-            // Enable OPL3 mode (register 0x105)
-            0xBA, 0x8A, 0x03,       // mov dx, 0x38A - OPL3 extended port
+            // Enable opl mode (register 0x105)
+            0xBA, 0x8A, 0x03,       // mov dx, 0x38A - opl extended port
             0xB0, 0x05,             // mov al, 0x05
             0xEE,                   // out dx, al
             0xB9, 0x06, 0x00,       // mov cx, 6
             0xE2, 0xFE,             // loop $
             0x42,                   // inc dx (now 0x38B)
-            0xB0, 0x01,             // mov al, 0x01 - enable OPL3
+            0xB0, 0x01,             // mov al, 0x01 - enable opl
             0xEE,                   // out dx, al
             // Enable 4-op for channels 0-2 (register 0x104)
             0x4A,                   // dec dx
@@ -178,7 +178,7 @@ public class OplAsmIntegrationTests {
         
         OplTestHandler testHandler = RunOplTest(program);
         
-        testHandler.Results.Should().Contain((byte)0x00, "OPL3 4-op mode should work");
+        testHandler.Results.Should().Contain((byte)0x00, "opl 4-op mode should work");
     }
     
     private OplTestHandler RunOplTest(byte[] program, long maxCycles = 100000L,

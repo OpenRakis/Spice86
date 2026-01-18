@@ -5,7 +5,7 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 /// </summary>
 public enum OplType {
     /// <summary>
-    /// Standard OPL3 as found on the Sound Blaster Pro 2 (default).
+    /// Standard opl as found on the Sound Blaster Pro 2 (default).
     /// </summary>
     SbPro2,
 
