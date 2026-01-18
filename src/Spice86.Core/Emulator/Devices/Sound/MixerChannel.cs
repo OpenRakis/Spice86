@@ -1059,8 +1059,8 @@ public sealed class MixerChannel {
             // Convert 8-bit unsigned to float
             _nextFrame = new AudioFrame(LookupTables.U8To16[data[pos]], LookupTables.U8To16[data[pos]]);
             
-            // Apply channel mapping (mono uses left channel)
-            AudioFrame frameWithGain = new AudioFrame(_prevFrame[(int)mappedChannelLeft]);
+            // Apply channel mapping (mono uses left channel) - use _nextFrame (current sample)
+            AudioFrame frameWithGain = new AudioFrame(_nextFrame[(int)mappedChannelLeft]);
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
             
             // Process through envelope to prevent clicks
@@ -1103,8 +1103,8 @@ public sealed class MixerChannel {
             // Convert 16-bit signed to float
             _nextFrame = new AudioFrame(data[pos], data[pos]);
             
-            // Apply channel mapping (mono uses left channel)
-            AudioFrame frameWithGain = new AudioFrame(_prevFrame[(int)mappedChannelLeft]);
+            // Apply channel mapping (mono uses left channel) - use _nextFrame (current sample)
+            AudioFrame frameWithGain = new AudioFrame(_nextFrame[(int)mappedChannelLeft]);
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
             
             // Process through envelope to prevent clicks
@@ -1148,10 +1148,10 @@ public sealed class MixerChannel {
             // Convert stereo 16-bit signed to float
             _nextFrame = new AudioFrame(data[pos * 2], data[pos * 2 + 1]);
             
-            // Apply channel mapping (stereo)
+            // Apply channel mapping (stereo) - use _nextFrame (current sample)
             AudioFrame frameWithGain = new AudioFrame(
-                _prevFrame[(int)mappedChannelLeft],
-                _prevFrame[(int)mappedChannelRight]
+                _nextFrame[(int)mappedChannelLeft],
+                _nextFrame[(int)mappedChannelRight]
             );
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
             
@@ -1196,8 +1196,8 @@ public sealed class MixerChannel {
             float sample = data[pos] * 32768.0f; // Convert normalized to 16-bit range
             _nextFrame = new AudioFrame(sample, sample);
             
-            // Apply channel mapping (mono uses left channel)
-            AudioFrame frameWithGain = new AudioFrame(_prevFrame[(int)mappedChannelLeft]);
+            // Apply channel mapping (mono uses left channel) - use _nextFrame (current sample)
+            AudioFrame frameWithGain = new AudioFrame(_nextFrame[(int)mappedChannelLeft]);
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
             
             // Process through envelope to prevent clicks
@@ -1244,10 +1244,10 @@ public sealed class MixerChannel {
             float right = data[pos * 2 + 1];
             _nextFrame = new AudioFrame(left, right);
             
-            // Apply channel mapping (stereo)
+            // Apply channel mapping (stereo) - use _nextFrame (current sample)
             AudioFrame frameWithGain = new AudioFrame(
-                _prevFrame[(int)mappedChannelLeft],
-                _prevFrame[(int)mappedChannelRight]
+                _nextFrame[(int)mappedChannelLeft],
+                _nextFrame[(int)mappedChannelRight]
             );
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
             
@@ -1701,10 +1701,10 @@ public sealed class MixerChannel {
                 _prevFrame = _nextFrame;
                 _nextFrame = frames[pos];
                 
-                // Apply channel mapping
+                // Apply channel mapping - use _nextFrame (current sample)
                 AudioFrame frameWithGain = new AudioFrame(
-                    _prevFrame[(int)mappedChannelLeft],
-                    _prevFrame[(int)mappedChannelRight]
+                    _nextFrame[(int)mappedChannelLeft],
+                    _nextFrame[(int)mappedChannelRight]
                 );
                 frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
                 

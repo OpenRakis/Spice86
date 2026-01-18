@@ -187,6 +187,7 @@ public sealed class SpeexResamplerCSharp {
     private float[] _mem;
     private float[]? _sincTable;
     private uint _sincTableLength;
+    private bool _useDirect;
     
     private int _inStride;
     private int _outStride;
@@ -210,6 +211,26 @@ public sealed class SpeexResamplerCSharp {
     /// Gets the output sample rate.
     /// </summary>
     public uint OutputRate => _outRate;
+
+    /// <summary>
+    /// Gets the current filter length (number of taps).
+    /// </summary>
+    public int FilterLength => (int)_filtLen;
+
+    /// <summary>
+    /// Gets the current oversample factor used for the interpolated table.
+    /// </summary>
+    public int Oversample => (int)_oversample;
+
+    /// <summary>
+    /// Gets whether the resampler is using the direct sinc table mode.
+    /// </summary>
+    public bool UseDirectTable => _useDirect;
+
+    /// <summary>
+    /// Gets the cutoff used when generating the sinc table.
+    /// </summary>
+    public float Cutoff => _cutoff;
 
     /// <summary>
     /// Create a new resampler with integer input and output rates.
@@ -329,12 +350,8 @@ public sealed class SpeexResamplerCSharp {
     // UpdateFilter() - Update filter parameters and regenerate sinc table
     // Mirrors: static int update_filter(SpeexResamplerState *st)
     private void UpdateFilter() {
+        // Compute num/den rates using GCD reduction when not set via SetRateFrac
         if (_numRate == 0 || _denRate == 0) {
-            uint fact;
-            uint intAdvance;
-            uint fracAdvance;
-            
-            // Compute gcd
             uint a = _inRate;
             uint b = _outRate;
             while (b != 0) {
@@ -342,41 +359,82 @@ public sealed class SpeexResamplerCSharp {
                 a = b;
                 b = temp;
             }
-            fact = a;
-            
+            uint fact = a;
             _numRate = _inRate / fact;
             _denRate = _outRate / fact;
-            
-            if (_numRate > _denRate) {
-                // Downsampling
-                intAdvance = _numRate / _denRate;
-                fracAdvance = _numRate % _denRate;
-            } else {
-                // Upsampling
-                intAdvance = 0;
-                fracAdvance = _numRate;
-            }
-            _intAdvance = (int)intAdvance;
-            _fracAdvance = (int)fracAdvance;
         }
 
+        // Advance per output sample
+        _intAdvance = (int)(_numRate / _denRate);
+        _fracAdvance = (int)(_numRate % _denRate);
+
         QualityMapping qm = QualityMap[_quality];
-        _filtLen = (uint)qm.BaseLength;
-        
-        // Downsampling uses downsample bandwidth; upsampling uses upsample bandwidth
-        _cutoff = _numRate > _denRate ? qm.DownsampleBandwidth : qm.UpsampleBandwidth;
-        
         _oversample = (uint)qm.Oversample;
-        
+        _filtLen = (uint)qm.BaseLength;
+
+        if (_numRate > _denRate) {
+            // Down-sampling: narrower cutoff and longer filter
+            _cutoff = qm.DownsampleBandwidth * ((float)_denRate / (float)_numRate);
+            // Increase filter length proportionally and align to multiple of 8 (like Speex)
+            uint scaled = (uint)((_filtLen * _numRate) / _denRate);
+            if (scaled < 8) {
+                scaled = 8;
+            }
+            // Round up to multiple of 8
+            _filtLen = ((scaled - 1u) & (~0x7u)) + 8u;
+            // Reduce oversample for heavy downsampling
+            if (2u * _denRate < _numRate) {
+                _oversample >>= 1;
+            }
+            if (4u * _denRate < _numRate) {
+                _oversample >>= 1;
+            }
+            if (8u * _denRate < _numRate) {
+                _oversample >>= 1;
+            }
+            if (16u * _denRate < _numRate) {
+                _oversample >>= 1;
+            }
+            if (_oversample < 1) {
+                _oversample = 1;
+            }
+        } else {
+            // Up-sampling: use upsample bandwidth
+            _cutoff = qm.UpsampleBandwidth;
+        }
+
         FuncDef windowFunc = qm.WindowFunc;
 
-        // Compute the sinc filter
-        _sincTableLength = _filtLen * _oversample + 1;
-        _sincTable = new float[_sincTableLength];
-        
-        for (int i = 0; i < (int)_sincTableLength; i++) {
-            // Fix precision loss: use proper float division
-            _sincTable[i] = Sinc(_cutoff, (float)i / (float)_oversample - (float)_filtLen / 2.0f, (int)_filtLen, windowFunc);
+        // Choose direct vs interpolated mode based on memory footprint
+        // Direct: den_rate phases * filt_len coefficients
+        // Interpolated: oversample * filt_len + 8 guard
+        uint directSize = (uint)(_filtLen * _denRate);
+        uint interpSize = (uint)(_filtLen * _oversample + 8);
+        _useDirect = directSize <= interpSize;
+
+        if (_useDirect) {
+            // Build direct sinc table: den_rate phases, each with filt_len taps
+            _sincTableLength = directSize;
+            _sincTable = new float[_sincTableLength];
+            for (uint i = 0; i < _denRate; i++) {
+                for (int j = 0; j < (int)_filtLen; j++) {
+                    float x = ((j - (int)_filtLen / 2 + 1) - ((float)i) / (float)_denRate);
+                    _sincTable[i * _filtLen + (uint)j] = Sinc(_cutoff, x, (int)_filtLen, windowFunc);
+                }
+            }
+        } else {
+            // Build interpolated sinc table with 4-sample guard at both ends
+            _sincTableLength = interpSize;
+            _sincTable = new float[_sincTableLength];
+            int total = (int)(_oversample * _filtLen);
+            for (int i = -4; i < total + 4; i++) {
+                int idx = i + 4;
+                if (idx < 0 || idx >= _sincTable.Length) {
+                    continue;
+                }
+                float x = (i / (float)_oversample) - (float)_filtLen / 2.0f;
+                _sincTable[idx] = Sinc(_cutoff, x, (int)_filtLen, windowFunc);
+            }
         }
 
         // Allocate memory for channel state
@@ -420,16 +478,16 @@ public sealed class SpeexResamplerCSharp {
         uint inLen = (uint)input.Length;
         uint outLen = (uint)output.Length;
 
-        // Use direct algorithm
-        ResamplerBasicDirect(channelIndex, input, ref inLen, output, ref outLen);
+        // Use direct or interpolated algorithm depending on filter setup
+        ResamplerBasic(channelIndex, input, ref inLen, output, ref outLen);
 
         inputConsumed = inLen;
         outputGenerated = outLen;
     }
 
-    // ResamplerBasicDirect() - Direct resampling using sinc table
-    // Mirrors: static int resampler_basic_direct_double() from resample.c
-    private void ResamplerBasicDirect(uint channelIndex, ReadOnlySpan<float> input, ref uint inLen, 
+    // ResamplerBasic() - Resample using direct or interpolated sinc table
+    // Mirrors: resampler_basic_* from Speex
+    private void ResamplerBasic(uint channelIndex, ReadOnlySpan<float> input, ref uint inLen, 
         Span<float> output, ref uint outLen) {
         
         int n = (int)_filtLen;
@@ -461,24 +519,62 @@ public sealed class SpeexResamplerCSharp {
             return;
         }
 
-        // Main resampling loop - EXACT MIRROR of C implementation
+        // Main resampling loop
         while (!(lastSample >= safeInLen || outSample >= (int)outLen)) {
-            // The sinc table is indexed by samp_frac_num*N
-            // This directly selects N coefficients for the current phase
-            int sincOffset = (int)(sampFracNum * (uint)n);
             double sum = 0.0;
 
-            // Inner product: sinc_table[sincOffset + j] * mem[lastSample - j]
-            for (int j = 0; j < n; j++) {
-                int sincIdx = sincOffset + j;
-                if (sincIdx >= _sincTable.Length) {
-                    break;
+            if (_useDirect) {
+                // Direct mode: pick phase block of N coefficients
+                int sincOffset = (int)(sampFracNum * (uint)n);
+                for (int j = 0; j < n; j++) {
+                    int sincIdx = sincOffset + j;
+                    int memIdx = channelOffset + (n - 1) + lastSample + j;
+                    if (sincIdx < 0 || sincIdx >= _sincTable.Length) {
+                        break;
+                    }
+                    if (memIdx < 0 || memIdx >= _mem.Length) {
+                        break;
+                    }
+                    sum += _sincTable[sincIdx] * _mem[memIdx];
                 }
-                int memIdx = channelOffset + lastSample + (n - 1 - j);
-                if (memIdx < 0 || memIdx >= _mem.Length) {
-                    break;
+            } else {
+                // Interpolated mode: compute cubic interpolation of oversampled table
+                int offset = (int)(((ulong)sampFracNum * (ulong)_oversample) / (ulong)denRate);
+                float frac = (float)((((ulong)sampFracNum * (ulong)_oversample) % (ulong)denRate)) / (float)denRate;
+                float[] interp = new float[4];
+                CubicCoef(frac, interp);
+
+                double accum0 = 0.0;
+                double accum1 = 0.0;
+                double accum2 = 0.0;
+                double accum3 = 0.0;
+
+                for (int j = 0; j < n; j++) {
+                    int baseIdx = 4 + ((j + 1) * (int)_oversample) - offset;
+                    int idx0 = baseIdx - 2;
+                    int idx1 = baseIdx - 1;
+                    int idx2 = baseIdx;
+                    int idx3 = baseIdx + 1;
+                    int memIdx = channelOffset + (n - 1) + lastSample + j;
+                    if (memIdx < 0 || memIdx >= _mem.Length) {
+                        break;
+                    }
+                    float currIn = _mem[memIdx];
+                    if (idx0 >= 0 && idx0 < _sincTable.Length) {
+                        accum0 += currIn * _sincTable[idx0];
+                    }
+                    if (idx1 >= 0 && idx1 < _sincTable.Length) {
+                        accum1 += currIn * _sincTable[idx1];
+                    }
+                    if (idx2 >= 0 && idx2 < _sincTable.Length) {
+                        accum2 += currIn * _sincTable[idx2];
+                    }
+                    if (idx3 >= 0 && idx3 < _sincTable.Length) {
+                        accum3 += currIn * _sincTable[idx3];
+                    }
                 }
-                sum += _sincTable[sincIdx] * _mem[memIdx];
+
+                sum = (double)interp[0] * accum0 + (double)interp[1] * accum1 + (double)interp[2] * accum2 + (double)interp[3] * accum3;
             }
 
             output[outStride * outSample++] = (float)sum;
