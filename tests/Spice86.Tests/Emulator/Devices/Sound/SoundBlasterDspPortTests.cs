@@ -261,12 +261,7 @@ using Xunit;
             EmulationLoopScheduler scheduler = new(clock, loggerService);
             Mixer mixer = new(loggerService, AudioEngine.Dummy);
 
-            HashSet<ChannelFeature> oplFeatures = new HashSet<ChannelFeature> {
-                ChannelFeature.Synthesizer,
-                ChannelFeature.Sleep,
-                ChannelFeature.Stereo
-            };
-            MixerChannel oplChannel = mixer.AddChannel(_ => { }, 49716, "OplTestChannel", oplFeatures);
+            Opl opl = new Opl(mixer, state, dispatcher, failOnUnhandledPort: false, loggerService, scheduler, clock, dualPic);
 
             SoundBlasterHardwareConfig config = new SoundBlasterHardwareConfig(7, 1, 5, sbType);
             SoundBlaster soundBlaster = new SoundBlaster(
@@ -275,7 +270,7 @@ using Xunit;
                 dmaBus,
                 dualPic,
                 mixer,
-                oplChannel,
+                opl,
                 loggerService,
                 scheduler,
                 clock,

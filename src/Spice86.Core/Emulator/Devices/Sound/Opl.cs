@@ -25,7 +25,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly DualPic _dualPic;
     private readonly OplIo _oplIo;
     private readonly byte _oplIrqLine;
-    private readonly EventHandler _oplTimerHandler;
     private readonly bool _useAdLibGold;
     
     // FIFO queue for cycle-accurate OPL frame generation
@@ -42,7 +41,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
 
     private readonly bool _useOplIrq;
     private bool _disposed;
-    private bool _oplTimerScheduled;
 
     /// <summary>
     ///     Initializes a new instance of the OPL synth chip.
@@ -87,8 +85,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         _useAdLibGold = useAdlibGold;
         _useOplIrq = enableOplIrq;
         _oplIrqLine = oplIrqLine;
-
-        _oplTimerHandler = ServiceOplTimers;
 
         _oplIo = new OplIo(_chip, () => _clock.ElapsedTimeMs) {
             OnIrqChanged = OnOplIrqChanged
@@ -186,6 +182,8 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         ioPortDispatcher.AddIOPortHandler(IOplPort.PrimaryDataPortNumber, this);
         ioPortDispatcher.AddIOPortHandler(IOplPort.SecondaryAddressPortNumber, this);
         ioPortDispatcher.AddIOPortHandler(IOplPort.SecondaryDataPortNumber, this);
+        
+        
         if (_adLibGoldIo is not null) {
             ioPortDispatcher.AddIOPortHandler(IOplPort.AdLibGoldAddressPortNumber, this);
             ioPortDispatcher.AddIOPortHandler(IOplPort.AdLibGoldDataPortNumber, this);
@@ -202,11 +200,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         }
 
         if (disposing) {
-            if (_oplTimerScheduled) {
-                _scheduler.RemoveEvents(_oplTimerHandler);
-                _oplTimerScheduled = false;
-            }
-
             if (_useOplIrq) {
                 _dualPic.DeactivateIrq(_oplIrqLine);
             }
@@ -223,21 +216,19 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// </summary>
     public override byte ReadByte(ushort port) {
         lock (_chipLock) {
-            return port switch {
-                IOplPort.PrimaryAddressPortNumber => _oplIo.ReadPort(port),
-                IOplPort.PrimaryDataPortNumber => _oplIo.ReadPort(port),
-                IOplPort.SecondaryAddressPortNumber => _oplIo.ReadPort(port),
-                IOplPort.SecondaryDataPortNumber => _oplIo.ReadPort(port),
-                IOplPort.AdLibGoldAddressPortNumber when _adLibGoldIo is not null => _oplIo.ReadPort(port),
-                IOplPort.AdLibGoldDataPortNumber when _adLibGoldIo is not null => _oplIo.ReadPort(port),
+            _oplIo.AdvanceTimersOnly(_clock.ElapsedTimeMs);
+
+            ushort targetPort = port;
+            return targetPort switch {
+                IOplPort.PrimaryAddressPortNumber => _oplIo.ReadPort(targetPort),
+                IOplPort.PrimaryDataPortNumber => _oplIo.ReadPort(targetPort),
+                IOplPort.SecondaryAddressPortNumber => _oplIo.ReadPort(targetPort),
+                IOplPort.SecondaryDataPortNumber => _oplIo.ReadPort(targetPort),
+                IOplPort.AdLibGoldAddressPortNumber when _adLibGoldIo is not null => _oplIo.ReadPort(targetPort),
+                IOplPort.AdLibGoldDataPortNumber when _adLibGoldIo is not null => _oplIo.ReadPort(targetPort),
                 _ => 0xFF
             };
         }
-    }
-
-    /// <inheritdoc />
-    public override ushort ReadWord(ushort port) {
-        return ReadByte(port);
     }
 
     /// <inheritdoc />
@@ -245,41 +236,30 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Writes to opl or AdLib Gold I/O ports.
     /// </summary>
     public override void WriteByte(ushort port, byte value) {
-        OplWriteResult result = OplWriteResult.None;
-
         RenderUpToNow();
         
         _mixerChannel.WakeUp();
 
-        switch (port) {
-            case IOplPort.PrimaryAddressPortNumber:
-            case IOplPort.SecondaryAddressPortNumber:
-            case IOplPort.PrimaryDataPortNumber:
-            case IOplPort.SecondaryDataPortNumber:
-                lock (_chipLock) {
-                    result = _oplIo.WritePort(port, value);
-                }
+        lock (_chipLock) {
+            _oplIo.AdvanceTimersOnly(_clock.ElapsedTimeMs);
 
-                break;
-            case IOplPort.AdLibGoldAddressPortNumber:
-            case IOplPort.AdLibGoldDataPortNumber:
-                if (_adLibGoldIo is not null) {
-                    lock (_chipLock) {
-                        result = _oplIo.WritePort(port, value);
+            switch (port) {
+                case IOplPort.PrimaryAddressPortNumber:
+                case IOplPort.SecondaryAddressPortNumber:
+                case IOplPort.PrimaryDataPortNumber:
+                case IOplPort.SecondaryDataPortNumber:
+                    _oplIo.WritePort(port, value);
+                    break;
+                case IOplPort.AdLibGoldAddressPortNumber:
+                case IOplPort.AdLibGoldDataPortNumber:
+                    if (_adLibGoldIo is not null) {
+                        _oplIo.WritePort(port, value);
                     }
-                }
-
-                break;
-            default:
-                LogUnhandledPortWrite(port, value);
-                return;
-        }
-
-        bool timerWrite = (result & OplWriteResult.TimerUpdated) != 0;
-
-        if (timerWrite) {
-            double now = _clock.ElapsedTimeMs;
-            ScheduleOplTimer(now);
+                    break;
+                default:
+                    LogUnhandledPortWrite(port, value);
+                    return;
+            }
         }
     }
 
@@ -314,13 +294,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 framesRemaining--;
             }
             
-            while (framesRemaining > 0) {
-                AudioFrame frame = RenderSingleFrame();
-                frameData[0] = frame.Left;
-                frameData[1] = frame.Right;
-                _mixerChannel.AddSamples_sfloat(1, frameData);
-                framesRemaining--;
-            }
+            // If we run out of FIFO frames, we simply stop adding samples.
+            // This constitutes an underrun, which the mixer will handle (e.g. by outputting silence).
+            // We do NOT generate "future" frames here because the emulation hasn't reached that point yet.
             
             _lastRenderedMs = _clock.ElapsedTimeMs;
         }
@@ -370,63 +346,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         return frame;
     }
     
-    /// <summary>
-    ///     Schedules servicing of the OPL timers based on the next overflow.
-    ///     Timer management is handled by oplIo which wraps OplChip timer logic.
-    /// </summary>
-    /// <param name="currentTick">Current time in scheduler ticks.</param>
-    private void ScheduleOplTimer(double currentTick) {
-        double? delay;
-        lock (_chipLock) {
-            _oplIo.AdvanceTimersOnly(currentTick);
-            delay = _oplIo.GetTicksUntilTimerOverflow(currentTick);
-        }
-
-        if (_oplTimerScheduled) {
-            _scheduler.RemoveEvents(_oplTimerHandler);
-            _oplTimerScheduled = false;
-        }
-
-        if (delay is not { } d) {
-            return;
-        }
-
-        if (d < 0) {
-            d = 0;
-        }
-
-        _scheduler.AddEvent(_oplTimerHandler, d);
-        _oplTimerScheduled = true;
-    }
-
-    /// <summary>
-    ///     Advances OPL timers to the current time and schedules the next timer event.
-    /// </summary>
-    /// <param name="unusedTick">Unused parameter supplied by the EmulationLoopScheduler event system.</param>
-    private void ServiceOplTimers(uint unusedTick) {
-        _ = unusedTick;
-        double now = _clock.ElapsedTimeMs;
-        double? delay;
-
-        lock (_chipLock) {
-            _oplIo.AdvanceTimersOnly(now);
-            delay = _oplIo.GetTicksUntilTimerOverflow(now);
-        }
-
-        _oplTimerScheduled = false;
-
-        if (delay is not { } d) {
-            return;
-        }
-
-        if (d < 0) {
-            d = 0;
-        }
-
-        _scheduler.AddEvent(_oplTimerHandler, d);
-        _oplTimerScheduled = true;
-    }
-
     /// <summary>
     ///     Handles changes in the OPL IRQ line state.
     ///     OPL timers can trigger IRQs when enabled (not default behavior).

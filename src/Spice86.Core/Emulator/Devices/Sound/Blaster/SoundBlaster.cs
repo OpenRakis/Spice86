@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Common;
+using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -457,6 +458,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private readonly DmaChannel? _secondaryDmaChannel;
     private readonly Mixer _mixer;
     private readonly MixerChannel _dacChannel;
+    private readonly Opl _opl;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly HardwareMixer _hardwareMixer;
@@ -480,10 +482,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     public SoundBlaster(
         IOPortDispatcher ioPortDispatcher,
         State state,
-        DmaBus dmaSystem,
+        DmaBus dmaBus,
         DualPic dualPic,
         Mixer mixer,
-        MixerChannel oplMixerChannel,
+        Opl opl,
         ILoggerService loggerService,
         EmulationLoopScheduler scheduler,
         IEmulatedClock clock,
@@ -497,14 +499,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _config = soundBlasterHardwareConfig;
         _dualPic = dualPic;
         _mixer = mixer;
+        _opl = opl;
         _scheduler = scheduler;
         _clock = clock;
 
-        _primaryDmaChannel = dmaSystem.GetChannel(_config.LowDma)
+        _primaryDmaChannel = dmaBus.GetChannel(_config.LowDma)
             ?? throw new InvalidOperationException($"DMA channel {_config.LowDma} unavailable for Sound Blaster.");
 
         _secondaryDmaChannel = ShouldUseHighDmaChannel()
-            ? dmaSystem.GetChannel(_config.HighDma)
+            ? dmaBus.GetChannel(_config.HighDma)
             : null;
 
         if (_primaryDmaChannel.ChannelNumber == 4 ||
@@ -560,7 +563,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _dacChannel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
         }
         
-        _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, oplMixerChannel, loggerService);
+        _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, opl.MixerChannel, loggerService);
         _hardwareMixer.Reset();
 
         InitSpeakerState();

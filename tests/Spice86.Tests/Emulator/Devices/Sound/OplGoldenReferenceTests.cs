@@ -222,7 +222,7 @@ public class OplGoldenReferenceTests {
     /// <summary>
     /// Helper to create opl device for golden reference testing.
     /// </summary>
-    private Opl CreateoplForGoldenTest(out IOPortDispatcher dispatcher) {
+    private Opl CreateOplForGoldenTest(out IOPortDispatcher dispatcher) {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         AddressReadWriteBreakpoints breakpoints = new();
         State state = new(CpuModel.INTEL_80286);
@@ -294,7 +294,7 @@ public class OplGoldenReferenceTests {
         
         sequence.AddWrite(IOplPort.PrimaryAddressPortNumber, 0xB0, 0x12, delayMs: 100); // Key off after 100ms
         
-        using Opl opl = CreateoplForGoldenTest(out IOPortDispatcher dispatcher);
+        using Opl opl = CreateOplForGoldenTest(out IOPortDispatcher dispatcher);
         
         // Act: Execute sequence and capture audio
         int framesToCapture = (OplSampleRateHz * 150) / 1000; // 150ms of audio
@@ -319,7 +319,7 @@ public class OplGoldenReferenceTests {
             TestName = "silence"
         };
         
-        using Opl opl = CreateoplForGoldenTest(out IOPortDispatcher dispatcher);
+        using Opl opl = CreateOplForGoldenTest(out IOPortDispatcher dispatcher);
         
         // Act: Capture audio without any register writes
         int framesToCapture = 1000;
