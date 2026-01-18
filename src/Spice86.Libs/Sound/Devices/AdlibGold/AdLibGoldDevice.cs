@@ -38,18 +38,18 @@ public sealed class AdLibGoldDevice : IDisposable {
     }
 
     /// <summary>
-    ///     Creates an <see cref="AdLibGoldIo" /> helper and attaches it to the supplied OPL3 I/O layer.
+    ///     Creates an <see cref="AdLibGoldIo" /> helper and attaches it to the supplied opl I/O layer.
     /// </summary>
-    /// <param name="oplIo">The OPL3 I/O interface that exposes AdLib Gold registers.</param>
+    /// <param name="oplIo">The opl I/O interface that exposes AdLib Gold registers.</param>
     /// <param name="volumeHandler">Optional callback invoked when the AdLib Gold mixer volume changes.</param>
     /// <returns>The configured <see cref="AdLibGoldIo" /> instance.</returns>
-    public AdLibGoldIo CreateIoAttachedTo(Opl3Io oplIo, Action<float, float>? volumeHandler = null) {
+    public AdLibGoldIo CreateIoAttachedTo(OplIo oplIo, Action<float, float>? volumeHandler = null) {
         ArgumentNullException.ThrowIfNull(oplIo);
 
         var io = new AdLibGoldIo(this, volumeHandler, _logger);
         oplIo.AttachAdLibGold(io);
 
-        _logger.Debug("AdLib Gold I/O helper attached to the OPL3 interface.");
+        _logger.Debug("AdLib Gold I/O helper attached to the opl interface.");
 
         return io;
     }

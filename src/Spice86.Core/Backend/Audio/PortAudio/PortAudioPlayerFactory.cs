@@ -7,12 +7,14 @@ using Serilog.Events;
 
 using Spice86.Shared.Interfaces;
 
+using System.Threading;
+
 /// <summary>
 /// Factory for instances of PortAudioPlayer.
 /// Ensures the native library is loaded properly.
 /// </summary>
 public class PortAudioPlayerFactory {
-    private static readonly object _lock = new();
+    private static readonly Lock _lock = new();
     private readonly ILoggerService _loggerService;
 
     /// <summary>
