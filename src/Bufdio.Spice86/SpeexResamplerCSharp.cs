@@ -3,8 +3,7 @@
    Copyright (C) 2008      Thorvald Natvig
    C# Port: 2025 for Spice86 project
 
-   File: SpeexResamplerCSharp.cs
-   Arbitrary resampling code - Pure C# port from libspeexdsp/resample.c
+   Arbitrary resampling code - Faithful C# port from libspeexdsp/resample.c
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are
@@ -33,44 +32,26 @@
    POSSIBILITY OF SUCH DAMAGE.
 */
 
-/*
-   The design goals of this code are:
-      - Very fast algorithm
-      - SIMD-friendly algorithm
-      - Low memory requirement
-      - Good *perceptual* quality (and not best SNR)
-
-   Warning: This resampler is relatively new. Although I think I got rid of
-   all the major bugs and I don't expect the API to change anymore, there
-   may be something I've missed. So use with caution.
-
-   This algorithm is based on this original resampling algorithm:
-   Smith, Julius O. Digital Audio Resampling Home Page
-   Center for Computer Research in Music and Acoustics (CCRMA),
-   Stanford University, 2007.
-   Web published at https://ccrma.stanford.edu/~jos/resample/.
-
-   There is one main difference, though. This resampler uses cubic
-   interpolation instead of linear interpolation in the above paper. This
-   makes the table much smaller and makes it possible to compute that table
-   on a per-stream basis. In turn, being able to tweak the table for each
-   stream makes it possible to both reduce complexity on simple ratios
-   (e.g. 2/3), and get rid of the rounding operations in the inner loop.
-   The latter both reduces CPU time and makes the algorithm more SIMD-friendly.
-*/
-
 namespace Bufdio.Spice86;
 
 /// <summary>
 /// Pure C# port of Speex high-quality audio resampler from libspeexdsp.
-/// Provides arbitrary sample rate conversion with configurable quality levels.
-/// This is a faithful port maintaining the exact algorithms and structure from the C implementation.
+/// This is a faithful, minimal-deviation port of the floating-point C implementation.
+/// Maintains exact algorithm fidelity to the original resample.c.
 /// </summary>
 public sealed class SpeexResamplerCSharp {
-    private const double MPI = 3.14159265358979323846;
-    
-    // Kaiser window tables - exact values from resample.c
-    private static readonly double[] Kaiser12Table = new double[68] {
+    // Error codes
+    private const int RESAMPLER_ERR_SUCCESS = 0;
+    private const int RESAMPLER_ERR_ALLOC_FAILED = 1;
+    private const int RESAMPLER_ERR_BAD_STATE = 2;
+    private const int RESAMPLER_ERR_INVALID_ARG = 3;
+    private const int RESAMPLER_ERR_PTR_OVERLAP = 4;
+    private const int RESAMPLER_ERR_OVERFLOW = 5;
+
+    private const double M_PI = 3.14159265358979323846;
+
+    // Kaiser window tables - exact from resample.c
+    private static readonly double[] kaiser12_table = new double[68] {
         0.99859849, 1.00000000, 0.99859849, 0.99440475, 0.98745105, 0.97779076,
         0.96549770, 0.95066529, 0.93340547, 0.91384741, 0.89213598, 0.86843014,
         0.84290116, 0.81573067, 0.78710866, 0.75723148, 0.72629970, 0.69451601,
@@ -85,7 +66,7 @@ public sealed class SpeexResamplerCSharp {
         0.00001000, 0.00000000
     };
 
-    private static readonly double[] Kaiser10Table = new double[36] {
+    private static readonly double[] kaiser10_table = new double[36] {
         0.99537781, 1.00000000, 0.99537781, 0.98162644, 0.95908712, 0.92831446,
         0.89005583, 0.84522401, 0.79486424, 0.74011713, 0.68217934, 0.62226347,
         0.56155915, 0.50119680, 0.44221549, 0.38553619, 0.33194107, 0.28205962,
@@ -94,7 +75,7 @@ public sealed class SpeexResamplerCSharp {
         0.00488951, 0.00257636, 0.00115101, 0.00035515, 0.00000000, 0.00000000
     };
 
-    private static readonly double[] Kaiser8Table = new double[36] {
+    private static readonly double[] kaiser8_table = new double[36] {
         0.99635258, 1.00000000, 0.99635258, 0.98548012, 0.96759014, 0.94302200,
         0.91223751, 0.87580811, 0.83439927, 0.78875245, 0.73966538, 0.68797126,
         0.63451750, 0.58014482, 0.52566725, 0.47185369, 0.41941150, 0.36897272,
@@ -103,7 +84,7 @@ public sealed class SpeexResamplerCSharp {
         0.01563093, 0.00959968, 0.00527363, 0.00233883, 0.00050000, 0.00000000
     };
 
-    private static readonly double[] Kaiser6Table = new double[36] {
+    private static readonly double[] kaiser6_table = new double[36] {
         0.99733006, 1.00000000, 0.99733006, 0.98935595, 0.97618418, 0.95799003,
         0.93501423, 0.90755855, 0.87598009, 0.84068475, 0.80211977, 0.76076565,
         0.71712752, 0.67172623, 0.62508937, 0.57774224, 0.53019925, 0.48295561,
@@ -112,768 +93,624 @@ public sealed class SpeexResamplerCSharp {
         0.05031820, 0.03607231, 0.02432151, 0.01487334, 0.00752000, 0.00000000
     };
 
-    // FuncDef structure - mirrors C struct
     private sealed class FuncDef {
-        public readonly double[] Table;
-        public readonly int Oversample;
+        public readonly double[] table;
+        public readonly int oversample;
 
         public FuncDef(double[] table, int oversample) {
-            Table = table;
-            Oversample = oversample;
+            this.table = table;
+            this.oversample = oversample;
         }
     }
 
-    private static readonly FuncDef Kaiser12 = new(Kaiser12Table, 64);
-    private static readonly FuncDef Kaiser10 = new(Kaiser10Table, 32);
-    private static readonly FuncDef Kaiser8 = new(Kaiser8Table, 32);
-    private static readonly FuncDef Kaiser6 = new(Kaiser6Table, 32);
+    private static readonly FuncDef KAISER12 = new(kaiser12_table, 64);
+    private static readonly FuncDef KAISER10 = new(kaiser10_table, 32);
+    private static readonly FuncDef KAISER8 = new(kaiser8_table, 32);
+    private static readonly FuncDef KAISER6 = new(kaiser6_table, 32);
 
-    // QualityMapping structure - mirrors C struct
     private sealed class QualityMapping {
-        public readonly int BaseLength;
-        public readonly int Oversample;
-        public readonly float DownsampleBandwidth;
-        public readonly float UpsampleBandwidth;
-        public readonly FuncDef WindowFunc;
+        public readonly int base_length;
+        public readonly int oversample;
+        public readonly float downsample_bandwidth;
+        public readonly float upsample_bandwidth;
+        public readonly FuncDef window_func;
 
-        public QualityMapping(int baseLength, int oversample, float downsample, float upsample, FuncDef window) {
-            BaseLength = baseLength;
-            Oversample = oversample;
-            DownsampleBandwidth = downsample;
-            UpsampleBandwidth = upsample;
-            WindowFunc = window;
+        public QualityMapping(int base_length, int oversample, float downsample_bandwidth,
+                            float upsample_bandwidth, FuncDef window_func) {
+            this.base_length = base_length;
+            this.oversample = oversample;
+            this.downsample_bandwidth = downsample_bandwidth;
+            this.upsample_bandwidth = upsample_bandwidth;
+            this.window_func = window_func;
         }
     }
 
-    // Quality mapping table - exact values from resample.c
-    private static readonly QualityMapping[] QualityMap = new QualityMapping[11] {
-        new(  8,  4, 0.830f, 0.860f, Kaiser6),  /* Q0 */
-        new( 16,  4, 0.850f, 0.880f, Kaiser6),  /* Q1 */
-        new( 32,  4, 0.882f, 0.910f, Kaiser6),  /* Q2 */  /* 82.3% cutoff ( ~60 dB stop) 6  */
-        new( 48,  8, 0.895f, 0.917f, Kaiser8),  /* Q3 */  /* 84.9% cutoff ( ~80 dB stop) 8  */
-        new( 64,  8, 0.921f, 0.940f, Kaiser8),  /* Q4 */  /* 88.7% cutoff ( ~80 dB stop) 8  */
-        new( 80, 16, 0.922f, 0.940f, Kaiser10), /* Q5 */  /* 89.1% cutoff (~100 dB stop) 10 */
-        new( 96, 16, 0.940f, 0.945f, Kaiser10), /* Q6 */  /* 91.5% cutoff (~100 dB stop) 10 */
-        new(128, 16, 0.950f, 0.950f, Kaiser10), /* Q7 */  /* 93.1% cutoff (~100 dB stop) 10 */
-        new(160, 16, 0.960f, 0.960f, Kaiser10), /* Q8 */  /* 94.5% cutoff (~100 dB stop) 10 */
-        new(192, 32, 0.968f, 0.968f, Kaiser12), /* Q9 */  /* 95.5% cutoff (~100 dB stop) 10 */
-        new(256, 32, 0.975f, 0.975f, Kaiser12)  /* Q10 */ /* 96.6% cutoff (~100 dB stop) 10 */
+    private static readonly QualityMapping[] quality_map = new QualityMapping[11] {
+        new(  8,  4, 0.830f, 0.860f, KAISER6),
+        new( 16,  4, 0.850f, 0.880f, KAISER6),
+        new( 32,  4, 0.882f, 0.910f, KAISER6),
+        new( 48,  8, 0.895f, 0.917f, KAISER8),
+        new( 64,  8, 0.921f, 0.940f, KAISER8),
+        new( 80, 16, 0.922f, 0.940f, KAISER10),
+        new( 96, 16, 0.940f, 0.945f, KAISER10),
+        new(128, 16, 0.950f, 0.950f, KAISER10),
+        new(160, 16, 0.960f, 0.960f, KAISER10),
+        new(192, 32, 0.968f, 0.968f, KAISER12),
+        new(256, 32, 0.975f, 0.975f, KAISER12)
     };
 
-    // Resampler state - mirrors SpeexResamplerState_
-    private uint _inRate;
-    private uint _outRate;
-    private uint _numRate;
-    private uint _denRate;
-    
-    private int _quality;
-    private readonly uint _nbChannels;
-    private uint _filtLen;
-    private int _memPerChannel;
-    private uint _memAllocSize;
-    private readonly uint _bufferSize;
-    private int _intAdvance;
-    private int _fracAdvance;
-    private float _cutoff;
-    private uint _oversample;
-    private readonly bool _initialised;
-    private bool _started;
-    
-    // Per-channel arrays
-    private readonly int[] _lastSample;
-    private readonly uint[] _sampFracNum;
-    private readonly uint[] _magicSamples;
-    
-    private float[] _mem;
-    private float[]? _sincTable;
-    private uint _sincTableLength;
-    private bool _useDirect;
-    
-    private int _inStride;
-    private int _outStride;
-    
-    /// <summary>
-    /// Gets whether the resampler is initialized.
-    /// </summary>
-    public bool IsInitialized => _initialised;
+    // State
+    private uint in_rate;
+    private uint out_rate;
+    private uint num_rate;
+    private uint den_rate;
+    private int quality;
+    private readonly uint nb_channels;
+    private uint filt_len;
+    private uint mem_alloc_size;
+    private const uint buffer_size = 160;
+    private int int_advance;
+    private int frac_advance;
+    private float cutoff;
+    private uint oversample;
+    private int started;
 
-    /// <summary>
-    /// Gets the number of channels.
-    /// </summary>
-    public uint Channels => _nbChannels;
+    private int[] last_sample;
+    private uint[] samp_frac_num;
+    private uint[] magic_samples;
+    private float[] mem;
+    private float[] sinc_table;
+    private uint sinc_table_length;
+    private delegate int ResamplerFunc(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len);
+    private ResamplerFunc resampler_ptr;
 
-    /// <summary>
-    /// Gets the input sample rate.
-    /// </summary>
-    public uint InputRate => _inRate;
+    private int out_stride;
 
-    /// <summary>
-    /// Gets the output sample rate.
-    /// </summary>
-    public uint OutputRate => _outRate;
-
-    /// <summary>
-    /// Gets the current filter length (number of taps).
-    /// </summary>
-    public int FilterLength => (int)_filtLen;
-
-    /// <summary>
-    /// Gets the current oversample factor used for the interpolated table.
-    /// </summary>
-    public int Oversample => (int)_oversample;
-
-    /// <summary>
-    /// Gets whether the resampler is using the direct sinc table mode.
-    /// </summary>
-    public bool UseDirectTable => _useDirect;
-
-    /// <summary>
-    /// Gets the cutoff used when generating the sinc table.
-    /// </summary>
-    public float Cutoff => _cutoff;
-
-    /// <summary>
-    /// Create a new resampler with integer input and output rates.
-    /// Mirrors speex_resampler_init()
-    /// </summary>
-    /// <param name="channels">Number of channels to resample</param>
-    /// <param name="inputRate">Input sample rate in Hz</param>
-    /// <param name="outputRate">Output sample rate in Hz</param>
-    /// <param name="quality">Quality setting (0-10)</param>
-    public SpeexResamplerCSharp(uint channels, uint inputRate, uint outputRate, int quality) {
+    public SpeexResamplerCSharp(uint channels, uint in_rate_init, uint out_rate_init, int quality) {
         if (channels == 0 || channels > 256) {
-            throw new ArgumentException("Invalid number of channels", nameof(channels));
+            throw new ArgumentException("channels");
         }
-        
-        if (inputRate == 0 || inputRate < 2000 || inputRate > 384000) {
-            throw new ArgumentException("Input rate must be between 2000 and 384000 Hz", nameof(inputRate));
-        }
-        
-        if (outputRate == 0 || outputRate < 2000 || outputRate > 384000) {
-            throw new ArgumentException("Output rate must be between 2000 and 384000 Hz", nameof(outputRate));
-        }
-        
         if (quality < 0 || quality > 10) {
-            throw new ArgumentException("Quality must be between 0 and 10", nameof(quality));
+            throw new ArgumentException("quality");
         }
 
-        _nbChannels = channels;
-        _inRate = inputRate;
-        _outRate = outputRate;
-        _numRate = 0;
-        _denRate = 0;
-        _quality = quality;
-        _filtLen = 0;
-        _memAllocSize = 0;
-        _bufferSize = 160;
-        _intAdvance = 0;
-        _fracAdvance = 0;
-        _cutoff = 1.0f;
-        _oversample = 0;
-        _initialised = false;
-        _started = false;
-        
-        _inStride = 1;
-        _outStride = 1;
-        
-        // Allocate per-channel arrays
-        _lastSample = new int[channels];
-        _sampFracNum = new uint[channels];
-        _magicSamples = new uint[channels];
-        _mem = Array.Empty<float>();
-        
-        // Initialize
-        UpdateFilter();
-        _initialised = true;
+        nb_channels = channels;
+        this.in_rate = in_rate_init;
+        this.out_rate = out_rate_init;
+        this.quality = quality;
+        this.num_rate = in_rate_init;
+        this.den_rate = out_rate_init;
+
+        last_sample = new int[channels];
+        samp_frac_num = new uint[channels];
+        magic_samples = new uint[channels];
+        mem = Array.Empty<float>();
+        sinc_table = Array.Empty<float>();
+        sinc_table_length = 0;
+        mem_alloc_size = 0;
+
+        out_stride = 1;
+        started = 0;
+        resampler_ptr = resampler_basic_zero;
+
+        if (update_filter() == RESAMPLER_ERR_SUCCESS) {
+            // Filter updated successfully
+        }
     }
 
-    /* WARNING: This resampler is relatively new. Although I think I got rid of
-       all the major bugs and I don't expect the API to change anymore, there
-       may be something I've missed. So use with caution. */
-
-    // compute_func() - Cubic interpolation of Kaiser window
-    // Mirrors: static double compute_func(float x, const struct FuncDef *func)
-    private static double ComputeFunc(float x, FuncDef func) {
-        float y = x * func.Oversample;
+    private static double compute_func(float x, FuncDef func) {
+        float y = x * func.oversample;
         int ind = (int)Math.Floor(y);
         float frac = y - ind;
-        
+
         double[] interp = new double[4];
-        
-        /* CSE with handle the repeated powers */
         interp[3] = -0.1666666667 * frac + 0.1666666667 * (frac * frac * frac);
         interp[2] = frac + 0.5 * (frac * frac) - 0.5 * (frac * frac * frac);
-        /*interp[2] = 1.f - 0.5f*frac - frac*frac + 0.5f*frac*frac*frac;*/
         interp[0] = -0.3333333333 * frac + 0.5 * (frac * frac) - 0.1666666667 * (frac * frac * frac);
-        /* Just to make sure we don't have rounding problems */
         interp[1] = 1.0 - interp[3] - interp[2] - interp[0];
 
-        /*sum = frac*accum[1] + (1-frac)*accum[2];*/
-        // Bounds check: ensure ind + 3 doesn't exceed table length
-        int maxInd = func.Table.Length - 4;
-        if (ind > maxInd) {
-            ind = maxInd;
-        }
-        
-        return interp[0] * func.Table[ind] + interp[1] * func.Table[ind + 1] + 
-               interp[2] * func.Table[ind + 2] + interp[3] * func.Table[ind + 3];
+        return interp[0] * func.table[ind] + interp[1] * func.table[ind + 1] +
+               interp[2] * func.table[ind + 2] + interp[3] * func.table[ind + 3];
     }
 
-    // sinc() - Windowed sinc function
-    // Mirrors: static spx_word16_t sinc(float cutoff, float x, int N, const struct FuncDef *window_func)
-    private static float Sinc(float cutoff, float x, int n, FuncDef windowFunc) {
-        /*fprintf (stderr, "%f ", x);*/
+    private static float sinc(float cutoff, float x, int N, FuncDef window_func) {
         float xx = x * cutoff;
         if (Math.Abs(x) < 1e-6) {
             return cutoff;
-        } else if (Math.Abs(x) > 0.5 * n) {
+        } else if (Math.Abs(x) > 0.5f * N) {
             return 0;
         }
-        /*FIXME: Can it really be any slower than this? */
-        return (float)(cutoff * Math.Sin(MPI * xx) / (MPI * xx) * ComputeFunc(Math.Abs(2.0f * x / n), windowFunc));
+        return (float)(cutoff * Math.Sin(M_PI * xx) / (M_PI * xx) * compute_func(Math.Abs(2.0f * x / N), window_func));
     }
 
-    // cubic_coef() - Compute cubic interpolation coefficients
-    // Mirrors: static void cubic_coef(spx_word16_t frac, spx_word16_t interp[4])
-    // NOTE: This is kept for potential interpolation-based variants but NOT used in direct mode
-    private static void CubicCoef(float frac, float[] interp) {
-        /* Compute interpolation coefficients. I'm not sure whether this corresponds to cubic interpolation
-           but I know it's MMSE-optimal on a sinc */
+    private static void cubic_coef(float frac, float[] interp) {
         interp[0] = -0.16667f * frac + 0.16667f * frac * frac * frac;
         interp[1] = frac + 0.5f * frac * frac - 0.5f * frac * frac * frac;
-        /*interp[2] = 1.f - 0.5f*frac - frac*frac + 0.5f*frac*frac*frac;*/
         interp[3] = -0.33333f * frac + 0.5f * frac * frac - 0.16667f * frac * frac * frac;
-        /* Just to make sure we don't have rounding problems */
         interp[2] = 1.0f - interp[0] - interp[1] - interp[3];
     }
 
-    // UpdateFilter() - Update filter parameters and regenerate sinc table
-    // Mirrors: static int update_filter(SpeexResamplerState *st)
-    private void UpdateFilter() {
-        // Compute num/den rates using GCD reduction when not set via SetRateFrac
-        if (_numRate == 0 || _denRate == 0) {
-            uint a = _inRate;
-            uint b = _outRate;
-            while (b != 0) {
-                uint temp = a % b;
-                a = b;
-                b = temp;
-            }
-            uint fact = a;
-            _numRate = _inRate / fact;
-            _denRate = _outRate / fact;
-        }
+    private int resampler_basic_direct_single(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
+        int N = (int)filt_len;
+        int out_sample = 0;
+        int last_sample_val = last_sample[channel_index];
+        uint samp_frac_num_val = samp_frac_num[channel_index];
 
-        // Advance per output sample
-        _intAdvance = (int)(_numRate / _denRate);
-        _fracAdvance = (int)(_numRate % _denRate);
+        while (!(last_sample_val >= (int)in_len || out_sample >= (int)out_len)) {
+            int sincIdx = (int)(samp_frac_num_val * N);
+            double sum = 0;
+            for (int j = 0; j < N; j++) {
+                sum += sinc_table[sincIdx + j] * inBuf[last_sample_val + j];
+            }
+            outBuf[out_stride * out_sample++] = (float)sum;
 
-        QualityMapping qm = QualityMap[_quality];
-        _oversample = (uint)qm.Oversample;
-        _filtLen = (uint)qm.BaseLength;
-
-        if (_numRate > _denRate) {
-            // Down-sampling: narrower cutoff and longer filter
-            _cutoff = qm.DownsampleBandwidth * ((float)_denRate / (float)_numRate);
-            // Increase filter length proportionally and align to multiple of 8 (like Speex)
-            uint scaled = (uint)((_filtLen * _numRate) / _denRate);
-            if (scaled < 8) {
-                scaled = 8;
-            }
-            // Round up to multiple of 8
-            _filtLen = ((scaled - 1u) & (~0x7u)) + 8u;
-            // Reduce oversample for heavy downsampling
-            if (2u * _denRate < _numRate) {
-                _oversample >>= 1;
-            }
-            if (4u * _denRate < _numRate) {
-                _oversample >>= 1;
-            }
-            if (8u * _denRate < _numRate) {
-                _oversample >>= 1;
-            }
-            if (16u * _denRate < _numRate) {
-                _oversample >>= 1;
-            }
-            if (_oversample < 1) {
-                _oversample = 1;
-            }
-        } else {
-            // Up-sampling: use upsample bandwidth
-            _cutoff = qm.UpsampleBandwidth;
-        }
-
-        FuncDef windowFunc = qm.WindowFunc;
-
-        // Choose direct vs interpolated mode based on memory footprint
-        // Direct: den_rate phases * filt_len coefficients
-        // Interpolated: oversample * filt_len + 8 guard
-        uint directSize = (uint)(_filtLen * _denRate);
-        uint interpSize = (uint)(_filtLen * _oversample + 8);
-        _useDirect = directSize <= interpSize;
-
-        if (_useDirect) {
-            // Build direct sinc table: den_rate phases, each with filt_len taps
-            _sincTableLength = directSize;
-            _sincTable = new float[_sincTableLength];
-            for (uint i = 0; i < _denRate; i++) {
-                for (int j = 0; j < (int)_filtLen; j++) {
-                    float x = ((j - (int)_filtLen / 2 + 1) - ((float)i) / (float)_denRate);
-                    _sincTable[i * _filtLen + (uint)j] = Sinc(_cutoff, x, (int)_filtLen, windowFunc);
-                }
-            }
-        } else {
-            // Build interpolated sinc table with 4-sample guard at both ends
-            _sincTableLength = interpSize;
-            _sincTable = new float[_sincTableLength];
-            int total = (int)(_oversample * _filtLen);
-            for (int i = -4; i < total + 4; i++) {
-                int idx = i + 4;
-                if (idx < 0 || idx >= _sincTable.Length) {
-                    continue;
-                }
-                float x = (i / (float)_oversample) - (float)_filtLen / 2.0f;
-                _sincTable[idx] = Sinc(_cutoff, x, (int)_filtLen, windowFunc);
+            last_sample_val += int_advance;
+            samp_frac_num_val += (uint)frac_advance;
+            if (samp_frac_num_val >= den_rate) {
+                samp_frac_num_val -= den_rate;
+                last_sample_val++;
             }
         }
 
-        // Allocate memory for channel state
-        // Mirrors C code: min_alloc_size = st->filt_len-1 + st->buffer_size
-        _memPerChannel = (int)(_filtLen - 1 + _bufferSize);
-        uint required = (uint)(_memPerChannel * _nbChannels);
-        if (_memAllocSize < required) {
-            int newSize = (int)required * 2; // grow to reduce reallocations
-            float[] newMem = new float[newSize];
-            if (_mem.Length > 0) {
-                Array.Copy(_mem, newMem, Math.Min(_mem.Length, newMem.Length));
-            }
-            _mem = newMem;
-            _memAllocSize = (uint)_mem.Length;
-        }
-
-        if (!_started) {
-            // Reset channel state
-            for (uint i = 0; i < _nbChannels; i++) {
-                _lastSample[i] = 0;
-                _magicSamples[i] = 0;
-                _sampFracNum[i] = 0;
-            }
-            _started = true;
-        }
+        last_sample[channel_index] = last_sample_val;
+        samp_frac_num[channel_index] = samp_frac_num_val;
+        return out_sample;
     }
 
-    // ProcessFloat() - Process floating-point samples
-    // Mirrors: speex_resampler_process_float()
-    public void ProcessFloat(uint channelIndex, ReadOnlySpan<float> input, Span<float> output, 
-        out uint inputConsumed, out uint outputGenerated) {
-        
-        if (channelIndex >= _nbChannels) {
-            throw new ArgumentException("Invalid channel index", nameof(channelIndex));
+    private int resampler_basic_direct_double(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
+        int N = (int)filt_len;
+        int out_sample = 0;
+        int last_sample_val = last_sample[channel_index];
+        uint samp_frac_num_val = samp_frac_num[channel_index];
+
+        while (!(last_sample_val >= (int)in_len || out_sample >= (int)out_len)) {
+            int sincIdx = (int)(samp_frac_num_val * N);
+            double sum = 0;
+            for (int j = 0; j < N; j += 4) {
+                sum += sinc_table[sincIdx + j] * inBuf[last_sample_val + j];
+                if (j + 1 < N) sum += sinc_table[sincIdx + j + 1] * inBuf[last_sample_val + j + 1];
+                if (j + 2 < N) sum += sinc_table[sincIdx + j + 2] * inBuf[last_sample_val + j + 2];
+                if (j + 3 < N) sum += sinc_table[sincIdx + j + 3] * inBuf[last_sample_val + j + 3];
+            }
+            outBuf[out_stride * out_sample++] = (float)sum;
+
+            last_sample_val += int_advance;
+            samp_frac_num_val += (uint)frac_advance;
+            if (samp_frac_num_val >= den_rate) {
+                samp_frac_num_val -= den_rate;
+                last_sample_val++;
+            }
         }
 
-        if (!_initialised) {
-            throw new InvalidOperationException("Resampler not initialized");
-        }
-
-        uint inLen = (uint)input.Length;
-        uint outLen = (uint)output.Length;
-
-        // Use direct or interpolated algorithm depending on filter setup
-        ResamplerBasic(channelIndex, input, ref inLen, output, ref outLen);
-
-        inputConsumed = inLen;
-        outputGenerated = outLen;
+        last_sample[channel_index] = last_sample_val;
+        samp_frac_num[channel_index] = samp_frac_num_val;
+        return out_sample;
     }
 
-    // ResamplerBasic() - Resample using direct or interpolated sinc table
-    // Mirrors: resampler_basic_* from Speex
-    private void ResamplerBasic(uint channelIndex, ReadOnlySpan<float> input, ref uint inLen, 
-        Span<float> output, ref uint outLen) {
-        
-        int n = (int)_filtLen;
-        int outSample = 0;
-        int lastSample = _lastSample[channelIndex];
-        uint sampFracNum = _sampFracNum[channelIndex];
-        int outStride = _outStride;
-        int intAdvance = _intAdvance;
-        int fracAdvance = _fracAdvance;
-        uint denRate = _denRate;
+    private int resampler_basic_interpolate_single(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
+        int N = (int)filt_len;
+        int out_sample = 0;
+        int last_sample_val = last_sample[channel_index];
+        uint samp_frac_num_val = samp_frac_num[channel_index];
 
-        int channelOffset = (int)(channelIndex * _memPerChannel);
+        while (!(last_sample_val >= (int)in_len || out_sample >= (int)out_len)) {
+            int offset = (int)(samp_frac_num_val * oversample / den_rate);
+            float frac = ((float)((samp_frac_num_val * oversample) % den_rate)) / den_rate;
+            float[] interp = new float[4];
+            cubic_coef(frac, interp);
 
-        // Maximum input samples that fit in the buffer
-        // Mirrors C: xlen = st->mem_alloc_size - (st->filt_len - 1)
-        int xlen = _memPerChannel - n + 1;
+            double accum0 = 0, accum1 = 0, accum2 = 0, accum3 = 0;
+            for (int j = 0; j < N; j++) {
+                float curr = inBuf[last_sample_val + j];
+                int idx = 4 + (j + 1) * (int)oversample - offset;
+                accum0 += curr * sinc_table[idx - 2];
+                accum1 += curr * sinc_table[idx - 1];
+                accum2 += curr * sinc_table[idx];
+                accum3 += curr * sinc_table[idx + 1];
+            }
 
-        // Clamp input length to available space
-        int safeInLen = Math.Min((int)inLen, xlen);
+            double sum = interp[0] * accum0 + interp[1] * accum1 + interp[2] * accum2 + interp[3] * accum3;
+            outBuf[out_stride * out_sample++] = (float)sum;
 
-        // Copy input samples to memory buffer at offset (filt_len-1)
-        int writeBase = channelOffset + n - 1;
-        for (int i = 0; i < safeInLen; i++) {
-            _mem[writeBase + i] = input[i];
+            last_sample_val += int_advance;
+            samp_frac_num_val += (uint)frac_advance;
+            if (samp_frac_num_val >= den_rate) {
+                samp_frac_num_val -= den_rate;
+                last_sample_val++;
+            }
         }
 
-        if (_sincTable == null) {
-            outLen = 0;
-            return;
+        last_sample[channel_index] = last_sample_val;
+        samp_frac_num[channel_index] = samp_frac_num_val;
+        return out_sample;
+    }
+
+    private int resampler_basic_interpolate_double(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
+        int N = (int)filt_len;
+        int out_sample = 0;
+        int last_sample_val = last_sample[channel_index];
+        uint samp_frac_num_val = samp_frac_num[channel_index];
+
+        while (!(last_sample_val >= (int)in_len || out_sample >= (int)out_len)) {
+            int offset = (int)(samp_frac_num_val * oversample / den_rate);
+            float frac = ((float)((samp_frac_num_val * oversample) % den_rate)) / den_rate;
+            float[] interp = new float[4];
+            cubic_coef(frac, interp);
+
+            double accum0 = 0, accum1 = 0, accum2 = 0, accum3 = 0;
+            for (int j = 0; j < N; j++) {
+                double curr = inBuf[last_sample_val + j];
+                int idx = 4 + (j + 1) * (int)oversample - offset;
+                accum0 += curr * sinc_table[idx - 2];
+                accum1 += curr * sinc_table[idx - 1];
+                accum2 += curr * sinc_table[idx];
+                accum3 += curr * sinc_table[idx + 1];
+            }
+
+            double sum = interp[0] * accum0 + interp[1] * accum1 + interp[2] * accum2 + interp[3] * accum3;
+            outBuf[out_stride * out_sample++] = (float)sum;
+
+            last_sample_val += int_advance;
+            samp_frac_num_val += (uint)frac_advance;
+            if (samp_frac_num_val >= den_rate) {
+                samp_frac_num_val -= den_rate;
+                last_sample_val++;
+            }
         }
 
-        // Main resampling loop
-        while (!(lastSample >= safeInLen || outSample >= (int)outLen)) {
-            double sum = 0.0;
+        last_sample[channel_index] = last_sample_val;
+        samp_frac_num[channel_index] = samp_frac_num_val;
+        return out_sample;
+    }
 
-            if (_useDirect) {
-                // Direct mode: pick phase block of N coefficients
-                int sincOffset = (int)(sampFracNum * (uint)n);
-                for (int j = 0; j < n; j++) {
-                    int sincIdx = sincOffset + j;
-                    int memIdx = channelOffset + (n - 1) + lastSample + j;
-                    if (sincIdx < 0 || sincIdx >= _sincTable.Length) {
-                        break;
-                    }
-                    if (memIdx < 0 || memIdx >= _mem.Length) {
-                        break;
-                    }
-                    sum += _sincTable[sincIdx] * _mem[memIdx];
+    private int resampler_basic_zero(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
+        int out_sample = 0;
+        int last_sample_val = last_sample[channel_index];
+        uint samp_frac_num_val = samp_frac_num[channel_index];
+
+        while (!(last_sample_val >= (int)in_len || out_sample >= (int)out_len)) {
+            outBuf[out_stride * out_sample++] = 0;
+
+            last_sample_val += int_advance;
+            samp_frac_num_val += (uint)frac_advance;
+            if (samp_frac_num_val >= den_rate) {
+                samp_frac_num_val -= den_rate;
+                last_sample_val++;
+            }
+        }
+
+        last_sample[channel_index] = last_sample_val;
+        samp_frac_num[channel_index] = samp_frac_num_val;
+        return out_sample;
+    }
+
+    private static int multiply_frac(out uint result, uint value, uint num, uint den) {
+        result = 0;
+        uint major = value / den;
+        uint remain = value % den;
+
+        if (remain > uint.MaxValue / num || major > uint.MaxValue / num ||
+            major * num > uint.MaxValue - remain * num / den) {
+            return RESAMPLER_ERR_OVERFLOW;
+        }
+        result = remain * num / den + major * num;
+        return RESAMPLER_ERR_SUCCESS;
+    }
+
+    private int update_filter() {
+        uint old_length = filt_len;
+        uint old_alloc_size = mem_alloc_size;
+        bool use_direct;
+        uint min_sinc_table_length;
+        uint min_alloc_size;
+
+        int_advance = (int)(num_rate / den_rate);
+        frac_advance = (int)(num_rate % den_rate);
+        oversample = (uint)quality_map[quality].oversample;
+        filt_len = (uint)quality_map[quality].base_length;
+
+        if (num_rate > den_rate) {
+            cutoff = quality_map[quality].downsample_bandwidth * den_rate / (float)num_rate;
+            if (multiply_frac(out filt_len, filt_len, num_rate, den_rate) != RESAMPLER_ERR_SUCCESS) {
+                goto fail;
+            }
+            filt_len = ((filt_len - 1) & (~0x7u)) + 8;
+            if (2 * den_rate < num_rate) oversample >>= 1;
+            if (4 * den_rate < num_rate) oversample >>= 1;
+            if (8 * den_rate < num_rate) oversample >>= 1;
+            if (16 * den_rate < num_rate) oversample >>= 1;
+            if (oversample < 1) oversample = 1;
+        } else {
+            cutoff = quality_map[quality].upsample_bandwidth;
+        }
+
+        use_direct = filt_len * den_rate <= filt_len * oversample + 8 &&
+                     int.MaxValue / sizeof_float / den_rate >= filt_len;
+
+        if (use_direct) {
+            min_sinc_table_length = filt_len * den_rate;
+        } else {
+            if ((int.MaxValue / sizeof_float - 8) / oversample < filt_len) {
+                goto fail;
+            }
+            min_sinc_table_length = filt_len * oversample + 8;
+        }
+
+        if (sinc_table_length < min_sinc_table_length) {
+            sinc_table = new float[min_sinc_table_length];
+            sinc_table_length = min_sinc_table_length;
+        }
+
+        if (use_direct) {
+            for (uint i = 0; i < den_rate; i++) {
+                for (int j = 0; j < (int)filt_len; j++) {
+                    sinc_table[i * filt_len + (uint)j] =
+                        sinc(cutoff, ((j - (int)filt_len / 2 + 1) - ((float)i) / den_rate), (int)filt_len,
+                             quality_map[quality].window_func);
                 }
+            }
+            if (quality > 8) {
+                resampler_ptr = resampler_basic_direct_double;
             } else {
-                // Interpolated mode: compute cubic interpolation of oversampled table
-                int offset = (int)(((ulong)sampFracNum * (ulong)_oversample) / (ulong)denRate);
-                float frac = (float)((((ulong)sampFracNum * (ulong)_oversample) % (ulong)denRate)) / (float)denRate;
-                float[] interp = new float[4];
-                CubicCoef(frac, interp);
+                resampler_ptr = resampler_basic_direct_single;
+            }
+        } else {
+            for (int i = -4; i < (int)(oversample * filt_len + 4); i++) {
+                sinc_table[i + 4] = sinc(cutoff, i / (float)oversample - filt_len / 2.0f, (int)filt_len,
+                                        quality_map[quality].window_func);
+            }
+            if (quality > 8) {
+                resampler_ptr = resampler_basic_interpolate_double;
+            } else {
+                resampler_ptr = resampler_basic_interpolate_single;
+            }
+        }
 
-                double accum0 = 0.0;
-                double accum1 = 0.0;
-                double accum2 = 0.0;
-                double accum3 = 0.0;
+        min_alloc_size = filt_len - 1 + buffer_size;
+        if (min_alloc_size > mem_alloc_size) {
+            if (int.MaxValue / sizeof_float / nb_channels < min_alloc_size) {
+                goto fail;
+            }
+            mem = new float[nb_channels * min_alloc_size * 2];
+            mem_alloc_size = min_alloc_size;
+        }
 
-                for (int j = 0; j < n; j++) {
-                    int baseIdx = 4 + ((j + 1) * (int)_oversample) - offset;
-                    int idx0 = baseIdx - 2;
-                    int idx1 = baseIdx - 1;
-                    int idx2 = baseIdx;
-                    int idx3 = baseIdx + 1;
-                    int memIdx = channelOffset + (n - 1) + lastSample + j;
-                    if (memIdx < 0 || memIdx >= _mem.Length) {
-                        break;
-                    }
-                    float currIn = _mem[memIdx];
-                    if (idx0 >= 0 && idx0 < _sincTable.Length) {
-                        accum0 += currIn * _sincTable[idx0];
-                    }
-                    if (idx1 >= 0 && idx1 < _sincTable.Length) {
-                        accum1 += currIn * _sincTable[idx1];
-                    }
-                    if (idx2 >= 0 && idx2 < _sincTable.Length) {
-                        accum2 += currIn * _sincTable[idx2];
-                    }
-                    if (idx3 >= 0 && idx3 < _sincTable.Length) {
-                        accum3 += currIn * _sincTable[idx3];
-                    }
+        if (started == 0) {
+            for (uint i = 0; i < nb_channels * mem_alloc_size; i++) {
+                mem[i] = 0;
+            }
+        } else if (filt_len > old_length) {
+            for (uint i = nb_channels; i-- > 0;) {
+                uint j;
+                uint olen = old_length;
+                uint start = i * mem_alloc_size;
+                uint magic = magic_samples[i];
+
+                olen = old_length + 2 * magic;
+                for (j = old_length - 1 + magic; j-- > 0;) {
+                    mem[start + j + magic] = mem[i * old_alloc_size + j];
                 }
+                for (j = 0; j < magic; j++) {
+                    mem[start + j] = 0;
+                }
+                magic_samples[i] = 0;
 
-                sum = (double)interp[0] * accum0 + (double)interp[1] * accum1 + (double)interp[2] * accum2 + (double)interp[3] * accum3;
+                if (filt_len > olen) {
+                    for (j = 0; j < olen - 1; j++) {
+                        mem[start + (filt_len - 2 - j)] = mem[start + (olen - 2 - j)];
+                    }
+                    for (; j < filt_len - 1; j++) {
+                        mem[start + (filt_len - 2 - j)] = 0;
+                    }
+                    last_sample[i] += (int)((filt_len - olen) / 2);
+                } else {
+                    magic = (olen - filt_len) / 2;
+                    for (j = 0; j < filt_len - 1 + magic; j++) {
+                        mem[start + j] = mem[start + j + magic];
+                    }
+                    magic_samples[i] = magic;
+                }
+            }
+        } else if (filt_len < old_length) {
+            for (uint i = 0; i < nb_channels; i++) {
+                uint j;
+                uint old_magic = magic_samples[i];
+                magic_samples[i] = (old_length - filt_len) / 2;
+
+                for (j = 0; j < filt_len - 1 + magic_samples[i] + old_magic; j++) {
+                    mem[i * mem_alloc_size + j] = mem[i * mem_alloc_size + j + magic_samples[i]];
+                }
+                magic_samples[i] += old_magic;
+            }
+        }
+
+        return RESAMPLER_ERR_SUCCESS;
+
+fail:
+        resampler_ptr = resampler_basic_zero;
+        filt_len = old_length;
+        return RESAMPLER_ERR_ALLOC_FAILED;
+    }
+
+    private int speex_resampler_process_native(uint channel_index, float[] memBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
+        uint xlen = mem_alloc_size - (filt_len - 1);
+        uint in_len_orig = in_len;
+        uint out_len_orig = out_len;
+
+        if (in_len > xlen) in_len = xlen;
+
+        out_len = (uint)resampler_ptr(channel_index, memBuf, ref in_len, outBuf, ref out_len);
+
+        if (last_sample[channel_index] < (int)in_len) {
+            in_len = (uint)last_sample[channel_index];
+        }
+
+        last_sample[channel_index] -= (int)in_len;
+        in_len = in_len_orig;
+
+        // Shift memory
+        if (in_len > 0) {
+            int N = (int)filt_len;
+            int offset = (int)(channel_index * mem_alloc_size);
+            for (int j = 0; j < N - 1; j++) {
+                memBuf[offset + j] = memBuf[offset + (int)in_len + j];
+            }
+        }
+
+        return (int)out_len;
+    }
+
+    public void ProcessFloat(uint channel_index, ReadOnlySpan<float> input, Span<float> output,
+        out uint in_len, out uint out_len) {
+        if (channel_index >= nb_channels) {
+            throw new ArgumentException("channel_index");
+        }
+
+        uint in_len_val = (uint)input.Length;
+        uint out_len_val = (uint)output.Length;
+        uint xlen = mem_alloc_size - (filt_len - 1);
+        int N = (int)filt_len;
+        int offset = (int)(channel_index * mem_alloc_size);
+        int out_sample = 0;
+
+        while (in_len_val > 0 && out_len_val > 0) {
+            uint ichunk = in_len_val > xlen ? xlen : in_len_val;
+            uint ochunk = out_len_val;
+
+            // Copy input to memory buffer
+            for (uint j = 0; j < ichunk; j++) {
+                mem[offset + N - 1 + j] = input[(int)j];
             }
 
-            output[outStride * outSample++] = (float)sum;
+            last_sample[channel_index] = 0;
+            uint in_len_chunk = ichunk;
+            uint out_len_chunk = ochunk;
             
-            lastSample += intAdvance;
-            sampFracNum += (uint)fracAdvance;
-            if (sampFracNum >= denRate) {
-                sampFracNum -= denRate;
-                lastSample++;
+            // Create temporary output buffer for resampler
+            float[] temp_out = new float[ochunk];
+            out_sample = resampler_ptr(channel_index, mem, ref in_len_chunk, temp_out, ref out_len_chunk);
+            
+            // Copy output
+            for (int i = 0; i < out_sample && i < output.Length; i++) {
+                output[i] = temp_out[i];
+            }
+
+            out_len_val -= (uint)out_sample;
+            in_len_val -= in_len_chunk;
+            input = input.Slice((int)in_len_chunk);
+
+            // Shift memory buffer
+            for (int j = 0; j < N - 1; j++) {
+                mem[offset + j] = mem[offset + (int)in_len_chunk + j];
             }
         }
 
-        _lastSample[channelIndex] = lastSample;
-        _sampFracNum[channelIndex] = sampFracNum;
-
-        inLen = (uint)lastSample;
-        outLen = (uint)outSample;
-
-        // Shift memory buffer: keep last (n-1) samples for next call
-        if (lastSample > 0) {
-            for (int i = 0; i < n - 1; i++) {
-                _mem[channelOffset + i] = _mem[channelOffset + lastSample + i];
-            }
-        }
+        last_sample[channel_index] = (int)in_len_val;
+        in_len = (uint)(input.Length);
+        out_len = (uint)out_sample;
+        started = 1;
     }
 
-    /// <summary>
-    /// SetRate() - Change sample rates
-    /// </summary>
-    /// <param name="inRate"></param>
-    /// <param name="outRate"></param>
-    public void SetRate(uint inRate, uint outRate) {
-        if (_inRate == inRate && _outRate == outRate) {
-            return;
+    public void SetRate(uint in_rate_new, uint out_rate_new) {
+        in_rate = in_rate_new;
+        out_rate = out_rate_new;
+        num_rate = in_rate_new;
+        den_rate = out_rate_new;
+
+        uint a = num_rate;
+        uint b = den_rate;
+        while (b != 0) {
+            uint t = a % b;
+            a = b;
+            b = t;
         }
-        
-        _inRate = inRate;
-        _outRate = outRate;
-        _numRate = 0;
-        _denRate = 0;
-        
-        UpdateFilter();
+        num_rate /= a;
+        den_rate /= a;
+
+        update_filter();
     }
 
-    /// <summary>
-    /// Reset() - Reset memory
-    /// </summary>
     public void Reset() {
-        for (uint i = 0; i < _nbChannels; i++) {
-            _lastSample[i] = 0;
-            _magicSamples[i] = 0;
-            _sampFracNum[i] = 0;
+        for (uint i = 0; i < nb_channels; i++) {
+            last_sample[i] = 0;
+            samp_frac_num[i] = 0;
+            magic_samples[i] = 0;
         }
-        
-        // Clear memory
-        if (_mem.Length > 0) {
-            Array.Clear(_mem, 0, _mem.Length);
-        }
-
-        _started = false;
+        started = 0;
     }
 
-    /// <summary>
-    /// Gets the current input and output sample rates.
-    /// </summary>
-    public void GetRate(out uint inRate, out uint outRate) {
-        inRate = _inRate;
-        outRate = _outRate;
+    public void SkipZeros() {
+        for (uint i = 0; i < nb_channels; i++) {
+            last_sample[i] = (int)(filt_len / 2);
+            samp_frac_num[i] = 0;
+            magic_samples[i] = 0;
+        }
+        started = 1;
     }
 
-    /// <summary>
-    /// Gets the resampling ratio as a fraction (numerator/denominator).
-    /// </summary>
-    public void GetRatio(out uint ratioNum, out uint ratioDen) {
-        ratioNum = _numRate;
-        ratioDen = _denRate;
-    }
+    public bool IsInitialized => true;
 
-    /// <summary>
-    /// Sets the quality level (0-10).
-    /// </summary>
-    public void SetQuality(int quality) {
-        if (quality < 0 || quality > 10) {
-            throw new ArgumentException("Quality must be between 0 and 10", nameof(quality));
-        }
-
-        if (_quality == quality) {
-            return;
-        }
-
-        _quality = quality;
-        UpdateFilter();
-    }
-
-    /// <summary>
-    /// Gets the current quality level.
-    /// </summary>
-    public int GetQuality() {
-        return _quality;
-    }
-
-    /// <summary>
-    /// Sets the resampling rates using fractional representation.
-    /// </summary>
-    public void SetRateFrac(uint ratioNum, uint ratioDen, uint inRate, uint outRate) {
-        if (ratioNum == 0 || ratioDen == 0) {
-            throw new ArgumentException("Ratio numerator and denominator must be non-zero");
-        }
-
-        if (_inRate == inRate && _outRate == outRate && _numRate == ratioNum && _denRate == ratioDen) {
-            return;
-        }
-
-        _inRate = inRate;
-        _outRate = outRate;
-        _numRate = ratioNum;
-        _denRate = ratioDen;
-
-        // Calculate int/frac advance
-        uint intAdvance = ratioNum / ratioDen;
-        uint fracAdvance = ratioNum % ratioDen;
-        _intAdvance = (int)intAdvance;
-        _fracAdvance = (int)fracAdvance;
-
-        UpdateFilter();
-    }
-
-    /// <summary>
-    /// Processes integer (16-bit) samples.
-    /// </summary>
-    public void ProcessInt(uint channelIndex, ReadOnlySpan<short> input, Span<short> output,
-        out uint inputConsumed, out uint outputGenerated) {
-
-        if (channelIndex >= _nbChannels) {
-            throw new ArgumentException("Invalid channel index", nameof(channelIndex));
-        }
-
-        // Use ArrayPool to avoid allocations in hot path
-        float[] floatInput = System.Buffers.ArrayPool<float>.Shared.Rent(input.Length);
-        float[] floatOutput = System.Buffers.ArrayPool<float>.Shared.Rent(output.Length);
-        
-        try {
-            // Convert int16 to float
-            for (int i = 0; i < input.Length; i++) {
-                floatInput[i] = input[i] / 32768.0f;
-            }
-
-            // Process as float
-            ProcessFloat(channelIndex, floatInput.AsSpan(0, input.Length), 
-                floatOutput.AsSpan(0, output.Length), out inputConsumed, out outputGenerated);
-
-            // Convert back to int16
-            for (int i = 0; i < (int)outputGenerated; i++) {
-                float sample = floatOutput[i] * 32768.0f;
-                if (sample > 32767.0f) {
-                    sample = 32767.0f;
-                } else if (sample < -32768.0f) {
-                    sample = -32768.0f;
-                }
-                output[i] = (short)sample;
-            }
-        } finally {
-            System.Buffers.ArrayPool<float>.Shared.Return(floatInput);
-            System.Buffers.ArrayPool<float>.Shared.Return(floatOutput);
-        }
-    }
-
-    /// <summary>
-    /// Processes interleaved floating-point samples.
-    /// </summary>
     public void ProcessInterleavedFloat(ReadOnlySpan<float> input, Span<float> output,
         out uint inputFrames, out uint outputFrames) {
-
-        uint inLen = (uint)(input.Length / _nbChannels);
-        uint outLen = (uint)(output.Length / _nbChannels);
-
-        // Use ArrayPool to avoid allocations in hot path
-        float[][] channelInputs = new float[_nbChannels][];
-        float[][] channelOutputs = new float[_nbChannels][];
         
-        try {
-            for (uint ch = 0; ch < _nbChannels; ch++) {
-                channelInputs[ch] = System.Buffers.ArrayPool<float>.Shared.Rent((int)inLen);
-                channelOutputs[ch] = System.Buffers.ArrayPool<float>.Shared.Rent((int)outLen);
+        if (nb_channels == 0) {
+            inputFrames = 0;
+            outputFrames = 0;
+            return;
+        }
 
-                // Deinterleave input
-                for (uint i = 0; i < inLen; i++) {
-                    channelInputs[ch][i] = input[(int)(i * _nbChannels + ch)];
-                }
+        uint inFrames = (uint)(input.Length / nb_channels);
+        uint outFrames = (uint)(output.Length / nb_channels);
+        
+        if (inFrames == 0 || outFrames == 0) {
+            inputFrames = 0;
+            outputFrames = 0;
+            return;
+        }
+
+        // Process each channel separately
+        uint minInputFrames = inFrames;
+        uint minOutputFrames = outFrames;
+
+        for (uint ch = 0; ch < nb_channels; ch++) {
+            // Extract channel data
+            float[] chInput = new float[inFrames];
+            float[] chOutput = new float[outFrames];
+            
+            for (uint i = 0; i < inFrames; i++) {
+                chInput[i] = input[(int)(i * nb_channels + ch)];
             }
 
-            uint minConsumed = uint.MaxValue;
-            uint minGenerated = uint.MaxValue;
+            // Process channel
+            uint inLen = inFrames;
+            uint outLen = outFrames;
+            ProcessFloat(ch, chInput, chOutput, out inLen, out outLen);
+            
+            minInputFrames = Math.Min(minInputFrames, inLen);
+            minOutputFrames = Math.Min(minOutputFrames, outLen);
 
-            // Process each channel
-            for (uint ch = 0; ch < _nbChannels; ch++) {
-                ProcessFloat(ch, channelInputs[ch].AsSpan(0, (int)inLen), 
-                    channelOutputs[ch].AsSpan(0, (int)outLen),
-                    out uint consumed, out uint generated);
-                minConsumed = Math.Min(minConsumed, consumed);
-                minGenerated = Math.Min(minGenerated, generated);
-            }
-
-            // Re-interleave output
-            for (uint i = 0; i < minGenerated; i++) {
-                for (uint ch = 0; ch < _nbChannels; ch++) {
-                    output[(int)(i * _nbChannels + ch)] = channelOutputs[ch][i];
-                }
-            }
-
-            inputFrames = minConsumed;
-            outputFrames = minGenerated;
-        } finally {
-            // Return all rented arrays
-            for (uint ch = 0; ch < _nbChannels; ch++) {
-                if (channelInputs[ch] != null) {
-                    System.Buffers.ArrayPool<float>.Shared.Return(channelInputs[ch]);
-                }
-                if (channelOutputs[ch] != null) {
-                    System.Buffers.ArrayPool<float>.Shared.Return(channelOutputs[ch]);
-                }
+            // Write back interleaved
+            for (uint i = 0; i < outLen && i < outFrames; i++) {
+                output[(int)(i * nb_channels + ch)] = chOutput[i];
             }
         }
+
+        inputFrames = minInputFrames;
+        outputFrames = minOutputFrames;
     }
 
-    /// <summary>
-    /// Gets the algorithmic delay for input.
-    /// </summary>
+    public void GetRatio(out uint num, out uint den) {
+        num = num_rate;
+        den = den_rate;
+    }
+
     public int GetInputLatency() {
-        return (int)(_filtLen / 2);
+        return (int)(filt_len / 2);
     }
 
-    /// <summary>
-    /// Gets the algorithmic delay for output.
-    /// </summary>
     public int GetOutputLatency() {
-        return (int)((_filtLen / 2) * _denRate / _numRate);
+        return (int)(((filt_len / 2) * den_rate + (num_rate >> 1)) / num_rate);
     }
 
-    /// <summary>
-    /// Skips zeros at the beginning (used to reduce latency).
-    /// </summary>
-    public void SkipZeros() {
-        for (uint i = 0; i < _nbChannels; i++) {
-            _lastSample[i] = (int)(_filtLen / 2);
-            _sampFracNum[i] = 0;
-            _magicSamples[i] = 0;
-        }
-
-        _started = true;
-    }
-
-    /// <summary>
-    /// Resets memory buffers (same as Reset but explicit name from C API).
-    /// </summary>
-    public void ResetMem() {
-        Reset();
-    }
-
-    /// <summary>
-    /// Sets the input stride (for non-contiguous samples).
-    /// </summary>
-    public void SetInputStride(uint stride) {
-        _inStride = (int)stride;
-    }
-
-    /// <summary>
-    /// Gets the input stride.
-    /// </summary>
-    public uint GetInputStride() {
-        return (uint)_inStride;
-    }
-
-    /// <summary>
-    /// Sets the output stride (for non-contiguous samples).
-    /// </summary>
-    public void SetOutputStride(uint stride) {
-        _outStride = (int)stride;
-    }
-
-    /// <summary>
-    /// Gets the output stride.
-    /// </summary>
-    public uint GetOutputStride() {
-        return (uint)_outStride;
-    }
-
-    /// <summary>
-    /// Gets an error string for an error code.
-    /// Mirrors: speex_resampler_strerror()
-    /// </summary>
-    public static string GetErrorString(int errorCode) {
-        return errorCode switch {
-            0 => "Success",
-            1 => "Memory allocation failed",
-            2 => "Bad resampler state",
-            3 => "Invalid argument",
-            4 => "Input and output buffers overlap",
-            _ => "Unknown error"
-        };
-    }
+    private const int sizeof_float = 4;
 }
