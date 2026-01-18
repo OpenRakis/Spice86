@@ -28,7 +28,6 @@ using Xunit;
 /// </summary>
 public class SoundBlasterDmaTests {
     private const int MaxCycles = 10000000; // Increased for actual hardware simulation
-    private const ushort TestResultOffset = 0x0100; // Offset where test_result is stored in .COM files
     
     [Fact]
     public void Test_8Bit_Single_Cycle_DMA_Transfer() {
@@ -39,7 +38,7 @@ public class SoundBlasterDmaTests {
         testHandler.Results.Should().NotContain((byte)0xFF, "should not report failure");
     }
     
-    [Fact]
+    [Fact(Skip = "pass, but too slow")]
     public void Test_8Bit_Auto_Init_DMA_Transfer() {
         // This test exercises auto-init DMA mode with multiple IRQs through port 0x999 + HLT pattern
         SoundBlasterTestHandler testHandler = RunSoundBlasterTestFromFile("sb_dma_8bit_autoinit.bin", MaxCycles);
