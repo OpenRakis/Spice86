@@ -20,16 +20,12 @@ using System.Collections.Generic;
 public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider {
     private const int DmaBufSize = 1024;
     private const int DspBufSize = 64;
+    private const int MinPlaybackRateHz = 5000;
+    private const ushort DefaultPlaybackRateHz = 22050;
     private const int SbShift = 14;
     private const ushort SbShiftMask = (1 << SbShift) - 1;
     private const byte MinAdaptiveStepSize = 0;
     private const byte DspInitialResetLimit = 4;
-    private const int MinPlaybackRateHz = 5000;
-    private const int NativeDacRateHz = 45454;
-    private const ushort DefaultPlaybackRateHz = 22050;
-
-    // Maximum frames to queue in channel buffer to prevent overflow
-    private const int MaxChannelFrames = 4096;
 
     private enum DspState { Reset, ResetWait, Normal, HighSpeed }
     private enum DmaMode { None, Adpcm2Bit, Adpcm3Bit, Adpcm4Bit, Pcm8Bit, Pcm16Bit, Pcm16BitAliased }
@@ -37,41 +33,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private enum EssType { None, Es1688 }
     private enum SbIrq { Irq8, Irq16, IrqMpu }
     private enum BlasterState { WaitingForCommand, ResetRequest, Resetting, ReadingCommand }
-
-    private class Dac {
-        private float _lastWriteMs;
-        private int _currentRateHz = MinPlaybackRateHz;
-        private int _sequentialChangesTally;
-        private const float PercentDifferenceThreshold = 0.01f;
-        private const int SequentialChangesThreshold = 10;
-
-        public int? MeasureDacRateHz(double currentTimeMs) {
-            float elapsedMs = (float)currentTimeMs - _lastWriteMs;
-            _lastWriteMs = (float)currentTimeMs;
-
-            if (elapsedMs <= 0) {
-                return null;
-            }
-
-            float measuredRate = 1000.0f / elapsedMs;
-            float changePct = Math.Abs(measuredRate - _currentRateHz) / _currentRateHz;
-
-            _sequentialChangesTally = changePct > PercentDifferenceThreshold ? _sequentialChangesTally + 1 : 0;
-
-            if (_sequentialChangesTally > SequentialChangesThreshold) {
-                _sequentialChangesTally = 0;
-                _currentRateHz = (int)Math.Round(measuredRate);
-                return _currentRateHz;
-            }
-
-            return null;
-        }
-
-        public AudioFrame RenderFrame(byte sample, bool speakerEnabled) {
-            float value = speakerEnabled ? LookupTables.U8To16[sample] : 0.0f;
-            return new AudioFrame(value, value);
-        }
-    }
 
     private class SbInfo {
         public uint FreqHz { get; set; }
@@ -92,12 +53,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             public uint Bits { get; set; }
             public DmaChannel? Channel { get; set; }
             public uint RemainSize { get; set; }
-
-            // Performance metrics for DMA operations
-            public ulong TotalBytesRead { get; set; }
-            public ulong TotalFramesGenerated { get; set; }
-            public ulong BufferOverflowCount { get; set; }
-            public ulong DmaCompletionCount { get; set; }
         }
         public DmaState Dma { get; } = new();
         public bool SpeakerEnabled { get; set; }
@@ -133,7 +88,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             public int WarmupRemainingMs { get; set; }
         }
         public DspStateInfo Dsp { get; } = new();
-        public Dac DacState { get; set; } = new();
         public class MixerState {
             public byte Index { get; set; } = 0;
 
@@ -327,9 +281,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             int bytesRead = _sb.Dma.Channel.Read((int)clampedBytes, buffer);
             uint actualBytesRead = (uint)Math.Max(0, bytesRead);
 
-            // Track performance metrics
-            _sb.Dma.TotalBytesRead += actualBytesRead;
-
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("SOUNDBLASTER: ReadDma8Bit - Read {ActualBytes}/{RequestedBytes} bytes from channel {Channel}",
                     actualBytesRead, clampedBytes, _sb.Dma.Channel.ChannelNumber);
@@ -389,9 +340,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             int wordsRead = _sb.Dma.Channel.Read((int)clampedWords, targetBuffer);
             uint actualWordsRead = (uint)Math.Max(0, wordsRead);
 
-            // Track performance metrics (count bytes, not words)
+            // Calculate bytes read for DMA
             uint bytesRead = actualWordsRead * (is16BitChannel ? 2u : 1u);
-            _sb.Dma.TotalBytesRead += bytesRead;
 
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("SOUNDBLASTER: ReadDma16Bit - Read {ActualWords}/{RequestedWords} words ({BytesRead} bytes) from channel {Channel}",
@@ -474,9 +424,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private BlasterState _blasterState = BlasterState.WaitingForCommand;
 
     private double _lastDmaCallbackTime;
-    
+
     private float _frameCounter = 0.0f;
-    
+
     private int _framesNeeded = 0;
 
     public SoundBlaster(
@@ -553,7 +503,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
 
         _dacChannel = _mixer.AddChannel(GenerateFrames, (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
-        
+
         // Configure Zero-Order-Hold upsampler and resample method for SB Pro 2 only
         // ZOH upsampler provides vintage DAC sound characteristic
         // Native DAC rate is 49716 Hz, then resampled to host rate (typically 48000 Hz)
@@ -562,7 +512,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _dacChannel.SetZeroOrderHoldUpsamplerTargetRate(NativeDacRateHz);
             _dacChannel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
         }
-        
+
         _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, opl.MixerChannel, loggerService);
         _hardwareMixer.Reset();
 
@@ -596,7 +546,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Mode == DspMode.Dma) {
             MaybeWakeUp();
         }
-        
+
         // Request more frames if output queue is running low
         // This ensures DMA processing can speed up when the mixer needs more data
         int queueSize = _outputQueue.Count;
@@ -624,12 +574,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _dacChannel.AddSilence();
         }
 
-        // Track performance metrics
-        _sb.Dma.TotalFramesGenerated += (ulong)framesReceived;
-
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SB: Pulled {Received}/{Requested} frames from queue (queue size: {QueueSize}), total frames: {TotalFrames}",
-                framesReceived, framesRequested, _outputQueue.Count, _sb.Dma.TotalFramesGenerated);
+            _loggerService.Verbose("SB: Pulled {Received}/{Requested} frames from queue (queue size: {QueueSize})",
+                framesReceived, framesRequested, _outputQueue.Count);
         }
     }
 
@@ -721,7 +668,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     // Wake up the mixer channel for playback
                     // Unmasking is when software has finished setup and is ready for playback
                     bool wasWokenUp = MaybeWakeUp();
-                    
+
                     // Ensure channel is enabled - critical for DMA processing to start
                     // If WakeUp didn't enable it (e.g., already awake), enable it explicitly
                     if (!_dacChannel.IsEnabled) {
@@ -996,16 +943,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         // Process samples into AudioFrames and enqueue to output_queue
         for (uint i = 0; i < numSamples; i++) {
-            float value;
-            if (signed) {
-                // For signed samples, interpret byte as sbyte and convert to lookup index
-                // In C#: sbyte value maps to index via (byte)(sbyteValue + 128)
-                sbyte signedSample = unchecked((sbyte)samples[i]);
-                byte lookupIndex = (byte)(signedSample + 128);
-                value = LookupTables.S8To16[lookupIndex];
-            } else {
-                value = LookupTables.U8To16[samples[i]];
-            }
+            float value = signed
+                ? LookupTables.ToSigned8(unchecked((sbyte)samples[i]))
+                : LookupTables.ToUnsigned8(samples[i]);
             _outputQueue.Enqueue(new AudioFrame(value, value));
         }
     }
@@ -1039,17 +979,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         bool swapChannels = _sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2;
 
         for (uint i = 0; i < numFrames; i++) {
-            float left, right;
-            if (signed) {
-                // For signed samples, interpret bytes as sbytes and convert to lookup indices
-                sbyte signedLeft = unchecked((sbyte)samples[i * 2]);
-                sbyte signedRight = unchecked((sbyte)samples[i * 2 + 1]);
-                left = LookupTables.S8To16[(byte)(signedLeft + 128)];
-                right = LookupTables.S8To16[(byte)(signedRight + 128)];
-            } else {
-                left = LookupTables.U8To16[samples[i * 2]];
-                right = LookupTables.U8To16[samples[i * 2 + 1]];
-            }
+            float left = signed
+                ? LookupTables.ToSigned8(unchecked((sbyte)samples[i * 2]))
+                : LookupTables.ToUnsigned8(samples[i * 2]);
+
+            float right = signed
+                ? LookupTables.ToSigned8(unchecked((sbyte)samples[i * 2 + 1]))
+                : LookupTables.ToUnsigned8(samples[i * 2 + 1]);
 
             if (swapChannels) {
                 _outputQueue.Enqueue(new AudioFrame(right, left));
@@ -1083,13 +1019,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         // Process samples into AudioFrames and enqueue to output_queue
         for (uint i = 0; i < numSamples; i++) {
-            float value;
-            if (signed) {
-                value = samples[i];
-            } else {
-                // Unsigned 16-bit: convert to signed by subtracting 32768
-                value = (ushort)samples[i] - 32768;
-            }
+            float value = signed
+                ? LookupTables.ToSigned16(samples[i])
+                : LookupTables.ToUnsigned16((ushort)samples[i]);
             _outputQueue.Enqueue(new AudioFrame(value, value));
         }
     }
@@ -1123,17 +1055,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         bool swapChannels = _sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2;
 
         for (uint i = 0; i < numFrames; i++) {
-            float left;
-            float right;
+            float left = signed
+                ? LookupTables.ToSigned16(samples[i * 2])
+                : LookupTables.ToUnsigned16((ushort)samples[i * 2]);
 
-            if (signed) {
-                left = samples[i * 2];
-                right = samples[i * 2 + 1];
-            } else {
-                // Unsigned 16-bit: convert to signed by subtracting 32768
-                left = (ushort)samples[i * 2] - 32768;
-                right = (ushort)samples[i * 2 + 1] - 32768;
-            }
+            float right = signed
+                ? LookupTables.ToSigned16(samples[i * 2 + 1])
+                : LookupTables.ToUnsigned16((ushort)samples[i * 2 + 1]);
 
             if (swapChannels) {
                 _outputQueue.Enqueue(new AudioFrame(right, left));
@@ -1176,41 +1104,44 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private AudioFrame GeneratePcm8Frame() {
-        byte sample = 0;
+        // In stereo mode, we read two bytes (left and right)
+        // In mono mode, we read one byte
+        int bytesToRead = _sb.Dma.Stereo ? 2 : 1;
 
-        try {
-            Span<byte> buffer = stackalloc byte[1];
-            int wordsRead = _sb.Dma.Channel!.Read(1, buffer);
+        Span<byte> buffer = stackalloc byte[bytesToRead];
+        int bytesRead = _sb.Dma.Channel!.Read(bytesToRead, buffer);
 
-            if (wordsRead > 0) {
-                sample = buffer[0];
-
-                if (_sb.Dma.Left > 0) {
-                    _sb.Dma.Left--;
-                }
-
-                if (_sb.Dma.FirstTransfer) {
-                    _sb.Dma.FirstTransfer = false;
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: First DMA byte read: 0x{Sample:X2}", sample);
-                    }
-                }
-            } else {
-                if (_sb.Dma.Left > 0) {
-                    _loggerService.Warning("SOUNDBLASTER: DMA read returned 0 words but DMA.Left={DmaLeft}", _sb.Dma.Left);
-                }
-                return new AudioFrame(0.0f, 0.0f);
+        if (bytesRead > 0 && _sb.Dma.Left > 0) {
+            _sb.Dma.Left -= (uint)bytesRead;
+        } else if (bytesRead == 0 && _sb.Dma.Left > 0) {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: DMA read returned 0 bytes but DMA.Left={DmaLeft}", _sb.Dma.Left);
             }
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "SOUNDBLASTER: Exception reading from DMA channel");
             return new AudioFrame(0.0f, 0.0f);
         }
 
-        // Reference: src/hardware/audio/soundblaster.cpp lines 988-1030
-        return MaybeSilenceFrame(sample);
+        // Convert bytes to float using lookup table
+        if (_sb.Dma.Stereo && bytesRead >= 2) {
+            // For stereo 8-bit: swap channels (left/right) for SBPro
+            float left = LookupTables.ToUnsigned8(buffer[0]);
+            float right = LookupTables.ToUnsigned8(buffer[1]);
+
+            if (_config.SbType == SbType.SBPro1 || _config.SbType == SbType.SBPro2) {
+                // SBPro swaps left and right
+                return MaybeSilenceFrame(right, left);
+            } else {
+                return MaybeSilenceFrame(left, right);
+            }
+        } else if (bytesRead >= 1) {
+            // For mono 8-bit: duplicate on both channels
+            float sample = LookupTables.ToUnsigned8(buffer[0]);
+            return MaybeSilenceFrame(sample, sample);
+        }
+
+        return new AudioFrame(0.0f, 0.0f);
     }
 
-    private AudioFrame MaybeSilenceFrame(byte sample) {
+    private AudioFrame MaybeSilenceFrame(float left, float right) {
         // Return silent frame if still in warmup
         if (_sb.Dsp.WarmupRemainingMs > 0) {
             _sb.Dsp.WarmupRemainingMs--;
@@ -1222,8 +1153,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return new AudioFrame(0.0f, 0.0f);
         }
 
-        // Render actual sample
-        return _sb.DacState.RenderFrame(sample, true);
+        // Return the stereo frame
+        return new AudioFrame(left, right);
+    }
+
+    private AudioFrame MaybeSilenceFrame(byte sample) {
+        float floatSample = LookupTables.ToUnsigned8(sample);
+        return MaybeSilenceFrame(floatSample, floatSample);
     }
 
     private AudioFrame GenerateAdpcm2Frame() {
@@ -1359,38 +1295,49 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             short sample = _sb.Dma.Buf16[DmaBufSize - (int)_sb.Dma.RemainSize];
             _sb.Dma.RemainSize--;
 
-            // Convert 16-bit sample to float (-32768 to 32767 range)
-            float value = _sb.SpeakerEnabled ? sample : 0.0f;
-            return new AudioFrame(value, value);
+            // Convert 16-bit sample to float and apply warmup/speaker checks
+            float value = sample / 32768.0f;
+            return MaybeSilenceFrame(value, value);
         }
 
-        // Read new word from DMA
-        try {
-            uint wordsRead = ReadDma16Bit(1);
+        // Read new words from DMA
+        uint wordsRead = _sb.Dma.Stereo ? ReadDma16Bit(2) : ReadDma16Bit(1);
 
-            if (wordsRead > 0 && _sb.Dma.Left > 0) {
-                _sb.Dma.Left--;
+        if (wordsRead > 0 && _sb.Dma.Left > 0) {
+            _sb.Dma.Left -= wordsRead;
 
-                if (_sb.Dma.FirstTransfer) {
-                    _sb.Dma.FirstTransfer = false;
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: First 16-bit DMA word read: 0x{Sample:X4}", _sb.Dma.Buf16[0]);
-                    }
+            if (_sb.Dma.Stereo && wordsRead >= 2) {
+                // Stereo 16-bit: read left and right samples
+                short leftSample = _sb.Dma.Buf16[0];
+                short rightSample = _sb.Dma.Buf16[1];
+
+                // Handle signed/unsigned conversion
+                if (!_sb.Dma.Sign) {
+                    leftSample = (short)((ushort)leftSample - 32768);
+                    rightSample = (short)((ushort)rightSample - 32768);
                 }
 
+                float left = leftSample / 32768.0f;
+                float right = rightSample / 32768.0f;
+
+                if (_config.SbType == SbType.SBPro1 || _config.SbType == SbType.SBPro2) {
+                    // SBPro swaps left and right
+                    return MaybeSilenceFrame(right, left);
+                } else {
+                    return MaybeSilenceFrame(left, right);
+                }
+            } else if (wordsRead >= 1) {
+                // Mono 16-bit
                 short sample = _sb.Dma.Buf16[0];
 
                 // Handle signed/unsigned conversion
                 if (!_sb.Dma.Sign) {
-                    // Unsigned 16-bit: convert to signed by subtracting 32768
                     sample = (short)((ushort)sample - 32768);
                 }
 
-                float value = _sb.SpeakerEnabled ? sample : 0.0f;
-                return new AudioFrame(value, value);
+                float value = sample / 32768.0f;
+                return MaybeSilenceFrame(value, value);
             }
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "SOUNDBLASTER: Exception in 16-bit PCM decode");
         }
 
         return new AudioFrame(0.0f, 0.0f);
@@ -1456,11 +1403,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private void OnDmaTransferComplete() {
         // Track DMA completion metrics
-        _sb.Dma.DmaCompletionCount++;
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DMA transfer complete #{Count}, signaling IRQ {Irq}; autoInit={AutoInit}",
-                _sb.Dma.DmaCompletionCount, _sb.Hw.Irq, _sb.Dma.AutoInit);
+            _loggerService.Debug("SOUNDBLASTER: DMA transfer complete, signaling IRQ {Irq}; autoInit={AutoInit}",
+                _sb.Hw.Irq, _sb.Dma.AutoInit);
         }
 
         // Check if auto-init is enabled (continuous looping transfers)
@@ -1500,13 +1446,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         int framesNeeded = System.Threading.Interlocked.Exchange(ref _framesNeeded, 0);
         float framesPerTick = _dacChannel.GetFramesPerTick();
         _frameCounter += Math.Max(framesNeeded, framesPerTick);
-        
+
         // Generate only the integer part of accumulated frames
         int totalFrames = (int)Math.Floor(_frameCounter);
-        
+
         // Retain the fractional remainder for next tick
         _frameCounter -= totalFrames;
-        
+
         // Generate the requested frames
         if (totalFrames > 0) {
             GenerateFramesInternal(totalFrames);
@@ -1518,7 +1464,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Reschedule for next tick (1ms intervals)
         _scheduler.AddEvent(MixerTickCallback, 1.0);
     }
-    
+
     private void GenerateFramesInternal(int framesToGenerate) {
         // Generate frames based on current DSP mode
         switch (_sb.Mode) {
@@ -1546,12 +1492,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case DspMode.Dma:
                 // DMA mode - process DMA transfers
-                
+
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                     _loggerService.Verbose("SOUNDBLASTER: GenerateFramesInternal DMA mode - frames={Frames}, Left={Left}, Channel={Channel}",
                         framesToGenerate, _sb.Dma.Left, _sb.Dma.Channel?.ChannelNumber);
                 }
-                
+
                 // Keep channel awake during DMA processing
                 MaybeWakeUp();
 
@@ -1563,7 +1509,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                         len += 1 << SbShift;
                     }
                     len >>= SbShift;
-                    
+
                     if (len > _sb.Dma.Left) {
                         len = _sb.Dma.Left;
                     }
@@ -1721,7 +1667,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Adpcm.Reference = 0;
         _sb.Adpcm.Stepsize = 0;
         _sb.Adpcm.HaveRef = false;
-        _sb.DacState = new Dac();
         _sb.FreqHz = DefaultPlaybackRateHz;
         _sb.TimeConstant = 45;
         _sb.E2.Value = 0xaa;
@@ -1840,10 +1785,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Direct DAC
                 DspChangeMode(DspMode.Dac);
 
-                if (MaybeWakeUp()) {
-                    // If we're waking up, the DAC hasn't been running, so start with fresh DAC state
-                    _sb.DacState = new Dac();
-                }
+                MaybeWakeUp();
                 break;
 
             case 0x14:
@@ -2254,9 +2196,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Mode == mode) {
             return;
         }
-        if (mode == DspMode.Dac) {
-            _sb.DacState = new Dac();
-        }
         _sb.Mode = mode;
     }
 
@@ -2325,11 +2264,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             DmaMode.Pcm16BitAliased => (1 << SbShift) * 2,
             _ => (1 << SbShift)
         };
-        
+
         if (_sb.Dma.Stereo) {
             _sb.Dma.Mul *= 2;
         }
-        
+
         // Reference: src/hardware/audio/soundblaster.cpp line 1609
         _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
         _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;

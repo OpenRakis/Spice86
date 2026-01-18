@@ -1361,9 +1361,7 @@ public sealed class MixerChannel {
             return;
         }
 
-        // Estimate maximum output frames needed
-        _speexResampler.GetRatio(out uint ratioNum, out uint ratioDen);
-        int estimatedOutFrames = (int)Math.Ceiling((double)inFrames * ratioDen / ratioNum);
+        int estimatedOutFrames = EstimateMaxOutFrames(_speexResampler, inFrames);
 
         // Resize audio_frames to accommodate new frames
         int targetSize = audioFramesStartingSize + estimatedOutFrames;
@@ -1400,6 +1398,17 @@ public sealed class MixerChannel {
         if (AudioFrames.Count > actualSize) {
             AudioFrames.RemoveRange(actualSize, AudioFrames.Count - actualSize);
         }
+    }
+
+    private static int EstimateMaxOutFrames(Bufdio.Spice86.SpeexResamplerCSharp resampler, int inFrames) {
+        resampler.GetRatio(out uint ratioNum, out uint ratioDen);
+        if (ratioNum == 0 || ratioDen == 0 || inFrames <= 0) {
+            return inFrames;
+        }
+
+        double numerator = (double)inFrames * ratioDen;
+        int estimated = (int)Math.Ceiling(numerator / ratioNum);
+        return estimated <= 0 ? inFrames : estimated;
     }
 
     /// <summary>

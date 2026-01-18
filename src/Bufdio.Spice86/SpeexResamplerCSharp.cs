@@ -169,6 +169,7 @@ public sealed class SpeexResamplerCSharp {
     private int _quality;
     private readonly uint _nbChannels;
     private uint _filtLen;
+    private int _memPerChannel;
     private uint _memAllocSize;
     private readonly uint _bufferSize;
     private int _intAdvance;
@@ -189,9 +190,6 @@ public sealed class SpeexResamplerCSharp {
     
     private int _inStride;
     private int _outStride;
-    
-    // Pre-allocated buffers to avoid allocations in hot paths
-    private readonly float[] _cubicInterpBuffer = new float[4];
     
     /// <summary>
     /// Gets whether the resampler is initialized.
@@ -316,6 +314,7 @@ public sealed class SpeexResamplerCSharp {
 
     // cubic_coef() - Compute cubic interpolation coefficients
     // Mirrors: static void cubic_coef(spx_word16_t frac, spx_word16_t interp[4])
+    // NOTE: This is kept for potential interpolation-based variants but NOT used in direct mode
     private static void CubicCoef(float frac, float[] interp) {
         /* Compute interpolation coefficients. I'm not sure whether this corresponds to cubic interpolation
            but I know it's MMSE-optimal on a sinc */
@@ -382,9 +381,11 @@ public sealed class SpeexResamplerCSharp {
 
         // Allocate memory for channel state
         // Mirrors C code: min_alloc_size = st->filt_len-1 + st->buffer_size
-        uint minAllocSize = (_filtLen - 1 + _bufferSize) * _nbChannels;
-        if (_memAllocSize < minAllocSize) {
-            float[] newMem = new float[minAllocSize * 2];  // Allocate extra space
+        _memPerChannel = (int)(_filtLen - 1 + _bufferSize);
+        uint required = (uint)(_memPerChannel * _nbChannels);
+        if (_memAllocSize < required) {
+            int newSize = (int)required * 2; // grow to reduce reallocations
+            float[] newMem = new float[newSize];
             if (_mem.Length > 0) {
                 Array.Copy(_mem, newMem, Math.Min(_mem.Length, newMem.Length));
             }
@@ -427,7 +428,7 @@ public sealed class SpeexResamplerCSharp {
     }
 
     // ResamplerBasicDirect() - Direct resampling using sinc table
-    // Mirrors: static int resampler_basic_direct_double()
+    // Mirrors: static int resampler_basic_direct_double() from resample.c
     private void ResamplerBasicDirect(uint channelIndex, ReadOnlySpan<float> input, ref uint inLen, 
         Span<float> output, ref uint outLen) {
         
@@ -440,56 +441,50 @@ public sealed class SpeexResamplerCSharp {
         int fracAdvance = _fracAdvance;
         uint denRate = _denRate;
 
-        // Ensure we have enough memory
-        uint memRequired = (uint)(n + inLen);
-        if (memRequired > _memAllocSize / _nbChannels) {
-            uint newSize = memRequired * 2 * _nbChannels;
-            float[] newMem = new float[newSize];
-            if (_mem.Length > 0) {
-                Array.Copy(_mem, newMem, Math.Min(_mem.Length, newSize));
-            }
-            _mem = newMem;
-            _memAllocSize = newSize;
+        int channelOffset = (int)(channelIndex * _memPerChannel);
+
+        // Maximum input samples that fit in the buffer
+        // Mirrors C: xlen = st->mem_alloc_size - (st->filt_len - 1)
+        int xlen = _memPerChannel - n + 1;
+
+        // Clamp input length to available space
+        int safeInLen = Math.Min((int)inLen, xlen);
+
+        // Copy input samples to memory buffer at offset (filt_len-1)
+        int writeBase = channelOffset + n - 1;
+        for (int i = 0; i < safeInLen; i++) {
+            _mem[writeBase + i] = input[i];
         }
 
-        int channelOffset = (int)(channelIndex * (_memAllocSize / _nbChannels));
-
-        // Copy input samples to memory buffer at offset (n-1)
-        // This mirrors the C code: x[j+filt_offs] = in[j*istride] where filt_offs = n-1
-        // The lastSample offset is used when reading, not when writing
-        for (int i = 0; i < (int)inLen; i++) {
-            _mem[channelOffset + (n - 1) + i] = input[i];
+        if (_sincTable == null) {
+            outLen = 0;
+            return;
         }
 
-        while (!(lastSample >= (int)inLen || outSample >= (int)outLen)) {
-            // Fix overflow: use double precision for phase calculation
-            double phase = (double)sampFracNum * (double)n / (double)denRate;
-            int offset = (int)phase;
-            float frac = (float)(phase - offset);
-            
-            // Use pre-allocated buffer to avoid allocation in hot path
-            CubicCoef(frac, _cubicInterpBuffer);
-            
-            double sum = 0;
-            
-            // Apply sinc filter with cubic interpolation
-            if (_sincTable != null) {
-                for (int j = 0; j < n; j++) {
-                    // Bounds checking for sinc table access
-                    int sincIndex = Math.Abs(offset - j) * (int)_oversample;
-                    if (sincIndex >= _sincTableLength) {
-                        sincIndex = (int)_sincTableLength - 1;
-                    }
-                    
-                    float sincVal = _sincTable[sincIndex];
-                    sum += _mem[channelOffset + n - 1 - j + lastSample] * sincVal;
+        // Main resampling loop - EXACT MIRROR of C implementation
+        while (!(lastSample >= safeInLen || outSample >= (int)outLen)) {
+            // The sinc table is indexed by samp_frac_num*N
+            // This directly selects N coefficients for the current phase
+            int sincOffset = (int)(sampFracNum * (uint)n);
+            double sum = 0.0;
+
+            // Inner product: sinc_table[sincOffset + j] * mem[lastSample - j]
+            for (int j = 0; j < n; j++) {
+                int sincIdx = sincOffset + j;
+                if (sincIdx >= _sincTable.Length) {
+                    break;
                 }
+                int memIdx = channelOffset + lastSample + (n - 1 - j);
+                if (memIdx < 0 || memIdx >= _mem.Length) {
+                    break;
+                }
+                sum += _sincTable[sincIdx] * _mem[memIdx];
             }
 
             output[outStride * outSample++] = (float)sum;
+            
             lastSample += intAdvance;
             sampFracNum += (uint)fracAdvance;
-            
             if (sampFracNum >= denRate) {
                 sampFracNum -= denRate;
                 lastSample++;
@@ -498,14 +493,14 @@ public sealed class SpeexResamplerCSharp {
 
         _lastSample[channelIndex] = lastSample;
         _sampFracNum[channelIndex] = sampFracNum;
-        
+
         inLen = (uint)lastSample;
         outLen = (uint)outSample;
 
-        // Shift memory buffer
+        // Shift memory buffer: keep last (n-1) samples for next call
         if (lastSample > 0) {
             for (int i = 0; i < n - 1; i++) {
-                _mem[channelOffset + i] = _mem[channelOffset + n - 1 - (n - 1 - i) + lastSample];
+                _mem[channelOffset + i] = _mem[channelOffset + lastSample + i];
             }
         }
     }
@@ -542,6 +537,8 @@ public sealed class SpeexResamplerCSharp {
         if (_mem.Length > 0) {
             Array.Clear(_mem, 0, _mem.Length);
         }
+
+        _started = false;
     }
 
     /// <summary>
@@ -727,7 +724,11 @@ public sealed class SpeexResamplerCSharp {
     public void SkipZeros() {
         for (uint i = 0; i < _nbChannels; i++) {
             _lastSample[i] = (int)(_filtLen / 2);
+            _sampFracNum[i] = 0;
+            _magicSamples[i] = 0;
         }
+
+        _started = true;
     }
 
     /// <summary>

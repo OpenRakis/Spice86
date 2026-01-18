@@ -5,9 +5,9 @@ using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Xunit;
 
 /// <summary>
-/// Unit tests for Sound Blaster lookup tables (U8To16, S8To16).
+/// Unit tests for Sound Blaster lookup tables (U8To16).
 /// Validates against DOSBox Staging reference implementation.
-/// Reference: DOSBox mixer.cpp:1744-1762 (u8to16/s8to16 functions and lut initialization)
+/// Reference: DOSBox mixer.cpp:1744-1762 (u8to16 function and lut initialization)
 /// </summary>
 public class LookupTablesTests {
     
@@ -32,8 +32,8 @@ public class LookupTablesTests {
     }
     
     /// <summary>
-    /// Tests S8To16 lookup table against DOSBox Staging s8to16() function.
-    /// S8To16 uses the same logic as U8To16 but for signed input.
+    /// Tests ToSigned8() method against DOSBox Staging behavior.
+    /// ToSigned8(sbyte) internally uses U8To16[sbyte + 128].
     /// </summary>
     [Theory]
     [InlineData(-128, -32768)]    // Min: -128 * 256 = -32768
@@ -42,14 +42,16 @@ public class LookupTablesTests {
     [InlineData(1, 258)]           // Positive: round(1 * 32767/127) = 258
     [InlineData(-1, -256)]         // Negative: -1 * 256 = -256
     [InlineData(-127, -32512)]     // -127 * 256 = -32512
-    public void S8To16_MatchesDOSBoxValues(sbyte input, int expected) {
+    public void ToSigned8_MatchesDOSBoxValues(sbyte input, int expected) {
         // Act
-        // S8To16 is indexed by byte (0-255), where index = signed_value + 128
-        byte index = (byte)((int)input + 128);
-        float result = LookupTables.S8To16[index];
+        float result = LookupTables.ToSigned8(input);
         
         // Assert
-        result.Should().Be(expected, $"S8To16[{input}] (index {index}) should match DOSBox s8to16({input})");
+        result.Should().Be(expected, $"ToSigned8({input}) should match DOSBox conversion");
+        
+        // Verify the underlying U8To16 array access
+        byte index = (byte)((int)input + 128);
+        LookupTables.U8To16[index].Should().Be(expected);
     }
     
     /// <summary>
@@ -66,19 +68,6 @@ public class LookupTablesTests {
     }
     
     /// <summary>
-    /// Validates that S8To16 creates a smooth monotonic curve.
-    /// </summary>
-    [Fact]
-    public void S8To16_CreatesMonotonicCurve() {
-        // Assert: Values should increase monotonically
-        for (int i = 1; i < 256; i++) {
-            float current = LookupTables.S8To16[i];
-            float previous = LookupTables.S8To16[i - 1];
-            current.Should().BeGreaterThan(previous, $"S8To16 should be monotonically increasing at index {i}");
-        }
-    }
-    
-    /// <summary>
     /// Tests that zero-crossing point for unsigned 8-bit is at 128.
     /// </summary>
     [Fact]
@@ -90,21 +79,15 @@ public class LookupTablesTests {
     }
     
     /// <summary>
-    /// Tests the range of values in the lookup tables.
+    /// Tests the range of values in the U8To16 lookup table.
     /// DOSBox uses int16 range: [-32768, 32767]
     /// </summary>
     [Fact]
-    public void LookupTables_StayWithinInt16Range() {
+    public void U8To16_StaysWithinInt16Range() {
         // U8To16
         foreach (float value in LookupTables.U8To16) {
             value.Should().BeGreaterThanOrEqualTo(-32768, "U8To16 values should not go below int16 min");
             value.Should().BeLessThanOrEqualTo(32767, "U8To16 values should not exceed int16 max");
-        }
-        
-        // S8To16
-        foreach (float value in LookupTables.S8To16) {
-            value.Should().BeGreaterThanOrEqualTo(-32768, "S8To16 values should not go below int16 min");
-            value.Should().BeLessThanOrEqualTo(32767, "S8To16 values should not exceed int16 max");
         }
     }
 }
