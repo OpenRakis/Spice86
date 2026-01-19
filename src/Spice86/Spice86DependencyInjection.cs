@@ -430,7 +430,7 @@ public class Spice86DependencyInjection : IDisposable {
             _gui as IGuiMouseEvents);
 
         KeyboardInt16Handler keyboardInt16Handler = new(
-            memory, biosDataArea, cfgCpu, stack, state, loggerService,
+            memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
         Joystick joystick = new(state, ioPortDispatcher,
