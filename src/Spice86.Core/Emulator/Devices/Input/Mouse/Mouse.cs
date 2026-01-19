@@ -184,4 +184,10 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private void TriggerInterruptRequest() {
         _dualPic.ProcessInterruptRequest(IrqNumber);
     }
+
+    /// <inheritdoc />
+    public void ResetDeltas() {
+        DeltaX = 0;
+        DeltaY = 0;
+    }
 }

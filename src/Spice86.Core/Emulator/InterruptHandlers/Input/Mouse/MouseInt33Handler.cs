@@ -589,5 +589,10 @@ public class MouseInt33Handler : InterruptHandler {
         }
         State.CX = (ushort)x;
         State.DX = (ushort)y;
+        
+        // Reset mickey counters after reading, similar to CuteMouse driver.
+        // This prevents mouse drift when games repeatedly call INT 33h function 0x0B.
+        // Games that were affected (for example): Day of the Tentacle, Cruise for a Corpse, Monkey Island 2, ...
+        _mouseDriver.ResetDeltaMickeys();
     }
 }
