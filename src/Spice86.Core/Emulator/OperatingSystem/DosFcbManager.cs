@@ -518,10 +518,13 @@ public class DosFcbManager {
 
         uint totalSize = (uint)recordSize * recordCount;
 
-        // Check for segment wrap
+        // Check for segment wrap: ensure DTA buffer stays within 16-bit offset range
         ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
-        if (dtaOffset + totalSize < dtaOffset) {
-            return FcbErrorSegmentWrap;
+        if (totalSize > 0) {
+            uint endOffset = (uint)dtaOffset + totalSize - 1;
+            if (endOffset > 0xFFFF) {
+                return FcbErrorSegmentWrap;
+            }
         }
 
         // Calculate file position
