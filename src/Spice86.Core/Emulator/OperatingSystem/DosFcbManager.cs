@@ -609,7 +609,8 @@ public class DosFcbManager {
         }
 
         try {
-            long position = (long)fcb.AbsoluteRecord * fcb.RecordSize;
+            ushort recordSize = fcb.RecordSize == 0 ? (ushort)128 : fcb.RecordSize;
+            long position = (long)fcb.AbsoluteRecord * recordSize;
             file.SetLength(position);
             fcb.FileSize = (uint)position;
             return FcbSuccess;
