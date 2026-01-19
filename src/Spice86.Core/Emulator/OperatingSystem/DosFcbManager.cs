@@ -989,6 +989,11 @@ public class DosFcbManager {
                 DosExtendedFileControlBlock xfcb = new(_memory, dtaAddress);
                 xfcb.Flag = DosExtendedFileControlBlock.ExtendedFcbFlag;
                 xfcb.Attribute = (byte)ConvertToDosFileAttributes(entryInfo.Attributes);
+
+                // Clear the 5-byte reserved area at offsets 0x01-0x05 for extended FCB entries
+                for (uint offset = 1; offset <= 5; offset++) {
+                    _memory.UInt8[dtaAddress + offset] = 0;
+                }
                 fcbOffset = DosExtendedFileControlBlock.HeaderSize;
             }
 
