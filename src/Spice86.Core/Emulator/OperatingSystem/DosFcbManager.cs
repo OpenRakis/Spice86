@@ -376,6 +376,281 @@ public class DosFcbManager {
     }
 
     /// <summary>
+    /// INT 21h, AH=13h - Delete File Using FCB.
+    /// </summary>
+    /// <param name="fcbAddress">The address of the FCB or extended FCB.</param>
+    /// <returns>0x00 on success, 0xFF if file not found or is a device.</returns>
+    /// <remarks>
+    /// Deletes a file specified by the FCB. Supports wildcards in filename.
+    /// Returns 0x00 even if no files matched the pattern.
+    /// Based on FreeDOS kernel implementation.
+    /// </remarks>
+    public byte DeleteFile(uint fcbAddress) {
+        DosFileControlBlock fcb = GetFcb(fcbAddress, out byte attribute);
+        string dosPath = FcbToPath(fcb);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("FCB Delete File: {Path}, Attribute: {Attribute}", dosPath, attribute);
+        }
+
+        // Get drive number
+        byte driveNumber = fcb.DriveNumber;
+        if (driveNumber == 0) {
+            driveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
+        }
+
+        // Get the search folder and pattern from the FCB path
+        string searchPattern = GetSearchPattern(fcb);
+        string? searchFolder = GetSearchFolder(dosPath);
+
+        if (searchFolder == null) {
+            return FcbError;
+        }
+
+        try {
+            // Find matching files
+            EnumerationOptions options = GetEnumerationOptions(attribute);
+            string[] matchingFiles = FindFilesUsingWildCmp(searchFolder, searchPattern, options);
+
+            if (matchingFiles.Length == 0) {
+                return FcbSuccess;
+            }
+
+            // Delete each matching file
+            bool hasError = false;
+            foreach (string matchingFile in matchingFiles) {
+                // Skip directories
+                if (Directory.Exists(matchingFile) && !File.Exists(matchingFile)) {
+                    continue;
+                }
+
+                try {
+                    File.Delete(matchingFile);
+                } catch (IOException ex) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning(ex, "FCB Delete File: Failed to delete {File}", matchingFile);
+                    }
+                    hasError = true;
+                }
+            }
+
+            return hasError ? FcbError : FcbSuccess;
+        } catch (IOException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(ex, "FCB Delete File: IO error searching {Folder}", searchFolder);
+            }
+            return FcbError;
+        } catch (UnauthorizedAccessException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(ex, "FCB Delete File: Access denied searching {Folder}", searchFolder);
+            }
+            return FcbError;
+        }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=17h - Rename File Using FCB.
+    /// </summary>
+    /// <param name="fcbAddress">The address of the FCB or extended FCB containing old and new names.</param>
+    /// <returns>0x00 on success, 0xFF on error or if file not found.</returns>
+    /// <remarks>
+    /// <para>
+    /// Renames a file. The FCB structure for this operation is a special "rename FCB" (rfcb):
+    /// </para>
+    /// <para>
+    /// Rename FCB layout (37 bytes total):
+    /// <list type="bullet">
+    ///   <item>Offset 0x00 (1 byte): Drive number</item>
+    ///   <item>Offset 0x01 (8 bytes): Old filename</item>
+    ///   <item>Offset 0x09 (3 bytes): Old file extension</item>
+    ///   <item>Offset 0x0C (5 bytes): Reserved</item>
+    ///   <item>Offset 0x11 (8 bytes): New filename</item>
+    ///   <item>Offset 0x19 (3 bytes): New file extension</item>
+    ///   <item>Offset 0x1C (9 bytes): Reserved</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// For extended FCB, prepend 7-byte header (flag + 5 reserved + attribute) before rename FCB.
+    /// Supports wildcards: '?' wildcards in the old name are matched from the source file,
+    /// and '?' in the new name take the character from the matched position in the old file.
+    /// </para>
+    /// <para>
+    /// Based on FreeDOS kernel implementation.
+    /// </para>
+    /// </remarks>
+    public byte RenameFile(uint fcbAddress) {
+        bool isExtended = _memory.UInt8[fcbAddress] == DosExtendedFileControlBlock.ExtendedFcbFlag;
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("FCB Rename File, Extended: {Extended}", isExtended);
+        }
+
+        // Get the drive and old name info from the rename FCB
+        uint fcbDataOffset = isExtended ? (uint)DosExtendedFileControlBlock.HeaderSize : 0;
+        uint driveNumberOffset = fcbAddress + fcbDataOffset;
+        uint oldNameOffset = driveNumberOffset + 1;
+        uint oldExtOffset = oldNameOffset + 8;
+        uint newNameOffset = driveNumberOffset + 0x11;
+        uint newExtOffset = newNameOffset + 8;
+
+        byte driveNumber = _memory.UInt8[driveNumberOffset];
+        if (driveNumber == 0) {
+            driveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
+        }
+
+        // Read old filename and extension
+        byte[] oldNameBytes = new byte[8];
+        for (int i = 0; i < 8; i++) {
+            oldNameBytes[i] = _memory.UInt8[oldNameOffset + (uint)i];
+        }
+        string oldName = Encoding.ASCII.GetString(oldNameBytes).TrimEnd();
+
+        byte[] oldExtBytes = new byte[3];
+        for (int i = 0; i < 3; i++) {
+            oldExtBytes[i] = _memory.UInt8[oldExtOffset + (uint)i];
+        }
+        string oldExt = Encoding.ASCII.GetString(oldExtBytes).TrimEnd();
+
+        // Build the old filename pattern
+        string oldFilePattern = string.IsNullOrEmpty(oldExt) ? oldName : $"{oldName}.{oldExt}";
+
+        // Read new filename and extension
+        byte[] newNameBytes = new byte[8];
+        for (int i = 0; i < 8; i++) {
+            newNameBytes[i] = _memory.UInt8[newNameOffset + (uint)i];
+        }
+        string newName = Encoding.ASCII.GetString(newNameBytes).TrimEnd();
+
+        byte[] newExtBytes = new byte[3];
+        for (int i = 0; i < 3; i++) {
+            newExtBytes[i] = _memory.UInt8[newExtOffset + (uint)i];
+        }
+        string newExt = Encoding.ASCII.GetString(newExtBytes).TrimEnd();
+
+        // Build the new filename template
+        string newFileTemplate = string.IsNullOrEmpty(newExt) ? newName : $"{newName}.{newExt}";
+
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("FCB Rename: OldPattern={Pattern}, NewTemplate={Template}",
+                oldFilePattern, newFileTemplate);
+        }
+
+        // Get the search folder from current drive
+        string? searchFolder = _dosPathResolver.GetFullHostPathFromDosOrDefault($"{(char)('A' + driveNumber - 1)}:");
+        if (searchFolder == null) {
+            return FcbError;
+        }
+
+        try {
+            // Find matching files based on old name pattern
+            string[] matchingFiles = FindFilesUsingWildCmp(searchFolder, oldFilePattern, GetEnumerationOptions(0));
+
+            if (matchingFiles.Length == 0) {
+                return FcbError;
+            }
+
+            bool hasError = false;
+            foreach (string oldFile in matchingFiles) {
+                // Skip directories
+                if (Directory.Exists(oldFile) && !File.Exists(oldFile)) {
+                    continue;
+                }
+
+                try {
+                    string oldFileName = Path.GetFileName(oldFile);
+                    string? directoryName = Path.GetDirectoryName(oldFile);
+
+                    // Apply wildcards: '?' in pattern copies character from source
+                    string renamedFile = ApplyWildcardRename(oldFileName, oldFilePattern, newFileTemplate);
+                    string newFilePath = Path.Combine(directoryName ?? "", renamedFile);
+
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("FCB Rename: {OldFile} -> {NewFile}", oldFile, newFilePath);
+                    }
+
+                    if (oldFile != newFilePath) {
+                        File.Move(oldFile, newFilePath, overwrite: false);
+                    }
+                } catch (IOException ex) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning(ex, "FCB Rename File: Failed to rename {File}", oldFile);
+                    }
+                    hasError = true;
+                }
+            }
+
+            return hasError ? FcbError : FcbSuccess;
+        } catch (IOException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(ex, "FCB Rename File: IO error in {Folder}", searchFolder);
+            }
+            return FcbError;
+        } catch (UnauthorizedAccessException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(ex, "FCB Rename File: Access denied in {Folder}", searchFolder);
+            }
+            return FcbError;
+        }
+    }
+
+    /// <summary>
+    /// Applies FCB rename wildcards to create the new filename.
+    /// '?' in the pattern matches any character and is preserved from the original filename.
+    /// </summary>
+    private static string ApplyWildcardRename(string oldFileName, string pattern, string newName) {
+        // Split both into name and extension
+        int oldDot = oldFileName.LastIndexOf('.');
+        string oldName = oldDot >= 0 ? oldFileName[..oldDot] : oldFileName;
+        string oldExt = oldDot >= 0 ? oldFileName[(oldDot + 1)..] : string.Empty;
+
+        int patternDot = pattern.LastIndexOf('.');
+        string patternName = patternDot >= 0 ? pattern[..patternDot] : pattern;
+        string patternExt = patternDot >= 0 ? pattern[(patternDot + 1)..] : string.Empty;
+
+        int newDot = newName.LastIndexOf('.');
+        string newNamePart = newDot >= 0 ? newName[..newDot] : newName;
+        string newExtPart = newDot >= 0 ? newName[(newDot + 1)..] : string.Empty;
+
+        // Apply wildcards to name part
+        StringBuilder resultName = new();
+        for (int i = 0; i < newNamePart.Length && i < patternName.Length; i++) {
+            if (patternName[i] == '?') {
+                resultName.Append(i < oldName.Length ? oldName[i] : ' ');
+            } else {
+                resultName.Append(newNamePart[i]);
+            }
+        }
+
+        // Append remaining new name characters
+        if (newNamePart.Length > patternName.Length) {
+            resultName.Append(newNamePart[patternName.Length..]);
+        }
+
+        // Apply wildcards to extension part
+        StringBuilder resultExt = new();
+        for (int i = 0; i < newExtPart.Length && i < patternExt.Length; i++) {
+            if (patternExt[i] == '?') {
+                resultExt.Append(i < oldExt.Length ? oldExt[i] : ' ');
+            } else {
+                resultExt.Append(newExtPart[i]);
+            }
+        }
+
+        // Append remaining new extension characters
+        if (newExtPart.Length > patternExt.Length) {
+            resultExt.Append(newExtPart[patternExt.Length..]);
+        }
+
+        // Build result
+        string result = resultName.ToString();
+        if (resultExt.Length > 0) {
+            result += "." + resultExt;
+        }
+
+        return result.TrimEnd();
+    }
+
+    /// <summary>
     /// INT 21h, AH=24h - Set Random Record Number Using FCB.
     /// </summary>
     /// <param name="fcbAddress">The address of the FCB.</param>
