@@ -1,37 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <LangVersion>latestmajor</LangVersion>
-    <Version>0.6.1</Version>
     <Authors>Olivier Azeau</Authors>
     <Product>AvaloniaGraphControl</Product>
     <PackageId>AvaloniaGraphControl</PackageId>
     <NeutralLanguage>en</NeutralLanguage>
     <Description>A graph layout panel for AvaloniaUI</Description>
     <Copyright>Copyright © Olivier Azeau</Copyright>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <RepositoryUrl>https://github.com/Oaz/AvaloniaGraphControl.git</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/Oaz/AvaloniaGraphControl</PackageProjectUrl>
-    <PackageTags>Avalonia Graph Control MSAGL</PackageTags>
-    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Release</PackageReleaseNotes>
-    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludePrivateDependenciesInNupkg</TargetsForTfmSpecificBuildOutput>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" />
     <ProjectReference Include="../automatic-graph-layout/GraphLayout/Drawing/AutomaticGraphLayout.Drawing.csproj" PrivateAssets="all" />
     <ProjectReference Include="../automatic-graph-layout/GraphLayout/MSAGL/AutomaticGraphLayout.csproj" PrivateAssets="all" />
-    <None Include="..\README.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
-  <Target Name="IncludePrivateDependenciesInNupkg">
-    <ItemGroup>
-      <BuildOutputInPackage Include="$(OutputPath)AutomaticGraphLayout.dll" />
-      <BuildOutputInPackage Include="$(OutputPath)AutomaticGraphLayout.Drawing.dll" />
-    </ItemGroup>
-  </Target>
 </Project>

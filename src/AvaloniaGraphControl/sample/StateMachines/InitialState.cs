@@ -1,6 +1,0 @@
-namespace AvaloniaGraphControlSample
-{
-  class InitialState
-  {
-  }
-}
