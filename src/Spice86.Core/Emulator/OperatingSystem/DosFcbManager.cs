@@ -1019,10 +1019,10 @@ public class DosFcbManager {
         // Clean up any previous search state on this FCB before starting a new one
         // This prevents memory leaks when FindFirst is called multiple times on the same FCB
         uint oldSearchId = GetFcbSearchState(fcbAddress, isExtended);
-        if (oldSearchId != 0 && _fcbActiveSearches.Remove(oldSearchId)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("FCB Find First: Cleaned up previous search state (SearchId: {Id})", oldSearchId);
-            }
+        if (oldSearchId != 0 &&
+            _fcbActiveSearches.Remove(oldSearchId) &&
+            _loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("FCB Find First: Cleaned up previous search state (SearchId: {Id})", oldSearchId);
         }
 
         // Get the search folder and pattern from the FCB path
