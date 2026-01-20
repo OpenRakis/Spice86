@@ -306,7 +306,10 @@ public class DosFcbManager {
     }
 
     public void SetRandomRecordNumber(uint fcbAddress) {
-        throw new NotImplementedException("To be implemented TDD style");
+        uint fcbBase = GetActualFcbBaseAddress(fcbAddress, out _);
+        DosFileControlBlock fcb = new DosFileControlBlock(_memory, fcbBase);
+        uint absoluteRecord = (uint)(fcb.CurrentBlock * 128 + fcb.CurrentRecord);
+        fcb.RandomRecord = absoluteRecord;
     }
 
     public byte FindFirst(uint fcbAddress, uint dtaAddress) {
@@ -319,6 +322,16 @@ public class DosFcbManager {
 
     public void ClearAllSearchState() {
         throw new NotImplementedException("To be implemented TDD style");
+    }
+
+    private uint GetActualFcbBaseAddress(uint fcbAddress, out byte attribute) {
+        attribute = 0;
+        // Extended FCB detection via drive marker 0xFF
+        DosFileControlBlock probe = new DosFileControlBlock(_memory, fcbAddress);
+        if (probe.DriveNumber == 0xFF) {
+            return fcbAddress + 7;
+        }
+        return fcbAddress;
     }
 }
 
