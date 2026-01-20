@@ -1970,7 +1970,10 @@ public class DosInt21Handler : InterruptHandler {
                 parseControl);
         }
 
-        State.AL = _dosFcbManager.ParseFilename(stringAddress, fcbAddress, parseControl);
+        State.AL = _dosFcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+        
+        // Update SI to point to first byte after parsed filename (per DOS semantics)
+        State.SI += (ushort)bytesAdvanced;
     }
 
     /// <summary>
