@@ -401,6 +401,7 @@ public class DosProcessManagerTests {
         DosDriveManager driveManager = new(loggerService, null, null);
         DosMemoryManager memoryManager = new(memory, tracker, loggerService);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state), driveManager, loggerService, new List<IVirtualDevice>());
+        DosFcbManager fcbManager = new(memory, fileManager, driveManager, loggerService);
 
         DosProcessManager processManager = new(
             memory,
@@ -410,6 +411,7 @@ public class DosProcessManagerTests {
             memoryManager,
             fileManager,
             driveManager,
+            fcbManager,
             new Dictionary<string, string>(),
             loggerService);
 

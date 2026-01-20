@@ -63,13 +63,14 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports (e.g., CMOS).</param>
     /// <param name="dosTables">The DOS tables structure containing CDS and DBCS information.</param>
     /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="dosFcbManager">FCB manager shared with the process manager for cleanup.</param>
     public DosInt21Handler(IMemory memory, DosProgramSegmentPrefixTracker dosPspTracker,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         DosProcessManager dosProcessManager,
-        IOPortDispatcher ioPortDispatcher, DosTables dosTables, ILoggerService loggerService)
+        IOPortDispatcher ioPortDispatcher, DosTables dosTables, ILoggerService loggerService, DosFcbManager dosFcbManager)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
         _dosPspTracker = dosPspTracker;
@@ -82,7 +83,7 @@ public class DosInt21Handler : InterruptHandler {
         _ioPortDispatcher = ioPortDispatcher;
         _dosTables = dosTables;
         _interruptVectorTable = new InterruptVectorTable(memory);
-        _dosFcbManager = new DosFcbManager(memory, dosFileManager, dosDriveManager, loggerService);
+        _dosFcbManager = dosFcbManager;
         FillDispatchTable();
     }
 
@@ -1663,7 +1664,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB OPEN FILE at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.OpenFile(GetFcbAddress());
+        State.AL = (byte)_dosFcbManager.OpenFile(GetFcbAddress());
     }
 
     /// <summary>
@@ -1681,7 +1682,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB CLOSE FILE at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.CloseFile(GetFcbAddress());
+        State.AL = (byte)_dosFcbManager.CloseFile(GetFcbAddress());
     }
 
     /// <summary>
@@ -1701,7 +1702,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB FIND FIRST at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.FindFirst(GetFcbAddress(), GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.FindFirst(GetFcbAddress(), GetDtaAddress());
     }
 
     /// <summary>
@@ -1722,7 +1723,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB FIND NEXT at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.FindNext(GetFcbAddress(), GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.FindNext(GetFcbAddress(), GetDtaAddress());
     }
 
     /// <summary>
@@ -1741,7 +1742,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB DELETE FILE at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.DeleteFile(GetFcbAddress());
+        State.AL = (byte)_dosFcbManager.DeleteFile(GetFcbAddress());
     }
 
     /// <summary>
@@ -1763,7 +1764,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB RENAME FILE at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.RenameFile(GetFcbAddress());
+        State.AL = (byte)_dosFcbManager.RenameFile(GetFcbAddress());
     }
 
     /// <summary>
@@ -1781,7 +1782,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB SEQUENTIAL READ at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.SequentialRead(GetFcbAddress(), GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.SequentialRead(GetFcbAddress(), GetDtaAddress());
     }
 
     /// <summary>
@@ -1799,7 +1800,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB SEQUENTIAL WRITE at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.SequentialWrite(GetFcbAddress(), GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.SequentialWrite(GetFcbAddress(), GetDtaAddress());
     }
 
     /// <summary>
@@ -1817,7 +1818,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB CREATE FILE at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.CreateFile(GetFcbAddress());
+        State.AL = (byte)_dosFcbManager.CreateFile(GetFcbAddress());
     }
 
     /// <summary>
@@ -1835,7 +1836,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB RANDOM READ at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.RandomRead(GetFcbAddress(), GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.RandomRead(GetFcbAddress(), GetDtaAddress());
     }
 
     /// <summary>
@@ -1853,7 +1854,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB RANDOM WRITE at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.RandomWrite(GetFcbAddress(), GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.RandomWrite(GetFcbAddress(), GetDtaAddress());
     }
 
     /// <summary>
@@ -1871,7 +1872,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB GET FILE SIZE at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = _dosFcbManager.GetFileSize(GetFcbAddress());
+        State.AL = (byte)_dosFcbManager.GetFileSize(GetFcbAddress());
     }
 
     /// <summary>
@@ -1913,7 +1914,7 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX), State.CX);
         }
         ushort recordCount = State.CX;
-        State.AL = _dosFcbManager.RandomBlockRead(GetFcbAddress(), GetDtaAddress(), ref recordCount);
+        State.AL = (byte)_dosFcbManager.RandomBlockRead(GetFcbAddress(), GetDtaAddress(), ref recordCount);
         State.CX = recordCount;
     }
 
@@ -1935,7 +1936,7 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX), State.CX);
         }
         ushort recordCount = State.CX;
-        State.AL = _dosFcbManager.RandomBlockWrite(GetFcbAddress(), GetDtaAddress(), ref recordCount);
+        State.AL = (byte)_dosFcbManager.RandomBlockWrite(GetFcbAddress(), GetDtaAddress(), ref recordCount);
         State.CX = recordCount;
     }
 
@@ -1968,7 +1969,7 @@ public class DosInt21Handler : InterruptHandler {
                 parseControl);
         }
 
-        State.AL = _dosFcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+        State.AL = (byte)_dosFcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
         
         // Update SI to point to first byte after parsed filename (per DOS semantics)
         State.SI += (ushort)bytesAdvanced;
