@@ -35,6 +35,11 @@ public static class Commands {
     public const byte ContinueDmaMode = 0xD4;
 
     /// <summary>
+    /// Command to continue auto-initialize DMA mode (8-bit, older variant).
+    /// </summary>
+    public const byte ContinueAutoInitDmaMode8 = 0x45;
+
+    /// <summary>
     /// Command to get the Sound Blaster's identification byte.
     /// </summary>
     public const byte DspIdentification = 0xE0;
@@ -58,6 +63,11 @@ public static class Commands {
     /// Command to read the value from the DSP's internal test register.
     /// </summary>
     public const byte ReadTestRegister = 0xE8;
+
+    /// <summary>
+    /// Command to get the DSP copyright string.
+    /// </summary>
+    public const byte GetCopyright = 0xE3;
 
     /// <summary>
     /// Command to output data using auto-init DMA mode in 8-bit mode.

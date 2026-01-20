@@ -1165,6 +1165,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
                 _outputData.Enqueue(_testRegister);
                 break;
 
+            case Commands.GetCopyright:
+                const string copyright = "COPYRIGHT (C) CREATIVE TECHNOLOGY LTD, 1992.";
+                foreach (char c in copyright) {
+                    _outputData.Enqueue((byte)c);
+                }
+                _outputData.Enqueue(0);
+                break;
+
             case Commands.SetTimeConstant:
                 _dsp.SampleRate = 256000000 / (65536 - (_commandData[0] << 8));
                 UpdateActiveDmaRate();
@@ -1294,6 +1302,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
             case Commands.ContinueDmaMode:
             case Commands.ContinueDmaMode16:
+            case Commands.ContinueAutoInitDmaMode8:
                 _dsp.IsDmaTransferActive = true;
                 startDmaScheduler = true;
                 break;
