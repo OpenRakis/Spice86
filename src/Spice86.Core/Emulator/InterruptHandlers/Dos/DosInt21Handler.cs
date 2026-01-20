@@ -115,9 +115,11 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x10, FcbCloseFile);
         AddAction(0x11, FcbFindFirst);
         AddAction(0x12, FcbFindNext);
+        AddAction(0x13, FcbDeleteFile);
         AddAction(0x14, FcbSequentialRead);
         AddAction(0x15, FcbSequentialWrite);
         AddAction(0x16, FcbCreateFile);
+        AddAction(0x17, FcbRenameFile);
         AddAction(0x19, GetCurrentDefaultDrive);
         AddAction(0x21, FcbRandomRead);
         AddAction(0x22, FcbRandomWrite);
@@ -1713,6 +1715,47 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
         State.AL = _dosFcbManager.FindNext(GetFcbAddress(), GetDtaAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=13h - Delete File Using FCB.
+    /// Deletes a file specified by the FCB filename pattern.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an FCB or extended FCB with filename pattern (may contain wildcards)</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h on success (even if no files matched the pattern)</para>
+    /// <para>AL = FFh if device or error</para>
+    /// </remarks>
+    private void FcbDeleteFile() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB DELETE FILE at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.DeleteFile(GetFcbAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=17h - Rename File Using FCB.
+    /// Renames a file using a special rename FCB structure.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to a rename FCB (special structure with old and new filenames)</para>
+    /// <para>Format: drive (1 byte), old name (8 bytes), old ext (3 bytes), reserved (5 bytes),</para>
+    /// <para>        new name (8 bytes), new ext (3 bytes), reserved (9 bytes)</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h on success</para>
+    /// <para>AL = FFh if file not found or error</para>
+    /// <para>Supports wildcards: '?' in new name takes character from old filename</para>
+    /// </remarks>
+    private void FcbRenameFile() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB RENAME FILE at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.RenameFile(GetFcbAddress());
     }
 
     /// <summary>
