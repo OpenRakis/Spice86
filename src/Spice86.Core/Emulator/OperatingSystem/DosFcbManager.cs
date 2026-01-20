@@ -805,10 +805,11 @@ public class DosFcbManager {
         
         int totalSizeBytes = (int)totalSizeUint;
 
-        // Check for segment wrap: ensure DTA buffer stays within 16-bit offset range
+        // Check for 64KB boundary crossing using linear DTA address
         if (totalSizeBytes > 0) {
-            uint endOffset = (uint)dtaOffset + (uint)totalSizeBytes - 1;
-            if (endOffset > 0xFFFF) {
+            uint startAddress = dtaAddress;
+            uint endAddress = dtaAddress + (uint)totalSizeBytes - 1;
+            if ((startAddress & 0xFFFF0000) != (endAddress & 0xFFFF0000)) {
                 return FcbErrorSegmentWrap;
             }
         }
