@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 
 using System.Text;
+using System.Linq;
 
 /// <summary>
 /// Implements DOS FCB (File Control Block) file operations.
@@ -146,14 +147,18 @@ public class DosFcbManager {
             _loggerService.Verbose("FCB Open File: {Path}", dosPath);
         }
 
-        string? hostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosPath);
-        if (hostPath == null || !File.Exists(hostPath)) {
-            return FcbError;
+        // Check if this is a character device first
+        bool isDevice = _dosFileManager.IsCharacterDevice(dosPath);
+
+        string? hostPath = null;
+        if (!isDevice) {
+            hostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosPath);
+            if (hostPath == null || !File.Exists(hostPath)) {
+                return FcbError;
+            }
         }
 
         try {
-            FileInfo fileInfo = new(hostPath);
-
             // Initialize FCB fields per FreeDOS behavior
             if (fcb.DriveNumber == 0) {
                 fcb.DriveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
@@ -161,9 +166,18 @@ public class DosFcbManager {
             fcb.CurrentBlock = 0;
             fcb.CurrentRecord = 0;
             fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
-            fcb.FileSize = (uint)fileInfo.Length;
-            fcb.Date = ToDosDate(fileInfo.LastWriteTime);
-            fcb.Time = ToDosTime(fileInfo.LastWriteTime);
+
+            if (!isDevice && hostPath != null) {
+                FileInfo fileInfo = new(hostPath);
+                fcb.FileSize = (uint)fileInfo.Length;
+                fcb.Date = ToDosDate(fileInfo.LastWriteTime);
+                fcb.Time = ToDosTime(fileInfo.LastWriteTime);
+            } else {
+                // Device files don't have meaningful size/date/time
+                fcb.FileSize = 0;
+                fcb.Date = 0;
+                fcb.Time = 0;
+            }
 
             // Use the DosFileManager to open the file and get a handle
             DosFileOperationResult result = _dosFileManager.OpenFileOrDevice(dosPath, FileAccessMode.ReadWrite);
@@ -352,10 +366,6 @@ public class DosFcbManager {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
         string dosPath = FcbToPath(fcb);
 
-        if (fcb.RecordSize == 0) {
-            return FcbError;
-        }
-
         string? hostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosPath);
         if (hostPath == null || !File.Exists(hostPath)) {
             return FcbError;
@@ -364,7 +374,7 @@ public class DosFcbManager {
         try {
             FileInfo fileInfo = new(hostPath);
             uint fileSize = (uint)fileInfo.Length;
-            uint recordSize = fcb.RecordSize;
+            uint recordSize = fcb.RecordSize == 0 ? DosFileControlBlock.DefaultRecordSize : fcb.RecordSize;
 
             // Set random record to the number of records (rounded up)
             fcb.RandomRecord = (fileSize + recordSize - 1) / recordSize;
@@ -379,7 +389,7 @@ public class DosFcbManager {
     /// INT 21h, AH=13h - Delete File Using FCB.
     /// </summary>
     /// <param name="fcbAddress">The address of the FCB or extended FCB.</param>
-    /// <returns>0x00 on success, 0xFF if file not found or is a device.</returns>
+    /// <returns>0x00 on success (including when no files match the pattern), 0xFF if path is invalid or is a device.</returns>
     /// <remarks>
     /// Deletes a file specified by the FCB. Supports wildcards in filename.
     /// Returns 0x00 even if no files matched the pattern.
@@ -759,12 +769,18 @@ public class DosFcbManager {
                 if (c == '*') {
                     hasWildcard = true;
                     while (ext.Length < 3) ext.Append('?');
+                    pos++; // Consume the '*' character
                     break;
                 }
                 if (c == '?') {
                     hasWildcard = true;
                 }
                 ext.Append(char.ToUpper(c));
+                pos++;
+            }
+
+            // Skip remaining extension characters if over 3
+            while (pos < filename.Length && !IsParseFieldSeparator(filename[pos])) {
                 pos++;
             }
 
@@ -956,6 +972,13 @@ public class DosFcbManager {
     /// <summary>
     /// Tracks active FCB file searches. Key is the search ID stored in the FCB reserved area.
     /// </summary>
+    /// <remarks>
+    /// Note: This dictionary can grow without bound if a program repeatedly calls FindFirst
+    /// on different FCBs and never exhausts them via FindNext. In long-running sessions,
+    /// consider adding an explicit cleanup path (e.g., when a PSP/process ends) or implementing
+    /// a bounding/eviction policy for stale searches. The current implementation relies on
+    /// ClearAllSearchState() being called during process termination to prevent unbounded growth.
+    /// </remarks>
     private readonly Dictionary<uint, FcbSearchData> _fcbActiveSearches = new();
 
     /// <summary>
@@ -1150,18 +1173,10 @@ public class DosFcbManager {
     private string? GetSearchFolder(string dosPath) {
         // Extract directory portion from path
         int lastSep = dosPath.LastIndexOfAny(new[] { '\\', '/' });
-        string directory;
-        if (lastSep >= 0) {
-            directory = dosPath[..(lastSep + 1)];
-        } else {
-            // Just a filename, search in current directory
-            int colonPos = dosPath.IndexOf(':');
-            if (colonPos >= 0) {
-                directory = dosPath[..(colonPos + 1)];
-            } else {
-                directory = ".";
-            }
-        }
+        int colonPos = dosPath.IndexOf(':');
+        string directory = lastSep >= 0
+            ? dosPath[..(lastSep + 1)]
+            : (colonPos >= 0 ? dosPath[..(colonPos + 1)] : ".");
 
         return _dosPathResolver.GetFullHostPathFromDosOrDefault(directory);
     }
@@ -1208,13 +1223,9 @@ public class DosFcbManager {
     /// Finds files matching a wildcard pattern.
     /// </summary>
     private string[] FindFilesUsingWildCmp(string searchFolder, string searchPattern, EnumerationOptions options) {
-        List<string> results = new();
-        foreach (string path in Directory.EnumerateFileSystemEntries(searchFolder, "*", options)) {
-            if (DosPathResolver.WildFileCmp(Path.GetFileName(path), searchPattern)) {
-                results.Add(path);
-            }
-        }
-        return results.ToArray();
+        return Directory.EnumerateFileSystemEntries(searchFolder, "*", options)
+            .Where(path => DosPathResolver.WildFileCmp(Path.GetFileName(path), searchPattern))
+            .ToArray();
     }
 
     /// <summary>
