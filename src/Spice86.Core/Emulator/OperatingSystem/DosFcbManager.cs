@@ -145,7 +145,7 @@ public class DosFcbManager {
     /// <param name="fcbAddress">The address of the FCB.</param>
     /// <returns>0x00 on success, 0xFF on failure.</returns>
     public byte OpenFile(uint fcbAddress) {
-        DosFileControlBlock fcb = GetFcb(fcbAddress, out byte attribute);
+        DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
         string dosPath = FcbToPath(fcb);
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -399,12 +399,6 @@ public class DosFcbManager {
             _loggerService.Verbose("FCB Delete File: {Path}, Attribute: {Attribute}", dosPath, attribute);
         }
 
-        // Get drive number
-        byte driveNumber = fcb.DriveNumber;
-        if (driveNumber == 0) {
-            driveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
-        }
-
         // Get the search folder and pattern from the FCB path
         string searchPattern = GetSearchPattern(fcb);
         string? searchFolder = GetSearchFolder(dosPath);
@@ -620,7 +614,7 @@ public class DosFcbManager {
         // Apply wildcards to name part
         StringBuilder resultName = new();
         for (int i = 0; i < newNamePart.Length && i < patternName.Length; i++) {
-            if (patternName[i] == '?') {
+            if (newNamePart[i] == '?') {
                 resultName.Append(i < oldName.Length ? oldName[i] : ' ');
             } else {
                 resultName.Append(newNamePart[i]);
@@ -635,7 +629,7 @@ public class DosFcbManager {
         // Apply wildcards to extension part
         StringBuilder resultExt = new();
         for (int i = 0; i < newExtPart.Length && i < patternExt.Length; i++) {
-            if (patternExt[i] == '?') {
+            if (newExtPart[i] == '?') {
                 resultExt.Append(i < oldExt.Length ? oldExt[i] : ' ');
             } else {
                 resultExt.Append(newExtPart[i]);
@@ -1019,9 +1013,7 @@ public class DosFcbManager {
         // Clean up any previous search state on this FCB before starting a new one
         // This prevents memory leaks when FindFirst is called multiple times on the same FCB
         uint oldSearchId = GetFcbSearchState(fcbAddress, isExtended);
-        if (oldSearchId != 0 &&
-            _fcbActiveSearches.Remove(oldSearchId) &&
-            _loggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (oldSearchId != 0 && _fcbActiveSearches.Remove(oldSearchId) && _loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("FCB Find First: Cleaned up previous search state (SearchId: {Id})", oldSearchId);
         }
 
@@ -1161,18 +1153,9 @@ public class DosFcbManager {
     private string? GetSearchFolder(string dosPath) {
         // Extract directory portion from path
         int lastSep = dosPath.LastIndexOfAny(new[] { '\\', '/' });
-        string directory;
-        if (lastSep >= 0) {
-            directory = dosPath[..(lastSep + 1)];
-        } else {
-            // Just a filename, search in current directory
-            int colonPos = dosPath.IndexOf(':');
-            if (colonPos >= 0) {
-                directory = dosPath[..(colonPos + 1)];
-            } else {
-                directory = ".";
-            }
-        }
+        string directory = lastSep >= 0
+            ? dosPath[..(lastSep + 1)]
+            : (dosPath.IndexOf(':') >= 0 ? dosPath[..(dosPath.IndexOf(':') + 1)] : ".");
 
         return _dosPathResolver.GetFullHostPathFromDosOrDefault(directory);
     }
