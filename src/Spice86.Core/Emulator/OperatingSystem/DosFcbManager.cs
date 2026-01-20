@@ -262,7 +262,8 @@ public class DosFcbManager {
     /// 0x02 if segment wrap, 0x03 if EOF after partial read.</returns>
     public byte SequentialRead(uint fcbAddress, uint dtaAddress) {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
-        return ReadWrite(fcb, dtaAddress, 1, isRead: true, isRandom: false);
+        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
+        return ReadWrite(fcb, dtaAddress, dtaOffset, 1, isRead: true, isRandom: false);
     }
 
     /// <summary>
@@ -273,7 +274,8 @@ public class DosFcbManager {
     /// <returns>0x00 on success, 0x01 if disk full, 0x02 if segment wrap.</returns>
     public byte SequentialWrite(uint fcbAddress, uint dtaAddress) {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
-        return ReadWrite(fcb, dtaAddress, 1, isRead: false, isRandom: false);
+        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
+        return ReadWrite(fcb, dtaAddress, dtaOffset, 1, isRead: false, isRandom: false);
     }
 
     /// <summary>
@@ -285,7 +287,8 @@ public class DosFcbManager {
     public byte RandomRead(uint fcbAddress, uint dtaAddress) {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
         fcb.CalculateRecordPosition();
-        return ReadWrite(fcb, dtaAddress, 1, isRead: true, isRandom: true);
+        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
+        return ReadWrite(fcb, dtaAddress, dtaOffset, 1, isRead: true, isRandom: true);
     }
 
     /// <summary>
@@ -297,7 +300,8 @@ public class DosFcbManager {
     public byte RandomWrite(uint fcbAddress, uint dtaAddress) {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
         fcb.CalculateRecordPosition();
-        return ReadWrite(fcb, dtaAddress, 1, isRead: false, isRandom: true);
+        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
+        return ReadWrite(fcb, dtaAddress, dtaOffset, 1, isRead: false, isRandom: true);
     }
 
     /// <summary>
@@ -311,8 +315,9 @@ public class DosFcbManager {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
         fcb.CalculateRecordPosition();
 
+        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
         uint oldRandom = fcb.RandomRecord;
-        byte result = ReadWrite(fcb, dtaAddress, recordCount, isRead: true, isRandom: true);
+        byte result = ReadWrite(fcb, dtaAddress, dtaOffset, recordCount, isRead: true, isRandom: true);
         recordCount = (ushort)(fcb.RandomRecord - oldRandom);
         fcb.CalculateRecordPosition();
 
@@ -335,8 +340,9 @@ public class DosFcbManager {
             return TruncateFile(fcb);
         }
 
+        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
         uint oldRandom = fcb.RandomRecord;
-        byte result = ReadWrite(fcb, dtaAddress, recordCount, isRead: false, isRandom: true);
+        byte result = ReadWrite(fcb, dtaAddress, dtaOffset, recordCount, isRead: false, isRandom: true);
         recordCount = (ushort)(fcb.RandomRecord - oldRandom);
         fcb.CalculateRecordPosition();
 
@@ -562,7 +568,7 @@ public class DosFcbManager {
 
                     // Apply wildcards: '?' in pattern copies character from source
                     string renamedFile = ApplyWildcardRename(oldFileName, oldFilePattern, newFileTemplate);
-                    string newFilePath = Path.Combine(directoryName ?? "", renamedFile);
+                    string newFilePath = Path.Join(directoryName ?? "", renamedFile);
 
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                         _loggerService.Debug("FCB Rename: {OldFile} -> {NewFile}", oldFile, newFilePath);
@@ -789,18 +795,25 @@ public class DosFcbManager {
     /// <summary>
     /// Performs FCB read/write operation.
     /// </summary>
-    private byte ReadWrite(DosFileControlBlock fcb, uint dtaAddress, ushort recordCount, bool isRead, bool isRandom) {
+    private byte ReadWrite(DosFileControlBlock fcb, uint dtaAddress, ushort dtaOffset, ushort recordCount, bool isRead, bool isRandom) {
         ushort recordSize = fcb.RecordSize;
         if (recordSize == 0) {
             recordSize = DosFileControlBlock.DefaultRecordSize;
         }
 
-        uint totalSize = (uint)recordSize * recordCount;
+        // Calculate total size with overflow check
+        uint totalSizeUint = (uint)recordSize * recordCount;
+        
+        // Validate that total size fits in int for array allocation and Stream operations
+        if (totalSizeUint > int.MaxValue) {
+            return FcbErrorNoData;
+        }
+        
+        int totalSizeBytes = (int)totalSizeUint;
 
         // Check for segment wrap: ensure DTA buffer stays within 16-bit offset range
-        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
-        if (totalSize > 0) {
-            uint endOffset = (uint)dtaOffset + totalSize - 1;
+        if (totalSizeBytes > 0) {
+            uint endOffset = (uint)dtaOffset + (uint)totalSizeBytes - 1;
             if (endOffset > 0xFFFF) {
                 return FcbErrorSegmentWrap;
             }
@@ -819,8 +832,8 @@ public class DosFcbManager {
             file.Seek(position, SeekOrigin.Begin);
 
             if (isRead) {
-                byte[] buffer = new byte[totalSize];
-                int bytesRead = file.Read(buffer, 0, (int)totalSize);
+                byte[] buffer = new byte[totalSizeBytes];
+                int bytesRead = file.Read(buffer, 0, totalSizeBytes);
 
                 if (bytesRead == 0) {
                     return FcbErrorNoData;
@@ -832,9 +845,9 @@ public class DosFcbManager {
                 }
 
                 // Pad with zeros if partial read
-                if (bytesRead < totalSize) {
-                    for (uint i = (uint)bytesRead; i < totalSize; i++) {
-                        _memory.UInt8[dtaAddress + i] = 0;
+                if (bytesRead < totalSizeBytes) {
+                    for (int i = bytesRead; i < totalSizeBytes; i++) {
+                        _memory.UInt8[dtaAddress + (uint)i] = 0;
                     }
                 }
 
@@ -845,19 +858,19 @@ public class DosFcbManager {
                     fcb.NextRecord();
                 }
 
-                if (bytesRead < totalSize) {
+                if (bytesRead < totalSizeBytes) {
                     return FcbErrorEof;
                 }
 
                 return FcbSuccess;
             } else {
                 // Write operation
-                byte[] buffer = new byte[totalSize];
-                for (uint i = 0; i < totalSize; i++) {
-                    buffer[i] = _memory.UInt8[dtaAddress + i];
+                byte[] buffer = new byte[totalSizeBytes];
+                for (int i = 0; i < totalSizeBytes; i++) {
+                    buffer[i] = _memory.UInt8[dtaAddress + (uint)i];
                 }
 
-                file.Write(buffer, 0, (int)totalSize);
+                file.Write(buffer, 0, totalSizeBytes);
 
                 // Update file size in FCB
                 long newSize = file.Position;
