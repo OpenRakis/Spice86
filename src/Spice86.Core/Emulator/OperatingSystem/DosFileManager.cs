@@ -108,7 +108,7 @@ public class DosFileManager {
     /// <returns>True if the filename matches a device name, false otherwise.</returns>
     public bool IsCharacterDevice(string fileName) {
         CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
-            .FirstOrDefault(device => device.IsName(fileName));
+            .FirstOrDefault(characterDevice => characterDevice.IsName(fileName));
         return device is not null;
     }
 

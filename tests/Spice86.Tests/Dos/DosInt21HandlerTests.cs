@@ -2,6 +2,8 @@ namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
+using NSubstitute;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.Memory;
@@ -502,6 +504,311 @@ public class DosInt21HandlerTests {
         }
     }
 
+    [Fact]
+    public void FcbCreateFile_ShouldCreateNewFile() {
+        // Arrange
+        string tempDir = CreateTempDirectory();
+        IMemory memory = CreateMemory();
+        const uint fcbAddress = 0x2000;
+        
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "NEWFILE ";
+        fcb.FileExtension = "DAT";
+        
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
+        driveManager.CurrentDrive = driveManager['C'];
+
+        try {
+            // Act
+            byte result = fcbManager.CreateFile(fcbAddress);
+
+            // Assert
+            result.Should().Be(DosFcbManager.FcbSuccess, "creation should succeed");
+            File.Exists(Path.Join(tempDir, "NEWFILE.DAT")).Should().BeTrue("file should be created on disk");
+        } finally {
+            CloseAllOpenFiles(dosFileManager);
+            CleanupTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void FcbDeleteFile_ShouldDeleteMatchingFiles() {
+        // Arrange
+        string tempDir = CreateTempDirectory();
+        File.WriteAllText(Path.Join(tempDir, "DELETE.ME"), "test content");
+        
+        IMemory memory = CreateMemory();
+        const uint fcbAddress = 0x2000;
+        
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "DELETE  ";
+        fcb.FileExtension = "ME ";
+        
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
+        driveManager.CurrentDrive = driveManager['C'];
+
+        try {
+            // Act
+            byte result = fcbManager.DeleteFile(fcbAddress);
+
+            // Assert
+            result.Should().Be(DosFcbManager.FcbSuccess, "deletion should succeed");
+            File.Exists(Path.Join(tempDir, "DELETE.ME")).Should().BeFalse("file should be deleted");
+        } finally {
+            CloseAllOpenFiles(dosFileManager);
+            CleanupTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void FcbDeleteFile_ShouldReturnErrorForDeviceName() {
+        // Arrange
+        IMemory memory = CreateMemory();
+        const uint fcbAddress = 0x2000;
+        
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "CON     ";
+        fcb.FileExtension = "   ";
+        
+        DosFcbManager fcbManager = CreateFcbManager(memory, out _, out DosFileManager dosFileManager);
+
+        try {
+            // Act
+            byte result = fcbManager.DeleteFile(fcbAddress);
+
+            // Assert
+            result.Should().Be(DosFcbManager.FcbError, "cannot delete character device");
+        } finally {
+            CloseAllOpenFiles(dosFileManager);
+        }
+    }
+
+    [Fact]
+    public void FcbRenameFile_ShouldRenameFile() {
+        // Arrange
+        string tempDir = CreateTempDirectory();
+        File.WriteAllText(Path.Join(tempDir, "OLD.TXT"), "test content");
+        
+        IMemory memory = CreateMemory();
+        const uint fcbAddress = 0x2000;
+        
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "OLD     ";
+        fcb.FileExtension = "TXT";
+        
+        // Write new name at offset 0x11 (17 bytes into FCB)
+        const uint newNameOffset = fcbAddress + 0x11;
+        WriteString(memory, newNameOffset, "NEW     TXT");
+        
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
+        driveManager.CurrentDrive = driveManager['C'];
+
+        try {
+            // Act
+            byte result = fcbManager.RenameFile(fcbAddress);
+
+            // Assert
+            result.Should().Be(DosFcbManager.FcbSuccess, "rename should succeed");
+            File.Exists(Path.Join(tempDir, "OLD.TXT")).Should().BeFalse("old file should not exist");
+            File.Exists(Path.Join(tempDir, "NEW.TXT")).Should().BeTrue("new file should exist");
+        } finally {
+            CloseAllOpenFiles(dosFileManager);
+            CleanupTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void FcbSequentialReadWrite_ShouldReadAndWriteRecords() {
+        // Arrange
+        string tempDir = CreateTempDirectory();
+        string testFile = Path.Join(tempDir, "SEQTEST.DAT");
+        
+        IMemory memory = CreateMemory();
+        const uint fcbAddress = 0x2000;
+        const uint dtaAddress = 0x3000;
+        
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "SEQTEST ";
+        fcb.FileExtension = "DAT";
+        fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
+        
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
+        driveManager.CurrentDrive = driveManager['C'];
+
+        try {
+            // Create file and write data
+            byte createResult = fcbManager.CreateFile(fcbAddress);
+            createResult.Should().Be(DosFcbManager.FcbSuccess);
+            
+            // Write test data to DTA
+            for (int i = 0; i < 128; i++) {
+                memory.UInt8[dtaAddress + (uint)i] = (byte)(i % 256);
+            }
+            
+            // Write one record
+            byte writeResult = fcbManager.SequentialWrite(fcbAddress, dtaAddress);
+            writeResult.Should().Be(DosFcbManager.FcbSuccess, "write should succeed");
+            
+            // Close and reopen
+            fcbManager.CloseFile(fcbAddress);
+            byte openResult = fcbManager.OpenFile(fcbAddress);
+            openResult.Should().Be(DosFcbManager.FcbSuccess);
+            
+            // Clear DTA
+            for (int i = 0; i < 128; i++) {
+                memory.UInt8[dtaAddress + (uint)i] = 0;
+            }
+            
+            // Read record back
+            byte readResult = fcbManager.SequentialRead(fcbAddress, dtaAddress);
+            readResult.Should().Be(DosFcbManager.FcbSuccess, "read should succeed");
+            
+            // Verify data
+            for (int i = 0; i < 128; i++) {
+                memory.UInt8[dtaAddress + (uint)i].Should().Be((byte)(i % 256), $"byte at offset {i} should match");
+            }
+        } finally {
+            CloseAllOpenFiles(dosFileManager);
+            CleanupTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void FcbRandomReadWrite_ShouldReadAndWriteAtSpecificRecord() {
+        // Arrange
+        string tempDir = CreateTempDirectory();
+        
+        IMemory memory = CreateMemory();
+        const uint fcbAddress = 0x2000;
+        const uint dtaAddress = 0x3000;
+        
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "RANDOM  ";
+        fcb.FileExtension = "DAT";
+        fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
+        
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
+        driveManager.CurrentDrive = driveManager['C'];
+
+        try {
+            // Create file
+            byte createResult = fcbManager.CreateFile(fcbAddress);
+            createResult.Should().Be(DosFcbManager.FcbSuccess);
+            
+            // Write at record 5
+            fcb.RandomRecord = 5;
+            for (int i = 0; i < 128; i++) {
+                memory.UInt8[dtaAddress + (uint)i] = (byte)0xAB;
+            }
+            
+            byte writeResult = fcbManager.RandomWrite(fcbAddress, dtaAddress);
+            writeResult.Should().Be(DosFcbManager.FcbSuccess, "random write should succeed");
+            
+            // Close and reopen
+            fcbManager.CloseFile(fcbAddress);
+            fcbManager.OpenFile(fcbAddress);
+            
+            // Clear DTA and read back record 5
+            for (int i = 0; i < 128; i++) {
+                memory.UInt8[dtaAddress + (uint)i] = 0;
+            }
+            
+            fcb.RandomRecord = 5;
+            byte readResult = fcbManager.RandomRead(fcbAddress, dtaAddress);
+            readResult.Should().Be(DosFcbManager.FcbSuccess, "random read should succeed");
+            
+            // Verify data
+            for (int i = 0; i < 128; i++) {
+                memory.UInt8[dtaAddress + (uint)i].Should().Be(0xAB, $"byte at offset {i} should be 0xAB");
+            }
+        } finally {
+            CloseAllOpenFiles(dosFileManager);
+            CleanupTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void FcbGetFileSize_ShouldCalculateRecordCount() {
+        // Arrange
+        string tempDir = CreateTempDirectory();
+        string testFile = Path.Join(tempDir, "SIZED.TXT");
+        File.WriteAllBytes(testFile, new byte[256]); // 256 bytes = 2 records
+        
+        IMemory memory = CreateMemory();
+        const uint fcbAddress = 0x2000;
+        
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "SIZED   ";
+        fcb.FileExtension = "TXT";
+        fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
+        
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
+        driveManager.CurrentDrive = driveManager['C'];
+
+        try {
+            // Act
+            byte result = fcbManager.GetFileSize(fcbAddress);
+
+            // Assert
+            result.Should().Be(DosFcbManager.FcbSuccess, "get file size should succeed");
+            fcb.RandomRecord.Should().Be(2, "256 bytes / 128 bytes per record = 2 records");
+        } finally {
+            CloseAllOpenFiles(dosFileManager);
+            CleanupTempDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public void FcbRandomBlockWrite_WithZeroRecordCount_ShouldTruncateFile() {
+        // Arrange
+        string tempDir = CreateTempDirectory();
+        
+        IMemory memory = CreateMemory();
+        const uint fcbAddress = 0x2000;
+        const uint dtaAddress = 0x3000;
+        
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "TRUNC   ";
+        fcb.FileExtension = "DAT";
+        fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
+        
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
+        driveManager.CurrentDrive = driveManager['C'];
+
+        try {
+            // Create file and write 3 records
+            fcbManager.CreateFile(fcbAddress);
+            
+            for (int i = 0; i < 128; i++) {
+                memory.UInt8[dtaAddress + (uint)i] = (byte)0xFF;
+            }
+            
+            for (int record = 0; record < 3; record++) {
+                fcbManager.SequentialWrite(fcbAddress, dtaAddress);
+            }
+            
+            // Truncate at record 1 (keep only first record) by setting random record and calling RandomBlockWrite with 0 count
+            fcb.RandomRecord = 1;
+            ushort recordCount = 0;
+            byte truncateResult = fcbManager.RandomBlockWrite(fcbAddress, dtaAddress, ref recordCount);
+            truncateResult.Should().Be(DosFcbManager.FcbSuccess, "truncate should succeed");
+            
+            // Verify file size
+            fcb.FileSize.Should().Be(128, "file should be truncated to 1 record = 128 bytes");
+        } finally {
+            CloseAllOpenFiles(dosFileManager);
+            CleanupTempDirectory(tempDir);
+        }
+    }
+
     private static Memory CreateMemory() {
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
@@ -515,7 +822,7 @@ public class DosInt21HandlerTests {
     }
 
     private static DosFcbManager CreateFcbManager(IMemory memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, string rootPath) {
-        ILoggerService logger = new Spice86.Logging.LoggerService();
+        ILoggerService logger = Substitute.For<ILoggerService>();
         string cDrivePath = rootPath;
         driveManager = new DosDriveManager(logger, cDrivePath, null);
         State state = new State(CpuModel.INTEL_80286);

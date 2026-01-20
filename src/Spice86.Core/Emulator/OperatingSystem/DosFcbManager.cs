@@ -56,7 +56,8 @@ public class DosFcbManager {
     public const byte FcbError = 0xFF;
 
     /// <summary>
-    /// FCB error code for no more data.
+    /// FCB error code used for "no more data" and other operation-specific conditions, for example
+    /// disk full on sequential write.
     /// </summary>
     public const byte FcbErrorNoData = 0x01;
 
@@ -111,6 +112,19 @@ public class DosFcbManager {
     }
 
     /// <summary>
+    /// Checks if a filename is a well-known DOS device name.
+    /// </summary>
+    /// <param name="filename">The filename to check (without drive prefix).</param>
+    /// <returns>True if the filename is a DOS device name, false otherwise.</returns>
+    private static bool IsWellKnownDeviceName(string filename) {
+        string upper = filename.ToUpperInvariant();
+        return upper == "CON" || upper == "PRN" || upper == "AUX" || upper == "NUL" ||
+               upper == "COM1" || upper == "COM2" || upper == "COM3" || upper == "COM4" ||
+               upper == "LPT1" || upper == "LPT2" || upper == "LPT3" || upper == "LPT4" ||
+               upper == "CLOCK$";
+    }
+
+    /// <summary>
     /// Converts FCB file name format to a DOS path string.
     /// </summary>
     /// <param name="fcb">The FCB containing the file name.</param>
@@ -121,8 +135,8 @@ public class DosFcbManager {
         string ext = fcb.FileExtension.TrimEnd();
         string filename = !string.IsNullOrEmpty(ext) ? $"{name}.{ext}" : name;
 
-        // Check if this matches a character device name
-        if (_dosFileManager.IsCharacterDevice(filename)) {
+        // Check if this matches a character device name (check both registered devices and well-known names)
+        if (_dosFileManager.IsCharacterDevice(filename) || IsWellKnownDeviceName(filename)) {
             return filename;
         }
 
@@ -219,8 +233,8 @@ public class DosFcbManager {
         }
 
         DosFileOperationResult result = _dosFileManager.CloseFileOrDevice(fcb.SftNumber);
-        if (result.IsError) {
-            return FcbError;
+        if (result.IsError && _loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning("FCB Close File: error closing SFT={SftNumber}, treating as success for device", fcb.SftNumber);
         }
 
         fcb.SftNumber = 0xFF;
@@ -401,6 +415,14 @@ public class DosFcbManager {
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("FCB Delete File: {Path}, Attribute: {Attribute}", dosPath, attribute);
+        }
+
+        // Check if target is a character device (FcbToPath returns device names without drive prefix)
+        if (!dosPath.Contains(':')) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("FCB Delete File: cannot delete character device {Path}", dosPath);
+            }
+            return FcbError;
         }
 
         // Get the search folder and pattern from the FCB path
@@ -905,7 +927,7 @@ public class DosFcbManager {
         }
 
         try {
-            ushort recordSize = fcb.RecordSize == 0 ? (ushort)128 : fcb.RecordSize;
+            ushort recordSize = fcb.RecordSize == 0 ? DosFileControlBlock.DefaultRecordSize : fcb.RecordSize;
             long position = (long)fcb.AbsoluteRecord * recordSize;
             file.SetLength(position);
             fcb.FileSize = (uint)position;
