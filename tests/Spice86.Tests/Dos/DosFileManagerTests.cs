@@ -212,4 +212,290 @@ public class DosFileManagerTests {
             }
         }
     }
+
+    #region FCB Tests - Based on FreeDOS kernel fcbfns.c
+
+    // FreeDOS constants from fcbfns.c
+    private const byte PARSE_SKIP_LEAD_SEP = 0x01;
+    private const byte PARSE_DFLT_DRIVE = 0x02;
+    private const byte PARSE_BLNK_FNAME = 0x04;
+    private const byte PARSE_BLNK_FEXT = 0x08;
+
+    private const byte PARSE_RET_NOWILD = 0;
+    private const byte PARSE_RET_WILD = 1;
+    private const byte PARSE_RET_BADDRIVE = 0xff;
+
+    [Fact]
+    public void FcbParseFilename_SimpleFilename_NoWildcards() {
+        // FreeDOS test: Basic filename with extension, no drive
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new(), ram, new A20Gate());
+        DosDriveManager driveManager = new DosDriveManager(Substitute.For<ILoggerService>(), MountPoint, null);
+        DosFcbManager fcbManager = new DosFcbManager(memory, dosFileManager, driveManager, Substitute.For<ILoggerService>());
+
+        const uint stringAddress = 0x1000;
+        const uint fcbAddress = 0x2000;
+        memory.SetZeroTerminatedString(stringAddress, "TEST.TXT", 9);
+        
+        byte parseControl = 0x00;
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        result.Should().Be(PARSE_RET_NOWILD, "no wildcards");
+        bytesAdvanced.Should().Be(8, "TEST.TXT is 8 chars");
+        fcb.FileName.Should().Be("TEST    ");
+        fcb.FileExtension.Should().Be("TXT");
+        fcb.DriveNumber.Should().Be(0, "default drive");
+        fcb.CurrentBlock.Should().Be(0, "FreeDOS clears fcb_cublock");
+        fcb.RecordSize.Should().Be(0, "FreeDOS clears fcb_recsiz");
+    }
+
+    [Fact]
+    public void FcbParseFilename_WithDrive_ValidDrive() {
+        // FreeDOS test: Filename with drive letter
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new(), ram, new A20Gate());
+        DosDriveManager driveManager = new DosDriveManager(Substitute.For<ILoggerService>(), MountPoint, null);
+        DosFcbManager fcbManager = new DosFcbManager(memory, dosFileManager, driveManager, Substitute.For<ILoggerService>());
+
+        const uint stringAddress = 0x1000;
+        const uint fcbAddress = 0x2000;
+        memory.SetZeroTerminatedString(stringAddress, "C:FILE.DAT", 11);
+        
+        byte parseControl = 0x00;
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        result.Should().Be(PARSE_RET_NOWILD);
+        bytesAdvanced.Should().Be(10);
+        fcb.DriveNumber.Should().Be(3, "C: = drive 3");
+        fcb.FileName.Should().Be("FILE    ");
+        fcb.FileExtension.Should().Be("DAT");
+    }
+
+    [Fact]
+    public void FcbParseFilename_InvalidDrive_ContinuesParsing() {
+        // FreeDOS test: Invalid drive returns PARSE_RET_BADDRIVE but still parses filename
+        // "Undocumented behavior: should keep parsing even if drive specification is invalid"
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new(), ram, new A20Gate());
+        DosDriveManager driveManager = new DosDriveManager(Substitute.For<ILoggerService>(), MountPoint, null);
+        DosFcbManager fcbManager = new DosFcbManager(memory, dosFileManager, driveManager, Substitute.For<ILoggerService>());
+
+        const uint stringAddress = 0x1000;
+        const uint fcbAddress = 0x2000;
+        memory.SetZeroTerminatedString(stringAddress, "Z:TEST.TXT", 11);
+        
+        byte parseControl = 0x00;
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        result.Should().Be(PARSE_RET_BADDRIVE, "invalid drive Z:");
+        bytesAdvanced.Should().Be(10);
+        fcb.DriveNumber.Should().Be(26, "Z: = drive 26 even if invalid");
+        fcb.FileName.Should().Be("TEST    ");
+        fcb.FileExtension.Should().Be("TXT");
+    }
+
+    [Fact]
+    public void FcbParseFilename_Wildcards_Asterisk() {
+        // FreeDOS test: Asterisk converts to question marks
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new(), ram, new A20Gate());
+        DosDriveManager driveManager = new DosDriveManager(Substitute.For<ILoggerService>(), MountPoint, null);
+        DosFcbManager fcbManager = new DosFcbManager(memory, dosFileManager, driveManager, Substitute.For<ILoggerService>());
+
+        const uint stringAddress = 0x1000;
+        const uint fcbAddress = 0x2000;
+        memory.SetZeroTerminatedString(stringAddress, "TEST*.*", 8);
+        
+        byte parseControl = 0x00;
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        result.Should().Be(PARSE_RET_WILD, "wildcards present");
+        fcb.FileName.Should().Be("TEST????", "* fills rest with ?");
+        fcb.FileExtension.Should().Be("???", "* fills extension with ?");
+    }
+
+    [Fact]
+    public void FcbParseFilename_Wildcards_QuestionMark() {
+        // FreeDOS test: Question marks preserved
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new(), ram, new A20Gate());
+        DosDriveManager driveManager = new DosDriveManager(Substitute.For<ILoggerService>(), MountPoint, null);
+        DosFcbManager fcbManager = new DosFcbManager(memory, dosFileManager, driveManager, Substitute.For<ILoggerService>());
+
+        const uint stringAddress = 0x1000;
+        const uint fcbAddress = 0x2000;
+        memory.SetZeroTerminatedString(stringAddress, "FI?E.T?T", 9);
+        
+        byte parseControl = 0x00;
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        result.Should().Be(PARSE_RET_WILD);
+        fcb.FileName.Should().Be("FI?E    ");
+        fcb.FileExtension.Should().Be("T?T");
+    }
+
+    [Fact]
+    public void FcbParseFilename_SkipLeadingSeparators() {
+        // FreeDOS test: PARSE_SKIP_LEAD_SEP flag
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new(), ram, new A20Gate());
+        DosDriveManager driveManager = new DosDriveManager(Substitute.For<ILoggerService>(), MountPoint, null);
+        DosFcbManager fcbManager = new DosFcbManager(memory, dosFileManager, driveManager, Substitute.For<ILoggerService>());
+
+        const uint stringAddress = 0x1000;
+        const uint fcbAddress = 0x2000;
+        memory.SetZeroTerminatedString(stringAddress, "  :;,=+ \tTEST.TXT", 18);
+        
+        byte parseControl = PARSE_SKIP_LEAD_SEP;
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        result.Should().Be(PARSE_RET_NOWILD);
+        fcb.FileName.Should().Be("TEST    ");
+        fcb.FileExtension.Should().Be("TXT");
+    }
+
+    [Fact]
+    public void FcbParseFilename_WhitespaceAlwaysSkipped() {
+        // FreeDOS test: "Undocumented feature, we skip white space anyway"
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new(), ram, new A20Gate());
+        DosDriveManager driveManager = new DosDriveManager(Substitute.For<ILoggerService>(), MountPoint, null);
+        DosFcbManager fcbManager = new DosFcbManager(memory, dosFileManager, driveManager, Substitute.For<ILoggerService>());
+
+        const uint stringAddress = 0x1000;
+        const uint fcbAddress = 0x2000;
+        memory.SetZeroTerminatedString(stringAddress, "  \t  TEST.TXT", 14);
+        
+        byte parseControl = 0x00;
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        result.Should().Be(PARSE_RET_NOWILD);
+        fcb.FileName.Should().Be("TEST    ");
+        fcb.FileExtension.Should().Be("TXT");
+    }
+
+    [Fact]
+    public void FcbParseFilename_DotAndDotDot() {
+        // FreeDOS test: Special handling for '.' and '..'
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new(), ram, new A20Gate());
+        DosDriveManager driveManager = new DosDriveManager(Substitute.For<ILoggerService>(), MountPoint, null);
+        DosFcbManager fcbManager = new DosFcbManager(memory, dosFileManager, driveManager, Substitute.For<ILoggerService>());
+
+        // Test single dot
+        const uint stringAddress1 = 0x1000;
+        const uint fcbAddress1 = 0x2000;
+        memory.SetZeroTerminatedString(stringAddress1, ".", 2);
+        
+        byte result1 = fcbManager.ParseFilename(stringAddress1, fcbAddress1, 0x00, out uint bytesAdvanced1);
+        DosFileControlBlock fcb1 = new(memory, fcbAddress1);
+        
+        result1.Should().Be(PARSE_RET_NOWILD);
+        bytesAdvanced1.Should().Be(1);
+        fcb1.FileName[0].Should().Be('.');
+        fcb1.FileName[1].Should().Be(' ');
+
+        // Test double dot
+        const uint stringAddress2 = 0x3000;
+        const uint fcbAddress2 = 0x4000;
+        memory.SetZeroTerminatedString(stringAddress2, "..", 3);
+        
+        byte result2 = fcbManager.ParseFilename(stringAddress2, fcbAddress2, 0x00, out uint bytesAdvanced2);
+        DosFileControlBlock fcb2 = new(memory, fcbAddress2);
+        
+        result2.Should().Be(PARSE_RET_NOWILD);
+        bytesAdvanced2.Should().Be(2);
+        fcb2.FileName[0].Should().Be('.');
+        fcb2.FileName[1].Should().Be('.');
+        fcb2.FileName[2].Should().Be(' ');
+    }
+
+    [Fact]
+    public void FcbParseFilename_NoExtension() {
+        // FreeDOS test: Filename without extension
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new(), ram, new A20Gate());
+        DosDriveManager driveManager = new DosDriveManager(Substitute.For<ILoggerService>(), MountPoint, null);
+        DosFcbManager fcbManager = new DosFcbManager(memory, dosFileManager, driveManager, Substitute.For<ILoggerService>());
+
+        const uint stringAddress = 0x1000;
+        const uint fcbAddress = 0x2000;
+        memory.SetZeroTerminatedString(stringAddress, "TESTFILE", 9);
+        
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, 0x00, out uint bytesAdvanced);
+
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        result.Should().Be(PARSE_RET_NOWILD);
+        fcb.FileName.Should().Be("TESTFILE");
+        fcb.FileExtension.Should().Be("   ", "no extension = spaces");
+    }
+
+    [Fact]
+    public void FcbParseFilename_UppercaseConversion() {
+        // FreeDOS test: Lowercase converted to uppercase (DosUpFChar)
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new(), ram, new A20Gate());
+        DosDriveManager driveManager = new DosDriveManager(Substitute.For<ILoggerService>(), MountPoint, null);
+        DosFcbManager fcbManager = new DosFcbManager(memory, dosFileManager, driveManager, Substitute.For<ILoggerService>());
+
+        const uint stringAddress = 0x1000;
+        const uint fcbAddress = 0x2000;
+        memory.SetZeroTerminatedString(stringAddress, "test.txt", 9);
+        
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, 0x00, out uint bytesAdvanced);
+
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        result.Should().Be(PARSE_RET_NOWILD);
+        fcb.FileName.Should().Be("TEST    ");
+        fcb.FileExtension.Should().Be("TXT");
+    }
+
+    [Fact]
+    public void FcbParseFilename_ParseControlFlags() {
+        // FreeDOS test: PARSE_BLNK_FNAME and PARSE_BLNK_FEXT flags
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new(), ram, new A20Gate());
+        DosDriveManager driveManager = new DosDriveManager(Substitute.For<ILoggerService>(), MountPoint, null);
+        DosFcbManager fcbManager = new DosFcbManager(memory, dosFileManager, driveManager, Substitute.For<ILoggerService>());
+
+        // First, set some initial values in FCB
+        const uint fcbAddress = 0x2000;
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        fcb.FileName = "OLDNAME ";
+        fcb.FileExtension = "OLD";
+
+        const uint stringAddress = 0x1000;
+        memory.SetZeroTerminatedString(stringAddress, "TEST.TXT", 9);
+        
+        // With PARSE_BLNK_FNAME | PARSE_BLNK_FEXT, should NOT clear the fields
+        byte parseControl = (byte)(PARSE_BLNK_FNAME | PARSE_BLNK_FEXT);
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out _);
+
+        fcb = new(memory, fcbAddress);
+        result.Should().Be(PARSE_RET_NOWILD);
+        fcb.FileName.Should().Be("TEST    ", "filename should still be parsed");
+        fcb.FileExtension.Should().Be("TXT", "extension should still be parsed");
+    }
+
+    #endregion
 }
+
+
