@@ -24,7 +24,7 @@
 	        <Setter Property="TextForeground" Value="{DynamicResource TextControlForeground}" />
 	        <Setter Property="BorderForeground" Value="{DynamicResource SystemControlForegroundBaseMediumHighBrush}" />
 	        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-	        <Setter Property="FontSize" Value="11" />
+	        <Setter Property="FontSize" Value="14" />
 	        <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Courier New, monospace" />
 	        <Setter Property="Padding" Value="10,6" />
 	        <Setter Property="BorderThickness" Value="1.5" />
@@ -38,8 +38,8 @@
 		
 	    <!-- Edge labels (TextBlock children of GraphPanel) -->
 	    <Style Selector="agc|GraphPanel > TextBlock">
-	        <Setter Property="FontSize" Value="10" />
-	        <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+	        <Setter Property="FontSize" Value="14" />
+	        <Setter Property="Foreground" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
 	        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltMediumHighBrush}" />
 	        <Setter Property="Padding" Value="4,2" />
 	    </Style>
