@@ -452,6 +452,14 @@ public class DosFileManager {
     }
 
     /// <summary>
+    /// Clears all active file searches (DTA search state).
+    /// Called on process termination to match FreeDOS behavior.
+    /// </summary>
+    public void ClearAllFileSearches() {
+        _activeFileSearches.Clear();
+    }
+
+    /// <summary>
     /// The offset part of the segmented address to the DTA.
     /// </summary>
     public ushort DiskTransferAreaAddressOffset => _diskTransferAreaAddressOffset;

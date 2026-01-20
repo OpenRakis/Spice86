@@ -227,10 +227,10 @@ public class DosFileManagerTests {
         memory.SetZeroTerminatedString(stringAddress, "TEST.TXT", 9);
         
         byte parseControl = 0x00;
-        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+        FcbParseResult result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
 
         DosFileControlBlock fcb = new(memory, fcbAddress);
-        result.Should().Be(DosFcbManager.PARSE_RET_NOWILD, "no wildcards");
+        result.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_NOWILD, "no wildcards");
         bytesAdvanced.Should().Be(8, "TEST.TXT is 8 chars");
         fcb.FileName.Should().Be("TEST    ");
         fcb.FileExtension.Should().Be("TXT");
@@ -253,10 +253,10 @@ public class DosFileManagerTests {
         memory.SetZeroTerminatedString(stringAddress, "C:FILE.DAT", 11);
         
         byte parseControl = 0x00;
-        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+        FcbParseResult result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
 
         DosFileControlBlock fcb = new(memory, fcbAddress);
-        result.Should().Be(DosFcbManager.PARSE_RET_NOWILD);
+        result.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_NOWILD);
         bytesAdvanced.Should().Be(10);
         fcb.DriveNumber.Should().Be(3, "C: = drive 3");
         fcb.FileName.Should().Be("FILE    ");
@@ -278,10 +278,10 @@ public class DosFileManagerTests {
         memory.SetZeroTerminatedString(stringAddress, "Z:TEST.TXT", 11);
         
         byte parseControl = 0x00;
-        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+        FcbParseResult result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
 
         DosFileControlBlock fcb = new(memory, fcbAddress);
-        result.Should().Be(DosFcbManager.PARSE_RET_BADDRIVE, "invalid drive Z:");
+        result.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_BADDRIVE, "invalid drive Z:");
         bytesAdvanced.Should().Be(10);
         fcb.DriveNumber.Should().Be(26, "Z: = drive 26 even if invalid");
         fcb.FileName.Should().Be("TEST    ");
@@ -302,10 +302,10 @@ public class DosFileManagerTests {
         memory.SetZeroTerminatedString(stringAddress, "TEST*.*", 8);
         
         byte parseControl = 0x00;
-        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+        FcbParseResult result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
 
         DosFileControlBlock fcb = new(memory, fcbAddress);
-        result.Should().Be(DosFcbManager.PARSE_RET_WILD, "wildcards present");
+        result.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_WILD, "wildcards present");
         fcb.FileName.Should().Be("TEST????", "* fills rest with ?");
         fcb.FileExtension.Should().Be("???", "* fills extension with ?");
     }
@@ -324,10 +324,10 @@ public class DosFileManagerTests {
         memory.SetZeroTerminatedString(stringAddress, "FI?E.T?T", 9);
         
         byte parseControl = 0x00;
-        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+        FcbParseResult result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
 
         DosFileControlBlock fcb = new(memory, fcbAddress);
-        result.Should().Be(DosFcbManager.PARSE_RET_WILD);
+        result.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_WILD);
         fcb.FileName.Should().Be("FI?E    ");
         fcb.FileExtension.Should().Be("T?T");
     }
@@ -346,10 +346,10 @@ public class DosFileManagerTests {
         memory.SetZeroTerminatedString(stringAddress, "  :;,=+ \tTEST.TXT", 18);
         
         byte parseControl = DosFcbManager.PARSE_SKIP_LEAD_SEP;
-        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+        FcbParseResult result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
 
         DosFileControlBlock fcb = new(memory, fcbAddress);
-        result.Should().Be(DosFcbManager.PARSE_RET_NOWILD);
+        result.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_NOWILD);
         fcb.FileName.Should().Be("TEST    ");
         fcb.FileExtension.Should().Be("TXT");
     }
@@ -368,10 +368,10 @@ public class DosFileManagerTests {
         memory.SetZeroTerminatedString(stringAddress, "  \t  TEST.TXT", 14);
         
         byte parseControl = 0x00;
-        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
+        FcbParseResult result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
 
         DosFileControlBlock fcb = new(memory, fcbAddress);
-        result.Should().Be(DosFcbManager.PARSE_RET_NOWILD);
+        result.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_NOWILD);
         fcb.FileName.Should().Be("TEST    ");
         fcb.FileExtension.Should().Be("TXT");
     }
@@ -390,10 +390,10 @@ public class DosFileManagerTests {
         const uint fcbAddress1 = 0x2000;
         memory.SetZeroTerminatedString(stringAddress1, ".", 2);
         
-        byte result1 = fcbManager.ParseFilename(stringAddress1, fcbAddress1, 0x00, out uint bytesAdvanced1);
+        FcbParseResult result1 = fcbManager.ParseFilename(stringAddress1, fcbAddress1, 0x00, out uint bytesAdvanced1);
         DosFileControlBlock fcb1 = new(memory, fcbAddress1);
         
-        result1.Should().Be(DosFcbManager.PARSE_RET_NOWILD);
+        result1.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_NOWILD);
         bytesAdvanced1.Should().Be(1);
         fcb1.FileName[0].Should().Be('.');
         fcb1.FileName[1].Should().Be(' ');
@@ -403,10 +403,10 @@ public class DosFileManagerTests {
         const uint fcbAddress2 = 0x4000;
         memory.SetZeroTerminatedString(stringAddress2, "..", 3);
         
-        byte result2 = fcbManager.ParseFilename(stringAddress2, fcbAddress2, 0x00, out uint bytesAdvanced2);
+        FcbParseResult result2 = fcbManager.ParseFilename(stringAddress2, fcbAddress2, 0x00, out uint bytesAdvanced2);
         DosFileControlBlock fcb2 = new(memory, fcbAddress2);
         
-        result2.Should().Be(DosFcbManager.PARSE_RET_NOWILD);
+        result2.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_NOWILD);
         bytesAdvanced2.Should().Be(2);
         fcb2.FileName[0].Should().Be('.');
         fcb2.FileName[1].Should().Be('.');
@@ -426,10 +426,10 @@ public class DosFileManagerTests {
         const uint fcbAddress = 0x2000;
         memory.SetZeroTerminatedString(stringAddress, "TESTFILE", 9);
         
-        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, 0x00, out uint bytesAdvanced);
+        FcbParseResult result = fcbManager.ParseFilename(stringAddress, fcbAddress, 0x00, out uint bytesAdvanced);
 
         DosFileControlBlock fcb = new(memory, fcbAddress);
-        result.Should().Be(DosFcbManager.PARSE_RET_NOWILD);
+        result.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_NOWILD);
         fcb.FileName.Should().Be("TESTFILE");
         fcb.FileExtension.Should().Be("   ", "no extension = spaces");
     }
@@ -447,10 +447,10 @@ public class DosFileManagerTests {
         const uint fcbAddress = 0x2000;
         memory.SetZeroTerminatedString(stringAddress, "test.txt", 9);
         
-        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, 0x00, out uint bytesAdvanced);
+        FcbParseResult result = fcbManager.ParseFilename(stringAddress, fcbAddress, 0x00, out uint bytesAdvanced);
 
         DosFileControlBlock fcb = new(memory, fcbAddress);
-        result.Should().Be(DosFcbManager.PARSE_RET_NOWILD);
+        result.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_NOWILD);
         fcb.FileName.Should().Be("TEST    ");
         fcb.FileExtension.Should().Be("TXT");
     }
@@ -475,10 +475,10 @@ public class DosFileManagerTests {
         
         // With PARSE_BLNK_FNAME | PARSE_BLNK_FEXT, should NOT clear the fields
         byte parseControl = (byte)(DosFcbManager.PARSE_BLNK_FNAME | DosFcbManager.PARSE_BLNK_FEXT);
-        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out _);
+        FcbParseResult result = fcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out _);
 
         fcb = new(memory, fcbAddress);
-        result.Should().Be(DosFcbManager.PARSE_RET_NOWILD);
+        result.Should().Be((FcbParseResult)DosFcbManager.PARSE_RET_NOWILD);
         fcb.FileName.Should().Be("TEST    ", "filename should still be parsed");
         fcb.FileExtension.Should().Be("TXT", "extension should still be parsed");
     }
