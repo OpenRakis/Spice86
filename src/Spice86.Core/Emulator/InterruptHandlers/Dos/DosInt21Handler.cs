@@ -1014,6 +1014,9 @@ public class DosInt21Handler : InterruptHandler {
                 paragraphsToKeep, errorCode);
         }
 
+        // Clear FCB search state before terminating
+        _dosFcbManager.ClearAllSearchState();
+
         _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR);
     }
 
@@ -1398,6 +1401,10 @@ public class DosInt21Handler : InterruptHandler {
         } else if (LoggerService.IsEnabled(LogEventLevel.Information)) {
             LoggerService.Information("INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2}", exitCode);
         }
+        
+        // Clear FCB search state before terminating
+        _dosFcbManager.ClearAllSearchState();
+        
         _dosProcessManager.TerminateProcess(exitCode, terminationType);
     }
 
@@ -1950,10 +1957,10 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>DS:SI = pointer to filename string to parse</para>
     /// <para>ES:DI = pointer to FCB to fill</para>
     /// <para>AL = parsing control byte:</para>
-    /// <para>  bit 0: skip leading separators</para>
-    /// <para>  bit 1: set default drive if not specified</para>
-    /// <para>  bit 2: blank filename if not specified</para>
-    /// <para>  bit 3: blank extension if not specified</para>
+    /// <para>  bit 0: when set, skip leading separators</para>
+    /// <para>  bit 1: when clear, set default drive if not specified; when set, do not change drive</para>
+    /// <para>  bit 2: when clear, blank filename if not specified; when set, leave filename unchanged</para>
+    /// <para>  bit 3: when clear, blank extension if not specified; when set, leave extension unchanged</para>
     /// <para><b>Returns:</b></para>
     /// <para>AL = 00h if no wildcards, 01h if wildcards present, FFh if invalid drive</para>
     /// <para>DS:SI = pointer to first byte after parsed filename</para>
