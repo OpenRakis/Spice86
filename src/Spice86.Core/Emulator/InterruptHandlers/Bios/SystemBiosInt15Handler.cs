@@ -97,7 +97,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// </remarks>
     public void DosVFontSubsystemAccess(bool calledFromVm) {
         SetCarryFlag(true, calledFromVm);
-        //Makes Knigths of Xentar work on MS-DOS (Western port for IBM PC)
+        //Makes Knights of Xentar work on MS-DOS (Western port for IBM PC)
         State.AH = 0; //Unsupported function (PC AT)
     }
 
