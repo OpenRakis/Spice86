@@ -1153,9 +1153,18 @@ public class DosFcbManager {
     private string? GetSearchFolder(string dosPath) {
         // Extract directory portion from path
         int lastSep = dosPath.LastIndexOfAny(new[] { '\\', '/' });
-        string directory = lastSep >= 0
-            ? dosPath[..(lastSep + 1)]
-            : (dosPath.IndexOf(':') >= 0 ? dosPath[..(dosPath.IndexOf(':') + 1)] : ".");
+        string directory;
+        if (lastSep >= 0) {
+            directory = dosPath[..(lastSep + 1)];
+        } else {
+            // Just a filename, search in current directory
+            int colonPos = dosPath.IndexOf(':');
+            if (colonPos >= 0) {
+                directory = dosPath[..(colonPos + 1)];
+            } else {
+                directory = ".";
+            }
+        }
 
         return _dosPathResolver.GetFullHostPathFromDosOrDefault(directory);
     }
