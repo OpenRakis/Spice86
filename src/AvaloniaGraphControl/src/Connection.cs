@@ -10,7 +10,7 @@ namespace AvaloniaGraphControl
 {
   public class Connection : Control
   {
-    public static readonly StyledProperty<IBrush> BrushProperty = AvaloniaProperty.Register<Connection, IBrush>(nameof(Brush), Brushes.Black);
+    public static readonly StyledProperty<IBrush> BrushProperty = AvaloniaProperty.Register<Connection, IBrush>(nameof(Brush), Brushes.DarkGray);
     public IBrush Brush
     {
       get => GetValue(BrushProperty);

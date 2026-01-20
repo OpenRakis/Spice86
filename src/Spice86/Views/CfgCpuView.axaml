@@ -16,8 +16,33 @@
 		<viewModels:CfgCpuViewModel />
 	</Design.DataContext>
 	
-	<UserControl.Styles>
-    	<StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+    <UserControl.Styles>
+	    <StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+		
+	    <!-- Node boxes styling -->
+	    <Style Selector="agc|TextSticker">
+	        <Setter Property="TextForeground" Value="{DynamicResource TextControlForeground}" />
+	        <Setter Property="BorderForeground" Value="{DynamicResource SystemControlForegroundBaseMediumHighBrush}" />
+	        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+	        <Setter Property="FontSize" Value="11" />
+	        <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Courier New, monospace" />
+	        <Setter Property="Padding" Value="10,6" />
+	        <Setter Property="BorderThickness" Value="1.5" />
+	        <Setter Property="BorderRadius" Value="4" />
+	    </Style>
+		
+	    <!-- Edge lines styling -->
+	    <Style Selector="agc|Connection">
+	    <Setter Property="Brush" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+	    </Style>
+		
+	    <!-- Edge labels (TextBlock children of GraphPanel) -->
+	    <Style Selector="agc|GraphPanel > TextBlock">
+	        <Setter Property="FontSize" Value="10" />
+	        <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+	        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltMediumHighBrush}" />
+	        <Setter Property="Padding" Value="4,2" />
+	    </Style>
 	</UserControl.Styles>
 	
 	<Grid RowDefinitions="Auto,Auto,*,Auto">
@@ -29,10 +54,10 @@
 			</StackPanel>
 			<StackPanel Grid.Column="2" Margin="5" Orientation="Horizontal">
 				<TextBlock VerticalAlignment="Center">Max nodes:</TextBlock>
-				<NumericUpDown Margin="5,0,0,0" VerticalAlignment="Center" 
-                               Value="{Binding MaxNodesToDisplay}" 
-                               FormatString="0" Minimum="0" Maximum="1000" 
-                               Width="80" />
+				<NumericUpDown  Margin="5,0,0,0" VerticalAlignment="Center" 
+                                Value="{Binding MaxNodesToDisplay}" 
+                                FormatString="0" Minimum="0" Maximum="1000" 
+                                Width="80" />
 			</StackPanel>
 			<CheckBox Grid.Column="3" Margin="5" Content="Auto-follow execution" IsChecked="{Binding AutoFollow}" />
 		</Grid>
@@ -88,7 +113,7 @@
                         
                     <!-- Graph display -->
                     <ScrollViewer IsVisible="{Binding !IsLoading}" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
-                        <Border Background="White">
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
                             <ZoomBorder 
                                 Name="ZoomBorder"
                                 ToolTip.Tip="Middle click to pan, mouse wheel to zoom/dezoom"
@@ -174,7 +199,13 @@
 		<Grid Grid.Row="3" ColumnDefinitions="*,Auto">
 			<TextBlock Grid.Column="0" Margin="5" Text="{Binding StatusMessage}" />
 			
-			<Border Grid.Column="1" Background="#AAFFFFFF" CornerRadius="3" Padding="5" Margin="0,5,5,5">
+            <Border Grid.Column="1" 
+			Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" 
+			BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+			BorderThickness="1"
+			CornerRadius="4" 
+			Padding="8,4" 
+			Margin="0,5,5,5">
 				<StackPanel Orientation="Horizontal" Spacing="8">
 					<TextBlock Text="🔴 Last run" />
 					<TextBlock Text="→ Jump" />

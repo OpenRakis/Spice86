@@ -7,8 +7,8 @@ namespace AvaloniaGraphControl
 {
   public class TextSticker : Control
   {
-    public static readonly StyledProperty<IBrush> BackgroundProperty = AvaloniaProperty.Register<TextSticker, IBrush>(nameof(Background), Brushes.Transparent);
-    public static readonly StyledProperty<IBrush> BorderForegroundProperty = AvaloniaProperty.Register<TextSticker, IBrush>(nameof(BorderForeground), Brushes.Black);
+    public static readonly StyledProperty<IBrush> BackgroundProperty = AvaloniaProperty.Register<TextSticker, IBrush>(nameof(Background), Brushes.White);
+    public static readonly StyledProperty<IBrush> BorderForegroundProperty = AvaloniaProperty.Register<TextSticker, IBrush>(nameof(BorderForeground), Brushes.Gray);
     public static readonly StyledProperty<IBrush> TextForegroundProperty = AvaloniaProperty.Register<TextSticker, IBrush>(nameof(TextForeground), Brushes.Black);
     public static readonly StyledProperty<double> BorderThicknessProperty = AvaloniaProperty.Register<TextSticker, double>(nameof(BorderThickness), 1);
     public static readonly StyledProperty<double> BorderRadiusProperty = AvaloniaProperty.Register<TextSticker, double>(nameof(BorderRadius), 3);
