@@ -515,7 +515,7 @@ public class DosInt21HandlerTests {
     }
 
     private static string CreateTempDirectory() {
-        string tempPath = Path.Join(Path.GetTempPath(), "Spice86_FCB_Tests_" + Guid.NewGuid().ToString());
+        string tempPath = Path.Join(Path.GetTempPath(), "Spice86_FCB_Tests_" + Guid.NewGuid());
         Directory.CreateDirectory(tempPath);
         return tempPath;
     }
