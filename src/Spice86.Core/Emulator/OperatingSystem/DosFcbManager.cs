@@ -1330,6 +1330,20 @@ public class DosFcbManager {
     }
 
     /// <summary>
+    /// Clears all active FCB search state.
+    /// </summary>
+    /// <remarks>
+    /// This method should be called when a process terminates to prevent unbounded growth
+    /// of _fcbActiveSearches dictionary in long-running sessions.
+    /// </remarks>
+    public void ClearAllSearchState() {
+        if (_fcbActiveSearches.Count > 0 && _loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("FCB: Clearing {Count} active search state entries", _fcbActiveSearches.Count);
+        }
+        _fcbActiveSearches.Clear();
+    }
+
+    /// <summary>
     /// Converts .NET FileAttributes to DOS file attributes.
     /// </summary>
     /// <remarks>
