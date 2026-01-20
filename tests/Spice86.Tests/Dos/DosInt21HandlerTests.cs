@@ -140,6 +140,32 @@ public class DosInt21HandlerTests {
     }
 
     [Fact]
+    public void FcbParseFilename_ShouldHandleLongExtension() {
+        // Arrange
+        IMemory memory = CreateMemory();
+        const uint stringAddress = 0x1000;
+        const uint fcbAddress = 0x2000;
+        const string filename = "FILE.LONGEXT";
+        
+        WriteString(memory, stringAddress, filename);
+        
+        DosFcbManager fcbManager = CreateFcbManager(memory, out _, out DosFileManager dosFileManager);
+
+        // Act
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, 0x00, out uint bytesAdvanced);
+
+        // Assert
+        result.Should().Be(DosFcbManager.FcbSuccess);
+        bytesAdvanced.Should().Be((uint)filename.Length, "bytesAdvanced should advance past the entire extension");
+        
+        DosFileControlBlock fcb = new(memory, fcbAddress);
+        fcb.FileName.Should().Be("FILE    ");
+        fcb.FileExtension.Should().Be("LON", "extension should be truncated to 3 characters");
+        
+        CloseAllOpenFiles(dosFileManager);
+    }
+
+    [Fact]
     public void FcbParseFilename_ShouldDetectWildcards() {
         // Arrange
         IMemory memory = CreateMemory();
@@ -483,9 +509,14 @@ public class DosInt21HandlerTests {
         return new Memory(memoryBreakpoints, ram, a20Gate);
     }
 
-    private static DosFcbManager CreateFcbManager(IMemory memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, string? rootPath = null) {
+    private static DosFcbManager CreateFcbManager(IMemory memory, out DosDriveManager driveManager, out DosFileManager dosFileManager) {
+        string cDrivePath = Path.GetTempPath();
+        return CreateFcbManager(memory, out driveManager, out dosFileManager, cDrivePath);
+    }
+
+    private static DosFcbManager CreateFcbManager(IMemory memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, string rootPath) {
         ILoggerService logger = new Spice86.Logging.LoggerService();
-        string cDrivePath = rootPath ?? Path.GetTempPath();
+        string cDrivePath = rootPath;
         driveManager = new DosDriveManager(logger, cDrivePath, null);
         State state = new State(CpuModel.INTEL_80286);
         DosStringDecoder stringDecoder = new(memory, state);
