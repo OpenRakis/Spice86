@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 using Serilog.Events;
@@ -61,7 +62,6 @@ public class DosFcbManager {
         
         int pos = 0;
         bool retCodeDrive = false;
-        bool retCodeName = false;
         bool retCodeExt = false;
 
         // Skip leading separators if requested
@@ -132,8 +132,8 @@ public class DosFcbManager {
 
         // Parse filename field
         int nameStart = pos;
-        (pos, retCodeName) = GetNameField(filename, pos, 8);
-        fcb.FileName = ExtractAndPadField(filename, nameStart, pos, 8, retCodeName);
+        (pos, bool hasWildcardName) = GetNameField(filename, pos, 8);
+        fcb.FileName = ExtractAndPadField(filename, nameStart, pos, 8, hasWildcardName);
 
         // Parse extension if present
         if (pos < filename.Length && filename[pos] == '.') {
@@ -150,7 +150,7 @@ public class DosFcbManager {
             return FcbParseResult.InvalidDrive;
         }
 
-        if (retCodeName || retCodeExt) {
+        if (hasWildcardName || retCodeExt) {
             return FcbParseResult.WildcardsPresent;
         }
 
@@ -207,6 +207,12 @@ public class DosFcbManager {
             }
             
             index++;
+            pos++;
+        }
+
+        // FreeDOS: After reading fieldSize characters, continue advancing until we hit a separator
+        // This ensures pos points to the separator (like '.') and not a character we skipped
+        while (pos < filename.Length && !TestFieldSeps(filename[pos])) {
             pos++;
         }
 
@@ -269,7 +275,7 @@ public class DosFcbManager {
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> indicating success or failure.</returns>
     public FcbStatus OpenFile(uint fcbAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         string fileSpec = fcb.FullFileName;
         if (string.IsNullOrWhiteSpace(fileSpec)) {
@@ -288,6 +294,9 @@ public class DosFcbManager {
         if (fcb.RecordSize == 0) {
             fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
         }
+        // Reset block/record pointers on open (FreeDOS behavior)
+        fcb.CurrentBlock = 0;
+        fcb.CurrentRecord = 0;
         TrackFcbHandle(handle);
         LogFcbDebug("OPEN", baseAddr, fileSpec, FcbStatus.Success);
         return FcbStatus.Success;
@@ -299,7 +308,7 @@ public class DosFcbManager {
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> indicating success or failure.</returns>
     public FcbStatus CloseFile(uint fcbAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
         if (handle == 0) {
@@ -323,7 +332,7 @@ public class DosFcbManager {
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> indicating success or failure.</returns>
     public FcbStatus CreateFile(uint fcbAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         string fileSpec = fcb.FullFileName;
         if (string.IsNullOrWhiteSpace(fileSpec)) {
@@ -354,7 +363,7 @@ public class DosFcbManager {
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus SequentialRead(uint fcbAddress, uint dtaAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
         if (handle == 0) {
@@ -402,7 +411,7 @@ public class DosFcbManager {
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus SequentialWrite(uint fcbAddress, uint dtaAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
         if (handle == 0) {
@@ -446,7 +455,7 @@ public class DosFcbManager {
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus RandomRead(uint fcbAddress, uint dtaAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
         if (handle == 0) {
@@ -493,7 +502,7 @@ public class DosFcbManager {
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus RandomWrite(uint fcbAddress, uint dtaAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
         if (handle == 0) {
@@ -538,7 +547,7 @@ public class DosFcbManager {
     /// <param name="recordCount">On input, requested record count; on output, number actually read.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus RandomBlockRead(uint fcbAddress, uint dtaAddress, ref ushort recordCount) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
         if (handle == 0) {
@@ -586,7 +595,7 @@ public class DosFcbManager {
     /// <param name="recordCount">On input, requested record count; on output, number actually written.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus RandomBlockWrite(uint fcbAddress, uint dtaAddress, ref ushort recordCount) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
         if (handle == 0) {
@@ -652,7 +661,7 @@ public class DosFcbManager {
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus GetFileSize(uint fcbAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         string fileSpec = fcb.FullFileName;
         if (string.IsNullOrWhiteSpace(fileSpec)) {
@@ -686,7 +695,7 @@ public class DosFcbManager {
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus DeleteFile(uint fcbAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         string pattern = fcb.FullFileName;
         if (string.IsNullOrWhiteSpace(pattern)) {
@@ -722,11 +731,14 @@ public class DosFcbManager {
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus RenameFile(uint fcbAddress) {
         // Special FCB layout for rename: old name/ext then new name/ext in reserved region
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
 
         string oldName = GetRenameOldName(fcb);
         string newPattern = GetRenameNewName(baseAddr);
+        
+        LogFcbDebug("RENAME START", baseAddr, $"Pattern: {oldName} -> {newPattern}", FcbStatus.Success);
+        
         if (string.IsNullOrWhiteSpace(oldName) || string.IsNullOrWhiteSpace(newPattern)) {
             LogFcbWarning("RENAME", baseAddr, "Missing old/new names");
             return FcbStatus.Error;
@@ -734,38 +746,85 @@ public class DosFcbManager {
 
         DosFileOperationResult ff = _dosFileManager.FindFirstMatchingFile(oldName, 0);
         if (ff.IsError) {
+            LogFcbWarning("RENAME", baseAddr, $"FindFirst failed for pattern: {oldName}");
             return FcbStatus.Error;
         }
+        
+        // Collect all files to rename first (can't modify directory while enumerating)
+        List<(string source, string dest)> filesToRename = new List<(string, string)>();
+        HashSet<string> seenSources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> seenDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         while (true) {
             DosDiskTransferArea dta = new DosDiskTransferArea(_memory, MemoryUtils.ToPhysicalAddress(
                 _dosFileManager.DiskTransferAreaAddressSegment, _dosFileManager.DiskTransferAreaAddressOffset));
             string sourceDos = dta.FileName;
             string destDos = ApplyWildcardRename(sourceDos, newPattern);
-            try {
-                string? srcHost = _dosFileManager.TryGetFullHostPathFromDos(sourceDos);
-                string? dstHost = _dosFileManager.TryGetFullHostPathFromDos(destDos);
-                if (!string.IsNullOrWhiteSpace(srcHost) && !string.IsNullOrWhiteSpace(dstHost)) {
-                    File.Move(srcHost, dstHost);
-                } else {
-                    LogFcbWarning("RENAME", baseAddr, "Unable to resolve host paths");
-                    return FcbStatus.Error;
-                }
-            } catch (IOException) {
-                LogFcbWarning("RENAME", baseAddr, "IOException during rename");
+            
+            LogFcbDebug("RENAME FILE", baseAddr, $"{sourceDos} -> {destDos}", FcbStatus.Success);
+            
+            string? srcHost = _dosFileManager.TryGetFullHostPathFromDos(sourceDos);
+            if (string.IsNullOrWhiteSpace(srcHost)) {
+                LogFcbWarning("RENAME", baseAddr, $"Unable to resolve source path: {sourceDos}");
                 return FcbStatus.Error;
             }
+            
+            // Skip duplicates (same file with different case)
+            if (seenSources.Contains(srcHost)) {
+                LogFcbDebug("RENAME SKIP", baseAddr, $"Already collected: {srcHost}", FcbStatus.Success);
+                DosFileOperationResult next = _dosFileManager.FindNextMatchingFile();
+                if (next.IsError) {
+                    break;
+                }
+                continue;
+            }
+            seenSources.Add(srcHost);
+            
+            // For destination, construct path in same directory as source
+            string? srcDir = Path.GetDirectoryName(srcHost);
+            if (string.IsNullOrWhiteSpace(srcDir)) {
+                LogFcbWarning("RENAME", baseAddr, $"Unable to get source directory: {srcHost}");
+                return FcbStatus.Error;
+            }
+            string dstHost = Path.Combine(srcDir, destDos);
+            
+            if (!File.Exists(srcHost)) {
+                LogFcbWarning("RENAME", baseAddr, $"Source does not exist: {srcHost}");
+                return FcbStatus.Error;
+            }
+            
+            if (File.Exists(dstHost)) {
+                LogFcbWarning("RENAME", baseAddr, $"Destination exists: {dstHost}");
+                return FcbStatus.Error;
+            }
+            
+            // Skip if this destination already appears in the rename list (wildcard conflict)
+            if (seenDestinations.Contains(dstHost)) {
+                LogFcbWarning("RENAME", baseAddr, $"Destination conflict in pattern: {dstHost}");
+                return FcbStatus.Error;
+            }
+            seenDestinations.Add(dstHost);
+            
+            filesToRename.Add((srcHost, dstHost));
 
             DosFileOperationResult nx = _dosFileManager.FindNextMatchingFile();
             if (nx.IsError) {
                 break;
             }
         }
-        LogFcbDebug("RENAME", baseAddr, oldName + "->" + newPattern, FcbStatus.Success);
+        
+        // Now rename all collected files
+        int renameCount = 0;
+        foreach ((string srcHost, string dstHost) in filesToRename) {
+            LogFcbDebug("RENAME EXECUTE", baseAddr, $"Moving {srcHost} to {dstHost}", FcbStatus.Success);
+            File.Move(srcHost, dstHost);
+            renameCount++;
+        }
+        LogFcbDebug("RENAME", baseAddr, $"{oldName} -> {newPattern} ({renameCount} files)", FcbStatus.Success);
         return FcbStatus.Success;
     }
 
     public void SetRandomRecordNumber(uint fcbAddress) {
-        uint fcbBase = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint fcbBase = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, fcbBase);
         uint absoluteRecord = (uint)(fcb.CurrentBlock * 128 + fcb.CurrentRecord);
         fcb.RandomRecord = absoluteRecord;
@@ -778,7 +837,7 @@ public class DosFcbManager {
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus FindFirst(uint fcbAddress, uint dtaAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress, out _);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         string pattern = fcb.FullFileName;
         DosFileOperationResult result = _dosFileManager.FindFirstMatchingFile(pattern, 0);
@@ -801,6 +860,37 @@ public class DosFcbManager {
     }
 
     /// <summary>
+    /// Reads one record sequentially from an FCB-opened file.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA where data will be written.</param>
+    /// <returns><see cref="FcbStatus"/> indicating success, EOF, or error.</returns>
+    public FcbStatus ReadSequentialRecord(uint fcbAddress, uint dtaAddress) {
+        return SequentialRead(fcbAddress, dtaAddress);
+    }
+
+    /// <summary>
+    /// Writes one record sequentially to an FCB-opened file.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA containing data to write.</param>
+    /// <returns><see cref="FcbStatus"/> indicating success or error.</returns>
+    public FcbStatus WriteSequentialRecord(uint fcbAddress, uint dtaAddress) {
+        return SequentialWrite(fcbAddress, dtaAddress);
+    }
+
+    /// <summary>
+    /// Sets the random record field from the current block and record fields.
+    /// FreeDOS: FcbSetRandom (fcbfns.c line 320).
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    public void SetRandomRecord(uint fcbAddress) {
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
+        DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
+        fcb.SetRandomFromPosition();
+    }
+
+    /// <summary>
     /// Clears all DTA search state (FindFirst/FindNext) entries.
     /// </summary>
     public void ClearAllSearchState() {
@@ -820,8 +910,7 @@ public class DosFcbManager {
         _trackedFcbHandles.Clear();
     }
 
-    private uint GetActualFcbBaseAddress(uint fcbAddress, out byte attribute) {
-        attribute = 0;
+    private uint GetActualFcbBaseAddress(uint fcbAddress) {
         // Extended FCB detection via drive marker 0xFF
         DosFileControlBlock probe = new DosFileControlBlock(_memory, fcbAddress);
         if (probe.DriveNumber == 0xFF) {
@@ -830,36 +919,104 @@ public class DosFcbManager {
         return fcbAddress;
     }
 
-    private static string GetRenameOldName(DosFileControlBlock fcb) {
-        // Offsets: 0x01..0x08 name, 0x09..0x0B ext
-        string name = fcb.FullFileName;
+    private static string ConvertFcbPatternToDosPattern(string fcbName, string fcbExt) {
+        // This implements FreeDOS ConvertName83ToNameSZ() behavior from fatdir.c
+        // FCB fields are space-padded (8 chars name, 3 chars extension)
+        // Convert to DOS pattern: "NAME    EXT" -> "NAME.EXT" or just "NAME" if no ext
+        
+        // Special case: '.' and '..' have no extension even if ext field is not empty
+        bool noExtension = fcbName.Length > 0 && fcbName[0] == '.';
+        
+        // Trim trailing spaces from name
+        int nameEnd = fcbName.Length - 1;
+        while (nameEnd >= 0 && fcbName[nameEnd] == ' ') {
+            nameEnd--;
+        }
+        string name = nameEnd >= 0 ? fcbName.Substring(0, nameEnd + 1) : "";
+        
+        if (noExtension) {
+            return name;
+        }
+        
+        // Trim trailing spaces from extension
+        int extEnd = fcbExt.Length - 1;
+        while (extEnd >= 0 && fcbExt[extEnd] == ' ') {
+            extEnd--;
+        }
+        
+        // Only add extension if there are non-space chars
+        if (extEnd >= 0) {
+            string ext = fcbExt.Substring(0, extEnd + 1);
+            return $"{name}.{ext}";
+        }
+        
         return name;
+    }
+    
+    private string GetRenameOldName(DosFileControlBlock fcb) {
+        // Build DOS search pattern from FCB fields
+        // DriveNumber: 0=default, 1=A, 2=B, etc.
+        string pattern = ConvertFcbPatternToDosPattern(fcb.FileName, fcb.FileExtension);
+        
+        // Add drive prefix if specified
+        if (fcb.DriveNumber > 0) {
+            char driveLetter = (char)('A' + fcb.DriveNumber - 1);
+            return $"{driveLetter}:{pattern}";
+        }
+        return pattern;
     }
 
     private string GetRenameNewName(uint fcbBaseAddress) {
+        // Read new name and extension fields (space-padded, 8.3 format)
         string newNameField = ReadSpacePaddedField(fcbBaseAddress, RenameNewNameOffset, DosFileControlBlock.FileNameSize);
         string newExtField = ReadSpacePaddedField(fcbBaseAddress, RenameNewExtensionOffset, DosFileControlBlock.FileExtensionSize);
-        string trimmedName = newNameField.TrimEnd();
-        string trimmedExt = newExtField.TrimEnd();
-        if (string.IsNullOrWhiteSpace(trimmedName)) {
-            return string.Empty;
-        }
-        return string.IsNullOrWhiteSpace(trimmedExt) ? trimmedName : trimmedName + "." + trimmedExt;
+        
+        // Keep the fields in their FCB format for wildcard processing
+        // Don't trim yet - we need to preserve space-padding for proper substitution
+        return $"{newNameField}|{newExtField}"; // Use delimiter to split later
     }
 
-    private static string ApplyWildcardRename(string oldName, string newPattern) {
-        // Apply '?' substitution: copy from oldName when '?' in pattern
+    private static string ApplyWildcardRename(string oldName, string newPatternWithDelimiter) {
+        // Parse old name into 8.3 FCB format
         int dotOld = oldName.IndexOf('.');
         string oldBase = dotOld >= 0 ? oldName[..dotOld] : oldName;
         string oldExt = dotOld >= 0 ? oldName[(dotOld + 1)..] : string.Empty;
-
-        int dotNew = newPattern.IndexOf('.');
-        string newBasePat = dotNew >= 0 ? newPattern[..dotNew] : newPattern;
-        string newExtPat = dotNew >= 0 ? newPattern[(dotNew + 1)..] : string.Empty;
-
-        string newBase = SubstitutePattern(newBasePat, oldBase, DosFileControlBlock.FileNameSize);
-        string newExt = SubstitutePattern(newExtPat, oldExt, DosFileControlBlock.FileExtensionSize);
-        return string.IsNullOrEmpty(newExt) ? newBase : newBase + "." + newExt;
+        
+        // Pad to FCB sizes
+        oldBase = oldBase.PadRight(DosFileControlBlock.FileNameSize);
+        oldExt = oldExt.PadRight(DosFileControlBlock.FileExtensionSize);
+        
+        // Parse new pattern (uses | delimiter from GetRenameNewName)
+        string[] parts = newPatternWithDelimiter.Split('|');
+        string newNamePat = parts[0];
+        string newExtPat = parts.Length > 1 ? parts[1] : "   ";
+        
+        // Apply character-by-character substitution
+        // '?' means copy from old, anything else means use new char
+        StringBuilder newName = new StringBuilder();
+        for (int i = 0; i < DosFileControlBlock.FileNameSize; i++) {
+            char patChar = i < newNamePat.Length ? newNamePat[i] : ' ';
+            if (patChar == '?') {
+                newName.Append(i < oldBase.Length ? oldBase[i] : ' ');
+            } else {
+                newName.Append(patChar);
+            }
+        }
+        
+        StringBuilder newExt = new StringBuilder();
+        for (int i = 0; i < DosFileControlBlock.FileExtensionSize; i++) {
+            char patChar = i < newExtPat.Length ? newExtPat[i] : ' ';
+            if (patChar == '?') {
+                newExt.Append(i < oldExt.Length ? oldExt[i] : ' ');
+            } else {
+                newExt.Append(patChar);
+            }
+        }
+        
+        // Trim and format result
+        string finalName = newName.ToString().TrimEnd();
+        string finalExt = newExt.ToString().TrimEnd();
+        return string.IsNullOrEmpty(finalExt) ? finalName : $"{finalName}.{finalExt}";
     }
 
     private static string SubstitutePattern(string pattern, string source, int maxLen) {
@@ -880,7 +1037,7 @@ public class DosFcbManager {
     }
 
     private bool TryComputeOffset(uint absoluteRecord, int recordSize, out int offset, out FcbStatus statusCode) {
-        ulong offsetValue = (ulong)absoluteRecord * (ulong)recordSize;
+        ulong offsetValue = absoluteRecord * (ulong)recordSize;
         if (offsetValue > int.MaxValue) {
             offset = 0;
             statusCode = FcbStatus.SegmentWrap;
