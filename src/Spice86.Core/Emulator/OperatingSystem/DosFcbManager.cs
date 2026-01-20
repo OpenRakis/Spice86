@@ -113,30 +113,24 @@ public class DosFcbManager {
     /// Converts FCB file name format to a DOS path string.
     /// </summary>
     /// <param name="fcb">The FCB containing the file name.</param>
-    /// <returns>A DOS file path string (e.g., "A:FILENAME.EXT").</returns>
+    /// <returns>A DOS file path string (e.g., "A:FILENAME.EXT" or "CON" for devices).</returns>
     public string FcbToPath(DosFileControlBlock fcb) {
-        StringBuilder path = new();
+        // Build filename without drive prefix first
+        string name = fcb.FileName.TrimEnd();
+        string ext = fcb.FileExtension.TrimEnd();
+        string filename = !string.IsNullOrEmpty(ext) ? $"{name}.{ext}" : name;
 
-        // Add drive letter if specified
+        // Check if this matches a character device name
+        if (_dosFileManager.IsCharacterDevice(filename)) {
+            return filename;
+        }
+
+        // Not a device, add drive prefix
         byte drive = fcb.DriveNumber;
         if (drive == 0) {
             drive = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
         }
-        path.Append((char)('A' + drive - 1));
-        path.Append(':');
-
-        // Add file name (trimmed of spaces)
-        string name = fcb.FileName.TrimEnd();
-        path.Append(name);
-
-        // Add extension if present
-        string ext = fcb.FileExtension.TrimEnd();
-        if (!string.IsNullOrEmpty(ext)) {
-            path.Append('.');
-            path.Append(ext);
-        }
-
-        return path.ToString();
+        return $"{(char)('A' + drive - 1)}:{filename}";
     }
 
     /// <summary>
@@ -262,7 +256,7 @@ public class DosFcbManager {
     /// 0x02 if segment wrap, 0x03 if EOF after partial read.</returns>
     public byte SequentialRead(uint fcbAddress, uint dtaAddress) {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
-        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
+        ushort dtaOffset = _dosFileManager.DiskTransferAreaAddressOffset;
         return ReadWrite(fcb, dtaAddress, dtaOffset, 1, isRead: true, isRandom: false);
     }
 
@@ -274,7 +268,7 @@ public class DosFcbManager {
     /// <returns>0x00 on success, 0x01 if disk full, 0x02 if segment wrap.</returns>
     public byte SequentialWrite(uint fcbAddress, uint dtaAddress) {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
-        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
+        ushort dtaOffset = _dosFileManager.DiskTransferAreaAddressOffset;
         return ReadWrite(fcb, dtaAddress, dtaOffset, 1, isRead: false, isRandom: false);
     }
 
@@ -287,7 +281,7 @@ public class DosFcbManager {
     public byte RandomRead(uint fcbAddress, uint dtaAddress) {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
         fcb.CalculateRecordPosition();
-        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
+        ushort dtaOffset = _dosFileManager.DiskTransferAreaAddressOffset;
         return ReadWrite(fcb, dtaAddress, dtaOffset, 1, isRead: true, isRandom: true);
     }
 
@@ -300,7 +294,7 @@ public class DosFcbManager {
     public byte RandomWrite(uint fcbAddress, uint dtaAddress) {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
         fcb.CalculateRecordPosition();
-        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
+        ushort dtaOffset = _dosFileManager.DiskTransferAreaAddressOffset;
         return ReadWrite(fcb, dtaAddress, dtaOffset, 1, isRead: false, isRandom: true);
     }
 
@@ -315,7 +309,7 @@ public class DosFcbManager {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
         fcb.CalculateRecordPosition();
 
-        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
+        ushort dtaOffset = _dosFileManager.DiskTransferAreaAddressOffset;
         uint oldRandom = fcb.RandomRecord;
         byte result = ReadWrite(fcb, dtaAddress, dtaOffset, recordCount, isRead: true, isRandom: true);
         recordCount = (ushort)(fcb.RandomRecord - oldRandom);
@@ -340,7 +334,7 @@ public class DosFcbManager {
             return TruncateFile(fcb);
         }
 
-        ushort dtaOffset = (ushort)(dtaAddress & 0xFFFF);
+        ushort dtaOffset = _dosFileManager.DiskTransferAreaAddressOffset;
         uint oldRandom = fcb.RandomRecord;
         byte result = ReadWrite(fcb, dtaAddress, dtaOffset, recordCount, isRead: false, isRandom: true);
         recordCount = (ushort)(fcb.RandomRecord - oldRandom);
@@ -805,11 +799,10 @@ public class DosFcbManager {
         
         int totalSizeBytes = (int)totalSizeUint;
 
-        // Check for 64KB boundary crossing using linear DTA address
+        // Check for segment wrap: ensure DTA buffer stays within 16-bit offset range
         if (totalSizeBytes > 0) {
-            uint startAddress = dtaAddress;
-            uint endAddress = dtaAddress + (uint)totalSizeBytes - 1;
-            if ((startAddress & 0xFFFF0000) != (endAddress & 0xFFFF0000)) {
+            uint endOffset = (uint)dtaOffset + (uint)totalSizeBytes - 1;
+            if (endOffset > 0xFFFF) {
                 return FcbErrorSegmentWrap;
             }
         }

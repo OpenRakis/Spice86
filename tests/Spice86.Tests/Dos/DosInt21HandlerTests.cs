@@ -2,7 +2,6 @@ namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
-using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.Memory;
@@ -18,10 +17,10 @@ using Xunit;
 
 public class DosInt21HandlerTests {
     [Fact]
-    public void MoveFilePointerUsingHandle_ShouldTreatCxDxOffsetAsSignedValue() {
+    public void DosFileManager_MoveFilePointer_ShouldTreatOffsetAsSignedValue() {
         // Arrange
         IMemory memory = CreateMemory();
-        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager);
+        CreateFcbManager(memory, out _, out DosFileManager dosFileManager);
         
         RecordingVirtualFile recordingFile = new();
         const ushort fileHandle = 0x0003;
