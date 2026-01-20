@@ -665,8 +665,9 @@ public class DosFcbManager {
     /// <param name="stringAddress">The address of the filename string to parse.</param>
     /// <param name="fcbAddress">The address of the FCB to fill.</param>
     /// <param name="parseControl">Parsing control byte.</param>
+    /// <param name="bytesAdvanced">Output: number of bytes advanced in the input string.</param>
     /// <returns>0x00 if no wildcards, 0x01 if wildcards present, 0xFF if invalid drive.</returns>
-    public byte ParseFilename(uint stringAddress, uint fcbAddress, byte parseControl) {
+    public byte ParseFilename(uint stringAddress, uint fcbAddress, byte parseControl, out uint bytesAdvanced) {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
 
         // Read the filename string from memory
@@ -723,8 +724,10 @@ public class DosFcbManager {
             pos++;
             if (pos < filename.Length && filename[pos] == '.') {
                 nameChars[1] = '.';
+                pos++;
             }
             fcb.FileName = new string(nameChars);
+            bytesAdvanced = (uint)pos;
             return invalidDrive ? FcbError : FcbSuccess;
         }
 
@@ -776,6 +779,7 @@ public class DosFcbManager {
             }
         }
 
+        bytesAdvanced = (uint)pos;
         if (invalidDrive) {
             return FcbError;
         }
