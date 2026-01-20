@@ -36,28 +36,10 @@ public sealed class TimerInt8Handler : IInterruptHandler {
         return interruptHandlerAddress;
     }
 
-    /// <summary>
-    /// Gets or set the value of the real time clock, in ticks.
-    /// </summary>
-    public uint TickCounterValue {
-        get => _biosDataArea.TimerCounter;
-        set => _biosDataArea.TimerCounter = value;
-    }
-
-    /// <summary>
-    /// Gets or set the value of the floppy motor counter byte in the BDA
-    /// </summary>
-    /// <remarks>Civilization 1 writes 0x1 to this value in the BDA, and expects for it to decrease.
-    /// If it is never decreased, the game waits indefinitely and does not answer anymore.</remarks>
-    public byte FloppyMotorCounterValue {
-        get => _biosDataArea.FloppyMotorCounter;
-        set => _biosDataArea.FloppyMotorCounter = value;
-    }
-
     private void IncTickCounterValue() {
-        TickCounterValue++;
-        if (FloppyMotorCounterValue > 0) {
-            FloppyMotorCounterValue--;
+        _biosDataArea.TimerCounter++;
+        if (_biosDataArea.FloppyMotorCounter > 0) {
+            _biosDataArea.FloppyMotorCounter--;
         }
     }
 
