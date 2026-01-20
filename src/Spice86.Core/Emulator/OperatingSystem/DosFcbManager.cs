@@ -19,18 +19,18 @@ public class DosFcbManager {
     public const byte FcbErrorEof = 0x03;
 
     // FreeDOS parse control constants
-    private const byte PARSE_SKIP_LEAD_SEP = 0x01;
-    private const byte PARSE_DFLT_DRIVE = 0x02;
-    private const byte PARSE_BLNK_FNAME = 0x04;
-    private const byte PARSE_BLNK_FEXT = 0x08;
+    public const byte PARSE_SKIP_LEAD_SEP = 0x01;
+    public const byte PARSE_DFLT_DRIVE = 0x02;
+    public const byte PARSE_BLNK_FNAME = 0x04;
+    public const byte PARSE_BLNK_FEXT = 0x08;
 
-    private const byte PARSE_RET_NOWILD = 0;
-    private const byte PARSE_RET_WILD = 1;
-    private const byte PARSE_RET_BADDRIVE = 0xFF;
+    public const byte PARSE_RET_NOWILD = 0;
+    public const byte PARSE_RET_WILD = 1;
+    public const byte PARSE_RET_BADDRIVE = 0xFF;
 
     // FreeDOS separators
-    private const string COMMON_SEPS = ":;,=+ \t";
-    private const string FIELD_SEPS = "/\\\"[]<>|.:;,=+\t";
+    public const string COMMON_SEPS = ":;,=+ \t";
+    public const string FIELD_SEPS = "/\\\"[]<>|.:;,=+\t";
 
     private readonly IMemory _memory;
     private readonly DosFileManager _dosFileManager;
@@ -77,7 +77,7 @@ public class DosFcbManager {
         // FreeDOS: "if (!TestFieldSeps(lpFileName) && *(lpFileName + 1) == ':'"
         if (pos + 1 < filename.Length && filename[pos + 1] == ':' && !TestFieldSeps(filename[pos])) {
             char driveChar = char.ToUpper(filename[pos]);
-            if (driveChar >= 'A' && driveChar <= 'Z') {
+            if (driveChar is >= 'A' and <= 'Z') {
                 byte driveNum = (byte)(driveChar - 'A');
                 
                 // FreeDOS: "Undocumented behavior: should keep parsing even if drive is invalid"
