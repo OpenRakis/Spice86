@@ -1939,13 +1939,16 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// INT 21h, AH=24h - Set Random Record Number Using FCB.
-    /// Sets the random record field from the current block and record numbers.
+    /// INT 21h, AH=24h - Set Random Record Number (FCB).
+    /// Sets the `RandomRecord` field in the FCB from the current block and record numbers.
     /// </summary>
     /// <remarks>
     /// <para><b>Expects:</b></para>
-    /// <para>DS:DX = pointer to an opened FCB</para>
-    /// <para><b>Returns:</b></para>
-    /// <para>Random record field in FCB is set based on current block and record</para>
+    /// <para>DS:DX = pointer to an FCB (standard or extended with 0xFF header)</para>
+    /// <para><b>Operation:</b></para>
+    /// <para>Computes `RandomRecord = CurrentBlock * 128 + CurrentRecord` and stores it in the FCB (DWORD at offset 0x21).</para>
+    /// <para><b>Notes:</b></para>
+    /// <para>Extended FCBs with 0xFF marker are supported; the inner FCB begins at +7 bytes.</para>
     /// </remarks>
     private void FcbSetRandomRecordNumber() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
