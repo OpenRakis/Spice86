@@ -2,22 +2,16 @@ namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
-using NSubstitute;
-
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
-using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
-
 using System.Text;
 
 using Xunit;
@@ -26,51 +20,24 @@ public class DosInt21HandlerTests {
     [Fact]
     public void MoveFilePointerUsingHandle_ShouldTreatCxDxOffsetAsSignedValue() {
         // Arrange
-        IMemory memory = Substitute.For<IMemory>();
-        var state = new State(CpuModel.INTEL_80286);
-        var stack = new Stack(memory, state);
-        ILoggerService logger = Substitute.For<ILoggerService>();
-        IFunctionHandlerProvider functionHandlerProvider = Substitute.For<IFunctionHandlerProvider>();
-        string cDrivePath = Path.GetTempPath();
-        var driveManager = new DosDriveManager(logger, cDrivePath, null);
-        var stringDecoder = new DosStringDecoder(memory, state);
-        IList<IVirtualDevice> virtualDevices = new List<IVirtualDevice>();
-        var dosFileManager = new DosFileManager(memory, stringDecoder, driveManager, logger, virtualDevices);
-        var recordingFile = new RecordingVirtualFile();
+        IMemory memory = CreateMemory();
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager);
+        
+        RecordingVirtualFile recordingFile = new();
         const ushort fileHandle = 0x0003;
         dosFileManager.OpenFiles[fileHandle] = recordingFile;
-        var ioPortBreakpoints = new Spice86.Core.Emulator.VM.Breakpoint.AddressReadWriteBreakpoints();
-        var ioPortDispatcher = new IOPortDispatcher(ioPortBreakpoints, state, logger, false);
-        var dosTables = new DosTables();
-        dosTables.Initialize(memory);
 
-        var handler = new DosInt21Handler(
-            memory,
-            functionHandlerProvider,
-            stack,
-            state,
-            null!,
-            null!,
-            stringDecoder,
-            null!,
-            dosFileManager,
-            driveManager,
-            null!,
-            ioPortDispatcher,
-            dosTables,
-            logger);
-
-        state.AL = (byte)SeekOrigin.Current;
-        state.BX = fileHandle;
-        state.CX = 0xFFFF;
-        state.DX = 0xFFFF;
+        const SeekOrigin seekOrigin = SeekOrigin.Current;
+        const int offset = -1; // 0xFFFFFFFF when CXDX registers hold 0xFFFF:0xFFFF
 
         // Act
-        handler.MoveFilePointerUsingHandle(false);
+        dosFileManager.MoveFilePointerUsingHandle(seekOrigin, fileHandle, offset);
 
         // Assert
         recordingFile.LastSeekOffset.Should().Be(-1);
         recordingFile.LastSeekOrigin.Should().Be(SeekOrigin.Current);
+        
+        CloseAllOpenFiles(dosFileManager);
     }
 
     private sealed class RecordingVirtualFile : VirtualFileBase {
@@ -117,8 +84,6 @@ public class DosInt21HandlerTests {
         }
     }
 
-    #region FCB Tests
-
     [Fact]
     public void FcbParseFilename_ShouldParseSimpleFilenameWithoutDrive() {
         // Arrange
@@ -129,7 +94,7 @@ public class DosInt21HandlerTests {
         
         WriteString(memory, stringAddress, filename);
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager);
         driveManager.CurrentDrive = driveManager['C']; // C: drive
 
         // Act
@@ -143,6 +108,8 @@ public class DosInt21HandlerTests {
         fcb.DriveNumber.Should().Be(0, "no drive specified, should use default");
         fcb.FileName.Should().Be("TEST    ", "filename should be space-padded to 8 chars");
         fcb.FileExtension.Should().Be("TXT", "extension should be TXT");
+        
+        CloseAllOpenFiles(dosFileManager);
     }
 
     [Fact]
@@ -155,19 +122,22 @@ public class DosInt21HandlerTests {
         
         WriteString(memory, stringAddress, filename);
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out _);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out _, out DosFileManager dosFileManager);
 
         // Act
-        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, 0x00, out uint bytesAdvanced);
+        byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, 0x02, out uint bytesAdvanced);
 
         // Assert
         result.Should().Be(DosFcbManager.FcbSuccess);
         bytesAdvanced.Should().Be((uint)filename.Length);
         
         DosFileControlBlock fcb = new(memory, fcbAddress);
-        fcb.DriveNumber.Should().Be(1, "A: drive should be 1");
+        fcb.DriveNumber.Should().Be(1, "drive A: should be set to 1");
         fcb.FileName.Should().Be("FILE    ");
         fcb.FileExtension.Should().Be("DAT");
+        
+
+        CloseAllOpenFiles(dosFileManager);
     }
 
     [Fact]
@@ -180,7 +150,7 @@ public class DosInt21HandlerTests {
         
         WriteString(memory, stringAddress, filename);
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out _);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out _, out DosFileManager dosFileManager);
 
         // Act
         byte result = fcbManager.ParseFilename(stringAddress, fcbAddress, 0x00, out _);
@@ -190,6 +160,8 @@ public class DosInt21HandlerTests {
         
         DosFileControlBlock fcb = new(memory, fcbAddress);
         fcb.FileName.Should().Be("TEST????", "* should be expanded to ???? wildcards");
+        
+        CloseAllOpenFiles(dosFileManager);
     }
 
     [Fact]
@@ -202,7 +174,7 @@ public class DosInt21HandlerTests {
         
         WriteString(memory, stringAddress, filename);
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager);
         // Z: drive doesn't exist in default setup
 
         // Act
@@ -210,13 +182,15 @@ public class DosInt21HandlerTests {
 
         // Assert
         result.Should().Be(DosFcbManager.FcbError, "should return error for invalid drive");
+        
+        CloseAllOpenFiles(dosFileManager);
     }
 
     [Fact]
     public void FcbOpenFile_ShouldOpenExistingFile() {
         // Arrange
         string tempDir = CreateTempDirectory();
-        string testFile = Path.Combine(tempDir, "TEST.TXT");
+        string testFile = Path.Join(tempDir, "TEST.TXT");
         File.WriteAllText(testFile, "Hello FCB");
         
         IMemory memory = CreateMemory();
@@ -228,7 +202,7 @@ public class DosInt21HandlerTests {
         fcb.FileName = "TEST    ";
         fcb.FileExtension = "TXT";
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, tempDir);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
         driveManager.CurrentDrive = driveManager['C'];
 
         try {
@@ -242,6 +216,7 @@ public class DosInt21HandlerTests {
             fcb.CurrentBlock.Should().Be(0, "should start at block 0");
             fcb.CurrentRecord.Should().Be(0, "should start at record 0");
         } finally {
+            CloseAllOpenFiles(dosFileManager);
             CleanupTempDirectory(tempDir);
         }
     }
@@ -259,7 +234,7 @@ public class DosInt21HandlerTests {
         fcb.FileName = "NOFILE  ";
         fcb.FileExtension = "TXT";
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, tempDir);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
         driveManager.CurrentDrive = driveManager['C'];
 
         try {
@@ -269,6 +244,7 @@ public class DosInt21HandlerTests {
             // Assert
             result.Should().Be(DosFcbManager.FcbError, "should return error when file doesn't exist");
         } finally {
+            CloseAllOpenFiles(dosFileManager);
             CleanupTempDirectory(tempDir);
         }
     }
@@ -277,7 +253,7 @@ public class DosInt21HandlerTests {
     public void FcbFindFirst_ShouldFindMatchingFile() {
         // Arrange
         string tempDir = CreateTempDirectory();
-        string testFile = Path.Combine(tempDir, "TEST.TXT");
+        string testFile = Path.Join(tempDir, "TEST.TXT");
         File.WriteAllText(testFile, "Test content");
         
         IMemory memory = CreateMemory();
@@ -290,7 +266,7 @@ public class DosInt21HandlerTests {
         fcb.FileName = "TEST    ";
         fcb.FileExtension = "TXT";
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, tempDir);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
         driveManager.CurrentDrive = driveManager['C'];
 
         try {
@@ -306,6 +282,7 @@ public class DosInt21HandlerTests {
             dtaFcb.FileExtension.Trim().Should().Be("TXT", "DTA should contain the found extension");
             dtaFcb.FileSize.Should().BeGreaterThan(0, "DTA should contain the file size");
         } finally {
+            CloseAllOpenFiles(dosFileManager);
             CleanupTempDirectory(tempDir);
         }
     }
@@ -324,7 +301,7 @@ public class DosInt21HandlerTests {
         fcb.FileName = "NOFILE  ";
         fcb.FileExtension = "TXT";
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, tempDir);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
         driveManager.CurrentDrive = driveManager['C'];
 
         try {
@@ -334,6 +311,7 @@ public class DosInt21HandlerTests {
             // Assert
             result.Should().Be(DosFcbManager.FcbError, "should return error when no files match");
         } finally {
+            CloseAllOpenFiles(dosFileManager);
             CleanupTempDirectory(tempDir);
         }
     }
@@ -342,9 +320,9 @@ public class DosInt21HandlerTests {
     public void FcbFindFirst_ShouldFindWildcardMatches() {
         // Arrange
         string tempDir = CreateTempDirectory();
-        File.WriteAllText(Path.Combine(tempDir, "TEST1.TXT"), "1");
-        File.WriteAllText(Path.Combine(tempDir, "TEST2.TXT"), "2");
-        File.WriteAllText(Path.Combine(tempDir, "OTHER.DAT"), "3");
+        File.WriteAllText(Path.Join(tempDir, "TEST1.TXT"), "1");
+        File.WriteAllText(Path.Join(tempDir, "TEST2.TXT"), "2");
+        File.WriteAllText(Path.Join(tempDir, "OTHER.DAT"), "3");
         
         IMemory memory = CreateMemory();
         const uint fcbAddress = 0x2000;
@@ -356,7 +334,7 @@ public class DosInt21HandlerTests {
         fcb.FileName = "TEST????";
         fcb.FileExtension = "TXT";
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, tempDir);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
         driveManager.CurrentDrive = driveManager['C'];
 
         try {
@@ -371,6 +349,7 @@ public class DosInt21HandlerTests {
             foundName.Should().StartWith("TEST", "found file should match wildcard pattern");
             dtaFcb.FileExtension.Trim().Should().Be("TXT");
         } finally {
+            CloseAllOpenFiles(dosFileManager);
             CleanupTempDirectory(tempDir);
         }
     }
@@ -379,9 +358,9 @@ public class DosInt21HandlerTests {
     public void FcbFindNext_ShouldFindMultipleMatches() {
         // Arrange
         string tempDir = CreateTempDirectory();
-        File.WriteAllText(Path.Combine(tempDir, "FILE1.TXT"), "1");
-        File.WriteAllText(Path.Combine(tempDir, "FILE2.TXT"), "2");
-        File.WriteAllText(Path.Combine(tempDir, "FILE3.TXT"), "3");
+        File.WriteAllText(Path.Join(tempDir, "FILE1.TXT"), "1");
+        File.WriteAllText(Path.Join(tempDir, "FILE2.TXT"), "2");
+        File.WriteAllText(Path.Join(tempDir, "FILE3.TXT"), "3");
         
         IMemory memory = CreateMemory();
         const uint fcbAddress = 0x2000;
@@ -392,7 +371,7 @@ public class DosInt21HandlerTests {
         fcb.FileName = "FILE????";
         fcb.FileExtension = "TXT";
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, tempDir);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
         driveManager.CurrentDrive = driveManager['C'];
 
         try {
@@ -415,6 +394,7 @@ public class DosInt21HandlerTests {
             secondName.Should().NotBe(firstName, "second file should be different from first");
             secondName.Should().StartWith("FILE", "second file should also match pattern");
         } finally {
+            CloseAllOpenFiles(dosFileManager);
             CleanupTempDirectory(tempDir);
         }
     }
@@ -423,7 +403,7 @@ public class DosInt21HandlerTests {
     public void FcbFindNext_ShouldReturnErrorWhenNoMoreMatches() {
         // Arrange
         string tempDir = CreateTempDirectory();
-        File.WriteAllText(Path.Combine(tempDir, "SINGLE.TXT"), "only one");
+        File.WriteAllText(Path.Join(tempDir, "SINGLE.TXT"), "only one");
         
         IMemory memory = CreateMemory();
         const uint fcbAddress = 0x2000;
@@ -434,7 +414,7 @@ public class DosInt21HandlerTests {
         fcb.FileName = "SINGLE  ";
         fcb.FileExtension = "TXT";
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, tempDir);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
         driveManager.CurrentDrive = driveManager['C'];
 
         try {
@@ -447,6 +427,7 @@ public class DosInt21HandlerTests {
             // Assert
             secondResult.Should().Be(DosFcbManager.FcbError, "should return error when no more files match");
         } finally {
+            CloseAllOpenFiles(dosFileManager);
             CleanupTempDirectory(tempDir);
         }
     }
@@ -455,8 +436,8 @@ public class DosInt21HandlerTests {
     public void FcbFindFirst_WithExtendedFcb_ShouldRespectAttributeFilter() {
         // Arrange
         string tempDir = CreateTempDirectory();
-        string normalFile = Path.Combine(tempDir, "NORMAL.TXT");
-        string hiddenFile = Path.Combine(tempDir, "HIDDEN.TXT");
+        string normalFile = Path.Join(tempDir, "NORMAL.TXT");
+        string hiddenFile = Path.Join(tempDir, "HIDDEN.TXT");
         
         File.WriteAllText(normalFile, "normal");
         File.WriteAllText(hiddenFile, "hidden");
@@ -476,7 +457,7 @@ public class DosInt21HandlerTests {
         fcb.FileName = "????????";
         fcb.FileExtension = "TXT";
         
-        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, tempDir);
+        DosFcbManager fcbManager = CreateFcbManager(memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, tempDir);
         driveManager.CurrentDrive = driveManager['C'];
 
         try {
@@ -490,32 +471,39 @@ public class DosInt21HandlerTests {
             byte dtaFlag = memory.UInt8[dtaAddress];
             dtaFlag.Should().Be(DosExtendedFileControlBlock.ExtendedFcbFlag, "DTA should have extended FCB format");
         } finally {
+            CloseAllOpenFiles(dosFileManager);
             File.SetAttributes(hiddenFile, FileAttributes.Normal);
             CleanupTempDirectory(tempDir);
         }
     }
 
-    #endregion
-
-    #region Helper Methods
-
-    private static IMemory CreateMemory() {
+    private static Memory CreateMemory() {
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
         A20Gate a20Gate = new();
         return new Memory(memoryBreakpoints, ram, a20Gate);
     }
 
-    private static DosFcbManager CreateFcbManager(IMemory memory, out DosDriveManager driveManager, string? rootPath = null) {
-        ILoggerService logger = Substitute.For<ILoggerService>();
+    private static DosFcbManager CreateFcbManager(IMemory memory, out DosDriveManager driveManager, out DosFileManager dosFileManager, string? rootPath = null) {
+        ILoggerService logger = new Spice86.Logging.LoggerService();
         string cDrivePath = rootPath ?? Path.GetTempPath();
         driveManager = new DosDriveManager(logger, cDrivePath, null);
         State state = new State(CpuModel.INTEL_80286);
         DosStringDecoder stringDecoder = new(memory, state);
         IList<IVirtualDevice> virtualDevices = new List<IVirtualDevice>();
-        DosFileManager dosFileManager = new(memory, stringDecoder, driveManager, logger, virtualDevices);
+        dosFileManager = new DosFileManager(memory, stringDecoder, driveManager, logger, virtualDevices);
         
         return new DosFcbManager(memory, dosFileManager, driveManager, logger);
+    }
+
+    /// <summary>
+    /// Closes all open files in the DosFileManager to prevent file locking during cleanup.
+    /// </summary>
+    private static void CloseAllOpenFiles(DosFileManager dosFileManager) {
+        for (int i = 0; i < dosFileManager.OpenFiles.Length; i++) {
+            VirtualFileBase? file = dosFileManager.OpenFiles[i];
+            file?.Close();
+        }
     }
 
     private static void WriteString(IMemory memory, uint address, string text) {
@@ -527,22 +515,14 @@ public class DosInt21HandlerTests {
     }
 
     private static string CreateTempDirectory() {
-        string tempPath = Path.Combine(Path.GetTempPath(), "Spice86_FCB_Tests_" + Guid.NewGuid().ToString());
+        string tempPath = Path.Join(Path.GetTempPath(), "Spice86_FCB_Tests_" + Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempPath);
         return tempPath;
     }
 
     private static void CleanupTempDirectory(string path) {
         if (Directory.Exists(path)) {
-            try {
-                Directory.Delete(path, true);
-            } catch (IOException) {
-                // Ignore cleanup errors - files may still be in use
-            } catch (UnauthorizedAccessException) {
-                // Ignore cleanup errors - permission issues
-            }
+            Directory.Delete(path, true);
         }
     }
-
-    #endregion
 }
