@@ -115,18 +115,19 @@
 		</Grid>
 		<Viewbox Grid.Row="1">
 			<LayoutTransformControl>
-				<LayoutTransformControl.RenderTransform>
-					<ScaleTransform
-						ScaleX="{Binding Scale}"
-						ScaleY="{Binding Scale}">
-					</ScaleTransform>
-				</LayoutTransformControl.RenderTransform>
-				<Viewbox>
-					<Image x:Name="Image"
-					    RenderOptions.BitmapInterpolationMode="None"
-					    Cursor="{Binding Cursor}"
-					    Source="{Binding Bitmap}" />
-				</Viewbox>
+				<LayoutTransformControl.LayoutTransform>
+					<TransformGroup>
+						<ScaleTransform ScaleX="1" ScaleY="1.2" />
+						<ScaleTransform
+							ScaleX="{Binding Scale}"
+							ScaleY="{Binding Scale}">
+						</ScaleTransform>
+					</TransformGroup>
+				</LayoutTransformControl.LayoutTransform>
+				<Image x:Name="Image"
+					RenderOptions.BitmapInterpolationMode="None"
+					Cursor="{Binding Cursor}"
+					Source="{Binding Bitmap}" />
 			</LayoutTransformControl>
 		</Viewbox>
 		<controls:StatusBar IsTabStop="False" Focusable="False" VerticalAlignment="Bottom" Grid.Row="2">
