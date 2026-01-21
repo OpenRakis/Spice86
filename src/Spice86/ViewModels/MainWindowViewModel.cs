@@ -288,15 +288,17 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     /// Updates the aspect ratio correction factor for proper display scaling.
     /// </summary>
     public void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
-        AspectRatioCorrectionFactor = e.AspectRatioCorrectionFactor;
-        
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug(
-                "Video mode changed to {Width}x{Height}, aspect ratio correction factor: {Factor}",
-                e.NewMode.Width,
-                e.NewMode.Height,
-                e.AspectRatioCorrectionFactor);
-        }
+        _uiDispatcher.Post(() => {
+            AspectRatioCorrectionFactor = e.AspectRatioCorrectionFactor;
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug(
+                    "Video mode changed to {Width}x{Height}, aspect ratio correction factor: {Factor}",
+                    e.NewMode.Width,
+                    e.NewMode.Height,
+                    e.AspectRatioCorrectionFactor);
+            }
+        });
     }
 
     public void HideMouseCursor() => _uiDispatcher.Post(() => ShowCursor = false);
