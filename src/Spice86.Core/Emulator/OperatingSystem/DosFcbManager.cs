@@ -259,13 +259,26 @@ public class DosFcbManager {
     }
 
     /// <summary>
-    /// Gets an FCB wrapper at the given linear address.
+    /// Gets an FCB wrapper at the given linear address, supporting both standard and extended FCBs.
     /// </summary>
     /// <param name="fcbAddress">Linear address of the FCB (standard or extended).</param>
-    /// <param name="attribute">Not used; kept for compatibility with FreeDOS signature.</param>
-    /// <returns>Wrapped <see cref="DosFileControlBlock"/>.</returns>
+    /// <param name="attribute">For extended FCBs, receives the file attributes byte; for standard FCBs, set to 0.</param>
+    /// <returns>
+    /// An extended FCB wrapper if the address points to 0xFF (extended FCB flag),
+    /// otherwise a standard FCB wrapper.
+    /// </returns>
     public DosFileControlBlock GetFcb(uint fcbAddress, out byte attribute) {
         attribute = 0;
+        
+        byte flag = _memory.UInt8[fcbAddress];
+        if (flag == DosExtendedFileControlBlock.ExtendedFcbFlag) {
+            // Extended FCB: header at fcbAddress, standard FCB starts at fcbAddress + 7
+            DosExtendedFileControlBlock xfcb = new DosExtendedFileControlBlock(_memory, fcbAddress);
+            attribute = xfcb.Attribute;
+            return xfcb;
+        }
+        
+        // Standard FCB
         return new DosFileControlBlock(_memory, fcbAddress);
     }
 
