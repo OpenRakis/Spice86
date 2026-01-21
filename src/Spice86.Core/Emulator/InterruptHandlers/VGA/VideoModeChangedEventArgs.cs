@@ -18,4 +18,11 @@ public readonly record struct VideoModeChangedEventArgs {
     ///     The new video mode.
     /// </summary>
     public VgaMode NewMode { get; init; }
+
+    /// <summary>
+    ///     Gets the aspect ratio correction factor for the new video mode.
+    ///     A value of 1.0 means square pixels (1:1 aspect ratio).
+    ///     A value of 1.2 means a 5:6 PAR (eg. Mode 13h)
+    /// </summary>
+    public double AspectRatioCorrectionFactor => NewMode.AspectRatioCorrectionFactor;
 }
