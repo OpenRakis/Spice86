@@ -117,6 +117,7 @@
 			<LayoutTransformControl>
 				<LayoutTransformControl.LayoutTransform>
 					<TransformGroup>
+						<!-- Apply fixed 6/5 (1.2) vertical scale to correct DOS VGA 320x200 to 4:3 CRT aspect ratio (5:6 pixel aspect correction). -->
 						<ScaleTransform ScaleX="1" ScaleY="1.2" />
 						<ScaleTransform
 							ScaleX="{Binding Scale}"
