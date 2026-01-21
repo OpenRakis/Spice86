@@ -34,7 +34,7 @@ public class DosFileControlBlock : MemoryBasedDataStructure {
     /// <summary>
     /// Total size of an FCB structure in bytes.
     /// </summary>
-    public const int StructureSize = 37;
+    public virtual int StructureSize => 37;
 
     /// <summary>
     /// Default record size for FCB operations.
