@@ -28,7 +28,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<{
             helper.ModRm.RM{{Size}}, 
             {{FieldTypeCast}}helper.InstructionFieldValueRetriever.GetFieldValue(ValueField)
         );
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

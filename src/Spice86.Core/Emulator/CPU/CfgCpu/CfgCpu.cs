@@ -16,7 +16,7 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
+public class CfgCpu : IFunctionHandlerProvider {
     private readonly ILoggerService _loggerService;
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly State _state;
@@ -27,14 +27,14 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
         FunctionCatalogue functionCatalogue,
-        bool useCodeOverride, ILoggerService loggerService) {
+        bool useCodeOverride, bool failOnInvalidOpcode, ILoggerService loggerService) {
         _loggerService = loggerService;
         _state = state;
         _dualPic = dualPic;
-        
+
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService);
-        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, loggerService);
+        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, loggerService);
     }
     
     /// <summary>
@@ -67,7 +67,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
             }
         }
 
-        ICfgNode? nextToExecute = _instructionExecutionHelper.NextNode;
+        ICfgNode? nextToExecute = toExecute.GetNextSuccessor(_instructionExecutionHelper);
         
         _state.IncCycles();
 

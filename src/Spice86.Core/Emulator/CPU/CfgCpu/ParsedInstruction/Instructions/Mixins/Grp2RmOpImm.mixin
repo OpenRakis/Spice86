@@ -21,7 +21,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<b
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         helper.ModRm.RM{{Size}} = helper.Alu{{Size}}.{{Operation}}(helper.ModRm.RM{{Size}}, helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

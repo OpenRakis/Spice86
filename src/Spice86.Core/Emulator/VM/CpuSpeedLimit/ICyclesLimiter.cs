@@ -15,6 +15,15 @@ public interface ICyclesLimiter {
     public int TargetCpuCyclesPerMs { get; set; }
 
     /// <summary>
+    /// Limits the number of emulated CPU cycles per ms, for speed sensitive games.
+    /// </summary>
+    /// <remarks>
+    /// Also, too many CPU cycles can make emulation performance worse,
+    /// and sometimes even starves other threads (ie. sound/music gets cut off, UI freezes!)
+    /// </remarks>
+    public void RegulateCycles();
+
+    /// <summary>
     /// Augments the number of target CPU cycles per ms
     /// </summary>
     public void IncreaseCycles();

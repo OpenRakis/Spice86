@@ -642,7 +642,6 @@ public class EmsIntegrationTests {
         // Setup emulator with EMS enabled
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
-            enableCfgCpu: true,
             enablePit: true,
             recordData: false,
             maxCycles: 100000L,

@@ -23,7 +23,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         value = helper.Alu{{Size}}.Sub(0, value);
         helper.ModRm.RM{{Size}} = value;
         helper.State.CarryFlag = value != 0;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

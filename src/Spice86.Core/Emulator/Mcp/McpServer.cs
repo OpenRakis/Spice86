@@ -44,6 +44,7 @@ public sealed class McpServer : IMcpServer {
     private readonly Tool[] _tools;
     private readonly object _requestLock = new object();
     private readonly Dictionary<string, BreakPoint> _mcpBreakpoints = new();
+    private readonly Dictionary<string, bool> _toolEnabledState = new();
     private int _nextBreakpointId = 1;
 
     public McpServer(IMemory memory, State state, FunctionCatalogue functionCatalogue, CfgCpu cfgCpu,
@@ -62,6 +63,9 @@ public sealed class McpServer : IMcpServer {
         _breakpointsManager = breakpointsManager;
         _loggerService = loggerService;
         _tools = CreateTools();
+        foreach (Tool tool in _tools) {
+            _toolEnabledState[tool.Name] = true;
+        }
     }
 
     private Tool[] CreateTools() {
@@ -231,7 +235,19 @@ public sealed class McpServer : IMcpServer {
 
     /// <inheritdoc />
     public Tool[] GetAvailableTools() {
+        return _tools.Where(t => _toolEnabledState.GetValueOrDefault(t.Name, true)).ToArray();
+    }
+
+    /// <inheritdoc />
+    public Tool[] GetAllTools() {
         return _tools;
+    }
+
+    /// <inheritdoc />
+    public void SetToolEnabled(string toolName, bool isEnabled) {
+        if (_toolEnabledState.ContainsKey(toolName)) {
+            _toolEnabledState[toolName] = isEnabled;
+        }
     }
 
     private string HandleInitialize(JsonElement? id) {
@@ -956,7 +972,7 @@ public sealed class McpServer : IMcpServer {
 
     private EmulatorControlResponse ClearBreakpoints() {
         int count = _mcpBreakpoints.Count;
-        foreach (var bp in _mcpBreakpoints.Values) {
+        foreach (BreakPoint bp in _mcpBreakpoints.Values) {
             _breakpointsManager.ToggleBreakPoint(bp, false);
         }
         _mcpBreakpoints.Clear();

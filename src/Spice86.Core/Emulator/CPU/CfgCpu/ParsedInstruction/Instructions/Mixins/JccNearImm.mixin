@@ -25,7 +25,7 @@ public partial class {{ moxy.Class.Name }} : JmpNearImm{{Size}} {
         if({{JumpCondition}}) {
             base.Execute(helper);
         } else {
-            helper.MoveIpAndSetNextNode(this);
+            helper.MoveIpToEndOfInstruction(this);
         }
     }
 

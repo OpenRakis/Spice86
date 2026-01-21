@@ -36,7 +36,7 @@ public sealed class McpHttpTransport : IDisposable {
 
     private async Task BroadcastNotificationAsync(string json) {
         byte[] buffer = Encoding.UTF8.GetBytes($"data: {json}\n\n");
-        foreach (var client in _clients) {
+        foreach (KeyValuePair<Guid, HttpListenerResponse> client in _clients) {
             try {
                 await client.Value.OutputStream.WriteAsync(buffer, 0, buffer.Length);
                 await client.Value.OutputStream.FlushAsync();
@@ -63,7 +63,7 @@ public sealed class McpHttpTransport : IDisposable {
     private async Task ListenLoop() {
         try {
             while (!_cts.Token.IsCancellationRequested && _listener.IsListening) {
-                var context = await _listener.GetContextAsync();
+                HttpListenerContext context = await _listener.GetContextAsync();
                 _ = HandleRequestAsync(context);
             }
         } catch (Exception ex) when (ex is ObjectDisposedException or HttpListenerException) {
@@ -202,7 +202,7 @@ public sealed class McpHttpTransport : IDisposable {
 
         _cts.Dispose();
 
-        foreach (var client in _clients.Values) {
+        foreach (HttpListenerResponse client in _clients.Values) {
             try {
                 client.Close();
             } catch {

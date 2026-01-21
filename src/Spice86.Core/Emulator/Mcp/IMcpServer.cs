@@ -9,4 +9,6 @@ public interface IMcpServer {
     event EventHandler<string>? OnNotification;
     string HandleRequest(string requestJson);
     Tool[] GetAvailableTools();
+    Tool[] GetAllTools();
+    void SetToolEnabled(string toolName, bool isEnabled);
 }

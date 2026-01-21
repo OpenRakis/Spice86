@@ -169,12 +169,6 @@ public sealed class Configuration {
     /// </summary>
     [Option(nameof(StructureFile), Default = null, Required = false, HelpText = "Specify a C header file to be used for structure information")]
     public string? StructureFile { get; init; }
-    
-    /// <summary>
-    /// Determines whether to use experimental CFG CPU or regular interpreter.
-    /// </summary>
-    [Option(nameof(CfgCpu), Default = false, Required = false, HelpText = "Enable CFG CPU (Control Flow Graph)")]
-    public bool CfgCpu { get; init; }
 
     /// <summary>
     /// Audio engine to use
@@ -184,4 +178,13 @@ public sealed class Configuration {
 
     [Option(nameof(Xms), Default = null, Required = false, HelpText = "Enable XMS. Default is true.")]
     public bool? Xms { get; init; }
+
+    /// <summary>
+    /// If true, will throw an exception and crash when encountering an invalid opcode.
+    /// If false, will handle invalid opcodes as CPU faults (int 0x06).
+    /// Default is true because usually invalid opcode means emulator bug.
+    /// </summary>
+    [Option(nameof(FailOnInvalidOpcode), Default = true, Required = false,
+        HelpText = "If true, will throw an exception and crash when encountering an invalid opcode. If false, will handle invalid opcodes as CPU faults. Default is true.")]
+    public bool FailOnInvalidOpcode { get; init; }
 }
