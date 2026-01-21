@@ -9,7 +9,7 @@ public static class AspectRatioCorrectionHelper {
     /// <summary>
     /// Gets the vertical scale factor needed to correct a video mode's aspect ratio.
     /// A factor of 1.0 represents square pixels (1:1 pixel aspect ratio).
-    /// A factor of 1.2 represents a 5:6 PAR (eg. Mode 13h)
+    /// A factor of 1.2 corrects a 5:6 pixel aspect ratio (e.g., Mode 13h requires 6:5 vertical scaling).
     /// </summary>
     public static double GetAspectRatioCorrectionFactor(ushort width, ushort height, MemoryModel memoryModel) {
         // Text modes should maintain square pixels by default
