@@ -14,7 +14,7 @@ using Xunit;
 /// Tests cover filename parsing, file operations, and wildcard rename semantics.
 /// </summary>
 public class DosFcbManagerTests {
-    private static readonly string MountPoint = Path.GetFullPath(Path.Combine("Resources", "MountPoint"));
+    private static readonly string MountPoint = Path.GetFullPath(Path.Join("Resources", "MountPoint"));
 
     /// <summary>
     /// Writes a space-padded string to memory (FCB fields are space-padded, not null-terminated).
@@ -405,7 +405,7 @@ public class DosFcbManagerTests {
         string[] sourceFiles = { "one.in", "two.in", "three.in", "four.in", "five.in", "none.ctl" };
         
         foreach (string file in sourceFiles) {
-            string fullPath = Path.Combine(MountPoint, file);
+            string fullPath = Path.Join(MountPoint, file);
             File.WriteAllText(fullPath, "test");
         }
 
@@ -426,13 +426,13 @@ public class DosFcbManagerTests {
             // Assert
             status.Should().Be(FcbStatus.Success);
             // DOS renames files in uppercase
-            File.Exists(Path.Combine(MountPoint, "ONE.OUT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "TWO.OUT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "THREE.OUT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "FOUR.OUT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "FIVE.OUT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "none.ctl")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "one.in")).Should().BeFalse();
+            File.Exists(Path.Join(MountPoint, "ONE.OUT")).Should().BeTrue();
+            File.Exists(Path.Join(MountPoint, "TWO.OUT")).Should().BeTrue();
+            File.Exists(Path.Join(MountPoint, "THREE.OUT")).Should().BeTrue();
+            File.Exists(Path.Join(MountPoint, "FOUR.OUT")).Should().BeTrue();
+            File.Exists(Path.Join(MountPoint, "FIVE.OUT")).Should().BeTrue();
+            File.Exists(Path.Join(MountPoint, "none.ctl")).Should().BeTrue();
+            File.Exists(Path.Join(MountPoint, "one.in")).Should().BeFalse();
         } finally {
             // Cleanup
             foreach (string file in new[] { "ONE.OUT", "TWO.OUT", "THREE.OUT", "FOUR.OUT", "FIVE.OUT", "none.ctl" }) {
@@ -624,6 +624,51 @@ public class DosFcbManagerTests {
         // Assert - random record = (currentBlock * 128) + currentRecord
         uint expectedRandom = (5u * 128) + 42;
         fcb.RandomRecord.Should().Be(expectedRandom);
+    }
+
+    [Fact]
+    public void GetFcb_StandardFcb_ReturnsCorrectly() {
+        // Test standard (non-extended) FCB
+        DosTestFixture fixture = new(MountPoint);
+        uint fcbAddr = 0x2000;
+        DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "TESTFILE";
+        fcb.FileExtension = "TXT";
+
+        // Act
+        DosFileControlBlock result = fixture.DosFcbManager.GetFcb(fcbAddr, out byte attr);
+
+        // Assert
+        result.BaseAddress.Should().Be(fcbAddr);
+        attr.Should().Be(0);
+        result.FileName.Should().Be("TESTFILE");
+    }
+
+    [Fact]
+    public void GetFcb_ExtendedFcb_ReturnsAttributeAndEmbeddedFcb() {
+        // Test extended FCB with attribute support
+        DosTestFixture fixture = new(MountPoint);
+        const uint xfcbAddr = 0x2000;
+        DosExtendedFileControlBlock xfcb = new DosExtendedFileControlBlock(fixture.Memory, xfcbAddr);
+        
+        // Set extended FCB marker and attribute
+        xfcb.Flag = 0xFF;
+        xfcb.Attribute = 0x20; // Archive attribute
+        
+        // Set FCB fields (xfcb inherits from DosFileControlBlock)
+        xfcb.DriveNumber = 0;
+        xfcb.FileName = "EXTTEST ";
+        xfcb.FileExtension = "DAT";
+
+        // Act
+        DosFileControlBlock result = fixture.DosFcbManager.GetFcb(xfcbAddr, out byte attr);
+
+        // Assert
+        attr.Should().Be(0x20);
+        result.BaseAddress.Should().Be(xfcbAddr + DosExtendedFileControlBlock.HeaderSize); // Points to embedded FCB
+        result.FileName.Should().Be("EXTTEST ");
+        result.FileExtension.Should().Be("DAT");
     }
 
 
