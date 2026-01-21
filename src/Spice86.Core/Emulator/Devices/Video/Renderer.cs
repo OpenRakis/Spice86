@@ -52,9 +52,6 @@ public class Renderer : IVgaRenderer {
             // We're already rendering. Get out of here.
             return;
         }
-        if (_state == null || _memory == null) {
-            return;
-        }
         try {
             BufferSize = frameBuffer.Length;
             if (Width * Height > BufferSize) {
