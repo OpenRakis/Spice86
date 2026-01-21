@@ -40,8 +40,8 @@ public sealed class McpHttpTransport : IDisposable {
             try {
                 await client.Value.OutputStream.WriteAsync(buffer, 0, buffer.Length);
                 await client.Value.OutputStream.FlushAsync();
-            } catch {
-                // Client probably disconnected
+            } catch (Exception ex) {
+                _loggerService.Warning(ex, "Failed to send notification to client {ClientId}", client.Key);
             }
         }
     }
@@ -67,7 +67,7 @@ public sealed class McpHttpTransport : IDisposable {
                 _ = HandleRequestAsync(context);
             }
         } catch (Exception ex) when (ex is ObjectDisposedException or HttpListenerException) {
-            // Normal shutdown
+            _loggerService.Information("MCP HTTP listener stopped normally");
         } catch (Exception ex) {
             _loggerService.Error(ex, "Error in MCP HTTP listen loop");
         }
@@ -134,15 +134,15 @@ public sealed class McpHttpTransport : IDisposable {
                 await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(": heartbeat\n\n"));
                 await response.OutputStream.FlushAsync();
             }
-        } catch (Exception) {
-            // Client disconnected
+        } catch (Exception ex) {
+            _loggerService.Warning(ex, "MCP SSE client disconnected abruptly: {ClientId}", clientId);
         } finally {
             _clients.TryRemove(clientId, out _);
             _loggerService.Information("MCP SSE client disconnected: {ClientId}", clientId);
             try {
                 response.Close();
-            } catch {
-                // Ignore
+            } catch (Exception ex) {
+                _loggerService.Warning(ex, "Failed to close SSE response for client {ClientId}", clientId);
             }
         }
     }
@@ -186,7 +186,7 @@ public sealed class McpHttpTransport : IDisposable {
         
         try {
             if (_listener.IsListening) {
-                _listener.Stop();
+        _listener.Stop();
             }
         } catch (ObjectDisposedException) {
             // Already disposed
@@ -195,7 +195,7 @@ public sealed class McpHttpTransport : IDisposable {
         }
 
         try {
-            _listener.Close();
+        _listener.Close();
         } catch (ObjectDisposedException) {
             // Already disposed
         }
@@ -205,7 +205,7 @@ public sealed class McpHttpTransport : IDisposable {
         foreach (HttpListenerResponse client in _clients.Values) {
             try {
                 client.Close();
-            } catch {
+            } catch (Exception) {
                 // Ignore
             }
         }
