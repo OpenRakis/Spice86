@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 /// If an instruction is modified and then put back in its original version, it is the original instance of the parsed instruction that will be returned for the address
 /// Instructions can be replaced in the cache (see method ReplaceInstruction)
 /// </summary>
-public class InstructionsFeeder {
+public class InstructionsFeeder : IClearable {
     private readonly InstructionParser _instructionParser;
     private readonly SignatureReducer _signatureReducer;
 
@@ -78,5 +78,13 @@ public class InstructionsFeeder {
             }
         }
         return parsed;
+    }
+
+    /// <summary>
+    /// Clears all internal state in both current and previous instruction caches.
+    /// </summary>
+    public void Clear() {
+        CurrentInstructions.Clear();
+        PreviousInstructions.Clear();
     }
 }

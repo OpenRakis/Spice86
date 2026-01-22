@@ -10,7 +10,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-public class ExecutionContextManager : InstructionReplacer {
+public class ExecutionContextManager : InstructionReplacer, IClearable {
     private readonly ILoggerService _loggerService;
     private readonly CfgNodeFeeder _cfgNodeFeeder;
     private readonly IMemory _memory;
@@ -112,5 +112,23 @@ public class ExecutionContextManager : InstructionReplacer {
             && entriesAtAddress.Remove(oldInstruction)) {
             entriesAtAddress.Add(newInstruction);
         }
+    }
+
+    /// <inheritdoc />
+    public void Clear() {
+        // Clear execution context returns
+        _executionContextReturns.Clear();
+
+        // Clear function catalogue
+        _functionCatalogue.Clear();
+
+        // Clear entry points
+        ExecutionContextEntryPoints.Clear();
+
+        // Reset depth to 0
+        CurrentDepth = 0;
+
+        // Reset to initial execution context
+        CurrentExecutionContext = NewExecutionContext(SegmentedAddress.ZERO);
     }
 }

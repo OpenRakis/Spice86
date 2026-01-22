@@ -2,6 +2,7 @@
 
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
+using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
 /// <summary>
 /// Maps return address to a stack of execution contexts to restore.
@@ -10,7 +11,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 /// Those stacked handlers can very well by chance happen at the same address and so return at the same address.
 /// To handle gracefully that case and no restore any arbitrary context, we map the expected return address to a stack of contexts so that they are unstacked in the correct order when they complete.
 /// </summary>
-public class ExecutionContextReturns {
+public class ExecutionContextReturns : IClearable {
     private readonly Dictionary<SegmentedAddress, Stack<ExecutionContext>> _executionContextReturns = new();
 
     public void PushContextToRestore(SegmentedAddress expectedReturn, ExecutionContext contextToRestore) {
@@ -31,5 +32,10 @@ public class ExecutionContextReturns {
             _executionContextReturns.Remove(returnAddress);
         }
         return res;
+    }
+
+    /// <inheritdoc />
+    public void Clear() {
+        _executionContextReturns.Clear();
     }
 }

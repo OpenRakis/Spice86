@@ -14,7 +14,7 @@ public class Flags {
         [CpuModel.INTEL_8086] = new(bitsAlwaysOn: [1, 12, 13, 14, 15], bitsAlwaysOff: [3, 5]),
         // Since we dont handle IO privilege (12 / 13) and nested task (14), let's put them as always off
         [CpuModel.INTEL_80286] = new(bitsAlwaysOn: [1], bitsAlwaysOff: [3, 5, 12, 13, 14, 15]),
-        [CpuModel.INTEL_80386] = new(bitsAlwaysOn: [1], bitsAlwaysOff: [3, 5, 12, 13, 14, 15])
+        [CpuModel.INTEL_80386] = new(bitsAlwaysOn: [1, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31], bitsAlwaysOff: [3, 5, 12, 13, 14, 15])
     }.ToFrozenDictionary();
     
     private record BitsOnOff {
@@ -83,9 +83,6 @@ public class Flags {
     private uint _orFlagMask;
     private uint _andFlagMask;
 
-    private uint _flagRegister;
-
-    private CpuModel _cpuModel;
     /// <summary>
     /// Initialises a new instance.
     /// </summary>
@@ -95,10 +92,10 @@ public class Flags {
     }
 
     public CpuModel CpuModel {
-        get => _cpuModel;
+        get;
         set {
-            _cpuModel = value;
-            BitsOnOff bitsOnOff = BitOnOffPerModel[_cpuModel];
+            field = value;
+            BitsOnOff bitsOnOff = BitOnOffPerModel[CpuModel];
             _orFlagMask = bitsOnOff.BitsAlwaysOn;
             _andFlagMask = bitsOnOff.BitsAlwaysOff;
         }
@@ -120,9 +117,9 @@ public class Flags {
     /// <param name="value">The boolean value of the flag.</param>
     public void SetFlag(ushort mask, bool value) {
         if (value) {
-            _flagRegister |= mask;
+            FlagRegister |= mask;
         } else {
-            _flagRegister &= (ushort)~mask;
+            FlagRegister &= (ushort)~mask;
         }
     }
 
@@ -135,8 +132,8 @@ public class Flags {
     /// Gets the 32-bit value of the flags register.
     /// </summary>
     public uint FlagRegister {
-        get => _flagRegister;
-        set => _flagRegister = (value | _orFlagMask) & _andFlagMask;
+        get;
+        set => field = (value | _orFlagMask) & _andFlagMask;
     }
 
     /// <inheritdoc />
