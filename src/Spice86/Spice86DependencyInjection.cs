@@ -393,6 +393,9 @@ public class Spice86DependencyInjection : IDisposable {
                 pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
                 loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter);
 
+            // Subscribe to video mode changes for dynamic aspect ratio correction
+            vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
+
             inputEventHub = new(mainWindowViewModel, mainWindowViewModel);
 
             _gui = mainWindowViewModel;
