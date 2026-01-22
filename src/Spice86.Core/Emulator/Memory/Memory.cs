@@ -4,6 +4,8 @@ using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
 
+using System.Linq;
+
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
@@ -115,10 +117,7 @@ public sealed class Memory : Indexable.Indexable, IMemory {
             return null;
         }
 
-        byte[] searchPattern = new byte[patternLength];
-        for (int idx = 0; idx < patternLength; idx++) {
-            searchPattern[idx] = value[idx];
-        }
+        byte[] searchPattern = [.. value];
 
         byte[] window = new byte[patternLength];
         
