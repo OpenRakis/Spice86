@@ -107,31 +107,28 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     /// <param name="value">The sequence of bytes to search for</param>
     /// <returns>The address of the first occurrence of the specified sequence of bytes, or null if not found.</returns>
     public uint? SearchValue(uint address, int len, IList<byte> value) {
+        if (value.Count == 0) {
+            return null;
+        } 
+        
         int end = (int)(address + len);
         if (end > _memoryDevices.Length) {
             end = _memoryDevices.Length;
         }
 
-        int patternLength = value.Count;
-        if (patternLength == 0) {
-            return null;
-        }
+        byte[] window = new byte[value.Count];
 
-        byte[] searchPattern = [.. value];
-
-        byte[] window = new byte[patternLength];
-        
         for (uint i = address; i < end; i++) {
             int remaining = end - (int)i;
-            if (remaining < patternLength) {
+            if (remaining < window.Length) {
                 break;
             }
 
-            for (int j = 0; j < patternLength; j++) {
+            for (int j = 0; j < value.Count; j++) {
                 window[j] = _memoryDevices[i + j].Read((uint)(i + j));
             }
-            
-            if (window.AsSpan().SequenceEqual(searchPattern.AsSpan())) {
+
+            if (window.AsSpan().SequenceEqual([..value])) {
                 return i;
             }
         }
