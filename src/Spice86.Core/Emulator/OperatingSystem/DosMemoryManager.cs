@@ -9,6 +9,8 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Linq;
+
 /// <summary>
 /// Implements DOS memory operations, such as allocating and releasing MCBs.
 /// </summary>
@@ -134,28 +136,19 @@ public class DosMemoryManager {
     /// </summary>
     /// <returns>The largest free <see cref="DosMemoryControlBlock"/></returns>
     public DosMemoryControlBlock FindLargestFree() {
+        return EnumerateBlocks()
+            .Where(block => block.IsFree)
+            .MaxBy(block => block.Size) ?? _start;
+    }
+
+    private IEnumerable<DosMemoryControlBlock> EnumerateBlocks() {
         DosMemoryControlBlock? current = _start;
-        DosMemoryControlBlock? largest = null;
-        while (true) {
-            if (current != null && current.IsFree && (largest == null || current.Size > largest.Size)) {
-                largest = current;
+        while (current != null) {
+            yield return current;
+            if (current.IsLast) {
+                break;
             }
-
-            if (current != null && current.IsLast && largest != null) {
-                return largest;
-            }
-
-            if (current == null) {
-                continue;
-            }
-
-            DosMemoryControlBlock? next = current.GetNextOrDefault();
-
-            if (next is null) {
-                return current;
-            }
-
-            current = next;
+            current = current.GetNextOrDefault();
         }
     }
 

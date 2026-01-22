@@ -438,7 +438,7 @@ public class Spice86DependencyInjection : IDisposable {
             _gui as IGuiMouseEvents);
 
         KeyboardInt16Handler keyboardInt16Handler = new(
-            memory, biosDataArea, cfgCpu, stack, state, loggerService,
+            memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
         Joystick joystick = new(state, ioPortDispatcher,
@@ -496,6 +496,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(dos.DosInt25Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt26Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt28Handler);
+            interruptInstaller.InstallInterruptHandler(dos.DosInt2aHandler);
             if (dos.Ems is not null) {
                 interruptInstaller.InstallInterruptHandler(dos.Ems);
             }

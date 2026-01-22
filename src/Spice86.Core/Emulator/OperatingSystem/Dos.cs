@@ -62,6 +62,11 @@ public sealed class Dos {
     public DosInt2fHandler DosInt2FHandler { get; }
 
     /// <summary>
+    /// Gets the INT 2Ah DOS services (minimal stub).
+    /// </summary>
+    public DosInt2aHandler DosInt2aHandler { get; }
+
+    /// <summary>
     /// Gets the INT 25H DOS Disk services.
     /// </summary>
     public DosDiskInt25Handler DosInt25Handler { get; }
@@ -207,6 +212,7 @@ public sealed class Dos {
         DosInt23Handler = new DosInt23Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt24Handler = new DosInt24Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
+        DosInt2aHandler = new DosInt2aHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
             functionHandlerProvider, stack, state, _loggerService, xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,

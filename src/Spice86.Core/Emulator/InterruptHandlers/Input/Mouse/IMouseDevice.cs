@@ -76,4 +76,9 @@ public interface IMouseDevice : IIOPortHandler {
     ///     Vertical position of the mouse cursor relative to the window.
     /// </summary>
     double MouseYRelative { get; set; }
+
+    /// <summary>
+    ///     Resets the accumulated delta values. Should be called after delta values are consumed.
+    /// </summary>
+    void ResetDeltas();
 }

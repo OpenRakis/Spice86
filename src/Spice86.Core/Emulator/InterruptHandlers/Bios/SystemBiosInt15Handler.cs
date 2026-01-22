@@ -3,7 +3,6 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
@@ -58,6 +57,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     private void FillDispatchTable() {
+        AddAction(0x50, () => DosVFontSubsystemAccess(true));
         AddAction(0x24, () => ToggleA20GateOrGetStatus(true));
         AddAction(0x6, Unsupported);
         AddAction(0x86, () => BiosWait(true));
@@ -70,6 +70,35 @@ public class SystemBiosInt15Handler : InterruptHandler {
         AddAction(0x87, () => CopyExtendedMemory(true));
         AddAction(0x83, () => WaitFunction(true));
         AddAction(0x4F, () => KeyboardIntercept(true));
+    }
+
+
+    /// <summary>
+    /// INT 15h, AH=50h - DOS/V Font Subsystem Access.
+    /// Retrieves the address of a font read or write function for Japanese DOS/V systems.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the CPU or not.</param>
+    /// <remarks>
+    /// <b>Inputs:</b><br/>
+    /// AH = 50h<br/>
+    /// AL = function type (00h = read font, 01h = write font)<br/>
+    /// BL = 00h (must be zero)<br/>
+    /// BH = character size (00h = single-byte, 01h = double-byte)<br/>
+    /// DH = width of character cell<br/>
+    /// DL = height of character cell<br/>
+    /// BP = code page (0 = default, 437 = US English, 932 = Japanese, 934 = Korea, 936 = China, 938 = Taiwan)<br/>
+    /// <b>Outputs:</b><br/>
+    /// CF clear if successful:<br/>
+    ///   AH = 00h<br/>
+    ///   ES:BX = address of requested function<br/>
+    /// CF set on error:<br/>
+    ///   AH = error code (01h = invalid font type, 02h = BL not zero, 03h = invalid font size,
+    ///   04h = invalid code page, 80h = unsupported on PC, 86h = unsupported on XT)<br/>
+    /// </remarks>
+    public void DosVFontSubsystemAccess(bool calledFromVm) {
+        SetCarryFlag(true, calledFromVm);
+        //Makes Knights of Xentar work on MS-DOS (Western port for IBM PC)
+        State.AH = 0x80; //Unsupported function (PC AT)
     }
 
     /// <inheritdoc />
@@ -211,7 +240,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
         uint wordCount = State.CX;
         uint byteCount = wordCount * 2;
-        
+
         // Validate word count first
         if (wordCount == 0) {
             SetCarryFlag(false, calledFromVm);
@@ -276,7 +305,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         // Perform the memory copy using spans (following XMS pattern)
         IList<byte> sourceSpan = Memory.GetSlice((int)sourceAddress, (int)byteCount);
         IList<byte> destinationSpan = Memory.GetSlice((int)destinationAddress, (int)byteCount);
-        
+
         sourceSpan.CopyTo(destinationSpan);
 
         // Restore A20 state
