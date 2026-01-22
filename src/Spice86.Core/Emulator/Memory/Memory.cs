@@ -4,8 +4,6 @@ using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
 
-using System.Linq;
-
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
@@ -105,26 +103,36 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     /// <param name="address">The address in memory to start the search from</param>
     /// <param name="len">The maximum amount of memory to search</param>
     /// <param name="value">The sequence of bytes to search for</param>
-    /// <returns>The address of the first occurence of the specified sequence of bytes, or null if not found.</returns>
+    /// <returns>The address of the first occurrence of the specified sequence of bytes, or null if not found.</returns>
     public uint? SearchValue(uint address, int len, IList<byte> value) {
         int end = (int)(address + len);
         if (end > _memoryDevices.Length) {
             end = _memoryDevices.Length;
         }
 
-        ReadOnlySpan<byte> searchPattern = value.ToArray();
+        int patternLength = value.Count;
+        if (patternLength == 0) {
+            return null;
+        }
+
+        byte[] searchPattern = new byte[patternLength];
+        for (int idx = 0; idx < patternLength; idx++) {
+            searchPattern[idx] = value[idx];
+        }
+
+        byte[] window = new byte[patternLength];
         
         for (uint i = address; i < end; i++) {
             int remaining = end - (int)i;
-            if (remaining < searchPattern.Length) {
+            if (remaining < patternLength) {
                 break;
             }
 
-            ReadOnlySpan<byte> window = new([.. Enumerable.Range(0, searchPattern.Length)
-                .Select(offset => _memoryDevices[i + offset]
-                .Read((uint)(i + offset)))]);
+            for (int j = 0; j < patternLength; j++) {
+                window[j] = _memoryDevices[i + j].Read((uint)(i + j));
+            }
             
-            if (window.SequenceEqual(searchPattern)) {
+            if (window.AsSpan().SequenceEqual(searchPattern.AsSpan())) {
                 return i;
             }
         }
