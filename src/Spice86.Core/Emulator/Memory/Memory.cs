@@ -4,6 +4,8 @@ using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
 
+using System.Linq;
+
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
@@ -106,23 +108,24 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     /// <returns>The address of the first occurence of the specified sequence of bytes, or null if not found.</returns>
     public uint? SearchValue(uint address, int len, IList<byte> value) {
         int end = (int)(address + len);
-        if (end >= _memoryDevices.Length) {
+        if (end > _memoryDevices.Length) {
             end = _memoryDevices.Length;
         }
 
-        for (long i = address; i < end; i++) {
-            long endValue = value.Count;
-            if (endValue + i >= _memoryDevices.Length) {
-                endValue = _memoryDevices.Length - i;
+        ReadOnlySpan<byte> searchPattern = value.ToArray();
+        
+        for (uint i = address; i < end; i++) {
+            int remaining = end - (int)i;
+            if (remaining < searchPattern.Length) {
+                break;
             }
 
-            int j = 0;
-            while (j < endValue && _memoryDevices[i + j].Read((uint)(i + j)) == value[j]) {
-                j++;
-            }
-
-            if (j == endValue) {
-                return (uint)i;
+            ReadOnlySpan<byte> window = new([.. Enumerable.Range(0, searchPattern.Length)
+                .Select(offset => _memoryDevices[i + offset]
+                .Read((uint)(i + offset)))]);
+            
+            if (window.SequenceEqual(searchPattern)) {
+                return i;
             }
         }
 
