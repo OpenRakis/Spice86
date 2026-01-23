@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -53,11 +54,6 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The emulated CPU.
     /// </summary>
-    public Cpu Cpu { get; }
-
-    /// <summary>
-    /// The emulated CPU.
-    /// </summary>
     public CfgCpu CfgCpu { get; }
 
     /// <summary>
@@ -94,6 +90,11 @@ public sealed class Machine : IDisposable {
     /// Gets the controller used to manage keyboard input via the Intel 8042 interface.
     /// </summary>
     public Intel8042Controller KeyboardController { get; }
+
+    /// <summary>
+    /// The interrupt vector table.
+    /// </summary>
+    public InterruptVectorTable InterruptVectorTable { get; }
 
     /// <summary>
     /// INT16H handler.
@@ -144,6 +145,11 @@ public sealed class Machine : IDisposable {
     /// INT1A handler.
     /// </summary>
     public SystemClockInt1AHandler SystemClockInt1AHandler { get; }
+
+    /// <summary>
+    /// The Real-Time Clock (RTC) and CMOS RAM device.
+    /// </summary>
+    public RealTimeClock RealTimeClock { get; }
 
     /// <summary>
     /// The Programmable Interval Timer.
@@ -232,14 +238,15 @@ public sealed class Machine : IDisposable {
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler,
         BiosKeyboardInt9Handler biosKeyboardInt9Handler,
         CallbackHandler callbackHandler,
-        Cpu cpu,
         CfgCpu cfgCpu,
         State cpuState,
+        Stack stack,
         Dos dos,
         GravisUltraSound gravisUltraSound,
         IOPortDispatcher ioPortDispatcher,
         Joystick joystick,
         Intel8042Controller keyboardController,
+        InterruptVectorTable interruptVectorTable,
         KeyboardInt16Handler keyboardInt16Handler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IMemory memory,
@@ -250,6 +257,7 @@ public sealed class Machine : IDisposable {
         SystemBiosInt12Handler systemBiosInt12Handler,
         SystemBiosInt15Handler systemBiosInt15Handler,
         SystemClockInt1AHandler systemClockInt1AHandler,
+        RealTimeClock realTimeClock,
         PitTimer timer,
         TimerInt8Handler timerInt8Handler,
         VgaCard vgaCard,
@@ -269,15 +277,15 @@ public sealed class Machine : IDisposable {
         BiosEquipmentDeterminationInt11Handler = biosEquipmentDeterminationInt11Handler;
         BiosKeyboardInt9Handler = biosKeyboardInt9Handler;
         CallbackHandler = callbackHandler;
-        Cpu = cpu;
         CfgCpu = cfgCpu;
         CpuState = cpuState;
-        Stack = cpu.Stack;
+        Stack = stack;
         Dos = dos;
         GravisUltraSound = gravisUltraSound;
         IoPortDispatcher = ioPortDispatcher;
         Joystick = joystick;
         KeyboardController = keyboardController;
+        InterruptVectorTable = interruptVectorTable;
         KeyboardInt16Handler = keyboardInt16Handler;
         EmulatorBreakpointsManager = emulatorBreakpointsManager;
         Memory = memory;
@@ -288,6 +296,7 @@ public sealed class Machine : IDisposable {
         SystemBiosInt12Handler = systemBiosInt12Handler;
         SystemBiosInt15Handler = systemBiosInt15Handler;
         SystemClockInt1AHandler = systemClockInt1AHandler;
+        RealTimeClock = realTimeClock;
         Timer = timer;
         TimerInt8Handler = timerInt8Handler;
         VgaCard = vgaCard;
@@ -317,6 +326,7 @@ public sealed class Machine : IDisposable {
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
                 SoftwareMixer.Dispose();
+                RealTimeClock.Dispose();
             }
             _disposed = true;
         }

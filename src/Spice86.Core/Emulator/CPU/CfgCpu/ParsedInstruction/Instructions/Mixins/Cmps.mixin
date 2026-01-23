@@ -30,7 +30,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
 
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ExecuteStringOperation(this);
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

@@ -230,6 +230,13 @@ public class VgaFunctionality : IVgaFunctionality {
         VideoMode videoMode = GetVideoMode(modeId);
         VgaMode vgaMode = videoMode.VgaMode;
 
+        // Calculate aspect ratio correction factor based on the mode
+        double aspectRatioCorrectionFactor = AspectRatioCorrectionHelper
+            .GetAspectRatioCorrectionFactor(vgaMode.Width, vgaMode.Height, vgaMode.MemoryModel);
+
+        // Create a new VgaMode with the calculated aspect ratio correction factor
+        vgaMode = vgaMode with { AspectRatioCorrectionFactor = aspectRatioCorrectionFactor };
+
         // if palette loading (bit 3 of modeSet ctl = 0)
         if (!flags.HasFlag(ModeFlags.NoPalette)) {
             LoadPalette(videoMode, flags);

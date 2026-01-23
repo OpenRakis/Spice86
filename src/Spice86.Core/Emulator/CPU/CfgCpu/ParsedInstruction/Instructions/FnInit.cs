@@ -12,7 +12,7 @@ public class FnInit : CfgInstruction {
     }
     public override void Execute(InstructionExecutionHelper helper) {
         // Do nothing, no FPU emulation, but this is used to detect FPU support.
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

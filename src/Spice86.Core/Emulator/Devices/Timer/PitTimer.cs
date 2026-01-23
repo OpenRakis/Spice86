@@ -108,7 +108,7 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     // can read the output level through bit 5 of the same port.
     private ref PitChannel Channel2 => ref _pitChannels[2];
 
-    private double PicFullIndex => _clock.CurrentTimeMs;
+    private double PicFullIndex => _clock.ElapsedTimeMs;
 
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {

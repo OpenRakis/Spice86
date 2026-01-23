@@ -9,8 +9,19 @@ using System.Diagnostics;
 using System.Text;
 
 /// <summary>
-/// Represents a MCB in memory.
+/// Represents a Memory Control Block (MCB) in DOS memory.
 /// </summary>
+/// <remarks>
+/// MCB structure (16 bytes):
+/// <code>
+/// Offset  Size  Description
+/// 00h     BYTE  Block type: 4Dh (non-last) or 5Ah (last)
+/// 01h     WORD  PSP segment of owner (0000h = free)
+/// 03h     WORD  Size of memory block in paragraphs (excluding this header)
+/// 05h     3B    Reserved
+/// 08h     8B    Program name (only in DOS 4.0+)
+/// </code>
+/// </remarks>
 [DebuggerDisplay("Owner = {Owner}, AllocationSizeInBytes = {AllocationSizeInBytes}, IsFree = {IsFree}, IsValid = {IsValid}, IsLast = {IsLast}")]
 public class DosMemoryControlBlock : MemoryBasedDataStructure {
     private const int FilenameFieldSize = 8;
@@ -21,6 +32,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     public const byte FreeMcbMarker = 0x0;
     private const byte McbLastEntry = 0x5A;
     private const byte McbNonLastEntry = 0x4D;
+    private const ushort FakeMcbSize = 0xFFFF;
 
     /// <summary>
     /// Initializes a new instance.
@@ -97,9 +109,10 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     public bool IsNonLast => TypeField == McbNonLastEntry;
 
     /// <summary>
-    /// Returns if the MCB is valid (must be Last or NonLast).
+    /// Returns if the MCB is valid (must be Last or NonLast, and size must not be FakeMcbSize).
+    /// The size check matches FreeDOS kernel behavior where FakeMcbSize marks unlinked/fake MCBs.
     /// </summary>
-    public bool IsValid => IsLast || IsNonLast;
+    public bool IsValid => (IsLast || IsNonLast) && Size != FakeMcbSize;
 
     /// <summary>
     /// Returns the next MCB in the MCB in chain, or null if not found.

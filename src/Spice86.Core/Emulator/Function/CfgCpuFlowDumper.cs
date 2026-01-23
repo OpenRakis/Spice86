@@ -9,7 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
 
-public class CfgCpuFlowDumper : IExecutionDumpFactory {
+public class CfgCpuFlowDumper {
     private readonly CfgCpu _cfgCpu;
     private readonly ExecutionDump _previousDump;
 

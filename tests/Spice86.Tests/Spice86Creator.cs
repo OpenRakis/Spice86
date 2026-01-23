@@ -5,7 +5,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
 using Xunit;
@@ -14,9 +13,10 @@ public class Spice86Creator {
     private readonly Configuration _configuration;
     private readonly long _maxCycles;
 
-    public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
+    public Spice86Creator(string binName, bool enablePit = false, bool recordData = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
-        bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null) {
+        bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, string? cDrive = null,
+        ushort programEntryPointSegment = 0x170) {
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
             CommandLineParser parser = new();
@@ -32,19 +32,20 @@ public class Spice86Creator {
             // when false: making sure int8 is not going to be triggered during the tests
             InitializeDOS = installInterruptVectors,
             ProvidedAsmHandlersSegment = 0xF000,
+            ProgramEntryPointSegment = programEntryPointSegment,
             DumpDataOnExit = recordData,
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
             HeadlessMode = HeadlessType.Minimal,
             // Use instructions per second based timer for predictability if timer is enabled
             InstructionsPerSecond = instructionsPerSecond,
-            CfgCpu = enableCfgCpu,
             AudioEngine = AudioEngine.Dummy,
             FailOnUnhandledPort = failOnUnhandledPort,
             A20Gate = enableA20Gate,
             OverrideSupplier = overrideSupplier,
             Xms = enableXms,
             Ems = enableEms,
+            CDrive = cDrive
         };
 
         _maxCycles = maxCycles;

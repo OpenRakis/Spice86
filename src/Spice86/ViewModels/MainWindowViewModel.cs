@@ -1,10 +1,7 @@
 ﻿namespace Spice86.ViewModels;
 
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,6 +11,7 @@ using Serilog.Events;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.Keyboard;
@@ -172,6 +170,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
+    /// <summary>
+    /// The aspect ratio correction factor for the current video mode.
+    /// Controls vertical scaling: 1.0 = square pixels, 1.2 = DOS VGA correction.
+    /// </summary>
+    [ObservableProperty]
+    private double _aspectRatioCorrectionFactor = 1.0;
+
     [ObservableProperty] private Cursor? _cursor = Cursor.Default;
 
     [ObservableProperty]
@@ -285,6 +290,24 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             UpdateShownEmulatorMouseCursorPosition();
             InitializeRenderingTimer();
         }, DispatcherPriority.Background);
+    }
+
+    /// <summary>
+    /// Called when the emulated video mode changes.
+    /// Updates the aspect ratio correction factor for proper display scaling.
+    /// </summary>
+    public void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
+        _uiDispatcher.Post(() => {
+            AspectRatioCorrectionFactor = e.AspectRatioCorrectionFactor;
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug(
+                    "Video mode changed to {Width}x{Height}, aspect ratio correction factor: {Factor}",
+                    e.NewMode.Width,
+                    e.NewMode.Height,
+                    e.AspectRatioCorrectionFactor);
+            }
+        });
     }
 
     public void HideMouseCursor() => _uiDispatcher.Post(() => ShowCursor = false);

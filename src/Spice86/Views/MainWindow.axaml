@@ -107,15 +107,18 @@
 		</Grid>
 		<Viewbox Grid.Row="1">
 			<LayoutTransformControl>
-				<LayoutTransformControl.RenderTransform>
-					<ScaleTransform
-						ScaleX="{Binding Scale}"
-						ScaleY="{Binding Scale}">
-					</ScaleTransform>
-				</LayoutTransformControl.RenderTransform>
+				<LayoutTransformControl.LayoutTransform>
+					<TransformGroup>
+						<!-- Dynamic aspect ratio correction based on current video mode -->
+						<ScaleTransform ScaleX="1" ScaleY="{Binding AspectRatioCorrectionFactor}" />
+						<ScaleTransform
+							ScaleX="{Binding Scale}"
+							ScaleY="{Binding Scale}">
+						</ScaleTransform>
+					</TransformGroup>
+				</LayoutTransformControl.LayoutTransform>
 				<!-- OpenGL Video Control for CRT shader effects -->
 				<local:OpenGlVideoControl x:Name="OpenGlVideo"
-				    Width="640" Height="480"
 				    Cursor="{Binding Cursor}"
 				    ShaderType="{Binding ShaderType}" />
 			</LayoutTransformControl>

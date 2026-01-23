@@ -7,7 +7,10 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -19,6 +22,9 @@ using Spice86.Shared.Utils;
 public class SystemBiosInt15Handler : InterruptHandler {
     private readonly A20Gate _a20Gate;
     private readonly Configuration _configuration;
+    private readonly BiosDataArea _biosDataArea;
+    private readonly IOPortDispatcher _ioPortDispatcher;
+    private readonly EmulationLoopScheduler _emulationLoopScheduler;
 
     /// <summary>
     /// Initializes a new instance.
@@ -29,31 +35,70 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="a20Gate">The A20 line gate.</param>
+    /// <param name="biosDataArea">The BIOS data area for accessing system flags and variables.</param>
+    /// <param name="emulationLoopScheduler">Used for registering a timed callback named 'OnWaitComplete' when emulated programs call the BIOS WAIT function.</param>
+    /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports (e.g., CMOS).</param>
     /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public SystemBiosInt15Handler(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, A20Gate a20Gate, bool initializeResetVector,
-        ILoggerService loggerService)
+        State state, A20Gate a20Gate, BiosDataArea biosDataArea, EmulationLoopScheduler emulationLoopScheduler,
+        IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, bool initializeResetVector)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _a20Gate = a20Gate;
+        _emulationLoopScheduler = emulationLoopScheduler;
         _configuration = configuration;
+        _biosDataArea = biosDataArea;
+        _ioPortDispatcher = ioPortDispatcher;
         if (initializeResetVector) {
-            // Put HLT instruction at the reset address
             memory.UInt16[0xF000, 0xFFF0] = 0xF4;
         }
         FillDispatchTable();
     }
 
     private void FillDispatchTable() {
+        AddAction(0x50, () => DosVFontSubsystemAccess(true));
         AddAction(0x24, () => ToggleA20GateOrGetStatus(true));
         AddAction(0x6, Unsupported);
+        AddAction(0x86, () => BiosWait(true));
+        AddAction(0x90, () => DeviceBusy(true));
+        AddAction(0x91, () => DevicePost(true));
         AddAction(0xC0, Unsupported);
         AddAction(0xC2, Unsupported);
         AddAction(0xC4, Unsupported);
         AddAction(0x88, () => GetExtendedMemorySize(true));
         AddAction(0x87, () => CopyExtendedMemory(true));
+        AddAction(0x83, () => WaitFunction(true));
         AddAction(0x4F, () => KeyboardIntercept(true));
+    }
+
+
+    /// <summary>
+    /// INT 15h, AH=50h - DOS/V Font Subsystem Access.
+    /// Retrieves the address of a font read or write function for Japanese DOS/V systems.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the CPU or not.</param>
+    /// <remarks>
+    /// <b>Inputs:</b><br/>
+    /// AH = 50h<br/>
+    /// AL = function type (00h = read font, 01h = write font)<br/>
+    /// BL = 00h (must be zero)<br/>
+    /// BH = character size (00h = single-byte, 01h = double-byte)<br/>
+    /// DH = width of character cell<br/>
+    /// DL = height of character cell<br/>
+    /// BP = code page (0 = default, 437 = US English, 932 = Japanese, 934 = Korea, 936 = China, 938 = Taiwan)<br/>
+    /// <b>Outputs:</b><br/>
+    /// CF clear if successful:<br/>
+    ///   AH = 00h<br/>
+    ///   ES:BX = address of requested function<br/>
+    /// CF set on error:<br/>
+    ///   AH = error code (01h = invalid font type, 02h = BL not zero, 03h = invalid font size,
+    ///   04h = invalid code page, 80h = unsupported on PC, 86h = unsupported on XT)<br/>
+    /// </remarks>
+    public void DosVFontSubsystemAccess(bool calledFromVm) {
+        SetCarryFlag(true, calledFromVm);
+        //Makes Knights of Xentar work on MS-DOS (Western port for IBM PC)
+        State.AH = 0x80; //Unsupported function (PC AT)
     }
 
     /// <inheritdoc />
@@ -63,6 +108,52 @@ public class SystemBiosInt15Handler : InterruptHandler {
     public override void Run() {
         byte operation = State.AH;
         Run(operation);
+    }
+
+    /// <summary>
+    /// INT 15h, AH=83h - Event Wait Interval.
+    /// Sets up RTC periodic interrupt for timed delay. ES:BX points to a flag byte whose bit 7 will be set when the wait completes.
+    /// AL=00h to set, AL=01h to cancel. Returns CF=1 + AH=80h if event already in progress.
+    /// </summary>
+    public void WaitFunction(bool calledFromVm) {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("INT 15h, AH=83h - WAIT FUNCTION, AL={AL:X2}", State.AL);
+        }
+
+        if (State.AL == 0x01) {
+            _biosDataArea.RtcWaitFlag = 0;
+            ModifyCmosRegister(Devices.Cmos.CmosRegisterAddresses.StatusRegisterB, value => (byte)(value & ~0x40));
+
+            SetCarryFlag(false, calledFromVm);
+
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("WAIT FUNCTION cancelled");
+            }
+            return;
+        }
+
+        if (_biosDataArea.RtcWaitFlag != 0) {
+            State.AH = 0x80;
+            SetCarryFlag(true, calledFromVm);
+
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("WAIT FUNCTION called while event already in progress");
+            }
+            return;
+        }
+
+        uint count = ((uint)State.CX << 16) | State.DX;
+        _biosDataArea.UserWaitCompleteFlag = new SegmentedAddress(State.ES, State.BX);
+        _biosDataArea.UserWaitTimeout = count;
+        _biosDataArea.RtcWaitFlag = 1;
+        ModifyCmosRegister(Devices.Cmos.CmosRegisterAddresses.StatusRegisterB, value => (byte)(value | 0x40));
+
+        SetCarryFlag(false, calledFromVm);
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("WAIT FUNCTION set: count={Count} microseconds, callback={Segment:X4}:{Offset:X4}",
+                count, State.ES, State.BX);
+        }
     }
 
     /// <summary>
@@ -149,7 +240,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
         uint wordCount = State.CX;
         uint byteCount = wordCount * 2;
-        
+
         // Validate word count first
         if (wordCount == 0) {
             SetCarryFlag(false, calledFromVm);
@@ -214,7 +305,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         // Perform the memory copy using spans (following XMS pattern)
         IList<byte> sourceSpan = Memory.GetSlice((int)sourceAddress, (int)byteCount);
         IList<byte> destinationSpan = Memory.GetSlice((int)destinationAddress, (int)byteCount);
-        
+
         sourceSpan.CopyTo(destinationSpan);
 
         // Restore A20 state
@@ -227,29 +318,77 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// This function tells to the emulated program that we are an IBM PC AT, not a IBM PS/2.
     /// </summary>
     public void Unsupported() {
-        // We are not an IBM PS/2
         SetCarryFlag(true, true);
         State.AH = 0x86;
     }
 
+
+    private void ModifyCmosRegister(byte register, Func<byte, byte> modifier) {
+        _ioPortDispatcher.WriteByte(Devices.Cmos.CmosPorts.Address, register);
+        byte currentValue = _ioPortDispatcher.ReadByte(Devices.Cmos.CmosPorts.Data);
+        byte newValue = modifier(currentValue);
+        _ioPortDispatcher.WriteByte(Devices.Cmos.CmosPorts.Address, register);
+        _ioPortDispatcher.WriteByte(Devices.Cmos.CmosPorts.Data, newValue);
+    }
+
     /// <summary>
-    /// INT 15h, AH=4Fh - Keyboard intercept function
-    /// Called by the INT 9 handler to allow translation or filtering of keyboard scan codes.
+    /// INT 15h, AH=86h - BIOS Wait.
+    /// Waits for CX:DX microseconds. Returns CF=1 + AH=83h if timer already in use.
     /// </summary>
-    /// <remarks>
-    /// Input: AL = scan code
-    /// Output: CF clear if scan code should be ignored
-    ///         CF set if scan code should be processed
-    ///         AL = possibly modified scan code
-    /// </remarks>
+    public void BiosWait(bool calledFromVm) {
+        if (_biosDataArea.RtcWaitFlag != 0) {
+            State.AH = 0x83;
+            SetCarryFlag(true, calledFromVm);
+            return;
+        }
+
+        uint microseconds = ((uint)State.CX << 16) | State.DX;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("BIOS WAIT requested for {Microseconds} microseconds", microseconds);
+        }
+
+        double delayMs = (microseconds / 1000.0) + 1.0;
+        _biosDataArea.RtcWaitFlag = 1;
+        _biosDataArea.UserWaitTimeout = microseconds;
+        _emulationLoopScheduler.AddEvent(OnWaitComplete, delayMs);
+        SetCarryFlag(false, calledFromVm);
+    }
+
+
+    private void OnWaitComplete(uint value) {
+        _biosDataArea.RtcWaitFlag = 0;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("BIOS WAIT completed");
+        }
+    }
+
+    /// <summary>
+    /// INT 15h, AH=4Fh - Keyboard Intercept.
+    /// Allows translation or filtering of keyboard scan codes. Returns CF=1 to process, CF=0 to ignore.
+    /// </summary>
     public void KeyboardIntercept(bool calledFromVm) {
         byte scanCode = State.AL;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 15h AH=4Fh: Keyboard intercept called with scan code {ScanCode:X2}", scanCode);
         }
 
-        // By default, we want to process the scan code (so set carry flag)
-        // A real keyboard hook could modify AL or clear CF here to alter behavior
         SetCarryFlag(true, calledFromVm);
+    }
+
+    /// <summary>
+    /// INT 15h, AH=90h - Device Busy.
+    /// </summary>
+    public void DeviceBusy(bool calledFromVm) {
+        SetCarryFlag(false, calledFromVm);
+        State.AH = 0;
+    }
+
+    /// <summary>
+    /// INT 15h, AH=91h - Device Post.
+    /// </summary>
+    public void DevicePost(bool calledFromVm) {
+        SetCarryFlag(false, calledFromVm);
+        State.AH = 0;
     }
 }

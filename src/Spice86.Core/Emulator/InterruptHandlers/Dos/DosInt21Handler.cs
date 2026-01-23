@@ -3,9 +3,11 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -13,6 +15,8 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System;
 
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -30,10 +34,15 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
+    private readonly DosProcessManager _dosProcessManager;
+    private readonly IOPortDispatcher _ioPortDispatcher;
+    private readonly DosTables _dosTables;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
-    private readonly Clock _clock;
+
+    private const ushort OffsetMask = 0x0F;
+    private const byte ExpectedValueOfALInCreateChildPsp = 0xF0;
 
     /// <summary>
     /// Initializes a new instance.
@@ -49,13 +58,17 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
     /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
     /// <param name="dosDriveManager">The DOS class responsible for DOS volumes.</param>
-    /// <param name="clock">The class responsible for the clock exposed to DOS programs.</param>
+    /// <param name="dosProcessManager">The DOS class responsible for program loading and execution.</param>
+    /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports (e.g., CMOS).</param>
+    /// <param name="dosTables">The DOS tables structure containing CDS and DBCS information.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt21Handler(IMemory memory, DosProgramSegmentPrefixTracker dosPspTracker,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, DosDriveManager dosDriveManager, Clock clock, ILoggerService loggerService)
+        DosFileManager dosFileManager, DosDriveManager dosDriveManager,
+        DosProcessManager dosProcessManager,
+        IOPortDispatcher ioPortDispatcher, DosTables dosTables, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
         _dosPspTracker = dosPspTracker;
@@ -64,16 +77,24 @@ public class DosInt21Handler : InterruptHandler {
         _dosMemoryManager = dosMemoryManager;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
+        _dosProcessManager = dosProcessManager;
+        _ioPortDispatcher = ioPortDispatcher;
+        _dosTables = dosTables;
         _interruptVectorTable = new InterruptVectorTable(memory);
-        _clock = clock;
         FillDispatchTable();
     }
+
+    /// <summary>
+    /// Gets the DOS process manager for the <see cref="DosProgramLoader"/>
+    /// </summary>
+    internal DosProcessManager ProcessManager => _dosProcessManager;
 
     /// <summary>
     /// Register the handlers for the DOS INT21H services that we support.
     /// </summary>
     private void FillDispatchTable() {
         AddAction(0x00, QuitWithExitCode);
+        AddAction(0x01, CharacterInputWithEcho);
         AddAction(0x02, DisplayOutput);
         AddAction(0x03, ReadCharacterFromStdAux);
         AddAction(0x04, WriteCharacterToStdAux);
@@ -92,6 +113,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
         AddAction(0x25, SetInterruptVector);
+        AddAction(0x26, CreateNewPsp);
         AddAction(0x2A, GetDate);
         AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
@@ -125,52 +147,195 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4A, () => ModifyMemoryBlock(true));
         AddAction(0x4B, () => LoadAndOrExecute(true));
         AddAction(0x4C, QuitWithExitCode);
+        AddAction(0x4D, GetReturnCode);
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
+        AddAction(0x52, GetListOfLists);
+        AddAction(0x55, CreateChildPsp);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
+        AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
+    }
+
+    /// <summary>
+    /// INT 21h, AH=01h - Character Input with Echo.
+    /// <para>
+    /// Reads a single character from standard input and echoes it to standard output.
+    /// The program waits for input; the user just needs to press the intended key
+    /// WITHOUT pressing "enter" key.
+    /// </para>
+    /// <b>Returns:</b><br/>
+    /// AL = ASCII code of the input character
+    /// </summary>
+    /// <remarks>
+    /// This is a blocking call that reads from STDIN.
+    /// The console device's Read method handles the echo internally when Echo is true. <br/>
+    /// Used by (for example): Civilization.
+    /// </remarks>
+    public void CharacterInputWithEcho() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CHARACTER INPUT WITH ECHO");
+        }
+        if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) &&
+            stdIn.CanRead) {
+            ConsoleDevice? consoleDevice = stdIn as ConsoleDevice;
+            bool previousEchoState = false;
+            if (consoleDevice != null) {
+                previousEchoState = consoleDevice.Echo;
+                consoleDevice.Echo = true;
+            }
+            
+            byte[] bytes = new byte[1];
+            int readCount = stdIn.Read(bytes, 0, 1);
+            
+            if (consoleDevice != null) {
+                consoleDevice.Echo = previousEchoState;
+            }
+            
+            State.AL = readCount < 1 ? (byte)0 : bytes[0];
+        } else {
+            State.AL = 0;
+        }
     }
 
     public void SetDate() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("SET DATE");
-        }
-
         ushort year = State.CX;
         byte month = State.DH;
         byte day = State.DL;
 
-        if (!_clock.SetDate(year, month, day)) {
-            State.AL = 0xFF; // Invalid date
+        bool valid = false;
+        try {
+            if (year >= 1980 && year <= 2099 && month >= 1 && month <= 12 && day >= 1) {
+                _ = new DateTime(year, month, day);
+                valid = true;
+            }
+        } catch (ArgumentOutOfRangeException) {
+            valid = false;
+        }
+
+        if (valid) {
+            int century = year / 100;
+            int yearPart = year % 100;
+
+            byte yearBcd = BcdConverter.ToBcd((byte)yearPart);
+            byte monthBcd = BcdConverter.ToBcd(month);
+            byte dayBcd = BcdConverter.ToBcd(day);
+            byte centuryBcd = BcdConverter.ToBcd((byte)century);
+
+            WriteCmosRegister(CmosRegisterAddresses.Year, yearBcd);
+            WriteCmosRegister(CmosRegisterAddresses.Month, monthBcd);
+            WriteCmosRegister(CmosRegisterAddresses.DayOfMonth, dayBcd);
+            WriteCmosRegister(CmosRegisterAddresses.Century, centuryBcd);
+
+            State.AL = 0;
+
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("SET DOS DATE to CMOS: {Year}-{Month:D2}-{Day:D2}",
+                    year, month, day);
+            }
+        } else {
+            State.AL = 0xFF;
+
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("SET DOS DATE called with invalid date: {Year}-{Month:D2}-{Day:D2}",
+                    year, month, day);
+            }
         }
     }
 
     public void SetTime() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("SET TIME");
-        }
-
-        byte hours = State.CH;
+        byte hour = State.CH;
         byte minutes = State.CL;
         byte seconds = State.DH;
         byte hundredths = State.DL;
 
-        if (!_clock.SetTime(hours, minutes, seconds, hundredths)) {
-            State.AL = 0xFF; // Invalid time
+        bool valid = hour <= 23 &&
+                     minutes <= 59 &&
+                     seconds <= 59 &&
+                     hundredths <= 99;
+
+        if (valid) {
+            byte hourBcd = BcdConverter.ToBcd(hour);
+            byte minutesBcd = BcdConverter.ToBcd(minutes);
+            byte secondsBcd = BcdConverter.ToBcd(seconds);
+
+            WriteCmosRegister(CmosRegisterAddresses.Hours, hourBcd);
+            WriteCmosRegister(CmosRegisterAddresses.Minutes, minutesBcd);
+            WriteCmosRegister(CmosRegisterAddresses.Seconds, secondsBcd);
+
+            State.AL = 0;
+
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("SET DOS TIME to CMOS: {Hour:D2}:{Minutes:D2}:{Seconds:D2}.{Hundredths:D2}",
+                    hour, minutes, seconds, hundredths);
+            }
+        } else {
+            State.AL = 0xFF;
+
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("SET DOS TIME called with invalid time: {Hour:D2}:{Minutes:D2}:{Seconds:D2}.{Hundredths:D2}",
+                    hour, minutes, seconds, hundredths);
+            }
         }
     }
 
     /// <summary>
-    /// Get a pointer to the "lead byte" table, for foreign character sets.
-    /// This is a table that tells DOS which bytes are the first byte of a double-byte character.
-    /// We don't support double-byte characters (yet), so we just return 0.
+    /// INT 21h, AH=63h - Get Double Byte Character Set (DBCS) Lead Byte Table.
+    /// <para>
+    /// Returns a pointer to the DBCS lead-byte table, which indicates which byte values
+    /// are lead bytes in double-byte character sequences (e.g., Japanese, Chinese, Korean).
+    /// An empty table (value 0) indicates no DBCS ranges are defined.
+    /// </para>
+    /// <b>Expects:</b><br/>
+    /// AL = 0 to get DBCS lead byte table pointer
+    /// <b>Returns:</b><br/>
+    /// If AL was 0:<br/>
+    /// - DS:SI = pointer to DBCS lead byte table<br/>
+    /// - AL = 0<br/>
+    /// - CF = 0 (undocumented)<br/>
+    /// If AL was not 0:<br/>
+    /// - AL = 0xFF<br/>
     /// </summary>
     private void GetLeadByteTable() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET LEAD BYTE TABLE");
+            LoggerService.Verbose("INT 21h AH=63h - Get DBCS Lead Byte Table, AL={AL:X2}", State.AL);
         }
-        State.AX = 0;
+
+        if (State.AL == 0) {
+            uint dbcsAddress = _dosTables.DoubleByteCharacterSet.BaseAddress;
+            ushort segment = MemoryUtils.ToSegment(dbcsAddress);
+            ushort offset = (ushort)(dbcsAddress & OffsetMask);
+
+            State.DS = segment;
+            State.SI = offset;
+            State.AL = 0;
+            State.CarryFlag = false; // FreeDOS clears carry flag on success
+
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("Returning DBCS table pointer at {Segment:X4}:{Offset:X4}", segment, offset);
+            }
+        } else {
+            // FreeDOS returns error without modifying carry flag for invalid subfunction
+            State.AL = 0xFF;
+        }
+    }
+
+    /// <summary>
+    /// Obtains or selects the current code page.
+    /// </summary>
+    /// <remarks>Setting the global loaded code page table is not supported and has no effect.</remarks>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    public void GetSetGlobalLoadedCodePageTable(bool calledFromVm) {
+        if (State.AL == 1) {
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("Getting the global loaded code page is not supported - returned 0 which passes test programs...");
+            }
+            State.BX = State.DX = 0;
+            SetCarryFlag(false, calledFromVm);
+        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("Setting the global loaded code page is not supported.");
+        }
     }
 
     /// <summary>
@@ -382,7 +547,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void ClearKeyboardBufferAndInvokeKeyboardFunction() {
         byte operation = State.AL;
-        if(LoggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
             LoggerService.Debug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", operation);
         }
         if (operation is not 0x0 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
@@ -446,7 +611,7 @@ public class DosInt21Handler : InterruptHandler {
         }
         dosInputBuffer.Characters = string.Empty;
 
-        while(State.IsRunning) {
+        while (State.IsRunning) {
             byte[] inputBuffer = new byte[1];
             readCount = standardInput.Read(inputBuffer, 0, 1);
             if (readCount < 1) {
@@ -474,7 +639,7 @@ public class DosInt21Handler : InterruptHandler {
                 standardOutput.Write(bell);
                 continue;
             }
-            if(standardOutput.CanWrite) {
+            if (standardOutput.CanWrite) {
                 standardOutput.Write(c);
             }
             dosInputBuffer.Characters += c;
@@ -501,7 +666,7 @@ public class DosInt21Handler : InterruptHandler {
     public void DirectConsoleIo(bool calledFromVm) {
         byte character = State.DL;
         if (character == 0xFF) {
-            if(LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("DOS INT21H DirectConsoleIo, INPUT REQUESTED");
             }
             if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn)
@@ -528,11 +693,11 @@ public class DosInt21Handler : InterruptHandler {
             }
             if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)
                 && stdOut.CanWrite) {
-                if(stdOut is ConsoleDevice consoleDeviceBefore) {
+                if (stdOut is ConsoleDevice consoleDeviceBefore) {
                     consoleDeviceBefore.DirectOutput = true;
                 }
                 stdOut.Write(character);
-                if(stdOut is ConsoleDevice consoleDeviceAfter) {
+                if (stdOut is ConsoleDevice consoleDeviceAfter) {
                     consoleDeviceAfter.DirectOutput = false;
                 }
                 State.AL = character;
@@ -572,7 +737,7 @@ public class DosInt21Handler : InterruptHandler {
             stdOut.CanWrite) {
             // Write to the standard output device
             stdOut.Write(characterByte);
-        } else if(LoggerService.IsEnabled(LogEventLevel.Warning)) {
+        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
             LoggerService.Warning("DOS INT21H DisplayOutput: Cannot write to standard output device.");
         }
         State.AL = _lastDisplayOutputCharacter;
@@ -675,7 +840,7 @@ public class DosInt21Handler : InterruptHandler {
     /// CF and AX are cleared on success. <br/>
     /// CF is set on error. Possible error code in AX: 0x09 (Invalid memory block address). <br/>
     /// </returns>
-    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void FreeMemoryBlock(bool calledFromVm) {
         ushort blockSegment = State.ES;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -731,14 +896,39 @@ public class DosInt21Handler : InterruptHandler {
     /// DL = day <br/>
     /// </returns>
     public void GetDate() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET DATE");
+        byte yearBcd = ReadCmosRegister(CmosRegisterAddresses.Year);
+        byte monthBcd = ReadCmosRegister(CmosRegisterAddresses.Month);
+        byte dayBcd = ReadCmosRegister(CmosRegisterAddresses.DayOfMonth);
+        byte dayOfWeekBcd = ReadCmosRegister(CmosRegisterAddresses.DayOfWeek);
+        byte centuryBcd = ReadCmosRegister(CmosRegisterAddresses.Century);
+
+        int year = BcdConverter.FromBcd(yearBcd);
+        int century = BcdConverter.FromBcd(centuryBcd);
+        int month = BcdConverter.FromBcd(monthBcd);
+        int day = BcdConverter.FromBcd(dayBcd);
+        int dayOfWeek = BcdConverter.FromBcd(dayOfWeekBcd);
+
+        int fullYear = century * 100 + year;
+
+        int dosDayOfWeek;
+        if (dayOfWeek == 0) {
+            dosDayOfWeek = 0;
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("CMOS DayOfWeek register returned 0 (invalid). Defaulting DOS day of week to Sunday (0).");
+            }
+        } else {
+            dosDayOfWeek = dayOfWeek - 1;
         }
-        (ushort year, byte month, byte day, byte dayOfWeek) = _clock.GetDate();
-        State.AL = dayOfWeek;
-        State.CX = year;
-        State.DH = month;
-        State.DL = day;
+
+        State.CX = (ushort)fullYear;
+        State.DH = (byte)month;
+        State.DL = (byte)day;
+        State.AL = (byte)dosDayOfWeek;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET DOS DATE from CMOS: {Year}-{Month:D2}-{Day:D2} (day of week: {DayOfWeek})",
+                fullYear, month, day, dosDayOfWeek);
+        }
     }
 
     /// <summary>
@@ -771,11 +961,42 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Terminate the current process, and either prepare unloading it, or keep it in memory.
+    /// INT 21h, AH=31h - Terminate and Stay Resident.
+    /// Keeps the program in memory and returns control to the parent process.
     /// </summary>
-    /// <exception cref="NotImplementedException">TSR Support is not implemented</exception>
+    /// <remarks>
+    /// Input: AL = return code, DX = number of paragraphs to keep resident
+    /// </remarks>
     private void TerminateAndStayResident() {
-        throw new NotImplementedException("TSR Support is not implemented");
+        ushort paragraphsToKeep = State.DX;
+        byte returnCode = State.AL;
+
+        ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
+
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information(
+                "TSR: Terminating with return code {ReturnCode}, keeping {Paragraphs} paragraphs at PSP {PspSegment:X4}",
+                returnCode, paragraphsToKeep, currentPspSegment);
+        }
+
+        DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(
+            currentPspSegment,
+            paragraphsToKeep,
+            out DosMemoryControlBlock resizedBlock);
+
+        if (errorCode == DosErrorCode.NoError) {
+            _dosProcessManager.TrackResidentBlock(currentPspSegment, resizedBlock);
+        }
+
+        // Even if resize fails, we still terminate as a TSR
+        // This matches FreeDOS behavior
+        if (errorCode != DosErrorCode.NoError && LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning(
+                "TSR: Failed to resize memory block to {Paragraphs} paragraphs, error: {Error}",
+                paragraphsToKeep, errorCode);
+        }
+
+        _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR);
     }
 
     /// <summary>
@@ -842,6 +1063,29 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// INT 21h, AH=52h - Get List of Lists (SYSVARS).
+    /// <para>
+    /// Returns a pointer to the DOS internal tables (also known as the "List of Lists" or SYSVARS).
+    /// </para>
+    /// <remarks>
+    /// Like FREEDOS and MS-DOS, this actually returns a pointer to the first drive DOS Parameter Block, which is the "official" start of the structure. <br/>
+    /// This is used by (for example) the game 'Day of the Tentacle' and 'Indiana Jones and the Fate of Atlantis'.
+    /// </remarks>
+    /// </summary>
+    private void GetListOfLists() {
+        // Return pointer to the List of Lists (SYSVARS)
+        // ES:BX points to offset 0 of the SYSVARS structure
+        State.ES = DosSysVars.Segment;
+        State.BX = 0;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose(
+                "GET LIST OF LISTS ES:BX={Es}:{Bx}",
+                ConvertUtils.ToHex16(State.ES),
+                ConvertUtils.ToHex16(State.BX));
+        }
+    }
+
+    /// <summary>
     /// Gets or sets the Ctrl-C flag. AL: 0 = get, 1 or 2 = set it from DL.
     /// </summary>
     /// <returns>
@@ -880,14 +1124,25 @@ public class DosInt21Handler : InterruptHandler {
     /// Returns the current MS-DOS time in CH (hour), CL (minute), DH (second), and DL (millisecond) from the host's DateTime.Now.
     /// </summary>
     public void GetTime() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET TIME");
-        }
-        (byte hours, byte minutes, byte seconds, byte hundredths) = _clock.GetTime();
-        State.CH = hours;
-        State.CL = minutes;
-        State.DH = seconds;
+        byte hourBcd = ReadCmosRegister(CmosRegisterAddresses.Hours);
+        byte minuteBcd = ReadCmosRegister(CmosRegisterAddresses.Minutes);
+        byte secondBcd = ReadCmosRegister(CmosRegisterAddresses.Seconds);
+
+        byte hour = BcdConverter.FromBcd(hourBcd);
+        byte minute = BcdConverter.FromBcd(minuteBcd);
+        byte second = BcdConverter.FromBcd(secondBcd);
+
+        byte hundredths = 0;
+
+        State.CH = hour;
+        State.CL = minute;
+        State.DH = second;
         State.DL = hundredths;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET DOS TIME from CMOS: {Hour:D2}:{Minute:D2}:{Second:D2}.{Hundredths:D2}",
+                hour, minute, second, hundredths);
+        }
     }
 
     /// <summary>
@@ -923,13 +1178,104 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Either only load a program or overlay, or load it and run it.
+    /// INT 21h, AH=4Bh - EXEC: Load and/or Execute Program.
+    /// <para>
+    /// <b>Call with:</b><br/>
+    /// AH = 4Bh<br/>
+    /// AL = 00h (Load and Execute), 01h (Load Only), 03h (Load Overlay)<br/>
+    /// DS:DX = ASCIIZ program path<br/>
+    /// ES:BX = parameter block
+    /// </para>
+    /// <para>
+    /// <b>Parameter Block (AL=00h/01h):</b><br/>
+    /// +00h WORD environment segment (0=inherit)<br/>
+    /// +02h DWORD command tail pointer<br/>
+    /// +06h DWORD FCB1 pointer<br/>
+    /// +0Ah DWORD FCB2 pointer<br/>
+    /// AL=01h returns: +0Eh SS, +10h SP, +12h CS, +14h IP
+    /// </para>
+    /// <para>
+    /// <b>Parameter Block (AL=03h):</b><br/>
+    /// +00h WORD load segment<br/>
+    /// +02h WORD relocation factor
+    /// </para>
+    /// <para>
+    /// <b>Returns:</b><br/>
+    /// CF=0: success (AL=00h: child terminated; AL=01h: param block filled; AL=03h: AX=DX=0)<br/>
+    /// CF=1: error (AX=02h file not found, 05h access denied, 08h insufficient memory, 0Bh invalid format)
+    /// </para>
+    /// <para>
+    /// <b>Behavior:</b><br/>
+    /// AL=00h: Creates child PSP, loads EXE/COM, executes, returns when child terminates via INT 21h/4Ch<br/>
+    /// AL=01h: Creates child PSP, loads program, fills param block with CS:IP/SS:SP, returns immediately without execution<br/>
+    /// AL=03h: Loads EXE overlay at specified segment with relocation, no PSP creation or execution<br/>
+    /// Child PSP inherits file handles (except DoNotInherit/Private), environment, parent's termination address from caller's CS:IP on stack<br/>
+    /// EXE: loads at PSP+10h, applies relocations, sets CS:IP/SS:SP from header<br/>
+    /// COM: loads at PSP:0100h, sets CS=DS=ES=SS=PSP, IP=0100h, SP=FFFEh<br/>
+    /// FCB pointers 0000:0000 and FFFF:FFFF treated as null<br/>
+    /// AX/BX return FCB validity code (00FFh=FCB1 invalid, FF00h=FCB2 invalid, 0000h=both valid)<br/>
+    /// Parent SS:SP saved; on child termination, restores parent context via modified interrupt frame and IRET to INT 22h vector
+    /// </para>
     /// </summary>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
-    /// <exception cref="NotImplementedException">This function is not implemented</exception>
     public void LoadAndOrExecute(bool calledFromVm) {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        throw new NotImplementedException($"INT21H: load and/or execute program is not implemented. Emulated program tried to load and/or exec: {programName}");
+        DosExecLoadType loadType = (DosExecLoadType)State.AL;
+        uint paramBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
+
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("INT21H/4B: DS:DX={Ds:X4}:{Dx:X4}, programName=\"{ProgramName}\", loadType={LoadType}",
+                State.DS, State.DX, programName, loadType);
+        }
+
+        DosExecResult result;
+
+        if (loadType == DosExecLoadType.LoadOverlay) {
+            DosExecOverlayParameterBlock overlayParamBlock = new(Memory, paramBlockAddress);
+            result = _dosProcessManager.LoadOverlay(programName, overlayParamBlock.LoadSegment, overlayParamBlock.RelocationFactor);
+        } else {
+            DosExecParameterBlock paramBlock = new(Memory, paramBlockAddress);
+            uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(paramBlock.CommandTailSegment, paramBlock.CommandTailOffset);
+            DosCommandTail cmdTail = new(Memory, cmdTailAddress);
+            string commandTail = cmdTail.Length > 0 ? cmdTail.Command.TrimEnd('\r') : string.Empty;
+            result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail, loadType, paramBlock.EnvironmentSegment);
+        }
+        HandleDosExecResult(calledFromVm, result);
+    }
+
+    private void HandleDosExecResult(bool calledFromVm, DosExecResult result) {
+        if (result.Success) {
+            SetCarryFlag(false, calledFromVm);
+            // Set AX and DX if the result specifies values (e.g., LoadOverlay returns AX=0, DX=0)
+            if (result.AX.HasValue) {
+                State.AX = result.AX.Value;
+            }
+            if (result.DX.HasValue) {
+                State.DX = result.DX.Value;
+            }
+        } else {
+            SetCarryFlag(true, calledFromVm);
+            State.AX = (ushort)result.ErrorCode;
+            LogDosError(calledFromVm);
+        }
+    }
+
+    public DosExecResult LoadOverlay(string programName, DosExecOverlayParameterBlock overlayParamBlock) {
+        DosExecResult result = _dosProcessManager.LoadOverlay(programName, overlayParamBlock.LoadSegment, overlayParamBlock.RelocationFactor);
+        HandleDosExecResult(calledFromVm: true, result);
+        return result;
+    }
+
+    public DosExecResult LoadOnly(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadOnly, paramBlock.EnvironmentSegment);
+        HandleDosExecResult(calledFromVm: true, result);
+        return result;
+    }
+
+    public DosExecResult LoadAndExecute(string programName, DosExecParameterBlock paramBlock, string? commandTail = "") {
+        DosExecResult result = _dosProcessManager.LoadOrLoadAndExecute(programName, paramBlock, commandTail ?? "", DosExecLoadType.LoadAndExecute, paramBlock.EnvironmentSegment);
+        HandleDosExecResult(calledFromVm: true, result);
+        return result;
     }
 
     /// <summary>
@@ -945,7 +1291,7 @@ public class DosInt21Handler : InterruptHandler {
         ushort fileHandle = State.BX;
         int offset = (State.CX << 16) | State.DX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("MOVE FILE POINTER USING HANDLE. {OriginOfMove}, {FileHandle}, {Offset}", 
+            LoggerService.Verbose("MOVE FILE POINTER USING HANDLE. {OriginOfMove}, {FileHandle}, {Offset}",
                 originOfMove, fileHandle, offset);
         }
 
@@ -967,7 +1313,7 @@ public class DosInt21Handler : InterruptHandler {
         byte accessMode = State.AL;
         FileAccessMode fileAccessMode = (FileAccessMode)(accessMode & 0b111);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMode} : {FileAccessModeByte}", 
+            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMode} : {FileAccessModeByte}",
                 fileName, fileAccessMode,
                 ConvertUtils.ToHex8(State.AL));
         }
@@ -997,15 +1343,75 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Quits the current DOS process and sets the exit code from the value in the AL register. <br/>
-    /// TODO: This is only a stub that sets the cpu state <see cref="State.IsRunning"/> property to <c>False</c>, thus ending the emulation loop !
+    /// INT 21h, AH=4Ch - Terminate Program.
+    /// Terminates the current process and returns control to the parent via INT 22h.
+    /// If Ctrl-C was detected, termination type is set to CtrlC (1) instead of Normal (0).
     /// </summary>
+    /// <remarks>
+    /// INT 20h is an alias for this function with AL=0.
+    /// </remarks>
     public void QuitWithExitCode() {
         byte exitCode = State.AL;
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning("INT21H: QUIT WITH EXIT CODE {ExitCode}", ConvertUtils.ToHex8(exitCode));
+        // Determine termination type based on break flag
+        DosTerminationType terminationType = DosTerminationType.Normal;
+        if (_isCtrlCFlag) {
+            terminationType = DosTerminationType.CtrlC;
+            _isCtrlCFlag = false;
+
+            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+                LoggerService.Information(
+                    "INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2} (Ctrl-C break detected)",
+                    exitCode);
+            }
+        } else if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2}", exitCode);
         }
-        State.IsRunning = false;
+        _dosProcessManager.TerminateProcess(exitCode, terminationType);
+    }
+
+    /// <summary>
+    /// INT 21h, AH=4Dh - Get Return Code of Subprogram.
+    /// </summary>
+    public void GetReturnCode() {
+        ushort returnCode = _dosProcessManager.LastChildReturnCode;
+        State.AX = returnCode;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET RETURN CODE: AX={Ax:X4}", returnCode);
+        }
+        // Clear the stored return code after reading it (RBIL)
+        _dosProcessManager.LastChildReturnCode = 0;
+    }
+
+    /// <summary>
+    /// INT 21h, AH=26h - Create New PSP.
+    /// Creates a copy of the current PSP at the segment specified in DX.
+    /// </summary>
+    public void CreateNewPsp() {
+        ushort newPspSegment = State.DX;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE NEW PSP at segment {Segment:X4}", newPspSegment);
+        }
+
+        _dosProcessManager.CreateNewPsp(newPspSegment);
+        State.AL = ExpectedValueOfALInCreateChildPsp;
+    }
+
+    /// <summary>
+    /// INT 21h, AH=55h - Create Child PSP.
+    /// Creates a child PSP at DX with size SI paragraphs and returns AL=0xF0 without switching the current PSP.
+    /// </summary>
+    public void CreateChildPsp() {
+        ushort childSegment = State.DX;
+        ushort sizeInParagraphs = State.SI;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE CHILD PSP at segment {Segment:X4}, size {Size} paragraphs",
+                childSegment, sizeInParagraphs);
+        }
+
+        _dosProcessManager.CreateChildPsp(childSegment, sizeInParagraphs);
+        State.AL = ExpectedValueOfALInCreateChildPsp;
     }
 
     /// <summary>
@@ -1043,9 +1449,9 @@ public class DosInt21Handler : InterruptHandler {
     /// The number of potentially valid drive letters in AL.
     /// </returns>
     public void SelectDefaultDrive() {
-        if(_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAtOrDefault(State.DL).Key, out VirtualDrive? mountedDrive)) {
+        if (_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAtOrDefault(State.DL).Key, out VirtualDrive? mountedDrive)) {
             _dosDriveManager.CurrentDrive = mountedDrive;
-        } 
+        }
         if (State.DL > DosDriveManager.MaxDriveCount && LoggerService.IsEnabled(LogEventLevel.Error)) {
             LoggerService.Error("DOS INT21H: Could not set default drive! Unrecognized index in State.DL: {DriveIndex}", State.DL);
         }
@@ -1252,5 +1658,23 @@ public class DosInt21Handler : InterruptHandler {
         if (dosFileOperationResult.IsValueIsUint32) {
             State.DX = (ushort)(value >> 16);
         }
+    }
+
+    /// <summary>
+    /// Reads a value from a CMOS register via I/O ports.
+    /// Writes the register index to the address port and reads the value from the data port.
+    /// </summary>
+    private byte ReadCmosRegister(byte register) {
+        _ioPortDispatcher.WriteByte(CmosPorts.Address, register);
+        return _ioPortDispatcher.ReadByte(CmosPorts.Data);
+    }
+
+    /// <summary>
+    /// Writes a value to a CMOS register via I/O ports.
+    /// Writes the register index to the address port and the value to the data port.
+    /// </summary>
+    private void WriteCmosRegister(byte register, byte value) {
+        _ioPortDispatcher.WriteByte(CmosPorts.Address, register);
+        _ioPortDispatcher.WriteByte(CmosPorts.Data, value);
     }
 }

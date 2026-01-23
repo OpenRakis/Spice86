@@ -21,7 +21,6 @@ public class InterruptBreakpointIpTests {
     [Fact]
     public void TestInterruptBreakpointIpPointsToIntInstruction() {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("interrupt",
-            enableCfgCpu: true,
             installInterruptVectors: true).Create();
         
         State state = spice86DependencyInjection.Machine.CpuState;

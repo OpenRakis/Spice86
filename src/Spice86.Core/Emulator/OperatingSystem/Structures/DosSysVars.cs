@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Represents the DOS core memory table (SYSVARS), containing pointers and configuration
@@ -15,8 +16,14 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 /// In DOSBox, this is the 'DOS_InfoBlock' class 
 /// </remarks>
 public class DosSysVars : MemoryBasedDataStructure {
-    public const int FirstMcbSegment = 0x16F;
+    public const ushort ParagraphSizeInBytes = 16;
+    public const ushort SizeInBytes = 0x8C;
+    public const ushort SizeInParagraphs = SizeInBytes / ParagraphSizeInBytes;
+    public const int Segment = DosProcessManager.CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs;
+    public const int FirstMcbSegment = Segment + SizeInParagraphs;
+
     private readonly DosDeviceHeader _nullDeviceHeader;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DosSysVars"/> class.
     /// </summary>

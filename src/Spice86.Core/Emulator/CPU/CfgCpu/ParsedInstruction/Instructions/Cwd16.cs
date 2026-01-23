@@ -18,7 +18,7 @@ public class Cwd16 : CfgInstruction {
         } else {
             helper.State.DX = 0;
         }
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

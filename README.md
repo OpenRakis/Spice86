@@ -16,7 +16,7 @@ Pre-releases are also available [on the Release page](https://github.com/OpenRak
 
 NOTE: This is a port, and a continuation from the [original Java Spice86](https://github.com/kevinferrare/spice86).
 
-It requires [.NET 8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) and runs on Windows, macOS, and Linux.
+It requires [.NET 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) and runs on Windows, macOS, and Linux.
 
 ## Approach
 Rewriting a program from only the binary is a hard task.
@@ -62,7 +62,7 @@ When there is already data in the specified location, the emulator will load it 
 
 ```
   --Debug                            (Default: false) Starts the program paused and pauses once again when stopping.
-  --Cycles                           (Default: null) Target CPU cycles per ms, for the rare speed sensitive game. Unused by default. Overrides Instructions per second option below if used.
+  --Cycles                           (Default: null) Target CPU cycles per ms, for the rare speed sensitive game. 3000 by default. Overrides Instructions per second option below if used.
   --Xms                              (Default: true) Enables 15 MB of XMS memory.
   --Ems                              (Default: true) Enables EMS memory. EMS adds 8 MB of memory accessible to DOS programs through the EMM Page Frame.
   --A20Gate                          (Default: false) Disables the 20th address line to support programs relying on the rollover of memory addresses above the HMA (slightly above 1 MB).
@@ -357,7 +357,7 @@ Compatibility list available [here](COMPATIBILITY.md).
 
 ### How to build on your machine
 
-- Install the [.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (once)
+- Install the [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) (once)
 - clone the repo
 - run this where Spice86.sln is located:
 

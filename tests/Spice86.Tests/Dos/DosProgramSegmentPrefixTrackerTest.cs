@@ -19,6 +19,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using Xunit;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
 
 /// <summary>
 /// Verifies that the DOS PSP tracker reads the configuration and adds/removes the PSP segments for
@@ -27,6 +28,7 @@ using Xunit;
 public class DosProgramSegmentPrefixTrackerTests {
     // The instance of the DosProgramSegmentPrefixTracker class that we're testing
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
+    private readonly DosProcessManager _processManager;
 
     /// <summary>
     /// Creates the DosProgramSegmentPrefixTracker instance for each test case.
@@ -47,19 +49,30 @@ public class DosProgramSegmentPrefixTrackerTests {
             new DosSwappableDataArea(memory,
             MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0)),
             loggerService);
+        State state = new(CpuModel.INTEL_80386);
+        Stack stack = new(memory, state);
+        DosDriveManager dosDriveManager = new(loggerService, null, null);
+        DosMemoryManager dosMemoryManager = new(memory, _pspTracker, loggerService);
+        DosFileManager dosFileManager = new(memory, new DosStringDecoder(memory, state),
+            dosDriveManager, loggerService, new List<IVirtualDevice>());
+        _processManager = new(memory, stack, state, _pspTracker, dosMemoryManager, dosFileManager, dosDriveManager,
+            new Dictionary<string, string>(), loggerService);
     }
 
     /// <summary>
-    /// Ensures that the initial PSP is calculated from the program entry point segment in the
-    /// configuration correctly.
+    /// Ensures that the root PSP corresponds to the FreeDOS convention for COMMAND.COM
     /// </summary>
     [Fact]
     public void CheckInitialPspSegment() {
+        //Act
+        // Push the root PSP onto the tracker
+        // Ensure root COMMAND.COM PSP exists
+        _processManager.CreateRootCommandComPsp();
+
         // Assert
         _pspTracker.InitialPspSegment.Should().Be(0xFF0);
-        _pspTracker.PspCount.Should().Be(0);
-        _pspTracker.GetCurrentPsp().Should().BeNull();
-        _pspTracker.GetCurrentPspSegment().Should().Be(0xFF0);
+        _pspTracker.PspCount.Should().Be(1);
+        _pspTracker.GetCurrentPspSegment().Should().Be(DosProcessManager.CommandComSegment);
     }
 
     /// <summary>

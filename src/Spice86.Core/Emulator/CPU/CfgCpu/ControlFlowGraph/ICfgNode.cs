@@ -53,6 +53,13 @@ public interface ICfgNode {
     void Execute(InstructionExecutionHelper helper);
 
     /// <summary>
+    /// Determines the next successor node to execute based on current CPU / Memory state.
+    /// </summary>
+    /// <param name="helper">InstructionExecutionHelper instance providing access to CPU state and memory</param>
+    /// <returns>The next node to execute, or null if no node exists in the graph for the state the machine is in</returns>
+    ICfgNode? GetNextSuccessor(InstructionExecutionHelper helper);
+
+    /// <summary>
     /// Builds an Abstract Syntax Tree representing the grammar of the assembly instruction
     /// </summary>
     /// <param name="builder"></param>

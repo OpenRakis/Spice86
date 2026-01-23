@@ -21,7 +21,7 @@ public class Aad : InstructionWithValueField<byte> {
         helper.State.CarryFlag = false;
         helper.State.AuxiliaryFlag = false;
         helper.State.OverflowFlag = false;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
     
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

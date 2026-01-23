@@ -23,10 +23,9 @@ public class Grp4Callback : InstructionWithModRm {
         helper.CallbackHandler.Run(helper.InstructionFieldValueRetriever.GetFieldValue(CallbackNumber));
 
         // Check if IP changed during callback execution, if so it means callback code did a jump.
-        if (helper.State.IpSegmentedAddress != Address) {
-            helper.SetNextNodeToSuccessorAtCsIp(this);
-        } else {
-            helper.MoveIpAndSetNextNode(this);
+        // If IP didn't change, move it to end of instruction to go to next instruction.
+        if (helper.State.IpSegmentedAddress == Address) {
+            helper.MoveIpToEndOfInstruction(this);
         }
     }
 

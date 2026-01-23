@@ -16,7 +16,7 @@ public class Sahf : CfgInstruction {
         helper.State.AuxiliaryFlag = (helper.State.AH & Flags.Auxiliary) == Flags.Auxiliary;
         helper.State.ParityFlag = (helper.State.AH & Flags.Parity) == Flags.Parity;
         helper.State.CarryFlag = (helper.State.AH & Flags.Carry) == Flags.Carry;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
