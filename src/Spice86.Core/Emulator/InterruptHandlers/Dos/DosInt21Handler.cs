@@ -1551,7 +1551,7 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToSegmentedAddressRepresentation(
                     State.DS, State.SI), currentDir);
         }
-        Memory.SetZeroTerminatedString(responseAddress, currentDir, currentDir.Length);
+        Memory.SetZeroTerminatedString(responseAddress, currentDir, currentDir.Length + 1);
         // According to Ralf's Interrupt List, many Microsoft Windows products rely on AX being 0x0100 on success
         if (!result.IsError) {
             State.AX = 0x0100;
