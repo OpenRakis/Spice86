@@ -194,7 +194,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     /// <param name="outputWidth">The actual width of the rendering output in pixels</param>
     /// <param name="outputHeight">The actual height of the rendering output in pixels</param>
     public void UpdateHostOutputResolution(int outputWidth, int outputHeight) {
-        Console.WriteLine($"[WARN] ViewModel: UpdateHostOutputResolution - width={outputWidth}, height={outputHeight}");
+        //Console.WriteLine(riteLine($"[WARN] ViewModel: UpdateHostOutputResolution - width={outputWidth}, height={outputHeight}");
         if (_hostOutputHeight != outputHeight) {
             _hostOutputHeight = outputHeight;
             UpdateShaderForHostResolution();
@@ -216,7 +216,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         } else {
             newShaderType = CrtShaderType.EasyMode;
         }
-        Console.WriteLine($"[WARN] ViewModel: UpdateShaderForHostResolution - height={_hostOutputHeight}, selected shader={newShaderType}");
+        //Console.WriteLine(riteLine($"[WARN] ViewModel: UpdateShaderForHostResolution - height={_hostOutputHeight}, selected shader={newShaderType}");
         ShaderType = newShaderType;
     }
 
@@ -276,12 +276,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     public void SetResolution(int width, int height) {
-        Console.WriteLine($"[WARN] ViewModel: SetResolution called - width={width}, height={height}");
+        //Console.WriteLine(riteLine($"[WARN] ViewModel: SetResolution called - width={width}, height={height}");
         _uiDispatcher.Post(() => {
             _isSettingResolution = true;
             Scale = 1;
             if (Width != width || Height != height) {
-                Console.WriteLine($"[WARN] ViewModel: Resolution changing from {Width}x{Height} to {width}x{height}");
+                //Console.WriteLine(riteLine($"[WARN] ViewModel: Resolution changing from {Width}x{Height} to {width}x{height}");
                 Width = width;
                 Height = height;
             }
@@ -377,12 +377,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _drawingSemaphoreSlim?.Wait();
         try {
             int bufferSize = Width * Height;
-            Console.WriteLine($"[WARN] ViewModel: DrawScreen - Width={Width}, Height={Height}, bufferSize={bufferSize}");
+            //Console.WriteLine(riteLine($"[WARN] ViewModel: DrawScreen - Width={Width}, Height={Height}, bufferSize={bufferSize}");
             
             // Reuse buffer to avoid per-frame allocations
             if (_frameBufferCache is null || _frameBufferCache.Length != bufferSize) {
                 _frameBufferCache = new uint[bufferSize];
-                Console.WriteLine($"[WARN] ViewModel: Allocated new frame buffer cache");
+                //Console.WriteLine(riteLine($"[WARN] ViewModel: Allocated new frame buffer cache");
             }
 
             unsafe {
@@ -391,7 +391,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                     RenderScreen.Invoke(this, uiRenderEventArgs);
                 }
             }
-            Console.WriteLine($"[WARN] ViewModel: RenderScreen invoked, UpdateOpenGlFrame subscribers={UpdateOpenGlFrame?.GetInvocationList().Length ?? 0}");
+            //Console.WriteLine(riteLine($"[WARN] ViewModel: RenderScreen invoked, UpdateOpenGlFrame subscribers={UpdateOpenGlFrame?.GetInvocationList().Length ?? 0}");
             
             // Send frame to OpenGL control
             _uiDispatcher.Post(() => UpdateOpenGlFrame?.Invoke(_frameBufferCache, Width, Height), DispatcherPriority.Render);
