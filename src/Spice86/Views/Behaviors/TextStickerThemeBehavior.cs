@@ -108,7 +108,8 @@ public static class TextStickerThemeBehavior {
         private void OnUnloaded(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e) {
             // Clean up when control is unloaded
             Unsubscribe();
-            if (_weakReference.TryGetTarget(out TextSticker? textSticker)) {
+            // The sender is the TextSticker that's being unloaded
+            if (sender is TextSticker textSticker) {
                 _eventHandlers.Remove(textSticker);
             }
         }
