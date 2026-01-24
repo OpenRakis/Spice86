@@ -1,8 +1,10 @@
 namespace Spice86.Views.Behaviors;
 
+using System;
+using System.Runtime.CompilerServices;
+
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Media;
 using Avalonia.Reactive;
 
 using AvaloniaGraphControl;
@@ -14,6 +16,8 @@ using Spice86.Views.Converters;
 /// This allows using the unmodified NuGet package while still supporting dynamic theming.
 /// </summary>
 public static class TextStickerThemeBehavior {
+    private static readonly ConditionalWeakTable<TextSticker, EventHandler> _eventHandlers = new();
+
     public static readonly AttachedProperty<bool> EnableThemingProperty =
         AvaloniaProperty.RegisterAttached<TextSticker, bool>(
             "EnableTheming",
@@ -35,11 +39,23 @@ public static class TextStickerThemeBehavior {
             return;
         }
 
+        if (Application.Current is null) {
+            return;
+        }
+
+        // Always unsubscribe existing handler first to prevent duplicate subscriptions
+        if (_eventHandlers.TryGetValue(textSticker, out EventHandler? existingHandler)) {
+            Application.Current.ActualThemeVariantChanged -= existingHandler;
+            _eventHandlers.Remove(textSticker);
+        }
+
         if (e.NewValue.Value) {
+            // Create and store new event handler
+            EventHandler handler = (sender, args) => ApplyTheme(textSticker);
+            _eventHandlers.Add(textSticker, handler);
+            
             // Subscribe to theme changes
-            if (Application.Current is not null) {
-                Application.Current.ActualThemeVariantChanged += (sender, args) => ApplyTheme(textSticker);
-            }
+            Application.Current.ActualThemeVariantChanged += handler;
 
             // Apply initial theme
             ApplyTheme(textSticker);
