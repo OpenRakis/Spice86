@@ -271,7 +271,8 @@ public class DosProcessManager {
 
         // Use the pre-allocated environment segment or 0 if caller provided one
         ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
-        InitializePsp(block.DataBlockSegment, hostPath, commandTail,
+        InitializePsp(block.DataBlockSegment, 
+            block.Size, hostPath, commandTail,
             finalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP, loadType == DosExecLoadType.LoadAndExecute);
 
@@ -328,7 +329,8 @@ public class DosProcessManager {
 
         // Use the pre-allocated environment segment or 0 if caller provided one
         ushort comFinalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
-        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail,
+        InitializePsp(comBlock.DataBlockSegment, 
+            comBlock.Size, hostPath, commandTail,
             comFinalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP, loadType == DosExecLoadType.LoadAndExecute);
 
@@ -807,7 +809,7 @@ public class DosProcessManager {
         return _driveManager.HasDriveAtIndex(zeroBasedIndex);
     }
 
-    private void InitializePsp(ushort pspSegment, string programHostPath,
+    private void InitializePsp(ushort pspSegment, ushort blockSizeInParagraphs, string programHostPath,
         string? arguments, ushort environmentSegment, ushort parentPspSegment,
         ushort callerCS, ushort callerIP, bool trackParentStackPointer) {
         ClearPspMemory(pspSegment);
@@ -816,7 +818,8 @@ public class DosProcessManager {
 
         psp.Exit[0] = IntOpcode;
         psp.Exit[1] = Int20TerminateNumber;
-        psp.CurrentSize = DosMemoryManager.LastFreeSegment;
+        // CurrentSize points to the first segment AFTER the allocated block, matching MS-DOS behavior
+        psp.CurrentSize = (ushort)(pspSegment + blockSizeInParagraphs);
 
         psp.FarCall = FarCallOpcode;
         psp.CpmServiceRequestAddress = MemoryUtils.To32BitAddress(pspSegment, Call5StubOffset);
