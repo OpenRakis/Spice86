@@ -71,7 +71,6 @@ public static class TextStickerThemeBehavior {
 
     /// <summary>
     /// Weak event handler wrapper that doesn't prevent garbage collection of the target control.
-    /// Automatically unsubscribes when the target is no longer available.
     /// </summary>
     private sealed class WeakEventHandler {
         private readonly WeakReference<TextSticker> _weakReference;
@@ -87,10 +86,9 @@ public static class TextStickerThemeBehavior {
         private void OnThemeChanged(object? sender, EventArgs e) {
             if (_weakReference.TryGetTarget(out TextSticker? textSticker)) {
                 ApplyTheme(textSticker);
-            } else if (Application.Current is not null) {
-                // Target is gone, unsubscribe to prevent further invocations
-                Application.Current.ActualThemeVariantChanged -= _cachedHandler;
             }
+            // If target is gone, do nothing. The ConditionalWeakTable will
+            // automatically clean up when the TextSticker is garbage collected.
         }
     }
 }
