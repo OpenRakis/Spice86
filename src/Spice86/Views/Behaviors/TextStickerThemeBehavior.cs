@@ -52,7 +52,7 @@ public static class TextStickerThemeBehavior {
 
         if (e.NewValue.Value) {
             // Create and store new event handler with weak reference
-            WeakEventHandler handler = new(textSticker);
+            WeakEventHandler handler = new(textSticker, application);
             _eventHandlers.Add(textSticker, handler);
             
             // Subscribe to theme changes
@@ -71,13 +71,16 @@ public static class TextStickerThemeBehavior {
 
     /// <summary>
     /// Weak event handler wrapper that doesn't prevent garbage collection of the target control.
+    /// Automatically unsubscribes when the target is no longer available.
     /// </summary>
     private sealed class WeakEventHandler {
         private readonly WeakReference<TextSticker> _weakReference;
+        private readonly WeakReference<Application> _applicationReference;
         private readonly EventHandler _cachedHandler;
 
-        public WeakEventHandler(TextSticker textSticker) {
+        public WeakEventHandler(TextSticker textSticker, Application application) {
             _weakReference = new WeakReference<TextSticker>(textSticker);
+            _applicationReference = new WeakReference<Application>(application);
             _cachedHandler = OnThemeChanged;
         }
 
@@ -86,6 +89,9 @@ public static class TextStickerThemeBehavior {
         private void OnThemeChanged(object? sender, EventArgs e) {
             if (_weakReference.TryGetTarget(out TextSticker? textSticker)) {
                 ApplyTheme(textSticker);
+            } else if (_applicationReference.TryGetTarget(out Application? application)) {
+                // Target is gone, unsubscribe to prevent further invocations
+                application.ActualThemeVariantChanged -= _cachedHandler;
             }
         }
     }
