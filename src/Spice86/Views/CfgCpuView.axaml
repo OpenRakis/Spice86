@@ -1,18 +1,18 @@
 <UserControl
-x:Class="Spice86.Views.CfgCpuView"
-xmlns="https://github.com/avaloniaui"
-xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
-xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
-xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
-d:DesignHeight="450"
-d:DesignWidth="800"
-x:CompileBindings="True"
-x:DataType="viewModels:CfgCpuViewModel"
-mc:Ignorable="d">
+    x:Class="Spice86.Views.CfgCpuView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+    xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+    xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    x:CompileBindings="True"
+    x:DataType="viewModels:CfgCpuViewModel"
+    mc:Ignorable="d">
 	<Design.DataContext>
 		<viewModels:CfgCpuViewModel />
 	</Design.DataContext>
@@ -144,41 +144,71 @@ mc:Ignorable="d">
                               AutoGenerateColumns="False"
                               GridLinesVisibility="All">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Address" Binding="{Binding Address}" />
-                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" />
-                            
-                            <!-- Predecessors ComboBox -->
-                            <DataGridTemplateColumn Header="Predecessors">
+                            <!-- Address -->
+                            <DataGridTemplateColumn Header="Address">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ComboBox ItemsSource="{Binding Predecessors}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Address}" ToolTip.Tip="{Binding Assembly}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
+                                        <TextBox Text="{Binding Address, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 BorderThickness="0"
+                                                 Background="Transparent" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             
-                            <!-- Successors ComboBox -->
+                            <!-- Type -->
+                            <DataGridTemplateColumn Header="Type">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Type, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 BorderThickness="0"
+                                                 Background="Transparent" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
+                            <!-- Predecessors List -->
+                            <DataGridTemplateColumn Header="Predecessors">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding PredecessorsText, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 AcceptsReturn="True"
+                                                 TextWrapping="NoWrap"
+                                                 BorderThickness="0"
+                                                 Background="Transparent" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
+                            <!-- Successors List -->
                             <DataGridTemplateColumn Header="Successors">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ComboBox ItemsSource="{Binding Successors}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Address}" ToolTip.Tip="{Binding Assembly}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
+                                        <TextBox Text="{Binding SuccessorsText, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 AcceptsReturn="True"
+                                                 TextWrapping="NoWrap"
+                                                 BorderThickness="0"
+                                                 Background="Transparent" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             
                             <DataGridCheckBoxColumn Header="Is the last executed node ?" Binding="{Binding IsLastExecuted}" />
-                            <DataGridTextColumn Header="Assembly" Binding="{Binding Assembly}" Width="*"/>
+                            
+                            <!-- Assembly -->
+                            <DataGridTemplateColumn Header="Assembly" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Assembly, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 BorderThickness="0"
+                                                 Background="Transparent" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                         
                         <DataGrid.ContextMenu>
