@@ -70,7 +70,9 @@ public static class TextStickerThemeBehavior {
     }
 
     /// <summary>
-    /// Event handler wrapper that properly unsubscribes when the control is unloaded.
+    /// Event handler wrapper that uses a weak reference to the TextSticker to avoid preventing
+    /// its garbage collection, while properly unsubscribing from the Application's theme change
+    /// event when the control is unloaded.
     /// </summary>
     private sealed class WeakEventHandler {
         private readonly WeakReference<TextSticker> _weakReference;
