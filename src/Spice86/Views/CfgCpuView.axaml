@@ -37,7 +37,7 @@ mc:Ignorable="d">
 	    <!-- Edge labels (TextBlock children of GraphPanel) -->
 	    <Style Selector="agc|GraphPanel > TextBlock">
 	        <Setter Property="FontSize" Value="14" />
-	        <Setter Property="Foreground" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
+	        <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
 	        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltMediumHighBrush}" />
 	        <Setter Property="Padding" Value="4,2" />
 	    </Style>
