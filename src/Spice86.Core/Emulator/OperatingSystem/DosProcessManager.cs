@@ -251,7 +251,7 @@ public class DosProcessManager {
         // This matches FreeDOS behavior
         return HandleComFileLoading(paramBlock, commandTail, loadType,
             environmentSegment, callerIP, callerCS, parentPspSegment,
-            hostPath, fileBytes, parentStackPointer, envBlock);
+            hostPath, fileBytes, envBlock);
     }
 
     private DosExecResult HandleExeFileLoading(DosExecParameterBlock paramBlock,
@@ -306,14 +306,17 @@ public class DosProcessManager {
         return exeResult;
     }
 
-
     private DosExecResult HandleComFileLoading(DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment,
         ushort callerIP, ushort callerCS, ushort parentPspSegment, string hostPath,
-        byte[] fileBytes, uint parentStackPointer, DosMemoryControlBlock? envBlock) {
+        byte[] fileBytes, DosMemoryControlBlock? envBlock) {
         ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
-        DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
-        if (comBlock is null) {
+        
+        // MS-DOS and FreeDOS: COM files are ALWAYS loaded in the largest available area
+        DosMemoryControlBlock largestFree = _memoryManager.FindLargestFree();
+        DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(largestFree.Size);
+        
+        if (comBlock is null || largestFree.Size < paragraphsNeeded) {
             //Free the environment block we just allocated
             if (envBlock is not null) {
                 _memoryManager.FreeMemoryBlock(envBlock);
