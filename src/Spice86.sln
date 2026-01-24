@@ -26,12 +26,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spice86.MicroBenchmarkTempl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spice86.Libs", "Spice86.Libs\Spice86.Libs.csproj", "{E19FBA01-60CD-4BC6-B88B-EAFB657ED797}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaGraphControl", "AvaloniaGraphControl\src\AvaloniaGraphControl.csproj", "{FCF7E467-A1D7-6943-B563-33F1CF192047}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutomaticGraphLayout.Drawing", "AvaloniaGraphControl\automatic-graph-layout\GraphLayout\Drawing\AutomaticGraphLayout.Drawing.csproj", "{3BB2A381-4610-DF40-55EB-A43BC610D313}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutomaticGraphLayout", "AvaloniaGraphControl\automatic-graph-layout\GraphLayout\MSAGL\AutomaticGraphLayout.csproj", "{6E0EC605-895A-5BC7-47D8-C8553CA7A1ED}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -70,18 +64,6 @@ Global
 		{E19FBA01-60CD-4BC6-B88B-EAFB657ED797}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E19FBA01-60CD-4BC6-B88B-EAFB657ED797}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E19FBA01-60CD-4BC6-B88B-EAFB657ED797}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FCF7E467-A1D7-6943-B563-33F1CF192047}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FCF7E467-A1D7-6943-B563-33F1CF192047}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FCF7E467-A1D7-6943-B563-33F1CF192047}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FCF7E467-A1D7-6943-B563-33F1CF192047}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3BB2A381-4610-DF40-55EB-A43BC610D313}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3BB2A381-4610-DF40-55EB-A43BC610D313}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3BB2A381-4610-DF40-55EB-A43BC610D313}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3BB2A381-4610-DF40-55EB-A43BC610D313}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6E0EC605-895A-5BC7-47D8-C8553CA7A1ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6E0EC605-895A-5BC7-47D8-C8553CA7A1ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6E0EC605-895A-5BC7-47D8-C8553CA7A1ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6E0EC605-895A-5BC7-47D8-C8553CA7A1ED}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,17 +1,18 @@
-﻿<UserControl
-    x:Class="Spice86.Views.CfgCpuView"
-    xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-    xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
-    x:CompileBindings="True"
-    x:DataType="viewModels:CfgCpuViewModel"
-    mc:Ignorable="d">
+<UserControl
+x:Class="Spice86.Views.CfgCpuView"
+xmlns="https://github.com/avaloniaui"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
+xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
+d:DesignHeight="450"
+d:DesignWidth="800"
+x:CompileBindings="True"
+x:DataType="viewModels:CfgCpuViewModel"
+mc:Ignorable="d">
 	<Design.DataContext>
 		<viewModels:CfgCpuViewModel />
 	</Design.DataContext>
@@ -19,19 +20,16 @@
     <UserControl.Styles>
 	    <StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
 		
-	    <!-- Node boxes styling -->
+	    <!-- Node boxes styling - static properties only, theme handled by behavior -->
 	    <Style Selector="agc|TextSticker">
-	        <Setter Property="TextForeground" Value="{DynamicResource TextControlForeground}" />
-	        <Setter Property="BorderForeground" Value="{DynamicResource SystemControlForegroundBaseMediumHighBrush}" />
-	        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
 	        <Setter Property="FontSize" Value="14" />
 	        <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Courier New, monospace" />
 	        <Setter Property="Padding" Value="10,6" />
 	        <Setter Property="BorderThickness" Value="1.5" />
 	        <Setter Property="BorderRadius" Value="4" />
+	        <Setter Property="behaviors:TextStickerThemeBehavior.EnableTheming" Value="True" />
 	    </Style>
 		
-	    <!-- Edge lines styling -->
 	    <Style Selector="agc|Connection">
 	    <Setter Property="Brush" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
 	    </Style>

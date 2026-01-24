@@ -1,6 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <Nullable>disable</Nullable>
-		<TargetFramework>net10.0</TargetFramework>
-  </PropertyGroup>
-</Project>

@@ -1,6 +1,0 @@
-digraph G {
-    a 
-    b [shape=box]
-    a -> b
-    c -> d
-}

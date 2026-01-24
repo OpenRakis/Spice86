@@ -1,5 +1,0 @@
-digraph G {
-  a -> b
-  a -> b
-  label="this is a graph"
-}
