@@ -39,13 +39,14 @@ public static class TextStickerThemeBehavior {
             return;
         }
 
-        if (Application.Current is null) {
+        Application? application = Application.Current;
+        if (application is null) {
             return;
         }
 
         // Always unsubscribe existing handler first to prevent duplicate subscriptions
         if (_eventHandlers.TryGetValue(textSticker, out WeakEventHandler? existingHandler)) {
-            Application.Current.ActualThemeVariantChanged -= existingHandler.Handler;
+            application.ActualThemeVariantChanged -= existingHandler.Handler;
             _eventHandlers.Remove(textSticker);
         }
 
@@ -55,7 +56,7 @@ public static class TextStickerThemeBehavior {
             _eventHandlers.Add(textSticker, handler);
             
             // Subscribe to theme changes
-            Application.Current.ActualThemeVariantChanged += handler.Handler;
+            application.ActualThemeVariantChanged += handler.Handler;
 
             // Apply initial theme
             ApplyTheme(textSticker);
