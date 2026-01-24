@@ -1,8 +1,10 @@
 namespace Spice86.Views.Behaviors;
 
+using System;
+using System.Runtime.CompilerServices;
+
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Media;
 using Avalonia.Reactive;
 
 using AvaloniaGraphControl;
@@ -14,6 +16,8 @@ using Spice86.Views.Converters;
 /// This allows using the unmodified NuGet package while still supporting dynamic theming.
 /// </summary>
 public static class TextStickerThemeBehavior {
+    private static readonly ConditionalWeakTable<TextSticker, WeakEventHandler> _eventHandlers = new();
+
     public static readonly AttachedProperty<bool> EnableThemingProperty =
         AvaloniaProperty.RegisterAttached<TextSticker, bool>(
             "EnableTheming",
@@ -35,11 +39,24 @@ public static class TextStickerThemeBehavior {
             return;
         }
 
+        Application? application = Application.Current;
+        if (application is null) {
+            return;
+        }
+
+        // Always unsubscribe existing handler first to prevent duplicate subscriptions
+        if (_eventHandlers.TryGetValue(textSticker, out WeakEventHandler? existingHandler)) {
+            application.ActualThemeVariantChanged -= existingHandler.Handler;
+            _eventHandlers.Remove(textSticker);
+        }
+
         if (e.NewValue.Value) {
+            // Create and store new event handler with weak reference
+            WeakEventHandler handler = new(textSticker);
+            _eventHandlers.Add(textSticker, handler);
+            
             // Subscribe to theme changes
-            if (Application.Current is not null) {
-                Application.Current.ActualThemeVariantChanged += (sender, args) => ApplyTheme(textSticker);
-            }
+            application.ActualThemeVariantChanged += handler.Handler;
 
             // Apply initial theme
             ApplyTheme(textSticker);
@@ -50,6 +67,29 @@ public static class TextStickerThemeBehavior {
         // Apply theme-aware colors using the same resources as the XAML styles
         textSticker.TextForeground = HighlightingConverter.GetDefaultForegroundBrush();
         textSticker.Background = HighlightingConverter.GetDefaultBackgroundBrush();
+    }
+
+    /// <summary>
+    /// Weak event handler wrapper that doesn't prevent garbage collection of the target control.
+    /// </summary>
+    private sealed class WeakEventHandler {
+        private readonly WeakReference<TextSticker> _weakReference;
+        private readonly EventHandler _cachedHandler;
+
+        public WeakEventHandler(TextSticker textSticker) {
+            _weakReference = new WeakReference<TextSticker>(textSticker);
+            _cachedHandler = OnThemeChanged;
+        }
+
+        public EventHandler Handler => _cachedHandler;
+
+        private void OnThemeChanged(object? sender, EventArgs e) {
+            if (_weakReference.TryGetTarget(out TextSticker? textSticker)) {
+                ApplyTheme(textSticker);
+            }
+            // If target is gone, do nothing. The ConditionalWeakTable will
+            // automatically clean up when the TextSticker is garbage collected.
+        }
     }
 }
 
