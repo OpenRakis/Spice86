@@ -73,12 +73,14 @@ public static class TextStickerThemeBehavior {
     /// </summary>
     private sealed class WeakEventHandler {
         private readonly WeakReference<TextSticker> _weakReference;
+        private readonly EventHandler _cachedHandler;
 
         public WeakEventHandler(TextSticker textSticker) {
             _weakReference = new WeakReference<TextSticker>(textSticker);
+            _cachedHandler = OnThemeChanged;
         }
 
-        public EventHandler Handler => OnThemeChanged;
+        public EventHandler Handler => _cachedHandler;
 
         private void OnThemeChanged(object? sender, EventArgs e) {
             if (_weakReference.TryGetTarget(out TextSticker? textSticker)) {
