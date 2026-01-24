@@ -46,17 +46,17 @@ public static class TextStickerThemeBehavior {
 
         // Always unsubscribe existing handler first to prevent duplicate subscriptions
         if (_eventHandlers.TryGetValue(textSticker, out WeakEventHandler? existingHandler)) {
-            application.ActualThemeVariantChanged -= existingHandler.Handler;
+            existingHandler.Unsubscribe();
             _eventHandlers.Remove(textSticker);
         }
 
         if (e.NewValue.Value) {
-            // Create and store new event handler with weak reference
-            WeakEventHandler handler = new(textSticker);
+            // Create and store new event handler
+            WeakEventHandler handler = new(textSticker, application);
             _eventHandlers.Add(textSticker, handler);
             
-            // Subscribe to theme changes
-            application.ActualThemeVariantChanged += handler.Handler;
+            // Subscribe to events
+            handler.Subscribe();
 
             // Apply initial theme
             ApplyTheme(textSticker);
@@ -70,25 +70,47 @@ public static class TextStickerThemeBehavior {
     }
 
     /// <summary>
-    /// Weak event handler wrapper that doesn't prevent garbage collection of the target control.
+    /// Event handler wrapper that properly unsubscribes when the control is unloaded.
     /// </summary>
     private sealed class WeakEventHandler {
         private readonly WeakReference<TextSticker> _weakReference;
-        private readonly EventHandler _cachedHandler;
+        private readonly Application _application;
+        private readonly EventHandler _themeChangedHandler;
+        private readonly EventHandler<global::Avalonia.Interactivity.RoutedEventArgs> _unloadedHandler;
 
-        public WeakEventHandler(TextSticker textSticker) {
+        public WeakEventHandler(TextSticker textSticker, Application application) {
             _weakReference = new WeakReference<TextSticker>(textSticker);
-            _cachedHandler = OnThemeChanged;
+            _application = application;
+            _themeChangedHandler = OnThemeChanged;
+            _unloadedHandler = OnUnloaded;
         }
 
-        public EventHandler Handler => _cachedHandler;
+        public void Subscribe() {
+            if (_weakReference.TryGetTarget(out TextSticker? textSticker)) {
+                _application.ActualThemeVariantChanged += _themeChangedHandler;
+                textSticker.Unloaded += _unloadedHandler;
+            }
+        }
+
+        public void Unsubscribe() {
+            _application.ActualThemeVariantChanged -= _themeChangedHandler;
+            if (_weakReference.TryGetTarget(out TextSticker? textSticker)) {
+                textSticker.Unloaded -= _unloadedHandler;
+            }
+        }
 
         private void OnThemeChanged(object? sender, EventArgs e) {
             if (_weakReference.TryGetTarget(out TextSticker? textSticker)) {
                 ApplyTheme(textSticker);
             }
-            // If target is gone, do nothing. The ConditionalWeakTable will
-            // automatically clean up when the TextSticker is garbage collected.
+        }
+
+        private void OnUnloaded(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e) {
+            // Clean up when control is unloaded
+            Unsubscribe();
+            if (_weakReference.TryGetTarget(out TextSticker? textSticker)) {
+                _eventHandlers.Remove(textSticker);
+            }
         }
     }
 }
