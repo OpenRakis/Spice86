@@ -1167,6 +1167,7 @@ public class DosInt21Handler : InterruptHandler {
         DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(blockSegment,
             requestedSizeInParagraphs, out DosMemoryControlBlock mcb);
         if (errorCode == DosErrorCode.NoError) {
+            // Undocumented MS-DOS behaviour expected by BRUN45!
             State.AX = blockSegment;
             SetCarryFlag(false, calledFromVm);
         } else {
