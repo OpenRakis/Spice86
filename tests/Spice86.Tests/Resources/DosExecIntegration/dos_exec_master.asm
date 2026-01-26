@@ -42,13 +42,31 @@ start:
         push    ds
         pop     es
 
+        ; Shrink memory allocation to free space for child processes
+        ; COM files are allocated ALL available memory by default.
+        ; Calculate paragraphs needed at runtime
+        mov     dx, end_of_program
+        sub     dx, 0x100           ; subtract ORG offset to get size from start
+        add     dx, 0x030F          ; add PSP (0x100) + stack (0x200) + rounding (15)
+        shr     dx, 4               ; convert bytes to paragraphs
+        mov     bx, dx              ; BX = paragraphs to keep
+        mov     ah, 0x4A            ; INT 21h/4Ah - Modify memory block size
+        int     0x21
+        jc      shrink_fail
+
         PRINT   'S'
+        jmp     env_check
+
+shrink_fail:
+        PRINT   's'                     ; lowercase 's' indicates shrink failure
+        hlt
 
 ; ---------------------------------------------------------------------------
 ; Environment block verification: PSP:002Ch holds segment of environment.
 ; Walk until a double NULL terminator to ensure block is present and capture
 ; the executable path for overlay name derivation.
 ; ---------------------------------------------------------------------------
+env_check:
         mov     bx, [PSP_ENV_PTR]
         cmp     bx, 0
         je      env_fail
@@ -291,3 +309,5 @@ cmdTail:
 
 childName       db "CHILD.COM", 0
 tsrName         db "TSR_HOOK.COM", 0
+
+end_of_program:

@@ -1174,7 +1174,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     /// <returns>
     /// CF is cleared on success. <br/>
-    /// On success, AX is set to the size of the MCB, which is at least equal to the requested size.
+    /// On success, AX is set to the segment (ES value).
     /// CF is set on error. The error is in AX. <br/>
     /// Possible error code in AX: 0x08 (Insufficient memory) or 0x09 (MCB block destroyed). <br/>
     /// BX is set to largest free block size in paragraphs on error. <br/>
@@ -1190,7 +1190,8 @@ public class DosInt21Handler : InterruptHandler {
         DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(blockSegment,
             requestedSizeInParagraphs, out DosMemoryControlBlock mcb);
         if (errorCode == DosErrorCode.NoError) {
-            State.AX = mcb.Size;
+            // Undocumented MS-DOS behaviour expected by BRUN45!
+            State.AX = blockSegment;
             SetCarryFlag(false, calledFromVm);
         } else {
             LogDosError(calledFromVm);

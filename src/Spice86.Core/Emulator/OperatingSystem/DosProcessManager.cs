@@ -254,7 +254,7 @@ public class DosProcessManager {
         // This matches FreeDOS behavior
         return HandleComFileLoading(paramBlock, commandTail, loadType,
             environmentSegment, callerIP, callerCS, parentPspSegment,
-            hostPath, fileBytes, parentStackPointer, envBlock);
+            hostPath, fileBytes, envBlock);
     }
 
     private DosExecResult HandleExeFileLoading(DosExecParameterBlock paramBlock,
@@ -274,7 +274,8 @@ public class DosProcessManager {
 
         // Use the pre-allocated environment segment or 0 if caller provided one
         ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
-        InitializePsp(block.DataBlockSegment, hostPath, commandTail,
+        InitializePsp(block.DataBlockSegment, 
+            block.Size, hostPath, commandTail,
             finalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP, loadType == DosExecLoadType.LoadAndExecute);
 
@@ -309,14 +310,17 @@ public class DosProcessManager {
         return exeResult;
     }
 
-
     private DosExecResult HandleComFileLoading(DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment,
         ushort callerIP, ushort callerCS, ushort parentPspSegment, string hostPath,
-        byte[] fileBytes, uint parentStackPointer, DosMemoryControlBlock? envBlock) {
+        byte[] fileBytes, DosMemoryControlBlock? envBlock) {
         ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
-        DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(paragraphsNeeded);
-        if (comBlock is null) {
+        
+        // MS-DOS and FreeDOS: COM files are ALWAYS loaded in the largest available area
+        DosMemoryControlBlock largestFree = _memoryManager.FindLargestFree();
+        DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(largestFree.Size);
+        
+        if (comBlock is null || largestFree.Size < paragraphsNeeded) {
             //Free the environment block we just allocated
             if (envBlock is not null) {
                 _memoryManager.FreeMemoryBlock(envBlock);
@@ -328,7 +332,8 @@ public class DosProcessManager {
 
         // Use the pre-allocated environment segment or 0 if caller provided one
         ushort comFinalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
-        InitializePsp(comBlock.DataBlockSegment, hostPath, commandTail,
+        InitializePsp(comBlock.DataBlockSegment, 
+            comBlock.Size, hostPath, commandTail,
             comFinalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP, loadType == DosExecLoadType.LoadAndExecute);
 
@@ -809,7 +814,7 @@ public class DosProcessManager {
         return _driveManager.HasDriveAtIndex(zeroBasedIndex);
     }
 
-    private void InitializePsp(ushort pspSegment, string programHostPath,
+    private void InitializePsp(ushort pspSegment, ushort blockSizeInParagraphs, string programHostPath,
         string? arguments, ushort environmentSegment, ushort parentPspSegment,
         ushort callerCS, ushort callerIP, bool trackParentStackPointer) {
         ClearPspMemory(pspSegment);
@@ -818,7 +823,8 @@ public class DosProcessManager {
 
         psp.Exit[0] = IntOpcode;
         psp.Exit[1] = Int20TerminateNumber;
-        psp.CurrentSize = DosMemoryManager.LastFreeSegment;
+        // CurrentSize points to the first segment AFTER the allocated block, matching MS-DOS behavior
+        psp.CurrentSize = (ushort)(pspSegment + blockSizeInParagraphs);
 
         psp.FarCall = FarCallOpcode;
         psp.CpmServiceRequestAddress = MemoryUtils.To32BitAddress(pspSegment, Call5StubOffset);

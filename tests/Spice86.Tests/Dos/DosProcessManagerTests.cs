@@ -123,6 +123,14 @@ public class DosProcessManagerTests {
             parentExec.Success.Should().BeTrue();
             ushort parentSegment = context.Tracker.GetCurrentPspSegment();
 
+            // Shrink parent's memory to PSP + small code, freeing space for child
+            const ushort parentMinimumSize = DosProgramSegmentPrefix.PspSizeInParagraphs + 0x10;
+            DosErrorCode shrinkResult = context.MemoryManager.TryModifyBlock(
+                parentSegment,
+                parentMinimumSize,
+                out DosMemoryControlBlock _);
+            shrinkResult.Should().Be(DosErrorCode.NoError, "parent must shrink memory before loading child");
+
             context.State.SS = 0x2222;
             context.State.SP = 0x0FF0;
 
