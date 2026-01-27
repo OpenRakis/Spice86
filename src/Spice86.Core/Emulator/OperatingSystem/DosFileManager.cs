@@ -131,10 +131,10 @@ public class DosFileManager {
                 file.Name, file.LoadedMemoryRanges);
         }
 
-        byte refCount = (byte)CountHandles(file);
         SetOpenFile(fileHandle, null);
+        byte refCount = (byte)CountHandles(file);
         try {
-            if (CountHandles(file) == 0) {
+            if (refCount == 0) {
                 // Only close the file if no other handle to it exist.
                 file.Close();
             }
