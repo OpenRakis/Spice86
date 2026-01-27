@@ -9,9 +9,18 @@ public class DosFileOperationResult {
     private readonly bool _error;
     private readonly uint? _value;
     private readonly bool _valueIsUint32;
-    private readonly byte? _refCount;
+    private readonly byte _refCount;
 
-    private DosFileOperationResult(bool error, bool valueIsUint32, uint? value, byte? refCount = null) {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DosFileOperationResult" /> class with the specified error state, value type,
+    /// value, and handle count.
+    /// </summary>
+    /// <param name="error"><c>true</c> if the operation resulted in an error; otherwise, <c>false</c>.</param>
+    /// <param name="valueIsUint32"><c>true</c> if the value represents a 32-bit unsigned integer; otherwise, <c>false</c>.</param>
+    /// <param name="value">The value associated with the file operation, or <c>null</c> if no value is available.</param>
+    /// <param name="refCount">The handle count for the associated file or device, after a successful <see cref="DosFileManager.CloseFileOrDevice(ushort)"/> operation.
+    /// Defaults to 0 for other DOS operations.</param>
+    private DosFileOperationResult(bool error, bool valueIsUint32, uint? value, byte refCount = 0) {
         _error = error;
         _valueIsUint32 = valueIsUint32;
         _value = value;
@@ -78,7 +87,7 @@ public class DosFileOperationResult {
     public bool IsValueIsUint32 => _valueIsUint32;
 
     /// <summary>
-    /// The reference count from the System File Table, if any.
+    /// The number of handles associated with the file or device after a successful <see cref="DosFileManager.CloseFileOrDevice(ushort)"/> operation. Defaults to 0 for other DOS operations.
     /// </summary>
-    public byte? RefCount => _refCount;
+    public byte RefCount => _refCount;
 }
