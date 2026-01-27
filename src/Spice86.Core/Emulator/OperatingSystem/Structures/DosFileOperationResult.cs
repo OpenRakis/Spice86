@@ -9,11 +9,13 @@ public class DosFileOperationResult {
     private readonly bool _error;
     private readonly uint? _value;
     private readonly bool _valueIsUint32;
+    private readonly byte? _refCount;
 
-    private DosFileOperationResult(bool error, bool valueIsUint32, uint? value) {
+    private DosFileOperationResult(bool error, bool valueIsUint32, uint? value, byte? refCount = null) {
         _error = error;
         _valueIsUint32 = valueIsUint32;
         _value = value;
+        _refCount = refCount;
     }
 
     /// <summary>
@@ -52,6 +54,15 @@ public class DosFileOperationResult {
     }
 
     /// <summary>
+    /// Returns a new instance of the class indicating no value with a reference count.
+    /// </summary>
+    /// <param name="refCount">The reference count from the System File Table.</param>
+    /// <returns>A new instance of the class with a reference count.</returns>
+    public static DosFileOperationResult NoValueWithRefCount(byte refCount) {
+        return new DosFileOperationResult(false, false, null, refCount);
+    }
+
+    /// <summary>
     /// The value of the operation, if any.
     /// </summary>
     public uint? Value => _value;
@@ -65,4 +76,9 @@ public class DosFileOperationResult {
     /// Indicates whether the value of the operation is 32 bits.
     /// </summary>
     public bool IsValueIsUint32 => _valueIsUint32;
+
+    /// <summary>
+    /// The reference count from the System File Table, if any.
+    /// </summary>
+    public byte? RefCount => _refCount;
 }
