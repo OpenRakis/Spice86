@@ -89,9 +89,9 @@ public interface IIndexable {
     /// </summary>
     /// <param name="address">The address at which to write the string</param>
     /// <param name="value">The string to write</param>
-    /// <param name="maxLength">The maximum length to write</param>
+    /// <param name="maxLength">The maximum length to write. Defaults to <paramref name="value"/> length + 1 for the NUL character.</param>
     /// <exception cref="UnrecoverableException">When the string length is beyond <paramref name="maxLength"/></exception>
-    void SetZeroTerminatedString(uint address, string value, int maxLength);
+    void SetZeroTerminatedString(uint address, string value, int maxLength = 0);
 
     /// <summary>
     ///     Load data from a byte array into memory.
