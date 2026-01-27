@@ -18,9 +18,8 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="/Views/Styles/DisassemblyResources.axaml" />
+                <ResourceInclude Source="avares://Spice86/Views/Styles/DisassemblyResources.axaml" />
             </ResourceDictionary.MergedDictionaries>
-
             <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
             <converters:FormattedTextSegmentsConverter x:Key="FormattedTextSegmentsConverter" />
             <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
@@ -210,14 +209,14 @@
                                 <!-- Address -->
                                 <SelectableTextBlock Grid.Column="1"
                                                      Text="{Binding SegmentedAddress}"
-                                                     Foreground="#78C9B0"
+                                                     Foreground="{DynamicResource DisassemblyFunctionAddressBrush}"
                                                      FontWeight="SemiBold"
                                                      Margin="0,0,6,0" />
 
                                 <!-- Bytes -->
                                 <SelectableTextBlock Grid.Column="2"
                                                      Text="{Binding ByteString}"
-                                                     Foreground="#B5CEA8"
+                                                     Foreground="{DynamicResource DisassemblyNumberBrush}"
                                                      FontFamily="Consolas,Menlo,Monaco,monospace"
                                                      FontSize="11"
                                                      MinWidth="110"
@@ -231,7 +230,7 @@
                                 <!-- Function Name -->
                                 <SelectableTextBlock Grid.Column="5"
                                                      Text="{Binding Function.Name, FallbackValue=''}"
-                                                     Foreground="#9CDCFE"
+                                                     Foreground="{DynamicResource DisassemblyFunctionBrush}"
                                                      Margin="12,0,0,0" />
                             </Grid>
                         </ContentControl>

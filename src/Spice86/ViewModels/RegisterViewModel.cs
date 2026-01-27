@@ -91,17 +91,33 @@ public partial class RegisterViewModel : ObservableObject {
     /// <param name="name">The name of the register.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="valueGetter">Function to get the register value from the CPU state.</param>
-    public RegisterViewModel(string name, State state, Func<State, uint> valueGetter) {
+    /// <param name="bitSize">The size of the register in bits (32, 16, or 8). Defaults to 32.</param>
+    public RegisterViewModel(string name, State state, Func<State, uint> valueGetter, int bitSize = 32) {
         Name = name;
         _state = state;
         _valueGetter = valueGetter;
+        BitSize = bitSize;
         _value = _valueGetter(state);
         _previousValue = _value;
-        _hexValue = $"{_value:X4}";
+        _hexValue = FormatValue(_value, BitSize);
         _upperWordHex = $"{_value >> 16 & 0xFFFF:X4}";
         _lowerWordHex = $"{_value & 0xFFFF:X4}";
         _highByteHex = $"{_value >> 8 & 0xFF:X2}";
         _lowByteHex = $"{_value & 0xFF:X2}";
+    }
+
+    /// <summary>
+    /// Gets the size of the register in bits.
+    /// </summary>
+    public int BitSize { get; }
+
+    private static string FormatValue(uint value, int bitSize) {
+        return bitSize switch {
+            32 => $"{value:X8}",
+            16 => $"{value:X4}",
+            8 => $"{value:X2}",
+            _ => $"{value:X4}"
+        };
     }
 
     /// <summary>
@@ -123,7 +139,7 @@ public partial class RegisterViewModel : ObservableObject {
 
             return;
         }
-        HexValue = $"{Value:X4}";
+        HexValue = FormatValue(Value, BitSize);
 
         // Check upper word
         UpperWordChanged = (changedBits & 0xFFFF0000) != 0;
