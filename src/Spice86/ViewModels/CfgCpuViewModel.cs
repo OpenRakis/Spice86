@@ -407,5 +407,8 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
         public bool IsLastExecuted { get; init; }
         public ICfgNode? Node { get; init; }
+
+        public string PredecessorsText => string.Join(Environment.NewLine, Predecessors.Select(p => p.Address));
+        public string SuccessorsText => string.Join(Environment.NewLine, Successors.Select(s => s.Address));
     }
 }
