@@ -30,7 +30,7 @@
 	</UserControl.Styles>
     <Grid RowDefinitions="Auto,*">
         <!-- Top toolbar -->
-        <Grid Grid.Row="0" IsVisible="{Binding IsPaused}" Margin="4" ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+        <Grid Grid.Row="0" IsEnabled="{Binding IsPaused}" Margin="4" ColumnDefinitions="Auto,Auto,Auto,*,Auto">
 
             <!-- Navigation Controls -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
@@ -114,7 +114,7 @@
 
             <!-- Disassembly View with Scrolling -->
             <ListBox Grid.Column="0"
-                     IsVisible="{Binding IsPaused}"
+                     IsEnabled="{Binding IsPaused}"
                      ItemsSource="{Binding SortedDebuggerLinesView}"
                      Name="DisassemblyListBox"
                      Background="Transparent"
@@ -241,7 +241,7 @@
             <!-- Register View Panel -->
             <Border Grid.Column="1"
                     MinWidth="250"
-                    IsVisible="{Binding IsPaused}"
+                    IsEnabled="{Binding IsPaused}"
                     BorderBrush="{DynamicResource SemiColorBorder}"
                     BorderThickness="1,0,0,0"
                     Padding="8">
