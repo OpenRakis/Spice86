@@ -64,7 +64,7 @@ public partial class RegistersViewModel : ObservableObject, IRegistersViewModel 
         SegmentRegisters.Add(new RegisterViewModel("GS", _state, s => s.GS, 16));
 
         // Pointer registers
-        PointerRegisters.Add(new RegisterViewModel("EIP", _state, s => s.IP, 32));
+        PointerRegisters.Add(new RegisterViewModel("IP", _state, s => s.IP, 16));
         PointerRegisters.Add(new RegisterViewModel("ESP", _state, s => s.ESP, 32));
         PointerRegisters.Add(new RegisterViewModel("EBP", _state, s => s.EBP, 32));
         PointerRegisters.Add(new RegisterViewModel("ESI", _state, s => s.ESI, 32));

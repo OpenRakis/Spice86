@@ -91,8 +91,18 @@ public partial class RegisterViewModel : ObservableObject {
     /// <param name="name">The name of the register.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="valueGetter">Function to get the register value from the CPU state.</param>
-    /// <param name="bitSize">The size of the register in bits (32, 16, or 8). Defaults to 32.</param>
-    public RegisterViewModel(string name, State state, Func<State, uint> valueGetter, int bitSize = 32) {
+    public RegisterViewModel(string name, State state, Func<State, uint> valueGetter)
+        : this(name, state, valueGetter, 32) {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RegisterViewModel"/> class.
+    /// </summary>
+    /// <param name="name">The name of the register.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="valueGetter">Function to get the register value from the CPU state.</param>
+    /// <param name="bitSize">The size of the register in bits (32, 16, or 8).</param>
+    public RegisterViewModel(string name, State state, Func<State, uint> valueGetter, int bitSize) {
         Name = name;
         _state = state;
         _valueGetter = valueGetter;
@@ -114,9 +124,9 @@ public partial class RegisterViewModel : ObservableObject {
     private static string FormatValue(uint value, int bitSize) {
         return bitSize switch {
             32 => $"{value:X8}",
-            16 => $"{value:X4}",
-            8 => $"{value:X2}",
-            _ => $"{value:X4}"
+            16 => $"{value & 0xFFFFu:X4}",
+            8 => $"{value & 0xFFu:X2}",
+            _ => $"{value & 0xFFFFu:X4}"
         };
     }
 

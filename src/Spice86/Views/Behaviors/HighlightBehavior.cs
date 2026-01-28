@@ -8,8 +8,6 @@ using Avalonia.Reactive;
 using Avalonia.Styling;
 using Avalonia.Media;
 
-using Spice86.Views.Converters;
-
 /// <summary>
 /// Provides highlight behaviors for different control types with fade-out animations.
 /// </summary>
@@ -80,16 +78,18 @@ public static class HighlightBehavior {
                 // Create animation for background fade-out
                 Animation backgroundAnimation = CreateAnimation(TextBlock.BackgroundProperty, highlightBackgroundBrush, defaultBackgroundBrush);
 
-                // Start background animation
-                await backgroundAnimation.RunAsync(textBlock);
-
-                // If foreground highlighting is enabled, animate it too
+                // If foreground highlighting is enabled, animate both in parallel
                 if (highlightForeground) {
                     Animation foregroundAnimation = CreateAnimation(TextBlock.ForegroundProperty, highlightForegroundBrush,
                         defaultForegroundBrush);
 
-                    // Start foreground animation
-                    await foregroundAnimation.RunAsync(textBlock);
+                    // Start both animations in parallel
+                    await System.Threading.Tasks.Task.WhenAll(
+                        backgroundAnimation.RunAsync(textBlock),
+                        foregroundAnimation.RunAsync(textBlock));
+                } else {
+                    // Only background animation
+                    await backgroundAnimation.RunAsync(textBlock);
                 }
             }
         }
@@ -138,16 +138,18 @@ public static class HighlightBehavior {
                 Animation backgroundAnimation = CreateAnimation(TemplatedControl.BackgroundProperty, highlightBackgroundBrush,
                     defaultBackgroundBrush);
 
-                // Start background animation
-                await backgroundAnimation.RunAsync(contentControl);
-
-                // If foreground highlighting is enabled, animate it too
+                // If foreground highlighting is enabled, animate both in parallel
                 if (highlightForeground) {
                     Animation foregroundAnimation = CreateAnimation(TemplatedControl.ForegroundProperty, highlightForegroundBrush,
                         defaultForegroundBrush);
 
-                    // Start foreground animation
-                    await foregroundAnimation.RunAsync(contentControl);
+                    // Start both animations in parallel
+                    await System.Threading.Tasks.Task.WhenAll(
+                        backgroundAnimation.RunAsync(contentControl),
+                        foregroundAnimation.RunAsync(contentControl));
+                } else {
+                    // Only background animation
+                    await backgroundAnimation.RunAsync(contentControl);
                 }
             }
         }
