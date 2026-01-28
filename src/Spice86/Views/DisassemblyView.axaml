@@ -228,7 +228,7 @@
                                                      Margin="12,0,0,0" />
 
                                 <!-- Function Name -->
-                                <SelectableTextBlock Grid.Column="5"
+                                <SelectableTextBlock Grid.Column="4"
                                                      Text="{Binding Function.Name, FallbackValue=''}"
                                                      Foreground="{DynamicResource DisassemblyFunctionBrush}"
                                                      Margin="12,0,0,0" />
