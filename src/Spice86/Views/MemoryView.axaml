@@ -20,7 +20,7 @@
 	<UserControl.Resources>
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</UserControl.Resources>
-	<ScrollViewer>
+	<ScrollViewer IsEnabled="{Binding IsPaused}">
 		<Grid RowDefinitions="Auto,*,Auto">
 			<StackPanel Orientation="Horizontal" Grid.Row="0"
 				HorizontalAlignment="Left"
@@ -70,7 +70,7 @@
 					</TextBox>
 				</Grid>
 				<StackPanel Orientation="Vertical">
-					<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
+					<Button IsEnabled="{Binding IsPaused}"
 							Command="{Binding UpdateBinaryDocumentCommand}"
 							HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Content="Refresh" />
 					<Label  IsVisible="{Binding IsPaused}" Content="{Binding Title}" />
@@ -78,13 +78,12 @@
 			</StackPanel>
 			<Grid Grid.Row="1"
 				  RowDefinitions="*, Auto">
-				<TextBlock Grid.Row="0" IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
 				<avaloniaHex:HexEditor
 					x:Name="HexViewer"
 					Width="800"
 					Grid.Row="0"
 					Document="{Binding DataMemoryDocument}"
-					IsVisible="{Binding IsPaused}">
+					IsEnabled="{Binding IsPaused}">
 					<TextElement.FontFamily>
 						<OnPlatform Default="{StaticResource RobotoMonoFont}" />
 					</TextElement.FontFamily>
