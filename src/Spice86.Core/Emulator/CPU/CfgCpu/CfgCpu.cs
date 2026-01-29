@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
+using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -23,14 +24,16 @@ public class CfgCpu : IFunctionHandlerProvider {
     private readonly DualPic _dualPic;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly InstructionReplacerRegistry _replacerRegistry = new();
+    private readonly CpuHeavyLogger? _cpuHeavyLogger;
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
         FunctionCatalogue functionCatalogue,
-        bool useCodeOverride, bool failOnInvalidOpcode, ILoggerService loggerService) {
+        bool useCodeOverride, bool failOnInvalidOpcode, ILoggerService loggerService, CpuHeavyLogger? cpuHeavyLogger = null) {
         _loggerService = loggerService;
         _state = state;
         _dualPic = dualPic;
+        _cpuHeavyLogger = cpuHeavyLogger;
 
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService);
@@ -66,6 +69,9 @@ public class CfgCpu : IFunctionHandlerProvider {
                 _instructionExecutionHelper.HandleCpuException(cfgInstruction, e);
             }
         }
+
+        // Log instruction after execution if CPU heavy logging is enabled
+        _cpuHeavyLogger?.LogInstruction(toExecute);
 
         ICfgNode? nextToExecute = toExecute.GetNextSuccessor(_instructionExecutionHelper);
         
