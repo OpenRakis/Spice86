@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Shared.Emulator.Memory;
@@ -31,6 +32,21 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     public string VisitAbsolutePointerNode(AbsolutePointerNode node) {
         string absoluteAddress = node.AbsoluteAddress.Accept(this);
         return PointerDataTypeToString(node.DataType) + " [" + absoluteAddress + "]";
+    }
+
+    public string VisitCpuFlagNode(CpuFlagNode node) {
+        return node.FlagMask switch {
+            Flags.Carry => "CF",
+            Flags.Parity => "PF",
+            Flags.Auxiliary => "AF",
+            Flags.Zero => "ZF",
+            Flags.Sign => "SF",
+            Flags.Trap => "TF",
+            Flags.Interrupt => "IF",
+            Flags.Direction => "DF",
+            Flags.Overflow => "OF",
+            _ => throw new InvalidOperationException($"Unknown flag mask: 0x{node.FlagMask:X4}")
+        };
     }
 
     public string VisitConstantNode(ConstantNode node) {
@@ -213,5 +229,65 @@ public class AstInstructionRenderer : IAstVisitor<string> {
             BitWidth.DWORD_32 => "dword ptr",
             _ => throw new InvalidOperationException($"Unsupported bit width {dataType.BitWidth}")
         };
+    }
+
+    public string VisitMethodCallNode(MethodCallNode node) {
+        throw new NotSupportedException("MethodCallNode should not be rendered as assembly.");
+    }
+
+    public string VisitBlockNode(BlockNode node) {
+        throw new NotSupportedException("BlockNode should not be rendered as assembly.");
+    }
+
+    public string VisitIfElseNode(IfElseNode node) {
+        throw new NotSupportedException("IfElseNode should not be rendered as assembly.");
+    }
+
+    public string VisitMethodCallValueNode(MethodCallValueNode node) {
+        throw new NotSupportedException("MethodCallValueNode should not be rendered as assembly.");
+    }
+
+    public string VisitMoveIpNextNode(MoveIpNextNode node) {
+        throw new NotSupportedException("MoveIpNextNode should not be rendered as assembly.");
+    }
+
+    public string VisitVariableReferenceNode(VariableReferenceNode node) {
+        throw new NotSupportedException("VariableReferenceNode should not be rendered as assembly.");
+    }
+
+    public string VisitVariableDeclarationNode(VariableDeclarationNode node) {
+        throw new NotSupportedException("VariableDeclarationNode should not be rendered as assembly.");
+    }
+
+    public string VisitCallNearNode(CallNearNode node) {
+        throw new NotSupportedException("CallNearNode should not be rendered as assembly.");
+    }
+
+    public string VisitCallFarNode(CallFarNode node) {
+        throw new NotSupportedException("CallFarNode should not be rendered as assembly.");
+    }
+
+    public string VisitReturnNearNode(ReturnNearNode node) {
+        throw new NotSupportedException("ReturnNearNode should not be rendered as assembly.");
+    }
+
+    public string VisitReturnFarNode(ReturnFarNode node) {
+        throw new NotSupportedException("ReturnFarNode should not be rendered as assembly.");
+    }
+
+    public string VisitJumpNearNode(JumpNearNode node) {
+        throw new NotSupportedException("JumpNearNode should not be rendered as assembly.");
+    }
+
+    public string VisitJumpFarNode(JumpFarNode node) {
+        throw new NotSupportedException("JumpFarNode should not be rendered as assembly.");
+    }
+
+    public string VisitInterruptCallNode(InterruptCallNode node) {
+        throw new NotSupportedException("InterruptCallNode should not be rendered as assembly.");
+    }
+
+    public string VisitReturnInterruptNode(ReturnInterruptNode node) {
+        throw new NotSupportedException("ReturnInterruptNode should not be rendered as assembly.");
     }
 }
