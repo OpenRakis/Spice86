@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
@@ -132,8 +131,8 @@ public class DosFileManagerTests {
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             false, true, loggerService);
 
-        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
+        Mixer mixer = new(loggerService, configuration.AudioEngine);
+        PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort);
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService, configuration.FailOnUnhandledPort);
 
@@ -142,16 +141,10 @@ public class DosFileManagerTests {
         DmaBus dmaSystem =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaSystem, dualPic, emulationLoopScheduler, emulatedClock,
-            configuration.FailOnUnhandledPort,
-            loggerService, soundBlasterHardwareConfig, pauseHandler);
-
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory, interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
-
 
         InputEventHub inputEventQueue = new();
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
@@ -170,7 +163,7 @@ public class DosFileManagerTests {
 
         Dos dos = new Dos(configuration, memory, cfgCpu, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
-            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
+            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", "A220 I7 D1 H5 P330 T6" } },
             ioPortDispatcher, loggerService);
 
         return dos.FileManager;
