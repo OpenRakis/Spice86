@@ -320,10 +320,19 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public void Pause() => _pauseHandler.RequestPause("Pause button pressed in main window");
 
     private void SetMainTitle(double instructionsPerMillisecond) {
-        MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}";
+        MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}{MouseCaptureHint}";
     }
 
     [ObservableProperty] private string? _mainTitle;
+
+    [ObservableProperty] private string _mouseCaptureHint = string.Empty;
+
+    internal void UpdateMouseCaptureHint(bool isCaptured) {
+        MouseCaptureHint = isCaptured
+            ? " | Mouse captured (middle click to release)"
+            : " | Mouse free (middle click to capture)";
+        RefreshMainTitleWithInstructionsPerMs();
+    }
 
     private double? _timeMultiplier = 1;
 
