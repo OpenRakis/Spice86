@@ -55,8 +55,9 @@ public class DosProgramSegmentPrefixTrackerTests {
         DosMemoryManager dosMemoryManager = new(memory, _pspTracker, loggerService);
         DosFileManager dosFileManager = new(memory, new DosStringDecoder(memory, state),
             dosDriveManager, loggerService, new List<IVirtualDevice>());
+        DosFcbManager dosFcbManager = new(memory, dosFileManager, dosDriveManager, loggerService);
         _processManager = new(memory, stack, state, _pspTracker, dosMemoryManager, dosFileManager, dosDriveManager,
-            new Dictionary<string, string>(), loggerService);
+            dosFcbManager, new Dictionary<string, string>(), loggerService);
     }
 
     /// <summary>
