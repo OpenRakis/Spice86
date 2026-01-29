@@ -11,6 +11,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -237,9 +238,19 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Function handler created...");
         }
 
+        // Create CPU heavy logger if enabled
+        CpuHeavyLogger? cpuHeavyLogger = null;
+        if (configuration.CpuHeavyLog) {
+            cpuHeavyLogger = new CpuHeavyLogger(dumpContext, configuration.CpuHeavyLogDumpFile);
+            if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                loggerService.Information("CPU heavy logger created. Logging to: {LogFile}", 
+                    configuration.CpuHeavyLogDumpFile ?? Path.Join(dumpContext.DumpDirectory, "cpu_heavy.log"));
+            }
+        }
+
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, functionCatalogue,
-            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, loggerService);
+            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, loggerService, cpuHeavyLogger);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CfgCpu created...");

@@ -187,4 +187,19 @@ public sealed class Configuration {
     [Option(nameof(FailOnInvalidOpcode), Default = true, Required = false,
         HelpText = "If true, will throw an exception and crash when encountering an invalid opcode. If false, will handle invalid opcodes as CPU faults. Default is true.")]
     public bool FailOnInvalidOpcode { get; init; }
+
+    /// <summary>
+    /// If true, logs every executed instruction to a file (similar to DOSBox heavy logging).
+    /// This will significantly impact performance. Default is false.
+    /// </summary>
+    [Option(nameof(CpuHeavyLog), Default = false, Required = false,
+        HelpText = "Enable CPU heavy logging. Logs every executed instruction to a file. Warning: significant performance impact.")]
+    public bool CpuHeavyLog { get; set; }
+
+    /// <summary>
+    /// Custom file path for CPU heavy log output. If not specified, defaults to {DumpDirectory}/cpu_heavy.log
+    /// </summary>
+    [Option(nameof(CpuHeavyLogDumpFile), Default = null, Required = false,
+        HelpText = "Custom file path for CPU heavy log output. If not specified, defaults to {DumpDirectory}/cpu_heavy.log")]
+    public string? CpuHeavyLogDumpFile { get; init; }
 }

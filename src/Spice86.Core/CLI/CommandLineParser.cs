@@ -37,6 +37,9 @@ public class CommandLineParser {
             if (initialConfig.Cycles != null) {
                 initialConfig.InstructionsPerSecond = null;
             }
+            if (initialConfig.CpuHeavyLogDumpFile != null) {
+                initialConfig.CpuHeavyLog = true;
+            }
             return initialConfig;
         }, error => null);
     }
