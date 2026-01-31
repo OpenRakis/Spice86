@@ -190,6 +190,15 @@ public class DosMemoryManager {
             return DosErrorCode.MemoryControlBlockDestroyed;
         }
 
+        // A request of 0 paragraphs is allowed by MS-DOS and should be
+        // treated as "accept the value but do not change the block size". Avoid
+        // attempting to split the block with size 0 which would corrupt the MCB
+        // chain. Simply affect it to the current process, and return it as-is.
+        if (requestedSizeInParagraphs == 0) {
+            block.PspSegment = _pspTracker.GetCurrentPspSegment();
+            return DosErrorCode.NoError;
+        }
+
         // Since the first thing we do is enlarge the block, we need to know the original size so
         // that we can restore it if we encounter an error later. We need to make sure that the
         // block doesn't grow to the maximum supported size on error.
