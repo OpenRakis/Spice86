@@ -14,6 +14,9 @@ using System.Linq;
 public class AstInstructionRenderer : IAstVisitor<string> {
     private readonly RegisterRenderer _registerRenderer = new();
 
+    public bool ExplicitPointerType { get; set; } = true;
+    public bool PrefixHexWith0X {get; set;} = true;
+
     public string VisitSegmentRegisterNode(SegmentRegisterNode node) {
         return _registerRenderer.ToStringSegmentRegister(node.RegisterIndex);
     }
@@ -50,40 +53,23 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     }
 
     public string VisitConstantNode(ConstantNode node) {
-        if (IsNegative(node)) {
-            int valueSigned = SignExtend(node.Value, node.DataType.BitWidth);
+        if (node.IsNegative) {
+            long valueSigned = node.SignedValue;
             return valueSigned.ToString(CultureInfo.InvariantCulture);
         }
-        uint value = node.Value;
-        if (value < 10) {
+        ulong value = node.Value;
+        if (value < 10 && PrefixHexWith0X) {
             // render it as decimal as it is the same and it will save the 0x0
             return value.ToString(CultureInfo.InvariantCulture);
         }
 
-        return node.DataType.BitWidth switch {
-            BitWidth.BYTE_8 => $"0x{value:X2}",
-            BitWidth.WORD_16 => $"0x{value:X4}",
-            BitWidth.DWORD_32 => $"0x{value:X8}",
+        string prefix = PrefixHexWith0X ? "0x" : "";
+        return prefix + node.DataType.BitWidth switch {
+            BitWidth.BYTE_8 => $"{value:X2}",
+            BitWidth.WORD_16 => $"{value:X4}",
+            BitWidth.DWORD_32 => $"{value:X8}",
+            BitWidth.QWORD_64 => $"{value:X16}",
             _ => throw new InvalidOperationException($"Unsupported bit width {node.DataType.BitWidth}")
-        };
-    }
-
-    private bool IsNegative(ConstantNode node) {
-        if (node.DataType.Signed) {
-            int value = SignExtend(node.Value, node.DataType.BitWidth);
-            if (value < 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private int SignExtend(uint value, BitWidth size) {
-        return size switch {
-            BitWidth.BYTE_8 => (sbyte)value,
-            BitWidth.WORD_16 => (short)value,
-            BitWidth.DWORD_32 => (int)value,
-            _ => throw new InvalidOperationException($"Unsupported bit width {size}")
         };
     }
 
@@ -160,6 +146,7 @@ public class AstInstructionRenderer : IAstVisitor<string> {
             BitWidth.BYTE_8 => node.DataType.Signed ? "(sbyte)" : "(byte)",
             BitWidth.WORD_16 => node.DataType.Signed ? "(short)" : "(ushort)",
             BitWidth.DWORD_32 => node.DataType.Signed ? "(int)" : "(uint)",
+            BitWidth.QWORD_64 => node.DataType.Signed ? "(long)" : "(ulong)",
             _ => throw new InvalidOperationException($"Unsupported bit width {node.DataType.BitWidth}")
         };
         string value = node.Value.Accept(this);
@@ -223,10 +210,14 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     }
 
     private string PointerDataTypeToString(DataType dataType) {
+        if (!ExplicitPointerType) {
+            return "";
+        }
         return dataType.BitWidth switch {
             BitWidth.BYTE_8 => "byte ptr",
             BitWidth.WORD_16 => "word ptr",
             BitWidth.DWORD_32 => "dword ptr",
+            BitWidth.QWORD_64 => "qword ptr",
             _ => throw new InvalidOperationException($"Unsupported bit width {dataType.BitWidth}")
         };
     }

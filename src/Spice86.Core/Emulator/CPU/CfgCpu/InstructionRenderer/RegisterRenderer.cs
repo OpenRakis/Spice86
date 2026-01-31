@@ -6,6 +6,7 @@ using Spice86.Shared.Emulator.Memory;
 using System.Collections.Frozen;
 
 public class RegisterRenderer {
+    public bool UpperCase { get; set; } = true; 
     private static readonly FrozenDictionary<int, string> _registersNames = new Dictionary<int, string>() {
         { (int)RegisterIndex.AxIndex, "AX" },
         { (int)RegisterIndex.CxIndex, "CX" },
@@ -41,16 +42,23 @@ public class RegisterRenderer {
         return "E" + Reg16Name(regIndex);
     }
     public string ToStringRegister(BitWidth bitWidth, int registerIndex) {
-        return bitWidth switch {
+        return UpperOrLower(bitWidth switch {
             BitWidth.BYTE_8=> Reg8Name(registerIndex),
             BitWidth.WORD_16 => Reg16Name(registerIndex),
             BitWidth.DWORD_32 => Reg32Name(registerIndex),
             _ => throw new ArgumentOutOfRangeException(nameof(bitWidth), bitWidth, null)
-        };
+        });
     }
 
 
     public string ToStringSegmentRegister(int registerIndex) {
-        return _segmentRegistersNames[registerIndex];
+        return UpperOrLower(_segmentRegistersNames[registerIndex]);
+    }
+
+    private string UpperOrLower(string s) {
+        if (UpperCase) {
+            return s.ToUpper();
+        }
+        return s.ToLower();
     }
 }

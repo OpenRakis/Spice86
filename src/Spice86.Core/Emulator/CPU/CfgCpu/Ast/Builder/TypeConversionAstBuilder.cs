@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Shared.Emulator.Memory;
 
 public class TypeConversionAstBuilder {
@@ -14,6 +15,12 @@ public class TypeConversionAstBuilder {
         // Avoid creating unnecessary conversion node if types already match
         if (value.DataType == targetType) {
             return value;
+        }
+
+        if (value is ConstantNode constant) {
+            // For constants we can compute directly the new constant node
+            ulong newValue = constant.Convert(targetType);
+            return new ConstantNode(targetType, newValue);
         }
         return new TypeConversionNode(targetType, value);
     }
