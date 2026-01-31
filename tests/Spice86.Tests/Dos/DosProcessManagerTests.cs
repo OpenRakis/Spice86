@@ -131,8 +131,8 @@ public class DosProcessManagerTests {
                 out DosMemoryControlBlock _);
             shrinkResult.Should().Be(DosErrorCode.NoError, "parent must shrink memory before loading child");
 
-            context.State.SS = 0x2222;
-            context.State.SP = 0x0FF0;
+            context.State.SS = 0xFFFD;
+            context.State.SP = 0xFFFE;
 
             parameterBlock = CreateParameterBlock();
 
@@ -151,11 +151,11 @@ public class DosProcessManagerTests {
             context.ProcessManager.TerminateProcess(0, DosTerminationType.Normal);
 
             context.Tracker.GetCurrentPspSegment().Should().Be(parentSegment);
-            context.State.SS.Should().Be(0x2222);
-            context.State.SP.Should().Be(0x0ff0);
+            context.State.SS.Should().Be(0x02B);
+            context.State.SP.Should().Be(0xFFFE);
 
             DosProgramSegmentPrefix parentPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(parentSegment, 0));
-            parentPsp.StackPointer.Should().Be(0x00023210);
+            parentPsp.StackPointer.Should().Be(0x000102AE);
         } finally {
             DeleteIfExists(comFilePath);
         }

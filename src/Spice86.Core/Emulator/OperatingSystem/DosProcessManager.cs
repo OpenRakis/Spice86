@@ -44,8 +44,9 @@ public class DosProcessManager {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly ILoggerService _loggerService;
-    private readonly Dictionary<ushort, (ushort SS, ushort SP)> _pendingParentStackPointers = new();
-    private readonly Dictionary<ushort, ResidentBlockInfo> _pendingResidentBlocks = new();
+    private readonly Stack<(ushort SS, ushort SP)> _pendingParentStackPointers = new();
+    private readonly Stack<(ushort CS, ushort IP)> _pendingParentReturnAddresses = new();
+    private readonly Stack<ResidentBlockInfo> _pendingResidentBlocks = new();
 
     /// <summary>
     /// The segment address where the root COMMAND.COM PSP is created.
@@ -128,7 +129,7 @@ public class DosProcessManager {
 
     public void TrackResidentBlock(ushort pspSegment, DosMemoryControlBlock block) {
         ushort mcbSegment = (ushort)(block.DataBlockSegment - 1);
-        _pendingResidentBlocks[pspSegment] = new ResidentBlockInfo(mcbSegment);
+        _pendingResidentBlocks.Push(new ResidentBlockInfo(mcbSegment));
     }
 
     /// <summary>
@@ -211,6 +212,7 @@ public class DosProcessManager {
     /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
+
         // We read CS:IP from the stack to get the address where the parent will resume.
         ushort callerIP = _stack.Peek16(0);
         ushort callerCS = _stack.Peek16(2);
@@ -237,21 +239,32 @@ public class DosProcessManager {
         if (environmentSegment == 0 && !TryAllocateEnvironmentBlock(parentPspSegment, hostPath, out envBlock)) {
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
-        if(fileBytes.Length >= DosExeFile.MinExeSize) {
+
+        DosExecResult? result = null;
+
+        if (fileBytes.Length >= DosExeFile.MinExeSize) {
             // Try to load as EXE first if it looks like an EXE file
             DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
             if (exeFile.IsValid) {
-                return HandleExeFileLoading(paramBlock, commandTail, loadType,
+                result = HandleExeFileLoading(paramBlock, commandTail, loadType,
                     environmentSegment, callerIP, callerCS, parentPspSegment, hostPath,
                     parentStackPointer, envBlock, exeFile);
             }
         }
 
-        // If file has .EXE signature but isn't a valid EXE, fall through to try COM loading
-        // This matches FreeDOS behavior
-        return HandleComFileLoading(paramBlock, commandTail, loadType,
-            environmentSegment, callerIP, callerCS, parentPspSegment,
-            hostPath, fileBytes, envBlock);
+        if (result?.Success is false or null) {
+            // If file has .EXE signature but isn't a valid EXE, fall through to try COM loading
+            // This matches FreeDOS behavior
+            result = HandleComFileLoading(paramBlock, commandTail, loadType,
+                environmentSegment, callerIP, callerCS, parentPspSegment,
+                hostPath, fileBytes, envBlock);
+        }
+
+        // Save parent's stack registers (SS:SP) and CS:IP for process termination logic
+        _pendingParentStackPointers.Push((_state.SS, _state.SP));
+        _pendingParentReturnAddresses.Push((callerCS, callerIP));
+
+        return result;
     }
 
     private DosExecResult HandleExeFileLoading(DosExecParameterBlock paramBlock,
@@ -271,10 +284,10 @@ public class DosProcessManager {
 
         // Use the pre-allocated environment segment or 0 if caller provided one
         ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
-        InitializePsp(block.DataBlockSegment, 
+        InitializePsp(block.DataBlockSegment,
             block.Size, hostPath, commandTail,
             finalEnvironmentSegment, parentPspSegment,
-            callerCS, callerIP, loadType == DosExecLoadType.LoadAndExecute);
+            callerCS, callerIP);
 
         DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
@@ -312,11 +325,11 @@ public class DosProcessManager {
         ushort callerIP, ushort callerCS, ushort parentPspSegment, string hostPath,
         byte[] fileBytes, DosMemoryControlBlock? envBlock) {
         ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
-        
+
         // MS-DOS and FreeDOS: COM files are ALWAYS loaded in the largest available area
         DosMemoryControlBlock largestFree = _memoryManager.FindLargestFree();
         DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(largestFree.Size);
-        
+
         if (comBlock is null || largestFree.Size < paragraphsNeeded) {
             //Free the environment block we just allocated
             if (envBlock is not null) {
@@ -329,10 +342,10 @@ public class DosProcessManager {
 
         // Use the pre-allocated environment segment or 0 if caller provided one
         ushort comFinalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
-        InitializePsp(comBlock.DataBlockSegment, 
+        InitializePsp(comBlock.DataBlockSegment,
             comBlock.Size, hostPath, commandTail,
             comFinalEnvironmentSegment, parentPspSegment,
-            callerCS, callerIP, loadType == DosExecLoadType.LoadAndExecute);
+            callerCS, callerIP);
 
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
@@ -397,7 +410,6 @@ public class DosProcessManager {
     private void RestoreParentPspForLoadOnly(DosExecLoadType loadType, ushort parentPspSegment) {
         if (loadType == DosExecLoadType.LoadOnly) {
             // LoadOnly: restore parent PSP as current
-            // Do NOT modify CS:IP/SS:SP - the IRET instruction will restore them from the stack
             _pspTracker.SetCurrentPspSegment(parentPspSegment);
         }
     }
@@ -450,7 +462,6 @@ public class DosProcessManager {
     /// <param name="exitCode">The DOS exit code to report to the parent in AL.</param>
     /// <param name="terminationType">The termination category stored in AH (normal, error, TSR).</param>
     public void TerminateProcess(byte exitCode, DosTerminationType terminationType) {
-
         // Store the return code for parent to retrieve via INT 21h AH=4Dh
         // Format: AH = termination type, AL = exit code
         LastChildReturnCode = (ushort)(((ushort)terminationType << 8) | exitCode);
@@ -459,35 +470,22 @@ public class DosProcessManager {
 
         ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
         ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
-        bool hasResidentBlock = _pendingResidentBlocks.TryGetValue(currentPspSegment, out ResidentBlockInfo residentBlockInfo);
         DosMemoryControlBlock? residentBlock = null;
         ushort? residentNextSegment = null;
 
-        if (hasResidentBlock) {
-            _pendingResidentBlocks.Remove(currentPspSegment);
+        if (_pendingResidentBlocks.Count > 0) {
+            ResidentBlockInfo residentBlockInfo = _pendingResidentBlocks.Pop();
             residentBlock = new DosMemoryControlBlock(_memory, MemoryUtils.ToPhysicalAddress(residentBlockInfo.McbSegment, 0));
         }
-
-        // Check if this is the root process (current PSP = parent PSP, which means this IS the shell itself terminating)
-        // In that case, there's no parent to return to
-        bool isRootProcess = currentPspSegment == parentPspSegment;
 
         // Check if parent is the root COMMAND.COM PSP - if so, we shouldn't try to return to it
         // because it has no valid stack or execution context. Instead, we halt like a normal program exit.
         bool parentIsRootCommandCom = parentPspSegment == CommandComSegment;
 
-        // If this is a child process (not the main program) with a real parent (not root COMMAND.COM), we have a parent to return to
-        bool hasParentToReturnTo = !isRootProcess && !parentIsRootCommandCom && _pspTracker.PspCount > 1;
-
         // Close non-standard handles only when the process fully terminates; TSR keeps them resident
         if (terminationType != DosTerminationType.TSR) {
             CloseProcessFileHandles(currentPsp);
         }
-
-        // Cache interrupt vectors from child PSP before freeing memory
-        uint terminateAddr = currentPsp.TerminateAddress;
-        uint breakAddr = currentPsp.BreakAddress;
-        uint criticalErrorAddr = currentPsp.CriticalErrorAddress;
 
         // This follows FreeDOS
         // TSR (term_type == 3) does NOT free memory - it keeps the program resident
@@ -502,51 +500,45 @@ public class DosProcessManager {
             }
         }
 
-        // Restore interrupt vectors from cached values
+        // Get interrupt vectors from current PSP before PopCurrentPspSegment call
+        uint terminateAddr = currentPsp.TerminateAddress;
+        uint breakAddr = currentPsp.BreakAddress;
+        uint criticalErrorAddr = currentPsp.CriticalErrorAddress;
+        // Restore interrupt vectors from those values
         RestoreInterruptVector(TerminateVectorNumber, terminateAddr);
         RestoreInterruptVector(CtrlBreakVectorNumber, breakAddr);
         RestoreInterruptVector(CriticalErrorVectorNumber, criticalErrorAddr);
 
         _pspTracker.PopCurrentPspSegment();
 
-        DosProgramSegmentPrefix? parentPspOptional = _pspTracker.PspCount > 0 ? _pspTracker.GetCurrentPsp() : null;
+        DosProgramSegmentPrefix parentPsp = _pspTracker.GetCurrentPsp();
 
-        if (residentNextSegment.HasValue && parentPspOptional is not null) {
-            parentPspOptional.CurrentSize = residentNextSegment.Value;
+        if (residentNextSegment.HasValue) {
+            parentPsp.CurrentSize = residentNextSegment.Value;
         }
 
-        bool hasSavedParentStackPointer = _pendingParentStackPointers.TryGetValue(currentPspSegment, out (ushort SS, ushort SP) savedParentStackPointer);
-        if (hasSavedParentStackPointer) {
-            _pendingParentStackPointers.Remove(currentPspSegment);
+        if (_pendingParentStackPointers.Count > 0) {
+            (ushort SS, ushort SP) = _pendingParentStackPointers.Pop();
+            _state.SS = SS;
+            _state.SP = SP;
         }
-
-        if (hasParentToReturnTo && parentPspOptional is not null) {
-            DosProgramSegmentPrefix parentPsp = parentPspOptional;
-            if (hasSavedParentStackPointer) {
-                _state.SS = savedParentStackPointer.SS;
-                _state.SP = savedParentStackPointer.SP;
-            }
+        if (_pendingParentReturnAddresses.Count > 0) {
+            (ushort CS, ushort IP) = _pendingParentReturnAddresses.Pop();
+            _state.CS = CS;
+            _state.IP = IP;
             parentPsp.StackPointer = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
 
-            _state.DS = parentPspSegment;
-            _state.ES = parentPspSegment;
-
-            // Get the terminate address from INT 22h vector (restored from child PSP)
-            SegmentedAddress returnAddress = _interruptVectorTable[TerminateVectorNumber];
-
-            // Modify the interrupt frame on the stack
-            // so that when IRET pops it, execution continues at the return address
-            uint stackPhysicalAddress = _state.StackPhysicalAddress;
-
-            _memory.UInt16[stackPhysicalAddress] = returnAddress.Offset;     // IP
-            _memory.UInt16[stackPhysicalAddress + 2] = returnAddress.Segment; // CS
-
-            // DON'T manually set CS:IP registers - let IRET handle it by popping the modified frame
-
+        }
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("TERMINATE: restored parent context SS:SP={SS:X4}:{SP:X4}, CS:IP={CS:X4}:{IP:X4}",
+                _state.SS, _state.SP, _state.CS, _state.IP);
         }
 
-        if (!hasParentToReturnTo) {
-            // When returning to COMMAND.COM with no parent to resume, halt emulation
+        _state.DS = parentPspSegment;
+        _state.ES = parentPspSegment;
+
+        if (terminationType != DosTerminationType.TSR && parentIsRootCommandCom) {
+            // When returning to COMMAND.COM, halt emulation
             _state.IsRunning = false;
         }
     }
@@ -811,7 +803,7 @@ public class DosProcessManager {
 
     private void InitializePsp(ushort pspSegment, ushort blockSizeInParagraphs, string programHostPath,
         string? arguments, ushort environmentSegment, ushort parentPspSegment,
-        ushort callerCS, ushort callerIP, bool trackParentStackPointer) {
+        ushort callerCS, ushort callerIP) {
         ClearPspMemory(pspSegment);
         // Establish parent-child PSP relationship and create the new PSP
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
@@ -837,12 +829,6 @@ public class DosProcessManager {
         psp.BreakAddress = MemoryUtils.To32BitAddress(breakVector.Segment, breakVector.Offset);
         psp.CriticalErrorAddress = MemoryUtils.To32BitAddress(criticalErrorVector.Segment, criticalErrorVector.Offset);
 
-        // Save parent's stack registers (SS:SP) only when the child will run, mirroring FreeDOS load_transfer semantics.
-        DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
-        if (trackParentStackPointer) {
-            _pendingParentStackPointers[pspSegment] = (_state.SS, _state.SP);
-        }
-
         psp.ParentProgramSegmentPrefix = parentPspSegment;
         psp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
         // file table address points to file table at offset FileTableOffset inside this PSP
@@ -854,16 +840,13 @@ public class DosProcessManager {
         }
 
         // Inherit parent's JFT entries except those marked as DoNotInherit or Unused
+        DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
         for (int i = 0; i < parentPsp.Files.Count; i++) {
             byte parentEntry = parentPsp.Files[i];
-            if (parentEntry == (byte)Enums.DosPspFileTableEntry.Unused) {
-                continue;
+            if (parentEntry != (byte)Enums.DosPspFileTableEntry.Unused &&
+                (parentEntry & (byte)Enums.DosPspFileTableEntry.DoNotInherit) == 0) {
+                psp.Files[i] = parentEntry;
             }
-            if ((parentEntry & (byte)Enums.DosPspFileTableEntry.DoNotInherit) != 0) {
-                // do not inherit
-                continue;
-            }
-            psp.Files[i] = parentEntry;
         }
 
         ResetFcb(psp.FirstFileControlBlock);
