@@ -82,6 +82,7 @@ public class DosProcessManager {
     private const ushort ExecRegisterContractBpValue = 0x091E;
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly Stack _stack;
+    private const int IregsFrameSize = 18; // Size of register frame pushed by DOS for LOADNGO (FreeDOS uses sizeof(iregs))
 
     /// <summary>
     /// The master environment block that all DOS PSPs inherit.
@@ -230,9 +231,14 @@ public class DosProcessManager {
 
         byte[] fileBytes = File.ReadAllBytes(hostPath);
 
-        // Save parent's current SS:SP BEFORE any CPU state changes
-        // This captures the parent's stack context before the child modifies anything
-        uint parentStackPointer = _state.StackPhysicalAddress;
+        ushort parentSS = _state.SS;
+        ushort parentSP = _state.SP;
+        // Compute the reserved SP value that FreeDOS records in the PSP by
+        // subtracting the user register frame size from the current SP. This
+        // mirrors FreeDOS behavior (reg_sp -= sizeof(iregs)). We do not modify
+        // the actual CPU stack here; we only compute the value to store in the
+        // new PSP and to restore later.
+        ushort parentReservedSP = (ushort)(parentSP - IregsFrameSize);
 
         // Allocate environment block FIRST before allocating program memory, as we might decide to take ALL the remaining free memory
         DosMemoryControlBlock? envBlock = null;
@@ -248,7 +254,7 @@ public class DosProcessManager {
             if (exeFile.IsValid) {
                 result = HandleExeFileLoading(paramBlock, commandTail, loadType,
                     environmentSegment, callerIP, callerCS, parentPspSegment, hostPath,
-                    parentStackPointer, envBlock, exeFile);
+                    envBlock, exeFile, parentSS, parentReservedSP);
             }
         }
 
@@ -257,11 +263,13 @@ public class DosProcessManager {
             // This matches FreeDOS behavior
             result = HandleComFileLoading(paramBlock, commandTail, loadType,
                 environmentSegment, callerIP, callerCS, parentPspSegment,
-                hostPath, fileBytes, envBlock);
+                hostPath, fileBytes, envBlock, parentSS, parentReservedSP);
         }
 
         // Save parent's stack registers (SS:SP) and CS:IP for process termination logic
-        _pendingParentStackPointers.Push((_state.SS, _state.SP));
+        // Follow FreeDOS: do not mutate the real stack here; track the parent's SS:SP
+        // in managed state so it can be restored on process termination.
+        _pendingParentStackPointers.Push((parentSS, parentReservedSP));
         _pendingParentReturnAddresses.Push((callerCS, callerIP));
 
         return result;
@@ -270,7 +278,8 @@ public class DosProcessManager {
     private DosExecResult HandleExeFileLoading(DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment,
         ushort callerIP, ushort callerCS, ushort parentPspSegment, string hostPath,
-        uint parentStackPointer, DosMemoryControlBlock? envBlock, DosExeFile exeFile) {
+        DosMemoryControlBlock? envBlock, DosExeFile exeFile,
+        ushort parentSS, ushort parentReservedSP) {
         DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
         if (block is null) {
             // Free the environment block we just allocated
@@ -288,8 +297,9 @@ public class DosProcessManager {
             block.Size, hostPath, commandTail,
             finalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP);
-
+        // Set the PSP's recorded stack pointer to the reserved parent SP like FreeDOS
         DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
+        exePsp.StackPointer = MemoryUtils.ToPhysicalAddress(parentSS, parentReservedSP);
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
         CopyFcbFromPointer(paramBlock.SecondFcbPointer, exePsp.SecondFileControlBlock);
 
@@ -323,7 +333,7 @@ public class DosProcessManager {
     private DosExecResult HandleComFileLoading(DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment,
         ushort callerIP, ushort callerCS, ushort parentPspSegment, string hostPath,
-        byte[] fileBytes, DosMemoryControlBlock? envBlock) {
+        byte[] fileBytes, DosMemoryControlBlock? envBlock, ushort parentSS, ushort parentReservedSP) {
         ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
 
         // MS-DOS and FreeDOS: COM files are ALWAYS loaded in the largest available area
@@ -346,8 +356,9 @@ public class DosProcessManager {
             comBlock.Size, hostPath, commandTail,
             comFinalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP);
-
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
+        // Record reserved parent SP into the new PSP like FreeDOS does
+        comPsp.StackPointer = MemoryUtils.ToPhysicalAddress(parentSS, parentReservedSP);
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
         CopyFcbFromPointer(paramBlock.SecondFcbPointer, comPsp.SecondFileControlBlock);
 
