@@ -32,7 +32,7 @@ public class CommandLineParser {
             initialConfig.Exe = ParseExePath(initialConfig.Exe);
             initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
-            initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
+            initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClassName);
             initialConfig.ExeArgs = exeArgs;
             if (initialConfig.Cycles != null) {
                 initialConfig.InstructionsPerSecond = null;
@@ -75,13 +75,12 @@ public class CommandLineParser {
         return ($"-{attribute[0].ShortName}", $"--{attribute[0].LongName}");
     }
 
-    private static string? ParseExePath(string? exePath) {
-        string? unixPathValue = exePath?.Replace('\\', '/');
+    private static string ParseExePath(string exePath) {
+        string unixPathValue = exePath.Replace('\\', '/');
         return File.Exists(exePath) ? new FileInfo(exePath).FullName : unixPathValue;
     }
 
-    private static IOverrideSupplier? ParseFunctionInformationSupplierClassName(Configuration configuration) {
-        string? supplierClassName = configuration.OverrideSupplierClassName;
+    public static IOverrideSupplier? ParseFunctionInformationSupplierClassName(string? supplierClassName) {
         if (supplierClassName == null) {
             return null;
         }

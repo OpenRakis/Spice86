@@ -6,10 +6,10 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexer;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Errors;
@@ -372,7 +372,7 @@ public class CSharpOverrideHelper {
             functionName = name;
         } else {
             string methodName = overrideFunc.Method.Name;
-            FunctionInformation? parsedFunctionInformation = GhidraSymbolsDumper.NameToFunctionInformation(_loggerService, methodName);
+            FunctionInformation? parsedFunctionInformation = GhidraSymbolsExporter.NameToFunctionInformation(_loggerService, methodName);
             if (parsedFunctionInformation == null) {
                 throw new UnrecoverableException("Cannot parse " + methodName +
                     " into a spice86 function name as format is not correct.");

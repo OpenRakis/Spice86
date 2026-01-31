@@ -5,7 +5,6 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.LoadableFile;
@@ -13,6 +12,7 @@ using Spice86.Core.Emulator.LoadableFile.Bios;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Logging;
@@ -36,7 +36,6 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly EmulationLoop _emulationLoop;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
-    private readonly DumpFolderMetadata _dumpContext;
     public event EventHandler? EmulationStopped;
 
     /// <summary>
@@ -48,35 +47,38 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
-    /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="int21Handler">The central DOS interrupt handler, used to load DOS programs.</param>
-    /// <param name="functionCatalogue">List of all functions.</param>
-    /// <param name="cfgCpuFlowDumper">To dump execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
-    /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
     /// <param name="loggerService">The logging service to use.</param>
-    public ProgramExecutor(Configuration configuration,
+    public ProgramExecutor(
+        Configuration configuration,
         EmulationLoop emulationLoop,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
-        IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        MemoryDataExporter memoryDataExporter, State state, DosInt21Handler int21Handler,
-        FunctionCatalogue functionCatalogue,
-        CfgCpuFlowDumper cfgCpuFlowDumper, IPauseHandler pauseHandler,
-        IGuiVideoPresentation? screenPresenter, DumpFolderMetadata dumpContext, ILoggerService loggerService) {
+        IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider,
+        State state,
+        DosInt21Handler int21Handler,
+        IPauseHandler pauseHandler,
+        IGuiVideoPresentation? screenPresenter,
+        ILoggerService loggerService) {
         _configuration = configuration;
         _emulationLoop = emulationLoop;
         _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
-        _dumpContext = dumpContext;
-        _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, functionHandlerProvider,
-            state, functionCatalogue,
-            cfgCpuFlowDumper,
-            emulatorBreakpointsManager, pauseHandler, dumpContext, _loggerService);
+        _gdbServer = CreateGdbServer(
+            configuration,
+            memory,
+            functionHandlerProvider,
+            state,
+            pauseHandler,
+            emulatorBreakpointsManager,
+            emulatorStateSerializer,
+            _loggerService);
 
         if (screenPresenter is not null) {
             screenPresenter.UserInterfaceInitialized += Run;
@@ -103,9 +105,7 @@ public sealed class ProgramExecutor : IDisposable {
             _gdbServer?.StartServer();
             _emulationLoop.Run();
 
-            if (_configuration.DumpDataOnExit is not false) {
-                _emulatorStateSerializer.SerializeEmulatorStateToDirectory(_dumpContext.DumpDirectory);
-            }
+            _emulatorStateSerializer.EmulationStateDataWriter.Write();
         } finally {
             EmulationStopped?.Invoke(this, EventArgs.Empty);
         }
@@ -165,20 +165,30 @@ public sealed class ProgramExecutor : IDisposable {
         }
     }
 
-    private static GdbServer? CreateGdbServer(Configuration configuration, IMemory memory,
-        MemoryDataExporter memoryDataExporter, IFunctionHandlerProvider functionHandlerProvider, State state,
-        FunctionCatalogue functionCatalogue, CfgCpuFlowDumper cfgCpuFlowDumper,
+    private static GdbServer? CreateGdbServer(
+        Configuration configuration,
+        IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider,
+        State state,
+        IPauseHandler pauseHandler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IPauseHandler pauseHandler, DumpFolderMetadata dumpContext, ILoggerService loggerService) {
+        EmulatorStateSerializer emulatorStateSerializer,
+        ILoggerService loggerService) {
         if (configuration.GdbPort == 0) {
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
                 loggerService.Information("GDB port is 0, disabling GDB server.");
             }
             return null;
         }
-        return new GdbServer(configuration, memory, functionHandlerProvider, state, memoryDataExporter,
-                functionCatalogue, cfgCpuFlowDumper,
-            emulatorBreakpointsManager, pauseHandler, dumpContext, loggerService);
+        return new GdbServer(
+            configuration,
+            memory,
+            functionHandlerProvider,
+            state,
+            pauseHandler,
+            emulatorBreakpointsManager,
+            emulatorStateSerializer,
+            loggerService);
     }
 
     /// <inheritdoc cref="IDisposable" />

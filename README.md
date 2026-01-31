@@ -109,7 +109,6 @@ Spice86 -e program.exe --CpuHeavyLog --CpuHeavyLogDumpFile "C:\logs\cpu.log"
   -u, --UseCodeOverride              (Default: true) <true or false> if false it will use the names provided by overrideSupplierClassName but not the code
   -i, --InstructionsPerSecond        <number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.
   -t, --TimeMultiplier               (Default: 1) <time multiplier> if >1 will go faster, if <1 will go slower.
-  -d, --DumpDataOnExit               (Default: true) When true, records data at runtime and dumps them at exit time
   -h, --HeadlessMode [Mode]          (Default: false) Headless mode. The mode 'Minimal' does not use any UI components, 'Avalonia' uses the full UI and consumes a bit more memory.
   -l, --VerboseLogs                  (Default: false) Enable verbose level logs
   -w, --WarningLogs                  (Default: false) Enable warning level logs

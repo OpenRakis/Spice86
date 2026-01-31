@@ -3,6 +3,7 @@ namespace Spice86.Tests;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
@@ -13,27 +14,29 @@ public class Spice86Creator {
     private readonly Configuration _configuration;
     private readonly long _maxCycles;
 
-    public Spice86Creator(string binName, bool enablePit = false, bool recordData = false,
+    public Spice86Creator(string binName, bool enablePit = false, 
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
         bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, string? cDrive = null,
         ushort programEntryPointSegment = 0x170) {
+        string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
-            CommandLineParser parser = new();
-            overrideSupplier = parser.ParseCommandLine(["--OverrideSupplierClassName", overrideSupplierClassName])?.OverrideSupplier;
+            overrideSupplier = CommandLineParser.ParseFunctionInformationSupplierClassName(overrideSupplierClassName);
         }
 
         int? instructionsPerSecond = enablePit ? 100000 : null;
-
+        string exportFolder = Path.Join(
+            Path.GetTempPath(),
+            Guid.NewGuid().ToString()
+        );
         _configuration = new Configuration {
-            Exe = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin",
+            Exe = executablePath,
             // Don't expect any hash for the exe
             ExpectedChecksumValue = [],
             // when false: making sure int8 is not going to be triggered during the tests
             InitializeDOS = installInterruptVectors,
             ProvidedAsmHandlersSegment = 0xF000,
             ProgramEntryPointSegment = programEntryPointSegment,
-            DumpDataOnExit = recordData,
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
             HeadlessMode = HeadlessType.Minimal,
@@ -45,7 +48,8 @@ public class Spice86Creator {
             OverrideSupplier = overrideSupplier,
             Xms = enableXms,
             Ems = enableEms,
-            CDrive = cDrive
+            CDrive = cDrive,
+            RecordedDataDirectory = exportFolder
         };
 
         _maxCycles = maxCycles;
@@ -57,6 +61,9 @@ public class Spice86Creator {
         // Add a breakpoint after some cycles to ensure no infinite loop can lock the tests
         res.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, _maxCycles,
             (breakpoint) => Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong."), true), true);
+        // Init VGA card to map some addresses correctly otherwise there will be errors when saving the ram image
+        res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerAddress, 0x6);
+        res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerData, 0xE);
         return res;
     }
 }

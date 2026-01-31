@@ -170,7 +170,6 @@ public class TsrIntegrationTests {
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
             enablePit: false,
-            recordData: false,
             maxCycles: 100000L,
             installInterruptVectors: true,  // Enable DOS
             enableA20Gate: true
