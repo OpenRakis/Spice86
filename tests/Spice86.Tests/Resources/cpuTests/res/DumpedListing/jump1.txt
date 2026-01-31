@@ -3,7 +3,7 @@ F000:0003 mov BX,0x0040
 F000:0006 mov SP,0x1000
 F000:0009 mov SS,SP
 F000:000B push BX
-F000:000C jmp near 0x0010
+F000:000C jmp short 0x0010
 F000:0010 stc
 F000:0011 ja short 0x000E
 F000:0013 clc
@@ -95,4 +95,4 @@ F000:00C2 popf
 F000:00C3 js short 0x00C8
 F000:00C8 mov word ptr DS:[0],0x1234
 F000:00CE hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

@@ -144,4 +144,4 @@ F000:0119 mov word ptr DS:[0x0044],AX
 F000:011C mov word ptr DS:[0x0046],DX
 F000:0120 pushf
 F000:0121 hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

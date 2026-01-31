@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 /// Represents a conditional if/else statement in the AST.
 /// Evaluates a boolean condition and executes either the true case or false case block.
 /// </summary>
-public class IfElseNode : IVisitableAstNode {
+public record IfElseNode : IVisitableAstNode {
     /// <summary>
     /// Initializes a new instance of the IfElseNode class.
     /// </summary>

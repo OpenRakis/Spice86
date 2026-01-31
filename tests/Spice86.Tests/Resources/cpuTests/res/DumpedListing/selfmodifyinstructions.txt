@@ -24,4 +24,4 @@ F000:1406 hlt
 F000:1406 mov SI,0x1000
 F000:1407 jmp far F000:000B
 F000:1409 jmp far F000:000B
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

@@ -31,7 +31,7 @@ F000:0058 mov word ptr DS:[0x0012],0x8960
 F000:005E add word ptr DS:[0x0012],0x0A95
 F000:0064 pushf
 F000:0065 mov word ptr DS:[0x0014],0xF1E1
-F000:006B add word ptr DS:[0x0014],0x64
+F000:006B add word ptr DS:[0x0014],0x0064
 F000:0070 pushf
 F000:0071 mov byte ptr DS:[0x0016],1
 F000:0076 add byte ptr DS:[0x0016],0xFF
@@ -141,4 +141,4 @@ F000:019E mov byte ptr DS:[0x004E],0xB5
 F000:01A3 inc byte ptr DS:[0x004E]
 F000:01A7 pushf
 F000:01A8 hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

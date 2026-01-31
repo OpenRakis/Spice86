@@ -80,4 +80,4 @@ F000:00BE mov AL,0xFF
 F000:00C0 mov AL,0xF1
 F000:00C2 mov word ptr DS:[0x0018],AX
 F000:00C5 hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

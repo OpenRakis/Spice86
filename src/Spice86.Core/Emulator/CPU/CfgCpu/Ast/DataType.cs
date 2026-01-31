@@ -3,6 +3,10 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Shared.Emulator.Memory;
 
 public class DataType(BitWidth bitWidth, bool signed) {
+    public static DataType UINT4 { get; } = new(BitWidth.NIBBLE_4, false);
+    public static DataType INT4 { get; } = new(BitWidth.NIBBLE_4, true);
+    public static DataType UINT5 { get; } = new(BitWidth.QUIBBLE_5, false);
+    public static DataType INT5 { get; } = new(BitWidth.QUIBBLE_5, true);
     public static DataType UINT8 { get; } = new(BitWidth.BYTE_8, false);
     public static DataType INT8 { get; } = new(BitWidth.BYTE_8, true);
     public static DataType UINT16 { get; } = new(BitWidth.WORD_16, false);

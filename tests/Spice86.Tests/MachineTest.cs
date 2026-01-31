@@ -8,6 +8,7 @@ using Serilog;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Errors;
@@ -26,7 +27,7 @@ using Xunit;
 
 public class MachineTest
 {
-    private readonly ListingExtractor _dumper = new();
+    private readonly ListingExtractor _dumper = new(new(AsmRenderingConfig.CreateSpice86Style()));
 
     static MachineTest()
     {
@@ -345,6 +346,7 @@ public class MachineTest
     private void CompareListingWithExpected(string binName, Machine machine) {
         List<string> expectedLines = GetExpectedListing(binName);
         List<string> actualLines = _dumper.ToAssemblyListing(machine.CfgCpu);
+        //WriteExpectedListing(binName, actualLines);
         Assert.Equal(expectedLines, actualLines);
     }
 
@@ -421,6 +423,11 @@ public class MachineTest
     {
         string resPath = $"Resources/cpuTests/res/DumpedListing/{binName}.txt";
         return File.ReadAllLines(resPath).ToList();
+    }
+
+    private static void WriteExpectedListing(string binName, List<string> expected) {
+        string resPath = $"Resources/cpuTests/res/DumpedListing/{binName}.txt";
+        File.WriteAllLines(resPath, expected);
     }
 
     [AssertionMethod]

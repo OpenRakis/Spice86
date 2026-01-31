@@ -9,7 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 /// (e.g., in BinaryOperationNode, assignments, etc.).
 /// For void methods, use <see cref="MethodCallNode"/> instead.
 /// </summary>
-public class MethodCallValueNode : ValueNode {
+public record MethodCallValueNode : ValueNode {
     /// <summary>
     /// Initializes a new instance of the MethodCallValueNode class.
     /// </summary>
@@ -27,25 +27,6 @@ public class MethodCallValueNode : ValueNode {
     /// Contains the property path, method name, and arguments.
     /// </summary>
     public MethodCallNode CallNode { get; }
-
-    /// <summary>
-    /// The property path to access the target object (e.g., "Alu8", "Stack").
-    /// If null, the method is called directly on the root helper (InstructionExecutionHelper).
-    /// Convenience accessor for <see cref="CallNode"/>.PropertyPath.
-    /// </summary>
-    public string? PropertyPath => CallNode.PropertyPath;
-
-    /// <summary>
-    /// The name of the method to call (e.g., "Add", "Push16").
-    /// Convenience accessor for <see cref="CallNode"/>.MethodName.
-    /// </summary>
-    public string MethodName => CallNode.MethodName;
-
-    /// <summary>
-    /// The arguments to pass to the method.
-    /// Convenience accessor for <see cref="CallNode"/>.Arguments.
-    /// </summary>
-    public IReadOnlyList<IVisitableAstNode> Arguments => CallNode.Arguments;
 
     /// <inheritdoc />
     public override T Accept<T>(IAstVisitor<T> astVisitor) {

@@ -170,4 +170,4 @@ F000:01E9 mov byte ptr DS:[0x0052],DL
 F000:01ED not byte ptr DS:[0x0018]
 F000:01F1 pushf
 F000:01F2 hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

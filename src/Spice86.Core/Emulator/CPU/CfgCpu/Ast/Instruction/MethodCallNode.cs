@@ -6,7 +6,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 /// Cannot be used as an expression operand.
 /// For methods that return values, use <see cref="MethodCallValueNode"/> instead.
 /// </summary>
-public class MethodCallNode : IVisitableAstNode {
+public record MethodCallNode : IVisitableAstNode {
     /// <summary>
     /// Initializes a new instance of the MethodCallNode class.
     /// </summary>

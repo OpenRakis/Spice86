@@ -25,13 +25,14 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     private readonly ParameterExpression[] _allParameters;
     private readonly ParameterExpression[] _allParametersWithHelper;
 
-    private readonly RegisterRenderer _registerRenderer = new();
+    private readonly RegisterRenderer _registerRenderer;
 
     // Stack of variable scopes for nested blocks
     // Each scope is a dictionary mapping variable names to their ParameterExpressions
     private readonly Stack<Dictionary<string, ParameterExpression>> _variableScopes = new();
 
     public AstExpressionBuilder() {
+        _registerRenderer = new RegisterRenderer(AsmRenderingConfig.CreateSpice86Style());
         _allParameters = [_stateParameter, _memoryParameter];
         _allParametersWithHelper = [_helperParameter, _stateParameter, _memoryParameter];
     }
@@ -41,6 +42,8 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             return typeof(bool);
         }
         return dataType.BitWidth switch {
+            BitWidth.NIBBLE_4 => dataType.Signed ? typeof(sbyte) : typeof(byte),
+            BitWidth.QUIBBLE_5 => dataType.Signed ? typeof(sbyte) : typeof(byte),
             BitWidth.BYTE_8 => dataType.Signed ? typeof(sbyte) : typeof(byte),
             BitWidth.WORD_16 => dataType.Signed ? typeof(short) : typeof(ushort),
             BitWidth.DWORD_32 => dataType.Signed ? typeof(int) : typeof(uint),
@@ -266,6 +269,10 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         Type type = FromDataType(node.DataType);
         object castValue = Convert.ChangeType(node.Value, type);
         return Expression.Constant(castValue, type);
+    }
+    
+    public Expression VisitNearAddressNode(NearAddressNode node) {
+        return VisitConstantNode(node);
     }
 
     public Expression VisitMethodCallValueNode(MethodCallValueNode node) {
@@ -498,14 +505,12 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         Dictionary<string, ParameterExpression> scope) {
         List<ParameterExpression> variables = [];
 
-        foreach (IVisitableAstNode statement in statements) {
-            if (statement is VariableDeclarationNode varDecl) {
-                Type varType = FromDataType(varDecl.DataType);
-                ParameterExpression variable = Expression.Variable(varType, varDecl.VariableName);
-                // Register variable for block
-                scope[varDecl.VariableName] = variable;
-                variables.Add(variable);
-            }
+        foreach (VariableDeclarationNode varDecl in statements.OfType<VariableDeclarationNode>()) {
+            Type varType = FromDataType(varDecl.DataType);
+            ParameterExpression variable = Expression.Variable(varType, varDecl.VariableName);
+            // Register variable for block
+            scope[varDecl.VariableName] = variable;
+            variables.Add(variable);
         }
 
         return variables;

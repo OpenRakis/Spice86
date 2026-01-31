@@ -12,7 +12,16 @@ using System.Globalization;
 using System.Linq;
 
 public class AstInstructionRenderer : IAstVisitor<string> {
-    private readonly RegisterRenderer _registerRenderer = new();
+    private readonly AsmRenderingConfig _config;
+    private readonly RegisterRenderer _registerRenderer;
+    private readonly MnemonicRenderer _mnemonicRenderer;
+
+    public AstInstructionRenderer(AsmRenderingConfig config) {
+        _config = config;
+        _registerRenderer = new RegisterRenderer(config);
+        _mnemonicRenderer = new MnemonicRenderer(config);
+    }
+
 
     public string VisitSegmentRegisterNode(SegmentRegisterNode node) {
         return _registerRenderer.ToStringSegmentRegister(node.RegisterIndex);
@@ -20,9 +29,22 @@ public class AstInstructionRenderer : IAstVisitor<string> {
 
     public string VisitSegmentedPointer(SegmentedPointerNode node) {
         string offset = node.Offset.Accept(this);
-        string segment = node.Segment.Accept(this);
+        string segment = RenderSegment(node);
+        string pointerType = PointerDataTypeToString(node.DataType);
+        if (pointerType.Length > 0) {
+            pointerType += " ";
+        }
 
-        return PointerDataTypeToString(node.DataType) + " " + segment + ":[" + offset + "]";
+        string column = segment == string.Empty ? string.Empty : ":";
+        return $"{pointerType}{segment}{column}[{offset}]";
+    }
+
+    private string RenderSegment(SegmentedPointerNode node) {
+        if (!_config.ShowDefaultSegment && node.DefaultSegment == node.Segment) {
+            // Default segment, do not show it
+            return string.Empty;
+        }
+        return node.Segment.Accept(this);
     }
 
     public string VisitRegisterNode(RegisterNode node) {
@@ -50,41 +72,46 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     }
 
     public string VisitConstantNode(ConstantNode node) {
-        if (IsNegative(node)) {
-            int valueSigned = SignExtend(node.Value, node.DataType.BitWidth);
+        if (node.IsNegative) {
+            long valueSigned = node.SignedValue;
             return valueSigned.ToString(CultureInfo.InvariantCulture);
         }
-        uint value = node.Value;
-        if (value < 10) {
+        ulong value = node.Value;
+        if (value < 10 && _config.PrefixHexWith0X) {
             // render it as decimal as it is the same and it will save the 0x0
             return value.ToString(CultureInfo.InvariantCulture);
         }
 
-        return node.DataType.BitWidth switch {
-            BitWidth.BYTE_8 => $"0x{value:X2}",
-            BitWidth.WORD_16 => $"0x{value:X4}",
-            BitWidth.DWORD_32 => $"0x{value:X8}",
+        string prefix = _config.PrefixHexWith0X ? "0x" : "";
+        return prefix + node.DataType.BitWidth switch {
+            BitWidth.NIBBLE_4 => $"{value:X1}",
+            BitWidth.QUIBBLE_5 => $"{value:X1}",
+            BitWidth.BYTE_8 => $"{value:X2}",
+            BitWidth.WORD_16 => $"{value:X4}",
+            BitWidth.DWORD_32 => $"{value:X8}",
+            BitWidth.QWORD_64 => $"{value:X16}",
             _ => throw new InvalidOperationException($"Unsupported bit width {node.DataType.BitWidth}")
         };
     }
 
-    private bool IsNegative(ConstantNode node) {
-        if (node.DataType.Signed) {
-            int value = SignExtend(node.Value, node.DataType.BitWidth);
-            if (value < 0) {
-                return true;
-            }
+    public string VisitNearAddressNode(NearAddressNode node) {
+        if (!_config.DwordJumpOffset) {
+            return VisitConstantNode(node);
         }
-        return false;
-    }
 
-    private int SignExtend(uint value, BitWidth size) {
-        return size switch {
-            BitWidth.BYTE_8 => (sbyte)value,
-            BitWidth.WORD_16 => (short)value,
-            BitWidth.DWORD_32 => (int)value,
-            _ => throw new InvalidOperationException($"Unsupported bit width {size}")
-        };
+        // Dosbos style addresses for near jump / calls:
+        // jc   00000125 ($+5)
+        // We generate the address and the delta part
+        // Fist pad the node to 32bit
+        ConstantNode nodePadded = new(DataType.UINT32, node.Value);
+        string addressString = nodePadded.Accept(this);
+
+        // Then compute delta
+        long delta = (long)(node.Value - node.BaseAddress.Offset);
+        string plus = delta > 0 ? "+" : "";
+        
+        // Then render
+        return $"{addressString} (${plus}{delta:X})";
     }
 
     public string VisitSegmentedAddressConstantNode(SegmentedAddressConstantNode node) {
@@ -157,9 +184,11 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     
     public string VisitTypeConversionNode(TypeConversionNode node) {
         string typeStr = node.DataType.BitWidth switch {
+            BitWidth.NIBBLE_4 => node.DataType.Signed ? "(sbyte)" : "(byte)",
             BitWidth.BYTE_8 => node.DataType.Signed ? "(sbyte)" : "(byte)",
             BitWidth.WORD_16 => node.DataType.Signed ? "(short)" : "(ushort)",
             BitWidth.DWORD_32 => node.DataType.Signed ? "(int)" : "(uint)",
+            BitWidth.QWORD_64 => node.DataType.Signed ? "(long)" : "(ulong)",
             _ => throw new InvalidOperationException($"Unsupported bit width {node.DataType.BitWidth}")
         };
         string value = node.Value.Accept(this);
@@ -171,7 +200,7 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     }
 
     private bool IsNegative(ValueNode valueNode) {
-        return valueNode is ConstantNode constantNode && IsNegative(constantNode);
+        return valueNode is ConstantNode { IsNegative: true };
     }
 
     public string VisitInstructionNode(InstructionNode node) {
@@ -180,8 +209,8 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         if (repPrefix != null) {
             prefix = Enum.GetName(repPrefix.Value)?.ToLower() + " ";
         }
-        string mnemonic = prefix + Enum.GetName(node.Operation)?.ToLower().Replace("_", " ");
-        if (node.Parameters.Count == 0) {
+        string mnemonic = prefix + _mnemonicRenderer.MnemonicToString(node.Operation);
+        if (node.Parameters.Length == 0) {
             return mnemonic;
         }
 
@@ -223,10 +252,14 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     }
 
     private string PointerDataTypeToString(DataType dataType) {
+        if (!_config.ExplicitPointerType) {
+            return "";
+        }
         return dataType.BitWidth switch {
             BitWidth.BYTE_8 => "byte ptr",
             BitWidth.WORD_16 => "word ptr",
             BitWidth.DWORD_32 => "dword ptr",
+            BitWidth.QWORD_64 => "qword ptr",
             _ => throw new InvalidOperationException($"Unsupported bit width {dataType.BitWidth}")
         };
     }

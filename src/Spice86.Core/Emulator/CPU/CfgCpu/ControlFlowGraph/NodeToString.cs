@@ -12,8 +12,18 @@ using System.Linq;
 /// For logging and debugging purposes
 /// </summary>
 public class NodeToString {
+    private readonly AsmRenderingConfig _config;
     private readonly AstBuilder _astBuilder = new();
-    private readonly AstInstructionRenderer _renderer = new();
+    private readonly AstInstructionRenderer _renderer;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NodeToString"/> class.
+    /// </summary>
+    /// <param name="config">The configuration for ASM rendering.</param>
+    public NodeToString(AsmRenderingConfig config) {
+        _config = config;
+        _renderer = new AstInstructionRenderer(config);
+    }
 
     public string ToString(ICfgNode node) {
         return $"{ToHeaderString(node)} / {ToAssemblyString(node)}";
@@ -26,6 +36,20 @@ public class NodeToString {
     public string ToAssemblyString(ICfgNode node) {
         InstructionNode ast = node.ToInstructionAst(_astBuilder);
         return ast.Accept(_renderer);
+    }
+
+    public string ToAssemblyStringWithAddress(ICfgNode node) {
+        string address = node.Address.ToString();
+        string instruction = ToAssemblyString(node);
+        return $"{AddSpaces(address)} {instruction}";
+    }
+    
+    private string AddSpaces(string address) {
+        string additionalSpaces = "";
+        if (_config.AddressRightSpaces > 0) {
+            additionalSpaces = new(' ', _config.AddressRightSpaces);
+        }
+        return address + additionalSpaces;
     }
 
     public string SuccessorsToString(ICfgNode node) {

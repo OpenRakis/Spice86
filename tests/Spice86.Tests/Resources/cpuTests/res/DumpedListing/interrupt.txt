@@ -43,4 +43,4 @@ F000:401A mov word ptr DS:[0x000C],CX
 F000:401E mov word ptr DS:[0x000E],DX
 F000:4022 mov word ptr DS:[0x0010],SP
 F000:4026 hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

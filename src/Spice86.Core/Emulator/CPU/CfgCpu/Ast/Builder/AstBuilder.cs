@@ -33,6 +33,8 @@ public class AstBuilder {
 
     private DataType Type(int size, bool isSigned) {
         return size switch {
+            4 => isSigned ? DataType.INT4 : DataType.UINT4,
+            5 => isSigned ? DataType.INT5 : DataType.UINT5,
             8 => isSigned ? DataType.INT8 : DataType.UINT8,
             16 => isSigned ? DataType.INT16 : DataType.UINT16,
             32 => isSigned ? DataType.INT32 : DataType.UINT32,

@@ -4,7 +4,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 /// Represents a sequence of statements that should be executed in order.
 /// Can include variable declarations (VariableDeclarationNode) which will be scoped to this block.
 /// </summary>
-public class BlockNode : IVisitableAstNode {
+public record BlockNode : IVisitableAstNode {
     /// <summary>
     /// Initializes a new instance of the BlockNode class.
     /// </summary>

@@ -41,13 +41,14 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
                 $"MemoryAddressType is {modRmContext.MemoryAddressType} which should never happen when computing addresses.");
         }
 
-        if (modRmContext.SegmentIndex == null) {
+        if (modRmContext.SegmentIndex == null || modRmContext.DefaultSegmentIndex == null) {
             throw new ArgumentException("SegmentIndex is null");
         }
 
+        ValueNode defaultSegment = new SegmentRegisterNode(modRmContext.DefaultSegmentIndex.Value);
         ValueNode segment = new SegmentRegisterNode(modRmContext.SegmentIndex.Value);
         ValueNode offset = MemoryOffsetToNode(modRmContext);
-        return Pointer.ToSegmentedPointer(targetDataType, segment, offset);
+        return Pointer.ToSegmentedPointer(targetDataType, segment, defaultSegment, offset);
     }
 
     public ValueNode MemoryOffsetToNode(ModRmContext modRmContext) {
