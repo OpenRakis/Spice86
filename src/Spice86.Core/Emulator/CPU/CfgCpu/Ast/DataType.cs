@@ -9,6 +9,8 @@ public class DataType(BitWidth bitWidth, bool signed) {
     public static DataType INT16 { get; } = new(BitWidth.WORD_16, true);
     public static DataType UINT32 { get; } = new(BitWidth.DWORD_32, false);
     public static DataType INT32 { get; } = new(BitWidth.DWORD_32, true);
+    public static DataType UINT64 { get; } = new(BitWidth.QWORD_64, false);
+    public static DataType INT64 { get; } = new(BitWidth.QWORD_64, true);
     public static DataType BOOL { get; } = new(BitWidth.DWORD_32, false);
 
     public BitWidth BitWidth { get; } = bitWidth;

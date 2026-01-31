@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.Registers;
@@ -19,5 +20,15 @@ public class PointerAstBuilder {
 
     public ValueNode ToSegmentedPointer(DataType targetDataType, ValueNode segment, ValueNode offset) {
         return new SegmentedPointerNode(targetDataType, segment, offset);
+    }
+
+    /// <summary>
+    /// Creates a new segmented pointer with an adjusted offset.
+    /// Takes an existing segmented pointer and adds an offset adjustment to it.
+    /// </summary>
+    public ValueNode WithOffsetAdjustment(SegmentedPointerNode pointer, ValueNode offsetAdjustment) {
+        DataType offsetDataType = pointer.Offset.DataType;
+        ValueNode adjustedOffset = new BinaryOperationNode(offsetDataType, pointer.Offset, BinaryOperation.PLUS, offsetAdjustment);
+        return new SegmentedPointerNode(pointer.DataType, pointer.Segment, adjustedOffset);
     }
 }
