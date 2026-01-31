@@ -2,9 +2,6 @@ namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
-using Spice86.Core.Emulator.CPU;
-using Spice86.Shared.Interfaces;
-
 using System;
 using System.IO;
 
@@ -33,7 +30,7 @@ public class TsrIntegrationTests {
 
     [Fact]
     public void TerminateAndStayResident_WithReturnCode_PassesCodeCorrectly() {
-        RunTsrTest("tsr_return_code.com", expectedExitCode: 0);
+        RunTsrTest("tsr_return_code.com", expectedExitCode: 66);
     }
 
     [Fact]
@@ -47,7 +44,7 @@ public class TsrIntegrationTests {
     }
 
     private static void RunTsrTest(string testFileName, byte expectedExitCode) {
-        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosTsrIntegration");
+        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosTsrTests");
         string tempDir = Path.Join(Path.GetTempPath(), $"dos_tsr_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
 

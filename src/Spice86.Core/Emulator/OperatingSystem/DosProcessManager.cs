@@ -537,8 +537,13 @@ public class DosProcessManager {
         _state.DS = parentPspSegment;
         _state.ES = parentPspSegment;
 
-        if (terminationType != DosTerminationType.TSR && parentIsRootCommandCom) {
-            // When returning to COMMAND.COM, halt emulation
+        if (parentIsRootCommandCom) {
+            // When returning to COMMAND.COM, expose the child's return code in AX
+            // so unit tests and external callers can observe it, then halt the
+            // emulation because COMMAND.COM does not have a usable execution
+            // context in this headless environment. Only the low byte (AL)
+            // contains the exit code expected by callers.
+            _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
             _state.IsRunning = false;
         }
     }
