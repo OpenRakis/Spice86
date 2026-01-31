@@ -93,7 +93,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Register the handlers for the DOS INT21H services that we support.
     /// </summary>
     private void FillDispatchTable() {
-        AddAction(0x00, QuitWithExitCode);
+        AddAction(0x00, LegacyTerminateProgram);
         AddAction(0x01, CharacterInputWithEcho);
         AddAction(0x02, DisplayOutput);
         AddAction(0x03, ReadCharacterFromStdAux);
@@ -1341,6 +1341,16 @@ public class DosInt21Handler : InterruptHandler {
         } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
             LoggerService.Warning("DOS INT21H PrintString: Cannot write to standard output device.");
         }
+    }
+
+    /// <summary>
+    /// Legacy CP/M program termination handler.
+    /// </summary>
+    /// <remarks>
+    /// Code is from FreeDOS <c>inthndlr.c</c>
+    /// </remarks>
+    public void LegacyTerminateProgram() {
+        State.AX = 0x4C00;
     }
 
     /// <summary>
