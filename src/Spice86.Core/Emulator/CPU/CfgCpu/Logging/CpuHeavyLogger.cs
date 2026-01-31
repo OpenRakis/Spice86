@@ -1,7 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
-using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Core.Emulator.StateSerialization;
 
 using System.IO;
 
@@ -17,10 +17,10 @@ public sealed class CpuHeavyLogger : IDisposable {
     /// <summary>
     /// Initializes a new instance of the <see cref="CpuHeavyLogger"/> class.
     /// </summary>
-    /// <param name="dumpFolderMetadata">Metadata containing the dump directory path.</param>
+    /// <param name="emulatorStateSerializationFolder">Where to write the file.</param>
     /// <param name="customFilePath">Optional custom file path. If null, uses {DumpDirectory}/cpu_heavy.log</param>
-    public CpuHeavyLogger(DumpFolderMetadata dumpFolderMetadata, string? customFilePath) {
-        string logFilePath = customFilePath ?? Path.Join(dumpFolderMetadata.DumpDirectory, "cpu_heavy.log");
+    public CpuHeavyLogger(EmulatorStateSerializationFolder emulatorStateSerializationFolder, string? customFilePath) {
+        string logFilePath = customFilePath ?? Path.Join(emulatorStateSerializationFolder.Folder, "cpu_heavy.log");
         
         // Ensure directory exists
         string? directory = Path.GetDirectoryName(logFilePath);
