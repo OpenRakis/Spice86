@@ -11,6 +11,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -23,7 +24,6 @@ using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
@@ -39,6 +39,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
@@ -82,14 +83,10 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Set logging level...");
         }
 
-        // Create DumpContext with program hash and dump directory computation
-        DumpFolderMetadata dumpContext = new(configuration.Exe, configuration.RecordedDataDirectory);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information(
-                "Dump context created with program hash {ProgramHash} and dump directory {DumpDirectory}",
-                dumpContext.ProgramHash, dumpContext.DumpDirectory);
-        }
+        // Create folder for emulator state serialization / deserialization
+        EmulatorStateSerializationFolderFactory emulatorStateSerializationFolderFactory = new(_loggerService);
+        EmulatorStateSerializationFolder emulatorStateSerializationFolder =
+            emulatorStateSerializationFolderFactory.ComputeFolder(configuration.Exe, configuration.RecordedDataDirectory);
 
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
@@ -102,17 +99,16 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Wall clock created...");
         }
 
-        RecordedDataReader reader = new(dumpContext.DumpDirectory,
-            loggerService);
+        EmulationStateDataReader emulationStateDataReader = new(emulatorStateSerializationFolder, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Recorded data reader created...");
         }
 
-        ExecutionDump executionDump = reader.ReadExecutionDumpFromFileOrCreate();
+        ExecutionAddresses executionAddresses = emulationStateDataReader.ReadExecutionDataFromFileOrCreate();
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Execution dump read...");
+            loggerService.Information("Execution data read...");
         }
 
         State state = new(configuration.CpuModel);
@@ -217,7 +213,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         IEnumerable<FunctionInformation> functionInformationsData =
-            reader.ReadGhidraSymbolsFromFileOrCreate();
+            emulationStateDataReader.ReadGhidraSymbolsFromFileOrCreate();
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Function information data read...");
@@ -237,15 +233,23 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Function handler created...");
         }
 
+        // Create CPU heavy logger if enabled
+        CpuHeavyLogger? cpuHeavyLogger = null;
+        if (configuration.CpuHeavyLog) {
+            cpuHeavyLogger = new CpuHeavyLogger(emulatorStateSerializationFolder, configuration.CpuHeavyLogDumpFile);
+            if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                loggerService.Information("CPU heavy logger created. Logging to: {LogFile}", 
+                    configuration.CpuHeavyLogDumpFile ?? Path.Join(emulatorStateSerializationFolder.Folder, "cpu_heavy.log"));
+            }
+        }
+
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, functionCatalogue,
-            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, loggerService);
+            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, loggerService, cpuHeavyLogger);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CfgCpu created...");
         }
-
-        CfgCpuFlowDumper cfgCpuFlowDumper = new CfgCpuFlowDumper(cfgCpu, executionDump);
 
         // IO devices
         var timerInt8Handler = new TimerInt8Handler(dualPic, biosDataArea);
@@ -345,19 +349,23 @@ public class Spice86DependencyInjection : IDisposable {
 
         loggerService.Information("Sound devices created...");
 
-        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler,
-            configuration, dumpContext.DumpDirectory, loggerService);
+        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, configuration, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Memory data exporter created...");
         }
 
-        EmulatorStateSerializer emulatorStateSerializer = new(dumpContext,
-            memoryDataExporter, state, cfgCpuFlowDumper, functionCatalogue,
-            emulatorBreakpointsManager, loggerService);
+        ListingExporter listingExporter = new(cfgCpu, loggerService);
+
+        ExecutionAddressesExtractor executionAddressesExtractor = new(cfgCpu, executionAddresses);
+        EmulationStateDataWriter emulationStateDataWriter = new(state, executionAddressesExtractor, memoryDataExporter,
+            listingExporter, functionCatalogue, emulatorStateSerializationFolder, emulatorBreakpointsManager,
+            loggerService);
+        EmulatorStateSerializer emulatorStateSerializer = new(emulatorStateSerializationFolder,
+            emulationStateDataReader, emulationStateDataWriter);
 
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
-              emulatorStateSerializer.LoadBreakpoints(dumpContext.DumpDirectory);
+            emulationStateDataReader.ReadBreakpointsFromFileOrCreate();
 
         ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(state, configuration);
 
@@ -374,7 +382,7 @@ public class Spice86DependencyInjection : IDisposable {
         if (mainWindow != null) {
             uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
             hostStorageProvider = new HostStorageProvider(
-                mainWindow.StorageProvider, configuration, emulatorStateSerializer, dumpContext);
+                mainWindow.StorageProvider, emulatorStateSerializer);
             textClipboard = new TextClipboard(mainWindow.Clipboard);
 
             PerformanceTracker performanceTracker = new PerformanceTracker(new SystemTimeProvider());
@@ -535,11 +543,18 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Function overrides added...");
         }
 
-        ProgramExecutor programExecutor = new(configuration, emulationLoop,
-            emulatorBreakpointsManager, emulatorStateSerializer, memory,
-            cfgCpu, memoryDataExporter, state, dos.DosInt21Handler,
-            functionCatalogue, cfgCpuFlowDumper, pauseHandler,
-            mainWindowViewModel, dumpContext, loggerService);
+        ProgramExecutor programExecutor = new(
+            configuration,
+            emulationLoop,
+            emulatorBreakpointsManager,
+            emulatorStateSerializer,
+            memory,
+            cfgCpu,
+            state,
+            dos.DosInt21Handler,
+            pauseHandler,
+            mainWindowViewModel,
+            loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Program executor created...");

@@ -58,6 +58,36 @@ The emulator dumps the following files:
 
 When there is already data in the specified location, the emulator will load it first and complement it.
 
+### CPU Heavy Logging
+
+For detailed debugging, you can enable CPU heavy logging which records every executed instruction to a file.
+
+**⚠️ Warning:** This feature has a significant performance impact and should only be used for debugging purposes.
+
+| Setting | Description |
+|---------|-------------|
+| `--CpuHeavyLog` | Enables CPU heavy logging (default: false) |
+| `--CpuHeavyLogDumpFile` | Custom path for the log file (optional). If set, will enable CpuHeavyLog as well. Default Location: `{DumpDirectory}/cpu_heavy.log` |
+
+**Log Format:** Each line contains: `SegmentedAddress InstructionString`
+
+**Example:**
+```
+017D:0000 mov AX,0xDD1D
+017D:0003 call near 0xE4AD
+017D:E4AD mov SI,0x0080
+```
+
+**Usage:**
+```bash
+# Enable with default location
+Spice86 -e program.exe --CpuHeavyLog
+
+# Use custom log file path
+Spice86 -e program.exe --CpuHeavyLog --CpuHeavyLogDumpFile "C:\logs\cpu.log"
+```
+
+
 ## Command line options
 
 ```
@@ -79,12 +109,13 @@ When there is already data in the specified location, the emulator will load it 
   -u, --UseCodeOverride              (Default: true) <true or false> if false it will use the names provided by overrideSupplierClassName but not the code
   -i, --InstructionsPerSecond        <number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.
   -t, --TimeMultiplier               (Default: 1) <time multiplier> if >1 will go faster, if <1 will go slower.
-  -d, --DumpDataOnExit               (Default: true) When true, records data at runtime and dumps them at exit time
   -h, --HeadlessMode [Mode]          (Default: false) Headless mode. The mode 'Minimal' does not use any UI components, 'Avalonia' uses the full UI and consumes a bit more memory.
   -l, --VerboseLogs                  (Default: false) Enable verbose level logs
   -w, --WarningLogs                  (Default: false) Enable warning level logs
   -s, --SilencedLogs                 (Default: false) Disable all logs
   -i, --InitializeDOS                (Default: true) Install DOS interrupt vectors or not.
+  --CpuHeavyLog                      (Default: false) Enable CPU heavy logging. Logs every executed instruction to a file. Warning: significant performance impact.
+  --CpuHeavyLogDumpFile              Custom file path for CPU heavy log output. If not specified, defaults to {DumpDirectory}/cpu_heavy.log
   --StructureFile                    Path to a C header file that describes the structures in the application. Works best with exports from IDA or Ghidra
   --help                             Display this help screen.
   --version                          Display version information.

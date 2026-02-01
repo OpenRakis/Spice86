@@ -1,183 +1,229 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-             xmlns:converters="clr-namespace:Spice86.Views.Converters"
-             xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
-             mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="450"
-             x:Class="Spice86.Views.RegistersView"
-             x:DataType="viewModels:IRegistersViewModel">
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-        <!-- Header -->
-        <TextBlock Grid.Row="0"
-                   Text="CPU Registers"
-                   FontWeight="Bold"
-                   Margin="0,0,0,8"
-                   HorizontalAlignment="Center" />
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+            xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+            xmlns:converters="clr-namespace:Spice86.Views.Converters"
+            mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="450"
+            x:Class="Spice86.Views.RegistersView"
+            x:DataType="viewModels:IRegistersViewModel">
+	<UserControl.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceInclude Source="avares://Spice86/Views/Styles/DisassemblyResources.axaml" />
+			</ResourceDictionary.MergedDictionaries>
+			<converters:BoolToZeroOneConverter x:Key="BoolToZeroOneConverter" />
+			<converters:RegisterNameConverter x:Key="RegisterNameConverter" />
+		</ResourceDictionary>
+	</UserControl.Resources>
 
-        <!-- General Purpose Registers -->
-        <Border Grid.Row="1"
+    <UserControl.Styles>
+        <Style Selector="SelectableTextBlock.highlighted">
+            <Setter Property="Background" Value="{DynamicResource DisassemblyLineHighlightBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource DisassemblyLineHighlightForegroundBrush}"/>
+        </Style>
+        <Style Selector="Border.highlighted">
+            <Setter Property="Background" Value="{DynamicResource DisassemblyLineHighlightBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.highlighted">
+            <Setter Property="Foreground" Value="{DynamicResource DisassemblyLineHighlightForegroundBrush}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+    </UserControl.Styles>
+
+	<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+		<!-- Header -->
+		<TextBlock Grid.Row="0"
+                Text="CPU Registers"
+                FontWeight="Bold"
+                Margin="0,0,0,8"
+                HorizontalAlignment="Center" />
+
+		<!-- General Purpose Registers -->
+		<Border Grid.Row="1"
                 BorderBrush="{DynamicResource SemiColorBorder}"
                 BorderThickness="1"
                 CornerRadius="4"
                 Padding="8"
                 Margin="0,0,0,8">
-            <StackPanel>
-                <ItemsControl ItemsSource="{Binding GeneralRegisters}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,*" Margin="0,2">
-                                <TextBlock Grid.Column="0"
-                                           Text="{Binding Name}"
-                                           FontFamily="Consolas,Menlo,Monaco,monospace"
-                                           MinWidth="40"
-                                           Foreground="#78C9B0" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <!-- General purpose 32-bit registers (EAX, EBX, etc.) upper word -->
-                                    <SelectableTextBlock Text="{Binding UpperWordHex}"
-                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
-                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding UpperWordChanged}" />
+			<StackPanel>
+				<ItemsControl ItemsSource="{Binding GeneralRegisters}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Grid ColumnDefinitions="Auto,*" Margin="0,2">
+								<TextBlock Grid.Column="0"
+                                        Text="{Binding Name}"
+                                        FontFamily="Consolas,Menlo,Monaco,monospace"
+                                        MinWidth="35"
+                                        VerticalAlignment="Center"
+                                        Foreground="{DynamicResource DisassemblyFunctionAddressBrush}" />
+								<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+									<!-- 32-bit Value -->
+									<SelectableTextBlock Text="{Binding HexValue}"
+										FontFamily="Consolas,Menlo,Monaco,monospace"
+										Classes.highlighted="{Binding HasChanged}"
+										MinWidth="70"/>
+									
+									<!-- 16-bit breakdown -->
+									<StackPanel Orientation="Horizontal" Spacing="4">
+										<TextBlock Text="{Binding Name, Converter={StaticResource RegisterNameConverter}, ConverterParameter=16}"
+                                                Foreground="{DynamicResource DisassemblyFunctionAddressBrush}"
+                                                FontFamily="Consolas,Menlo,Monaco,monospace"/>
+										<SelectableTextBlock Text="{Binding LowerWordHex}"
+                                                            FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                            Classes.highlighted="{Binding LowerWordChanged}"/>
+									</StackPanel>
 
-                                    <!-- High byte (AH, BH, etc.) -->
-                                    <SelectableTextBlock Text="{Binding HighByteHex}"
-                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
-                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding HighByteChanged}"
-                                                         Margin="4,0,0,0" />
+									<!-- 8-bit breakdown -->
+									<StackPanel Orientation="Horizontal" Spacing="4">
+										<TextBlock Text="{Binding Name, Converter={StaticResource RegisterNameConverter}, ConverterParameter=H}"
+                                                Foreground="{DynamicResource DisassemblyFunctionAddressBrush}"
+                                                FontFamily="Consolas,Menlo,Monaco,monospace"/>
+										<SelectableTextBlock Text="{Binding HighByteHex}"
+                                                            FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                            Classes.highlighted="{Binding HighByteChanged}"/>
+									</StackPanel>
 
-                                    <!-- Low byte (AL, BL, etc.) -->
-                                    <SelectableTextBlock Text="{Binding LowByteHex}"
-                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
-                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding LowByteChanged}"
-                                                         Margin="4,0,0,0" />
-                                </StackPanel>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </Border>
+									<StackPanel Orientation="Horizontal" Spacing="4">
+										<TextBlock Text="{Binding Name, Converter={StaticResource RegisterNameConverter}, ConverterParameter=L}"
+                                                Foreground="{DynamicResource DisassemblyFunctionAddressBrush}"
+                                                FontFamily="Consolas,Menlo,Monaco,monospace"/>
+										<SelectableTextBlock Text="{Binding LowByteHex}"
+                                                            FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                            Classes.highlighted="{Binding LowByteChanged}"/>
+									</StackPanel>
+								</StackPanel>
+							</Grid>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</StackPanel>
+		</Border>
 
-        <!-- Pointer Registers -->
-        <Border Grid.Row="2"
+		<!-- Pointer Registers -->
+		<Border Grid.Row="2"
                 BorderBrush="{DynamicResource SemiColorBorder}"
                 BorderThickness="1"
                 CornerRadius="4"
                 Padding="8"
                 Margin="0,0,0,8">
-            <StackPanel>
-                <ItemsControl ItemsSource="{Binding PointerRegisters}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,*" Margin="0,2">
-                                <TextBlock Grid.Column="0"
-                                           Text="{Binding Name}"
-                                           FontFamily="Consolas,Menlo,Monaco,monospace"
-                                           MinWidth="40"
-                                           Foreground="#78C9B0" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <!-- Pointer registers (ESI, EDI, etc.) upper word -->
-                                    <SelectableTextBlock Text="{Binding UpperWordHex}"
-                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
-                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding UpperWordChanged}" />
+			<StackPanel>
+				<ItemsControl ItemsSource="{Binding PointerRegisters}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Grid ColumnDefinitions="Auto,*" Margin="0,2">
+								<TextBlock Grid.Column="0"
+                                        Text="{Binding Name}"
+                                        FontFamily="Consolas,Menlo,Monaco,monospace"
+                                        MinWidth="40"
+                                        Foreground="{DynamicResource DisassemblyFunctionAddressBrush}" />
+								<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+									<!-- 32-bit Value -->
+									<SelectableTextBlock Text="{Binding HexValue}"
+                                                        FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                        Classes.highlighted="{Binding HasChanged}"/>
 
-                                    <!-- Pointer registers (ESI, EDI, etc.) lower word -->
-                                    <SelectableTextBlock Text="{Binding LowerWordHex}"
-                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
-                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding LowerWordChanged}"
-                                                         Margin="4,0,0,0" />
+									<!-- 16-bit breakdown (SI, DI, BP, SP, IP) -->
+									<StackPanel Orientation="Horizontal" Spacing="4">
+										<TextBlock Text="{Binding Name, Converter={StaticResource RegisterNameConverter}, ConverterParameter=16}"
+                                                Foreground="{DynamicResource DisassemblyFunctionAddressBrush}"
+                                                FontFamily="Consolas,Menlo,Monaco,monospace"/>
+										<SelectableTextBlock Text="{Binding LowerWordHex}"
+                                                            FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                            Classes.highlighted="{Binding LowerWordChanged}"/>
+									</StackPanel>
+								</StackPanel>
+							</Grid>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</StackPanel>
+		</Border>
 
-                                </StackPanel>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </Border>
-
-        <!-- Segment Registers -->
-        <Border Grid.Row="3"
+		<!-- Segment Registers -->
+		<Border Grid.Row="3"
                 BorderBrush="{DynamicResource SemiColorBorder}"
                 BorderThickness="1"
                 CornerRadius="4"
                 Padding="8"
                 Margin="0,0,0,8">
-            <StackPanel>
-                <ItemsControl ItemsSource="{Binding SegmentRegisters}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,*" Margin="0,2">
-                                <TextBlock Grid.Column="0"
-                                           Text="{Binding Name}"
-                                           FontFamily="Consolas,Menlo,Monaco,monospace"
-                                           MinWidth="40"
-                                           Foreground="#78C9B0" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <!-- For Segment registers always show 16 bit -->
-                                    <SelectableTextBlock Text="{Binding LowerWordHex}"
-                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
-                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding LowerWordChanged}" />
-                                </StackPanel>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </Border>
+			<StackPanel>
+				<ItemsControl ItemsSource="{Binding SegmentRegisters}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Grid ColumnDefinitions="Auto,*" Margin="0,2">
+								<TextBlock Grid.Column="0"
+                                        Text="{Binding Name}"
+                                        FontFamily="Consolas,Menlo,Monaco,monospace"
+                                        MinWidth="35"
+                                        VerticalAlignment="Center"
+                                        Foreground="{DynamicResource DisassemblyFunctionAddressBrush}" />
+								<StackPanel Grid.Column="1" Orientation="Horizontal">
+									<SelectableTextBlock Text="{Binding LowerWordHex}"
+                                                        FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                        Classes.highlighted="{Binding LowerWordChanged}" />
+								</StackPanel>
+							</Grid>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</StackPanel>
+		</Border>
 
-        <!-- Flags -->
-        <Border Grid.Row="4"
+		<!-- Flags -->
+		<Border Grid.Row="4"
                 BorderBrush="{DynamicResource SemiColorBorder}"
                 BorderThickness="1"
                 CornerRadius="4"
                 Padding="8">
-            <StackPanel>
-                <ContentControl Content="{Binding EFlagRegister}">
-                    <ContentControl.ContentTemplate>
-                        <DataTemplate DataType="viewModels:RegisterViewModel">
-                            <Grid ColumnDefinitions="Auto,*" Margin="0,2, 2, 0">
-                                <TextBlock Grid.Column="0"
-                                           Text="{Binding Name}"
-                                           FontFamily="Consolas,Menlo,Monaco,monospace"
-                                           MinWidth="40"
-                                           Foreground="#78C9B0" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <SelectableTextBlock Text="{Binding UpperWordHex}"
-                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
-                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding UpperWordChanged}" />
-
-                                    <SelectableTextBlock Text="{Binding LowerWordHex}"
-                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
-                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding LowByteChanged}"
-                                                         Margin="4,0,0,0" />
-                                </StackPanel>
-                            </Grid>
-                        </DataTemplate>
-                    </ContentControl.ContentTemplate>
-                </ContentControl>
-                <ItemsControl ItemsSource="{Binding Flags}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Margin="2"
+			<StackPanel>
+				<ContentControl Content="{Binding EFlagRegister}">
+					<ContentControl.ContentTemplate>
+						<DataTemplate DataType="viewModels:RegisterViewModel">
+							<Grid ColumnDefinitions="Auto,*" Margin="0,2, 2, 0">
+								<TextBlock Grid.Column="0"
+                                        Text="{Binding Name}"
+                                        FontFamily="Consolas,Menlo,Monaco,monospace"
+                                        MinWidth="35"
+                                        VerticalAlignment="Center"
+                                        Foreground="{DynamicResource DisassemblyFunctionAddressBrush}" />
+								<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+									<SelectableTextBlock Text="{Binding HexValue}"
+                                                        FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                        Classes.highlighted="{Binding HasChanged}" />
+								</StackPanel>
+							</Grid>
+						</DataTemplate>
+					</ContentControl.ContentTemplate>
+				</ContentControl>
+				<ItemsControl ItemsSource="{Binding Flags}">
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<WrapPanel />
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Border Margin="2"
                                     Padding="4,2"
                                     BorderThickness="1"
                                     BorderBrush="{DynamicResource SemiColorBorder}"
                                     CornerRadius="2"
-                                    Background="{Binding HasChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}">
-                                <TextBlock Text="{Binding Name}"
-                                           FontFamily="Consolas,Menlo,Monaco,monospace"
-                                           Foreground="{Binding Value, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
-                                           FontWeight="{Binding Value, Converter={x:Static converters:HighlightingConverter.TrueToBold}}" />
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </Border>
-    </Grid>
+                                    Classes.highlighted="{Binding HasChanged}">
+								<StackPanel Orientation="Horizontal">
+									<TextBlock Text="{Binding Name}"
+                                        FontFamily="Consolas,Menlo,Monaco,monospace"
+                                        Classes.highlighted="{Binding Value}" />
+									<TextBlock Text="{Binding Value, Converter={StaticResource BoolToZeroOneConverter}}"
+                                            FontFamily="Consolas,Menlo,Monaco,monospace"
+                                            Classes.highlighted="{Binding Value}"
+                                            Margin="4,0,0,0"/>
+								</StackPanel>
+							</Border>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</StackPanel>
+		</Border>
+	</Grid>
 </UserControl>

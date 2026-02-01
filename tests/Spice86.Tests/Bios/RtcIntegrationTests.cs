@@ -166,7 +166,6 @@ public class RtcIntegrationTests {
             Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
                 binName: tempFilePath,
                 enablePit: true,
-                recordData: false,
                 maxCycles: maxCycles,
                 installInterruptVectors: true,
                 enableA20Gate: false,

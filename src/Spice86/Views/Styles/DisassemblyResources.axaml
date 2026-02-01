@@ -14,8 +14,8 @@
             <SolidColorBrush x:Key="DisassemblyKeywordBrush" Color="#0000FF" />
             <SolidColorBrush x:Key="DisassemblyLabelAddressBrush" Color="#2B91AF" />
             <SolidColorBrush x:Key="DisassemblyLabelBrush" Color="#2B91AF" />
-            <SolidColorBrush x:Key="DisassemblyLineHighlightBrush" Color="#E6F0FF" />
-            <SolidColorBrush x:Key="DisassemblyLineHighlightForegroundBrush" Color="#0078D7" />
+            <SolidColorBrush x:Key="DisassemblyLineHighlightBrush" Color="#ADD6FF" />
+            <SolidColorBrush x:Key="DisassemblyLineHighlightForegroundBrush" Color="#000000" />
             <SolidColorBrush x:Key="DisassemblyMnemonicBrush" Color="#0000FF" />
             <SolidColorBrush x:Key="DisassemblyNumberBrush" Color="#800080" />
             <SolidColorBrush x:Key="DisassemblyOperatorBrush" Color="#000000" />
