@@ -11,7 +11,9 @@
         mov     ax, 0x2560          ; set interrupt vector 60h
         int     0x21
 
-        mov     dx, handler_end - $$
+        ; INT 21h/31h expects DX = paragraphs to keep from PSP start.
+        ; handler_end already includes the 0x100 offset from PSP.
+        mov     dx, handler_end
         add     dx, 15
         shr     dx, 4
         mov     ax, 0x3100          ; terminate and stay resident

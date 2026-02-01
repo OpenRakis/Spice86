@@ -1,5 +1,7 @@
 namespace Spice86.Tests.Dos;
 
+using Castle.Core.Configuration;
+
 using FluentAssertions;
 
 using NSubstitute;
@@ -43,24 +45,19 @@ public class DosInt21HandlerTests {
         var dosTables = new DosTables();
         dosTables.Initialize(memory);
         var dosSwappableDataArea = new DosSwappableDataArea(memory, 0xB20);
-        var dosPspTracker = new DosProgramSegmentPrefixTracker(
-            new Configuration { ProgramEntryPointSegment = 0x1000 },
-            memory,
-            dosSwappableDataArea,
-            logger);
         var biosDataArea = new BiosDataArea(memory, 640);
         var biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         var keyboardInt16Handler = new KeyboardInt16Handler(
             memory, ioPortDispatcher, biosDataArea,
             functionHandlerProvider, stack, state, logger, biosKeyboardBuffer);
         var countryInfo = new CountryInfo();
-        var dosMemoryManager = new DosMemoryManager(memory, dosPspTracker, logger);
+        ushort initialPspSegment = 0x170 - 0x10;
+        var dosMemoryManager = new DosMemoryManager(memory, initialPspSegment, logger);
         var envVars = new Dictionary<string, string> { { "PATH", "C:\\" } };
-        var dosProcessManager = new DosProcessManager(memory, stack, state, dosPspTracker, dosMemoryManager, dosFileManager, driveManager, dosFcbManager, envVars, logger);
+        var dosProcessManager = new DosProcessManager(memory, stack, state, dosMemoryManager, dosFileManager, driveManager, dosFcbManager, envVars, logger);
 
         var handler = new DosInt21Handler(
             memory,
-            dosPspTracker,
             functionHandlerProvider,
             stack,
             state,

@@ -2,23 +2,11 @@ namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
-using NSubstitute;
-
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Emulator.Errors;
-using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
 
 using Xunit;
-
-using Configuration = Spice86.Core.CLI.Configuration;
-using EmulatorBreakpointsManager = Spice86.Core.Emulator.VM.Breakpoint.EmulatorBreakpointsManager;
-using PauseHandler = Spice86.Core.Emulator.VM.PauseHandler;
-using State = Spice86.Core.Emulator.CPU.State;
 
 /// <summary>
 /// Verifies that the DOS PSP command line is correctly encoded.
