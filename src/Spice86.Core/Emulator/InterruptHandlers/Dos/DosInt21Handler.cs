@@ -1349,13 +1349,16 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Legacy CP/M program termination handler.
+    /// Legacy CP/M program termination handler (INT 21h, AH=00h).
+    /// Behaves like INT 21h, AH=4Ch with AL=0.
     /// </summary>
     /// <remarks>
-    /// Code is from FreeDOS <c>inthndlr.c</c>
+    /// Code is adapted from FreeDOS <c>inthndlr.c</c>.
     /// </remarks>
     public void LegacyTerminateProgram() {
-        State.AX = 0x4C00;
+        State.AL = 0;
+        State.AH = 0x4C;
+        QuitWithExitCode();
     }
 
     /// <summary>
