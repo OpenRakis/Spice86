@@ -319,8 +319,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
 
             return actualBytesRead;
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "SOUNDBLASTER: Exception during 8-bit DMA read");
+        } catch (ArgumentOutOfRangeException ex) {
+            _loggerService.Error(ex, "SOUNDBLASTER: ArgumentOutOfRangeException during 8-bit DMA read");
+            return 0;
+        } catch (ArgumentException ex) {
+            _loggerService.Error(ex, "SOUNDBLASTER: ArgumentException during 8-bit DMA read");
             return 0;
         }
     }
@@ -381,7 +384,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
 
             return actualWordsRead;
-        } catch (Exception ex) {
+        } catch (ArgumentOutOfRangeException ex) {
+            _loggerService.Error(ex, "SOUNDBLASTER: Exception during 16-bit DMA read");
+            return 0;
+        } catch (ArgumentException ex) {
             _loggerService.Error(ex, "SOUNDBLASTER: Exception during 16-bit DMA read");
             return 0;
         }
@@ -707,6 +713,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     // Transition back to active DMA mode
                     DspChangeMode(DspMode.Dma);
 
+                    // Flush any remaining short transfer that would otherwise be missed
+                    // Reference: src/hardware/audio/soundblaster.cpp dsp_dma_callback() line 827
+                    FlushRemainingDmaTransfer();
+
                     // Wake up the mixer channel for playback
                     // Unmasking is when software has finished setup and is ready for playback
                     bool wasWokenUp = MaybeWakeUp();
@@ -897,6 +907,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
 
         if (_sb.Dma.Left == 0) {
+            // Remove any pending ProcessDMATransfer events
+            // Reference: src/hardware/audio/soundblaster.cpp play_dma_transfer() line 1318
+            _scheduler.RemoveEvents(ProcessDmaTransferEvent);
+
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("SOUNDBLASTER: DMA transfer complete (Left=0), raising IRQ - Mode={Mode}, AutoInit={AutoInit}",
                     _sb.Dma.Mode, _sb.Dma.AutoInit);
@@ -1493,6 +1507,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Dsp.CmdLen = 0;
         _sb.Dsp.CmdInPos = 0;
         _sb.Dsp.WriteStatusCounter = 0;
+        _sb.Dsp.ResetTally++;
 
         _sb.Dma.Left = 0;
         _sb.Dma.SingleSize = 0;
@@ -1504,9 +1519,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Dma.Mode = DmaMode.None;
         _sb.Dma.RemainSize = 0;
 
+        // Clear any pending DMA requests
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_reset() line 1735
+        _sb.Dma.Channel?.ClearRequest();
+
         _sb.Adpcm.Reference = 0;
         _sb.Adpcm.Stepsize = 0;
         _sb.Adpcm.HaveRef = false;
+
+        // DAC state is reset implicitly - it reads from _sb.Dsp.In.Data which is cleared below
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_reset() line 1741 - sb.dac = {};
+
         _sb.FreqHz = DefaultPlaybackRateHz;
         _sb.TimeConstant = 45;
         _sb.E2.Value = 0xaa;
@@ -1514,6 +1537,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         _sb.Irq.Pending8Bit = false;
         _sb.Irq.Pending16Bit = false;
+
+        // Update channel sample rate to default
+        _dacChannel.SetSampleRate(DefaultPlaybackRateHz);
+
+        // Re-initialize speaker state
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_reset() line 1751
+        InitSpeakerState();
+
+        // Remove any pending DMA transfer events
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_reset() line 1755
+        _scheduler.RemoveEvents(ProcessDmaTransferEvent);
     }
 
     private void DspDoWrite(byte value) {
@@ -1623,9 +1657,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0x10:
                 // Direct DAC
+                // Reference: src/hardware/audio/soundblaster.cpp DSP command 0x10
                 DspChangeMode(DspMode.Dac);
 
                 MaybeWakeUp();
+
+                // Ensure we're using per-frame callback timing because DAC samples
+                // are sent one after another with sub-millisecond timing.
+                SetCallbackPerFrame();
                 break;
 
             case 0x14:
@@ -2039,6 +2078,102 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Mode = mode;
     }
 
+    /// <summary>
+    /// Flushes any remaining DMA transfer that's shorter than the minimum threshold.
+    /// This handles edge cases where the DMA transfer is so short it wouldn't be processed
+    /// by the normal per-tick callback before the next one fires.
+    /// Reference: src/hardware/audio/soundblaster.cpp flush_remaining_dma_transfer()
+    /// </summary>
+    private void FlushRemainingDmaTransfer() {
+        if (_sb.Dma.Left == 0) {
+            return;
+        }
+
+        // If speaker is disabled (and not SB16), suppress the DMA transfer silently
+        // This reads and discards DMA data, but still raises IRQs
+        if (!_sb.SpeakerEnabled && _config.SbType != SbType.Sb16) {
+            uint numBytes = Math.Min(_sb.Dma.Min, _sb.Dma.Left);
+            double delayMs = (numBytes * 1000.0) / _sb.Dma.Rate;
+
+            _scheduler.AddEvent(SuppressDmaTransfer, delayMs, numBytes);
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: Silent DMA Transfer scheduling IRQ in {Delay:F3} milliseconds", delayMs);
+            }
+        }
+        // If we have a short transfer (less than the minimum), schedule it immediately
+        else if (_sb.Dma.Left < _sb.Dma.Min) {
+            double delayMs = (_sb.Dma.Left * 1000.0) / _sb.Dma.Rate;
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: Short transfer scheduling ProcessDMA in {Delay:F3} milliseconds, Left={Left}", delayMs, _sb.Dma.Left);
+            }
+
+            _scheduler.AddEvent(ProcessDmaTransferEvent, delayMs, _sb.Dma.Left);
+        }
+    }
+
+    /// <summary>
+    /// Event callback to process DMA transfer for flush_remaining_dma_transfer.
+    /// Reference: src/hardware/audio/soundblaster.cpp ProcessDMATransfer()
+    /// </summary>
+    private void ProcessDmaTransferEvent(uint bytesToProcess) {
+        if (_sb.Dma.Left > 0) {
+            uint toProcess = Math.Min(bytesToProcess, _sb.Dma.Left);
+            PlayDmaTransfer(toProcess);
+        }
+    }
+
+    /// <summary>
+    /// Suppresses DMA transfer silently (reads and discards data, raises IRQs).
+    /// Used when speaker output is disabled.
+    /// Reference: src/hardware/audio/soundblaster.cpp suppress_dma_transfer()
+    /// </summary>
+    private void SuppressDmaTransfer(uint bytesToRead) {
+        uint numBytes = Math.Min(bytesToRead, _sb.Dma.Left);
+        
+        // Read and discard the DMA data silently
+        DmaChannel? dmaChannel = _sb.Dma.Channel;
+        if (dmaChannel is not null && numBytes > 0) {
+            Span<byte> discardBuffer = stackalloc byte[(int)Math.Min(numBytes, 4096)];
+            uint remaining = numBytes;
+            while (remaining > 0) {
+                int toRead = (int)Math.Min(remaining, (uint)discardBuffer.Length);
+                int read = dmaChannel.Read(toRead, discardBuffer[..toRead]);
+                if (read == 0) {
+                    break;
+                }
+                remaining -= (uint)read;
+            }
+        }
+
+        _sb.Dma.Left -= numBytes;
+
+        if (_sb.Dma.Left == 0) {
+            // Raise appropriate IRQ
+            if (_sb.Dma.Mode >= DmaMode.Pcm16Bit) {
+                RaiseIrq(SbIrq.Irq16);
+            } else {
+                RaiseIrq(SbIrq.Irq8);
+            }
+
+            // Handle auto-init vs single-cycle
+            if (_sb.Dma.AutoInit) {
+                _sb.Dma.Left = _sb.Dma.AutoSize;
+            } else {
+                _sb.Mode = DspMode.None;
+                _sb.Dma.Mode = DmaMode.None;
+            }
+        }
+
+        // If more data remains, schedule another suppress
+        if (_sb.Dma.Left > 0) {
+            uint nextBytes = Math.Min(_sb.Dma.Min, _sb.Dma.Left);
+            double delayMs = (nextBytes * 1000.0) / _sb.Dma.Rate;
+            _scheduler.AddEvent(SuppressDmaTransfer, delayMs, nextBytes);
+        }
+    }
+
     private void DspPrepareDmaOld(DmaMode mode, bool autoInit, bool recordMode) {
         // Setup DMA transfer with given mode and parameters
         // Called when a DMA command (0x14, 0x1c, 0x24, etc) is executed
@@ -2133,6 +2268,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
         }
 
+        // Remove any pending DMA transfer events from previous sounds
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() line 1615
+        _scheduler.RemoveEvents(ProcessDmaTransferEvent);
+
         _sb.Mode = DspMode.DmaMasked;
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -2140,8 +2279,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
         dmaChannel.RegisterCallback(DspDmaCallback);
 
-        // Note: We do NOT call MaybeWakeUp() here or transition to Dma mode
-        // The channel will wake up and mode will transition when the DMA channel is unmasked (DmaEvent.IsUnmasked)
+        // MaybeWakeUp() and mode transition to Dma happen when DMA channel is unmasked (DmaEvent.IsUnmasked)
+        // This matches DOSBox staging behavior - see src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer()
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA prepared - Mode={Mode}, AutoInit={AutoInit}, Bits={Bits}, Left={Left}, Channel={Channel}, Rate={Rate}Hz",
@@ -2237,6 +2376,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
         }
 
+        // Remove any pending DMA transfer events from previous sounds
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() line 1615
+        _scheduler.RemoveEvents(ProcessDmaTransferEvent);
+
         _sb.Mode = DspMode.DmaMasked;
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -2244,8 +2387,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
         _sb.Dma.Channel.RegisterCallback(DspDmaCallback);
 
-        // Note: We do NOT call MaybeWakeUp() here or transition to Dma mode
-        // The channel will wake up and mode will transition when the DMA channel is unmasked (DmaEvent.IsUnmasked)
+        // MaybeWakeUp() and mode transition to Dma happen when DMA channel is unmasked (DmaEvent.IsUnmasked)
+        // This matches DOSBox staging behavior - see src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer()
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SOUNDBLASTER: DMA prepared (new) - Mode={Mode}, AutoInit={AutoInit}, " +
@@ -2287,6 +2430,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.SpeakerEnabled == enabled) {
             return;
         }
+
+        // If the speaker's being turned on, then flush old
+        // content before releasing the channel for playback.
+        // Reference: src/hardware/audio/soundblaster.cpp set_speaker_enabled()
+        if (enabled) {
+            _scheduler.RemoveEvents(SuppressDmaTransfer);
+            FlushRemainingDmaTransfer();
+
+            // Speaker powered-on after cold-state, give it warmup time
+            _sb.Dsp.WarmupRemainingMs = _sb.Dsp.ColdWarmupMs;
+        }
+
         _sb.SpeakerEnabled = enabled;
     }
 
