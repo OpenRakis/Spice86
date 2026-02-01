@@ -1469,13 +1469,27 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private void DspDoReset(byte value) {
         if (((value & 1) != 0) && (_sb.Dsp.State != DspState.Reset)) {
+            // TODO: Get out of highspeed mode
             DspReset();
             _sb.Dsp.State = DspState.Reset;
         } else if (((value & 1) == 0) && (_sb.Dsp.State == DspState.Reset)) {
+            // reset off
             _sb.Dsp.State = DspState.ResetWait;
-            _sb.Dsp.ResetTally++;
-            DspFinishReset();
+
+            // Reference: src/hardware/audio/soundblaster.cpp dsp_do_reset()
+            // PIC_RemoveEvents(dsp_finish_reset);
+            // PIC_AddEvent(dsp_finish_reset, 20.0 / 1000.0, 0);  // 20 microseconds
+            _scheduler.RemoveEvents(DspFinishResetEvent);
+            _scheduler.AddEvent(DspFinishResetEvent, 20.0 / 1000.0, 0);  // 20 microseconds = 0.020 ms
         }
+    }
+
+    /// <summary>
+    /// Event callback for delayed DSP reset completion.
+    /// Reference: src/hardware/audio/soundblaster.cpp dsp_finish_reset()
+    /// </summary>
+    private void DspFinishResetEvent(uint val) {
+        DspFinishReset();
     }
 
     private void DspFinishReset() {
@@ -1498,6 +1512,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Dsp.CmdInPos = 0;
         _sb.Dsp.WriteStatusCounter = 0;
         _sb.Dsp.ResetTally++;
+
+        // Remove any pending finish reset events
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_reset() line 1723
+        _scheduler.RemoveEvents(DspFinishResetEvent);
 
         _sb.Dma.Left = 0;
         _sb.Dma.SingleSize = 0;
@@ -2160,253 +2178,136 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
     }
 
-    private void DspPrepareDmaOld(DmaMode mode, bool autoInit, bool recordMode) {
-        // Setup DMA transfer with given mode and parameters
-        // Called when a DMA command (0x14, 0x1c, 0x24, etc) is executed
+    /// <summary>
+    /// Core DMA transfer setup - matches DOSBox's dsp_do_dma_transfer().
+    /// Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer()
+    /// </summary>
+    private void DspDoDmaTransfer(DmaMode mode, uint freqHz, bool autoInit, bool stereo) {
+        // Starting a new transfer will clear any active irqs
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1571-1573
+        _sb.Irq.Pending8Bit = false;
+        _sb.Irq.Pending16Bit = false;
+        _dualPic.DeactivateIrq(_config.Irq);
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DspPrepareDmaOld - Mode={Mode}, AutoInit={AutoInit}, RecordMode={RecordMode}, Left={Left}, AutoSize={AutoSize}",
-                mode, autoInit, recordMode, _sb.Dma.Left, _sb.Dma.AutoSize);
-        }
-
-        _sb.Dma.Mode = mode;
-        _sb.Dma.AutoInit = autoInit;
-
-        // Determine bit depth based on DMA mode
-        _sb.Dma.Bits = mode switch {
-            DmaMode.Pcm8Bit => 8,
-            DmaMode.Pcm16Bit or DmaMode.Pcm16BitAliased => 16,
-            DmaMode.Adpcm2Bit => 2,
-            DmaMode.Adpcm3Bit => 3,
-            DmaMode.Adpcm4Bit => 4,
-            _ => 8
-        };
-
-        // For single-cycle DMA, Left should already be set by the DMA command
-        // For auto-init, use AutoSize
-        if (autoInit) {
-            _sb.Dma.Left = _sb.Dma.AutoSize;
-        }
-
-        // Validate that we have a transfer size
-        if (_sb.Dma.Left == 0) {
-            _loggerService.Warning("SOUNDBLASTER: DMA prepared with zero transfer size (AutoInit={AutoInit}, Mode={Mode}). DMA will not start.",
-                autoInit, mode);
-            _sb.Dma.Mode = DmaMode.None;
-            return;
-        }
-
-        // Select appropriate DMA channel based on bit depth
-        // 16-bit modes use the secondary (high) DMA channel, 8-bit modes use primary (low)
-        DmaChannel? dmaChannel = null;
-        if (_sb.Dma.Bits == 16) {
-            dmaChannel = _secondaryDmaChannel;
-        } else {
-            dmaChannel = _primaryDmaChannel;
-        }
-
-        if (dmaChannel is null) {
-            _loggerService.Warning("SOUNDBLASTER: DMA channel not available for {Bits}-bit mode", _sb.Dma.Bits);
-            _sb.Dma.Mode = DmaMode.None;
-            return;
-        }
-
-        _sb.Dma.Channel = dmaChannel;
-        _sb.Dma.FirstTransfer = true;
-
-        // Reference: src/hardware/audio/soundblaster.cpp lines 1575-1580
-        // The multiplier determines how many bytes to process per frame
+        // Set up the multiplier based on DMA mode
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1575-1588
         _sb.Dma.Mul = mode switch {
             DmaMode.Adpcm2Bit => (1 << SbShift) / 4,
             DmaMode.Adpcm3Bit => (1 << SbShift) / 3,
             DmaMode.Adpcm4Bit => (1 << SbShift) / 2,
-            DmaMode.Pcm8Bit => (1 << SbShift),
-            DmaMode.Pcm16Bit => (1 << SbShift),
+            DmaMode.Pcm8Bit => 1 << SbShift,
+            DmaMode.Pcm16Bit => 1 << SbShift,
             DmaMode.Pcm16BitAliased => (1 << SbShift) * 2,
-            _ => (1 << SbShift)
+            _ => 1 << SbShift
         };
 
-        if (_sb.Dma.Stereo) {
+        // Going from an active autoinit into a single cycle
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1590-1601
+        if (_sb.Mode >= DspMode.Dma && _sb.Dma.AutoInit && !autoInit) {
+            // Don't do anything, the total will flip over on the next transfer
+        } else if (!autoInit) {
+            // Just a normal single cycle transfer
+            _sb.Dma.Left = _sb.Dma.SingleSize;
+            _sb.Dma.SingleSize = 0;
+        } else {
+            // Going into an autoinit transfer - transfer full cycle again
+            _sb.Dma.Left = _sb.Dma.AutoSize;
+        }
+
+        _sb.Dma.AutoInit = autoInit;
+        _sb.Dma.Mode = mode;
+        _sb.Dma.Stereo = stereo;
+
+        // Double the reading speed for stereo mode
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1606-1608
+        if (stereo) {
             _sb.Dma.Mul *= 2;
         }
 
-        // Reference: src/hardware/audio/soundblaster.cpp line 1609
-        _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
+        // Calculate rate and minimum transfer size
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1609-1610
+        _sb.Dma.Rate = (freqHz * _sb.Dma.Mul) >> SbShift;
         _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DMA timing - FreqHz={FreqHz}, Mul={Mul}, Rate={Rate}Hz, Min={Min}",
-                _sb.FreqHz, _sb.Dma.Mul, _sb.Dma.Rate, _sb.Dma.Min);
-        }
+        // Update channel sample rate
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1612-1613
+        _dacChannel.SetSampleRate((int)freqHz);
 
-        // Update channel sample rate to match DMA frequency
-        // This ensures the mixer can properly resample if needed
-        int dmaRateHz = (int)_sb.FreqHz;
-        if (dmaRateHz > 0) {
-            // Validate DMA rate is reasonable
-            ValidateDmaRate(dmaRateHz);
-
-            if (dmaRateHz != _dacChannel.GetSampleRate()) {
-                _dacChannel.SetSampleRate(dmaRateHz);
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: Updated DAC channel sample rate to {Rate} Hz", dmaRateHz);
-                }
-            }
-        }
-
-        // Remove any pending DMA transfer events from previous sounds
+        // Remove any pending DMA transfer events
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() line 1615
         _scheduler.RemoveEvents(ProcessDmaTransferEvent);
 
+        // Set to be masked, the dma call can change this again
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1616-1618
         _sb.Mode = DspMode.DmaMasked;
+        _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: Registering DMA callback on channel {Channel}", dmaChannel.ChannelNumber);
-        }
-        dmaChannel.RegisterCallback(DspDmaCallback);
-
-        // MaybeWakeUp() and mode transition to Dma happen when DMA channel is unmasked (DmaEvent.IsUnmasked)
-        // This matches DOSBox staging behavior - see src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer()
-
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DMA prepared - Mode={Mode}, AutoInit={AutoInit}, Bits={Bits}, Left={Left}, Channel={Channel}, Rate={Rate}Hz",
-                mode, autoInit, _sb.Dma.Bits, _sb.Dma.Left, dmaChannel.ChannelNumber, dmaRateHz);
+            _loggerService.Debug("SOUNDBLASTER: DMA Transfer - Mode={Mode}, Stereo={Stereo}, AutoInit={AutoInit}, FreqHz={FreqHz}, Rate={Rate}, Left={Left}",
+                mode, stereo, autoInit, freqHz, _sb.Dma.Rate, _sb.Dma.Left);
         }
     }
 
-    private void DspPrepareDmaNew(DmaMode mode, uint length, bool autoInit, bool stereo) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DspPrepareDmaNew - Mode={Mode}, Length={Length}, AutoInit={AutoInit}, Stereo={Stereo}",
-                mode, length, autoInit, stereo);
+    /// <summary>
+    /// Prepare DMA transfer for old-style (SB 1.x/2.x) commands.
+    /// Reference: src/hardware/audio/soundblaster.cpp dsp_prepare_dma_old()
+    /// </summary>
+    private void DspPrepareDmaOld(DmaMode mode, bool autoInit, bool sign) {
+        _sb.Dma.Sign = sign;
+
+        // For single-cycle transfers, set up the size from the DSP command data
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_prepare_dma_old() lines 1635-1637
+        if (!autoInit) {
+            _sb.Dma.SingleSize = (uint)(1 + _commandData[0] + (_commandData[1] << 8));
         }
 
+        // Always use 8-bit DMA channel for old-style commands
+        _sb.Dma.Channel = _primaryDmaChannel;
+
+        // Calculate frequency - divide by 2 for stereo
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_prepare_dma_old() lines 1640-1643
+        uint freqHz = _sb.FreqHz;
+        if (_sb.Mixer.StereoEnabled) {
+            freqHz /= 2;
+        }
+
+        DspDoDmaTransfer(mode, freqHz, autoInit, _sb.Mixer.StereoEnabled);
+    }
+
+    /// <summary>
+    /// Prepare DMA transfer for new-style (SB16) commands.
+    /// Reference: src/hardware/audio/soundblaster.cpp dsp_prepare_dma_new()
+    /// </summary>
+    private void DspPrepareDmaNew(DmaMode mode, uint length, bool autoInit, bool stereo) {
+        uint freqHz = _sb.FreqHz;
         DmaMode newMode = mode;
         uint newLength = length;
 
-        // Select appropriate DMA channel and adjust mode/length if needed
+        // Equal length if data format and dma channel are both 16-bit or 8-bit
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_prepare_dma_new() lines 1651-1677
         if (mode == DmaMode.Pcm16Bit) {
-            // Try to use 16-bit DMA channel first
             if (_secondaryDmaChannel is not null) {
                 _sb.Dma.Channel = _secondaryDmaChannel;
             } else {
-                // Fall back to 8-bit DMA channel in aliased mode
                 _sb.Dma.Channel = _primaryDmaChannel;
                 newMode = DmaMode.Pcm16BitAliased;
-                // In aliased mode, sample length is specified as number of 16-bit samples
-                // but we need to double the 8-bit DMA buffer length
+                // UNDOCUMENTED: In aliased mode sample length is written to DSP as
+                // number of 16-bit samples so we need double 8-bit DMA buffer length
                 newLength *= 2;
             }
         } else {
-            // 8-bit modes always use primary DMA channel
             _sb.Dma.Channel = _primaryDmaChannel;
         }
 
-        if (_sb.Dma.Channel is null) {
-            _loggerService.Warning("SOUNDBLASTER: No DMA channel available for mode {Mode}", mode);
-            return;
-        }
-
-        // Set stereo flag
-        _sb.Dma.Stereo = stereo;
-
         // Set the length to the correct register depending on mode
+        // Reference: src/hardware/audio/soundblaster.cpp dsp_prepare_dma_new() lines 1679-1683
         if (autoInit) {
             _sb.Dma.AutoSize = newLength;
-            _sb.Dma.Left = newLength;
         } else {
             _sb.Dma.SingleSize = newLength;
-            _sb.Dma.Left = newLength;
         }
 
-        // Setup the DMA transfer
-        _sb.Dma.Mode = newMode;
-        _sb.Dma.AutoInit = autoInit;
-        _sb.Dma.FirstTransfer = true;
-
-        // Reference: src/hardware/audio/soundblaster.cpp lines 653-680
-        _sb.Dma.Rate = _sb.FreqHz;
-        if (_sb.Dma.Rate > 0) {
-            _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
-            _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
-        } else {
-            _loggerService.Warning("SOUNDBLASTER: DMA Rate is 0 (new), using default timing parameters");
-            _sb.Dma.Rate = DefaultPlaybackRateHz;
-            _sb.Dma.Mul = (1 << SbShift) / _sb.Dma.Rate;
-            _sb.Dma.Min = (_sb.Dma.Mul > 0) ? (_sb.Dma.Mul >> SbShift) : 1;
-        }
-
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DMA timing (new) - Rate={Rate}Hz, Mul={Mul}, Min={Min}",
-                _sb.Dma.Rate, _sb.Dma.Mul, _sb.Dma.Min);
-        }
-
-        // Determine bit depth
-        _sb.Dma.Bits = newMode switch {
-            DmaMode.Pcm8Bit => 8,
-            DmaMode.Pcm16Bit or DmaMode.Pcm16BitAliased => 16,
-            _ => 8
-        };
-
-        // Update channel sample rate to match DMA rate
-        // This ensures the mixer can properly resample if needed
-        int dmaRateHz = (int)_sb.FreqHz;
-        if (dmaRateHz > 0) {
-            // Validate DMA rate is reasonable
-            ValidateDmaRate(dmaRateHz);
-
-            if (dmaRateHz != _dacChannel.GetSampleRate()) {
-                _dacChannel.SetSampleRate(dmaRateHz);
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: Updated DAC channel sample rate to {Rate} Hz (stereo={Stereo})", dmaRateHz, stereo);
-                }
-            }
-        }
-
-        // Remove any pending DMA transfer events from previous sounds
-        // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() line 1615
-        _scheduler.RemoveEvents(ProcessDmaTransferEvent);
-
-        _sb.Mode = DspMode.DmaMasked;
-
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: Registering DMA callback on channel {Channel} (new-style)", _sb.Dma.Channel.ChannelNumber);
-        }
-        _sb.Dma.Channel.RegisterCallback(DspDmaCallback);
-
-        // MaybeWakeUp() and mode transition to Dma happen when DMA channel is unmasked (DmaEvent.IsUnmasked)
-        // This matches DOSBox staging behavior - see src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer()
-
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DMA prepared (new) - Mode={Mode}, AutoInit={AutoInit}, " +
-                "Stereo={Stereo}, Bits={Bits}, Left={Left}, Channel={Channel}, Rate={Rate}Hz",
-                newMode, autoInit, stereo, _sb.Dma.Bits, _sb.Dma.Left, _sb.Dma.Channel.ChannelNumber, dmaRateHz);
-        }
-    }
-
-    private void ValidateDmaRate(int dmaRateHz) {
-        int mixerRateHz = _mixer.SampleRateHz;
-
-        // Check if DMA rate is reasonable
-        if (dmaRateHz < MinPlaybackRateHz) {
-            _loggerService.Warning("SOUNDBLASTER: DMA rate {DmaRate} Hz is below minimum {MinRate} Hz",
-                dmaRateHz, MinPlaybackRateHz);
-        }
-
-        // Warn if DMA rate significantly exceeds mixer rate
-        // High upsampling ratios can cause performance issues
-        if (dmaRateHz > mixerRateHz * 2) {
-            _loggerService.Warning("SOUNDBLASTER: DMA rate {DmaRate} Hz is more than 2x mixer rate {MixerRate} Hz. " +
-                "This may cause performance issues and audio glitches.",
-                dmaRateHz, mixerRateHz);
-        }
-
-        // Log rate relationship for debugging
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            double ratio = (double)dmaRateHz / mixerRateHz;
-            string relationship = ratio > 1.0 ? "upsampling" : ratio < 1.0 ? "downsampling" : "matching";
-            _loggerService.Debug("SOUNDBLASTER: DMA rate {DmaRate} Hz vs mixer rate {MixerRate} Hz (ratio: {Ratio:F2}x, {Relationship})",
-                dmaRateHz, mixerRateHz, ratio, relationship);
-        }
+        DspDoDmaTransfer(newMode, freqHz, autoInit, stereo);
     }
 
     private void SetSpeakerEnabled(bool enabled) {
