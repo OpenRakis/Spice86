@@ -14,8 +14,8 @@ overlay_header:
         dw      ((overlay_end - $$) + 511) / 512    ; pages in file
         dw      0                                   ; relocations
         dw      HEADER_PARAS                        ; header size in paragraphs
-        dw      0                                   ; min alloc
-        dw      0xFFFF                              ; max alloc
+        dw      0x10                                ; min alloc - request minimal extra memory
+        dw      0x10                                ; max alloc - request minimal extra memory
         dw      0                                   ; initial SS (relative)
         dw      0xFFFE                              ; initial SP
         dw      0                                   ; checksum

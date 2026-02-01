@@ -40,7 +40,6 @@ public class DosInt21HandlerTests {
 
         var handler = new DosInt21Handler(
             memory,
-            null!,
             functionHandlerProvider,
             stack,
             state,
