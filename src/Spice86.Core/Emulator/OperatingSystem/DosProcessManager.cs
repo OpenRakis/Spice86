@@ -36,16 +36,25 @@ public class DosProcessManager {
     private const byte CtrlBreakVectorNumber = 0x23;
     private const byte CriticalErrorVectorNumber = 0x24;
     private const byte RetfOpcode = 0xCB;
-
-    private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
     private readonly DosDriveManager _driveManager;
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly ILoggerService _loggerService;
-    private readonly Stack<(ushort SS, ushort SP)> _pendingParentStackPointers = new();
-    private readonly Stack<(ushort CS, ushort IP)> _pendingParentReturnAddresses = new();
+
+    /// <summary>
+    /// Maps child PSP segment to parent's saved stack pointer (SS:SP).
+    /// Only populated when child is loaded via EXEC.
+    /// </summary>
+    private readonly Dictionary<ushort, (ushort SS, ushort SP)> _parentStackPointersByChildPsp = new();
+
+    /// <summary>
+    /// Maps child PSP segment to parent's return address (CS:IP).
+    /// Only populated when child is loaded via EXEC.
+    /// </summary>
+    private readonly Dictionary<ushort, (ushort CS, ushort IP)> _parentReturnAddressByChildPsp = new();
+
     private readonly Stack<ResidentBlockInfo> _pendingResidentBlocks = new();
 
     /// <summary>
@@ -85,6 +94,25 @@ public class DosProcessManager {
     private const int IregsFrameSize = 18; // Size of register frame pushed by DOS for LOADNGO (FreeDOS uses sizeof(iregs))
 
     /// <summary>
+    /// Gets or sets the current PSP segment from the DOS Swappable Data Area.
+    /// </summary>
+    private ushort CurrentPspSegment {
+        get {
+            DosSwappableDataArea sda = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
+            return sda.CurrentProgramSegmentPrefix;
+        }
+        set {
+            DosSwappableDataArea sda = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
+            sda.CurrentProgramSegmentPrefix = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets the current PSP from the DOS Swappable Data Area.
+    /// </summary>
+    private DosProgramSegmentPrefix CurrentPsp => new(_memory, MemoryUtils.ToPhysicalAddress(CurrentPspSegment, 0));
+
+    /// <summary>
     /// The master environment block that all DOS PSPs inherit.
     /// </summary>
     /// <remarks>
@@ -98,18 +126,16 @@ public class DosProcessManager {
     /// <param name="memory">The emulated memory interface used to read and write PSP and environment data.</param>
     /// <param name="stack">The CPU stack, used to get the parent process CS and IP.</param>
     /// <param name="state">The CPU state that is adjusted during EXEC operations.</param>
-    /// <param name="dosPspTracker">Tracks the current and historical PSP segments to maintain parent-child relationships.</param>
     /// <param name="dosMemoryManager">Allocates and frees DOS memory control blocks for PSPs and environments.</param>
     /// <param name="dosFileManager">Resolves DOS paths and manages open file tables shared across processes.</param>
     /// <param name="dosDriveManager">Provides drive metadata and current drive context for path resolution.</param>
     /// <param name="envVars">The initial host environment variables to seed the master environment block.</param>
     /// <param name="loggerService">Logger for emitting diagnostic information during process lifecycle changes.</param>
     public DosProcessManager(IMemory memory, Stack stack, State state,
-        DosProgramSegmentPrefixTracker dosPspTracker, DosMemoryManager dosMemoryManager,
+        DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         IDictionary<string, string> envVars, ILoggerService loggerService) {
         _memory = memory;
-        _pspTracker = dosPspTracker;
         _memoryManager = dosMemoryManager;
         _stack = stack;
         _fileManager = dosFileManager;
@@ -146,7 +172,8 @@ public class DosProcessManager {
     /// Creates the root COMMAND.COM PSP that acts as the parent for all programs.
     /// </summary>
     public DosProgramSegmentPrefix CreateRootCommandComPsp() {
-        DosProgramSegmentPrefix rootPsp = _pspTracker.PushPspSegment(CommandComSegment);
+        CurrentPspSegment = CommandComSegment;
+        DosProgramSegmentPrefix rootPsp = CurrentPsp;
 
         rootPsp.Exit[0] = IntOpcode;
         rootPsp.Exit[1] = Int20TerminateNumber;
@@ -218,7 +245,7 @@ public class DosProcessManager {
         ushort callerIP = _stack.Peek16(0);
         ushort callerCS = _stack.Peek16(2);
 
-        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
+        ushort parentPspSegment = CurrentPspSegment;
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("EXEC: Current PSP={CurrentPsp:X4}, will become parent",
                 parentPspSegment);
@@ -266,11 +293,15 @@ public class DosProcessManager {
                 hostPath, fileBytes, envBlock, parentSS, parentReservedSP);
         }
 
-        // Save parent's stack registers (SS:SP) and CS:IP for process termination logic
+        // Save parent's stack registers (SS:SP) and CS:IP for process termination logic.
         // Follow FreeDOS: do not mutate the real stack here; track the parent's SS:SP
         // in managed state so it can be restored on process termination.
-        _pendingParentStackPointers.Push((parentSS, parentReservedSP));
-        _pendingParentReturnAddresses.Push((callerCS, callerIP));
+        // Key by the child PSP segment so we only restore when that specific child terminates.
+        if (result.Success) {
+            ushort childPspSegment = CurrentPspSegment;
+            _parentStackPointersByChildPsp[childPspSegment] = (parentSS, parentReservedSP);
+            _parentReturnAddressByChildPsp[childPspSegment] = (callerCS, callerIP);
+        }
 
         return result;
     }
@@ -421,7 +452,7 @@ public class DosProcessManager {
     private void RestoreParentPspForLoadOnly(DosExecLoadType loadType, ushort parentPspSegment) {
         if (loadType == DosExecLoadType.LoadOnly) {
             // LoadOnly: restore parent PSP as current
-            _pspTracker.SetCurrentPspSegment(parentPspSegment);
+            CurrentPspSegment = parentPspSegment;
         }
     }
 
@@ -477,9 +508,8 @@ public class DosProcessManager {
         // Format: AH = termination type, AL = exit code
         LastChildReturnCode = (ushort)(((ushort)terminationType << 8) | exitCode);
 
-        DosProgramSegmentPrefix currentPsp = _pspTracker.GetCurrentPsp();
-
-        ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
+        ushort currentPspSegment = CurrentPspSegment;
+        DosProgramSegmentPrefix currentPsp = CurrentPsp;
         ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
         DosMemoryControlBlock? residentBlock = null;
         ushort? residentNextSegment = null;
@@ -520,25 +550,34 @@ public class DosProcessManager {
         RestoreInterruptVector(CtrlBreakVectorNumber, breakAddr);
         RestoreInterruptVector(CriticalErrorVectorNumber, criticalErrorAddr);
 
-        _pspTracker.PopCurrentPspSegment();
+        // Set current PSP to the parent
+        CurrentPspSegment = parentPspSegment;
 
-        DosProgramSegmentPrefix parentPsp = _pspTracker.GetCurrentPsp();
+        DosProgramSegmentPrefix parentPsp = CurrentPsp;
 
         if (residentNextSegment.HasValue) {
             parentPsp.CurrentSize = residentNextSegment.Value;
         }
 
-        if (_pendingParentStackPointers.Count > 0) {
-            (ushort SS, ushort SP) = _pendingParentStackPointers.Pop();
-            _state.SS = SS;
-            _state.SP = SP;
+        // If this process was loaded via EXEC, restore the parent's saved state.
+        // If it was created manually (via INT 21h/26h + 50h), use the PSP's TerminateAddress.
+        if (_parentStackPointersByChildPsp.TryGetValue(currentPspSegment, out (ushort SS, ushort SP) savedStack)) {
+            _state.SS = savedStack.SS;
+            _state.SP = savedStack.SP;
+            _parentStackPointersByChildPsp.Remove(currentPspSegment);
         }
-        if (_pendingParentReturnAddresses.Count > 0) {
-            (ushort CS, ushort IP) = _pendingParentReturnAddresses.Pop();
-            _state.CS = CS;
-            _state.IP = IP;
+        if (_parentReturnAddressByChildPsp.TryGetValue(currentPspSegment, out (ushort CS, ushort IP) savedReturn)) {
+            _state.CS = savedReturn.CS;
+            _state.IP = savedReturn.IP;
             parentPsp.StackPointer = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
-
+            _parentReturnAddressByChildPsp.Remove(currentPspSegment);
+        } else if (terminateAddr != 0) {
+            // When no saved parent return address (non-EXEC process creation),
+            // use the TerminateAddress (INT 22h) from the PSP as the return address.
+            // This is how real DOS returns to the caller for programs created via
+            // INT 21h/26h (Create PSP) + INT 21h/50h (Set PSP) instead of EXEC.
+            _state.IP = (ushort)(terminateAddr & 0xFFFF);
+            _state.CS = (ushort)(terminateAddr >> 16);
         }
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("TERMINATE: restored parent context SS:SP={SS:X4}:{SP:X4}, CS:IP={CS:X4}:{IP:X4}",
@@ -564,7 +603,7 @@ public class DosProcessManager {
     /// </summary>
     /// <param name="newPspSegment">The segment address where the new PSP will be created.</param>
     public void CreateNewPsp(ushort newPspSegment) {
-        ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
+        ushort currentPspSegment = CurrentPspSegment;
 
         uint currentPspAddress = MemoryUtils.ToPhysicalAddress(currentPspSegment, 0);
         uint newPspAddress = MemoryUtils.ToPhysicalAddress(newPspSegment, 0);
@@ -572,7 +611,7 @@ public class DosProcessManager {
         byte[] pspData = _memory.ReadRam(DosProgramSegmentPrefix.MaxLength, currentPspAddress);
         _memory.LoadData(newPspAddress, pspData);
 
-        DosProgramSegmentPrefix currentPsp = _pspTracker.GetCurrentPsp();
+        DosProgramSegmentPrefix currentPsp = CurrentPsp;
         DosProgramSegmentPrefix newPsp = new(_memory, newPspAddress);
 
         newPsp.Exit[0] = IntOpcode;
@@ -598,7 +637,7 @@ public class DosProcessManager {
     /// Implements INT 21h, AH=55h by cloning the current PSP to the target segment, wiring parent links, refreshing INT 22h/23h/24h vectors, rebuilding the file table, and clearing FCBs and command tail to FreeDOS defaults.
     /// </summary>
     public void CreateChildPsp(ushort childSegment, ushort sizeInParagraphs) {
-        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
+        ushort parentPspSegment = CurrentPspSegment;
         uint childPspAddress = MemoryUtils.ToPhysicalAddress(childSegment, 0);
         uint parentPspAddress = MemoryUtils.ToPhysicalAddress(parentPspSegment, 0);
 
@@ -739,7 +778,7 @@ public class DosProcessManager {
     }
 
     private void CloneCurrentPspTo(ushort destinationSegment) {
-        ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
+        ushort currentPspSegment = CurrentPspSegment;
         uint currentPspAddress = MemoryUtils.ToPhysicalAddress(currentPspSegment, 0);
         uint destinationAddress = MemoryUtils.ToPhysicalAddress(destinationSegment, 0);
 
@@ -821,8 +860,9 @@ public class DosProcessManager {
         string? arguments, ushort environmentSegment, ushort parentPspSegment,
         ushort callerCS, ushort callerIP) {
         ClearPspMemory(pspSegment);
-        // Establish parent-child PSP relationship and create the new PSP
-        DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
+        // Establish parent-child PSP relationship and set as current PSP
+        CurrentPspSegment = pspSegment;
+        DosProgramSegmentPrefix psp = CurrentPsp;
 
         psp.Exit[0] = IntOpcode;
         psp.Exit[1] = Int20TerminateNumber;

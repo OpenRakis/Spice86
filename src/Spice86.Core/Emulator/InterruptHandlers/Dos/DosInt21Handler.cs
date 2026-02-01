@@ -28,7 +28,6 @@ using System.Text;
 public class DosInt21Handler : InterruptHandler {
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly DosDriveManager _dosDriveManager;
-    private readonly DosProgramSegmentPrefixTracker _dosPspTracker;
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly DosFileManager _dosFileManager;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
@@ -37,6 +36,14 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosProcessManager _dosProcessManager;
     private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly DosTables _dosTables;
+
+    /// <summary>
+    /// Gets or sets the current PSP segment directly from the DOS SDA.
+    /// </summary>
+    private ushort CurrentPspSegment {
+        get => new DosSwappableDataArea(Memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0)).CurrentProgramSegmentPrefix;
+        set => new DosSwappableDataArea(Memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0)).CurrentProgramSegmentPrefix = value;
+    }
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
@@ -48,7 +55,6 @@ public class DosInt21Handler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The emulator memory.</param>
-    /// <param name="dosPspTracker">The DOS class used to track the current loaded program.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
@@ -62,7 +68,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports (e.g., CMOS).</param>
     /// <param name="dosTables">The DOS tables structure containing CDS and DBCS information.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt21Handler(IMemory memory, DosProgramSegmentPrefixTracker dosPspTracker,
+    public DosInt21Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
@@ -71,7 +77,6 @@ public class DosInt21Handler : InterruptHandler {
         IOPortDispatcher ioPortDispatcher, DosTables dosTables, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
-        _dosPspTracker = dosPspTracker;
         _dosStringDecoder = dosStringDecoder;
         _keyboardInt16Handler = keyboardInt16Handler;
         _dosMemoryManager = dosMemoryManager;
@@ -870,7 +875,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("SET CURRENT PSP: {PspSegment}", ConvertUtils.ToHex16(State.BX));
         }
-        _dosPspTracker.SetCurrentPspSegment(State.BX);
+        CurrentPspSegment = State.BX;
     }
 
     /// <summary>
@@ -971,7 +976,7 @@ public class DosInt21Handler : InterruptHandler {
         ushort paragraphsToKeep = State.DX;
         byte returnCode = State.AL;
 
-        ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
+        ushort currentPspSegment = CurrentPspSegment;
 
         if (LoggerService.IsEnabled(LogEventLevel.Information)) {
             LoggerService.Information(
@@ -1054,7 +1059,7 @@ public class DosInt21Handler : InterruptHandler {
     /// The segment of the current PSP in BX.
     /// </returns>
     public void GetPspAddress() {
-        ushort pspSegment = _dosPspTracker.GetCurrentPspSegment();
+        ushort pspSegment = CurrentPspSegment;
         State.BX = pspSegment;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET PSP ADDRESS {PspSegment}",
