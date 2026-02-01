@@ -1,49 +1,39 @@
-namespace Spice86.Core.Emulator.Function;
+namespace Spice86.Core.Emulator.StateSerialization;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
-using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
 
-public class CfgCpuFlowDumper {
-    private readonly CfgCpu _cfgCpu;
-    private readonly ExecutionDump _previousDump;
-
-
-    public CfgCpuFlowDumper(CfgCpu cfgCpu, ExecutionDump previousDump) {
-        _cfgCpu = cfgCpu;
-        _previousDump = previousDump;
-    }
-
-    public ExecutionDump Dump() {
+public class ExecutionAddressesExtractor(CfgCpu cfgCpu, ExecutionAddresses previousAddresses) {
+    public ExecutionAddresses Extract() {
         // List all instructions currently in memory. Those info are meant to go along with the memory dump.
-        IEnumerable<CfgInstruction> all = _cfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions.GetAll();
+        IEnumerable<CfgInstruction> all = cfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions.GetAll();
         foreach (CfgInstruction instruction in all) {
             switch (instruction) {
                 case IJumpInstruction:
                     FillResultWithSuccessorsOfType(InstructionSuccessorType.Normal, instruction, true,
-                        _previousDump.JumpsFromTo);
+                        previousAddresses.JumpsFromTo);
                     break;
                 case ICallInstruction:
                     FillResultWithSuccessorsOfType(InstructionSuccessorType.Normal, instruction, false,
-                        _previousDump.CallsFromTo);
+                        previousAddresses.CallsFromTo);
                     break;
                 case IReturnInstruction:
                     FillResultWithSuccessorsOfType(InstructionSuccessorType.Normal, instruction, false,
-                        _previousDump.RetsFromTo);
+                        previousAddresses.RetsFromTo);
                     break;
             }
 
             FillResultWithSuccessorsOfType(InstructionSuccessorType.CpuFault, instruction, false,
-                _previousDump.CallsFromTo);
-            _previousDump.ExecutedInstructions.Add(instruction.Address);
+                previousAddresses.CallsFromTo);
+            previousAddresses.ExecutedInstructions.Add(instruction.Address);
         }
 
-        return _previousDump;
+        return previousAddresses;
     }
 
     private void FillResultWithSuccessorsOfType(InstructionSuccessorType type, CfgInstruction instruction,

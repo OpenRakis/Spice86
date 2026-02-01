@@ -13,7 +13,6 @@ using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
@@ -24,11 +23,13 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
+using Spice86.Tests.Utility;
 
 using Xunit;
 
@@ -95,17 +96,20 @@ public class DosFileManagerTests {
     }
 
     private static DosFileManager ArrangeDosFileManager(string mountPoint) {
+        TempFile tempFile = new TempFile();
         Configuration configuration = new Configuration() {
             AudioEngine = AudioEngine.Dummy,
-            DumpDataOnExit = false,
             CDrive = mountPoint,
-            RecordedDataDirectory = Path.GetTempPath()
+            RecordedDataDirectory = tempFile.Directory,
+            Exe = tempFile.Path
         };
         Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
-
-        RecordedDataReader reader = new(configuration.RecordedDataDirectory!, loggerService);
+        EmulatorStateSerializationFolder emulatorStateSerializationFolder = 
+            new EmulatorStateSerializationFolderFactory(loggerService)
+                .ComputeFolder(configuration.Exe, configuration.RecordedDataDirectory);
+        EmulationStateDataReader reader = new(emulatorStateSerializationFolder, loggerService);
         State state = new(CpuModel.INTEL_80286);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();

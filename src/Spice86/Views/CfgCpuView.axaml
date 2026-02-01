@@ -1,4 +1,4 @@
-﻿<UserControl
+<UserControl
     x:Class="Spice86.Views.CfgCpuView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -7,6 +7,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="clr-namespace:Spice86.ViewModels"
     xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+    xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
     d:DesignHeight="450"
     d:DesignWidth="800"
     x:CompileBindings="True"
@@ -16,8 +17,30 @@
 		<viewModels:CfgCpuViewModel />
 	</Design.DataContext>
 	
-	<UserControl.Styles>
-    	<StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+    <UserControl.Styles>
+	    <StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+		
+	    <!-- Node boxes styling - static properties only, theme handled by behavior -->
+	    <Style Selector="agc|TextSticker">
+	        <Setter Property="FontSize" Value="14" />
+	        <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Courier New, monospace" />
+	        <Setter Property="Padding" Value="10,6" />
+	        <Setter Property="BorderThickness" Value="1.5" />
+	        <Setter Property="BorderRadius" Value="4" />
+	        <Setter Property="behaviors:TextStickerThemeBehavior.EnableTheming" Value="True" />
+	    </Style>
+		
+	    <Style Selector="agc|Connection">
+	    <Setter Property="Brush" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+	    </Style>
+		
+	    <!-- Edge labels (TextBlock children of GraphPanel) -->
+	    <Style Selector="agc|GraphPanel > TextBlock">
+	        <Setter Property="FontSize" Value="14" />
+	        <Setter Property="Foreground" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
+	        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltMediumHighBrush}" />
+	        <Setter Property="Padding" Value="4,2" />
+	    </Style>
 	</UserControl.Styles>
 	
 	<Grid RowDefinitions="Auto,Auto,*,Auto">
@@ -29,10 +52,10 @@
 			</StackPanel>
 			<StackPanel Grid.Column="2" Margin="5" Orientation="Horizontal">
 				<TextBlock VerticalAlignment="Center">Max nodes:</TextBlock>
-				<NumericUpDown Margin="5,0,0,0" VerticalAlignment="Center" 
-                               Value="{Binding MaxNodesToDisplay}" 
-                               FormatString="0" Minimum="0" Maximum="1000" 
-                               Width="80" />
+				<NumericUpDown  Margin="5,0,0,0" VerticalAlignment="Center" 
+                                Value="{Binding MaxNodesToDisplay}" 
+                                FormatString="0" Minimum="0" Maximum="1000" 
+                                Width="80" />
 			</StackPanel>
 			<CheckBox Grid.Column="3" Margin="5" Content="Auto-follow execution" IsChecked="{Binding AutoFollow}" />
 		</Grid>
@@ -88,7 +111,7 @@
                         
                     <!-- Graph display -->
                     <ScrollViewer IsVisible="{Binding !IsLoading}" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
-                        <Border Background="White">
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
                             <ZoomBorder 
                                 Name="ZoomBorder"
                                 ToolTip.Tip="Middle click to pan, mouse wheel to zoom/dezoom"
@@ -121,41 +144,71 @@
                               AutoGenerateColumns="False"
                               GridLinesVisibility="All">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Address" Binding="{Binding Address}" />
-                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" />
-                            
-                            <!-- Predecessors ComboBox -->
-                            <DataGridTemplateColumn Header="Predecessors">
+                            <!-- Address -->
+                            <DataGridTemplateColumn Header="Address">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ComboBox ItemsSource="{Binding Predecessors}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Address}" ToolTip.Tip="{Binding Assembly}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
+                                        <TextBox Text="{Binding Address, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 BorderThickness="0"
+                                                 Background="Transparent" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             
-                            <!-- Successors ComboBox -->
+                            <!-- Type -->
+                            <DataGridTemplateColumn Header="Type">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Type, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 BorderThickness="0"
+                                                 Background="Transparent" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
+                            <!-- Predecessors List -->
+                            <DataGridTemplateColumn Header="Predecessors">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding PredecessorsText, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 AcceptsReturn="True"
+                                                 TextWrapping="NoWrap"
+                                                 BorderThickness="0"
+                                                 Background="Transparent" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
+                            <!-- Successors List -->
                             <DataGridTemplateColumn Header="Successors">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ComboBox ItemsSource="{Binding Successors}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Address}" ToolTip.Tip="{Binding Assembly}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
+                                        <TextBox Text="{Binding SuccessorsText, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 AcceptsReturn="True"
+                                                 TextWrapping="NoWrap"
+                                                 BorderThickness="0"
+                                                 Background="Transparent" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             
                             <DataGridCheckBoxColumn Header="Is the last executed node ?" Binding="{Binding IsLastExecuted}" />
-                            <DataGridTextColumn Header="Assembly" Binding="{Binding Assembly}" Width="*"/>
+                            
+                            <!-- Assembly -->
+                            <DataGridTemplateColumn Header="Assembly" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Assembly, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 BorderThickness="0"
+                                                 Background="Transparent" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                         
                         <DataGrid.ContextMenu>
@@ -174,7 +227,13 @@
 		<Grid Grid.Row="3" ColumnDefinitions="*,Auto">
 			<TextBlock Grid.Column="0" Margin="5" Text="{Binding StatusMessage}" />
 			
-			<Border Grid.Column="1" Background="#AAFFFFFF" CornerRadius="3" Padding="5" Margin="0,5,5,5">
+            <Border Grid.Column="1" 
+			Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" 
+			BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+			BorderThickness="1"
+			CornerRadius="4" 
+			Padding="8,4" 
+			Margin="0,5,5,5">
 				<StackPanel Orientation="Horizontal" Spacing="8">
 					<TextBlock Text="🔴 Last run" />
 					<TextBlock Text="→ Jump" />

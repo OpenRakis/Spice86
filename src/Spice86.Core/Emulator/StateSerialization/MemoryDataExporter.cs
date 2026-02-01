@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Function.Dump;
+namespace Spice86.Core.Emulator.StateSerialization;
 
 using Serilog.Events;
 
@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-public class MemoryDataExporter : RecordedDataIoHandler {
+public class MemoryDataExporter {
     private readonly ILoggerService _loggerService;
     private readonly IMemory _memory;
     private readonly CallbackHandler _callbackHandler;
@@ -18,24 +18,22 @@ public class MemoryDataExporter : RecordedDataIoHandler {
     /// <param name="memory">The memory bus.</param>
     /// <param name="callbackHandler">The class that stores callback instructions.</param>
     /// <param name="configuration">The emulator configuration.</param>
-    /// <param name="dumpDirectory">Where to dump the data.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public MemoryDataExporter(IMemory memory, CallbackHandler callbackHandler, Configuration configuration,
-        string dumpDirectory, ILoggerService loggerService) : base(dumpDirectory) {
-        _loggerService = loggerService;
+        ILoggerService loggerService) {
         _configuration = configuration;
         _memory = memory;
         _callbackHandler = callbackHandler;
+        _loggerService = loggerService;
     }
 
     /// <summary>
     /// Dumps the machine's memory to the file system.
     /// </summary>
-    /// <param name="suffix">The suffix to add to the file name.</param>
-    public void DumpMemory(string suffix) {
-        string path = GenerateDumpFileName($"MemoryDump{suffix}.bin");
+    /// <param name="path">Destination file path.</param>
+    public void Write(string path) {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Dumping memory content in file {Path}", path);
+            _loggerService.Information("Saving memory content in file {Path}", path);
         }
 
         File.WriteAllBytes(path, GenerateToolingCompliantRamDump());

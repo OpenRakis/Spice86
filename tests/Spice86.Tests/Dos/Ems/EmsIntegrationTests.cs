@@ -643,7 +643,6 @@ public class EmsIntegrationTests {
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
             enablePit: true,
-            recordData: false,
             maxCycles: 100000L,
             installInterruptVectors: true,
             enableA20Gate: false,

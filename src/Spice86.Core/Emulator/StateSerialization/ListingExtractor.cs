@@ -1,16 +1,16 @@
-﻿namespace Spice86.Tests;
+﻿namespace Spice86.Core.Emulator.StateSerialization;
 
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 
-public class CfgGraphDumper {
+using System.Linq;
+
+public class ListingExtractor {
     private readonly NodeToString _nodeToString = new();
-    public List<string> ToAssemblyListing(Machine machine) {
-        List<ICfgNode> nodes = DumpInOrder(machine);
+    public List<string> ToAssemblyListing(CfgCpu cpu) {
+        List<ICfgNode> nodes = DumpInOrder(cpu);
         
         List<string> res = new();
         foreach (ICfgNode node in nodes) {
@@ -21,8 +21,8 @@ public class CfgGraphDumper {
         return res;
     }
 
-    private List<ICfgNode> DumpInOrder(Machine machine) {
-        Dictionary<SegmentedAddress, ISet<CfgInstruction>> executionContextEntryPoints = machine.CfgCpu.ExecutionContextManager.ExecutionContextEntryPoints;
+    private List<ICfgNode> DumpInOrder(CfgCpu cpu) {
+        Dictionary<SegmentedAddress, ISet<CfgInstruction>> executionContextEntryPoints = cpu.ExecutionContextManager.ExecutionContextEntryPoints;
         IEnumerable<CfgInstruction> startNodes = executionContextEntryPoints.Values.SelectMany(i => i);
         ISet<ICfgNode> allNodes = BrowseGraph(startNodes);
         return allNodes.OrderBy(node => node.Address.Linear).ThenByDescending(node => node.Id).ToList();

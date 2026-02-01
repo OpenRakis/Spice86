@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
@@ -25,7 +26,7 @@ using Xunit;
 
 public class MachineTest
 {
-    private readonly CfgGraphDumper _dumper = new();
+    private readonly ListingExtractor _dumper = new();
 
     static MachineTest()
     {
@@ -253,7 +254,7 @@ public class MachineTest
     [Fact]
     public void TestCallbacks() {
         string comFileName = Path.GetFullPath("Resources/cpuTests/intchain.com");
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: comFileName, maxCycles: 1000, enablePit: false, installInterruptVectors: true, recordData: false, enableA20Gate: false).Create();
+        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: comFileName, maxCycles: 1000, enablePit: false, installInterruptVectors: true, enableA20Gate: false).Create();
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
         SegmentedAddress entryPoint = machine.CpuState.IpSegmentedAddress;
@@ -332,7 +333,7 @@ public class MachineTest
     [AssertionMethod]
     private Machine TestOneBin(string binName, byte[] expected, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false)
     {
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: binName, maxCycles: maxCycles, enablePit: enablePit, recordData: false, enableA20Gate: enableA20Gate).Create();
+        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: binName, maxCycles: maxCycles, enablePit: enablePit, enableA20Gate: enableA20Gate).Create();
         spice86DependencyInjection.ProgramExecutor.Run();
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
@@ -343,7 +344,7 @@ public class MachineTest
 
     private void CompareListingWithExpected(string binName, Machine machine) {
         List<string> expectedLines = GetExpectedListing(binName);
-        List<string> actualLines = _dumper.ToAssemblyListing(machine);
+        List<string> actualLines = _dumper.ToAssemblyListing(machine.CfgCpu);
         Assert.Equal(expectedLines, actualLines);
     }
 
@@ -364,7 +365,7 @@ public class MachineTest
         string binName = "test386";
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: binName,
-            enablePit: false, recordData: false, maxCycles: long.MaxValue,
+            enablePit: false, maxCycles: long.MaxValue,
             failOnUnhandledPort: true).Create();
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
