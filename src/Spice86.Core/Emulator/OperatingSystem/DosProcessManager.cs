@@ -264,7 +264,8 @@ public class DosProcessManager {
         // subtracting the user register frame size from the current SP. This
         // mirrors FreeDOS behavior (reg_sp -= sizeof(iregs)). We do not modify
         // the actual CPU stack here; we only compute the value to store in the
-        // new PSP and to restore later.
+        // new PSP. However, for the parent context we restore on termination,
+        // we use the actual parentSP so IRET correctly pops the interrupt frame.
         ushort parentReservedSP = (ushort)(parentSP - IregsFrameSize);
 
         // Allocate environment block FIRST before allocating program memory, as we might decide to take ALL the remaining free memory
@@ -297,9 +298,10 @@ public class DosProcessManager {
         // Follow FreeDOS: do not mutate the real stack here; track the parent's SS:SP
         // in managed state so it can be restored on process termination.
         // Key by the child PSP segment so we only restore when that specific child terminates.
+        // Use parentSP (not parentReservedSP) so IRET correctly pops the interrupt frame.
         if (result.Success) {
             ushort childPspSegment = CurrentPspSegment;
-            _parentStackPointersByChildPsp[childPspSegment] = (parentSS, parentReservedSP);
+            _parentStackPointersByChildPsp[childPspSegment] = (parentSS, parentSP);
             _parentReturnAddressByChildPsp[childPspSegment] = (callerCS, callerIP);
         }
 
@@ -567,8 +569,11 @@ public class DosProcessManager {
             _parentStackPointersByChildPsp.Remove(currentPspSegment);
         }
         if (_parentReturnAddressByChildPsp.TryGetValue(currentPspSegment, out (ushort CS, ushort IP) savedReturn)) {
-            _state.CS = savedReturn.CS;
-            _state.IP = savedReturn.IP;
+            // Modify the interrupt frame on the parent's stack so IRET returns to the correct place.
+            // Stack layout: [SP+0]=IP, [SP+2]=CS, [SP+4]=FLAGS
+            // We overwrite IP and CS with the parent's saved return address.
+            _stack.Poke16(0, savedReturn.IP);
+            _stack.Poke16(2, savedReturn.CS);
             parentPsp.StackPointer = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
             _parentReturnAddressByChildPsp.Remove(currentPspSegment);
         } else if (terminateAddr != 0) {
@@ -576,12 +581,12 @@ public class DosProcessManager {
             // use the TerminateAddress (INT 22h) from the PSP as the return address.
             // This is how real DOS returns to the caller for programs created via
             // INT 21h/26h (Create PSP) + INT 21h/50h (Set PSP) instead of EXEC.
-            _state.IP = (ushort)(terminateAddr & 0xFFFF);
-            _state.CS = (ushort)(terminateAddr >> 16);
+            _stack.Poke16(0, (ushort)(terminateAddr & 0xFFFF));
+            _stack.Poke16(2, (ushort)(terminateAddr >> 16));
         }
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("TERMINATE: restored parent context SS:SP={SS:X4}:{SP:X4}, CS:IP={CS:X4}:{IP:X4}",
-                _state.SS, _state.SP, _state.CS, _state.IP);
+            _loggerService.Information("TERMINATE: restored parent context SS:SP={0:X4}:{1:X4}, return CS:IP={2:X4}:{3:X4}",
+                _state.SS, _state.SP, _stack.Peek16(2), _stack.Peek16(0));
         }
 
         _state.DS = parentPspSegment;

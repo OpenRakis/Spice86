@@ -924,7 +924,8 @@ public class DosMemoryManagerTests {
         block1!.IsValid.Should().BeTrue();
         block1!.IsFree.Should().BeFalse();
         block1!.IsLast.Should().BeFalse();
-        block1!.PspSegment.Should().Be(_initialPspSegment);
+        // ReserveSpaceForExe sets the PSP segment to the block's data block segment
+        block1!.PspSegment.Should().Be(block1.DataBlockSegment);
         block1!.DataBlockSegment.Should().Be(0xFF0);
         block1!.Size.Should().Be(12301);
         block1!.AllocationSizeInBytes.Should().Be(196816);
@@ -932,7 +933,8 @@ public class DosMemoryManagerTests {
         block2!.IsValid.Should().BeTrue();
         block2!.IsFree.Should().BeFalse();
         block2!.IsLast.Should().BeFalse();
-        block2!.PspSegment.Should().Be(_initialPspSegment);
+        // ReserveSpaceForExe sets the PSP segment to the block's data block segment
+        block2!.PspSegment.Should().Be(block2.DataBlockSegment);
         block2!.DataBlockSegment.Should().Be(0x3FFE);
         block2!.Size.Should().Be(16112);
         block2!.AllocationSizeInBytes.Should().Be(257792);

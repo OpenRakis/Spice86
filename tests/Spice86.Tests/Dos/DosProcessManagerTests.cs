@@ -152,8 +152,8 @@ public class DosProcessManagerTests {
 
             context.CurrentPspSegment.Should().Be(parentSegment);
             context.State.SS.Should().Be(0xFFFD);
-            // SP is parentSP - IregsFrameSize (18 bytes) as DOS reserves space for registers
-            context.State.SP.Should().Be(0xFFFE - 18);
+            // SP is restored to the actual parent SP (interrupt frame location)
+            context.State.SP.Should().Be(0xFFFE);
         } finally {
             DeleteIfExists(comFilePath);
         }
