@@ -1180,6 +1180,8 @@ public sealed class MixerChannel {
     /// <summary>
     /// Converts mono 32-bit float samples to AudioFrames with optional ZoH upsampling.
     /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
+    /// Reference: DOSBox staging mixer.cpp ConvertSamplesAndMaybeZohUpsample()
+    /// Float samples are expected to be in int16 range already (like DOSBox staging).
     /// </summary>
     private void ConvertSamplesAndMaybeZohUpsample_mfloat(ReadOnlySpan<float> data, int numFrames) {
         _convertBuffer.Clear();
@@ -1192,8 +1194,9 @@ public sealed class MixerChannel {
         while (pos < numFrames) {
             _prevFrame = _nextFrame;
             
-            // Float samples are already in the correct format
-            float sample = data[pos] * 32768.0f; // Convert normalized to 16-bit range
+            // Float samples are already in int16 range (like DOSBox staging)
+            // Reference: DOSBox mixer.cpp just does static_cast<float>(data[pos]) with no conversion
+            float sample = data[pos];
             _nextFrame = new AudioFrame(sample, sample);
             
             // Apply channel mapping (mono uses left channel) - use _nextFrame (current sample)

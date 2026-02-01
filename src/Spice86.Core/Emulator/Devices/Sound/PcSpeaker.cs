@@ -50,7 +50,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     private readonly Queue<float> _outputQueue = new();
     private readonly PitState _pit = new();
     private readonly MixerChannel _mixerChannel;
-    private readonly EventHandler _tickHandler;
+    private readonly TickHandler _tickHandler;
     private readonly float[] _waveform = new float[WaveformSize];
     private float _accumulator;
     private bool _disposed;
@@ -117,8 +117,10 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
 
         ioPortDispatcher.AddIOPortHandler(PcSpeakerPortNumber, this);
 
+        // Reference: src/hardware/audio/pcspeaker.cpp:134 TIMER_AddTickHandler(PCSPEAKER_PicCallback)
+        // Registers OnSchedulerTick to be called automatically every tick (1ms)
         _tickHandler = OnSchedulerTick;
-        _scheduler.AddEvent(_tickHandler, 1.0);
+        _scheduler.AddTickHandler(_tickHandler);
 
         // Unlock mixer thread after construction completes
         // Reference: src/hardware/audio/pcspeaker.cpp:136
@@ -311,25 +313,35 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
             return;
         }
         if (disposing) {
-            _scheduler.RemoveEvents(_tickHandler);
+            // Reference: src/hardware/audio/pcspeaker.cpp:143 TIMER_DelTickHandler(PCSPEAKER_PicCallback)
+            _scheduler.DelTickHandler(_tickHandler);
         }
         _disposed = true;
     }
 
-    private void OnSchedulerTick(uint _ = 0) {
-        _frameCounter += SampleRatePerMillisecond;
+    /// <summary>
+    /// Called every emulator tick (1ms) via TIMER_AddTickHandler.
+    /// Reference: src/hardware/audio/pcspeaker.cpp:15-23 PCSPEAKER_PicCallback()
+    /// </summary>
+    private void OnSchedulerTick() {
+        if (!_mixerChannel.IsEnabled) {
+            return;
+        }
+        
+        // Reference: src/hardware/audio/pcspeaker.cpp:20-22
+        // frame_counter += channel->GetFramesPerTick();
+        // const int requested_frames = ifloor(frame_counter);
+        // frame_counter -= static_cast<float>(requested_frames);
+        _frameCounter += _mixerChannel.GetFramesPerTick();
         int requestedFrames = (int)Math.Floor(_frameCounter);
         _frameCounter -= requestedFrames;
 
         if (requestedFrames > 0) {
             if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                _logger.Verbose("PCSPEAKER: Scheduler tick requestedFrames={Frames}", requestedFrames);
+                _logger.Verbose("PCSPEAKER: Tick callback requestedFrames={Frames}", requestedFrames);
             }
             PicCallback(requestedFrames);
         }
-        
-        // Reschedule for the next tick
-        _scheduler.AddEvent(_tickHandler, 1.0);
     }
 
     private void PicCallback(int requestedFrames) {
@@ -544,6 +556,12 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     }
 
     private void AddImpulse(float index, float amplitude) {
+        // Reference: DOSBox pcspeaker_impulse.cpp AddImpulse()
+        // If we're waking the channel, reset the previous amplitude
+        if (_mixerChannel.WakeUp()) {
+            _pit.PreviousAmplitude = NeutralAmplitude;
+        }
+
         if (Math.Abs(amplitude - _pit.PreviousAmplitude) < 1e-6f) {
             return;
         }
@@ -608,6 +626,12 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         lock (_outputLock) {
             int framesToAdd = Math.Min(framesRequested, _outputQueue.Count);
             
+            if (framesToAdd <= 0) {
+                return;
+            }
+            
+            // Dequeue samples and collect into array for batch processing
+            Span<float> samples = stackalloc float[framesToAdd];
             for (int i = 0; i < framesToAdd; i++) {
                 float sample = _outputQueue.Dequeue();
                 
@@ -615,13 +639,16 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
                 sample = _highPassFilter.Filter(sample);
                 sample = _lowPassFilter.Filter(sample);
                 
-                // Normalize and add to channel
-                float normalized = Math.Clamp(sample / short.MaxValue, -1.0f, 1.0f);
-                _mixerChannel.AddAudioFrames([new AudioFrame(normalized, normalized)]);
+                samples[i] = sample;
             }
+            
+            // Use AddSamples_mfloat which expects int16-ranged floats (like DOSBox staging)
+            // Reference: DOSBox pcspeaker_impulse.cpp uses MIXER_PullFromQueueCallback<..., float, Stereo=false, SignedData=true, ...>
+            // which calls AddSamples<float, false, true, true> expecting int16-ranged floats
+            _mixerChannel.AddSamples_mfloat(framesToAdd, samples);
         }
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("PCSPEAKER: RenderCallback addedFrames={Frames}", Math.Min(framesRequested, _outputQueue.Count));
+            _logger.Verbose("PCSPEAKER: RenderCallback completed");
         }
     }
 

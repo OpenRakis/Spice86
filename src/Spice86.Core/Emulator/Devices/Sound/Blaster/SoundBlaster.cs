@@ -34,6 +34,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private enum SbIrq { Irq8, Irq16, IrqMpu }
     private enum BlasterState { WaitingForCommand, ResetRequest, Resetting, ReadingCommand }
 
+    /// <summary>
+    /// Callback timing type for audio frame generation.
+    /// Reference: src/hardware/audio/soundblaster.cpp enum class TimingType and class CallbackType
+    /// </summary>
+    private enum TimingType { None, PerTick, PerFrame }
+
     private class SbInfo {
         public uint FreqHz { get; set; }
         public class DmaState {
@@ -459,6 +465,20 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     // Reference: src/hardware/audio/soundblaster.cpp line 291 (static int frames_added_this_tick)
     private int _framesAddedThisTick = 0;
 
+    /// <summary>
+    /// Current callback timing type for audio frame generation.
+    /// Reference: src/hardware/audio/soundblaster.cpp CallbackType class
+    /// </summary>
+    private TimingType _timingType = TimingType.None;
+
+    /// <summary>
+    /// Maximum DMA base count for using per-frame callback.
+    /// If base_count is less than or equal to this value, use SetPerFrame() for fine-grained timing.
+    /// Reference: src/hardware/audio/soundblaster.cpp constexpr MaxSingleFrameBaseCount
+    /// Value is 3 (sizeof(short) * 2 - 1)
+    /// </summary>
+    private const int MaxSingleFrameBaseCount = sizeof(short) * 2 - 1;
+
     public SoundBlaster(
         IOPortDispatcher ioPortDispatcher,
         State state,
@@ -552,8 +572,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         _dualPic.SetIrqMask(_config.Irq, false);
 
-        // Reference: per_tick_callback scheduled via PIC_AddEvent
-        _scheduler.AddEvent(per_tick_callback, 1.0);
+        // Note: Unlike DOSBox which registers the tick handler at startup, we dynamically
+        // switch between per-tick and per-frame callbacks based on DMA base count.
+        // The callback is activated when DMA is unmasked in DspDmaCallback.
+        // Reference: src/hardware/audio/soundblaster.cpp lines 850-856
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             string highDmaSegment = ShouldUseHighDmaChannel() ? $", high DMA {_config.HighDma}" : string.Empty;
@@ -698,9 +720,21 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                         }
                     }
 
+                    // If the DMA transfer is setup with a base count of fewer than three elements
+                    // (which is four bytes given one 16-bit stereo frame held in an 8-bit DMA
+                    // channel), then we know the software intends to overwrite the DMA content
+                    // on the fly instead of pre-generating large chunks of DMA audio. In these
+                    // cases we prefer the fine-grained per-frame callback.
+                    // Reference: src/hardware/audio/soundblaster.cpp lines 844-856
+                    if (channel.BaseCount <= MaxSingleFrameBaseCount) {
+                        SetCallbackPerFrame();
+                    } else {
+                        SetCallbackPerTick();
+                    }
+
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output. WokenUp={WokenUp}, ChannelEnabled={Enabled}, IsAutoiniting={IsAutoiniting}, BaseCount={BaseCount}, CurrentCount={CurrentCount}, Left={Left}",
-                            wasWokenUp, _dacChannel.IsEnabled, channel.IsAutoiniting, channel.BaseCount, channel.CurrentCount, _sb.Dma.Left);
+                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output. WokenUp={WokenUp}, ChannelEnabled={Enabled}, IsAutoiniting={IsAutoiniting}, BaseCount={BaseCount}, CurrentCount={CurrentCount}, Left={Left}, CallbackType={CallbackType}",
+                            wasWokenUp, _dacChannel.IsEnabled, channel.IsAutoiniting, channel.BaseCount, channel.CurrentCount, _sb.Dma.Left, _timingType);
                     }
                 } else {
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -1141,17 +1175,23 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// <summary>
     /// Reference: src/hardware/audio/soundblaster.cpp per_tick_callback()
     /// This callback is run once per emulator tick (every 1ms), so it generates a
-    /// batch of frames covering each 1ms time period.
+    /// batch of frames covering each 1ms time period. For example, if the Sound
+    /// Blaster's running at 8 kHz, then that's 8 frames per call. Many rates aren't
+    /// evenly divisible by 1000 (For example, 22050 Hz is 22.05 frames/millisecond),
+    /// so this function keeps track of exact fractional frames and uses rounding to
+    /// ensure partial frames are accounted for and generated across N calls.
+    /// Reference: DOSBox staging calls this via TIMER_AddTickHandler (no parameters)
     /// </summary>
-    private void per_tick_callback(uint unusedTick) {
+    private void per_tick_callback() {
+        // assert(sblaster);
+        // assert(sblaster->channel);
+
+        // if (!sblaster->channel->is_enabled) {
+        //     callback_type.SetNone();
+        //     return;
+        // }
         if (!_dacChannel.IsEnabled) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("SOUNDBLASTER: per_tick_callback - channel not enabled, skipping. Mode={Mode}, DmaMode={DmaMode}",
-                    _sb.Mode, _sb.Dma.Mode);
-            }
-            // Don't reschedule if disabled - DOSBox uses callback_type.SetNone()
-            // But we still need to keep the tick running for when it gets re-enabled
-            _scheduler.AddEvent(per_tick_callback, 1.0);
+            SetCallbackNone();
             return;
         }
 
@@ -1177,12 +1217,88 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         // frames_added_this_tick -= total_frames;
         _framesAddedThisTick -= total_frames;
+    }
 
-        // Trigger the mixer to process frames from the output_queue
-        _mixer.TickMixer();
+    /// <summary>
+    /// Per-frame callback for fine-grained audio generation.
+    /// Used for very short DMA transfers where per-tick callbacks would be too infrequent.
+    /// Reference: src/hardware/audio/soundblaster.cpp per_frame_callback()
+    /// </summary>
+    private void per_frame_callback(uint _) {
+        if (!_dacChannel.IsEnabled) {
+            SetCallbackNone();
+            return;
+        }
 
-        // Reschedule for next tick (1ms intervals)
-        _scheduler.AddEvent(per_tick_callback, 1.0);
+        // Reference: src/hardware/audio/soundblaster.cpp per_frame_callback() lines 3270-3280
+        int mixer_needs = Math.Max(System.Threading.Interlocked.Exchange(ref _framesNeeded, 0), 1);
+
+        // Frames added this tick is only useful when we're in an underflow
+        // situation with the mixer. generate_frames() may not give us
+        // everything we need in a single call. We're not concerned about
+        // over-filling while in this mode so just zero it out.
+        _framesAddedThisTick = 0;
+        while (_framesAddedThisTick < mixer_needs) {
+            generate_frames(mixer_needs - _framesAddedThisTick);
+        }
+
+        AddNextFrameCallback();
+    }
+
+    /// <summary>
+    /// Schedules the next per-frame callback.
+    /// Reference: src/hardware/audio/soundblaster.cpp add_next_frame_callback()
+    /// </summary>
+    private void AddNextFrameCallback() {
+        double millisPerFrame = _dacChannel.GetMillisPerFrame();
+        _scheduler.AddEvent(per_frame_callback, millisPerFrame, 0);
+    }
+
+    /// <summary>
+    /// Stops the current callback type.
+    /// Reference: src/hardware/audio/soundblaster.cpp CallbackType::SetNone()
+    /// </summary>
+    private void SetCallbackNone() {
+        if (_timingType != TimingType.None) {
+            if (_timingType == TimingType.PerTick) {
+                _scheduler.DelTickHandler(per_tick_callback);
+            } else {
+                _scheduler.RemoveEvents(per_frame_callback);
+            }
+
+            _timingType = TimingType.None;
+        }
+    }
+
+    /// <summary>
+    /// Switches to per-tick callback mode (every 1ms).
+    /// Reference: src/hardware/audio/soundblaster.cpp CallbackType::SetPerTick()
+    /// </summary>
+    private void SetCallbackPerTick() {
+        if (_timingType != TimingType.PerTick) {
+            SetCallbackNone();
+
+            _framesAddedThisTick = 0;
+
+            _scheduler.AddTickHandler(per_tick_callback);
+
+            _timingType = TimingType.PerTick;
+        }
+    }
+
+    /// <summary>
+    /// Switches to per-frame callback mode (at sample rate frequency).
+    /// Used for very short DMA transfers.
+    /// Reference: src/hardware/audio/soundblaster.cpp CallbackType::SetPerFrame()
+    /// </summary>
+    private void SetCallbackPerFrame() {
+        if (_timingType != TimingType.PerFrame) {
+            SetCallbackNone();
+
+            AddNextFrameCallback();
+
+            _timingType = TimingType.PerFrame;
+        }
     }
 
     /// <summary>

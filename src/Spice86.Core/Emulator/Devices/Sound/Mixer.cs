@@ -570,49 +570,6 @@ public sealed class Mixer : IDisposable {
     }
 
     /// <summary>
-    /// Triggers a single mix cycle from the emulation loop scheduler.
-    /// This allows the mixer to be synchronized with the emulation loop for deterministic behavior.
-    /// </summary>
-    public void TickMixer() {
-        // Only process if not already being processed by the mixer thread
-        if (!_mixerLock.TryEnter()) {
-            return; // Mixer thread is currently processing, skip this tick
-        }
-
-        try {
-            // Process a small chunk of frames (1ms worth at current sample rate)
-            // This provides fine-grained synchronization with the emulation loop
-            int framesToMix = _sampleRateHz / 1000; // 1ms of audio at current rate
-            if (framesToMix > 0) {
-                MixSamples(framesToMix);
-
-                // Write the mixed samples if we have any
-                if (_outputBuffer.Count > 0 && _state != MixerState.Muted) {
-                    try {
-                        float[] temp = System.Buffers.ArrayPool<float>.Shared.Rent(_outputBuffer.Count * 2);
-                        try {
-                            Span<float> interleavedBuffer = temp.AsSpan(0, _outputBuffer.Count * 2);
-                            const float normalizeFactor = 1.0f / 32768.0f;
-                            for (int i = 0; i < _outputBuffer.Count; i++) {
-                                int offset = i * 2;
-                                interleavedBuffer[offset] = _outputBuffer[i].Left * normalizeFactor;
-                                interleavedBuffer[offset + 1] = _outputBuffer[i].Right * normalizeFactor;
-                            }
-                            _audioPlayer.WriteData(interleavedBuffer);
-                        } finally {
-                            System.Buffers.ArrayPool<float>.Shared.Return(temp);
-                        }
-                    } catch (Exception ex) {
-                        _loggerService.Error(ex, "MIXER: Failed writing audio block from TickMixer");
-                    }
-                }
-            }
-        } finally {
-            _mixerLock.Exit();
-        }
-    }
-
-    /// <summary>
     /// Main mixer thread loop.
     /// </summary>
     private void MixerThreadLoop() {
