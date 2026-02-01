@@ -236,11 +236,11 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Writes to opl or AdLib Gold I/O ports.
     /// </summary>
     public override void WriteByte(ushort port, byte value) {
-        RenderUpToNow();
-        
-        _mixerChannel.WakeUp();
-
         lock (_chipLock) {
+            RenderUpToNow();
+            
+            _mixerChannel.WakeUp();
+
             _oplIo.AdvanceTimersOnly(_clock.ElapsedTimeMs);
 
             switch (port) {
