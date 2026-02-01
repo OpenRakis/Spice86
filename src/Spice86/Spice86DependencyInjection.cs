@@ -325,11 +325,11 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
-        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        var midiDevice = new Midi(configuration, softwareMixer, state,
+        Mixer mixer = new(loggerService, configuration.AudioEngine);
+        var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
-        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher,
+        PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher,
             pauseHandler, loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
 
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock,
@@ -338,12 +338,20 @@ public class Spice86DependencyInjection : IDisposable {
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SbPro2);
+        // Create OPL FM device; it creates and registers its own mixer channel internally
+        bool useAdlibGold = configuration.OplType == OplType.Gold;
+        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SBPro2);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
+
+        Opl OPL = new(mixer, state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService,
+            emulationLoopScheduler, emulatedClock, dualPic,
+            useAdlibGold: useAdlibGold, enableOplIrq: false);
+
         var soundBlaster = new SoundBlaster(ioPortDispatcher,
-            softwareMixer, state, dmaSystem, dualPic, emulationLoopScheduler, emulatedClock,
-            configuration.FailOnUnhandledPort,
-            loggerService, soundBlasterHardwareConfig, pauseHandler);
+            state, dmaSystem, dualPic, mixer, OPL, loggerService,
+            emulationLoopScheduler, emulatedClock,
+            soundBlasterHardwareConfig);
         var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
@@ -399,7 +407,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
                 pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter);
+                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter, mixer);
 
             // Subscribe to video mode changes for dynamic aspect ratio correction
             vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
@@ -529,7 +537,7 @@ public class Spice86DependencyInjection : IDisposable {
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
-            dmaSystem, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
+            dmaSystem, OPL, mixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -585,8 +593,6 @@ public class Spice86DependencyInjection : IDisposable {
             PaletteViewModel paletteViewModel = new(videoState.DacRegisters.ArgbPalette,
                 uiDispatcher);
 
-            SoftwareMixerViewModel softwareMixerViewModel = new(softwareMixer);
-
             VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState, hostStorageProvider);
 
             CpuViewModel cpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
@@ -617,7 +623,7 @@ public class Spice86DependencyInjection : IDisposable {
             DebugWindowViewModel debugWindowViewModel = new(
                 WeakReferenceMessenger.Default, uiDispatcher, pauseHandler,
                 breakpointsViewModel, disassemblyViewModel,
-                paletteViewModel, softwareMixerViewModel, videoCardViewModel,
+                paletteViewModel, videoCardViewModel,
                 cpuViewModel, midiViewModel, cfgCpuViewModel,
                 [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
 
