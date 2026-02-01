@@ -240,10 +240,28 @@ public class DosProcessManager {
     /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
-
-        // We read CS:IP from the stack to get the address where the parent will resume.
+        // Read CS:IP from the stack to get the address where the parent will resume.
         ushort callerIP = _stack.Peek16(0);
         ushort callerCS = _stack.Peek16(2);
+        return LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, loadType, environmentSegment, callerCS, callerIP);
+    }
+
+    /// <summary>
+    /// Loads the initial DOS program before emulation starts. Uses explicit return address since there's no valid stack frame.
+    /// </summary>
+    /// <param name="programName">DOS path to the program to load.</param>
+    /// <param name="paramBlock">The EXEC parameter block containing FCB pointers and initial register outputs.</param>
+    /// <param name="commandTail">The command tail passed to the child process.</param>
+    /// <param name="environmentSegment">Optional environment block to inherit; 0 clones the parent's environment.</param>
+    /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
+    internal DosExecResult LoadInitialProgram(string programName, DosExecParameterBlock paramBlock,
+        string commandTail, ushort environmentSegment) {
+        // Initial program has no caller - use 0:0 as placeholder. Parent is root COMMAND.COM so we halt on terminate anyway.
+        return LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, DosExecLoadType.LoadAndExecute, environmentSegment, 0, 0);
+    }
+
+    private DosExecResult LoadOrLoadAndExecuteInternal(string programName, DosExecParameterBlock paramBlock,
+        string commandTail, DosExecLoadType loadType, ushort environmentSegment, ushort callerCS, ushort callerIP) {
 
         ushort parentPspSegment = CurrentPspSegment;
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -320,7 +338,11 @@ public class DosProcessManager {
             finalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP);
         DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
-        exePsp.StackPointer = MemoryUtils.ToPhysicalAddress(parentSS, parentReservedSP);
+        // FreeDOS: parent PSP's ps_stack field stores the parent's current iregs frame (only for LoadAndExecute).
+        if (loadType == DosExecLoadType.LoadAndExecute) {
+            DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
+            parentPsp.StackPointer = MemoryUtils.To32BitAddress(parentSS, parentReservedSP);
+        }
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
         CopyFcbFromPointer(paramBlock.SecondFcbPointer, exePsp.SecondFileControlBlock);
         LoadExeFile(exeFile, block.DataBlockSegment, block, loadType == DosExecLoadType.LoadAndExecute);
@@ -374,7 +396,11 @@ public class DosProcessManager {
             comFinalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP);
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
-        comPsp.StackPointer = MemoryUtils.ToPhysicalAddress(parentSS, parentReservedSP);
+        // FreeDOS: parent PSP's ps_stack field stores the parent's current iregs frame (only for LoadAndExecute).
+        if (loadType == DosExecLoadType.LoadAndExecute) {
+            DosProgramSegmentPrefix parentPspForCom = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
+            parentPspForCom.StackPointer = MemoryUtils.To32BitAddress(parentSS, parentReservedSP);
+        }
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
         CopyFcbFromPointer(paramBlock.SecondFcbPointer, comPsp.SecondFileControlBlock);
 
@@ -543,23 +569,18 @@ public class DosProcessManager {
             parentPsp.CurrentSize = residentNextSegment.Value;
         }
 
-        // Restore parent state from EXEC tracking or fall back to PSP TerminateAddress.
-        if (_parentStackPointersByChildPsp.TryGetValue(currentPspSegment, out (ushort SS, ushort SP) savedStack)) {
-            _state.SS = savedStack.SS;
-            _state.SP = savedStack.SP;
-            _parentStackPointersByChildPsp.Remove(currentPspSegment);
-        }
-        if (_parentReturnAddressByChildPsp.TryGetValue(currentPspSegment, out (ushort CS, ushort IP) savedReturn)) {
-            // Patch interrupt frame so IRET returns to parent.
-            _stack.Poke16(0, savedReturn.IP);
-            _stack.Poke16(2, savedReturn.CS);
-            parentPsp.StackPointer = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
-            _parentReturnAddressByChildPsp.Remove(currentPspSegment);
-        } else if (terminateAddr != 0) {
-            // Non-EXEC: use INT 22h vector from PSP.
-            _stack.Poke16(0, (ushort)(terminateAddr & 0xFFFF));
-            _stack.Poke16(2, (ushort)(terminateAddr >> 16));
-        }
+        // FreeDOS return_user: restore SS:SP from parent's ps_stack, patch with child's ps_isv22.
+        uint parentStackPtr = parentPsp.StackPointer;
+        _state.SS = (ushort)(parentStackPtr >> 16);
+        _state.SP = (ushort)(parentStackPtr & 0xFFFF);
+        // Patch the iregs frame with child's TerminateAddress (INT 22h vector).
+        _stack.Poke16(0, (ushort)(terminateAddr & 0xFFFF));
+        _stack.Poke16(2, (ushort)(terminateAddr >> 16));
+
+        // Clean up dictionary tracking (still used for debugging/verification).
+        _parentStackPointersByChildPsp.Remove(currentPspSegment);
+        _parentReturnAddressByChildPsp.Remove(currentPspSegment);
+
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("TERMINATE: restored parent context SS:SP={0:X4}:{1:X4}, return CS:IP={2:X4}:{3:X4}",
                 _state.SS, _state.SP, _stack.Peek16(2), _stack.Peek16(0));

@@ -152,8 +152,9 @@ public class DosProcessManagerTests {
 
             context.CurrentPspSegment.Should().Be(parentSegment);
             context.State.SS.Should().Be(0xFFFD);
-            // SP is restored to the actual parent SP (interrupt frame location)
-            context.State.SP.Should().Be(0xFFFE);
+            // SP is restored to the iregs frame location (parent SP minus IregsFrameSize of 18 bytes).
+            // FreeDOS stores ps_stack = SS:(SP - sizeof(iregs)) during EXEC.
+            context.State.SP.Should().Be((ushort)(0xFFFE - 18));
         } finally {
             DeleteIfExists(comFilePath);
         }
