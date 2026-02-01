@@ -148,6 +148,32 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
 
         public E2State E2 { get; } = new E2State();
+
+        /// <summary>
+        /// Reference: src/hardware/audio/soundblaster.cpp class Dac
+        /// </summary>
+        public class DacState {
+            private readonly SbInfo _sb;
+
+            public DacState(SbInfo sb) {
+                _sb = sb;
+            }
+
+            /// <summary>
+            /// Reference: src/hardware/audio/soundblaster.cpp Dac::RenderFrame()
+            /// </summary>
+            public AudioFrame RenderFrame() {
+                // return sb.speaker_enabled ? lut_u8to16[sb.dsp.in.data[0]] : 0.0f;
+                if (_sb.SpeakerEnabled && _sb.Dsp.In.Data.Length > 0) {
+                    float sample = LookupTables.ToUnsigned8(_sb.Dsp.In.Data[0]);
+                    return new AudioFrame(sample, sample);
+                }
+                return new AudioFrame(0.0f, 0.0f);
+            }
+        }
+
+        private DacState? _dac;
+        public DacState Dac => _dac ??= new DacState(this);
     }
 
     private static byte DecodeAdpcmPortion(
@@ -429,6 +455,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private int _framesNeeded = 0;
 
+    // Tracks frames added during current tick to prevent over-generation
+    // Reference: src/hardware/audio/soundblaster.cpp line 291 (static int frames_added_this_tick)
+    private int _framesAddedThisTick = 0;
+
     public SoundBlaster(
         IOPortDispatcher ioPortDispatcher,
         State state,
@@ -502,7 +532,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             dacFeatures.Add(ChannelFeature.Stereo);
         }
 
-        _dacChannel = _mixer.AddChannel(GenerateFrames, (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
+        // Reference: channel = MIXER_AddChannel(&SoundBlaster::MixerCallback, ...)
+        _dacChannel = _mixer.AddChannel(MixerCallback, (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
 
         // Configure Zero-Order-Hold upsampler and resample method for SB Pro 2 only
         // ZOH upsampler provides vintage DAC sound characteristic
@@ -521,7 +552,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         _dualPic.SetIrqMask(_config.Irq, false);
 
-        _scheduler.AddEvent(MixerTickCallback, 1.0);
+        // Reference: per_tick_callback scheduled via PIC_AddEvent
+        _scheduler.AddEvent(per_tick_callback, 1.0);
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             string highDmaSegment = ShouldUseHighDmaChannel() ? $", high DMA {_config.HighDma}" : string.Empty;
@@ -535,48 +567,36 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         mixer.UnlockMixerThread();
     }
 
-    private void GenerateFrames(int framesRequested) {
-        // Reference: src/hardware/audio/soundblaster.cpp line 1139
-        _lastDmaCallbackTime = _clock.ElapsedTimeMs;
+    /// <summary>
+    /// Mixer callback - called by mixer when it needs audio frames.
+    /// Reference: src/hardware/audio/soundblaster.cpp SoundBlaster::MixerCallback()
+    /// </summary>
+    private void MixerCallback(int frames_requested) {
+        // Reference: src/hardware/audio/soundblaster.cpp lines 3283-3303
 
-        // Callback from mixer requesting audio frames
-        // Reference: src/hardware/audio/soundblaster.cpp lines 3160-3179
-        // Reference: src/audio/mixer.h lines 498-553
-
-        if (_sb.Mode == DspMode.Dma) {
-            MaybeWakeUp();
-        }
-
-        // Request more frames if output queue is running low
-        // This ensures DMA processing can speed up when the mixer needs more data
+        // Set frames_needed based on shortage
+        // frames_needed = max(frames_requested - output_queue.Size(), 0)
         int queueSize = _outputQueue.Count;
-        int shortage = Math.Max(framesRequested - queueSize, 0);
-        if (shortage > 0) {
-            System.Threading.Interlocked.Exchange(ref _framesNeeded, shortage);
+        int shortage = Math.Max(frames_requested - queueSize, 0);
+        System.Threading.Interlocked.Exchange(ref _framesNeeded, shortage);
+
+        // Pull from queue callback - exact port of MIXER_PullFromQueueCallback
+        // Reference: src/audio/mixer.h lines 498-553
+        List<AudioFrame> to_mix = new();
+
+        int frames_received = 0;
+        while (frames_received < frames_requested && _outputQueue.TryDequeue(out AudioFrame frame)) {
+            to_mix.Add(frame);
+            frames_received++;
         }
 
-        // Pull frames from output_queue and add them to the channel
-        int framesReceived = 0;
-        List<AudioFrame> framesToMix = new();
-
-        while (framesReceived < framesRequested && _outputQueue.TryDequeue(out AudioFrame frame)) {
-            framesToMix.Add(frame);
-            framesReceived++;
-        }
-
-        // Add the frames through AddAudioFrames to ensure proper resampling
-        if (framesReceived > 0) {
-            _dacChannel.AddAudioFrames(framesToMix.ToArray().AsSpan());
+        if (frames_received > 0) {
+            _dacChannel.AddAudioFrames(to_mix.ToArray().AsSpan());
         }
 
         // Fill any shortfall with silence
-        if (framesReceived < framesRequested) {
+        if (frames_received < frames_requested) {
             _dacChannel.AddSilence();
-        }
-
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SB: Pulled {Received}/{Requested} frames from queue (queue size: {QueueSize})",
-                framesReceived, framesRequested, _outputQueue.Count);
         }
     }
 
@@ -593,7 +613,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         switch (dmaEvent) {
             case DmaChannel.DmaEvent.ReachedTerminalCount:
                 // Terminal count reached - DMA transfer completed naturally
-                // This is handled by OnDmaTransferComplete() in GenerateFrames
+                // Note: IRQ is raised in PlayDmaTransfer when _sb.Dma.Left reaches 0
                 if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                     _loggerService.Debug("SOUNDBLASTER: Terminal count reached on channel {Channel}, Left={Left}, AutoInit={AutoInit}",
                         channel.ChannelNumber, _sb.Dma.Left, _sb.Dma.AutoInit);
@@ -930,6 +950,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             for (uint i = 0; i < numSamples; i++) {
                 _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
+            _framesAddedThisTick += (int)numSamples;
             return;
         }
 
@@ -938,6 +959,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             for (uint i = 0; i < numSamples; i++) {
                 _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
+            _framesAddedThisTick += (int)numSamples;
             return;
         }
 
@@ -948,6 +970,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 : LookupTables.ToUnsigned8(samples[i]);
             _outputQueue.Enqueue(new AudioFrame(value, value));
         }
+        // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+        _framesAddedThisTick += (int)numSamples;
     }
 
     internal void EnqueueFramesStereo(byte[] samples, uint numSamples, bool signed) {
@@ -963,6 +987,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             for (uint i = 0; i < numFrames; i++) {
                 _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
+            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+            _framesAddedThisTick += (int)numFrames;
             return;
         }
 
@@ -971,6 +997,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             for (uint i = 0; i < numFrames; i++) {
                 _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
+            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+            _framesAddedThisTick += (int)numFrames;
             return;
         }
 
@@ -993,6 +1021,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 _outputQueue.Enqueue(new AudioFrame(left, right));
             }
         }
+        // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+        _framesAddedThisTick += (int)numFrames;
     }
 
     internal void EnqueueFramesMono16(short[] samples, uint numSamples, bool signed) {
@@ -1006,6 +1036,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             for (uint i = 0; i < numSamples; i++) {
                 _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
+            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+            _framesAddedThisTick += (int)numSamples;
             return;
         }
 
@@ -1014,6 +1046,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             for (uint i = 0; i < numSamples; i++) {
                 _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
+            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+            _framesAddedThisTick += (int)numSamples;
             return;
         }
 
@@ -1024,6 +1058,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 : LookupTables.ToUnsigned16((ushort)samples[i]);
             _outputQueue.Enqueue(new AudioFrame(value, value));
         }
+        // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+        _framesAddedThisTick += (int)numSamples;
     }
 
     internal void EnqueueFramesStereo16(short[] samples, uint numSamples, bool signed) {
@@ -1039,6 +1075,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             for (uint i = 0; i < numFrames; i++) {
                 _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
+            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+            _framesAddedThisTick += (int)numFrames;
             return;
         }
 
@@ -1047,6 +1085,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             for (uint i = 0; i < numFrames; i++) {
                 _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
             }
+            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+            _framesAddedThisTick += (int)numFrames;
             return;
         }
 
@@ -1069,311 +1109,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 _outputQueue.Enqueue(new AudioFrame(left, right));
             }
         }
-    }
-
-    private AudioFrame GenerateDmaFrame() {
-        // If no DMA transfer is active, return silence
-        if (_sb.Dma.Channel is null || _sb.Dma.Left == 0 || _sb.Dma.Mode == DmaMode.None) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("SB: GenerateDmaFrame idle; channelNull={Null} left={Left} mode={Mode}", _sb.Dma.Channel is null, _sb.Dma.Left, _sb.Dma.Mode);
-            }
-            return new AudioFrame(0.0f, 0.0f);
-        }
-
-        switch (_sb.Dma.Mode) {
-            case DmaMode.Pcm8Bit:
-                return GeneratePcm8Frame();
-
-            case DmaMode.Adpcm2Bit:
-                return GenerateAdpcm2Frame();
-
-            case DmaMode.Adpcm3Bit:
-                return GenerateAdpcm3Frame();
-
-            case DmaMode.Adpcm4Bit:
-                return GenerateAdpcm4Frame();
-
-            case DmaMode.Pcm16Bit:
-            case DmaMode.Pcm16BitAliased:
-                return GeneratePcm16Frame();
-
-            default:
-                _loggerService.Warning("SOUNDBLASTER: Unsupported DMA mode {Mode}", _sb.Dma.Mode);
-                return new AudioFrame(0.0f, 0.0f);
-        }
-    }
-
-    private AudioFrame GeneratePcm8Frame() {
-        // In stereo mode, we read two bytes (left and right)
-        // In mono mode, we read one byte
-        int bytesToRead = _sb.Dma.Stereo ? 2 : 1;
-
-        Span<byte> buffer = stackalloc byte[bytesToRead];
-        int bytesRead = _sb.Dma.Channel!.Read(bytesToRead, buffer);
-
-        if (bytesRead > 0 && _sb.Dma.Left > 0) {
-            _sb.Dma.Left -= (uint)bytesRead;
-        } else if (bytesRead == 0 && _sb.Dma.Left > 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("SOUNDBLASTER: DMA read returned 0 bytes but DMA.Left={DmaLeft}", _sb.Dma.Left);
-            }
-            return new AudioFrame(0.0f, 0.0f);
-        }
-
-        // Convert bytes to float using lookup table
-        if (_sb.Dma.Stereo && bytesRead >= 2) {
-            // For stereo 8-bit: swap channels (left/right) for SBPro
-            float left = LookupTables.ToUnsigned8(buffer[0]);
-            float right = LookupTables.ToUnsigned8(buffer[1]);
-
-            if (_config.SbType == SbType.SBPro1 || _config.SbType == SbType.SBPro2) {
-                // SBPro swaps left and right
-                return MaybeSilenceFrame(right, left);
-            } else {
-                return MaybeSilenceFrame(left, right);
-            }
-        } else if (bytesRead >= 1) {
-            // For mono 8-bit: duplicate on both channels
-            float sample = LookupTables.ToUnsigned8(buffer[0]);
-            return MaybeSilenceFrame(sample, sample);
-        }
-
-        return new AudioFrame(0.0f, 0.0f);
-    }
-
-    private AudioFrame MaybeSilenceFrame(float left, float right) {
-        // Return silent frame if still in warmup
-        if (_sb.Dsp.WarmupRemainingMs > 0) {
-            _sb.Dsp.WarmupRemainingMs--;
-            return new AudioFrame(0.0f, 0.0f);
-        }
-
-        // Return silent frame if speaker is disabled
-        if (!_sb.SpeakerEnabled) {
-            return new AudioFrame(0.0f, 0.0f);
-        }
-
-        // Return the stereo frame
-        return new AudioFrame(left, right);
-    }
-
-    private AudioFrame MaybeSilenceFrame(byte sample) {
-        float floatSample = LookupTables.ToUnsigned8(sample);
-        return MaybeSilenceFrame(floatSample, floatSample);
-    }
-
-    private AudioFrame GenerateAdpcm2Frame() {
-        // Decode samples from buffer cache if available
-        if (_sb.Dma.RemainSize > 0) {
-            byte sample = _sb.Dma.Buf8[DmaBufSize - (int)_sb.Dma.RemainSize];
-            _sb.Dma.RemainSize--;
-            return MaybeSilenceFrame(sample);
-        }
-
-        // Read and decode new byte
-        try {
-            Span<byte> buffer = stackalloc byte[1];
-            int wordsRead = _sb.Dma.Channel!.Read(1, buffer);
-
-            if (wordsRead > 0 && _sb.Dma.Left > 0) {
-                _sb.Dma.Left--;
-
-                if (_sb.Adpcm.HaveRef) {
-                    _sb.Adpcm.HaveRef = false;
-                    _sb.Adpcm.Reference = buffer[0];
-                    _sb.Adpcm.Stepsize = MinAdaptiveStepSize;
-                    return MaybeSilenceFrame(buffer[0]);
-                }
-
-                // Decode 1 byte → 4 samples
-                byte reference = _sb.Adpcm.Reference;
-                ushort stepsize = _sb.Adpcm.Stepsize;
-                byte[] samples = DecodeAdpcm2Bit(buffer[0], ref reference, ref stepsize);
-                _sb.Adpcm.Reference = reference;
-                _sb.Adpcm.Stepsize = stepsize;
-
-                // Cache samples in buffer
-                for (int i = 0; i < samples.Length; i++) {
-                    _sb.Dma.Buf8[i] = samples[i];
-                }
-                _sb.Dma.RemainSize = (uint)(samples.Length - 1);
-
-                return MaybeSilenceFrame(samples[0]);
-            }
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "SOUNDBLASTER: Exception in ADPCM2 decode");
-        }
-
-        return new AudioFrame(0.0f, 0.0f);
-    }
-
-    private AudioFrame GenerateAdpcm3Frame() {
-        if (_sb.Dma.RemainSize > 0) {
-            byte sample = _sb.Dma.Buf8[DmaBufSize - (int)_sb.Dma.RemainSize];
-            _sb.Dma.RemainSize--;
-            return MaybeSilenceFrame(sample);
-        }
-
-        try {
-            Span<byte> buffer = stackalloc byte[1];
-            int wordsRead = _sb.Dma.Channel!.Read(1, buffer);
-
-            if (wordsRead > 0 && _sb.Dma.Left > 0) {
-                _sb.Dma.Left--;
-
-                if (_sb.Adpcm.HaveRef) {
-                    _sb.Adpcm.HaveRef = false;
-                    _sb.Adpcm.Reference = buffer[0];
-                    _sb.Adpcm.Stepsize = MinAdaptiveStepSize;
-                    return MaybeSilenceFrame(buffer[0]);
-                }
-
-                byte reference = _sb.Adpcm.Reference;
-                ushort stepsize = _sb.Adpcm.Stepsize;
-                byte[] samples = DecodeAdpcm3Bit(buffer[0], ref reference, ref stepsize);
-                _sb.Adpcm.Reference = reference;
-                _sb.Adpcm.Stepsize = stepsize;
-
-                for (int i = 0; i < samples.Length; i++) {
-                    _sb.Dma.Buf8[i] = samples[i];
-                }
-                _sb.Dma.RemainSize = (uint)(samples.Length - 1);
-
-                return MaybeSilenceFrame(samples[0]);
-            }
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "SOUNDBLASTER: Exception in ADPCM3 decode");
-        }
-
-        return new AudioFrame(0.0f, 0.0f);
-    }
-
-    private AudioFrame GenerateAdpcm4Frame() {
-        if (_sb.Dma.RemainSize > 0) {
-            byte sample = _sb.Dma.Buf8[DmaBufSize - (int)_sb.Dma.RemainSize];
-            _sb.Dma.RemainSize--;
-            return MaybeSilenceFrame(sample);
-        }
-
-        try {
-            Span<byte> buffer = stackalloc byte[1];
-            int wordsRead = _sb.Dma.Channel!.Read(1, buffer);
-
-            if (wordsRead > 0 && _sb.Dma.Left > 0) {
-                _sb.Dma.Left--;
-
-                if (_sb.Adpcm.HaveRef) {
-                    _sb.Adpcm.HaveRef = false;
-                    _sb.Adpcm.Reference = buffer[0];
-                    _sb.Adpcm.Stepsize = MinAdaptiveStepSize;
-                    return MaybeSilenceFrame(buffer[0]);
-                }
-
-                byte reference = _sb.Adpcm.Reference;
-                ushort stepsize = _sb.Adpcm.Stepsize;
-                byte[] samples = DecodeAdpcm4Bit(buffer[0], ref reference, ref stepsize);
-                _sb.Adpcm.Reference = reference;
-                _sb.Adpcm.Stepsize = stepsize;
-
-                for (int i = 0; i < samples.Length; i++) {
-                    _sb.Dma.Buf8[i] = samples[i];
-                }
-                _sb.Dma.RemainSize = (uint)(samples.Length - 1);
-
-                return MaybeSilenceFrame(samples[0]);
-            }
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "SOUNDBLASTER: Exception in ADPCM4 decode");
-        }
-
-        return new AudioFrame(0.0f, 0.0f);
-    }
-
-    private AudioFrame GeneratePcm16Frame() {
-        // Decode samples from buffer cache if available
-        if (_sb.Dma.RemainSize > 0) {
-            short sample = _sb.Dma.Buf16[DmaBufSize - (int)_sb.Dma.RemainSize];
-            _sb.Dma.RemainSize--;
-
-            // Convert 16-bit sample to float and apply warmup/speaker checks
-            float value = sample / 32768.0f;
-            return MaybeSilenceFrame(value, value);
-        }
-
-        // Read new words from DMA
-        uint wordsRead = _sb.Dma.Stereo ? ReadDma16Bit(2) : ReadDma16Bit(1);
-
-        if (wordsRead > 0 && _sb.Dma.Left > 0) {
-            _sb.Dma.Left -= wordsRead;
-
-            if (_sb.Dma.Stereo && wordsRead >= 2) {
-                // Stereo 16-bit: read left and right samples
-                short leftSample = _sb.Dma.Buf16[0];
-                short rightSample = _sb.Dma.Buf16[1];
-
-                // Handle signed/unsigned conversion
-                if (!_sb.Dma.Sign) {
-                    leftSample = (short)((ushort)leftSample - 32768);
-                    rightSample = (short)((ushort)rightSample - 32768);
-                }
-
-                float left = leftSample / 32768.0f;
-                float right = rightSample / 32768.0f;
-
-                if (_config.SbType == SbType.SBPro1 || _config.SbType == SbType.SBPro2) {
-                    // SBPro swaps left and right
-                    return MaybeSilenceFrame(right, left);
-                } else {
-                    return MaybeSilenceFrame(left, right);
-                }
-            } else if (wordsRead >= 1) {
-                // Mono 16-bit
-                short sample = _sb.Dma.Buf16[0];
-
-                // Handle signed/unsigned conversion
-                if (!_sb.Dma.Sign) {
-                    sample = (short)((ushort)sample - 32768);
-                }
-
-                float value = sample / 32768.0f;
-                return MaybeSilenceFrame(value, value);
-            }
-        }
-
-        return new AudioFrame(0.0f, 0.0f);
-    }
-
-    private uint CalculateBytesPerFrame() {
-        byte channels = _sb.Dma.Stereo ? (byte)2 : (byte)1;
-
-        switch (_sb.Dma.Mode) {
-            case DmaMode.Pcm8Bit:
-                // 8-bit PCM: 1 byte per sample, samples = channels
-                return channels;
-
-            case DmaMode.Pcm16Bit:
-            case DmaMode.Pcm16BitAliased:
-                // 16-bit PCM: 2 bytes per sample, samples = channels
-                return (uint)(channels * 2);
-
-            case DmaMode.Adpcm2Bit:
-                // 2-bit ADPCM: 1 byte decodes to 4 samples (mono only)
-                // Average: 0.25 bytes per sample
-                return channels == 1 ? 1u : channels;
-
-            case DmaMode.Adpcm3Bit:
-                // 3-bit ADPCM: 1 byte decodes to 3 samples (mono only)
-                // Average: 0.33 bytes per sample
-                return channels == 1 ? 1u : channels;
-
-            case DmaMode.Adpcm4Bit:
-                // 4-bit ADPCM: 1 byte decodes to 2 samples (mono only)
-                // Average: 0.5 bytes per sample
-                return channels == 1 ? 1u : channels;
-
-            default:
-                return 1;
-        }
+        // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+        _framesAddedThisTick += (int)numFrames;
     }
 
     private void RaiseIrq(SbIrq irqType) {
@@ -1401,128 +1138,115 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
     }
 
-    private void OnDmaTransferComplete() {
-        // Track DMA completion metrics
-
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DMA transfer complete, signaling IRQ {Irq}; autoInit={AutoInit}",
-                _sb.Hw.Irq, _sb.Dma.AutoInit);
-        }
-
-        // Check if auto-init is enabled (continuous looping transfers)
-        if (_sb.Dma.AutoInit) {
-            // Reload DMA parameters for next transfer
-            _sb.Dma.Left = _sb.Dma.AutoSize;
-            _sb.Dma.FirstTransfer = true;
-
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("SOUNDBLASTER: Auto-init reload size={Size} channel={Channel} addr={Addr}", _sb.Dma.AutoSize, _sb.Dma.Channel?.ChannelNumber, _sb.Dma.Channel?.CurrentAddress);
-            }
-        } else {
-            // Single transfer mode - stop after this transfer completes
-            _sb.Mode = DspMode.None;
-            _sb.Dma.Mode = DmaMode.None;
-        }
-
-        // Signal interrupt to wake the DOS driver
-        // The driver responds by reading the status register and potentially
-        // starting the next DMA transfer
-        _dualPic.ActivateIrq(_sb.Hw.Irq);
-
-        // Set pending interrupt flag (for status register readback)
-        _sb.Irq.Pending8Bit = true;
-    }
-
-    private void MixerTickCallback(uint unusedTick) {
+    /// <summary>
+    /// Reference: src/hardware/audio/soundblaster.cpp per_tick_callback()
+    /// This callback is run once per emulator tick (every 1ms), so it generates a
+    /// batch of frames covering each 1ms time period.
+    /// </summary>
+    private void per_tick_callback(uint unusedTick) {
         if (!_dacChannel.IsEnabled) {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("SOUNDBLASTER: MixerTickCallback - channel not enabled, skipping. Mode={Mode}, DmaMode={DmaMode}",
+                _loggerService.Verbose("SOUNDBLASTER: per_tick_callback - channel not enabled, skipping. Mode={Mode}, DmaMode={DmaMode}",
                     _sb.Mode, _sb.Dma.Mode);
             }
-            _scheduler.AddEvent(MixerTickCallback, 1.0);
+            // Don't reschedule if disabled - DOSBox uses callback_type.SetNone()
+            // But we still need to keep the tick running for when it gets re-enabled
+            _scheduler.AddEvent(per_tick_callback, 1.0);
             return;
         }
 
-        int framesNeeded = System.Threading.Interlocked.Exchange(ref _framesNeeded, 0);
-        float framesPerTick = _dacChannel.GetFramesPerTick();
-        _frameCounter += Math.Max(framesNeeded, framesPerTick);
+        // Reference: src/hardware/audio/soundblaster.cpp per_tick_callback() lines 3234-3248
+        // static float frame_counter = 0.0f;
+        // frame_counter += std::max(static_cast<float>(sblaster->frames_needed.exchange(0)), 
+        //                           sblaster->channel->GetFramesPerTick());
+        int frames_needed_val = System.Threading.Interlocked.Exchange(ref _framesNeeded, 0);
+        float frames_per_tick = _dacChannel.GetFramesPerTick();
+        _frameCounter += Math.Max(frames_needed_val, frames_per_tick);
 
-        // Generate only the integer part of accumulated frames
-        int totalFrames = (int)Math.Floor(_frameCounter);
+        // const int total_frames = ifloor(frame_counter);
+        // frame_counter -= static_cast<float>(total_frames);
+        int total_frames = (int)Math.Floor(_frameCounter);
+        _frameCounter -= total_frames;
 
-        // Retain the fractional remainder for next tick
-        _frameCounter -= totalFrames;
-
-        // Generate the requested frames
-        if (totalFrames > 0) {
-            GenerateFramesInternal(totalFrames);
+        // while (frames_added_this_tick < total_frames) {
+        //     generate_frames(total_frames - frames_added_this_tick);
+        // }
+        while (_framesAddedThisTick < total_frames) {
+            generate_frames(total_frames - _framesAddedThisTick);
         }
+
+        // frames_added_this_tick -= total_frames;
+        _framesAddedThisTick -= total_frames;
 
         // Trigger the mixer to process frames from the output_queue
         _mixer.TickMixer();
 
         // Reschedule for next tick (1ms intervals)
-        _scheduler.AddEvent(MixerTickCallback, 1.0);
+        _scheduler.AddEvent(per_tick_callback, 1.0);
     }
 
-    private void GenerateFramesInternal(int framesToGenerate) {
-        // Generate frames based on current DSP mode
+    /// <summary>
+    /// Reference: src/hardware/audio/soundblaster.cpp generate_frames()
+    /// </summary>
+    private void generate_frames(int frames_requested) {
         switch (_sb.Mode) {
             case DspMode.None:
             case DspMode.DmaPause:
-            case DspMode.DmaMasked:
-                // Generate silence
-                for (int i = 0; i < framesToGenerate; i++) {
-                    _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
+            case DspMode.DmaMasked: {
+                // Reference: static std::vector<AudioFrame> empty_frames = {};
+                // empty_frames.resize(frames_requested);
+                // enqueue_frames(empty_frames);
+                List<AudioFrame> empty_frames = new(frames_requested);
+                for (int i = 0; i < frames_requested; i++) {
+                    empty_frames.Add(new AudioFrame(0.0f, 0.0f));
                 }
+                enqueue_frames(empty_frames);
                 break;
+            }
 
             case DspMode.Dac:
-                // DAC mode - render current DAC sample
-                for (int i = 0; i < framesToGenerate; i++) {
-                    if (_sb.Dsp.In.Data.Length > 0) {
-                        byte dacSample = _sb.Dsp.In.Data[0];
-                        AudioFrame frame = MaybeSilenceFrame(dacSample);
-                        _outputQueue.Enqueue(frame);
-                    } else {
-                        _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
-                    }
+                // DAC mode typically renders one frame at a time because the
+                // DOS program will be writing to the DAC register at the
+                // playback rate. In a mixer underflow situation, we render the
+                // current frame multiple times.
+                for (int i = 0; i < frames_requested; i++) {
+                    _outputQueue.Enqueue(_sb.Dac.RenderFrame());
                 }
+                _framesAddedThisTick += frames_requested;
                 break;
 
-            case DspMode.Dma:
-                // DMA mode - process DMA transfers
-
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("SOUNDBLASTER: GenerateFramesInternal DMA mode - frames={Frames}, Left={Left}, Channel={Channel}",
-                        framesToGenerate, _sb.Dma.Left, _sb.Dma.Channel?.ChannelNumber);
-                }
-
-                // Keep channel awake during DMA processing
+            case DspMode.Dma: {
+                // This is a no-op if the channel is already running. DMA
+                // processing can go for some time using auto-init mode without
+                // having to send IO calls to the card; so we keep it awake when
+                // DMA is still running.
                 MaybeWakeUp();
 
-                // Calculate bytes needed for requested frames
-                if (_sb.Dma.Left > 0 && _sb.Dma.Channel != null) {
-                    uint len = (uint)framesToGenerate;
-                    len *= _sb.Dma.Mul;
-                    if ((len & SbShiftMask) != 0) {
-                        len += 1 << SbShift;
-                    }
-                    len >>= SbShift;
-
-                    if (len > _sb.Dma.Left) {
-                        len = _sb.Dma.Left;
-                    }
-
-                    // Perform bulk DMA transfer which enqueues frames to output_queue
-                    PlayDmaTransfer(len);
-                } else {
-                    // No DMA data, generate silence
-                    for (int i = 0; i < framesToGenerate; i++) {
-                        _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
-                    }
+                uint len = (uint)frames_requested;
+                len *= _sb.Dma.Mul;
+                if ((len & SbShiftMask) != 0) {
+                    len += 1 << SbShift;
                 }
+                len >>= SbShift;
+
+                if (len > _sb.Dma.Left) {
+                    len = _sb.Dma.Left;
+                }
+
+                // ProcessDMATransfer(len);
+                PlayDmaTransfer(len);
                 break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+    /// </summary>
+    private void enqueue_frames(List<AudioFrame> frames) {
+        _framesAddedThisTick += frames.Count;
+        foreach (AudioFrame frame in frames) {
+            _outputQueue.Enqueue(frame);
         }
     }
 

@@ -161,9 +161,10 @@ public sealed class SpeexResamplerCSharp {
     private float[] mem;
     private float[] sinc_table;
     private uint sinc_table_length;
-    private delegate int ResamplerFunc(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len);
+    private delegate int ResamplerFunc(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride);
     private ResamplerFunc resampler_ptr;
 
+    private int in_stride;
     private int out_stride;
 
     public SpeexResamplerCSharp(uint channels, uint in_rate_init, uint out_rate_init, int quality) {
@@ -189,6 +190,7 @@ public sealed class SpeexResamplerCSharp {
         sinc_table_length = 0;
         mem_alloc_size = 0;
 
+        in_stride = 1;
         out_stride = 1;
         started = 0;
         resampler_ptr = resampler_basic_zero;
@@ -230,7 +232,7 @@ public sealed class SpeexResamplerCSharp {
         interp[2] = 1.0f - interp[0] - interp[1] - interp[3];
     }
 
-    private int resampler_basic_direct_single(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
+    private int resampler_basic_direct_single(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -240,9 +242,9 @@ public sealed class SpeexResamplerCSharp {
             int sincIdx = (int)(samp_frac_num_val * N);
             double sum = 0;
             for (int j = 0; j < N; j++) {
-                sum += sinc_table[sincIdx + j] * inBuf[last_sample_val + j];
+                sum += sinc_table[sincIdx + j] * inBuf[inBufOffset + last_sample_val + j];
             }
-            outBuf[out_stride * out_sample++] = (float)sum;
+            outBuf[outBufOffset + outStride * out_sample++] = (float)sum;
 
             last_sample_val += int_advance;
             samp_frac_num_val += (uint)frac_advance;
@@ -257,7 +259,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int resampler_basic_direct_double(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
+    private int resampler_basic_direct_double(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -267,12 +269,12 @@ public sealed class SpeexResamplerCSharp {
             int sincIdx = (int)(samp_frac_num_val * N);
             double sum = 0;
             for (int j = 0; j < N; j += 4) {
-                sum += sinc_table[sincIdx + j] * inBuf[last_sample_val + j];
-                if (j + 1 < N) sum += sinc_table[sincIdx + j + 1] * inBuf[last_sample_val + j + 1];
-                if (j + 2 < N) sum += sinc_table[sincIdx + j + 2] * inBuf[last_sample_val + j + 2];
-                if (j + 3 < N) sum += sinc_table[sincIdx + j + 3] * inBuf[last_sample_val + j + 3];
+                sum += sinc_table[sincIdx + j] * inBuf[inBufOffset + last_sample_val + j];
+                if (j + 1 < N) sum += sinc_table[sincIdx + j + 1] * inBuf[inBufOffset + last_sample_val + j + 1];
+                if (j + 2 < N) sum += sinc_table[sincIdx + j + 2] * inBuf[inBufOffset + last_sample_val + j + 2];
+                if (j + 3 < N) sum += sinc_table[sincIdx + j + 3] * inBuf[inBufOffset + last_sample_val + j + 3];
             }
-            outBuf[out_stride * out_sample++] = (float)sum;
+            outBuf[outBufOffset + outStride * out_sample++] = (float)sum;
 
             last_sample_val += int_advance;
             samp_frac_num_val += (uint)frac_advance;
@@ -287,7 +289,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int resampler_basic_interpolate_single(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
+    private int resampler_basic_interpolate_single(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -301,7 +303,7 @@ public sealed class SpeexResamplerCSharp {
 
             double accum0 = 0, accum1 = 0, accum2 = 0, accum3 = 0;
             for (int j = 0; j < N; j++) {
-                float curr = inBuf[last_sample_val + j];
+                float curr = inBuf[inBufOffset + last_sample_val + j];
                 int idx = 4 + (j + 1) * (int)oversample - offset;
                 accum0 += curr * sinc_table[idx - 2];
                 accum1 += curr * sinc_table[idx - 1];
@@ -310,7 +312,7 @@ public sealed class SpeexResamplerCSharp {
             }
 
             double sum = interp[0] * accum0 + interp[1] * accum1 + interp[2] * accum2 + interp[3] * accum3;
-            outBuf[out_stride * out_sample++] = (float)sum;
+            outBuf[outBufOffset + outStride * out_sample++] = (float)sum;
 
             last_sample_val += int_advance;
             samp_frac_num_val += (uint)frac_advance;
@@ -325,7 +327,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int resampler_basic_interpolate_double(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
+    private int resampler_basic_interpolate_double(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -339,7 +341,7 @@ public sealed class SpeexResamplerCSharp {
 
             double accum0 = 0, accum1 = 0, accum2 = 0, accum3 = 0;
             for (int j = 0; j < N; j++) {
-                double curr = inBuf[last_sample_val + j];
+                double curr = inBuf[inBufOffset + last_sample_val + j];
                 int idx = 4 + (j + 1) * (int)oversample - offset;
                 accum0 += curr * sinc_table[idx - 2];
                 accum1 += curr * sinc_table[idx - 1];
@@ -348,7 +350,7 @@ public sealed class SpeexResamplerCSharp {
             }
 
             double sum = interp[0] * accum0 + interp[1] * accum1 + interp[2] * accum2 + interp[3] * accum3;
-            outBuf[out_stride * out_sample++] = (float)sum;
+            outBuf[outBufOffset + outStride * out_sample++] = (float)sum;
 
             last_sample_val += int_advance;
             samp_frac_num_val += (uint)frac_advance;
@@ -363,13 +365,13 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int resampler_basic_zero(uint channel_index, float[] inBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
+    private int resampler_basic_zero(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
         uint samp_frac_num_val = samp_frac_num[channel_index];
 
         while (!(last_sample_val >= (int)in_len || out_sample >= (int)out_len)) {
-            outBuf[out_stride * out_sample++] = 0;
+            outBuf[outBufOffset + outStride * out_sample++] = 0;
 
             last_sample_val += int_advance;
             samp_frac_num_val += (uint)frac_advance;
@@ -532,83 +534,196 @@ fail:
         return RESAMPLER_ERR_ALLOC_FAILED;
     }
 
-    private int speex_resampler_process_native(uint channel_index, float[] memBuf, ref uint in_len, float[] outBuf, ref uint out_len) {
-        uint xlen = mem_alloc_size - (filt_len - 1);
-        uint in_len_orig = in_len;
-        uint out_len_orig = out_len;
-
-        if (in_len > xlen) in_len = xlen;
-
-        out_len = (uint)resampler_ptr(channel_index, memBuf, ref in_len, outBuf, ref out_len);
-
+    /// <summary>
+    /// Process native resampling - matches speex_resampler_process_native from resample.c
+    /// </summary>
+    private int speex_resampler_process_native(uint channel_index, ref uint in_len, float[] outBuf, int outOffset, ref uint out_len) {
+        int N = (int)filt_len;
+        int memOffset = (int)(channel_index * mem_alloc_size);
+        
+        started = 1;
+        
+        // Call the right resampler through the function ptr
+        int out_sample = resampler_ptr(channel_index, mem, memOffset, ref in_len, outBuf, outOffset, ref out_len, out_stride);
+        
         if (last_sample[channel_index] < (int)in_len) {
             in_len = (uint)last_sample[channel_index];
         }
-
+        out_len = (uint)out_sample;
         last_sample[channel_index] -= (int)in_len;
-        in_len = in_len_orig;
-
+        
+        uint ilen = in_len;
+        
         // Shift memory
-        if (in_len > 0) {
-            int N = (int)filt_len;
-            int offset = (int)(channel_index * mem_alloc_size);
-            for (int j = 0; j < N - 1; j++) {
-                memBuf[offset + j] = memBuf[offset + (int)in_len + j];
-            }
+        for (int j = 0; j < N - 1; j++) {
+            mem[memOffset + j] = mem[memOffset + (int)ilen + j];
         }
-
-        return (int)out_len;
+        
+        return RESAMPLER_ERR_SUCCESS;
     }
 
-    public void ProcessFloat(uint channel_index, ReadOnlySpan<float> input, Span<float> output,
-        out uint in_len, out uint out_len) {
-        if (channel_index >= nb_channels) {
-            throw new ArgumentException("channel_index");
-        }
-
-        uint in_len_val = (uint)input.Length;
-        uint out_len_val = (uint)output.Length;
-        uint xlen = mem_alloc_size - (filt_len - 1);
+    /// <summary>
+    /// Handle magic samples - matches speex_resampler_magic from resample.c
+    /// </summary>
+    private int speex_resampler_magic(uint channel_index, float[] outBuf, ref int outOffset, uint out_len) {
+        uint tmp_in_len = magic_samples[channel_index];
+        int memOffset = (int)(channel_index * mem_alloc_size);
         int N = (int)filt_len;
-        int offset = (int)(channel_index * mem_alloc_size);
-        int out_sample = 0;
-
-        while (in_len_val > 0 && out_len_val > 0) {
-            uint ichunk = in_len_val > xlen ? xlen : in_len_val;
-            uint ochunk = out_len_val;
-
-            // Copy input to memory buffer
-            for (uint j = 0; j < ichunk; j++) {
-                mem[offset + N - 1 + j] = input[(int)j];
-            }
-
-            last_sample[channel_index] = 0;
-            uint in_len_chunk = ichunk;
-            uint out_len_chunk = ochunk;
-            
-            // Create temporary output buffer for resampler
-            float[] temp_out = new float[ochunk];
-            out_sample = resampler_ptr(channel_index, mem, ref in_len_chunk, temp_out, ref out_len_chunk);
-            
-            // Copy output
-            for (int i = 0; i < out_sample && i < output.Length; i++) {
-                output[i] = temp_out[i];
-            }
-
-            out_len_val -= (uint)out_sample;
-            in_len_val -= in_len_chunk;
-            input = input.Slice((int)in_len_chunk);
-
-            // Shift memory buffer
-            for (int j = 0; j < N - 1; j++) {
-                mem[offset + j] = mem[offset + (int)in_len_chunk + j];
+        
+        uint out_len_temp = out_len;
+        speex_resampler_process_native(channel_index, ref tmp_in_len, outBuf, outOffset, ref out_len_temp);
+        
+        magic_samples[channel_index] -= tmp_in_len;
+        
+        // If we couldn't process all "magic" input samples, save the rest for next time
+        if (magic_samples[channel_index] != 0) {
+            for (uint i = 0; i < magic_samples[channel_index]; i++) {
+                mem[memOffset + N - 1 + (int)i] = mem[memOffset + N - 1 + (int)tmp_in_len + (int)i];
             }
         }
+        
+        outOffset += (int)out_len_temp * out_stride;
+        return (int)out_len_temp;
+    }
 
-        last_sample[channel_index] = (int)in_len_val;
-        in_len = (uint)(input.Length);
-        out_len = (uint)out_sample;
-        started = 1;
+    /// <summary>
+    /// Process float samples for a single channel - matches speex_resampler_process_float from resample.c
+    /// </summary>
+    public int ProcessFloat(uint channel_index, ReadOnlySpan<float> input, int inputOffset,
+        ref uint in_len, Span<float> output, int outputOffset, ref uint out_len) {
+        
+        if (channel_index >= nb_channels) {
+            return RESAMPLER_ERR_INVALID_ARG;
+        }
+        
+        int memOffset = (int)(channel_index * mem_alloc_size);
+        int filt_offs = (int)filt_len - 1;
+        uint xlen = mem_alloc_size - (uint)filt_offs;
+        int istride = in_stride;
+        
+        uint ilen = in_len;
+        uint olen = out_len;
+        
+        int currentOutOffset = outputOffset;
+        int currentInOffset = inputOffset;
+        
+        if (magic_samples[channel_index] != 0) {
+            float[] tempOut = new float[output.Length];
+            output.CopyTo(tempOut);
+            olen -= (uint)speex_resampler_magic(channel_index, tempOut, ref currentOutOffset, olen);
+            tempOut.AsSpan().CopyTo(output);
+        }
+        
+        if (magic_samples[channel_index] == 0) {
+            while (ilen > 0 && olen > 0) {
+                uint ichunk = (ilen > xlen) ? xlen : ilen;
+                uint ochunk = olen;
+                
+                // Copy input to memory buffer
+                if (input.Length > 0) {
+                    for (int j = 0; j < (int)ichunk; j++) {
+                        int srcIdx = currentInOffset + j * istride;
+                        if (srcIdx < input.Length) {
+                            mem[memOffset + filt_offs + j] = input[srcIdx];
+                        } else {
+                            mem[memOffset + filt_offs + j] = 0;
+                        }
+                    }
+                } else {
+                    for (int j = 0; j < (int)ichunk; j++) {
+                        mem[memOffset + filt_offs + j] = 0;
+                    }
+                }
+                
+                // Prepare temp output buffer at correct offset
+                float[] tempOut = new float[output.Length];
+                for (int i = 0; i < output.Length; i++) {
+                    tempOut[i] = output[i];
+                }
+                
+                speex_resampler_process_native(channel_index, ref ichunk, tempOut, currentOutOffset, ref ochunk);
+                
+                // Copy back to output
+                for (int i = 0; i < tempOut.Length && i < output.Length; i++) {
+                    output[i] = tempOut[i];
+                }
+                
+                ilen -= ichunk;
+                olen -= ochunk;
+                currentOutOffset += (int)ochunk * out_stride;
+                if (input.Length > 0) {
+                    currentInOffset += (int)ichunk * istride;
+                }
+            }
+        }
+        
+        in_len -= ilen;
+        out_len -= olen;
+        
+        return resampler_ptr == resampler_basic_zero ? RESAMPLER_ERR_ALLOC_FAILED : RESAMPLER_ERR_SUCCESS;
+    }
+
+    /// <summary>
+    /// Process interleaved float samples - matches speex_resampler_process_interleaved_float from resample.c
+    /// </summary>
+    public int ProcessInterleavedFloat(ReadOnlySpan<float> input, ref uint in_len,
+        Span<float> output, ref uint out_len) {
+        
+        int istride_save = in_stride;
+        int ostride_save = out_stride;
+        uint bak_out_len = out_len;
+        uint bak_in_len = in_len;
+        
+        in_stride = (int)nb_channels;
+        out_stride = (int)nb_channels;
+        
+        for (uint i = 0; i < nb_channels; i++) {
+            out_len = bak_out_len;
+            in_len = bak_in_len;
+            
+            if (input.Length > 0) {
+                ProcessFloat(i, input, (int)i, ref in_len, output, (int)i, ref out_len);
+            } else {
+                ProcessFloat(i, ReadOnlySpan<float>.Empty, 0, ref in_len, output, (int)i, ref out_len);
+            }
+        }
+        
+        in_stride = istride_save;
+        out_stride = ostride_save;
+        
+        return resampler_ptr == resampler_basic_zero ? RESAMPLER_ERR_ALLOC_FAILED : RESAMPLER_ERR_SUCCESS;
+    }
+
+    /// <summary>
+    /// Simplified interface for processing interleaved float data.
+    /// Takes input/output spans and returns consumed/produced frame counts.
+    /// </summary>
+    public void ProcessInterleavedFloat(ReadOnlySpan<float> input, Span<float> output,
+        out uint inputFramesConsumed, out uint outputFramesProduced) {
+        
+        if (nb_channels == 0) {
+            inputFramesConsumed = 0;
+            outputFramesProduced = 0;
+            return;
+        }
+
+        uint inFrames = (uint)(input.Length / nb_channels);
+        uint outFrames = (uint)(output.Length / nb_channels);
+        
+        if (inFrames == 0 || outFrames == 0) {
+            inputFramesConsumed = 0;
+            outputFramesProduced = 0;
+            return;
+        }
+
+        uint in_len = inFrames;
+        uint out_len = outFrames;
+        
+        ProcessInterleavedFloat(input, ref in_len, output, ref out_len);
+        
+        // in_len and out_len now contain the amount consumed/produced
+        inputFramesConsumed = in_len;
+        outputFramesProduced = out_len;
     }
 
     public void SetRate(uint in_rate_new, uint out_rate_new) {
@@ -636,68 +751,20 @@ fail:
             samp_frac_num[i] = 0;
             magic_samples[i] = 0;
         }
+        for (uint i = 0; i < nb_channels * mem_alloc_size; i++) {
+            mem[i] = 0;
+        }
         started = 0;
     }
 
     public void SkipZeros() {
         for (uint i = 0; i < nb_channels; i++) {
             last_sample[i] = (int)(filt_len / 2);
-            samp_frac_num[i] = 0;
-            magic_samples[i] = 0;
         }
         started = 1;
     }
 
     public bool IsInitialized => true;
-
-    public void ProcessInterleavedFloat(ReadOnlySpan<float> input, Span<float> output,
-        out uint inputFrames, out uint outputFrames) {
-        
-        if (nb_channels == 0) {
-            inputFrames = 0;
-            outputFrames = 0;
-            return;
-        }
-
-        uint inFrames = (uint)(input.Length / nb_channels);
-        uint outFrames = (uint)(output.Length / nb_channels);
-        
-        if (inFrames == 0 || outFrames == 0) {
-            inputFrames = 0;
-            outputFrames = 0;
-            return;
-        }
-
-        // Process each channel separately
-        uint minInputFrames = inFrames;
-        uint minOutputFrames = outFrames;
-
-        for (uint ch = 0; ch < nb_channels; ch++) {
-            // Extract channel data
-            float[] chInput = new float[inFrames];
-            float[] chOutput = new float[outFrames];
-            
-            for (uint i = 0; i < inFrames; i++) {
-                chInput[i] = input[(int)(i * nb_channels + ch)];
-            }
-
-            // Process channel
-            uint inLen = inFrames;
-            uint outLen = outFrames;
-            ProcessFloat(ch, chInput, chOutput, out inLen, out outLen);
-            
-            minInputFrames = Math.Min(minInputFrames, inLen);
-            minOutputFrames = Math.Min(minOutputFrames, outLen);
-
-            // Write back interleaved
-            for (uint i = 0; i < outLen && i < outFrames; i++) {
-                output[(int)(i * nb_channels + ch)] = chOutput[i];
-            }
-        }
-
-        inputFrames = minInputFrames;
-        outputFrames = minOutputFrames;
-    }
 
     public void GetRatio(out uint num, out uint den) {
         num = num_rate;

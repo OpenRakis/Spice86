@@ -286,6 +286,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             int framesRemaining = framesRequested;
             Span<float> frameData = stackalloc float[2];
             
+            // First, send any frames we've queued since the last callback
             while (framesRemaining > 0 && _fifo.Count > 0) {
                 AudioFrame frame = _fifo.Dequeue();
                 frameData[0] = frame.Left;
@@ -294,10 +295,18 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 framesRemaining--;
             }
             
-            // If we run out of FIFO frames, we simply stop adding samples.
-            // This constitutes an underrun, which the mixer will handle (e.g. by outputting silence).
-            // We do NOT generate "future" frames here because the emulation hasn't reached that point yet.
+            // If the queue's run dry, render the remainder and sync-up our time datum
+            // Reference: DOSBox-staging src/hardware/audio/opl.cpp AudioCallback()
+            while (framesRemaining > 0) {
+                AudioFrame frame = RenderSingleFrame();
+                frameData[0] = frame.Left;
+                frameData[1] = frame.Right;
+                _mixerChannel.AddSamples_sfloat(1, frameData);
+                framesRemaining--;
+            }
             
+            // Only update _lastRenderedMs after we've actually rendered frames
+            // This keeps the time datum synchronized with what was actually rendered
             _lastRenderedMs = _clock.ElapsedTimeMs;
         }
 
