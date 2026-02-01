@@ -252,7 +252,7 @@ public sealed class MixerChannel {
             float stretchFactor = (float)_sampleRateHz / _mixerSampleRateHz;
             // PIT_TICK_RATE is 1000.0f in DOSBox (1 ms per tick)
             const float MillisPerTick = 1.0f;
-            return (_sampleRateHz / 1000.0f) * MillisPerTick * stretchFactor;
+            return (_mixerSampleRateHz / 1000.0f) * MillisPerTick * stretchFactor;
         }
     }
     
