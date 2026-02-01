@@ -43,18 +43,6 @@ public class DosProcessManager {
     private readonly State _state;
     private readonly ILoggerService _loggerService;
 
-    /// <summary>
-    /// Maps child PSP segment to parent's saved stack pointer (SS:SP).
-    /// Only populated when child is loaded via EXEC.
-    /// </summary>
-    private readonly Dictionary<ushort, (ushort SS, ushort SP)> _parentStackPointersByChildPsp = new();
-
-    /// <summary>
-    /// Maps child PSP segment to parent's return address (CS:IP).
-    /// Only populated when child is loaded via EXEC.
-    /// </summary>
-    private readonly Dictionary<ushort, (ushort CS, ushort IP)> _parentReturnAddressByChildPsp = new();
-
     private readonly Stack<ResidentBlockInfo> _pendingResidentBlocks = new();
 
     /// <summary>
@@ -305,13 +293,6 @@ public class DosProcessManager {
             result = HandleComFileLoading(paramBlock, commandTail, loadType,
                 environmentSegment, callerIP, callerCS, parentPspSegment,
                 hostPath, fileBytes, envBlock, parentSS, parentReservedSP);
-        }
-
-        // Track parent SS:SP and CS:IP for LoadAndExecute only (LoadOnly returns immediately).
-        if (result.Success && loadType == DosExecLoadType.LoadAndExecute) {
-            ushort childPspSegment = CurrentPspSegment;
-            _parentStackPointersByChildPsp[childPspSegment] = (parentSS, parentSP);
-            _parentReturnAddressByChildPsp[childPspSegment] = (callerCS, callerIP);
         }
 
         return result;
@@ -576,10 +557,6 @@ public class DosProcessManager {
         // Patch the iregs frame with child's TerminateAddress (INT 22h vector).
         _stack.Poke16(0, (ushort)(terminateAddr & 0xFFFF));
         _stack.Poke16(2, (ushort)(terminateAddr >> 16));
-
-        // Clean up dictionary tracking (still used for debugging/verification).
-        _parentStackPointersByChildPsp.Remove(currentPspSegment);
-        _parentReturnAddressByChildPsp.Remove(currentPspSegment);
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("TERMINATE: restored parent context SS:SP={0:X4}:{1:X4}, return CS:IP={2:X4}:{3:X4}",
