@@ -91,7 +91,7 @@ public class DosProcessManager {
     private const ushort ExecRegisterContractBpValue = 0x091E;
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly Stack _stack;
-    private const int IregsFrameSize = 18; // Size of register frame pushed by DOS for LOADNGO (FreeDOS uses sizeof(iregs))
+    private const int IregsFrameSize = 18;
 
     /// <summary>
     /// Gets or sets the current PSP segment from the DOS Swappable Data Area.
@@ -260,12 +260,7 @@ public class DosProcessManager {
 
         ushort parentSS = _state.SS;
         ushort parentSP = _state.SP;
-        // Compute the reserved SP value that FreeDOS records in the PSP by
-        // subtracting the user register frame size from the current SP. This
-        // mirrors FreeDOS behavior (reg_sp -= sizeof(iregs)). We do not modify
-        // the actual CPU stack here; we only compute the value to store in the
-        // new PSP. However, for the parent context we restore on termination,
-        // we use the actual parentSP so IRET correctly pops the interrupt frame.
+        // FreeDOS stores (SP - sizeof(iregs)) in the child PSP's stack field.
         ushort parentReservedSP = (ushort)(parentSP - IregsFrameSize);
 
         // Allocate environment block FIRST before allocating program memory, as we might decide to take ALL the remaining free memory
@@ -294,14 +289,7 @@ public class DosProcessManager {
                 hostPath, fileBytes, envBlock, parentSS, parentReservedSP);
         }
 
-        // Save parent's stack registers (SS:SP) and CS:IP for process termination logic.
-        // Follow FreeDOS: do not mutate the real stack here; track the parent's SS:SP
-        // in managed state so it can be restored on process termination.
-        // Key by the child PSP segment so we only restore when that specific child terminates.
-        // Use parentSP (not parentReservedSP) so IRET correctly pops the interrupt frame.
-        // NOTE: Only save for LoadAndExecute mode. For LoadOnly, the parent's context is
-        // never lost (execution continues in parent immediately), and RestoreParentPspForLoadOnly
-        // has already restored CurrentPspSegment to the parent, so we'd incorrectly key by parent PSP.
+        // Track parent SS:SP and CS:IP for LoadAndExecute only (LoadOnly returns immediately).
         if (result.Success && loadType == DosExecLoadType.LoadAndExecute) {
             ushort childPspSegment = CurrentPspSegment;
             _parentStackPointersByChildPsp[childPspSegment] = (parentSS, parentSP);
@@ -326,19 +314,15 @@ public class DosProcessManager {
         }
 
         SetMemoryBlockOwnership(hostPath, envBlock, block);
-
-        // Use the pre-allocated environment segment or 0 if caller provided one
         ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
         InitializePsp(block.DataBlockSegment,
             block.Size, hostPath, commandTail,
             finalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP);
-        // Set the PSP's recorded stack pointer to the reserved parent SP like FreeDOS
         DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
         exePsp.StackPointer = MemoryUtils.ToPhysicalAddress(parentSS, parentReservedSP);
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
         CopyFcbFromPointer(paramBlock.SecondFcbPointer, exePsp.SecondFileControlBlock);
-
         LoadExeFile(exeFile, block.DataBlockSegment, block, loadType == DosExecLoadType.LoadAndExecute);
 
         ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
@@ -346,7 +330,6 @@ public class DosProcessManager {
             ushort imageDistanceInParagraphs = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
             loadImageSegment = (ushort)(block.DataBlockSegment + imageDistanceInParagraphs);
         }
-
         SetupAxAndBxWithFcbValuesForExecute(loadType, exePsp);
 
         RestoreParentPspForLoadOnly(loadType, parentPspSegment);
@@ -385,15 +368,12 @@ public class DosProcessManager {
         }
 
         SetMemoryBlockOwnership(hostPath, envBlock, comBlock);
-
-        // Use the pre-allocated environment segment or 0 if caller provided one
         ushort comFinalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
         InitializePsp(comBlock.DataBlockSegment,
             comBlock.Size, hostPath, commandTail,
             comFinalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP);
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
-        // Record reserved parent SP into the new PSP like FreeDOS does
         comPsp.StackPointer = MemoryUtils.ToPhysicalAddress(parentSS, parentReservedSP);
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
         CopyFcbFromPointer(paramBlock.SecondFcbPointer, comPsp.SecondFileControlBlock);
@@ -533,8 +513,7 @@ public class DosProcessManager {
             CloseProcessFileHandles(currentPsp);
         }
 
-        // This follows FreeDOS
-        // TSR (term_type == 3) does NOT free memory - it keeps the program resident
+        // TSR keeps program resident; others free memory.
         if (terminationType != DosTerminationType.TSR) {
             _memoryManager.FreeProcessMemory(currentPspSegment);
         } else {
@@ -564,26 +543,20 @@ public class DosProcessManager {
             parentPsp.CurrentSize = residentNextSegment.Value;
         }
 
-        // If this process was loaded via EXEC, restore the parent's saved state.
-        // If it was created manually (via INT 21h/26h + 50h), use the PSP's TerminateAddress.
+        // Restore parent state from EXEC tracking or fall back to PSP TerminateAddress.
         if (_parentStackPointersByChildPsp.TryGetValue(currentPspSegment, out (ushort SS, ushort SP) savedStack)) {
             _state.SS = savedStack.SS;
             _state.SP = savedStack.SP;
             _parentStackPointersByChildPsp.Remove(currentPspSegment);
         }
         if (_parentReturnAddressByChildPsp.TryGetValue(currentPspSegment, out (ushort CS, ushort IP) savedReturn)) {
-            // Modify the interrupt frame on the parent's stack so IRET returns to the correct place.
-            // Stack layout: [SP+0]=IP, [SP+2]=CS, [SP+4]=FLAGS
-            // We overwrite IP and CS with the parent's saved return address.
+            // Patch interrupt frame so IRET returns to parent.
             _stack.Poke16(0, savedReturn.IP);
             _stack.Poke16(2, savedReturn.CS);
             parentPsp.StackPointer = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
             _parentReturnAddressByChildPsp.Remove(currentPspSegment);
         } else if (terminateAddr != 0) {
-            // When no saved parent return address (non-EXEC process creation),
-            // use the TerminateAddress (INT 22h) from the PSP as the return address.
-            // This is how real DOS returns to the caller for programs created via
-            // INT 21h/26h (Create PSP) + INT 21h/50h (Set PSP) instead of EXEC.
+            // Non-EXEC: use INT 22h vector from PSP.
             _stack.Poke16(0, (ushort)(terminateAddr & 0xFFFF));
             _stack.Poke16(2, (ushort)(terminateAddr >> 16));
         }
@@ -596,11 +569,7 @@ public class DosProcessManager {
         _state.ES = parentPspSegment;
 
         if (parentIsRootCommandCom) {
-            // When returning to COMMAND.COM, expose the child's return code in AX
-            // so unit tests and external callers can observe it, then halt the
-            // emulation because COMMAND.COM does not have a usable execution
-            // context in this headless environment. Only the low byte (AL)
-            // contains the exit code expected by callers.
+            // Halt emulation; COMMAND.COM has no execution context.
             _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
             _state.IsRunning = false;
         }
@@ -802,9 +771,7 @@ public class DosProcessManager {
     }
 
     private void InitializeRootEnvironment(DosProgramSegmentPrefix rootPsp, byte[] environmentBlock) {
-        // FreeDOS places the root COMMAND.COM environment at a fixed offset (DOS_PSP + 8)
-        // This is NOT managed by the memory manager's MCB chain - it's a pre-allocated reserved area
-        // The memory manager will start its MCB chain after this reserved space
+        // Root environment at fixed offset, outside MCB chain.
         ushort environmentSegment = CommandComSegment + RootEnvironmentParagraphOffset;
         int capacityBytes = (DosProgramSegmentPrefix.PspSizeInParagraphs - RootEnvironmentParagraphOffset) * 16;
         byte[] buffer = new byte[capacityBytes];
@@ -822,8 +789,7 @@ public class DosProcessManager {
 
     private static string BuildMcbOwnerName(string programPath) {
         string name = Path.GetFileNameWithoutExtension(programPath).ToUpperInvariant();
-        // The MCB owner field is 8 bytes and this setter writes a zero terminator,
-        // so keep the textual portion to at most 7 characters.
+        // MCB owner field is 8 bytes with null terminator.
         if (name.Length > 7) {
             name = name[..7];
         }
