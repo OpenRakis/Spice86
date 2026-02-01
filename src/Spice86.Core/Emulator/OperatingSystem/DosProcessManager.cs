@@ -215,7 +215,6 @@ public class DosProcessManager {
         string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
 
         // We read CS:IP from the stack to get the address where the parent will resume.
-        // The saved return IP is at stack offset 0 and CS at offset 2 relative to SS:SP.
         ushort callerIP = _stack.Peek16(0);
         ushort callerCS = _stack.Peek16(2);
 
@@ -267,9 +266,9 @@ public class DosProcessManager {
                 hostPath, fileBytes, envBlock, parentSS, parentReservedSP);
         }
 
-        // Save parent's stack registers (SS, reserved SP) and CS:IP for process termination logic
-        // Follow FreeDOS: do not mutate the real stack here; track the parent's SS and
-        // the parent's reserved SP (parent SP - sizeof(iregs)) so it can be restored on process termination.
+        // Save parent's stack registers (SS:SP) and CS:IP for process termination logic
+        // Follow FreeDOS: do not mutate the real stack here; track the parent's SS:SP
+        // in managed state so it can be restored on process termination.
         _pendingParentStackPointers.Push((parentSS, parentReservedSP));
         _pendingParentReturnAddresses.Push((callerCS, callerIP));
 
@@ -283,35 +282,39 @@ public class DosProcessManager {
         ushort parentSS, ushort parentReservedSP) {
         DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
         if (block is null) {
+            // Free the environment block we just allocated
             if (envBlock is not null) {
                 _memoryManager.FreeMemoryBlock(envBlock);
             }
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
+
         SetMemoryBlockOwnership(hostPath, envBlock, block);
+
+        // Use the pre-allocated environment segment or 0 if caller provided one
         ushort finalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
         InitializePsp(block.DataBlockSegment,
             block.Size, hostPath, commandTail,
             finalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP);
+        // Set the PSP's recorded stack pointer to the reserved parent SP like FreeDOS
         DosProgramSegmentPrefix exePsp = new(_memory, MemoryUtils.ToPhysicalAddress(block.DataBlockSegment, 0));
-        // Record reserved parent SP into the new PSP like FreeDOS does: store parent's PSP segment and reserved SP
-        exePsp.StackPointer = MemoryUtils.ToPhysicalAddress(parentPspSegment, parentReservedSP);
+        exePsp.StackPointer = MemoryUtils.ToPhysicalAddress(parentSS, parentReservedSP);
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, exePsp.FirstFileControlBlock);
         CopyFcbFromPointer(paramBlock.SecondFcbPointer, exePsp.SecondFileControlBlock);
+
         LoadExeFile(exeFile, block.DataBlockSegment, block, loadType == DosExecLoadType.LoadAndExecute);
+
         ushort loadImageSegment = (ushort)(block.DataBlockSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
         if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
             ushort imageDistanceInParagraphs = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
             loadImageSegment = (ushort)(block.DataBlockSegment + imageDistanceInParagraphs);
         }
-        if (loadType == DosExecLoadType.LoadAndExecute) {
-            // FreeDOS: push return address for RETF (IP, then CS)
-            _stack.Push16(callerIP);
-            _stack.Push16(callerCS);
-        }
+
         SetupAxAndBxWithFcbValuesForExecute(loadType, exePsp);
+
         RestoreParentPspForLoadOnly(loadType, parentPspSegment);
+
         DosExecResult exeResult;
         if (loadType == DosExecLoadType.LoadOnly) {
             exeResult = DosExecResult.SuccessLoadOnly((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
@@ -320,7 +323,10 @@ public class DosProcessManager {
             exeResult = DosExecResult.SuccessExecute((ushort)(exeFile.InitCS + loadImageSegment), exeFile.InitIP,
             (ushort)(exeFile.InitSS + loadImageSegment), exeFile.InitSP);
         }
+
+        // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
         FillEPBForLoadOnlyMode(paramBlock, loadType, exeResult);
+
         return exeResult;
     }
 
@@ -329,39 +335,45 @@ public class DosProcessManager {
         ushort callerIP, ushort callerCS, ushort parentPspSegment, string hostPath,
         byte[] fileBytes, DosMemoryControlBlock? envBlock, ushort parentSS, ushort parentReservedSP) {
         ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
+
+        // MS-DOS and FreeDOS: COM files are ALWAYS loaded in the largest available area
         DosMemoryControlBlock largestFree = _memoryManager.FindLargestFree();
         DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(largestFree.Size);
+
         if (comBlock is null || largestFree.Size < paragraphsNeeded) {
+            //Free the environment block we just allocated
             if (envBlock is not null) {
                 _memoryManager.FreeMemoryBlock(envBlock);
             }
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
         }
+
         SetMemoryBlockOwnership(hostPath, envBlock, comBlock);
+
+        // Use the pre-allocated environment segment or 0 if caller provided one
         ushort comFinalEnvironmentSegment = envBlock?.DataBlockSegment ?? environmentSegment;
         InitializePsp(comBlock.DataBlockSegment,
             comBlock.Size, hostPath, commandTail,
             comFinalEnvironmentSegment, parentPspSegment,
             callerCS, callerIP);
         DosProgramSegmentPrefix comPsp = new(_memory, MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, 0));
-        // Record reserved parent SP into the new PSP like FreeDOS does: store parent's PSP segment and reserved SP
-        comPsp.StackPointer = MemoryUtils.ToPhysicalAddress(parentPspSegment, parentReservedSP);
+        // Record reserved parent SP into the new PSP like FreeDOS does
+        comPsp.StackPointer = MemoryUtils.ToPhysicalAddress(parentSS, parentReservedSP);
         CopyFcbFromPointer(paramBlock.FirstFcbPointer, comPsp.FirstFileControlBlock);
         CopyFcbFromPointer(paramBlock.SecondFcbPointer, comPsp.SecondFileControlBlock);
+
         LoadComFile(fileBytes, comBlock.DataBlockSegment, loadType == DosExecLoadType.LoadAndExecute);
-        if (loadType == DosExecLoadType.LoadAndExecute) {
-            // FreeDOS: push return address for RETF (IP, then CS)
-            _stack.Push16(callerIP);
-            _stack.Push16(callerCS);
-        }
+
         DosExecResult comResult = loadType == DosExecLoadType.LoadOnly
             ? DosExecResult.SuccessLoadOnly(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
                 comBlock.DataBlockSegment, ComDefaultStackPointer)
             : DosExecResult.SuccessExecute(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize,
                 comBlock.DataBlockSegment, ComDefaultStackPointer);
+
         RestoreParentPspForLoadOnly(loadType, parentPspSegment);
         FillEPBForLoadOnlyMode(paramBlock, loadType, comResult);
         SetupAxAndBxWithFcbValuesForExecute(loadType, comPsp);
+
         return comResult;
     }
 
@@ -461,20 +473,33 @@ public class DosProcessManager {
     /// <param name="exitCode">The DOS exit code to report to the parent in AL.</param>
     /// <param name="terminationType">The termination category stored in AH (normal, error, TSR).</param>
     public void TerminateProcess(byte exitCode, DosTerminationType terminationType) {
+        // Store the return code for parent to retrieve via INT 21h AH=4Dh
+        // Format: AH = termination type, AL = exit code
         LastChildReturnCode = (ushort)(((ushort)terminationType << 8) | exitCode);
+
         DosProgramSegmentPrefix currentPsp = _pspTracker.GetCurrentPsp();
+
         ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
         ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
         DosMemoryControlBlock? residentBlock = null;
         ushort? residentNextSegment = null;
+
         if (_pendingResidentBlocks.Count > 0) {
             ResidentBlockInfo residentBlockInfo = _pendingResidentBlocks.Pop();
             residentBlock = new DosMemoryControlBlock(_memory, MemoryUtils.ToPhysicalAddress(residentBlockInfo.McbSegment, 0));
         }
+
+        // Check if parent is the root COMMAND.COM PSP - if so, we shouldn't try to return to it
+        // because it has no valid stack or execution context. Instead, we halt like a normal program exit.
         bool parentIsRootCommandCom = parentPspSegment == CommandComSegment;
+
+        // Close non-standard handles only when the process fully terminates; TSR keeps them resident
         if (terminationType != DosTerminationType.TSR) {
             CloseProcessFileHandles(currentPsp);
         }
+
+        // This follows FreeDOS
+        // TSR (term_type == 3) does NOT free memory - it keeps the program resident
         if (terminationType != DosTerminationType.TSR) {
             _memoryManager.FreeProcessMemory(currentPspSegment);
         } else {
@@ -485,53 +510,52 @@ public class DosProcessManager {
                 currentPsp.CurrentSize = residentNextSegment.Value;
             }
         }
+
+        // Get interrupt vectors from current PSP before PopCurrentPspSegment call
         uint terminateAddr = currentPsp.TerminateAddress;
         uint breakAddr = currentPsp.BreakAddress;
         uint criticalErrorAddr = currentPsp.CriticalErrorAddress;
+        // Restore interrupt vectors from those values
         RestoreInterruptVector(TerminateVectorNumber, terminateAddr);
         RestoreInterruptVector(CtrlBreakVectorNumber, breakAddr);
         RestoreInterruptVector(CriticalErrorVectorNumber, criticalErrorAddr);
+
         _pspTracker.PopCurrentPspSegment();
+
         DosProgramSegmentPrefix parentPsp = _pspTracker.GetCurrentPsp();
+
         if (residentNextSegment.HasValue) {
             parentPsp.CurrentSize = residentNextSegment.Value;
         }
+
         if (_pendingParentStackPointers.Count > 0) {
-            (ushort parentSS, ushort parentReservedSP) = _pendingParentStackPointers.Pop();
-            // parentReservedSP was stored as (parentSP - sizeof(iregs)).
-            // Restore the actual SP by adding back the iregs frame size.
-            _state.SS = parentSS;
-            _state.SP = (ushort)(parentReservedSP + IregsFrameSize);
+            (ushort SS, ushort SP) = _pendingParentStackPointers.Pop();
+            _state.SS = SS;
+            _state.SP = SP;
         }
-        // Restore CS:IP for the parent. Prefer the return address saved when the program was launched
-        // (pushed into _pendingParentReturnAddresses). Fall back to the child's stored terminate vector
-        // if no saved pending return address exists.
         if (_pendingParentReturnAddresses.Count > 0) {
             (ushort CS, ushort IP) = _pendingParentReturnAddresses.Pop();
             _state.CS = CS;
             _state.IP = IP;
-        } else {
-            uint storedReturnFar = currentPsp.TerminateAddress;
-            if (storedReturnFar != 0) {
-                _state.CS = MemoryUtils.GetHighWord(storedReturnFar);
-                _state.IP = MemoryUtils.GetLowWord(storedReturnFar);
-            }
+            parentPsp.StackPointer = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
+
         }
-        parentPsp.StackPointer = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("TERMINATE: restored parent context SS:SP={SS:X4}:{SP:X4}, CS:IP={CS:X4}:{IP:X4}",
                 _state.SS, _state.SP, _state.CS, _state.IP);
         }
+
         _state.DS = parentPspSegment;
         _state.ES = parentPspSegment;
+
         if (parentIsRootCommandCom) {
-            if (terminationType != DosTerminationType.TSR) {
-                // When returning to COMMAND.COM after a normal termination, expose the child's return code in AX
-                // Only the low byte (AL) contains the exit code expected by callers, then halt the emulation.
-                _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
-                _state.IsRunning = false;
-            }
-            // For TSR termination, do not halt the emulation nor override AX: the loader continues executing.
+            // When returning to COMMAND.COM, expose the child's return code in AX
+            // so unit tests and external callers can observe it, then halt the
+            // emulation because COMMAND.COM does not have a usable execution
+            // context in this headless environment. Only the low byte (AL)
+            // contains the exit code expected by callers.
+            _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
+            _state.IsRunning = false;
         }
     }
 
