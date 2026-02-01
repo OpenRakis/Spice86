@@ -5,7 +5,7 @@ using FluentAssertions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
-using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Collections.Immutable;
@@ -13,18 +13,11 @@ using System.Collections.Immutable;
 using Xunit;
 
 public class CpuHeavyLoggerTests : IDisposable {
-    private readonly DumpFolderMetadata _dumpContext;
+    private readonly EmulatorStateSerializationFolder _emulatorStateSerializationFolder;
     private readonly List<string> _filesToCleanup = new();
 
     public CpuHeavyLoggerTests() {
-        string tempExeFile =
-            // Create a temporary exe file for DumpFolderMetadata
-            Path.GetTempFileName();
-        byte[] testData = "test"u8.ToArray();
-        File.WriteAllBytes(tempExeFile, testData);
-        
-        _dumpContext = new DumpFolderMetadata(tempExeFile, Path.GetTempPath());
-        _filesToCleanup.Add(tempExeFile);
+        _emulatorStateSerializationFolder = new(Path.GetTempPath());
     }
 
     public void Dispose() {
@@ -42,11 +35,11 @@ public class CpuHeavyLoggerTests : IDisposable {
     [Fact]
     public void Constructor_WithDefaultPath_CreatesLogFileInDumpDirectory() {
         // Arrange
-        string expectedLogPath = Path.Join(_dumpContext.DumpDirectory, "cpu_heavy.log");
+        string expectedLogPath = Path.Join(_emulatorStateSerializationFolder.Folder, "cpu_heavy.log");
         _filesToCleanup.Add(expectedLogPath);
 
         // Act
-        using CpuHeavyLogger logger = new(_dumpContext, null);
+        using CpuHeavyLogger logger = new(_emulatorStateSerializationFolder, null);
 
         // Assert
         File.Exists(expectedLogPath).Should().BeTrue();
@@ -58,7 +51,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         string customLogPath = GetUniqueLogPath();
 
         // Act
-        using CpuHeavyLogger logger = new(_dumpContext, customLogPath);
+        using CpuHeavyLogger logger = new(_emulatorStateSerializationFolder, customLogPath);
 
         // Assert
         File.Exists(customLogPath).Should().BeTrue();
@@ -74,7 +67,7 @@ public class CpuHeavyLoggerTests : IDisposable {
             CreateNop(new SegmentedAddress(0x1000, 0x0106))
         };
 
-        using (CpuHeavyLogger logger = new(_dumpContext, logPath)) {
+        using (CpuHeavyLogger logger = new(_emulatorStateSerializationFolder, logPath)) {
             // Act
             foreach (var node in nodes) {
                 logger.LogInstruction(node);

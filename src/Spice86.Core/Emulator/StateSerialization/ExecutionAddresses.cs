@@ -1,8 +1,9 @@
-namespace Spice86.Core.Emulator.Function.Dump;
+namespace Spice86.Core.Emulator.StateSerialization;
 
+using Spice86.Core.Emulator.Function;
 using Spice86.Shared.Emulator.Memory;
 
-public class ExecutionDump {
+public class ExecutionAddresses {
     /// <summary>
     /// Gets a dictionary of calls from one address to another.
     /// </summary>

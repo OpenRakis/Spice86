@@ -30,7 +30,6 @@ public class DosExecIntegrationTests {
             Spice86DependencyInjection spice86 = new Spice86Creator(
                 binName: programPath,
                 enablePit: true,
-                recordData: false,
                 maxCycles: 300000,
                 installInterruptVectors: true,
                 enableA20Gate: false,

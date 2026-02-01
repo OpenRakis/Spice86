@@ -5,8 +5,8 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
@@ -22,7 +22,7 @@ using System.Text;
 /// </summary>
 public class GdbCustomCommandsHandler {
     private readonly ILoggerService _loggerService;
-    private readonly RecordedDataWriter _recordedDataWriter;
+    private readonly EmulatorStateSerializer _emulatorStateSerializer;
     private readonly GdbIo _gdbIo;
     private readonly IFunctionHandlerProvider _functionHandlerProvider;
     private readonly State _state;
@@ -36,34 +36,28 @@ public class GdbCustomCommandsHandler {
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
-    /// <param name="functionCatalogue">List of encountered functions.</param>
-    /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
-    /// <param name="cfgCpuFlowDumper">The class that records machine code execution flow.</param>
+    /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
-    /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
     public GdbCustomCommandsHandler(
         IMemory memory,
         State state,
         IFunctionHandlerProvider functionHandlerProvider,
-        FunctionCatalogue functionCatalogue,
-        MemoryDataExporter memoryDataExporter,
-        CfgCpuFlowDumper cfgCpuFlowDumper,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
+        EmulatorStateSerializer emulatorStateSerializer,
         GdbIo gdbIo,
         ILoggerService loggerService,
-        Action<BreakPoint> onBreakpointReached,
-        string recordedDataDirectory) {
+        Action<BreakPoint> onBreakpointReached) {
         _loggerService = loggerService;
         _state = state;
         _memory = memory;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
+        _emulatorStateSerializer = emulatorStateSerializer;
         _functionHandlerProvider = functionHandlerProvider;
         _gdbIo = gdbIo;
         _onBreakpointReached = onBreakpointReached;
-        _recordedDataWriter = new RecordedDataWriter(state, cfgCpuFlowDumper, memoryDataExporter, functionCatalogue, recordedDataDirectory, _loggerService);
     }
 
     /// <summary>
@@ -152,10 +146,11 @@ public class GdbCustomCommandsHandler {
         return sb.ToString();
     }
 
-    private string DumpAll() {
+    private string WriteAll() {
         try {
-            _recordedDataWriter.DumpAll();
-            return _gdbIo.GenerateMessageToDisplayResponse($"Dumped everything in {_recordedDataWriter.DumpDirectory}");
+            _emulatorStateSerializer.EmulationStateDataWriter.Write();
+            return _gdbIo.GenerateMessageToDisplayResponse(
+                $"Wrote everything in {_emulatorStateSerializer.EmulatorStateSerializationFolder.Folder}");
         } catch (IOException e) {
             return _gdbIo.GenerateMessageToDisplayResponse(e.Message);
         }
@@ -174,7 +169,7 @@ public class GdbCustomCommandsHandler {
             "breakstop" => BreakStop(),
             "callstack" => CallStack(),
             "peekret" => PeekRet(args),
-            "dumpall" => DumpAll(),
+            "dumpall" => WriteAll(),
             "breakcycles" => BreakCycles(args),
             "breakcsip" => BreakCsIp(args),
             _ => InvalidCommand(originalCommand),
@@ -233,14 +228,6 @@ public class GdbCustomCommandsHandler {
         }
     }
 
-    private static string ExtractAction(string[] args) {
-        if (args.Length >= 2) {
-            return args[1];
-        }
-
-        throw new ArgumentException("You need to specify an action. Valid actions are [refresh, add, remove]");
-    }
-
     private string GetValidRetValues() {
         return string.Join(", ", Enum.GetNames(typeof(CallType)));
     }
@@ -248,8 +235,8 @@ public class GdbCustomCommandsHandler {
     private string Help(string additionnalMessage) {
         return _gdbIo.GenerateMessageToDisplayResponse($@"{additionnalMessage}
 Supported custom commands:
- -help: display this
- - dumpAll: dumps everything possible in the default directory which is {_recordedDataWriter.DumpDirectory}
+ - help: display this
+ - dumpAll: dumps everything possible in the default directory which is {_emulatorStateSerializer.EmulatorStateSerializationFolder.Folder}
  - breakCycles <number of cycles to wait before break>: breaks after the given number of cycles is reached
  - breakCsIp <number for CS, number for IP>: breaks once CS and IP match and before the instruction is executed
  - breakStop: setups a breakpoint when machine shuts down

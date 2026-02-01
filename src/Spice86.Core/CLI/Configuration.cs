@@ -39,8 +39,8 @@ public sealed class Configuration {
     public string? CDrive { get; set; }
 
     /// <summary> Path to executable. </summary>
-    [Option('e', nameof(Exe), Default = null, Required = false, HelpText = "Path to executable")]
-    public string? Exe { get; set; }
+    [Option('e', nameof(Exe), Required = true, HelpText = "Path to executable")]
+    public string Exe { get; set; } = string.Empty;
 
     /// <summary> List of parameters to give to the emulated program. </summary>
     [Option('a', nameof(ExeArgs), Default = null, Required = false, HelpText = "List of parameters to give to the emulated program")]
@@ -74,10 +74,6 @@ public sealed class Configuration {
         HelpText =
             "Headless mode. 'Minimal' does not use any UI components, 'Avalonia' uses the full UI and consumes a bit more memory.")]
     public HeadlessType? HeadlessMode { get; init; }
-
-    /// <summary> When true, records data at runtime and dumps them at exit time. </summary>
-    [Option('d', nameof(DumpDataOnExit), Default = null, Required = false, HelpText = "When true, records data at runtime and dumps them at exit time")]
-    public bool? DumpDataOnExit { get; set; }
 
     /// <summary>
     /// If true, will fail when encountering an unhandled IO port. Useful to check for unimplemented hardware. false by default.

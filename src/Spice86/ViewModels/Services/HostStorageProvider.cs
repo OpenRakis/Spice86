@@ -3,51 +3,41 @@
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Core.Emulator.StateSerialization;
 
 /// <inheritdoc cref="IHostStorageProvider" />
-public class HostStorageProvider : IHostStorageProvider {
-    private readonly IStorageProvider _storageProvider;
-    private readonly Configuration _configuration;
-    private readonly EmulatorStateSerializer _emulatorStateSerializer;
-    private readonly DumpFolderMetadata _dumpContext;
-
-    public HostStorageProvider(IStorageProvider storageProvider, Configuration configuration, EmulatorStateSerializer emulatorStateSerializer, DumpFolderMetadata dumpContext) {
-        _storageProvider = storageProvider;
-        _configuration = configuration;
-        _emulatorStateSerializer = emulatorStateSerializer;
-        _dumpContext = dumpContext;
-    }
+public class HostStorageProvider(
+    IStorageProvider storageProvider,
+    EmulatorStateSerializer emulatorStateSerializer)
+    : IHostStorageProvider {
 
     /// <inheritdoc />
-    public bool CanPickFolder => _storageProvider.CanPickFolder;
+    public bool CanPickFolder => storageProvider.CanPickFolder;
 
     /// <inheritdoc />
-    public bool CanOpen => _storageProvider.CanOpen;
+    public bool CanOpen => storageProvider.CanOpen;
 
     /// <inheritdoc/>
-    public bool CanSave => _storageProvider.CanSave;
+    public bool CanSave => storageProvider.CanSave;
 
     /// <inheritdoc/>
     public async Task<IStorageFolder?> TryGetFolderFromPathAsync(string folderPath) {
-        return await _storageProvider.TryGetFolderFromPathAsync(folderPath);
+        return await storageProvider.TryGetFolderFromPathAsync(folderPath);
     }
 
     /// <inheritdoc />
     public async Task<IStorageFile?> SaveFilePickerAsync(FilePickerSaveOptions options) {
-        return await _storageProvider.SaveFilePickerAsync(options);
+        return await storageProvider.SaveFilePickerAsync(options);
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<IStorageFolder>> OpenFolderPickerAsync(FolderPickerOpenOptions options) {
-        return await _storageProvider.OpenFolderPickerAsync(options);
+        return await storageProvider.OpenFolderPickerAsync(options);
     }
 
     /// <inheritdoc />
     public async Task<IStorageFolder?> TryGetWellKnownFolderAsync(WellKnownFolder wellKnownFolder) {
-        return await _storageProvider.TryGetWellKnownFolderAsync(wellKnownFolder);
+        return await storageProvider.TryGetWellKnownFolderAsync(wellKnownFolder);
     }
 
     public async Task SaveBitmapFile(WriteableBitmap bitmap) {
@@ -80,29 +70,30 @@ public class HostStorageProvider : IHostStorageProvider {
     }
 
     public async Task SaveVideoCardInfoFile(string videoCardInfoJson) {
-        string dumpDir = _dumpContext.DumpDirectory;
-        if (!Directory.Exists(dumpDir)) {
-            Directory.CreateDirectory(dumpDir);
-        }
-        string filePath = Path.Join(dumpDir, "VideoCardInfo.json");
+        string filePath = Path.Join(emulatorStateSerializer.EmulatorStateSerializationFolder.Folder,
+            "VideoCardInfo.json");
         await File.WriteAllTextAsync(filePath, videoCardInfoJson);
     }
 
     public async Task DumpEmulatorStateToFile() {
         if (CanSave && CanPickFolder) {
+            EmulatorStateSerializationFolder emulatorStateSerializationFolder =
+                emulatorStateSerializer.EmulatorStateSerializationFolder;
             FolderPickerOpenOptions options = new() {
                 Title = "Dump emulator state to directory...",
                 AllowMultiple = false,
-                SuggestedStartLocation = await TryGetFolderFromPathAsync(_dumpContext.DumpDirectory)
+                SuggestedStartLocation = await TryGetFolderFromPathAsync(emulatorStateSerializationFolder.Folder)
             };
-            if (!Directory.Exists(_dumpContext.DumpDirectory)) {
+            if (!Directory.Exists(emulatorStateSerializationFolder.Folder)) {
                 options.SuggestedStartLocation = await TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
             }
             IReadOnlyList<IStorageFolder> dirs = await OpenFolderPickerAsync(options);
             IStorageFolder? directory = dirs.Count > 0 ? dirs[0] : null;
             Uri? directoryPath = directory?.Path;
             if (!string.IsNullOrWhiteSpace(directoryPath?.AbsolutePath)) {
-                _emulatorStateSerializer.SerializeEmulatorStateToDirectory(directoryPath.AbsolutePath);
+                // Update globally the save folder
+                emulatorStateSerializationFolder.Folder = directoryPath.AbsolutePath;
+                emulatorStateSerializer.EmulationStateDataWriter.Write();
             }
         }
     }

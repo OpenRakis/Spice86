@@ -72,7 +72,6 @@ public class DosReallocIntegrationTests {
         Spice86DependencyInjection spice86 = new Spice86Creator(
             binName: programPath,
             enablePit: false,
-            recordData: false,
             maxCycles: 50000,
             installInterruptVectors: true,
             enableA20Gate: false,

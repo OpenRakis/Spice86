@@ -1,7 +1,4 @@
-namespace Spice86.Core.Emulator.Function.Dump;
-
-using System.IO;
-using System.Linq;
+namespace Spice86.Core.Emulator.StateSerialization;
 
 using Serilog.Events;
 
@@ -10,37 +7,40 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.IO;
+using System.Linq;
+
 /// <summary>
 /// Provides functionality for dumping Ghidra symbols and labels to a file.
 /// </summary>
-public class GhidraSymbolsDumper {
+public class GhidraSymbolsExporter {
     private readonly ILoggerService _loggerService;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
-    public GhidraSymbolsDumper(ILoggerService loggerService) => _loggerService = loggerService;
+    public GhidraSymbolsExporter(ILoggerService loggerService) => _loggerService = loggerService;
 
     /// <summary>
     /// Dumps function information and labels to a file.
     /// </summary>
-    /// <param name="executionDump">The class that holds machine code execution flow.</param>
+    /// <param name="executionAddresses">The class that holds machine code execution flow.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="destinationFilePath">The path of the file to write the dumped information to.</param>
-    public void Dump(ExecutionDump executionDump, FunctionCatalogue functionCatalogue, string destinationFilePath) {
+    public void Write(ExecutionAddresses executionAddresses, FunctionCatalogue functionCatalogue, string destinationFilePath) {
         ICollection<FunctionInformation> functionInformationsValues = functionCatalogue.FunctionInformations.Values;
         List<string> lines = new();
         // keep addresses in a set in order not to write a label where a function was, ghidra will otherwise overwrite functions with labels and this is not cool.
         HashSet<SegmentedAddress> dumpedAddresses = new HashSet<SegmentedAddress>();
         DumpFunctionInformations(lines, dumpedAddresses, functionInformationsValues);
-        DumpLabels(lines, dumpedAddresses, executionDump);
+        DumpLabels(lines, dumpedAddresses, executionAddresses);
         using StreamWriter printWriter = new StreamWriter(destinationFilePath);
         lines.ForEach(line => printWriter.WriteLine(line));
     }
 
-    private void DumpLabels(List<string> lines, HashSet<SegmentedAddress> dumpedAddresses, ExecutionDump executionDump) {
-        executionDump.JumpsFromTo
+    private void DumpLabels(List<string> lines, HashSet<SegmentedAddress> dumpedAddresses, ExecutionAddresses executionAddresses) {
+        executionAddresses.JumpsFromTo
             .SelectMany(x => x.Value)
             .Where(address => !dumpedAddresses.Contains(address))
             .OrderBy(x => x)

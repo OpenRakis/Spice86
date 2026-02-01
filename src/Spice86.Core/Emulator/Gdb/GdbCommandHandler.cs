@@ -2,8 +2,8 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
@@ -30,17 +30,20 @@ public class GdbCommandHandler {
     /// <param name="memory">The memory bus.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="pauseHandler">The class that enables us to pause the emulator.</param>
     /// <param name="emulatorBreakpointsManager">The class used to store and retrieve breakpoints.</param>
-    /// <param name="cfgCpuFlowDumper">The class that dumps machine code execution flow.</param>
-    /// <param name="functionCatalogue">List of all functions.</param>
+    /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
-    public GdbCommandHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, State state, MemoryDataExporter memoryDataExporter, IPauseHandler pauseHandler,
-        EmulatorBreakpointsManager emulatorBreakpointsManager, CfgCpuFlowDumper cfgCpuFlowDumper,
-        FunctionCatalogue functionCatalogue, GdbIo gdbIo, ILoggerService loggerService, DumpFolderMetadata dumpContext) {
+    public GdbCommandHandler(
+        IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider,
+        State state,
+        IPauseHandler pauseHandler,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        EmulatorStateSerializer emulatorStateSerializer,
+        GdbIo gdbIo,
+        ILoggerService loggerService) {
         _loggerService = loggerService;
         _state = state;
         _gdbIo = gdbIo;
@@ -49,9 +52,14 @@ public class GdbCommandHandler {
         _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(memory, gdbIo, _loggerService);
         _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(emulatorBreakpointsManager, pauseHandler, gdbIo, _loggerService, state, memory);
         _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(
-            memory, state, functionHandlerProvider, functionCatalogue, memoryDataExporter, cfgCpuFlowDumper, emulatorBreakpointsManager, gdbIo,
+            memory,
+            state,
+            functionHandlerProvider,
+            emulatorBreakpointsManager,
+            emulatorStateSerializer,
+            gdbIo,
             _loggerService,
-            _gdbCommandBreakpointHandler.OnBreakPointReached, dumpContext.DumpDirectory);
+            _gdbCommandBreakpointHandler.OnBreakPointReached);
     }
 
     /// <summary>

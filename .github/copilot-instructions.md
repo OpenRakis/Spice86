@@ -52,7 +52,7 @@ dotnet test tests/Spice86.Tests
 - **Internal Debugger**: UI-based debugger with disassembly, memory, CPU state views
 
 ### Reverse Engineering Process
-1. Run DOS program in Spice86 with `--DumpDataOnExit true`
+1. Run DOS program in Spice86
 2. Emulator dumps `spice86dumpMemoryDump.bin` and `spice86dumpExecutionFlow.json` to `--RecordedDataDirectory`
 3. Load dumps in Ghidra via [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin)
 4. Generate C# override classes from decompiled functions
