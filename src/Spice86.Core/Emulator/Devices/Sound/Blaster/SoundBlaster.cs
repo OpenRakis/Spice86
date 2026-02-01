@@ -710,46 +710,36 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
 
                 if (_sb.Mode == DspMode.DmaMasked && _sb.Dma.Mode != DmaMode.None) {
-                    // Transition back to active DMA mode
                     DspChangeMode(DspMode.Dma);
 
-                    // Flush any remaining short transfer that would otherwise be missed
-                    // Reference: src/hardware/audio/soundblaster.cpp dsp_dma_callback() line 827
                     FlushRemainingDmaTransfer();
 
-                    // Wake up the mixer channel for playback
-                    // Unmasking is when software has finished setup and is ready for playback
-                    bool wasWokenUp = MaybeWakeUp();
-
-                    // Ensure channel is enabled - critical for DMA processing to start
-                    // If WakeUp didn't enable it (e.g., already awake), enable it explicitly
-                    if (!_dacChannel.IsEnabled) {
-                        _dacChannel.Enable(true);
-                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                            _loggerService.Debug("SOUNDBLASTER: Explicitly enabled DAC channel after unmask");
-                        }
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output, auto {AutoInit} block {BaseCount}",
+                            channel.IsAutoiniting, channel.BaseCount);
                     }
 
-                    // If the DMA transfer is setup with a base count of fewer than three elements
-                    // (which is four bytes given one 16-bit stereo frame held in an 8-bit DMA
-                    // channel), then we know the software intends to overwrite the DMA content
-                    // on the fly instead of pre-generating large chunks of DMA audio. In these
+                    // Unmasking the DMA channel is the point when the
+                    // software has finished setting up the Sound Blaster's
+                    // state (frequency, bit depth, stereo, etc) as well as
+                    // the DMA controller, and is finally ready for
+                    // playback. This is when we set the callback running to
+                    // play the data.
+                    MaybeWakeUp();
+
+                    // If the DMA transfer is setup with a base count of
+                    // fewer than three elements (which is four bytes given
+                    // one 16-bit stereo frame held in an 8-bit DMA
+                    // channel), then we know the software intends to
+                    // overwrite the DMA content on the fly instead of
+                    // pre-generating large chunks of DMA audio. In these
                     // cases we prefer the fine-grained per-frame callback.
-                    // Reference: src/hardware/audio/soundblaster.cpp lines 844-856
+                    // (The minus one is because DMA counts are in addition
+                    // to one; so a base count of zero is one element).
                     if (channel.BaseCount <= MaxSingleFrameBaseCount) {
                         SetCallbackPerFrame();
                     } else {
                         SetCallbackPerTick();
-                    }
-
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output. WokenUp={WokenUp}, ChannelEnabled={Enabled}, IsAutoiniting={IsAutoiniting}, BaseCount={BaseCount}, CurrentCount={CurrentCount}, Left={Left}, CallbackType={CallbackType}",
-                            wasWokenUp, _dacChannel.IsEnabled, channel.IsAutoiniting, channel.BaseCount, channel.CurrentCount, _sb.Dma.Left, _timingType);
-                    }
-                } else {
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked but not in DmaMasked mode, ignoring - Mode={Mode}, DmaMode={DmaMode}",
-                            _sb.Mode, _sb.Dma.Mode);
                     }
                 }
                 break;
@@ -2089,8 +2079,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return;
         }
 
-        // If speaker is disabled (and not SB16), suppress the DMA transfer silently
-        // This reads and discards DMA data, but still raises IRQs
         if (!_sb.SpeakerEnabled && _config.SbType != SbType.Sb16) {
             uint numBytes = Math.Min(_sb.Dma.Min, _sb.Dma.Left);
             double delayMs = (numBytes * 1000.0) / _sb.Dma.Rate;
@@ -2100,13 +2088,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("SOUNDBLASTER: Silent DMA Transfer scheduling IRQ in {Delay:F3} milliseconds", delayMs);
             }
-        }
-        // If we have a short transfer (less than the minimum), schedule it immediately
-        else if (_sb.Dma.Left < _sb.Dma.Min) {
+        } else if (_sb.Dma.Left < _sb.Dma.Min) {
             double delayMs = (_sb.Dma.Left * 1000.0) / _sb.Dma.Rate;
 
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("SOUNDBLASTER: Short transfer scheduling ProcessDMA in {Delay:F3} milliseconds, Left={Left}", delayMs, _sb.Dma.Left);
+                _loggerService.Debug("SOUNDBLASTER: Short transfer scheduling IRQ in {Delay:F3} milliseconds", delayMs);
             }
 
             _scheduler.AddEvent(ProcessDmaTransferEvent, delayMs, _sb.Dma.Left);
