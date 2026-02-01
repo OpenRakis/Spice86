@@ -299,7 +299,10 @@ public class DosProcessManager {
         // in managed state so it can be restored on process termination.
         // Key by the child PSP segment so we only restore when that specific child terminates.
         // Use parentSP (not parentReservedSP) so IRET correctly pops the interrupt frame.
-        if (result.Success) {
+        // NOTE: Only save for LoadAndExecute mode. For LoadOnly, the parent's context is
+        // never lost (execution continues in parent immediately), and RestoreParentPspForLoadOnly
+        // has already restored CurrentPspSegment to the parent, so we'd incorrectly key by parent PSP.
+        if (result.Success && loadType == DosExecLoadType.LoadAndExecute) {
             ushort childPspSegment = CurrentPspSegment;
             _parentStackPointersByChildPsp[childPspSegment] = (parentSS, parentSP);
             _parentReturnAddressByChildPsp[childPspSegment] = (callerCS, callerIP);
