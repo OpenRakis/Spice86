@@ -12,6 +12,12 @@ using Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth;
 /// muted or brought back from the muted state, respectively.
 /// </summary>
 public sealed class NoiseGate {
+    /// <summary>
+    /// Provides a delegate to the Process method for compatibility with MixerChannel.
+    /// </summary>
+    public ProcessorDelegate Processor => new ProcessorDelegate(Process);
+
+    public delegate AudioFrame ProcessorDelegate(AudioFrame input);
     private float _scaleIn;
     private float _scaleOut;
     private float _thresholdValue;
