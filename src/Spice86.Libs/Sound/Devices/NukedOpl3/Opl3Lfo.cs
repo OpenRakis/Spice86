@@ -3,6 +3,8 @@
 
 namespace Spice86.Libs.Sound.Devices.NukedOpl3;
 
+using System.Runtime.CompilerServices;
+
 /// <summary>
 ///     Encapsulates Nuked-OPL3 LFO state transitions (tremolo and vibrato).
 /// </summary>
@@ -19,6 +21,7 @@ internal static class Opl3Lfo {
     }
 
     /* Original C: tremolo/vibrato update inside OPL3_Generate */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void Advance(Opl3Chip chip) {
         if ((chip.Timer & 0x3f) == 0x3f) {
             chip.TremoloPosition = (byte)((chip.TremoloPosition + 1) % 210);

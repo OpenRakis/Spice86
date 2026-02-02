@@ -172,6 +172,7 @@ internal static class Opl3Envelope {
         slot.EffectiveKeyScaleLevel = (byte)value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void EnvelopeCalc(Opl3Operator slot) {
         Opl3Chip chip = slot.Chip ?? throw new InvalidOperationException("Chip not assigned.");
         Opl3Channel channel = slot.Channel ?? throw new InvalidOperationException("Channel not assigned.");
