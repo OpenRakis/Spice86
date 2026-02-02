@@ -339,20 +339,24 @@ public class Spice86DependencyInjection : IDisposable {
         loggerService.Information("PIT created...");
 
         // Create OPL FM device; it creates and registers its own mixer channel internally
-        bool useAdlibGold = configuration.OplType == OplType.Gold;
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SBPro2);
+        SoundBlasterHardwareConfig soundBlasterHardwareConfig = new(
+            configuration.SbIrq,
+            configuration.SbDma,
+            configuration.SbHdma,
+            configuration.SbType,
+            configuration.SbBase);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
 
         Opl OPL = new(mixer, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService,
             emulationLoopScheduler, emulatedClock, dualPic,
-            useAdlibGold: useAdlibGold, enableOplIrq: false);
+            mode: configuration.OplMode, sbBase: configuration.SbBase, enableOplIrq: false);
 
-        var soundBlaster = new SoundBlaster(ioPortDispatcher,
+        SoundBlaster soundBlaster = new(ioPortDispatcher,
             state, dmaSystem, dualPic, mixer, OPL, loggerService,
             emulationLoopScheduler, emulatedClock,
             soundBlasterHardwareConfig);
-        var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
+        GravisUltraSound gravisUltraSound = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
         loggerService.Information("Sound devices created...");
@@ -407,7 +411,8 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
                 pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter, mixer);
+                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter,
+                mixer, soundBlaster, OPL);
 
             // Subscribe to video mode changes for dynamic aspect ratio correction
             vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;

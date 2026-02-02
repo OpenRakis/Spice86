@@ -5,6 +5,7 @@ using CommandLine;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 
@@ -173,11 +174,46 @@ public sealed class Configuration {
     public AudioEngine AudioEngine { get; init; }
 
     /// <summary>
-    /// Select the OPL implementation to expose.
+    /// Select the OPL synthesis mode.
     /// </summary>
-    [Option(nameof(OplType), Default = OplType.SbPro2, Required = false,
-        HelpText = "OPL backend to expose. Defaults to SbPro2. Use Gold to enable AdLib Gold filtering and IRQs.")]
-    public OplType OplType { get; init; }
+    [Option(nameof(OplMode), Default = OplMode.Opl3, Required = false,
+        HelpText = "OPL synthesis mode. Values are None, Opl2, DualOpl2, Opl3, Opl3Gold. Default is Opl3.")]
+    public OplMode OplMode { get; init; }
+
+    /// <summary>
+    /// Sound Blaster type to emulate.
+    /// </summary>
+    [Option(nameof(SbType), Default = SbType.SBPro2, Required = false,
+        HelpText = "Sound Blaster card type. Values are None, SB1, SB2, SBPro1, SBPro2, Sb16, GameBlaster. Default is SBPro2.")]
+    public SbType SbType { get; init; }
+
+    /// <summary>
+    /// Sound Blaster base I/O address.
+    /// </summary>
+    [Option(nameof(SbBase), Default = (ushort)0x220, Required = false,
+        HelpText = "Sound Blaster base I/O address (hex). Default is 0x220. Common values: 0x220, 0x240, 0x260, 0x280.")]
+    public ushort SbBase { get; init; }
+
+    /// <summary>
+    /// Sound Blaster IRQ line.
+    /// </summary>
+    [Option(nameof(SbIrq), Default = (byte)7, Required = false,
+        HelpText = "Sound Blaster IRQ line. Default is 7. Common values: 5, 7, 9, 10.")]
+    public byte SbIrq { get; init; }
+
+    /// <summary>
+    /// Sound Blaster 8-bit DMA channel.
+    /// </summary>
+    [Option(nameof(SbDma), Default = (byte)1, Required = false,
+        HelpText = "Sound Blaster 8-bit DMA channel. Default is 1. Common values: 0, 1, 3.")]
+    public byte SbDma { get; init; }
+
+    /// <summary>
+    /// Sound Blaster 16-bit high DMA channel.
+    /// </summary>
+    [Option(nameof(SbHdma), Default = (byte)5, Required = false,
+        HelpText = "Sound Blaster 16-bit high DMA channel. Default is 5. Common values: 5, 6, 7.")]
+    public byte SbHdma { get; init; }
 
     [Option(nameof(Xms), Default = null, Required = false, HelpText = "Enable XMS. Default is true.")]
     public bool? Xms { get; init; }

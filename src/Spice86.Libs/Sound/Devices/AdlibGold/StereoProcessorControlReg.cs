@@ -2,8 +2,9 @@
 
 /// <summary>
 ///     Enumerates the stereo processor control registers exposed over the AdLib Gold I/O interface.
+///     Reference: enum class StereoProcessorControlReg in DOSBox adlib_gold.h
 /// </summary>
-internal enum StereoProcessorControlReg {
+public enum StereoProcessorControlReg {
     /// <summary>
     ///     Left channel master volume register.
     /// </summary>

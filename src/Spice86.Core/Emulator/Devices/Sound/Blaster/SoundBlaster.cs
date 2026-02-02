@@ -2502,9 +2502,34 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         RaiseIrq(SbIrq.Irq8);
     }
 
+    /// <summary>
+    /// Gets the configured Sound Blaster type.
+    /// </summary>
     public SbType SbTypeProperty => _config.SbType;
+
+    /// <summary>
+    /// Gets the configured IRQ line.
+    /// </summary>
     public byte IRQ => _config.Irq;
 
+    /// <summary>
+    /// Gets the configured base I/O address.
+    /// </summary>
+    public ushort BaseAddress => _config.BaseAddress;
+
+    /// <summary>
+    /// Gets the configured 8-bit DMA channel.
+    /// </summary>
+    public byte LowDma => _config.LowDma;
+
+    /// <summary>
+    /// Gets the configured 16-bit DMA channel.
+    /// </summary>
+    public byte HighDma => _config.HighDma;
+
+    /// <summary>
+    /// Gets the BLASTER environment variable string.
+    /// </summary>
     public string BlasterString {
         get {
             string highChannelSegment = ShouldUseHighDmaChannel() ? $" H{_config.HighDma}" : string.Empty;

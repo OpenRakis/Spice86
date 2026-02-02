@@ -1,16 +1,32 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 /// <summary>
-/// Selectable OPL backend types.
+/// Selectable OPL synthesis modes.
+/// Matches DOSBox staging OplMode enum.
 /// </summary>
-public enum OplType {
+public enum OplMode {
     /// <summary>
-    /// Standard opl as found on the Sound Blaster Pro 2 (default).
+    /// No OPL synthesis.
     /// </summary>
-    SbPro2,
+    None,
 
     /// <summary>
-    /// AdLib Gold enhanced signal path.
+    /// Single OPL2 chip (mono, 9 channels).
     /// </summary>
-    Gold
+    Opl2,
+
+    /// <summary>
+    /// Dual OPL2 chips (stereo, 18 channels).
+    /// </summary>
+    DualOpl2,
+
+    /// <summary>
+    /// OPL3 chip (stereo, 18 channels, 4-op modes).
+    /// </summary>
+    Opl3,
+
+    /// <summary>
+    /// OPL3 with AdLib Gold enhanced signal path.
+    /// </summary>
+    Opl3Gold
 }

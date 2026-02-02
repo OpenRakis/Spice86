@@ -80,6 +80,14 @@
 							</StackPanel>
 						</MenuItem.Header>
 					</MenuItem>
+					<MenuItem Command="{Binding ShowAudioSettingsCommand}">
+						<MenuItem.Header>
+							<StackPanel Orientation="Horizontal">
+								<fluent:SymbolIcon Symbol="Settings" />
+								<Label Content="Audio Settings" />
+							</StackPanel>
+						</MenuItem.Header>
+					</MenuItem>
 				</MenuItem>
 				<MenuItem Header="Video" IsEnabled="{Binding IsEmulatorRunning}">
 					<MenuItem>

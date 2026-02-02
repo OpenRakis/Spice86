@@ -15,6 +15,7 @@ using Serilog.Events;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
@@ -87,6 +88,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     internal event EventHandler? CloseMainWindow;
 
     private readonly Mixer _mixer;
+    private readonly SoundBlaster _soundBlaster;
+    private readonly Opl _opl;
 
     public MainWindowViewModel(SharedMouseData sharedMouseData,
         ITimeMultiplier pit, IUIDispatcher uiDispatcher,
@@ -94,7 +97,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         Configuration configuration, ILoggerService loggerService,
         IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel,
         IExceptionHandler exceptionHandler, ICyclesLimiter cyclesLimiter,
-        Mixer mixer)
+        Mixer mixer, SoundBlaster soundBlaster, Opl opl)
         : base(uiDispatcher, textClipboard) {
         _sharedMouseData = sharedMouseData;
         _pit = pit;
@@ -105,6 +108,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _hostStorageProvider = hostStorageProvider;
         _cyclesLimiter = cyclesLimiter;
         _mixer = mixer;
+        _soundBlaster = soundBlaster;
+        _opl = opl;
         TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
         _pauseHandler = pauseHandler;
         _pauseHandler.Paused += OnPaused;
@@ -161,6 +166,27 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             DataContext = new MixerViewModel(_mixer)
         };
         newMixerWindow.Show();
+    }
+
+    [RelayCommand]
+    private void ShowAudioSettings() {
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime lifetime) {
+            return;
+        }
+
+        // Check if audio settings window already exists
+        foreach (Window window in lifetime.Windows) {
+            if (window is AudioSettingsView audioSettingsView) {
+                audioSettingsView.Activate();
+                return;
+            }
+        }
+
+        // Create new audio settings window
+        AudioSettingsView newAudioSettingsWindow = new() {
+            DataContext = new AudioSettingsViewModel(_soundBlaster, _opl)
+        };
+        newAudioSettingsWindow.Show();
     }
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
