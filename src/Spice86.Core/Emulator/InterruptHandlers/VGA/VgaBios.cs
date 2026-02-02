@@ -305,23 +305,25 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <inheritdoc />
     public void SetColorPaletteOrBackGroundColor() {
-        switch (State.BH) {
-            case 0x00:
-                _vgaFunctions.SetBorderColor(State.BL);
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set border color {Color}",
-                        nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
-                }
-                break;
-            case 0x01:
-                _vgaFunctions.SetPalette(State.BL);
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set palette id {PaletteId}",
-                        nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
-                }
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(State.BH), State.BH, $"INT 10: {nameof(SetColorPaletteOrBackGroundColor)} Invalid subFunction 0x{State.BH:X2}");
+        if (State.BH == 0x00) {
+            _vgaFunctions.SetBorderColor(State.BL);
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set border color {Color}",
+                    nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
+            }
+        }
+        else
+        {
+            // Most interrupt manuals say that BH can only be 0 and 1. De facto, any nonzero
+            // value in BH should be handled as 1, because this was the behaviour of the IBM
+            // BIOS:
+            // https://github.com/gawlas/IBM-PC-BIOS/blob/master/IBM%20PC/PCBIOSV3.ASM#L3814
+
+            _vgaFunctions.SetPalette(State.BL);
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set palette id {PaletteId}",
+                    nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
+            }
         }
     }
 
