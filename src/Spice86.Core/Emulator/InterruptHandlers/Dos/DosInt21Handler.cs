@@ -36,14 +36,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosProcessManager _dosProcessManager;
     private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly DosTables _dosTables;
-
-    /// <summary>
-    /// Gets or sets the current PSP segment directly from the DOS SDA.
-    /// </summary>
-    private ushort CurrentPspSegment {
-        get => new DosSwappableDataArea(Memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0)).CurrentProgramSegmentPrefix;
-        set => new DosSwappableDataArea(Memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0)).CurrentProgramSegmentPrefix = value;
-    }
+    private readonly DosSwappableDataArea _sda;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
@@ -76,6 +69,7 @@ public class DosInt21Handler : InterruptHandler {
         DosProcessManager dosProcessManager,
         IOPortDispatcher ioPortDispatcher, DosTables dosTables, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _countryInfo = countryInfo;
         _dosStringDecoder = dosStringDecoder;
         _keyboardInt16Handler = keyboardInt16Handler;
@@ -875,7 +869,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("SET CURRENT PSP: {PspSegment}", ConvertUtils.ToHex16(State.BX));
         }
-        CurrentPspSegment = State.BX;
+        _sda.CurrentProgramSegmentPrefix = State.BX;
     }
 
     /// <summary>
@@ -976,7 +970,7 @@ public class DosInt21Handler : InterruptHandler {
         ushort paragraphsToKeep = State.DX;
         byte returnCode = State.AL;
 
-        ushort currentPspSegment = CurrentPspSegment;
+        ushort currentPspSegment = _sda.CurrentProgramSegmentPrefix;
 
         if (LoggerService.IsEnabled(LogEventLevel.Information)) {
             LoggerService.Information(
@@ -990,7 +984,7 @@ public class DosInt21Handler : InterruptHandler {
             out DosMemoryControlBlock resizedBlock);
 
         if (errorCode == DosErrorCode.NoError) {
-            _dosProcessManager.TrackResidentBlock(currentPspSegment, resizedBlock);
+            _dosProcessManager.TrackResidentBlock(resizedBlock);
         }
 
         // Even if resize fails, we still terminate as a TSR
@@ -1059,7 +1053,7 @@ public class DosInt21Handler : InterruptHandler {
     /// The segment of the current PSP in BX.
     /// </returns>
     public void GetPspAddress() {
-        ushort pspSegment = CurrentPspSegment;
+        ushort pspSegment = _sda.CurrentProgramSegmentPrefix;
         State.BX = pspSegment;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET PSP ADDRESS {PspSegment}",

@@ -27,15 +27,7 @@ public class DosMemoryManager {
     private readonly IMemory _memory;
     private readonly DosMemoryControlBlock _start;
 
-    /// <summary>
-    /// Gets the current PSP segment from the DOS Swappable Data Area.
-    /// </summary>
-    private ushort CurrentPspSegment {
-        get {
-            DosSwappableDataArea sda = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
-            return sda.CurrentProgramSegmentPrefix;
-        }
-    }
+    private readonly DosSwappableDataArea _sda;
 
     /// <summary>
     /// The current memory allocation strategy used for INT 21h/48h (allocate memory).
@@ -55,6 +47,7 @@ public class DosMemoryManager {
     public DosMemoryManager(IMemory memory, ushort initialPspSegment, ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
+        _sda = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
 
         ushort pspSegment = initialPspSegment;
         // The MCB starts 1 paragraph (16 bytes) before the 16 paragraph (256 bytes) PSP. Since
@@ -134,7 +127,7 @@ public class DosMemoryManager {
             return null;
         }
 
-        block.PspSegment = CurrentPspSegment;
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix;
         return block;
     }
 
@@ -202,7 +195,7 @@ public class DosMemoryManager {
         // attempting to split the block with size 0 which would corrupt the MCB
         // chain. Simply affect it to the current process, and return it as-is.
         if (requestedSizeInParagraphs == 0) {
-            block.PspSegment = CurrentPspSegment;
+            block.PspSegment = _sda.CurrentProgramSegmentPrefix;
             return DosErrorCode.NoError;
         }
 
@@ -242,7 +235,7 @@ public class DosMemoryManager {
         if (block.Size > requestedSizeInParagraphs) {
             SplitBlock(block, requestedSizeInParagraphs);
         }
-        block.PspSegment = CurrentPspSegment;
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix;
         return DosErrorCode.NoError;
     }
 
@@ -436,7 +429,7 @@ public class DosMemoryManager {
             return null;
         }
 
-        block.PspSegment = CurrentPspSegment; // Marks the block as allocated.
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix; // Marks the block as allocated.
         return block;
     }
 
@@ -472,7 +465,7 @@ public class DosMemoryManager {
         if (block.Size > size.MaxSizeInParagraphs) {
             SplitBlock(block, size.MaxSizeInParagraphs);
         }
-        block.PspSegment = CurrentPspSegment; // Marks the block as allocated.
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix; // Marks the block as allocated.
         return block;
     }
 

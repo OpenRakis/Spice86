@@ -225,14 +225,14 @@ public class DosProcessManagerTests {
             ushort tsrSegment = context.CurrentPspSegment;
             DosProgramSegmentPrefix tsrPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(tsrSegment, 0));
 
-            ushort paragraphsToKeep = (ushort)(DosProgramSegmentPrefix.PspSizeInParagraphs + 0x10);
+            ushort paragraphsToKeep = DosProgramSegmentPrefix.PspSizeInParagraphs + 0x10;
             DosErrorCode resizeResult = context.MemoryManager.TryModifyBlock(
                 tsrSegment,
                 paragraphsToKeep,
                 out DosMemoryControlBlock resizedBlock);
 
             resizeResult.Should().Be(DosErrorCode.NoError);
-            context.ProcessManager.TrackResidentBlock(tsrSegment, resizedBlock);
+            context.ProcessManager.TrackResidentBlock(resizedBlock);
 
             context.ProcessManager.TerminateProcess(0x00, DosTerminationType.TSR);
 
