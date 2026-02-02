@@ -4,12 +4,11 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
-using Spice86.Libs.Sound.Common;
-using Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth;
 using Spice86.Shared.Interfaces;
 
 using System.Threading;
 
+using AudioFrame = Spice86.Libs.Sound.Common.AudioFrame;
 using HighPass = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
 using LowPass = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.LowPass;
 
@@ -61,14 +60,14 @@ public sealed class MixerChannel {
     
     // Used as intermediate buffer during sample conversion and resampling
     // Matches DOSBox: std::vector<AudioFrame> convert_buffer
-    private readonly List<AudioFrame> _convertBuffer = new();
+    private readonly AudioFrameBuffer _convertBuffer = new(0);
 
     // Channel mapping
     private StereoLine _outputMap = new() { Left = LineIndex.Left, Right = LineIndex.Right };
     private StereoLine _channelMap = new() { Left = LineIndex.Left, Right = LineIndex.Right };
 
     // Frame buffers - matches DOSBox audio_frames
-    public List<AudioFrame> AudioFrames { get; } = new();
+    public AudioFrameBuffer AudioFrames { get; } = new(0);
 
     private AudioFrame _prevFrame = new(0.0f, 0.0f);
     private AudioFrame _nextFrame = new(0.0f, 0.0f);
@@ -1334,7 +1333,7 @@ public sealed class MixerChannel {
                 ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling - just copy convert_buffer to audio_frames
-                AudioFrames.AddRange(_convertBuffer);
+                AudioFrames.AddRange(_convertBuffer.AsSpan());
             }
 
             // Step 3: Apply in-place processing to newly added frames
@@ -1355,7 +1354,7 @@ public sealed class MixerChannel {
     private void ApplySpeexResampling(int audioFramesStartingSize) {
         if (_speexResampler == null || !_speexResampler.IsInitialized) {
             // Fallback: just copy convert_buffer if resampler isn't ready
-            AudioFrames.AddRange(_convertBuffer);
+            AudioFrames.AddRange(_convertBuffer.AsSpan());
             return;
         }
 
@@ -1368,15 +1367,14 @@ public sealed class MixerChannel {
 
         // Resize audio_frames to accommodate new frames
         int targetSize = audioFramesStartingSize + estimatedOutFrames;
-        while (AudioFrames.Count < targetSize) {
-            AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
-        }
+        AudioFrames.Resize(targetSize);
 
         // Prepare input buffer - convert AudioFrame[] to interleaved float[]
         float[] inputBuffer = new float[inFrames * 2];
+        Span<AudioFrame> convertSpan = _convertBuffer.AsSpan();
         for (int i = 0; i < inFrames; i++) {
-            inputBuffer[i * 2] = _convertBuffer[i].Left;
-            inputBuffer[i * 2 + 1] = _convertBuffer[i].Right;
+            inputBuffer[i * 2] = convertSpan[i].Left;
+            inputBuffer[i * 2 + 1] = convertSpan[i].Right;
         }
 
         // Prepare output buffer
@@ -1495,7 +1493,7 @@ public sealed class MixerChannel {
                 ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling
-                AudioFrames.AddRange(_convertBuffer);
+                AudioFrames.AddRange(_convertBuffer.AsSpan());
             }
 
             // Step 3: Apply in-place processing to newly added frames
@@ -1552,7 +1550,7 @@ public sealed class MixerChannel {
                 ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling
-                AudioFrames.AddRange(_convertBuffer);
+                AudioFrames.AddRange(_convertBuffer.AsSpan());
             }
 
             // Step 3: Apply in-place processing to newly added frames
@@ -1609,7 +1607,7 @@ public sealed class MixerChannel {
                 ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling
-                AudioFrames.AddRange(_convertBuffer);
+                AudioFrames.AddRange(_convertBuffer.AsSpan());
             }
 
             // Step 3: Apply in-place processing to newly added frames
@@ -1666,7 +1664,7 @@ public sealed class MixerChannel {
                 ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling
-                AudioFrames.AddRange(_convertBuffer);
+                AudioFrames.AddRange(_convertBuffer.AsSpan());
             }
 
             // Step 3: Apply in-place processing to newly added frames
@@ -1762,7 +1760,7 @@ public sealed class MixerChannel {
                 ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling
-                AudioFrames.AddRange(_convertBuffer);
+                AudioFrames.AddRange(_convertBuffer.AsSpan());
             }
 
             // Apply in-place processing to newly added frames

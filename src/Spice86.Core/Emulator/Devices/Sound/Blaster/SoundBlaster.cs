@@ -450,9 +450,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private readonly IEmulatedClock _clock;
     private readonly HardwareMixer _hardwareMixer;
 
-    // Frames are enqueued during DMA transfer and dequeued by mixer callback
-    // This ensures proper resampling through AddSamples methods
-    private readonly ConcurrentQueue<AudioFrame> _outputQueue = new();
+    // Output queue for audio frames - uses Lock for bulk operations like DOSBox's RWQueue
+    // Reference: DOSBox uses RWQueue with NonblockingBulkEnqueue/BulkDequeue
+    private readonly Queue<AudioFrame> _outputQueue = new();
+    private readonly Lock _outputQueueLock = new();
+    
+    // Reusable buffer for batch enqueue operations - avoids per-sample Enqueue overhead
+    private readonly AudioFrame[] _enqueueBatch = new AudioFrame[4096];
+    private int _enqueueBatchCount;
+    
+    // Reusable buffer for mixer callback dequeue - avoids per-callback List allocation
+    private readonly AudioFrame[] _dequeueBatch = new AudioFrame[4096];
 
     private Queue<byte> _outputData = new Queue<byte>();
     private BlasterState _blasterState = BlasterState.WaitingForCommand;
@@ -600,22 +608,26 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         // Set frames_needed based on shortage
         // frames_needed = max(frames_requested - output_queue.Size(), 0)
-        int queueSize = _outputQueue.Count;
+        int queueSize;
+        lock (_outputQueueLock) {
+            queueSize = _outputQueue.Count;
+        }
         int shortage = Math.Max(frames_requested - queueSize, 0);
         System.Threading.Interlocked.Exchange(ref _framesNeeded, shortage);
 
         // Pull from queue callback - exact port of MIXER_PullFromQueueCallback
-        // Reference: src/audio/mixer.h lines 498-553
-        List<AudioFrame> to_mix = new();
-
+        // Reference: src/audio/mixer.h lines 498-553 BulkDequeue pattern
+        // Uses single lock for bulk dequeue like DOSBox's RWQueue
         int frames_received = 0;
-        while (frames_received < frames_requested && _outputQueue.TryDequeue(out AudioFrame frame)) {
-            to_mix.Add(frame);
-            frames_received++;
+        int maxFrames = Math.Min(frames_requested, _dequeueBatch.Length);
+        lock (_outputQueueLock) {
+            while (frames_received < maxFrames && _outputQueue.Count > 0) {
+                _dequeueBatch[frames_received++] = _outputQueue.Dequeue();
+            }
         }
 
         if (frames_received > 0) {
-            _dacChannel.AddAudioFrames(to_mix.ToArray().AsSpan());
+            _dacChannel.AddAudioFrames(_dequeueBatch.AsSpan(0, frames_received));
         }
 
         // Fill any shortfall with silence
@@ -1019,31 +1031,57 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Return silent frames if still in warmup
         if (_sb.Dsp.WarmupRemainingMs > 0) {
             _sb.Dsp.WarmupRemainingMs--;
-            for (uint i = 0; i < numSamples; i++) {
-                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
-            }
-            _framesAddedThisTick += (int)numSamples;
+            EnqueueSilentFrames(numSamples);
             return;
         }
 
         // Return silent frames if speaker is disabled
         if (!_sb.SpeakerEnabled) {
-            for (uint i = 0; i < numSamples; i++) {
-                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
-            }
-            _framesAddedThisTick += (int)numSamples;
+            EnqueueSilentFrames(numSamples);
             return;
         }
 
-        // Process samples into AudioFrames and enqueue to output_queue
+        // Batch process samples into AudioFrames and enqueue to output_queue
+        _enqueueBatchCount = 0;
         for (uint i = 0; i < numSamples; i++) {
             float value = signed
                 ? LookupTables.ToSigned8(unchecked((sbyte)samples[i]))
                 : LookupTables.ToUnsigned8(samples[i]);
-            _outputQueue.Enqueue(new AudioFrame(value, value));
+            _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(value, value);
         }
+        FlushEnqueueBatch();
         // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
         _framesAddedThisTick += (int)numSamples;
+    }
+    
+    /// <summary>
+    /// Enqueues silent frames in batch. Used during warmup and when speaker is disabled.
+    /// </summary>
+    private void EnqueueSilentFrames(uint count) {
+        _enqueueBatchCount = 0;
+        AudioFrame silence = new AudioFrame(0.0f, 0.0f);
+        for (uint i = 0; i < count; i++) {
+            _enqueueBatch[_enqueueBatchCount++] = silence;
+        }
+        FlushEnqueueBatch();
+        _framesAddedThisTick += (int)count;
+    }
+    
+    /// <summary>
+    /// Flushes the enqueue batch to the output queue.
+    /// Uses single lock like DOSBox's NonblockingBulkEnqueue for efficiency.
+    /// Reference: src/misc/rwqueue.cpp NonblockingBulkEnqueue
+    /// </summary>
+    private void FlushEnqueueBatch() {
+        if (_enqueueBatchCount == 0) {
+            return;
+        }
+        lock (_outputQueueLock) {
+            for (int i = 0; i < _enqueueBatchCount; i++) {
+                _outputQueue.Enqueue(_enqueueBatch[i]);
+            }
+        }
+        _enqueueBatchCount = 0;
     }
 
     internal void EnqueueFramesStereo(byte[] samples, uint numSamples, bool signed) {
@@ -1056,28 +1094,21 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Return silent frames if still in warmup
         if (_sb.Dsp.WarmupRemainingMs > 0) {
             _sb.Dsp.WarmupRemainingMs--;
-            for (uint i = 0; i < numFrames; i++) {
-                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
-            }
-            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
-            _framesAddedThisTick += (int)numFrames;
+            EnqueueSilentFrames(numFrames);
             return;
         }
 
         // Return silent frames if speaker is disabled
         if (!_sb.SpeakerEnabled) {
-            for (uint i = 0; i < numFrames; i++) {
-                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
-            }
-            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
-            _framesAddedThisTick += (int)numFrames;
+            EnqueueSilentFrames(numFrames);
             return;
         }
 
-        // Process samples into AudioFrames and enqueue to output_queue
+        // Batch process samples into AudioFrames
         // Note: SB Pro 1 and 2 swap left/right channels
         bool swapChannels = _sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2;
 
+        _enqueueBatchCount = 0;
         for (uint i = 0; i < numFrames; i++) {
             float left = signed
                 ? LookupTables.ToSigned8(unchecked((sbyte)samples[i * 2]))
@@ -1088,11 +1119,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 : LookupTables.ToUnsigned8(samples[i * 2 + 1]);
 
             if (swapChannels) {
-                _outputQueue.Enqueue(new AudioFrame(right, left));
+                _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(right, left);
             } else {
-                _outputQueue.Enqueue(new AudioFrame(left, right));
+                _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(left, right);
             }
         }
+        FlushEnqueueBatch();
         // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
         _framesAddedThisTick += (int)numFrames;
     }
@@ -1105,32 +1137,25 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Return silent frames if still in warmup
         if (_sb.Dsp.WarmupRemainingMs > 0) {
             _sb.Dsp.WarmupRemainingMs--;
-            for (uint i = 0; i < numSamples; i++) {
-                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
-            }
-            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
-            _framesAddedThisTick += (int)numSamples;
+            EnqueueSilentFrames(numSamples);
             return;
         }
 
         // Return silent frames if speaker is disabled
         if (!_sb.SpeakerEnabled) {
-            for (uint i = 0; i < numSamples; i++) {
-                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
-            }
-            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
-            _framesAddedThisTick += (int)numSamples;
+            EnqueueSilentFrames(numSamples);
             return;
         }
 
-        // Process samples into AudioFrames and enqueue to output_queue
+        // Batch process samples into AudioFrames
+        _enqueueBatchCount = 0;
         for (uint i = 0; i < numSamples; i++) {
             float value = signed
                 ? LookupTables.ToSigned16(samples[i])
                 : LookupTables.ToUnsigned16((ushort)samples[i]);
-            _outputQueue.Enqueue(new AudioFrame(value, value));
+            _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(value, value);
         }
-        // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+        FlushEnqueueBatch();
         _framesAddedThisTick += (int)numSamples;
     }
 
@@ -1144,28 +1169,21 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Return silent frames if still in warmup
         if (_sb.Dsp.WarmupRemainingMs > 0) {
             _sb.Dsp.WarmupRemainingMs--;
-            for (uint i = 0; i < numFrames; i++) {
-                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
-            }
-            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
-            _framesAddedThisTick += (int)numFrames;
+            EnqueueSilentFrames(numFrames);
             return;
         }
 
         // Return silent frames if speaker is disabled
         if (!_sb.SpeakerEnabled) {
-            for (uint i = 0; i < numFrames; i++) {
-                _outputQueue.Enqueue(new AudioFrame(0.0f, 0.0f));
-            }
-            // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
-            _framesAddedThisTick += (int)numFrames;
+            EnqueueSilentFrames(numFrames);
             return;
         }
 
-        // Process samples into AudioFrames and enqueue to output_queue
+        // Batch process samples into AudioFrames
         // Note: SB Pro 1 and 2 swap left/right channels
         bool swapChannels = _sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2;
 
+        _enqueueBatchCount = 0;
         for (uint i = 0; i < numFrames; i++) {
             float left = signed
                 ? LookupTables.ToSigned16(samples[i * 2])
@@ -1176,12 +1194,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 : LookupTables.ToUnsigned16((ushort)samples[i * 2 + 1]);
 
             if (swapChannels) {
-                _outputQueue.Enqueue(new AudioFrame(right, left));
+                _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(right, left);
             } else {
-                _outputQueue.Enqueue(new AudioFrame(left, right));
+                _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(left, right);
             }
         }
-        // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
+        FlushEnqueueBatch();
         _framesAddedThisTick += (int)numFrames;
     }
 
@@ -1362,11 +1380,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Reference: static std::vector<AudioFrame> empty_frames = {};
                 // empty_frames.resize(frames_requested);
                 // enqueue_frames(empty_frames);
-                List<AudioFrame> empty_frames = new(frames_requested);
-                for (int i = 0; i < frames_requested; i++) {
-                    empty_frames.Add(new AudioFrame(0.0f, 0.0f));
-                }
-                enqueue_frames(empty_frames);
+                EnqueueSilentFrames((uint)frames_requested);
                 break;
             }
 
@@ -1375,9 +1389,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // DOS program will be writing to the DAC register at the
                 // playback rate. In a mixer underflow situation, we render the
                 // current frame multiple times.
+                _enqueueBatchCount = 0;
                 for (int i = 0; i < frames_requested; i++) {
-                    _outputQueue.Enqueue(_sb.Dac.RenderFrame());
+                    _enqueueBatch[_enqueueBatchCount++] = _sb.Dac.RenderFrame();
+                    if (_enqueueBatchCount == _enqueueBatch.Length) {
+                        FlushEnqueueBatch();
+                    }
                 }
+                FlushEnqueueBatch();
                 _framesAddedThisTick += frames_requested;
                 break;
 
@@ -1409,11 +1428,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// <summary>
     /// Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
     /// </summary>
-    private void enqueue_frames(List<AudioFrame> frames) {
-        _framesAddedThisTick += frames.Count;
-        foreach (AudioFrame frame in frames) {
-            _outputQueue.Enqueue(frame);
+    private void EnqueueFrames(ReadOnlySpan<AudioFrame> frames) {
+        if (frames.Length == 0) {
+            return;
         }
+        _framesAddedThisTick += frames.Length;
+        _enqueueBatchCount = 0;
+        for (int i = 0; i < frames.Length; i++) {
+            _enqueueBatch[_enqueueBatchCount++] = frames[i];
+            if (_enqueueBatchCount == _enqueueBatch.Length) {
+                FlushEnqueueBatch();
+            }
+        }
+        FlushEnqueueBatch();
     }
 
     public bool PendingIrq8Bit {

@@ -33,6 +33,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly OplTimerChip[] _timerChips = [new OplTimerChip(), new OplTimerChip()];
 
     // FIFO queue for cycle-accurate OPL frame generation
+    // Reference: std::queue<AudioFrame> fifo in DOSBox opl.h
     private readonly Queue<AudioFrame> _fifo = new();
 
     // Register cache for two chips (512 bytes)
@@ -588,7 +589,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
 
     /// <summary>
     ///     OPL mixer callback - called by the mixer thread to generate frames.
-    ///     Reference: Opl::AudioCallback() in DOSBox
+    ///     Reference: Opl::AudioCallback() in DOSBox opl.cpp lines 433-458
     /// </summary>
     public void AudioCallback(int framesRequested) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
@@ -601,6 +602,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             Span<float> frameData = stackalloc float[2];
 
             // First, send any frames we've queued since the last callback
+            // Reference: while (frames_remaining && fifo.size())
             while (framesRemaining > 0 && _fifo.Count > 0) {
                 AudioFrame frame = _fifo.Dequeue();
                 frameData[0] = frame.Left;
@@ -610,6 +612,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             }
 
             // If the queue's run dry, render the remainder and sync-up our time datum
+            // Reference: while (frames_remaining)
             while (framesRemaining > 0) {
                 AudioFrame frame = RenderFrame();
                 frameData[0] = frame.Left;

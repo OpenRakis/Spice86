@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Backend.Audio;
 using Spice86.Libs.Sound.Common;
+using AudioFrame = Spice86.Libs.Sound.Common.AudioFrame;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Concurrent;
@@ -50,9 +51,9 @@ public sealed class Mixer : IDisposable {
     private ChorusPreset _chorusPreset = ChorusPreset.None;
 
     // Output buffers - matches DOSBox mixer output_buffer
-    private readonly List<AudioFrame> _outputBuffer = new();
-    private readonly List<AudioFrame> _reverbAuxBuffer = new();
-    private readonly List<AudioFrame> _chorusAuxBuffer = new();
+    private readonly AudioFrameBuffer _outputBuffer = new(0);
+    private readonly AudioFrameBuffer _reverbAuxBuffer = new(0);
+    private readonly AudioFrameBuffer _chorusAuxBuffer = new(0);
 
     private bool _doCompressor = false;
     private readonly Compressor _compressor = new();
@@ -609,10 +610,11 @@ public sealed class Mixer : IDisposable {
                     rentedBuffer = System.Buffers.ArrayPool<float>.Shared.Rent(framesToWrite * 2);
                     Span<float> interleavedBuffer = rentedBuffer.AsSpan(0, framesToWrite * 2);
                     const float normalizeFactor = 1.0f / 32768.0f;
+                    Span<AudioFrame> outputFrames = _outputBuffer.AsSpan(0, framesToWrite);
                     for (int i = 0; i < framesToWrite; i++) {
                         int offset = i * 2;
-                        interleavedBuffer[offset] = _outputBuffer[i].Left * normalizeFactor;
-                        interleavedBuffer[offset + 1] = _outputBuffer[i].Right * normalizeFactor;
+                        interleavedBuffer[offset] = outputFrames[i].Left * normalizeFactor;
+                        interleavedBuffer[offset + 1] = outputFrames[i].Right * normalizeFactor;
                     }
 
                     _audioPlayer.WriteData(interleavedBuffer);
@@ -636,18 +638,14 @@ public sealed class Mixer : IDisposable {
     /// </summary>
     private void MixSamples(int framesRequested) {
         // Clear output buffers
-        _outputBuffer.Clear();
-        _outputBuffer.Capacity = Math.Max(_outputBuffer.Capacity, framesRequested);
-
-        _reverbAuxBuffer.Clear();
-        _chorusAuxBuffer.Clear();
+        _outputBuffer.Resize(framesRequested);
+        _reverbAuxBuffer.Resize(framesRequested);
+        _chorusAuxBuffer.Resize(framesRequested);
 
         // Initialize with silence
-        for (int i = 0; i < framesRequested; i++) {
-            _outputBuffer.Add(new AudioFrame(0.0f, 0.0f));
-            _reverbAuxBuffer.Add(new AudioFrame(0.0f, 0.0f));
-            _chorusAuxBuffer.Add(new AudioFrame(0.0f, 0.0f));
-        }
+        _outputBuffer.AsSpan().Clear();
+        _reverbAuxBuffer.AsSpan().Clear();
+        _chorusAuxBuffer.AsSpan().Clear();
 
         // Mix all enabled channels
         foreach (MixerChannel channel in _channels.Values) {
@@ -660,21 +658,25 @@ public sealed class Mixer : IDisposable {
 
             // Accumulate channel output into master mix
             int numFrames = Math.Min(framesRequested, channel.AudioFrames.Count);
+            Span<AudioFrame> channelFrames = channel.AudioFrames.AsSpan(0, numFrames);
+            Span<AudioFrame> outputFrames = _outputBuffer.AsSpan(0, numFrames);
+            Span<AudioFrame> reverbFrames = _reverbAuxBuffer.AsSpan(0, numFrames);
+            Span<AudioFrame> chorusFrames = _chorusAuxBuffer.AsSpan(0, numFrames);
             for (int i = 0; i < numFrames; i++) {
-                AudioFrame channelFrame = channel.AudioFrames[i];
+                AudioFrame channelFrame = channelFrames[i];
 
                 // Apply sleep/wake fade-out or signal detection if enabled
                 channelFrame = channel.MaybeFadeOrListen(channelFrame);
 
                 // Add to master output using operator
-                _outputBuffer[i] = _outputBuffer[i] + channelFrame;
+                outputFrames[i] = outputFrames[i] + channelFrame;
 
                 if (_doReverb && channel.DoReverbSend) {
-                    _reverbAuxBuffer[i] = _reverbAuxBuffer[i] + (channelFrame * channel.ReverbSendGain);
+                    reverbFrames[i] = reverbFrames[i] + (channelFrame * channel.ReverbSendGain);
                 }
 
                 if (_doChorus && channel.DoChorusSend) {
-                    _chorusAuxBuffer[i] = _chorusAuxBuffer[i] + (channelFrame * channel.ChorusSendGain);
+                    chorusFrames[i] = chorusFrames[i] + (channelFrame * channel.ChorusSendGain);
                 }
             }
 
@@ -691,19 +693,21 @@ public sealed class Mixer : IDisposable {
 
         // Apply master gain using operator
         AudioFrame masterGainSnapshot = _masterGain;
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            _outputBuffer[i] = _outputBuffer[i] * masterGainSnapshot;
+        Span<AudioFrame> outputAll = _outputBuffer.AsSpan();
+        for (int i = 0; i < outputAll.Length; i++) {
+            outputAll[i] = outputAll[i] * masterGainSnapshot;
         }
 
         if (_doReverb) {
             // Apply high-pass filter to reverb aux buffer before reverb processing
-            for (int i = 0; i < _reverbAuxBuffer.Count; i++) {
-                AudioFrame frame = _reverbAuxBuffer[i];
+            Span<AudioFrame> reverbAll = _reverbAuxBuffer.AsSpan();
+            for (int i = 0; i < reverbAll.Length; i++) {
+                AudioFrame frame = reverbAll[i];
                 frame = new AudioFrame(
                     _reverbHighPassFilter[0].Filter(frame.Left),
                     _reverbHighPassFilter[1].Filter(frame.Right)
                 );
-                _reverbAuxBuffer[i] = frame;
+                reverbAll[i] = frame;
             }
 
             ApplyReverb();
