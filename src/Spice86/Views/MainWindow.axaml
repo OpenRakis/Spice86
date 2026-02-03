@@ -70,7 +70,25 @@
 							</StackPanel>
 						</MenuItem.Header>
 					</MenuItem>
+				</MenuItem>
+				<MenuItem Header="Audio" IsEnabled="{Binding IsEmulatorRunning}">
+					<MenuItem Command="{Binding ShowMixerCommand}">
+						<MenuItem.Header>
+							<StackPanel Orientation="Horizontal">
+								<fluent:SymbolIcon Symbol="MusicNote2" />
+								<Label Content="Audio Mixer" />
+							</StackPanel>
+						</MenuItem.Header>
 					</MenuItem>
+					<MenuItem Command="{Binding ShowAudioSettingsCommand}">
+						<MenuItem.Header>
+							<StackPanel Orientation="Horizontal">
+								<fluent:SymbolIcon Symbol="Settings" />
+								<Label Content="Audio Settings" />
+							</StackPanel>
+						</MenuItem.Header>
+					</MenuItem>
+				</MenuItem>
 				<MenuItem Header="Video" IsEnabled="{Binding IsEmulatorRunning}">
 					<MenuItem>
 						<MenuItem.Header>

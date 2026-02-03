@@ -1,6 +1,7 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
+namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -9,8 +10,8 @@ using Spice86.Shared.Interfaces;
 public class HardwareMixer {
     private readonly SoundBlasterHardwareConfig _blasterHardwareConfig;
     private readonly ILoggerService _logger;
-    private readonly SoundChannel _pcmSoundChannel;
-    private readonly SoundChannel _opl3fmSoundChannel;
+    private readonly MixerChannel _pcmMixerChannel;
+    private readonly MixerChannel _OPLMixerChannel;
 
     // Mixer volume registers (0-31 range)
     private readonly byte[] _masterVolume = new byte[2] { 31, 31 }; // Left, Right
@@ -19,8 +20,8 @@ public class HardwareMixer {
     private readonly byte[] _cdaVolume = new byte[2] { 31, 31 };    // Left, Right
     private readonly byte[] _lineVolume = new byte[2] { 31, 31 };   // Left, Right
     private byte _micVolume = 31;
-
-    // SB16 advanced registers
+    
+    // Sb16 advanced registers
     private byte _pcmLevel;
     private byte _recordingMonitor;
     private byte _recordingSource;
@@ -44,16 +45,16 @@ public class HardwareMixer {
     /// Initializes a new instance of the <see cref="HardwareMixer"/> class
     /// </summary>
     /// <param name="soundBlasterHardwareConfig">The SoundBlaster IRQs, and DMA information.</param>
-    /// <param name="pcmSoundChannel">The sound channel for sound effects.</param>
-    /// <param name="opl3fmSoundChannel">The sound channel for FM synth music.</param>
+    /// <param name="pcmMixerChannel">The mixer channel for PCM/DAC sound effects.</param>
+    /// <param name="OPLMixerChannel">The mixer channel for FM synth music.</param>
     /// <param name="loggerService">The service used for logging.</param>
     public HardwareMixer(SoundBlasterHardwareConfig soundBlasterHardwareConfig,
-        SoundChannel pcmSoundChannel, SoundChannel opl3fmSoundChannel,
+        MixerChannel pcmMixerChannel, MixerChannel OPLMixerChannel,
         ILoggerService loggerService) {
         _logger = loggerService;
         _blasterHardwareConfig = soundBlasterHardwareConfig;
-        _pcmSoundChannel = pcmSoundChannel;
-        _opl3fmSoundChannel = opl3fmSoundChannel;
+        _pcmMixerChannel = pcmMixerChannel;
+        _OPLMixerChannel = OPLMixerChannel;
     }
 
     /// <summary>
@@ -123,7 +124,7 @@ public class HardwareMixer {
             case MixerRegisters.OutputStereoSelect:
                 return (byte)(0x11 | (_stereoEnabled ? 0x02 : 0x00) | (_filterEnabled ? 0x00 : 0x20));
 
-            // SB16-specific registers
+            // Sb16-specific registers
             case MixerRegisters.MasterVolumeLeft:
                 if (_blasterHardwareConfig.SbType == SbType.Sb16) {
                     return (byte)(_masterVolume[0] << 3);
@@ -190,7 +191,7 @@ public class HardwareMixer {
                 }
                 return 0x0A;
 
-            // SB16 advanced registers
+            // Sb16 advanced registers
             case MixerRegisters.Sb16PcmLevel:
                 return _blasterHardwareConfig.SbType == SbType.Sb16 ? _pcmLevel : (byte)0;
 
@@ -296,7 +297,7 @@ public class HardwareMixer {
                 }
                 break;
 
-            // SB16-specific registers
+            // Sb16-specific registers
             case MixerRegisters.MasterVolumeLeft:
                 if (_blasterHardwareConfig.SbType == SbType.Sb16) {
                     _masterVolume[0] = (byte)(value >> 3);
@@ -376,7 +377,7 @@ public class HardwareMixer {
                 }
                 break;
 
-            // SB16 advanced registers
+            // Sb16 advanced registers
             case MixerRegisters.Sb16PcmLevel:
                 if (_blasterHardwareConfig.SbType == SbType.Sb16) {
                     _pcmLevel = value;
@@ -488,7 +489,7 @@ public class HardwareMixer {
         _stereoEnabled = false;
         _filterEnabled = true;
 
-        // Reset SB16 advanced registers
+        // Reset Sb16 advanced registers
         _pcmLevel = 0;
         _recordingMonitor = 0;
         _recordingSource = 0;
@@ -532,7 +533,7 @@ public class HardwareMixer {
             case 3: result |= 0x08; break;
         }
 
-        // High DMA channel (SB16)
+        // High DMA channel (Sb16)
         if (_blasterHardwareConfig.SbType == SbType.Sb16) {
             switch (_blasterHardwareConfig.HighDma) {
                 case 5: result |= 0x20; break;
@@ -567,19 +568,50 @@ public class HardwareMixer {
 
         float dacLeft = CalculatePercentage(_dacVolume[0]) * masterLeft;
         float dacRight = CalculatePercentage(_dacVolume[1]) * masterRight;
-        _pcmSoundChannel.Volume = (int)((dacLeft + dacRight) * 50); // Average and scale to 0-100
+        
+        // Set app volume on the mixer channel (programmatic control from DOS software)
+        _pcmMixerChannel.SetAppVolume(new AudioFrame(dacLeft, dacRight));
 
         float fmLeft = CalculatePercentage(_fmVolume[0]) * masterLeft;
         float fmRight = CalculatePercentage(_fmVolume[1]) * masterRight;
-        _opl3fmSoundChannel.Volume = (int)((fmLeft + fmRight) * 50); // Average and scale to 0-100
+        
+        // Set app volume on the mixer channel (programmatic control from DOS software)
+        _OPLMixerChannel.SetAppVolume(new AudioFrame(fmLeft, fmRight));
     }
 
-    private static float CalculatePercentage(byte volume) {
+    private float CalculatePercentage(byte volume) {
         // The SB Pro volume values are attenuation values (31=max volume, 0=mute)
-        if (volume >= 28) return 1.0f;  // Full volume
-        if (volume <= 4) return 0.0f;   // Mute
+        // Reference: src/hardware/audio/soundblaster.cpp calc_vol()
+        
+        byte count = (byte)(31 - volume);
+        float db = count;
 
-        // Linear interpolation between 0.0 and 1.0
-        return (volume - 4) / 24.0f;
+        // Apply Sound Blaster type-specific adjustments
+        if (_blasterHardwareConfig.SbType == SbType.SBPro1 || _blasterHardwareConfig.SbType == SbType.SBPro2) {
+            if (count != 0) {
+                if (count < 16) {
+                    db -= 1.0f;
+                } else if (count > 16) {
+                    db += 1.0f;
+                }
+                if (count == 24) {
+                    db += 2.0f;
+                }
+                if (count > 27) {
+                    // Turn it off
+                    return 0.0f;
+                }
+            }
+        } else {
+            // SB16 scale (and other SB types without specific data)
+            db *= 2.0f;
+            if (count > 20) {
+                db -= 1.0f;
+            }
+        }
+
+        // Convert dB to linear scale: 10^(-0.05 * db)
+        // This is the inverse of the formula: dB = 20 * log10(linear)
+        return (float)Math.Pow(10.0, -0.05 * db);
     }
 }

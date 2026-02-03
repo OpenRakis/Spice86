@@ -3,12 +3,9 @@ namespace Spice86.Tests.Dos;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Blaster;
-using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
@@ -72,21 +69,6 @@ public class DosTestFixture {
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             false, true, LoggerService);
 
-        SoftwareMixer softwareMixer = new(LoggerService, configuration.AudioEngine);
-        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, LoggerService, emulationLoopScheduler, emulatedClock,
-            configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, LoggerService, configuration.FailOnUnhandledPort);
-
-        pcSpeaker.AttachPitControl(pitTimer);
-
-        DmaBus dmaSystem =
-            new(Memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, LoggerService);
-
-        SoundBlasterHardwareConfig soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaSystem, dualPic, emulationLoopScheduler, emulatedClock,
-            configuration.FailOnUnhandledPort,
-            LoggerService, soundBlasterHardwareConfig, pauseHandler);
-
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(Memory, interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
@@ -109,7 +91,7 @@ public class DosTestFixture {
 
         Dos = new Dos(configuration, Memory, cfgCpu, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
-            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
+            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", "" } },
             ioPortDispatcher, LoggerService);
 
         DosFileManager = Dos.FileManager;
