@@ -197,16 +197,21 @@ public sealed class Dos {
         CountryInfo = new();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, Devices);
-        DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, DosSwappableDataArea, _loggerService);
+
+        // Calculate initial PSP segment from configuration (PSP is 16 paragraphs before entry point)
+        ushort initialPspSegment = (ushort)(configuration.ProgramEntryPointSegment - 0x10);
+
+        // Initialize the SDA with the initial PSP segment
+        DosSwappableDataArea.CurrentProgramSegmentPrefix = initialPspSegment;
 
         // Initialize memory manager first - it must know about the root COMMAND.COM reserved space
         // Root PSP is at 0x60, environment at 0x68, so MCB chain starts after 0x6F
         // This matches FreeDOS where DOS_PSP + 16 paragraphs is reserved
-        MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
+        MemoryManager = new DosMemoryManager(_memory, initialPspSegment, loggerService);
 
-        ProcessManager = new(_memory, stack, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, _loggerService);
+        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
+        DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, ProcessManager, ioPortDispatcher, DosTables, _loggerService);
         DosInt23Handler = new DosInt23Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);

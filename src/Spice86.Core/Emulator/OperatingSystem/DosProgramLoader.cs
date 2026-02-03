@@ -46,7 +46,7 @@ internal class DosProgramLoader : DosFileLoader {
         }
 
         DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
-        _int21.LoadAndExecute(absoluteDosPath, paramBlock, commandTail: arguments);
+        _processManager.LoadInitialProgram(absoluteDosPath, paramBlock, arguments ?? "", paramBlock.EnvironmentSegment);
         return File.ReadAllBytes(file);
     }
 }
