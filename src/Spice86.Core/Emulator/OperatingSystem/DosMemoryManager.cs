@@ -186,7 +186,6 @@ public class DosMemoryManager {
         out DosMemoryControlBlock block) {
         block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
         if (!CheckValidOrLogError(block)) {
-            block = this.FindLargestFree();
             return DosErrorCode.MemoryControlBlockDestroyed;
         }
 
@@ -200,16 +199,10 @@ public class DosMemoryManager {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("Could not join MCB {Block}", block);
             }
-            block = this.FindLargestFree();
             return DosErrorCode.InsufficientMemory;
         }
 
         if (block.Size < requestedSizeInParagraphs) {
-            // Restore the original size of the block.
-            if (block.Size != initialBlockSizeInParagraphs) {
-                SplitBlock(block, initialBlockSizeInParagraphs);
-            }
-
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}",
                     block, requestedSizeInParagraphs);
@@ -219,7 +212,6 @@ public class DosMemoryManager {
                     _loggerService.Verbose("Next MCB is {Block}", nextBlock);
                 }
             }
-            block = this.FindLargestFree();
             return DosErrorCode.InsufficientMemory;
         }
 

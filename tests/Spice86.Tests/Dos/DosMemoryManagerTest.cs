@@ -399,7 +399,7 @@ public class DosMemoryManagerTests {
         // Simulate allocating a block for the program image first.
         DosErrorCode errorCode1 = _memoryManager.TryModifyBlock(0xFF0, 1234, out block1);
         // Get the remaining free space.
-        DosErrorCode errorCode2 = _memoryManager.TryModifyBlock(0xFF0, 0xFFFF, out block2);
+        DosErrorCode errorCode2 = _memoryManager.TryModifyBlock(0xFF0, 0xFFFF, out _);
 
         // Assert
         errorCode1.Should().Be(DosErrorCode.NoError);
@@ -407,19 +407,11 @@ public class DosMemoryManagerTests {
 
         block1.IsValid.Should().BeTrue();
         block1.IsFree.Should().BeFalse();
-        block1.IsLast.Should().BeFalse();
+        block1.IsLast.Should().BeTrue();
         block1.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
         block1.DataBlockSegment.Should().Be(0xFF0);
-        block1.Size.Should().Be(1234);
-        block1.AllocationSizeInBytes.Should().Be(19744);
-
-        block2.IsValid.Should().BeTrue();
-        block2.IsFree.Should().BeTrue();
-        block2.IsLast.Should().BeTrue();
-        block2.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        block2.DataBlockSegment.Should().Be(0x14C3);
-        block2.Size.Should().Be(35645);
-        block2.AllocationSizeInBytes.Should().Be(570320);
+        block1.Size.Should().Be(36880);
+        block1.AllocationSizeInBytes.Should().Be(590080);
     }
 
     /// <summary>
@@ -434,13 +426,7 @@ public class DosMemoryManagerTests {
 
         // Assert
         errorCode.Should().Be(DosErrorCode.MemoryControlBlockDestroyed);
-        block.IsValid.Should().BeTrue();
-        block.IsFree.Should().BeTrue();
-        block.IsLast.Should().BeTrue();
-        block.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        block.DataBlockSegment.Should().Be(0xFF0);
-        block.Size.Should().Be(36880);
-        block.AllocationSizeInBytes.Should().Be(590080);
+        block.IsValid.Should().BeFalse();
     }
 
     /// <summary>
@@ -557,7 +543,7 @@ public class DosMemoryManagerTests {
     }
 
     /// <summary>
-    /// Ensures that the memory manager cannot extend the size of an allocated block if it has
+    /// Ensures that the memory manager cannot extend the size of an allocated block past
     /// another allocated block immediately after it.
     /// </summary>
     [Fact]
@@ -575,16 +561,16 @@ public class DosMemoryManagerTests {
         secondBlock.Should().NotBeNull();
         errorCode.Should().Be(DosErrorCode.InsufficientMemory);
         modifiedBlock.IsValid.Should().BeTrue();
-        modifiedBlock.IsFree.Should().BeTrue();
-        modifiedBlock.IsLast.Should().BeTrue();
-        modifiedBlock.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        modifiedBlock.DataBlockSegment.Should().Be(0x50CA);
-        modifiedBlock.Size.Should().Be(20278);
-        modifiedBlock.AllocationSizeInBytes.Should().Be(324448);
+        modifiedBlock.IsFree.Should().BeFalse();
+        modifiedBlock.IsLast.Should().BeFalse();
+        modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
+        modifiedBlock.Size.Should().Be(16300);
+        modifiedBlock.AllocationSizeInBytes.Should().Be(260800);
     }
 
     /// <summary>
-    /// Ensures that the memory manager cannot extend the size of an allocated block if it has free
+    /// Ensures that the memory manager extends the size of an allocated block if it has free
     /// space after it, but not as much as requested.
     /// </summary>
     [Fact]
@@ -609,12 +595,12 @@ public class DosMemoryManagerTests {
         thirdBlock.Should().NotBeNull();
         errorCode.Should().Be(DosErrorCode.InsufficientMemory);
         modifiedBlock.IsValid.Should().BeTrue();
-        modifiedBlock.IsFree.Should().BeTrue();
-        modifiedBlock.IsLast.Should().BeTrue();
-        modifiedBlock.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        modifiedBlock.DataBlockSegment.Should().Be(0x512F);
-        modifiedBlock.Size.Should().Be(20177);
-        modifiedBlock.AllocationSizeInBytes.Should().Be(322832);
+        modifiedBlock.IsFree.Should().BeFalse();
+        modifiedBlock.IsLast.Should().BeFalse();
+        modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
+        modifiedBlock.Size.Should().Be(16401);
+        modifiedBlock.AllocationSizeInBytes.Should().Be(262416);
     }
 
     /// <summary>
