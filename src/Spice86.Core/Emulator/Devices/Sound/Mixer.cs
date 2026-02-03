@@ -850,8 +850,8 @@ public sealed class Mixer : IDisposable {
         // Apply high-pass filter to reverb input (removes low-frequency buildup)
         for (int i = 0; i < frameCount; i++) {
             AudioFrame frame = _reverbAuxBuffer[i];
-            leftIn[i] = (float)_reverbHighPassFilter[0].Filter(frame.Left);
-            rightIn[i] = (float)_reverbHighPassFilter[1].Filter(frame.Right);
+            leftIn[i] = _reverbHighPassFilter[0].Filter(frame.Left);
+            rightIn[i] = _reverbHighPassFilter[1].Filter(frame.Right);
         }
 
         // Process through MVerb (FDN reverb algorithm)

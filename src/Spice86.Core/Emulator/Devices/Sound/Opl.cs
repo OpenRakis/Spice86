@@ -214,7 +214,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private void Init() {
         _newMode = 0;
-        _chip.Reset((uint)OplSampleRateHz);
+        _chip.Reset(OplSampleRateHz);
         InitializeToneGenerators();
         Array.Clear(_registerCache);
 

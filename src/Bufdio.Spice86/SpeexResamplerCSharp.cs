@@ -412,7 +412,7 @@ public sealed class SpeexResamplerCSharp {
         filt_len = (uint)quality_map[quality].base_length;
 
         if (num_rate > den_rate) {
-            cutoff = quality_map[quality].downsample_bandwidth * den_rate / (float)num_rate;
+            cutoff = quality_map[quality].downsample_bandwidth * den_rate / num_rate;
             if (multiply_frac(out filt_len, filt_len, num_rate, den_rate) != RESAMPLER_ERR_SUCCESS) {
                 goto fail;
             }

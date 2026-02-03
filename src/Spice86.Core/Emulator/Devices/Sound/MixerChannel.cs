@@ -299,7 +299,7 @@ public sealed class MixerChannel {
             throw new InvalidOperationException("LERP upsampler requires channel rate < mixer rate");
         }
 
-        _lerpStep = (float)_sampleRateHz / (float)_mixerSampleRateHz;
+        _lerpStep = _sampleRateHz / (float)_mixerSampleRateHz;
         if (_lerpStep >= 1.0f) {
             throw new InvalidOperationException($"LERP step must be < 1.0, got {_lerpStep}");
         }
@@ -649,7 +649,7 @@ public sealed class MixerChannel {
             int framesRemaining;
             lock (_mutex) {
                 // Calculate stretch factor based on sample rates
-                float stretchFactor = (float)_sampleRateHz / (float)_mixerSampleRateHz;
+                float stretchFactor = _sampleRateHz / (float)_mixerSampleRateHz;
 
                 // Calculate how many frames we still need
                 framesRemaining = (int)Math.Ceiling(
@@ -1877,7 +1877,7 @@ public sealed class MixerChannel {
         public bool ConfigureFadeOut(string prefs) {
             void SetWaitAndFade(int waitMs, int fadeMs) {
                 _fadeoutOrSleepAfterMs = waitMs;
-                _fadeoutDecrementPerMs = 1.0f / (float)fadeMs;
+                _fadeoutDecrementPerMs = 1.0f / fadeMs;
 
                 // LOG_MSG equivalent - using Verbose level
                 if (_channel._loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
@@ -1940,7 +1940,7 @@ public sealed class MixerChannel {
                 throw new ArgumentException("awakeForMs must be >= fadeoutOrSleepAfterMs");
             }
 
-            float elapsedFadeMs = (float)(awakeForMs - _fadeoutOrSleepAfterMs);
+            float elapsedFadeMs = awakeForMs - _fadeoutOrSleepAfterMs;
             float decrement = _fadeoutDecrementPerMs * elapsedFadeMs;
 
             const float MinLevel = 0.0f;
