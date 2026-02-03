@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.OperatingSystem;
+namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
@@ -25,8 +25,9 @@ public class DosMemoryManager {
     private const byte HighMemOnlyNoFallback = 0x80;
     private readonly ILoggerService _loggerService;
     private readonly IMemory _memory;
-    private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryControlBlock _start;
+
+    private readonly DosSwappableDataArea _sda;
 
     /// <summary>
     /// The current memory allocation strategy used for INT 21h/48h (allocate memory).
@@ -41,15 +42,14 @@ public class DosMemoryManager {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="pspTracker">The class responsible for DOS program loader configuration.</param>
+    /// <param name="initialPspSegment">The initial PSP segment for MCB chain setup.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosMemoryManager(IMemory memory,
-        DosProgramSegmentPrefixTracker pspTracker, ILoggerService loggerService) {
+    public DosMemoryManager(IMemory memory, ushort initialPspSegment, ILoggerService loggerService) {
         _loggerService = loggerService;
-        _pspTracker = pspTracker;
         _memory = memory;
+        _sda = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
 
-        ushort pspSegment = _pspTracker.InitialPspSegment;
+        ushort pspSegment = initialPspSegment;
         // The MCB starts 1 paragraph (16 bytes) before the 16 paragraph (256 bytes) PSP. Since
         // we're the memory manager, we're the one who needs to read the MCB, so we need to start
         // with its address by subtracting 1 paragraph from the PSP.
@@ -127,7 +127,7 @@ public class DosMemoryManager {
             return null;
         }
 
-        block.PspSegment = _pspTracker.GetCurrentPspSegment();
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix;
         return block;
     }
 
@@ -226,7 +226,7 @@ public class DosMemoryManager {
         if (block.Size > requestedSizeInParagraphs) {
             SplitBlock(block, requestedSizeInParagraphs);
         }
-        block.PspSegment = _pspTracker.GetCurrentPspSegment();
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix;
         return DosErrorCode.NoError;
     }
 
@@ -420,7 +420,7 @@ public class DosMemoryManager {
             return null;
         }
 
-        block.PspSegment = _pspTracker.GetCurrentPspSegment(); // Marks the block as allocated.
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix; // Marks the block as allocated.
         return block;
     }
 
@@ -456,7 +456,7 @@ public class DosMemoryManager {
         if (block.Size > size.MaxSizeInParagraphs) {
             SplitBlock(block, size.MaxSizeInParagraphs);
         }
-        block.PspSegment = _pspTracker.GetCurrentPspSegment(); // Marks the block as allocated.
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix; // Marks the block as allocated.
         return block;
     }
 
