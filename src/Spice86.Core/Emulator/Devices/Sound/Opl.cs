@@ -162,6 +162,25 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
+    ///     Renders OPL frames up to the current emulated time, queueing them in the FIFO.
+    ///     Reference: Opl::RenderUpToNow() in DOSBox opl.cpp
+    /// </summary>
+    private void RenderUpToNow() {
+        double now = _clock.ElapsedTimeMs;
+        // Wake up the channel and update the last rendered time datum.
+        // assert(channel);
+        if (_mixerChannel.WakeUp()) {
+            _lastRenderedMs = now;
+            return;
+        }
+        // Keep rendering until we're current
+        while (_lastRenderedMs < now) {
+            _lastRenderedMs += _msPerFrame;
+            _fifo.Enqueue(RenderFrame());
+        }
+    }
+
+    /// <summary>
     ///     Exposes the OPL mixer channel for other components (e.g., SoundBlaster hardware mixer).
     /// </summary>
     public MixerChannel MixerChannel => _mixerChannel;
@@ -592,17 +611,10 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Reference: Opl::AudioCallback() in DOSBox opl.cpp lines 433-458
     /// </summary>
     public void AudioCallback(int framesRequested) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("OPL: AudioCallback framesRequested={Frames}, FIFO size={FifoSize}",
-                framesRequested, _fifo.Count);
-        }
-
+        int framesRemaining = framesRequested;
         lock (_chipLock) {
-            int framesRemaining = framesRequested;
             Span<float> frameData = stackalloc float[2];
-
             // First, send any frames we've queued since the last callback
-            // Reference: while (frames_remaining && fifo.size())
             while (framesRemaining > 0 && _fifo.Count > 0) {
                 AudioFrame frame = _fifo.Dequeue();
                 frameData[0] = frame.Left;
@@ -610,9 +622,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 _mixerChannel.AddSamples_sfloat(1, frameData);
                 framesRemaining--;
             }
-
             // If the queue's run dry, render the remainder and sync-up our time datum
-            // Reference: while (frames_remaining)
             while (framesRemaining > 0) {
                 AudioFrame frame = RenderFrame();
                 frameData[0] = frame.Left;
@@ -620,27 +630,8 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 _mixerChannel.AddSamples_sfloat(1, frameData);
                 framesRemaining--;
             }
-
+            // Update last rendered time to now (cycle-accurate sync)
             _lastRenderedMs = _clock.ElapsedTimeMs;
-        }
-    }
-
-    /// <summary>
-    ///     Renders cycle-accurate OPL frames up to the current emulated time.
-    ///     Reference: Opl::RenderUpToNow() in DOSBox
-    /// </summary>
-    private void RenderUpToNow() {
-        double now = _clock.ElapsedTimeMs;
-
-        if (_mixerChannel.WakeUp()) {
-            _lastRenderedMs = now;
-            return;
-        }
-
-        while (_lastRenderedMs < now) {
-            _lastRenderedMs += _msPerFrame;
-            AudioFrame frame = RenderFrame();
-            _fifo.Enqueue(frame);
         }
     }
 
