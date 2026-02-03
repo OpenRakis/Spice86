@@ -1,8 +1,10 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Shared.Emulator.Memory;
 
 public abstract class CfgNode : ICfgNode {
@@ -28,6 +30,12 @@ public abstract class CfgNode : ICfgNode {
     public abstract ICfgNode? GetNextSuccessor(InstructionExecutionHelper helper);
 
     public abstract InstructionNode ToInstructionAst(AstBuilder builder);
+
+    public virtual IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        throw new NotImplementedException(
+            $"GenerateExecutionAst not yet implemented for {GetType().Name}. " +
+            $"See OpRegRm.mixin for an example implementation.");
+    }
 
     public int? MaxSuccessorsCount { get; set; }
 

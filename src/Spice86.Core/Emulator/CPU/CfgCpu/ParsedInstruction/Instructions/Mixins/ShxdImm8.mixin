@@ -6,8 +6,10 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
@@ -30,6 +32,15 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<b
         builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
         builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext),
         builder.InstructionField.ToNode(ValueField));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // RM = {{Operation}}(RM, R, IMM)
+        var (rNode, rmNode) = builder.ModRmOperands(builder.UType({{Size}}), ModRmContext);
+        ValueNode immNode = builder.InstructionField.ToNode(ValueField);
+        MethodCallValueNode shiftCall = builder.AluCall(builder.UType({{Size}}), {{Size}}, "{{Operation}}", rmNode, rNode, immNode);
+        IVisitableAstNode instructionLogic = builder.Assign(builder.UType({{Size}}), rmNode, shiftCall);
+        return builder.WithIpAdvancement(this, instructionLogic);
     }
 }
 
