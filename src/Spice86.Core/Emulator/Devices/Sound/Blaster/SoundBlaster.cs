@@ -2573,6 +2573,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        // Don't register any ports when Sound Blaster is disabled or has no base address
+        if (_config.SbType == SbType.None || _config.BaseAddress == 0) {
+            return;
+        }
+
         int basePort = _config.BaseAddress;
         ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x06), this);
         ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x0A), this);

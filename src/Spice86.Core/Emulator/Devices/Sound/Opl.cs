@@ -302,6 +302,11 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Reference: Port handler installation in DOSBox Opl constructor
     /// </summary>
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        // Don't register any ports when OPL is disabled
+        if (_mode == OplMode.None) {
+            return;
+        }
+
         // 0x388-0x38b ports (AdLib base ports) - always registered
         ioPortDispatcher.AddIOPortHandler(0x388, this);
         ioPortDispatcher.AddIOPortHandler(0x389, this);
