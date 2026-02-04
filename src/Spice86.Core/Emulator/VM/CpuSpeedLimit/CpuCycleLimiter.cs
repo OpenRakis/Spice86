@@ -83,4 +83,18 @@ public class CpuCycleLimiter : ICyclesLimiter {
         TargetCpuCyclesPerMs = Math.Max(TargetCpuCyclesPerMs - CyclesDown,
             MinCyclesPerMs);
     }
+
+    /// <inheritdoc/>
+    public long GetNumberOfCyclesNotDoneYet() {
+        long cyclesRemaining = TargetCpuCyclesPerMs - (_targetCyclesForPause - _state.Cycles);
+        return cyclesRemaining;
+    }
+
+    /// <inheritdoc/>
+    public double GetCycleProgressionPercentage() {
+        if (TargetCpuCyclesPerMs == 0) {
+            return 0.0;
+        }
+        return GetNumberOfCyclesNotDoneYet() / TargetCpuCyclesPerMs;
+    }
 }

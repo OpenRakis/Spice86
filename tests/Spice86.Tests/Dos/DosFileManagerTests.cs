@@ -27,6 +27,7 @@ using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 using Spice86.Tests.Utility;
@@ -106,7 +107,7 @@ public class DosFileManagerTests {
         Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
-        EmulatorStateSerializationFolder emulatorStateSerializationFolder = 
+        EmulatorStateSerializationFolder emulatorStateSerializationFolder =
             new EmulatorStateSerializationFolderFactory(loggerService)
                 .ComputeFolder(configuration.Exe, configuration.RecordedDataDirectory);
         EmulationStateDataReader reader = new(emulatorStateSerializationFolder, loggerService);
@@ -117,7 +118,7 @@ public class DosFileManagerTests {
         A20Gate a20Gate = new(configuration.A20Gate);
         Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
-        IEmulatedClock emulatedClock = new EmulatedClock();
+        IEmulatedClock emulatedClock = new EmulatedClock(new NullCyclesLimiter());
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
         

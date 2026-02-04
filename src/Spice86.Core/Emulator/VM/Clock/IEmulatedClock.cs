@@ -10,6 +10,17 @@ public interface IEmulatedClock {
     double ElapsedTimeMs { get; }
 
     /// <summary>
+    /// Gets the full index with sub-millisecond precision, combining elapsed milliseconds
+    /// with the current CPU cycle position within the millisecond tick.
+    /// Equivalent to DOSBox Staging's PIC_FullIndex().
+    /// </summary>
+    /// <remarks>
+    /// This provides more precise timing than ElapsedTimeMs for audio and other subsystems
+    /// that need sub-millisecond accuracy.
+    /// </remarks>
+    double FullIndex { get; }
+
+    /// <summary>
     /// Gets or sets the start time for the emulated clock.
     /// This represents the initial date/time from which CurrentDateTime is calculated.
     /// </summary>

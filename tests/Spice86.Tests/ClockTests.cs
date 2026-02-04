@@ -5,6 +5,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Xunit;
 
 /// <summary>
@@ -18,7 +19,8 @@ public class ClockTests {
     public void CyclesClock_CurrentDateTime_ShouldReflectStartTimePlusElapsed() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        CyclesClock clock = new CyclesClock(state, 1000); // 1000 cycles per second
+        ICyclesLimiter cyclesLimiter = new NullCyclesLimiter();
+        CyclesClock clock = new CyclesClock(state, cyclesLimiter, 1000); // 1000 cycles per second
         DateTime startTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         clock.StartTime = startTime;
 
@@ -40,7 +42,8 @@ public class ClockTests {
     public void EmulatedClock_StartTime_CanBeSetAndCurrentDateTimeCalculated() {
         // Arrange
         DateTime startTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-        EmulatedClock clock = new EmulatedClock();
+        ICyclesLimiter cyclesLimiter = new NullCyclesLimiter();
+        EmulatedClock clock = new EmulatedClock(cyclesLimiter);
         
         // Act
         clock.StartTime = startTime;
@@ -58,7 +61,8 @@ public class ClockTests {
     public void Clock_StartTime_CanBeSetAndRetrieved() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        CyclesClock clock = new CyclesClock(state, 1000);
+        ICyclesLimiter cyclesLimiter = new NullCyclesLimiter();
+        CyclesClock clock = new CyclesClock(state, cyclesLimiter, 1000);
         DateTime expectedStartTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
         // Act
@@ -76,7 +80,8 @@ public class ClockTests {
     public void Clock_OnPauseAndOnResume_ShouldNotThrow() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        CyclesClock clock = new CyclesClock(state, 1000);
+        ICyclesLimiter cyclesLimiter = new NullCyclesLimiter();
+        CyclesClock clock = new CyclesClock(state, cyclesLimiter, 1000);
 
         // Act
         Action act = () => {

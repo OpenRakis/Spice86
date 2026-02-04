@@ -32,4 +32,18 @@ public interface ICyclesLimiter {
     /// Decreases the number of target CPU cycles per ms
     /// </summary>
     public void DecreaseCycles();
+
+    /// <summary>
+    /// Gets the number of cycles not done yet (ND) within the current millisecond tick.
+    /// Equivalent to DOSBox Staging's PIC_TickIndexND().
+    /// </summary>
+    /// <returns>The number of cycles not yet completed in the current millisecond tick.</returns>
+    public long GetNumberOfCyclesNotDoneYet();
+
+    /// <summary>
+    /// Gets the percent of cycles completed within the current millisecond tick of the CPU.
+    /// Equivalent to DOSBox Staging's PIC_TickIndex().
+    /// </summary>
+    /// <returns>A value between 0.0 and 1.0 representing the percentage of cycles completed.</returns>
+    public double GetCycleProgressionPercentage();
 }

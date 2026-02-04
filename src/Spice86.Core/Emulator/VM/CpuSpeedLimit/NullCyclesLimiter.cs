@@ -14,4 +14,12 @@ internal class NullCyclesLimiter : ICyclesLimiter {
     public void IncreaseCycles() {
         //NOP
     }
+
+    public long GetNumberOfCyclesNotDoneYet() {
+        return 1;
+    }
+
+    public double GetCycleProgressionPercentage() {
+        return 0.0;
+    }
 }

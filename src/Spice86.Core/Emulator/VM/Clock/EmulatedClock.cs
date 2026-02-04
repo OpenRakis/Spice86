@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM.Clock;
 
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
+
 using System.Diagnostics;
 
 /// <summary>
@@ -8,9 +10,11 @@ using System.Diagnostics;
 public class EmulatedClock : IEmulatedClock {
     private int _ticks;
     private readonly Stopwatch _stopwatch = new();
+    private readonly ICyclesLimiter _cyclesLimiter;
     private double _cachedTime;
 
-    public EmulatedClock(DateTime? startTime = null) {
+    public EmulatedClock(ICyclesLimiter cyclesLimiter, DateTime? startTime = null) {
+        _cyclesLimiter = cyclesLimiter;
         StartTime = startTime ?? DateTime.UtcNow;
         _stopwatch.Start();
     }
@@ -26,6 +30,8 @@ public class EmulatedClock : IEmulatedClock {
             return _cachedTime;
         }
     }
+
+    public double FullIndex => ElapsedTimeMs + _cyclesLimiter.GetCycleProgressionPercentage();
 
     public DateTime StartTime { get; set; }
 

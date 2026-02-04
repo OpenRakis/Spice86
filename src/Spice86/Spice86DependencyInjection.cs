@@ -164,9 +164,15 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS data area created...");
         }
 
+        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(state, configuration);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Cycles limiter created...");
+        }
+
         IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null
-            ? new CyclesClock(state, configuration.InstructionsPerSecond.Value)
-            : new EmulatedClock();
+            ? new CyclesClock(state, cyclesLimiter, configuration.InstructionsPerSecond.Value)
+            : new EmulatedClock(cyclesLimiter);
         
         // Register clock to pause/resume events
         pauseHandler.Pausing += () => emulatedClock.OnPause();
@@ -378,8 +384,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
             emulationStateDataReader.ReadBreakpointsFromFileOrCreate();
-
-        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(state, configuration);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
