@@ -99,7 +99,7 @@ public class Cascade {
 internal sealed class CascadeStages<TState>
     where TState : struct, ISectionState {
     private readonly Biquad[] _stages;
-    private TState[] _states;
+    private readonly TState[] _states;
 
     internal CascadeStages(int maxStages) {
         _stages = new Biquad[maxStages];

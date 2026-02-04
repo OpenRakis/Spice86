@@ -348,90 +348,90 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         }
         switch (_mode) {
             case OplMode.Opl2: {
-                // Only respond on primary port, return 0xFF for others
-                // Make sure the low bits are 6 on OPL2
-                if ((port & 0x03) == 0) {
-                    byte ret = (byte)(_timerChips[0].Read(_clock.ElapsedTimeMs) | 0x06);
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("OPL: PortRead offset=0x00 returning 0x{Ret:X2} (timer0 status | 0x06)", ret);
+                    // Only respond on primary port, return 0xFF for others
+                    // Make sure the low bits are 6 on OPL2
+                    if ((port & 0x03) == 0) {
+                        byte ret = (byte)(_timerChips[0].Read(_clock.ElapsedTimeMs) | 0x06);
+                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                            _loggerService.Debug("OPL: PortRead offset=0x00 returning 0x{Ret:X2} (timer0 status | 0x06)", ret);
+                        }
+                        return ret;
                     }
-                    return ret;
+                    byte retOpl2Default = 0xFF;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("OPL: PortRead offset not primary returning 0x{Ret:X2} (no device)", retOpl2Default);
+                    }
+                    return retOpl2Default;
                 }
-                byte retOpl2Default = 0xFF;
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("OPL: PortRead offset not primary returning 0x{Ret:X2} (no device)", retOpl2Default);
-                }
-                return retOpl2Default;
-            }
 
             case OplMode.DualOpl2: {
-                // Only return for the lower ports
-                if ((port & 0x01) != 0) {
-                    byte ret = 0xFF;
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("OPL: PortRead DualOpl2 upper port returning 0x{Ret:X2} (no device)", ret);
+                    // Only return for the lower ports
+                    if ((port & 0x01) != 0) {
+                        byte ret = 0xFF;
+                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                            _loggerService.Debug("OPL: PortRead DualOpl2 upper port returning 0x{Ret:X2} (no device)", ret);
+                        }
+                        return ret;
                     }
-                    return ret;
+                    int timerIndex = (port >> 1) & 1;
+                    byte retTimer = (byte)(_timerChips[timerIndex].Read(_clock.ElapsedTimeMs) | 0x06);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("OPL: PortRead DualOpl2 returning 0x{Ret:X2} (timer chip {Index} status | 0x06)", retTimer, timerIndex);
+                    }
+                    return retTimer;
                 }
-                int timerIndex = (port >> 1) & 1;
-                byte retTimer = (byte)(_timerChips[timerIndex].Read(_clock.ElapsedTimeMs) | 0x06);
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("OPL: PortRead DualOpl2 returning 0x{Ret:X2} (timer chip {Index} status | 0x06)", retTimer, timerIndex);
-                }
-                return retTimer;
-            }
 
             case OplMode.Opl3Gold: {
-                if (_ctrlActive) {
-                    if (port == 0x38A) {
-                        // Control status, not busy
-                        byte ret = 0;
-                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                            _loggerService.Debug("OPL: PortRead 0x38A returning 0x{Ret:X2} (AdlibGold control status: not busy)", ret);
+                    if (_ctrlActive) {
+                        if (port == 0x38A) {
+                            // Control status, not busy
+                            byte ret = 0;
+                            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                                _loggerService.Debug("OPL: PortRead 0x38A returning 0x{Ret:X2} (AdlibGold control status: not busy)", ret);
+                            }
+                            return ret;
                         }
-                        return ret;
-                    }
-                    if (port == 0x38B) {
-                        byte ret = AdlibGoldControlRead();
-                        string desc = _ctrlIndex switch {
-                            0x00 => "Board Options (0x50 expected)",
-                            0x09 => "Left FM Volume (_ctrlLvol)",
-                            0x0A => "Right FM Volume (_ctrlRvol)",
-                            0x15 => "Audio Relocation (Cryo detection)",
-                            _ => "AdlibGold control read"
-                        };
-                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                            _loggerService.Debug("OPL: PortRead 0x38B returning 0x{Ret:X2} (AdlibGold index=0x{Idx:X2} => {Desc})", ret, _ctrlIndex, desc);
+                        if (port == 0x38B) {
+                            byte ret = AdlibGoldControlRead();
+                            string desc = _ctrlIndex switch {
+                                0x00 => "Board Options (0x50 expected)",
+                                0x09 => "Left FM Volume (_ctrlLvol)",
+                                0x0A => "Right FM Volume (_ctrlRvol)",
+                                0x15 => "Audio Relocation (Cryo detection)",
+                                _ => "AdlibGold control read"
+                            };
+                            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                                _loggerService.Debug("OPL: PortRead 0x38B returning 0x{Ret:X2} (AdlibGold index=0x{Idx:X2} => {Desc})", ret, _ctrlIndex, desc);
+                            }
+                            return ret;
                         }
-                        return ret;
                     }
+                    goto case OplMode.Opl3;
                 }
-                goto case OplMode.Opl3;
-            }
 
             case OplMode.Opl3: {
-                // Return timer status only on base port
-                if ((port & 0x03) == 0) {
-                    byte ret = _timerChips[0].Read(_clock.ElapsedTimeMs);
+                    // Return timer status only on base port
+                    if ((port & 0x03) == 0) {
+                        byte ret = _timerChips[0].Read(_clock.ElapsedTimeMs);
+                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                            _loggerService.Debug("OPL: PortRead Opl3 base port returning timer status 0x{Ret:X2}", ret);
+                        }
+                        return ret;
+                    }
+                    byte retOpl3Default = 0xFF;
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("OPL: PortRead Opl3 base port returning timer status 0x{Ret:X2}", ret);
+                        _loggerService.Debug("OPL: PortRead Opl3 non-base port returning 0x{Ret:X2} (no device)", retOpl3Default);
+                    }
+                    return retOpl3Default;
+                }
+
+            default: {
+                    byte ret = 0xFF;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("OPL: PortRead default returning 0x{Ret:X2} (unknown mode)", ret);
                     }
                     return ret;
                 }
-                byte retOpl3Default = 0xFF;
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("OPL: PortRead Opl3 non-base port returning 0x{Ret:X2} (no device)", retOpl3Default);
-                }
-                return retOpl3Default;
-            }
-
-            default: {
-                byte ret = 0xFF;
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("OPL: PortRead default returning 0x{Ret:X2} (unknown mode)", ret);
-                }
-                return ret;
-            }
         }
     }
 

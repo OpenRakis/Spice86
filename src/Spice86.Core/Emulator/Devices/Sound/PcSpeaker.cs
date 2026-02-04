@@ -93,7 +93,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         _scheduler = scheduler;
         _clock = clock;
         _pitControl = pitControl;
-        
+
         // Create and register the PC Speaker mixer channel
         // Features: Sleep (CPU efficiency), ChorusSend, ReverbSend (effect sends), Synthesizer (square wave)
         // Note: PC Speaker is mono but uses stereo channel for left output only (SetChannelMap below)
@@ -327,7 +327,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         if (!_mixerChannel.IsEnabled) {
             return;
         }
-        
+
         // Reference: src/hardware/audio/pcspeaker.cpp:20-22
         // frame_counter += channel->GetFramesPerTick();
         // const int requested_frames = ifloor(frame_counter);
@@ -625,23 +625,23 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         }
         lock (_outputLock) {
             int framesToAdd = Math.Min(framesRequested, _outputQueue.Count);
-            
+
             if (framesToAdd <= 0) {
                 return;
             }
-            
+
             // Dequeue samples and collect into array for batch processing
             Span<float> samples = stackalloc float[framesToAdd];
             for (int i = 0; i < framesToAdd; i++) {
                 float sample = _outputQueue.Dequeue();
-                
+
                 // Apply filters
                 sample = _highPassFilter.Filter(sample);
                 sample = _lowPassFilter.Filter(sample);
-                
+
                 samples[i] = sample;
             }
-            
+
             // Use AddSamples_mfloat which expects int16-ranged floats (like DOSBox staging)
             // Reference: DOSBox pcspeaker_impulse.cpp uses MIXER_PullFromQueueCallback<..., float, Stereo=false, SignedData=true, ...>
             // which calls AddSamples<float, false, true, true> expecting int16-ranged floats

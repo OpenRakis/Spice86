@@ -144,7 +144,7 @@ public sealed class SpeexResamplerCSharp {
     private uint out_rate;
     private uint num_rate;
     private uint den_rate;
-    private int quality;
+    private readonly int quality;
     private readonly uint nb_channels;
     private uint filt_len;
     private uint mem_alloc_size;
@@ -155,9 +155,9 @@ public sealed class SpeexResamplerCSharp {
     private uint oversample;
     private int started;
 
-    private int[] last_sample;
-    private uint[] samp_frac_num;
-    private uint[] magic_samples;
+    private readonly int[] last_sample;
+    private readonly uint[] samp_frac_num;
+    private readonly uint[] magic_samples;
     private float[] mem;
     private float[] sinc_table;
     private uint sinc_table_length;

@@ -22,7 +22,7 @@ using System;
 /// </summary>
 public sealed class MVerb {
     private const int MaxLength = 96000; // Maximum buffer length for 96kHz sample rate
-    
+
     // FDN components
     private readonly Allpass[] _allpass = new Allpass[4];
     private readonly StaticAllpassFourTap[] _allpassFourTap = new StaticAllpassFourTap[4];
@@ -31,7 +31,7 @@ public sealed class MVerb {
     private readonly StaticDelayLine _predelay;
     private readonly StaticDelayLineFourTap[] _staticDelayLine = new StaticDelayLineFourTap[4];
     private readonly StaticDelayLineEightTap[] _earlyReflectionsDelayLine = new StaticDelayLineEightTap[2];
-    
+
     // Parameters
     private float _sampleRate;
     private float _maxFreq;
@@ -45,7 +45,7 @@ public sealed class MVerb {
     private float _mix;
     private float _earlyMix;
     private float _size;
-    
+
     // Smoothing variables
     private float _mixSmooth;
     private float _earlyLateSmooth;
@@ -55,15 +55,15 @@ public sealed class MVerb {
     private float _sizeSmooth;
     private float _densitySmooth;
     private float _decaySmooth;
-    
+
     // Tank state
     private float _previousLeftTank;
     private float _previousRightTank;
-    
+
     // Control rate limiting
     private int _controlRate;
     private int _controlRateCounter;
-    
+
     /// <summary>
     /// Parameter indices for SetParameter/GetParameter.
     /// </summary>
@@ -79,7 +79,7 @@ public sealed class MVerb {
         EarlyMix,
         NumParams
     }
-    
+
     /// <summary>
     /// Initializes a new instance of the MVerb reverb processor.
     /// </summary>
@@ -90,15 +90,15 @@ public sealed class MVerb {
             _allpassFourTap[i] = new StaticAllpassFourTap();
             _staticDelayLine[i] = new StaticDelayLineFourTap();
         }
-        
+
         for (int i = 0; i < 2; i++) {
             _bandwidthFilter[i] = new StateVariable();
             _damping[i] = new StateVariable();
             _earlyReflectionsDelayLine[i] = new StaticDelayLineEightTap();
         }
-        
+
         _predelay = new StaticDelayLine();
-        
+
         // Initialize parameters with defaults
         _dampingFreq = 0.9f;
         _bandwidthFreq = 0.9f;
@@ -112,14 +112,14 @@ public sealed class MVerb {
         _previousLeftTank = 0.0f;
         _previousRightTank = 0.0f;
         _preDelayTime = 100.0f * (_sampleRate / 1000.0f);
-        _mixSmooth = _earlyLateSmooth = _bandwidthSmooth = _dampingSmooth = 
+        _mixSmooth = _earlyLateSmooth = _bandwidthSmooth = _dampingSmooth =
                      _predelaySmooth = _sizeSmooth = _decaySmooth = _densitySmooth = 0.0f;
         _controlRate = (int)(_sampleRate / 1000);
         _controlRateCounter = 0;
-        
+
         Reset();
     }
-    
+
     /// <summary>
     /// Processes stereo audio through the reverb.
     /// </summary>
@@ -128,23 +128,23 @@ public sealed class MVerb {
     /// <param name="leftOutput">Left channel output samples</param>
     /// <param name="rightOutput">Right channel output samples</param>
     /// <param name="sampleFrames">Number of sample frames to process</param>
-    public void Process(float[] leftInput, float[] rightInput, 
+    public void Process(float[] leftInput, float[] rightInput,
                        float[] leftOutput, float[] rightOutput, int sampleFrames) {
         float oneOverSampleFrames = 1.0f / sampleFrames;
         float mixDelta = (_mix - _mixSmooth) * oneOverSampleFrames;
         float earlyLateDelta = (_earlyMix - _earlyLateSmooth) * oneOverSampleFrames;
-        
+
         float bandwidthDelta = (((_bandwidthFreq * _maxFreq) + 100.0f) - _bandwidthSmooth) * oneOverSampleFrames;
         float dampingDelta = (((_dampingFreq * _maxFreq) + 100.0f) - _dampingSmooth) * oneOverSampleFrames;
         float predelayDelta = ((_preDelayTime * 200 * (_sampleRate / 1000)) - _predelaySmooth) * oneOverSampleFrames;
         float sizeDelta = (_size - _sizeSmooth) * oneOverSampleFrames;
         float decayDelta = (((0.7995f * _decay) + 0.005f) - _decaySmooth) * oneOverSampleFrames;
         float densityDelta = (((0.7995f * _density1) + 0.005f) - _densitySmooth) * oneOverSampleFrames;
-        
+
         for (int i = 0; i < sampleFrames; ++i) {
             float left = leftInput[i];
             float right = rightInput[i];
-            
+
             // Smooth parameter changes
             _mixSmooth += mixDelta;
             _earlyLateSmooth += earlyLateDelta;
@@ -154,7 +154,7 @@ public sealed class MVerb {
             _sizeSmooth += sizeDelta;
             _decaySmooth += decayDelta;
             _densitySmooth += densityDelta;
-            
+
             // Update filter frequencies at control rate
             if (_controlRateCounter >= _controlRate) {
                 _controlRateCounter = 0;
@@ -164,25 +164,25 @@ public sealed class MVerb {
                 _damping[1].Frequency(_dampingSmooth);
             }
             ++_controlRateCounter;
-            
+
             _predelay.SetLength((int)_predelaySmooth);
-            
+
             // Calculate density2 based on decay
             _density2 = _decaySmooth + 0.15f;
             if (_density2 > 0.5f)
                 _density2 = 0.5f;
             if (_density2 < 0.25f)
                 _density2 = 0.25f;
-            
+
             _allpassFourTap[1].SetFeedback(_density2);
             _allpassFourTap[3].SetFeedback(_density2);
             _allpassFourTap[0].SetFeedback(_density1);
             _allpassFourTap[2].SetFeedback(_density1);
-            
+
             // Bandwidth filtering
             float bandwidthLeft = _bandwidthFilter[0].Process(left);
             float bandwidthRight = _bandwidthFilter[1].Process(right);
-            
+
             // Early reflections calculation
             float earlyReflectionsL = _earlyReflectionsDelayLine[0].Process(bandwidthLeft * 0.5f + bandwidthRight * 0.3f)
                                     + _earlyReflectionsDelayLine[0].GetIndex(2) * 0.6f
@@ -192,7 +192,7 @@ public sealed class MVerb {
                                     + _earlyReflectionsDelayLine[0].GetIndex(6) * 0.1f
                                     + _earlyReflectionsDelayLine[0].GetIndex(7) * 0.1f
                                     + (bandwidthLeft * 0.4f + bandwidthRight * 0.2f) * 0.5f;
-            
+
             float earlyReflectionsR = _earlyReflectionsDelayLine[1].Process(bandwidthLeft * 0.3f + bandwidthRight * 0.5f)
                                     + _earlyReflectionsDelayLine[1].GetIndex(2) * 0.6f
                                     + _earlyReflectionsDelayLine[1].GetIndex(3) * 0.4f
@@ -201,33 +201,33 @@ public sealed class MVerb {
                                     + _earlyReflectionsDelayLine[1].GetIndex(6) * 0.1f
                                     + _earlyReflectionsDelayLine[1].GetIndex(7) * 0.1f
                                     + (bandwidthLeft * 0.2f + bandwidthRight * 0.4f) * 0.5f;
-            
+
             // Predelay
             float predelayMonoInput = _predelay.Process((bandwidthRight + bandwidthLeft) * 0.5f);
-            
+
             // Allpass diffusion
             float smearedInput = predelayMonoInput;
             for (int j = 0; j < 4; j++)
                 smearedInput = _allpass[j].Process(smearedInput);
-            
+
             // FDN feedback network - Left tank
             float leftTank = _allpassFourTap[0].Process(smearedInput + _previousRightTank);
             leftTank = _staticDelayLine[0].Process(leftTank);
             leftTank = _damping[0].Process(leftTank);
             leftTank = _allpassFourTap[1].Process(leftTank);
             leftTank = _staticDelayLine[1].Process(leftTank);
-            
+
             // FDN feedback network - Right tank
             float rightTank = _allpassFourTap[2].Process(smearedInput + _previousLeftTank);
             rightTank = _staticDelayLine[2].Process(rightTank);
             rightTank = _damping[1].Process(rightTank);
             rightTank = _allpassFourTap[3].Process(rightTank);
             rightTank = _staticDelayLine[3].Process(rightTank);
-            
+
             // Update tank state
             _previousLeftTank = leftTank * _decaySmooth;
             _previousRightTank = rightTank * _decaySmooth;
-            
+
             // Output accumulation from delay taps
             float accumulatorL = (0.6f * _staticDelayLine[2].GetIndex(1))
                               + (0.6f * _staticDelayLine[2].GetIndex(2))
@@ -236,7 +236,7 @@ public sealed class MVerb {
                               - (0.6f * _staticDelayLine[0].GetIndex(1))
                               - (0.6f * _allpassFourTap[1].GetIndex(1))
                               - (0.6f * _staticDelayLine[1].GetIndex(1));
-            
+
             float accumulatorR = (0.6f * _staticDelayLine[0].GetIndex(2))
                               + (0.6f * _staticDelayLine[0].GetIndex(3))
                               - (0.6f * _allpassFourTap[1].GetIndex(2))
@@ -244,42 +244,42 @@ public sealed class MVerb {
                               - (0.6f * _staticDelayLine[2].GetIndex(3))
                               - (0.6f * _allpassFourTap[3].GetIndex(2))
                               - (0.6f * _staticDelayLine[3].GetIndex(2));
-            
+
             // Mix early reflections with late reverberation
             accumulatorL = (accumulatorL * _earlyMix) + ((1 - _earlyMix) * earlyReflectionsL);
             accumulatorR = (accumulatorR * _earlyMix) + ((1 - _earlyMix) * earlyReflectionsR);
-            
+
             // Apply mix and gain
             left = (left + _mixSmooth * (accumulatorL - left)) * _gain;
             right = (right + _mixSmooth * (accumulatorR - right)) * _gain;
-            
+
             leftOutput[i] = left;
             rightOutput[i] = right;
         }
     }
-    
+
     /// <summary>
     /// Resets all delay lines and filters to initial state.
     /// </summary>
     public void Reset() {
         _controlRateCounter = 0;
-        
+
         // Setup bandwidth filters
         _bandwidthFilter[0].SetSampleRate(_sampleRate);
         _bandwidthFilter[1].SetSampleRate(_sampleRate);
         _bandwidthFilter[0].Reset();
         _bandwidthFilter[1].Reset();
-        
+
         // Setup damping filters
         _damping[0].SetSampleRate(_sampleRate);
         _damping[1].SetSampleRate(_sampleRate);
         _damping[0].Reset();
         _damping[1].Reset();
-        
+
         // Setup predelay
         _predelay.Clear();
         _predelay.SetLength((int)_preDelayTime);
-        
+
         // Setup diffusion allpass filters
         _allpass[0].Clear();
         _allpass[1].Clear();
@@ -293,7 +293,7 @@ public sealed class MVerb {
         _allpass[1].SetFeedback(0.75f);
         _allpass[2].SetFeedback(0.625f);
         _allpass[3].SetFeedback(0.625f);
-        
+
         // Setup FDN allpass filters
         _allpassFourTap[0].Clear();
         _allpassFourTap[1].Clear();
@@ -311,7 +311,7 @@ public sealed class MVerb {
         _allpassFourTap[1].SetIndex(0, (int)(0.006 * _sampleRate * _size), (int)(0.041 * _sampleRate * _size), 0);
         _allpassFourTap[2].SetIndex(0, 0, 0, 0);
         _allpassFourTap[3].SetIndex(0, (int)(0.031 * _sampleRate * _size), (int)(0.011 * _sampleRate * _size), 0);
-        
+
         // Setup delay lines
         _staticDelayLine[0].Clear();
         _staticDelayLine[1].Clear();
@@ -325,20 +325,20 @@ public sealed class MVerb {
         _staticDelayLine[1].SetIndex(0, (int)(0.036 * _sampleRate * _size), (int)(0.089 * _sampleRate * _size), 0);
         _staticDelayLine[2].SetIndex(0, (int)(0.0089 * _sampleRate * _size), (int)(0.099 * _sampleRate * _size), 0);
         _staticDelayLine[3].SetIndex(0, (int)(0.067 * _sampleRate * _size), (int)(0.0041 * _sampleRate * _size), 0);
-        
+
         // Setup early reflections
         _earlyReflectionsDelayLine[0].Clear();
         _earlyReflectionsDelayLine[1].Clear();
         _earlyReflectionsDelayLine[0].SetLength((int)(0.089 * _sampleRate));
-        _earlyReflectionsDelayLine[0].SetIndex(0, (int)(0.0199 * _sampleRate), (int)(0.0219 * _sampleRate), 
-            (int)(0.0354 * _sampleRate), (int)(0.0389 * _sampleRate), (int)(0.0414 * _sampleRate), 
+        _earlyReflectionsDelayLine[0].SetIndex(0, (int)(0.0199 * _sampleRate), (int)(0.0219 * _sampleRate),
+            (int)(0.0354 * _sampleRate), (int)(0.0389 * _sampleRate), (int)(0.0414 * _sampleRate),
             (int)(0.0692 * _sampleRate), 0);
         _earlyReflectionsDelayLine[1].SetLength((int)(0.069 * _sampleRate));
-        _earlyReflectionsDelayLine[1].SetIndex(0, (int)(0.0099 * _sampleRate), (int)(0.011 * _sampleRate), 
-            (int)(0.0182 * _sampleRate), (int)(0.0189 * _sampleRate), (int)(0.0213 * _sampleRate), 
+        _earlyReflectionsDelayLine[1].SetIndex(0, (int)(0.0099 * _sampleRate), (int)(0.011 * _sampleRate),
+            (int)(0.0182 * _sampleRate), (int)(0.0189 * _sampleRate), (int)(0.0213 * _sampleRate),
             (int)(0.0431 * _sampleRate), 0);
     }
-    
+
     /// <summary>
     /// Sets a reverb parameter.
     /// </summary>
@@ -395,7 +395,7 @@ public sealed class MVerb {
                 break;
         }
     }
-    
+
     /// <summary>
     /// Gets a reverb parameter value.
     /// </summary>
@@ -423,7 +423,7 @@ public sealed class MVerb {
                 return 0.0f;
         }
     }
-    
+
     /// <summary>
     /// Sets the sample rate and recalculates all internal parameters.
     /// </summary>
@@ -433,8 +433,8 @@ public sealed class MVerb {
         _maxFreq = Math.Min(_sampleRate * 0.41723f, 18400.0f);
         Reset();
     }
-    
-    
+
+
     /// <summary>
     /// Allpass filter for diffusion.
     /// </summary>
@@ -443,13 +443,13 @@ public sealed class MVerb {
         private int _index;
         private int _length;
         private float _feedback;
-        
+
         public Allpass() {
             SetLength(MaxLength - 1);
             Clear();
             _feedback = 0.5f;
         }
-        
+
         public float Process(float input) {
             float bufout = _buffer[_index];
             float temp = input * -_feedback;
@@ -459,7 +459,7 @@ public sealed class MVerb {
                 _index = 0;
             return output;
         }
-        
+
         public void SetLength(int length) {
             if (length >= MaxLength)
                 length = MaxLength;
@@ -467,17 +467,17 @@ public sealed class MVerb {
                 length = 0;
             _length = length;
         }
-        
+
         public void SetFeedback(float feedback) {
             _feedback = feedback;
         }
-        
+
         public void Clear() {
             Array.Clear(_buffer, 0, _buffer.Length);
             _index = 0;
         }
     }
-    
+
     /// <summary>
     /// Allpass filter with four tap points for complex reflections.
     /// </summary>
@@ -489,19 +489,19 @@ public sealed class MVerb {
         private int _index4;
         private int _length;
         private float _feedback;
-        
+
         public StaticAllpassFourTap() {
             SetLength(MaxLength - 1);
             Clear();
             _feedback = 0.5f;
         }
-        
+
         public float Process(float input) {
             float bufout = _buffer[_index1];
             float temp = input * -_feedback;
             float output = bufout + temp;
             _buffer[_index1] = input + ((bufout + temp) * _feedback);
-            
+
             if (++_index1 >= _length)
                 _index1 = 0;
             if (++_index2 >= _length)
@@ -510,17 +510,17 @@ public sealed class MVerb {
                 _index3 = 0;
             if (++_index4 >= _length)
                 _index4 = 0;
-            
+
             return output;
         }
-        
+
         public void SetIndex(int index1, int index2, int index3, int index4) {
             _index1 = index1;
             _index2 = index2;
             _index3 = index3;
             _index4 = index4;
         }
-        
+
         public float GetIndex(int index) {
             return index switch {
                 0 => _buffer[_index1],
@@ -530,7 +530,7 @@ public sealed class MVerb {
                 _ => _buffer[_index1],
             };
         }
-        
+
         public void SetLength(int length) {
             if (length >= MaxLength)
                 length = MaxLength;
@@ -538,17 +538,17 @@ public sealed class MVerb {
                 length = 0;
             _length = length;
         }
-        
+
         public void Clear() {
             Array.Clear(_buffer, 0, _buffer.Length);
             _index1 = _index2 = _index3 = _index4 = 0;
         }
-        
+
         public void SetFeedback(float feedback) {
             _feedback = feedback;
         }
     }
-    
+
     /// <summary>
     /// Simple delay line without feedback.
     /// </summary>
@@ -556,12 +556,12 @@ public sealed class MVerb {
         private readonly float[] _buffer = new float[MaxLength];
         private int _index;
         private int _length;
-        
+
         public StaticDelayLine() {
             SetLength(MaxLength - 1);
             Clear();
         }
-        
+
         public float Process(float input) {
             float output = _buffer[_index];
             _buffer[_index++] = input;
@@ -569,7 +569,7 @@ public sealed class MVerb {
                 _index = 0;
             return output;
         }
-        
+
         public void SetLength(int length) {
             if (length >= MaxLength)
                 length = MaxLength;
@@ -577,13 +577,13 @@ public sealed class MVerb {
                 length = 0;
             _length = length;
         }
-        
+
         public void Clear() {
             Array.Clear(_buffer, 0, _buffer.Length);
             _index = 0;
         }
     }
-    
+
     /// <summary>
     /// Delay line with four tap points for complex delay patterns.
     /// </summary>
@@ -594,12 +594,12 @@ public sealed class MVerb {
         private int _index3;
         private int _index4;
         private int _length;
-        
+
         public StaticDelayLineFourTap() {
             SetLength(MaxLength - 1);
             Clear();
         }
-        
+
         public float Process(float input) {
             float output = _buffer[_index1];
             _buffer[_index1++] = input;
@@ -613,14 +613,14 @@ public sealed class MVerb {
                 _index4 = 0;
             return output;
         }
-        
+
         public void SetIndex(int index1, int index2, int index3, int index4) {
             _index1 = index1;
             _index2 = index2;
             _index3 = index3;
             _index4 = index4;
         }
-        
+
         public float GetIndex(int index) {
             return index switch {
                 0 => _buffer[_index1],
@@ -630,7 +630,7 @@ public sealed class MVerb {
                 _ => _buffer[_index1],
             };
         }
-        
+
         public void SetLength(int length) {
             if (length >= MaxLength)
                 length = MaxLength;
@@ -638,13 +638,13 @@ public sealed class MVerb {
                 length = 0;
             _length = length;
         }
-        
+
         public void Clear() {
             Array.Clear(_buffer, 0, _buffer.Length);
             _index1 = _index2 = _index3 = _index4 = 0;
         }
     }
-    
+
     /// <summary>
     /// Delay line with eight tap points for early reflections.
     /// </summary>
@@ -659,12 +659,12 @@ public sealed class MVerb {
         private int _index7;
         private int _index8;
         private int _length;
-        
+
         public StaticDelayLineEightTap() {
             SetLength(MaxLength - 1);
             Clear();
         }
-        
+
         public float Process(float input) {
             float output = _buffer[_index1];
             _buffer[_index1++] = input;
@@ -686,8 +686,8 @@ public sealed class MVerb {
                 _index8 = 0;
             return output;
         }
-        
-        public void SetIndex(int index1, int index2, int index3, int index4, 
+
+        public void SetIndex(int index1, int index2, int index3, int index4,
                             int index5, int index6, int index7, int index8) {
             _index1 = index1;
             _index2 = index2;
@@ -698,7 +698,7 @@ public sealed class MVerb {
             _index7 = index7;
             _index8 = index8;
         }
-        
+
         public float GetIndex(int index) {
             return index switch {
                 0 => _buffer[_index1],
@@ -712,7 +712,7 @@ public sealed class MVerb {
                 _ => _buffer[_index1],
             };
         }
-        
+
         public void SetLength(int length) {
             if (length >= MaxLength)
                 length = MaxLength;
@@ -720,19 +720,19 @@ public sealed class MVerb {
                 length = 0;
             _length = length;
         }
-        
+
         public void Clear() {
             Array.Clear(_buffer, 0, _buffer.Length);
             _index1 = _index2 = _index3 = _index4 = _index5 = _index6 = _index7 = _index8 = 0;
         }
     }
-    
+
     /// <summary>
     /// State variable filter for frequency-dependent damping.
     /// </summary>
     private sealed class StateVariable {
         private const int OverSampleCount = 4;
-        
+
         private enum FilterType {
             Lowpass,
             Highpass,
@@ -740,19 +740,19 @@ public sealed class MVerb {
             Notch,
             FilterTypeCount
         }
-        
+
         private float _sampleRate;
         private float _frequency;
         private float _q;
         private float _f;
-        
+
         private float _low;
         private float _high;
         private float _band;
         private float _notch;
-        
+
         private FilterType _currentType;
-        
+
         public StateVariable() {
             SetSampleRate(44100.0f);
             Frequency(1000.0f);
@@ -760,7 +760,7 @@ public sealed class MVerb {
             Type(FilterType.Lowpass);
             Reset();
         }
-        
+
         public float Process(float input) {
             for (int i = 0; i < OverSampleCount; i++) {
                 _low += _f * _band + 1e-25f;
@@ -768,7 +768,7 @@ public sealed class MVerb {
                 _band += _f * _high;
                 _notch = _low + _high;
             }
-            
+
             return _currentType switch {
                 FilterType.Lowpass => _low,
                 FilterType.Highpass => _high,
@@ -777,29 +777,29 @@ public sealed class MVerb {
                 _ => _low,
             };
         }
-        
+
         public void Reset() {
             _low = _high = _band = _notch = 0;
         }
-        
+
         public void SetSampleRate(float sampleRate) {
             _sampleRate = sampleRate * OverSampleCount;
             UpdateCoefficient();
         }
-        
+
         public void Frequency(float frequency) {
             _frequency = frequency;
             UpdateCoefficient();
         }
-        
+
         public void Resonance(float resonance) {
             _q = 2 - 2 * resonance;
         }
-        
+
         private void Type(FilterType type) {
             _currentType = type;
         }
-        
+
         private void UpdateCoefficient() {
             _f = (float)(2.0 * Math.Sin(Math.PI * _frequency / _sampleRate));
         }

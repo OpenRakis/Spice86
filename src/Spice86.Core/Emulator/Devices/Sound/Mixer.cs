@@ -1,14 +1,13 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Backend.Audio;
-using Spice86.Libs.Sound.Common;
-using AudioFrame = Spice86.Libs.Sound.Common.AudioFrame;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
+using AudioFrame = Spice86.Libs.Sound.Common.AudioFrame;
 using HighPassFilter = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
 
 /// <summary>
@@ -36,8 +35,8 @@ public sealed class Mixer : IDisposable {
 
     // Atomic state
     private volatile bool _threadShouldQuit;
-    private volatile int _sampleRateHz = DefaultSampleRateHz;
-    private volatile int _blocksize = DefaultBlocksize;
+    private readonly int _sampleRateHz = DefaultSampleRateHz;
+    private readonly int _blocksize = DefaultBlocksize;
 
     // Master volume (atomic via Interlocked operations)
     private AudioFrame _masterGain = new(Minus6db, Minus6db);
@@ -137,7 +136,7 @@ public sealed class Mixer : IDisposable {
     /// Gets the current mixer sample rate.
     /// </summary>
     public int SampleRateHz => _sampleRateHz;
-    
+
     /// <summary>
     /// Gets the mixer sample rate.
     /// </summary>
@@ -915,7 +914,7 @@ public sealed class Mixer : IDisposable {
             _outputBuffer[i] = new AudioFrame(newLeft, newRight);
         }
     }
-    
+
     /// <summary>
     /// Closes the audio device and stops all channels.
     /// </summary>
@@ -927,15 +926,15 @@ public sealed class Mixer : IDisposable {
                 _cancellationTokenSource.Cancel();
                 _mixerThread.Join(TimeSpan.FromSeconds(5));
             }
-            
+
             // Disable all channels
             foreach (MixerChannel channel in _channels.Values) {
                 channel.Enable(false);
             }
-            
+
             // Close audio player
             _audioPlayer.Dispose();
-            
+
             _loggerService.Information("MIXER: Closed audio device");
         }
     }

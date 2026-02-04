@@ -125,7 +125,7 @@ public sealed class MixerChannel {
     private int _lowPassFilterCutoffHz;
 
     private readonly Sleeper _sleeper;
-    private bool _doSleep;
+    private readonly bool _doSleep;
 
     private readonly Envelope _envelope;
 

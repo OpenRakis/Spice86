@@ -105,7 +105,7 @@ public sealed class Chorus {
 
         // Get two adjacent samples for linear interpolation
         float sample1 = _delayLine[readPos];
-        
+
         int readPos2 = readPos - 1;
         if (readPos2 < 0) {
             readPos2 += _delayLineLength;

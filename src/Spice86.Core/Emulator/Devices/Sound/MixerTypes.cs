@@ -10,37 +10,37 @@ public enum ChannelFeature {
     /// Channel can send to chorus effect.
     /// </summary>
     ChorusSend,
-    
+
     /// <summary>
     /// Channel contains digital audio (PCM).
     /// </summary>
     DigitalAudio,
-    
+
     /// <summary>
     /// Channel supports fade-out when stopping.
     /// </summary>
     FadeOut,
-    
+
     /// <summary>
     /// Channel has a noise gate processor.
     /// </summary>
     NoiseGate,
-    
+
     /// <summary>
     /// Channel can send to reverb effect.
     /// </summary>
     ReverbSend,
-    
+
     /// <summary>
     /// Channel can sleep when inactive to save CPU.
     /// </summary>
     Sleep,
-    
+
     /// <summary>
     /// Channel produces stereo audio.
     /// </summary>
     Stereo,
-    
+
     /// <summary>
     /// Channel is a synthesizer (OPL, MT-32, etc).
     /// </summary>
@@ -55,7 +55,7 @@ public enum FilterState {
     /// Filter is disabled.
     /// </summary>
     Off,
-    
+
     /// <summary>
     /// Filter is enabled.
     /// </summary>
@@ -110,17 +110,17 @@ public enum CrossfeedPreset {
     /// No crossfeed processing.
     /// </summary>
     None,
-    
+
     /// <summary>
     /// Light crossfeed (20% strength).
     /// </summary>
     Light,
-    
+
     /// <summary>
     /// Normal crossfeed (40% strength) - default.
     /// </summary>
     Normal,
-    
+
     /// <summary>
     /// Strong crossfeed (60% strength).
     /// </summary>
@@ -135,27 +135,27 @@ public enum ReverbPreset {
     /// No reverb processing.
     /// </summary>
     None,
-    
+
     /// <summary>
     /// Tiny room reverb (very short decay).
     /// </summary>
     Tiny,
-    
+
     /// <summary>
     /// Small room reverb.
     /// </summary>
     Small,
-    
+
     /// <summary>
     /// Medium room reverb - default.
     /// </summary>
     Medium,
-    
+
     /// <summary>
     /// Large hall reverb.
     /// </summary>
     Large,
-    
+
     /// <summary>
     /// Huge cathedral-like reverb (long decay).
     /// </summary>
@@ -170,17 +170,17 @@ public enum ChorusPreset {
     /// No chorus processing.
     /// </summary>
     None,
-    
+
     /// <summary>
     /// Light chorus effect.
     /// </summary>
     Light,
-    
+
     /// <summary>
     /// Normal chorus effect - default.
     /// </summary>
     Normal,
-    
+
     /// <summary>
     /// Strong chorus effect.
     /// </summary>
@@ -195,12 +195,12 @@ public enum ResampleMethod {
     /// Use linear interpolation for upsampling, Speex-like for downsampling.
     /// </summary>
     LerpUpsampleOrResample,
-    
+
     /// <summary>
     /// Zero-order hold upsampling followed by resampling (vintage DAC sound).
     /// </summary>
     ZeroOrderHoldAndResample,
-    
+
     /// <summary>
     /// High-quality Speex-like resampling for both up and down.
     /// </summary>
@@ -215,12 +215,12 @@ public enum MixerState {
     /// Audio device is not initialized or disabled.
     /// </summary>
     NoSound,
-    
+
     /// <summary>
     /// Audio is actively playing and mixing.
     /// </summary>
     On,
-    
+
     /// <summary>
     /// Audio is muted (device active but producing silence).
     /// </summary>
@@ -236,27 +236,27 @@ public struct MixerChannelSettings {
     /// Whether the channel is enabled.
     /// </summary>
     public bool IsEnabled { get; set; }
-    
+
     /// <summary>
     /// User-controlled volume gain (from MIXER command).
     /// </summary>
     public Spice86.Libs.Sound.Common.AudioFrame UserVolumeGain { get; set; }
-    
+
     /// <summary>
     /// Output line mapping (stereo/reverse/etc).
     /// </summary>
     public StereoLine LineoutMap { get; set; }
-    
+
     /// <summary>
     /// Crossfeed strength (0.0 to 1.0).
     /// </summary>
     public float CrossfeedStrength { get; set; }
-    
+
     /// <summary>
     /// Reverb send level (0.0 to 1.0).
     /// </summary>
     public float ReverbLevel { get; set; }
-    
+
     /// <summary>
     /// Chorus send level (0.0 to 1.0).
     /// </summary>

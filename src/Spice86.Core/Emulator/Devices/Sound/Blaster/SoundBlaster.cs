@@ -452,15 +452,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     // Reference: DOSBox uses RWQueue with NonblockingBulkEnqueue/BulkDequeue
     private readonly Queue<AudioFrame> _outputQueue = new();
     private readonly Lock _outputQueueLock = new();
-    
+
     // Reusable buffer for batch enqueue operations - avoids per-sample Enqueue overhead
     private readonly AudioFrame[] _enqueueBatch = new AudioFrame[4096];
     private int _enqueueBatchCount;
-    
+
     // Reusable buffer for mixer callback dequeue - avoids per-callback List allocation
     private readonly AudioFrame[] _dequeueBatch = new AudioFrame[4096];
 
-    private Queue<byte> _outputData = new Queue<byte>();
+    private readonly Queue<byte> _outputData = new Queue<byte>();
     private BlasterState _blasterState = BlasterState.WaitingForCommand;
 
     private double _lastDmaCallbackTime;
@@ -759,7 +759,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private void DspE2DmaCallback(DmaChannel channel, DmaChannel.DmaEvent dmaEvent) {
         if (dmaEvent == DmaChannel.DmaEvent.IsUnmasked) {
             byte val = (byte)(_sb.E2.Value & 0xff);
-            
+
             // Unregister callback and write the E2 value
             channel.RegisterCallback(null);
             Span<byte> buffer = stackalloc byte[1];
@@ -1051,7 +1051,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
         _framesAddedThisTick += (int)numSamples;
     }
-    
+
     /// <summary>
     /// Enqueues silent frames in batch. Used during warmup and when speaker is disabled.
     /// </summary>
@@ -1064,7 +1064,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         FlushEnqueueBatch();
         _framesAddedThisTick += (int)count;
     }
-    
+
     /// <summary>
     /// Flushes the enqueue batch to the output queue.
     /// Uses single lock like DOSBox's NonblockingBulkEnqueue for efficiency.
@@ -1375,12 +1375,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case DspMode.None:
             case DspMode.DmaPause:
             case DspMode.DmaMasked: {
-                // Reference: static std::vector<AudioFrame> empty_frames = {};
-                // empty_frames.resize(frames_requested);
-                // enqueue_frames(empty_frames);
-                EnqueueSilentFrames((uint)frames_requested);
-                break;
-            }
+                    // Reference: static std::vector<AudioFrame> empty_frames = {};
+                    // empty_frames.resize(frames_requested);
+                    // enqueue_frames(empty_frames);
+                    EnqueueSilentFrames((uint)frames_requested);
+                    break;
+                }
 
             case DspMode.Dac:
                 // DAC mode typically renders one frame at a time because the
@@ -1399,27 +1399,27 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 break;
 
             case DspMode.Dma: {
-                // This is a no-op if the channel is already running. DMA
-                // processing can go for some time using auto-init mode without
-                // having to send IO calls to the card; so we keep it awake when
-                // DMA is still running.
-                MaybeWakeUp();
+                    // This is a no-op if the channel is already running. DMA
+                    // processing can go for some time using auto-init mode without
+                    // having to send IO calls to the card; so we keep it awake when
+                    // DMA is still running.
+                    MaybeWakeUp();
 
-                uint len = (uint)frames_requested;
-                len *= _sb.Dma.Mul;
-                if ((len & SbShiftMask) != 0) {
-                    len += 1 << SbShift;
+                    uint len = (uint)frames_requested;
+                    len *= _sb.Dma.Mul;
+                    if ((len & SbShiftMask) != 0) {
+                        len += 1 << SbShift;
+                    }
+                    len >>= SbShift;
+
+                    if (len > _sb.Dma.Left) {
+                        len = _sb.Dma.Left;
+                    }
+
+                    // ProcessDMATransfer(len);
+                    PlayDmaTransfer(len);
+                    break;
                 }
-                len >>= SbShift;
-
-                if (len > _sb.Dma.Left) {
-                    len = _sb.Dma.Left;
-                }
-
-                // ProcessDMATransfer(len);
-                PlayDmaTransfer(len);
-                break;
-            }
         }
     }
 
@@ -1466,89 +1466,89 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
         switch (port - _config.BaseAddress) {
             case 0x0A: {
-                // DSP Read Data Port - returns queued output data
-                bool hadData = _outputData.Count > 0;
-                byte ret = hadData ? _outputData.Dequeue() : (byte)0;
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    string desc = hadData ? "DSP queued output data (dequeued)" : "No DSP data (return 0)";
-                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0A returning 0x{Ret:X2} ({Desc})", ret, desc);
+                    // DSP Read Data Port - returns queued output data
+                    bool hadData = _outputData.Count > 0;
+                    byte ret = hadData ? _outputData.Dequeue() : (byte)0;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        string desc = hadData ? "DSP queued output data (dequeued)" : "No DSP data (return 0)";
+                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0A returning 0x{Ret:X2} ({Desc})", ret, desc);
+                    }
+                    return ret;
                 }
-                return ret;
-            }
 
             case 0x0C: {
-                // DSP Write Buffer Status Port (Write Command/Data)
-                // Bit 7: 0 = ready to accept commands, 1 = busy
-                // In emulation, we're always ready to accept writes immediately
-                byte ret = 0x7F;
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0C returning 0x{Ret:X2} (Write buffer status: ready)", ret);
+                    // DSP Write Buffer Status Port (Write Command/Data)
+                    // Bit 7: 0 = ready to accept commands, 1 = busy
+                    // In emulation, we're always ready to accept writes immediately
+                    byte ret = 0x7F;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0C returning 0x{Ret:X2} (Write buffer status: ready)", ret);
+                    }
+                    return ret;
                 }
-                return ret;
-            }
 
             case 0x0E: {
-                // DSP Read Buffer Status Port / 8-bit IRQ Acknowledge
-                // Bit 7: 1 = data available to read OR 8-bit IRQ pending
-                // Reading this port also acknowledges 8-bit DMA IRQ
-                bool hasDataOrIrq = _outputData.Count > 0 || _sb.Irq.Pending8Bit;
-                if (_sb.Irq.Pending8Bit) {
-                    _sb.Irq.Pending8Bit = false;
-                    _dualPic.DeactivateIrq(_config.Irq);
+                    // DSP Read Buffer Status Port / 8-bit IRQ Acknowledge
+                    // Bit 7: 1 = data available to read OR 8-bit IRQ pending
+                    // Reading this port also acknowledges 8-bit DMA IRQ
+                    bool hasDataOrIrq = _outputData.Count > 0 || _sb.Irq.Pending8Bit;
+                    if (_sb.Irq.Pending8Bit) {
+                        _sb.Irq.Pending8Bit = false;
+                        _dualPic.DeactivateIrq(_config.Irq);
+                    }
+                    byte ret = (byte)(hasDataOrIrq ? 0x80 : 0x00);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        string desc = hasDataOrIrq ? "Data available or 8-bit IRQ pending (bit7=1)" : "No data and no 8-bit IRQ (0)";
+                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0E returning 0x{Ret:X2} ({Desc})", ret, desc);
+                    }
+                    return ret;
                 }
-                byte ret = (byte)(hasDataOrIrq ? 0x80 : 0x00);
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    string desc = hasDataOrIrq ? "Data available or 8-bit IRQ pending (bit7=1)" : "No data and no 8-bit IRQ (0)";
-                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0E returning 0x{Ret:X2} ({Desc})", ret, desc);
-                }
-                return ret;
-            }
 
             case 0x0F: {
-                // 16-bit IRQ Acknowledge Port
-                _sb.Irq.Pending16Bit = false;
-                byte ret = 0xFF;
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0F returning 0x{Ret:X2} (16-bit IRQ acknowledge, cleared)", ret);
+                    // 16-bit IRQ Acknowledge Port
+                    _sb.Irq.Pending16Bit = false;
+                    byte ret = 0xFF;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0F returning 0x{Ret:X2} (16-bit IRQ acknowledge, cleared)", ret);
+                    }
+                    return ret;
                 }
-                return ret;
-            }
 
             case 0x04: {
-                // Mixer Address Port (read)
-                byte ret = (byte)_hardwareMixer.CurrentAddress;
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x04 returning 0x{Ret:X2} (Mixer current address)", ret);
+                    // Mixer Address Port (read)
+                    byte ret = (byte)_hardwareMixer.CurrentAddress;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x04 returning 0x{Ret:X2} (Mixer current address)", ret);
+                    }
+                    return ret;
                 }
-                return ret;
-            }
 
             case 0x05: {
-                // Mixer Data Port (read)
-                byte ret = _hardwareMixer.ReadData();
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x05 returning 0x{Ret:X2} (Mixer data read)", ret);
+                    // Mixer Data Port (read)
+                    byte ret = _hardwareMixer.ReadData();
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x05 returning 0x{Ret:X2} (Mixer data read)", ret);
+                    }
+                    return ret;
                 }
-                return ret;
-            }
 
             case 0x06: {
-                // DSP Reset Port (read) - typically returns 0xFF
-                byte ret = 0xFF;
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x06 returning 0x{Ret:X2} (DSP reset port read)", ret);
+                    // DSP Reset Port (read) - typically returns 0xFF
+                    byte ret = 0xFF;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x06 returning 0x{Ret:X2} (DSP reset port read)", ret);
+                    }
+                    return ret;
                 }
-                return ret;
-            }
 
             default: {
-                // Unknown ports return 0xFF
-                byte ret = 0xFF;
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x{Offset:X2} returning 0x{Ret:X2} (Unknown port)", port - _config.BaseAddress, ret);
+                    // Unknown ports return 0xFF
+                    byte ret = 0xFF;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x{Offset:X2} returning 0x{Ret:X2} (Unknown port)", port - _config.BaseAddress, ret);
+                    }
+                    return ret;
                 }
-                return ret;
-            }
         }
     }
 
@@ -1996,14 +1996,38 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             // Generic 8/16-bit DMA commands (SB16 only) - 0xB0-0xCF
             // Reference: DOSBox soundblaster.cpp lines 2068-2097
-            case 0xb0: case 0xb1: case 0xb2: case 0xb3:
-            case 0xb4: case 0xb5: case 0xb6: case 0xb7:
-            case 0xb8: case 0xb9: case 0xba: case 0xbb:
-            case 0xbc: case 0xbd: case 0xbe: case 0xbf:
-            case 0xc0: case 0xc1: case 0xc2: case 0xc3:
-            case 0xc4: case 0xc5: case 0xc6: case 0xc7:
-            case 0xc8: case 0xc9: case 0xca: case 0xcb:
-            case 0xcc: case 0xcd: case 0xce: case 0xcf:
+            case 0xb0:
+            case 0xb1:
+            case 0xb2:
+            case 0xb3:
+            case 0xb4:
+            case 0xb5:
+            case 0xb6:
+            case 0xb7:
+            case 0xb8:
+            case 0xb9:
+            case 0xba:
+            case 0xbb:
+            case 0xbc:
+            case 0xbd:
+            case 0xbe:
+            case 0xbf:
+            case 0xc0:
+            case 0xc1:
+            case 0xc2:
+            case 0xc3:
+            case 0xc4:
+            case 0xc5:
+            case 0xc6:
+            case 0xc7:
+            case 0xc8:
+            case 0xc9:
+            case 0xca:
+            case 0xcb:
+            case 0xcc:
+            case 0xcd:
+            case 0xce:
+            case 0xcf:
                 // Generic DMA commands (SB16 only)
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xb0-0xcf
                 if (_config.SbType == SbType.Sb16) {
@@ -2325,7 +2349,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// </summary>
     private void SuppressDmaTransfer(uint bytesToRead) {
         uint numBytes = Math.Min(bytesToRead, _sb.Dma.Left);
-        
+
         // Read and discard the DMA data silently
         DmaChannel? dmaChannel = _sb.Dma.Channel;
         if (dmaChannel is not null && numBytes > 0) {

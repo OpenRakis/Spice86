@@ -37,6 +37,7 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Libs.Sound.Common;
+
 using System;
 
 /// <summary>
@@ -48,7 +49,7 @@ public sealed class Compressor {
     private const float LogToDb = 8.685889638065035f;  // 20.0 / log(10.0)
     private const float DbToLog = 0.1151292546497022f; // log(10.0) / 20.0
     private const float MillisInSecondF = 1000.0f;
-    
+
     // Configuration parameters
     private float _sampleRateHz;
     private float _scaleIn;
@@ -58,21 +59,21 @@ public sealed class Compressor {
     private float _attackCoeff;
     private float _releaseCoeff;
     private float _rmsCoeff;
-    
+
     private float _compRatio;
     private float _runDb;
     private float _runSumSquares;
     private float _overDb;
     private float _runMaxDb;
     private float _maxOverDb;
-    
+
     /// <summary>
     /// Initializes a new instance of the Compressor class.
     /// </summary>
     public Compressor() {
         Reset();
     }
-    
+
     /// <summary>
     /// Configures the compressor with the specified parameters.
     /// </summary>
@@ -103,26 +104,26 @@ public sealed class Compressor {
         if (rmsWindowMs <= 0.0f) {
             throw new ArgumentException("RMS window must be positive", nameof(rmsWindowMs));
         }
-        
+
         _sampleRateHz = sampleRateHz;
-        
+
         // Input scaling to normalize, output scaling to denormalize
         _scaleIn = 1.0f / zeroDbfsSampleValue;
         _scaleOut = zeroDbfsSampleValue;
-        
+
         // Threshold in linear domain
         _thresholdValue = MathF.Exp(thresholdDb * DbToLog);
         _ratio = ratio;
-        
+
         _attackCoeff = MathF.Exp(-1.0f / (attackTimeMs * _sampleRateHz));
-        
+
         _releaseCoeff = MathF.Exp(-MillisInSecondF / (releaseTimeMs * _sampleRateHz));
-        
+
         _rmsCoeff = MathF.Exp(-MillisInSecondF / (rmsWindowMs * _sampleRateHz));
-        
+
         Reset();
     }
-    
+
     /// <summary>
     /// Resets the compressor state to initial values.
     /// </summary>
@@ -134,7 +135,7 @@ public sealed class Compressor {
         _runMaxDb = 0.0f;
         _maxOverDb = 0.0f;
     }
-    
+
     /// <summary>
     /// Processes a single audio frame through the compressor.
     /// </summary>
@@ -144,44 +145,44 @@ public sealed class Compressor {
         // Scale input to normalized range
         float left = input.Left * _scaleIn;
         float right = input.Right * _scaleIn;
-        
+
         // Calculate RMS using sum of squares with exponential averaging
         float sumSquares = (left * left) + (right * right);
         _runSumSquares = sumSquares + _rmsCoeff * (_runSumSquares - sumSquares);
         float det = MathF.Sqrt(Math.Max(0.0f, _runSumSquares));
-        
+
         // Calculate how much signal exceeds threshold in dB
         _overDb = 2.08136898f * MathF.Log(det / _thresholdValue) * LogToDb;
-        
+
         // Track maximum overshoot
         if (_overDb > _maxOverDb) {
             _maxOverDb = _overDb;
         }
-        
+
         // Clamp to positive values only
         _overDb = Math.Max(0.0f, _overDb);
-        
+
         // Apply attack/release envelope to overshoot
         _runDb = _overDb + (_runDb - _overDb) * (_overDb > _runDb ? _attackCoeff : _releaseCoeff);
-        
+
         // Use the envelope-smoothed overshoot
         _overDb = _runDb;
-        
+
         // Calculate compression ratio with knee (soft transition around threshold)
         const float RatioThresholdDb = 6.0f;
         _compRatio = 1.0f + _ratio * Math.Min(_overDb, RatioThresholdDb) / RatioThresholdDb;
-        
+
         // Calculate gain reduction in dB
         float gainReductionDb = -_overDb * (_compRatio - 1.0f) / _compRatio;
         float gainReductionFactor = MathF.Exp(gainReductionDb * DbToLog);
-        
+
         // Update running maximum with release
         _runMaxDb = _maxOverDb + _releaseCoeff * (_runMaxDb - _maxOverDb);
         _maxOverDb = _runMaxDb;
-        
+
         // Apply gain reduction and scale back to output range
         float gainScalar = gainReductionFactor * _scaleOut;
-        
+
         return new AudioFrame(
             left * gainScalar,
             right * gainScalar

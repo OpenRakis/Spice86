@@ -20,7 +20,7 @@ public class HardwareMixer {
     private readonly byte[] _cdaVolume = new byte[2] { 31, 31 };    // Left, Right
     private readonly byte[] _lineVolume = new byte[2] { 31, 31 };   // Left, Right
     private byte _micVolume = 31;
-    
+
     // Sb16 advanced registers
     private byte _pcmLevel;
     private byte _recordingMonitor;
@@ -629,7 +629,7 @@ public class HardwareMixer {
 
         float dacLeft = CalculatePercentage(_dacVolume[0]) * masterLeft;
         float dacRight = CalculatePercentage(_dacVolume[1]) * masterRight;
-        
+
         // Set app volume on the mixer channel (programmatic control from DOS software)
         _pcmMixerChannel.SetAppVolume(new AudioFrame(dacLeft, dacRight));
 
@@ -640,7 +640,7 @@ public class HardwareMixer {
 
         float fmLeft = CalculatePercentage(_fmVolume[0]) * masterLeft;
         float fmRight = CalculatePercentage(_fmVolume[1]) * masterRight;
-        
+
         // Set app volume on the mixer channel (programmatic control from DOS software)
         _OPLMixerChannel.SetAppVolume(new AudioFrame(fmLeft, fmRight));
 
@@ -653,7 +653,7 @@ public class HardwareMixer {
     private float CalculatePercentage(byte volume) {
         // The SB Pro volume values are attenuation values (31=max volume, 0=mute)
         // Reference: src/hardware/audio/soundblaster.cpp calc_vol()
-        
+
         byte count = (byte)(31 - volume);
         float db = count;
 

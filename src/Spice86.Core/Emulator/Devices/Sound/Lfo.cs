@@ -62,7 +62,7 @@ public sealed class Lfo {
 
         // Initialize all waveform tables
         InitializeWaveforms();
-        
+
         // Set default rate of 1Hz
         SetRate(1.0f);
     }
@@ -158,10 +158,10 @@ public sealed class Lfo {
 
         // Waveform 1: Triangle wave
         for (int i = 0; i < 64; i++) {
-            _tableTri[i]       =         i / 64.0f;
-            _tableTri[i + 64]  =   (64 - i) / 64.0f;
-            _tableTri[i + 128] =       - i / 64.0f;
-            _tableTri[i + 192] = - (64 - i) / 64.0f;
+            _tableTri[i] = i / 64.0f;
+            _tableTri[i + 64] = (64 - i) / 64.0f;
+            _tableTri[i + 128] = -i / 64.0f;
+            _tableTri[i + 192] = -(64 - i) / 64.0f;
         }
         _tableTri[256] = 0.0f;
 
@@ -173,7 +173,7 @@ public sealed class Lfo {
 
         // Waveform 3: Rectangle wave (square wave)
         for (int i = 0; i < 128; i++) {
-            _tableRec[i]       =  1.0f;
+            _tableRec[i] = 1.0f;
             _tableRec[i + 128] = -1.0f;
         }
         _tableRec[256] = 1.0f;
@@ -181,7 +181,7 @@ public sealed class Lfo {
         // Waveform 4: Exponential (symmetric, similar to triangle)
         float e = MathF.E;
         for (int i = 0; i < 128; i++) {
-            _tableExp[i]       = 2.0f * ((MathF.Exp(i / 128.0f) - 1.0f) / (e - 1.0f)) - 1.0f;
+            _tableExp[i] = 2.0f * ((MathF.Exp(i / 128.0f) - 1.0f) / (e - 1.0f)) - 1.0f;
             _tableExp[i + 128] = 2.0f * ((MathF.Exp((128 - i) / 128.0f) - 1.0f) / (e - 1.0f)) - 1.0f;
         }
         _tableExp[256] = -1.0f;
