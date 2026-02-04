@@ -32,7 +32,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
 
     // Two timer chips for DualOpl2 mode or single chip for other modes
     // Reference: OplChip chip[2] in DOSBox
-    private readonly OplTimerChip[] _timerChips = [new OplTimerChip(), new OplTimerChip()];
+    private readonly OplChip[] _timerChips = [new OplChip(), new OplChip()];
 
     // FIFO queue for cycle-accurate OPL frame generation
     // Reference: std::queue<AudioFrame> fifo in DOSBox opl.h
@@ -247,6 +247,21 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Initializes default envelopes and rates for the OPL operators.
     ///     Reference: initialize_opl_tone_generators() in DOSBox
     /// </summary>
+    /// <remarks>
+    /// Initialize the OPL chip's 4-op and 2-op FM synthesis tone generators per the
+    /// Adlib v1.51 driver's values. Games and audio players typically overwrite the
+    /// card with their own settings however we know the following eight games by
+    /// Silmarils rely on the card being initialized by the Adlib driver:
+    ///
+    /// - Boston Bomb Club (1991),
+    /// - Bunny Bricks (1993),
+    /// - Crystals of Arborea (1990),
+    /// - Ishar 1 (1992),
+    /// - Ishar 2 (1993),
+    /// - Metal Mutant (1991),
+    /// - Storm Master (1992), and
+    /// - Transantartica (1993).
+    /// </remarks>
     private void InitializeToneGenerators() {
         // The first 9 operators are used for 4-op FM synthesis.
         int[] fourOp = [0, 1, 2, 6, 7, 8, 12, 13, 14];
@@ -254,7 +269,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             Opl3Operator slot = _chip.Slots[index];
             slot.EnvelopeGeneratorOutput = 511;
             slot.EnvelopeGeneratorLevel = 571;
-            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Sustain;
+            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Release;
             slot.RegFrequencyMultiplier = 1;
             slot.RegKeyScaleLevel = 1;
             slot.RegTotalLevel = 15;
@@ -262,6 +277,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             slot.RegDecayRate = 1;
             slot.RegSustainLevel = 5;
             slot.RegReleaseRate = 3;
+            // all other non-pointer slot members are zero
         }
 
         // The remaining 9 operators are used for 2-op FM synthesis.
@@ -270,13 +286,14 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             Opl3Operator slot = _chip.Slots[index];
             slot.EnvelopeGeneratorOutput = 511;
             slot.EnvelopeGeneratorLevel = 511;
-            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Sustain;
+            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Release;
             slot.RegKeyScaleRate = 1;
             slot.RegFrequencyMultiplier = 1;
             slot.RegAttackRate = 15;
             slot.RegDecayRate = 2;
             slot.RegSustainLevel = 7;
             slot.RegReleaseRate = 4;
+            // all other non-pointer slot members are zero
         }
     }
 
@@ -757,9 +774,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     OPL timer chip for handling timer registers and status.
     ///     Reference: OplChip class in DOSBox opl.h/opl.cpp
     /// </summary>
-    private sealed class OplTimerChip {
-        private readonly OplTimer _timer0 = new(80);  // 80 microseconds
-        private readonly OplTimer _timer1 = new(320); // 320 microseconds
+    private sealed class OplChip {
+        private readonly Timer _timer0 = new(80);  // 80 microseconds
+        private readonly Timer _timer1 = new(320); // 320 microseconds
 
         /// <summary>
         ///     Handles timer register writes.
@@ -828,7 +845,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Individual OPL timer.
     ///     Reference: Timer class in DOSBox opl.h/opl.cpp
     /// </summary>
-    private sealed class OplTimer {
+    private sealed class Timer {
         private readonly double _clockInterval;
         private double _start;
         private double _trigger;
@@ -838,7 +855,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         private bool _overflow;
         private bool _masked;
 
-        public OplTimer(int micros) {
+        public Timer(int micros) {
             _clockInterval = micros * 0.001; // interval in milliseconds
             SetCounter(0);
         }
@@ -871,6 +888,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         ///     Reference: Timer::Reset() in DOSBox
         /// </summary>
         public void Reset() {
+            // On a reset make sure the start is in sync with the next cycle
             _overflow = false;
         }
 
