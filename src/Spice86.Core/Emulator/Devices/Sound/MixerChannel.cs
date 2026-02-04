@@ -1292,6 +1292,10 @@ public sealed class MixerChannel {
         if (numFrames <= 0) {
             return;
         }
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("MIXER_CHANNEL: {Channel}: AddSamples_m8 frames={Frames} doResample={DoResample} doLerp={DoLerp} doZoh={DoZoh}",
+                _name, numFrames, _doResample, _doLerpUpsample, _doZohUpsample);
+        }
 
         lock (_mutex) {
             _lastSamplesWereStereo = false;
@@ -1474,6 +1478,10 @@ public sealed class MixerChannel {
         if (numFrames <= 0) {
             return;
         }
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("MIXER_CHANNEL: {Channel}: AddSamples_m16 frames={Frames} doResample={DoResample} doLerp={DoLerp} doZoh={DoZoh}",
+                _name, numFrames, _doResample, _doLerpUpsample, _doZohUpsample);
+        }
 
         lock (_mutex) {
             _lastSamplesWereStereo = false;
@@ -1529,6 +1537,10 @@ public sealed class MixerChannel {
     public void AddSamples_s16(int numFrames, ReadOnlySpan<short> data) {
         if (numFrames <= 0) {
             return;
+        }
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("MIXER_CHANNEL: {Channel}: AddSamples_s16 frames={Frames} doResample={DoResample} doLerp={DoLerp} doZoh={DoZoh}",
+                _name, numFrames, _doResample, _doLerpUpsample, _doZohUpsample);
         }
 
         lock (_mutex) {
@@ -1586,6 +1598,10 @@ public sealed class MixerChannel {
         if (numFrames <= 0) {
             return;
         }
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("MIXER_CHANNEL: {Channel}: AddSamples_mfloat frames={Frames} doResample={DoResample} doLerp={DoLerp} doZoh={DoZoh}",
+                _name, numFrames, _doResample, _doLerpUpsample, _doZohUpsample);
+        }
 
         lock (_mutex) {
             _lastSamplesWereStereo = false;
@@ -1641,6 +1657,10 @@ public sealed class MixerChannel {
     public void AddSamples_sfloat(int numFrames, ReadOnlySpan<float> data) {
         if (numFrames <= 0) {
             return;
+        }
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("MIXER_CHANNEL: {Channel}: AddSamples_sfloat frames={Frames} doResample={DoResample} doLerp={DoLerp} doZoh={DoZoh}",
+                _name, numFrames, _doResample, _doLerpUpsample, _doZohUpsample);
         }
 
         lock (_mutex) {

@@ -737,6 +737,10 @@ public sealed class Mixer : IDisposable {
         }
 
         ApplyMasterNormalization();
+
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("MIXER: Post-normalization peaks L={PeakLeft:0.0000} R={PeakRight:0.0000}", _peakLeft, _peakRight);
+        }
     }
 
     /// <summary>

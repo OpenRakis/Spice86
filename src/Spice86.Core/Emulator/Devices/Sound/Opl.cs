@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
@@ -329,6 +331,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// </summary>
     public override byte ReadByte(ushort port) {
         lock (_chipLock) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("OPL: ReadByte port=0x{Port:X4} mode={Mode}", port, _mode);
+            }
             return PortRead(port);
         }
     }
@@ -338,44 +343,95 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Reference: Opl::PortRead() in DOSBox
     /// </summary>
     private byte PortRead(ushort port) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("OPL: PortRead port=0x{Port:X4} mode={Mode}", port, _mode);
+        }
         switch (_mode) {
-            case OplMode.Opl2:
+            case OplMode.Opl2: {
                 // Only respond on primary port, return 0xFF for others
                 // Make sure the low bits are 6 on OPL2
                 if ((port & 0x03) == 0) {
-                    return (byte)(_timerChips[0].Read(_clock.ElapsedTimeMs) | 0x06);
+                    byte ret = (byte)(_timerChips[0].Read(_clock.ElapsedTimeMs) | 0x06);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("OPL: PortRead offset=0x00 returning 0x{Ret:X2} (timer0 status | 0x06)", ret);
+                    }
+                    return ret;
                 }
-                return 0xFF;
+                byte retOpl2Default = 0xFF;
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("OPL: PortRead offset not primary returning 0x{Ret:X2} (no device)", retOpl2Default);
+                }
+                return retOpl2Default;
+            }
 
-            case OplMode.DualOpl2:
+            case OplMode.DualOpl2: {
                 // Only return for the lower ports
                 if ((port & 0x01) != 0) {
-                    return 0xFF;
+                    byte ret = 0xFF;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("OPL: PortRead DualOpl2 upper port returning 0x{Ret:X2} (no device)", ret);
+                    }
+                    return ret;
                 }
-                // Make sure the low bits are 6 on OPL2
-                return (byte)(_timerChips[(port >> 1) & 1].Read(_clock.ElapsedTimeMs) | 0x06);
+                int timerIndex = (port >> 1) & 1;
+                byte retTimer = (byte)(_timerChips[timerIndex].Read(_clock.ElapsedTimeMs) | 0x06);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("OPL: PortRead DualOpl2 returning 0x{Ret:X2} (timer chip {Index} status | 0x06)", retTimer, timerIndex);
+                }
+                return retTimer;
+            }
 
-            case OplMode.Opl3Gold:
+            case OplMode.Opl3Gold: {
                 if (_ctrlActive) {
                     if (port == 0x38A) {
                         // Control status, not busy
-                        return 0;
+                        byte ret = 0;
+                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                            _loggerService.Debug("OPL: PortRead 0x38A returning 0x{Ret:X2} (AdlibGold control status: not busy)", ret);
+                        }
+                        return ret;
                     }
                     if (port == 0x38B) {
-                        return AdlibGoldControlRead();
+                        byte ret = AdlibGoldControlRead();
+                        string desc = _ctrlIndex switch {
+                            0x00 => "Board Options (0x50 expected)",
+                            0x09 => "Left FM Volume (_ctrlLvol)",
+                            0x0A => "Right FM Volume (_ctrlRvol)",
+                            0x15 => "Audio Relocation (Cryo detection)",
+                            _ => "AdlibGold control read"
+                        };
+                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                            _loggerService.Debug("OPL: PortRead 0x38B returning 0x{Ret:X2} (AdlibGold index=0x{Idx:X2} => {Desc})", ret, _ctrlIndex, desc);
+                        }
+                        return ret;
                     }
                 }
                 goto case OplMode.Opl3;
+            }
 
-            case OplMode.Opl3:
+            case OplMode.Opl3: {
                 // Return timer status only on base port
                 if ((port & 0x03) == 0) {
-                    return _timerChips[0].Read(_clock.ElapsedTimeMs);
+                    byte ret = _timerChips[0].Read(_clock.ElapsedTimeMs);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("OPL: PortRead Opl3 base port returning timer status 0x{Ret:X2}", ret);
+                    }
+                    return ret;
                 }
-                return 0xFF;
+                byte retOpl3Default = 0xFF;
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("OPL: PortRead Opl3 non-base port returning 0x{Ret:X2} (no device)", retOpl3Default);
+                }
+                return retOpl3Default;
+            }
 
-            default:
-                return 0xFF;
+            default: {
+                byte ret = 0xFF;
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("OPL: PortRead default returning 0x{Ret:X2} (unknown mode)", ret);
+                }
+                return ret;
+            }
         }
     }
 
@@ -386,6 +442,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// </summary>
     public override void WriteByte(ushort port, byte value) {
         lock (_chipLock) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("OPL: WriteByte port=0x{Port:X4} value=0x{Value:X2} mode={Mode}", port, value, _mode);
+            }
             RenderUpToNow();
             PortWrite(port, value);
         }
@@ -397,12 +456,25 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private void PortWrite(ushort port, byte value) {
         bool isDataPort = (port & 0x01) != 0;
-
         if (isDataPort) {
             // Data write
             switch (_mode) {
                 case OplMode.Opl3Gold:
                     if (port == 0x38B && _ctrlActive) {
+                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                            string desc = _ctrlIndex switch {
+                                0x04 => "Stereo Volume Left",
+                                0x05 => "Stereo Volume Right",
+                                0x06 => "Bass",
+                                0x07 => "Treble",
+                                0x08 => "Switch Functions",
+                                0x09 => "Left FM Volume",
+                                0x0A => "Right FM Volume",
+                                0x18 => "Surround Control",
+                                _ => "AdlibGold control"
+                            };
+                            _loggerService.Debug("OPL: AdlibGold control write index=0x{Idx:X2} ({Desc}) value=0x{Value:X2}", _ctrlIndex, desc, value);
+                        }
                         AdlibGoldControlWrite(value);
                         return;
                     }
@@ -411,6 +483,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 case OplMode.Opl2:
                 case OplMode.Opl3:
                     if (!_timerChips[0].Write((byte)(_selectedRegister & 0xFF), value, _clock.ElapsedTimeMs)) {
+                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                            _loggerService.Debug("OPL: Data write to register 0x{Reg:X3} value=0x{Value:X2} (WriteReg)", _selectedRegister, value);
+                        }
                         WriteReg(_selectedRegister, value);
                         CacheWrite(_selectedRegister, value);
                     }
@@ -420,9 +495,15 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                     // Not a 0x??8 port, then write to a specific port
                     if ((port & 0x08) == 0) {
                         int index = (port & 2) >> 1;
+                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                            _loggerService.Debug("OPL: Dual data write index={Index} reg=0x{Reg:X2} value=0x{Value:X2}", index, _selectedRegisterDual[index], value);
+                        }
                         DualWrite((byte)index, _selectedRegisterDual[index], value);
                     } else {
                         // Write to both ports
+                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                            _loggerService.Debug("OPL: Dual data broadcast write reg0=0x{Reg0:X2} reg1=0x{Reg1:X2} value=0x{Value:X2}", _selectedRegisterDual[0], _selectedRegisterDual[1], value);
+                        }
                         DualWrite(0, _selectedRegisterDual[0], value);
                         DualWrite(1, _selectedRegisterDual[1], value);
                     }
@@ -433,6 +514,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             switch (_mode) {
                 case OplMode.Opl2:
                     _selectedRegister = (ushort)(WriteAddr(port, value) & 0xFF);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("OPL: Address write selected register set to 0x{Reg:X3} (Opl2)", _selectedRegister);
+                    }
                     break;
 
                 case OplMode.DualOpl2:
@@ -458,6 +542,10 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                         }
                         if (_ctrlActive) {
                             _ctrlIndex = value;
+                            string idxDesc = GetAdlibGoldControlDescription(_ctrlIndex);
+                            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                                _loggerService.Debug("OPL: AdlibGold control index set to 0x{Idx:X2} ({Desc})", _ctrlIndex, idxDesc);
+                            }
                             return;
                         }
                     }
@@ -465,6 +553,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
 
                 case OplMode.Opl3:
                     _selectedRegister = (ushort)(WriteAddr(port, value) & 0x1FF);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("OPL: Address write selected register set to 0x{Reg:X3} (Opl3)", _selectedRegister);
+                    }
                     break;
             }
         }
@@ -481,6 +572,16 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             addr |= 0x100;
         }
         return addr;
+    }
+
+    private static string GetAdlibGoldControlDescription(byte idx) {
+        return idx switch {
+            0x00 => "Board Options (0x50 expected)",
+            0x09 => "Left FM Volume (_ctrlLvol)",
+            0x0A => "Right FM Volume (_ctrlRvol)",
+            0x15 => "Audio Relocation (Cryo detection)",
+            _ => "AdlibGold control index"
+        };
     }
 
     /// <summary>

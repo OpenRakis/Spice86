@@ -10,11 +10,9 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Common;
-using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -1463,21 +1461,33 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     // ReadByte, WriteByte, Reset, and other existing methods...
     public override byte ReadByte(ushort port) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SoundBlaster: ReadByte port=0x{Port:X4} offset=0x{Offset:X2}", port, port - _config.BaseAddress);
+        }
         switch (port - _config.BaseAddress) {
-            case 0x0A:
+            case 0x0A: {
                 // DSP Read Data Port - returns queued output data
-                if (_outputData.Count > 0) {
-                    return _outputData.Dequeue();
+                bool hadData = _outputData.Count > 0;
+                byte ret = hadData ? _outputData.Dequeue() : (byte)0;
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    string desc = hadData ? "DSP queued output data (dequeued)" : "No DSP data (return 0)";
+                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0A returning 0x{Ret:X2} ({Desc})", ret, desc);
                 }
-                return 0;
+                return ret;
+            }
 
-            case 0x0C:
+            case 0x0C: {
                 // DSP Write Buffer Status Port (Write Command/Data)
                 // Bit 7: 0 = ready to accept commands, 1 = busy
                 // In emulation, we're always ready to accept writes immediately
-                return 0x7F;
+                byte ret = 0x7F;
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0C returning 0x{Ret:X2} (Write buffer status: ready)", ret);
+                }
+                return ret;
+            }
 
-            case 0x0E:
+            case 0x0E: {
                 // DSP Read Buffer Status Port / 8-bit IRQ Acknowledge
                 // Bit 7: 1 = data available to read OR 8-bit IRQ pending
                 // Reading this port also acknowledges 8-bit DMA IRQ
@@ -1486,46 +1496,93 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     _sb.Irq.Pending8Bit = false;
                     _dualPic.DeactivateIrq(_config.Irq);
                 }
-                return (byte)(hasDataOrIrq ? 0x80 : 0x00);
+                byte ret = (byte)(hasDataOrIrq ? 0x80 : 0x00);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    string desc = hasDataOrIrq ? "Data available or 8-bit IRQ pending (bit7=1)" : "No data and no 8-bit IRQ (0)";
+                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0E returning 0x{Ret:X2} ({Desc})", ret, desc);
+                }
+                return ret;
+            }
 
-            case 0x0F:
+            case 0x0F: {
                 // 16-bit IRQ Acknowledge Port
                 _sb.Irq.Pending16Bit = false;
-                return 0xFF;
+                byte ret = 0xFF;
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0F returning 0x{Ret:X2} (16-bit IRQ acknowledge, cleared)", ret);
+                }
+                return ret;
+            }
 
-            case 0x04:
+            case 0x04: {
                 // Mixer Address Port (read)
-                return (byte)_hardwareMixer.CurrentAddress;
+                byte ret = (byte)_hardwareMixer.CurrentAddress;
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x04 returning 0x{Ret:X2} (Mixer current address)", ret);
+                }
+                return ret;
+            }
 
-            case 0x05:
+            case 0x05: {
                 // Mixer Data Port (read)
-                return _hardwareMixer.ReadData();
+                byte ret = _hardwareMixer.ReadData();
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x05 returning 0x{Ret:X2} (Mixer data read)", ret);
+                }
+                return ret;
+            }
 
-            case 0x06:
+            case 0x06: {
                 // DSP Reset Port (read) - typically returns 0xFF
-                return 0xFF;
+                byte ret = 0xFF;
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x06 returning 0x{Ret:X2} (DSP reset port read)", ret);
+                }
+                return ret;
+            }
 
-            default:
+            default: {
                 // Unknown ports return 0xFF
-                return 0xFF;
+                byte ret = 0xFF;
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x{Offset:X2} returning 0x{Ret:X2} (Unknown port)", port - _config.BaseAddress, ret);
+                }
+                return ret;
+            }
         }
     }
 
     public override void WriteByte(ushort port, byte value) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SoundBlaster: WriteByte port=0x{Port:X4} offset=0x{Offset:X2} value=0x{Value:X2}", port, port - _config.BaseAddress, value);
+        }
         switch (port - _config.BaseAddress) {
             case 0x06:
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    string meaning = ((value & 1) != 0) ? "assert reset (bit0=1)" : "release reset (bit0=0)";
+                    _loggerService.Debug("SOUNDBLASTER: WriteByte offset=0x06 received 0x{Value:X2} ({Meaning})", value, meaning);
+                }
                 DspDoReset(value);
                 break;
 
             case 0x0C:
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: WriteByte offset=0x0C received DSP write 0x{Value:X2} (DSP command/data)", value);
+                }
                 DspDoWrite(value);
                 break;
 
             case 0x04:
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: WriteByte offset=0x04 setting mixer address to 0x{Addr:X2}", value);
+                }
                 _hardwareMixer.CurrentAddress = value;
                 break;
 
             case 0x05:
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: WriteByte offset=0x05 mixer write to address=0x{Addr:X2} value=0x{Value:X2}", _hardwareMixer.CurrentAddress, value);
+                }
                 _hardwareMixer.Write(value);
                 break;
 
@@ -1534,17 +1591,23 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             default:
                 if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SoundBlaster: Unhandled port write {Port:X4}", port);
+                    _loggerService.Debug("SOUNDBLASTER: Unhandled port write port=0x{Port:X4} offset=0x{Offset:X2} value=0x{Value:X2} (ignored)", port, port - _config.BaseAddress, value);
                 }
                 break;
         }
     }
 
     private void DspDoReset(byte value) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DspDoReset called value=0x{Value:X2} state={State}", value, _sb.Dsp.State);
+        }
         if (((value & 1) != 0) && (_sb.Dsp.State != DspState.Reset)) {
             // TODO: Get out of highspeed mode
             DspReset();
             _sb.Dsp.State = DspState.Reset;
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: DSP asserted reset -> state={State}", _sb.Dsp.State);
+            }
         } else if (((value & 1) == 0) && (_sb.Dsp.State == DspState.Reset)) {
             // reset off
             _sb.Dsp.State = DspState.ResetWait;
@@ -1566,9 +1629,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void DspFinishReset() {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DspFinishReset - performing finish reset tasks");
+        }
         DspFlushData();
         DspAddData(0xaa);
         _sb.Dsp.State = DspState.Normal;
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DspFinishReset complete -> state={State}", _sb.Dsp.State);
+        }
     }
 
     private void DspReset() {

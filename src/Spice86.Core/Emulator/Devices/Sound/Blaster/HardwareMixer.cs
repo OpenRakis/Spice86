@@ -83,12 +83,20 @@ public class HardwareMixer {
     /// </summary>
     /// <returns>The data read from the current in use mixer register.</returns>
     public byte ReadData() {
+        string regName = GetMixerRegisterName((byte)CurrentAddress);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("HARDWARE_MIXER: ReadData from register 0x{Addr:X2} ({Name})", CurrentAddress, regName);
+        }
+
+        byte ret;
         switch (CurrentAddress) {
             case MixerRegisters.Reset:
-                return 0x00;
+                ret = 0x00;
+                break;
 
             case MixerRegisters.InterruptStatus:
-                return (byte)InterruptStatusRegister;
+                ret = (byte)InterruptStatusRegister;
+                break;
 
             case MixerRegisters.IRQ:
                 return GetIRQByte();
@@ -241,16 +249,69 @@ public class HardwareMixer {
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                     _logger.Warning("Read from unsupported mixer register {CurrentAddress:X2}h", CurrentAddress);
                 }
-                return 0x00;
+                ret = 0x00;
+                break;
         }
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("HARDWARE_MIXER: Read register 0x{Addr:X2} ({Name}) => 0x{Val:X2}", CurrentAddress, regName, ret);
+        }
+
+        return ret;
     }
 
+    private static string GetMixerRegisterName(byte addr) {
+        return addr switch {
+            MixerRegisters.Reset => "Reset",
+            MixerRegisters.InterruptStatus => "InterruptStatus",
+            MixerRegisters.IRQ => "IRQ",
+            MixerRegisters.DMA => "DMA",
+            MixerRegisters.MasterVolume => "MasterVolume",
+            MixerRegisters.DacVolume => "DacVolume",
+            MixerRegisters.FmVolume => "FmVolume",
+            MixerRegisters.CdVolume => "CdVolume",
+            MixerRegisters.LineVolume => "LineVolume",
+            MixerRegisters.MicVolume => "MicVolume",
+            MixerRegisters.OutputStereoSelect => "OutputStereoSelect",
+            MixerRegisters.MasterVolumeLeft => "MasterVolumeLeft",
+            MixerRegisters.MasterVolumeRight => "MasterVolumeRight",
+            MixerRegisters.DacVolumeLeft => "DacVolumeLeft",
+            MixerRegisters.DacVolumeRight => "DacVolumeRight",
+            MixerRegisters.FmVolumeLeft => "FmVolumeLeft",
+            MixerRegisters.FmVolumeRight => "FmVolumeRight",
+            MixerRegisters.CdVolumeLeft => "CdVolumeLeft",
+            MixerRegisters.CdVolumeRight => "CdVolumeRight",
+            MixerRegisters.LineVolumeLeft => "LineVolumeLeft",
+            MixerRegisters.LineVolumeRight => "LineVolumeRight",
+            MixerRegisters.MicVolumeSb16 => "MicVolumeSb16",
+            MixerRegisters.Sb16PcmLevel => "Sb16PcmLevel",
+            MixerRegisters.Sb16RecordingMonitor => "Sb16RecordingMonitor",
+            MixerRegisters.Sb16RecordingSource => "Sb16RecordingSource",
+            MixerRegisters.Sb16RecordingGain => "Sb16RecordingGain",
+            MixerRegisters.Sb16RecordingGainLeft => "Sb16RecordingGainLeft",
+            MixerRegisters.Sb16RecordingGainRight => "Sb16RecordingGainRight",
+            MixerRegisters.Sb16OutputFilter => "Sb16OutputFilter",
+            MixerRegisters.Sb16InputFilter => "Sb16InputFilter",
+            MixerRegisters.Sb16Effects3D => "Sb16Effects3D",
+            MixerRegisters.Sb16AltFeatureEnable1 => "Sb16AltFeatureEnable1",
+            MixerRegisters.Sb16AltFeatureEnable2 => "Sb16AltFeatureEnable2",
+            MixerRegisters.Sb16AltFeatureStatus => "Sb16AltFeatureStatus",
+            MixerRegisters.Sb16GamePortControl => "Sb16GamePortControl",
+            MixerRegisters.Sb16VolumeControlMode => "Sb16VolumeControlMode",
+            MixerRegisters.Sb16Reserved => "Sb16Reserved",
+            _ => $"0x{addr:X2}"
+        };
+    }
     /// <summary>
     /// Write data to the <see cref="CurrentAddress"/> of the hardware mixer. <br/>
     /// For example, the FM volume register is written to when the address is <c>0x26</c>.
     /// </summary>
     /// <param name="value">The value to apply.</param>
     public void Write(byte value) {
+        string regName = GetMixerRegisterName((byte)CurrentAddress);
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _logger.Debug("HARDWARE_MIXER: Write register 0x{Addr:X2} ({Name}) <= 0x{Val:X2}", CurrentAddress, regName, value);
+        }
+
         switch (CurrentAddress) {
             case MixerRegisters.Reset:
                 Reset();
@@ -572,11 +633,21 @@ public class HardwareMixer {
         // Set app volume on the mixer channel (programmatic control from DOS software)
         _pcmMixerChannel.SetAppVolume(new AudioFrame(dacLeft, dacRight));
 
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _logger.Verbose("HARDWARE_MIXER: Updated DAC app volume L={Left:0.0000} R={Right:0.0000} (master L={ML} R={MR})",
+                dacLeft, dacRight, _masterVolume[0], _masterVolume[1]);
+        }
+
         float fmLeft = CalculatePercentage(_fmVolume[0]) * masterLeft;
         float fmRight = CalculatePercentage(_fmVolume[1]) * masterRight;
         
         // Set app volume on the mixer channel (programmatic control from DOS software)
         _OPLMixerChannel.SetAppVolume(new AudioFrame(fmLeft, fmRight));
+
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _logger.Verbose("HARDWARE_MIXER: Updated FM app volume L={Left:0.0000} R={Right:0.0000} (fm regs L={FL} R={FR})",
+                fmLeft, fmRight, _fmVolume[0], _fmVolume[1]);
+        }
     }
 
     private float CalculatePercentage(byte volume) {
