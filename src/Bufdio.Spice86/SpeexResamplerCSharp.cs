@@ -695,8 +695,11 @@ fail:
     }
 
     /// <summary>
-    /// Simplified interface for processing interleaved float data.
-    /// Takes input/output spans and returns consumed/produced frame counts.
+    /// Convenience wrapper for processing interleaved float data.
+    /// Computes frame counts from the provided spans, calls the canonical
+    /// `ProcessInterleavedFloat(... ref ...)` implementation, and returns
+    /// the consumed/produced frame counts. This is a thin wrapper only and
+    /// does not alter resampling behavior or skip any processing steps.
     /// </summary>
     public void ProcessInterleavedFloat(ReadOnlySpan<float> input, Span<float> output,
         out uint inputFramesConsumed, out uint outputFramesProduced) {
