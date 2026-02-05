@@ -51,4 +51,4 @@ F000:1216 mov SI,0x1400
 F000:1219 mov CX,6
 F000:121C rep movs byte ptr ES:[DI],byte ptr CS:[SI]
 F000:121F hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

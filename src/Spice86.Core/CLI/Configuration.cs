@@ -241,4 +241,8 @@ public sealed class Configuration {
     [Option(nameof(CpuHeavyLogDumpFile), Default = null, Required = false,
         HelpText = "Custom file path for CPU heavy log output. If not specified, defaults to {DumpDirectory}/cpu_heavy.log")]
     public string? CpuHeavyLogDumpFile { get; init; }
+    
+    [Option(nameof(AsmRenderingStyle), Default = AsmRenderingStyle.Spice86, Required = false,
+        HelpText = "Style of the ASM rendering. Spice86 or DosBox.")]
+    public AsmRenderingStyle AsmRenderingStyle { get; init; }
 }

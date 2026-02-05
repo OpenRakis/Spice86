@@ -27,10 +27,10 @@ public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{Signed
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.JMP_{{ if Size == 8 }}SHORT{{else}}NEAR{{ end }}, TargetIpToNode(builder));
+        return new InstructionNode(InstructionOperation.JMP_{{if SignedType == "sbyte"}}SHORT{{else}}NEAR{{ end }}, TargetIpToNode(builder));
     }
     
     protected ValueNode TargetIpToNode(AstBuilder builder) {
-        return builder.Constant.ToNode(_targetIp);
+        return builder.Constant.ToNearAddressNode(_targetIp, NextInMemoryAddress);
     }
 }

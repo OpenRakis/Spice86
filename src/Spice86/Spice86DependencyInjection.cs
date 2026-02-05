@@ -11,6 +11,8 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
@@ -240,9 +242,11 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         // Create CPU heavy logger if enabled
+        AsmRenderingConfig asmRenderingConfig = AsmRenderingConfig.Create(configuration.AsmRenderingStyle);
+        NodeToString nodeToString = new NodeToString(asmRenderingConfig);
         CpuHeavyLogger? cpuHeavyLogger = null;
         if (configuration.CpuHeavyLog) {
-            cpuHeavyLogger = new CpuHeavyLogger(emulatorStateSerializationFolder, configuration.CpuHeavyLogDumpFile);
+            cpuHeavyLogger = new CpuHeavyLogger(emulatorStateSerializationFolder, configuration.CpuHeavyLogDumpFile, nodeToString);
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
                 loggerService.Information("CPU heavy logger created. Logging to: {LogFile}", 
                     configuration.CpuHeavyLogDumpFile ?? Path.Join(emulatorStateSerializationFolder.Folder, "cpu_heavy.log"));
@@ -373,7 +377,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Memory data exporter created...");
         }
 
-        ListingExporter listingExporter = new(cfgCpu, loggerService);
+        ListingExporter listingExporter = new(cfgCpu, loggerService, nodeToString);
 
         ExecutionAddressesExtractor executionAddressesExtractor = new(cfgCpu, executionAddresses);
         EmulationStateDataWriter emulationStateDataWriter = new(state, executionAddressesExtractor, memoryDataExporter,
@@ -609,7 +613,7 @@ public class Spice86DependencyInjection : IDisposable {
             MidiViewModel midiViewModel = new(midiDevice);
 
             CfgCpuViewModel cfgCpuViewModel = new(uiDispatcher,
-                cfgCpu.ExecutionContextManager, pauseHandler);
+                cfgCpu.ExecutionContextManager, pauseHandler, nodeToString);
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
                 state, loggerService, pauseHandler);

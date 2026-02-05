@@ -24,7 +24,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private readonly List<NodeTableEntry> _tableNodesList = new();
     private readonly IUIDispatcher _uiDispatcher;
     private readonly ExecutionContextManager _executionContextManager;
-    private readonly NodeToString _nodeToString = new();
+    private readonly NodeToString _nodeToString;
 
     // Collection of searchable nodes for AutoCompleteBox
     private readonly Dictionary<string, ICfgNode> _searchableNodes = new();
@@ -57,7 +57,9 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
     public CfgCpuViewModel(IUIDispatcher uiDispatcher,
         ExecutionContextManager executionContextManager,
-        IPauseHandler pauseHandler) {
+        IPauseHandler pauseHandler,
+        NodeToString nodeToString) {
+        _nodeToString = nodeToString;
         _uiDispatcher = uiDispatcher;
         _executionContextManager = executionContextManager;
         AutoFollow = true;
