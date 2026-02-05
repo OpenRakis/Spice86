@@ -12,7 +12,6 @@ using Spice86.Libs.Sound.Devices.AdlibGold;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
 
-using System.Diagnostics;
 using System.Threading;
 
 /// <summary>
@@ -22,7 +21,6 @@ using System.Threading;
 public class Opl : DefaultIOPortHandler, IDisposable {
     private const int OplSampleRateHz = 49716;
 
-    TimeSpan _waitTime = TimeSpan.FromMicroseconds(0.5);
     private readonly AdlibGold? _adlibGold;
     private readonly Opl3Chip _chip = new();
     private readonly Lock _chipLock = new();
@@ -367,8 +365,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Reference: Opl::PortRead() in DOSBox
     /// </summary>
     private byte PortRead(ushort port) {
-        var currentTime = Stopwatch.GetTimestamp();
-        SpinWait.SpinUntil(() => Stopwatch.GetElapsedTime(currentTime) >= _waitTime);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("OPL: PortRead port=0x{Port:X4} mode={Mode}", port, _mode);
         }
