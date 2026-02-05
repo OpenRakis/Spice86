@@ -15,11 +15,16 @@ namespace Bufdio.Spice86.Engines;
 /// This class cannot be inherited.
 /// <para>Implements: <see cref="IAudioEngine"/>.</para>
 /// </summary>
+/// <remarks>
+/// Mirrors DOSBox behavior where SDL audio device starts paused and is unpaused
+/// via SDL_PauseAudioDevice when ready. Reference: DOSBox mixer.cpp MIXER_Init().
+/// </remarks>
 public sealed class PortAudioEngine : IAudioEngine {
     private const PaStreamFlags StreamFlags = PaStreamFlags.paNoFlag;
     private readonly AudioEngineOptions _options;
     private readonly IntPtr _stream;
     private bool _disposed;
+    private bool _started;
 
     /// <summary>
     /// Initializes <see cref="PortAudioEngine"/> object.
@@ -51,11 +56,28 @@ public sealed class PortAudioEngine : IAudioEngine {
         }
         _stream = stream;
 
+        // Stream is opened but NOT started - matches DOSBox's SDL behavior
+        // where audio device starts paused. Call Start() to begin playback.
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Starts the audio stream. Mirrors DOSBox's SDL_PauseAudioDevice(mixer.sdl_device, Unpause).
+    /// Reference: DOSBox mixer.cpp MIXER_Init() - "SDL starts out paused so unpause it"
+    /// </remarks>
+    public void Start() {
+        if (_started || _disposed) {
+            return;
+        }
         NativeMethods.PortAudioStartStream(_stream).PaGuard();
+        _started = true;
     }
 
     /// <inheritdoc />
     public unsafe void Send(Span<float> frames) {
+        if (!_started) {
+            return;
+        }
         fixed (float* buffer = frames) {
             NativeMethods.PortAudioWriteStream(_stream, (IntPtr)buffer, frames.Length / _options.Channels);
         }

@@ -46,6 +46,13 @@ public abstract class AudioPlayer : IDisposable
     /// <returns>The length of data written. Equal to the input data length.</returns>
     internal abstract int WriteData(Span<float> data);
 
+    /// <summary>
+    /// Starts audio playback. Matches DOSBox behavior where SDL audio starts paused
+    /// and is unpaused via SDL_PauseAudioDevice when ready.
+    /// Reference: DOSBox mixer.cpp - "An opened audio device starts out paused"
+    /// </summary>
+    internal abstract void Start();
+
     internal void WriteSilence() {
         WriteData(new Span<float>([0]));
     }

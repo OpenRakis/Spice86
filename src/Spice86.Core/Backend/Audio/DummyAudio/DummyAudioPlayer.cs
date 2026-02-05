@@ -20,4 +20,9 @@ sealed class DummyAudioPlayer : AudioPlayer {
         // Tell we wrote it all, it's all fake anyway
         return data.Length;
     }
+
+    /// <inheritdoc/>
+    internal override void Start() {
+        // No-op for dummy player
+    }
 }

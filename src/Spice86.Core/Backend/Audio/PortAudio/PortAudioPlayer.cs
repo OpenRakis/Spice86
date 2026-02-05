@@ -42,4 +42,13 @@ public sealed class PortAudioPlayer : AudioPlayer {
         _engine.Send(data);
         return data.Length;
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Starts the audio stream. Mirrors DOSBox's SDL_PauseAudioDevice(mixer.sdl_device, Unpause).
+    /// Reference: DOSBox mixer.cpp MIXER_Init() - "SDL starts out paused so unpause it"
+    /// </remarks>
+    internal override void Start() {
+        _engine.Start();
+    }
 }

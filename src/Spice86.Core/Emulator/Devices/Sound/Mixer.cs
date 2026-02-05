@@ -45,6 +45,11 @@ public sealed class Mixer : IDisposable {
     private MixerState _state = MixerState.On;
     private bool _isManuallyMuted = false;
 
+    // Tracks whether audio output stream has been started.
+    // Mirrors DOSBox behavior: "An opened audio device starts out paused"
+    // Reference: DOSBox mixer.cpp - SDL_PauseAudioDevice(mixer.sdl_device, Unpause)
+    private bool _audioStreamStarted = false;
+
     private CrossfeedPreset _crossfeedPreset = CrossfeedPreset.None;
     private ReverbPreset _reverbPreset = ReverbPreset.None;
     private ChorusPreset _chorusPreset = ChorusPreset.None;
@@ -588,7 +593,20 @@ public sealed class Mixer : IDisposable {
             float[] rentedBuffer = Array.Empty<float>();
             try {
                 lock (_mixerLock) {
-                    MixSamples(framesRequested);
+                    bool anyChannelContributed = MixSamples(framesRequested);
+
+                    // Start audio stream when first channel produces audio.
+                    // Mirrors DOSBox: "SDL starts out paused so unpause it when we first set the mixer state"
+                    // Reference: DOSBox mixer.cpp - SDL_PauseAudioDevice(mixer.sdl_device, Unpause)
+                    if (!_audioStreamStarted) {
+                        if (!anyChannelContributed) {
+                            // No channels active yet - skip output until audio is ready
+                            continue;
+                        }
+                        _audioPlayer.Start();
+                        _audioStreamStarted = true;
+                        _loggerService.Information("MIXER: Audio stream started (first channel activated)");
+                    }
 
                     if (_state == MixerState.Muted) {
                         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
@@ -635,7 +653,8 @@ public sealed class Mixer : IDisposable {
     /// <summary>
     /// Mixes samples from all channels into the output buffer.
     /// </summary>
-    private void MixSamples(int framesRequested) {
+    /// <returns>True if at least one enabled channel contributed audio.</returns>
+    private bool MixSamples(int framesRequested) {
         // Clear output buffers
         _outputBuffer.Resize(framesRequested);
         _reverbAuxBuffer.Resize(framesRequested);
@@ -646,11 +665,15 @@ public sealed class Mixer : IDisposable {
         _reverbAuxBuffer.AsSpan().Clear();
         _chorusAuxBuffer.AsSpan().Clear();
 
+        bool anyChannelContributed = false;
+
         // Mix all enabled channels
         foreach (MixerChannel channel in _channels.Values) {
             if (!channel.IsEnabled) {
                 continue;
             }
+
+            anyChannelContributed = true;
 
             // Request frames from the channel
             channel.Mix(framesRequested);
@@ -740,6 +763,8 @@ public sealed class Mixer : IDisposable {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("MIXER: Post-normalization peaks L={PeakLeft:0.0000} R={PeakRight:0.0000}", _peakLeft, _peakRight);
         }
+
+        return anyChannelContributed;
     }
 
     /// <summary>
