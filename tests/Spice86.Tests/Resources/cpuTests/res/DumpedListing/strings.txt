@@ -56,4 +56,4 @@ F000:D000 mov DX,0
 F000:D003 mov DS,DX
 F000:D005 mov word ptr DS:[2],0x1234
 F000:D00B hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0
