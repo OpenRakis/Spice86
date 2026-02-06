@@ -152,7 +152,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x51, GetPspAddress);
         AddAction(0x52, GetListOfLists);
         AddAction(0x55, CreateChildPsp);
-        AddAction(0x58, AllocationStrategyOrUpperMemoryLinkState);
+        AddAction(0x58, () => AllocationStrategyOrUpperMemoryLinkState(true));
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
         AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
@@ -1435,27 +1435,27 @@ public class DosInt21Handler : InterruptHandler {
     /// AX=5802H Query Upper-Memory Link State
     /// AX=5803H Set Upper-Memory Link State
     /// </summary>
-    public void AllocationStrategyOrUpperMemoryLinkState() {
+    public void AllocationStrategyOrUpperMemoryLinkState(bool calledFromVm) {
         byte op = State.AL;
         if (op == 0x00) {
             // Query Memory Allocation Strategy
             State.AX = (ushort)_dosMemoryManager.AllocationStrategy;
-            State.CarryFlag = false;
+            SetCarryFlag(false, calledFromVm);
         } else if (op == 0x01) {
             // Set Memory Allocation Strategy
             _dosMemoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)State.BX;
             State.AX = 0;
-            State.CarryFlag = false;
+            SetCarryFlag(false, calledFromVm);
         } else if (op == 0x02) {
             // Query Upper-Memory Link State
             // 01H = upper memory is currently linked
             // 00H = not linked (all allocations go to conventional mem)
             State.AL = 0x00;
-            State.CarryFlag = false;
+            SetCarryFlag(false, calledFromVm);
         } else if (op == 0x03) {
             // Set Upper-Memory Link State
             State.AX = 0x01; // 0001h (invalid function)
-            State.CarryFlag = true;
+            SetCarryFlag(false, calledFromVm);
         } else {
             throw GenerateUnhandledOperationException(op);
         }
