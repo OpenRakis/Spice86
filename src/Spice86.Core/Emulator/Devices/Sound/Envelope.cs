@@ -34,48 +34,49 @@ public sealed class Envelope {
             return;
         }
 
-        // Check if we've exceeded the expiration period
-        if (_framesDone >= _expireAfterFrames) {
-            _isActive = false;
+        // Only start the envelope once our samples have actual values
+        if (frame.Left == 0.0f && _framesDone == 0) {
             return;
         }
 
-        // Check if we've hit the edge limit
-        if (_edge >= _edgeLimit) {
-            _isActive = false;
-            return;
-        }
+        // beyond the edge is the lip. Do any samples walk out onto the lip?
+        float lip = _edge + _edgeIncrement;
+        bool onLip = ClampSample(ref frame.Left, lip) ||
+                     (isStereo && ClampSample(ref frame.Right, lip));
 
-        // Clamp samples to current envelope edge
-        bool leftClamped = ClampSample(ref frame.Left, _edge);
-        bool rightClamped = ClampSample(ref frame.Right, _edge);
-
-        // If either sample was clamped, expand the envelope edge
-        if (leftClamped || rightClamped) {
+        // If any of the samples are out on the lip, then march the edge forward
+        if (onLip) {
             _edge += _edgeIncrement;
         }
 
-        _framesDone++;
+        // Should we deactivate the envelope?
+        if (++_framesDone > _expireAfterFrames || _edge >= _edgeLimit) {
+            _isActive = false;
+        }
     }
 
     /// <summary>
     /// Updates the envelope with audio stream characteristics.
     /// </summary>
     public void Update(int sampleRateHz, int peakAmplitude, byte expansionPhaseMs, byte expireAfterSeconds) {
-        if (sampleRateHz <= 0 || peakAmplitude <= 0 || expansionPhaseMs == 0 || expireAfterSeconds == 0) {
-            _isActive = false;
+        if (sampleRateHz == 0 || peakAmplitude == 0 || expansionPhaseMs == 0) {
             return;
         }
 
-        _expireAfterFrames = sampleRateHz * expireAfterSeconds;
+        // How many frames should we inspect before expiring?
+        _expireAfterFrames = expireAfterSeconds * sampleRateHz;
+
+        // The furtherest allowed edge is the peak sample amplitude.
         _edgeLimit = peakAmplitude;
 
-        int expansionPhaseFrames = (sampleRateHz * expansionPhaseMs) / 1000;
-        if (expansionPhaseFrames > 0) {
-            _edgeIncrement = (float)peakAmplitude / expansionPhaseFrames;
-        } else {
-            _edgeIncrement = peakAmplitude;
-        }
+        // Permit the envelope to achieve peak volume within the expansion_phase
+        // (in ms) if the samples happen to constantly press on the edges.
+        // ceil_sdivide(a, b) = (a + b - 1) / b
+        int expansionPhaseFrames = ((sampleRateHz * expansionPhaseMs) + 999) / 1000;
+
+        // Calculate how much the envelope's edge will grow after a frame
+        // presses against it.
+        _edgeIncrement = (peakAmplitude + expansionPhaseFrames - 1) / expansionPhaseFrames;
 
         _edge = 0.0f;
         _framesDone = 0;
@@ -92,16 +93,12 @@ public sealed class Envelope {
     }
 
     /// <summary>
-    /// Clamps a sample to the current edge value.
+    /// Clamps a sample to [-lip, lip] if its absolute value exceeds the current edge.
     /// Returns true if the sample was clamped.
     /// </summary>
-    private bool ClampSample(ref float sample, float nextEdge) {
-        if (sample > nextEdge) {
-            sample = nextEdge;
-            return true;
-        }
-        if (sample < -nextEdge) {
-            sample = -nextEdge;
+    private bool ClampSample(ref float sample, float lip) {
+        if (MathF.Abs(sample) > _edge) {
+            sample = Math.Clamp(sample, -lip, lip);
             return true;
         }
         return false;

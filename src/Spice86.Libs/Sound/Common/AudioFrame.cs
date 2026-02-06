@@ -1,8 +1,13 @@
 namespace Spice86.Libs.Sound.Common;
 
+using System.Runtime.InteropServices;
+
 /// <summary>
 ///     Represents a stereo audio frame with left and right channel sample values.
+///     Memory layout is guaranteed to be [Left, Right] for direct casting to float span.
+///     Reference: DOSBox audio_frame.h - struct AudioFrame { float left; float right; }
 /// </summary>
+[StructLayout(LayoutKind.Sequential)]
 public struct AudioFrame : IEquatable<AudioFrame> {
     /// <summary>
     ///     Sample amplitude for the left channel.

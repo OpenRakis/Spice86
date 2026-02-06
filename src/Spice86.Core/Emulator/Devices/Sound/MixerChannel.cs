@@ -127,6 +127,12 @@ public sealed class MixerChannel {
     private readonly Sleeper _sleeper;
     private readonly bool _doSleep;
 
+    /// <summary>
+    /// Whether this channel uses the sleep feature.
+    /// Reference: DOSBox mixer.h - bool do_sleep
+    /// </summary>
+    public bool DoSleep => _doSleep;
+
     private readonly Envelope _envelope;
 
     public MixerChannel(
@@ -927,9 +933,8 @@ public sealed class MixerChannel {
         }
 
         lock (_mutex) {
-            int mixerSampleRateHz = 48000; // TODO: Get from mixer
             foreach (HighPass filter in _highPassFilters) {
-                filter.Setup(_highPassFilterOrder, mixerSampleRateHz, _highPassFilterCutoffHz);
+                filter.Setup(_highPassFilterOrder, _mixerSampleRateHz, _highPassFilterCutoffHz);
             }
         }
     }
@@ -973,9 +978,8 @@ public sealed class MixerChannel {
         }
 
         lock (_mutex) {
-            int mixerSampleRateHz = 48000; // TODO: Get from mixer
             foreach (LowPass filter in _lowPassFilters) {
-                filter.Setup(_lowPassFilterOrder, mixerSampleRateHz, _lowPassFilterCutoffHz);
+                filter.Setup(_lowPassFilterOrder, _mixerSampleRateHz, _lowPassFilterCutoffHz);
             }
         }
     }
@@ -999,51 +1003,53 @@ public sealed class MixerChannel {
 
     /// <summary>
     /// Adds silence frames to fill the buffer.
+    /// Reference: DOSBox mixer.cpp AddSilence() lines 1213-1263
     /// </summary>
     public void AddSilence() {
         lock (_mutex) {
-            while (AudioFrames.Count < _framesNeeded) {
-                AudioFrame frameWithGain;
-
+            if (AudioFrames.Count < _framesNeeded) {
                 if (_prevFrame.Left == 0.0f && _prevFrame.Right == 0.0f) {
-                    frameWithGain = new AudioFrame(0.0f, 0.0f);
+                    // Pure silence - just add zero frames
+                    while (AudioFrames.Count < _framesNeeded) {
+                        AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
+                    }
+
+                    // Make sure the next samples are zero when they get
+                    // switched to prev
+                    _nextFrame = new AudioFrame(0.0f, 0.0f);
+
                 } else {
                     // Fade to silence to avoid clicks
-                    const float fadeAmount = 4.0f;
+                    bool stereo = _lastSamplesWereStereo;
 
-                    float nextLeft;
-                    if (_prevFrame.Left > fadeAmount) {
-                        nextLeft = _prevFrame.Left - fadeAmount;
-                    } else if (_prevFrame.Left < -fadeAmount) {
-                        nextLeft = _prevFrame.Left + fadeAmount;
-                    } else {
-                        nextLeft = 0.0f;
+                    LineIndex mappedOutputLeft = _outputMap.Left;
+                    LineIndex mappedOutputRight = _outputMap.Right;
+
+                    while (AudioFrames.Count < _framesNeeded) {
+                        // Fade gradually to silence to avoid clicks.
+                        // Maybe the fade factor f depends on the sample rate.
+                        const float f = 4.0f;
+
+                        for (int ch = 0; ch < 2; ch++) {
+                            if (_prevFrame[ch] > f) {
+                                _nextFrame[ch] = _prevFrame[ch] - f;
+                            } else if (_prevFrame[ch] < -f) {
+                                _nextFrame[ch] = _prevFrame[ch] + f;
+                            } else {
+                                _nextFrame[ch] = 0.0f;
+                            }
+                        }
+
+                        AudioFrame frameWithGain = (stereo ? _prevFrame : new AudioFrame(_prevFrame.Left)) * _combinedVolumeGain;
+
+                        AudioFrame outFrame = new();
+                        outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
+                        outFrame[(int)mappedOutputRight] = frameWithGain.Right;
+
+                        AudioFrames.Add(outFrame);
+                        _prevFrame = _nextFrame;
                     }
-
-                    float nextRight;
-                    if (_prevFrame.Right > fadeAmount) {
-                        nextRight = _prevFrame.Right - fadeAmount;
-                    } else if (_prevFrame.Right < -fadeAmount) {
-                        nextRight = _prevFrame.Right + fadeAmount;
-                    } else {
-                        nextRight = 0.0f;
-                    }
-
-                    _nextFrame = new AudioFrame(nextLeft, nextRight);
-
-                    AudioFrame baseFrame = _lastSamplesWereStereo
-                        ? _prevFrame
-                        : new AudioFrame(_prevFrame.Left);
-                    frameWithGain = baseFrame.Multiply(_combinedVolumeGain);
-
-                    _prevFrame = _nextFrame;
                 }
-
-                AudioFrame outFrame = new();
-                outFrame[(int)_outputMap.Left] = frameWithGain.Left;
-                outFrame[(int)_outputMap.Right] = frameWithGain.Right;
-
-                AudioFrames.Add(outFrame);
             }
 
             _lastSamplesWereSilence = true;
@@ -1068,8 +1074,8 @@ public sealed class MixerChannel {
             // Convert 8-bit unsigned to float
             _nextFrame = new AudioFrame(LookupTables.U8To16[data[pos]], LookupTables.U8To16[data[pos]]);
 
-            // Apply channel mapping (mono uses left channel) - use _nextFrame (current sample)
-            AudioFrame frameWithGain = new AudioFrame(_nextFrame[(int)mappedChannelLeft]);
+            // Apply channel mapping (mono uses left channel) - use _prevFrame (DOSBox pattern)
+            AudioFrame frameWithGain = new AudioFrame(_prevFrame[(int)mappedChannelLeft]);
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
 
             // Process through envelope to prevent clicks
@@ -1112,8 +1118,8 @@ public sealed class MixerChannel {
             // Convert 16-bit signed to float
             _nextFrame = new AudioFrame(data[pos], data[pos]);
 
-            // Apply channel mapping (mono uses left channel) - use _nextFrame (current sample)
-            AudioFrame frameWithGain = new AudioFrame(_nextFrame[(int)mappedChannelLeft]);
+            // Apply channel mapping (mono uses left channel) - use _prevFrame (DOSBox pattern)
+            AudioFrame frameWithGain = new AudioFrame(_prevFrame[(int)mappedChannelLeft]);
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
 
             // Process through envelope to prevent clicks
@@ -1157,10 +1163,10 @@ public sealed class MixerChannel {
             // Convert stereo 16-bit signed to float
             _nextFrame = new AudioFrame(data[pos * 2], data[pos * 2 + 1]);
 
-            // Apply channel mapping (stereo) - use _nextFrame (current sample)
+            // Apply channel mapping (stereo) - use _prevFrame (DOSBox pattern)
             AudioFrame frameWithGain = new AudioFrame(
-                _nextFrame[(int)mappedChannelLeft],
-                _nextFrame[(int)mappedChannelRight]
+                _prevFrame[(int)mappedChannelLeft],
+                _prevFrame[(int)mappedChannelRight]
             );
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
 
@@ -1208,8 +1214,8 @@ public sealed class MixerChannel {
             float sample = data[pos];
             _nextFrame = new AudioFrame(sample, sample);
 
-            // Apply channel mapping (mono uses left channel) - use _nextFrame (current sample)
-            AudioFrame frameWithGain = new AudioFrame(_nextFrame[(int)mappedChannelLeft]);
+            // Apply channel mapping (mono uses left channel) - use _prevFrame (DOSBox pattern)
+            AudioFrame frameWithGain = new AudioFrame(_prevFrame[(int)mappedChannelLeft]);
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
 
             // Process through envelope to prevent clicks
@@ -1256,10 +1262,10 @@ public sealed class MixerChannel {
             float right = data[pos * 2 + 1];
             _nextFrame = new AudioFrame(left, right);
 
-            // Apply channel mapping (stereo) - use _nextFrame (current sample)
+            // Apply channel mapping (stereo) - use _prevFrame (DOSBox pattern)
             AudioFrame frameWithGain = new AudioFrame(
-                _nextFrame[(int)mappedChannelLeft],
-                _nextFrame[(int)mappedChannelRight]
+                _prevFrame[(int)mappedChannelLeft],
+                _prevFrame[(int)mappedChannelRight]
             );
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
 
@@ -1741,10 +1747,10 @@ public sealed class MixerChannel {
                 _prevFrame = _nextFrame;
                 _nextFrame = frames[pos];
 
-                // Apply channel mapping - use _nextFrame (current sample)
+                // Apply channel mapping - use _prevFrame (DOSBox pattern)
                 AudioFrame frameWithGain = new AudioFrame(
-                    _nextFrame[(int)mappedChannelLeft],
-                    _nextFrame[(int)mappedChannelRight]
+                    _prevFrame[(int)mappedChannelLeft],
+                    _prevFrame[(int)mappedChannelRight]
                 );
                 frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
 

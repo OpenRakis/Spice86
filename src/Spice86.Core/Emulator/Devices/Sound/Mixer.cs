@@ -5,6 +5,7 @@ using Spice86.Shared.Interfaces;
 
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 using AudioFrame = Spice86.Libs.Sound.Common.AudioFrame;
@@ -45,11 +46,6 @@ public sealed class Mixer : IDisposable {
     private MixerState _state = MixerState.On;
     private bool _isManuallyMuted = false;
 
-    // Tracks whether audio output stream has been started.
-    // Mirrors DOSBox behavior: "An opened audio device starts out paused"
-    // Reference: DOSBox mixer.cpp - SDL_PauseAudioDevice(mixer.sdl_device, Unpause)
-    private bool _audioStreamStarted = false;
-
     private CrossfeedPreset _crossfeedPreset = CrossfeedPreset.None;
     private ReverbPreset _reverbPreset = ReverbPreset.None;
     private ChorusPreset _chorusPreset = ChorusPreset.None;
@@ -61,10 +57,6 @@ public sealed class Mixer : IDisposable {
 
     private bool _doCompressor = false;
     private readonly Compressor _compressor = new();
-
-    private float _peakLeft = 0.0f;
-    private float _peakRight = 0.0f;
-    private const float PeakDecayCoeff = 0.995f; // Slow decay for peak tracking
 
     // Reverb state - MVerb professional algorithmic reverb
     private bool _doReverb = false;
@@ -86,13 +78,17 @@ public sealed class Mixer : IDisposable {
     private readonly HighPassFilter[] _reverbHighPassFilter;
     private readonly HighPassFilter[] _masterHighPassFilter;
     private const int HighPassFilterOrder = 2; // 2nd-order Butterworth
-    private const float ReverbHighPassCutoffHz = 120.0f; // Low-frequency cutoff for reverb
-    private const float MasterHighPassCutoffHz = 3.0f; // Very low DC-blocking filter for master
+    private const float MasterHighPassCutoffHz = 20.0f; // DOSBox: HighpassCutoffFreqHz = 20.0
 
     // Final output queue is not used; mixer writes directly
 
     private bool _disposed;
 
+    /// <summary>
+    /// Creates a new Mixer instance.
+    /// </summary>
+    /// <param name="loggerService">Logger service.</param>
+    /// <param name="audioEngine">Audio engine to use.</param>
     public Mixer(ILoggerService loggerService, AudioEngine audioEngine) {
         _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
         _audioPlayerFactory = new AudioPlayerFactory(_loggerService, audioEngine);
@@ -103,10 +99,11 @@ public sealed class Mixer : IDisposable {
         // Initialize high-pass filters (2 channels - left and right)
         _reverbHighPassFilter = new HighPassFilter[2];
         _masterHighPassFilter = new HighPassFilter[2];
+        const float DefaultReverbHighPassHz = 200.0f;
 
         for (int i = 0; i < 2; i++) {
             _reverbHighPassFilter[i] = new HighPassFilter(HighPassFilterOrder);
-            _reverbHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, ReverbHighPassCutoffHz);
+            _reverbHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, DefaultReverbHighPassHz);
 
             _masterHighPassFilter[i] = new HighPassFilter(HighPassFilterOrder);
             _masterHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, MasterHighPassCutoffHz);
@@ -576,162 +573,113 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Main mixer thread loop.
+    /// Reference: DOSBox mixer.cpp mixer_thread_loop() lines 2606-2700
+    /// EXACT MIRROR of DOSBox structure.
     /// </summary>
     private void MixerThreadLoop() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
             _loggerService.Debug("MIXER: Mixer thread started. sampleRate={SampleRateHz}, blocksize={Blocksize}", _sampleRateHz, _blocksize);
         }
 
-        CancellationToken token = _cancellationTokenSource.Token;
-        while (!_threadShouldQuit && !token.IsCancellationRequested) {
-            int framesRequested = _blocksize;
+        // Start audio immediately - DOSBox doesn't wait for channel activity
+        // Reference: DOSBox SDL audio device starts and the callback runs immediately
+        _audioPlayer.Start();
+        _loggerService.Information("MIXER: Audio stream started");
 
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("MIXER: Begin mix cycle frames={FramesRequested} channels={ChannelCount}", framesRequested, _channels.Count);
+        CancellationToken token = _cancellationTokenSource.Token;
+
+        while (!_threadShouldQuit && !token.IsCancellationRequested) {
+            lock (_mixerLock) {
+                // Reference: int frames_requested = mixer.blocksize;
+                int framesRequested = _blocksize;
+                MixSamples(framesRequested);
+            } // Unlock mixer for state checks and I/O
+
+            // Handle NoSound state - sleep for expected duration
+            // Reference: mixer.cpp lines 2645-2654
+            if (_state == MixerState.NoSound) {
+                // SDL callback is not running. Mixed sound gets discarded.
+                // Sleep for the expected duration to simulate playback time.
+                // Reference: const double expected_time = (static_cast<double>(mixer.blocksize) /
+                //                                         static_cast<double>(mixer.sample_rate_hz)) * 1000.0;
+                double expectedTimeMs = (double)_blocksize / _sampleRateHz * 1000.0;
+                Thread.Sleep(TimeSpan.FromMilliseconds(expectedTimeMs));
+                continue;
             }
 
-            float[] rentedBuffer = Array.Empty<float>();
-            try {
-                lock (_mixerLock) {
-                    bool anyChannelContributed = MixSamples(framesRequested);
+            // Handle Muted state - enqueue silence
+            // Reference: mixer.cpp lines 2656-2662
+            if (_state == MixerState.Muted) {
+                // SDL callback remains active. Enqueue silence.
+                _outputBuffer.Resize(_blocksize);
+                _outputBuffer.AsSpan().Clear();
+                Span<AudioFrame> silenceFrames = _outputBuffer.AsSpan(0, _blocksize);
+                Span<float> silenceBuffer = MemoryMarshal.Cast<AudioFrame, float>(silenceFrames);
+                _audioPlayer.WriteData(silenceBuffer);
+                continue;
+            }
 
-                    // Start audio stream when first channel produces audio.
-                    // Mirrors DOSBox: "SDL starts out paused so unpause it when we first set the mixer state"
-                    // Reference: DOSBox mixer.cpp - SDL_PauseAudioDevice(mixer.sdl_device, Unpause)
-                    if (!_audioStreamStarted) {
-                        if (!anyChannelContributed) {
-                            // No channels active yet - skip output until audio is ready
-                            continue;
-                        }
-                        _audioPlayer.Start();
-                        _audioStreamStarted = true;
-                        _loggerService.Information("MIXER: Audio stream started (first channel activated)");
-                    }
+            int framesToWrite = _outputBuffer.Count;
+            if (framesToWrite == 0) {
+                continue;
+            }
 
-                    if (_state == MixerState.Muted) {
-                        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                            _loggerService.Verbose("MIXER: Skipping audio output (muted)");
-                        }
-                        continue;
-                    }
+            // EXACT DOSBox pattern: AudioFrame IS interleaved floats (left, right)
+            // Reference: mixer.final_output.BulkEnqueue(to_mix)
+            // AudioFrame memory layout: [float left][float right] = 2 floats = interleaved stereo
+            Span<AudioFrame> outputFrames = _outputBuffer.AsSpan(0, framesToWrite);
+            Span<float> interleavedBuffer = MemoryMarshal.Cast<AudioFrame, float>(outputFrames);
+            _audioPlayer.WriteData(interleavedBuffer);
 
-                    int framesToWrite = _outputBuffer.Count;
-                    if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                        _loggerService.Verbose("MIXER: Mixed frames={Frames}", framesToWrite);
-                    }
-
-                    if (framesToWrite == 0) {
-                        continue;
-                    }
-
-                    rentedBuffer = System.Buffers.ArrayPool<float>.Shared.Rent(framesToWrite * 2);
-                    Span<float> interleavedBuffer = rentedBuffer.AsSpan(0, framesToWrite * 2);
-                    const float normalizeFactor = 1.0f / 32768.0f;
-                    Span<AudioFrame> outputFrames = _outputBuffer.AsSpan(0, framesToWrite);
-                    for (int i = 0; i < framesToWrite; i++) {
-                        int offset = i * 2;
-                        interleavedBuffer[offset] = outputFrames[i].Left * normalizeFactor;
-                        interleavedBuffer[offset + 1] = outputFrames[i].Right * normalizeFactor;
-                    }
-
-                    _audioPlayer.WriteData(interleavedBuffer);
-
-                    if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                        _loggerService.Verbose("MIXER: Wrote frames to audio backend frames={Frames}", framesToWrite);
-                    }
-                }
-            } finally {
-                if (rentedBuffer != null) {
-                    System.Buffers.ArrayPool<float>.Shared.Return(rentedBuffer);
-                }
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("MIXER: Wrote frames to audio backend frames={Frames}", framesToWrite);
             }
         }
     }
 
-    // No consumer thread: mixer thread writes directly to the audio backend
-
     /// <summary>
-    /// Mixes samples from all channels into the output buffer.
+    /// Mix a certain amount of new sample frames.
+    /// Reference: DOSBox mixer.cpp mix_samples() lines 2394-2540
     /// </summary>
-    /// <returns>True if at least one enabled channel contributed audio.</returns>
-    private bool MixSamples(int framesRequested) {
-        // Clear output buffers
+    private void MixSamples(int framesRequested) {
         _outputBuffer.Resize(framesRequested);
         _reverbAuxBuffer.Resize(framesRequested);
         _chorusAuxBuffer.Resize(framesRequested);
 
-        // Initialize with silence
         _outputBuffer.AsSpan().Clear();
         _reverbAuxBuffer.AsSpan().Clear();
         _chorusAuxBuffer.AsSpan().Clear();
 
-        bool anyChannelContributed = false;
-
-        // Mix all enabled channels
+        // Render all channels and accumulate results in the master mixbuffer
         foreach (MixerChannel channel in _channels.Values) {
-            if (!channel.IsEnabled) {
-                continue;
-            }
-
-            anyChannelContributed = true;
-
-            // Request frames from the channel
             channel.Mix(framesRequested);
 
-            // Accumulate channel output into master mix
-            int numFrames = Math.Min(framesRequested, channel.AudioFrames.Count);
-            Span<AudioFrame> channelFrames = channel.AudioFrames.AsSpan(0, numFrames);
-            Span<AudioFrame> outputFrames = _outputBuffer.AsSpan(0, numFrames);
-            Span<AudioFrame> reverbFrames = _reverbAuxBuffer.AsSpan(0, numFrames);
-            Span<AudioFrame> chorusFrames = _chorusAuxBuffer.AsSpan(0, numFrames);
+            int numFrames = Math.Min(_outputBuffer.Count, channel.AudioFrames.Count);
+
             for (int i = 0; i < numFrames; i++) {
-                AudioFrame channelFrame = channelFrames[i];
-
-                // Apply sleep/wake fade-out or signal detection if enabled
-                channelFrame = channel.MaybeFadeOrListen(channelFrame);
-
-                // Add to master output using operator
-                outputFrames[i] = outputFrames[i] + channelFrame;
+                if (channel.DoSleep) {
+                    _outputBuffer[i] = _outputBuffer[i] + channel.MaybeFadeOrListen(channel.AudioFrames[i]);
+                } else {
+                    _outputBuffer[i] = _outputBuffer[i] + channel.AudioFrames[i];
+                }
 
                 if (_doReverb && channel.DoReverbSend) {
-                    reverbFrames[i] = reverbFrames[i] + (channelFrame * channel.ReverbSendGain);
+                    _reverbAuxBuffer[i] = _reverbAuxBuffer[i] + (channel.AudioFrames[i] * channel.ReverbSendGain);
                 }
 
                 if (_doChorus && channel.DoChorusSend) {
-                    chorusFrames[i] = chorusFrames[i] + (channelFrame * channel.ChorusSendGain);
+                    _chorusAuxBuffer[i] = _chorusAuxBuffer[i] + (channel.AudioFrames[i] * channel.ChorusSendGain);
                 }
             }
 
-            // Remove consumed frames from channel
-            if (numFrames > 0) {
-                channel.AudioFrames.RemoveRange(0, numFrames);
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("MIXER: Channel {Channel} provided frames={Frames}", channel.GetName(), numFrames);
-                }
+            channel.AudioFrames.RemoveRange(0, numFrames);
+
+            if (channel.DoSleep) {
+                channel.MaybeSleep();
             }
-
-            channel.MaybeSleep();
-        }
-
-        // Apply master gain using operator
-        AudioFrame masterGainSnapshot = _masterGain;
-        Span<AudioFrame> outputAll = _outputBuffer.AsSpan();
-        for (int i = 0; i < outputAll.Length; i++) {
-            outputAll[i] = outputAll[i] * masterGainSnapshot;
         }
 
         if (_doReverb) {
-            // Apply high-pass filter to reverb aux buffer before reverb processing
-            Span<AudioFrame> reverbAll = _reverbAuxBuffer.AsSpan();
-            for (int i = 0; i < reverbAll.Length; i++) {
-                AudioFrame frame = reverbAll[i];
-                frame = new AudioFrame(
-                    _reverbHighPassFilter[0].Filter(frame.Left),
-                    _reverbHighPassFilter[1].Filter(frame.Right)
-                );
-                reverbAll[i] = frame;
-            }
-
             ApplyReverb();
         }
 
@@ -739,32 +687,50 @@ public sealed class Mixer : IDisposable {
             ApplyChorus();
         }
 
-        // Apply crossfeed if enabled (uses per-channel strength set by SetGlobalCrossfeed)
+        // Apply crossfeed if enabled
         if (_doCrossfeed) {
             ApplyCrossfeed();
         }
 
-        // This is a DC-blocking filter to prevent low-frequency buildup
+        // Apply high-pass filter to the master output
         for (int i = 0; i < _outputBuffer.Count; i++) {
             AudioFrame frame = _outputBuffer[i];
-            frame = new AudioFrame(
+            _outputBuffer[i] = new AudioFrame(
                 _masterHighPassFilter[0].Filter(frame.Left),
                 _masterHighPassFilter[1].Filter(frame.Right)
             );
-            _outputBuffer[i] = frame;
+        }
+
+        // Apply master gain
+        AudioFrame gain = _masterGain;
+        for (int i = 0; i < _outputBuffer.Count; i++) {
+            _outputBuffer[i] = _outputBuffer[i] * gain;
         }
 
         if (_doCompressor) {
-            ApplyCompressor();
+            // Apply compressor to the master output as the very last step
+            for (int i = 0; i < _outputBuffer.Count; i++) {
+                _outputBuffer[i] = _compressor.Process(_outputBuffer[i]);
+            }
         }
 
-        ApplyMasterNormalization();
-
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("MIXER: Post-normalization peaks L={PeakLeft:0.0000} R={PeakRight:0.0000}", _peakLeft, _peakRight);
+        // Normalize the final output before sending to SDL
+        for (int i = 0; i < _outputBuffer.Count; i++) {
+            AudioFrame frame = _outputBuffer[i];
+            _outputBuffer[i] = new AudioFrame(
+                NormalizeSample(frame.Left),
+                NormalizeSample(frame.Right)
+            );
         }
+    }
 
-        return anyChannelContributed;
+    /// <summary>
+    /// We use floats in the range of 16 bit integers everywhere.
+    /// SDL expects floats to be normalized from 1.0 to -1.0.
+    /// Reference: DOSBox mixer.cpp normalize_sample()
+    /// </summary>
+    private static float NormalizeSample(float sample) {
+        return sample / 32768.0f;
     }
 
     /// <summary>
@@ -800,66 +766,6 @@ public sealed class Mixer : IDisposable {
         UnlockMixerThread();
 
         _loggerService.Information("MIXER: Master compressor enabled");
-    }
-
-    /// <summary>
-    /// Applies professional RMS-based compressor to reduce dynamic range.
-    /// </summary>
-    private void ApplyCompressor() {
-        // Process each frame through the compressor
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            _outputBuffer[i] = _compressor.Process(_outputBuffer[i]);
-        }
-    }
-
-    /// <summary>
-    /// Applies master normalization to prevent clipping and maintain consistent levels.
-    /// </summary>
-    private void ApplyMasterNormalization() {
-        // Track peaks for adaptive gain
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            AudioFrame frame = _outputBuffer[i];
-
-            // Update peak trackers
-            float absLeft = Math.Abs(frame.Left);
-            float absRight = Math.Abs(frame.Right);
-
-            if (absLeft > _peakLeft) {
-                _peakLeft = absLeft;
-            } else {
-                _peakLeft *= PeakDecayCoeff;
-            }
-
-            if (absRight > _peakRight) {
-                _peakRight = absRight;
-            } else {
-                _peakRight *= PeakDecayCoeff;
-            }
-
-            // Apply soft clipping to both channels
-            float left = ApplySoftClipping(frame.Left);
-            float right = ApplySoftClipping(frame.Right);
-
-            _outputBuffer[i] = new AudioFrame(left, right);
-        }
-    }
-
-    /// <summary>
-    /// Applies soft-knee limiting to a single sample to prevent harsh clipping.
-    /// Similar to DOSBox normalize_sample() soft-limiting approach
-    /// </summary>
-    private static float ApplySoftClipping(float sample) {
-        const float softClipThreshold = 32000.0f;
-        const float hardLimit = 32767.0f;
-
-        if (Math.Abs(sample) > softClipThreshold) {
-            float sign = Math.Sign(sample);
-            float excess = Math.Abs(sample) - softClipThreshold;
-            float softened = softClipThreshold + excess * 0.5f; // Reduce overshoot by half
-            return Math.Clamp(sign * softened, -hardLimit, hardLimit);
-        }
-
-        return sample;
     }
 
     /// <summary>

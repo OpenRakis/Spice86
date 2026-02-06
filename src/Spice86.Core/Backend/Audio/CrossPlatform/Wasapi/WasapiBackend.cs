@@ -8,21 +8,25 @@ using System.Threading;
 /// <summary>
 /// WASAPI audio backend for Windows.
 /// Implements callback-based audio output using Windows Audio Session API.
-/// Reference: SDL's SDL_wasapi.c implementation.
+/// Reference: SDL's SDL_wasapi.c implementation - mirrors it exactly.
 /// </summary>
 [SupportedOSPlatform("windows")]
 public sealed class WasapiBackend : IAudioBackend {
     private const uint ClsctxAll = 0x17;
-    private const int ReftimesPerSec = 10_000_000;
-    private const int ReftimesPerMillisec = 10_000;
+
+    // Wait timeout in milliseconds - matches SDL's 200ms timeout
+    private const int WaitTimeoutMs = 200;
+
+    // WAIT_OBJECT_0 and WAIT_TIMEOUT for WaitForSingleObjectEx
+    private const uint WaitObject0 = 0;
+    private const uint WaitTimeout = 258;
 
     private IMMDeviceEnumerator? _deviceEnumerator;
     private IMMDevice? _device;
     private IAudioClient? _audioClient;
     private IAudioRenderClient? _renderClient;
     private Thread? _audioThread;
-    private ManualResetEventSlim? _stopEvent;
-    private AutoResetEvent? _bufferEvent;
+    private IntPtr _bufferEvent;
     private volatile bool _isRunning;
     private volatile bool _isPaused = true;
     private uint _bufferFrameCount;
@@ -30,6 +34,10 @@ public sealed class WasapiBackend : IAudioBackend {
     private AudioDeviceState _state = AudioDeviceState.Stopped;
     private string? _lastError;
     private AudioCallback? _callback;
+
+    // avrt.dll handles for Pro Audio thread priority - matches SDL
+    private IntPtr _avrtHandle;
+    private IntPtr _taskHandle;
 
     /// <inheritdoc/>
     public AudioSpec ObtainedSpec => _obtainedSpec;
@@ -79,23 +87,40 @@ public sealed class WasapiBackend : IAudioBackend {
             }
             _audioClient = audioClient;
 
-            // Create format structure
+            // Create event for buffer notifications - matches SDL: CreateEvent(NULL, FALSE, FALSE, NULL)
+            _bufferEvent = NativeMethods.CreateEventW(IntPtr.Zero, false, false, null);
+            if (_bufferEvent == IntPtr.Zero) {
+                _lastError = "Failed to create event handle";
+                return false;
+            }
+
+            // Get mix format from the device
+            hr = _audioClient.GetMixFormat(out IntPtr mixFormatPtr);
+            if (WasapiResult.Failed(hr) || mixFormatPtr == IntPtr.Zero) {
+                _lastError = $"Failed to get mix format: 0x{hr:X8}";
+                return false;
+            }
+
+            // Create format structure - use IEEE float like SDL
             WaveFormatEx format = WaveFormatEx.CreateIeeeFloat(desiredSpec.SampleRate, desiredSpec.Channels);
             IntPtr formatPtr = Marshal.AllocHGlobal(Marshal.SizeOf<WaveFormatEx>());
             try {
                 Marshal.StructureToPtr(format, formatPtr, false);
 
-                // Calculate buffer duration (in 100-nanosecond units)
-                long bufferDuration = (long)desiredSpec.BufferFrames * ReftimesPerSec / desiredSpec.SampleRate;
-                // Use at least 20ms buffer for stability
-                bufferDuration = Math.Max(bufferDuration, 20 * ReftimesPerMillisec);
+                // Stream flags matching SDL:
+                // AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY
+                AudioClientStreamFlags streamFlags =
+                    AudioClientStreamFlags.EventCallback |
+                    AudioClientStreamFlags.AutoConvertPcm |
+                    AudioClientStreamFlags.SrcDefaultQuality;
 
-                // Initialize audio client with event callback
+                // Initialize with 0 buffer duration and periodicity for shared mode - let WASAPI choose
+                // Reference: SDL uses IAudioClient_Initialize(client, sharemode, streamflags, 0, 0, waveformat, NULL)
                 hr = _audioClient.Initialize(
                     AudioClientShareMode.Shared,
-                    AudioClientStreamFlags.EventCallback | AudioClientStreamFlags.AutoConvertPcm | AudioClientStreamFlags.SrcDefaultQuality,
-                    bufferDuration,
-                    0,
+                    streamFlags,
+                    0,  // bufferDuration - let WASAPI choose
+                    0,  // periodicity - must be 0 for shared mode
                     formatPtr,
                     IntPtr.Zero);
 
@@ -105,6 +130,14 @@ public sealed class WasapiBackend : IAudioBackend {
                 }
             } finally {
                 Marshal.FreeHGlobal(formatPtr);
+                NativeMethods.CoTaskMemFree(mixFormatPtr);
+            }
+
+            // Set event handle - matches SDL: IAudioClient_SetEventHandle(client, device->hidden->event)
+            hr = _audioClient.SetEventHandle(_bufferEvent);
+            if (WasapiResult.Failed(hr)) {
+                _lastError = $"Failed to set event handle: 0x{hr:X8}";
+                return false;
             }
 
             // Get buffer size
@@ -114,12 +147,24 @@ public sealed class WasapiBackend : IAudioBackend {
                 return false;
             }
 
-            // Create event for buffer notifications
-            _bufferEvent = new AutoResetEvent(false);
-            hr = _audioClient.SetEventHandle(_bufferEvent.SafeWaitHandle.DangerousGetHandle());
+            // Get device period to match callback size to period size (like SDL does)
+            hr = _audioClient.GetDevicePeriod(out long defaultPeriod, out _);
             if (WasapiResult.Failed(hr)) {
-                _lastError = $"Failed to set event handle: 0x{hr:X8}";
+                _lastError = $"Failed to get device period: 0x{hr:X8}";
                 return false;
+            }
+
+            // Calculate sample frames from period - matches SDL:
+            // const float period_millis = default_period / 10000.0f;
+            // const float period_frames = period_millis * newspec.freq / 1000.0f;
+            float periodMillis = defaultPeriod / 10000.0f;
+            float periodFrames = periodMillis * desiredSpec.SampleRate / 1000.0f;
+            int sampleFrames = (int)MathF.Ceiling(periodFrames);
+
+            // Clamp to buffer size - matches SDL:
+            // if (new_sample_frames > (int) bufsize) { new_sample_frames = (int) bufsize; }
+            if (sampleFrames > (int)_bufferFrameCount) {
+                sampleFrames = (int)_bufferFrameCount;
             }
 
             // Get render client
@@ -135,11 +180,10 @@ public sealed class WasapiBackend : IAudioBackend {
             _obtainedSpec = new AudioSpec {
                 SampleRate = desiredSpec.SampleRate,
                 Channels = desiredSpec.Channels,
-                BufferFrames = (int)_bufferFrameCount,
+                BufferFrames = sampleFrames,
                 Callback = desiredSpec.Callback
             };
 
-            _stopEvent = new ManualResetEventSlim(false);
             _state = AudioDeviceState.Stopped;
             return true;
         } catch (COMException ex) {
@@ -161,12 +205,12 @@ public sealed class WasapiBackend : IAudioBackend {
             _isRunning = true;
             _audioThread = new Thread(AudioThreadProc) {
                 Name = "WASAPI Audio Thread",
-                Priority = ThreadPriority.Highest,
                 IsBackground = true
             };
             _audioThread.Start();
         }
 
+        // Start audio client - matches SDL: ret = IAudioClient_Start(client);
         int hr = _audioClient.Start();
         if (WasapiResult.Failed(hr)) {
             _lastError = $"Failed to start audio client: 0x{hr:X8}";
@@ -194,7 +238,11 @@ public sealed class WasapiBackend : IAudioBackend {
     /// <inheritdoc/>
     public void Close() {
         _isRunning = false;
-        _stopEvent?.Set();
+
+        // Signal the event to wake up the thread
+        if (_bufferEvent != IntPtr.Zero) {
+            NativeMethods.SetEvent(_bufferEvent);
+        }
 
         if (_audioThread != null && _audioThread.IsAlive) {
             _audioThread.Join(timeout: TimeSpan.FromSeconds(2));
@@ -226,11 +274,10 @@ public sealed class WasapiBackend : IAudioBackend {
             _deviceEnumerator = null;
         }
 
-        _bufferEvent?.Dispose();
-        _bufferEvent = null;
-
-        _stopEvent?.Dispose();
-        _stopEvent = null;
+        if (_bufferEvent != IntPtr.Zero) {
+            NativeMethods.CloseHandle(_bufferEvent);
+            _bufferEvent = IntPtr.Zero;
+        }
 
         _state = AudioDeviceState.Stopped;
     }
@@ -240,65 +287,199 @@ public sealed class WasapiBackend : IAudioBackend {
         Close();
     }
 
+    /// <summary>
+    /// Audio thread procedure - mirrors SDL's WASAPI_ThreadInit, WaitDevice, GetDeviceBuf, PlayDevice pattern.
+    /// </summary>
     private void AudioThreadProc() {
-        // Set thread to use COM MTA
-        Thread.CurrentThread.SetApartmentState(ApartmentState.MTA);
+        // Initialize COM for this thread - matches SDL: WIN_CoInitialize()
+        int hr = NativeMethods.CoInitializeEx(IntPtr.Zero, NativeMethods.COINIT_MULTITHREADED);
+        bool comInitialized = hr >= 0;
 
-        float[] tempBuffer = new float[_obtainedSpec.BufferSamples];
+        // Set thread to Pro Audio priority - matches SDL:
+        // if (pAvSetMmThreadCharacteristicsW) {
+        //     DWORD idx = 0;
+        //     device->hidden->task = pAvSetMmThreadCharacteristicsW(L"Pro Audio", &idx);
+        // }
+        _avrtHandle = NativeMethods.LoadLibraryW("avrt.dll");
+        if (_avrtHandle != IntPtr.Zero) {
+            IntPtr procAddr = NativeMethods.GetProcAddress(_avrtHandle, "AvSetMmThreadCharacteristicsW");
+            if (procAddr != IntPtr.Zero) {
+                AvSetMmThreadCharacteristicsWDelegate avSetMmThread =
+                    Marshal.GetDelegateForFunctionPointer<AvSetMmThreadCharacteristicsWDelegate>(procAddr);
+                uint taskIndex = 0;
+                _taskHandle = avSetMmThread("Pro Audio", ref taskIndex);
+            }
+        }
+
+        // Buffer for callback - exactly sample_frames * channels floats
+        // Reference: SDL always uses exactly device->sample_frames
+        int sampleFrames = _obtainedSpec.BufferFrames;
+        int samplesPerCallback = sampleFrames * _obtainedSpec.Channels;
+        float[] tempBuffer = new float[samplesPerCallback];
 
         while (_isRunning) {
-            if (_stopEvent == null || _bufferEvent == null) {
-                break;
-            }
-
-            // Wait for buffer event or stop signal
-            int waitResult = WaitHandle.WaitAny(new WaitHandle[] { _stopEvent.WaitHandle, _bufferEvent }, millisecondsTimeout: 100);
-
-            if (!_isRunning || waitResult == 0) {
+            if (_bufferEvent == IntPtr.Zero) {
                 break;
             }
 
             if (_isPaused || _audioClient == null || _renderClient == null) {
+                // Still need to wait on event to avoid busy loop
+                NativeMethods.WaitForSingleObjectEx(_bufferEvent, WaitTimeoutMs, false);
+                continue;
+            }
+
+            // =================================================================
+            // WASAPI_WaitDevice - EXACT SDL MIRROR
+            // Reference: SDL_wasapi.c WASAPI_WaitDevice() for playback devices
+            // =================================================================
+            // SDL waits in a loop until padding <= sample_frames
+            bool waitSucceeded = false;
+            while (_isRunning && !_isPaused) {
+                // WaitForSingleObjectEx(device->hidden->event, 200, FALSE)
+                uint waitResult = NativeMethods.WaitForSingleObjectEx(_bufferEvent, WaitTimeoutMs, false);
+
+                if (!_isRunning) {
+                    break;
+                }
+
+                if (waitResult == WaitObject0) {
+                    // WAIT_OBJECT_0 - event signaled, check padding
+                    // Reference: if (waitResult == WAIT_OBJECT_0) { ... if (padding <= (UINT32)device->sample_frames) { break; } }
+                    hr = _audioClient.GetCurrentPadding(out uint padding);
+                    if (WasapiResult.Failed(hr)) {
+                        // WasapiFailed - device lost or dead
+                        break;
+                    }
+
+                    // SDL: if (padding <= (UINT32)device->sample_frames) { break; }
+                    if (padding <= (uint)sampleFrames) {
+                        waitSucceeded = true;
+                        break;
+                    }
+                    // Not enough space yet, continue waiting
+                } else if (waitResult == WaitTimeout) {
+                    // WAIT_TIMEOUT - just continue the loop
+                    continue;
+                } else {
+                    // Wait failed - matches SDL: IAudioClient_Stop(client); return false;
+                    _audioClient?.Stop();
+                    _isRunning = false;
+                    break;
+                }
+            }
+
+            if (!waitSucceeded || !_isRunning) {
                 continue;
             }
 
             try {
-                // Get current padding (how many frames are already in the buffer)
-                int hr = _audioClient.GetCurrentPadding(out uint paddingFrameCount);
+                // =================================================================
+                // WASAPI_GetDeviceBuf - EXACT SDL MIRROR
+                // Reference: SDL_wasapi.c WASAPI_GetDeviceBuf()
+                // SDL always requests exactly device->sample_frames, NOT available frames
+                // =================================================================
+                // const HRESULT ret = IAudioRenderClient_GetBuffer(device->hidden->render, device->sample_frames, &buffer);
+                hr = _renderClient.GetBuffer((uint)sampleFrames, out IntPtr dataPtr);
+
+                if (hr == WasapiResult.AudioClientEBufferTooLarge) {
+                    // AUDCLNT_E_BUFFER_TOO_LARGE - buffer is NULL, go back to WaitDevice
+                    // Reference: SDL sets buffer_size = 0 and returns NULL, then loops back
+                    continue;
+                }
+
                 if (WasapiResult.Failed(hr)) {
+                    // Device lost or dead
                     continue;
                 }
 
-                // Calculate frames available
-                uint framesAvailable = _bufferFrameCount - paddingFrameCount;
-                if (framesAvailable == 0) {
-                    continue;
-                }
-
-                // Get buffer from WASAPI
-                hr = _renderClient.GetBuffer(framesAvailable, out IntPtr dataPtr);
-                if (WasapiResult.Failed(hr)) {
-                    continue;
-                }
-
-                // Request audio data from callback
-                int samplesNeeded = (int)framesAvailable * _obtainedSpec.Channels;
-                if (tempBuffer.Length < samplesNeeded) {
-                    tempBuffer = new float[samplesNeeded];
-                }
-
-                Span<float> callbackBuffer = tempBuffer.AsSpan(0, samplesNeeded);
-                callbackBuffer.Clear(); // Fill with silence by default
+                // =================================================================
+                // Fill buffer via callback - mirrors SDL's internal audio thread loop
+                // =================================================================
+                Span<float> callbackBuffer = tempBuffer.AsSpan(0, samplesPerCallback);
+                callbackBuffer.Clear();  // Silent by default
                 _callback?.Invoke(callbackBuffer);
 
-                // Copy to WASAPI buffer
-                Marshal.Copy(tempBuffer, 0, dataPtr, samplesNeeded);
+                // Copy float data to WASAPI buffer (IEEE float format)
+                Marshal.Copy(tempBuffer, 0, dataPtr, samplesPerCallback);
 
-                // Release buffer
-                _renderClient.ReleaseBuffer(framesAvailable, 0);
+                // =================================================================
+                // WASAPI_PlayDevice - EXACT SDL MIRROR
+                // Reference: SDL_wasapi.c WASAPI_PlayDevice()
+                // WasapiFailed(device, IAudioRenderClient_ReleaseBuffer(device->hidden->render, device->sample_frames, 0));
+                // =================================================================
+                _renderClient.ReleaseBuffer((uint)sampleFrames, 0);
             } catch (COMException) {
-                // Device may have been lost, ignore
+                // Device may have been lost, ignore and continue
             }
         }
+
+        // ThreadDeinit - matches SDL:
+        // if (device->hidden->task && pAvRevertMmThreadCharacteristics) {
+        //     pAvRevertMmThreadCharacteristics(device->hidden->task);
+        // }
+        if (_taskHandle != IntPtr.Zero && _avrtHandle != IntPtr.Zero) {
+            IntPtr procAddr = NativeMethods.GetProcAddress(_avrtHandle, "AvRevertMmThreadCharacteristics");
+            if (procAddr != IntPtr.Zero) {
+                AvRevertMmThreadCharacteristicsDelegate avRevert =
+                    Marshal.GetDelegateForFunctionPointer<AvRevertMmThreadCharacteristicsDelegate>(procAddr);
+                avRevert(_taskHandle);
+            }
+            _taskHandle = IntPtr.Zero;
+        }
+
+        if (_avrtHandle != IntPtr.Zero) {
+            NativeMethods.FreeLibrary(_avrtHandle);
+            _avrtHandle = IntPtr.Zero;
+        }
+
+        // CoUninitialize - matches SDL: WIN_CoUninitialize()
+        if (comInitialized) {
+            NativeMethods.CoUninitialize();
+        }
+    }
+
+    // Delegate for AvSetMmThreadCharacteristicsW
+    [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Unicode)]
+    private delegate IntPtr AvSetMmThreadCharacteristicsWDelegate(string taskName, ref uint taskIndex);
+
+    // Delegate for AvRevertMmThreadCharacteristics
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    private delegate bool AvRevertMmThreadCharacteristicsDelegate(IntPtr taskHandle);
+
+    /// <summary>
+    /// Native methods for WASAPI and Windows APIs.
+    /// </summary>
+    private static class NativeMethods {
+        public const uint COINIT_MULTITHREADED = 0x0;
+
+        [DllImport("ole32.dll")]
+        public static extern int CoInitializeEx(IntPtr reserved, uint coInit);
+
+        [DllImport("ole32.dll")]
+        public static extern void CoUninitialize();
+
+        [DllImport("ole32.dll")]
+        public static extern void CoTaskMemFree(IntPtr ptr);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern IntPtr CreateEventW(IntPtr lpEventAttributes, bool bManualReset, bool bInitialState, string? lpName);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool SetEvent(IntPtr hEvent);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool CloseHandle(IntPtr hObject);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern uint WaitForSingleObjectEx(IntPtr hHandle, int dwMilliseconds, bool bAlertable);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern IntPtr LoadLibraryW(string lpLibFileName);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool FreeLibrary(IntPtr hLibModule);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true)]
+        public static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
     }
 }
