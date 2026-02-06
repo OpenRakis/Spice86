@@ -170,7 +170,7 @@ public sealed class Configuration {
     /// <summary>
     /// Audio engine to use
     /// </summary>
-    [Option(nameof(AudioEngine), Default = AudioEngine.PortAudio, Required = false, HelpText = "Audio engine to use. Values are PortAudio or Dummy")]
+    [Option(nameof(AudioEngine), Default = AudioEngine.CrossPlatform, Required = false, HelpText = "Audio engine to use. CrossPlatform uses WASAPI on Windows and SDL on other platforms. Values are CrossPlatform or Dummy")]
     public AudioEngine AudioEngine { get; init; }
 
     /// <summary>

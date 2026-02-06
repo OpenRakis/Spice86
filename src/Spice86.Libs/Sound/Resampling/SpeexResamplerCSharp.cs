@@ -32,7 +32,7 @@
    POSSIBILITY OF SUCH DAMAGE.
 */
 
-namespace Bufdio.Spice86;
+namespace Spice86.Libs.Sound.Resampling;
 
 /// <summary>
 /// Pure C# port of Speex high-quality audio resampler from libspeexdsp.

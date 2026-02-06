@@ -658,7 +658,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 if (_sb.Mode == DspMode.Dma) {
                     // Catch up to current time but don't generate IRQ
                     // This fixes timing issues with later SCI games
-                    double currentTime = _clock.ElapsedTimeMs;
+                    // Use FullIndex (emulated time) for timing
+                    double currentTime = _clock.FullIndex;
                     double elapsedTime = currentTime - _lastDmaCallbackTime;
 
                     if (elapsedTime > 0 && _sb.Dma.Rate > 0) {
@@ -815,7 +816,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Used to convert from samples to frames (which is what AddSamples unintuitively uses..)
         byte channels = _sb.Dma.Stereo ? (byte)2 : (byte)1;
 
-        _lastDmaCallbackTime = _clock.ElapsedTimeMs;
+        // Use FullIndex (emulated time) for timing
+        _lastDmaCallbackTime = _clock.FullIndex;
 
         // Read the actual data, process it and send it off to the mixer
         switch (_sb.Dma.Mode) {

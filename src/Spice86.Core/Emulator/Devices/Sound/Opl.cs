@@ -152,7 +152,8 @@ public class Opl : DefaultIOPortHandler, IDisposable {
 
         const double MillisInSecond = 1000.0;
         _msPerFrame = MillisInSecond / OplSampleRateHz;
-        _lastRenderedMs = _clock.ElapsedTimeMs;
+        // Use FullIndex (emulated time) not wall-clock
+        _lastRenderedMs = _clock.FullIndex;
 
         // Initialize chip
         Init();
@@ -168,7 +169,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Reference: Opl::RenderUpToNow() in DOSBox opl.cpp
     /// </summary>
     private void RenderUpToNow() {
-        double now = _clock.ElapsedTimeMs;
+        // Use FullIndex (emulated time) for main thread operations
+        // Reference: DOSBox uses PIC_FullIndex() for rendering
+        double now = _clock.FullIndex;
         // Wake up the channel and update the last rendered time datum.
         // assert(channel);
         if (_mixerChannel.WakeUp()) {
@@ -373,7 +376,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                     // Only respond on primary port, return 0xFF for others
                     // Make sure the low bits are 6 on OPL2
                     if ((port & 0x03) == 0) {
-                        byte ret = (byte)(_timerChips[0].Read(_clock.ElapsedTimeMs) | 0x06);
+                        byte ret = (byte)(_timerChips[0].Read(_clock.FullIndex) | 0x06);
                         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                             _loggerService.Debug("OPL: PortRead offset=0x00 returning 0x{Ret:X2} (timer0 status | 0x06)", ret);
                         }
@@ -396,7 +399,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                         return ret;
                     }
                     int timerIndex = (port >> 1) & 1;
-                    byte retTimer = (byte)(_timerChips[timerIndex].Read(_clock.ElapsedTimeMs) | 0x06);
+                    byte retTimer = (byte)(_timerChips[timerIndex].Read(_clock.FullIndex) | 0x06);
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                         _loggerService.Debug("OPL: PortRead DualOpl2 returning 0x{Ret:X2} (timer chip {Index} status | 0x06)", retTimer, timerIndex);
                     }
@@ -434,7 +437,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             case OplMode.Opl3: {
                     // Return timer status only on base port
                     if ((port & 0x03) == 0) {
-                        byte ret = _timerChips[0].Read(_clock.ElapsedTimeMs);
+                        byte ret = _timerChips[0].Read(_clock.FullIndex);
                         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                             _loggerService.Debug("OPL: PortRead Opl3 base port returning timer status 0x{Ret:X2}", ret);
                         }
@@ -504,7 +507,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
 
                 case OplMode.Opl2:
                 case OplMode.Opl3:
-                    if (!_timerChips[0].Write((byte)(_selectedRegister & 0xFF), value, _clock.ElapsedTimeMs)) {
+                    if (!_timerChips[0].Write((byte)(_selectedRegister & 0xFF), value, _clock.FullIndex)) {
                         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                             _loggerService.Debug("OPL: Data write to register 0x{Reg:X3} value=0x{Value:X2} (WriteReg)", _selectedRegister, value);
                         }
@@ -643,7 +646,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         }
 
         // Write to the timer?
-        if (_timerChips[index].Write(reg, val, _clock.ElapsedTimeMs)) {
+        if (_timerChips[index].Write(reg, val, _clock.FullIndex)) {
             return;
         }
 
@@ -754,7 +757,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 framesRemaining--;
             }
             // Update last rendered time to now (cycle-accurate sync)
-            _lastRenderedMs = _clock.ElapsedTimeMs;
+            _lastRenderedMs = _clock.FullIndex;
         }
     }
 

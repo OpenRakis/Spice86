@@ -16,7 +16,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\tests\Spice86.Tests\Spice86.Tests.csproj"/>
-        <ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj"/>
         <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj"/>
         <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj"/>
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj"/>

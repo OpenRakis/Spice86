@@ -52,7 +52,7 @@ public sealed class MixerChannel {
     // Speex resampler state - pure C# implementation
     // Replaces P/Invoke version with faithful C# port
     // Initialized ONCE when first needed (see ConfigureResampler)
-    private Bufdio.Spice86.SpeexResamplerCSharp? _speexResampler;
+    private Spice86.Libs.Sound.Resampling.SpeexResamplerCSharp? _speexResampler;
 
     private bool _doResample;
 
@@ -360,7 +360,7 @@ public sealed class MixerChannel {
             uint speexOutRate = (uint)mixerRateHz;
 
             if (_speexResampler == null) {
-                _speexResampler = new Bufdio.Spice86.SpeexResamplerCSharp(
+                _speexResampler = new Spice86.Libs.Sound.Resampling.SpeexResamplerCSharp(
                     SpeexChannels,
                     speexInRate,
                     speexOutRate,
@@ -1414,7 +1414,7 @@ public sealed class MixerChannel {
         }
     }
 
-    private static int EstimateMaxOutFrames(Bufdio.Spice86.SpeexResamplerCSharp resampler, int inFrames) {
+    private static int EstimateMaxOutFrames(Spice86.Libs.Sound.Resampling.SpeexResamplerCSharp resampler, int inFrames) {
         resampler.GetRatio(out uint ratioNum, out uint ratioDen);
         if (ratioNum == 0 || ratioDen == 0 || inFrames <= 0) {
             return inFrames;

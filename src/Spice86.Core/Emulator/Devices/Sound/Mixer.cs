@@ -28,7 +28,7 @@ public sealed class Mixer : IDisposable {
     // Channels registry - matches DOSBox mixer.channels
     private readonly ConcurrentDictionary<string, MixerChannel> _channels = new();
 
-    // Mixer thread that produces and writes directly to PortAudio
+    // Mixer thread that produces audio and sends to the audio backend
     private readonly Thread _mixerThread;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly Lock _mixerLock = new();
@@ -125,7 +125,7 @@ public sealed class Mixer : IDisposable {
         // Initialize compressor with default parameters
         InitCompressor(compressorEnabled: true);
 
-        // Start mixer thread (produces frames and writes to PortAudio directly)
+        // Start mixer thread (produces frames and sends to audio backend)
         _mixerThread = new Thread(MixerThreadLoop) {
             Name = "Spice86-Mixer",
             IsBackground = true,
@@ -637,7 +637,7 @@ public sealed class Mixer : IDisposable {
                     _audioPlayer.WriteData(interleavedBuffer);
 
                     if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                        _loggerService.Verbose("MIXER: Wrote frames to PortAudio frames={Frames}", framesToWrite);
+                        _loggerService.Verbose("MIXER: Wrote frames to audio backend frames={Frames}", framesToWrite);
                     }
                 }
             } finally {
