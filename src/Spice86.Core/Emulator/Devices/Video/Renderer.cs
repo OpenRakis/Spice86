@@ -260,7 +260,9 @@ public class Renderer : IVgaRenderer {
         byte fontByte = _memory.Planes[2, fontAddress + scanline];
         for (int x = 0; x < _state.SequencerRegisters.ClockingModeRegister.DotsPerClock; x++) {
             uint pixel = (fontByte & 0x80 >> x) != 0 ? foreGroundColor : backGroundColor;
-            frameBuffer[destinationAddress++] = pixel;
+            if (destinationAddress < frameBuffer.Length) {
+                frameBuffer[destinationAddress++] = pixel;
+            }
         }
     }
 
@@ -318,16 +320,16 @@ public class Renderer : IVgaRenderer {
             case true:
                 return _state.DacRegisters.ArgbPalette[index];
             default: {
-                int fromPaletteRam6Bits = _state.AttributeControllerRegisters.InternalPalette[index & 0x0F];
-                int bits0To3 = fromPaletteRam6Bits & 0b00001111;
-                int bits4And5 = _state.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select
-                    ? _state.AttributeControllerRegisters.ColorSelectRegister.Bits45 << 4
-                    : fromPaletteRam6Bits & 0b00110000;
-                int bits6And7 = _state.AttributeControllerRegisters.ColorSelectRegister.Bits67 << 6;
-                int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
-                int paletteIndex = dacIndex8Bits & _state.DacRegisters.PixelMask;
-                return _state.DacRegisters.ArgbPalette[paletteIndex];
-            }
+                    int fromPaletteRam6Bits = _state.AttributeControllerRegisters.InternalPalette[index & 0x0F];
+                    int bits0To3 = fromPaletteRam6Bits & 0b00001111;
+                    int bits4And5 = _state.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select
+                        ? _state.AttributeControllerRegisters.ColorSelectRegister.Bits45 << 4
+                        : fromPaletteRam6Bits & 0b00110000;
+                    int bits6And7 = _state.AttributeControllerRegisters.ColorSelectRegister.Bits67 << 6;
+                    int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
+                    int paletteIndex = dacIndex8Bits & _state.DacRegisters.PixelMask;
+                    return _state.DacRegisters.ArgbPalette[paletteIndex];
+                }
         }
     }
 }
