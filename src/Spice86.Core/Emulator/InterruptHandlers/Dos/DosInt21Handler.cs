@@ -1429,6 +1429,28 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Subfunction ID in AL for <see cref="AllocationStrategyOrUpperMemoryLinkState"/>
+    /// </summary>
+    public enum AllocationStrategySubFunction : byte {
+        /// <summary>
+        /// Gets the current strategy in AX
+        /// </summary>
+        QueryMemoryAllocationStrategy = 0x0,
+        /// <summary>
+        /// Sets the current strategy from BX
+        /// </summary>
+        SetMemoryAllocationStrategy = 0x1,
+        /// <summary>
+        /// Gets whether the upper memory block is currently linked in AL (1) or not (0).
+        /// </summary>
+        QueryUpperMemoryBlockState = 0x2,
+        /// <summary>
+        /// Set the state of the upper memory block link.
+        /// </summary>
+        SetUpperMemoryBlockState = 0x3,
+    }
+
+    /// <summary>
     /// INT 21h, AH=58h
     /// AX=5800H Query Memory Allocation Strategy
     /// AX=5801H Set Memory Allocation Strategy
@@ -1437,23 +1459,19 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void AllocationStrategyOrUpperMemoryLinkState(bool calledFromVm) {
         byte op = State.AL;
-        if (op == 0x00) {
-            // Query Memory Allocation Strategy
+        if (op == (byte)AllocationStrategySubFunction.QueryMemoryAllocationStrategy) {
             State.AX = (ushort)_dosMemoryManager.AllocationStrategy;
             SetCarryFlag(false, calledFromVm);
-        } else if (op == 0x01) {
-            // Set Memory Allocation Strategy
+        } else if (op == (byte)AllocationStrategySubFunction.SetMemoryAllocationStrategy) {
             _dosMemoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)State.BX;
             State.AX = 0;
             SetCarryFlag(false, calledFromVm);
-        } else if (op == 0x02) {
-            // Query Upper-Memory Link State
+        } else if (op == (byte)AllocationStrategySubFunction.QueryUpperMemoryBlockState) {
             // 01H = upper memory is currently linked
             // 00H = not linked (all allocations go to conventional mem)
             State.AL = 0x00;
             SetCarryFlag(false, calledFromVm);
-        } else if (op == 0x03) {
-            // Set Upper-Memory Link State
+        } else if (op == (byte)AllocationStrategySubFunction.SetUpperMemoryBlockState) {
             State.AX = 0x01; // 0001h (invalid function)
             SetCarryFlag(false, calledFromVm);
         } else {
