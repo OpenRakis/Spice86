@@ -92,7 +92,7 @@ public class DosMemoryManager {
                 return;
             }
             byte highMemBits = (byte)((byte)value & HighMemMask);
-            if (highMemBits != 0x00 && highMemBits != HighMemFirstThenLow && highMemBits != HighMemOnlyNoFallback) {
+            if (highMemBits is not 0x00 and not HighMemFirstThenLow and not HighMemOnlyNoFallback) {
                 // Invalid high memory bits, ignore
                 return;
             }
