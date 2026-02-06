@@ -185,6 +185,12 @@ public class DosMemoryManager {
     public DosErrorCode TryModifyBlock(in ushort blockSegment, in ushort requestedSizeInParagraphs,
         out DosMemoryControlBlock block) {
         block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
+
+        if(requestedSizeInParagraphs == 0) { // behavior from Alpha Waves loader
+            block.PspSegment = _sda.CurrentProgramSegmentPrefix; // fixes Alpha Waves loader, otherwise we end up executing garbage
+            return DosErrorCode.NoError; // we stop here and avoid corrupting the MCB chain
+        }
+
         if (!CheckValidOrLogError(block)) {
             return DosErrorCode.MemoryControlBlockDestroyed;
         }
