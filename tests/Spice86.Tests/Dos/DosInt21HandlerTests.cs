@@ -4,9 +4,13 @@ using FluentAssertions;
 
 using NSubstitute;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -30,6 +34,7 @@ public class DosInt21HandlerTests {
         var stringDecoder = new DosStringDecoder(memory, state);
         IList<IVirtualDevice> virtualDevices = new List<IVirtualDevice>();
         var dosFileManager = new DosFileManager(memory, stringDecoder, driveManager, logger, virtualDevices);
+        var dosFcbManager = new DosFcbManager(memory, dosFileManager, driveManager, logger);
         var recordingFile = new RecordingVirtualFile();
         const ushort fileHandle = 0x0003;
         dosFileManager.OpenFiles[fileHandle] = recordingFile;
@@ -37,22 +42,33 @@ public class DosInt21HandlerTests {
         var ioPortDispatcher = new IOPortDispatcher(ioPortBreakpoints, state, logger, false);
         var dosTables = new DosTables();
         dosTables.Initialize(memory);
+        var dosSwappableDataArea = new DosSwappableDataArea(memory, 0xB20);
+        var biosDataArea = new BiosDataArea(memory, 640);
+        var biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
+        var keyboardInt16Handler = new KeyboardInt16Handler(
+            memory, ioPortDispatcher, biosDataArea,
+            functionHandlerProvider, stack, state, logger, biosKeyboardBuffer);
+        var countryInfo = new CountryInfo();
+        var dosMemoryManager = new DosMemoryManager(memory, 0x170, logger);
+        var envVars = new Dictionary<string, string> { { "PATH", "C:\\" } };
+        var dosProcessManager = new DosProcessManager(memory, stack, state, dosMemoryManager, dosFileManager, driveManager, dosFcbManager, envVars, logger);
 
         var handler = new DosInt21Handler(
             memory,
             functionHandlerProvider,
             stack,
             state,
-            null!,
-            null!,
+            keyboardInt16Handler,
+            countryInfo,
             stringDecoder,
-            null!,
+            dosMemoryManager,
             dosFileManager,
             driveManager,
-            null!,
+            dosProcessManager,
             ioPortDispatcher,
             dosTables,
-            logger);
+            logger,
+            dosFcbManager);
 
         state.AL = (byte)SeekOrigin.Current;
         state.BX = fileHandle;
