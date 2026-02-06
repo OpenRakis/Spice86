@@ -39,7 +39,7 @@ F000:00A3 mov AH,0x41
 F000:00A5 sahf
 F000:00A6 ja short 0x00AC
 F000:00A8 jbe short 0x00B5
-F000:00AA jmp near 0x00B7
+F000:00AA jmp short 0x00B7
 F000:00AD jb short 0x008B
 F000:00AF je short 0x0093
 F000:00B1 jp short 0x009B
@@ -62,7 +62,7 @@ F000:00D0 jns short 0x00E1
 F000:00D3 mov AH,0x94
 F000:00D5 sahf
 F000:00D6 ja short 0x00E3
-F000:00D9 jmp near 0x00E5
+F000:00D9 jmp short 0x00E5
 F000:00DB jae short 0x00C1
 F000:00DD jne short 0x00C7
 F000:00DF jnp short 0x00CD
@@ -89,7 +89,7 @@ F000:0112 jcxz short 0x012D
 F000:0114 jcxz short 0x0122
 F000:0117 mov ECX,0
 F000:011D jcxz short 0x012F
-F000:0120 jmp near 0x0132
+F000:0120 jmp short 0x0132
 F000:0123 jo short 0x00F1
 F000:0125 jge short 0x00F6
 F000:0127 jg short 0x00FB
@@ -1125,7 +1125,7 @@ F000:1363 mov AX,SP
 F000:1365 clc
 F000:1366 call near 0x136F
 F000:1369 jae near 0x15C7
-F000:136D jmp near 0x1380
+F000:136D jmp short 0x1380
 F000:136F sub AX,2
 F000:1372 cmp SP,AX
 F000:1374 jne near 0x15C7
@@ -1135,7 +1135,7 @@ F000:137C ret near
 F000:1380 clc
 F000:1381 call near 0x138D
 F000:1387 jae near 0x15C7
-F000:138B jmp near 0x139F
+F000:138B jmp short 0x139F
 F000:138D sub AX,4
 F000:1390 cmp SP,AX
 F000:1392 jne near 0x15C7
@@ -1154,7 +1154,7 @@ F000:13B7 mov AX,SP
 F000:13B9 clc
 F000:13BA call far F000:13C5
 F000:13BF jae near 0x15C7
-F000:13C3 jmp near 0x13D6
+F000:13C3 jmp short 0x13D6
 F000:13C5 sub AX,4
 F000:13C8 cmp SP,AX
 F000:13CA jne near 0x15C7
@@ -1164,7 +1164,7 @@ F000:13D2 ret far
 F000:13D6 clc
 F000:13D7 call far F000:13E5
 F000:13DF jae near 0x15C7
-F000:13E3 jmp near 0x13F7
+F000:13E3 jmp short 0x13F7
 F000:13E5 sub AX,8
 F000:13E8 cmp SP,AX
 F000:13EA jne near 0x15C7

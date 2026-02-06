@@ -21,7 +21,7 @@ using Xunit;
 /// </summary>
 public class AstExpressionParserRoundTripTest {
     private readonly AstExpressionParser _parser = new();
-    private readonly AstInstructionRenderer _renderer = new();
+    private readonly AstInstructionRenderer _renderer = new(AsmRenderingConfig.CreateSpice86Style());
 
     private void AssertRoundTrip(string expression, string? expected = null) {
         // Parse expression into AST

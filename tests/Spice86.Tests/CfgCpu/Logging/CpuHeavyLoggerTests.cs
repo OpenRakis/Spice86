@@ -2,6 +2,8 @@ namespace Spice86.Tests.CfgCpu.Logging;
 
 using FluentAssertions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
@@ -15,6 +17,7 @@ using Xunit;
 public class CpuHeavyLoggerTests : IDisposable {
     private readonly EmulatorStateSerializationFolder _emulatorStateSerializationFolder;
     private readonly List<string> _filesToCleanup = new();
+    private readonly NodeToString _nodeToString = new(AsmRenderingConfig.CreateSpice86Style());
 
     public CpuHeavyLoggerTests() {
         _emulatorStateSerializationFolder = new(Path.GetTempPath());
@@ -39,7 +42,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _filesToCleanup.Add(expectedLogPath);
 
         // Act
-        using CpuHeavyLogger logger = new(_emulatorStateSerializationFolder, null);
+        using CpuHeavyLogger logger = new(_emulatorStateSerializationFolder, null, _nodeToString);
 
         // Assert
         File.Exists(expectedLogPath).Should().BeTrue();
@@ -51,7 +54,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         string customLogPath = GetUniqueLogPath();
 
         // Act
-        using CpuHeavyLogger logger = new(_emulatorStateSerializationFolder, customLogPath);
+        using CpuHeavyLogger logger = new(_emulatorStateSerializationFolder, customLogPath, _nodeToString);
 
         // Assert
         File.Exists(customLogPath).Should().BeTrue();
@@ -67,7 +70,7 @@ public class CpuHeavyLoggerTests : IDisposable {
             CreateNop(new SegmentedAddress(0x1000, 0x0106))
         };
 
-        using (CpuHeavyLogger logger = new(_emulatorStateSerializationFolder, logPath)) {
+        using (CpuHeavyLogger logger = new(_emulatorStateSerializationFolder, logPath, _nodeToString)) {
             // Act
             foreach (var node in nodes) {
                 logger.LogInstruction(node);

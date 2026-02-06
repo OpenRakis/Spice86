@@ -121,7 +121,7 @@ public class DosProcessManagerTests {
                 environmentSegment: 0);
 
             parentExec.Success.Should().BeTrue();
-            ushort parentSegment = context.Tracker.GetCurrentPspSegment();
+            ushort parentSegment = context.CurrentPspSegment;
 
             // Shrink parent's memory to PSP + small code, freeing space for child
             const ushort parentMinimumSize = DosProgramSegmentPrefix.PspSizeInParagraphs + 0x10;
@@ -131,8 +131,8 @@ public class DosProcessManagerTests {
                 out DosMemoryControlBlock _);
             shrinkResult.Should().Be(DosErrorCode.NoError, "parent must shrink memory before loading child");
 
-            context.State.SS = 0x2222;
-            context.State.SP = 0x0FF0;
+            context.State.SS = 0xFFFD;
+            context.State.SP = 0xFFFE;
 
             parameterBlock = CreateParameterBlock();
 
@@ -150,12 +150,11 @@ public class DosProcessManagerTests {
 
             context.ProcessManager.TerminateProcess(0, DosTerminationType.Normal);
 
-            context.Tracker.GetCurrentPspSegment().Should().Be(parentSegment);
-            context.State.SS.Should().Be(0x2222);
-            context.State.SP.Should().Be(0x0ff0);
-
-            DosProgramSegmentPrefix parentPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(parentSegment, 0));
-            parentPsp.StackPointer.Should().Be(0x00023210);
+            context.CurrentPspSegment.Should().Be(parentSegment);
+            context.State.SS.Should().Be(0xFFFD);
+            // SP is restored to the iregs frame location (parent SP minus IregsFrameSize of 18 bytes).
+            // FreeDOS stores ps_stack = SS:(SP - sizeof(iregs)) during EXEC.
+            context.State.SP.Should().Be((ushort)(0xFFFE - 18));
         } finally {
             DeleteIfExists(comFilePath);
         }
@@ -179,7 +178,7 @@ public class DosProcessManagerTests {
 
             execResult.Success.Should().BeTrue();
 
-            ushort tsrSegment = context.Tracker.GetCurrentPspSegment();
+            ushort tsrSegment = context.CurrentPspSegment;
             DosProgramSegmentPrefix tsrPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(tsrSegment, 0));
 
             ushort environmentSegment = tsrPsp.EnvironmentTableSegment;
@@ -223,17 +222,17 @@ public class DosProcessManagerTests {
 
             execResult.Success.Should().BeTrue();
 
-            ushort tsrSegment = context.Tracker.GetCurrentPspSegment();
+            ushort tsrSegment = context.CurrentPspSegment;
             DosProgramSegmentPrefix tsrPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(tsrSegment, 0));
 
-            ushort paragraphsToKeep = (ushort)(DosProgramSegmentPrefix.PspSizeInParagraphs + 0x10);
+            ushort paragraphsToKeep = DosProgramSegmentPrefix.PspSizeInParagraphs + 0x10;
             DosErrorCode resizeResult = context.MemoryManager.TryModifyBlock(
                 tsrSegment,
                 paragraphsToKeep,
                 out DosMemoryControlBlock resizedBlock);
 
             resizeResult.Should().Be(DosErrorCode.NoError);
-            context.ProcessManager.TrackResidentBlock(tsrSegment, resizedBlock);
+            context.ProcessManager.TrackResidentBlock(resizedBlock);
 
             context.ProcessManager.TerminateProcess(0x00, DosTerminationType.TSR);
 
@@ -277,7 +276,7 @@ public class DosProcessManagerTests {
 
             execResult.Success.Should().BeTrue();
 
-            ushort childSegment = context.Tracker.GetCurrentPspSegment();
+            ushort childSegment = context.CurrentPspSegment;
             DosProgramSegmentPrefix childPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(childSegment, 0));
 
             EnvironmentBlockInfo environmentInfo = ReadEnvironmentBlockInfo(context.Memory, childPsp.EnvironmentTableSegment);
@@ -312,7 +311,7 @@ public class DosProcessManagerTests {
 
             execResult.Success.Should().BeTrue();
 
-            ushort childPspSegment = context.Tracker.GetCurrentPspSegment();
+            ushort childPspSegment = context.CurrentPspSegment;
 
             context.State.DX.Should().Be(childPspSegment);
             context.State.CX.Should().Be(0x00FF);
@@ -396,24 +395,26 @@ public class DosProcessManagerTests {
             ? new Configuration { ProgramEntryPointSegment = programEntryPointSegment.Value }
             : new Configuration();
 
+        // Calculate initial PSP segment and set it in the SDA
+        ushort initialPspSegment = (ushort)(configuration.ProgramEntryPointSegment - 0x10);
         DosSwappableDataArea sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
-        DosProgramSegmentPrefixTracker tracker = new(configuration, memory, sda, loggerService);
+        sda.CurrentProgramSegmentPrefix = initialPspSegment;
+
         DosDriveManager driveManager = new(loggerService, null, null);
-        DosMemoryManager memoryManager = new(memory, tracker, loggerService);
+        DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state), driveManager, loggerService, new List<IVirtualDevice>());
 
         DosProcessManager processManager = new(
             memory,
             stack,
             state,
-            tracker,
             memoryManager,
             fileManager,
             driveManager,
             new Dictionary<string, string>(),
             loggerService);
 
-        return new DosProcessManagerTestContext(memory, processManager, tracker, state, memoryManager);
+        return new DosProcessManagerTestContext(memory, processManager, state, memoryManager);
     }
 
     private static DosProgramSegmentPrefix GetRootPsp(DosProcessManagerTestContext context) {
@@ -593,18 +594,22 @@ public class DosProcessManagerTests {
 
     private sealed class DosProcessManagerTestContext {
         public DosProcessManagerTestContext(Memory memory, DosProcessManager processManager,
-            DosProgramSegmentPrefixTracker tracker, State state, DosMemoryManager memoryManager) {
+            State state, DosMemoryManager memoryManager) {
             Memory = memory;
             ProcessManager = processManager;
-            Tracker = tracker;
             State = state;
             MemoryManager = memoryManager;
         }
 
         public Memory Memory { get; }
         public DosProcessManager ProcessManager { get; }
-        public DosProgramSegmentPrefixTracker Tracker { get; }
         public State State { get; }
         public DosMemoryManager MemoryManager { get; }
+
+        /// <summary>
+        /// Gets the current PSP segment directly from the DOS SDA.
+        /// </summary>
+        public ushort CurrentPspSegment =>
+            new DosSwappableDataArea(Memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0)).CurrentProgramSegmentPrefix;
     }
 }

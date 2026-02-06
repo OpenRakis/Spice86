@@ -11,7 +11,7 @@ F000:0016 push 0xFEFD
 F000:0019 ret far
 FFEF:000D jmp near 0x0110
 F000:FEFD jmp near 0
-F000:FFF0 jmp near 8
+F000:FFF0 jmp short 8
 FFEF:0110 mov AX,2
 FFEF:0113 mov word ptr DS:[0],AX
 FFEF:0116 hlt

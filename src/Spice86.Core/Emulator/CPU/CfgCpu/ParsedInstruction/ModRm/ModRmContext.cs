@@ -3,7 +3,6 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Shared.Emulator.Memory;
 
 public class ModRmContext {
-    
     public InstructionField<byte> ModRmField { get; }
     public uint Mode { get; }
     public int RegisterIndex { get; }
@@ -17,6 +16,8 @@ public class ModRmContext {
     public ModRmOffsetType? ModRmOffsetType { get; }
     public InstructionField<ushort>? ModRmOffsetField { get; }
     public int? SegmentIndex { get; }
+    // For rendering
+    public int? DefaultSegmentIndex { get; }
 
     public List<FieldWithValue> FieldsInOrder { get; } = new();
 
@@ -33,7 +34,8 @@ public class ModRmContext {
         FieldWithValue? displacementField,
         ModRmOffsetType? modRmOffsetType,
         InstructionField<ushort>? modRmOffsetField,
-        int? segmentIndex
+        int? segmentIndex,
+        int? defaultSegmentIndex
     ) {
         ModRmField = modRmField;
         Mode = mode;
@@ -48,6 +50,7 @@ public class ModRmContext {
         ModRmOffsetType = modRmOffsetType;
         ModRmOffsetField = modRmOffsetField;
         SegmentIndex = segmentIndex;
+        DefaultSegmentIndex = defaultSegmentIndex;
 
         // Order of the bytes in modrm context:
         // First ModRM byte
@@ -56,14 +59,15 @@ public class ModRmContext {
         if (SibContext != null) {
             FieldsInOrder.AddRange(SibContext.FieldsInOrder);
         }
+
         // Then displacement
         if (DisplacementField != null) {
             FieldsInOrder.Add(DisplacementField);
         }
+
         // Then offset
         if (ModRmOffsetField != null) {
             FieldsInOrder.Add(ModRmOffsetField);
         }
     }
-
 }

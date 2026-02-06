@@ -5,6 +5,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Shared.Emulator.Memory;
 
 public class ConstantAstBuilder {
+    public NearAddressNode ToNearAddressNode(ushort value, SegmentedAddress baseAddress) {
+        return new NearAddressNode(value, baseAddress);
+    }
+
     public ValueNode ToNode(byte value) {
         return new ConstantNode(DataType.UINT8, value);
     }
@@ -15,6 +19,14 @@ public class ConstantAstBuilder {
 
     public ValueNode ToNode(uint value) {
         return new ConstantNode(DataType.UINT32, value);
+    }
+    
+    public ValueNode ToNode(ulong value) {
+        return new ConstantNode(DataType.UINT64, value);
+    }
+    
+    public ValueNode ToNode(DataType dataType, ulong value) {
+        return new ConstantNode(dataType, value);
     }
 
     public ValueNode ToNode(sbyte value) {
@@ -27,6 +39,10 @@ public class ConstantAstBuilder {
 
     public ValueNode ToNode(int value) {
         return new ConstantNode(DataType.INT32, (uint)value);
+    }
+    
+    public ValueNode ToNode(long value) {
+        return new ConstantNode(DataType.INT64, (ulong)value);
     }
 
     public ValueNode ToNode(SegmentedAddress segmentedAddress) {

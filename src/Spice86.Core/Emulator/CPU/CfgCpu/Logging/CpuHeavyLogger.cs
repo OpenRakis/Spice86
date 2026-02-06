@@ -11,7 +11,7 @@ using System.IO;
 /// </summary>
 public sealed class CpuHeavyLogger : IDisposable {
     private readonly StreamWriter _writer;
-    private readonly NodeToString _nodeToString = new();
+    private readonly NodeToString _nodeToString;
     private bool _disposed;
 
     /// <summary>
@@ -19,7 +19,9 @@ public sealed class CpuHeavyLogger : IDisposable {
     /// </summary>
     /// <param name="emulatorStateSerializationFolder">Where to write the file.</param>
     /// <param name="customFilePath">Optional custom file path. If null, uses {DumpDirectory}/cpu_heavy.log</param>
-    public CpuHeavyLogger(EmulatorStateSerializationFolder emulatorStateSerializationFolder, string? customFilePath) {
+    /// <param name="nodeToString">The node renderer to use.</param>
+    public CpuHeavyLogger(EmulatorStateSerializationFolder emulatorStateSerializationFolder, string? customFilePath, NodeToString nodeToString) {
+        _nodeToString = nodeToString;
         string logFilePath = customFilePath ?? Path.Join(emulatorStateSerializationFolder.Folder, "cpu_heavy.log");
         
         // Ensure directory exists
@@ -46,16 +48,14 @@ public sealed class CpuHeavyLogger : IDisposable {
             return;
         }
 
-        string address = node.Address.ToString();
-        string instruction = _nodeToString.ToAssemblyString(node);
-        _writer.WriteLine($"{address} {instruction}");
+        _writer.WriteLine(_nodeToString.ToAssemblyStringWithAddress(node));
     }
 
     /// <inheritdoc/>
     public void Dispose() {
         if (!_disposed) {
-            _writer?.Flush();
-            _writer?.Dispose();
+            _writer.Flush();
+            _writer.Dispose();
             _disposed = true;
         }
         GC.SuppressFinalize(this);

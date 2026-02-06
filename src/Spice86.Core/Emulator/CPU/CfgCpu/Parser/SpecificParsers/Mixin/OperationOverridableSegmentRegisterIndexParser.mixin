@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : OperationOverridableSegmentRegisterIndexParser {
@@ -16,9 +17,9 @@ public partial class {{ moxy.Class.Name }} : OperationOverridableSegmentRegister
 
     protected override CfgInstruction Parse(ParsingContext context, int segmentRegisterIndex, BitWidth bitWidth) {
         return bitWidth switch {
-            BitWidth.BYTE_8 => new {{Operation}}8(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex),
-            BitWidth.WORD_16 => new {{Operation}}16(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex),
-            BitWidth.DWORD_32 => new {{Operation}}32(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex),
+            BitWidth.BYTE_8 => new {{Operation}}8(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex, (int)SegmentRegisterIndex.DsIndex),
+            BitWidth.WORD_16 => new {{Operation}}16(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex, (int)SegmentRegisterIndex.DsIndex),
+            BitWidth.DWORD_32 => new {{Operation}}32(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex, (int)SegmentRegisterIndex.DsIndex),
             _ => throw CreateUnsupportedBitWidthException(bitWidth)
         };
     }

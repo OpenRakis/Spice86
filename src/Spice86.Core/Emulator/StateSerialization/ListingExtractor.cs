@@ -8,15 +8,18 @@ using Spice86.Shared.Emulator.Memory;
 using System.Linq;
 
 public class ListingExtractor {
-    private readonly NodeToString _nodeToString = new();
+    private readonly NodeToString _nodeToString;
+
+    public ListingExtractor(NodeToString nodeToString) {
+        _nodeToString = nodeToString;
+    }
+
     public List<string> ToAssemblyListing(CfgCpu cpu) {
         List<ICfgNode> nodes = DumpInOrder(cpu);
         
         List<string> res = new();
         foreach (ICfgNode node in nodes) {
-            string address = node.Address.ToString();
-            string instruction = _nodeToString.ToAssemblyString(node);
-            res.Add($"{address} {instruction}");
+            res.Add(_nodeToString.ToAssemblyStringWithAddress(node));
         }
         return res;
     }
