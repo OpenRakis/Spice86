@@ -567,6 +567,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsValid.Should().BeTrue();
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
+        modifiedBlock.PspSegment.Should().Be(_initialPspSegment);
         modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(16300);
         modifiedBlock.AllocationSizeInBytes.Should().Be(260800);
@@ -600,6 +601,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsValid.Should().BeTrue();
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
+        modifiedBlock.PspSegment.Should().Be(_initialPspSegment);
         modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(16401);
         modifiedBlock.AllocationSizeInBytes.Should().Be(262416);
