@@ -189,11 +189,6 @@ public class DosMemoryManager {
             return DosErrorCode.MemoryControlBlockDestroyed;
         }
 
-        // Since the first thing we do is enlarge the block, we need to know the original size so
-        // that we can restore it if we encounter an error later. We need to make sure that the
-        // block doesn't grow to the maximum supported size on error.
-        ushort initialBlockSizeInParagraphs = block.Size;
-
         // Make the block the biggest it can get
         if (!JoinBlocks(block, false)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
