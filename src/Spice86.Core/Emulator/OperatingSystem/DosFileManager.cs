@@ -1,5 +1,4 @@
-﻿
-namespace Spice86.Core.Emulator.OperatingSystem;
+﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
@@ -133,8 +132,9 @@ public class DosFileManager {
         }
 
         SetOpenFile(fileHandle, null);
+        byte refCount = (byte)CountHandles(file);
         try {
-            if (CountHandles(file) == 0) {
+            if (refCount == 0) {
                 // Only close the file if no other handle to it exist.
                 file.Close();
             }
@@ -142,7 +142,7 @@ public class DosFileManager {
             throw new UnrecoverableException("IOException while closing file", e);
         }
 
-        return DosFileOperationResult.NoValue();
+        return DosFileOperationResult.NoValueWithRefCount(refCount);
     }
 
     /// <summary>
