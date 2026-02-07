@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -685,7 +686,7 @@ public sealed class Mixer : IDisposable {
                 // SDL callback is not running. Mixed sound gets discarded.
                 // Sleep for the expected duration to simulate playback time.
                 double expectedTimeMs = (double)_blocksize / _sampleRateHz * 1000.0;
-                Thread.Sleep(TimeSpan.FromMilliseconds(expectedTimeMs));
+                HighResolutionWaiter.WaitMilliseconds(expectedTimeMs);
                 continue;
             }
 

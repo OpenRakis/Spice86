@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM.CpuSpeedLimit;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Shared.Utils;
 
 using System.Diagnostics;
 using System.Threading;
@@ -89,16 +90,11 @@ public class CpuCycleLimiter : ICyclesLimiter {
         long now = _stopwatch.ElapsedTicks;
 
         if (now < targetTicks) {
-            // Ahead of real-time. Busy-spin until wall-clock catches up.
-            // CRITICAL: Do NOT use SpinWait.SpinOnce() — it escalates to
-            // Thread.Sleep(1) after ~35 iterations, which on Windows sleeps
-            // for ~15.6ms (default timer resolution). That would make each
-            // 1ms tick take 15ms, slowing emulation to 1/15th speed.
-            // Thread.SpinWait(1) issues a single PAUSE instruction without
-            // any escalation, keeping sub-microsecond precision.
-            while (_state.IsRunning && _stopwatch.ElapsedTicks < targetTicks) {
-                Thread.SpinWait(1);
-            }
+            // Ahead of real-time. Wait using graduated strategy:
+            // >= 1ms: ManualResetEventSlim (no CPU burn)
+            // 0.05–1ms: SpinWait + Yield
+            // < 0.05ms: pure spin
+            HighResolutionWaiter.WaitUntil(_stopwatch, targetTicks);
         }
 
         // Track where we SHOULD be, not where we ARE.
