@@ -17,7 +17,7 @@ using HighPassFilter = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth
 public sealed class Mixer : IDisposable {
     private const int DefaultSampleRateHz = 48000;
     private const int DefaultBlocksize = 1024;
-    private const int MaxPrebufferMs = 100;
+    private const int DefaultPrebufferMs = 25;
 
     // This shows up nicely as 50% and -6.00 dB in the MIXER command's output
     private const float Minus6db = 0.501f;
@@ -28,6 +28,7 @@ public sealed class Mixer : IDisposable {
 
     // Channels registry - matches DOSBox mixer.channels
     private readonly ConcurrentDictionary<string, MixerChannel> _channels = new();
+    private readonly ConcurrentDictionary<string, MixerChannelSettings> _channelSettingsCache = new();
 
     // Mixer thread that produces audio and sends to the audio backend
     private readonly Thread _mixerThread;
@@ -36,8 +37,9 @@ public sealed class Mixer : IDisposable {
 
     // Atomic state
     private volatile bool _threadShouldQuit;
-    private readonly int _sampleRateHz = DefaultSampleRateHz;
-    private readonly int _blocksize = DefaultBlocksize;
+    private int _sampleRateHz = DefaultSampleRateHz;
+    private int _blocksize = DefaultBlocksize;
+    private readonly int _prebufferMs = DefaultPrebufferMs;
 
     // Master volume (atomic via Interlocked operations)
     private AudioFrame _masterGain = new(Minus6db, Minus6db);
@@ -94,7 +96,13 @@ public sealed class Mixer : IDisposable {
         _audioPlayerFactory = new AudioPlayerFactory(_loggerService, audioEngine);
 
         // Create the audio player with our sample rate and blocksize
-        _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize);
+        _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize, _prebufferMs);
+        if (_audioPlayer.Format.SampleRate > 0) {
+            _sampleRateHz = _audioPlayer.Format.SampleRate;
+        }
+        if (_audioPlayer.BufferFrames > 0) {
+            _blocksize = _audioPlayer.BufferFrames;
+        }
 
         // Initialize high-pass filters (2 channels - left and right)
         _reverbHighPassFilter = new HighPassFilter[2];
@@ -155,8 +163,7 @@ public sealed class Mixer : IDisposable {
     /// Gets the prebuffer time in milliseconds.
     /// </summary>
     public int GetPreBufferMs() {
-        // For now return a constant; DOSBox calculates based on buffer size
-        return MaxPrebufferMs / 2; // Conservative default
+        return _prebufferMs;
     }
 
     /// <summary>
@@ -218,6 +225,7 @@ public sealed class Mixer : IDisposable {
     public void Mute() {
         lock (_mixerLock) {
             if (_state == MixerState.On) {
+                _audioPlayer.ClearQueuedData();
                 _state = MixerState.Muted;
                 _isManuallyMuted = true;
                 _loggerService.Information("MIXER: Muted audio output");
@@ -303,12 +311,12 @@ public sealed class Mixer : IDisposable {
     /// Applies global crossfeed settings to all channels.
     /// </summary>
     private void SetGlobalCrossfeed() {
-        // Apply preset-specific crossfeed strength to stereo channels
-        // DOSBox applies to OPL and CMS channels; we apply to all stereo channels
+        // Apply preset-specific crossfeed strength to OPL and CMS channels only
         float globalStrength = _doCrossfeed ? _crossfeedGlobalStrength : 0.0f;
-
         foreach (MixerChannel channel in _channels.Values) {
-            if (channel.HasFeature(ChannelFeature.Stereo)) {
+            string name = channel.GetName();
+            bool applyCrossfeed = name == nameof(Opl) || name == "Cms";
+            if (applyCrossfeed && channel.HasFeature(ChannelFeature.Stereo)) {
                 channel.SetCrossfeedStrength(globalStrength);
             } else {
                 channel.SetCrossfeedStrength(0.0f);
@@ -539,9 +547,18 @@ public sealed class Mixer : IDisposable {
             _channels[name] = channel;
         }
 
-        // Set default state
-        channel.Enable(false);
-        channel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Right });
+        if (_channelSettingsCache.TryGetValue(name, out MixerChannelSettings cachedSettings)) {
+            channel.SetSettings(cachedSettings);
+            ApplyCachedEffectSettings(channel, cachedSettings);
+        } else {
+            // Set default state
+            channel.Enable(false);
+            channel.SetUserVolume(new AudioFrame(1.0f, 1.0f));
+            channel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Right });
+            SetGlobalCrossfeed();
+            SetGlobalReverb();
+            SetGlobalChorus();
+        }
 
         return channel;
     }
@@ -559,8 +576,30 @@ public sealed class Mixer : IDisposable {
     /// </summary>
     public void DeregisterChannel(string name) {
         if (_channels.TryRemove(name, out MixerChannel? channel)) {
+            MixerChannelSettings settings = channel.GetSettings();
+            _channelSettingsCache[name] = settings;
             channel.Enable(false);
             _loggerService.Debug("MIXER: Deregistered channel {ChannelName}", name);
+        }
+    }
+
+    private void ApplyCachedEffectSettings(MixerChannel channel, MixerChannelSettings settings) {
+        if (_doCrossfeed) {
+            channel.SetCrossfeedStrength(settings.CrossfeedStrength);
+        } else {
+            channel.SetCrossfeedStrength(0.0f);
+        }
+
+        if (_doReverb) {
+            channel.SetReverbLevel(settings.ReverbLevel);
+        } else {
+            channel.SetReverbLevel(0.0f);
+        }
+
+        if (_doChorus) {
+            channel.SetChorusLevel(settings.ChorusLevel);
+        } else {
+            channel.SetChorusLevel(0.0f);
         }
     }
 
@@ -589,15 +628,19 @@ public sealed class Mixer : IDisposable {
         CancellationToken token = _cancellationTokenSource.Token;
 
         while (!_threadShouldQuit && !token.IsCancellationRequested) {
+            MixerState state;
             lock (_mixerLock) {
-                // Reference: int frames_requested = mixer.blocksize;
-                int framesRequested = _blocksize;
-                MixSamples(framesRequested);
+                state = _state;
+                if (state == MixerState.On) {
+                    // Reference: int frames_requested = mixer.blocksize;
+                    int framesRequested = _blocksize;
+                    MixSamples(framesRequested);
+                }
             } // Unlock mixer for state checks and I/O
 
             // Handle NoSound state - sleep for expected duration
             // Reference: mixer.cpp lines 2645-2654
-            if (_state == MixerState.NoSound) {
+            if (state == MixerState.NoSound) {
                 // SDL callback is not running. Mixed sound gets discarded.
                 // Sleep for the expected duration to simulate playback time.
                 // Reference: const double expected_time = (static_cast<double>(mixer.blocksize) /
@@ -609,7 +652,7 @@ public sealed class Mixer : IDisposable {
 
             // Handle Muted state - enqueue silence
             // Reference: mixer.cpp lines 2656-2662
-            if (_state == MixerState.Muted) {
+            if (state == MixerState.Muted) {
                 // SDL callback remains active. Enqueue silence.
                 _outputBuffer.Resize(_blocksize);
                 _outputBuffer.AsSpan().Clear();
@@ -685,11 +728,6 @@ public sealed class Mixer : IDisposable {
 
         if (_doChorus) {
             ApplyChorus();
-        }
-
-        // Apply crossfeed if enabled
-        if (_doCrossfeed) {
-            ApplyCrossfeed();
         }
 
         // Apply high-pass filter to the master output
@@ -825,24 +863,6 @@ public sealed class Mixer : IDisposable {
                 _outputBuffer[i].Left + left,
                 _outputBuffer[i].Right + right
             );
-        }
-    }
-
-    /// <summary>
-    /// Applies crossfeed effect for headphone spatialization.
-    /// Note: In DOSBox, crossfeed is applied per-channel in MixerChannel::ApplyCrossfeed.
-    /// This is a master-level crossfeed for any remaining unmixed channels.
-    /// </summary>
-    private void ApplyCrossfeed() {
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            AudioFrame frame = _outputBuffer[i];
-
-            // Mix some of each channel into the opposite channel
-            // This simulates speaker crosstalk for headphone listening
-            float newLeft = frame.Left + frame.Right * _crossfeedGlobalStrength;
-            float newRight = frame.Right + frame.Left * _crossfeedGlobalStrength;
-
-            _outputBuffer[i] = new AudioFrame(newLeft, newRight);
         }
     }
 

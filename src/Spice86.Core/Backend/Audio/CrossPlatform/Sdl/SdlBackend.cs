@@ -16,6 +16,7 @@ public sealed class SdlBackend : IAudioBackend {
     private AudioDeviceState _state = AudioDeviceState.Stopped;
     private string? _lastError;
     private AudioCallback? _callback;
+    private AudioPostmixCallback? _postmixCallback;
     private readonly object _lock = new object();
 
     /// <inheritdoc/>
@@ -34,6 +35,7 @@ public sealed class SdlBackend : IAudioBackend {
 
         try {
             _callback = desiredSpec.Callback;
+            _postmixCallback = desiredSpec.PostmixCallback;
 
             // Initialize SDL audio subsystem
             int result = SdlNativeMethods.SdlInit(SdlNativeMethods.SdlInitAudio);
@@ -78,7 +80,8 @@ public sealed class SdlBackend : IAudioBackend {
                 SampleRate = obtained.Freq,
                 Channels = obtained.Channels,
                 BufferFrames = obtained.Samples,
-                Callback = desiredSpec.Callback
+                Callback = desiredSpec.Callback,
+                PostmixCallback = desiredSpec.PostmixCallback
             };
 
             _state = AudioDeviceState.Stopped;
@@ -155,6 +158,7 @@ public sealed class SdlBackend : IAudioBackend {
                 Span<float> buffer = new Span<float>((void*)stream, samples);
                 buffer.Clear(); // Start with silence
                 _callback.Invoke(buffer);
+                _postmixCallback?.Invoke(buffer);
             }
         }
     }

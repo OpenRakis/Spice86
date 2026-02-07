@@ -14,6 +14,13 @@ using System;
 public delegate void AudioCallback(Span<float> buffer);
 
 /// <summary>
+/// Optional post-mix callback invoked after device mixing.
+/// Mirrors SDL's postmix hook for final adjustments.
+/// </summary>
+/// <param name="buffer">Buffer with mixed audio samples.</param>
+public delegate void AudioPostmixCallback(Span<float> buffer);
+
+/// <summary>
 /// Audio format specification matching SDL_AudioSpec.
 /// </summary>
 public sealed class AudioSpec {
@@ -36,6 +43,11 @@ public sealed class AudioSpec {
     /// Callback function to provide audio data.
     /// </summary>
     public AudioCallback? Callback { get; init; }
+
+    /// <summary>
+    /// Optional post-mix callback invoked after device mixing.
+    /// </summary>
+    public AudioPostmixCallback? PostmixCallback { get; init; }
 
     /// <summary>
     /// Gets the buffer size in samples (frames * channels).

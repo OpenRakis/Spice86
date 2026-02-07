@@ -25,4 +25,9 @@ sealed class DummyAudioPlayer : AudioPlayer {
     internal override void Start() {
         // No-op for dummy player
     }
+
+    /// <inheritdoc/>
+    internal override void ClearQueuedData() {
+        // No-op for dummy player
+    }
 }

@@ -32,20 +32,10 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
     /// <param name="format">Audio format.</param>
     /// <param name="backend">Platform-specific audio backend.</param>
     /// <param name="bufferFrames">Buffer size in frames for the audio device (blocksize).</param>
-    public CrossPlatformAudioPlayer(AudioFormat format, IAudioBackend backend, int bufferFrames)
+    /// <param name="prebufferMs">Prebuffer duration in milliseconds.</param>
+    public CrossPlatformAudioPlayer(AudioFormat format, IAudioBackend backend, int bufferFrames, int prebufferMs)
         : base(format) {
         _backend = backend ?? throw new ArgumentNullException(nameof(backend));
-
-        // Calculate queue capacity like DOSBox: blocksize + prebuffer_frames
-        // Reference: const auto prebuffer_frames = (mixer.sample_rate_hz * mixer.prebuffer_ms) / 1000;
-        // Reference: mixer.final_output.Resize(mixer.blocksize + prebuffer_frames);
-        const int DefaultPrebufferMs = 25;
-        int prebufferFrames = format.SampleRate * DefaultPrebufferMs / 1000;
-        int queueFrames = bufferFrames + prebufferFrames;
-
-        // Convert frames to floats (stereo = 2 channels)
-        _queueCapacity = queueFrames * format.Channels;
-        _ringBuffer = new float[_queueCapacity];
 
         // Configure the audio spec with our callback
         AudioSpec spec = new AudioSpec {
@@ -58,6 +48,19 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
         if (!_backend.Open(spec)) {
             throw new InvalidOperationException($"Failed to open audio backend: {_backend.LastError}");
         }
+
+        AudioSpec obtainedSpec = _backend.ObtainedSpec;
+        Format = new AudioFormat(obtainedSpec.SampleRate, obtainedSpec.Channels, format.SampleFormat);
+        BufferFrames = obtainedSpec.BufferFrames;
+
+        // Calculate queue capacity like DOSBox: blocksize + prebuffer_frames
+        // Reference: const auto prebuffer_frames = (mixer.sample_rate_hz * mixer.prebuffer_ms) / 1000;
+        // Reference: mixer.final_output.Resize(mixer.blocksize + prebuffer_frames);
+        int prebufferFrames = obtainedSpec.SampleRate * prebufferMs / 1000;
+        int queueFrames = obtainedSpec.BufferFrames + prebufferFrames;
+        // Convert frames to floats (stereo = 2 channels)
+        _queueCapacity = queueFrames * obtainedSpec.Channels;
+        _ringBuffer = new float[_queueCapacity];
     }
 
     /// <summary>
@@ -75,10 +78,15 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
         // Reference: mixer.final_output.BulkDequeue(frame_stream, frames_to_dequeue);
         lock (_queueLock) {
             int samplesToRead = Math.Min(samplesNeeded, _count);
-            for (int i = 0; i < samplesToRead; i++) {
-                buffer[samplesWritten++] = _ringBuffer[_readIndex];
-                _readIndex = (_readIndex + 1) % _queueCapacity;
+            int remaining = samplesToRead;
+            while (remaining > 0) {
+                int contiguous = Math.Min(remaining, _queueCapacity - _readIndex);
+                _ringBuffer.AsSpan(_readIndex, contiguous).CopyTo(buffer.Slice(samplesWritten, contiguous));
+                _readIndex = (_readIndex + contiguous) % _queueCapacity;
+                samplesWritten += contiguous;
+                remaining -= contiguous;
             }
+
             _count -= samplesToRead;
 
             // Signal producer that space is available
@@ -105,6 +113,15 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
     }
 
     /// <inheritdoc/>
+    internal override void ClearQueuedData() {
+        lock (_queueLock) {
+            _count = 0;
+            _readIndex = _writeIndex;
+            Monitor.PulseAll(_queueLock);
+        }
+    }
+
+    /// <inheritdoc/>
     internal override int WriteData(Span<float> data) {
         // BulkEnqueue - blocks until space is available
         // Reference: rwqueue.h BulkEnqueue - blocks producer when queue is at capacity
@@ -112,7 +129,8 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
         int written = 0;
 
         lock (_queueLock) {
-            foreach (float sample in data) {
+            int remaining = data.Length;
+            while (remaining > 0 && _isRunning) {
                 // Wait while queue is full - this is the key DOSBox RWQueue behavior
                 // Reference: condition_variable has_room - producer waits for space
                 while (_count >= _queueCapacity && _isRunning) {
@@ -123,10 +141,15 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
                     break;
                 }
 
-                _ringBuffer[_writeIndex] = sample;
-                _writeIndex = (_writeIndex + 1) % _queueCapacity;
-                _count++;
-                written++;
+                int space = _queueCapacity - _count;
+                int contiguous = Math.Min(space, _queueCapacity - _writeIndex);
+                int toCopy = Math.Min(remaining, contiguous);
+                data.Slice(written, toCopy).CopyTo(_ringBuffer.AsSpan(_writeIndex, toCopy));
+                _writeIndex = (_writeIndex + toCopy) % _queueCapacity;
+                _count += toCopy;
+                written += toCopy;
+                remaining -= toCopy;
+
             }
         }
 
@@ -152,6 +175,8 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
     private void Stop() {
         lock (_queueLock) {
             _isRunning = false;
+            _count = 0;
+            _readIndex = _writeIndex;
             Monitor.PulseAll(_queueLock);
         }
     }

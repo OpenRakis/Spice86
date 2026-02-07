@@ -18,12 +18,18 @@ public abstract class AudioPlayer : IDisposable
     /// <param name="format">Format of the audio stream.</param>
     protected AudioPlayer(AudioFormat format) {
         Format = format ?? throw new ArgumentNullException(nameof(format));
+        BufferFrames = 0;
     }
 
     /// <summary>
     /// Gets the playback audio format.
     /// </summary>
-    public AudioFormat Format { get; }
+    public AudioFormat Format { get; protected set; }
+
+    /// <summary>
+    /// Gets the buffer size in frames for the audio device.
+    /// </summary>
+    public int BufferFrames { get; protected set; }
 
     /// <inheritdoc />
     public void Dispose() {
@@ -52,6 +58,11 @@ public abstract class AudioPlayer : IDisposable
     /// Reference: DOSBox mixer.cpp - "An opened audio device starts out paused"
     /// </summary>
     internal abstract void Start();
+
+    /// <summary>
+    /// Clears any queued audio data, if supported by the backend.
+    /// </summary>
+    internal abstract void ClearQueuedData();
 
     internal void WriteSilence() {
         WriteData(new Span<float>([0]));

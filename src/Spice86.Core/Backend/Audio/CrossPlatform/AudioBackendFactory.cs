@@ -1,14 +1,14 @@
 namespace Spice86.Core.Backend.Audio.CrossPlatform;
 
 using System;
-using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 using Spice86.Core.Backend.Audio.CrossPlatform.Sdl;
-using Spice86.Core.Backend.Audio.CrossPlatform.Wasapi;
+using Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Windows;
 
 /// <summary>
 /// Factory for creating platform-specific audio backends.
-/// Uses WASAPI on Windows (native C# COM implementation) and SDL on other platforms (Linux, macOS).
+/// Uses SDL on all platforms to align behavior and API semantics.
 /// </summary>
 public static class AudioBackendFactory {
     /// <summary>
@@ -16,11 +16,10 @@ public static class AudioBackendFactory {
     /// </summary>
     /// <returns>An audio backend, or null if no backend is available.</returns>
     public static IAudioBackend? Create() {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-            return CreateWasapiBackend();
+        if (OperatingSystem.IsWindows()) {
+            return CreateSdlWindowsBackend();
         }
 
-        // Linux and macOS use SDL P/Invoke
         return CreateSdlBackend();
     }
 
@@ -35,31 +34,6 @@ public static class AudioBackendFactory {
     }
 
     /// <summary>
-    /// Tries to create a WASAPI backend on Windows.
-    /// Falls back to SDL if WASAPI initialization fails.
-    /// </summary>
-    private static IAudioBackend? CreateWasapiBackend() {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-            return CreateSdlBackend();
-        }
-
-        try {
-            return CreateWasapiBackendInternal();
-        } catch (TypeInitializationException) {
-            // COM not available, fall back to SDL
-            return CreateSdlBackend();
-        } catch (InvalidOperationException) {
-            // WASAPI initialization failed, fall back to SDL
-            return CreateSdlBackend();
-        }
-    }
-
-    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
-    private static IAudioBackend CreateWasapiBackendInternal() {
-        return new WasapiBackend();
-    }
-
-    /// <summary>
     /// Tries to create an SDL backend.
     /// </summary>
     private static IAudioBackend? CreateSdlBackend() {
@@ -71,6 +45,18 @@ public static class AudioBackendFactory {
         } catch (DllNotFoundException) {
             return null;
         } catch (TypeInitializationException) {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Tries to create the SDL Windows backend.
+    /// </summary>
+    [SupportedOSPlatform("windows")]
+    private static IAudioBackend? CreateSdlWindowsBackend() {
+        try {
+            return new SdlWindowsBackend();
+        } catch (InvalidOperationException) {
             return null;
         }
     }
