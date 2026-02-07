@@ -185,14 +185,15 @@ public class DosMemoryManager {
     public DosErrorCode TryModifyBlock(in ushort blockSegment, in ushort requestedSizeInParagraphs,
         out DosMemoryControlBlock block) {
         block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
-
-        if(requestedSizeInParagraphs == 0) { // behavior from Alpha Waves loader
-            block.PspSegment = _sda.CurrentProgramSegmentPrefix; // fixes Alpha Waves loader, otherwise we end up executing garbage
-            return DosErrorCode.NoError; // we stop here and avoid corrupting the MCB chain
-        }
+        ushort newSizeInParagraphs = requestedSizeInParagraphs;
 
         if (!CheckValidOrLogError(block)) {
             return DosErrorCode.MemoryControlBlockDestroyed;
+        }
+
+        //AlphaWaves loader starts a TSR for adlib-sound that wrongly sets the block-size in DX leaving BX = 0
+        if (newSizeInParagraphs == 0 && blockSegment == _sda.CurrentProgramSegmentPrefix) {
+            newSizeInParagraphs = DosProgramSegmentPrefix.PspSizeInParagraphs;
         }
 
         // Make the block the biggest it can get
@@ -203,10 +204,10 @@ public class DosMemoryManager {
             return DosErrorCode.InsufficientMemory;
         }
 
-        if (block.Size < requestedSizeInParagraphs) {
+        if (block.Size < newSizeInParagraphs) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}",
-                    block, requestedSizeInParagraphs);
+                    block, newSizeInParagraphs);
 
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose) && !block.IsLast) {
                     DosMemoryControlBlock? nextBlock = block.GetNextOrDefault();
@@ -216,8 +217,8 @@ public class DosMemoryManager {
             return DosErrorCode.InsufficientMemory;
         }
 
-        if (block.Size > requestedSizeInParagraphs) {
-            SplitBlock(block, requestedSizeInParagraphs);
+        if (block.Size > newSizeInParagraphs) {
+            SplitBlock(block, newSizeInParagraphs);
         }
         block.PspSegment = _sda.CurrentProgramSegmentPrefix;
         return DosErrorCode.NoError;
