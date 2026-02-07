@@ -18,6 +18,15 @@ public class CpuCycleLimiter : ICyclesLimiter {
     private uint _tickCount;
     private double _atomicFullIndex;
 
+    /// <summary>
+    /// The cycle budget that was active when the current tick started.
+    /// Snapshotted at each tick boundary so that FullIndex (which uses this as
+    /// denominator) is continuous and monotonic — exactly like DOSBox's CPU_CycleMax
+    /// which does not change within a tick.
+    /// Reference: DOSBox src/cpu/cpu.h CPU_CycleMax
+    /// </summary>
+    private int _tickCycleMax;
+
     private static readonly long TicksPerMs = Stopwatch.Frequency / 1000;
 
     private const int CyclesUp = 1000;
@@ -52,7 +61,8 @@ public class CpuCycleLimiter : ICyclesLimiter {
 
         // First tick boundary: CPU must execute TargetCpuCyclesPerMs cycles before the first tick completes.
         // Reference: DOSBox TIMER_AddTick() sets CPU_CycleLeft=CPU_CycleMax at the start of each tick.
-        _targetCyclesForPause = TargetCpuCyclesPerMs;
+        _tickCycleMax = TargetCpuCyclesPerMs;
+        _targetCyclesForPause = _tickCycleMax;
 
         _stopwatch.Start();
         _lastTicks = _stopwatch.ElapsedTicks;
@@ -80,8 +90,14 @@ public class CpuCycleLimiter : ICyclesLimiter {
         TickOccurred = true;
         _tickCount++;
 
+        // Snapshot the current target for the new tick, like DOSBox's
+        // TIMER_AddTick() which uses CPU_CycleMax for the entire tick.
+        // TargetCpuCyclesPerMs may have changed via IncreaseCycles/DecreaseCycles
+        // during the previous tick, but we only apply it at the tick boundary.
+        _tickCycleMax = TargetCpuCyclesPerMs;
+
         // Set next tick boundary immediately (like DOSBox's CPU_CycleLeft = CPU_CycleMax).
-        _targetCyclesForPause = _state.Cycles + TargetCpuCyclesPerMs;
+        _targetCyclesForPause = _state.Cycles + _tickCycleMax;
 
         // Throttle: determine whether we're ahead of or behind wall-clock.
         // Reference: DOSBox increase_ticks(): measures wall-clock, sleeps if ahead,
@@ -121,6 +137,9 @@ public class CpuCycleLimiter : ICyclesLimiter {
     /// <inheritdoc />
     public long NextTickBoundaryCycles => _targetCyclesForPause;
 
+    /// <inheritdoc />
+    public int TickCycleMax => _tickCycleMax;
+
     /// <inheritdoc/>
     public void IncreaseCycles() {
         TargetCpuCyclesPerMs = Math.Min(TargetCpuCyclesPerMs + CyclesUp,
@@ -140,19 +159,21 @@ public class CpuCycleLimiter : ICyclesLimiter {
     public long GetNumberOfCyclesNotDoneYet() {
         // Cycles consumed within the current tick.
         // Reference: DOSBox PIC_TickIndexND() = CPU_CycleMax - CPU_CycleLeft - CPU_Cycles
-        long tickStart = _targetCyclesForPause - TargetCpuCyclesPerMs;
+        long tickStart = _targetCyclesForPause - _tickCycleMax;
         return _state.Cycles - tickStart;
     }
 
     /// <inheritdoc/>
     public double GetCycleProgressionPercentage() {
-        if (TargetCpuCyclesPerMs == 0) {
+        if (_tickCycleMax == 0) {
             return 0.0;
         }
         // Reference: DOSBox PIC_TickIndex() = PIC_TickIndexND() / CPU_CycleMax
-        long tickStart = _targetCyclesForPause - TargetCpuCyclesPerMs;
+        // Uses _tickCycleMax (snapshotted at tick boundary) as denominator,
+        // ensuring FullIndex is continuous and monotonic within a tick.
+        long tickStart = _targetCyclesForPause - _tickCycleMax;
         long cyclesDone = _state.Cycles - tickStart;
-        double fraction = (double)cyclesDone / TargetCpuCyclesPerMs;
+        double fraction = (double)cyclesDone / _tickCycleMax;
         return Math.Clamp(fraction, 0.0, 1.0);
     }
 

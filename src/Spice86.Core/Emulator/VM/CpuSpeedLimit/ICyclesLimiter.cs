@@ -96,4 +96,12 @@ public interface ICyclesLimiter {
     /// Used by the scheduler to compute cycle thresholds for event gating.
     /// </summary>
     long NextTickBoundaryCycles { get; }
+
+    /// <summary>
+    /// Gets the cycle budget that was active when the current tick started.
+    /// Snapshotted at each tick boundary so that FullIndex computations use a stable
+    /// denominator within a tick, exactly like DOSBox's CPU_CycleMax.
+    /// Reference: DOSBox src/cpu/cpu.h CPU_CycleMax
+    /// </summary>
+    int TickCycleMax { get; }
 }

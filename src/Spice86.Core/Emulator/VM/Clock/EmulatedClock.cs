@@ -43,7 +43,7 @@ public class EmulatedClock : IEmulatedClock {
 
     /// <inheritdoc/>
     public long ConvertTimeToCycles(double scheduledTime) {
-        int cpuCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
+        int cpuCyclesPerMs = _cyclesLimiter.TickCycleMax;
         if (cpuCyclesPerMs == 0) {
             return 0;
         }
