@@ -232,10 +232,7 @@ public sealed class RWQueue<T> {
                 int space = _capacity - _count;
                 int toEnqueue = Math.Min(remaining, space);
 
-                for (int i = 0; i < toEnqueue; i++) {
-                    _buffer[_tail] = source[offset + i];
-                    _tail = (_tail + 1) % _buffer.Length;
-                }
+                BulkCopyIn(source.Slice(offset, toEnqueue));
                 _count += toEnqueue;
                 totalEnqueued += toEnqueue;
                 offset += toEnqueue;
@@ -270,10 +267,7 @@ public sealed class RWQueue<T> {
                 int space = _capacity - _count;
                 int toEnqueue = Math.Min(remaining, space);
 
-                for (int i = 0; i < toEnqueue; i++) {
-                    _buffer[_tail] = data[offset + i];
-                    _tail = (_tail + 1) % _buffer.Length;
-                }
+                BulkCopyIn(data.AsSpan(offset, toEnqueue));
                 _count += toEnqueue;
                 totalEnqueued += toEnqueue;
                 offset += toEnqueue;
@@ -297,10 +291,7 @@ public sealed class RWQueue<T> {
             }
             int space = _capacity - _count;
             int toEnqueue = Math.Min(source.Length, space);
-            for (int i = 0; i < toEnqueue; i++) {
-                _buffer[_tail] = source[i];
-                _tail = (_tail + 1) % _buffer.Length;
-            }
+            BulkCopyIn(source.Slice(0, toEnqueue));
             _count += toEnqueue;
             Monitor.PulseAll(_lock);
             return toEnqueue;
@@ -321,11 +312,7 @@ public sealed class RWQueue<T> {
             if (toDequeue == 0) {
                 return 0;
             }
-            for (int i = 0; i < toDequeue; i++) {
-                target[i] = _buffer[_head];
-                _buffer[_head] = default!;
-                _head = (_head + 1) % _buffer.Length;
-            }
+            BulkCopyOut(target.AsSpan(0, toDequeue));
             _count -= toDequeue;
             Monitor.PulseAll(_lock);
             return toDequeue;
@@ -356,11 +343,7 @@ public sealed class RWQueue<T> {
                 }
 
                 toDequeue = Math.Min(_count, remaining);
-                for (int i = 0; i < toDequeue; i++) {
-                    target[totalDequeued + i] = _buffer[_head];
-                    _buffer[_head] = default!;
-                    _head = (_head + 1) % _buffer.Length;
-                }
+                BulkCopyOut(target.AsSpan(totalDequeued, toDequeue));
                 _count -= toDequeue;
                 totalDequeued += toDequeue;
                 remaining -= toDequeue;
@@ -368,5 +351,42 @@ public sealed class RWQueue<T> {
             }
         }
         return totalDequeued;
+    }
+
+    /// <summary>
+    ///     Copies items from <paramref name="source"/> into the ring buffer at _tail,
+    ///     handling wrap-around with at most two bulk copies.
+    ///     Caller must hold _lock and ensure sufficient capacity.
+    /// </summary>
+    private void BulkCopyIn(ReadOnlySpan<T> source) {
+        int toEnqueue = source.Length;
+        int firstChunk = Math.Min(toEnqueue, _buffer.Length - _tail);
+        source.Slice(0, firstChunk).CopyTo(_buffer.AsSpan(_tail, firstChunk));
+        int secondChunk = toEnqueue - firstChunk;
+        if (secondChunk > 0) {
+            source.Slice(firstChunk, secondChunk).CopyTo(_buffer.AsSpan(0, secondChunk));
+        }
+        _tail = (_tail + toEnqueue) % _buffer.Length;
+    }
+
+    /// <summary>
+    ///     Copies items from the ring buffer at _head into <paramref name="target"/>,
+    ///     handling wrap-around with at most two bulk copies, and clears the vacated slots.
+    ///     Caller must hold _lock and ensure sufficient items are available.
+    /// </summary>
+    private void BulkCopyOut(Span<T> target) {
+        int toDequeue = target.Length;
+        int firstChunk = Math.Min(toDequeue, _buffer.Length - _head);
+        _buffer.AsSpan(_head, firstChunk).CopyTo(target.Slice(0, firstChunk));
+        int secondChunk = toDequeue - firstChunk;
+        if (secondChunk > 0) {
+            _buffer.AsSpan(0, secondChunk).CopyTo(target.Slice(firstChunk, secondChunk));
+        }
+        // Clear vacated slots to allow GC of reference types
+        _buffer.AsSpan(_head, firstChunk).Clear();
+        if (secondChunk > 0) {
+            _buffer.AsSpan(0, secondChunk).Clear();
+        }
+        _head = (_head + toDequeue) % _buffer.Length;
     }
 }
