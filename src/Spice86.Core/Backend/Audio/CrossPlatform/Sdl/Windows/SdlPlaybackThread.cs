@@ -9,30 +9,37 @@ internal static class SdlPlaybackThread {
             return false;
         }
 
-        // Reference: SDL_audio.c SDL_RunAudio
-        // SDL does: GetDeviceBuf -> lock -> callback -> unlock -> PlayDevice
-        // GetDeviceBuf is called without the lock
+        // Reference: SDL_audio.c SDL_RunAudio lines 704-790
+        // SDL flow: GetDeviceBuf -> lock -> callback/silence -> unlock -> PlayDevice -> WaitDevice
+        // GetDeviceBuf now internally handles BUFFER_TOO_LARGE retries (matching SDL)
         int bufferSize = device.BufferSizeBytes;
         IntPtr deviceBuffer = driver.GetDeviceBuffer(device, out int bufferBytes);
         if (bufferBytes < 0) {
             return false;
         }
-        if (bufferBytes == 0) {
-            return true;
-        }
 
         if (deviceBuffer == IntPtr.Zero) {
-            return false;
+            // Device isn't happy - sleep for buffer duration and retry
+            // Reference: SDL_RunAudio lines 783-786
+            int delayMs = (device.SampleFrames * 1000) / device.ObtainedSpec.SampleRate;
+            if (delayMs > 0) {
+                Thread.Sleep(delayMs);
+            }
+            return true;
         }
 
         int clampedBytes = Math.Min(bufferBytes, bufferSize);
 
         // Reference: SDL_RunAudio locks only around the callback fill
+        // SDL_LockMutex(device->mixer_lock)
         lock (deviceLock) {
             device.FillAudioBuffer(deviceBuffer, clampedBytes);
         }
+        // SDL_UnlockMutex(device->mixer_lock)
 
-        // Reference: SDL_RunAudio calls PlayDevice (ReleaseBuffer) outside the lock
+        // Reference: SDL_RunAudio calls PlayDevice then WaitDevice
+        // Lines 788-789: current_audio.impl.PlayDevice(device);
+        //                current_audio.impl.WaitDevice(device);
         if (!driver.PlayDevice(device, deviceBuffer, clampedBytes)) {
             return false;
         }

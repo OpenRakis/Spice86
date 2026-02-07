@@ -175,14 +175,6 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
 
             sampleFrames = calculatedFrames;
 
-            // Reference: SDL_wasapi.c WASAPI_PrepDevice line ~530
-            // Start the audio client - SDL starts it during device preparation
-            hr = _audioClient.Start();
-            if (SdlWasapiResult.Failed(hr)) {
-                error = $"Failed to start audio client: 0x{hr:X8}";
-                return false;
-            }
-
             return true;
         } catch (COMException ex) {
             error = $"COM exception during Open: {ex.Message} (0x{ex.HResult:X8})";
@@ -261,23 +253,30 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
             return IntPtr.Zero;
         }
 
-        // Reference: SDL_wasapi.c WASAPI_GetDeviceBuf
-        // Requests spec.samples frames, handles BUFFER_TOO_LARGE by waiting and retrying
-        int hr = _renderClient.GetBuffer((uint)_sampleFrames, out IntPtr dataPtr);
-        if (hr == SdlWasapiResult.AudioClientEBufferTooLarge) {
-            // Not enough room - signal caller to loop back through WaitDevice
-            // Reference: SDL retries after calling WaitDevice internally
-            bufferBytes = 0;
-            return IntPtr.Zero;
-        }
+        // Reference: SDL_wasapi.c WASAPI_GetDeviceBuf lines 183-198
+        // SDL retries internally on BUFFER_TOO_LARGE by calling WaitDevice in a loop.
+        // This is critical for glitch-free playback - the caller must receive a valid
+        // buffer pointer every time, not a "try again" signal.
+        while (true) {
+            int hr = _renderClient.GetBuffer((uint)_sampleFrames, out IntPtr dataPtr);
+            if (hr == SdlWasapiResult.AudioClientEBufferTooLarge) {
+                // Not enough room yet - wait for buffer to drain
+                // Reference: SDL_wasapi.c line 191: WASAPI_WaitDevice(this)
+                if (!WaitDevice(device)) {
+                    bufferBytes = -1;
+                    return IntPtr.Zero;
+                }
+                continue; // retry GetBuffer
+            }
 
-        if (SdlWasapiResult.Failed(hr)) {
-            bufferBytes = -1;
-            return IntPtr.Zero;
-        }
+            if (SdlWasapiResult.Failed(hr)) {
+                bufferBytes = -1;
+                return IntPtr.Zero;
+            }
 
-        bufferBytes = _sampleFrames * _bytesPerFrame;
-        return dataPtr;
+            bufferBytes = _sampleFrames * _bytesPerFrame;
+            return dataPtr;
+        }
     }
 
     public bool PlayDevice(SdlAudioDevice device, IntPtr buffer, int bufferBytes) {
@@ -293,6 +292,18 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
 
     public void ThreadInit(SdlAudioDevice device) {
         NativeMethods.CoInitializeEx(IntPtr.Zero, NativeMethods.COINIT_MULTITHREADED);
+
+        // Start the WASAPI audio client on the audio thread.
+        // Reference: SDL_wasapi.c WASAPI_PrepDevice line ~536: IAudioClient_Start(client)
+        // In SDL, the client is started during PrepDevice (which runs from the main thread
+        // while the audio thread is starting). We start it here in ThreadInit so the audio
+        // thread is ready to handle WASAPI buffer events immediately.
+        if (_audioClient != null) {
+            int hr = _audioClient.Start();
+            if (SdlWasapiResult.Failed(hr)) {
+                // Log but don't crash - the thread loop will detect missing buffers
+            }
+        }
 
         _avrtHandle = NativeMethods.LoadLibraryW("avrt.dll");
         if (_avrtHandle != IntPtr.Zero) {

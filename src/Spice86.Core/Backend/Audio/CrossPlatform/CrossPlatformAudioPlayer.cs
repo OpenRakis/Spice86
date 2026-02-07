@@ -58,16 +58,13 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
         Format = new AudioFormat(obtainedSpec.SampleRate, obtainedSpec.Channels, format.SampleFormat);
         BufferFrames = obtainedSpec.BufferFrames;
 
-        // Calculate queue capacity like DOSBox: blocksize + prebuffer_frames
+        // Calculate queue capacity exactly like DOSBox: blocksize + prebuffer_frames
         // Reference: const auto prebuffer_frames = (mixer.sample_rate_hz * mixer.prebuffer_ms) / 1000;
         // Reference: mixer.final_output.Resize(mixer.blocksize + prebuffer_frames);
+        // DOSBox does NOT artificially inflate the queue - it relies on the RWQueue's
+        // blocking BulkEnqueue to provide back-pressure. Matching this exactly.
         int prebufferFrames = obtainedSpec.SampleRate * prebufferMs / 1000;
         int queueFrames = obtainedSpec.BufferFrames + prebufferFrames;
-        // Use at least 4x blocksize for headroom to prevent underrun clicks
-        int minQueueFrames = obtainedSpec.BufferFrames * 4;
-        if (queueFrames < minQueueFrames) {
-            queueFrames = minQueueFrames;
-        }
         // Convert frames to floats (stereo = 2 channels)
         _queueCapacity = queueFrames * obtainedSpec.Channels;
         _ringBuffer = new float[_queueCapacity];

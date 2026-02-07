@@ -95,11 +95,18 @@ internal sealed class SdlAudioDevice {
     private void AudioThreadLoop() {
         _driver.ThreadInit(this);
 
+        // Reference: SDL_audio.c SDL_RunAudio lines 703-791
+        // SDL flow: GetDeviceBuf -> Lock -> Callback -> Unlock -> PlayDevice -> WaitDevice
+        // SdlPlaybackThread.Iterate handles GetDeviceBuf/Lock/Callback/Unlock/PlayDevice
+        // WaitDevice follows immediately after, matching SDL exactly.
         while (!_shutdown) {
             if (!SdlPlaybackThread.Iterate(this, _driver, _lock)) {
                 break;
             }
 
+            // Reference: SDL_RunAudio line 789: current_audio.impl.WaitDevice(device)
+            // WaitDevice blocks until the hardware buffer has drained enough
+            // for the next iteration to succeed.
             if (!_driver.WaitDevice(this)) {
                 break;
             }

@@ -248,13 +248,16 @@ public sealed class Mixer : IDisposable {
     /// <summary>
     /// Mutes audio output while keeping the audio device active.
     /// Reference: DOSBox set_mixer_state(MixerState::Muted)
+    /// DOSBox clears the output queue to prevent stuttering on un-mute,
+    /// then the mixer thread enqueues silence blocks instead of mixed audio.
+    /// The SDL callback stays active and keeps draining the queue.
     /// </summary>
     public void Mute() {
         lock (_mixerLock) {
             if (_state == MixerState.On) {
-                // Mute at the audio callback level for instant silence
-                // Reference: DOSBox mixer.final_output.Clear() in set_mixer_state
-                _audioPlayer.MuteOutput();
+                // Clear out any audio in the queue to avoid a stutter on un-mute
+                // Reference: DOSBox set_mixer_state(Muted) calls mixer.final_output.Clear()
+                _audioPlayer.ClearQueuedData();
                 _state = MixerState.Muted;
                 _isManuallyMuted = true;
                 _loggerService.Information("MIXER: Muted audio output");
@@ -271,8 +274,6 @@ public sealed class Mixer : IDisposable {
             if (_state == MixerState.Muted) {
                 _state = MixerState.On;
                 _isManuallyMuted = false;
-                // Unmute at the callback level - audio data will flow again
-                _audioPlayer.UnmuteOutput();
                 _loggerService.Information("MIXER: Unmuted audio output");
             }
         }
@@ -659,11 +660,15 @@ public sealed class Mixer : IDisposable {
 
         CancellationToken token = _cancellationTokenSource.Token;
 
+        // Silence block for muted state - allocated once, reused
+        // Reference: DOSBox mixer_thread_loop muted path creates silence via clear+resize
+        float[] silenceBlock = new float[_blocksize * 2]; // stereo interleaved
+
         while (!_threadShouldQuit && !token.IsCancellationRequested) {
             MixerState state;
             int framesRequested = _blocksize;
 
-            // Reference: DOSBox mixer_thread_loop:
+            // Reference: DOSBox mixer_thread_loop lines 2607-2636:
             //   std::unique_lock lock(mixer.mutex);
             //   mix_samples(frames_requested);
             //   lock.unlock();
@@ -679,30 +684,22 @@ public sealed class Mixer : IDisposable {
             if (state == MixerState.NoSound) {
                 // SDL callback is not running. Mixed sound gets discarded.
                 // Sleep for the expected duration to simulate playback time.
-                // Reference: const double expected_time = (static_cast<double>(mixer.blocksize) /
-                //                                         static_cast<double>(mixer.sample_rate_hz)) * 1000.0;
                 double expectedTimeMs = (double)_blocksize / _sampleRateHz * 1000.0;
                 Thread.Sleep(TimeSpan.FromMilliseconds(expectedTimeMs));
                 continue;
             }
 
-            // Handle Muted state - the audio callback already outputs silence via MuteOutput.
-            // The mixer still needs to sleep for the expected block duration to keep
-            // the thread from spinning. DOSBox still enqueues silence blocks but we use
-            // the callback-level mute for instant silence instead.
-            // Reference: mixer.cpp lines 2656-2662
+            // Handle Muted state - enqueue silence to keep the SDL callback fed.
+            // Reference: DOSBox mixer.cpp lines 2656-2662:
+            //   mixer.output_buffer.clear();
+            //   mixer.output_buffer.resize(mixer.blocksize);
+            //   mixer.final_output.BulkEnqueue(mixer.output_buffer);
+            // DOSBox keeps the SDL callback running and enqueues silence blocks.
+            // This prevents clicks/pops when unmuting because the audio pipeline
+            // stays continuously active. The BulkEnqueue also provides the correct
+            // pacing (it blocks until the callback drains enough from the queue).
             if (state == MixerState.Muted) {
-                double expectedTimeMs = (double)_blocksize / _sampleRateHz * 1000.0;
-                Thread.Sleep(TimeSpan.FromMilliseconds(expectedTimeMs));
-                continue;
-            }
-
-            // Re-check state to avoid writing stale data after a mute transition.
-            // Between mixing (under lock) and here, Mute() may have been called.
-            // If state changed, discard this block.
-            // Reference: DOSBox doesn't explicitly check, but its RWQueue.Clear() on
-            // mute ensures stale data is discarded.
-            if (_state != MixerState.On) {
+                _audioPlayer.WriteData(silenceBlock.AsSpan());
                 continue;
             }
 
@@ -714,6 +711,8 @@ public sealed class Mixer : IDisposable {
             // EXACT DOSBox pattern: AudioFrame IS interleaved floats (left, right)
             // Reference: mixer.final_output.BulkEnqueue(to_mix)
             // AudioFrame memory layout: [float left][float right] = 2 floats = interleaved stereo
+            // The WriteData call blocks when the queue is full, providing natural
+            // pacing like DOSBox's RWQueue::BulkEnqueue.
             Span<AudioFrame> outputFrames = _outputBuffer.AsSpan(0, framesToWrite);
             Span<float> interleavedBuffer = MemoryMarshal.Cast<AudioFrame, float>(outputFrames);
             _audioPlayer.WriteData(interleavedBuffer);
