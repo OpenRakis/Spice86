@@ -66,14 +66,15 @@ internal sealed class SdlAudioDevice {
 
     public void Start() {
         if (_audioThread == null) {
+            _paused = false;
             _audioThread = new Thread(AudioThreadLoop) {
                 Name = "SDL-Audio-Playback",
                 IsBackground = true
             };
             _audioThread.Start();
+        } else {
+            _paused = false;
         }
-
-        _paused = false;
     }
 
     public void Pause() {

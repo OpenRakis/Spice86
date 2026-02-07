@@ -62,12 +62,16 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
 
             _audioClient = audioClient;
 
+            // Reference: SDL_wasapi.c WASAPI_PrepDevice
+            // Create event handle for buffer notifications
             _bufferEvent = NativeMethods.CreateEventW(IntPtr.Zero, false, false, null);
             if (_bufferEvent == IntPtr.Zero) {
                 error = "Failed to create event handle";
                 return false;
             }
 
+            // Reference: SDL gets the device's mix format and uses it as a base
+            // Then only adds AutoConvertPcm if sample rate differs
             IntPtr mixFormatPtr = IntPtr.Zero;
             hr = _audioClient.GetMixFormat(out mixFormatPtr);
             if (SdlWasapiResult.Failed(hr) || mixFormatPtr == IntPtr.Zero) {
@@ -75,19 +79,37 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
                 return false;
             }
 
+            // Read the device's mix format to check if we need sample rate conversion
+            WaveFormatEx mixFormat = Marshal.PtrToStructure<WaveFormatEx>(mixFormatPtr);
+            int deviceNativeRate = (int)mixFormat.SamplesPerSec;
+
+            // Use our desired format (IEEE float stereo) like SDL does
             WaveFormatEx format = WaveFormatEx.CreateIeeeFloat(desiredSpec.SampleRate, desiredSpec.Channels);
             IntPtr formatPtr = Marshal.AllocHGlobal(Marshal.SizeOf<WaveFormatEx>());
             try {
                 Marshal.StructureToPtr(format, formatPtr, false);
 
-                AudioClientStreamFlags flags = AudioClientStreamFlags.EventCallback |
-                                              AudioClientStreamFlags.AutoConvertPcm |
-                                              AudioClientStreamFlags.SrcDefaultQuality;
+                // Reference: SDL_wasapi.c WASAPI_PrepDevice lines ~470-480
+                // Only add AutoConvertPcm when sample rate differs from device native rate
+                // This avoids unnecessary resampling overhead
+                AudioClientStreamFlags flags = AudioClientStreamFlags.EventCallback;
+                if (desiredSpec.SampleRate != deviceNativeRate) {
+                    flags |= AudioClientStreamFlags.AutoConvertPcm |
+                             AudioClientStreamFlags.SrcDefaultQuality;
+                }
 
                 hr = _audioClient.Initialize(AudioClientShareMode.Shared, flags, 0, 0, formatPtr, IntPtr.Zero);
                 if (SdlWasapiResult.Failed(hr)) {
-                    error = $"Failed to initialize audio client: 0x{hr:X8}";
-                    return false;
+                    // Fallback: try again with AutoConvertPcm in case the device
+                    // doesn't natively support our float format
+                    flags = AudioClientStreamFlags.EventCallback |
+                            AudioClientStreamFlags.AutoConvertPcm |
+                            AudioClientStreamFlags.SrcDefaultQuality;
+                    hr = _audioClient.Initialize(AudioClientShareMode.Shared, flags, 0, 0, formatPtr, IntPtr.Zero);
+                    if (SdlWasapiResult.Failed(hr)) {
+                        error = $"Failed to initialize audio client: 0x{hr:X8}";
+                        return false;
+                    }
                 }
             } finally {
                 Marshal.FreeHGlobal(formatPtr);
@@ -112,10 +134,16 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
                 return false;
             }
 
+            // Reference: SDL_wasapi.c WASAPI_PrepDevice lines ~490-497
+            // Match the callback size to the period size to cut down on
+            // the number of interrupts waited for in each call to WaitDevice
             float periodMillis = defaultPeriod / 10000.0f;
             float periodFrames = periodMillis * desiredSpec.SampleRate / 1000.0f;
             int calculatedFrames = (int)MathF.Ceiling(periodFrames);
 
+            // Regardless of what we calculated for the period size, clamp it
+            // to the expected hardware buffer size.
+            // Reference: SDL_wasapi.c line ~499
             if (calculatedFrames > (int)bufferFrameCount) {
                 calculatedFrames = (int)bufferFrameCount;
             }
@@ -147,6 +175,8 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
 
             sampleFrames = calculatedFrames;
 
+            // Reference: SDL_wasapi.c WASAPI_PrepDevice line ~530
+            // Start the audio client - SDL starts it during device preparation
             hr = _audioClient.Start();
             if (SdlWasapiResult.Failed(hr)) {
                 error = $"Failed to start audio client: 0x{hr:X8}";
@@ -197,6 +227,9 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
             return false;
         }
 
+        // Reference: SDL_wasapi.c WASAPI_WaitDevice
+        // Wait for WASAPI buffer event, then check padding to see if we can write.
+        // For playback: break when padding <= maxpadding (spec.samples)
         while (true) {
             uint waitResult = NativeMethods.WaitForSingleObjectEx(_bufferEvent, WaitTimeoutMs, false);
             if (waitResult == WaitObject0) {
@@ -205,9 +238,13 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
                     return false;
                 }
 
-                if (_sampleFrames <= _bufferFrameCount && padding <= (uint)_sampleFrames) {
+                // Reference: SDL_wasapi.c line ~285
+                // const UINT32 maxpadding = this->spec.samples;
+                // if (padding <= maxpadding) { break; }
+                if (padding <= (uint)_sampleFrames) {
                     return true;
                 }
+                // Not enough room yet, keep waiting
             } else if (waitResult == WaitTimeout) {
                 continue;
             } else {
@@ -224,8 +261,12 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
             return IntPtr.Zero;
         }
 
+        // Reference: SDL_wasapi.c WASAPI_GetDeviceBuf
+        // Requests spec.samples frames, handles BUFFER_TOO_LARGE by waiting and retrying
         int hr = _renderClient.GetBuffer((uint)_sampleFrames, out IntPtr dataPtr);
         if (hr == SdlWasapiResult.AudioClientEBufferTooLarge) {
+            // Not enough room - signal caller to loop back through WaitDevice
+            // Reference: SDL retries after calling WaitDevice internally
             bufferBytes = 0;
             return IntPtr.Zero;
         }
@@ -244,8 +285,10 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
             return false;
         }
 
-        _renderClient.ReleaseBuffer((uint)_sampleFrames, 0);
-        return true;
+        // Reference: SDL_wasapi.c WASAPI_PlayDevice
+        // Releases exactly spec.samples frames (the same count passed to GetBuffer)
+        int hr = _renderClient.ReleaseBuffer((uint)_sampleFrames, 0);
+        return !SdlWasapiResult.Failed(hr);
     }
 
     public void ThreadInit(SdlAudioDevice device) {

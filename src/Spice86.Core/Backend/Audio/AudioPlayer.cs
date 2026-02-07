@@ -64,6 +64,20 @@ public abstract class AudioPlayer : IDisposable
     /// </summary>
     internal abstract void ClearQueuedData();
 
+    /// <summary>
+    /// Mutes the audio output at the callback level.
+    /// The callback fills with silence regardless of queued data.
+    /// Reference: SDL_PauseAudioDevice(device, 1) behavior in DOSBox.
+    /// </summary>
+    internal abstract void MuteOutput();
+
+    /// <summary>
+    /// Unmutes the audio output at the callback level.
+    /// The callback resumes reading from the queue.
+    /// Reference: SDL_PauseAudioDevice(device, 0) behavior in DOSBox.
+    /// </summary>
+    internal abstract void UnmuteOutput();
+
     internal void WriteSilence() {
         WriteData(new Span<float>([0]));
     }

@@ -335,7 +335,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
-        Mixer mixer = new(loggerService, configuration.AudioEngine);
+        Mixer mixer = new(loggerService, configuration.AudioEngine, pauseHandler);
         var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);

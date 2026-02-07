@@ -26,6 +26,11 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
     private volatile bool _isRunning = true;
     private volatile bool _started;
 
+    // Muted flag - when true, the audio callback outputs silence immediately
+    // Reference: SDL_RunAudio checks SDL_AtomicGet(&device->paused) under lock
+    // and fills with silence. This provides instant muting for pause.
+    private volatile bool _muted;
+
     /// <summary>
     /// Creates a new cross-platform audio player.
     /// </summary>
@@ -58,6 +63,11 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
         // Reference: mixer.final_output.Resize(mixer.blocksize + prebuffer_frames);
         int prebufferFrames = obtainedSpec.SampleRate * prebufferMs / 1000;
         int queueFrames = obtainedSpec.BufferFrames + prebufferFrames;
+        // Use at least 4x blocksize for headroom to prevent underrun clicks
+        int minQueueFrames = obtainedSpec.BufferFrames * 4;
+        if (queueFrames < minQueueFrames) {
+            queueFrames = minQueueFrames;
+        }
         // Convert frames to floats (stereo = 2 channels)
         _queueCapacity = queueFrames * obtainedSpec.Channels;
         _ringBuffer = new float[_queueCapacity];
@@ -67,9 +77,17 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
     /// Audio callback invoked by the backend when it needs audio data.
     /// This runs on the audio thread. Non-blocking - fills with silence if underrun.
     /// Reference: DOSBox mixer_callback() - dequeues available frames, fills shortfall with silence
+    /// Reference: SDL_RunAudio - checks paused flag and fills with silence
     /// Reference: rwqueue.h BulkDequeue - non-blocking variant for callbacks
     /// </summary>
     private void AudioCallback(Span<float> buffer) {
+        // Check muted state first - instant silence like SDL's paused check
+        // Reference: SDL_RunAudio: if (SDL_AtomicGet(&device->paused)) { SDL_memset(data, silence, data_len); }
+        if (_muted) {
+            buffer.Clear();
+            return;
+        }
+
         int samplesNeeded = buffer.Length;
         int samplesWritten = 0;
 
@@ -119,6 +137,19 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
             _readIndex = _writeIndex;
             Monitor.PulseAll(_queueLock);
         }
+    }
+
+    /// <inheritdoc/>
+    internal override void MuteOutput() {
+        _muted = true;
+        // Also clear the queue to avoid stale data on unmute
+        // Reference: DOSBox set_mixer_state(Muted) calls mixer.final_output.Clear()
+        ClearQueuedData();
+    }
+
+    /// <inheritdoc/>
+    internal override void UnmuteOutput() {
+        _muted = false;
     }
 
     /// <inheritdoc/>

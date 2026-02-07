@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Backend.Audio;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Concurrent;
@@ -25,6 +26,7 @@ public sealed class Mixer : IDisposable {
     private readonly ILoggerService _loggerService;
     private readonly AudioPlayerFactory _audioPlayerFactory;
     private readonly AudioPlayer _audioPlayer;
+    private readonly IPauseHandler _pauseHandler;
 
     // Channels registry - matches DOSBox mixer.channels
     private readonly ConcurrentDictionary<string, MixerChannel> _channels = new();
@@ -91,8 +93,10 @@ public sealed class Mixer : IDisposable {
     /// </summary>
     /// <param name="loggerService">Logger service.</param>
     /// <param name="audioEngine">Audio engine to use.</param>
-    public Mixer(ILoggerService loggerService, AudioEngine audioEngine) {
+    /// <param name="pauseHandler">Pause handler to mute audio when emulator is paused.</param>
+    public Mixer(ILoggerService loggerService, AudioEngine audioEngine, IPauseHandler pauseHandler) {
         _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
+        _pauseHandler = pauseHandler ?? throw new ArgumentNullException(nameof(pauseHandler));
         _audioPlayerFactory = new AudioPlayerFactory(_loggerService, audioEngine);
 
         // Create the audio player with our sample rate and blocksize
@@ -138,8 +142,30 @@ public sealed class Mixer : IDisposable {
         };
         _mixerThread.Start();
 
+        // Subscribe to pause/resume events
+        // Reference: DOSBox set_mixer_state (MixerState::Muted / MixerState::On)
+        // When emulator pauses, mute mixer; when resumed, unmute.
+        _pauseHandler.Pausing += OnEmulatorPausing;
+        _pauseHandler.Resumed += OnEmulatorResumed;
+
         _loggerService.Information("MIXER: Initialized stereo {SampleRate} Hz audio with {BlockSize} sample frame buffer",
             _sampleRateHz, _blocksize);
+    }
+
+    /// <summary>
+    /// Called when the emulator is about to pause.
+    /// Mutes audio output immediately.
+    /// </summary>
+    private void OnEmulatorPausing() {
+        Mute();
+    }
+
+    /// <summary>
+    /// Called when the emulator resumes from pause.
+    /// Unmutes audio output.
+    /// </summary>
+    private void OnEmulatorResumed() {
+        Unmute();
     }
 
     /// <summary>
@@ -221,11 +247,14 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Mutes audio output while keeping the audio device active.
+    /// Reference: DOSBox set_mixer_state(MixerState::Muted)
     /// </summary>
     public void Mute() {
         lock (_mixerLock) {
             if (_state == MixerState.On) {
-                _audioPlayer.ClearQueuedData();
+                // Mute at the audio callback level for instant silence
+                // Reference: DOSBox mixer.final_output.Clear() in set_mixer_state
+                _audioPlayer.MuteOutput();
                 _state = MixerState.Muted;
                 _isManuallyMuted = true;
                 _loggerService.Information("MIXER: Muted audio output");
@@ -235,12 +264,15 @@ public sealed class Mixer : IDisposable {
 
     /// <summary>
     /// Unmutes audio output, resuming playback.
+    /// Reference: DOSBox set_mixer_state(MixerState::On)
     /// </summary>
     public void Unmute() {
         lock (_mixerLock) {
             if (_state == MixerState.Muted) {
                 _state = MixerState.On;
                 _isManuallyMuted = false;
+                // Unmute at the callback level - audio data will flow again
+                _audioPlayer.UnmuteOutput();
                 _loggerService.Information("MIXER: Unmuted audio output");
             }
         }
@@ -629,11 +661,15 @@ public sealed class Mixer : IDisposable {
 
         while (!_threadShouldQuit && !token.IsCancellationRequested) {
             MixerState state;
+            int framesRequested = _blocksize;
+
+            // Reference: DOSBox mixer_thread_loop:
+            //   std::unique_lock lock(mixer.mutex);
+            //   mix_samples(frames_requested);
+            //   lock.unlock();
             lock (_mixerLock) {
                 state = _state;
                 if (state == MixerState.On) {
-                    // Reference: int frames_requested = mixer.blocksize;
-                    int framesRequested = _blocksize;
                     MixSamples(framesRequested);
                 }
             } // Unlock mixer for state checks and I/O
@@ -650,15 +686,23 @@ public sealed class Mixer : IDisposable {
                 continue;
             }
 
-            // Handle Muted state - enqueue silence
+            // Handle Muted state - the audio callback already outputs silence via MuteOutput.
+            // The mixer still needs to sleep for the expected block duration to keep
+            // the thread from spinning. DOSBox still enqueues silence blocks but we use
+            // the callback-level mute for instant silence instead.
             // Reference: mixer.cpp lines 2656-2662
             if (state == MixerState.Muted) {
-                // SDL callback remains active. Enqueue silence.
-                _outputBuffer.Resize(_blocksize);
-                _outputBuffer.AsSpan().Clear();
-                Span<AudioFrame> silenceFrames = _outputBuffer.AsSpan(0, _blocksize);
-                Span<float> silenceBuffer = MemoryMarshal.Cast<AudioFrame, float>(silenceFrames);
-                _audioPlayer.WriteData(silenceBuffer);
+                double expectedTimeMs = (double)_blocksize / _sampleRateHz * 1000.0;
+                Thread.Sleep(TimeSpan.FromMilliseconds(expectedTimeMs));
+                continue;
+            }
+
+            // Re-check state to avoid writing stale data after a mute transition.
+            // Between mixing (under lock) and here, Mute() may have been called.
+            // If state changed, discard this block.
+            // Reference: DOSBox doesn't explicitly check, but its RWQueue.Clear() on
+            // mute ensures stale data is discarded.
+            if (_state != MixerState.On) {
                 continue;
             }
 
@@ -896,6 +940,10 @@ public sealed class Mixer : IDisposable {
         }
 
         _loggerService.Debug("MIXER: Disposing mixer");
+
+        // Unsubscribe from pause events
+        _pauseHandler.Pausing -= OnEmulatorPausing;
+        _pauseHandler.Resumed -= OnEmulatorResumed;
 
         _threadShouldQuit = true;
         _cancellationTokenSource.Cancel();
