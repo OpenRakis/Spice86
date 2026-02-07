@@ -257,7 +257,6 @@ public sealed class Mixer : IDisposable {
         lock (_mixerLock) {
             if (_state == MixerState.On) {
                 // Clear out any audio in the queue to avoid a stutter on un-mute
-                // Reference: DOSBox set_mixer_state(Muted) calls mixer.final_output.Clear()
                 _audioPlayer.ClearQueuedData();
                 _state = MixerState.Muted;
                 _isManuallyMuted = true;
@@ -690,15 +689,9 @@ public sealed class Mixer : IDisposable {
                 continue;
             }
 
-            // Handle Muted state - enqueue silence to keep the SDL callback fed.
-            // Reference: DOSBox mixer.cpp lines 2656-2662:
-            //   mixer.output_buffer.clear();
-            //   mixer.output_buffer.resize(mixer.blocksize);
-            //   mixer.final_output.BulkEnqueue(mixer.output_buffer);
-            // DOSBox keeps the SDL callback running and enqueues silence blocks.
-            // This prevents clicks/pops when unmuting because the audio pipeline
-            // stays continuously active. The BulkEnqueue also provides the correct
-            // pacing (it blocks until the callback drains enough from the queue).
+            // Enqueue silence to keep the audio callback fed while muted.
+            // Prevents clicks/pops on unmute because the audio pipeline stays active.
+            // BulkEnqueue blocks until the callback drains enough space.
             if (state == MixerState.Muted) {
                 _audioPlayer.WriteData(silenceBlock.AsSpan());
                 continue;
@@ -709,11 +702,8 @@ public sealed class Mixer : IDisposable {
                 continue;
             }
 
-            // EXACT DOSBox pattern: AudioFrame IS interleaved floats (left, right)
-            // Reference: mixer.final_output.BulkEnqueue(to_mix)
-            // AudioFrame memory layout: [float left][float right] = 2 floats = interleaved stereo
-            // The WriteData call blocks when the queue is full, providing natural
-            // pacing like DOSBox's RWQueue::BulkEnqueue.
+            // AudioFrame memory layout: [float left][float right] = interleaved stereo.
+            // WriteData blocks when the queue is full, providing natural pacing.
             Span<AudioFrame> outputFrames = _outputBuffer.AsSpan(0, framesToWrite);
             Span<float> interleavedBuffer = MemoryMarshal.Cast<AudioFrame, float>(outputFrames);
             _audioPlayer.WriteData(interleavedBuffer);

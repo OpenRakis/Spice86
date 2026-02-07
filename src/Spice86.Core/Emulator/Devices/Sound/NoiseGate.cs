@@ -45,15 +45,9 @@ public sealed class NoiseGate {
     /// <param name="releaseTimeMs">Release time in milliseconds</param>
     public void Configure(int sampleRateHz, float db0fsSampleValue,
                          float thresholdDb, float attackTimeMs, float releaseTimeMs) {
-        if (sampleRateHz <= 0) {
-            throw new ArgumentOutOfRangeException(nameof(sampleRateHz));
-        }
-        if (attackTimeMs <= 0.0f) {
-            throw new ArgumentOutOfRangeException(nameof(attackTimeMs));
-        }
-        if (releaseTimeMs <= 0.0f) {
-            throw new ArgumentOutOfRangeException(nameof(releaseTimeMs));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(sampleRateHz);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(attackTimeMs, 0.0f);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(releaseTimeMs, 0.0f);
 
         _scaleIn = 1.0f / db0fsSampleValue;
         _scaleOut = db0fsSampleValue;

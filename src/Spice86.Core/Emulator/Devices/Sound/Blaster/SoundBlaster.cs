@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using System;
 using System.Collections.Generic;
@@ -448,16 +449,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private readonly IEmulatedClock _clock;
     private readonly HardwareMixer _hardwareMixer;
 
-    // Output queue for audio frames - uses Lock for bulk operations like DOSBox's RWQueue
-    // Reference: DOSBox uses RWQueue with NonblockingBulkEnqueue/BulkDequeue
-    private readonly Queue<AudioFrame> _outputQueue = new();
-    private readonly Lock _outputQueueLock = new();
+    private readonly RWQueue<AudioFrame> _outputQueue = new(4096);
 
-    // Reusable buffer for batch enqueue operations - avoids per-sample Enqueue overhead
     private readonly AudioFrame[] _enqueueBatch = new AudioFrame[4096];
     private int _enqueueBatchCount;
 
-    // Reusable buffer for mixer callback dequeue - avoids per-callback List allocation
     private readonly AudioFrame[] _dequeueBatch = new AudioFrame[4096];
 
     private readonly Queue<byte> _outputData = new();
@@ -602,33 +598,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp SoundBlaster::MixerCallback()
     /// </summary>
     private void MixerCallback(int frames_requested) {
-        // Reference: src/hardware/audio/soundblaster.cpp lines 3283-3303
-
-        // Set frames_needed based on shortage
-        // frames_needed = max(frames_requested - output_queue.Size(), 0)
-        int queueSize;
-        lock (_outputQueueLock) {
-            queueSize = _outputQueue.Count;
-        }
+        int queueSize = _outputQueue.Size;
         int shortage = Math.Max(frames_requested - queueSize, 0);
         System.Threading.Interlocked.Exchange(ref _framesNeeded, shortage);
 
-        // Pull from queue callback - exact port of MIXER_PullFromQueueCallback
-        // Reference: src/audio/mixer.h lines 498-553 BulkDequeue pattern
-        // Uses single lock for bulk dequeue like DOSBox's RWQueue
-        int frames_received = 0;
         int maxFrames = Math.Min(frames_requested, _dequeueBatch.Length);
-        lock (_outputQueueLock) {
-            while (frames_received < maxFrames && _outputQueue.Count > 0) {
-                _dequeueBatch[frames_received++] = _outputQueue.Dequeue();
-            }
-        }
+        int frames_received = _outputQueue.BulkDequeue(_dequeueBatch, maxFrames);
 
         if (frames_received > 0) {
             _dacChannel.AddAudioFrames(_dequeueBatch.AsSpan(0, frames_received));
         }
 
-        // Fill any shortfall with silence
         if (frames_received < frames_requested) {
             _dacChannel.AddSilence();
         }
@@ -639,110 +619,53 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void DspDmaCallback(DmaChannel channel, DmaChannel.DmaEvent dmaEvent) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DMA callback - Event={Event}, Mode={Mode}, DmaMode={DmaMode}, Left={Left}, Channel={Channel}, AutoInit={AutoInit}",
-                dmaEvent, _sb.Mode, _sb.Dma.Mode, _sb.Dma.Left, channel.ChannelNumber, _sb.Dma.AutoInit);
-        }
-
         switch (dmaEvent) {
             case DmaChannel.DmaEvent.ReachedTerminalCount:
-                // Terminal count reached - DMA transfer completed naturally
-                // Note: IRQ is raised in PlayDmaTransfer when _sb.Dma.Left reaches 0
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: Terminal count reached on channel {Channel}, Left={Left}, AutoInit={AutoInit}",
-                        channel.ChannelNumber, _sb.Dma.Left, _sb.Dma.AutoInit);
-                }
                 break;
 
             case DmaChannel.DmaEvent.IsMasked:
                 if (_sb.Mode == DspMode.Dma) {
-                    // Catch up to current time but don't generate IRQ
-                    // This fixes timing issues with later SCI games
-                    // Use FullIndex (emulated time) for timing
                     double currentTime = _clock.FullIndex;
                     double elapsedTime = currentTime - _lastDmaCallbackTime;
 
                     if (elapsedTime > 0 && _sb.Dma.Rate > 0) {
                         uint samplesToGenerate = (uint)(_sb.Dma.Rate * elapsedTime / 1000.0);
 
-                        // Limit to sb.dma.min to prevent runaway
                         if (samplesToGenerate > _sb.Dma.Min) {
-                            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                                _loggerService.Debug("SOUNDBLASTER: Limiting masked amount to Min={Min} (was {Samples})",
-                                    _sb.Dma.Min, samplesToGenerate);
-                            }
                             samplesToGenerate = _sb.Dma.Min;
                         }
 
-                        // Calculate minimum transfer size
                         uint minSize = _sb.Dma.Mul >> SbShift;
                         if (minSize == 0) {
                             minSize = 1;
                         }
                         minSize *= 2;
 
-                        // Only process if we have enough data left
                         if (_sb.Dma.Left > minSize) {
                             if (samplesToGenerate > (_sb.Dma.Left - minSize)) {
                                 samplesToGenerate = _sb.Dma.Left - minSize;
                             }
 
-                            // Don't trigger IRQ if we're about to complete a non-autoinit transfer
                             if (!_sb.Dma.AutoInit && _sb.Dma.Left <= _sb.Dma.Min) {
                                 samplesToGenerate = 0;
                             }
 
-                            // Process remaining DMA samples before masking
-                            // Reference: src/hardware/audio/soundblaster.cpp lines 810-812
                             if (samplesToGenerate > 0) {
                                 PlayDmaTransfer(samplesToGenerate);
                             }
                         }
                     }
 
-                    // Transition to masked state
                     _sb.Mode = DspMode.DmaMasked;
-
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: DMA masked, stopping output. Left={Left}, CurrentCount={Count}",
-                            _sb.Dma.Left, channel.CurrentCount);
-                    }
                 }
                 break;
 
             case DmaChannel.DmaEvent.IsUnmasked:
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: DMA unmasked event - Mode={Mode}, DmaMode={DmaMode}, Channel={Channel}",
-                        _sb.Mode, _sb.Dma.Mode, channel.ChannelNumber);
-                }
-
                 if (_sb.Mode == DspMode.DmaMasked && _sb.Dma.Mode != DmaMode.None) {
                     DspChangeMode(DspMode.Dma);
-
                     FlushRemainingDmaTransfer();
-
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output, auto {AutoInit} block {BaseCount}",
-                            channel.IsAutoiniting, channel.BaseCount);
-                    }
-
-                    // Unmasking the DMA channel is the point when the
-                    // software has finished setting up the Sound Blaster's
-                    // state (frequency, bit depth, stereo, etc) as well as
-                    // the DMA controller, and is finally ready for
-                    // playback. This is when we set the callback running to
-                    // play the data.
                     MaybeWakeUp();
 
-                    // If the DMA transfer is setup with a base count of
-                    // fewer than three elements (which is four bytes given
-                    // one 16-bit stereo frame held in an 8-bit DMA
-                    // channel), then we know the software intends to
-                    // overwrite the DMA content on the fly instead of
-                    // pre-generating large chunks of DMA audio. In these
-                    // cases we prefer the fine-grained per-frame callback.
-                    // (The minus one is because DMA counts are in addition
-                    // to one; so a base count of zero is one element).
                     if (channel.BaseCount <= MaxSingleFrameBaseCount) {
                         SetCallbackPerFrame();
                     } else {
@@ -792,11 +715,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void PlayDmaTransfer(uint bytesRequested) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SOUNDBLASTER: PlayDmaTransfer - BytesRequested={BytesRequested}, Left={Left}, Mode={Mode}, AutoInit={AutoInit}, Channel={Channel}",
-                bytesRequested, _sb.Dma.Left, _sb.Dma.Mode, _sb.Dma.AutoInit, _sb.Dma.Channel?.ChannelNumber);
-        }
-
         // How many bytes should we read from DMA?
         uint lowerBound = _sb.Dma.AutoInit ? bytesRequested : _sb.Dma.Min;
         uint bytesToRead = _sb.Dma.Left <= lowerBound ? _sb.Dma.Left : bytesRequested;
@@ -937,20 +855,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Deduct the DMA bytes read from the remaining to still read
         _sb.Dma.Left -= bytesRead;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: PlayDmaTransfer complete - BytesRead={BytesRead}, Samples={Samples}, Frames={Frames}, NewLeft={Left}, AutoInit={AutoInit}",
-                bytesRead, samples, frames, _sb.Dma.Left, _sb.Dma.AutoInit);
-        }
-
         if (_sb.Dma.Left == 0) {
             // Remove any pending ProcessDMATransfer events
             // Reference: src/hardware/audio/soundblaster.cpp play_dma_transfer() line 1318
             _scheduler.RemoveEvents(ProcessDmaTransferEvent);
-
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("SOUNDBLASTER: DMA transfer complete (Left=0), raising IRQ - Mode={Mode}, AutoInit={AutoInit}",
-                    _sb.Dma.Mode, _sb.Dma.AutoInit);
-            }
 
             if (_sb.Dma.Mode >= DmaMode.Pcm16Bit) {
                 RaiseIrq(SbIrq.Irq16);
@@ -959,29 +867,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
 
             if (!_sb.Dma.AutoInit) {
-                // Not new single cycle transfer waiting?
                 if (_sb.Dma.SingleSize == 0) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: Single cycle transfer ended");
-                    }
                     _sb.Mode = DspMode.None;
                     _sb.Dma.Mode = DmaMode.None;
                 } else {
-                    // A single size transfer is still waiting, handle that now
                     _sb.Dma.Left = _sb.Dma.SingleSize;
                     _sb.Dma.SingleSize = 0;
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: Switch to Single cycle transfer begun");
-                    }
                 }
             } else {
                 if (_sb.Dma.AutoSize == 0) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: Auto-init transfer with 0 size");
-                    }
                     _sb.Mode = DspMode.None;
                 }
-                // Continue with a new auto init transfer
                 _sb.Dma.Left = _sb.Dma.AutoSize;
             }
         }
@@ -1068,18 +964,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     /// <summary>
     /// Flushes the enqueue batch to the output queue.
-    /// Uses single lock like DOSBox's NonblockingBulkEnqueue for efficiency.
-    /// Reference: src/misc/rwqueue.cpp NonblockingBulkEnqueue
     /// </summary>
     private void FlushEnqueueBatch() {
         if (_enqueueBatchCount == 0) {
             return;
         }
-        lock (_outputQueueLock) {
-            for (int i = 0; i < _enqueueBatchCount; i++) {
-                _outputQueue.Enqueue(_enqueueBatch[i]);
-            }
-        }
+        _outputQueue.NonblockingBulkEnqueue(_enqueueBatch.AsSpan(0, _enqueueBatchCount));
         _enqueueBatchCount = 0;
     }
 
@@ -1460,155 +1350,65 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     public MixerChannel DacChannel => _dacChannel;
 
-    // ReadByte, WriteByte, Reset, and other existing methods...
+    // ReadByte and WriteByte have ZERO logging, matching DOSBox's read_sb()/write_sb().
+    // Reference: src/hardware/audio/soundblaster.cpp read_sb() / write_sb()
     public override byte ReadByte(ushort port) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SoundBlaster: ReadByte port=0x{Port:X4} offset=0x{Offset:X2}", port, port - _config.BaseAddress);
-        }
         switch (port - _config.BaseAddress) {
-            case 0x0A: {
-                    // DSP Read Data Port - returns queued output data
-                    bool hadData = _outputData.Count > 0;
-                    byte ret = hadData ? _outputData.Dequeue() : (byte)0;
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        string desc = hadData ? "DSP queued output data (dequeued)" : "No DSP data (return 0)";
-                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0A returning 0x{Ret:X2} ({Desc})", ret, desc);
-                    }
-                    return ret;
-                }
+            case 0x0A:
+                return _outputData.Count > 0 ? _outputData.Dequeue() : (byte)0;
 
-            case 0x0C: {
-                    // DSP Write Buffer Status Port (Write Command/Data)
-                    // Bit 7: 0 = ready to accept commands, 1 = busy
-                    // In emulation, we're always ready to accept writes immediately
-                    byte ret = 0x7F;
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0C returning 0x{Ret:X2} (Write buffer status: ready)", ret);
-                    }
-                    return ret;
-                }
+            case 0x0C:
+                return 0x7F;
 
             case 0x0E: {
-                    // DSP Read Buffer Status Port / 8-bit IRQ Acknowledge
-                    // Bit 7: 1 = data available to read OR 8-bit IRQ pending
-                    // Reading this port also acknowledges 8-bit DMA IRQ
                     bool hasDataOrIrq = _outputData.Count > 0 || _sb.Irq.Pending8Bit;
                     if (_sb.Irq.Pending8Bit) {
                         _sb.Irq.Pending8Bit = false;
                         _dualPic.DeactivateIrq(_config.Irq);
                     }
-                    byte ret = (byte)(hasDataOrIrq ? 0x80 : 0x00);
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        string desc = hasDataOrIrq ? "Data available or 8-bit IRQ pending (bit7=1)" : "No data and no 8-bit IRQ (0)";
-                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0E returning 0x{Ret:X2} ({Desc})", ret, desc);
-                    }
-                    return ret;
+                    return (byte)(hasDataOrIrq ? 0x80 : 0x00);
                 }
 
-            case 0x0F: {
-                    // 16-bit IRQ Acknowledge Port
-                    _sb.Irq.Pending16Bit = false;
-                    byte ret = 0xFF;
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x0F returning 0x{Ret:X2} (16-bit IRQ acknowledge, cleared)", ret);
-                    }
-                    return ret;
-                }
+            case 0x0F:
+                _sb.Irq.Pending16Bit = false;
+                return 0xFF;
 
-            case 0x04: {
-                    // Mixer Address Port (read)
-                    byte ret = (byte)_hardwareMixer.CurrentAddress;
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x04 returning 0x{Ret:X2} (Mixer current address)", ret);
-                    }
-                    return ret;
-                }
+            case 0x04:
+                return (byte)_hardwareMixer.CurrentAddress;
 
-            case 0x05: {
-                    // Mixer Data Port (read)
-                    byte ret = _hardwareMixer.ReadData();
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x05 returning 0x{Ret:X2} (Mixer data read)", ret);
-                    }
-                    return ret;
-                }
+            case 0x05:
+                return _hardwareMixer.ReadData();
 
-            case 0x06: {
-                    // DSP Reset Port (read) - typically returns 0xFF
-                    byte ret = 0xFF;
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x06 returning 0x{Ret:X2} (DSP reset port read)", ret);
-                    }
-                    return ret;
-                }
-
-            default: {
-                    // Unknown ports return 0xFF
-                    byte ret = 0xFF;
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("SOUNDBLASTER: ReadByte offset=0x{Offset:X2} returning 0x{Ret:X2} (Unknown port)", port - _config.BaseAddress, ret);
-                    }
-                    return ret;
-                }
+            default:
+                return 0xFF;
         }
     }
 
     public override void WriteByte(ushort port, byte value) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SoundBlaster: WriteByte port=0x{Port:X4} offset=0x{Offset:X2} value=0x{Value:X2}", port, port - _config.BaseAddress, value);
-        }
         switch (port - _config.BaseAddress) {
             case 0x06:
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    string meaning = ((value & 1) != 0) ? "assert reset (bit0=1)" : "release reset (bit0=0)";
-                    _loggerService.Debug("SOUNDBLASTER: WriteByte offset=0x06 received 0x{Value:X2} ({Meaning})", value, meaning);
-                }
                 DspDoReset(value);
                 break;
-
             case 0x0C:
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: WriteByte offset=0x0C received DSP write 0x{Value:X2} (DSP command/data)", value);
-                }
                 DspDoWrite(value);
                 break;
-
             case 0x04:
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: WriteByte offset=0x04 setting mixer address to 0x{Addr:X2}", value);
-                }
                 _hardwareMixer.CurrentAddress = value;
                 break;
-
             case 0x05:
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: WriteByte offset=0x05 mixer write to address=0x{Addr:X2} value=0x{Value:X2}", _hardwareMixer.CurrentAddress, value);
-                }
                 _hardwareMixer.Write(value);
                 break;
-
             case 0x07:
                 break;
-
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: Unhandled port write port=0x{Port:X4} offset=0x{Offset:X2} value=0x{Value:X2} (ignored)", port, port - _config.BaseAddress, value);
-                }
                 break;
         }
     }
 
     private void DspDoReset(byte value) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DspDoReset called value=0x{Value:X2} state={State}", value, _sb.Dsp.State);
-        }
         if (((value & 1) != 0) && (_sb.Dsp.State != DspState.Reset)) {
-            // TODO: Get out of highspeed mode
             DspReset();
             _sb.Dsp.State = DspState.Reset;
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("SOUNDBLASTER: DSP asserted reset -> state={State}", _sb.Dsp.State);
-            }
         } else if (((value & 1) == 0) && (_sb.Dsp.State == DspState.Reset)) {
             // reset off
             _sb.Dsp.State = DspState.ResetWait;
@@ -1630,21 +1430,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void DspFinishReset() {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DspFinishReset - performing finish reset tasks");
-        }
         DspFlushData();
         DspAddData(0xaa);
         _sb.Dsp.State = DspState.Normal;
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SOUNDBLASTER: DspFinishReset complete -> state={State}", _sb.Dsp.State);
-        }
     }
 
     private void DspReset() {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SoundBlaster: DSP Reset");
-        }
+        // Stop any active callback before resetting state
+        SetCallbackNone();
 
         _dualPic.DeactivateIrq(_config.Irq);
         DspChangeMode(DspMode.None);
