@@ -456,8 +456,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private readonly AudioFrame[] _dequeueBatch = new AudioFrame[4096];
 
-    private readonly Queue<byte> _outputData = new();
     private BlasterState _blasterState = BlasterState.WaitingForCommand;
+
+    /// <summary>
+    /// ASP/CSP register storage for SB16 Advanced Signal Processing.
+    /// Reference: src/hardware/audio/soundblaster.cpp static uint8_t asp_regs[256]
+    /// </summary>
+    private readonly byte[] _aspRegs = new byte[256];
+
+    /// <summary>
+    /// Tracks whether ASP initialization is in progress (toggling register 0x83).
+    /// Reference: src/hardware/audio/soundblaster.cpp static bool asp_init_in_progress
+    /// </summary>
+    private bool _aspInitInProgress;
 
     private double _lastDmaCallbackTime;
 
@@ -569,10 +580,26 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
 
         _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, opl.MixerChannel, loggerService);
-        _hardwareMixer.Reset();
 
-        InitSpeakerState();
+        // Reference: src/hardware/audio/soundblaster.cpp SoundBlaster constructor lines 3660-3664
+        // Must set Normal state BEFORE dsp_reset() so first game reset triggers properly.
+        // DspState defaults to Reset (enum value 0) in C#, but DOSBox explicitly sets Normal.
+        _sb.Dsp.State = DspState.Normal;
+        _sb.Dsp.Out.LastVal = 0xAA;
+
         InitPortHandlers(ioPortDispatcher);
+
+        // Reference: src/hardware/audio/soundblaster.cpp SoundBlaster constructor lines 3671-3673
+        // Initialize ASP registers before dsp_reset()
+        _aspRegs[5] = 0x01;
+        _aspRegs[9] = 0xF8;
+
+        // Reference: src/hardware/audio/soundblaster.cpp SoundBlaster constructor line 3682
+        // Full DSP reset (includes InitSpeakerState at the end)
+        DspReset();
+
+        // Reference: src/hardware/audio/soundblaster.cpp SoundBlaster constructor line 3684
+        _hardwareMixer.Reset();
 
         _dualPic.SetIrqMask(_config.Irq, false);
 
@@ -1352,32 +1379,53 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     // ReadByte and WriteByte have ZERO logging, matching DOSBox's read_sb()/write_sb().
     // Reference: src/hardware/audio/soundblaster.cpp read_sb() / write_sb()
+    /// <summary>
+    /// Reads from a Sound Blaster I/O port.
+    /// Reference: src/hardware/audio/soundblaster.cpp read_sb()
+    /// </summary>
     public override byte ReadByte(ushort port) {
         switch (port - _config.BaseAddress) {
-            case 0x0A:
-                return _outputData.Count > 0 ? _outputData.Dequeue() : (byte)0;
+            case 0x04: // MixerIndex
+                return (byte)_hardwareMixer.CurrentAddress;
 
-            case 0x0C:
-                return 0x7F;
+            case 0x05: // MixerData
+                return _hardwareMixer.ReadData();
 
-            case 0x0E: {
-                    bool hasDataOrIrq = _outputData.Count > 0 || _sb.Irq.Pending8Bit;
+            case 0x0A: // DspReadData
+                return DspReadData();
+
+            case 0x0C: { // DspWriteStatus
+                    // Bit 7 = 1 means buffer at capacity (not ready to receive).
+                    // Lower 7 bits are always 1.
+                    // Reference: src/hardware/audio/soundblaster.cpp read_sb() DspWriteStatus
+                    byte writeStatus = 0x7F; // lower 7 bits always set
+                    if (WriteBufferAtCapacity()) {
+                        writeStatus |= 0x80;
+                    }
+                    return writeStatus;
+                }
+
+            case 0x0E: { // DspReadStatus
+                    // Acknowledges 8-bit IRQ. Bit 7 = 1 if output FIFO has data.
+                    // Lower 7 bits are always 1.
+                    // Reference: src/hardware/audio/soundblaster.cpp read_sb() DspReadStatus
                     if (_sb.Irq.Pending8Bit) {
                         _sb.Irq.Pending8Bit = false;
                         _dualPic.DeactivateIrq(_config.Irq);
                     }
-                    return (byte)(hasDataOrIrq ? 0x80 : 0x00);
+                    byte readStatus = 0x7F; // lower 7 bits always set
+                    if (_sb.Dsp.Out.Used != 0) {
+                        readStatus |= 0x80;
+                    }
+                    return readStatus;
                 }
 
-            case 0x0F:
+            case 0x0F: // DspAck16Bit
                 _sb.Irq.Pending16Bit = false;
                 return 0xFF;
 
-            case 0x04:
-                return (byte)_hardwareMixer.CurrentAddress;
-
-            case 0x05:
-                return _hardwareMixer.ReadData();
+            case 0x06: // DspReset read
+                return 0xFF;
 
             default:
                 return 0xFF;
@@ -1453,6 +1501,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         _sb.Dsp.WriteStatusCounter = 0;
         _sb.Dsp.ResetTally++;
+
+        // Ensure command state is properly reset (DOSBox uses sb.dsp.cmd == 0 implicitly)
+        _blasterState = BlasterState.WaitingForCommand;
 
         // Remove any pending finish reset events
         // Reference: src/hardware/audio/soundblaster.cpp dsp_reset() line 1723
@@ -1547,7 +1598,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Sb16 ASP set mode register or DSP Status
                 if (_config.SbType == SbType.Sb16) {
                     if ((_sb.Dsp.In.Data[0] & 0xf1) == 0xf1) {
-                        // asp_init_in_progress = true
+                        _aspInitInProgress = true;
+                    } else {
+                        _aspInitInProgress = false;
                     }
                 } else {
                     DspFlushData();
@@ -1594,15 +1647,20 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0x0e:
                 // Sb16 ASP set register
+                // Reference: src/hardware/audio/soundblaster.cpp case 0x0e
                 if (_config.SbType == SbType.Sb16) {
-                    // asp_regs[_sb.Dsp.In.Data[0]] = _sb.Dsp.In.Data[1]
+                    _aspRegs[_sb.Dsp.In.Data[0]] = _sb.Dsp.In.Data[1];
                 }
                 break;
 
             case 0x0f:
                 // Sb16 ASP get register
+                // Reference: src/hardware/audio/soundblaster.cpp case 0x0f
                 if (_config.SbType == SbType.Sb16) {
-                    DspAddData(0x00);
+                    if (_aspInitInProgress && (_sb.Dsp.In.Data[0] == 0x83)) {
+                        _aspRegs[0x83] = (byte)~_aspRegs[0x83];
+                    }
+                    DspAddData(_aspRegs[_sb.Dsp.In.Data[0]]);
                 }
                 break;
 
@@ -1733,10 +1791,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 if (_sb.Dsp.Cmd == 0x17) {
                     _sb.Adpcm.HaveRef = true;
                 }
-                _sb.Dma.Left = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SB: 2-bit ADPCM size={Size} haveRef={HaveRef}", _sb.Dma.Left, _sb.Adpcm.HaveRef);
-                }
                 DspPrepareDmaOld(DmaMode.Adpcm2Bit, false, false);
                 break;
 
@@ -1853,7 +1907,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0xd0:
                 // Halt 8-bit DMA
+                // Reference: src/hardware/audio/soundblaster.cpp case 0xd0
                 _sb.Mode = DspMode.DmaPause;
+                _scheduler.RemoveEvents(ProcessDmaTransferEvent);
                 break;
 
             case 0xd1:
@@ -1868,24 +1924,32 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0xd4:
                 // Continue DMA 8-bit
+                // Reference: src/hardware/audio/soundblaster.cpp case 0xd4
                 if (_sb.Mode == DspMode.DmaPause) {
                     _sb.Mode = DspMode.DmaMasked;
+                    _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
                 }
                 break;
 
             case 0xd5:
                 // Halt 16-bit DMA
-                if (_config.SbType == SbType.Sb16) {
-                    _sb.Mode = DspMode.DmaPause;
+                // Reference: src/hardware/audio/soundblaster.cpp case 0xd5
+                if (_config.SbType != SbType.Sb16) {
+                    break;
                 }
+                _sb.Mode = DspMode.DmaPause;
+                _scheduler.RemoveEvents(ProcessDmaTransferEvent);
                 break;
 
             case 0xd6:
                 // Continue DMA 16-bit
-                if (_config.SbType == SbType.Sb16) {
-                    if (_sb.Mode == DspMode.DmaPause) {
-                        _sb.Mode = DspMode.DmaMasked;
-                    }
+                // Reference: src/hardware/audio/soundblaster.cpp case 0xd6
+                if (_config.SbType != SbType.Sb16) {
+                    break;
+                }
+                if (_sb.Mode == DspMode.DmaPause) {
+                    _sb.Mode = DspMode.DmaMasked;
+                    _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
                 }
                 break;
 
@@ -2401,12 +2465,70 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _dualPic.DeactivateIrq(_config.Irq);
     }
 
+    /// <summary>
+    /// Flushes the DSP output FIFO.
+    /// Reference: src/hardware/audio/soundblaster.cpp dsp_flush_data()
+    /// </summary>
     private void DspFlushData() {
-        _outputData.Clear();
+        _sb.Dsp.Out.Used = 0;
+        _sb.Dsp.Out.Pos = 0;
     }
 
+    /// <summary>
+    /// Adds a byte to the DSP output FIFO (circular buffer of DspBufSize=64).
+    /// Reference: src/hardware/audio/soundblaster.cpp dsp_add_data()
+    /// </summary>
     private void DspAddData(byte value) {
-        _outputData.Enqueue(value);
+        if (_sb.Dsp.Out.Used < DspBufSize) {
+            int start = _sb.Dsp.Out.Used + _sb.Dsp.Out.Pos;
+            if (start >= DspBufSize) {
+                start -= DspBufSize;
+            }
+            _sb.Dsp.Out.Data[start] = value;
+            _sb.Dsp.Out.Used++;
+        } else {
+            _loggerService.Error("SOUNDBLASTER: DSP output buffer full");
+        }
+    }
+
+    /// <summary>
+    /// Reads from the DSP output FIFO. Returns last value if empty (sticky).
+    /// Reference: src/hardware/audio/soundblaster.cpp dsp_read_data()
+    /// </summary>
+    private byte DspReadData() {
+        if (_sb.Dsp.Out.Used > 0) {
+            _sb.Dsp.Out.LastVal = _sb.Dsp.Out.Data[_sb.Dsp.Out.Pos];
+            _sb.Dsp.Out.Pos++;
+            if (_sb.Dsp.Out.Pos >= DspBufSize) {
+                _sb.Dsp.Out.Pos -= DspBufSize;
+            }
+            _sb.Dsp.Out.Used--;
+        }
+        return _sb.Dsp.Out.LastVal;
+    }
+
+    /// <summary>
+    /// Determines if the DSP write buffer is at capacity.
+    /// Reference: src/hardware/audio/soundblaster.cpp write_buffer_at_capacity()
+    /// </summary>
+    private bool WriteBufferAtCapacity() {
+        // Is the DSP in an abnormal state?
+        if (_sb.Dsp.State != DspState.Normal) {
+            return true;
+        }
+
+        // Report the buffer as having some room every 8th call
+        if ((++_sb.Dsp.WriteStatusCounter % 8) == 0) {
+            return false;
+        }
+
+        // If DMA isn't running then the buffer's definitely not at capacity
+        if (_sb.Dma.Mode == DmaMode.None) {
+            return false;
+        }
+
+        // The DMA buffer is considered full until it can accept a full write
+        return _sb.Dma.Left > _sb.Dma.Min;
     }
 
     /// <summary>
