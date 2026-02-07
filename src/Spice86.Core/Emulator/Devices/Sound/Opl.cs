@@ -577,7 +577,10 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private void WriteReg(ushort selectedReg, byte value) {
         _chip.WriteRegisterBuffered(selectedReg, value);
         if (selectedReg == 0x105) {
-            _newMode = (byte)(value & 0x01);
+            // Matches DOSBox: opl.newm = selected_reg & 0x01;
+            // Uses register address (always 1 when reg==0x105), not value.
+            // This is DOSBox's longstanding behavior that games are tested against.
+            _newMode = (byte)(selectedReg & 0x01);
         }
     }
 
