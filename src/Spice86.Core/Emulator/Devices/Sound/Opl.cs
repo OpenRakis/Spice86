@@ -378,9 +378,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         //   CPU_Cycles -= delaycyc;
         //   CPU_IODelayRemoved += delaycyc;
         int delayCycles = _cyclesLimiter.TickCycleMax / 2048;
-        if (delayCycles < 1) {
-            delayCycles = 1;
-        }
         _cyclesLimiter.ConsumeIoCycles(delayCycles);
 
         switch (_mode) {
