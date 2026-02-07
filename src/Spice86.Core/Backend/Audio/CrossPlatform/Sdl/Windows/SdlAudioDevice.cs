@@ -15,7 +15,7 @@ internal interface ISdlAudioDriver {
 
 internal sealed class SdlAudioDevice {
     private readonly ISdlAudioDriver _driver;
-    private readonly object _lock = new object();
+    private readonly object _lock = new();
     private Thread? _audioThread;
     private volatile bool _shutdown;
     private volatile bool _paused = true;

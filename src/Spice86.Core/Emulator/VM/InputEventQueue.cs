@@ -7,6 +7,7 @@ using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
 using System;
+using System.Threading;
 
 /// <summary>
 /// Represents a queue for handling and processing keyboard and mouse events. <br/>
@@ -21,7 +22,7 @@ using System;
 /// </remarks>
 public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
     private readonly Queue<Action> _eventQueue = new();
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly IGuiMouseEvents? _mouseEvents;
     private readonly IGuiKeyboardEvents? _keyboardEvents;
 

@@ -22,7 +22,7 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
     private int _writeIndex;
     private int _readIndex;
     private int _count;
-    private readonly object _queueLock = new();
+    private readonly object _lock = new();
     private volatile bool _isRunning = true;
     private volatile bool _started;
 
@@ -91,7 +91,7 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
         // Pull samples from the queue - non-blocking dequeue
         // Reference: const auto frames_to_dequeue = std::min(mixer.final_output.Size(), frames_requested);
         // Reference: mixer.final_output.BulkDequeue(frame_stream, frames_to_dequeue);
-        lock (_queueLock) {
+        lock (_lock) {
             int samplesToRead = Math.Min(samplesNeeded, _count);
             int remaining = samplesToRead;
             while (remaining > 0) {
@@ -107,7 +107,7 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
             // Signal producer that space is available
             // Reference: RWQueue uses condition_variable has_room to notify waiting producers
             if (samplesToRead > 0) {
-                Monitor.PulseAll(_queueLock);
+                Monitor.PulseAll(_lock);
             }
         }
 
@@ -129,10 +129,10 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
 
     /// <inheritdoc/>
     internal override void ClearQueuedData() {
-        lock (_queueLock) {
+        lock (_lock) {
             _count = 0;
             _readIndex = _writeIndex;
-            Monitor.PulseAll(_queueLock);
+            Monitor.PulseAll(_lock);
         }
     }
 
@@ -156,13 +156,13 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
         // Reference: "blocks both the producer until space is available"
         int written = 0;
 
-        lock (_queueLock) {
+        lock (_lock) {
             int remaining = data.Length;
             while (remaining > 0 && _isRunning) {
                 // Wait while queue is full - this is the key DOSBox RWQueue behavior
                 // Reference: condition_variable has_room - producer waits for space
                 while (_count >= _queueCapacity && _isRunning) {
-                    Monitor.Wait(_queueLock);
+                    Monitor.Wait(_lock);
                 }
 
                 if (!_isRunning) {
@@ -190,7 +190,7 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
     /// </summary>
     public int QueuedSamples {
         get {
-            lock (_queueLock) {
+            lock (_lock) {
                 return _count;
             }
         }
@@ -201,11 +201,11 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
     /// Reference: RWQueue::Stop()
     /// </summary>
     private void Stop() {
-        lock (_queueLock) {
+        lock (_lock) {
             _isRunning = false;
             _count = 0;
             _readIndex = _writeIndex;
-            Monitor.PulseAll(_queueLock);
+            Monitor.PulseAll(_lock);
         }
     }
 

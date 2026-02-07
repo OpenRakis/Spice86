@@ -25,7 +25,7 @@ public sealed class MVerb {
     private readonly StaticAllpassFourTap[] _allpassFourTap = new StaticAllpassFourTap[4];
     private readonly StateVariable[] _bandwidthFilter = new StateVariable[2];
     private readonly StateVariable[] _damping = new StateVariable[2];
-    private readonly StaticDelayLine _predelay = new StaticDelayLine();
+    private readonly StaticDelayLine _predelay = new();
     private readonly StaticDelayLineFourTap[] _staticDelayLine = new StaticDelayLineFourTap[4];
     private readonly StaticDelayLineEightTap[] _earlyReflectionsDelayLine = new StaticDelayLineEightTap[2];
     private float _sampleRate;

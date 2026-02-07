@@ -6,7 +6,7 @@ using System.Runtime.Versioning;
 using System.Threading;
 
 [SupportedOSPlatform("windows")]
-internal sealed class SdlWasapiDriver : ISdlAudioDriver {
+internal sealed partial class SdlWasapiDriver : ISdlAudioDriver {
     private const uint ClsctxAll = 0x17;
     private const int WaitTimeoutMs = 200;
     private const uint WaitObject0 = 0;
@@ -247,7 +247,6 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
     }
 
     public IntPtr GetDeviceBuffer(SdlAudioDevice device, out int bufferBytes) {
-        bufferBytes = 0;
         if (_renderClient == null) {
             bufferBytes = -1;
             return IntPtr.Zero;
@@ -342,17 +341,17 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     private delegate bool AvRevertMmThreadCharacteristicsDelegate(IntPtr taskHandle);
 
-    private static class NativeMethods {
+    private static partial class NativeMethods {
         public const uint COINIT_MULTITHREADED = 0x0;
 
-        [DllImport("ole32.dll")]
-        public static extern int CoInitializeEx(IntPtr reserved, uint coInit);
+        [LibraryImport("ole32.dll")]
+        public static partial int CoInitializeEx(IntPtr reserved, uint coInit);
 
-        [DllImport("ole32.dll")]
-        public static extern void CoUninitialize();
+        [LibraryImport("ole32.dll")]
+        public static partial void CoUninitialize();
 
-        [DllImport("ole32.dll")]
-        public static extern void CoTaskMemFree(IntPtr ptr);
+        [LibraryImport("ole32.dll")]
+        public static partial void CoTaskMemFree(IntPtr ptr);
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern IntPtr CreateEventW(IntPtr lpEventAttributes, bool bManualReset, bool bInitialState, string? lpName);
@@ -363,13 +362,13 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern uint WaitForSingleObjectEx(IntPtr hHandle, int dwMilliseconds, bool bAlertable);
 
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        public static extern IntPtr LoadLibraryW(string lpLibFileName);
+        [LibraryImport("kernel32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        public static partial IntPtr LoadLibraryW(string lpLibFileName);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool FreeLibrary(IntPtr hLibModule);
 
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true)]
-        public static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
+        [LibraryImport("kernel32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(System.Runtime.InteropServices.Marshalling.AnsiStringMarshaller))]
+        public static partial IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
     }
 }

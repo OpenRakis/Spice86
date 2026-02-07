@@ -151,7 +151,6 @@ internal sealed class SdlDirectSoundDriver : ISdlAudioDriver {
     }
 
     public IntPtr GetDeviceBuffer(SdlAudioDevice device, out int bufferBytes) {
-        bufferBytes = (int)_bufferSize;
         if (_mixBuffer == null) {
             bufferBytes = -1;
             return IntPtr.Zero;

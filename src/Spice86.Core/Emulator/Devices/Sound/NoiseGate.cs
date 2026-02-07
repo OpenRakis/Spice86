@@ -15,7 +15,7 @@ public sealed class NoiseGate {
     /// <summary>
     /// Provides a delegate to the Process method for compatibility with MixerChannel.
     /// </summary>
-    public ProcessorDelegate Processor => new ProcessorDelegate(Process);
+    public ProcessorDelegate Processor => new(Process);
 
     public delegate AudioFrame ProcessorDelegate(AudioFrame input);
     private float _scaleIn;

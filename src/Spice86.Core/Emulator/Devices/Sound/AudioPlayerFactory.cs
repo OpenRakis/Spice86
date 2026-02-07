@@ -44,7 +44,7 @@ public class AudioPlayerFactory {
             SampleFormat: SampleFormat.IeeeFloat32));
     }
 
-    private AudioPlayer? TryCreateCrossPlatformPlayer(int sampleRate, int framesPerBuffer, int prebufferMs) {
+    private CrossPlatformAudioPlayer? TryCreateCrossPlatformPlayer(int sampleRate, int framesPerBuffer, int prebufferMs) {
         try {
             IAudioBackend? backend = AudioBackendFactory.Create();
             if (backend == null) {

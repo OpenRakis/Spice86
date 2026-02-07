@@ -41,10 +41,10 @@ internal interface IDirectSoundBuffer {
     int Restore();
 }
 
-internal static class SdlDirectSoundNative {
+internal static partial class SdlDirectSoundNative {
     [DllImport("dsound.dll", CallingConvention = CallingConvention.StdCall)]
     public static extern int DirectSoundCreate8(IntPtr deviceGuid, out IDirectSound8 directSound, IntPtr outer);
 
-    [DllImport("user32.dll")]
-    public static extern IntPtr GetDesktopWindow();
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr GetDesktopWindow();
 }

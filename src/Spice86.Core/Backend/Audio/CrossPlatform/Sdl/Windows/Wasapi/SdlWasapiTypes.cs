@@ -4,9 +4,9 @@ using System;
 using System.Runtime.InteropServices;
 
 internal static class SdlWasapiGuids {
-    public static readonly Guid ClsidMmDeviceEnumerator = new Guid("BCDE0395-E52F-467C-8E3D-C4579291692E");
-    public static readonly Guid IidIaudioClient = new Guid("1CB9AD4C-DBFA-4C32-B178-C2F568A703B2");
-    public static readonly Guid IidIaudioRenderClient = new Guid("F294ACFC-3146-4483-A7BF-ADDCA7C260E2");
+    public static readonly Guid ClsidMmDeviceEnumerator = new("BCDE0395-E52F-467C-8E3D-C4579291692E");
+    public static readonly Guid IidIaudioClient = new("1CB9AD4C-DBFA-4C32-B178-C2F568A703B2");
+    public static readonly Guid IidIaudioRenderClient = new("F294ACFC-3146-4483-A7BF-ADDCA7C260E2");
 }
 
 internal static class SdlWasapiResult {

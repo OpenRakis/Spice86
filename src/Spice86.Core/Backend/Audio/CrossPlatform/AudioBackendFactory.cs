@@ -36,7 +36,7 @@ public static class AudioBackendFactory {
     /// <summary>
     /// Tries to create an SDL backend.
     /// </summary>
-    private static IAudioBackend? CreateSdlBackend() {
+    private static SdlBackend? CreateSdlBackend() {
         try {
             if (!SdlNativeMethods.Initialize()) {
                 return null;
@@ -66,7 +66,7 @@ public static class AudioBackendFactory {
 /// Dummy audio backend that does nothing. Used when no real audio backend is available.
 /// </summary>
 public sealed class DummyAudioBackend : IAudioBackend {
-    private AudioSpec _obtainedSpec = new AudioSpec();
+    private AudioSpec _obtainedSpec = new();
 
     /// <inheritdoc/>
     public AudioSpec ObtainedSpec => _obtainedSpec;

@@ -2,6 +2,7 @@ namespace Spice86.Core.Backend.Audio.CrossPlatform.Sdl;
 
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 /// <summary>
 /// SDL2 audio backend for Linux and macOS.
@@ -12,12 +13,12 @@ public sealed class SdlBackend : IAudioBackend {
     private uint _deviceId;
     private SdlAudioCallback? _nativeCallback;
     private GCHandle _callbackHandle;
-    private AudioSpec _obtainedSpec = new AudioSpec();
+    private AudioSpec _obtainedSpec = new();
     private AudioDeviceState _state = AudioDeviceState.Stopped;
     private string? _lastError;
     private AudioCallback? _callback;
     private AudioPostmixCallback? _postmixCallback;
-    private readonly object _lock = new object();
+    private readonly Lock _lock = new();
 
     /// <inheritdoc/>
     public AudioSpec ObtainedSpec => _obtainedSpec;
