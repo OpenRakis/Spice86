@@ -400,7 +400,6 @@ public class DosMemoryManagerTests {
     public void GetSizeOfStartingConventionalMemory() {
         // Act
         DosMemoryControlBlock block1;
-        DosMemoryControlBlock block2;
         // Simulate allocating a block for the program image first.
         DosErrorCode errorCode1 = _memoryManager.TryModifyBlock(0xFF0, 1234, out block1);
         // Get the remaining free space.
@@ -568,7 +567,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsValid.Should().BeTrue();
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
-        modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        modifiedBlock.PspSegment.Should().Be(_initialPspSegment);
         modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(16300);
         modifiedBlock.AllocationSizeInBytes.Should().Be(260800);
@@ -602,7 +601,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsValid.Should().BeTrue();
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
-        modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        modifiedBlock.PspSegment.Should().Be(_initialPspSegment);
         modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(16401);
         modifiedBlock.AllocationSizeInBytes.Should().Be(262416);
