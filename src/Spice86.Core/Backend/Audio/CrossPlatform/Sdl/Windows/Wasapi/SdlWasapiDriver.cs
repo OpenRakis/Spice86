@@ -121,12 +121,16 @@ internal sealed class SdlWasapiDriver : ISdlAudioDriver {
             }
 
             Guid iidRenderClient = SdlWasapiGuids.IidIaudioRenderClient;
-            hr = _audioClient.GetService(ref iidRenderClient, out object renderClientObj);
-            if (SdlWasapiResult.Failed(hr) || renderClientObj is not IAudioRenderClient renderClient) {
+            hr = _audioClient.GetService(ref iidRenderClient, out IntPtr renderClientPtr);
+            if (SdlWasapiResult.Failed(hr) || renderClientPtr == IntPtr.Zero) {
                 error = $"Failed to get render client: 0x{hr:X8}";
                 return false;
             }
 
+            IAudioRenderClient renderClient = (IAudioRenderClient)Marshal.GetTypedObjectForIUnknown(
+                renderClientPtr,
+                typeof(IAudioRenderClient));
+            Marshal.Release(renderClientPtr);
             _renderClient = renderClient;
             _sampleFrames = calculatedFrames;
             _bufferFrameCount = (int)bufferFrameCount;

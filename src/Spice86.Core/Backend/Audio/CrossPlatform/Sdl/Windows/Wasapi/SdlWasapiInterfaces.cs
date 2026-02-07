@@ -97,7 +97,7 @@ internal interface IAudioClient {
 
     int SetEventHandle(IntPtr eventHandle);
 
-    int GetService(ref Guid iid, [MarshalAs(UnmanagedType.Interface)] out object service);
+    int GetService(ref Guid iid, out IntPtr service);
 }
 
 [ComImport]

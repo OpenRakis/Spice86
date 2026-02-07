@@ -36,13 +36,9 @@ public sealed class SdlWindowsBackend : IAudioBackend {
         ArgumentNullException.ThrowIfNull(desiredSpec.Callback);
 
         if (!_device.Open(desiredSpec)) {
-            _device.Close();
-            _device = new SdlAudioDevice(new SdlDirectSoundDriver());
-            if (!_device.Open(desiredSpec)) {
-                _lastError = _device.LastError;
-                _state = AudioDeviceState.Error;
-                return false;
-            }
+            _lastError = _device.LastError;
+            _state = AudioDeviceState.Error;
+            return false;
         }
 
         _state = AudioDeviceState.Stopped;
