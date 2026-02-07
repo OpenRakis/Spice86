@@ -460,7 +460,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     // Reusable buffer for mixer callback dequeue - avoids per-callback List allocation
     private readonly AudioFrame[] _dequeueBatch = new AudioFrame[4096];
 
-    private readonly Queue<byte> _outputData = new Queue<byte>();
+    private readonly Queue<byte> _outputData = new();
     private BlasterState _blasterState = BlasterState.WaitingForCommand;
 
     private double _lastDmaCallbackTime;
@@ -993,7 +993,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         uint numBytes = ReadDma8Bit(bytesToRead);
         uint numSamples = 0;
-        ushort numFrames = 0;
 
         // Parse the reference ADPCM byte, if provided
         uint i = 0;
@@ -1019,7 +1018,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
 
         // ADPCM is mono
-        numFrames = (ushort)numSamples;
+        ushort numFrames = (ushort)numSamples;
         return (numBytes, numSamples, numFrames);
     }
 
