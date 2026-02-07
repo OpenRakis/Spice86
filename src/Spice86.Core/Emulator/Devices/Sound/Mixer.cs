@@ -69,6 +69,12 @@ public sealed class Mixer : IDisposable {
     private float _reverbSynthSendLevel = 0.0f;
     private float _reverbDigitalSendLevel = 0.0f;
 
+    // Pre-allocated reverb processing buffers (avoids per-tick GC allocations)
+    private float[] _reverbLeftIn = new float[DefaultBlocksize];
+    private float[] _reverbRightIn = new float[DefaultBlocksize];
+    private float[] _reverbLeftOut = new float[DefaultBlocksize];
+    private float[] _reverbRightOut = new float[DefaultBlocksize];
+
     // Chorus state - TAL-Chorus professional modulated chorus
     private bool _doChorus = false;
     private readonly ChorusEngine _chorusEngine;
@@ -847,27 +853,36 @@ public sealed class Mixer : IDisposable {
         // Prepare buffers for MVerb processing
         // MVerb operates on non-interleaved sample streams (separate L/R arrays)
         int frameCount = _reverbAuxBuffer.Count;
-        float[] leftIn = new float[frameCount];
-        float[] rightIn = new float[frameCount];
-        float[] leftOut = new float[frameCount];
-        float[] rightOut = new float[frameCount];
+
+        // Ensure pre-allocated buffers are large enough
+        if (_reverbLeftIn.Length < frameCount) {
+            _reverbLeftIn = new float[frameCount];
+            _reverbRightIn = new float[frameCount];
+            _reverbLeftOut = new float[frameCount];
+            _reverbRightOut = new float[frameCount];
+        }
 
         // Extract left and right channels from reverb aux buffer
         // Apply high-pass filter to reverb input (removes low-frequency buildup)
         for (int i = 0; i < frameCount; i++) {
             AudioFrame frame = _reverbAuxBuffer[i];
-            leftIn[i] = _reverbHighPassFilter[0].Filter(frame.Left);
-            rightIn[i] = _reverbHighPassFilter[1].Filter(frame.Right);
+            _reverbLeftIn[i] = _reverbHighPassFilter[0].Filter(frame.Left);
+            _reverbRightIn[i] = _reverbHighPassFilter[1].Filter(frame.Right);
         }
 
         // Process through MVerb (FDN reverb algorithm)
-        _mverb.Process(leftIn, rightIn, leftOut, rightOut, frameCount);
+        _mverb.Process(
+            _reverbLeftIn.AsSpan(0, frameCount),
+            _reverbRightIn.AsSpan(0, frameCount),
+            _reverbLeftOut.AsSpan(0, frameCount),
+            _reverbRightOut.AsSpan(0, frameCount),
+            frameCount);
 
         // Mix reverb output with main output buffer
         for (int i = 0; i < frameCount; i++) {
             _outputBuffer[i] = new AudioFrame(
-                _outputBuffer[i].Left + leftOut[i],
-                _outputBuffer[i].Right + rightOut[i]
+                _outputBuffer[i].Left + _reverbLeftOut[i],
+                _outputBuffer[i].Right + _reverbRightOut[i]
             );
         }
     }

@@ -100,7 +100,7 @@ public sealed class MVerb {
         Reset();
     }
 
-    public void Process(float[] leftInput, float[] rightInput, float[] leftOutput, float[] rightOutput, int sampleFrames) {
+    public void Process(ReadOnlySpan<float> leftInput, ReadOnlySpan<float> rightInput, Span<float> leftOutput, Span<float> rightOutput, int sampleFrames) {
         float oneOverSampleFrames = 1.0f / sampleFrames;
         float mixDelta = (_mix - _mixSmooth) * oneOverSampleFrames;
         float earlyLateDelta = (_earlyMix - _earlyLateSmooth) * oneOverSampleFrames;

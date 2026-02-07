@@ -54,6 +54,10 @@ public sealed class MixerChannel {
     // Initialized ONCE when first needed (see ConfigureResampler)
     private Spice86.Libs.Sound.Resampling.SpeexResamplerCSharp? _speexResampler;
 
+    // Pre-allocated resample buffers (avoids per-tick GC allocations)
+    private float[] _resampleInputBuffer = Array.Empty<float>();
+    private float[] _resampleOutputBuffer = Array.Empty<float>();
+
     private bool _doResample;
 
     // DOSBox default: ResampleMethod::Resample (always use Speex)
@@ -1389,28 +1393,34 @@ public sealed class MixerChannel {
         AudioFrames.Resize(targetSize);
 
         // Prepare input buffer - convert AudioFrame[] to interleaved float[]
-        float[] inputBuffer = new float[inFrames * 2];
+        int inputSize = inFrames * 2;
+        if (_resampleInputBuffer.Length < inputSize) {
+            _resampleInputBuffer = new float[inputSize];
+        }
         Span<AudioFrame> convertSpan = _convertBuffer.AsSpan();
         for (int i = 0; i < inFrames; i++) {
-            inputBuffer[i * 2] = convertSpan[i].Left;
-            inputBuffer[i * 2 + 1] = convertSpan[i].Right;
+            _resampleInputBuffer[i * 2] = convertSpan[i].Left;
+            _resampleInputBuffer[i * 2 + 1] = convertSpan[i].Right;
         }
 
         // Prepare output buffer
-        float[] outputBuffer = new float[estimatedOutFrames * 2];
+        int outputSize = estimatedOutFrames * 2;
+        if (_resampleOutputBuffer.Length < outputSize) {
+            _resampleOutputBuffer = new float[outputSize];
+        }
 
         // Process through Speex resampler (interleaved stereo)
         _speexResampler.ProcessInterleavedFloat(
-            inputBuffer.AsSpan(),
-            outputBuffer.AsSpan(),
+            _resampleInputBuffer.AsSpan(0, inputSize),
+            _resampleOutputBuffer.AsSpan(0, outputSize),
             out uint inFramesConsumed,
             out uint outFramesGenerated);
 
         // Copy resampled frames back to audio_frames
         for (int i = 0; i < (int)outFramesGenerated; i++) {
             AudioFrames[audioFramesStartingSize + i] = new AudioFrame(
-                outputBuffer[i * 2],
-                outputBuffer[i * 2 + 1]);
+                _resampleOutputBuffer[i * 2],
+                _resampleOutputBuffer[i * 2 + 1]);
         }
 
         // Trim audio_frames to actual size

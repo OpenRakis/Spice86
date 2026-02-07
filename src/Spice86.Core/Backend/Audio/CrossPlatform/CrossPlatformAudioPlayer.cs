@@ -98,11 +98,9 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
 
     /// <inheritdoc/>
     internal override int WriteData(Span<float> data) {
-        // BulkEnqueue: blocks producer until all data is enqueued or queue is stopped.
-        // Span can't cross Monitor.Wait, so copy to a temporary array.
-        float[] temp = new float[data.Length];
-        data.CopyTo(temp);
-        return _queue.BulkEnqueue(temp, 0, temp.Length);
+        // BulkEnqueue(ReadOnlySpan<T>) processes in chunks within lock acquisitions,
+        // avoiding the need to copy to a temporary array.
+        return _queue.BulkEnqueue((ReadOnlySpan<float>)data);
     }
 
     /// <summary>
