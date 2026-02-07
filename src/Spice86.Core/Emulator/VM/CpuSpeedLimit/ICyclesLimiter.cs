@@ -104,4 +104,12 @@ public interface ICyclesLimiter {
     /// Reference: DOSBox src/cpu/cpu.h CPU_CycleMax
     /// </summary>
     int TickCycleMax { get; }
+
+    /// <summary>
+    /// Gets the total number of IO delay cycles removed during the current tick.
+    /// This is used for auto-cycle adjustment to discount IO-heavy periods.
+    /// Accumulated in <see cref="ConsumeIoCycles"/>, reset at each tick boundary.
+    /// Reference: DOSBox src/cpu/cpu.h CPU_IODelayRemoved
+    /// </summary>
+    long IoDelayRemoved { get; }
 }

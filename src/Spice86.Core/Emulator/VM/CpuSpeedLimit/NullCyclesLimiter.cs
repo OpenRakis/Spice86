@@ -48,4 +48,6 @@ internal class NullCyclesLimiter : ICyclesLimiter {
     public long NextTickBoundaryCycles => 0;
 
     public int TickCycleMax => 0;
+
+    public long IoDelayRemoved => 0;
 }

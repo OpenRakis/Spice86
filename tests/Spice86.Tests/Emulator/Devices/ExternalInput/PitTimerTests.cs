@@ -55,7 +55,7 @@ public sealed class PitTimerTests {
             Logger = Substitute.For<ILoggerService>();
             State = new State(CpuModel.ZET_86);
             var breakpoints = new AddressReadWriteBreakpoints();
-            Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false);
+            Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false, new NullCyclesLimiter());
             DualPic = new DualPic(Dispatcher, State, Logger, false);
             Speaker = new StubPitSpeaker();
             var emulatedClock = new EmulatedClock(new NullCyclesLimiter());

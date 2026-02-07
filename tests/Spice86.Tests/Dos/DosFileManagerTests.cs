@@ -114,7 +114,7 @@ public class DosFileManagerTests {
         State state = new(CpuModel.INTEL_80286);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
-        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
+        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, configuration.FailOnUnhandledPort, new NullCyclesLimiter());
         A20Gate a20Gate = new(configuration.A20Gate);
         Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);

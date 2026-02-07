@@ -123,9 +123,16 @@ public class Spice86DependencyInjection : IDisposable {
         AddressReadWriteBreakpoints memoryReadWriteBreakpoints = new();
         AddressReadWriteBreakpoints ioReadWriteBreakpoints = new();
 
+        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(state, configuration);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Cycles limiter created...");
+        }
+
         IOPortDispatcher ioPortDispatcher = new(
             ioReadWriteBreakpoints, state,
-            loggerService, configuration.FailOnUnhandledPort);
+            loggerService, configuration.FailOnUnhandledPort,
+            cyclesLimiter);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("IO port dispatcher created...");
@@ -164,12 +171,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("BIOS data area created...");
-        }
-
-        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(state, configuration);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Cycles limiter created...");
         }
 
         IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null

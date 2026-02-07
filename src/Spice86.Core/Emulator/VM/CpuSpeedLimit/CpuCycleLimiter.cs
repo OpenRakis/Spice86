@@ -27,6 +27,13 @@ public class CpuCycleLimiter : ICyclesLimiter {
     /// </summary>
     private int _tickCycleMax;
 
+    /// <summary>
+    /// Accumulated IO delay cycles removed during the current tick.
+    /// Reset to 0 at each tick boundary, matching DOSBox's CPU_IODelayRemoved.
+    /// Reference: DOSBox src/cpu/cpu.cpp CPU_IODelayRemoved, reset in dosbox.cpp
+    /// </summary>
+    private long _ioDelayRemoved;
+
     private static readonly long TicksPerMs = Stopwatch.Frequency / 1000;
 
     private const int CyclesUp = 1000;
@@ -89,6 +96,10 @@ public class CpuCycleLimiter : ICyclesLimiter {
         // Reference: DOSBox TIMER_AddTick() increments PIC_Ticks.
         TickOccurred = true;
         _tickCount++;
+
+        // Reset IO delay tracking for the new tick.
+        // Reference: DOSBox dosbox.cpp: CPU_IODelayRemoved = 0; at tick boundary.
+        _ioDelayRemoved = 0;
 
         // Snapshot the current target for the new tick, like DOSBox's
         // TIMER_AddTick() which uses CPU_CycleMax for the entire tick.
@@ -190,6 +201,9 @@ public class CpuCycleLimiter : ICyclesLimiter {
     }
 
     /// <inheritdoc/>
+    public long IoDelayRemoved => _ioDelayRemoved;
+
+    /// <inheritdoc/>
     public void ConsumeIoCycles(int cycles) {
         // Lower the tick boundary so the remaining budget for this tick is reduced.
         // Equivalent to DOSBox: CPU_Cycles -= delaycyc
@@ -198,6 +212,10 @@ public class CpuCycleLimiter : ICyclesLimiter {
         int clamped = (int)Math.Min(cycles, remaining);
         if (clamped > 0) {
             _targetCyclesForPause -= clamped;
+            // Track removed IO cycles for auto-cycle adjustment, matching DOSBox:
+            //   CPU_IODelayRemoved += delaycyc;
+            // Reference: DOSBox src/hardware/port.cpp IO_USEC_read_delay(), IO_USEC_write_delay()
+            _ioDelayRemoved += clamped;
         }
     }
 

@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -31,7 +32,7 @@ public class PicTests {
     public PicTests() {
         ILoggerService logger = Substitute.For<ILoggerService>();
         State state = new(CpuModel.INTEL_80286);
-        _ioPortDispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
+        _ioPortDispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false, new NullCyclesLimiter());
         _pic = new DualPic(_ioPortDispatcher, state, logger, false);
     }
 
