@@ -579,7 +579,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _dacChannel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
         }
 
-        _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, opl.MixerChannel, loggerService);
+        _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, opl.MixerChannel, loggerService, DspChangeStereo);
 
         // Reference: src/hardware/audio/soundblaster.cpp SoundBlaster constructor lines 3660-3664
         // Must set Normal state BEFORE dsp_reset() so first game reset triggers properly.
@@ -2318,6 +2318,26 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _loggerService.Debug("SOUNDBLASTER: DMA Transfer - Mode={Mode}, Stereo={Stereo}, AutoInit={AutoInit}, FreqHz={FreqHz}, Rate={Rate}, Left={Left}",
                 mode, stereo, autoInit, freqHz, _sb.Dma.Rate, _sb.Dma.Left);
         }
+    }
+
+    /// <summary>
+    /// Changes the stereo mode during active DMA playback.
+    /// Called by the hardware mixer when register 0x0E (Output/Stereo Select) is written.
+    /// Reference: src/hardware/audio/soundblaster.cpp dsp_change_stereo()
+    /// </summary>
+    private void DspChangeStereo(bool stereo) {
+        if (!_sb.Dma.Stereo && stereo) {
+            _dacChannel.SetSampleRate((int)(_sb.FreqHz / 2));
+            _sb.Dma.Mul *= 2;
+            _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
+            _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
+        } else if (_sb.Dma.Stereo && !stereo) {
+            _dacChannel.SetSampleRate((int)_sb.FreqHz);
+            _sb.Dma.Mul /= 2;
+            _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
+            _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
+        }
+        _sb.Dma.Stereo = stereo;
     }
 
     /// <summary>

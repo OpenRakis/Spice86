@@ -25,6 +25,11 @@ public static class MixerRegisters {
     public const byte DMA = 0x81;
 
     /// <summary>
+    /// Master Volume register (SB2 only, mono).
+    /// </summary>
+    public const byte MasterVolumeSb2 = 0x02;
+
+    /// <summary>
     /// Master Volume register (SB Pro).
     /// </summary>
     public const byte MasterVolume = 0x22;
@@ -33,6 +38,16 @@ public static class MixerRegisters {
     /// DAC/Voice Volume register (SB Pro).
     /// </summary>
     public const byte DacVolume = 0x04;
+
+    /// <summary>
+    /// FM Volume register (SB2 only, mono) + FM output selection.
+    /// </summary>
+    public const byte FmVolumeSb2 = 0x06;
+
+    /// <summary>
+    /// CD Audio Volume register (SB2 only, mono).
+    /// </summary>
+    public const byte CdVolumeSb2 = 0x08;
 
     /// <summary>
     /// FM Volume register (SB Pro).
@@ -53,6 +68,11 @@ public static class MixerRegisters {
     /// Mic Volume register (SB Pro).
     /// </summary>
     public const byte MicVolume = 0x0A;
+
+    /// <summary>
+    /// Input control register (SBPro only, stored as unhandled).
+    /// </summary>
+    public const byte InputControl = 0x0C;
 
     /// <summary>
     /// Output/Stereo Select register.

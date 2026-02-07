@@ -18,8 +18,8 @@ public class HardwareMixer {
     private readonly byte[] _dacVolume = new byte[2] { 31, 31 };    // Left, Right
     private readonly byte[] _fmVolume = new byte[2] { 31, 31 };     // Left, Right
     private readonly byte[] _cdaVolume = new byte[2] { 31, 31 };    // Left, Right
-    private readonly byte[] _lineVolume = new byte[2] { 31, 31 };   // Left, Right
-    private byte _micVolume = 31;
+    private readonly byte[] _lineVolume = new byte[2];   // Left, Right - zero-initialized like DOSBox
+    private byte _micVolume; // zero-initialized like DOSBox
 
     // Sb16 advanced registers
     private byte _pcmLevel;
@@ -41,6 +41,10 @@ public class HardwareMixer {
     private bool _stereoEnabled;
     private bool _filterEnabled = true;
 
+    // Storage for unhandled registers (SBPro 0x0C, SB16 0x3B-0x47)
+    // Reference: soundblaster.cpp sb.mixer.unhandled[]
+    private readonly byte[] _unhandled = new byte[0x48];
+
     /// <summary>
     /// Initializes a new instance of the <see cref="HardwareMixer"/> class
     /// </summary>
@@ -48,14 +52,18 @@ public class HardwareMixer {
     /// <param name="pcmMixerChannel">The mixer channel for PCM/DAC sound effects.</param>
     /// <param name="OPLMixerChannel">The mixer channel for FM synth music.</param>
     /// <param name="loggerService">The service used for logging.</param>
+    /// <param name="onStereoChange">Callback invoked when stereo mode changes via mixer register 0x0E.</param>
     public HardwareMixer(SoundBlasterHardwareConfig soundBlasterHardwareConfig,
         MixerChannel pcmMixerChannel, MixerChannel OPLMixerChannel,
-        ILoggerService loggerService) {
+        ILoggerService loggerService, Action<bool> onStereoChange) {
         _logger = loggerService;
         _blasterHardwareConfig = soundBlasterHardwareConfig;
         _pcmMixerChannel = pcmMixerChannel;
         _OPLMixerChannel = OPLMixerChannel;
+        _onStereoChange = onStereoChange;
     }
+
+    private readonly Action<bool> _onStereoChange;
 
     /// <summary>
     /// Gets or sets the current mixer register in use.
@@ -95,7 +103,10 @@ public class HardwareMixer {
                 break;
 
             case MixerRegisters.InterruptStatus:
-                ret = (byte)InterruptStatusRegister;
+                // Reference: soundblaster.cpp ctmixer_read() case 0x82
+                // SB16 always sets bit 5 (0x20)
+                ret = (byte)((byte)InterruptStatusRegister |
+                    (_blasterHardwareConfig.SbType == SbType.Sb16 ? 0x20 : 0));
                 break;
 
             case MixerRegisters.IRQ:
@@ -104,6 +115,11 @@ public class HardwareMixer {
             case MixerRegisters.DMA:
                 return GetDMAByte();
 
+            // Master Volume (SB2 only, mono)
+            // Reference: soundblaster.cpp ctmixer_read() case 0x02
+            case MixerRegisters.MasterVolumeSb2:
+                return (byte)((_masterVolume[1] >> 1) & 0x0E);
+
             // Master Volume (SB Pro)
             case MixerRegisters.MasterVolume:
                 return ReadStereoVolume(_masterVolume);
@@ -111,6 +127,16 @@ public class HardwareMixer {
             // Voice/DAC Volume (SB Pro)
             case MixerRegisters.DacVolume:
                 return ReadStereoVolume(_dacVolume);
+
+            // FM Volume (SB2 only) + FM output selection
+            // Reference: soundblaster.cpp ctmixer_read() case 0x06
+            case MixerRegisters.FmVolumeSb2:
+                return (byte)((_fmVolume[1] >> 1) & 0x0E);
+
+            // CD Audio Volume (SB2 only)
+            // Reference: soundblaster.cpp ctmixer_read() case 0x08
+            case MixerRegisters.CdVolumeSb2:
+                return (byte)((_cdaVolume[1] >> 1) & 0x0E);
 
             // FM Volume (SB Pro)
             case MixerRegisters.FmVolume:
@@ -124,9 +150,21 @@ public class HardwareMixer {
             case MixerRegisters.LineVolume:
                 return ReadStereoVolume(_lineVolume);
 
-            // Mic Level (SB Pro)
+            // Mic Level (SB Pro) or DAC Volume (SB2)
+            // Reference: soundblaster.cpp ctmixer_read() case 0x0a
             case MixerRegisters.MicVolume:
-                return (byte)((_micVolume >> 2) & 0x07);
+                if (_blasterHardwareConfig.SbType == SbType.SB2) {
+                    return (byte)(_dacVolume[0] >> 2);
+                }
+                return (byte)((_micVolume >> 2) & (_blasterHardwareConfig.SbType == SbType.Sb16 ? 0x07 : 0x06));
+
+            // Input Control (SBPro only, stored as unhandled)
+            case MixerRegisters.InputControl:
+                if (_blasterHardwareConfig.SbType == SbType.SBPro1 || _blasterHardwareConfig.SbType == SbType.SBPro2) {
+                    return _unhandled[MixerRegisters.InputControl];
+                }
+                ret = 0x0A;
+                break;
 
             // Output/Stereo Select
             case MixerRegisters.OutputStereoSelect:
@@ -249,7 +287,8 @@ public class HardwareMixer {
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                     _logger.Warning("Read from unsupported mixer register {CurrentAddress:X2}h", CurrentAddress);
                 }
-                ret = 0x00;
+                // Reference: soundblaster.cpp ctmixer_read() default case returns 0x0A
+                ret = 0x0A;
                 break;
         }
         if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
@@ -262,15 +301,19 @@ public class HardwareMixer {
     private static string GetMixerRegisterName(byte addr) {
         return addr switch {
             MixerRegisters.Reset => "Reset",
+            MixerRegisters.MasterVolumeSb2 => "MasterVolumeSb2",
             MixerRegisters.InterruptStatus => "InterruptStatus",
             MixerRegisters.IRQ => "IRQ",
             MixerRegisters.DMA => "DMA",
             MixerRegisters.MasterVolume => "MasterVolume",
             MixerRegisters.DacVolume => "DacVolume",
+            MixerRegisters.FmVolumeSb2 => "FmVolumeSb2",
+            MixerRegisters.CdVolumeSb2 => "CdVolumeSb2",
             MixerRegisters.FmVolume => "FmVolume",
             MixerRegisters.CdVolume => "CdVolume",
             MixerRegisters.LineVolume => "LineVolume",
             MixerRegisters.MicVolume => "MicVolume",
+            MixerRegisters.InputControl => "InputControl",
             MixerRegisters.OutputStereoSelect => "OutputStereoSelect",
             MixerRegisters.MasterVolumeLeft => "MasterVolumeLeft",
             MixerRegisters.MasterVolumeRight => "MasterVolumeRight",
@@ -317,6 +360,13 @@ public class HardwareMixer {
                 Reset();
                 break;
 
+            // Master Volume (SB2 only, mono)
+            // Reference: soundblaster.cpp ctmixer_write() case 0x02
+            case MixerRegisters.MasterVolumeSb2:
+                WriteStereoVolume(_masterVolume, (byte)((value & 0x0F) | (value << 4)));
+                UpdateMixerVolumes();
+                break;
+
             case MixerRegisters.MasterVolume:
                 WriteStereoVolume(_masterVolume, value);
                 UpdateMixerVolumes();
@@ -324,6 +374,20 @@ public class HardwareMixer {
 
             case MixerRegisters.DacVolume:
                 WriteStereoVolume(_dacVolume, value);
+                UpdateMixerVolumes();
+                break;
+
+            // FM Volume (SB2 only) + FM output selection
+            // Reference: soundblaster.cpp ctmixer_write() case 0x06
+            case MixerRegisters.FmVolumeSb2:
+                WriteStereoVolume(_fmVolume, (byte)((value & 0x0F) | (value << 4)));
+                UpdateMixerVolumes();
+                break;
+
+            // CD Audio Volume (SB2 only)
+            // Reference: soundblaster.cpp ctmixer_write() case 0x08
+            case MixerRegisters.CdVolumeSb2:
+                WriteStereoVolume(_cdaVolume, (byte)((value & 0x0F) | (value << 4)));
                 UpdateMixerVolumes();
                 break;
 
@@ -342,21 +406,51 @@ public class HardwareMixer {
                 // Line-in input connection is not emulated.
                 break;
 
+            // Mic Level (SB Pro) or DAC Volume (SB2)
+            // Reference: soundblaster.cpp ctmixer_write() case 0x0a
             case MixerRegisters.MicVolume:
-                _micVolume = (byte)(((value & 0x07) << 2) | 0x03);
-                // no microphone input support in the emulator
+                if (_blasterHardwareConfig.SbType == SbType.SB2) {
+                    _dacVolume[0] = _dacVolume[1] = (byte)(((value & 0x06) << 2) | 3);
+                    UpdateMixerVolumes();
+                } else {
+                    _micVolume = (byte)(((value & 0x07) << 2) |
+                        (_blasterHardwareConfig.SbType == SbType.Sb16 ? 1 : 3));
+                    // no microphone input support in the emulator
+                }
                 break;
 
-            case MixerRegisters.OutputStereoSelect:
-                StereoEnabled = (value & 0x02) != 0;
-                _filterEnabled = (value & 0x20) == 0;
+            // Input Control (SBPro only)
+            // Reference: soundblaster.cpp ctmixer_write() default case stores in unhandled[]
+            case MixerRegisters.InputControl:
+                if (_blasterHardwareConfig.SbType == SbType.SBPro1 || _blasterHardwareConfig.SbType == SbType.SBPro2) {
+                    _unhandled[MixerRegisters.InputControl] = value;
+                }
+                break;
+
+            // Output/Stereo Select
+            // Reference: soundblaster.cpp ctmixer_write() case 0x0e
+            case MixerRegisters.OutputStereoSelect: {
+                bool newStereo = (value & 0x02) != 0;
+
+                // Filter toggle is only possible on SBPro2
+                // Reference: soundblaster.cpp "Toggling the filter programmatically is only possible on the Sound Blaster Pro 2."
+                if (_blasterHardwareConfig.SbType == SbType.SBPro2) {
+                    _filterEnabled = (value & 0x20) == 0;
+                }
+
+                // Invoke the stereo change callback (dsp_change_stereo equivalent)
+                _onStereoChange(newStereo);
+
+                _stereoEnabled = newStereo;
+                UpdateMixerVolumes();
 
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
                     _logger.Debug("Mixer set to {StereoSetting} with filter {FilterSetting}",
-                        StereoEnabled ? "STEREO" : "MONO",
+                        _stereoEnabled ? "STEREO" : "MONO",
                         _filterEnabled ? "ENABLED" : "DISABLED");
                 }
                 break;
+            }
 
             // Sb16-specific registers
             case MixerRegisters.MasterVolumeLeft:
@@ -539,33 +633,14 @@ public class HardwareMixer {
 
     /// <summary>
     /// Resets the mixer to its default state.
+    /// Reference: soundblaster.cpp ctmixer_reset() — only resets fm, cda, dac, master to 31.
+    /// Line-in, mic, stereo, filter, and SB16 advanced registers are NOT reset.
     /// </summary>
     public void Reset() {
         SetDefaultVolumes(_masterVolume);
         SetDefaultVolumes(_dacVolume);
         SetDefaultVolumes(_fmVolume);
         SetDefaultVolumes(_cdaVolume);
-        SetDefaultVolumes(_lineVolume);
-        _micVolume = 31;
-        _stereoEnabled = false;
-        _filterEnabled = true;
-
-        // Reset Sb16 advanced registers
-        _pcmLevel = 0;
-        _recordingMonitor = 0;
-        _recordingSource = 0;
-        _recordingGain = 0;
-        _recordingGainLeft = 0;
-        _recordingGainRight = 0;
-        _outputFilter = 0;
-        _inputFilter = 0;
-        _effects3D = 0;
-        _altFeatureEnable1 = 0;
-        _altFeatureEnable2 = 0;
-        _altFeatureStatus = 0;
-        _gamePortControl = 0;
-        _volumeControlMode = 0;
-        _reserved = 0;
 
         UpdateMixerVolumes();
 
@@ -611,15 +686,21 @@ public class HardwareMixer {
         volumes[1] = 31;
     }
 
-    private static void WriteStereoVolume(byte[] target, byte value) {
+    private void WriteStereoVolume(byte[] target, byte value) {
         // SB Pro format: Left channel in high nibble, right channel in low nibble
-        target[0] = (byte)(((value & 0xF0) >> 3) | 0x03); // Left (bits 7-4)
-        target[1] = (byte)(((value & 0x0F) << 1) | 0x03); // Right (bits 3-0)
+        // Reference: soundblaster.cpp write_sb_pro_volume()
+        // SB16 uses | 1, all other types use | 3
+        int orMask = _blasterHardwareConfig.SbType == SbType.Sb16 ? 1 : 3;
+        target[0] = (byte)(((value & 0xF0) >> 3) | orMask); // Left (bits 7-4)
+        target[1] = (byte)(((value & 0x0F) << 1) | orMask); // Right (bits 3-0)
     }
 
-    private static byte ReadStereoVolume(byte[] source) {
+    private byte ReadStereoVolume(byte[] source) {
         // Convert the internal 5-bit format back to the SB Pro mixer register format
-        return (byte)(((source[0] & 0x1E) << 3) | ((source[1] & 0x1E) >> 1) | 0x11);
+        // Reference: soundblaster.cpp read_sb_pro_volume()
+        // Only SBPro1/SBPro2 add | 0x11 to fill unused bits
+        int orMask = (_blasterHardwareConfig.SbType == SbType.SBPro1 || _blasterHardwareConfig.SbType == SbType.SBPro2) ? 0x11 : 0;
+        return (byte)(((source[0] & 0x1E) << 3) | ((source[1] & 0x1E) >> 1) | orMask);
     }
 
     private void UpdateMixerVolumes() {
