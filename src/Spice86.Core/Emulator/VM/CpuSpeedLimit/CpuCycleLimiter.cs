@@ -182,10 +182,13 @@ public class CpuCycleLimiter : ICyclesLimiter {
         // Reference: DOSBox PIC_TickIndex() = PIC_TickIndexND() / CPU_CycleMax
         // Uses _tickCycleMax (snapshotted at tick boundary) as denominator,
         // ensuring FullIndex is continuous and monotonic within a tick.
+        // DOSBox does NOT clamp PIC_TickIndex() — it can momentarily exceed 1.0
+        // when an instruction overshoots the tick boundary. Clamping would create
+        // a timing plateau followed by a discontinuity, causing audio artifacts.
         long tickStart = _targetCyclesForPause - _tickCycleMax;
         long cyclesDone = _state.Cycles - tickStart;
         double fraction = (double)cyclesDone / _tickCycleMax;
-        return Math.Clamp(fraction, 0.0, 1.0);
+        return Math.Max(fraction, 0.0);
     }
 
     /// <inheritdoc/>
