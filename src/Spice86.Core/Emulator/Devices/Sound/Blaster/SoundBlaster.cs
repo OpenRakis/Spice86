@@ -21,6 +21,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private const int DmaBufSize = 1024;
     private const int DspBufSize = 64;
     private const int MinPlaybackRateHz = 5000;
+    private const int NativeDacRateHz = 45454;
     private const ushort DefaultPlaybackRateHz = 22050;
     private const int SbShift = 14;
     private const ushort SbShiftMask = (1 << SbShift) - 1;
@@ -157,27 +158,83 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         /// Reference: src/hardware/audio/soundblaster.cpp class Dac
         /// </summary>
         public class DacState {
-            private readonly SbInfo _sb;
+            private const float PercentDifferenceThreshold = 0.01f;
+            private const int SequentialChangesThreshold = 10;
+            private const float MillisInSecond = 1000.0f;
 
-            public DacState(SbInfo sb) {
+            private readonly SbInfo _sb;
+            private readonly IEmulatedClock _clock;
+
+            private float _lastWriteMs;
+            private int _currentRateHz = MinPlaybackRateHz;
+            private int _sequentialChangesTally;
+
+            public DacState(SbInfo sb, IEmulatedClock clock) {
                 _sb = sb;
+                _clock = clock;
+            }
+
+            /// <summary>
+            /// Resets the DAC state. Called when the DAC wakes up or mode changes.
+            /// Reference: src/hardware/audio/soundblaster.cpp sb.dac = {};
+            /// </summary>
+            public void Reset() {
+                _lastWriteMs = 0;
+                _currentRateHz = MinPlaybackRateHz;
+                _sequentialChangesTally = 0;
             }
 
             /// <summary>
             /// Reference: src/hardware/audio/soundblaster.cpp Dac::RenderFrame()
             /// </summary>
             public AudioFrame RenderFrame() {
-                // return sb.speaker_enabled ? lut_u8to16[sb.dsp.in.data[0]] : 0.0f;
                 if (_sb.SpeakerEnabled && _sb.Dsp.In.Data.Length > 0) {
                     float sample = LookupTables.ToUnsigned8(_sb.Dsp.In.Data[0]);
                     return new AudioFrame(sample, sample);
                 }
                 return new AudioFrame(0.0f, 0.0f);
             }
+
+            /// <summary>
+            /// Measures the DAC write rate by timing consecutive writes.
+            /// Returns the new rate in Hz if the rate has changed significantly, or null otherwise.
+            /// Reference: src/hardware/audio/soundblaster.cpp Dac::MeasureDacRateHz()
+            /// </summary>
+            public int? MeasureDacRateHz() {
+                float currWriteMs = (float)_clock.FullIndex;
+                float elapsedMs = currWriteMs - _lastWriteMs;
+                _lastWriteMs = currWriteMs;
+
+                if (elapsedMs <= 0) {
+                    return null;
+                }
+
+                float measuredRate = MillisInSecond / elapsedMs;
+
+                float changePct = Math.Abs(measuredRate - _currentRateHz) / _currentRateHz;
+
+                _sequentialChangesTally = (changePct > PercentDifferenceThreshold)
+                    ? _sequentialChangesTally + 1
+                    : 0;
+
+                if (_sequentialChangesTally > SequentialChangesThreshold) {
+                    _sequentialChangesTally = 0;
+                    _currentRateHz = (int)Math.Round(measuredRate);
+                    return _currentRateHz;
+                }
+
+                return null;
+            }
         }
 
         private DacState? _dac;
-        public DacState Dac => _dac ??= new DacState(this);
+        public DacState Dac => _dac ??= new DacState(this, _clock);
+
+        private readonly IEmulatedClock _clock;
+
+        public SbInfo(IEmulatedClock clock) {
+            _clock = clock;
+        }
     }
 
     private static byte DecodeAdpcmPortion(
@@ -437,7 +494,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         new int[] { 0x01, -0x02, 0x04, -0x08, -0x10, 0x20, -0x40, 0x80, 90 }
     };
 
-    private readonly SbInfo _sb = new();
+    private readonly SbInfo _sb;
     private readonly SoundBlasterHardwareConfig _config;
     private readonly DualPic _dualPic;
     private readonly DmaChannel _primaryDmaChannel;
@@ -517,6 +574,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _opl = opl;
         _scheduler = scheduler;
         _clock = clock;
+        _sb = new SbInfo(clock);
 
         _primaryDmaChannel = dmaBus.GetChannel(_config.LowDma)
             ?? throw new InvalidOperationException($"DMA channel {_config.LowDma} unavailable for Sound Blaster.");
@@ -574,7 +632,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // ZOH upsampler provides vintage DAC sound characteristic
         // Native DAC rate is 49716 Hz, then resampled to host rate (typically 48000 Hz)
         if (_config.SbType == SbType.SBPro2) {
-            const int NativeDacRateHz = 49716;
             _dacChannel.SetZeroOrderHoldUpsamplerTargetRate(NativeDacRateHz);
             _dacChannel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
         }
@@ -645,6 +702,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         return _dacChannel.WakeUp();
     }
 
+    /// <summary>
+    /// Sets the channel sample rate, clamped to [MinPlaybackRateHz, NativeDacRateHz].
+    /// Only updates if the rate has actually changed.
+    /// Reference: src/hardware/audio/soundblaster.cpp SoundBlaster::SetChannelRateHz()
+    /// </summary>
+    private void SetChannelRateHz(int requestedRateHz) {
+        int rateHz = Math.Clamp(requestedRateHz, MinPlaybackRateHz, NativeDacRateHz);
+        if (_dacChannel.GetSampleRate() != rateHz) {
+            _dacChannel.SetSampleRate(rateHz);
+        }
+    }
+
     private void DspDmaCallback(DmaChannel channel, DmaChannel.DmaEvent dmaEvent) {
         switch (dmaEvent) {
             case DmaChannel.DmaEvent.ReachedTerminalCount:
@@ -652,34 +721,32 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case DmaChannel.DmaEvent.IsMasked:
                 if (_sb.Mode == DspMode.Dma) {
-                    double currentTime = _clock.FullIndex;
-                    double elapsedTime = currentTime - _lastDmaCallbackTime;
+                    // Catch up to current time, but don't generate an IRQ!
+                    // Fixes problems with later sci games.
+                    double t = _clock.FullIndex - _lastDmaCallbackTime;
+                    uint s = (uint)(_sb.Dma.Rate * t / 1000.0);
 
-                    if (elapsedTime > 0 && _sb.Dma.Rate > 0) {
-                        uint samplesToGenerate = (uint)(_sb.Dma.Rate * elapsedTime / 1000.0);
+                    if (s > _sb.Dma.Min) {
+                        s = _sb.Dma.Min;
+                    }
 
-                        if (samplesToGenerate > _sb.Dma.Min) {
-                            samplesToGenerate = _sb.Dma.Min;
+                    uint minSize = _sb.Dma.Mul >> SbShift;
+                    if (minSize == 0) {
+                        minSize = 1;
+                    }
+                    minSize *= 2;
+
+                    if (_sb.Dma.Left > minSize) {
+                        if (s > (_sb.Dma.Left - minSize)) {
+                            s = _sb.Dma.Left - minSize;
                         }
-
-                        uint minSize = _sb.Dma.Mul >> SbShift;
-                        if (minSize == 0) {
-                            minSize = 1;
+                        // This will trigger an irq, see
+                        // PlayDmaTransfer, so lets not do that
+                        if (!_sb.Dma.AutoInit && _sb.Dma.Left <= _sb.Dma.Min) {
+                            s = 0;
                         }
-                        minSize *= 2;
-
-                        if (_sb.Dma.Left > minSize) {
-                            if (samplesToGenerate > (_sb.Dma.Left - minSize)) {
-                                samplesToGenerate = _sb.Dma.Left - minSize;
-                            }
-
-                            if (!_sb.Dma.AutoInit && _sb.Dma.Left <= _sb.Dma.Min) {
-                                samplesToGenerate = 0;
-                            }
-
-                            if (samplesToGenerate > 0) {
-                                PlayDmaTransfer(samplesToGenerate);
-                            }
+                        if (s > 0) {
+                            PlayDmaTransfer(s);
                         }
                     }
 
@@ -1411,7 +1478,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     // Reference: src/hardware/audio/soundblaster.cpp read_sb() DspReadStatus
                     if (_sb.Irq.Pending8Bit) {
                         _sb.Irq.Pending8Bit = false;
-                        _dualPic.DeactivateIrq(_config.Irq);
+                        _dualPic.DeactivateIrq(_sb.Hw.Irq);
                     }
                     byte readStatus = 0x7F; // lower 7 bits always set
                     if (_sb.Dsp.Out.Used != 0) {
@@ -1484,10 +1551,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void DspReset() {
-        // Stop any active callback before resetting state
-        SetCallbackNone();
-
-        _dualPic.DeactivateIrq(_config.Irq);
+        _dualPic.DeactivateIrq(_sb.Hw.Irq);
         DspChangeMode(DspMode.None);
         DspFlushData();
 
@@ -1502,7 +1566,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Dsp.WriteStatusCounter = 0;
         _sb.Dsp.ResetTally++;
 
-        // Ensure command state is properly reset (DOSBox uses sb.dsp.cmd == 0 implicitly)
+        // sb.dsp.cmd = DspNoCommand implicitly resets to "waiting for command" state in DOSBox
         _blasterState = BlasterState.WaitingForCommand;
 
         // Remove any pending finish reset events
@@ -1539,7 +1603,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Irq.Pending16Bit = false;
 
         // Update channel sample rate to default
-        _dacChannel.SetSampleRate(DefaultPlaybackRateHz);
+        SetChannelRateHz(DefaultPlaybackRateHz);
 
         // Re-initialize speaker state
         // Reference: src/hardware/audio/soundblaster.cpp dsp_reset() line 1751
@@ -1669,11 +1733,21 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Reference: src/hardware/audio/soundblaster.cpp DSP command 0x10
                 DspChangeMode(DspMode.Dac);
 
-                MaybeWakeUp();
+                if (MaybeWakeUp()) {
+                    // If we're waking up, then the DAC hasn't been running
+                    // (or maybe wasn't running at all), so start with a
+                    // fresh DAC state.
+                    _sb.Dac.Reset();
+                }
 
                 // Ensure we're using per-frame callback timing because DAC samples
                 // are sent one after another with sub-millisecond timing.
                 SetCallbackPerFrame();
+
+                int? dacRateHz = _sb.Dac.MeasureDacRateHz();
+                if (dacRateHz.HasValue) {
+                    SetChannelRateHz(dacRateHz.Value);
+                }
                 break;
 
             case 0x14:
@@ -2139,6 +2213,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Mode == mode) {
             return;
         }
+        switch (mode) {
+            case DspMode.Dac:
+                _sb.Dac.Reset();
+                break;
+            case DspMode.None:
+            case DspMode.Dma:
+            case DspMode.DmaPause:
+            case DspMode.DmaMasked:
+                break;
+        }
         _sb.Mode = mode;
     }
 
@@ -2150,7 +2234,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // If rate changes during active DMA, update the DMA-related timing values
         if (_sb.FreqHz != freqHz && _sb.Dma.Mode != DmaMode.None) {
             uint effectiveFreq = _sb.Mixer.StereoEnabled ? freqHz / 2 : freqHz;
-            _dacChannel.SetSampleRate((int)effectiveFreq);
+            SetChannelRateHz((int)effectiveFreq);
 
             _sb.Dma.Rate = (freqHz * _sb.Dma.Mul) >> SbShift;
             _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
@@ -2206,24 +2290,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp suppress_dma_transfer()
     /// </summary>
     private void SuppressDmaTransfer(uint bytesToRead) {
-        uint numBytes = Math.Min(bytesToRead, _sb.Dma.Left);
-
-        // Read and discard the DMA data silently
-        DmaChannel? dmaChannel = _sb.Dma.Channel;
-        if (dmaChannel is not null && numBytes > 0) {
-            Span<byte> discardBuffer = stackalloc byte[(int)Math.Min(numBytes, 4096)];
-            uint remaining = numBytes;
-            while (remaining > 0) {
-                int toRead = (int)Math.Min(remaining, (uint)discardBuffer.Length);
-                int read = dmaChannel.Read(toRead, discardBuffer[..toRead]);
-                if (read == 0) {
-                    break;
-                }
-                remaining -= (uint)read;
-            }
+        uint numBytes = bytesToRead;
+        if (_sb.Dma.Left < numBytes) {
+            numBytes = _sb.Dma.Left;
         }
 
-        _sb.Dma.Left -= numBytes;
+        // Read and discard the DMA data through the standard DMA read path,
+        // which matches DOSBox's use of read_dma_8bit(). The data goes into
+        // _sb.Dma.Buf8 but is never processed.
+        uint read = ReadDma8Bit(numBytes);
+
+        _sb.Dma.Left -= read;
 
         if (_sb.Dma.Left == 0) {
             // Raise appropriate IRQ
@@ -2244,9 +2321,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         // If more data remains, schedule another suppress
         if (_sb.Dma.Left > 0) {
-            uint nextBytes = Math.Min(_sb.Dma.Min, _sb.Dma.Left);
-            double delayMs = (nextBytes * 1000.0) / _sb.Dma.Rate;
-            _scheduler.AddEvent(SuppressDmaTransfer, delayMs, nextBytes);
+            uint bigger = (_sb.Dma.Left > _sb.Dma.Min) ? _sb.Dma.Min : _sb.Dma.Left;
+            double delayMs = (bigger * 1000.0) / _sb.Dma.Rate;
+            _scheduler.AddEvent(SuppressDmaTransfer, delayMs, bigger);
         }
     }
 
@@ -2259,7 +2336,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1571-1573
         _sb.Irq.Pending8Bit = false;
         _sb.Irq.Pending16Bit = false;
-        _dualPic.DeactivateIrq(_config.Irq);
+        _dualPic.DeactivateIrq(_sb.Hw.Irq);
 
         // Set up the multiplier based on DMA mode
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1575-1588
@@ -2303,7 +2380,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         // Update channel sample rate
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1612-1613
-        _dacChannel.SetSampleRate((int)freqHz);
+        SetChannelRateHz((int)freqHz);
 
         // Remove any pending DMA transfer events
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() line 1615
@@ -2327,17 +2404,22 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// </summary>
     private void DspChangeStereo(bool stereo) {
         if (!_sb.Dma.Stereo && stereo) {
-            _dacChannel.SetSampleRate((int)(_sb.FreqHz / 2));
+            SetChannelRateHz((int)(_sb.FreqHz / 2));
             _sb.Dma.Mul *= 2;
             _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
             _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
         } else if (_sb.Dma.Stereo && !stereo) {
-            _dacChannel.SetSampleRate((int)_sb.FreqHz);
+            SetChannelRateHz((int)_sb.FreqHz);
             _sb.Dma.Mul /= 2;
             _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
             _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
         }
         _sb.Dma.Stereo = stereo;
+
+        // Keep the internal mixer state in sync — this is the same field as
+        // DOSBox's sb.mixer.stereo_enabled, which is read by dsp_change_rate()
+        // and dsp_prepare_dma_old().
+        _sb.Mixer.StereoEnabled = stereo;
     }
 
     /// <summary>
@@ -2482,7 +2564,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Clear pending IRQs
         _sb.Irq.Pending8Bit = false;
         _sb.Irq.Pending16Bit = false;
-        _dualPic.DeactivateIrq(_config.Irq);
+        _dualPic.DeactivateIrq(_sb.Hw.Irq);
     }
 
     /// <summary>
