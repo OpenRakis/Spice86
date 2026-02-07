@@ -58,10 +58,14 @@ public class CpuCycleLimiter : ICyclesLimiter {
     }
 
     /// <inheritdoc/>
+    public bool TickOccurred { get; private set; }
+
+    /// <inheritdoc/>
     public void RegulateCycles() {
         // Fast path: if current cycles haven't reached the tick boundary, nothing to do.
         // This is the hot path — called every instruction — so it must be as cheap as possible.
         // Reference: DOSBox normal_loop() only enters PIC_RunQueue/increase_ticks when CPU_Cycles are exhausted.
+        TickOccurred = false;
         if (_state.Cycles < _targetCyclesForPause) {
             return;
         }
@@ -72,6 +76,7 @@ public class CpuCycleLimiter : ICyclesLimiter {
 
         // A full tick's worth of cycles has been consumed.
         // Reference: DOSBox TIMER_AddTick() increments PIC_Ticks.
+        TickOccurred = true;
         _tickCount++;
 
         // Set next tick boundary immediately (like DOSBox's CPU_CycleLeft = CPU_CycleMax).

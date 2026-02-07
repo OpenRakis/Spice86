@@ -131,8 +131,12 @@ public class EmulationLoop {
             // DOSBox: cpudecoder() runs first, then PIC_RunQueue() processes events.
             // This ensures the cycle count is updated before event timing checks.
             _emulationLoopScheduler.ProcessEvents();
-            _inputEventQueue.ProcessAllPendingInputEvents();
             _cyclesLimiter.RegulateCycles();
+            // Input polling at tick boundaries only, matching DOSBox's normal_loop():
+            // DOSBox calls GFX_PollAndHandleEvents() between ticks, not every instruction.
+            if (_cyclesLimiter.TickOccurred) {
+                _inputEventQueue.ProcessAllPendingInputEvents();
+            }
         }
 
         _performanceStopwatch.Stop();

@@ -74,6 +74,14 @@ public interface ICyclesLimiter {
     void ConsumeIoCycles(int cycles);
 
     /// <summary>
+    /// Whether a tick boundary was crossed during the last <see cref="RegulateCycles"/> call.
+    /// Used by the emulation loop to gate per-tick work such as input polling.
+    /// Reference: DOSBox's <c>normal_loop()</c> only calls <c>GFX_PollAndHandleEvents()</c>
+    /// between ticks, not every instruction.
+    /// </summary>
+    bool TickOccurred { get; }
+
+    /// <summary>
     /// Thread-safe snapshot of FullIndex (TickCount + CycleProgressionPercentage).
     /// Updated atomically by the emulation thread in RegulateCycles.
     /// Equivalent to DOSBox's <c>atomic_pic_index</c> / <c>PIC_AtomicIndex()</c>.

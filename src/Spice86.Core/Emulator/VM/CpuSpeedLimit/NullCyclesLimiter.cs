@@ -3,6 +3,12 @@
 internal class NullCyclesLimiter : ICyclesLimiter {
     public int TargetCpuCyclesPerMs { get; set; }
 
+    /// <summary>
+    /// Always true for unthrottled mode: input is processed every instruction
+    /// since there are no tick boundaries.
+    /// </summary>
+    public bool TickOccurred => true;
+
     public void RegulateCycles() {
         //NOP
     }
