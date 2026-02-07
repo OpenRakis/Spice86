@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Common;
 using Spice86.Libs.Sound.Devices.AdlibGold;
@@ -26,6 +27,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly Lock _chipLock = new();
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
+    private readonly ICyclesLimiter _cyclesLimiter;
     private readonly DualPic _dualPic;
     private readonly byte _oplIrqLine;
     private readonly OplMode _mode;
@@ -84,6 +86,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <param name="loggerService">The logger service.</param>
     /// <param name="scheduler">The event scheduler.</param>
     /// <param name="clock">The emulated clock.</param>
+    /// <param name="cyclesLimiter">The CPU cycle limiter, used for I/O port read delay simulation.</param>
     /// <param name="dualPic">The dual PIC.</param>
     /// <param name="mode">OPL synthesis mode.</param>
     /// <param name="sbBase">Sound Blaster base I/O address for port registration.</param>
@@ -92,7 +95,8 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <param name="mixerEnabled">True if SB mixer controls OPL volume.</param>
     public Opl(Mixer mixer, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
-        ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
+        ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock,
+        ICyclesLimiter cyclesLimiter, DualPic dualPic,
         OplMode mode = OplMode.Opl3, ushort sbBase = 0x220, bool enableOplIrq = false, byte oplIrqLine = 5,
         bool mixerEnabled = false)
         : base(state, failOnUnhandledPort, loggerService) {
@@ -102,6 +106,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         _sbBase = sbBase;
         _scheduler = scheduler;
         _clock = clock;
+        _cyclesLimiter = cyclesLimiter;
         _dualPic = dualPic;
         _useOplIrq = enableOplIrq;
         _oplIrqLine = oplIrqLine;
@@ -368,6 +373,15 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Reference: Opl::PortRead() in DOSBox
     /// </summary>
     private byte PortRead(ushort port) {
+        // Simulate I/O port access latency (~0.5 microseconds).
+        // Reference: DOSBox opl.cpp Opl::PortRead():
+        //   auto delaycyc = (CPU_CycleMax / 2048);
+        //   if (delaycyc > CPU_Cycles) delaycyc = CPU_Cycles;
+        //   CPU_Cycles -= delaycyc;
+        // At 3000 cycles/ms, 3000/2048 ≈ 1 cycle per port read.
+        int delayCycles = Math.Max(1, _cyclesLimiter.TargetCpuCyclesPerMs / 2048);
+        _cyclesLimiter.ConsumeIoCycles(delayCycles);
+
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("OPL: PortRead port=0x{Port:X4} mode={Mode}", port, _mode);
         }
@@ -756,8 +770,11 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 _mixerChannel.AddSamples_sfloat(1, frameData);
                 framesRemaining--;
             }
-            // Update last rendered time to now (cycle-accurate sync)
-            _lastRenderedMs = _clock.FullIndex;
+            // Update last rendered time to now using the atomic snapshot.
+            // AudioCallback runs on the mixer thread, so we must use AtomicFullIndex
+            // to avoid torn reads of the emulation thread's cycle state.
+            // Reference: DOSBox mixer.cpp mixer_thread_loop() uses PIC_AtomicIndex()
+            _lastRenderedMs = _clock.AtomicFullIndex;
         }
     }
 

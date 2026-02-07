@@ -16,9 +16,21 @@ public interface IEmulatedClock {
     /// </summary>
     /// <remarks>
     /// This provides more precise timing than ElapsedTimeMs for audio and other subsystems
-    /// that need sub-millisecond accuracy.
+    /// that need sub-millisecond accuracy. Only safe to call from the emulation thread.
+    /// Cross-thread consumers (mixer, audio callbacks) should use <see cref="AtomicFullIndex"/>.
     /// </remarks>
     double FullIndex { get; }
+
+    /// <summary>
+    /// Thread-safe snapshot of <see cref="FullIndex"/>.
+    /// Updated atomically by the emulation thread on every RegulateCycles call.
+    /// Equivalent to DOSBox Staging's PIC_AtomicIndex().
+    /// </summary>
+    /// <remarks>
+    /// Cross-thread consumers such as the mixer thread should always use this property
+    /// instead of <see cref="FullIndex"/> to avoid torn reads.
+    /// </remarks>
+    double AtomicFullIndex { get; }
 
     /// <summary>
     /// Gets or sets the start time for the emulated clock.

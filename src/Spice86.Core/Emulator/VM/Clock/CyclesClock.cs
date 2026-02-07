@@ -18,7 +18,19 @@ public class CyclesClock : IEmulatedClock {
 
     public double ElapsedTimeMs => (double)_cpuState.Cycles * 1000 / CyclesPerSecond;
 
-    public double FullIndex => ElapsedTimeMs + _cyclesLimiter.GetCycleProgressionPercentage();
+    /// <summary>
+    /// Gets the full index with sub-ms precision from cycle counting.
+    /// FullIndex = ElapsedTimeMs already has sub-ms precision from the cycle conversion,
+    /// so no additional CycleProgressionPercentage is added (that would double-count).
+    /// Equivalent to DOSBox's PIC_FullIndex().
+    /// </summary>
+    public double FullIndex => ElapsedTimeMs;
+
+    /// <summary>
+    /// Thread-safe snapshot of FullIndex, updated atomically by the emulation thread.
+    /// Equivalent to DOSBox's PIC_AtomicIndex().
+    /// </summary>
+    public double AtomicFullIndex => _cyclesLimiter.AtomicFullIndex;
 
     public DateTime StartTime { get; set; }
 

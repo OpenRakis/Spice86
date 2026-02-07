@@ -176,9 +176,11 @@ public class Spice86DependencyInjection : IDisposable {
             ? new CyclesClock(state, cyclesLimiter, configuration.InstructionsPerSecond.Value)
             : new EmulatedClock(cyclesLimiter);
         
-        // Register clock to pause/resume events
+        // Register clock and limiter to pause/resume events
         pauseHandler.Pausing += () => emulatedClock.OnPause();
         pauseHandler.Resumed += () => emulatedClock.OnResume();
+        pauseHandler.Pausing += () => cyclesLimiter.OnPause();
+        pauseHandler.Resumed += () => cyclesLimiter.OnResume();
         
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
 
@@ -359,7 +361,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         Opl OPL = new(mixer, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService,
-            emulationLoopScheduler, emulatedClock, dualPic,
+            emulationLoopScheduler, emulatedClock, cyclesLimiter, dualPic,
             mode: configuration.OplMode, sbBase: configuration.SbBase, enableOplIrq: false);
 
         SoundBlaster soundBlaster = new(ioPortDispatcher,

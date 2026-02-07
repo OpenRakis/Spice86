@@ -76,7 +76,7 @@ public class EmulationLoopScheduler {
             return;
         }
 
-        double baseTime = _isServicingEvents ? _activeEventScheduledTime : _clock.ElapsedTimeMs;
+        double baseTime = _isServicingEvents ? _activeEventScheduledTime : _clock.FullIndex;
         double absoluteScheduledTime = baseTime + delay;
 
         ScheduledEntry entry = GetEntry(handler, absoluteScheduledTime, val);
@@ -145,14 +145,17 @@ public class EmulationLoopScheduler {
     /// <summary>
     ///     Executes all events that are due as of the current time provided by the clock.
     ///     Also invokes all registered tick handlers every 1ms.
-    ///     Reference: DOSBox staging src/hardware/pic.cpp TIMER_AddTick()
+    ///     Reference: DOSBox staging src/hardware/pic.cpp TIMER_AddTick() + PIC_RunQueue()
     /// </summary>
     public void ProcessEvents() {
-        double currentTime = _clock.ElapsedTimeMs;
+        // Use ElapsedTimeMs for tick handler detection — this is cheap (integer read for EmulatedClock).
+        // Reference: DOSBox calls TIMER_AddTick() from normal_loop() at integer tick boundaries,
+        // separate from the sub-ms event processing in PIC_RunQueue().
+        double elapsedMs = _clock.ElapsedTimeMs;
 
         // Call tick handlers every 1ms (like DOSBox's TIMER_AddTick)
         // Reference: src/hardware/pic.cpp lines 607-624
-        while (currentTime >= _lastTickTimeMs + 1.0) {
+        while (elapsedMs >= _lastTickTimeMs + 1.0) {
             _lastTickTimeMs += 1.0;
 
             // Call our list of ticker handlers
@@ -165,9 +168,15 @@ public class EmulationLoopScheduler {
             }
         }
 
+        // Only compute expensive FullIndex when there are queued events.
+        // This is the key optimization: on the fast path (no events), we skip
+        // the GetCycleProgressionPercentage() double division entirely.
+        // Reference: DOSBox PIC_RunQueue() only checks events when they exist in pic_queue.
         if (_queue.Count == 0) {
             return;
         }
+
+        double currentTime = _clock.FullIndex;
 
         _isServicingEvents = true;
 

@@ -46,4 +46,40 @@ public interface ICyclesLimiter {
     /// </summary>
     /// <returns>A value between 0.0 and 1.0 representing the percentage of cycles completed.</returns>
     public double GetCycleProgressionPercentage();
+
+    /// <summary>
+    /// Gets the number of completed millisecond ticks.
+    /// Equivalent to DOSBox Staging's PIC_Ticks.
+    /// Reference: DOSBox src/hardware/pic.cpp PIC_Ticks, incremented by TIMER_AddTick()
+    /// </summary>
+    uint TickCount { get; }
+
+    /// <summary>
+    /// Called when the emulator is paused. Stops the internal throttle clock.
+    /// </summary>
+    void OnPause();
+
+    /// <summary>
+    /// Called when the emulator is resumed. Restarts the internal throttle clock.
+    /// </summary>
+    void OnResume();
+
+    /// <summary>
+    /// Consumes cycles from the current tick's budget to simulate I/O port access latency.
+    /// Equivalent to DOSBox's <c>CPU_Cycles -= delaycyc</c> pattern used in OPL PortRead.
+    /// This makes the next tick boundary arrive sooner, naturally pacing I/O-heavy loops.
+    /// Reference: DOSBox src/hardware/audio/opl.cpp Opl::PortRead()
+    /// </summary>
+    /// <param name="cycles">Number of cycles to consume (clamped to remaining budget).</param>
+    void ConsumeIoCycles(int cycles);
+
+    /// <summary>
+    /// Thread-safe snapshot of FullIndex (TickCount + CycleProgressionPercentage).
+    /// Updated atomically by the emulation thread in RegulateCycles.
+    /// Equivalent to DOSBox's <c>atomic_pic_index</c> / <c>PIC_AtomicIndex()</c>.
+    /// Cross-thread consumers (mixer, audio callbacks) should use this instead of
+    /// computing FullIndex directly, which involves non-atomic reads of multiple fields.
+    /// Reference: DOSBox src/hardware/pic.h PIC_AtomicIndex(), PIC_UpdateAtomicIndex()
+    /// </summary>
+    double AtomicFullIndex { get; }
 }
