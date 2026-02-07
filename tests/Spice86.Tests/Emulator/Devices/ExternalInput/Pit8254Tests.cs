@@ -34,7 +34,7 @@ public class Pit8254Tests {
         _ioPortDispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
         var pic = new DualPic(_ioPortDispatcher, state, logger, false);
         var emulatedClock = new EmulatedClock(new NullCyclesLimiter());
-        var emulationLoopScheduler = new EmulationLoopScheduler(emulatedClock, logger);
+        var emulationLoopScheduler = new EmulationLoopScheduler(emulatedClock, state, logger);
         _pit = new PitTimer(_ioPortDispatcher, state, pic, _speaker, emulationLoopScheduler, emulatedClock, logger, false);
     }
 

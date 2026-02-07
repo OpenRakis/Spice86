@@ -118,6 +118,9 @@ public class CpuCycleLimiter : ICyclesLimiter {
     /// <inheritdoc />
     public int TargetCpuCyclesPerMs { get; set; }
 
+    /// <inheritdoc />
+    public long NextTickBoundaryCycles => _targetCyclesForPause;
+
     /// <inheritdoc/>
     public void IncreaseCycles() {
         TargetCpuCyclesPerMs = Math.Min(TargetCpuCyclesPerMs + CyclesUp,

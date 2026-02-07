@@ -36,6 +36,14 @@ public class CyclesClock : IEmulatedClock {
 
     public DateTime CurrentDateTime => StartTime.AddMilliseconds(ElapsedTimeMs);
 
+    /// <inheritdoc/>
+    public long ConvertTimeToCycles(double scheduledTime) {
+        if (CyclesPerSecond == 0) {
+            return 0;
+        }
+        return (long)(scheduledTime * CyclesPerSecond / 1000.0);
+    }
+
     public void OnPause() {
         // No-op: when CPU is paused, cycles don't advance, so time naturally stops
     }

@@ -44,6 +44,14 @@ public interface IEmulatedClock {
     DateTime CurrentDateTime { get; }
 
     /// <summary>
+    /// Converts an absolute FullIndex time to the corresponding CPU cycle count.
+    /// Used by the scheduler to compute cycle thresholds for event processing.
+    /// </summary>
+    /// <param name="scheduledTime">The FullIndex time to convert.</param>
+    /// <returns>The absolute cycle count at which that time is reached.</returns>
+    long ConvertTimeToCycles(double scheduledTime);
+
+    /// <summary>
     /// Called when the emulator is paused.
     /// </summary>
     void OnPause();

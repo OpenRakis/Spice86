@@ -59,7 +59,7 @@ public sealed class PitTimerTests {
             DualPic = new DualPic(Dispatcher, State, Logger, false);
             Speaker = new StubPitSpeaker();
             var emulatedClock = new EmulatedClock(new NullCyclesLimiter());
-            var emulationLoopScheduler = new EmulationLoopScheduler(emulatedClock, Logger);
+            var emulationLoopScheduler = new EmulationLoopScheduler(emulatedClock, State, Logger);
             PitTimer = new PitTimer(Dispatcher, State, DualPic, Speaker, emulationLoopScheduler, emulatedClock, Logger, false);
         }
 

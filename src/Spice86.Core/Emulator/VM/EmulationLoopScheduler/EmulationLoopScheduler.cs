@@ -2,6 +2,7 @@
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Interfaces;
 
@@ -29,6 +30,7 @@ public class EmulationLoopScheduler {
 
     private readonly IEmulatedClock _clock;
     private readonly ILoggerService _logger;
+    private readonly State _state;
 
     private readonly FastPriorityQueue<ScheduledEntry> _queue = new(MaxQueueSize);
     private readonly Stack<ScheduledEntry> _entryPool = new(MaxQueueSize);
@@ -37,15 +39,21 @@ public class EmulationLoopScheduler {
 
     /// <summary>
     ///     Linked list of tick handlers called every tick.
-    ///     Reference: DOSBox staging src/hardware/pic.cpp firstticker linked list
     /// </summary>
     private readonly LinkedList<TickHandler> _tickHandlers = new();
 
     /// <summary>
     ///     Tracks the last tick time to determine when to fire tick handlers.
-    ///     Reference: DOSBox staging calls TIMER_AddTick() every ~1ms (1000 cycles at 1MHz)
     /// </summary>
     private double _lastTickTimeMs;
+
+    /// <summary>
+    ///     Cycle threshold: the next absolute cycle count at which events need processing.
+    ///     Matches DOSBox's pattern where PIC_RunQueue computes CPU_Cycles = cycles until
+    ///     next event, and cpudecoder runs that many instructions without rechecking.
+    ///     This eliminates the expensive FullIndex computation on every instruction.
+    /// </summary>
+    private long _nextCheckCycles;
 
     private bool _isServicingEvents;
     private double _activeEventScheduledTime;
@@ -54,9 +62,11 @@ public class EmulationLoopScheduler {
     ///     Initializes a new scheduler.
     /// </summary>
     /// <param name="clock">The emulated clock that provides the master time source.</param>
+    /// <param name="state">CPU state, used to read the current cycle count for fast-path gating.</param>
     /// <param name="logger">Logger used for diagnostic reporting.</param>
-    public EmulationLoopScheduler(IEmulatedClock clock, ILoggerService logger) {
+    public EmulationLoopScheduler(IEmulatedClock clock, State state, ILoggerService logger) {
         _clock = clock;
+        _state = state;
         _logger = logger;
         _monitor = new EmulationLoopSchedulerMonitor(logger);
     }
@@ -89,6 +99,14 @@ public class EmulationLoopScheduler {
         }
 
         events.Add(entry);
+
+        // If this event fires sooner than the current threshold, lower it.
+        // Matches DOSBox AddEntry() which sets CPU_Cycles=0 when a new event
+        // is earlier than the current batch boundary.
+        long eventCycles = _clock.ConvertTimeToCycles(absoluteScheduledTime);
+        if (eventCycles < _nextCheckCycles) {
+            _nextCheckCycles = eventCycles;
+        }
     }
 
     /// <summary>
@@ -110,8 +128,11 @@ public class EmulationLoopScheduler {
         events.Clear();
         _activeEventsByHandler.Remove(handler);
 
-        if (count > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Cancelled all {EventCount} events for handler {Handler}", count, GetHandlerName(handler));
+        if (count > 0) {
+            RecomputeNextCheckCycles();
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("Cancelled all {EventCount} events for handler {Handler}", count, GetHandlerName(handler));
+            }
         }
     }
 
@@ -145,34 +166,38 @@ public class EmulationLoopScheduler {
     /// <summary>
     ///     Executes all events that are due as of the current time provided by the clock.
     ///     Also invokes all registered tick handlers every 1ms.
-    ///     Reference: DOSBox staging src/hardware/pic.cpp TIMER_AddTick() + PIC_RunQueue()
+    ///     The fast path is a single long comparison per instruction, matching DOSBox's
+    ///     pattern where PIC_RunQueue sets CPU_Cycles to the batch size and cpudecoder
+    ///     runs that many instructions without rechecking.
     /// </summary>
     public void ProcessEvents() {
-        // Use ElapsedTimeMs for tick handler detection — this is cheap (integer read for EmulatedClock).
-        // Reference: DOSBox calls TIMER_AddTick() from normal_loop() at integer tick boundaries,
-        // separate from the sub-ms event processing in PIC_RunQueue().
+        // Cheap tick handler check (~4 ops: uint read + double compare).
+        // Tick handlers fire based on TickCount which advances in RegulateCycles,
+        // so this detects ticks one instruction after the boundary — same as DOSBox.
         double elapsedMs = _clock.ElapsedTimeMs;
-
-        // Call tick handlers every 1ms (like DOSBox's TIMER_AddTick)
-        // Reference: src/hardware/pic.cpp lines 607-624
-        while (elapsedMs >= _lastTickTimeMs + 1.0) {
-            _lastTickTimeMs += 1.0;
-
-            // Call our list of ticker handlers
-            // Reference: DOSBox iterates through firstticker linked list
-            LinkedListNode<TickHandler>? ticker = _tickHandlers.First;
-            while (ticker is not null) {
-                LinkedListNode<TickHandler>? nextTicker = ticker.Next;
-                ticker.Value.Invoke();
-                ticker = nextTicker;
+        if (elapsedMs >= _lastTickTimeMs + 1.0) {
+            while (elapsedMs >= _lastTickTimeMs + 1.0) {
+                _lastTickTimeMs += 1.0;
+                LinkedListNode<TickHandler>? ticker = _tickHandlers.First;
+                while (ticker is not null) {
+                    LinkedListNode<TickHandler>? nextTicker = ticker.Next;
+                    ticker.Value.Invoke();
+                    ticker = nextTicker;
+                }
             }
         }
 
-        // Only compute expensive FullIndex when there are queued events.
-        // This is the key optimization: on the fast path (no events), we skip
-        // the GetCycleProgressionPercentage() double division entirely.
-        // Reference: DOSBox PIC_RunQueue() only checks events when they exist in pic_queue.
+        // Cycle-gated event check: single long comparison on fast path.
+        // This eliminates the expensive FullIndex computation (double division)
+        // on every instruction. Events are only checked when the CPU reaches the
+        // cycle count where the next queued event fires.
+        if (_state.Cycles < _nextCheckCycles) {
+            return;
+        }
+
+        // Expensive path: compute FullIndex and process due events.
         if (_queue.Count == 0) {
+            _nextCheckCycles = long.MaxValue;
             return;
         }
 
@@ -184,7 +209,6 @@ public class EmulationLoopScheduler {
             ScheduledEntry entry = _queue.Dequeue();
             _monitor.OnEventExecuted(entry.ScheduledTime, currentTime, _queue.Count);
 
-            // Remove from active handler tracking
             if (_activeEventsByHandler.TryGetValue(entry.Handler, out List<ScheduledEntry>? events)) {
                 events.Remove(entry);
                 if (events.Count == 0) {
@@ -192,7 +216,6 @@ public class EmulationLoopScheduler {
                 }
             }
 
-            // Important for events that re-schedules another event, to ensure it will fire at the correct time not taking into account lag
             _activeEventScheduledTime = entry.ScheduledTime;
             try {
                 entry.Handler.Invoke(entry.Value);
@@ -202,6 +225,21 @@ public class EmulationLoopScheduler {
         }
 
         _isServicingEvents = false;
+
+        RecomputeNextCheckCycles();
+    }
+
+    /// <summary>
+    ///     Recomputes the cycle threshold for the next event check.
+    ///     Matches DOSBox PIC_RunQueue's batch size computation:
+    ///     CPU_Cycles = min(cycles_until_next_event, cycles_remaining_in_tick).
+    /// </summary>
+    private void RecomputeNextCheckCycles() {
+        if (_queue.Count == 0) {
+            _nextCheckCycles = long.MaxValue;
+            return;
+        }
+        _nextCheckCycles = _clock.ConvertTimeToCycles(_queue.First.ScheduledTime);
     }
 
     private ScheduledEntry GetEntry(EventHandler handler, double scheduledTime, uint value) {

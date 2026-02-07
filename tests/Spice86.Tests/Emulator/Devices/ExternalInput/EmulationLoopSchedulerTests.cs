@@ -23,7 +23,7 @@ public sealed class EmulationLoopSchedulerTests {
         _state = new State(CpuModel.INTEL_8086);
         // 1000 cycles = 1 second for simplicity in tests
         _cyclesClock = new CyclesClock(_state, new NullCyclesLimiter(), 1000);
-        _scheduler = new EmulationLoopScheduler(_cyclesClock, _logger);
+        _scheduler = new EmulationLoopScheduler(_cyclesClock, _state, _logger);
     }
 
     [Fact]

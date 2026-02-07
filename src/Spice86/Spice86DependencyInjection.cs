@@ -182,7 +182,7 @@ public class Spice86DependencyInjection : IDisposable {
         pauseHandler.Pausing += () => cyclesLimiter.OnPause();
         pauseHandler.Resumed += () => cyclesLimiter.OnResume();
         
-        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
+        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, state, loggerService);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
 

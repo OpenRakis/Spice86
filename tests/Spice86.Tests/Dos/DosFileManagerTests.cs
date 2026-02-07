@@ -120,7 +120,7 @@ public class DosFileManagerTests {
             initializeResetVector: configuration.InitializeDOS is true);
         NullCyclesLimiter cyclesLimiter = new();
         IEmulatedClock emulatedClock = new EmulatedClock(cyclesLimiter);
-        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
+        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, state, loggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
         
         BiosDataArea biosDataArea =

@@ -41,6 +41,16 @@ public class EmulatedClock : IEmulatedClock {
 
     public DateTime CurrentDateTime => StartTime.AddMilliseconds(_cyclesLimiter.TickCount);
 
+    /// <inheritdoc/>
+    public long ConvertTimeToCycles(double scheduledTime) {
+        int cpuCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
+        if (cpuCyclesPerMs == 0) {
+            return 0;
+        }
+        long tickStart = _cyclesLimiter.NextTickBoundaryCycles - cpuCyclesPerMs;
+        return tickStart + (long)((scheduledTime - _cyclesLimiter.TickCount) * cpuCyclesPerMs);
+    }
+
     /// <summary>
     /// No-op: tick counting naturally stops when the CPU is paused because
     /// RegulateCycles() is not called and TickCount does not advance.

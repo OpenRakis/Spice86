@@ -90,4 +90,10 @@ public interface ICyclesLimiter {
     /// Reference: DOSBox src/hardware/pic.h PIC_AtomicIndex(), PIC_UpdateAtomicIndex()
     /// </summary>
     double AtomicFullIndex { get; }
+
+    /// <summary>
+    /// Gets the absolute cycle count at which the next tick boundary fires.
+    /// Used by the scheduler to compute cycle thresholds for event gating.
+    /// </summary>
+    long NextTickBoundaryCycles { get; }
 }

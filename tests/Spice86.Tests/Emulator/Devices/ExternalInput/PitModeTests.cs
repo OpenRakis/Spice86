@@ -33,7 +33,7 @@ public class PitModeTests {
         State state = new(CpuModel.INTEL_80286);
         _ioPortDispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
         _clock = new EmulatedClock(new NullCyclesLimiter());
-        var emulationLoopScheduler = new EmulationLoopScheduler(_clock, logger);
+        var emulationLoopScheduler = new EmulationLoopScheduler(_clock, state, logger);
         _pic = new DualPic(_ioPortDispatcher, state, logger, false);
         _pit = new PitTimer(_ioPortDispatcher, state, _pic, _speaker, emulationLoopScheduler, _clock, logger, false);
     }

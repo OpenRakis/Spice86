@@ -44,4 +44,6 @@ internal class NullCyclesLimiter : ICyclesLimiter {
     }
 
     public double AtomicFullIndex => 0.0;
+
+    public long NextTickBoundaryCycles => 0;
 }
