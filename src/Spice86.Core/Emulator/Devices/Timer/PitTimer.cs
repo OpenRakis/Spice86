@@ -112,7 +112,7 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     ///     Sub-millisecond precision emulated time index.
     ///     Reference: DOSBox uses PIC_FullIndex() = PIC_Ticks + PIC_TickIndex() for timer calculations.
     /// </summary>
-    private double PicFullIndex => _clock.ElapsedTimeMs;
+    private double PicFullIndex => _clock.FullIndex;
 
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {

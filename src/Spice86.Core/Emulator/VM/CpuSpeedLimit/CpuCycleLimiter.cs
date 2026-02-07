@@ -205,16 +205,20 @@ public class CpuCycleLimiter : ICyclesLimiter {
 
     /// <inheritdoc/>
     public void ConsumeIoCycles(int cycles) {
-        // Lower the tick boundary so the remaining budget for this tick is reduced.
-        // Equivalent to DOSBox: CPU_Cycles -= delaycyc
-        // This means RegulateCycles() will trigger the next tick sooner.
+        // Advance _state.Cycles instead of lowering _targetCyclesForPause.
+        // This keeps tickStart (= _targetCyclesForPause - _tickCycleMax) stable within a tick,
+        // which is critical: ConvertTimeToCycles and _nextCheckCycles depend on a fixed tickStart.
+        // Lowering _targetCyclesForPause would shift tickStart and make _nextCheckCycles stale,
+        // causing events (PIT timer, SB reset, etc.) to fire late.
+        //
+        // Matches DOSBox: CPU_Cycles -= delaycyc (consumes from remaining budget).
+        // In DOSBox, CPU_CycleLeft is fixed for the tick; CPU_Cycles counts down.
+        // Here, _targetCyclesForPause is fixed; _state.Cycles counts up.
+        // Reference: DOSBox src/hardware/port.cpp IO_USEC_read_delay(), IO_USEC_write_delay()
         long remaining = _targetCyclesForPause - _state.Cycles;
         int clamped = (int)Math.Min(cycles, remaining);
         if (clamped > 0) {
-            _targetCyclesForPause -= clamped;
-            // Track removed IO cycles for auto-cycle adjustment, matching DOSBox:
-            //   CPU_IODelayRemoved += delaycyc;
-            // Reference: DOSBox src/hardware/port.cpp IO_USEC_read_delay(), IO_USEC_write_delay()
+            _state.AdvanceCycles(clamped);
             _ioDelayRemoved += clamped;
         }
     }
