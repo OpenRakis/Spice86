@@ -389,19 +389,19 @@ public sealed class Mixer : IDisposable {
         _reverbSynthSendLevel = synthLevel;
         _reverbDigitalSendLevel = digitalLevel;
 
-        _mverb.SetParameter(MVerb.Parameter.Predelay, predelay);
-        _mverb.SetParameter(MVerb.Parameter.EarlyMix, earlyMix);
-        _mverb.SetParameter(MVerb.Parameter.Size, size);
-        _mverb.SetParameter(MVerb.Parameter.Density, density);
-        _mverb.SetParameter(MVerb.Parameter.BandwidthFreq, bandwidthFreq);
-        _mverb.SetParameter(MVerb.Parameter.Decay, decay);
-        _mverb.SetParameter(MVerb.Parameter.DampingFreq, dampingFreq);
+        _mverb.SetParameter((int)MVerb.Parameter.Predelay, predelay);
+        _mverb.SetParameter((int)MVerb.Parameter.EarlyMix, earlyMix);
+        _mverb.SetParameter((int)MVerb.Parameter.Size, size);
+        _mverb.SetParameter((int)MVerb.Parameter.Density, density);
+        _mverb.SetParameter((int)MVerb.Parameter.BandwidthFreq, bandwidthFreq);
+        _mverb.SetParameter((int)MVerb.Parameter.Decay, decay);
+        _mverb.SetParameter((int)MVerb.Parameter.DampingFreq, dampingFreq);
 
         // Always max gain (no attenuation)
-        _mverb.SetParameter(MVerb.Parameter.Gain, 1.0f);
+        _mverb.SetParameter((int)MVerb.Parameter.Gain, 1.0f);
 
         // Always 100% wet output signal
-        _mverb.SetParameter(MVerb.Parameter.Mix, 1.0f);
+        _mverb.SetParameter((int)MVerb.Parameter.Mix, 1.0f);
 
         _mverb.SetSampleRate(_sampleRateHz);
 
