@@ -139,9 +139,12 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             _adlibGold = new AdlibGold(OplSampleRateHz, loggerService);
         }
 
-        _loggerService.Debug(
-            "Initializing OPL FM synth. Mode: {Mode}, Sample rate: {SampleRate}",
-            _mode, OplSampleRateHz);
+        // Reference: DOSBox opl.cpp constructor LOG_MSG
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "OPL: Running {Mode} on ports {BasePort:X3}h and {AdLibPort:X3}h at {SampleRate} Hz",
+                _mode, _sbBase, 0x388, OplSampleRateHz);
+        }
 
         // Volume gain matching DOSBox
         // Reference: constexpr auto OplVolumeGain = 1.5f
@@ -345,6 +348,11 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         }
 
         if (disposing) {
+            // Reference: DOSBox opl.cpp destructor LOG_MSG
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("OPL: Shutting down {Mode}", _mode);
+            }
+
             if (_useOplIrq) {
                 _dualPic.DeactivateIrq(_oplIrqLine);
             }
@@ -362,7 +370,11 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Reference: DOSBox Opl::PortRead() does NOT take the mutex.
     /// </summary>
     public override byte ReadByte(ushort port) {
-        return PortRead(port);
+        byte result = PortRead(port);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("OPL: ReadByte port=0x{Port:X4} => 0x{Result:X2}", port, result);
+        }
+        return result;
     }
 
     /// <summary>
@@ -379,6 +391,12 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         //   CPU_IODelayRemoved += delaycyc;
         int delayCycles = _cyclesLimiter.TickCycleMax / 2048;
         _cyclesLimiter.ConsumeIoCycles(delayCycles);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose(
+                "OPL: PortRead extra delay on port 0x{Port:X4}: {DelayCycles} cycles consumed (TickCycleMax={TickCycleMax}, total IO delay removed={IoDelayRemoved})",
+                port, delayCycles, _cyclesLimiter.TickCycleMax, _cyclesLimiter.IoDelayRemoved);
+        }
 
         switch (_mode) {
             case OplMode.Opl2:

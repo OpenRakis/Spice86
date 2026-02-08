@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;

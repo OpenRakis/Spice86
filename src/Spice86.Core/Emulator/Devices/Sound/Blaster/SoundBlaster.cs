@@ -751,11 +751,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     }
 
                     _sb.Mode = DspMode.DmaMasked;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: DMA masked, stopping output, left {Left}", _sb.Dma.Left);
+                    }
                 }
                 break;
 
             case DmaChannel.DmaEvent.IsUnmasked:
                 if (_sb.Mode == DspMode.DmaMasked && _sb.Dma.Mode != DmaMode.None) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output, autoInit={AutoInit} baseCount={BaseCount}",
+                            _sb.Dma.AutoInit, channel.BaseCount);
+                    }
                     DspChangeMode(DspMode.Dma);
                     FlushRemainingDmaTransfer();
                     MaybeWakeUp();
@@ -962,14 +969,23 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             if (!_sb.Dma.AutoInit) {
                 if (_sb.Dma.SingleSize == 0) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Single cycle transfer ended");
+                    }
                     _sb.Mode = DspMode.None;
                     _sb.Dma.Mode = DmaMode.None;
                 } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Switch to single cycle transfer begun");
+                    }
                     _sb.Dma.Left = _sb.Dma.SingleSize;
                     _sb.Dma.SingleSize = 0;
                 }
             } else {
                 if (_sb.Dma.AutoSize == 0) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Auto-init transfer with 0 size");
+                    }
                     _sb.Mode = DspMode.None;
                 }
                 _sb.Dma.Left = _sb.Dma.AutoSize;
@@ -1495,6 +1511,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 return 0xFF;
 
             default:
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Unhandled read from port {Port:X4}h", port);
+                }
                 return 0xFF;
         }
     }
@@ -1516,12 +1535,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x07:
                 break;
             default:
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Unhandled write to port {Port:X4}h value=0x{Value:X2}", port, value);
+                }
                 break;
         }
     }
 
     private void DspDoReset(byte value) {
         if (((value & 1) != 0) && (_sb.Dsp.State != DspState.Reset)) {
+            // Reference: DOSBox soundblaster.cpp dsp_do_reset() LOG_MSG
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("SOUNDBLASTER: Resetting DSP");
+            }
             DspReset();
             _sb.Dsp.State = DspState.Reset;
         } else if (((value & 1) == 0) && (_sb.Dsp.State == DspState.Reset)) {
@@ -1551,6 +1577,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void DspReset() {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DSP Reset");
+        }
         _dualPic.DeactivateIrq(_sb.Hw.Irq);
         DspChangeMode(DspMode.None);
         DspFlushData();
@@ -1661,6 +1690,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x04:
                 // Sb16 ASP set mode register or DSP Status
                 if (_config.SbType == SbType.Sb16) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: SB16ASP set mode register to 0x{Mode:X2}", _sb.Dsp.In.Data[0]);
+                    }
                     if ((_sb.Dsp.In.Data[0] & 0xf1) == 0xf1) {
                         _aspInitInProgress = true;
                     } else {
@@ -1674,6 +1706,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                         DspAddData(0x7b);
                     } else {
                         DspAddData(0xff);
+                    }
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: DSP status query on {SbType} (non-SB16 path)", _config.SbType);
                     }
                 }
                 break;
@@ -1714,6 +1749,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x0e
                 if (_config.SbType == SbType.Sb16) {
                     _aspRegs[_sb.Dsp.In.Data[0]] = _sb.Dsp.In.Data[1];
+                } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: SB16ASP set register (not SB16)");
+                    }
                 }
                 break;
 
@@ -1725,12 +1764,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                         _aspRegs[0x83] = (byte)~_aspRegs[0x83];
                     }
                     DspAddData(_aspRegs[_sb.Dsp.In.Data[0]]);
+                } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: SB16ASP get register (not SB16)");
+                    }
                 }
                 break;
 
             case 0x10:
                 // Direct DAC
                 // Reference: src/hardware/audio/soundblaster.cpp DSP command 0x10
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Direct DAC output, sample=0x{Sample:X2}", _sb.Dsp.In.Data[0]);
+                }
                 DspChangeMode(DspMode.Dac);
 
                 if (MaybeWakeUp()) {
@@ -1756,6 +1802,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Single Cycle 8-Bit DMA DAC
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x14/0x15/0x91
                 // DOSBox calls dsp_prepare_dma_old() directly which reads sb.dsp.in.data[]
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Single Cycle 8-bit DMA (cmd=0x{Cmd:X2})", _sb.Dsp.Cmd);
+                }
                 DspPrepareDmaOld(DmaMode.Pcm8Bit, false, false);
                 break;
 
@@ -1764,9 +1813,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Auto Init 8-bit DMA
                 // Uses AutoSize previously set by command 0x48
                 if (_config.SbType > SbType.SB1) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Auto-Init 8-bit DMA (cmd=0x{Cmd:X2})", _sb.Dsp.Cmd);
+                    }
                     DspPrepareDmaOld(DmaMode.Pcm8Bit, true, false);
                 } else {
-                    _loggerService.Warning("SOUNDBLASTER: Auto-init DMA not supported on {SbType}", _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses Auto-init DMA (cmd=0x{Cmd:X2}) but {SbType} does not support it", _sb.Dsp.Cmd, _config.SbType);
+                    }
                 }
                 break;
 
@@ -1781,6 +1835,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 break;
 
             case 0x20:
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Direct ADC read (fake silent input)");
+                }
                 DspAddData(0x7f); // Fake silent input for Creative parrot
                 break;
 
@@ -1819,10 +1876,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x38:
                 // Write to SB MIDI Output
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x38
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: MIDI output byte 0x{Byte:X2}, midiEnabled={MidiEnabled}", _sb.Dsp.In.Data[0], _sb.MidiEnabled);
+                }
                 if (_sb.MidiEnabled) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        _loggerService.Verbose("SB: MIDI output byte 0x{Byte:X2}", _sb.Dsp.In.Data[0]);
-                    }
                     // TODO: Forward to MIDI subsystem
                 }
                 break;
@@ -1842,7 +1899,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x41/0x42
                 // Note: 0x42 is handled like 0x41, needed by Fasttracker II
                 if (_config.SbType == SbType.Sb16) {
-                    DspChangeRate((uint)((_sb.Dsp.In.Data[0] << 8) | _sb.Dsp.In.Data[1]));
+                    uint rate = (uint)((_sb.Dsp.In.Data[0] << 8) | _sb.Dsp.In.Data[1]);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Set SB16 sample rate to {Rate} Hz (cmd=0x{Cmd:X2})", rate, _sb.Dsp.Cmd);
+                    }
+                    DspChangeRate(rate);
+                } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses SB16 sample rate command 0x{Cmd:X2} but running as {SbType}",
+                            _sb.Dsp.Cmd, _config.SbType);
+                    }
                 }
                 break;
 
@@ -1854,6 +1920,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                         _loggerService.Debug("SB: DMA AutoSize set to {AutoSize}", _sb.Dma.AutoSize);
                     }
+                } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses DMA block size command (0x48) but {SbType} does not support it", _config.SbType);
+                    }
                 }
                 break;
 
@@ -1862,6 +1932,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Single Cycle 2-bit ADPCM
                 // 0x17 includes reference byte
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x16/0x17
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Single Cycle 2-bit ADPCM (cmd=0x{Cmd:X2}, ref={HasRef})", _sb.Dsp.Cmd, _sb.Dsp.Cmd == 0x17);
+                }
                 if (_sb.Dsp.Cmd == 0x17) {
                     _sb.Adpcm.HaveRef = true;
                 }
@@ -1872,6 +1945,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x75:
                 // Single Cycle 4-bit ADPCM
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x74/0x75
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Single Cycle 4-bit ADPCM (cmd=0x{Cmd:X2}, ref={HasRef})", _sb.Dsp.Cmd, _sb.Dsp.Cmd == 0x75);
+                }
                 if (_sb.Dsp.Cmd == 0x75) {
                     _sb.Adpcm.HaveRef = true;
                 }
@@ -1882,6 +1958,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x77:
                 // Single Cycle 3-bit ADPCM
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x76/0x77
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Single Cycle 3-bit ADPCM (cmd=0x{Cmd:X2}, ref={HasRef})", _sb.Dsp.Cmd, _sb.Dsp.Cmd == 0x77);
+                }
                 if (_sb.Dsp.Cmd == 0x77) {
                     _sb.Adpcm.HaveRef = true;
                 }
@@ -1891,8 +1970,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x7d:
                 // Auto Init 4-bit ADPCM
                 if (_config.SbType > SbType.SB1) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Auto-Init 4-bit ADPCM with reference");
+                    }
                     _sb.Adpcm.HaveRef = true;
                     DspPrepareDmaOld(DmaMode.Adpcm4Bit, true, false);
+                } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses Auto-init ADPCM (0x7D) but {SbType} does not support it", _config.SbType);
+                    }
                 }
                 break;
 
@@ -1902,6 +1988,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 {
                     uint samples = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
                     double delayMs = (1000.0 * samples) / _sb.FreqHz;
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Silence DAC for {Samples} samples ({Delay:F3} ms) at {Rate} Hz", samples, delayMs, _sb.FreqHz);
+                    }
                     _scheduler.AddEvent(DspRaiseIrqEvent, delayMs, 0);
                 }
                 break;
@@ -1975,13 +2064,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
                     DspPrepareDmaNew(is16Bit ? DmaMode.Pcm16Bit : DmaMode.Pcm8Bit, length, autoInit, stereo);
                 } else {
-                    _loggerService.Warning("SOUNDBLASTER: Generic DMA commands (0xB0-0xCF) require SB16");
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses Generic DMA commands (0xB0-0xCF) but running as {SbType}, requires SB16", _config.SbType);
+                    }
                 }
                 break;
 
             case 0xd0:
                 // Halt 8-bit DMA
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xd0
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Halt DMA command (8-bit)");
+                }
                 _sb.Mode = DspMode.DmaPause;
                 _scheduler.RemoveEvents(ProcessDmaTransferEvent);
                 break;
@@ -2000,6 +2094,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Continue DMA 8-bit
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xd4
                 if (_sb.Mode == DspMode.DmaPause) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Continue DMA command (8-bit)");
+                    }
                     _sb.Mode = DspMode.DmaMasked;
                     _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
                 }
@@ -2009,7 +2106,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Halt 16-bit DMA
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xd5
                 if (_config.SbType != SbType.Sb16) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses 16-bit DMA halt (0xD5) but running as {SbType}, requires SB16", _config.SbType);
+                    }
                     break;
+                }
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Halt DMA command (16-bit)");
                 }
                 _sb.Mode = DspMode.DmaPause;
                 _scheduler.RemoveEvents(ProcessDmaTransferEvent);
@@ -2019,9 +2122,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Continue DMA 16-bit
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xd6
                 if (_config.SbType != SbType.Sb16) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses 16-bit DMA continue (0xD6) but running as {SbType}, requires SB16", _config.SbType);
+                    }
                     break;
                 }
                 if (_sb.Mode == DspMode.DmaPause) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Continue DMA command (16-bit)");
+                    }
                     _sb.Mode = DspMode.DmaMasked;
                     _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
                 }
@@ -2037,32 +2146,59 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     } else {
                         DspAddData(0x00);
                     }
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Speaker status query, enabled={SpeakerEnabled}", _sb.SpeakerEnabled);
+                    }
+                } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses speaker status query (0xD8) but {SbType} does not support it", _config.SbType);
+                    }
                 }
                 break;
 
             case 0xd9:
                 // Exit Autoinitialize 16-bit
                 if (_config.SbType == SbType.Sb16) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Exit auto-init command (16-bit)");
+                    }
                     _sb.Dma.AutoInit = false;
+                } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses 16-bit exit auto-init (0xD9) but running as {SbType}, requires SB16", _config.SbType);
+                    }
                 }
                 break;
 
             case 0xda:
                 // Exit Autoinitialize 8-bit
                 if (_config.SbType > SbType.SB1) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Exit auto-init command (8-bit)");
+                    }
                     _sb.Dma.AutoInit = false;
+                } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses exit auto-init (0xDA) but {SbType} does not support it", _config.SbType);
+                    }
                 }
                 break;
 
             case 0xe0:
                 // DSP Identification
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xe0
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: DSP Identification, input=0x{Input:X2} response=0x{Response:X2}", _sb.Dsp.In.Data[0], (byte)~_sb.Dsp.In.Data[0]);
+                }
                 DspFlushData();
                 DspAddData((byte)~_sb.Dsp.In.Data[0]);
                 break;
 
             case 0xe1:
                 // Get DSP Version
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Get DSP Version for {SbType}", _config.SbType);
+                }
                 DspFlushData();
                 switch (_config.SbType) {
                     case SbType.SB1:
@@ -2096,6 +2232,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0xe2:
                 // Weird DMA identification write routine
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xe2
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: DSP Function 0xE2 (DMA identification)");
+                }
                 for (int i = 0; i < 8; i++) {
                     if (((_sb.Dsp.In.Data[0] >> i) & 0x01) != 0) {
                         _sb.E2.Value += E2IncrTable[_sb.E2.Count % 4][i];
@@ -2109,6 +2248,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0xe3:
                 // DSP Copyright
+                // Reference: DOSBox Staging src/hardware/audio/soundblaster.cpp case 0xe3
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: DSP Copyright string requested, essType={EssType}", _sb.EssType);
+                }
                 DspFlushData();
                 if (_sb.EssType != EssType.None) {
                     DspAddData(0);
@@ -2117,16 +2260,24 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     foreach (char c in copyright) {
                         DspAddData((byte)c);
                     }
+                    // Include null terminator — games read until they encounter it
+                    DspAddData(0);
                 }
                 break;
 
             case 0xe4:
                 // Write Test Register
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xe4
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Write Test Register = 0x{Value:X2}", _sb.Dsp.In.Data[0]);
+                }
                 _sb.Dsp.TestRegister = _sb.Dsp.In.Data[0];
                 break;
 
             case 0xe7: // ESS detect/read config
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: ESS detect/read config, essType={EssType}", _sb.EssType);
+                }
                 switch (_sb.EssType) {
                     case EssType.None:
                         break;
@@ -2142,6 +2293,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0xe8:
                 // Read Test Register
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Read Test Register = 0x{Value:X2}", _sb.Dsp.TestRegister);
+                }
                 DspFlushData();
                 DspAddData(_sb.Dsp.TestRegister);
                 break;
@@ -2150,6 +2304,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Trigger 8bit IRQ
                 // Small delay to emulate DSP slowness, fixes Llamatron 2012 and Lemmings 3D
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xf2
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Trigger 8-bit IRQ command");
+                }
                 _scheduler.AddEvent(DspRaiseIrqEvent, 0.01, 0);
                 break;
 
@@ -2157,12 +2314,22 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Trigger 16bit IRQ
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xf3
                 if (_config.SbType == SbType.Sb16) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Trigger 16-bit IRQ command");
+                    }
                     RaiseIrq(SbIrq.Irq16);
+                } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses 16-bit IRQ trigger (0xF3) but running as {SbType}, requires SB16", _config.SbType);
+                    }
                 }
                 break;
 
             case 0xf8:
                 // Undocumented, pre-Sb16 only
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Undocumented command 0xF8 (pre-SB16)");
+                }
                 DspFlushData();
                 DspAddData(0);
                 break;
@@ -2171,6 +2338,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Sb16 ASP unknown function
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xf9
                 if (_config.SbType == SbType.Sb16) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: SB16 ASP unknown function 0x{Sub:X2}", _sb.Dsp.In.Data[0]);
+                    }
                     switch (_sb.Dsp.In.Data[0]) {
                         case 0x0b: DspAddData(0x00); break;
                         case 0x0e: DspAddData(0xff); break;
@@ -2182,6 +2352,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                         case 0x2d: DspAddData(0x00); break;
                         case 0x37: DspAddData(0x38); break;
                         default: DspAddData(0x00); break;
+                    }
+                } else {
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: SB16 ASP unknown function 0x{Cmd:X2} (not SB16)", _sb.Dsp.Cmd);
                     }
                 }
                 break;
@@ -2347,7 +2521,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             DmaMode.Pcm8Bit => 1 << SbShift,
             DmaMode.Pcm16Bit => 1 << SbShift,
             DmaMode.Pcm16BitAliased => (1 << SbShift) * 2,
-            _ => 1 << SbShift
+            _ => LogIllegalTransferMode(mode)
         };
 
         // Going from an active autoinit into a single cycle
@@ -2403,6 +2577,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_change_stereo()
     /// </summary>
     private void DspChangeStereo(bool stereo) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: Mixer set to {StereoSetting}", stereo ? "STEREO" : "MONO");
+        }
         if (!_sb.Dma.Stereo && stereo) {
             SetChannelRateHz((int)(_sb.FreqHz / 2));
             _sb.Dma.Mul *= 2;
@@ -2538,15 +2715,18 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             return;
         }
 
+        // Reference: DOSBox Staging src/hardware/audio/soundblaster.cpp
+        // Register ports base+4 through base+0xF, skipping 8 and 9 (used by OPL).
+        // SB1 and SB2 also skip ports 4 and 5 (mixer not present).
         int basePort = _config.BaseAddress;
-        ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x06), this);
-        ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x0A), this);
-        ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x0C), this);
-        ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x0E), this);
-        ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x04), this);
-        ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x05), this);
-        if (_sb.Type == SbType.Sb16) {
-            ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x0F), this);
+        for (int i = 4; i <= 0xF; i++) {
+            if (i == 8 || i == 9) {
+                continue;
+            }
+            if ((_sb.Type == SbType.SB1 || _sb.Type == SbType.SB2) && (i == 4 || i == 5)) {
+                continue;
+            }
+            ioPortDispatcher.AddIOPortHandler((ushort)(basePort + i), this);
         }
     }
 
@@ -2678,5 +2858,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             string highChannelSegment = ShouldUseHighDmaChannel() ? $" H{_config.HighDma}" : string.Empty;
             return $"A{_config.BaseAddress:X3} I{_config.Irq} D{_config.LowDma}{highChannelSegment} T{(int)_config.SbType}";
         }
+    }
+
+    /// <summary>
+    /// Logs an illegal DMA transfer mode and returns a safe default multiplier.
+    /// Reference: DOSBox soundblaster.cpp dsp_prepare_dma_new() "DSP:Illegal transfer mode"
+    /// </summary>
+    private uint LogIllegalTransferMode(DmaMode mode) {
+        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+            _loggerService.Error("SOUNDBLASTER: Illegal transfer mode {Mode}", mode);
+        }
+        return 1u << SbShift;
     }
 }
