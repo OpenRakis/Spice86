@@ -1636,6 +1636,44 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
     }
 
+    /// <summary>
+    /// Handles 16-bit word writes to Sound Blaster I/O ports by splitting into two byte writes.
+    /// This matches DOSBox Staging's port_containers.cpp write_word_to_port() fallback behavior,
+    /// where a word write to a port with only byte handlers is split into low byte to port and
+    /// high byte to port+1. This is needed because games commonly use "out dx, ax" to write
+    /// the mixer index and data registers in a single word operation (AL=index to port 0x224,
+    /// AH=data to port 0x225).
+    /// Reference: dosbox-staging src/hardware/port_containers.cpp write_word_to_port()
+    /// </summary>
+    public override void WriteWord(ushort port, ushort value) {
+        LogMethodEntry(nameof(WriteWord));
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("SB: WriteWord port=0x{Port:X4} value=0x{Value:X4} (lo=0x{Lo:X2} hi=0x{Hi:X2})",
+                port, value, (byte)(value & 0xFF), (byte)(value >> 8));
+        }
+        WriteByte(port, (byte)(value & 0xFF));
+        WriteByte((ushort)(port + 1), (byte)(value >> 8));
+    }
+
+    /// <summary>
+    /// Handles 16-bit word reads from Sound Blaster I/O ports by splitting into two byte reads.
+    /// This matches DOSBox Staging's port_containers.cpp read_word_from_port() fallback behavior,
+    /// where a word read from a port with only byte handlers is split into low byte from port
+    /// and high byte from port+1.
+    /// Reference: dosbox-staging src/hardware/port_containers.cpp read_word_from_port()
+    /// </summary>
+    public override ushort ReadWord(ushort port) {
+        LogMethodEntry(nameof(ReadWord));
+        byte low = ReadByte(port);
+        byte high = ReadByte((ushort)(port + 1));
+        ushort result = (ushort)(low | (high << 8));
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("SB: ReadWord port=0x{Port:X4} => 0x{Value:X4} (lo=0x{Lo:X2} hi=0x{Hi:X2})",
+                port, result, low, high);
+        }
+        return result;
+    }
+
     private void DspDoReset(byte value) {
         LogMethodEntry(nameof(DspDoReset));
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
