@@ -365,6 +365,16 @@ public class State {
     }
 
     /// <summary>
+    /// Advances the <see cref="Cycles"/> count by the specified amount.
+    /// Used by I/O delay emulation to consume cycles from the current tick budget,
+    /// matching DOSBox's <c>CPU_Cycles -= delaycyc</c> pattern.
+    /// </summary>
+    /// <param name="amount">The number of cycles to advance.</param>
+    public void AdvanceCycles(long amount) {
+        Cycles += amount;
+    }
+
+    /// <summary>
     /// Returns all the CPU registers dumped into a string
     /// </summary>
     /// <returns>All the CPU registers dumped into a string</returns>

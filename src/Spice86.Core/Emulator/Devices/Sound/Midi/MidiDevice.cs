@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound.Midi;
+namespace Spice86.Core.Emulator.Devices.Sound.Midi;
 
 using System;
 

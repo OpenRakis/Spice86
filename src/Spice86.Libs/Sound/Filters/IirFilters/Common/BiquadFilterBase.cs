@@ -5,7 +5,7 @@ using Spice86.Libs.Sound.Filters.IirFilters.Common.State;
 public abstract class BiquadFilterBase<TState>
     where TState : struct, ISectionState {
     // ReSharper disable once RedundantDefaultMemberInitializer
-    private TState _state = default;
+    private readonly TState _state = default;
 
     public Biquad Coefficients { get; } = new();
 

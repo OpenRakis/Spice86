@@ -1,9 +1,14 @@
 namespace Spice86.Libs.Sound.Common;
 
+using System.Runtime.InteropServices;
+
 /// <summary>
 ///     Represents a stereo audio frame with left and right channel sample values.
+///     Memory layout is guaranteed to be [Left, Right] for direct casting to float span.
+///     Reference: DOSBox audio_frame.h - struct AudioFrame { float left; float right; }
 /// </summary>
-internal struct AudioFrame : IEquatable<AudioFrame> {
+[StructLayout(LayoutKind.Sequential)]
+public struct AudioFrame : IEquatable<AudioFrame> {
     /// <summary>
     ///     Sample amplitude for the left channel.
     /// </summary>
@@ -145,7 +150,7 @@ internal struct AudioFrame : IEquatable<AudioFrame> {
     /// </summary>
     /// <param name="other">The frame to add.</param>
     /// <returns>An <see cref="AudioFrame" /> containing the summed channel values.</returns>
-    public AudioFrame Add(AudioFrame other) {
+    public readonly AudioFrame Add(AudioFrame other) {
         return this + other;
     }
 
@@ -154,7 +159,7 @@ internal struct AudioFrame : IEquatable<AudioFrame> {
     /// </summary>
     /// <param name="gain">The gain applied to both channels.</param>
     /// <returns>An <see cref="AudioFrame" /> with scaled samples.</returns>
-    public AudioFrame Multiply(float gain) {
+    public readonly AudioFrame Multiply(float gain) {
         return this * gain;
     }
 
@@ -163,7 +168,7 @@ internal struct AudioFrame : IEquatable<AudioFrame> {
     /// </summary>
     /// <param name="gain">The per-channel gain.</param>
     /// <returns>An <see cref="AudioFrame" /> with scaled samples.</returns>
-    public AudioFrame Multiply(AudioFrame gain) {
+    public readonly AudioFrame Multiply(AudioFrame gain) {
         return this * gain;
     }
 

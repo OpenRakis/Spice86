@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
@@ -30,9 +31,9 @@ public class PitModeTests {
         ILoggerService logger = Substitute.For<ILoggerService>();
         _speaker = Substitute.For<IPitSpeaker>();
         State state = new(CpuModel.INTEL_80286);
-        _ioPortDispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
-        _clock = new EmulatedClock();
-        var emulationLoopScheduler = new EmulationLoopScheduler(_clock, logger);
+        _ioPortDispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false, new NullCyclesLimiter());
+        _clock = new EmulatedClock(new NullCyclesLimiter());
+        var emulationLoopScheduler = new EmulationLoopScheduler(_clock, state, logger);
         _pic = new DualPic(_ioPortDispatcher, state, logger, false);
         _pit = new PitTimer(_ioPortDispatcher, state, _pic, _speaker, emulationLoopScheduler, _clock, logger, false);
     }

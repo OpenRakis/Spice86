@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
@@ -54,11 +55,11 @@ public sealed class PitTimerTests {
             Logger = Substitute.For<ILoggerService>();
             State = new State(CpuModel.ZET_86);
             var breakpoints = new AddressReadWriteBreakpoints();
-            Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false);
+            Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false, new NullCyclesLimiter());
             DualPic = new DualPic(Dispatcher, State, Logger, false);
             Speaker = new StubPitSpeaker();
-            var emulatedClock = new EmulatedClock();
-            var emulationLoopScheduler = new EmulationLoopScheduler(emulatedClock, Logger);
+            var emulatedClock = new EmulatedClock(new NullCyclesLimiter());
+            var emulationLoopScheduler = new EmulationLoopScheduler(emulatedClock, State, Logger);
             PitTimer = new PitTimer(Dispatcher, State, DualPic, Speaker, emulationLoopScheduler, emulatedClock, Logger, false);
         }
 
