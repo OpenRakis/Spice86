@@ -30,8 +30,8 @@ public sealed class Mixer : IDisposable {
     private readonly IPauseHandler _pauseHandler;
 
     // Channels registry - matches DOSBox mixer.channels
-    private readonly ConcurrentDictionary<string, MixerChannel> _channels = new();
-    private readonly ConcurrentDictionary<string, MixerChannelSettings> _channelSettingsCache = new();
+    private readonly Dictionary<string, MixerChannel> _channels = new();
+    private readonly Dictionary<string, MixerChannelSettings> _channelSettingsCache = new();
 
     // Mixer thread that produces audio and sends to the audio backend
     private readonly Thread _mixerThread;
@@ -610,18 +610,6 @@ public sealed class Mixer : IDisposable {
         return channel;
     }
 
-    /// <summary>
-    /// Removes a channel from the mixer.
-    /// </summary>
-    public void DeregisterChannel(string name) {
-        if (_channels.TryRemove(name, out MixerChannel? channel)) {
-            MixerChannelSettings settings = channel.GetSettings();
-            _channelSettingsCache[name] = settings;
-            channel.Enable(false);
-            _loggerService.Debug("MIXER: Deregistered channel {ChannelName}", name);
-        }
-    }
-
     private void ApplyCachedEffectSettings(MixerChannel channel, MixerChannelSettings settings) {
         if (_doCrossfeed) {
             channel.SetCrossfeedStrength(settings.CrossfeedStrength);
@@ -918,7 +906,7 @@ public sealed class Mixer : IDisposable {
     /// <summary>
     /// Closes the audio device and stops all channels.
     /// </summary>
-    public void CloseAudioDevice() {
+    private void CloseAudioDevice() {
         lock (_mixerLock) {
             // Stop mixer thread
             if (_mixerThread.IsAlive) {
@@ -943,6 +931,8 @@ public sealed class Mixer : IDisposable {
         if (_disposed) {
             return;
         }
+
+        CloseAudioDevice();
 
         _loggerService.Debug("MIXER: Disposing mixer");
 
