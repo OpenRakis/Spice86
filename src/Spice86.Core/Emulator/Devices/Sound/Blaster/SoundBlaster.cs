@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
+namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Serilog.Events;
 
@@ -345,6 +345,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private uint ReadDma8Bit(uint bytesToRead, uint bufferIndex = 0) {
+        LogMethodEntry(nameof(ReadDma8Bit));
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            int? channelNumber = _sb.Dma.Channel?.ChannelNumber;
+            _logger.Debug("SB: ReadDma8Bit bytes={Bytes} index={Index} channel={Channel}", bytesToRead, bufferIndex, channelNumber);
+        }
         if (bufferIndex >= DmaBufSize) {
             _logger.Error("SOUNDBLASTER: Read requested out of bounds of DMA buffer at index {Index}", bufferIndex);
             return 0;
@@ -384,6 +389,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private uint ReadDma16Bit(uint wordsToRead, uint bufferIndex = 0) {
+        LogMethodEntry(nameof(ReadDma16Bit));
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            int? channelNumber = _sb.Dma.Channel?.ChannelNumber;
+            _logger.Debug("SB: ReadDma16Bit words={Words} index={Index} channel={Channel}", wordsToRead, bufferIndex, channelNumber);
+        }
         if (bufferIndex >= DmaBufSize) {
             _logger.Error("SOUNDBLASTER: Read requested out of bounds of DMA buffer at index {Index}", bufferIndex);
             return 0;
@@ -505,7 +515,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private readonly Opl _opl;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
-    private readonly HardwareMixer _hardwareMixer;
 
     private readonly RWQueue<AudioFrame> _outputQueue = new(4096);
 
@@ -552,6 +561,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// </summary>
     private const int MaxSingleFrameBaseCount = sizeof(short) * 2 - 1;
 
+    private void LogMethodEntry(string methodName) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("SB: {Method}", methodName);
+        }
+    }
+
     public SoundBlaster(
         IOPortDispatcher ioPortDispatcher,
         State state,
@@ -564,9 +579,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         IEmulatedClock clock,
         SoundBlasterHardwareConfig soundBlasterHardwareConfig)
         : base(state, false, loggerService) {
-
         // Temporarily force verbose logging for SB debugging
-        _logger = loggerService;//.WithLogLevel(LogEventLevel.Verbose);
+        _logger = loggerService.WithLogLevel(LogEventLevel.Verbose);
 
         // Lock mixer thread during construction to prevent concurrent modifications
         // Reference: src/hardware/audio/soundblaster.cpp:3858
@@ -619,6 +633,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.FreqHz = DefaultPlaybackRateHz;
         _sb.TimeConstant = 45;
 
+        _sb.Mixer.Enabled = true;
+        _sb.Mixer.StereoEnabled = false;
+
         HashSet<ChannelFeature> dacFeatures = new HashSet<ChannelFeature> {
             ChannelFeature.ReverbSend,
             ChannelFeature.ChorusSend,
@@ -640,8 +657,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _dacChannel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
         }
 
-        _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, opl.MixerChannel, loggerService, DspChangeStereo);
-
         // Reference: src/hardware/audio/soundblaster.cpp SoundBlaster constructor lines 3660-3664
         // Must set Normal state BEFORE dsp_reset() so first game reset triggers properly.
         // DspState defaults to Reset (enum value 0) in C#, but DOSBox explicitly sets Normal.
@@ -660,7 +675,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         DspReset();
 
         // Reference: src/hardware/audio/soundblaster.cpp SoundBlaster constructor line 3684
-        _hardwareMixer.Reset();
+        CtmixerReset();
 
         _dualPic.SetIrqMask(_config.Irq, false);
 
@@ -686,6 +701,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp SoundBlaster::MixerCallback()
     /// </summary>
     private void MixerCallback(int frames_requested) {
+        LogMethodEntry(nameof(MixerCallback));
         int queueSize = _outputQueue.Size;
         int shortage = Math.Max(frames_requested - queueSize, 0);
         System.Threading.Interlocked.Exchange(ref _framesNeeded, shortage);
@@ -703,6 +719,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private bool MaybeWakeUp() {
+        LogMethodEntry(nameof(MaybeWakeUp));
         bool wokeUp = _dacChannel.WakeUp();
         if (wokeUp && _logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("SB: DAC channel woke up");
@@ -716,6 +733,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp SoundBlaster::SetChannelRateHz()
     /// </summary>
     private void SetChannelRateHz(int requestedRateHz) {
+        LogMethodEntry(nameof(SetChannelRateHz));
         int rateHz = Math.Clamp(requestedRateHz, MinPlaybackRateHz, NativeDacRateHz);
         if (_dacChannel.GetSampleRate() != rateHz) {
             if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -727,6 +745,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void DspDmaCallback(DmaChannel channel, DmaChannel.DmaEvent dmaEvent) {
+        LogMethodEntry(nameof(DspDmaCallback));
         switch (dmaEvent) {
             case DmaChannel.DmaEvent.ReachedTerminalCount:
                 break;
@@ -794,6 +813,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_e2_dma_callback()
     /// </summary>
     private void DspE2DmaCallback(DmaChannel channel, DmaChannel.DmaEvent dmaEvent) {
+        LogMethodEntry(nameof(DspE2DmaCallback));
         if (dmaEvent == DmaChannel.DmaEvent.IsUnmasked) {
             byte val = (byte)(_sb.E2.Value & 0xff);
 
@@ -810,6 +830,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_adc_callback()
     /// </summary>
     private void DspAdcCallback(DmaChannel channel, DmaChannel.DmaEvent dmaEvent) {
+        LogMethodEntry(nameof(DspAdcCallback));
         if (dmaEvent != DmaChannel.DmaEvent.IsUnmasked) {
             return;
         }
@@ -828,6 +849,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void PlayDmaTransfer(uint bytesRequested) {
+        LogMethodEntry(nameof(PlayDmaTransfer));
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("SB: PlayDmaTransfer bytes={Bytes} mode={Mode} stereo={Stereo} left={Left}",
+                bytesRequested, _sb.Dma.Mode, _sb.Dma.Stereo, _sb.Dma.Left);
+        }
         // How many bytes should we read from DMA?
         uint lowerBound = _sb.Dma.AutoInit ? bytesRequested : _sb.Dma.Min;
         uint bytesToRead = _sb.Dma.Left <= lowerBound ? _sb.Dma.Left : bytesRequested;
@@ -1041,6 +1067,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     internal void EnqueueFramesMono(byte[] samples, uint numSamples, bool signed) {
+        LogMethodEntry(nameof(EnqueueFramesMono));
         if (numSamples == 0) {
             return;
         }
@@ -1075,6 +1102,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Enqueues silent frames in batch. Used during warmup and when speaker is disabled.
     /// </summary>
     private void EnqueueSilentFrames(uint count) {
+        LogMethodEntry(nameof(EnqueueSilentFrames));
         _enqueueBatchCount = 0;
         AudioFrame silence = new AudioFrame(0.0f, 0.0f);
         for (uint i = 0; i < count; i++) {
@@ -1088,6 +1116,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Flushes the enqueue batch to the output queue.
     /// </summary>
     private void FlushEnqueueBatch() {
+        LogMethodEntry(nameof(FlushEnqueueBatch));
         if (_enqueueBatchCount == 0) {
             return;
         }
@@ -1096,6 +1125,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     internal void EnqueueFramesStereo(byte[] samples, uint numSamples, bool signed) {
+        LogMethodEntry(nameof(EnqueueFramesStereo));
         if (numSamples == 0) {
             return;
         }
@@ -1141,6 +1171,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     internal void EnqueueFramesMono16(short[] samples, uint numSamples, bool signed) {
+        LogMethodEntry(nameof(EnqueueFramesMono16));
         if (numSamples == 0) {
             return;
         }
@@ -1171,6 +1202,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     internal void EnqueueFramesStereo16(short[] samples, uint numSamples, bool signed) {
+        LogMethodEntry(nameof(EnqueueFramesStereo16));
         if (numSamples == 0) {
             return;
         }
@@ -1219,6 +1251,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp sb_raise_irq()
     /// </summary>
     private void RaiseIrq(SbIrq irqType) {
+        LogMethodEntry(nameof(RaiseIrq));
         switch (irqType) {
             case SbIrq.Irq8:
                 // Don't raise if already pending
@@ -1262,6 +1295,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: DOSBox staging calls this via TIMER_AddTickHandler (no parameters)
     /// </summary>
     private void per_tick_callback() {
+        LogMethodEntry(nameof(per_tick_callback));
         // assert(sblaster);
         // assert(sblaster->channel);
 
@@ -1304,6 +1338,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp per_frame_callback()
     /// </summary>
     private void per_frame_callback(uint _) {
+        LogMethodEntry(nameof(per_frame_callback));
         if (!_dacChannel.IsEnabled) {
             SetCallbackNone();
             return;
@@ -1329,6 +1364,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp add_next_frame_callback()
     /// </summary>
     private void AddNextFrameCallback() {
+        LogMethodEntry(nameof(AddNextFrameCallback));
         double millisPerFrame = _dacChannel.GetMillisPerFrame();
         _scheduler.AddEvent(per_frame_callback, millisPerFrame, 0);
     }
@@ -1338,6 +1374,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp CallbackType::SetNone()
     /// </summary>
     private void SetCallbackNone() {
+        LogMethodEntry(nameof(SetCallbackNone));
         if (_timingType != TimingType.None) {
             if (_timingType == TimingType.PerTick) {
                 _scheduler.DelTickHandler(per_tick_callback);
@@ -1354,6 +1391,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp CallbackType::SetPerTick()
     /// </summary>
     private void SetCallbackPerTick() {
+        LogMethodEntry(nameof(SetCallbackPerTick));
         if (_timingType != TimingType.PerTick) {
             SetCallbackNone();
 
@@ -1371,6 +1409,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp CallbackType::SetPerFrame()
     /// </summary>
     private void SetCallbackPerFrame() {
+        LogMethodEntry(nameof(SetCallbackPerFrame));
         if (_timingType != TimingType.PerFrame) {
             SetCallbackNone();
 
@@ -1384,6 +1423,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp generate_frames()
     /// </summary>
     private void generate_frames(int frames_requested) {
+        LogMethodEntry(nameof(generate_frames));
         switch (_sb.Mode) {
             case DspMode.None:
             case DspMode.DmaPause:
@@ -1440,6 +1480,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
     /// </summary>
     private void EnqueueFrames(ReadOnlySpan<AudioFrame> frames) {
+        LogMethodEntry(nameof(EnqueueFrames));
         if (frames.Length == 0) {
             return;
         }
@@ -1472,27 +1513,31 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     public MixerChannel DacChannel => _dacChannel;
 
-    // ReadByte and WriteByte have ZERO logging, matching DOSBox's read_sb()/write_sb().
+    // ReadByte and WriteByte include debug logging for troubleshooting.
     // Reference: src/hardware/audio/soundblaster.cpp read_sb() / write_sb()
     /// <summary>
     /// Reads from a Sound Blaster I/O port.
     /// Reference: src/hardware/audio/soundblaster.cpp read_sb()
     /// </summary>
     public override byte ReadByte(ushort port) {
+        LogMethodEntry(nameof(ReadByte));
         byte result;
         int offset = port - _config.BaseAddress;
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("SB: ReadByte port=0x{Port:X4} offset=0x{Offset:X2}", port, offset);
+        }
         switch (offset) {
             case 0x04: // MixerIndex
-                result = (byte)_hardwareMixer.CurrentAddress;
+                result = _sb.Mixer.Index;
                 if (_logger.IsEnabled(LogEventLevel.Verbose)) {
                     _logger.Verbose("SB: Read port {Port:X4}h (MixerIndex) => 0x{Result:X2}", port, result);
                 }
                 return result;
 
             case 0x05: // MixerData
-                result = _hardwareMixer.ReadData();
+                result = CtmixerRead();
                 if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("SB: Read port {Port:X4}h (MixerData, reg=0x{Reg:X2}) => 0x{Result:X2}", port, _hardwareMixer.CurrentAddress, result);
+                    _logger.Verbose("SB: Read port {Port:X4}h (MixerData, reg=0x{Reg:X2}) => 0x{Result:X2}", port, _sb.Mixer.Index, result);
                 }
                 return result;
 
@@ -1560,7 +1605,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     public override void WriteByte(ushort port, byte value) {
+        LogMethodEntry(nameof(WriteByte));
         int offset = port - _config.BaseAddress;
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("SB: WriteByte port=0x{Port:X4} offset=0x{Offset:X2} value=0x{Value:X2}", port, offset, value);
+        }
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("SB: Write port {Port:X4}h (offset=0x{Offset:X2}) value=0x{Value:X2}", port, offset, value);
         }
@@ -1572,10 +1621,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 DspDoWrite(value);
                 break;
             case 0x04:
-                _hardwareMixer.CurrentAddress = value;
+                _sb.Mixer.Index = value;
                 break;
             case 0x05:
-                _hardwareMixer.Write(value);
+                CtmixerWrite(value);
                 break;
             case 0x07:
                 break;
@@ -1588,6 +1637,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void DspDoReset(byte value) {
+        LogMethodEntry(nameof(DspDoReset));
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("SB: DspDoReset value=0x{Value:X2} currentState={State}", value, _sb.Dsp.State);
         }
@@ -1615,10 +1665,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_finish_reset()
     /// </summary>
     private void DspFinishResetEvent(uint val) {
+        LogMethodEntry(nameof(DspFinishResetEvent));
         DspFinishReset();
     }
 
     private void DspFinishReset() {
+        LogMethodEntry(nameof(DspFinishReset));
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("SB: DspFinishReset - adding 0xAA to output, state transitioning to Normal");
         }
@@ -1628,6 +1680,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void DspReset() {
+        LogMethodEntry(nameof(DspReset));
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("SOUNDBLASTER: DSP Reset");
         }
@@ -1695,6 +1748,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void DspDoWrite(byte value) {
+        LogMethodEntry(nameof(DspDoWrite));
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_write()
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("SB: DSP write value=0x{Value:X2} state={State}", value, _blasterState);
@@ -1732,6 +1786,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private bool ProcessCommand() {
+        LogMethodEntry(nameof(ProcessCommand));
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_command()
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             string paramsHex = _sb.Dsp.In.Pos > 0 ? string.Join(" ", _sb.Dsp.In.Data.Take(_sb.Dsp.In.Pos).Select(b => b.ToString("X2"))) : string.Empty;
@@ -2435,6 +2490,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void DspChangeMode(DspMode mode) {
+        LogMethodEntry(nameof(DspChangeMode));
         if (_sb.Mode == mode) {
             return;
         }
@@ -2459,6 +2515,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_change_rate()
     /// </summary>
     private void DspChangeRate(uint freqHz) {
+        LogMethodEntry(nameof(DspChangeRate));
         // If rate changes during active DMA, update the DMA-related timing values
         if (_sb.FreqHz != freqHz && _sb.Dma.Mode != DmaMode.None) {
             uint effectiveFreq = _sb.Mixer.StereoEnabled ? freqHz / 2 : freqHz;
@@ -2485,6 +2542,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp flush_remaining_dma_transfer()
     /// </summary>
     private void FlushRemainingDmaTransfer() {
+        LogMethodEntry(nameof(FlushRemainingDmaTransfer));
         if (_sb.Dma.Left == 0) {
             return;
         }
@@ -2514,6 +2572,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp ProcessDMATransfer()
     /// </summary>
     private void ProcessDmaTransferEvent(uint bytesToProcess) {
+        LogMethodEntry(nameof(ProcessDmaTransferEvent));
         if (_sb.Dma.Left > 0) {
             uint toProcess = Math.Min(bytesToProcess, _sb.Dma.Left);
             PlayDmaTransfer(toProcess);
@@ -2526,6 +2585,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp suppress_dma_transfer()
     /// </summary>
     private void SuppressDmaTransfer(uint bytesToRead) {
+        LogMethodEntry(nameof(SuppressDmaTransfer));
         uint numBytes = bytesToRead;
         if (_sb.Dma.Left < numBytes) {
             numBytes = _sb.Dma.Left;
@@ -2571,6 +2631,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer()
     /// </summary>
     private void DspDoDmaTransfer(DmaMode mode, uint freqHz, bool autoInit, bool stereo) {
+        LogMethodEntry(nameof(DspDoDmaTransfer));
         // Starting a new transfer will clear any active irqs
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1571-1573
         _sb.Irq.Pending8Bit = false;
@@ -2642,9 +2703,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_change_stereo()
     /// </summary>
     private void DspChangeStereo(bool stereo) {
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SOUNDBLASTER: Mixer set to {StereoSetting}", stereo ? "STEREO" : "MONO");
-        }
+        LogMethodEntry(nameof(DspChangeStereo));
         if (!_sb.Dma.Stereo && stereo) {
             SetChannelRateHz((int)(_sb.FreqHz / 2));
             _sb.Dma.Mul *= 2;
@@ -2657,11 +2716,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
         }
         _sb.Dma.Stereo = stereo;
-
-        // Keep the internal mixer state in sync â€” this is the same field as
-        // DOSBox's sb.mixer.stereo_enabled, which is read by dsp_change_rate()
-        // and dsp_prepare_dma_old().
-        _sb.Mixer.StereoEnabled = stereo;
     }
 
     /// <summary>
@@ -2669,6 +2723,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_prepare_dma_old()
     /// </summary>
     private void DspPrepareDmaOld(DmaMode mode, bool autoInit, bool sign) {
+        LogMethodEntry(nameof(DspPrepareDmaOld));
         _sb.Dma.Sign = sign;
 
         // For single-cycle transfers, set up the size from the DSP input buffer
@@ -2701,6 +2756,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_prepare_dma_new()
     /// </summary>
     private void DspPrepareDmaNew(DmaMode mode, uint length, bool autoInit, bool stereo) {
+        LogMethodEntry(nameof(DspPrepareDmaNew));
         uint freqHz = _sb.FreqHz;
         DmaMode newMode = mode;
         uint newLength = length;
@@ -2741,6 +2797,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void SetSpeakerEnabled(bool enabled) {
+        LogMethodEntry(nameof(SetSpeakerEnabled));
         // Speaker output is always enabled on the SB16 and ESS cards; speaker
         // enable/disable commands are simply ignored. Only the SB Pro and
         // earlier models can toggle the speaker-output.
@@ -2777,12 +2834,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private bool ShouldUseHighDmaChannel() {
+        LogMethodEntry(nameof(ShouldUseHighDmaChannel));
         return _config.SbType == SbType.Sb16 &&
                _config.HighDma >= 5 &&
                _config.HighDma != _config.LowDma;
     }
 
     private void InitSpeakerState() {
+        LogMethodEntry(nameof(InitSpeakerState));
         // Reference: src/hardware/audio/soundblaster.cpp init_speaker_state()
         if (_config.SbType == SbType.Sb16 || _sb.EssType != EssType.None) {
             // Speaker output (DAC output) is always enabled on the SB16 and
@@ -2805,6 +2864,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        LogMethodEntry(nameof(InitPortHandlers));
         // Don't register any ports when Sound Blaster is disabled or has no base address
         if (_config.SbType == SbType.None || _config.BaseAddress == 0) {
             return;
@@ -2826,6 +2886,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private void OnDmaChannelEvicted() {
+        LogMethodEntry(nameof(OnDmaChannelEvicted));
         if (_logger.IsEnabled(LogEventLevel.Warning)) {
             _logger.Warning("SOUNDBLASTER: DMA channel evicted - stopping audio");
         }
@@ -2847,6 +2908,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_flush_data()
     /// </summary>
     private void DspFlushData() {
+        LogMethodEntry(nameof(DspFlushData));
         _sb.Dsp.Out.Used = 0;
         _sb.Dsp.Out.Pos = 0;
     }
@@ -2856,6 +2918,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_add_data()
     /// </summary>
     private void DspAddData(byte value) {
+        LogMethodEntry(nameof(DspAddData));
         if (_sb.Dsp.Out.Used < DspBufSize) {
             int start = _sb.Dsp.Out.Used + _sb.Dsp.Out.Pos;
             if (start >= DspBufSize) {
@@ -2876,6 +2939,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_read_data()
     /// </summary>
     private byte DspReadData() {
+        LogMethodEntry(nameof(DspReadData));
         if (_sb.Dsp.Out.Used > 0) {
             _sb.Dsp.Out.LastVal = _sb.Dsp.Out.Data[_sb.Dsp.Out.Pos];
             _sb.Dsp.Out.Pos++;
@@ -2890,11 +2954,566 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         return _sb.Dsp.Out.LastVal;
     }
 
+    private float CalcVol(byte amount) {
+        LogMethodEntry(nameof(CalcVol));
+        int count = 31 - amount;
+        float db = count;
+
+        if (_sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2) {
+            if (count != 0) {
+                if (count < 16) {
+                    db -= 1.0f;
+                } else if (count > 16) {
+                    db += 1.0f;
+                }
+                if (count == 24) {
+                    db += 2.0f;
+                }
+                if (count > 27) {
+                    return 0.0f;
+                }
+            }
+        } else {
+            db *= 2.0f;
+            if (count > 20) {
+                db -= 1.0f;
+            }
+        }
+
+        return MathF.Pow(10.0f, -0.05f * db);
+    }
+
+    private void CtmixerUpdateVolumes() {
+        LogMethodEntry(nameof(CtmixerUpdateVolumes));
+        if (!_sb.Mixer.Enabled) {
+            return;
+        }
+
+        float m0 = CalcVol(_sb.Mixer.Master[0]);
+        float m1 = CalcVol(_sb.Mixer.Master[1]);
+
+        AudioFrame dacVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Dac[0]), m1 * CalcVol(_sb.Mixer.Dac[1]));
+        _dacChannel.SetAppVolume(dacVolume);
+
+        MixerChannel oplChannel = _opl.MixerChannel;
+        AudioFrame oplVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Fm[0]), m1 * CalcVol(_sb.Mixer.Fm[1]));
+        oplChannel.SetAppVolume(oplVolume);
+
+        MixerChannel? cdAudioChannel = _mixer.FindChannel("CdAudio");
+        if (cdAudioChannel != null) {
+            AudioFrame cdVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Cda[0]), m1 * CalcVol(_sb.Mixer.Cda[1]));
+            cdAudioChannel.SetAppVolume(cdVolume);
+        }
+    }
+
+    private void CtmixerReset() {
+        LogMethodEntry(nameof(CtmixerReset));
+        const byte DefaultVolume = 31;
+
+        _sb.Mixer.Fm[0] = DefaultVolume;
+        _sb.Mixer.Fm[1] = DefaultVolume;
+
+        _sb.Mixer.Cda[0] = DefaultVolume;
+        _sb.Mixer.Cda[1] = DefaultVolume;
+
+        _sb.Mixer.Dac[0] = DefaultVolume;
+        _sb.Mixer.Dac[1] = DefaultVolume;
+
+        _sb.Mixer.Master[0] = DefaultVolume;
+        _sb.Mixer.Master[1] = DefaultVolume;
+
+        CtmixerUpdateVolumes();
+    }
+
+    private void WriteSbProVolume(byte[] dest, byte value) {
+        LogMethodEntry(nameof(WriteSbProVolume));
+        dest[0] = (byte)(((value & 0xF0) >> 3) | (_sb.Type == SbType.Sb16 ? 1 : 3));
+        dest[1] = (byte)(((value & 0x0F) << 1) | (_sb.Type == SbType.Sb16 ? 1 : 3));
+    }
+
+    private byte ReadSbProVolume(byte[] src) {
+        LogMethodEntry(nameof(ReadSbProVolume));
+        int result = ((src[0] & 0x1E) << 3) | ((src[1] & 0x1E) >> 1);
+        if (_sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2) {
+            result |= 0x11;
+        }
+        return (byte)result;
+    }
+
+    private void WriteEssVolume(byte value, byte[] output) {
+        LogMethodEntry(nameof(WriteEssVolume));
+        byte high = (byte)((value >> 4) & 0x0F);
+        byte low = (byte)(value & 0x0F);
+
+        output[0] = (byte)((high << 1) | (high >> 3));
+        output[1] = (byte)((low << 1) | (low >> 3));
+    }
+
+    private byte ReadEssVolume(byte[] input) {
+        LogMethodEntry(nameof(ReadEssVolume));
+        byte high = (byte)(input[0] >> 1);
+        byte low = (byte)(input[1] >> 1);
+        return (byte)((high << 4) + low);
+    }
+
+    private void CtmixerWrite(byte value) {
+        LogMethodEntry(nameof(CtmixerWrite));
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("SB: CtmixerWrite index=0x{Index:X2} value=0x{Value:X2}", _sb.Mixer.Index, value);
+        }
+        switch (_sb.Mixer.Index) {
+            case 0x00: // Reset
+                CtmixerReset();
+                if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                    _logger.Warning("Mixer reset value {Value:X2}", value);
+                }
+                break;
+
+            case 0x02: // Master Volume (SB2 Only)
+                WriteSbProVolume(_sb.Mixer.Master, (byte)((value & 0x0F) | (value << 4)));
+                CtmixerUpdateVolumes();
+                break;
+
+            case 0x04: // DAC Volume (SBPRO)
+                WriteSbProVolume(_sb.Mixer.Dac, value);
+                CtmixerUpdateVolumes();
+                break;
+
+            case 0x06: { // FM output selection
+                    WriteSbProVolume(_sb.Mixer.Fm, (byte)((value & 0x0F) | (value << 4)));
+                    CtmixerUpdateVolumes();
+
+                    if ((value & 0x60) != 0) {
+                        if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                            _logger.Warning("Turned FM one channel off. not implemented {Value:X2}", value);
+                        }
+                    }
+                }
+                break;
+
+            case 0x08: // CDA Volume (SB2 Only)
+                WriteSbProVolume(_sb.Mixer.Cda, (byte)((value & 0x0F) | (value << 4)));
+                CtmixerUpdateVolumes();
+                break;
+
+            case 0x0A: // Mic Level (SBPRO) or DAC Volume (SB2)
+                if (_sb.Type == SbType.SB2) {
+                    byte dacValue = (byte)(((value & 0x06) << 2) | 3);
+                    _sb.Mixer.Dac[0] = dacValue;
+                    _sb.Mixer.Dac[1] = dacValue;
+                    CtmixerUpdateVolumes();
+                } else {
+                    _sb.Mixer.Mic = (byte)(((value & 0x07) << 2) | (_sb.Type == SbType.Sb16 ? 1 : 3));
+                }
+                break;
+
+            case 0x0E: {
+                    _sb.Mixer.StereoEnabled = (value & 0x02) != 0;
+
+                    if (_sb.Type == SbType.SBPro2) {
+                        bool lastFilterEnabled = _sb.Mixer.FilterEnabled;
+                        _sb.Mixer.FilterEnabled = (value & 0x20) == 0;
+
+                        if (_sb.Mixer.FilterConfigured && _sb.Mixer.FilterEnabled != lastFilterEnabled) {
+                            if (_sb.Mixer.FilterAlwaysOn) {
+                                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                                    _logger.Debug("Filter always on; ignoring {Action} low-pass filter command",
+                                        _sb.Mixer.FilterEnabled ? "enable" : "disable");
+                                }
+                            } else {
+                                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                                    _logger.Debug("{Action} low-pass filter",
+                                        _sb.Mixer.FilterEnabled ? "Enabling" : "Disabling");
+                                }
+                                _dacChannel.SetLowPassFilter(_sb.Mixer.FilterEnabled ? FilterState.On : FilterState.Off);
+                            }
+                        }
+                    }
+
+                    DspChangeStereo(_sb.Mixer.StereoEnabled);
+
+                    if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                        _logger.Warning("Mixer set to {Mode}", _sb.Dma.Stereo ? "STEREO" : "MONO");
+                    }
+                }
+                break;
+
+            case 0x14: // Audio 1 Play Volume (ESS)
+                if (_sb.EssType != EssType.None) {
+                    WriteEssVolume(value, _sb.Mixer.Dac);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case 0x22: // Master Volume (SBPRO)
+                WriteSbProVolume(_sb.Mixer.Master, value);
+                CtmixerUpdateVolumes();
+                break;
+
+            case 0x26: // FM Volume (SBPRO)
+                WriteSbProVolume(_sb.Mixer.Fm, value);
+                CtmixerUpdateVolumes();
+                break;
+
+            case 0x28: // CD Audio Volume (SBPRO)
+                WriteSbProVolume(_sb.Mixer.Cda, value);
+                CtmixerUpdateVolumes();
+                break;
+
+            case 0x2E: // Line-in Volume (SBPRO)
+                WriteSbProVolume(_sb.Mixer.Lin, value);
+                break;
+
+            case 0x30: // Master Volume Left (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Master[0] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case 0x31: // Master Volume Right (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Master[1] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case 0x32:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Dac[0] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                } else if (_sb.EssType != EssType.None) {
+                    WriteEssVolume(value, _sb.Mixer.Master);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case 0x33: // DAC Volume Right (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Dac[1] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case 0x34: // FM Volume Left (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Fm[0] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case 0x35: // FM Volume Right (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Fm[1] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case 0x36:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Cda[0] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                } else if (_sb.EssType != EssType.None) {
+                    WriteEssVolume(value, _sb.Mixer.Fm);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case 0x37: // CD Volume Right (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Cda[1] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case 0x38:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Lin[0] = (byte)(value >> 3);
+                } else if (_sb.EssType != EssType.None) {
+                    WriteEssVolume(value, _sb.Mixer.Cda);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case 0x39: // Line-in Volume Right (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Lin[1] = (byte)(value >> 3);
+                }
+                break;
+
+            case 0x3A: // Mic Volume (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Mic = (byte)(value >> 3);
+                }
+                break;
+
+            case 0x3E: // Line Volume (ESS)
+                if (_sb.EssType != EssType.None) {
+                    WriteEssVolume(value, _sb.Mixer.Lin);
+                }
+                break;
+
+            case 0x80: // IRQ Select
+                _sb.Hw.Irq = 0xFF;
+                if ((value & 0x01) != 0) {
+                    _sb.Hw.Irq = 2;
+                } else if ((value & 0x02) != 0) {
+                    _sb.Hw.Irq = 5;
+                } else if ((value & 0x04) != 0) {
+                    _sb.Hw.Irq = 7;
+                } else if ((value & 0x08) != 0) {
+                    _sb.Hw.Irq = 10;
+                }
+                break;
+
+            case 0x81: // DMA Select
+                _sb.Hw.Dma8 = 0xFF;
+                _sb.Hw.Dma16 = 0xFF;
+
+                if ((value & 0x01) != 0) {
+                    _sb.Hw.Dma8 = 0;
+                } else if ((value & 0x02) != 0) {
+                    _sb.Hw.Dma8 = 1;
+                } else if ((value & 0x08) != 0) {
+                    _sb.Hw.Dma8 = 3;
+                }
+
+                if ((value & 0x20) != 0) {
+                    _sb.Hw.Dma16 = 5;
+                } else if ((value & 0x40) != 0) {
+                    _sb.Hw.Dma16 = 6;
+                } else if ((value & 0x80) != 0) {
+                    _sb.Hw.Dma16 = 7;
+                }
+
+                if (_logger.IsEnabled(LogEventLevel.Information)) {
+                    _logger.Information("Mixer select dma8:{Dma8:X} dma16:{Dma16:X}", _sb.Hw.Dma8, _sb.Hw.Dma16);
+                }
+                break;
+
+            default:
+                if (((_sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2) &&
+                     _sb.Mixer.Index == 0x0C) ||
+                    (_sb.Type == SbType.Sb16 && _sb.Mixer.Index >= 0x3B && _sb.Mixer.Index <= 0x47)) {
+                    _sb.Mixer.Unhandled[_sb.Mixer.Index] = value;
+                }
+
+                if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                    _logger.Warning("MIXER:Write {Value:X2} to unhandled index {Index:X2}", value, _sb.Mixer.Index);
+                }
+                break;
+        }
+    }
+
+    private byte CtmixerRead() {
+        LogMethodEntry(nameof(CtmixerRead));
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("SB: CtmixerRead index=0x{Index:X2}", _sb.Mixer.Index);
+        }
+        byte ret = 0;
+
+        switch (_sb.Mixer.Index) {
+            case 0x00: // Reset
+                return 0x00;
+
+            case 0x02: // Master Volume (SB2 only)
+                return (byte)((_sb.Mixer.Master[1] >> 1) & 0x0E);
+
+            case 0x14: // Audio 1 Play Volume (ESS)
+                if (_sb.EssType != EssType.None) {
+                    ret = ReadEssVolume(_sb.Mixer.Dac);
+                }
+                break;
+
+            case 0x22: // Master Volume (SB Pro)
+                return ReadSbProVolume(_sb.Mixer.Master);
+
+            case 0x04: // DAC Volume (SB Pro)
+                return ReadSbProVolume(_sb.Mixer.Dac);
+
+            case 0x06: // FM Volume (SB2 only) + FM output selection
+                return (byte)((_sb.Mixer.Fm[1] >> 1) & 0x0E);
+
+            case 0x08: // CD Volume (SB2 only)
+                return (byte)((_sb.Mixer.Cda[1] >> 1) & 0x0E);
+
+            case 0x0A: // Mic Level (SB Pro) or Voice (SB2 only)
+                if (_sb.Type == SbType.SB2) {
+                    return (byte)(_sb.Mixer.Dac[0] >> 2);
+                }
+                return (byte)((_sb.Mixer.Mic >> 2) & (_sb.Type == SbType.Sb16 ? 7 : 6));
+
+            case 0x0E: // Output/Stereo Select
+                return (byte)(0x11 | (_sb.Mixer.StereoEnabled ? 0x02 : 0x00) | (_sb.Mixer.FilterEnabled ? 0x00 : 0x20));
+
+            case 0x26: // FM Volume (SB Pro)
+                return ReadSbProVolume(_sb.Mixer.Fm);
+
+            case 0x28: // CD Audio Volume (SB Pro)
+                return ReadSbProVolume(_sb.Mixer.Cda);
+
+            case 0x2E: // Line-in Volume (SB Pro)
+                return ReadSbProVolume(_sb.Mixer.Lin);
+
+            case 0x30: // Master Volume Left (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Master[0] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case 0x31: // Master Volume Right (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Master[1] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case 0x32:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Dac[0] << 3);
+                }
+                if (_sb.EssType != EssType.None) {
+                    return ReadEssVolume(_sb.Mixer.Master);
+                }
+                ret = 0x0A;
+                break;
+
+            case 0x33: // DAC Volume Right (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Dac[1] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case 0x34: // FM Volume Left (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Fm[0] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case 0x35: // FM Volume Right (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Fm[1] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case 0x36:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Cda[0] << 3);
+                }
+                if (_sb.EssType != EssType.None) {
+                    return ReadEssVolume(_sb.Mixer.Fm);
+                }
+                ret = 0x0A;
+                break;
+
+            case 0x37: // CD Volume Right (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Cda[1] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case 0x38:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Lin[0] << 3);
+                }
+                if (_sb.EssType != EssType.None) {
+                    return ReadEssVolume(_sb.Mixer.Cda);
+                }
+                ret = 0x0A;
+                break;
+
+            case 0x39: // Line-in Volume Right (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Lin[1] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case 0x3A: // Mic Volume (SB16)
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Mic << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case 0x3E: // Line Volume (ESS)
+                if (_sb.EssType != EssType.None) {
+                    ret = ReadEssVolume(_sb.Mixer.Lin);
+                }
+                break;
+
+            case 0x40: // ESS Identification Value (ES1488 and later)
+                if (_sb.EssType == EssType.Es1688 || _sb.EssType == EssType.None) {
+                    ret = _sb.Mixer.EssIdStr[_sb.Mixer.EssIdStrPos];
+                    _sb.Mixer.EssIdStrPos++;
+                    if (_sb.Mixer.EssIdStrPos >= 4) {
+                        _sb.Mixer.EssIdStrPos = 0;
+                    }
+                } else {
+                    ret = 0x0A;
+                    if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                        _logger.Warning("ESS: Identification function 0x{Index:X2} is not implemented", _sb.Mixer.Index);
+                    }
+                }
+                break;
+
+            case 0x80: // IRQ Select
+                ret = 0;
+                switch (_sb.Hw.Irq) {
+                    case 2: return 0x01;
+                    case 5: return 0x02;
+                    case 7: return 0x04;
+                    case 10: return 0x08;
+                }
+                return ret;
+
+            case 0x81: // DMA Select
+                ret = 0;
+                switch (_sb.Hw.Dma8) {
+                    case 0: ret |= 0x01; break;
+                    case 1: ret |= 0x02; break;
+                    case 3: ret |= 0x08; break;
+                }
+                switch (_sb.Hw.Dma16) {
+                    case 5: ret |= 0x20; break;
+                    case 6: ret |= 0x40; break;
+                    case 7: ret |= 0x80; break;
+                }
+                return ret;
+
+            case 0x82: // IRQ Status
+                return (byte)((_sb.Irq.Pending8Bit ? 0x01 : 0x00) |
+                              (_sb.Irq.Pending16Bit ? 0x02 : 0x00) |
+                              (_sb.Type == SbType.Sb16 ? 0x20 : 0x00));
+
+            default:
+                if (((_sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2) &&
+                     _sb.Mixer.Index == 0x0C) ||
+                    (_sb.Type == SbType.Sb16 && _sb.Mixer.Index >= 0x3B && _sb.Mixer.Index <= 0x47)) {
+                    ret = _sb.Mixer.Unhandled[_sb.Mixer.Index];
+                } else {
+                    ret = 0x0A;
+                }
+                break;
+        }
+
+        if (_logger.IsEnabled(LogEventLevel.Warning)) {
+            _logger.Warning("MIXER:Read from unhandled index {Index:X2}", _sb.Mixer.Index);
+        }
+        return ret;
+    }
+
     /// <summary>
     /// Determines if the DSP write buffer is at capacity.
     /// Reference: src/hardware/audio/soundblaster.cpp write_buffer_at_capacity()
     /// </summary>
     private bool WriteBufferAtCapacity() {
+        LogMethodEntry(nameof(WriteBufferAtCapacity));
         // Is the DSP in an abnormal state?
         if (_sb.Dsp.State != DspState.Normal) {
             return true;
@@ -2919,10 +3538,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_raise_irq_event()
     /// </summary>
     private void DspRaiseIrqEvent(uint val) {
+        LogMethodEntry(nameof(DspRaiseIrqEvent));
         RaiseIrq(SbIrq.Irq8);
     }
 
     public void RaiseInterruptRequest() {
+        LogMethodEntry(nameof(RaiseInterruptRequest));
         RaiseIrq(SbIrq.Irq8);
     }
 
@@ -2966,6 +3587,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: DOSBox soundblaster.cpp dsp_prepare_dma_new() "DSP:Illegal transfer mode"
     /// </summary>
     private uint LogIllegalTransferMode(DmaMode mode) {
+        LogMethodEntry(nameof(LogIllegalTransferMode));
         if (_logger.IsEnabled(LogEventLevel.Error)) {
             _logger.Error("SOUNDBLASTER: Illegal transfer mode {Mode}", mode);
         }
