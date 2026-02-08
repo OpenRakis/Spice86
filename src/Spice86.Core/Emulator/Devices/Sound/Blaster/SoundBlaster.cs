@@ -1606,9 +1606,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SB: WriteByte port=0x{Port:X4} offset=0x{Offset:X2} value=0x{Value:X2}", port, offset, value);
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SB: Write port {Port:X4}h (offset=0x{Offset:X2}) value=0x{Value:X2}", port, offset, value);
-        }
         switch (offset) {
             case 0x06:
                 DspDoReset(value);
@@ -1625,9 +1622,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x07:
                 break;
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SOUNDBLASTER: Unhandled write to port {Port:X4}h (offset=0x{Offset:X2}) value=0x{Value:X2}", port, offset, value);
-                }
+                base.WriteByte(port, value);
                 break;
         }
     }
@@ -1643,6 +1638,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// </summary>
     public override void WriteWord(ushort port, ushort value) {
         LogMethodEntry(nameof(WriteWord));
+        int offset = port - _config.BaseAddress;
+        if (offset is < 4 or > 0xF) {
+            base.WriteWord(port, value);
+            return;
+        }
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SB: WriteWord port=0x{Port:X4} value=0x{Value:X4} (lo=0x{Lo:X2} hi=0x{Hi:X2})",
                 port, value, (byte)(value & 0xFF), (byte)(value >> 8));
@@ -1660,6 +1660,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// </summary>
     public override ushort ReadWord(ushort port) {
         LogMethodEntry(nameof(ReadWord));
+        int offset = port - _config.BaseAddress;
+        if (offset is < 4 or > 0xF) {
+            return base.ReadWord(port);
+        }
         byte low = ReadByte(port);
         byte high = ReadByte((ushort)(port + 1));
         ushort result = (ushort)(low | (high << 8));
