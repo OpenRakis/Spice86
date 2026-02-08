@@ -711,9 +711,28 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     }
 
     /// <inheritdoc />
+    /// <summary>
+    ///     Handles 16-bit word writes to OPL I/O ports by splitting into two byte writes.
+    ///     DOSBox Staging registers OPL ports with io_width_t::byte only, so the port bus in
+    ///     port_containers.cpp write_word_to_port() splits word writes into two byte writes.
+    ///     Reference: dosbox-staging src/hardware/port_containers.cpp write_word_to_port()
+    /// </summary>
     public override void WriteWord(ushort port, ushort value) {
         WriteByte(port, (byte)value);
         WriteByte((ushort)(port + 1), (byte)(value >> 8));
+    }
+
+    /// <inheritdoc />
+    /// <summary>
+    ///     Handles 16-bit word reads from OPL I/O ports by splitting into two byte reads.
+    ///     DOSBox Staging registers OPL ports with io_width_t::byte only, so the port bus in
+    ///     port_containers.cpp read_word_from_port() splits word reads into two byte reads.
+    ///     Reference: dosbox-staging src/hardware/port_containers.cpp read_word_from_port()
+    /// </summary>
+    public override ushort ReadWord(ushort port) {
+        byte low = ReadByte(port);
+        byte high = ReadByte((ushort)(port + 1));
+        return (ushort)(low | (high << 8));
     }
 
     /// <summary>
