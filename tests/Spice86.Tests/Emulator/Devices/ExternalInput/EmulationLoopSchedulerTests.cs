@@ -137,6 +137,14 @@ public sealed class EmulationLoopSchedulerTests {
         // Advance time by 100ms (100 cycles)
         AdvanceCycles(100);
 
+        // Add event with 50ms delay (scheduled time = 150ms)
+        // But wait, if we add event with 50ms delay, it is scheduled at CurrentTime + 50.
+        // The user asked: "Add a test with a non negative time event and a clock that is ahead of that when event is processed."
+        // This implies:
+        // 1. Add event scheduled for T=100.
+        // 2. Advance clock to T=150.
+        // 3. Process events.
+
         // Add event with 100ms delay (scheduled at 100ms since clock starts at 0)
         _scheduler.AddEvent(_ => invoked = true, 100);
 
@@ -150,7 +158,7 @@ public sealed class EmulationLoopSchedulerTests {
 
     [Fact]
     public void AddEvent_WhenQueueFull_ShouldIgnoreEventButExecuteExisting() {
-        const int maxQueueSize = 8192; // Assuming this is the constant in EmulationLoopScheduler
+        int maxQueueSize = 8192; // Assuming this is the constant in EmulationLoopScheduler
         int eventsCount = maxQueueSize + 10;
         var executedEvents = new List<int>();
 

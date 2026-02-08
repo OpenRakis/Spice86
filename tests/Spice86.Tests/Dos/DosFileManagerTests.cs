@@ -1,4 +1,4 @@
-﻿namespace Spice86.Tests.Dos;
+namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
@@ -7,7 +7,6 @@ using NSubstitute;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -107,7 +106,7 @@ public class DosFileManagerTests {
         Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
-        EmulatorStateSerializationFolder emulatorStateSerializationFolder =
+        EmulatorStateSerializationFolder emulatorStateSerializationFolder = 
             new EmulatorStateSerializationFolderFactory(loggerService)
                 .ComputeFolder(configuration.Exe, configuration.RecordedDataDirectory);
         EmulationStateDataReader reader = new(emulatorStateSerializationFolder, loggerService);
@@ -118,8 +117,7 @@ public class DosFileManagerTests {
         A20Gate a20Gate = new(configuration.A20Gate);
         Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
-        NullCyclesLimiter cyclesLimiter = new();
-        IEmulatedClock emulatedClock = new EmulatedClock(cyclesLimiter);
+        IEmulatedClock emulatedClock = new EmulatedClock(new NullCyclesLimiter());
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, state, loggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
         
@@ -144,13 +142,11 @@ public class DosFileManagerTests {
 
         pcSpeaker.AttachPitControl(pitTimer);
 
-        DmaBus dmaSystem =
-            new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
-
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory, interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
+
 
         InputEventHub inputEventQueue = new();
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,

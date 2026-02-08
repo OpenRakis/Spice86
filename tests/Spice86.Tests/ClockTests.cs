@@ -19,8 +19,7 @@ public class ClockTests {
     public void CyclesClock_CurrentDateTime_ShouldReflectStartTimePlusElapsed() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        ICyclesLimiter cyclesLimiter = new NullCyclesLimiter();
-        CyclesClock clock = new CyclesClock(state, cyclesLimiter, 1000); // 1000 cycles per second
+        CyclesClock clock = new CyclesClock(state, new NullCyclesLimiter(), 1000); // 1000 cycles per second
         DateTime startTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         clock.StartTime = startTime;
 
@@ -42,8 +41,7 @@ public class ClockTests {
     public void EmulatedClock_StartTime_CanBeSetAndCurrentDateTimeCalculated() {
         // Arrange
         DateTime startTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-        ICyclesLimiter cyclesLimiter = new NullCyclesLimiter();
-        EmulatedClock clock = new EmulatedClock(cyclesLimiter);
+        EmulatedClock clock = new EmulatedClock(new NullCyclesLimiter());
         
         // Act
         clock.StartTime = startTime;
@@ -61,8 +59,7 @@ public class ClockTests {
     public void Clock_StartTime_CanBeSetAndRetrieved() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        ICyclesLimiter cyclesLimiter = new NullCyclesLimiter();
-        CyclesClock clock = new CyclesClock(state, cyclesLimiter, 1000);
+        CyclesClock clock = new CyclesClock(state, new NullCyclesLimiter(), 1000);
         DateTime expectedStartTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
         // Act
@@ -80,8 +77,7 @@ public class ClockTests {
     public void Clock_OnPauseAndOnResume_ShouldNotThrow() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        ICyclesLimiter cyclesLimiter = new NullCyclesLimiter();
-        CyclesClock clock = new CyclesClock(state, cyclesLimiter, 1000);
+        CyclesClock clock = new CyclesClock(state, new NullCyclesLimiter(), 1000);
 
         // Act
         Action act = () => {

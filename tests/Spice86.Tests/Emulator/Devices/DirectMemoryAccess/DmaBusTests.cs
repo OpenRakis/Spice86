@@ -1,4 +1,4 @@
-﻿namespace Spice86.Tests.Emulator.Devices.DirectMemoryAccess;
+namespace Spice86.Tests.Emulator.Devices.DirectMemoryAccess;
 
 using FluentAssertions;
 
