@@ -158,7 +158,11 @@ public class BreakpointTests {
         ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
         int triggers = 0;
         emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.IO_WRITE, 0x43, breakpoint => {
-            Assert.Equal(8, state.Cycles);
+            // With Cycles=3000 timing model, IO write delays (3000/1365=2 cycles each)
+            // are consumed via ConsumeIoCycles before each IO operation, adding extra
+            // cycles beyond instruction count. VGA init writes in Create() plus program
+            // IO operations before port 0x43 add 6 delay cycles to the base 8.
+            Assert.Equal(14, state.Cycles);
             Assert.Equal(0x43, ioPortDispatcher.LastPortWritten);
             Assert.Equal((uint)0b00110110, ioPortDispatcher.LastPortWrittenValue);
             triggers++;
@@ -167,11 +171,10 @@ public class BreakpointTests {
         Assert.Equal(1, triggers);
     }
 
-    // Note: This test verifies timer interrupt generation with the new PIT/EmulationLoopScheduler event system.
-    // The test expects approximately 356 timer interrupts. Due to the transition from an instruction-based
-    // timer model (where the counter decremented once per CPU instruction) to a time-based event model
-    // (where events are scheduled with sub-millisecond precision), there may be small timing differences.
-    // We allow a tolerance of ±1% to account for rounding and timing variations.
+    // Note: This test verifies timer interrupt generation with the EmulatedClock/EmulationLoopScheduler.
+    // With Cycles=3000 (DOSBox-aligned), each instruction ≈ 0.333μs, so the PIT timer (65536 divider,
+    // 1193182 Hz → 54.925ms period) fires every ~164,775 cycles. The program's ~2M instructions yield
+    // approximately 11 timer interrupts. We allow a tolerance of ±2 to account for rounding.
     [Fact]
     public void TestExternalInterruptBreakpoints() {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("externalint", maxCycles: 0xFFFFFFF, enablePit: true).Create();
@@ -183,10 +186,9 @@ public class BreakpointTests {
         }, false), true);
         programExecutor.Run();
         
-        // Allow ±1% tolerance for timing differences between instruction-based and event-based models
-        const int expected = 356;
-        int tolerance = expected / 100; // 1% of expected
-        if (tolerance < 1) tolerance = 1; // Ensure at least 1 interrupt tolerance for small values
+        // With Cycles=3000, the PIT fires ~30x less often than with InstructionsPerSecond=100000
+        const int expected = 11;
+        int tolerance = 2;
         Assert.InRange(triggers, expected - tolerance, expected + tolerance);
     }
 
