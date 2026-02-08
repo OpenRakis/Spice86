@@ -67,8 +67,8 @@ public class DosFileManagerTests {
         DosFileOperationResult result = dosFileManager.OpenFileOrDevice("C.txt", FileAccessMode.ReadOnly);
 
         // Assert
-        result.Should().BeEquivalentTo(DosFileOperationResult.Value16(3));
-        dosFileManager.OpenFiles.ElementAtOrDefault(3)?.Name.Should().Be("C.txt");
+        result.Should().BeEquivalentTo(DosFileOperationResult.Value16(6));
+        dosFileManager.OpenFiles.Last()?.Name.Should().Be("C.txt");
     }
 
     [Theory]

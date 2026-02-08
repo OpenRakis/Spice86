@@ -19,6 +19,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Linq;
 using System.Text;
 
 /// <summary>
@@ -247,7 +248,48 @@ public sealed class Dos {
     }
 
     private void OpenDefaultFileHandles(VirtualFileBase[] fileDevices) {
+        // Ensure DOS standard handles map to fixed indices:
+        // 0 -> STDIN (console)
+        // 1 -> STDOUT (console)
+        // 2 -> STDERR (console)
+        // 3 -> STDAUX (aux)
+        // 4 -> STDPRN (printer)
+
+        // Find devices by name from the Devices list (which contains all added devices)
+        VirtualFileBase? console = Devices.OfType<VirtualFileBase>().FirstOrDefault(d => string.Equals(d.Name, "CON", StringComparison.OrdinalIgnoreCase));
+        VirtualFileBase? aux = Devices.OfType<VirtualFileBase>().FirstOrDefault(d => string.Equals(d.Name, "AUX", StringComparison.OrdinalIgnoreCase));
+        VirtualFileBase? prn = Devices.OfType<VirtualFileBase>().FirstOrDefault(d => string.Equals(d.Name, "LPT1", StringComparison.OrdinalIgnoreCase));
+
+        var opened = new HashSet<VirtualFileBase>();
+
+        // Open console for stdin/stdout/stderr (three handles)
+        if (console != null) {
+            FileManager.OpenDevice(console); // handle 0
+            opened.Add(console);
+            FileManager.OpenDevice(console); // handle 1
+            FileManager.OpenDevice(console); // handle 2
+        }
+
+        // STDAUX -> AUX device (handle 3)
+        if (aux != null) {
+            FileManager.OpenDevice(aux);
+            opened.Add(aux);
+        }
+
+        // STDPRN -> LPT1 (handle 4)
+        if (prn != null) {
+            FileManager.OpenDevice(prn);
+            opened.Add(prn);
+        }
+
+        // Finally open any remaining devices passed in fileDevices that haven't been opened yet
         foreach (VirtualFileBase fileDevice in fileDevices) {
+            if (fileDevice == null) {
+                continue;
+            }
+            if (opened.Contains(fileDevice)) {
+                continue;
+            }
             FileManager.OpenDevice(fileDevice);
         }
     }
