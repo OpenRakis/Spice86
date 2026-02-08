@@ -346,22 +346,22 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private uint ReadDma8Bit(uint bytesToRead, uint bufferIndex = 0) {
         LogMethodEntry(nameof(ReadDma8Bit));
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             int? channelNumber = _sb.Dma.Channel?.ChannelNumber;
-            _logger.Debug("SB: ReadDma8Bit bytes={Bytes} index={Index} channel={Channel}", bytesToRead, bufferIndex, channelNumber);
+            _loggerService.Debug("SB: ReadDma8Bit bytes={Bytes} index={Index} channel={Channel}", bytesToRead, bufferIndex, channelNumber);
         }
         if (bufferIndex >= DmaBufSize) {
-            _logger.Error("SOUNDBLASTER: Read requested out of bounds of DMA buffer at index {Index}", bufferIndex);
+            _loggerService.Error("SOUNDBLASTER: Read requested out of bounds of DMA buffer at index {Index}", bufferIndex);
             return 0;
         }
 
         if (_sb.Dma.Channel is null) {
-            _logger.Warning("SOUNDBLASTER: Attempted to read DMA with null channel");
+            _loggerService.Warning("SOUNDBLASTER: Attempted to read DMA with null channel");
             return 0;
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("SOUNDBLASTER: ReadDma8Bit - Requesting {BytesToRead} bytes from channel {Channel}, bufferIndex={BufferIndex}",
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SOUNDBLASTER: ReadDma8Bit - Requesting {BytesToRead} bytes from channel {Channel}, bufferIndex={BufferIndex}",
                 bytesToRead, _sb.Dma.Channel.ChannelNumber, bufferIndex);
         }
 
@@ -373,39 +373,39 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             int bytesRead = _sb.Dma.Channel.Read((int)clampedBytes, buffer);
             uint actualBytesRead = (uint)Math.Max(0, bytesRead);
 
-            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                _logger.Verbose("SOUNDBLASTER: ReadDma8Bit - Read {ActualBytes}/{RequestedBytes} bytes from channel {Channel}",
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("SOUNDBLASTER: ReadDma8Bit - Read {ActualBytes}/{RequestedBytes} bytes from channel {Channel}",
                     actualBytesRead, clampedBytes, _sb.Dma.Channel.ChannelNumber);
             }
 
             return actualBytesRead;
         } catch (ArgumentOutOfRangeException ex) {
-            _logger.Error(ex, "SOUNDBLASTER: ArgumentOutOfRangeException during 8-bit DMA read");
+            _loggerService.Error(ex, "SOUNDBLASTER: ArgumentOutOfRangeException during 8-bit DMA read");
             return 0;
         } catch (ArgumentException ex) {
-            _logger.Error(ex, "SOUNDBLASTER: ArgumentException during 8-bit DMA read");
+            _loggerService.Error(ex, "SOUNDBLASTER: ArgumentException during 8-bit DMA read");
             return 0;
         }
     }
 
     private uint ReadDma16Bit(uint wordsToRead, uint bufferIndex = 0) {
         LogMethodEntry(nameof(ReadDma16Bit));
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             int? channelNumber = _sb.Dma.Channel?.ChannelNumber;
-            _logger.Debug("SB: ReadDma16Bit words={Words} index={Index} channel={Channel}", wordsToRead, bufferIndex, channelNumber);
+            _loggerService.Debug("SB: ReadDma16Bit words={Words} index={Index} channel={Channel}", wordsToRead, bufferIndex, channelNumber);
         }
         if (bufferIndex >= DmaBufSize) {
-            _logger.Error("SOUNDBLASTER: Read requested out of bounds of DMA buffer at index {Index}", bufferIndex);
+            _loggerService.Error("SOUNDBLASTER: Read requested out of bounds of DMA buffer at index {Index}", bufferIndex);
             return 0;
         }
 
         if (_sb.Dma.Channel is null) {
-            _logger.Warning("SOUNDBLASTER: Attempted to read DMA with null channel");
+            _loggerService.Warning("SOUNDBLASTER: Attempted to read DMA with null channel");
             return 0;
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("SOUNDBLASTER: ReadDma16Bit - Requesting {WordsToRead} words from channel {Channel}, bufferIndex={BufferIndex}",
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SOUNDBLASTER: ReadDma16Bit - Requesting {WordsToRead} words from channel {Channel}, bufferIndex={BufferIndex}",
                 wordsToRead, _sb.Dma.Channel.ChannelNumber, bufferIndex);
         }
 
@@ -417,11 +417,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (is16BitChannel) {
             bytesRequested *= 2;
             if (_sb.Dma.Mode != DmaMode.Pcm16Bit) {
-                _logger.Warning("SOUNDBLASTER: Expected 16-bit mode but DMA mode is {Mode}", _sb.Dma.Mode);
+                _loggerService.Warning("SOUNDBLASTER: Expected 16-bit mode but DMA mode is {Mode}", _sb.Dma.Mode);
             }
         } else {
             if (_sb.Dma.Mode != DmaMode.Pcm16BitAliased) {
-                _logger.Warning("SOUNDBLASTER: Expected 16-bit aliased mode but DMA mode is {Mode}", _sb.Dma.Mode);
+                _loggerService.Warning("SOUNDBLASTER: Expected 16-bit aliased mode but DMA mode is {Mode}", _sb.Dma.Mode);
             }
         }
 
@@ -443,17 +443,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             // Calculate bytes read for DMA
             uint bytesRead = actualWordsRead * (is16BitChannel ? 2u : 1u);
 
-            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                _logger.Verbose("SOUNDBLASTER: ReadDma16Bit - Read {ActualWords}/{RequestedWords} words ({BytesRead} bytes) from channel {Channel}",
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("SOUNDBLASTER: ReadDma16Bit - Read {ActualWords}/{RequestedWords} words ({BytesRead} bytes) from channel {Channel}",
                     actualWordsRead, clampedWords, bytesRead, _sb.Dma.Channel.ChannelNumber);
             }
 
             return actualWordsRead;
         } catch (ArgumentOutOfRangeException ex) {
-            _logger.Error(ex, "SOUNDBLASTER: Exception during 16-bit DMA read");
+            _loggerService.Error(ex, "SOUNDBLASTER: Exception during 16-bit DMA read");
             return 0;
         } catch (ArgumentException ex) {
-            _logger.Error(ex, "SOUNDBLASTER: Exception during 16-bit DMA read");
+            _loggerService.Error(ex, "SOUNDBLASTER: Exception during 16-bit DMA read");
             return 0;
         }
     }
@@ -505,7 +505,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     };
 
     private readonly SbInfo _sb;
-    private readonly ILoggerService _logger;
     private readonly SoundBlasterHardwareConfig _config;
     private readonly DualPic _dualPic;
     private readonly DmaChannel _primaryDmaChannel;
@@ -562,8 +561,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private const int MaxSingleFrameBaseCount = sizeof(short) * 2 - 1;
 
     private void LogMethodEntry(string methodName) {
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: {Method}", methodName);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: {Method}", methodName);
         }
     }
 
@@ -579,9 +578,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         IEmulatedClock clock,
         SoundBlasterHardwareConfig soundBlasterHardwareConfig)
         : base(state, false, loggerService) {
-        // Temporarily force verbose logging for SB debugging
-        _logger = loggerService.WithLogLevel(LogEventLevel.Verbose);
-
         // Lock mixer thread during construction to prevent concurrent modifications
         // Reference: src/hardware/audio/soundblaster.cpp:3858
         mixer.LockMixerThread();
@@ -607,15 +603,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
 
         // This prevents other devices from hijacking our channels
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SOUNDBLASTER: Reserving DMA channel {Channel} for Sound Blaster",
+        if (this._loggerService.IsEnabled(LogEventLevel.Debug)) {
+            this._loggerService.Debug("SOUNDBLASTER: Reserving DMA channel {Channel} for Sound Blaster",
                 _primaryDmaChannel.ChannelNumber);
         }
         _primaryDmaChannel.ReserveFor("SoundBlaster", OnDmaChannelEvicted);
 
         if (_secondaryDmaChannel is not null) {
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("SOUNDBLASTER: Reserving secondary DMA channel {Channel} for Sound Blaster 16-bit",
+            if (this._loggerService.IsEnabled(LogEventLevel.Debug)) {
+                this._loggerService.Debug("SOUNDBLASTER: Reserving secondary DMA channel {Channel} for Sound Blaster 16-bit",
                     _secondaryDmaChannel.ChannelNumber);
             }
             _secondaryDmaChannel.ReserveFor("SoundBlaster16", OnDmaChannelEvicted);
@@ -684,9 +680,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // The callback is activated when DMA is unmasked in DspDmaCallback.
         // Reference: src/hardware/audio/soundblaster.cpp lines 850-856
 
-        if (_logger.IsEnabled(LogEventLevel.Information)) {
+        if (this._loggerService.IsEnabled(LogEventLevel.Information)) {
             string highDmaSegment = ShouldUseHighDmaChannel() ? $", high DMA {_config.HighDma}" : string.Empty;
-            _logger.Information(
+            this._loggerService.Information(
                 "SoundBlaster: Initialized {SbType} on port {Port:X3}, IRQ {Irq}, DMA {LowDma}{HighDmaSegment}",
                 _sb.Type, _sb.Hw.Base, _sb.Hw.Irq, _sb.Hw.Dma8, highDmaSegment);
         }
@@ -721,8 +717,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private bool MaybeWakeUp() {
         LogMethodEntry(nameof(MaybeWakeUp));
         bool wokeUp = _dacChannel.WakeUp();
-        if (wokeUp && _logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: DAC channel woke up");
+        if (wokeUp && _loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: DAC channel woke up");
         }
         return wokeUp;
     }
@@ -736,8 +732,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         LogMethodEntry(nameof(SetChannelRateHz));
         int rateHz = Math.Clamp(requestedRateHz, MinPlaybackRateHz, NativeDacRateHz);
         if (_dacChannel.GetSampleRate() != rateHz) {
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("SB: SetChannelRateHz {OldRate} -> {NewRate} Hz (requested={Requested})",
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SB: SetChannelRateHz {OldRate} -> {NewRate} Hz (requested={Requested})",
                     _dacChannel.GetSampleRate(), rateHz, requestedRateHz);
             }
             _dacChannel.SetSampleRate(rateHz);
@@ -782,16 +778,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     }
 
                     _sb.Mode = DspMode.DmaMasked;
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: DMA masked, stopping output, left {Left}", _sb.Dma.Left);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: DMA masked, stopping output, left {Left}", _sb.Dma.Left);
                     }
                 }
                 break;
 
             case DmaChannel.DmaEvent.IsUnmasked:
                 if (_sb.Mode == DspMode.DmaMasked && _sb.Dma.Mode != DmaMode.None) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: DMA unmasked, starting output, autoInit={AutoInit} baseCount={BaseCount}",
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: DMA unmasked, starting output, autoInit={AutoInit} baseCount={BaseCount}",
                             _sb.Dma.AutoInit, channel.BaseCount);
                     }
                     DspChangeMode(DspMode.Dma);
@@ -850,8 +846,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private void PlayDmaTransfer(uint bytesRequested) {
         LogMethodEntry(nameof(PlayDmaTransfer));
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: PlayDmaTransfer bytes={Bytes} mode={Mode} stereo={Stereo} left={Left}",
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: PlayDmaTransfer bytes={Bytes} mode={Mode} stereo={Stereo} left={Left}",
                 bytesRequested, _sb.Dma.Mode, _sb.Dma.Stereo, _sb.Dma.Left);
         }
         // How many bytes should we read from DMA?
@@ -918,7 +914,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     samples = bytesRead;
                     // mono sanity-check
                     if (channels != 1) {
-                        _logger.Error("SOUNDBLASTER: Mono mode but channels={Channels}", channels);
+                        _loggerService.Error("SOUNDBLASTER: Mono mode but channels={Channels}", channels);
                     }
                     if (_sb.Dma.Sign) {
                         EnqueueFramesMono(_sb.Dma.Buf8, samples, true);
@@ -957,7 +953,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
                     // mono sanity check
                     if (channels != 1) {
-                        _logger.Error("SOUNDBLASTER: Mono mode but channels={Channels}", channels);
+                        _loggerService.Error("SOUNDBLASTER: Mono mode but channels={Channels}", channels);
                     }
 
                     if (_sb.Dma.Sign) {
@@ -969,14 +965,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 break;
 
             default:
-                _logger.Warning("SOUNDBLASTER: Unhandled DMA mode {Mode}", _sb.Dma.Mode);
+                _loggerService.Warning("SOUNDBLASTER: Unhandled DMA mode {Mode}", _sb.Dma.Mode);
                 _sb.Mode = DspMode.None;
                 return;
         }
 
         // Sanity check
         if (frames > samples) {
-            _logger.Error("SOUNDBLASTER: Frames {Frames} should never exceed samples {Samples}", frames, samples);
+            _loggerService.Error("SOUNDBLASTER: Frames {Frames} should never exceed samples {Samples}", frames, samples);
         }
 
         // If the first DMA transfer after a reset contains a single sample, it
@@ -1007,22 +1003,22 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             if (!_sb.Dma.AutoInit) {
                 if (_sb.Dma.SingleSize == 0) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: Single cycle transfer ended");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Single cycle transfer ended");
                     }
                     _sb.Mode = DspMode.None;
                     _sb.Dma.Mode = DmaMode.None;
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: Switch to single cycle transfer begun");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Switch to single cycle transfer begun");
                     }
                     _sb.Dma.Left = _sb.Dma.SingleSize;
                     _sb.Dma.SingleSize = 0;
                 }
             } else {
                 if (_sb.Dma.AutoSize == 0) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: Auto-init transfer with 0 size");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Auto-init transfer with 0 size");
                     }
                     _sb.Mode = DspMode.None;
                 }
@@ -1260,8 +1256,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 _sb.Irq.Pending8Bit = true;
                 _dualPic.ActivateIrq(_sb.Hw.Irq);
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("SOUNDBLASTER: Raised 8-bit IRQ {Irq}", _sb.Hw.Irq);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SOUNDBLASTER: Raised 8-bit IRQ {Irq}", _sb.Hw.Irq);
                 }
                 break;
 
@@ -1272,14 +1268,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 _sb.Irq.Pending16Bit = true;
                 _dualPic.ActivateIrq(_sb.Hw.Irq);
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("SOUNDBLASTER: Raised 16-bit IRQ {Irq}", _sb.Hw.Irq);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SOUNDBLASTER: Raised 16-bit IRQ {Irq}", _sb.Hw.Irq);
                 }
                 break;
 
             case SbIrq.IrqMpu:
                 // MPU-401 IRQ handling not implemented yet
-                _logger.Warning("SOUNDBLASTER: MPU-401 IRQ not yet implemented");
+                _loggerService.Warning("SOUNDBLASTER: MPU-401 IRQ not yet implemented");
                 break;
         }
     }
@@ -1523,28 +1519,28 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         LogMethodEntry(nameof(ReadByte));
         byte result;
         int offset = port - _config.BaseAddress;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: ReadByte port=0x{Port:X4} offset=0x{Offset:X2}", port, offset);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: ReadByte port=0x{Port:X4} offset=0x{Offset:X2}", port, offset);
         }
         switch (offset) {
             case 0x04: // MixerIndex
                 result = _sb.Mixer.Index;
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("SB: Read port {Port:X4}h (MixerIndex) => 0x{Result:X2}", port, result);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SB: Read port {Port:X4}h (MixerIndex) => 0x{Result:X2}", port, result);
                 }
                 return result;
 
             case 0x05: // MixerData
                 result = CtmixerRead();
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("SB: Read port {Port:X4}h (MixerData, reg=0x{Reg:X2}) => 0x{Result:X2}", port, _sb.Mixer.Index, result);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SB: Read port {Port:X4}h (MixerData, reg=0x{Reg:X2}) => 0x{Result:X2}", port, _sb.Mixer.Index, result);
                 }
                 return result;
 
             case 0x0A: // DspReadData
                 result = DspReadData();
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("SB: Read port {Port:X4}h (DspReadData) => 0x{Result:X2} (remaining={Remaining})", port, result, _sb.Dsp.Out.Used);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SB: Read port {Port:X4}h (DspReadData) => 0x{Result:X2} (remaining={Remaining})", port, result, _sb.Dsp.Out.Used);
                 }
                 return result;
 
@@ -1556,8 +1552,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     if (WriteBufferAtCapacity()) {
                         writeStatus |= 0x80;
                     }
-                    if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                        _logger.Verbose("SB: Read port {Port:X4}h (DspWriteStatus) => 0x{Status:X2} (ready={Ready}, dspState={DspState})",
+                    if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                        _loggerService.Verbose("SB: Read port {Port:X4}h (DspWriteStatus) => 0x{Status:X2} (ready={Ready}, dspState={DspState})",
                             port, writeStatus, (writeStatus & 0x80) == 0, _sb.Dsp.State);
                     }
                     return writeStatus;
@@ -1576,29 +1572,29 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     if (_sb.Dsp.Out.Used != 0) {
                         readStatus |= 0x80;
                     }
-                    if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                        _logger.Verbose("SB: Read port {Port:X4}h (DspReadStatus) => 0x{Status:X2} (dataAvail={DataAvail}, irq8WasActive={IrqWas})",
+                    if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                        _loggerService.Verbose("SB: Read port {Port:X4}h (DspReadStatus) => 0x{Status:X2} (dataAvail={DataAvail}, irq8WasActive={IrqWas})",
                             port, readStatus, _sb.Dsp.Out.Used > 0, wasIrqPending);
                     }
                     return readStatus;
                 }
 
             case 0x0F: // DspAck16Bit
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("SB: Read port {Port:X4}h (DspAck16Bit) irq16WasActive={IrqWas}", port, _sb.Irq.Pending16Bit);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SB: Read port {Port:X4}h (DspAck16Bit) irq16WasActive={IrqWas}", port, _sb.Irq.Pending16Bit);
                 }
                 _sb.Irq.Pending16Bit = false;
                 return 0xFF;
 
             case 0x06: // DspReset read
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("SB: Read port {Port:X4}h (DspReset read) => 0xFF", port);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SB: Read port {Port:X4}h (DspReset read) => 0xFF", port);
                 }
                 return 0xFF;
 
             default:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SOUNDBLASTER: Unhandled read from port {Port:X4}h (offset=0x{Offset:X2})", port, offset);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Unhandled read from port {Port:X4}h (offset=0x{Offset:X2})", port, offset);
                 }
                 return 0xFF;
         }
@@ -1607,11 +1603,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     public override void WriteByte(ushort port, byte value) {
         LogMethodEntry(nameof(WriteByte));
         int offset = port - _config.BaseAddress;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: WriteByte port=0x{Port:X4} offset=0x{Offset:X2} value=0x{Value:X2}", port, offset, value);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: WriteByte port=0x{Port:X4} offset=0x{Offset:X2} value=0x{Value:X2}", port, offset, value);
         }
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("SB: Write port {Port:X4}h (offset=0x{Offset:X2}) value=0x{Value:X2}", port, offset, value);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SB: Write port {Port:X4}h (offset=0x{Offset:X2}) value=0x{Value:X2}", port, offset, value);
         }
         switch (offset) {
             case 0x06:
@@ -1629,8 +1625,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x07:
                 break;
             default:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SOUNDBLASTER: Unhandled write to port {Port:X4}h (offset=0x{Offset:X2}) value=0x{Value:X2}", port, offset, value);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Unhandled write to port {Port:X4}h (offset=0x{Offset:X2}) value=0x{Value:X2}", port, offset, value);
                 }
                 break;
         }
@@ -1647,8 +1643,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// </summary>
     public override void WriteWord(ushort port, ushort value) {
         LogMethodEntry(nameof(WriteWord));
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: WriteWord port=0x{Port:X4} value=0x{Value:X4} (lo=0x{Lo:X2} hi=0x{Hi:X2})",
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: WriteWord port=0x{Port:X4} value=0x{Value:X4} (lo=0x{Lo:X2} hi=0x{Hi:X2})",
                 port, value, (byte)(value & 0xFF), (byte)(value >> 8));
         }
         WriteByte(port, (byte)(value & 0xFF));
@@ -1667,8 +1663,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         byte low = ReadByte(port);
         byte high = ReadByte((ushort)(port + 1));
         ushort result = (ushort)(low | (high << 8));
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: ReadWord port=0x{Port:X4} => 0x{Value:X4} (lo=0x{Lo:X2} hi=0x{Hi:X2})",
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: ReadWord port=0x{Port:X4} => 0x{Value:X4} (lo=0x{Lo:X2} hi=0x{Hi:X2})",
                 port, result, low, high);
         }
         return result;
@@ -1676,13 +1672,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private void DspDoReset(byte value) {
         LogMethodEntry(nameof(DspDoReset));
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: DspDoReset value=0x{Value:X2} currentState={State}", value, _sb.Dsp.State);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: DspDoReset value=0x{Value:X2} currentState={State}", value, _sb.Dsp.State);
         }
         if (((value & 1) != 0) && (_sb.Dsp.State != DspState.Reset)) {
             // Reference: DOSBox soundblaster.cpp dsp_do_reset() LOG_MSG
-            if (_logger.IsEnabled(LogEventLevel.Information)) {
-                _logger.Information("SOUNDBLASTER: Resetting DSP");
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("SOUNDBLASTER: Resetting DSP");
             }
             DspReset();
             _sb.Dsp.State = DspState.Reset;
@@ -1709,8 +1705,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private void DspFinishReset() {
         LogMethodEntry(nameof(DspFinishReset));
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: DspFinishReset - adding 0xAA to output, state transitioning to Normal");
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: DspFinishReset - adding 0xAA to output, state transitioning to Normal");
         }
         DspFlushData();
         DspAddData(0xaa);
@@ -1719,8 +1715,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private void DspReset() {
         LogMethodEntry(nameof(DspReset));
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SOUNDBLASTER: DSP Reset");
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DSP Reset");
         }
         _dualPic.DeactivateIrq(_sb.Hw.Irq);
         DspChangeMode(DspMode.None);
@@ -1788,8 +1784,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private void DspDoWrite(byte value) {
         LogMethodEntry(nameof(DspDoWrite));
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_write()
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("SB: DSP write value=0x{Value:X2} state={State}", value, _blasterState);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SB: DSP write value=0x{Value:X2} state={State}", value, _blasterState);
         }
         switch (_blasterState) {
             case BlasterState.WaitingForCommand:
@@ -1801,8 +1797,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 }
                 _sb.Dsp.In.Pos = 0;
                 _blasterState = BlasterState.ReadingCommand;
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Command 0x{Cmd:X2} received; expecting {Len} bytes", _sb.Dsp.Cmd, _sb.Dsp.CmdLen);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Command 0x{Cmd:X2} received; expecting {Len} bytes", _sb.Dsp.Cmd, _sb.Dsp.CmdLen);
                 }
                 if (_sb.Dsp.CmdLen == 0) {
                     ProcessCommand();
@@ -1813,8 +1809,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Reference: sb.dsp.in.data[sb.dsp.in.pos] = val; sb.dsp.in.pos++;
                 _sb.Dsp.In.Data[_sb.Dsp.In.Pos] = value;
                 _sb.Dsp.In.Pos++;
-                if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                    _logger.Verbose("SB: Command 0x{Cmd:X2} param[{Count}] = 0x{Val:X2}", _sb.Dsp.Cmd, _sb.Dsp.In.Pos - 1, value);
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("SB: Command 0x{Cmd:X2} param[{Count}] = 0x{Val:X2}", _sb.Dsp.Cmd, _sb.Dsp.In.Pos - 1, value);
                 }
                 if (_sb.Dsp.In.Pos >= _sb.Dsp.CmdLen) {
                     ProcessCommand();
@@ -1826,16 +1822,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private bool ProcessCommand() {
         LogMethodEntry(nameof(ProcessCommand));
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_command()
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             string paramsHex = _sb.Dsp.In.Pos > 0 ? string.Join(" ", _sb.Dsp.In.Data.Take(_sb.Dsp.In.Pos).Select(b => b.ToString("X2"))) : string.Empty;
-            _logger.Debug("SB: Processing command 0x{Cmd:X2} params={Params}", _sb.Dsp.Cmd, paramsHex);
+            _loggerService.Debug("SB: Processing command 0x{Cmd:X2} params={Params}", _sb.Dsp.Cmd, paramsHex);
         }
         switch (_sb.Dsp.Cmd) {
             case 0x04:
                 // Sb16 ASP set mode register or DSP Status
                 if (_config.SbType == SbType.Sb16) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: SB16ASP set mode register to 0x{Mode:X2}", _sb.Dsp.In.Data[0]);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: SB16ASP set mode register to 0x{Mode:X2}", _sb.Dsp.In.Data[0]);
                     }
                     if ((_sb.Dsp.In.Data[0] & 0xf1) == 0xf1) {
                         _aspInitInProgress = true;
@@ -1851,22 +1847,22 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     } else {
                         DspAddData(0xff);
                     }
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SB: DSP status query on {SbType} (non-SB16 path)", _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: DSP status query on {SbType} (non-SB16 path)", _config.SbType);
                     }
                 }
                 break;
 
             case 0x05: // SB16 ASP set codec parameter
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("DSP Unhandled SB16ASP command 0x{Cmd:X2} (set codec parameter)", _sb.Dsp.Cmd);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("DSP Unhandled SB16ASP command 0x{Cmd:X2} (set codec parameter)", _sb.Dsp.Cmd);
                 }
                 // No specific action needed - ASP commands are mostly unimplemented
                 break;
 
             case 0x08: // SB16 ASP get version
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("DSP Unhandled SB16ASP command {Cmd:X} sub {Sub:X}",
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("DSP Unhandled SB16ASP command {Cmd:X} sub {Sub:X}",
                                         _sb.Dsp.Cmd,
                                         _sb.Dsp.In.Pos > 0 ? _sb.Dsp.In.Data[0] : 0);
                 }
@@ -1878,8 +1874,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                             break;
 
                         default:
-                            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                                _logger.Debug("DSP Unhandled SB16ASP command {Cmd:X} sub {Sub:X}",
+                            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                                _loggerService.Debug("DSP Unhandled SB16ASP command {Cmd:X} sub {Sub:X}",
                                                     _sb.Dsp.Cmd,
                                                     _sb.Dsp.In.Data[0]);
                             }
@@ -1894,8 +1890,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 if (_config.SbType == SbType.Sb16) {
                     _aspRegs[_sb.Dsp.In.Data[0]] = _sb.Dsp.In.Data[1];
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: SB16ASP set register (not SB16)");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: SB16ASP set register (not SB16)");
                     }
                 }
                 break;
@@ -1909,8 +1905,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     }
                     DspAddData(_aspRegs[_sb.Dsp.In.Data[0]]);
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: SB16ASP get register (not SB16)");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: SB16ASP get register (not SB16)");
                     }
                 }
                 break;
@@ -1918,8 +1914,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x10:
                 // Direct DAC
                 // Reference: src/hardware/audio/soundblaster.cpp DSP command 0x10
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Direct DAC output, sample=0x{Sample:X2}", _sb.Dsp.In.Data[0]);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Direct DAC output, sample=0x{Sample:X2}", _sb.Dsp.In.Data[0]);
                 }
                 DspChangeMode(DspMode.Dac);
 
@@ -1946,8 +1942,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Single Cycle 8-Bit DMA DAC
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x14/0x15/0x91
                 // DOSBox calls dsp_prepare_dma_old() directly which reads sb.dsp.in.data[]
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Single Cycle 8-bit DMA (cmd=0x{Cmd:X2})", _sb.Dsp.Cmd);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Single Cycle 8-bit DMA (cmd=0x{Cmd:X2})", _sb.Dsp.Cmd);
                 }
                 DspPrepareDmaOld(DmaMode.Pcm8Bit, false, false);
                 break;
@@ -1957,13 +1953,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Auto Init 8-bit DMA
                 // Uses AutoSize previously set by command 0x48
                 if (_config.SbType > SbType.SB1) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SB: Auto-Init 8-bit DMA (cmd=0x{Cmd:X2})", _sb.Dsp.Cmd);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Auto-Init 8-bit DMA (cmd=0x{Cmd:X2})", _sb.Dsp.Cmd);
                     }
                     DspPrepareDmaOld(DmaMode.Pcm8Bit, true, false);
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Information)) {
-                        _logger.Information("SB: Game uses Auto-init DMA (cmd=0x{Cmd:X2}) but {SbType} does not support it", _sb.Dsp.Cmd, _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses Auto-init DMA (cmd=0x{Cmd:X2}) but {SbType} does not support it", _sb.Dsp.Cmd, _config.SbType);
                     }
                 }
                 break;
@@ -1971,16 +1967,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x7f:
             case 0x1f:
                 if (_config.SbType > SbType.SB1) {
-                    if (_logger.IsEnabled(LogEventLevel.Error)) {
-                        _logger.Error("DSP:Unimplemented auto-init DMA ADPCM command {Cmd:X2}",
+                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                        _loggerService.Error("DSP:Unimplemented auto-init DMA ADPCM command {Cmd:X2}",
                                             _sb.Dsp.Cmd);
                     }
                 }
                 break;
 
             case 0x20:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Direct ADC read (fake silent input)");
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Direct ADC read (fake silent input)");
                 }
                 DspAddData(0x7f); // Fake silent input for Creative parrot
                 break;
@@ -1991,16 +1987,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Note: ADC is faked - writes silence (128) to DMA buffer
                 _sb.Dma.Left = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
                 _sb.Dma.Sign = false;
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Faked ADC for {Size} bytes", _sb.Dma.Left);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Faked ADC for {Size} bytes", _sb.Dma.Left);
                 }
                 _primaryDmaChannel.RegisterCallback(DspAdcCallback);
                 break;
 
             case 0x30:
             case 0x31:
-                if (_logger.IsEnabled(LogEventLevel.Error)) {
-                    _logger.Error("DSP:Unimplemented MIDI I/O command {Cmd:X2}",
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("DSP:Unimplemented MIDI I/O command {Cmd:X2}",
                                         _sb.Dsp.Cmd);
                 }
                 break;
@@ -2010,8 +2006,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x36:
             case 0x37:
                 if (_config.SbType > SbType.SB1) {
-                    if (_logger.IsEnabled(LogEventLevel.Error)) {
-                        _logger.Error("DSP:Unimplemented MIDI UART command {Cmd:X2}",
+                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                        _loggerService.Error("DSP:Unimplemented MIDI UART command {Cmd:X2}",
                                             _sb.Dsp.Cmd);
                     }
                 }
@@ -2020,8 +2016,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x38:
                 // Write to SB MIDI Output
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x38
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: MIDI output byte 0x{Byte:X2}, midiEnabled={MidiEnabled}", _sb.Dsp.In.Data[0], _sb.MidiEnabled);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: MIDI output byte 0x{Byte:X2}, midiEnabled={MidiEnabled}", _sb.Dsp.In.Data[0], _sb.MidiEnabled);
                 }
                 if (_sb.MidiEnabled) {
                     // TODO: Forward to MIDI subsystem
@@ -2032,8 +2028,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Set Timeconstant
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x40
                 DspChangeRate((uint)(1000000 / (256 - _sb.Dsp.In.Data[0])));
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Timeconstant set tc=0x{Tc:X2} rate={Rate}Hz", _sb.Dsp.In.Data[0], _sb.FreqHz);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Timeconstant set tc=0x{Tc:X2} rate={Rate}Hz", _sb.Dsp.In.Data[0], _sb.FreqHz);
                 }
                 break;
 
@@ -2044,13 +2040,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Note: 0x42 is handled like 0x41, needed by Fasttracker II
                 if (_config.SbType == SbType.Sb16) {
                     uint rate = (uint)((_sb.Dsp.In.Data[0] << 8) | _sb.Dsp.In.Data[1]);
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SB: Set SB16 sample rate to {Rate} Hz (cmd=0x{Cmd:X2})", rate, _sb.Dsp.Cmd);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Set SB16 sample rate to {Rate} Hz (cmd=0x{Cmd:X2})", rate, _sb.Dsp.Cmd);
                     }
                     DspChangeRate(rate);
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Information)) {
-                        _logger.Information("SB: Game uses SB16 sample rate command 0x{Cmd:X2} but running as {SbType}",
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses SB16 sample rate command 0x{Cmd:X2} but running as {SbType}",
                             _sb.Dsp.Cmd, _config.SbType);
                     }
                 }
@@ -2061,12 +2057,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x48
                 if (_config.SbType > SbType.SB1) {
                     _sb.Dma.AutoSize = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SB: DMA AutoSize set to {AutoSize}", _sb.Dma.AutoSize);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: DMA AutoSize set to {AutoSize}", _sb.Dma.AutoSize);
                     }
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Information)) {
-                        _logger.Information("SB: Game uses DMA block size command (0x48) but {SbType} does not support it", _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses DMA block size command (0x48) but {SbType} does not support it", _config.SbType);
                     }
                 }
                 break;
@@ -2076,8 +2072,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Single Cycle 2-bit ADPCM
                 // 0x17 includes reference byte
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x16/0x17
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Single Cycle 2-bit ADPCM (cmd=0x{Cmd:X2}, ref={HasRef})", _sb.Dsp.Cmd, _sb.Dsp.Cmd == 0x17);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Single Cycle 2-bit ADPCM (cmd=0x{Cmd:X2}, ref={HasRef})", _sb.Dsp.Cmd, _sb.Dsp.Cmd == 0x17);
                 }
                 if (_sb.Dsp.Cmd == 0x17) {
                     _sb.Adpcm.HaveRef = true;
@@ -2089,8 +2085,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x75:
                 // Single Cycle 4-bit ADPCM
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x74/0x75
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Single Cycle 4-bit ADPCM (cmd=0x{Cmd:X2}, ref={HasRef})", _sb.Dsp.Cmd, _sb.Dsp.Cmd == 0x75);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Single Cycle 4-bit ADPCM (cmd=0x{Cmd:X2}, ref={HasRef})", _sb.Dsp.Cmd, _sb.Dsp.Cmd == 0x75);
                 }
                 if (_sb.Dsp.Cmd == 0x75) {
                     _sb.Adpcm.HaveRef = true;
@@ -2102,8 +2098,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x77:
                 // Single Cycle 3-bit ADPCM
                 // Reference: src/hardware/audio/soundblaster.cpp case 0x76/0x77
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Single Cycle 3-bit ADPCM (cmd=0x{Cmd:X2}, ref={HasRef})", _sb.Dsp.Cmd, _sb.Dsp.Cmd == 0x77);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Single Cycle 3-bit ADPCM (cmd=0x{Cmd:X2}, ref={HasRef})", _sb.Dsp.Cmd, _sb.Dsp.Cmd == 0x77);
                 }
                 if (_sb.Dsp.Cmd == 0x77) {
                     _sb.Adpcm.HaveRef = true;
@@ -2114,14 +2110,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x7d:
                 // Auto Init 4-bit ADPCM
                 if (_config.SbType > SbType.SB1) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SB: Auto-Init 4-bit ADPCM with reference");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Auto-Init 4-bit ADPCM with reference");
                     }
                     _sb.Adpcm.HaveRef = true;
                     DspPrepareDmaOld(DmaMode.Adpcm4Bit, true, false);
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Information)) {
-                        _logger.Information("SB: Game uses Auto-init ADPCM (0x7D) but {SbType} does not support it", _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses Auto-init ADPCM (0x7D) but {SbType} does not support it", _config.SbType);
                     }
                 }
                 break;
@@ -2132,8 +2128,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 {
                     uint samples = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
                     double delayMs = (1000.0 * samples) / _sb.FreqHz;
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SB: Silence DAC for {Samples} samples ({Delay:F3} ms) at {Rate} Hz", samples, delayMs, _sb.FreqHz);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Silence DAC for {Samples} samples ({Delay:F3} ms) at {Rate} Hz", samples, delayMs, _sb.FreqHz);
                     }
                     _scheduler.AddEvent(DspRaiseIrqEvent, delayMs, 0);
                 }
@@ -2143,8 +2139,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0x99: // Documented only for DSP 2.x and 3.x
             case 0xa0:
             case 0xa8: // Documented only for DSP 3.x
-                if (_logger.IsEnabled(LogEventLevel.Error)) {
-                    _logger.Error("DSP:Unimplemented input command {Cmd:X2}",
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("DSP:Unimplemented input command {Cmd:X2}",
                                         _sb.Dsp.Cmd);
                 }
                 break;
@@ -2200,16 +2196,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     // Length is in bytes (for 8-bit) or words (for 16-bit)
                     uint length = (uint)(1 + _sb.Dsp.In.Data[1] + (_sb.Dsp.In.Data[2] << 8));
 
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SB16: Generic DMA cmd=0x{Cmd:X2} mode=0x{Mode:X2} " +
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB16: Generic DMA cmd=0x{Cmd:X2} mode=0x{Mode:X2} " +
                             "16bit={Is16Bit} autoInit={AutoInit} stereo={Stereo} sign={Sign} len={Length}",
                             _sb.Dsp.Cmd, _sb.Dsp.In.Data[0], is16Bit, autoInit, stereo, _sb.Dma.Sign, length);
                     }
 
                     DspPrepareDmaNew(is16Bit ? DmaMode.Pcm16Bit : DmaMode.Pcm8Bit, length, autoInit, stereo);
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Information)) {
-                        _logger.Information("SB: Game uses Generic DMA commands (0xB0-0xCF) but running as {SbType}, requires SB16", _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses Generic DMA commands (0xB0-0xCF) but running as {SbType}, requires SB16", _config.SbType);
                     }
                 }
                 break;
@@ -2217,8 +2213,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0xd0:
                 // Halt 8-bit DMA
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xd0
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SOUNDBLASTER: Halt DMA command (8-bit)");
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Halt DMA command (8-bit)");
                 }
                 _sb.Mode = DspMode.DmaPause;
                 _scheduler.RemoveEvents(ProcessDmaTransferEvent);
@@ -2238,8 +2234,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Continue DMA 8-bit
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xd4
                 if (_sb.Mode == DspMode.DmaPause) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: Continue DMA command (8-bit)");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Continue DMA command (8-bit)");
                     }
                     _sb.Mode = DspMode.DmaMasked;
                     _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
@@ -2250,13 +2246,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Halt 16-bit DMA
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xd5
                 if (_config.SbType != SbType.Sb16) {
-                    if (_logger.IsEnabled(LogEventLevel.Information)) {
-                        _logger.Information("SB: Game uses 16-bit DMA halt (0xD5) but running as {SbType}, requires SB16", _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses 16-bit DMA halt (0xD5) but running as {SbType}, requires SB16", _config.SbType);
                     }
                     break;
                 }
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SOUNDBLASTER: Halt DMA command (16-bit)");
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Halt DMA command (16-bit)");
                 }
                 _sb.Mode = DspMode.DmaPause;
                 _scheduler.RemoveEvents(ProcessDmaTransferEvent);
@@ -2266,14 +2262,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Continue DMA 16-bit
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xd6
                 if (_config.SbType != SbType.Sb16) {
-                    if (_logger.IsEnabled(LogEventLevel.Information)) {
-                        _logger.Information("SB: Game uses 16-bit DMA continue (0xD6) but running as {SbType}, requires SB16", _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses 16-bit DMA continue (0xD6) but running as {SbType}, requires SB16", _config.SbType);
                     }
                     break;
                 }
                 if (_sb.Mode == DspMode.DmaPause) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: Continue DMA command (16-bit)");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Continue DMA command (16-bit)");
                     }
                     _sb.Mode = DspMode.DmaMasked;
                     _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
@@ -2290,12 +2286,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     } else {
                         DspAddData(0x00);
                     }
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SB: Speaker status query, enabled={SpeakerEnabled}", _sb.SpeakerEnabled);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SB: Speaker status query, enabled={SpeakerEnabled}", _sb.SpeakerEnabled);
                     }
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Information)) {
-                        _logger.Information("SB: Game uses speaker status query (0xD8) but {SbType} does not support it", _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses speaker status query (0xD8) but {SbType} does not support it", _config.SbType);
                     }
                 }
                 break;
@@ -2303,13 +2299,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0xd9:
                 // Exit Autoinitialize 16-bit
                 if (_config.SbType == SbType.Sb16) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: Exit auto-init command (16-bit)");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Exit auto-init command (16-bit)");
                     }
                     _sb.Dma.AutoInit = false;
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Information)) {
-                        _logger.Information("SB: Game uses 16-bit exit auto-init (0xD9) but running as {SbType}, requires SB16", _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses 16-bit exit auto-init (0xD9) but running as {SbType}, requires SB16", _config.SbType);
                     }
                 }
                 break;
@@ -2317,13 +2313,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0xda:
                 // Exit Autoinitialize 8-bit
                 if (_config.SbType > SbType.SB1) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: Exit auto-init command (8-bit)");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Exit auto-init command (8-bit)");
                     }
                     _sb.Dma.AutoInit = false;
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Information)) {
-                        _logger.Information("SB: Game uses exit auto-init (0xDA) but {SbType} does not support it", _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses exit auto-init (0xDA) but {SbType} does not support it", _config.SbType);
                     }
                 }
                 break;
@@ -2331,8 +2327,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0xe0:
                 // DSP Identification
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xe0
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: DSP Identification, input=0x{Input:X2} response=0x{Response:X2}", _sb.Dsp.In.Data[0], (byte)~_sb.Dsp.In.Data[0]);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: DSP Identification, input=0x{Input:X2} response=0x{Response:X2}", _sb.Dsp.In.Data[0], (byte)~_sb.Dsp.In.Data[0]);
                 }
                 DspFlushData();
                 DspAddData((byte)~_sb.Dsp.In.Data[0]);
@@ -2340,8 +2336,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0xe1:
                 // Get DSP Version
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Get DSP Version for {SbType}", _config.SbType);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Get DSP Version for {SbType}", _config.SbType);
                 }
                 DspFlushData();
                 switch (_config.SbType) {
@@ -2376,8 +2372,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0xe2:
                 // Weird DMA identification write routine
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xe2
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SOUNDBLASTER: DSP Function 0xE2 (DMA identification)");
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: DSP Function 0xE2 (DMA identification)");
                 }
                 for (int i = 0; i < 8; i++) {
                     if (((_sb.Dsp.In.Data[0] >> i) & 0x01) != 0) {
@@ -2393,8 +2389,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0xe3:
                 // DSP Copyright
                 // Reference: DOSBox Staging src/hardware/audio/soundblaster.cpp case 0xe3
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: DSP Copyright string requested, essType={EssType}", _sb.EssType);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: DSP Copyright string requested, essType={EssType}", _sb.EssType);
                 }
                 DspFlushData();
                 if (_sb.EssType != EssType.None) {
@@ -2412,15 +2408,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case 0xe4:
                 // Write Test Register
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xe4
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Write Test Register = 0x{Value:X2}", _sb.Dsp.In.Data[0]);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Write Test Register = 0x{Value:X2}", _sb.Dsp.In.Data[0]);
                 }
                 _sb.Dsp.TestRegister = _sb.Dsp.In.Data[0];
                 break;
 
             case 0xe7: // ESS detect/read config
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: ESS detect/read config, essType={EssType}", _sb.EssType);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: ESS detect/read config, essType={EssType}", _sb.EssType);
                 }
                 switch (_sb.EssType) {
                     case EssType.None:
@@ -2437,8 +2433,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             case 0xe8:
                 // Read Test Register
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Read Test Register = 0x{Value:X2}", _sb.Dsp.TestRegister);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Read Test Register = 0x{Value:X2}", _sb.Dsp.TestRegister);
                 }
                 DspFlushData();
                 DspAddData(_sb.Dsp.TestRegister);
@@ -2448,8 +2444,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Trigger 8bit IRQ
                 // Small delay to emulate DSP slowness, fixes Llamatron 2012 and Lemmings 3D
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xf2
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SOUNDBLASTER: Trigger 8-bit IRQ command");
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SOUNDBLASTER: Trigger 8-bit IRQ command");
                 }
                 _scheduler.AddEvent(DspRaiseIrqEvent, 0.01, 0);
                 break;
@@ -2458,21 +2454,21 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Trigger 16bit IRQ
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xf3
                 if (_config.SbType == SbType.Sb16) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: Trigger 16-bit IRQ command");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: Trigger 16-bit IRQ command");
                     }
                     RaiseIrq(SbIrq.Irq16);
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Information)) {
-                        _logger.Information("SB: Game uses 16-bit IRQ trigger (0xF3) but running as {SbType}, requires SB16", _config.SbType);
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("SB: Game uses 16-bit IRQ trigger (0xF3) but running as {SbType}, requires SB16", _config.SbType);
                     }
                 }
                 break;
 
             case 0xf8:
                 // Undocumented, pre-Sb16 only
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: Undocumented command 0xF8 (pre-SB16)");
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: Undocumented command 0xF8 (pre-SB16)");
                 }
                 DspFlushData();
                 DspAddData(0);
@@ -2482,8 +2478,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // Sb16 ASP unknown function
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xf9
                 if (_config.SbType == SbType.Sb16) {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: SB16 ASP unknown function 0x{Sub:X2}", _sb.Dsp.In.Data[0]);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: SB16 ASP unknown function 0x{Sub:X2}", _sb.Dsp.In.Data[0]);
                     }
                     switch (_sb.Dsp.In.Data[0]) {
                         case 0x0b: DspAddData(0x00); break;
@@ -2498,15 +2494,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                         default: DspAddData(0x00); break;
                     }
                 } else {
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("SOUNDBLASTER: SB16 ASP unknown function 0x{Cmd:X2} (not SB16)", _sb.Dsp.Cmd);
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("SOUNDBLASTER: SB16 ASP unknown function 0x{Cmd:X2} (not SB16)", _sb.Dsp.Cmd);
                     }
                 }
                 break;
 
             default:
-                if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning("SoundBlaster: Unimplemented DSP command {Command:X2}", _sb.Dsp.Cmd);
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("SoundBlaster: Unimplemented DSP command {Command:X2}", _sb.Dsp.Cmd);
                 }
                 // Reference: src/hardware/audio/soundblaster.cpp dsp_do_command() end
                 _sb.Dsp.Cmd = 0;
@@ -2532,8 +2528,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Mode == mode) {
             return;
         }
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: DspChangeMode {OldMode} -> {NewMode}", _sb.Mode, mode);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: DspChangeMode {OldMode} -> {NewMode}", _sb.Mode, mode);
         }
         switch (mode) {
             case DspMode.Dac:
@@ -2557,8 +2553,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // If rate changes during active DMA, update the DMA-related timing values
         if (_sb.FreqHz != freqHz && _sb.Dma.Mode != DmaMode.None) {
             uint effectiveFreq = _sb.Mixer.StereoEnabled ? freqHz / 2 : freqHz;
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("SB: DspChangeRate {OldFreq} -> {NewFreq} Hz (effective={EffFreq} Hz, stereo={Stereo}, dmaMode={Mode})",
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SB: DspChangeRate {OldFreq} -> {NewFreq} Hz (effective={EffFreq} Hz, stereo={Stereo}, dmaMode={Mode})",
                     _sb.FreqHz, freqHz, effectiveFreq, _sb.Mixer.StereoEnabled, _sb.Dma.Mode);
             }
             SetChannelRateHz((int)effectiveFreq);
@@ -2566,8 +2562,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _sb.Dma.Rate = (freqHz * _sb.Dma.Mul) >> SbShift;
             _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
         } else if (_sb.FreqHz != freqHz) {
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("SB: DspChangeRate {OldFreq} -> {NewFreq} Hz (no active DMA)", _sb.FreqHz, freqHz);
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SB: DspChangeRate {OldFreq} -> {NewFreq} Hz (no active DMA)", _sb.FreqHz, freqHz);
             }
         }
         _sb.FreqHz = freqHz;
@@ -2591,14 +2587,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             _scheduler.AddEvent(SuppressDmaTransfer, delayMs, numBytes);
 
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("SOUNDBLASTER: Silent DMA Transfer scheduling IRQ in {Delay:F3} milliseconds", delayMs);
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: Silent DMA Transfer scheduling IRQ in {Delay:F3} milliseconds", delayMs);
             }
         } else if (_sb.Dma.Left < _sb.Dma.Min) {
             double delayMs = (_sb.Dma.Left * 1000.0) / _sb.Dma.Rate;
 
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("SOUNDBLASTER: Short transfer scheduling IRQ in {Delay:F3} milliseconds", delayMs);
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SOUNDBLASTER: Short transfer scheduling IRQ in {Delay:F3} milliseconds", delayMs);
             }
 
             _scheduler.AddEvent(ProcessDmaTransferEvent, delayMs, _sb.Dma.Left);
@@ -2628,8 +2624,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         if (_sb.Dma.Left < numBytes) {
             numBytes = _sb.Dma.Left;
         }
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("SB: SuppressDmaTransfer requested={Requested} actual={Actual} left={Left}", bytesToRead, numBytes, _sb.Dma.Left);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SB: SuppressDmaTransfer requested={Requested} actual={Actual} left={Left}", bytesToRead, numBytes, _sb.Dma.Left);
         }
 
         // Read and discard the DMA data through the standard DMA read path,
@@ -2729,8 +2725,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.Mode = DspMode.DmaMasked;
         _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SOUNDBLASTER: DMA Transfer - Mode={Mode}, Stereo={Stereo}, AutoInit={AutoInit}, FreqHz={FreqHz}, Rate={Rate}, Left={Left}",
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SOUNDBLASTER: DMA Transfer - Mode={Mode}, Stereo={Stereo}, AutoInit={AutoInit}, FreqHz={FreqHz}, Rate={Rate}, Left={Left}",
                 mode, stereo, autoInit, freqHz, _sb.Dma.Rate, _sb.Dma.Left);
         }
     }
@@ -2781,8 +2777,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             freqHz /= 2;
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: DspPrepareDmaOld mode={Mode} autoInit={AutoInit} sign={Sign} freqHz={FreqHz} singleSize={SingleSize} stereo={Stereo}",
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: DspPrepareDmaOld mode={Mode} autoInit={AutoInit} sign={Sign} freqHz={FreqHz} singleSize={SingleSize} stereo={Stereo}",
                 mode, autoInit, sign, freqHz, autoInit ? _sb.Dma.AutoSize : _sb.Dma.SingleSize, _sb.Mixer.StereoEnabled);
         }
 
@@ -2810,8 +2806,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 // UNDOCUMENTED: In aliased mode sample length is written to DSP as
                 // number of 16-bit samples so we need double 8-bit DMA buffer length
                 newLength *= 2;
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("SB: DspPrepareDmaNew using 16-bit aliased mode (no high DMA channel), length doubled {Orig} -> {New}", length, newLength);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SB: DspPrepareDmaNew using 16-bit aliased mode (no high DMA channel), length doubled {Orig} -> {New}", length, newLength);
                 }
             }
         } else {
@@ -2826,8 +2822,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _sb.Dma.SingleSize = newLength;
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: DspPrepareDmaNew mode={Mode} (resolved={NewMode}) freqHz={FreqHz} autoInit={AutoInit} stereo={Stereo} length={Length}",
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: DspPrepareDmaNew mode={Mode} (resolved={NewMode}) freqHz={FreqHz} autoInit={AutoInit} stereo={Stereo} length={Length}",
                 mode, newMode, freqHz, autoInit, stereo, newLength);
         }
 
@@ -2841,20 +2837,20 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // earlier models can toggle the speaker-output.
         // Reference: src/hardware/audio/soundblaster.cpp dsp_enable_speaker()
         if (_config.SbType == SbType.Sb16 || _sb.EssType != EssType.None) {
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("SB: SetSpeakerEnabled({Enabled}) ignored - always on for {SbType}", enabled, _config.SbType);
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SB: SetSpeakerEnabled({Enabled}) ignored - always on for {SbType}", enabled, _config.SbType);
             }
             return;
         }
         if (_sb.SpeakerEnabled == enabled) {
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("SB: SetSpeakerEnabled({Enabled}) - no change", enabled);
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SB: SetSpeakerEnabled({Enabled}) - no change", enabled);
             }
             return;
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: Speaker {Action}", enabled ? "ENABLED" : "DISABLED");
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: Speaker {Action}", enabled ? "ENABLED" : "DISABLED");
         }
 
         // If the speaker's being turned on, then flush old
@@ -2888,15 +2884,15 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             bool isColdStart = _sb.Dsp.ResetTally <= DspInitialResetLimit;
             _sb.Dsp.WarmupRemainingMs = isColdStart ? _sb.Dsp.ColdWarmupMs : _sb.Dsp.HotWarmupMs;
             _sb.SpeakerEnabled = true;
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("SB: InitSpeakerState - speaker always on for {SbType}, coldStart={ColdStart}, warmup={Warmup}ms",
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SB: InitSpeakerState - speaker always on for {SbType}, coldStart={ColdStart}, warmup={Warmup}ms",
                     _config.SbType, isColdStart, _sb.Dsp.WarmupRemainingMs);
             }
         } else {
             // SB Pro and earlier models have the speaker-output disabled by default.
             _sb.SpeakerEnabled = false;
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("SB: InitSpeakerState - speaker disabled by default for {SbType}", _config.SbType);
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("SB: InitSpeakerState - speaker disabled by default for {SbType}", _config.SbType);
             }
         }
     }
@@ -2925,8 +2921,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private void OnDmaChannelEvicted() {
         LogMethodEntry(nameof(OnDmaChannelEvicted));
-        if (_logger.IsEnabled(LogEventLevel.Warning)) {
-            _logger.Warning("SOUNDBLASTER: DMA channel evicted - stopping audio");
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning("SOUNDBLASTER: DMA channel evicted - stopping audio");
         }
 
         // Stop any active DMA transfer
@@ -2964,11 +2960,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
             _sb.Dsp.Out.Data[start] = value;
             _sb.Dsp.Out.Used++;
-            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                _logger.Verbose("SB: DspAddData 0x{Value:X2} (fifoUsed={Used})", value, _sb.Dsp.Out.Used);
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("SB: DspAddData 0x{Value:X2} (fifoUsed={Used})", value, _sb.Dsp.Out.Used);
             }
         } else {
-            _logger.Error("SOUNDBLASTER: DSP output buffer full");
+            _loggerService.Error("SOUNDBLASTER: DSP output buffer full");
         }
     }
 
@@ -2986,8 +2982,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             }
             _sb.Dsp.Out.Used--;
         }
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("SB: DspReadData => 0x{Value:X2} (remaining={Remaining})", _sb.Dsp.Out.LastVal, _sb.Dsp.Out.Used);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("SB: DspReadData => 0x{Value:X2} (remaining={Remaining})", _sb.Dsp.Out.LastVal, _sb.Dsp.Out.Used);
         }
         return _sb.Dsp.Out.LastVal;
     }
@@ -3096,14 +3092,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private void CtmixerWrite(byte value) {
         LogMethodEntry(nameof(CtmixerWrite));
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: CtmixerWrite index=0x{Index:X2} value=0x{Value:X2}", _sb.Mixer.Index, value);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: CtmixerWrite index=0x{Index:X2} value=0x{Value:X2}", _sb.Mixer.Index, value);
         }
         switch (_sb.Mixer.Index) {
             case 0x00: // Reset
                 CtmixerReset();
-                if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning("Mixer reset value {Value:X2}", value);
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("Mixer reset value {Value:X2}", value);
                 }
                 break;
 
@@ -3122,8 +3118,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     CtmixerUpdateVolumes();
 
                     if ((value & 0x60) != 0) {
-                        if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                            _logger.Warning("Turned FM one channel off. not implemented {Value:X2}", value);
+                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                            _loggerService.Warning("Turned FM one channel off. not implemented {Value:X2}", value);
                         }
                     }
                 }
@@ -3154,13 +3150,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
                         if (_sb.Mixer.FilterConfigured && _sb.Mixer.FilterEnabled != lastFilterEnabled) {
                             if (_sb.Mixer.FilterAlwaysOn) {
-                                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                                    _logger.Debug("Filter always on; ignoring {Action} low-pass filter command",
+                                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                                    _loggerService.Debug("Filter always on; ignoring {Action} low-pass filter command",
                                         _sb.Mixer.FilterEnabled ? "enable" : "disable");
                                 }
                             } else {
-                                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                                    _logger.Debug("{Action} low-pass filter",
+                                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                                    _loggerService.Debug("{Action} low-pass filter",
                                         _sb.Mixer.FilterEnabled ? "Enabling" : "Disabling");
                                 }
                                 _dacChannel.SetLowPassFilter(_sb.Mixer.FilterEnabled ? FilterState.On : FilterState.Off);
@@ -3170,8 +3166,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
                     DspChangeStereo(_sb.Mixer.StereoEnabled);
 
-                    if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                        _logger.Warning("Mixer set to {Mode}", _sb.Dma.Stereo ? "STEREO" : "MONO");
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning("Mixer set to {Mode}", _sb.Dma.Stereo ? "STEREO" : "MONO");
                     }
                 }
                 break;
@@ -3324,8 +3320,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     _sb.Hw.Dma16 = 7;
                 }
 
-                if (_logger.IsEnabled(LogEventLevel.Information)) {
-                    _logger.Information("Mixer select dma8:{Dma8:X} dma16:{Dma16:X}", _sb.Hw.Dma8, _sb.Hw.Dma16);
+                if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                    _loggerService.Information("Mixer select dma8:{Dma8:X} dma16:{Dma16:X}", _sb.Hw.Dma8, _sb.Hw.Dma16);
                 }
                 break;
 
@@ -3336,8 +3332,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     _sb.Mixer.Unhandled[_sb.Mixer.Index] = value;
                 }
 
-                if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning("MIXER:Write {Value:X2} to unhandled index {Index:X2}", value, _sb.Mixer.Index);
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("MIXER:Write {Value:X2} to unhandled index {Index:X2}", value, _sb.Mixer.Index);
                 }
                 break;
         }
@@ -3345,8 +3341,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private byte CtmixerRead() {
         LogMethodEntry(nameof(CtmixerRead));
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("SB: CtmixerRead index=0x{Index:X2}", _sb.Mixer.Index);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("SB: CtmixerRead index=0x{Index:X2}", _sb.Mixer.Index);
         }
         byte ret = 0;
 
@@ -3494,8 +3490,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                     }
                 } else {
                     ret = 0x0A;
-                    if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                        _logger.Warning("ESS: Identification function 0x{Index:X2} is not implemented", _sb.Mixer.Index);
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning("ESS: Identification function 0x{Index:X2} is not implemented", _sb.Mixer.Index);
                     }
                 }
                 break;
@@ -3540,8 +3536,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 break;
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Warning)) {
-            _logger.Warning("MIXER:Read from unhandled index {Index:X2}", _sb.Mixer.Index);
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning("MIXER:Read from unhandled index {Index:X2}", _sb.Mixer.Index);
         }
         return ret;
     }
@@ -3626,8 +3622,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// </summary>
     private uint LogIllegalTransferMode(DmaMode mode) {
         LogMethodEntry(nameof(LogIllegalTransferMode));
-        if (_logger.IsEnabled(LogEventLevel.Error)) {
-            _logger.Error("SOUNDBLASTER: Illegal transfer mode {Mode}", mode);
+        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+            _loggerService.Error("SOUNDBLASTER: Illegal transfer mode {Mode}", mode);
         }
         return 1u << SbShift;
     }
