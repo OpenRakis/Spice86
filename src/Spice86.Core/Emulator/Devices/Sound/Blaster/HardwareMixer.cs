@@ -47,6 +47,30 @@ public class HardwareMixer {
     // Reference: soundblaster.cpp sb.mixer.unhandled[]
     private readonly byte[] _unhandled = new byte[0x48];
 
+    // Mutable IRQ/DMA state — initialized from config, can be reprogrammed via mixer registers 0x80/0x81
+    // Reference: soundblaster.cpp sb.hw.irq, sb.hw.dma8, sb.hw.dma16
+    private byte _currentIrq;
+    private byte _currentDma8;
+    private byte _currentDma16;
+
+    /// <summary>
+    /// The current IRQ setting, may be reprogrammed via mixer register 0x80.
+    /// Reference: soundblaster.cpp sb.hw.irq
+    /// </summary>
+    public byte CurrentIrq => _currentIrq;
+
+    /// <summary>
+    /// The current 8-bit DMA channel, may be reprogrammed via mixer register 0x81.
+    /// Reference: soundblaster.cpp sb.hw.dma8
+    /// </summary>
+    public byte CurrentDma8 => _currentDma8;
+
+    /// <summary>
+    /// The current 16-bit DMA channel, may be reprogrammed via mixer register 0x81.
+    /// Reference: soundblaster.cpp sb.hw.dma16
+    /// </summary>
+    public byte CurrentDma16 => _currentDma16;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="HardwareMixer"/> class
     /// </summary>
@@ -58,11 +82,16 @@ public class HardwareMixer {
     public HardwareMixer(SoundBlasterHardwareConfig soundBlasterHardwareConfig,
         MixerChannel pcmMixerChannel, MixerChannel OPLMixerChannel,
         ILoggerService loggerService, Action<bool> onStereoChange) {
-        _logger = loggerService;
+        _logger = loggerService;//.WithLogLevel(LogEventLevel.Verbose);
         _blasterHardwareConfig = soundBlasterHardwareConfig;
         _pcmMixerChannel = pcmMixerChannel;
         _OPLMixerChannel = OPLMixerChannel;
         _onStereoChange = onStereoChange;
+
+        // Initialize mutable IRQ/DMA state from config
+        _currentIrq = soundBlasterHardwareConfig.Irq;
+        _currentDma8 = soundBlasterHardwareConfig.LowDma;
+        _currentDma16 = soundBlasterHardwareConfig.HighDma;
     }
 
     private readonly Action<bool> _onStereoChange;
@@ -241,49 +270,49 @@ public class HardwareMixer {
 
             // Sb16 advanced registers
             case MixerRegisters.Sb16PcmLevel:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _pcmLevel : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _pcmLevel : (byte)0x0A;
 
             case MixerRegisters.Sb16RecordingMonitor:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _recordingMonitor : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _recordingMonitor : (byte)0x0A;
 
             case MixerRegisters.Sb16RecordingSource:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _recordingSource : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _recordingSource : (byte)0x0A;
 
             case MixerRegisters.Sb16RecordingGain:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _recordingGain : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _recordingGain : (byte)0x0A;
 
             case MixerRegisters.Sb16RecordingGainLeft:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _recordingGainLeft : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _recordingGainLeft : (byte)0x0A;
 
             case MixerRegisters.Sb16RecordingGainRight:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _recordingGainRight : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _recordingGainRight : (byte)0x0A;
 
             case MixerRegisters.Sb16OutputFilter:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _outputFilter : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _outputFilter : (byte)0x0A;
 
             case MixerRegisters.Sb16InputFilter:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _inputFilter : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _inputFilter : (byte)0x0A;
 
             case MixerRegisters.Sb16Effects3D:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _effects3D : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _effects3D : (byte)0x0A;
 
             case MixerRegisters.Sb16AltFeatureEnable1:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _altFeatureEnable1 : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _altFeatureEnable1 : (byte)0x0A;
 
             case MixerRegisters.Sb16AltFeatureEnable2:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _altFeatureEnable2 : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _altFeatureEnable2 : (byte)0x0A;
 
             case MixerRegisters.Sb16AltFeatureStatus:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _altFeatureStatus : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _altFeatureStatus : (byte)0x0A;
 
             case MixerRegisters.Sb16GamePortControl:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _gamePortControl : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _gamePortControl : (byte)0x0A;
 
             case MixerRegisters.Sb16VolumeControlMode:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _volumeControlMode : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _volumeControlMode : (byte)0x0A;
 
             case MixerRegisters.Sb16Reserved:
-                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _reserved : (byte)0;
+                return _blasterHardwareConfig.SbType == SbType.Sb16 ? _reserved : (byte)0x0A;
 
             default:
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
@@ -432,27 +461,27 @@ public class HardwareMixer {
             // Output/Stereo Select
             // Reference: soundblaster.cpp ctmixer_write() case 0x0e
             case MixerRegisters.OutputStereoSelect: {
-                bool newStereo = (value & 0x02) != 0;
+                    bool newStereo = (value & 0x02) != 0;
 
-                // Filter toggle is only possible on SBPro2
-                // Reference: soundblaster.cpp "Toggling the filter programmatically is only possible on the Sound Blaster Pro 2."
-                if (_blasterHardwareConfig.SbType == SbType.SBPro2) {
-                    _filterEnabled = (value & 0x20) == 0;
+                    // Filter toggle is only possible on SBPro2
+                    // Reference: soundblaster.cpp "Toggling the filter programmatically is only possible on the Sound Blaster Pro 2."
+                    if (_blasterHardwareConfig.SbType == SbType.SBPro2) {
+                        _filterEnabled = (value & 0x20) == 0;
+                    }
+
+                    // Invoke the stereo change callback (dsp_change_stereo equivalent)
+                    _onStereoChange(newStereo);
+
+                    _stereoEnabled = newStereo;
+                    UpdateMixerVolumes();
+
+                    if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                        _logger.Debug("Mixer set to {StereoSetting} with filter {FilterSetting}",
+                            _stereoEnabled ? "STEREO" : "MONO",
+                            _filterEnabled ? "ENABLED" : "DISABLED");
+                    }
+                    break;
                 }
-
-                // Invoke the stereo change callback (dsp_change_stereo equivalent)
-                _onStereoChange(newStereo);
-
-                _stereoEnabled = newStereo;
-                UpdateMixerVolumes();
-
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                    _logger.Debug("Mixer set to {StereoSetting} with filter {FilterSetting}",
-                        _stereoEnabled ? "STEREO" : "MONO",
-                        _filterEnabled ? "ENABLED" : "DISABLED");
-                }
-                break;
-            }
 
             // Sb16-specific registers
             case MixerRegisters.MasterVolumeLeft:
@@ -625,6 +654,45 @@ public class HardwareMixer {
                 }
                 break;
 
+            // IRQ Select — allows reprogramming the SB IRQ via mixer
+            // Reference: soundblaster.cpp ctmixer_write() case 0x80
+            case MixerRegisters.IRQ:
+                _currentIrq = 0xFF;
+                if ((value & 0x01) != 0) {
+                    _currentIrq = 2;
+                } else if ((value & 0x02) != 0) {
+                    _currentIrq = 5;
+                } else if ((value & 0x04) != 0) {
+                    _currentIrq = 7;
+                } else if ((value & 0x08) != 0) {
+                    _currentIrq = 10;
+                }
+                break;
+
+            // DMA Select — allows reprogramming the SB DMA channels via mixer
+            // Reference: soundblaster.cpp ctmixer_write() case 0x81
+            case MixerRegisters.DMA:
+                _currentDma8 = 0xFF;
+                _currentDma16 = 0xFF;
+                if ((value & 0x01) != 0) {
+                    _currentDma8 = 0;
+                } else if ((value & 0x02) != 0) {
+                    _currentDma8 = 1;
+                } else if ((value & 0x08) != 0) {
+                    _currentDma8 = 3;
+                }
+                if ((value & 0x20) != 0) {
+                    _currentDma16 = 5;
+                } else if ((value & 0x40) != 0) {
+                    _currentDma16 = 6;
+                } else if ((value & 0x80) != 0) {
+                    _currentDma16 = 7;
+                }
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                    _logger.Debug("HARDWARE_MIXER: DMA select dma8:{Dma8} dma16:{Dma16}", _currentDma8, _currentDma16);
+                }
+                break;
+
             default:
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                     _logger.Warning("Write to unsupported mixer register {CurrentAddress:X2}h value {Value:X2}h", CurrentAddress, value);
@@ -652,7 +720,8 @@ public class HardwareMixer {
     }
 
     private byte GetIRQByte() {
-        return _blasterHardwareConfig.Irq switch {
+        // Reference: soundblaster.cpp ctmixer_read() case 0x80
+        return _currentIrq switch {
             2 => 1 << 0,
             5 => 1 << 1,
             7 => 1 << 2,
@@ -665,19 +734,19 @@ public class HardwareMixer {
         byte result = 0;
 
         // Low DMA channel
-        switch (_blasterHardwareConfig.LowDma) {
+        // Reference: soundblaster.cpp ctmixer_read() case 0x81
+        switch (_currentDma8) {
             case 0: result |= 0x01; break;
             case 1: result |= 0x02; break;
             case 3: result |= 0x08; break;
         }
 
-        // High DMA channel (Sb16)
-        if (_blasterHardwareConfig.SbType == SbType.Sb16) {
-            switch (_blasterHardwareConfig.HighDma) {
-                case 5: result |= 0x20; break;
-                case 6: result |= 0x40; break;
-                case 7: result |= 0x80; break;
-            }
+        // High DMA channel — DOSBox unconditionally includes dma16
+        // Reference: soundblaster.cpp ctmixer_read() case 0x81
+        switch (_currentDma16) {
+            case 5: result |= 0x20; break;
+            case 6: result |= 0x40; break;
+            case 7: result |= 0x80; break;
         }
 
         return result;
