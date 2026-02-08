@@ -58,7 +58,8 @@ public class Spice86Creator {
             Xms = enableXms,
             Ems = enableEms,
             CDrive = cDrive,
-            RecordedDataDirectory = exportFolder
+            RecordedDataDirectory = exportFolder,
+            SilencedLogs = true,
         };
 
         _maxCycles = maxCycles;
