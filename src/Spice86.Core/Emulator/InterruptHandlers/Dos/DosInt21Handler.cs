@@ -1473,7 +1473,7 @@ public class DosInt21Handler : InterruptHandler {
             SetCarryFlag(false, calledFromVm);
         } else if (op == (byte)AllocationStrategySubFunction.SetUpperMemoryBlockState) {
             State.AX = 0x01; // 0001h (invalid function)
-            SetCarryFlag(false, calledFromVm);
+            SetCarryFlag(true, calledFromVm);
         } else {
             throw GenerateUnhandledOperationException(op);
         }
