@@ -6,8 +6,10 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -31,5 +33,12 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueFieldAndRegiste
         return new InstructionNode(InstructionOperation.MOV,
             builder.Register.Reg(builder.UType({{Size}}), RegisterIndex),
             builder.InstructionField.ToNode(ValueField));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // MOV R, IMM
+        ValueNode regNode = builder.Register.Reg(builder.UType({{Size}}), RegisterIndex);
+        ValueNode immNode = builder.InstructionField.ToNode(ValueField);
+        return builder.WithIpAdvancement(this, builder.Assign(builder.UType({{Size}}), regNode, immNode));
     }
 }

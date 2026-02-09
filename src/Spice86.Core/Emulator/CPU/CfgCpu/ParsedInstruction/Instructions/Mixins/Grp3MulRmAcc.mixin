@@ -10,11 +10,15 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
@@ -35,6 +39,33 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.{{Operation | string.upcase}}, builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // {{Operation}}: result = Alu.{{Operation}}({{SourceReg}}, RM)
+        // Upper part goes to {{AdditionalReg}}, lower part stays in {{SourceReg}}
+        DataType unsignedType = builder.ParseCSharpType("{{Type}}");
+        DataType signedType = builder.ParseCSharpType("{{TypeSigned}}");
+        DataType wideType = builder.ParseCSharpType("{{TypeUpped}}");
+
+        // v1 = ({{TypeSigned}}){{SourceReg}}
+        ValueNode v1 = builder.TypeConversion.Convert(signedType, builder.Register.RegByName("{{SourceReg}}"));
+
+        // v2 = ({{TypeSigned}})RM
+        ValueNode v2 = builder.ModRm.RmToNodeSigned(unsignedType, ModRmContext);
+
+        // Declare variable: result = Alu.{{Operation}}(v1, v2)
+        VariableDeclarationNode resultDecl = builder.DeclareAluResult(wideType, {{Size}}, "{{Operation}}", "result", v1, v2);
+
+        // {{AdditionalReg}} = ({{Type}})(result >> {{Size}})
+        ValueNode upperPart = builder.ExtractUpperBits(resultDecl.Reference, {{Size}}, unsignedType);
+        IVisitableAstNode assignUpper = builder.AssignWithConversion(unsignedType, builder.Register.RegByName("{{AdditionalReg}}"), upperPart);
+
+        // {{SourceReg}} = ({{Type}})result
+        ValueNode lowerPart = builder.ExtractLowerBits(resultDecl.Reference, unsignedType);
+        IVisitableAstNode assignLower = builder.AssignWithConversion(unsignedType, builder.Register.RegByName("{{SourceReg}}"), lowerPart);
+
+        return builder.WithIpAdvancement(this, resultDecl, assignUpper, assignLower);
     }
 }
 

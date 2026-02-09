@@ -8,8 +8,10 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
@@ -35,5 +37,18 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<{
              builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext),
              builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
              builder.InstructionField.ToNode(ValueField));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // R = (RmUnsignedType)Alu.Imul(IMM, (signed)RM)
+        // Note: IMM is already signed since ValueField is InstructionField<{{ImmSignedType}}>
+        DataType unsignedType = builder.UType({{Size}});
+        ValueNode rNode = builder.ModRm.RToNode(unsignedType, ModRmContext);
+        ValueNode immSigned = builder.InstructionField.ToNode(ValueField);
+        ValueNode rmSigned = builder.ModRm.RmToNodeSigned(unsignedType, ModRmContext);
+        MethodCallValueNode imulCall = builder.AluCall(builder.SType({{Size}} * 2), {{Size}}, "Imul", immSigned, rmSigned);
+        ValueNode resultTruncated = builder.TypeConversion.Convert(unsignedType, imulCall);
+        IVisitableAstNode instructionLogic = builder.Assign(unsignedType, rNode, resultTruncated);
+        return builder.WithIpAdvancement(this, instructionLogic);
     }
 }

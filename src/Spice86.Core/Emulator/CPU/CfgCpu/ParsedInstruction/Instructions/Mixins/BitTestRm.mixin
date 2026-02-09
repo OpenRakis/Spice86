@@ -6,8 +6,11 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -74,5 +77,64 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         return new InstructionNode(InstructionOperation.{{Operation}},
             builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
             builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        DataType dataType = builder.UType({{Size}});
+
+        // bitIndex = R register
+        ValueNode bitIndexNode = builder.ModRm.RToNode(dataType, ModRmContext);
+
+        // bitInElement = bitIndex % {{Size}} (same for both register and memory)
+        // Result is always a small value (0-31 or 0-15), so we use the operand's data type
+        BinaryOperationNode bitInElement = new BinaryOperationNode(dataType, bitIndexNode, BinaryOperation.MODULO, builder.Constant.ToNode({{Size}}));
+
+        // Get the target node (register or adjusted memory pointer)
+        // This is the only path-specific code
+        ValueNode targetNode;
+        bool isMemory = ModRmContext.MemoryAddressType != MemoryAddressType.NONE;
+        if (!isMemory) {
+            // Register path: simple RM access
+            targetNode = builder.ModRm.RmToNode(dataType, ModRmContext);
+        } else {
+            // Memory path: calculate offset adjustment based on bit index
+            // Per Intel spec: Effective Address + (elementBytes * (bitIndex / elementSize))
+            const uint elementSize = {{Size}};
+            const uint elementBytes = elementSize / 8;
+
+            // elementIndex = bitIndex / {{Size}}
+            BinaryOperationNode elementIndex = new BinaryOperationNode(DataType.UINT32, bitIndexNode, BinaryOperation.DIVIDE, builder.Constant.ToNode(elementSize));
+
+            // offsetAdjustment = elementIndex * elementBytes
+            BinaryOperationNode offsetAdjustment = new BinaryOperationNode(DataType.UINT32, elementIndex, BinaryOperation.MULTIPLY, builder.Constant.ToNode(elementBytes));
+
+            // Create adjusted memory pointer
+            targetNode = builder.ModRm.ToMemoryAddressNodeWithOffsetAdjustment(dataType, ModRmContext, offsetAdjustment);
+        }
+
+        // Common bit test and mutation logic for both paths
+        // CarryFlag = IsBitSet(target, bitInElement)
+        BinaryOperationNode carryValue = builder.Bitwise.IsBitSet(targetNode, bitInElement);
+        IVisitableAstNode setCarry = builder.Assign(DataType.BOOL, builder.Flag.Carry(), carryValue);
+
+        {{ if Mutation == "None" }}
+        // BT: No mutation, just set carry flag
+        return builder.WithIpAdvancement(this, setCarry);
+        {{ else }}
+        // BTC/BTR/BTS: Apply mutation and write back
+        {{ if Mutation == "Set" }}
+        // BTS: value = SetBit(value, bitInElement)
+        BinaryOperationNode mutatedValue = builder.Bitwise.SetBit(targetNode, bitInElement);
+        {{ else if Mutation == "Reset" }}
+        // BTR: value = ResetBit(value, bitInElement)
+        BinaryOperationNode mutatedValue = builder.Bitwise.ResetBit(targetNode, bitInElement);
+        {{ else if Mutation == "Toggle" }}
+        // BTC: value = ToggleBit(value, bitInElement)
+        BinaryOperationNode mutatedValue = builder.Bitwise.ToggleBit(targetNode, bitInElement);
+        {{ end }}
+        IVisitableAstNode assignMutated = builder.Assign(dataType, targetNode, mutatedValue);
+
+        return builder.WithIpAdvancement(this, setCarry, assignMutated);
+        {{ end }}
     }
 }

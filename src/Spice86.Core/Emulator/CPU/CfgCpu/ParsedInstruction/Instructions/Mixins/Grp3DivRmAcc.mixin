@@ -12,11 +12,15 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
@@ -36,6 +40,44 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.{{Operation | string.upcase}}, builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // {{Operation}}: {{RegisterLow}} = dividend / divisor, {{RegisterHigh}} = dividend % divisor
+        DataType unsignedType = builder.ParseCSharpType("{{Type}}");
+        DataType signedType = builder.ParseCSharpType("{{TypeSigned}}");
+        DataType wideSignedType = builder.ParseCSharpType("{{TypeUppedSigned}}");
+
+        // Build dividend (v1)
+        ValueNode v1Node;
+        {{if SourceIsAx}}
+        // For 8-bit division: v1 = ({{TypeUppedSigned}})AX
+        v1Node = builder.TypeConversion.Convert(wideSignedType, builder.Register.Reg16(RegisterIndex.AxIndex));
+        {{else}}
+        // For 16/32-bit division: v1 = ({{RegisterHigh}} << {{Size}}) | {{RegisterLow}}
+        v1Node = builder.CombineHighLowRegisters("{{RegisterHigh}}", "{{RegisterLow}}", {{Size}}, wideSignedType);
+        {{end}}
+
+        // divisor = ({{TypeSigned}})RM
+        ValueNode divisorNode = builder.TypeConversion.Convert(signedType, builder.ModRm.RmToNode(unsignedType, ModRmContext));
+
+        // Declare variable for dividend to use in both division and modulo
+        VariableDeclarationNode dividendNode = builder.DeclareVariable(wideSignedType, "dividend", v1Node);
+
+        // quotient = Alu.{{Operation}}(dividend, divisor)
+        VariableDeclarationNode quotientDecl = builder.DeclareAluResult(signedType, {{Size}}, "{{Operation}}", "quotient", dividendNode.Reference, divisorNode);
+
+        // {{RegisterLow}} = ({{Type}})quotient
+        IVisitableAstNode assignQuotient = builder.AssignWithConversion(unsignedType, builder.Register.RegByName("{{RegisterLow}}"), quotientDecl.Reference);
+
+        // remainder = dividend % divisor
+        BinaryOperationNode moduloOp = new BinaryOperationNode(wideSignedType, dividendNode.Reference, BinaryOperation.MODULO, builder.TypeConversion.Convert(wideSignedType, divisorNode));
+        ValueNode remainderNarrowed = builder.TypeConversion.Convert(unsignedType, moduloOp);
+
+        // {{RegisterHigh}} = remainder
+        IVisitableAstNode assignRemainder = builder.AssignWithConversion(unsignedType, builder.Register.RegByName("{{RegisterHigh}}"), remainderNarrowed);
+
+        return builder.WithIpAdvancement(this, dividendNode, quotientDecl, assignQuotient, assignRemainder);
     }
 }
 

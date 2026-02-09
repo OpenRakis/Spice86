@@ -9,8 +9,10 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -32,5 +34,14 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<{{Type}}>
         return new InstructionNode(InstructionOperation.{{if Mnemonic}}{{Mnemonic | string.upcase}}{{else}}{{Operation | string.upcase}}{{end}},
             builder.Register.Accumulator(builder.UType({{Size}})),
             builder.InstructionField.ToNode(ValueField));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // {{if Assign}}ACC = {{end}}{{Operation}}(ACC, IMM)
+        ValueNode accNode = builder.Register.Accumulator(builder.UType({{Size}}));
+        ValueNode immNode = builder.InstructionField.ToNode(ValueField);
+        MethodCallValueNode aluCall = builder.AluCall(builder.UType({{Size}}), {{Size}}, "{{Operation}}", accNode, immNode);
+        IVisitableAstNode instructionLogic = builder.ConditionalAssign(builder.UType({{Size}}), accNode, aluCall, {{Assign}});
+        return builder.WithIpAdvancement(this, instructionLogic);
     }
 }

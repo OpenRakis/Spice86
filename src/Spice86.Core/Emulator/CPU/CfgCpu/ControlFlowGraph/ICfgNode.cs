@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
@@ -65,6 +66,14 @@ public interface ICfgNode {
     /// <param name="builder"></param>
     /// <returns></returns>
     InstructionNode ToInstructionAst(AstBuilder builder);
+
+    /// <summary>
+    /// Builds an Abstract Syntax Tree representing the execution logic of this node.
+    /// This AST contains granular microcode-like operations that can be compiled to executable code.
+    /// </summary>
+    /// <param name="builder">The AST builder to use for constructing the AST.</param>
+    /// <returns>An AST node representing the execution logic.</returns>
+    IVisitableAstNode GenerateExecutionAst(AstBuilder builder);
 
     /// <summary>
     /// Max successors this node can be expected to have.

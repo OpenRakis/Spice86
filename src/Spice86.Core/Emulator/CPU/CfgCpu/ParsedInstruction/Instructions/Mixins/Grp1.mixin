@@ -8,6 +8,7 @@
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
@@ -38,5 +39,14 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<{
             builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
             {{if FieldTypeCast==""}}field{{else}}builder.TypeConversion.Convert(builder.SType({{Size}}), field){{end}}
         );
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // {{if Assign}}RM = {{end}}{{Operation}}(RM, IMM)
+        ValueNode rmNode = builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext);
+        ValueNode immNode = builder.InstructionField.ToNode(ValueField);
+        MethodCallValueNode aluCall = builder.AluCall(builder.UType({{Size}}), {{Size}}, "{{Operation}}", rmNode, immNode);
+        IVisitableAstNode instructionLogic = builder.ConditionalAssign(builder.UType({{Size}}), rmNode, aluCall, {{Assign}});
+        return builder.WithIpAdvancement(this, instructionLogic);
     }
 }
