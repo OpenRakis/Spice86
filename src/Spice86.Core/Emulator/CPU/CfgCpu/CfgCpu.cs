@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
@@ -63,7 +64,35 @@ public class CfgCpu : IFunctionHandlerProvider {
         // Execute the node
         try {
             _loggerService.LoggerPropertyBag.CsIp = toExecute.Address;
+            
+            // Direct execution (temporary until all instructions have GenerateExecutionAst implemented):
             toExecute.Execute(_instructionExecutionHelper);
+
+            // TODO: Enable AST execution once all instructions implement GenerateExecutionAst
+            //
+            // Current status:
+            // - OpRegRm instructions (ADD, SUB, AND, OR, XOR, CMP, ADC, SBB) are implemented with IP advancement
+            // - IP advancement is included in the AST via MoveIpNextNode wrapped in BlockNode
+            // - Remaining instructions will throw NotImplementedException
+            //
+            // To enable:
+            // 1. Uncomment the block below
+            // 2. Comment out the direct Execute() call above
+            // 3. Run MachineTest to identify missing implementations
+            // 4. Implement GenerateExecutionAst() for failing instructions following the OpRegRm pattern
+            // 5. Iterate until all tests pass
+            //
+            // See code-review-findings.md Issue #2 for MoveIpAndSetNextNode handling
+            // See code-review-findings-issue-2-plan.md for implementation plan
+            // See microcode-ast.md for full plan and remaining work
+            //
+            // IVisitableAstNode executionAst = toExecute.GenerateExecutionAst(new Ast.Builder.AstBuilder());
+            // InstructionExecutor.Expressions.AstExpressionBuilder expressionBuilder = new();
+            // System.Linq.Expressions.Expression astExpression = executionAst.Accept(expressionBuilder);
+            // Action<InstructionExecutionHelper, State, Memory> compiledAction =
+            //     expressionBuilder.ToActionWithHelper(astExpression).Compile();
+            // compiledAction(_instructionExecutionHelper, _state, (_instructionExecutionHelper.Memory as Memory)!);
+            
         } catch (CpuException e) {
             if(toExecute is CfgInstruction cfgInstruction) {
                 _instructionExecutionHelper.HandleCpuException(cfgInstruction, e);

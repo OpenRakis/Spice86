@@ -20,9 +20,17 @@ public class PointerAstBuilder {
             defaultSegmentRegisterIndex == null ? null : new(defaultSegmentRegisterIndex.Value);
         return ToSegmentedPointer(targetDataType, segment, defaultSegment, offset);
     }
-    
+
+    public ValueNode ToSegmentedPointer(DataType targetDataType, int segmentRegisterIndex, ValueNode offset) {
+        return ToSegmentedPointer(targetDataType, segmentRegisterIndex, null, offset);
+    }
+
     public ValueNode ToSegmentedPointer(DataType targetDataType, ValueNode segment, ValueNode? defaultSegment, ValueNode offset) {
         return new SegmentedPointerNode(targetDataType, segment, defaultSegment, offset);
+    }
+
+    public ValueNode ToSegmentedPointer(DataType targetDataType, ValueNode segment, ValueNode offset) {
+        return ToSegmentedPointer(targetDataType, segment, null, offset);
     }
 
     /// <summary>
