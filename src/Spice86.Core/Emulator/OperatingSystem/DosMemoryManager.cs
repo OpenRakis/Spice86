@@ -92,7 +92,7 @@ public class DosMemoryManager {
                 return;
             }
             byte highMemBits = (byte)((byte)value & HighMemMask);
-            if (highMemBits != 0x00 && highMemBits != HighMemFirstThenLow && highMemBits != HighMemOnlyNoFallback) {
+            if (highMemBits is not 0x00 and not HighMemFirstThenLow and not HighMemOnlyNoFallback) {
                 // Invalid high memory bits, ignore
                 return;
             }
@@ -185,14 +185,16 @@ public class DosMemoryManager {
     public DosErrorCode TryModifyBlock(in ushort blockSegment, in ushort requestedSizeInParagraphs,
         out DosMemoryControlBlock block) {
         block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
+        ushort newSizeInParagraphs = requestedSizeInParagraphs;
+
         if (!CheckValidOrLogError(block)) {
             return DosErrorCode.MemoryControlBlockDestroyed;
         }
 
-        // Since the first thing we do is enlarge the block, we need to know the original size so
-        // that we can restore it if we encounter an error later. We need to make sure that the
-        // block doesn't grow to the maximum supported size on error.
-        ushort initialBlockSizeInParagraphs = block.Size;
+        //AlphaWaves loader starts a TSR for adlib-sound that wrongly sets the block-size in DX leaving BX = 0
+        if (newSizeInParagraphs == 0 && blockSegment == _sda.CurrentProgramSegmentPrefix) {
+            newSizeInParagraphs = DosProgramSegmentPrefix.PspSizeInParagraphs;
+        }
 
         // Make the block the biggest it can get
         if (!JoinBlocks(block, false)) {
@@ -202,10 +204,10 @@ public class DosMemoryManager {
             return DosErrorCode.InsufficientMemory;
         }
 
-        if (block.Size < requestedSizeInParagraphs) {
+        if (block.Size < newSizeInParagraphs) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}",
-                    block, requestedSizeInParagraphs);
+                    block, newSizeInParagraphs);
 
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose) && !block.IsLast) {
                     DosMemoryControlBlock? nextBlock = block.GetNextOrDefault();
@@ -215,8 +217,8 @@ public class DosMemoryManager {
             return DosErrorCode.InsufficientMemory;
         }
 
-        if (block.Size > requestedSizeInParagraphs) {
-            SplitBlock(block, requestedSizeInParagraphs);
+        if (block.Size > newSizeInParagraphs) {
+            SplitBlock(block, newSizeInParagraphs);
         }
         block.PspSegment = _sda.CurrentProgramSegmentPrefix;
         return DosErrorCode.NoError;
