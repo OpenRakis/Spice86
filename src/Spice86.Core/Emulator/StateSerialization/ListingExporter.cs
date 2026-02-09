@@ -3,10 +3,12 @@ namespace Spice86.Core.Emulator.StateSerialization;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Shared.Interfaces;
 
-public class ListingExporter(CfgCpu cpu, ILoggerService loggerService) {
-    private readonly ListingExtractor _listingExtractor = new();
+public class ListingExporter(CfgCpu cpu, ILoggerService loggerService, NodeToString nodeToString) {
+    private readonly ListingExtractor _listingExtractor = new(nodeToString);
+
     
     /// <summary>
     /// Dumps an assembly listing of instructions encountered so far to the file system.

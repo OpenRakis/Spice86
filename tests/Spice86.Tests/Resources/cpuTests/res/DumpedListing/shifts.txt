@@ -120,4 +120,4 @@ F000:0144 mov word ptr DS:[0x0042],DX
 F000:0148 shr byte ptr DS:[0x0016],CL
 F000:014C pushf
 F000:014D hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

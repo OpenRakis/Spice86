@@ -29,4 +29,4 @@ F000:0043 mov AL,0x20
 F000:0045 out 0x20,AL
 F000:0047 pop AX
 F000:0048 iret
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

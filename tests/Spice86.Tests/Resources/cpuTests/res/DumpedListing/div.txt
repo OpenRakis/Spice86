@@ -263,4 +263,4 @@ F000:1016 mov word ptr DS:[DI],SI
 F000:1018 pop DI
 F000:1019 pop AX
 F000:101A iret
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

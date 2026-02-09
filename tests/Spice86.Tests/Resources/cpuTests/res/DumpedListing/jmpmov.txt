@@ -1,4 +1,4 @@
-F000:0000 jmp near 0x000E
+F000:0000 jmp short 0x000E
 F000:000E mov BX,0xF000
 F000:0011 mov DS,BX
 F000:0013 mov AX,word ptr DS:[0xFFF2]
@@ -37,4 +37,4 @@ F000:4004 mov DX,0
 F000:4007 mov DS,DX
 F000:4009 mov word ptr DS:[0],AX
 F000:400C hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0
