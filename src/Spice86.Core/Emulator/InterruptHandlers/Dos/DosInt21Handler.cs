@@ -129,7 +129,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x3A, () => RemoveDirectory(true));
         AddAction(0x3B, () => ChangeCurrentDirectory(true));
         AddAction(0x3C, () => CreateFileUsingHandle(true));
-        AddAction(0x3D, () => OpenFileorDevice(true));
+        AddAction(0x3D, () => OpenFileOrDevice(true));
         AddAction(0x3E, () => CloseFileOrDevice(true));
         AddAction(0x3F, () => ReadFileOrDevice(true));
         AddAction(0x40, () => WriteToFileOrDevice(true));
@@ -1309,7 +1309,7 @@ public class DosInt21Handler : InterruptHandler {
     /// CF is set on error.
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
-    public void OpenFileorDevice(bool calledFromVm) {
+    public void OpenFileOrDevice(bool calledFromVm) {
         string fileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         byte accessMode = State.AL;
         FileAccessMode fileAccessMode = (FileAccessMode)(accessMode & 0b111);
