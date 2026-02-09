@@ -63,15 +63,14 @@ public class CfgCpu : IFunctionHandlerProvider {
         // Execute the node
         try {
             _loggerService.LoggerPropertyBag.CsIp = toExecute.Address;
+            // Log instruction before execution if CPU heavy logging is enabled
+            _cpuHeavyLogger?.LogInstruction(toExecute);
             toExecute.Execute(_instructionExecutionHelper);
         } catch (CpuException e) {
             if(toExecute is CfgInstruction cfgInstruction) {
                 _instructionExecutionHelper.HandleCpuException(cfgInstruction, e);
             }
         }
-
-        // Log instruction after execution if CPU heavy logging is enabled
-        _cpuHeavyLogger?.LogInstruction(toExecute);
 
         ICfgNode? nextToExecute = toExecute.GetNextSuccessor(_instructionExecutionHelper);
         
