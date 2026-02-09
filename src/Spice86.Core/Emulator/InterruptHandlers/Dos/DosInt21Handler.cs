@@ -129,7 +129,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x3A, () => RemoveDirectory(true));
         AddAction(0x3B, () => ChangeCurrentDirectory(true));
         AddAction(0x3C, () => CreateFileUsingHandle(true));
-        AddAction(0x3D, () => OpenFileorDevice(true));
+        AddAction(0x3D, () => OpenFileOrDevice(true));
         AddAction(0x3E, () => CloseFileOrDevice(true));
         AddAction(0x3F, () => ReadFileOrDevice(true));
         AddAction(0x40, () => WriteToFileOrDevice(true));
@@ -152,7 +152,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x51, GetPspAddress);
         AddAction(0x52, GetListOfLists);
         AddAction(0x55, CreateChildPsp);
-        AddAction(0x58, AllocationStrategyOrUpperMemoryLinkState);
+        AddAction(0x58, () => AllocationStrategyOrUpperMemoryLinkState(true));
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
         AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
@@ -1309,7 +1309,7 @@ public class DosInt21Handler : InterruptHandler {
     /// CF is set on error.
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
-    public void OpenFileorDevice(bool calledFromVm) {
+    public void OpenFileOrDevice(bool calledFromVm) {
         string fileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         byte accessMode = State.AL;
         FileAccessMode fileAccessMode = (FileAccessMode)(accessMode & 0b111);
@@ -1429,33 +1429,51 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Subfunction ID in AL for <see cref="AllocationStrategyOrUpperMemoryLinkState"/>
+    /// </summary>
+    public enum AllocationStrategySubFunction : byte {
+        /// <summary>
+        /// Gets the current strategy in AX
+        /// </summary>
+        QueryMemoryAllocationStrategy = 0x0,
+        /// <summary>
+        /// Sets the current strategy from BX
+        /// </summary>
+        SetMemoryAllocationStrategy = 0x1,
+        /// <summary>
+        /// Gets whether the upper memory block is currently linked in AL (1) or not (0).
+        /// </summary>
+        QueryUpperMemoryBlockState = 0x2,
+        /// <summary>
+        /// Set the state of the upper memory block link.
+        /// </summary>
+        SetUpperMemoryBlockState = 0x3,
+    }
+
+    /// <summary>
     /// INT 21h, AH=58h
     /// AX=5800H Query Memory Allocation Strategy
     /// AX=5801H Set Memory Allocation Strategy
     /// AX=5802H Query Upper-Memory Link State
     /// AX=5803H Set Upper-Memory Link State
     /// </summary>
-    public void AllocationStrategyOrUpperMemoryLinkState() {
+    public void AllocationStrategyOrUpperMemoryLinkState(bool calledFromVm) {
         byte op = State.AL;
-        if (op == 0x00) {
-            // Query Memory Allocation Strategy
+        if (op == (byte)AllocationStrategySubFunction.QueryMemoryAllocationStrategy) {
             State.AX = (ushort)_dosMemoryManager.AllocationStrategy;
-            State.CarryFlag = false;
-        } else if (op == 0x01) {
-            // Set Memory Allocation Strategy
+            SetCarryFlag(false, calledFromVm);
+        } else if (op == (byte)AllocationStrategySubFunction.SetMemoryAllocationStrategy) {
             _dosMemoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)State.BX;
             State.AX = 0;
-            State.CarryFlag = false;
-        } else if (op == 0x02) {
-            // Query Upper-Memory Link State
+            SetCarryFlag(false, calledFromVm);
+        } else if (op == (byte)AllocationStrategySubFunction.QueryUpperMemoryBlockState) {
             // 01H = upper memory is currently linked
             // 00H = not linked (all allocations go to conventional mem)
             State.AL = 0x00;
-            State.CarryFlag = false;
-        } else if (op == 0x03) {
-            // Set Upper-Memory Link State
+            SetCarryFlag(false, calledFromVm);
+        } else if (op == (byte)AllocationStrategySubFunction.SetUpperMemoryBlockState) {
             State.AX = 0x01; // 0001h (invalid function)
-            State.CarryFlag = true;
+            SetCarryFlag(true, calledFromVm);
         } else {
             throw GenerateUnhandledOperationException(op);
         }
