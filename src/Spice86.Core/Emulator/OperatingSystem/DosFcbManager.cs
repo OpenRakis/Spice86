@@ -14,26 +14,54 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 /// <summary>
-/// FCB (File Control Block) manager aligned with FreeDOS <c>fcbfns.c</c> behavior.
+/// Manages File Control Block (FCB) operations for DOS INT 21h FCB-based file functions.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>Overview:</b> This class implements legacy CP/M-style File Control Block operations required by many
+/// 1980s-1990s DOS programs and games (Civilization 1, Reunion, Detroit, Lands of Lore, etc.). FCBs were
+/// the primary file I/O mechanism in early DOS but were superseded by file handles in DOS 2.0+.
+/// </para>
+/// <para>
+/// <b>Implementation Strategy:</b> Follows <b>DOSBox Staging</b> (dos_files.cpp) for FCB behavior,
+/// as it has extensive game compatibility testing. FreeDOS kernel (fcbfns.c) is referenced in comments
+/// where implementations align. Key differences: DOSBox loops per-record for block I/O, uses floor division
+/// for GetFileSize; FreeDOS does bulk I/O, uses ceiling division.
+/// </para>
+/// <para>
+/// <b>Supported Operations:</b> Open/Close (0Fh/10h), Create/Delete/Rename (16h/13h/17h),
+/// Sequential R/W (14h/15h), Random R/W (21h/22h), Block R/W (27h/28h), Find First/Next (11h/12h),
+/// Get Size/Set Random (23h/24h), Parse Filename (29h). Extended FCB support for file attributes.
+/// </para>
+/// <para>
+/// See <see cref="DosFileControlBlock"/> and <see cref="DosExtendedFileControlBlock"/> for structure details.
+/// </para>
+/// </remarks>
 public class DosFcbManager {
 
     private const int RenameNewNameOffset = 0x0C;
     private const int RenameNewExtensionOffset = 0x14;
 
-    // FreeDOS parse control constants
-    public const byte PARSE_SKIP_LEAD_SEP = 0x01;
-    public const byte PARSE_DFLT_DRIVE = 0x02;
-    public const byte PARSE_BLNK_FNAME = 0x04;
-    public const byte PARSE_BLNK_FEXT = 0x08;
+    /// <summary>
+    /// Common separator characters for filename parsing.
+    /// These characters can appear between components of a DOS path and may be skipped during parsing.
+    /// </summary>
+    /// <remarks>
+    /// DOS filename parser: colon (:), semicolon (;), comma (,), equals (=), plus (+), space, tab
+    /// FreeDOS reference: fcbfns.c line 50 "TestCmnSeps"
+    /// </remarks>
+    public const string CommonSeparators = ":;,=+ \t";
 
-    public const byte PARSE_RET_NOWILD = 0;
-    public const byte PARSE_RET_WILD = 1;
-    public const byte PARSE_RET_BADDRIVE = 0xFF;
-
-    // FreeDOS separators
-    public const string COMMON_SEPS = ":;,=+ \t";
-    public const string FIELD_SEPS = "/\\\"[]<>|.:;,=+\t";
+    /// <summary>
+    /// Field separator characters that cannot appear in filename or extension.
+    /// These characters terminate filename parsing and are never part of a valid DOS filename.
+    /// </summary>
+    /// <remarks>
+    /// Slash (/), backslash (\), quote ("), brackets ([]), angle brackets (&lt;&gt;), pipe (|),
+    /// dot (.), colon (:), semicolon (;), comma (,), equals (=), plus (+), tab
+    /// FreeDOS reference: fcbfns.c line 51 "TestFieldSeps"
+    /// </remarks>
+    public const string FieldSeparators = "/\\\"[]<>|.:;,=+\t";
 
     private readonly IMemory _memory;
     private readonly DosFileManager _dosFileManager;
@@ -53,10 +81,10 @@ public class DosFcbManager {
     /// </summary>
     /// <param name="stringAddress">Linear address of the ASCIIZ string to parse.</param>
     /// <param name="fcbAddress">Linear address of the destination FCB (standard or extended).</param>
-    /// <param name="parseControl">Parsing control flags (PARSE_*).</param>
+    /// <param name="parseControl">Parsing control flags.</param>
     /// <param name="bytesAdvanced">Number of bytes consumed from the input string.</param>
     /// <returns>An <see cref="FcbParseResult"/> describing parse status.</returns>
-    public FcbParseResult ParseFilename(uint stringAddress, uint fcbAddress, byte parseControl, out uint bytesAdvanced) {
+    public FcbParseResult ParseFilename(uint stringAddress, uint fcbAddress, FcbParseControl parseControl, out uint bytesAdvanced) {
         string filename = _memory.GetZeroTerminatedString(stringAddress, 128);
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
         
@@ -66,7 +94,7 @@ public class DosFcbManager {
 
         // Skip leading separators if requested
         // FreeDOS: "if (*wTestMode & PARSE_SKIP_LEAD_SEP)"
-        if ((parseControl & PARSE_SKIP_LEAD_SEP) != 0) {
+        if (parseControl.HasFlag(FcbParseControl.SkipLeadingSeparators)) {
             while (pos < filename.Length && TestCmnSeps(filename[pos])) {
                 pos++;
             }
@@ -90,7 +118,7 @@ public class DosFcbManager {
                 fcb.DriveNumber = (byte)(driveNum + 1);
                 pos += 2;
             }
-        } else if ((parseControl & PARSE_DFLT_DRIVE) == 0) {
+        } else if (!parseControl.HasFlag(FcbParseControl.SetDefaultDrive)) {
             // FreeDOS: "} else if (!(*wTestMode & PARSE_DFLT_DRIVE)) {"
             // If flag NOT set, set to default drive (0)
             fcb.DriveNumber = 0;
@@ -104,12 +132,12 @@ public class DosFcbManager {
         fcb.RecordSize = 0;
 
         // Blank filename field if requested
-        if ((parseControl & PARSE_BLNK_FNAME) == 0) {
+        if (!parseControl.HasFlag(FcbParseControl.BlankFilename)) {
             fcb.FileName = "        ";
         }
         
         // Blank extension field if requested
-        if ((parseControl & PARSE_BLNK_FEXT) == 0) {
+        if ((parseControl & FcbParseControl.BlankExtension) == 0) {
             fcb.FileExtension = "   ";
         }
 
@@ -162,7 +190,7 @@ public class DosFcbManager {
     /// FreeDOS: TestCmnSeps - ":;,=+ \t"
     /// </summary>
     private static bool TestCmnSeps(char c) {
-        return COMMON_SEPS.Contains(c);
+        return CommonSeparators.Contains(c);
     }
 
     /// <summary>
@@ -170,7 +198,7 @@ public class DosFcbManager {
     /// FreeDOS: TestFieldSeps - (unsigned char)*lpFileName &lt;= ' ' || "/\\\"[]&lt;&gt;|.:;,=+\t"
     /// </summary>
     private static bool TestFieldSeps(char c) {
-        return c <= ' ' || FIELD_SEPS.Contains(c);
+        return c <= ' ' || FieldSeparators.Contains(c);
     }
 
     /// <summary>
@@ -555,6 +583,11 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=27h random block read from the RandomRecord pointer.
     /// </summary>
+    /// <remarks>
+    /// Implementation follows DOSBox Staging dos_files.cpp:1571-1602 DOS_FCBRandomRead.
+    /// DOSBox loops per-record calling DOS_FCBRead, while FreeDOS (fcbfns.c:230-283) does
+    /// a single DosRWSft operation. We follow DOSBox for FCB compatibility.
+    /// </remarks>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <param name="recordCount">On input, requested record count; on output, number actually read.</param>
@@ -573,6 +606,8 @@ public class DosFcbManager {
         int recordSize = fcb.RecordSize;
         uint startRecord = fcb.RandomRecord;
         ushort totalRead = 0;
+        // DOSBox: loop for each record (dos_files.cpp:1590-1593)
+        // FreeDOS: single operation with total size (fcbfns.c:243-258)
         for (ushort i = 0; i < recordCount; i++) {
             uint absoluteRecord = startRecord + i;
             if (!TryComputeOffset(absoluteRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
@@ -583,7 +618,9 @@ public class DosFcbManager {
             if (seek.IsError) {
                 break;
             }
-            DosFileOperationResult read = _dosFileManager.ReadFileOrDevice(handle, (ushort)recordSize, dtaAddress);
+            // Advance DTA destination for each record
+            uint destinationAddress = dtaAddress + (uint)totalRead * (uint)recordSize;
+            DosFileOperationResult read = _dosFileManager.ReadFileOrDevice(handle, (ushort)recordSize, destinationAddress);
             if (read.IsError) {
                 break;
             }
@@ -603,6 +640,12 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=28h random block write from the RandomRecord pointer.
     /// </summary>
+    /// <remarks>
+    /// Implementation follows DOSBox Staging dos_files.cpp:1604-1633 DOS_FCBRandomWrite.
+    /// Special handling for numRec==0 calls DOS_FCBIncreaseSize (dos_files.cpp:1542-1569)
+    /// to truncate/extend the file. Both DOSBox and FreeDOS update file size after write
+    /// (DOSBox: dos_files.cpp:1625, FreeDOS: fcbfns.c:264).
+    /// </remarks>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <param name="recordCount">On input, requested record count; on output, number actually written.</param>
@@ -621,21 +664,27 @@ public class DosFcbManager {
         int recordSize = fcb.RecordSize;
         uint startRecord = fcb.RandomRecord;
         if (recordCount == 0) {
-            // Truncate file to random record position
+            // Truncate/extend file to random record position
+            // DOSBox: DOS_FCBIncreaseSize (dos_files.cpp:1624-1626)
+            // FreeDOS: No explicit truncate, but updates size after write (fcbfns.c:264)
             if (!TryComputeOffset(startRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
                 return offsetStatus;
             }
-            DosFileOperationResult seek = _dosFileManager.MoveFilePointerUsingHandle(SeekOrigin.Begin, handle, offset);
-            if (seek.IsError) {
-                LogFcbWarning("RAND BLK WRITE", baseAddr, "Seek failed during truncate");
-                return FcbStatus.Error;
+            VirtualFileBase? vf = _dosFileManager.OpenFiles[handle];
+            if (vf is DosFile dosFile) {
+                dosFile.SetLength(offset);
+                fcb.FileSize = (uint)offset;
+                LogFcbDebug("RAND BLK WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
+                return FcbStatus.Success;
             }
-            LogFcbDebug("RAND BLK WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
-            return FcbStatus.Success;
+            LogFcbWarning("RAND BLK WRITE", baseAddr, "Handle is not a file");
+            return FcbStatus.Error;
         }
 
         ushort requestedRecords = recordCount;
         ushort totalWritten = 0;
+        // DOSBox: loop for each record (dos_files.cpp:1619-1622)
+        // FreeDOS: single operation with total size (fcbfns.c:258)
         for (ushort i = 0; i < recordCount; i++) {
             uint absoluteRecord = startRecord + i;
             if (!TryComputeOffset(absoluteRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
@@ -669,10 +718,70 @@ public class DosFcbManager {
     }
 
     /// <summary>
-    /// INT 21h AH=23h populates RandomRecord with file size in records.
+    /// INT 21h AH=23h - Get File Size in Records.
+    /// Computes the number of records needed to contain the file and stores it in the FCB's RandomRecord field.
     /// </summary>
-    /// <param name="fcbAddress">Linear address of the FCB.</param>
-    /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
+    /// <remarks>
+    /// <para>
+    /// <b>Purpose:</b> This function determines how many records (of the size specified in the FCB's RecordSize field)
+    /// are needed to store the entire file. This is useful for applications that want to know the file's size
+    /// in terms of their record structure before performing random access I/O.
+    /// </para>
+    /// <para>
+    /// <b>How it works:</b>
+    /// <list type="number">
+    ///   <item>Opens the file specified in the FCB (read-only)</item>
+    ///   <item>Gets the file size in bytes</item>
+    ///   <item>Divides file size by record size to get number of records</item>
+    ///   <item>Stores the result in FCB.RandomRecord</item>
+    ///   <item>Closes the file</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// <b>Record Size:</b> If FCB.RecordSize is 0, DOS uses the default value of 128 bytes (one CP/M record).
+    /// Applications can set RecordSize to any value (e.g., 512 for a sector, 4096 for a page) to work with
+    /// different logical record sizes.
+    /// </para>
+    /// <para>
+    /// <b>Division Method:</b> DOSBox and FreeDOS differ here:
+    /// <list type="bullet">
+    ///   <item><b>DOSBox</b> (dos_files.cpp:1650): Uses floor division: random = size / rec_size</item>
+    ///   <item><b>FreeDOS</b> (fcbfns.c:307): Uses ceiling division: fcb_rndm = (fsize + (recsiz - 1)) / recsiz</item>
+    /// </list>
+    /// This implementation follows <b>DOSBox behavior (floor division)</b> for game compatibility.
+    /// </para>
+    /// <para>
+    /// <b>Example:</b>
+    /// <code>
+    /// File size: 1000 bytes, RecordSize: 128
+    /// DOSBox: 1000 / 128 = 7 records (floor)
+    /// FreeDOS: (1000 + 127) / 128 = 8 records (ceiling)
+    /// Spice86: 7 records (follows DOSBox)
+    /// </code>
+    /// FreeDOS's ceiling division ensures enough records to contain all bytes. DOSBox's floor division
+    /// matches the actual number of complete records, which some games may rely on.
+    /// </para>
+    /// <para>
+    /// <b>Usage Pattern:</b>
+    /// <code>
+    /// FCB.FileName = "MYFILE  "
+    /// FCB.Extension = "DAT"
+    /// FCB.RecordSize = 512  // Optional, defaults to 128
+    /// Call INT 21h AH=23h
+    /// // FCB.RandomRecord now contains file size in 512-byte records
+    /// </code>
+    /// </para>
+    /// <para>
+    /// <b>References:</b>
+    /// <list type="bullet">
+    ///   <item>DOSBox Staging: dos_files.cpp:1635-1651 DOS_FCBGetFileSize</item>
+    ///   <item>FreeDOS kernel: fcbfns.c:285-316 FcbGetFileSize</item>
+    ///   <item>Ralf Brown's Interrupt List: INT 21h AH=23h</item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    /// <param name="fcbAddress">Linear address of the FCB containing the filename to query.</param>
+    /// <returns><see cref="FcbStatus.Success"/> if file size retrieved, <see cref="FcbStatus.Error"/> if file not found or device.</returns>
     public FcbStatus GetFileSize(uint fcbAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
@@ -927,7 +1036,7 @@ public class DosFcbManager {
         // Extended FCB detection via drive marker 0xFF
         DosFileControlBlock probe = new DosFileControlBlock(_memory, fcbAddress);
         if (probe.DriveNumber == 0xFF) {
-            return fcbAddress + 7;
+            return fcbAddress + DosExtendedFileControlBlock.HeaderSize;
         }
         return fcbAddress;
     }

@@ -42,27 +42,28 @@ public class DosInt21HandlerTests {
         var ioPortDispatcher = new IOPortDispatcher(ioPortBreakpoints, state, logger, false);
         var dosTables = new DosTables();
         dosTables.Initialize(memory);
-        BiosDataArea biosDataArea = new BiosDataArea(memory, 640);
-        var dosMemoryManager = new DosMemoryManager(memory, 0x1000, logger);
-        var dosDriveManager = new DosDriveManager(logger, Path.GetTempPath(), Path.GetTempFileName());
+        var biosDataArea = new BiosDataArea(memory, 640);
+        var biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
+        var keyboardInt16Handler = new KeyboardInt16Handler(
+            memory, ioPortDispatcher, biosDataArea,
+            functionHandlerProvider, stack, state, logger, biosKeyboardBuffer);
+        var countryInfo = new CountryInfo();
+        var dosMemoryManager = new DosMemoryManager(memory, 0x170, logger);
+        var envVars = new Dictionary<string, string> { { "PATH", "C:\\" } };
+        var dosProcessManager = new DosProcessManager(memory, stack, state, dosMemoryManager, dosFileManager, driveManager, dosFcbManager, envVars, logger);
+
         var handler = new DosInt21Handler(
             memory,
             functionHandlerProvider,
             stack,
             state,
-            new KeyboardInt16Handler(memory, ioPortDispatcher, biosDataArea
-            , functionHandlerProvider, stack, state, logger,
-            new BiosKeyboardBuffer(memory, biosDataArea)
-            ),
-            new CountryInfo(),
+            keyboardInt16Handler,
+            countryInfo,
             stringDecoder,
             dosMemoryManager,
             dosFileManager,
             driveManager,
-            new DosProcessManager(memory, stack, state,
-            dosMemoryManager, dosFileManager, dosDriveManager,
-            dosFcbManager,
-            new Dictionary<string,string>(), logger),
+            dosProcessManager,
             ioPortDispatcher,
             dosTables,
             logger,
