@@ -1134,9 +1134,10 @@ public class DosFcbManager {
     /// </summary>
     /// <param name="pspSegment">The PSP segment of the process being terminated.</param>
     public void CloseAllTrackedFcbFiles(ushort pspSegment) {
-        IEnumerable<ushort> handlesToClose = _trackedFcbHandles
+        List<ushort> handlesToClose = _trackedFcbHandles
             .Where(entry => entry.Value == pspSegment)
-            .Select(entry => entry.Key);
+            .Select(entry => entry.Key)
+            .ToList();
 
         // Close the files
         foreach (ushort handle in handlesToClose) {
