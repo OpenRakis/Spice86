@@ -339,6 +339,27 @@ public class DosFcbManager {
         // Reset block/record pointers on open (FreeDOS behavior)
         fcb.CurrentBlock = 0;
         fcb.CurrentRecord = 0;
+        
+        // DOSBox Staging: Populate FCB metadata (size, date, time) on open
+        // Reference: dos_files.cpp DOS_FCBOpen calls fcb.FileOpen(handle) which sets metadata
+        VirtualFileBase? vf = _dosFileManager.OpenFiles[handle];
+        if (vf is DosFile dosFile) {
+            fcb.FileSize = (uint)dosFile.Length;
+            
+            // Get file's last write time from the file system
+            string? hostPath = _dosFileManager.TryGetFullHostPathFromDos(fileSpec);
+            if (!string.IsNullOrWhiteSpace(hostPath) && File.Exists(hostPath)) {
+                FileInfo fileInfo = new FileInfo(hostPath);
+                DateTime lastWrite = fileInfo.LastWriteTime;
+                fcb.Date = DosFileManager.ToDosDate(lastWrite);
+                fcb.Time = DosFileManager.ToDosTime(lastWrite);
+                
+                // Also update the DosFile object for consistency
+                dosFile.Date = fcb.Date;
+                dosFile.Time = fcb.Time;
+            }
+        }
+        
         TrackFcbHandle(handle);
         LogFcbDebug("OPEN", baseAddr, fileSpec, FcbStatus.Success);
         return FcbStatus.Success;

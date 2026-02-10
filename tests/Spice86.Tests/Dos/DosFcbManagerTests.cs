@@ -366,6 +366,58 @@ public class DosFcbManagerTests : IDisposable {
     }
 
     [Fact]
+    public void OpenFile_ExistingFile_PopulatesFileMetadata() {
+        // Test that FCB open populates FileSize, Date, and Time fields
+        // DOSBox Staging behavior: DOS_FCBOpen calls fcb.FileOpen(handle) which sets these fields
+        
+        // Arrange
+        DosTestFixture fixture = new(_mountPoint);
+        string testContent = "Test file content for metadata test";
+        string testFile = Path.Combine(_mountPoint, "METADATA.TXT");
+        File.WriteAllText(testFile, testContent);
+        FileInfo fileInfo = new FileInfo(testFile);
+        
+        uint fcbAddr = 0x2000;
+        DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "METADATA";
+        fcb.FileExtension = "TXT";
+        
+        // Zero out the metadata fields before open
+        fcb.FileSize = 0;
+        fcb.Date = 0;
+        fcb.Time = 0;
+
+        try {
+            // Act
+            FcbStatus status = fixture.DosFcbManager.OpenFile(fcbAddr);
+
+            // Assert
+            status.Should().Be(FcbStatus.Success);
+            
+            // FileSize should be populated with actual file size
+            fcb.FileSize.Should().Be((uint)testContent.Length, "FileSize should match actual file size");
+            
+            // Date and Time should be non-zero (populated with file's last write time)
+            fcb.Date.Should().NotBe(0, "Date should be populated from file last write time");
+            fcb.Time.Should().NotBe(0, "Time should be populated from file last write time");
+            
+            // Verify Date/Time are in reasonable range (DOS format starts from 1980)
+            // Date: bits 15-9 = year-1980, 8-5 = month, 4-0 = day
+            ushort year = (ushort)((fcb.Date >> 9) + 1980);
+            year.Should().BeInRange((ushort)1980, (ushort)2100);
+            
+            // Time: bits 15-11 = hour, 10-5 = minute, 4-0 = seconds/2
+            ushort hour = (ushort)(fcb.Time >> 11);
+            hour.Should().BeLessThanOrEqualTo((ushort)23);
+        } finally {
+            // Cleanup
+            fixture.DosFcbManager.CloseFile(fcbAddr);
+            File.Delete(testFile);
+        }
+    }
+
+    [Fact]
     public void CloseFile_OpenedFile_ReturnsSuccess() {
         // Arrange
         DosTestFixture fixture = new(_mountPoint);
