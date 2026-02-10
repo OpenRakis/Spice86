@@ -67,7 +67,11 @@ public class DosFcbManager {
     private readonly DosFileManager _dosFileManager;
     private readonly DosDriveManager _dosDriveManager;
     private readonly ILoggerService _loggerService;
-    private readonly HashSet<ushort> _trackedFcbHandles = new();
+    private readonly DosSwappableDataArea _sda;
+    
+    // Track FCB handles per PSP: handle → PSP segment
+    // DOSBox Staging behavior: FCB files are cleaned up when their owning PSP terminates
+    private readonly Dictionary<ushort, ushort> _trackedFcbHandles = new();
 
     public
     DosFcbManager(IMemory memory, DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILoggerService loggerService) {
@@ -75,6 +79,8 @@ public class DosFcbManager {
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
         _loggerService = loggerService;
+        _sda = new DosSwappableDataArea(_memory, 
+            MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
     }
 
     /// <summary>
@@ -1251,16 +1257,28 @@ public class DosFcbManager {
     }
 
     /// <summary>
-    /// Closes every file handle opened through FCB APIs and clears the tracking list.
+    /// Closes all FCB-opened files for the specified PSP segment.
+    /// DOSBox Staging behavior: Only closes FCB files owned by the terminating process.
     /// </summary>
-    public void CloseAllTrackedFcbFiles() {
-        foreach (ushort handle in _trackedFcbHandles) {
-            DosFileOperationResult result = _dosFileManager.CloseFileOrDevice(handle);
-            if (result.IsError && _loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("Failed to close FCB handle {Handle}", handle);
+    /// <param name="pspSegment">The PSP segment of the process being terminated.</param>
+    public void CloseAllTrackedFcbFiles(ushort pspSegment) {
+        List<ushort> handlesToClose = new();
+        
+        // Find all handles owned by this PSP
+        foreach (KeyValuePair<ushort, ushort> entry in _trackedFcbHandles) {
+            if (entry.Value == pspSegment) {
+                handlesToClose.Add(entry.Key);
             }
         }
-        _trackedFcbHandles.Clear();
+        
+        // Close the files
+        foreach (ushort handle in handlesToClose) {
+            DosFileOperationResult result = _dosFileManager.CloseFileOrDevice(handle);
+            if (result.IsError && _loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("Failed to close FCB handle {Handle} for PSP {Psp}", handle, pspSegment);
+            }
+            _trackedFcbHandles.Remove(handle);
+        }
     }
 
     private uint GetActualFcbBaseAddress(uint fcbAddress) {
@@ -1409,8 +1427,13 @@ public class DosFcbManager {
         return builder.ToString();
     }
 
+    /// <summary>
+    /// Tracks an FCB handle for the current PSP.
+    /// DOSBox Staging behavior: Associates FCB handle with its owning PSP for cleanup on process termination.
+    /// </summary>
     private void TrackFcbHandle(ushort handle) {
-        _trackedFcbHandles.Add(handle);
+        ushort currentPsp = _sda.CurrentProgramSegmentPrefix;
+        _trackedFcbHandles[handle] = currentPsp;
     }
 
     /// <summary>

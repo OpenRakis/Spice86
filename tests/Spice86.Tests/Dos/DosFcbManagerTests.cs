@@ -1005,6 +1005,4 @@ public class DosFcbManagerTests : IDisposable {
         // Assert
         result.Should().Be(FcbStatus.Error);
     }
-
-
 }
