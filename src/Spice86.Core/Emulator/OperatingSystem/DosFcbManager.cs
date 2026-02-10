@@ -68,7 +68,7 @@ public class DosFcbManager {
     private readonly DosDriveManager _dosDriveManager;
     private readonly ILoggerService _loggerService;
     private readonly DosSwappableDataArea _sda;
-    
+
     // Track FCB handles per PSP: handle → PSP segment
     // DOSBox Staging behavior: FCB files are cleaned up when their owning PSP terminates
     private readonly Dictionary<ushort, ushort> _trackedFcbHandles = new();
@@ -79,7 +79,7 @@ public class DosFcbManager {
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
         _loggerService = loggerService;
-        _sda = new DosSwappableDataArea(_memory, 
+        _sda = new DosSwappableDataArea(_memory,
             MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
     }
 
@@ -345,13 +345,13 @@ public class DosFcbManager {
         // Reset block/record pointers on open (FreeDOS behavior)
         fcb.CurrentBlock = 0;
         fcb.CurrentRecord = 0;
-        
+
         // DOSBox Staging: Populate FCB metadata (size, date, time) on open
         // Reference: dos_files.cpp DOS_FCBOpen calls fcb.FileOpen(handle) which sets metadata
         VirtualFileBase? vf = _dosFileManager.OpenFiles[handle];
         if (vf is DosFile dosFile) {
             fcb.FileSize = (uint)dosFile.Length;
-            
+
             // Get file's last write time from the file system
             string? hostPath = _dosFileManager.TryGetFullHostPathFromDos(fileSpec);
             if (!string.IsNullOrWhiteSpace(hostPath) && File.Exists(hostPath)) {
@@ -359,13 +359,13 @@ public class DosFcbManager {
                 DateTime lastWrite = fileInfo.LastWriteTime;
                 fcb.Date = DosFileManager.ToDosDate(lastWrite);
                 fcb.Time = DosFileManager.ToDosTime(lastWrite);
-                
+
                 // Also update the DosFile object for consistency
                 dosFile.Date = fcb.Date;
                 dosFile.Time = fcb.Time;
             }
         }
-        
+
         TrackFcbHandle(handle);
         LogFcbDebug("OPEN", baseAddr, fileSpec, FcbStatus.Success);
         return FcbStatus.Success;
@@ -1268,7 +1268,7 @@ public class DosFcbManager {
             .Where(entry => entry.Value == pspSegment)
             .Select(entry => entry.Key)
             .ToList();
-        
+
         // Close the files
         foreach (ushort handle in handlesToClose) {
             DosFileOperationResult result = _dosFileManager.CloseFileOrDevice(handle);
@@ -1488,4 +1488,3 @@ public class DosFcbManager {
         }
     }
 }
-
