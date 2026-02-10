@@ -1,7 +1,7 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Enums;
 
 /// <summary>
-/// Return codes for INT 21h AH=29h filename parsing into an FCB, matching FreeDOS behavior.
+/// Return codes for INT 21h AH=29h filename parsing into an FCB.
 /// </summary>
 public enum FcbParseResult : byte {
     /// <summary>

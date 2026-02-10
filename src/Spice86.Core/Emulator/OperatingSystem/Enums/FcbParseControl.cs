@@ -29,8 +29,6 @@ using System;
 /// <para>
 /// <b>References:</b>
 /// <list type="bullet">
-///   <item>DOSBox Staging: dos_files.cpp FCB_Parsename</item>
-///   <item>FreeDOS kernel: fcbfns.c FcbParseFname (lines 91-188)</item>
 ///   <item>Ralf Brown's Interrupt List: INT 21h AH=29h</item>
 /// </list>
 /// </para>
@@ -54,9 +52,6 @@ public enum FcbParseControl : byte {
     /// <para>
     /// Example: "  : TEST.TXT" → with flag: "TEST.TXT", without flag: parse fails
     /// </para>
-    /// <para>
-    /// FreeDOS: if (*wTestMode &amp; PARSE_SKIP_LEAD_SEP) (fcbfns.c:98-102)
-    /// </para>
     /// </remarks>
     SkipLeadingSeparators = 0x01,
 
@@ -71,11 +66,6 @@ public enum FcbParseControl : byte {
     ///   <item>When bit is CLEAR (0): Sets FCB drive to 0 (default drive) if no "X:" found</item>
     ///   <item>When bit is SET (1): Leaves FCB drive field unchanged if no "X:" found</item>
     /// </list>
-    /// </para>
-    /// <para>
-    /// This matches FreeDOS behavior: "if (!(*wTestMode &amp; PARSE_DFLT_DRIVE))" (fcbfns.c:130)
-    /// The FreeDOS flag name "PARSE_DFLT_DRIVE" suggests "use default drive", but the code checks
-    /// for the bit being CLEAR to set default. This enum name reflects the actual behavior when SET.
     /// </para>
     /// <para>
     /// Example: Input "TEST.TXT" (no drive letter)

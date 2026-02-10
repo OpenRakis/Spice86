@@ -16,9 +16,6 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 ///   <item>Offset 0x07 (37 bytes): Standard FCB (inherited functionality)</item>
 /// </list>
 /// </para>
-/// <para>
-/// Based on FreeDOS kernel implementation: https://github.com/FDOS/kernel/blob/master/hdr/fcb.h
-/// </para>
 /// </remarks>
 public class DosExtendedFileControlBlock : DosFileControlBlock {
     /// <summary>

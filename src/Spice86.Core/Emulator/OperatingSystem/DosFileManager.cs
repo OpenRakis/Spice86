@@ -442,7 +442,7 @@ public class DosFileManager {
 
     /// <summary>
     /// Clears all active file searches (DTA search state).
-    /// Called on process termination to match FreeDOS behavior.
+    /// Called on process termination.
     /// </summary>
     public void ClearAllFileSearches() {
         _activeFileSearches.Clear();

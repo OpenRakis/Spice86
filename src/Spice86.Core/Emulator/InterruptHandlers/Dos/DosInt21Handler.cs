@@ -330,13 +330,13 @@ public class DosInt21Handler : InterruptHandler {
             State.DS = segment;
             State.SI = offset;
             State.AL = 0;
-            State.CarryFlag = false; // FreeDOS clears carry flag on success
+            State.CarryFlag = false;
 
             if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("Returning DBCS table pointer at {Segment:X4}:{Offset:X4}", segment, offset);
             }
         } else {
-            // FreeDOS returns error without modifying carry flag for invalid subfunction
+            // Returns error without modifying carry flag for invalid subfunction
             State.AL = 0xFF;
         }
     }
@@ -492,7 +492,6 @@ public class DosInt21Handler : InterruptHandler {
         State.DX = 0xEA0;
         // Media Id
         State.DS = 0x8010;
-        // From DOSBox source code...
         State.BX = (ushort)(0x8010 + _dosDriveManager.CurrentDriveIndex * 9);
         State.AH = 0;
     }
@@ -826,7 +825,6 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// Undocumented behavior expected by Qbix and Willy Beamish, when FindFirst or FindNext is called.
-    /// Comes from DOSBox Staging source code
     /// </summary>
     /// <param name="dosFileOperationResult">The DOS File operation result to check for error status</param>
     private void SetAxToZeroOnSuccess(DosFileOperationResult dosFileOperationResult) {
@@ -1009,7 +1007,6 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         // Even if resize fails, we still terminate as a TSR
-        // This matches FreeDOS behavior
         if (errorCode != DosErrorCode.NoError && LoggerService.IsEnabled(LogEventLevel.Warning)) {
             LoggerService.Warning(
                 "TSR: Failed to resize memory block to {Paragraphs} paragraphs, error: {Error}",
@@ -1091,7 +1088,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Returns a pointer to the DOS internal tables (also known as the "List of Lists" or SYSVARS).
     /// </para>
     /// <remarks>
-    /// Like FREEDOS and MS-DOS, this actually returns a pointer to the first drive DOS Parameter Block, which is the "official" start of the structure. <br/>
+    /// Like MS-DOS, this actually returns a pointer to the first drive DOS Parameter Block, which is the "official" start of the structure. <br/>
     /// This is used by (for example) the game 'Day of the Tentacle' and 'Indiana Jones and the Fate of Atlantis'.
     /// </remarks>
     /// </summary>
@@ -1370,9 +1367,6 @@ public class DosInt21Handler : InterruptHandler {
     /// Legacy CP/M program termination handler (INT 21h, AH=00h).
     /// Behaves like INT 21h, AH=4Ch with AL=0.
     /// </summary>
-    /// <remarks>
-    /// Code is adapted from FreeDOS <c>inthndlr.c</c>.
-    /// </remarks>
     public void LegacyTerminateProgram() {
         State.AL = 0;
         State.AH = 0x4C;
@@ -1731,7 +1725,6 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>DS:DX = pointer to an unopened FCB</para>
     /// <para><b>Returns:</b></para>
     /// <para>AL = 00h if file opened, FFh if file not found</para>
-    /// <para>DOSBox Staging: Always sets RecordSize=128 on success (dos_files.cpp DOS_FCB::FileOpen).</para>
     /// </remarks>
     private void FcbOpenFile() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
