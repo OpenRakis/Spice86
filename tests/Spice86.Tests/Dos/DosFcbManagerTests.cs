@@ -10,9 +10,54 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Xunit;
 
 /// <summary>
-/// Comprehensive tests for FCB (File Control Block) operations based on FreeDOS fcbfns.c and DOSBox dos_files.cpp behavior.
-/// Tests cover filename parsing, file operations, and wildcard rename semantics.
+/// Comprehensive tests for FCB (File Control Block) operations based on DOSBox Staging dos_files.cpp behavior.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>Test Strategy:</b>
+/// These tests verify that Spice86's FCB implementation matches DOSBox Staging behavior for game compatibility.
+/// Where FreeDOS behavior differs, tests include comments explaining the difference and why DOSBox is followed.
+/// </para>
+/// <para>
+/// <b>Test Coverage:</b>
+/// <list type="bullet">
+///   <item><b>Filename Parsing (AH=29h):</b> Wildcards, drive specs, separators, case conversion, parse flags</item>
+///   <item><b>File Operations:</b> Open/Close/Create/Delete/Rename with standard and extended FCBs</item>
+///   <item><b>Sequential I/O (AH=14h/15h):</b> Read/write with automatic position advancement</item>
+///   <item><b>Random I/O (AH=21h/22h):</b> Single record read/write using RandomRecord field</item>
+///   <item><b>Block I/O (AH=27h/28h):</b> Multi-record operations, DTA advancement, CX=0 truncation</item>
+///   <item><b>Directory Search (AH=11h/12h):</b> Find First/Next with wildcards and attributes</item>
+///   <item><b>File Size/Position (AH=23h/24h):</b> Size calculation, record conversion</item>
+///   <item><b>Error Handling:</b> Invalid paths, missing files, unopened handles, devices</item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Test Organization:</b>
+/// <list type="bullet">
+///   <item>Each test uses the Arrange/Act/Assert pattern with section comments</item>
+///   <item>Tests are named using Given/When/Then: Method_Scenario_ExpectedResult</item>
+///   <item>Each test uses IDisposable pattern to provide isolated temp directory (_mountPoint)</item>
+///   <item>DosTestFixture is created per-test to provide fresh DOS environment</item>
+///   <item>Helper methods (WriteSpacePaddedField) reduce duplication</item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>DOSBox vs FreeDOS Differences:</b>
+/// <list type="bullet">
+///   <item><b>RandomBlockRead/Write:</b> DOSBox loops per-record; FreeDOS bulk I/O (tests follow DOSBox)</item>
+///   <item><b>GetFileSize:</b> DOSBox floor division; FreeDOS ceiling (tests follow DOSBox)</item>
+///   <item><b>CX=0 Truncate:</b> DOSBox explicit via DOS_FCBIncreaseSize; FreeDOS implicit (tests follow DOSBox)</item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>References:</b>
+/// <list type="bullet">
+///   <item>DOSBox Staging: src/dos/dos_files.cpp (DOS_FCB*, lines 1300-1650)</item>
+///   <item>FreeDOS kernel: kernel/fcbfns.c, hdr/fcb.h</item>
+///   <item>FreeDOS test: tests/fcb_rename/fcb_ren.c (wildcard rename semantics)</item>
+/// </list>
+/// </para>
+/// </remarks>
 public class DosFcbManagerTests : IDisposable {
     private readonly string _mountPoint;
 
@@ -54,7 +99,7 @@ public class DosFcbManagerTests : IDisposable {
         fixture.Memory.SetZeroTerminatedString(stringAddr, "TEST.TXT", 128);
 
         // Act
-        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, DosFcbManager.PARSE_DFLT_DRIVE, out uint bytesAdvanced);
+        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, FcbParseControl.SetDefaultDrive, out uint bytesAdvanced);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -114,7 +159,7 @@ public class DosFcbManagerTests : IDisposable {
         fixture.Memory.SetZeroTerminatedString(stringAddr, "*.TXT", 128);
 
         // Act
-        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, DosFcbManager.PARSE_DFLT_DRIVE, out uint bytesAdvanced);
+        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, FcbParseControl.SetDefaultDrive, out uint bytesAdvanced);
 
         // Assert
         result.Should().Be(FcbParseResult.WildcardsPresent);
@@ -133,7 +178,7 @@ public class DosFcbManagerTests : IDisposable {
         fixture.Memory.SetZeroTerminatedString(stringAddr, "TEST?.TX?", 128);
 
         // Act
-        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, DosFcbManager.PARSE_DFLT_DRIVE, out uint bytesAdvanced);
+        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, FcbParseControl.SetDefaultDrive, out uint bytesAdvanced);
 
         // Assert
         result.Should().Be(FcbParseResult.WildcardsPresent);
@@ -152,7 +197,7 @@ public class DosFcbManagerTests : IDisposable {
         fixture.Memory.SetZeroTerminatedString(stringAddr, "  :;,=+  TEST.TXT", 128);
 
         // Act
-        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, DosFcbManager.PARSE_SKIP_LEAD_SEP | DosFcbManager.PARSE_DFLT_DRIVE, out uint bytesAdvanced);
+        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, FcbParseControl.SkipLeadingSeparators | FcbParseControl.SetDefaultDrive, out uint bytesAdvanced);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -189,12 +234,12 @@ public class DosFcbManagerTests : IDisposable {
         // Test "."
         uint stringAddr1 = 0x1000;
         fixture.Memory.SetZeroTerminatedString(stringAddr1, ".", 128);
-        FcbParseResult result1 = fixture.DosFcbManager.ParseFilename(stringAddr1, fcbAddr1, DosFcbManager.PARSE_DFLT_DRIVE, out uint bytes1);
+        FcbParseResult result1 = fixture.DosFcbManager.ParseFilename(stringAddr1, fcbAddr1, FcbParseControl.SetDefaultDrive, out uint bytes1);
         
         // Test ".."
         uint stringAddr2 = 0x1100;
         fixture.Memory.SetZeroTerminatedString(stringAddr2, "..", 128);
-        FcbParseResult result2 = fixture.DosFcbManager.ParseFilename(stringAddr2, fcbAddr2, DosFcbManager.PARSE_DFLT_DRIVE, out uint bytes2);
+        FcbParseResult result2 = fixture.DosFcbManager.ParseFilename(stringAddr2, fcbAddr2, FcbParseControl.SetDefaultDrive, out uint bytes2);
 
         // Assert
         result1.Should().Be(FcbParseResult.NoWildcards);
@@ -217,7 +262,7 @@ public class DosFcbManagerTests : IDisposable {
         fixture.Memory.SetZeroTerminatedString(stringAddr, "NOEXT", 128);
 
         // Act
-        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, DosFcbManager.PARSE_DFLT_DRIVE, out uint bytesAdvanced);
+        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, FcbParseControl.SetDefaultDrive, out uint bytesAdvanced);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -236,7 +281,7 @@ public class DosFcbManagerTests : IDisposable {
         fixture.Memory.SetZeroTerminatedString(stringAddr, "lowercase.ext", 128);
 
         // Act
-        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, DosFcbManager.PARSE_DFLT_DRIVE, out uint bytesAdvanced);
+        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, FcbParseControl.SetDefaultDrive, out uint bytesAdvanced);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -255,7 +300,7 @@ public class DosFcbManagerTests : IDisposable {
         fixture.Memory.SetZeroTerminatedString(stringAddr, "TEST.TXT", 128);
 
         // Act - PARSE_BLNK_FNAME: should blank filename field
-        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, DosFcbManager.PARSE_BLNK_FNAME, out _);
+        FcbParseResult result = fixture.DosFcbManager.ParseFilename(stringAddr, fcbAddr, FcbParseControl.BlankFilename, out _);
 
         // Assert - filename field should be blanked before parsing
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -680,6 +725,234 @@ public class DosFcbManagerTests : IDisposable {
         result.BaseAddress.Should().Be(xfcbAddr + DosExtendedFileControlBlock.HeaderSize); // Points to embedded FCB
         result.FileName.Should().Be("EXTTEST ");
         result.FileExtension.Should().Be("DAT");
+    }
+
+    /// <summary>
+    /// Tests RandomBlockRead with multiple records to verify DTA address advances for each record (DOSBox behavior).
+    /// This is the fix from review comment: "RandomBlockRead should advance DTA for each record".
+    /// DOSBox: loops calling DOS_FCBRead which advances DTA internally (dos_files.cpp:1590-1593)
+    /// FreeDOS: single DosRWSft call with total size (fcbfns.c:258) - different approach
+    /// </summary>
+    [Fact]
+    public void RandomBlockRead_MultipleRecords_AdvancesDtaForEachRecord() {
+        // Arrange: Create test file with multiple distinct records
+        DosTestFixture fixture = new(_mountPoint);
+        string testFile = Path.Combine(_mountPoint, "MULTIREC.DAT");
+        
+        // Write 3 records: "AAAA", "BBBB", "CCCC" (4 bytes each)
+        byte[] fileData = new byte[] { 
+            0x41, 0x41, 0x41, 0x41,  // Record 0: AAAA
+            0x42, 0x42, 0x42, 0x42,  // Record 1: BBBB  
+            0x43, 0x43, 0x43, 0x43   // Record 2: CCCC
+        };
+        File.WriteAllBytes(testFile, fileData);
+
+        // Setup FCB
+        uint fcbAddr = 0x2000;
+        DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
+        fcb.DriveNumber = 0; // Default drive
+        fcb.FileName = "MULTIREC";
+        fcb.FileExtension = "DAT";
+        fcb.RecordSize = 4;  // 4-byte records
+        fcb.RandomRecord = 0; // Start at record 0
+
+        // Open file
+        FcbStatus openResult = fixture.DosFcbManager.OpenFile(fcbAddr);
+        openResult.Should().Be(FcbStatus.Success);
+
+        // Setup DTA buffer
+        uint dtaAddress = 0x3000;
+        ushort recordCount = 3;
+
+        // Act: Read 3 records
+        FcbStatus readResult = fixture.DosFcbManager.RandomBlockRead(fcbAddr, dtaAddress, ref recordCount);
+
+        // Assert: Should have read all 3 records
+        readResult.Should().Be(FcbStatus.Success);
+        recordCount.Should().Be(3);
+
+        // Verify each record was written to consecutive DTA locations
+        // Record 0 at DTA+0: AAAA
+        fixture.Memory.UInt8[dtaAddress + 0].Should().Be(0x41);
+        fixture.Memory.UInt8[dtaAddress + 1].Should().Be(0x41);
+        fixture.Memory.UInt8[dtaAddress + 2].Should().Be(0x41);
+        fixture.Memory.UInt8[dtaAddress + 3].Should().Be(0x41);
+
+        // Record 1 at DTA+4: BBBB (DTA advanced by record size)
+        fixture.Memory.UInt8[dtaAddress + 4].Should().Be(0x42);
+        fixture.Memory.UInt8[dtaAddress + 5].Should().Be(0x42);
+        fixture.Memory.UInt8[dtaAddress + 6].Should().Be(0x42);
+        fixture.Memory.UInt8[dtaAddress + 7].Should().Be(0x42);
+
+        // Record 2 at DTA+8: CCCC (DTA advanced again)
+        fixture.Memory.UInt8[dtaAddress + 8].Should().Be(0x43);
+        fixture.Memory.UInt8[dtaAddress + 9].Should().Be(0x43);
+        fixture.Memory.UInt8[dtaAddress + 10].Should().Be(0x43);
+        fixture.Memory.UInt8[dtaAddress + 11].Should().Be(0x43);
+
+        // Cleanup
+        fixture.DosFcbManager.CloseFile(fcbAddr);
+    }
+
+    /// <summary>
+    /// Tests RandomBlockWrite with CX=0 to verify file is truncated (DOSBox DOS_FCBIncreaseSize behavior).
+    /// This is the fix from review comment: "RandomBlockWrite CX=0 should explicitly set file length".
+    /// DOSBox: calls DOS_FCBIncreaseSize which does SetLength (dos_files.cpp:1624-1626, 1542-1569)
+    /// FreeDOS: Unclear behavior, appears to just do zero-size write
+    /// </summary>
+    [Fact]
+    public void RandomBlockWrite_ZeroRecords_TruncatesFileExplicitly() {
+        // Arrange: Create file with initial content
+        DosTestFixture fixture = new(_mountPoint);
+        string testFile = Path.Combine(_mountPoint, "TRUNCATE.DAT");
+        
+        // Write 100 bytes initially
+        byte[] initialData = new byte[100];
+        for (int i = 0; i < 100; i++) {
+            initialData[i] = (byte)(i & 0xFF);
+        }
+        File.WriteAllBytes(testFile, initialData);
+
+        // Setup FCB
+        uint fcbAddr = 0x2000;
+        DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "TRUNCATE";
+        fcb.FileExtension = "DAT";
+        fcb.RecordSize = 10;  // 10-byte records
+        fcb.RandomRecord = 5;  // Truncate to record 5 = 50 bytes
+
+        // Open file
+        FcbStatus openResult = fixture.DosFcbManager.OpenFile(fcbAddr);
+        openResult.Should().Be(FcbStatus.Success);
+
+        uint dtaAddress = 0x3000;
+        ushort recordCount = 0; // CX=0 means truncate
+
+        // Act: Write 0 records (truncate operation)
+        FcbStatus writeResult = fixture.DosFcbManager.RandomBlockWrite(fcbAddr, dtaAddress, ref recordCount);
+
+        // Assert: Operation should succeed
+        writeResult.Should().Be(FcbStatus.Success);
+        recordCount.Should().Be(0); // Should remain 0
+
+        // Verify file size in FCB was updated
+        fcb.FileSize.Should().Be(50); // 5 records * 10 bytes
+
+        // Close and verify actual file size on disk
+        fixture.DosFcbManager.CloseFile(fcbAddr);
+        FileInfo fileInfo = new FileInfo(testFile);
+        fileInfo.Length.Should().Be(50); // File physically truncated to 50 bytes
+    }
+
+    /// <summary>
+    /// Tests GetFileSize with floor division matching DOSBox behavior (not ceiling like FreeDOS).
+    /// This documents the design decision from review comments.
+    /// DOSBox: random = size / rec_size (dos_files.cpp:1650)
+    /// FreeDOS: fcb_rndm = (fsize + (recsiz - 1)) / recsiz (fcbfns.c:307)
+    /// </summary>
+    [Fact]
+    public void GetFileSize_UsesFloorDivision_MatchesDOSBox() {
+        // Arrange: Create file with size that isn't evenly divisible by record size
+        DosTestFixture fixture = new(_mountPoint);
+        string testFile = Path.Combine(_mountPoint, "SIZETEST.DAT");
+        
+        // Write 1000 bytes
+        byte[] fileData = new byte[1000];
+        File.WriteAllBytes(testFile, fileData);
+
+        // Setup FCB with 128-byte record size
+        uint fcbAddr = 0x2000;
+        DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "SIZETEST";
+        fcb.FileExtension = "DAT";
+        fcb.RecordSize = 128;
+
+        // Act: Get file size
+        FcbStatus result = fixture.DosFcbManager.GetFileSize(fcbAddr);
+
+        // Assert: Should succeed
+        result.Should().Be(FcbStatus.Success);
+
+        // DOSBox floor division: 1000 / 128 = 7 (not 8)
+        // FreeDOS ceiling division: (1000 + 127) / 128 = 8
+        // We follow DOSBox for game compatibility
+        fcb.RandomRecord.Should().Be(7, "DOSBox uses floor division: 1000 / 128 = 7");
+    }
+
+    /// <summary>
+    /// Tests GetFileSize with record size of zero, which should use default 128 bytes.
+    /// Both DOSBox and FreeDOS use 128 as default (DosFileControlBlock.DefaultRecordSize).
+    /// </summary>
+    [Fact]
+    public void GetFileSize_RecordSizeZero_UsesDefault128() {
+        // Arrange
+        DosTestFixture fixture = new(_mountPoint);
+        string testFile = Path.Combine(_mountPoint, "DEFAULT.DAT");
+        
+        // Write 256 bytes (exactly 2 default records)
+        byte[] fileData = new byte[256];
+        File.WriteAllBytes(testFile, fileData);
+
+        // Setup FCB with RecordSize = 0 (should use default)
+        uint fcbAddr = 0x2000;
+        DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "DEFAULT ";
+        fcb.FileExtension = "DAT";
+        fcb.RecordSize = 0; // Zero means use default
+
+        // Act
+        FcbStatus result = fixture.DosFcbManager.GetFileSize(fcbAddr);
+
+        // Assert
+        result.Should().Be(FcbStatus.Success);
+        // 256 / 128 (default) = 2 records
+        fcb.RandomRecord.Should().Be(2, "256 bytes / 128 (default) = 2 records");
+    }
+
+    /// <summary>
+    /// Tests OpenFile with non-existent file returns error.
+    /// Error path coverage.
+    /// </summary>
+    [Fact]
+    public void OpenFile_NonExistentFile_ReturnsError() {
+        // Arrange
+        DosTestFixture fixture = new(_mountPoint);
+        uint fcbAddr = 0x2000;
+        DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "NOTFOUND";
+        fcb.FileExtension = "DAT";
+
+        // Act
+        FcbStatus result = fixture.DosFcbManager.OpenFile(fcbAddr);
+
+        // Assert: Should fail
+        result.Should().Be(FcbStatus.Error);
+    }
+
+    /// <summary>
+    /// Tests GetFileSize with non-existent file returns error.
+    /// Error path coverage.
+    /// </summary>
+    [Fact]
+    public void GetFileSize_NonExistentFile_ReturnsError() {
+        // Arrange
+        DosTestFixture fixture = new(_mountPoint);
+        uint fcbAddr = 0x2000;
+        DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
+        fcb.DriveNumber = 0;
+        fcb.FileName = "MISSING ";
+        fcb.FileExtension = "TXT";
+        fcb.RecordSize = 512;
+
+        // Act
+        FcbStatus result = fixture.DosFcbManager.GetFileSize(fcbAddr);
+
+        // Assert
+        result.Should().Be(FcbStatus.Error);
     }
 
 

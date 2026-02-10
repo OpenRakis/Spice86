@@ -42,19 +42,26 @@ public class DosFcbManager {
     private const int RenameNewNameOffset = 0x0C;
     private const int RenameNewExtensionOffset = 0x14;
 
-    // FreeDOS parse control constants
-    public const byte PARSE_SKIP_LEAD_SEP = 0x01;
-    public const byte PARSE_DFLT_DRIVE = 0x02;
-    public const byte PARSE_BLNK_FNAME = 0x04;
-    public const byte PARSE_BLNK_FEXT = 0x08;
+    /// <summary>
+    /// Common separator characters for filename parsing.
+    /// These characters can appear between components of a DOS path and may be skipped during parsing.
+    /// </summary>
+    /// <remarks>
+    /// DOS filename parser: colon (:), semicolon (;), comma (,), equals (=), plus (+), space, tab
+    /// FreeDOS reference: fcbfns.c line 50 "TestCmnSeps"
+    /// </remarks>
+    public const string CommonSeparators = ":;,=+ \t";
 
-    public const byte PARSE_RET_NOWILD = 0;
-    public const byte PARSE_RET_WILD = 1;
-    public const byte PARSE_RET_BADDRIVE = 0xFF;
-
-    // FreeDOS separators
-    public const string COMMON_SEPS = ":;,=+ \t";
-    public const string FIELD_SEPS = "/\\\"[]<>|.:;,=+\t";
+    /// <summary>
+    /// Field separator characters that cannot appear in filename or extension.
+    /// These characters terminate filename parsing and are never part of a valid DOS filename.
+    /// </summary>
+    /// <remarks>
+    /// Slash (/), backslash (\), quote ("), brackets ([]), angle brackets (&lt;&gt;), pipe (|),
+    /// dot (.), colon (:), semicolon (;), comma (,), equals (=), plus (+), tab
+    /// FreeDOS reference: fcbfns.c line 51 "TestFieldSeps"
+    /// </remarks>
+    public const string FieldSeparators = "/\\\"[]<>|.:;,=+\t";
 
     private readonly IMemory _memory;
     private readonly DosFileManager _dosFileManager;
@@ -74,10 +81,10 @@ public class DosFcbManager {
     /// </summary>
     /// <param name="stringAddress">Linear address of the ASCIIZ string to parse.</param>
     /// <param name="fcbAddress">Linear address of the destination FCB (standard or extended).</param>
-    /// <param name="parseControl">Parsing control flags (PARSE_*).</param>
+    /// <param name="parseControl">Parsing control flags.</param>
     /// <param name="bytesAdvanced">Number of bytes consumed from the input string.</param>
     /// <returns>An <see cref="FcbParseResult"/> describing parse status.</returns>
-    public FcbParseResult ParseFilename(uint stringAddress, uint fcbAddress, byte parseControl, out uint bytesAdvanced) {
+    public FcbParseResult ParseFilename(uint stringAddress, uint fcbAddress, FcbParseControl parseControl, out uint bytesAdvanced) {
         string filename = _memory.GetZeroTerminatedString(stringAddress, 128);
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
         
@@ -87,7 +94,7 @@ public class DosFcbManager {
 
         // Skip leading separators if requested
         // FreeDOS: "if (*wTestMode & PARSE_SKIP_LEAD_SEP)"
-        if ((parseControl & PARSE_SKIP_LEAD_SEP) != 0) {
+        if (parseControl.HasFlag(FcbParseControl.SkipLeadingSeparators)) {
             while (pos < filename.Length && TestCmnSeps(filename[pos])) {
                 pos++;
             }
@@ -111,7 +118,7 @@ public class DosFcbManager {
                 fcb.DriveNumber = (byte)(driveNum + 1);
                 pos += 2;
             }
-        } else if ((parseControl & PARSE_DFLT_DRIVE) == 0) {
+        } else if (!parseControl.HasFlag(FcbParseControl.SetDefaultDrive)) {
             // FreeDOS: "} else if (!(*wTestMode & PARSE_DFLT_DRIVE)) {"
             // If flag NOT set, set to default drive (0)
             fcb.DriveNumber = 0;
@@ -125,12 +132,12 @@ public class DosFcbManager {
         fcb.RecordSize = 0;
 
         // Blank filename field if requested
-        if ((parseControl & PARSE_BLNK_FNAME) == 0) {
+        if (!parseControl.HasFlag(FcbParseControl.BlankFilename)) {
             fcb.FileName = "        ";
         }
         
         // Blank extension field if requested
-        if ((parseControl & PARSE_BLNK_FEXT) == 0) {
+        if ((parseControl & FcbParseControl.BlankExtension) == 0) {
             fcb.FileExtension = "   ";
         }
 
@@ -183,7 +190,7 @@ public class DosFcbManager {
     /// FreeDOS: TestCmnSeps - ":;,=+ \t"
     /// </summary>
     private static bool TestCmnSeps(char c) {
-        return COMMON_SEPS.Contains(c);
+        return CommonSeparators.Contains(c);
     }
 
     /// <summary>
@@ -191,7 +198,7 @@ public class DosFcbManager {
     /// FreeDOS: TestFieldSeps - (unsigned char)*lpFileName &lt;= ' ' || "/\\\"[]&lt;&gt;|.:;,=+\t"
     /// </summary>
     private static bool TestFieldSeps(char c) {
-        return c <= ' ' || FIELD_SEPS.Contains(c);
+        return c <= ' ' || FieldSeparators.Contains(c);
     }
 
     /// <summary>
