@@ -55,9 +55,6 @@ using System.Text;
 /// <para>
 /// <b>Implementation Notes:</b>
 /// <list type="bullet">
-///   <item>DOSBox Staging reference: src/dos/dos_files.cpp (DOS_FCB class, lines 1300-1650)</item>
-///   <item>FreeDOS kernel reference: hdr/fcb.h, kernel/fcbfns.c (FcbOpen, FcbReadWrite, etc.)</item>
-///   <item>This implementation follows DOSBox behavior for compatibility with games and old software.</item>
 ///   <item>The Reserved area (0x18-0x1F) stores the SFT (System File Table) handle at offset 0x18 (SftNumber property).</item>
 /// </list>
 /// </para>

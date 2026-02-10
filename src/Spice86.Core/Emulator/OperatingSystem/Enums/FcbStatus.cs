@@ -1,7 +1,7 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Enums;
 
 /// <summary>
-/// Return codes for CP/M-style FCB operations, aligned with FreeDOS <c>fcbfns.c</c> semantics.
+/// Return codes for CP/M-style FCB operations.
 /// </summary>
 public enum FcbStatus : byte {
     /// <summary>
