@@ -18,9 +18,6 @@ using Spice86.Shared.Utils;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Implements legacy CP/M-style FCB operations required by many DOS programs and games.
-/// </para>
-/// <para>
 /// <b>Supported Operations:</b> Open/Close (0Fh/10h), Create/Delete/Rename (16h/13h/17h),
 /// Sequential R/W (14h/15h), Random R/W (21h/22h), Block R/W (27h/28h), Find First/Next (11h/12h),
 /// Get Size/Set Random (23h/24h), Parse Filename (29h). Extended FCB support for file attributes.
@@ -30,19 +27,16 @@ using Spice86.Shared.Utils;
 /// </para>
 /// </remarks>
 public class DosFcbManager {
-
     private const int RenameNewNameOffset = 0x11;
     private const int RenameNewExtensionOffset = 0x19;
 
     /// <summary>
     /// Common separator characters for filename parsing.
-    /// These characters can appear between components of a DOS path and may be skipped during parsing.
     /// </summary>
     public const string CommonSeparators = ":;,=+ \t";
 
     /// <summary>
     /// Field separator characters that cannot appear in filename or extension.
-    /// These characters terminate filename parsing and are never part of a valid DOS filename.
     /// </summary>
     public const string FieldSeparators = "/\\\"[]<>|.:;,=+\t";
 
@@ -110,9 +104,6 @@ public class DosFcbManager {
             fcb.DriveNumber = 0;
         }
 
-        /* Undocumented behavior, set record number & record size to 0  */
-        /* per MS-DOS Encyclopedia pp269 no other FCB fields modified   */
-        /* except zeroing current block and record size fields          */
         fcb.CurrentBlock = 0;
         fcb.RecordSize = 0;
 
@@ -399,11 +390,6 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=14h sequential read using the current block/record pointer.
     /// </summary>
-    /// <remarks>
-    /// Auto-reopens closed FCBs if handle=0xFF but rec_size!=0.
-    /// Zero-pads partial reads to full record size.
-    /// Advances block/record position after read.
-    /// </remarks>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
@@ -471,11 +457,6 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=15h sequential write using the current block/record pointer.
     /// </summary>
-    /// <remarks>
-    /// Auto-reopens closed FCBs if handle=0xFF but rec_size!=0.
-    /// Updates FCB size/date/time after successful write.
-    /// Advances block/record position after write.
-    /// </remarks>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
@@ -537,11 +518,6 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=21h random read using the RandomRecord field.
     /// </summary>
-    /// <remarks>
-    /// Sets block/record from random field before read.
-    /// For single-record read (AH=21h), restores block/record after read.
-    /// Zero-pads partial reads.
-    /// </remarks>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
@@ -620,11 +596,6 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=22h random write using the RandomRecord field.
     /// </summary>
-    /// <remarks>
-    /// Sets block/record from random field before write.
-    /// For single-record write (AH=22h), restores block/record after write.
-    /// Updates FCB size/date/time after write.
-    /// </remarks>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
@@ -696,12 +667,6 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=27h random block read from the RandomRecord pointer.
     /// </summary>
-    /// <remarks>
-    /// Sets block/record from random field.
-    /// Loops per-record, advancing the DTA address for each.
-    /// Updates block/record and RandomRecord after read.
-    /// Zero-pads partial reads.
-    /// </remarks>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <param name="recordCount">On input, requested record count; on output, number actually read.</param>
@@ -796,12 +761,6 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=28h random block write from the RandomRecord pointer.
     /// </summary>
-    /// <remarks>
-    /// Sets block/record from random field.
-    /// Special handling for CX=0: truncate/extend file.
-    /// Loops per-record, reading from DTA at record offsets.
-    /// Updates block/record and RandomRecord after write.
-    /// </remarks>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <param name="recordCount">On input, requested record count; on output, number actually written.</param>
