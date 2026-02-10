@@ -6,28 +6,60 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using System.Text;
 
 /// <summary>
-/// Represents a DOS File Control Block (FCB) in memory.
-/// The FCB is a CP/M-style data structure used for file operations in DOS.
+/// Represents a DOS File Control Block (FCB) in memory - a legacy CP/M-style data structure for file operations.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The FCB structure is 37 bytes and contains:
+/// <b>What is an FCB?</b>
+/// The File Control Block is a 37-byte data structure that applications use to perform file operations
+/// in DOS without using file handles. It originated in CP/M and was retained in DOS for compatibility.
+/// Modern DOS programs use file handles (INT 21h AH=3Ch-46h), but FCBs are still required for many
+/// older programs, games, and utilities from the 1980s-early 1990s (e.g., Civilization, Reunion, Detroit).
+/// </para>
+/// <para>
+/// <b>How FCBs Work:</b>
+/// 1. Application allocates 37 bytes in its memory for the FCB
+/// 2. Application fills in the filename and extension (drive is optional)
+/// 3. Application calls INT 21h with AH=0Fh (Open) or AH=16h (Create), passing DS:DX pointing to the FCB
+/// 4. DOS fills in the rest of the FCB fields (size, date, time, internal handle)
+/// 5. Application performs reads/writes by calling INT 21h with the FCB pointer
+/// 6. DOS tracks file position using CurrentBlock/CurrentRecord (sequential) or RandomRecord (random access)
+/// 7. Application calls INT 21h AH=10h (Close) when done
+/// </para>
+/// <para>
+/// <b>FCB Structure Layout (37 bytes):</b></para>
+/// <list type="table">
+///   <listheader><term>Offset</term><term>Size</term><term>Field</term><term>Description</term></listheader>
+///   <item><term>0x00</term><term>1</term><term>Drive</term><term>0=default, 1=A:, 2=B:, 0xFF=Extended FCB marker</term></item>
+///   <item><term>0x01</term><term>8</term><term>Filename</term><term>Space-padded, uppercase, no dot (e.g., "MYFILE  ")</term></item>
+///   <item><term>0x09</term><term>3</term><term>Extension</term><term>Space-padded, uppercase (e.g., "DAT")</term></item>
+///   <item><term>0x0C</term><term>2</term><term>CurrentBlock</term><term>Block number for sequential I/O (1 block = 128 records)</term></item>
+///   <item><term>0x0E</term><term>2</term><term>RecordSize</term><term>Bytes per record (default 128 if 0, can be set to any value)</term></item>
+///   <item><term>0x10</term><term>4</term><term>FileSize</term><term>File size in bytes (maintained by DOS)</term></item>
+///   <item><term>0x14</term><term>2</term><term>Date</term><term>Last write date: bits 15-9=year-1980, 8-5=month, 4-0=day</term></item>
+///   <item><term>0x16</term><term>2</term><term>Time</term><term>Last write time: bits 15-11=hour, 10-5=minute, 4-0=seconds/2</term></item>
+///   <item><term>0x18</term><term>8</term><term>Reserved</term><term>Internal DOS use (SFT handle, search state, etc.)</term></item>
+///   <item><term>0x20</term><term>1</term><term>CurrentRecord</term><term>Record within block (0-127) for sequential I/O</term></item>
+///   <item><term>0x21</term><term>4</term><term>RandomRecord</term><term>Absolute record number for random access (32-bit)</term></item>
+/// </list>
+/// <para>
+/// <b>Sequential vs Random Access:</b>
 /// <list type="bullet">
-///   <item>Offset 0x00 (1 byte): Drive number (0=default, 1=A, 2=B, etc.)</item>
-///   <item>Offset 0x01 (8 bytes): File name (space-padded)</item>
-///   <item>Offset 0x09 (3 bytes): File extension (space-padded)</item>
-///   <item>Offset 0x0C (2 bytes): Current block number</item>
-///   <item>Offset 0x0E (2 bytes): Record size (default 128)</item>
-///   <item>Offset 0x10 (4 bytes): File size in bytes</item>
-///   <item>Offset 0x14 (2 bytes): Date of last write (DOS date format)</item>
-///   <item>Offset 0x16 (2 bytes): Time of last write (DOS time format)</item>
-///   <item>Offset 0x18 (8 bytes): Reserved (system use)</item>
-///   <item>Offset 0x20 (1 byte): Current record number</item>
-///   <item>Offset 0x21 (4 bytes): Random record number</item>
+///   <item><b>Sequential:</b> Uses CurrentBlock and CurrentRecord. Each read/write advances the position.
+///         INT 21h AH=14h (sequential read), AH=15h (sequential write).</item>
+///   <item><b>Random:</b> Uses RandomRecord. Application sets RandomRecord before each operation.
+///         INT 21h AH=21h (random read), AH=22h (random write), AH=27h/28h (block read/write).</item>
+///   <item>Use INT 21h AH=24h to convert CurrentBlock/CurrentRecord to RandomRecord (and vice versa via AH=21h).</item>
 /// </list>
 /// </para>
 /// <para>
-/// Based on FreeDOS kernel implementation: https://github.com/FDOS/kernel/blob/master/hdr/fcb.h
+/// <b>Implementation Notes:</b>
+/// <list type="bullet">
+///   <item>DOSBox Staging reference: src/dos/dos_files.cpp (DOS_FCB class, lines 1300-1650)</item>
+///   <item>FreeDOS kernel reference: hdr/fcb.h, kernel/fcbfns.c (FcbOpen, FcbReadWrite, etc.)</item>
+///   <item>This implementation follows DOSBox behavior for compatibility with games and old software.</item>
+///   <item>The Reserved area (0x18-0x1F) stores the SFT (System File Table) handle at offset 0x18 (SftNumber property).</item>
+/// </list>
 /// </para>
 /// </remarks>
 public class DosFileControlBlock : MemoryBasedDataStructure {

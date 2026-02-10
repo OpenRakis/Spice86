@@ -14,8 +14,29 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 /// <summary>
-/// FCB (File Control Block) manager aligned with FreeDOS <c>fcbfns.c</c> behavior.
+/// Manages File Control Block (FCB) operations for DOS INT 21h FCB-based file functions.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>Overview:</b> This class implements legacy CP/M-style File Control Block operations required by many
+/// 1980s-1990s DOS programs and games (Civilization 1, Reunion, Detroit, Lands of Lore, etc.). FCBs were
+/// the primary file I/O mechanism in early DOS but were superseded by file handles in DOS 2.0+.
+/// </para>
+/// <para>
+/// <b>Implementation Strategy:</b> Follows <b>DOSBox Staging</b> (dos_files.cpp) for FCB behavior,
+/// as it has extensive game compatibility testing. FreeDOS kernel (fcbfns.c) is referenced in comments
+/// where implementations align. Key differences: DOSBox loops per-record for block I/O, uses floor division
+/// for GetFileSize; FreeDOS does bulk I/O, uses ceiling division.
+/// </para>
+/// <para>
+/// <b>Supported Operations:</b> Open/Close (0Fh/10h), Create/Delete/Rename (16h/13h/17h),
+/// Sequential R/W (14h/15h), Random R/W (21h/22h), Block R/W (27h/28h), Find First/Next (11h/12h),
+/// Get Size/Set Random (23h/24h), Parse Filename (29h). Extended FCB support for file attributes.
+/// </para>
+/// <para>
+/// See <see cref="DosFileControlBlock"/> and <see cref="DosExtendedFileControlBlock"/> for structure details.
+/// </para>
+/// </remarks>
 public class DosFcbManager {
 
     private const int RenameNewNameOffset = 0x0C;
@@ -690,10 +711,70 @@ public class DosFcbManager {
     }
 
     /// <summary>
-    /// INT 21h AH=23h populates RandomRecord with file size in records.
+    /// INT 21h AH=23h - Get File Size in Records.
+    /// Computes the number of records needed to contain the file and stores it in the FCB's RandomRecord field.
     /// </summary>
-    /// <param name="fcbAddress">Linear address of the FCB.</param>
-    /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
+    /// <remarks>
+    /// <para>
+    /// <b>Purpose:</b> This function determines how many records (of the size specified in the FCB's RecordSize field)
+    /// are needed to store the entire file. This is useful for applications that want to know the file's size
+    /// in terms of their record structure before performing random access I/O.
+    /// </para>
+    /// <para>
+    /// <b>How it works:</b>
+    /// <list type="number">
+    ///   <item>Opens the file specified in the FCB (read-only)</item>
+    ///   <item>Gets the file size in bytes</item>
+    ///   <item>Divides file size by record size to get number of records</item>
+    ///   <item>Stores the result in FCB.RandomRecord</item>
+    ///   <item>Closes the file</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// <b>Record Size:</b> If FCB.RecordSize is 0, DOS uses the default value of 128 bytes (one CP/M record).
+    /// Applications can set RecordSize to any value (e.g., 512 for a sector, 4096 for a page) to work with
+    /// different logical record sizes.
+    /// </para>
+    /// <para>
+    /// <b>Division Method:</b> DOSBox and FreeDOS differ here:
+    /// <list type="bullet">
+    ///   <item><b>DOSBox</b> (dos_files.cpp:1650): Uses floor division: random = size / rec_size</item>
+    ///   <item><b>FreeDOS</b> (fcbfns.c:307): Uses ceiling division: fcb_rndm = (fsize + (recsiz - 1)) / recsiz</item>
+    /// </list>
+    /// This implementation follows <b>DOSBox behavior (floor division)</b> for game compatibility.
+    /// </para>
+    /// <para>
+    /// <b>Example:</b>
+    /// <code>
+    /// File size: 1000 bytes, RecordSize: 128
+    /// DOSBox: 1000 / 128 = 7 records (floor)
+    /// FreeDOS: (1000 + 127) / 128 = 8 records (ceiling)
+    /// Spice86: 7 records (follows DOSBox)
+    /// </code>
+    /// FreeDOS's ceiling division ensures enough records to contain all bytes. DOSBox's floor division
+    /// matches the actual number of complete records, which some games may rely on.
+    /// </para>
+    /// <para>
+    /// <b>Usage Pattern:</b>
+    /// <code>
+    /// FCB.FileName = "MYFILE  "
+    /// FCB.Extension = "DAT"
+    /// FCB.RecordSize = 512  // Optional, defaults to 128
+    /// Call INT 21h AH=23h
+    /// // FCB.RandomRecord now contains file size in 512-byte records
+    /// </code>
+    /// </para>
+    /// <para>
+    /// <b>References:</b>
+    /// <list type="bullet">
+    ///   <item>DOSBox Staging: dos_files.cpp:1635-1651 DOS_FCBGetFileSize</item>
+    ///   <item>FreeDOS kernel: fcbfns.c:285-316 FcbGetFileSize</item>
+    ///   <item>Ralf Brown's Interrupt List: INT 21h AH=23h</item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    /// <param name="fcbAddress">Linear address of the FCB containing the filename to query.</param>
+    /// <returns><see cref="FcbStatus.Success"/> if file size retrieved, <see cref="FcbStatus.Error"/> if file not found or device.</returns>
     public FcbStatus GetFileSize(uint fcbAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
