@@ -1768,7 +1768,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB FIND FIRST at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = (byte)_dosFcbManager.FindFirst(GetFcbAddress(), GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.FindFirst(GetFcbAddress());
     }
 
     /// <summary>
@@ -1789,7 +1789,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB FIND NEXT at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        State.AL = (byte)_dosFcbManager.FindNext(GetFcbAddress(), GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.FindNext();
     }
 
     /// <summary>

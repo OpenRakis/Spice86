@@ -607,9 +607,13 @@ public class DosFcbManager {
         int recordSize = fcb.RecordSize;
 
         // DOSBox: Set block/record from random field (dos_files.cpp:1587)
+        // Random read positions the FCB at the random record location
         fcb.CalculateRecordPosition();
 
-        // DOSBox: Store old block/record for restore after read (dos_files.cpp:1588)
+        // DOSBox: Store the random position for restore after read (dos_files.cpp:1588)
+        // DOSBox's DOS_FCBRead advances position during read, so it must restore to the random position after.
+        // We mimic this behavior: save random position, read (which in DOSBox advances it), restore random position.
+        // Result: CurrentBlock/CurrentRecord remain at the random position, not advanced by the read operation.
         ushort oldBlock = fcb.CurrentBlock;
         byte oldRecord = fcb.CurrentRecord;
 
@@ -636,7 +640,8 @@ public class DosFcbManager {
             ZeroPadDta(dtaAddress, len, recordSize);
         }
 
-        // DOSBox: Restore old block/record for single-record random read (dos_files.cpp:1598)
+        // DOSBox: Restore position to random location (dos_files.cpp:1598)
+        // This ensures CurrentBlock/CurrentRecord remain at the random position after the read
         fcb.CurrentBlock = oldBlock;
         fcb.CurrentRecord = oldRecord;
 
@@ -1193,9 +1198,8 @@ public class DosFcbManager {
     /// INT 21h AH=11h FCB Find First using the FCB filename pattern.
     /// </summary>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
-    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
-    public FcbStatus FindFirst(uint fcbAddress, uint dtaAddress) {
+    public FcbStatus FindFirst(uint fcbAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         string pattern = fcb.FullFileName;
@@ -1208,13 +1212,11 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=12h FCB Find Next using prior search state.
     /// </summary>
-    /// <param name="fcbAddress">Linear address of the FCB (unused, present for symmetry).</param>
-    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
-    public FcbStatus FindNext(uint fcbAddress, uint dtaAddress) {
+    public FcbStatus FindNext() {
         DosFileOperationResult result = _dosFileManager.FindNextMatchingFile();
         FcbStatus status = result.IsError ? FcbStatus.Error : FcbStatus.Success;
-        LogFcbDebug("FIND NEXT", fcbAddress, string.Empty, status);
+        LogFcbDebug("FIND NEXT", 0, string.Empty, status);
         return status;
     }
 
@@ -1262,14 +1264,10 @@ public class DosFcbManager {
     /// </summary>
     /// <param name="pspSegment">The PSP segment of the process being terminated.</param>
     public void CloseAllTrackedFcbFiles(ushort pspSegment) {
-        List<ushort> handlesToClose = new();
-        
-        // Find all handles owned by this PSP
-        foreach (KeyValuePair<ushort, ushort> entry in _trackedFcbHandles) {
-            if (entry.Value == pspSegment) {
-                handlesToClose.Add(entry.Key);
-            }
-        }
+        List<ushort> handlesToClose = _trackedFcbHandles
+            .Where(entry => entry.Value == pspSegment)
+            .Select(entry => entry.Key)
+            .ToList();
         
         // Close the files
         foreach (ushort handle in handlesToClose) {
