@@ -375,7 +375,6 @@ public class DosFcbManagerTests : IDisposable {
         string testContent = "Test file content for metadata test";
         string testFile = Path.Combine(_mountPoint, "METADATA.TXT");
         File.WriteAllText(testFile, testContent);
-        FileInfo fileInfo = new FileInfo(testFile);
         
         uint fcbAddr = 0x2000;
         DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
