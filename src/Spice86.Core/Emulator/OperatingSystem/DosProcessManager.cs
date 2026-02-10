@@ -506,7 +506,7 @@ public class DosProcessManager {
 
         // Close non-standard handles only when the process fully terminates; TSR keeps them resident
         if (terminationType != DosTerminationType.TSR) {
-            _fcbManager.CloseAllTrackedFcbFiles();
+            _fcbManager.CloseAllTrackedFcbFiles(currentPspSegment);
             _fcbManager.ClearAllSearchState();
             CloseProcessFileHandles(currentPsp);
         }

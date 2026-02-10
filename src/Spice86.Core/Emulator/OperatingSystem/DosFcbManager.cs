@@ -67,7 +67,11 @@ public class DosFcbManager {
     private readonly DosFileManager _dosFileManager;
     private readonly DosDriveManager _dosDriveManager;
     private readonly ILoggerService _loggerService;
-    private readonly HashSet<ushort> _trackedFcbHandles = new();
+    private readonly DosSwappableDataArea _sda;
+    
+    // Track FCB handles per PSP: handle → PSP segment
+    // DOSBox Staging behavior: FCB files are cleaned up when their owning PSP terminates
+    private readonly Dictionary<ushort, ushort> _trackedFcbHandles = new();
 
     public
     DosFcbManager(IMemory memory, DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILoggerService loggerService) {
@@ -75,6 +79,8 @@ public class DosFcbManager {
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
         _loggerService = loggerService;
+        _sda = new DosSwappableDataArea(_memory, 
+            MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
     }
 
     /// <summary>
@@ -119,7 +125,7 @@ public class DosFcbManager {
                 fcb.DriveNumber = (byte)(driveNum + 1);
                 pos += 2;
             }
-        } else if (!parseControl.HasFlag(FcbParseControl.SetDefaultDrive)) {
+        } else if (!parseControl.HasFlag(FcbParseControl.LeaveDriveUnchanged)) {
             // FreeDOS: "} else if (!(*wTestMode & PARSE_DFLT_DRIVE)) {"
             // If flag NOT set, set to default drive (0)
             fcb.DriveNumber = 0;
@@ -162,14 +168,14 @@ public class DosFcbManager {
         // Parse filename field
         int nameStart = pos;
         (pos, bool hasWildcardName) = GetNameField(filename, pos, 8);
-        fcb.FileName = ExtractAndPadField(filename, nameStart, pos, 8, hasWildcardName);
+        fcb.FileName = ExtractAndPadField(filename, nameStart, pos, 8);
 
         // Parse extension if present
         if (pos < filename.Length && filename[pos] == '.') {
             pos++;
             int extStart = pos;
             (pos, retCodeExt) = GetNameField(filename, pos, 3);
-            fcb.FileExtension = ExtractAndPadField(filename, extStart, pos, 3, retCodeExt);
+            fcb.FileExtension = ExtractAndPadField(filename, extStart, pos, 3);
         }
 
         bytesAdvanced = (uint)pos;
@@ -252,7 +258,7 @@ public class DosFcbManager {
     /// Extract field from string and pad/convert to proper form.
     /// Handles asterisk conversion to question marks.
     /// </summary>
-    private string ExtractAndPadField(string filename, int startPos, int endPos, int fieldSize, bool hasWildcard) {
+    private string ExtractAndPadField(string filename, int startPos, int endPos, int fieldSize) {
         StringBuilder result = new();
         int pos = startPos;
         int index = 0;
@@ -339,6 +345,27 @@ public class DosFcbManager {
         // Reset block/record pointers on open (FreeDOS behavior)
         fcb.CurrentBlock = 0;
         fcb.CurrentRecord = 0;
+        
+        // DOSBox Staging: Populate FCB metadata (size, date, time) on open
+        // Reference: dos_files.cpp DOS_FCBOpen calls fcb.FileOpen(handle) which sets metadata
+        VirtualFileBase? vf = _dosFileManager.OpenFiles[handle];
+        if (vf is DosFile dosFile) {
+            fcb.FileSize = (uint)dosFile.Length;
+            
+            // Get file's last write time from the file system
+            string? hostPath = _dosFileManager.TryGetFullHostPathFromDos(fileSpec);
+            if (!string.IsNullOrWhiteSpace(hostPath) && File.Exists(hostPath)) {
+                FileInfo fileInfo = new FileInfo(hostPath);
+                DateTime lastWrite = fileInfo.LastWriteTime;
+                fcb.Date = DosFileManager.ToDosDate(lastWrite);
+                fcb.Time = DosFileManager.ToDosTime(lastWrite);
+                
+                // Also update the DosFile object for consistency
+                dosFile.Date = fcb.Date;
+                dosFile.Time = fcb.Time;
+            }
+        }
+        
         TrackFcbHandle(handle);
         LogFcbDebug("OPEN", baseAddr, fileSpec, FcbStatus.Success);
         return FcbStatus.Success;
@@ -1140,8 +1167,16 @@ public class DosFcbManager {
         int renameCount = 0;
         foreach ((string srcHost, string dstHost) in filesToRename) {
             LogFcbDebug("RENAME EXECUTE", baseAddr, $"Moving {srcHost} to {dstHost}", FcbStatus.Success);
-            File.Move(srcHost, dstHost);
-            renameCount++;
+            try {
+                File.Move(srcHost, dstHost);
+                renameCount++;
+            } catch (IOException ex) {
+                LogFcbWarning("RENAME", baseAddr, $"Failed to rename {srcHost}: {ex.Message}");
+                return FcbStatus.Error;
+            } catch (UnauthorizedAccessException ex) {
+                LogFcbWarning("RENAME", baseAddr, $"Access denied renaming {srcHost}: {ex.Message}");
+                return FcbStatus.Error;
+            }
         }
         LogFcbDebug("RENAME", baseAddr, $"{oldName} -> {newPattern} ({renameCount} files)", FcbStatus.Success);
         return FcbStatus.Success;
@@ -1222,16 +1257,28 @@ public class DosFcbManager {
     }
 
     /// <summary>
-    /// Closes every file handle opened through FCB APIs and clears the tracking list.
+    /// Closes all FCB-opened files for the specified PSP segment.
+    /// DOSBox Staging behavior: Only closes FCB files owned by the terminating process.
     /// </summary>
-    public void CloseAllTrackedFcbFiles() {
-        foreach (ushort handle in _trackedFcbHandles) {
-            DosFileOperationResult result = _dosFileManager.CloseFileOrDevice(handle);
-            if (result.IsError && _loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("Failed to close FCB handle {Handle}", handle);
+    /// <param name="pspSegment">The PSP segment of the process being terminated.</param>
+    public void CloseAllTrackedFcbFiles(ushort pspSegment) {
+        List<ushort> handlesToClose = new();
+        
+        // Find all handles owned by this PSP
+        foreach (KeyValuePair<ushort, ushort> entry in _trackedFcbHandles) {
+            if (entry.Value == pspSegment) {
+                handlesToClose.Add(entry.Key);
             }
         }
-        _trackedFcbHandles.Clear();
+        
+        // Close the files
+        foreach (ushort handle in handlesToClose) {
+            DosFileOperationResult result = _dosFileManager.CloseFileOrDevice(handle);
+            if (result.IsError && _loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("Failed to close FCB handle {Handle} for PSP {Psp}", handle, pspSegment);
+            }
+            _trackedFcbHandles.Remove(handle);
+        }
     }
 
     private uint GetActualFcbBaseAddress(uint fcbAddress) {
@@ -1380,8 +1427,13 @@ public class DosFcbManager {
         return builder.ToString();
     }
 
+    /// <summary>
+    /// Tracks an FCB handle for the current PSP.
+    /// DOSBox Staging behavior: Associates FCB handle with its owning PSP for cleanup on process termination.
+    /// </summary>
     private void TrackFcbHandle(ushort handle) {
-        _trackedFcbHandles.Add(handle);
+        ushort currentPsp = _sda.CurrentProgramSegmentPrefix;
+        _trackedFcbHandles[handle] = currentPsp;
     }
 
     /// <summary>
