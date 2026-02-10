@@ -23,8 +23,8 @@ using System;
 /// </para>
 /// <para>
 /// <b>Flag Combinations:</b>
-/// Flags can be OR'd together. For example, <c>SkipLeadingSeparators | SetDefaultDrive</c>
-/// skips leading spaces/tabs and sets drive to default if no "X:" prefix is found.
+/// Flags can be OR'd together. For example, <c>SkipLeadingSeparators | LeaveDriveUnchanged</c>
+/// skips leading spaces/tabs and leaves the drive unchanged if no "X:" prefix is found.
 /// </para>
 /// <para>
 /// <b>References:</b>
@@ -61,12 +61,12 @@ public enum FcbParseControl : byte {
     SkipLeadingSeparators = 0x01,
 
     /// <summary>
-    /// Set drive to default (0) if no drive letter is specified in the input string.
-    /// When NOT set, leaves the FCB drive field unchanged if no "X:" prefix found.
+    /// Leave FCB drive field unchanged if no drive letter is specified in the input string.
+    /// When NOT set, sets drive to default (0) if no "X:" prefix found.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>Confusing bit semantics:</b> The bit logic is inverted from what you might expect:
+    /// <b>Inverted bit semantics:</b> The bit logic is inverted from DOS's flag name:
     /// <list type="bullet">
     ///   <item>When bit is CLEAR (0): Sets FCB drive to 0 (default drive) if no "X:" found</item>
     ///   <item>When bit is SET (1): Leaves FCB drive field unchanged if no "X:" found</item>
@@ -74,8 +74,8 @@ public enum FcbParseControl : byte {
     /// </para>
     /// <para>
     /// This matches FreeDOS behavior: "if (!(*wTestMode &amp; PARSE_DFLT_DRIVE))" (fcbfns.c:130)
-    /// The flag name "PARSE_DFLT_DRIVE" suggests "use default drive", but the code checks
-    /// for the bit being CLEAR to set default. This is a DOS quirk.
+    /// The FreeDOS flag name "PARSE_DFLT_DRIVE" suggests "use default drive", but the code checks
+    /// for the bit being CLEAR to set default. This enum name reflects the actual behavior when SET.
     /// </para>
     /// <para>
     /// Example: Input "TEST.TXT" (no drive letter)
@@ -85,7 +85,7 @@ public enum FcbParseControl : byte {
     /// </list>
     /// </para>
     /// </remarks>
-    SetDefaultDrive = 0x02,
+    LeaveDriveUnchanged = 0x02,
 
     /// <summary>
     /// Blank filename field if no filename is found in the input string.
@@ -93,7 +93,7 @@ public enum FcbParseControl : byte {
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Like SetDefaultDrive, this has inverted semantics:
+    /// Like LeaveDriveUnchanged, this has inverted semantics:
     /// <list type="bullet">
     ///   <item>When bit is CLEAR (0): Fills FCB filename with spaces if input has no filename</item>
     ///   <item>When bit is SET (1): Leaves FCB filename field unchanged</item>
