@@ -748,12 +748,14 @@ public class DosFcbManager {
             }
             DosFileOperationResult seek = _dosFileManager.MoveFilePointerUsingHandle(SeekOrigin.Begin, handle, offset);
             if (seek.IsError) {
+                lastError = FcbStatus.NoData;
                 break;
             }
             // Advance DTA destination for each record
-            uint destinationAddress = dtaAddress + (uint)totalRead * (uint)recordSize;
+            uint destinationAddress = dtaAddress + totalRead * (uint)recordSize;
             DosFileOperationResult read = _dosFileManager.ReadFileOrDevice(handle, (ushort)recordSize, destinationAddress);
             if (read.IsError) {
+                lastError = FcbStatus.NoData;
                 break;
             }
             ushort len = (ushort)(read.Value ?? 0);
@@ -852,24 +854,27 @@ public class DosFcbManager {
             return FcbStatus.Error;
         }
 
-        ushort requestedRecords = recordCount;
         ushort totalWritten = 0;
+        FcbStatus lastError = FcbStatus.Success;
 
         // Loop for each record
         for (ushort i = 0; i < recordCount; i++) {
             uint absoluteRecord = startRecord + i;
             if (!TryComputeOffset(absoluteRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
+                lastError = offsetStatus;
                 break;
             }
             DosFileOperationResult seek = _dosFileManager.MoveFilePointerUsingHandle(SeekOrigin.Begin, handle, offset);
             if (seek.IsError) {
+                lastError = FcbStatus.NoData;
                 break;
             }
 
             // Read from DTA at record offset
-            uint sourceAddress = dtaAddress + (uint)i * (uint)recordSize;
+            uint sourceAddress = dtaAddress + i * (uint)recordSize;
             DosFileOperationResult write = _dosFileManager.WriteToFileOrDevice(handle, (ushort)recordSize, sourceAddress);
             if (write.IsError) {
+                lastError = FcbStatus.NoData;
                 break;
             }
             ushort len = (ushort)(write.Value ?? 0);
@@ -897,8 +902,8 @@ public class DosFcbManager {
         if (totalWritten == 0) {
             return FcbStatus.NoData;
         }
-        if (totalWritten < requestedRecords) {
-            return FcbStatus.NoData;
+        if (lastError != FcbStatus.Success) {
+            return lastError;
         }
         LogFcbDebug("RAND BLK WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
         return FcbStatus.Success;
