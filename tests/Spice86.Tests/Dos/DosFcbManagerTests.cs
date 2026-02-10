@@ -13,8 +13,19 @@ using Xunit;
 /// Comprehensive tests for FCB (File Control Block) operations based on FreeDOS fcbfns.c and DOSBox dos_files.cpp behavior.
 /// Tests cover filename parsing, file operations, and wildcard rename semantics.
 /// </summary>
-public class DosFcbManagerTests {
-    private static readonly string MountPoint = Path.GetFullPath(Path.Join("Resources", "MountPoint"));
+public class DosFcbManagerTests : IDisposable {
+    private readonly string _mountPoint;
+
+    public DosFcbManagerTests() {
+        _mountPoint = Path.Combine(Path.GetTempPath(), $"Spice86_FCB_Tests_{Guid.NewGuid()}");
+        Directory.CreateDirectory(_mountPoint);
+    }
+
+    public void Dispose() {
+        if (Directory.Exists(_mountPoint)) {
+            Directory.Delete(_mountPoint, recursive: true);
+        }
+    }
 
     /// <summary>
     /// Writes a space-padded string to memory (FCB fields are space-padded, not null-terminated).
@@ -37,7 +48,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ParseFilename_SimpleFilename_NoWildcards() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint stringAddr = 0x1000;
         uint fcbAddr = 0x2000;
         fixture.Memory.SetZeroTerminatedString(stringAddr, "TEST.TXT", 128);
@@ -57,7 +68,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ParseFilename_WithDrive_ValidDrive() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint stringAddr = 0x1000;
         uint fcbAddr = 0x2000;
         fixture.Memory.SetZeroTerminatedString(stringAddr, "C:FILE.DAT", 128);
@@ -77,7 +88,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ParseFilename_InvalidDrive_ContinuesParsing() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint stringAddr = 0x1000;
         uint fcbAddr = 0x2000;
         fixture.Memory.SetZeroTerminatedString(stringAddr, "Z:TEST.TXT", 128);
@@ -97,7 +108,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ParseFilename_Wildcards_Asterisk() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint stringAddr = 0x1000;
         uint fcbAddr = 0x2000;
         fixture.Memory.SetZeroTerminatedString(stringAddr, "*.TXT", 128);
@@ -116,7 +127,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ParseFilename_Wildcards_QuestionMark() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint stringAddr = 0x1000;
         uint fcbAddr = 0x2000;
         fixture.Memory.SetZeroTerminatedString(stringAddr, "TEST?.TX?", 128);
@@ -135,7 +146,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ParseFilename_SkipLeadingSeparators() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint stringAddr = 0x1000;
         uint fcbAddr = 0x2000;
         fixture.Memory.SetZeroTerminatedString(stringAddr, "  :;,=+  TEST.TXT", 128);
@@ -153,7 +164,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ParseFilename_WhitespaceAlwaysSkipped() {
         // Arrange - FreeDOS: "Undocumented 'feature,' we skip white space anyway"
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint stringAddr = 0x1000;
         uint fcbAddr = 0x2000;
         fixture.Memory.SetZeroTerminatedString(stringAddr, "   \t  TEST.TXT", 128);
@@ -171,7 +182,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ParseFilename_DotAndDotDot() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint fcbAddr1 = 0x2000;
         uint fcbAddr2 = 0x2100;
 
@@ -200,7 +211,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ParseFilename_NoExtension() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint stringAddr = 0x1000;
         uint fcbAddr = 0x2000;
         fixture.Memory.SetZeroTerminatedString(stringAddr, "NOEXT", 128);
@@ -219,7 +230,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ParseFilename_UppercaseConversion() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint stringAddr = 0x1000;
         uint fcbAddr = 0x2000;
         fixture.Memory.SetZeroTerminatedString(stringAddr, "lowercase.ext", 128);
@@ -238,7 +249,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ParseFilename_ParseControlFlags() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint stringAddr = 0x1000;
         uint fcbAddr = 0x2000;
         fixture.Memory.SetZeroTerminatedString(stringAddr, "TEST.TXT", 128);
@@ -259,7 +270,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void CreateFile_ValidName_ReturnsSuccess() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint fcbAddr = 0x2000;
         DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
         fcb.DriveNumber = 0;
@@ -284,8 +295,8 @@ public class DosFcbManagerTests {
     [Fact]
     public void OpenFile_ExistingFile_ReturnsSuccess() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
-        string testFile = Path.Combine(MountPoint, "TESTOPEN.TXT");
+        DosTestFixture fixture = new(_mountPoint);
+        string testFile = Path.Combine(_mountPoint, "TESTOPEN.TXT");
         File.WriteAllText(testFile, "Test content");
 
         uint fcbAddr = 0x2000;
@@ -312,7 +323,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void CloseFile_OpenedFile_ReturnsSuccess() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint fcbAddr = 0x2000;
         DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
         fcb.DriveNumber = 0;
@@ -335,7 +346,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void ReadWriteFile_SequentialRecords_WorksCorrectly() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint fcbAddr = 0x2000;
         uint dtaAddr = 0x3000;
         
@@ -393,11 +404,11 @@ public class DosFcbManagerTests {
         // expect "one.out", "two.out", "three.out", "four.out", "five.out", "none.ctl"
         
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         
         // Clean up any existing files from previous test runs
         foreach (string pattern in new[] { "*.in", "*.out", "*.ctl" }) {
-            foreach (string file in Directory.GetFiles(MountPoint, pattern)) {
+            foreach (string file in Directory.GetFiles(_mountPoint, pattern)) {
                 File.Delete(file);
             }
         }
@@ -405,7 +416,7 @@ public class DosFcbManagerTests {
         string[] sourceFiles = { "one.in", "two.in", "three.in", "four.in", "five.in", "none.ctl" };
         
         foreach (string file in sourceFiles) {
-            string fullPath = Path.Join(MountPoint, file);
+            string fullPath = Path.Join(_mountPoint, file);
             File.WriteAllText(fullPath, "test");
         }
 
@@ -426,17 +437,17 @@ public class DosFcbManagerTests {
             // Assert
             status.Should().Be(FcbStatus.Success);
             // DOS renames files in uppercase
-            File.Exists(Path.Join(MountPoint, "ONE.OUT")).Should().BeTrue();
-            File.Exists(Path.Join(MountPoint, "TWO.OUT")).Should().BeTrue();
-            File.Exists(Path.Join(MountPoint, "THREE.OUT")).Should().BeTrue();
-            File.Exists(Path.Join(MountPoint, "FOUR.OUT")).Should().BeTrue();
-            File.Exists(Path.Join(MountPoint, "FIVE.OUT")).Should().BeTrue();
-            File.Exists(Path.Join(MountPoint, "none.ctl")).Should().BeTrue();
-            File.Exists(Path.Join(MountPoint, "one.in")).Should().BeFalse();
+            File.Exists(Path.Join(_mountPoint, "ONE.OUT")).Should().BeTrue();
+            File.Exists(Path.Join(_mountPoint, "TWO.OUT")).Should().BeTrue();
+            File.Exists(Path.Join(_mountPoint, "THREE.OUT")).Should().BeTrue();
+            File.Exists(Path.Join(_mountPoint, "FOUR.OUT")).Should().BeTrue();
+            File.Exists(Path.Join(_mountPoint, "FIVE.OUT")).Should().BeTrue();
+            File.Exists(Path.Join(_mountPoint, "none.ctl")).Should().BeTrue();
+            File.Exists(Path.Join(_mountPoint, "one.in")).Should().BeFalse();
         } finally {
             // Cleanup
             foreach (string file in new[] { "ONE.OUT", "TWO.OUT", "THREE.OUT", "FOUR.OUT", "FIVE.OUT", "none.ctl" }) {
-                File.Delete(Path.Combine(MountPoint, file));
+                File.Delete(Path.Combine(_mountPoint, file));
             }
         }
     }
@@ -449,11 +460,11 @@ public class DosFcbManagerTests {
         // expect "bone.out", "btwo.out", "bthree.out", "bfour.out", "bfive.out", "xnone.ctl"
         
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         
         // Clean up any existing files from previous test runs
         foreach (string pattern in new[] { "a*.in", "b*.out", "x*.ctl" }) {
-            foreach (string file in Directory.GetFiles(MountPoint, pattern)) {
+            foreach (string file in Directory.GetFiles(_mountPoint, pattern)) {
                 File.Delete(file);
             }
         }
@@ -461,7 +472,7 @@ public class DosFcbManagerTests {
         string[] sourceFiles = { "aone.in", "atwo.in", "athree.in", "afour.in", "afive.in", "xnone.ctl" };
         
         foreach (string file in sourceFiles) {
-            File.WriteAllText(Path.Combine(MountPoint, file), "test");
+            File.WriteAllText(Path.Combine(_mountPoint, file), "test");
         }
 
         uint fcbAddr = 0x2000;
@@ -480,16 +491,16 @@ public class DosFcbManagerTests {
             // Assert
             status.Should().Be(FcbStatus.Success);
             // DOS renames files in uppercase
-            File.Exists(Path.Combine(MountPoint, "BONE.OUT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "BTWO.OUT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "BTHREE.OUT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "BFOUR.OUT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "BFIVE.OUT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "xnone.ctl")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "BONE.OUT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "BTWO.OUT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "BTHREE.OUT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "BFOUR.OUT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "BFIVE.OUT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "xnone.ctl")).Should().BeTrue();
         } finally {
             // Cleanup
             foreach (string file in new[] { "BONE.OUT", "BTWO.OUT", "BTHREE.OUT", "BFOUR.OUT", "BFIVE.OUT", "xnone.ctl" }) {
-                File.Delete(Path.Combine(MountPoint, file));
+                File.Delete(Path.Combine(_mountPoint, file));
             }
         }
     }
@@ -502,11 +513,11 @@ public class DosFcbManagerTests {
         // expect "abc601.txt", "abc602.txt", "abc603.txt", "abc604.txt", "abc605.txt", "abc610.txt", "xbc007.txt"
         
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         
         // Clean up any existing files from previous test runs
         foreach (string pattern in new[] { "abc*.txt", "xbc*.txt" }) {
-            foreach (string file in Directory.GetFiles(MountPoint, pattern)) {
+            foreach (string file in Directory.GetFiles(_mountPoint, pattern)) {
                 File.Delete(file);
             }
         }
@@ -514,7 +525,7 @@ public class DosFcbManagerTests {
         string[] sourceFiles = { "abc001.txt", "abc002.txt", "abc003.txt", "abc004.txt", "abc005.txt", "abc010.txt", "xbc007.txt" };
         
         foreach (string file in sourceFiles) {
-            File.WriteAllText(Path.Combine(MountPoint, file), "test");
+            File.WriteAllText(Path.Combine(_mountPoint, file), "test");
         }
 
         uint fcbAddr = 0x2000;
@@ -533,17 +544,17 @@ public class DosFcbManagerTests {
             // Assert
             status.Should().Be(FcbStatus.Success);
             // DOS renames files in uppercase
-            File.Exists(Path.Combine(MountPoint, "ABC601.TXT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "ABC602.TXT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "ABC603.TXT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "ABC604.TXT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "ABC605.TXT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "ABC610.TXT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "xbc007.txt")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC601.TXT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC602.TXT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC603.TXT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC604.TXT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC605.TXT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC610.TXT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "xbc007.txt")).Should().BeTrue();
         } finally {
             // Cleanup
             foreach (string file in new[] { "ABC601.TXT", "ABC602.TXT", "ABC603.TXT", "ABC604.TXT", "ABC605.TXT", "ABC610.TXT", "xbc007.txt" }) {
-                File.Delete(Path.Combine(MountPoint, file));
+                File.Delete(Path.Combine(_mountPoint, file));
             }
         }
     }
@@ -556,11 +567,11 @@ public class DosFcbManagerTests {
         // expect "abc001.ht", "abc002.ht", "abc003.ht", "abc004.ht", "abc005.ht", "abc010.ht", "xbc007.htm"
         
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         
         // Clean up any existing files from previous test runs
         foreach (string pattern in new[] { "abc*.htm", "abc*.ht", "xbc*.htm" }) {
-            foreach (string file in Directory.GetFiles(MountPoint, pattern)) {
+            foreach (string file in Directory.GetFiles(_mountPoint, pattern)) {
                 File.Delete(file);
             }
         }
@@ -568,7 +579,7 @@ public class DosFcbManagerTests {
         string[] sourceFiles = { "abc001.htm", "abc002.htm", "abc003.htm", "abc004.htm", "abc005.htm", "abc010.htm", "xbc007.htm" };
         
         foreach (string file in sourceFiles) {
-            File.WriteAllText(Path.Combine(MountPoint, file), "test");
+            File.WriteAllText(Path.Combine(_mountPoint, file), "test");
         }
 
         uint fcbAddr = 0x2000;
@@ -587,17 +598,17 @@ public class DosFcbManagerTests {
             // Assert
             status.Should().Be(FcbStatus.Success);
             // DOS renames files in uppercase
-            File.Exists(Path.Combine(MountPoint, "ABC001.HT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "ABC002.HT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "ABC003.HT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "ABC004.HT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "ABC005.HT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "ABC010.HT")).Should().BeTrue();
-            File.Exists(Path.Combine(MountPoint, "xbc007.htm")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC001.HT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC002.HT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC003.HT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC004.HT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC005.HT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "ABC010.HT")).Should().BeTrue();
+            File.Exists(Path.Combine(_mountPoint, "xbc007.htm")).Should().BeTrue();
         } finally {
             // Cleanup
             foreach (string file in new[] { "ABC001.HT", "ABC002.HT", "ABC003.HT", "ABC004.HT", "ABC005.HT", "ABC010.HT", "xbc007.htm" }) {
-                File.Delete(Path.Combine(MountPoint, file));
+                File.Delete(Path.Combine(_mountPoint, file));
             }
         }
     }
@@ -609,7 +620,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void SetRandomRecord_CalculatesCorrectly() {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint fcbAddr = 0x2000;
         DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
         
@@ -629,7 +640,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void GetFcb_StandardFcb_ReturnsCorrectly() {
         // Test standard (non-extended) FCB
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         uint fcbAddr = 0x2000;
         DosFileControlBlock fcb = new DosFileControlBlock(fixture.Memory, fcbAddr);
         fcb.DriveNumber = 0;
@@ -648,7 +659,7 @@ public class DosFcbManagerTests {
     [Fact]
     public void GetFcb_ExtendedFcb_ReturnsAttributeAndEmbeddedFcb() {
         // Test extended FCB with attribute support
-        DosTestFixture fixture = new(MountPoint);
+        DosTestFixture fixture = new(_mountPoint);
         const uint xfcbAddr = 0x2000;
         DosExtendedFileControlBlock xfcb = new DosExtendedFileControlBlock(fixture.Memory, xfcbAddr);
         

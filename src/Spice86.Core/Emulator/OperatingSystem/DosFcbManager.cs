@@ -555,6 +555,11 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=27h random block read from the RandomRecord pointer.
     /// </summary>
+    /// <remarks>
+    /// Implementation follows DOSBox Staging dos_files.cpp:1571-1602 DOS_FCBRandomRead.
+    /// DOSBox loops per-record calling DOS_FCBRead, while FreeDOS (fcbfns.c:230-283) does
+    /// a single DosRWSft operation. We follow DOSBox for FCB compatibility.
+    /// </remarks>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <param name="recordCount">On input, requested record count; on output, number actually read.</param>
@@ -573,6 +578,8 @@ public class DosFcbManager {
         int recordSize = fcb.RecordSize;
         uint startRecord = fcb.RandomRecord;
         ushort totalRead = 0;
+        // DOSBox: loop for each record (dos_files.cpp:1590-1593)
+        // FreeDOS: single operation with total size (fcbfns.c:243-258)
         for (ushort i = 0; i < recordCount; i++) {
             uint absoluteRecord = startRecord + i;
             if (!TryComputeOffset(absoluteRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
@@ -583,7 +590,9 @@ public class DosFcbManager {
             if (seek.IsError) {
                 break;
             }
-            DosFileOperationResult read = _dosFileManager.ReadFileOrDevice(handle, (ushort)recordSize, dtaAddress);
+            // Advance DTA destination for each record
+            uint destinationAddress = dtaAddress + (uint)totalRead * (uint)recordSize;
+            DosFileOperationResult read = _dosFileManager.ReadFileOrDevice(handle, (ushort)recordSize, destinationAddress);
             if (read.IsError) {
                 break;
             }
@@ -603,6 +612,12 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=28h random block write from the RandomRecord pointer.
     /// </summary>
+    /// <remarks>
+    /// Implementation follows DOSBox Staging dos_files.cpp:1604-1633 DOS_FCBRandomWrite.
+    /// Special handling for numRec==0 calls DOS_FCBIncreaseSize (dos_files.cpp:1542-1569)
+    /// to truncate/extend the file. Both DOSBox and FreeDOS update file size after write
+    /// (DOSBox: dos_files.cpp:1625, FreeDOS: fcbfns.c:264).
+    /// </remarks>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <param name="recordCount">On input, requested record count; on output, number actually written.</param>
@@ -621,21 +636,27 @@ public class DosFcbManager {
         int recordSize = fcb.RecordSize;
         uint startRecord = fcb.RandomRecord;
         if (recordCount == 0) {
-            // Truncate file to random record position
+            // Truncate/extend file to random record position
+            // DOSBox: DOS_FCBIncreaseSize (dos_files.cpp:1624-1626)
+            // FreeDOS: No explicit truncate, but updates size after write (fcbfns.c:264)
             if (!TryComputeOffset(startRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
                 return offsetStatus;
             }
-            DosFileOperationResult seek = _dosFileManager.MoveFilePointerUsingHandle(SeekOrigin.Begin, handle, offset);
-            if (seek.IsError) {
-                LogFcbWarning("RAND BLK WRITE", baseAddr, "Seek failed during truncate");
-                return FcbStatus.Error;
+            VirtualFileBase? vf = _dosFileManager.OpenFiles[handle];
+            if (vf is DosFile dosFile) {
+                dosFile.SetLength(offset);
+                fcb.FileSize = (uint)offset;
+                LogFcbDebug("RAND BLK WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
+                return FcbStatus.Success;
             }
-            LogFcbDebug("RAND BLK WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
-            return FcbStatus.Success;
+            LogFcbWarning("RAND BLK WRITE", baseAddr, "Handle is not a file");
+            return FcbStatus.Error;
         }
 
         ushort requestedRecords = recordCount;
         ushort totalWritten = 0;
+        // DOSBox: loop for each record (dos_files.cpp:1619-1622)
+        // FreeDOS: single operation with total size (fcbfns.c:258)
         for (ushort i = 0; i < recordCount; i++) {
             uint absoluteRecord = startRecord + i;
             if (!TryComputeOffset(absoluteRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
@@ -927,7 +948,7 @@ public class DosFcbManager {
         // Extended FCB detection via drive marker 0xFF
         DosFileControlBlock probe = new DosFileControlBlock(_memory, fcbAddress);
         if (probe.DriveNumber == 0xFF) {
-            return fcbAddress + 7;
+            return fcbAddress + DosExtendedFileControlBlock.HeaderSize;
         }
         return fcbAddress;
     }

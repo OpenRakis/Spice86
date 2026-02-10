@@ -42,7 +42,6 @@ public class DosInt21HandlerTests {
         var ioPortDispatcher = new IOPortDispatcher(ioPortBreakpoints, state, logger, false);
         var dosTables = new DosTables();
         dosTables.Initialize(memory);
-        var dosSwappableDataArea = new DosSwappableDataArea(memory, 0xB20);
         var biosDataArea = new BiosDataArea(memory, 640);
         var biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         var keyboardInt16Handler = new KeyboardInt16Handler(
