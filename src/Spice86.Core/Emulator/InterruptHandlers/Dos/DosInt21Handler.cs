@@ -1714,17 +1714,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para><b>Expects:</b></para>
     /// <para>DS:DX = pointer to an unopened FCB</para>
     /// <para><b>Returns:</b></para>
-    /// <para>AL = 00h if file found, FFh if file not found</para>
-    /// </remarks>
-    /// <summary>
-    /// INT 21h, AH=0Fh - Open File Using FCB.
-    /// Opens an existing file specified by the FCB filename.
-    /// </summary>
-    /// <remarks>
-    /// <para><b>Expects:</b></para>
-    /// <para>DS:DX = pointer to an unopened FCB</para>
-    /// <para><b>Returns:</b></para>
-    /// <para>AL = 00h if file opened, FFh if file not found</para>
+    /// <para>AL = 00h if file opened/found, FFh if file not found</para>
     /// </remarks>
     private void FcbOpenFile() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
