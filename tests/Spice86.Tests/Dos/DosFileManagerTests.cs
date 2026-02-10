@@ -107,10 +107,16 @@ public class DosFileManagerTests {
             DosFileOperationResult openResult = fixture.DosFileManager.OpenFileOrDevice(fileName, FileAccessMode.ReadOnly);
             openResult.IsError.Should().BeFalse();
             openResult.Value.Should().NotBeNull();
-            handle = (ushort)openResult.Value!.Value;
+            if (openResult.Value == null) {
+                throw new InvalidOperationException("OpenFileOrDevice returned null");
+            }
+            handle = (ushort)openResult.Value.Value;
 
-            fixture.DosFileManager.OpenFiles[handle.Value].Should().BeOfType<DosFile>();
-            DosFile dosFile = (DosFile)fixture.DosFileManager.OpenFiles[handle.Value]!;
+            VirtualFileBase? fileBase = fixture.DosFileManager.OpenFiles[handle.Value];
+            fileBase.Should().BeOfType<DosFile>();
+            if (fileBase is not DosFile dosFile) {
+                throw new InvalidOperationException("Expected DosFile but got different type");
+            }
             dosFile.DeviceInformation.Should().Be(0x0802);
             dosFile.CanSeek.Should().BeTrue();
 

@@ -2023,7 +2023,7 @@ public class DosInt21Handler : InterruptHandler {
     private void FcbParseFilename() {
         uint stringAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.SI);
         uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
-        byte parseControl = State.AL;
+        FcbParseControl parseControl = (FcbParseControl)State.AL;
 
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB PARSE FILENAME from {StringAddress} to {FcbAddress}, control={Control:X2}",
