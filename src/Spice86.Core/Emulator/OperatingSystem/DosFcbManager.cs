@@ -1422,30 +1422,8 @@ public class DosFcbManager {
     /// <param name="fcb">The FCB to update.</param>
     private void UpdateFcbDateTime(DosFileControlBlock fcb) {
         DateTime now = DateTime.Now;
-        fcb.Date = ToDosDate(now);
-        fcb.Time = ToDosTime(now);
-    }
-
-    /// <summary>
-    /// Converts a DateTime to DOS packed date format.
-    /// DOS date format: bits 15-9=year-1980, bits 8-5=month, bits 4-0=day.
-    /// </summary>
-    private static ushort ToDosDate(DateTime localDate) {
-        int day = localDate.Day;
-        int month = localDate.Month;
-        int dosYear = localDate.Year - 1980;
-        return (ushort)((day & 0b11111) | (month & 0b1111) << 5 | (dosYear & 0b1111111) << 9);
-    }
-
-    /// <summary>
-    /// Converts a DateTime to DOS packed time format.
-    /// DOS time format: bits 15-11=hour, bits 10-5=minute, bits 4-0=seconds/2.
-    /// </summary>
-    private static ushort ToDosTime(DateTime localTime) {
-        int dosSeconds = localTime.Second / 2;
-        int minutes = localTime.Minute;
-        int hours = localTime.Hour;
-        return (ushort)((dosSeconds & 0b11111) | (minutes & 0b111111) << 5 | (hours & 0b11111) << 11);
+        fcb.Date = DosFileManager.ToDosDate(now);
+        fcb.Time = DosFileManager.ToDosTime(now);
     }
 
     private void LogFcbWarning(string operation, uint fcbBaseAddress, string reason) {
