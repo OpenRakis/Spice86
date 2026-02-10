@@ -1809,7 +1809,6 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>DS:DX = pointer to an FCB or extended FCB with filename pattern (may contain wildcards)</para>
     /// <para><b>Returns:</b></para>
     /// <para>AL = 00h on success, FFh if no files matched or error</para>
-    /// <para>AL = FFh if device or error</para>
     /// </remarks>
     private void FcbDeleteFile() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {

@@ -224,7 +224,7 @@ public class DosFcbManager {
     /// FreeDOS: GetNameField.
     /// Returns a tuple of (newPos, hasWildcard).
     /// </summary>
-    private (int newPos, bool hasWildcard) GetNameField(string filename, int pos, int fieldSize) {
+    private static (int newPos, bool hasWildcard) GetNameField(string filename, int pos, int fieldSize) {
         bool hasWildcard = false;
         int index = 0;
 
@@ -258,7 +258,7 @@ public class DosFcbManager {
     /// Extract field from string and pad/convert to proper form.
     /// Handles asterisk conversion to question marks.
     /// </summary>
-    private string ExtractAndPadField(string filename, int startPos, int endPos, int fieldSize) {
+    private static string ExtractAndPadField(string filename, int startPos, int endPos, int fieldSize) {
         StringBuilder result = new();
         int pos = startPos;
         int index = 0;
