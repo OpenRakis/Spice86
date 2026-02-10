@@ -25,8 +25,8 @@ using Spice86.Shared.Utils;
 /// <para>
 /// <b>Implementation Strategy:</b> Follows <b>DOSBox Staging</b> (dos_files.cpp) for FCB behavior,
 /// as it has extensive game compatibility testing. FreeDOS kernel (fcbfns.c) is referenced in comments
-/// where implementations align. Key differences: DOSBox loops per-record for block I/O, uses floor division
-/// for GetFileSize; FreeDOS does bulk I/O, uses ceiling division.
+/// where implementations align. Key differences: DOSBox loops per-record for block I/O, uses ceiling division
+/// for GetFileSize; FreeDOS also uses ceiling division.
 /// </para>
 /// <para>
 /// <b>Supported Operations:</b> Open/Close (0Fh/10h), Create/Delete/Rename (16h/13h/17h),
@@ -39,8 +39,8 @@ using Spice86.Shared.Utils;
 /// </remarks>
 public class DosFcbManager {
 
-    private const int RenameNewNameOffset = 0x0C;
-    private const int RenameNewExtensionOffset = 0x14;
+    private const int RenameNewNameOffset = 0x11;
+    private const int RenameNewExtensionOffset = 0x19;
 
     /// <summary>
     /// Common separator characters for filename parsing.
@@ -339,10 +339,8 @@ public class DosFcbManager {
 
         ushort handle = (ushort)result.Value.Value;
         fcb.SftNumber = (byte)handle;
-        if (fcb.RecordSize == 0) {
-            fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
-        }
-        // Reset block/record pointers on open (FreeDOS behavior)
+        // DOSBox: FileOpen() always sets rec_size=128 and cur_block=0 (dos_classes.cpp:566-579)
+        fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
         fcb.CurrentBlock = 0;
         fcb.CurrentRecord = 0;
 
@@ -384,6 +382,9 @@ public class DosFcbManager {
             LogFcbWarning("CLOSE", baseAddr, "Handle is zero");
             return FcbStatus.Error;
         }
+        // DOSBox: FileClose() sets file_handle=0xFF before closing (dos_classes.cpp:588-592)
+        // This enables auto-reopen in DOS_FCBRead/Write when handle==0xFF && rec_size!=0
+        fcb.SftNumber = 0xFF;
         DosFileOperationResult result = _dosFileManager.CloseFileOrDevice(handle);
         if (result.IsError) {
             LogFcbWarning("CLOSE", baseAddr, "CloseFileOrDevice failed");
@@ -417,9 +418,8 @@ public class DosFcbManager {
 
         ushort handle = (ushort)result.Value.Value;
         fcb.SftNumber = (byte)handle;
-        if (fcb.RecordSize == 0) {
-            fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
-        }
+        // DOSBox: FileOpen() always sets rec_size=128 (dos_classes.cpp:570)
+        fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
         TrackFcbHandle(handle);
         LogFcbDebug("CREATE", baseAddr, fileSpec, FcbStatus.Success);
         return FcbStatus.Success;
@@ -557,7 +557,7 @@ public class DosFcbManager {
         ushort len = (ushort)(write.Value ?? 0);
 
         // DOSBox: Update FCB size/date/time after successful write (dos_files.cpp:1526-1536)
-        UpdateFcbAfterWrite(fcb, handle, offset, len);
+        UpdateFcbAfterWrite(fcb, offset, len);
 
         fcb.NextRecord();
         if (len < recordSize) {
@@ -720,7 +720,7 @@ public class DosFcbManager {
         ushort len = (ushort)(write.Value ?? 0);
 
         // DOSBox: Update FCB size/date/time after successful write (dos_files.cpp:1526-1536)
-        UpdateFcbAfterWrite(fcb, handle, offset, len);
+        UpdateFcbAfterWrite(fcb, offset, len);
 
         // DOSBox: Restore old block/record for single-record random write (dos_files.cpp:1629)
         fcb.CurrentBlock = oldBlock;
@@ -922,7 +922,7 @@ public class DosFcbManager {
             ushort len = (ushort)(write.Value ?? 0);
 
             // DOSBox: Update FCB size/date/time after successful write (dos_files.cpp:1526-1536)
-            UpdateFcbAfterWrite(fcb, handle, offset, len);
+            UpdateFcbAfterWrite(fcb, offset, len);
 
             totalWritten++;
 
@@ -977,23 +977,22 @@ public class DosFcbManager {
     /// different logical record sizes.
     /// </para>
     /// <para>
-    /// <b>Division Method:</b> DOSBox and FreeDOS differ here:
+    /// <b>Division Method:</b> Both DOSBox and FreeDOS use ceiling division:
     /// <list type="bullet">
-    ///   <item><b>DOSBox</b> (dos_files.cpp:1650): Uses floor division: random = size / rec_size</item>
-    ///   <item><b>FreeDOS</b> (fcbfns.c:307): Uses ceiling division: fcb_rndm = (fsize + (recsiz - 1)) / recsiz</item>
+    ///   <item><b>DOSBox</b> (dos_files.cpp:1650): random = size / rec_size; if (size % rec_size) random++</item>
+    ///   <item><b>FreeDOS</b> (fcbfns.c:307): fcb_rndm = (fsize + (recsiz - 1)) / recsiz</item>
     /// </list>
-    /// This implementation follows <b>DOSBox behavior (floor division)</b> for game compatibility.
+    /// This implementation follows <b>DOSBox behavior (ceiling division)</b>.
     /// </para>
     /// <para>
     /// <b>Example:</b>
     /// <code>
     /// File size: 1000 bytes, RecordSize: 128
-    /// DOSBox: 1000 / 128 = 7 records (floor)
+    /// DOSBox: 1000 / 128 = 7, then 1000 % 128 != 0, so 7+1 = 8 records (ceiling)
     /// FreeDOS: (1000 + 127) / 128 = 8 records (ceiling)
-    /// Spice86: 7 records (follows DOSBox)
+    /// Spice86: 8 records (follows DOSBox)
     /// </code>
-    /// FreeDOS's ceiling division ensures enough records to contain all bytes. DOSBox's floor division
-    /// matches the actual number of complete records, which some games may rely on.
+    /// Both DOSBox and FreeDOS use ceiling division to ensure enough records to contain all bytes.
     /// </para>
     /// <para>
     /// <b>Usage Pattern:</b>
@@ -1034,7 +1033,12 @@ public class DosFcbManager {
         if (vf is DosFile dosFile) {
             long size = dosFile.Length;
             int recSize = fcb.RecordSize == 0 ? DosFileControlBlock.DefaultRecordSize : fcb.RecordSize;
+            // DOSBox: ceiling division (dos_files.cpp:1650-1651)
+            // random = size / rec_size; if (size % rec_size) random++;
             uint records = (uint)(size / recSize);
+            if (size % recSize != 0) {
+                records++;
+            }
             fcb.RandomRecord = records;
             _dosFileManager.CloseFileOrDevice(handle);
             LogFcbDebug("GET SIZE", baseAddr, fileSpec, FcbStatus.Success);
@@ -1060,7 +1064,8 @@ public class DosFcbManager {
         }
         DosFileOperationResult ff = _dosFileManager.FindFirstMatchingFile(pattern, 0);
         if (ff.IsError) {
-            return FcbStatus.Success; // per RBIL: still return success if no matches
+            // DOSBox: DOS_FCBDeleteFile returns false when no files match (dos_files.cpp:1656-1680)
+            return FcbStatus.Error;
         }
         while (true) {
             DosDiskTransferArea dta = new DosDiskTransferArea(_memory, MemoryUtils.ToPhysicalAddress(
@@ -1187,13 +1192,6 @@ public class DosFcbManager {
         return FcbStatus.Success;
     }
 
-    public void SetRandomRecordNumber(uint fcbAddress) {
-        uint fcbBase = GetActualFcbBaseAddress(fcbAddress);
-        DosFileControlBlock fcb = new DosFileControlBlock(_memory, fcbBase);
-        uint absoluteRecord = (uint)(fcb.CurrentBlock * 128 + fcb.CurrentRecord);
-        fcb.RandomRecord = absoluteRecord;
-    }
-
     /// <summary>
     /// INT 21h AH=11h FCB Find First using the FCB filename pattern.
     /// </summary>
@@ -1221,27 +1219,8 @@ public class DosFcbManager {
     }
 
     /// <summary>
-    /// Reads one record sequentially from an FCB-opened file.
-    /// </summary>
-    /// <param name="fcbAddress">Linear address of the FCB.</param>
-    /// <param name="dtaAddress">Linear address of the DTA where data will be written.</param>
-    /// <returns><see cref="FcbStatus"/> indicating success, EOF, or error.</returns>
-    public FcbStatus ReadSequentialRecord(uint fcbAddress, uint dtaAddress) {
-        return SequentialRead(fcbAddress, dtaAddress);
-    }
-
-    /// <summary>
-    /// Writes one record sequentially to an FCB-opened file.
-    /// </summary>
-    /// <param name="fcbAddress">Linear address of the FCB.</param>
-    /// <param name="dtaAddress">Linear address of the DTA containing data to write.</param>
-    /// <returns><see cref="FcbStatus"/> indicating success or error.</returns>
-    public FcbStatus WriteSequentialRecord(uint fcbAddress, uint dtaAddress) {
-        return SequentialWrite(fcbAddress, dtaAddress);
-    }
-
-    /// <summary>
-    /// Sets the random record field from the current block and record fields.
+    /// INT 21h AH=24h - Sets the random record field from the current block and record fields.
+    /// DOSBox Staging: DOS_FCBSetRandomRecord (dos_files.cpp:1714-1721).
     /// FreeDOS: FcbSetRandom (fcbfns.c line 320).
     /// </summary>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
@@ -1388,23 +1367,6 @@ public class DosFcbManager {
         return string.IsNullOrEmpty(finalExt) ? finalName : $"{finalName}.{finalExt}";
     }
 
-    private static string SubstitutePattern(string pattern, string source, int maxLen) {
-        StringBuilder sb = new StringBuilder();
-        int len = Math.Min(maxLen, pattern.Length);
-        for (int i = 0; i < len; i++) {
-            char pc = pattern[i];
-            if (pc == '?') {
-                sb.Append(i < source.Length ? source[i] : ' ');
-            } else {
-                sb.Append(pc);
-            }
-        }
-        if (pattern.Length > len) {
-            sb.Append(pattern[len..]);
-        }
-        return sb.ToString().TrimEnd();
-    }
-
     private bool TryComputeOffset(uint absoluteRecord, int recordSize, out int offset, out FcbStatus statusCode) {
         ulong offsetValue = absoluteRecord * (ulong)recordSize;
         if (offsetValue > int.MaxValue) {
@@ -1452,10 +1414,9 @@ public class DosFcbManager {
     /// DOSBox Staging reference: dos_files.cpp:1526-1536.
     /// </summary>
     /// <param name="fcb">The FCB to update.</param>
-    /// <param name="handle">The file handle.</param>
     /// <param name="offset">The file offset where write occurred.</param>
     /// <param name="bytesWritten">Number of bytes written.</param>
-    private void UpdateFcbAfterWrite(DosFileControlBlock fcb, ushort handle, int offset, int bytesWritten) {
+    private void UpdateFcbAfterWrite(DosFileControlBlock fcb, int offset, int bytesWritten) {
         // DOSBox: if (pos+towrite>size) size=pos+towrite; (dos_files.cpp:1528)
         uint newPosition = (uint)(offset + bytesWritten);
         if (newPosition > fcb.FileSize) {

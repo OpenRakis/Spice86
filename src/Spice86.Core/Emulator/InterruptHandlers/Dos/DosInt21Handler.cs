@@ -205,14 +205,14 @@ public class DosInt21Handler : InterruptHandler {
                 previousEchoState = consoleDevice.Echo;
                 consoleDevice.Echo = true;
             }
-            
+
             byte[] bytes = new byte[1];
             int readCount = stdIn.Read(bytes, 0, 1);
-            
+
             if (consoleDevice != null) {
                 consoleDevice.Echo = previousEchoState;
             }
-            
+
             State.AL = readCount < 1 ? (byte)0 : bytes[0];
         } else {
             State.AL = 0;
@@ -1406,10 +1406,10 @@ public class DosInt21Handler : InterruptHandler {
         } else if (LoggerService.IsEnabled(LogEventLevel.Information)) {
             LoggerService.Information("INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2}", exitCode);
         }
-        
+
         // Clear FCB search state before terminating
         _dosFcbManager.ClearAllSearchState();
-        
+
         _dosProcessManager.TerminateProcess(exitCode, terminationType);
     }
 
@@ -1725,6 +1725,17 @@ public class DosInt21Handler : InterruptHandler {
     /// <para><b>Returns:</b></para>
     /// <para>AL = 00h if file found, FFh if file not found</para>
     /// </remarks>
+    /// <summary>
+    /// INT 21h, AH=0Fh - Open File Using FCB.
+    /// Opens an existing file specified by the FCB filename.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an unopened FCB</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if file opened, FFh if file not found</para>
+    /// <para>DOSBox Staging: Always sets RecordSize=128 on success (dos_files.cpp DOS_FCB::FileOpen).</para>
+    /// </remarks>
     private void FcbOpenFile() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB OPEN FILE at {Address}",
@@ -1800,7 +1811,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para><b>Expects:</b></para>
     /// <para>DS:DX = pointer to an FCB or extended FCB with filename pattern (may contain wildcards)</para>
     /// <para><b>Returns:</b></para>
-    /// <para>AL = 00h on success (even if no files matched the pattern)</para>
+    /// <para>AL = 00h on success, FFh if no files matched or error</para>
     /// <para>AL = FFh if device or error</para>
     /// </remarks>
     private void FcbDeleteFile() {
@@ -1942,9 +1953,8 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// INT 21h, AH=24h - Set Random Record Number Using FCB.
     /// INT 21h, AH=24h - Set Random Record Number (FCB).
-    /// Sets the `RandomRecord` field in the FCB from the current block and record numbers.
+    /// Sets the <c>RandomRecord</c> field in the FCB from the current block and record numbers.
     /// </summary>
     /// <remarks>
     /// <para><b>Expects:</b></para>
@@ -1959,7 +1969,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("FCB SET RANDOM RECORD NUMBER at {Address}",
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
-        _dosFcbManager.SetRandomRecordNumber(GetFcbAddress());
+        _dosFcbManager.SetRandomRecord(GetFcbAddress());
     }
 
     /// <summary>
@@ -2036,7 +2046,7 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         State.AL = (byte)_dosFcbManager.ParseFilename(stringAddress, fcbAddress, parseControl, out uint bytesAdvanced);
-        
+
         // Update SI to point to first byte after parsed filename (per DOS semantics)
         State.SI += (ushort)bytesAdvanced;
     }
