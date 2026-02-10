@@ -119,7 +119,7 @@ public class DosFcbManager {
                 fcb.DriveNumber = (byte)(driveNum + 1);
                 pos += 2;
             }
-        } else if (!parseControl.HasFlag(FcbParseControl.SetDefaultDrive)) {
+        } else if (!parseControl.HasFlag(FcbParseControl.LeaveDriveUnchanged)) {
             // FreeDOS: "} else if (!(*wTestMode & PARSE_DFLT_DRIVE)) {"
             // If flag NOT set, set to default drive (0)
             fcb.DriveNumber = 0;
@@ -162,14 +162,14 @@ public class DosFcbManager {
         // Parse filename field
         int nameStart = pos;
         (pos, bool hasWildcardName) = GetNameField(filename, pos, 8);
-        fcb.FileName = ExtractAndPadField(filename, nameStart, pos, 8, hasWildcardName);
+        fcb.FileName = ExtractAndPadField(filename, nameStart, pos, 8);
 
         // Parse extension if present
         if (pos < filename.Length && filename[pos] == '.') {
             pos++;
             int extStart = pos;
             (pos, retCodeExt) = GetNameField(filename, pos, 3);
-            fcb.FileExtension = ExtractAndPadField(filename, extStart, pos, 3, retCodeExt);
+            fcb.FileExtension = ExtractAndPadField(filename, extStart, pos, 3);
         }
 
         bytesAdvanced = (uint)pos;
@@ -252,7 +252,7 @@ public class DosFcbManager {
     /// Extract field from string and pad/convert to proper form.
     /// Handles asterisk conversion to question marks.
     /// </summary>
-    private string ExtractAndPadField(string filename, int startPos, int endPos, int fieldSize, bool hasWildcard) {
+    private string ExtractAndPadField(string filename, int startPos, int endPos, int fieldSize) {
         StringBuilder result = new();
         int pos = startPos;
         int index = 0;
@@ -1140,8 +1140,16 @@ public class DosFcbManager {
         int renameCount = 0;
         foreach ((string srcHost, string dstHost) in filesToRename) {
             LogFcbDebug("RENAME EXECUTE", baseAddr, $"Moving {srcHost} to {dstHost}", FcbStatus.Success);
-            File.Move(srcHost, dstHost);
-            renameCount++;
+            try {
+                File.Move(srcHost, dstHost);
+                renameCount++;
+            } catch (IOException ex) {
+                LogFcbWarning("RENAME", baseAddr, $"Failed to rename {srcHost}: {ex.Message}");
+                return FcbStatus.Error;
+            } catch (UnauthorizedAccessException ex) {
+                LogFcbWarning("RENAME", baseAddr, $"Access denied renaming {srcHost}: {ex.Message}");
+                return FcbStatus.Error;
+            }
         }
         LogFcbDebug("RENAME", baseAddr, $"{oldName} -> {newPattern} ({renameCount} files)", FcbStatus.Success);
         return FcbStatus.Success;

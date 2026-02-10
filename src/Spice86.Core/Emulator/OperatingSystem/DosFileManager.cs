@@ -102,17 +102,6 @@ public class DosFileManager {
     }
 
     /// <summary>
-    /// Checks if a filename matches a known character device name.
-    /// </summary>
-    /// <param name="fileName">The filename to check.</param>
-    /// <returns>True if the filename matches a device name, false otherwise.</returns>
-    public bool IsCharacterDevice(string fileName) {
-        CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
-            .FirstOrDefault(characterDevice => characterDevice.IsName(fileName));
-        return device is not null;
-    }
-
-    /// <summary>
     /// Gets the device file handle of the first open character device with the specified attributes.
     /// </summary>
     /// <param name="attributes">The device attributes, such as <see cref="DeviceAttributes.CurrentStdin"/>. <br/>
@@ -918,8 +907,6 @@ public class DosFileManager {
 
         return PathNotFoundError(dosFile);
     }
-
-
 
     /// <summary>
     /// Removes a directory on disk.
