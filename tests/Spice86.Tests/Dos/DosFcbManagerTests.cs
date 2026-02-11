@@ -1,4 +1,4 @@
-namespace Spice86.Tests.Dos;
+﻿namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
