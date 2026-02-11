@@ -1016,9 +1016,6 @@ public class DosInt21Handler : InterruptHandler {
                 paragraphsToKeep, errorCode);
         }
 
-        // Clear FCB search state before terminating
-        _dosFcbManager.ClearAllSearchState();
-
         _dosProcessManager.TerminateProcess(returnCode, DosTerminationType.TSR);
     }
 
@@ -1400,9 +1397,6 @@ public class DosInt21Handler : InterruptHandler {
         } else if (LoggerService.IsEnabled(LogEventLevel.Information)) {
             LoggerService.Information("INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2}", exitCode);
         }
-
-        // Clear FCB search state before terminating
-        _dosFcbManager.ClearAllSearchState();
 
         _dosProcessManager.TerminateProcess(exitCode, terminationType);
     }

@@ -50,7 +50,7 @@ public class DosInt21HandlerTests {
         var countryInfo = new CountryInfo();
         var dosMemoryManager = new DosMemoryManager(memory, 0x170, logger);
         var envVars = new Dictionary<string, string> { { "PATH", "C:\\" } };
-        var dosProcessManager = new DosProcessManager(memory, stack, state, dosMemoryManager, dosFileManager, driveManager, dosFcbManager, envVars, logger);
+        var dosProcessManager = new DosProcessManager(memory, stack, state, dosMemoryManager, dosFileManager, driveManager, envVars, logger);
 
         var handler = new DosInt21Handler(
             memory,
