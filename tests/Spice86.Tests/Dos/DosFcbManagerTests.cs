@@ -183,31 +183,33 @@ public class DosFcbManagerTests : IDisposable {
     }
 
     [Fact]
-    public void ParseFilename_DotAndDotDot() {
+    public void ParseFilename_Dot_ParsesCorrectly() {
         // Arrange
-        const uint fcbAddr1 = 0x2000;
-        const uint fcbAddr2 = 0x2100;
+        _fixture.Memory.SetZeroTerminatedString(StringAddr, ".", 128);
 
-        // Test "."
-        const uint stringAddr1 = 0x1000;
-        _fixture.Memory.SetZeroTerminatedString(stringAddr1, ".", 128);
-        FcbParseResult result1 = _fixture.DosFcbManager.ParseFilename(stringAddr1, fcbAddr1, FcbParseControl.LeaveDriveUnchanged, out uint bytes1);
-
-        // Test ".."
-        const uint stringAddr2 = 0x1100;
-        _fixture.Memory.SetZeroTerminatedString(stringAddr2, "..", 128);
-        FcbParseResult result2 = _fixture.DosFcbManager.ParseFilename(stringAddr2, fcbAddr2, FcbParseControl.LeaveDriveUnchanged, out uint bytes2);
+        // Act
+        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged, out uint bytesAdvanced);
 
         // Assert
-        result1.Should().Be(FcbParseResult.NoWildcards);
-        bytes1.Should().Be(1);
-        DosFileControlBlock fcb1 = new DosFileControlBlock(_fixture.Memory, fcbAddr1);
-        fcb1.FileName.Should().Be(".       ");
+        result.Should().Be(FcbParseResult.NoWildcards);
+        bytesAdvanced.Should().Be(1);
+        DosFileControlBlock fcb = new DosFileControlBlock(_fixture.Memory, FcbAddr);
+        fcb.FileName.Should().Be(".       ");
+    }
 
-        result2.Should().Be(FcbParseResult.NoWildcards);
-        bytes2.Should().Be(2);
-        DosFileControlBlock fcb2 = new DosFileControlBlock(_fixture.Memory, fcbAddr2);
-        fcb2.FileName.Should().Be("..      ");
+    [Fact]
+    public void ParseFilename_DotDot_ParsesCorrectly() {
+        // Arrange
+        _fixture.Memory.SetZeroTerminatedString(StringAddr, "..", 128);
+
+        // Act
+        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged, out uint bytesAdvanced);
+
+        // Assert
+        result.Should().Be(FcbParseResult.NoWildcards);
+        bytesAdvanced.Should().Be(2);
+        DosFileControlBlock fcb = new DosFileControlBlock(_fixture.Memory, FcbAddr);
+        fcb.FileName.Should().Be("..      ");
     }
 
     [Fact]
@@ -261,19 +263,16 @@ public class DosFcbManagerTests : IDisposable {
         // Arrange
         DosFileControlBlock fcb = CreateFcb("NEWFILE", "TXT");
 
-        try {
-            // Act
-            FcbStatus status = _fixture.DosFcbManager.CreateFile(FcbAddr);
+        // Act
+        FcbStatus status = _fixture.DosFcbManager.CreateFile(FcbAddr);
 
-            // Assert
-            status.Should().Be(FcbStatus.Success);
-            fcb.SftNumber.Should().NotBe(0);
-            fcb.RecordSize.Should().Be(DosFileControlBlock.DefaultRecordSize);
-        } finally {
-            // Cleanup
-            _fixture.DosFcbManager.CloseFile(FcbAddr);
-            _fixture.DosFileManager.RemoveFile("NEWFILE.TXT");
-        }
+        // Assert
+        status.Should().Be(FcbStatus.Success);
+        fcb.SftNumber.Should().NotBe(0);
+        fcb.RecordSize.Should().Be(DosFileControlBlock.DefaultRecordSize);
+
+        // Cleanup
+        _fixture.DosFcbManager.CloseFile(FcbAddr);
     }
 
     [Fact]
@@ -282,60 +281,45 @@ public class DosFcbManagerTests : IDisposable {
         CreateTestFile("TESTOPEN.TXT", "Test content");
         DosFileControlBlock fcb = CreateFcb("TESTOPEN", "TXT");
 
-        try {
-            // Act
-            FcbStatus status = _fixture.DosFcbManager.OpenFile(FcbAddr);
+        // Act
+        FcbStatus status = _fixture.DosFcbManager.OpenFile(FcbAddr);
 
-            // Assert
-            status.Should().Be(FcbStatus.Success);
-            fcb.SftNumber.Should().NotBe(0);
-            fcb.RecordSize.Should().Be(DosFileControlBlock.DefaultRecordSize);
-        } finally {
-            // Cleanup
-            _fixture.DosFcbManager.CloseFile(FcbAddr);
-        }
+        // Assert
+        status.Should().Be(FcbStatus.Success);
+        fcb.SftNumber.Should().NotBe(0);
+        fcb.RecordSize.Should().Be(DosFileControlBlock.DefaultRecordSize);
+
+        // Cleanup
+        _fixture.DosFcbManager.CloseFile(FcbAddr);
     }
 
     [Fact]
     public void OpenFile_ExistingFile_PopulatesFileMetadata() {
-        // Test that FCB open populates FileSize, Date, and Time fields
-
         // Arrange
         const string testContent = "Test file content for metadata test";
         CreateTestFile("METADATA.TXT", testContent);
         DosFileControlBlock fcb = CreateFcb("METADATA", "TXT");
-
-        // Zero out the metadata fields before open
         fcb.FileSize = 0;
         fcb.Date = 0;
         fcb.Time = 0;
 
-        try {
-            // Act
-            FcbStatus status = _fixture.DosFcbManager.OpenFile(FcbAddr);
+        // Act
+        FcbStatus status = _fixture.DosFcbManager.OpenFile(FcbAddr);
 
-            // Assert
-            status.Should().Be(FcbStatus.Success);
+        // Assert
+        status.Should().Be(FcbStatus.Success);
+        fcb.FileSize.Should().Be((uint)testContent.Length, "FileSize should match actual file size");
+        fcb.Date.Should().NotBe(0, "Date should be populated from file last write time");
+        fcb.Time.Should().NotBe(0, "Time should be populated from file last write time");
 
-            // FileSize should be populated with actual file size
-            fcb.FileSize.Should().Be((uint)testContent.Length, "FileSize should match actual file size");
+        ushort year = (ushort)((fcb.Date >> 9) + 1980);
+        year.Should().BeInRange((ushort)1980, (ushort)2100);
 
-            // Date and Time should be non-zero (populated with file's last write time)
-            fcb.Date.Should().NotBe(0, "Date should be populated from file last write time");
-            fcb.Time.Should().NotBe(0, "Time should be populated from file last write time");
+        ushort hour = (ushort)(fcb.Time >> 11);
+        hour.Should().BeLessThanOrEqualTo((ushort)23);
 
-            // Verify Date/Time are in reasonable range (DOS format starts from 1980)
-            // Date: bits 15-9 = year-1980, 8-5 = month, 4-0 = day
-            ushort year = (ushort)((fcb.Date >> 9) + 1980);
-            year.Should().BeInRange((ushort)1980, (ushort)2100);
-
-            // Time: bits 15-11 = hour, 10-5 = minute, 4-0 = seconds/2
-            ushort hour = (ushort)(fcb.Time >> 11);
-            hour.Should().BeLessThanOrEqualTo((ushort)23);
-        } finally {
-            // Cleanup
-            _fixture.DosFcbManager.CloseFile(FcbAddr);
-        }
+        // Cleanup
+        _fixture.DosFcbManager.CloseFile(FcbAddr);
     }
 
     [Fact]
@@ -344,62 +328,42 @@ public class DosFcbManagerTests : IDisposable {
         CreateFcb("TESTCLS", "TXT");
         _fixture.DosFcbManager.CreateFile(FcbAddr);
 
-        try {
-            // Act
-            FcbStatus status = _fixture.DosFcbManager.CloseFile(FcbAddr);
+        // Act
+        FcbStatus status = _fixture.DosFcbManager.CloseFile(FcbAddr);
 
-            // Assert
-            status.Should().Be(FcbStatus.Success);
-        } finally {
-            // Cleanup
-            _fixture.DosFileManager.RemoveFile("TESTCLS.TXT");
-        }
+        // Assert
+        status.Should().Be(FcbStatus.Success);
     }
 
     [Fact]
-    public void ReadWriteFile_SequentialRecords_WorksCorrectly() {
+    public void SequentialWriteAndRead_RoundTrip_DataPreserved() {
         // Arrange
         CreateFcb("RWTST", "DAT");
         _fixture.DosFcbManager.CreateFile(FcbAddr);
-
-        try {
-            // Write test data
-            byte[] testData = new byte[128];
-            for (int i = 0; i < 128; i++) {
-                testData[i] = (byte)('A' + (i % 26));
-            }
-            for (int i = 0; i < 128; i++) {
-                _fixture.Memory.UInt8[DtaAddr + (uint)i] = testData[i];
-            }
-
-            FcbStatus writeStatus = _fixture.DosFcbManager.SequentialWrite(FcbAddr, DtaAddr);
-            writeStatus.Should().Be(FcbStatus.Success);
-
-            // Close and reopen for reading
-            _fixture.DosFcbManager.CloseFile(FcbAddr);
-            _fixture.DosFcbManager.OpenFile(FcbAddr);
-
-            // Read data back
-            Array.Clear(testData, 0, testData.Length);
-            for (int i = 0; i < 128; i++) {
-                _fixture.Memory.UInt8[DtaAddr + (uint)i] = 0;
-            }
-
-            FcbStatus readStatus = _fixture.DosFcbManager.SequentialRead(FcbAddr, DtaAddr);
-            readStatus.Should().Be(FcbStatus.Success);
-
-            byte[] readData = new byte[128];
-            for (int i = 0; i < 128; i++) {
-                readData[i] = _fixture.Memory.UInt8[DtaAddr + (uint)i];
-            }
-            for (int i = 0; i < 128; i++) {
-                readData[i].Should().Be((byte)('A' + (i % 26)));
-            }
-        } finally {
-            // Cleanup
-            _fixture.DosFcbManager.CloseFile(FcbAddr);
-            _fixture.DosFileManager.RemoveFile("RWTST.DAT");
+        byte[] testData = new byte[128];
+        for (int i = 0; i < 128; i++) {
+            testData[i] = (byte)('A' + (i % 26));
+            _fixture.Memory.UInt8[DtaAddr + (uint)i] = testData[i];
         }
+
+        // Act
+        FcbStatus writeStatus = _fixture.DosFcbManager.SequentialWrite(FcbAddr, DtaAddr);
+        _fixture.DosFcbManager.CloseFile(FcbAddr);
+        _fixture.DosFcbManager.OpenFile(FcbAddr);
+        for (int i = 0; i < 128; i++) {
+            _fixture.Memory.UInt8[DtaAddr + (uint)i] = 0;
+        }
+        FcbStatus readStatus = _fixture.DosFcbManager.SequentialRead(FcbAddr, DtaAddr);
+
+        // Assert
+        writeStatus.Should().Be(FcbStatus.Success);
+        readStatus.Should().Be(FcbStatus.Success);
+        for (int i = 0; i < 128; i++) {
+            _fixture.Memory.UInt8[DtaAddr + (uint)i].Should().Be((byte)('A' + (i % 26)));
+        }
+
+        // Cleanup
+        _fixture.DosFcbManager.CloseFile(FcbAddr);
     }
 
     [Fact]
@@ -576,7 +540,7 @@ public class DosFcbManagerTests : IDisposable {
 
     [Fact]
     public void GetFcb_StandardFcb_ReturnsCorrectly() {
-        // Test standard (non-extended) FCB
+        // Arrange
         CreateFcb("TESTFILE", "TXT");
 
         // Act
@@ -590,14 +554,10 @@ public class DosFcbManagerTests : IDisposable {
 
     [Fact]
     public void GetFcb_ExtendedFcb_ReturnsAttributeAndEmbeddedFcb() {
-        // Test extended FCB with attribute support
+        // Arrange
         DosExtendedFileControlBlock xfcb = new DosExtendedFileControlBlock(_fixture.Memory, FcbAddr);
-
-        // Set extended FCB marker and attribute
         xfcb.Flag = 0xFF;
-        xfcb.Attribute = 0x20; // Archive attribute
-
-        // Set FCB fields (xfcb inherits from DosFileControlBlock)
+        xfcb.Attribute = 0x20;
         xfcb.DriveNumber = 0;
         xfcb.FileName = "EXTTEST ";
         xfcb.FileExtension = "DAT";
@@ -607,145 +567,92 @@ public class DosFcbManagerTests : IDisposable {
 
         // Assert
         attr.Should().Be(0x20);
-        result.BaseAddress.Should().Be(FcbAddr + DosExtendedFileControlBlock.HeaderSize); // Points to embedded FCB
+        result.BaseAddress.Should().Be(FcbAddr + DosExtendedFileControlBlock.HeaderSize);
         result.FileName.Should().Be("EXTTEST ");
         result.FileExtension.Should().Be("DAT");
     }
 
     [Fact]
     public void RandomBlockRead_MultipleRecords_AdvancesDtaForEachRecord() {
-        // Arrange: Create test file with multiple distinct records
-        // Write 3 records: "AAAA", "BBBB", "CCCC" (4 bytes each)
-        byte[] fileData = new byte[] {
-            0x41, 0x41, 0x41, 0x41,  // Record 0: AAAA
-            0x42, 0x42, 0x42, 0x42,  // Record 1: BBBB  
-            0x43, 0x43, 0x43, 0x43   // Record 2: CCCC
-        };
+        // Arrange
+        byte[] fileData = { 0x41, 0x41, 0x41, 0x41, 0x42, 0x42, 0x42, 0x42, 0x43, 0x43, 0x43, 0x43 };
         CreateTestFile("MULTIREC.DAT", fileData);
-
-        // Setup FCB
         DosFileControlBlock fcb = CreateFcb("MULTIREC", "DAT");
-
-        // Open file
-        FcbStatus openResult = _fixture.DosFcbManager.OpenFile(FcbAddr);
-        openResult.Should().Be(FcbStatus.Success);
-
-        // Set RecordSize AFTER OpenFile because OpenFile always resets RecordSize to 128
-        fcb.RecordSize = 4;  // 4-byte records
-        fcb.RandomRecord = 0; // Start at record 0
-
+        _fixture.DosFcbManager.OpenFile(FcbAddr);
+        fcb.RecordSize = 4;
+        fcb.RandomRecord = 0;
         ushort recordCount = 3;
 
-        // Act: Read 3 records
+        // Act
         FcbStatus readResult = _fixture.DosFcbManager.RandomBlockRead(FcbAddr, DtaAddr, ref recordCount);
 
-        // Assert: Should have read all 3 records
+        // Assert
         readResult.Should().Be(FcbStatus.Success);
         recordCount.Should().Be(3);
-
-        // Verify each record was written to consecutive DTA locations
-        // Record 0 at DTA+0: AAAA
         _fixture.Memory.UInt8[DtaAddr + 0].Should().Be(0x41);
-        _fixture.Memory.UInt8[DtaAddr + 1].Should().Be(0x41);
-        _fixture.Memory.UInt8[DtaAddr + 2].Should().Be(0x41);
-        _fixture.Memory.UInt8[DtaAddr + 3].Should().Be(0x41);
-
-        // Record 1 at DTA+4: BBBB (DTA advanced by record size)
         _fixture.Memory.UInt8[DtaAddr + 4].Should().Be(0x42);
-        _fixture.Memory.UInt8[DtaAddr + 5].Should().Be(0x42);
-        _fixture.Memory.UInt8[DtaAddr + 6].Should().Be(0x42);
-        _fixture.Memory.UInt8[DtaAddr + 7].Should().Be(0x42);
-
-        // Record 2 at DTA+8: CCCC (DTA advanced again)
         _fixture.Memory.UInt8[DtaAddr + 8].Should().Be(0x43);
-        _fixture.Memory.UInt8[DtaAddr + 9].Should().Be(0x43);
-        _fixture.Memory.UInt8[DtaAddr + 10].Should().Be(0x43);
-        _fixture.Memory.UInt8[DtaAddr + 11].Should().Be(0x43);
 
         // Cleanup
         _fixture.DosFcbManager.CloseFile(FcbAddr);
     }
 
     [Fact]
-    public void RandomBlockWrite_ZeroRecords_TruncatesFileExplicitly() {
-        // Arrange: Create file with initial content
+    public void RandomBlockWrite_ZeroRecords_TruncatesFile() {
+        // Arrange
         string testFile = Path.Join(_mountPoint, "TRUNCATE.DAT");
-
-        // Write 100 bytes initially
         byte[] initialData = new byte[100];
         for (int i = 0; i < 100; i++) {
             initialData[i] = (byte)(i & 0xFF);
         }
         CreateTestFile("TRUNCATE.DAT", initialData);
-
-        // Setup FCB
         DosFileControlBlock fcb = CreateFcb("TRUNCATE", "DAT");
+        _fixture.DosFcbManager.OpenFile(FcbAddr);
+        fcb.RecordSize = 10;
+        fcb.RandomRecord = 5;
+        ushort recordCount = 0;
 
-        // Open file
-        FcbStatus openResult = _fixture.DosFcbManager.OpenFile(FcbAddr);
-        openResult.Should().Be(FcbStatus.Success);
-
-        // Set RecordSize and RandomRecord AFTER OpenFile because OpenFile always resets RecordSize to 128
-        fcb.RecordSize = 10;  // 10-byte records
-        fcb.RandomRecord = 5;  // Truncate to record 5 = 50 bytes
-
-        ushort recordCount = 0; // CX=0 means truncate
-
-        // Act: Write 0 records (truncate operation)
+        // Act
         FcbStatus writeResult = _fixture.DosFcbManager.RandomBlockWrite(FcbAddr, DtaAddr, ref recordCount);
 
-        // Assert: Operation should succeed
+        // Assert
         writeResult.Should().Be(FcbStatus.Success);
-        recordCount.Should().Be(0); // Should remain 0
-
-        // Verify file size in FCB was updated
-        fcb.FileSize.Should().Be(50); // 5 records * 10 bytes
-
-        // Close and verify actual file size on disk
+        recordCount.Should().Be(0);
+        fcb.FileSize.Should().Be(50);
         _fixture.DosFcbManager.CloseFile(FcbAddr);
-        FileInfo fileInfo = new FileInfo(testFile);
-        fileInfo.Length.Should().Be(50); // File physically truncated to 50 bytes
+        new FileInfo(testFile).Length.Should().Be(50);
     }
 
     [Fact]
     public void GetFileSize_UsesCeilingDivision() {
-        // Arrange: Create file with size that isn't evenly divisible by record size
-        // Write 1000 bytes
+        // Arrange
         byte[] fileData = new byte[1000];
         CreateTestFile("SIZETEST.DAT", fileData);
-
-        // Setup FCB with 128-byte record size
         DosFileControlBlock fcb = CreateFcb("SIZETEST", "DAT");
         fcb.RecordSize = 128;
-
-        // Act: Get file size
-        FcbStatus result = _fixture.DosFcbManager.GetFileSize(FcbAddr);
-
-        // Assert: Should succeed
-        result.Should().Be(FcbStatus.Success);
-
-        // Ceiling division: 1000 / 128 = 7, then 1000 % 128 != 0, so 7+1 = 8
-        fcb.RandomRecord.Should().Be(8, "Ceiling division: 1000/128=7, 1000%%128!=0 so 7+1=8");
-    }
-
-    [Fact]
-    public void GetFileSize_RecordSizeZero_UsesDefault128() {
-        // Arrange
-        // Write 256 bytes (exactly 2 default records)
-        byte[] fileData = new byte[256];
-        CreateTestFile("DEFAULT.DAT", fileData);
-
-        // Setup FCB with RecordSize = 0 (should use default)
-        DosFileControlBlock fcb = CreateFcb("DEFAULT", "DAT");
-        fcb.RecordSize = 0; // Zero means use default
 
         // Act
         FcbStatus result = _fixture.DosFcbManager.GetFileSize(FcbAddr);
 
         // Assert
         result.Should().Be(FcbStatus.Success);
-        // 256 / 128 (default) = 2 records
-        fcb.RandomRecord.Should().Be(2, "256 bytes / 128 (default) = 2 records");
+        fcb.RandomRecord.Should().Be(8);
+    }
+
+    [Fact]
+    public void GetFileSize_RecordSizeZero_UsesDefault128() {
+        // Arrange
+        byte[] fileData = new byte[256];
+        CreateTestFile("DEFAULT.DAT", fileData);
+        DosFileControlBlock fcb = CreateFcb("DEFAULT", "DAT");
+        fcb.RecordSize = 0;
+
+        // Act
+        FcbStatus result = _fixture.DosFcbManager.GetFileSize(FcbAddr);
+
+        // Assert
+        result.Should().Be(FcbStatus.Success);
+        fcb.RandomRecord.Should().Be(2);
     }
 
     [Fact]
