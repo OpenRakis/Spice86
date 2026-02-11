@@ -52,6 +52,6 @@
     <PackageVersion Include="System.Memory" Version="4.6.3" />
     <PackageVersion Include="System.Text.Encoding.CodePages" Version="10.0.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.0" />
-    <PackageVersion Include="Xaml.Behaviors.Avalonia" Version="11.3.9.3" />
+    <PackageVersion Include="Xaml.Behaviors.Avalonia" Version="11.3.9.5" />
   </ItemGroup>
 </Project>
