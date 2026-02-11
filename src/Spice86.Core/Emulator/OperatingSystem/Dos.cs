@@ -215,7 +215,7 @@ public sealed class Dos {
         MemoryManager = new DosMemoryManager(_memory, initialPspSegment, loggerService);
 
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
-        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, FcbManager, envVars, _loggerService);
+        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,

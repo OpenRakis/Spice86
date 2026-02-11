@@ -42,7 +42,6 @@ public class DosProcessManager {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly ILoggerService _loggerService;
-    private readonly DosFcbManager _fcbManager;
 
     private readonly Stack<ResidentBlockInfo> _pendingResidentBlocks = new();
 
@@ -100,12 +99,11 @@ public class DosProcessManager {
     /// <param name="dosMemoryManager">Allocates and frees DOS memory control blocks for PSPs and environments.</param>
     /// <param name="dosFileManager">Resolves DOS paths and manages open file tables shared across processes.</param>
     /// <param name="dosDriveManager">Provides drive metadata and current drive context for path resolution.</param>
-    /// <param name="dosFcbManager">Coordinates FCB lifecycle so termination can release FCB-specific resources.</param>
     /// <param name="envVars">The initial host environment variables to seed the master environment block.</param>
     /// <param name="loggerService">Logger for emitting diagnostic information during process lifecycle changes.</param>
     public DosProcessManager(IMemory memory, Stack stack, State state,
         DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, DosDriveManager dosDriveManager, DosFcbManager dosFcbManager,
+        DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         IDictionary<string, string> envVars, ILoggerService loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _memory = memory;
@@ -115,7 +113,6 @@ public class DosProcessManager {
         _driveManager = dosDriveManager;
         _state = state;
         _loggerService = loggerService;
-        _fcbManager = dosFcbManager;
         _environmentVariables = new();
         _interruptVectorTable = new(memory);
 
@@ -128,7 +125,7 @@ public class DosProcessManager {
         }
     }
 
-    private DosProgramSegmentPrefix GetCurrentPsp() => 
+    private DosProgramSegmentPrefix GetCurrentPsp() =>
         new(_memory, MemoryUtils.ToPhysicalAddress(_sda.CurrentProgramSegmentPrefix, 0));
 
     public void TrackResidentBlock(DosMemoryControlBlock block) {
@@ -506,8 +503,6 @@ public class DosProcessManager {
 
         // Close non-standard handles only when the process fully terminates; TSR keeps them resident
         if (terminationType != DosTerminationType.TSR) {
-            _fcbManager.CloseAllTrackedFcbFiles(currentPspSegment);
-            _fcbManager.ClearAllSearchState();
             CloseProcessFileHandles(currentPsp);
         }
 

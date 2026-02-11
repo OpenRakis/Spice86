@@ -2,7 +2,6 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 using Serilog.Events;
@@ -44,10 +43,6 @@ public class DosFcbManager {
     private readonly DosFileManager _dosFileManager;
     private readonly DosDriveManager _dosDriveManager;
     private readonly ILoggerService _loggerService;
-    private readonly DosSwappableDataArea _sda;
-
-    // Track FCB handles per PSP: handle → PSP segment
-    private readonly Dictionary<ushort, ushort> _trackedFcbHandles = new();
 
     public
     DosFcbManager(IMemory memory, DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILoggerService loggerService) {
@@ -55,8 +50,6 @@ public class DosFcbManager {
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
         _loggerService = loggerService;
-        _sda = new DosSwappableDataArea(_memory,
-            MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
     }
 
     /// <summary>
@@ -327,7 +320,6 @@ public class DosFcbManager {
             }
         }
 
-        TrackFcbHandle(handle);
         LogFcbDebug("OPEN", baseAddr, fileSpec, FcbStatus.Success);
         return FcbStatus.Success;
     }
@@ -353,7 +345,6 @@ public class DosFcbManager {
             return FcbStatus.Error;
         }
 
-        _trackedFcbHandles.Remove(handle);
         LogFcbDebug("CLOSE", baseAddr, fcb.FullFileName, FcbStatus.Success);
         return FcbStatus.Success;
     }
@@ -382,7 +373,6 @@ public class DosFcbManager {
         fcb.SftNumber = (byte)handle;
         // Always set RecordSize to 128 on create
         fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
-        TrackFcbHandle(handle);
         LogFcbDebug("CREATE", baseAddr, fileSpec, FcbStatus.Success);
         return FcbStatus.Success;
     }
@@ -1085,34 +1075,6 @@ public class DosFcbManager {
         fcb.SetRandomFromPosition();
     }
 
-    /// <summary>
-    /// Clears all DTA search state (FindFirst/FindNext) entries.
-    /// </summary>
-    public void ClearAllSearchState() {
-        _dosFileManager.ClearAllFileSearches();
-    }
-
-    /// <summary>
-    /// Closes all FCB-opened files for the specified PSP segment.
-    /// Only closes FCB files owned by the terminating process.
-    /// </summary>
-    /// <param name="pspSegment">The PSP segment of the process being terminated.</param>
-    public void CloseAllTrackedFcbFiles(ushort pspSegment) {
-        List<ushort> handlesToClose = _trackedFcbHandles
-            .Where(entry => entry.Value == pspSegment)
-            .Select(entry => entry.Key)
-            .ToList();
-
-        // Close the files
-        foreach (ushort handle in handlesToClose) {
-            DosFileOperationResult result = _dosFileManager.CloseFileOrDevice(handle);
-            if (result.IsError && _loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("Failed to close FCB handle {Handle} for PSP {Psp}", handle, pspSegment);
-            }
-            _trackedFcbHandles.Remove(handle);
-        }
-    }
-
     private uint GetActualFcbBaseAddress(uint fcbAddress) {
         // Extended FCB detection via drive marker 0xFF
         DosFileControlBlock probe = new DosFileControlBlock(_memory, fcbAddress);
@@ -1239,14 +1201,6 @@ public class DosFcbManager {
             builder.Append((char)_memory.UInt8[(uint)offset + fcbBaseAddress + (uint)i]);
         }
         return builder.ToString();
-    }
-
-    /// <summary>
-    /// Tracks an FCB handle for the current PSP so it can be closed on process termination.
-    /// </summary>
-    private void TrackFcbHandle(ushort handle) {
-        ushort currentPsp = _sda.CurrentProgramSegmentPrefix;
-        _trackedFcbHandles[handle] = currentPsp;
     }
 
     /// <summary>

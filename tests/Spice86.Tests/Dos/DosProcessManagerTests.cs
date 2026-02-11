@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+
 using Xunit;
 
 public class DosProcessManagerTests {
@@ -403,7 +404,6 @@ public class DosProcessManagerTests {
         DosDriveManager driveManager = new(loggerService, null, null);
         DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state), driveManager, loggerService, new List<IVirtualDevice>());
-        DosFcbManager fcbManager = new(memory, fileManager, driveManager, loggerService);
 
         DosProcessManager processManager = new(
             memory,
@@ -412,7 +412,6 @@ public class DosProcessManagerTests {
             memoryManager,
             fileManager,
             driveManager,
-            fcbManager,
             new Dictionary<string, string>(),
             loggerService);
 
