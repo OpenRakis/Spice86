@@ -26,19 +26,6 @@ public static class DebugModePerformanceTest
 
         var results = new List<(string Name, double DebugNs, double ReleaseNs)>();
 
-        // Section 1: Basic Loop Operations
-        Console.WriteLine("--- Basic Loop Operations ---");
-        RunTest("Bare loop (baseline)", TestBareLoop);
-        RunTest("State.AdvanceCycles", TestAdvanceCycles);
-        RunTest("State.IncCycles", TestIncCycles);
-
-        // Section 2: Cycles Limiter
-        Console.WriteLine("\n--- Cycles Limiter ---");
-        RunTest("RegulateCycles fast path (60k c/ms)", TestRegulateCyclesFastPath);
-        RunTest("RegulateCycles with ticks (3k c/ms, no wait)", TestRegulateCyclesWithTicks);
-        RunTest("GetCycleProgressionPercentage", TestGetCycleProgression);
-        RunTest("TickOccurred check", TestTickOccurredCheck);
-
         // Section 3: Clock Operations
         Console.WriteLine("\n--- Clock Operations ---");
         RunTest("Clock.FullIndex", TestClockFullIndex);
@@ -65,13 +52,6 @@ public static class DebugModePerformanceTest
         RunTest("Volatile.Write (double)", TestVolatileWrite);
         RunTest("Interlocked.Increment", TestInterlockedIncrement);
 
-        // Section 7: Simulated Emulation Loop
-        Console.WriteLine("\n--- Simulated Emulation Loop ---");
-        RunTest("Minimal loop (AdvanceCycles only)", TestMinimalLoop);
-        RunTest("Basic loop (+ RegulateCycles fast)", TestBasicLoop);
-        RunTest("Full loop (+ ticks, scheduler sim)", TestFullLoop);
-        RunTest("Full loop + breakpoint check", TestFullLoopWithBreakpoints);
-
         // Summary
         PrintSummary();
     }
@@ -88,118 +68,6 @@ public static class DebugModePerformanceTest
         string extra = string.IsNullOrEmpty(result.extra) ? "" : $" [{result.extra}]";
         Console.WriteLine($"  {name,-45} {result.nsPerOp,8:F2} ns/op{extra}");
     }
-
-    #region Basic Loop Operations
-
-    private static (double, string) TestBareLoop()
-    {
-        long counter = 0;
-        var sw = Stopwatch.StartNew();
-        for (int i = 0; i < TotalCycles; i++)
-        {
-            counter++;
-        }
-        sw.Stop();
-        return (sw.Elapsed.TotalNanoseconds / TotalCycles, $"counter={counter}");
-    }
-
-    private static (double, string) TestAdvanceCycles()
-    {
-        var state = new State(CpuModel.INTEL_80386);
-        var sw = Stopwatch.StartNew();
-        for (int i = 0; i < TotalCycles; i++)
-        {
-            state.AdvanceCycles(1);
-        }
-        sw.Stop();
-        return (sw.Elapsed.TotalNanoseconds / TotalCycles, "");
-    }
-
-    private static (double, string) TestIncCycles()
-    {
-        var state = new State(CpuModel.INTEL_80386);
-        var sw = Stopwatch.StartNew();
-        for (int i = 0; i < TotalCycles; i++)
-        {
-            state.IncCycles();
-        }
-        sw.Stop();
-        return (sw.Elapsed.TotalNanoseconds / TotalCycles, "");
-    }
-
-    #endregion
-
-    #region Cycles Limiter
-
-    private static (double, string) TestRegulateCyclesFastPath()
-    {
-        var state = new State(CpuModel.INTEL_80386);
-        var limiter = new CpuCycleLimiter(state, 60000); // High cycles = few tick boundaries
-        limiter.OnResume();
-
-        var sw = Stopwatch.StartNew();
-        for (int i = 0; i < TotalCycles; i++)
-        {
-            state.AdvanceCycles(1);
-            limiter.RegulateCycles();
-        }
-        sw.Stop();
-        return (sw.Elapsed.TotalNanoseconds / TotalCycles, $"ticks={limiter.TickCount}");
-    }
-
-    private static (double, string) TestRegulateCyclesWithTicks()
-    {
-        var state = new State(CpuModel.INTEL_80386);
-        var limiter = new NoWaitCycleLimiter(state, 3000);
-        limiter.OnResume();
-
-        var sw = Stopwatch.StartNew();
-        for (int i = 0; i < TotalCycles; i++)
-        {
-            state.AdvanceCycles(1);
-            limiter.RegulateCycles();
-        }
-        sw.Stop();
-        double perTickUs = sw.Elapsed.TotalMicroseconds / limiter.TickCount;
-        return (sw.Elapsed.TotalNanoseconds / TotalCycles, $"ticks={limiter.TickCount}, {perTickUs:F1}µs/tick");
-    }
-
-    private static (double, string) TestGetCycleProgression()
-    {
-        var state = new State(CpuModel.INTEL_80386);
-        var limiter = new NoWaitCycleLimiter(state, 3000);
-        limiter.OnResume();
-        double sum = 0;
-
-        var sw = Stopwatch.StartNew();
-        for (int i = 0; i < TotalCycles; i++)
-        {
-            sum += limiter.GetCycleProgressionPercentage();
-            state.AdvanceCycles(1);
-        }
-        sw.Stop();
-        return (sw.Elapsed.TotalNanoseconds / TotalCycles, "");
-    }
-
-    private static (double, string) TestTickOccurredCheck()
-    {
-        var state = new State(CpuModel.INTEL_80386);
-        var limiter = new NoWaitCycleLimiter(state, 3000);
-        limiter.OnResume();
-        int count = 0;
-
-        var sw = Stopwatch.StartNew();
-        for (int i = 0; i < TotalCycles; i++)
-        {
-            if (limiter.TickOccurred) count++;
-        }
-        sw.Stop();
-        return (sw.Elapsed.TotalNanoseconds / TotalCycles, $"count={count}");
-    }
-
-    #endregion
-
-    #region Clock Operations
 
     private static (double, string) TestClockFullIndex()
     {
@@ -234,8 +102,6 @@ public static class DebugModePerformanceTest
         sw.Stop();
         return (sw.Elapsed.TotalNanoseconds / TotalCycles, "");
     }
-
-    #endregion
 
     #region Memory Operations
 
@@ -450,90 +316,6 @@ public static class DebugModePerformanceTest
 
     #endregion
 
-    #region Simulated Emulation Loop
-
-    private static (double, string) TestMinimalLoop()
-    {
-        var state = new State(CpuModel.INTEL_80386);
-
-        var sw = Stopwatch.StartNew();
-        for (int i = 0; i < TotalCycles; i++)
-        {
-            // Minimal: just advance cycles
-            state.AdvanceCycles(1);
-        }
-        sw.Stop();
-        return (sw.Elapsed.TotalNanoseconds / TotalCycles, "");
-    }
-
-    private static (double, string) TestBasicLoop()
-    {
-        var state = new State(CpuModel.INTEL_80386);
-        var limiter = new CpuCycleLimiter(state, 60000);
-        limiter.OnResume();
-
-        var sw = Stopwatch.StartNew();
-        for (int i = 0; i < TotalCycles; i++)
-        {
-            state.AdvanceCycles(1);
-            limiter.RegulateCycles();
-        }
-        sw.Stop();
-        return (sw.Elapsed.TotalNanoseconds / TotalCycles, $"ticks={limiter.TickCount}");
-    }
-
-    private static (double, string) TestFullLoop()
-    {
-        var state = new State(CpuModel.INTEL_80386);
-        var limiter = new NoWaitCycleLimiter(state, 3000);
-        limiter.OnResume();
-        int tickHandlerCalls = 0;
-
-        var sw = Stopwatch.StartNew();
-        for (int i = 0; i < TotalCycles; i++)
-        {
-            state.AdvanceCycles(1);
-            limiter.RegulateCycles();
-            if (limiter.TickOccurred)
-            {
-                // Simulate scheduler work
-                tickHandlerCalls++;
-            }
-        }
-        sw.Stop();
-        return (sw.Elapsed.TotalNanoseconds / TotalCycles, $"ticks={limiter.TickCount}, handlers={tickHandlerCalls}");
-    }
-
-    private static (double, string) TestFullLoopWithBreakpoints()
-    {
-        var state = new State(CpuModel.INTEL_80386);
-        var limiter = new NoWaitCycleLimiter(state, 3000);
-        limiter.OnResume();
-        bool hasBreakpoints = false; // Simulate HasActiveBreakpoints check
-        int tickHandlerCalls = 0;
-
-        var sw = Stopwatch.StartNew();
-        for (int i = 0; i < TotalCycles; i++)
-        {
-            // Breakpoint check (fast path when none)
-            if (hasBreakpoints)
-            {
-                // Would check breakpoints here
-            }
-
-            state.AdvanceCycles(1);
-            limiter.RegulateCycles();
-            if (limiter.TickOccurred)
-            {
-                tickHandlerCalls++;
-            }
-        }
-        sw.Stop();
-        return (sw.Elapsed.TotalNanoseconds / TotalCycles, $"ticks={limiter.TickCount}");
-    }
-
-    #endregion
-
     private static void PrintSummary()
     {
         Console.WriteLine("\n=== Performance Summary ===");
@@ -647,18 +429,11 @@ public static class DebugModePerformanceTest
             return _state.Cycles - tickStart;
         }
 
-        public void ConsumeIoCycles(int cycles)
-        {
-            long remaining = _targetCyclesForPause - _state.Cycles;
-            int clamped = (int)Math.Min(cycles, remaining);
-            if (clamped > 0)
-            {
-                _state.AdvanceCycles(clamped);
-                _ioDelayRemoved += clamped;
-            }
-        }
-
         public void IncreaseCycles() => TargetCpuCyclesPerMs += 100;
         public void DecreaseCycles() => TargetCpuCyclesPerMs = Math.Max(100, TargetCpuCyclesPerMs - 100);
+
+        public void ConsumeIoCycles(int cycles) {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -208,20 +208,17 @@ public class CpuCycleLimiter : ICyclesLimiter {
 
     /// <inheritdoc/>
     public void ConsumeIoCycles(int cycles) {
-        // Advance _state.Cycles instead of lowering _targetCyclesForPause.
-        // This keeps tickStart (= _targetCyclesForPause - _tickCycleMax) stable within a tick,
-        // which is critical: ConvertTimeToCycles and _nextCheckCycles depend on a fixed tickStart.
-        // Lowering _targetCyclesForPause would shift tickStart and make _nextCheckCycles stale,
-        // causing events (PIT timer, SB reset, etc.) to fire late.
-        //
-        // Matches DOSBox: CPU_Cycles -= delaycyc (consumes from remaining budget).
-        // In DOSBox, CPU_CycleLeft is fixed for the tick; CPU_Cycles counts down.
-        // Here, _targetCyclesForPause is fixed; _state.Cycles counts up.
+        // Advance the emulated clock by adjusting the next tick boundary.
+        // This keeps the timing accounting consistent within the current tick
+        // without requiring State.Cycles to be modified.
         // Reference: DOSBox src/hardware/port.cpp IO_USEC_read_delay(), IO_USEC_write_delay()
         long remaining = _targetCyclesForPause - _state.Cycles;
         int clamped = (int)Math.Min(cycles, remaining);
         if (clamped > 0) {
-            _state.AdvanceCycles(clamped);
+            // Advance the next tick boundary to account for IO delay cycles.
+            // This effectively advances the emulated clock forward without needing
+            // to modify the Cycles property in State.
+            _targetCyclesForPause += clamped;
             _ioDelayRemoved += clamped;
         }
     }

@@ -73,17 +73,17 @@ public class State {
     /// Gets or sets the Base Register High Byte
     /// </summary>
     public byte BH { get => GeneralRegisters.UInt8High[(uint)RegisterIndex.BxIndex]; set => GeneralRegisters.UInt8High[(uint)RegisterIndex.BxIndex] = value; }
-    
+
     /// <summary>
     /// Gets or sets the Base Register Low Byte
     /// </summary>
     public byte BL { get => GeneralRegisters.UInt8Low[(uint)RegisterIndex.BxIndex]; set => GeneralRegisters.UInt8Low[(uint)RegisterIndex.BxIndex] = value; }
-    
+
     /// <summary>
     /// Gets or sets the Base Register First Word
     /// </summary>
     public ushort BX { get => GeneralRegisters.UInt16[(uint)RegisterIndex.BxIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.BxIndex] = value; }
-    
+
     /// <summary>
     /// Gets or sets the Extended Base general purpose register
     /// </summary>
@@ -126,7 +126,7 @@ public class State {
     /// Gets or sets the word value of the Data general purpose register.
     /// </summary>
     public ushort DX { get => GeneralRegisters.UInt16[(uint)RegisterIndex.DxIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.DxIndex] = value; }
-    
+
     /// <summary>
     /// Extended Data general purpose register.
     /// <para>
@@ -139,7 +139,7 @@ public class State {
     /// Gets or sets the word value of the Destination Index general purpose register.
     /// </summary>
     public ushort DI { get => GeneralRegisters.UInt16[(uint)RegisterIndex.DiIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.DiIndex] = value; }
-    
+
     /// <summary>
     /// Extended Destination Index general purpose register.
     /// <para>
@@ -257,22 +257,22 @@ public class State {
     /// </para> 
     /// </summary>
     public bool TrapFlag { get => Flags.GetFlag(Flags.Trap); set => Flags.SetFlag(Flags.Trap, value); }
-    
+
     /// <summary>
     /// Gets or sets the sign flag. Set equal to high-order bit of result (0 is positive, 1 if negative).
     /// </summary>
     public bool SignFlag { get => Flags.GetFlag(Flags.Sign); set => Flags.SetFlag(Flags.Sign, value); }
-    
+
     /// <summary>
     /// Gets or sets the value of the Zero Flag. Set if result is zero; cleared otherwise.
     /// </summary>
     public bool ZeroFlag { get => Flags.GetFlag(Flags.Zero); set => Flags.SetFlag(Flags.Zero, value); }
-    
+
     /// <summary>
     /// Gets or sets the value of the Auxiliary Flag. Set if there is a carry from bit 3 to bit 4 of the result; cleared otherwise. <br/>
     /// </summary>
     public bool AuxiliaryFlag { get => Flags.GetFlag(Flags.Auxiliary); set => Flags.SetFlag(Flags.Auxiliary, value); }
-    
+
     /// <summary>
     /// Gets or sets the value of the Parity Flag. <br/> Set if low-order eight bits of result contain an even number of 1 bits; cleared otherwise.
     /// </summary>
@@ -320,7 +320,7 @@ public class State {
     /// The segmented address representation of the instruction pointer in memory
     /// </summary>
     public SegmentedAddress IpSegmentedAddress {
-        get { 
+        get {
             return new SegmentedAddress(CS, IP);
         }
         set {
@@ -362,16 +362,6 @@ public class State {
     /// </summary>
     public void IncCycles() {
         Cycles++;
-    }
-
-    /// <summary>
-    /// Advances the <see cref="Cycles"/> count by the specified amount.
-    /// Used by I/O delay emulation to consume cycles from the current tick budget,
-    /// matching DOSBox's <c>CPU_Cycles -= delaycyc</c> pattern.
-    /// </summary>
-    /// <param name="amount">The number of cycles to advance.</param>
-    public void AdvanceCycles(long amount) {
-        Cycles += amount;
     }
 
     /// <summary>
