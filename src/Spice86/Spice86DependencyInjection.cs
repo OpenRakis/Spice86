@@ -249,7 +249,7 @@ public class Spice86DependencyInjection : IDisposable {
         NodeToString nodeToString = new NodeToString(asmRenderingConfig);
         CpuHeavyLogger? cpuHeavyLogger = null;
         if (configuration.CpuHeavyLog) {
-            cpuHeavyLogger = new CpuHeavyLogger(emulatorStateSerializationFolder, configuration.CpuHeavyLogDumpFile, nodeToString);
+            cpuHeavyLogger = new CpuHeavyLogger(emulatorStateSerializationFolder, configuration.CpuHeavyLogDumpFile, nodeToString, state, asmRenderingConfig);
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
                 loggerService.Information("CPU heavy logger created. Logging to: {LogFile}", 
                     configuration.CpuHeavyLogDumpFile ?? Path.Join(emulatorStateSerializationFolder.Folder, "cpu_heavy.log"));
