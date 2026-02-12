@@ -13,19 +13,20 @@ public static class CycleLimiterFactory {
     /// <param name="configuration">The emulator configuration.</param>
     /// <returns>A cycle limiter instance.</returns>
     public static ICyclesLimiter Create(State state, Configuration configuration) {
-        // Priority order: explicit Cycles setting, then InstructionsPerSecond, then default.
-        // DOSBox always has cycle-based timing (CPU_CycleMax), so we always create a CpuCycleLimiter.
-        // Reference: DOSBox defaults CPU_CycleMax to 3000 (auto_cpu_cycles_min in dosbox.cpp).
+        if (configuration.Cycles is null && configuration.InstructionsPerSecond is null) {
+            return new NullCyclesLimiter();
+        }
+        // Priority order: explicit Cycles setting, then InstructionsPerSecond, then default
         if (configuration.Cycles is not null) {
             return new CpuCycleLimiter(state, configuration.Cycles.Value);
         }
-
+        
         if (configuration.InstructionsPerSecond != null) {
             // Convert instructions per second to cycles per millisecond with proper rounding
             int cyclesPerMs = (int)Math.Round(configuration.InstructionsPerSecond.Value / 1000.0);
             return new CpuCycleLimiter(state, cyclesPerMs);
         }
-
+        
         return new CpuCycleLimiter(state, ICyclesLimiter.RealModeCpuCyclesPerMs);
     }
 }

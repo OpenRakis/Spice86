@@ -131,8 +131,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         IOPortDispatcher ioPortDispatcher = new(
             ioReadWriteBreakpoints, state,
-            loggerService, configuration.FailOnUnhandledPort,
-            cyclesLimiter);
+            loggerService, configuration.FailOnUnhandledPort);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("IO port dispatcher created...");
@@ -174,16 +173,14 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null
-            ? new CyclesClock(state, cyclesLimiter, configuration.InstructionsPerSecond.Value)
-            : new EmulatedClock(cyclesLimiter);
-        
+            ? new CyclesClock(state, configuration.InstructionsPerSecond.Value)
+            : new EmulatedClock();
+
         // Register clock and limiter to pause/resume events
         pauseHandler.Pausing += () => emulatedClock.OnPause();
         pauseHandler.Resumed += () => emulatedClock.OnResume();
-        pauseHandler.Pausing += () => cyclesLimiter.OnPause();
-        pauseHandler.Resumed += () => cyclesLimiter.OnResume();
         
-        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, state, loggerService);
+        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
 

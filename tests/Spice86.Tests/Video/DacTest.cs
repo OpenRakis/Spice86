@@ -39,3 +39,6 @@ public class DacTest {
         Assert.Equal(0xFFFFFFFF, dac.ArgbPalette[0]);
     }
 }
+
+
+

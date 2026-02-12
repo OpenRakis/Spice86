@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 
@@ -36,7 +35,7 @@ public class SingleStepTestMinimalMachine {
             emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
         }
         IOPortDispatcher ioPortDispatcher =
-            new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, false, new NullCyclesLimiter());
+            new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, false);
         CallbackHandler callbackHandler = new(state, loggerService);
         DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
         FunctionCatalogue functionCatalogue = new();
@@ -50,7 +49,7 @@ public class SingleStepTestMinimalMachine {
         }
         _modifiedAddresses.Clear();
     }
-    
+
     public CfgCpu Cpu { get; }
     public State State { get; }
     public Memory Memory { get; }

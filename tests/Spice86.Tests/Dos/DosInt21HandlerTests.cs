@@ -12,7 +12,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -35,7 +34,7 @@ public class DosInt21HandlerTests {
         const ushort fileHandle = 0x0003;
         dosFileManager.OpenFiles[fileHandle] = recordingFile;
         var ioPortBreakpoints = new Spice86.Core.Emulator.VM.Breakpoint.AddressReadWriteBreakpoints();
-        var ioPortDispatcher = new IOPortDispatcher(ioPortBreakpoints, state, logger, false, new NullCyclesLimiter());
+        var ioPortDispatcher = new IOPortDispatcher(ioPortBreakpoints, state, logger, false);
         var dosTables = new DosTables();
         dosTables.Initialize(memory);
 
@@ -112,3 +111,6 @@ public class DosInt21HandlerTests {
         }
     }
 }
+
+
+

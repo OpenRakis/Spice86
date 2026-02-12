@@ -50,7 +50,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     private readonly Queue<float> _outputQueue = new();
     private readonly PitState _pit = new();
     private readonly MixerChannel _mixerChannel;
-    private readonly TickHandler _tickHandler;
+    private readonly EventHandler _tickHandler;
     private readonly float[] _waveform = new float[WaveformSize];
     private float _accumulator;
     private bool _disposed;
@@ -119,8 +119,8 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
 
         // Reference: src/hardware/audio/pcspeaker.cpp:134 TIMER_AddTickHandler(PCSPEAKER_PicCallback)
         // Registers OnSchedulerTick to be called automatically every tick (1ms)
-        _tickHandler = OnSchedulerTick;
-        _scheduler.AddTickHandler(_tickHandler);
+        _tickHandler = (_) => OnSchedulerTick();
+        _scheduler.AddEvent(_tickHandler, 1);
 
         // Unlock mixer thread after construction completes
         // Reference: src/hardware/audio/pcspeaker.cpp:136
@@ -314,7 +314,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         }
         if (disposing) {
             // Reference: src/hardware/audio/pcspeaker.cpp:143 TIMER_DelTickHandler(PCSPEAKER_PicCallback)
-            _scheduler.DelTickHandler(_tickHandler);
+            _scheduler.RemoveEvents(_tickHandler);
         }
         _disposed = true;
     }
@@ -653,9 +653,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     }
 
     private float GetPicTickIndex() {
-        // Use FullIndex (emulated time) for timing
-        double full = _clock.FullIndex;
-        return (float)(full - Math.Floor(full));
+        return _pit.Index;
     }
 
     private void InitializeImpulseLookup() {

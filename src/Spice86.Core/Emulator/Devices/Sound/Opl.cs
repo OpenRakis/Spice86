@@ -167,7 +167,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         const double MillisInSecond = 1000.0;
         _msPerFrame = MillisInSecond / OplSampleRateHz;
         // Use FullIndex (emulated time) not wall-clock
-        _lastRenderedMs = _clock.FullIndex;
+        _lastRenderedMs = _clock.ElapsedTimeMs;
 
         // Initialize chip
         Init();
@@ -185,7 +185,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private void RenderUpToNow() {
         // Use FullIndex (emulated time) for main thread operations
         // Reference: DOSBox uses PIC_FullIndex() for rendering
-        double now = _clock.FullIndex;
+        double now = _clock.ElapsedTimeMs;
         // Wake up the channel and update the last rendered time datum.
         // assert(channel);
         if (_mixerChannel.WakeUp()) {
@@ -387,21 +387,15 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     Reference: DOSBox opl.cpp lines 712-780
     /// </summary>
     private byte PortRead(ushort port) {
-        // Roughly half a microsecond (as we already do 1 us on each port read
-        // and some tests revealed it taking 1.5 us to read an AdLib port).
-        // Reference: DOSBox opl.cpp Opl::PortRead():
-        //   auto delaycyc = (CPU_CycleMax / 2048);
-        //   if (delaycyc > CPU_Cycles) delaycyc = CPU_Cycles;
-        //   CPU_Cycles -= delaycyc;
-        //   CPU_IODelayRemoved += delaycyc;
-        int delayCycles = _cyclesLimiter.TickCycleMax / 2048;
-        _cyclesLimiter.ConsumeIoCycles(delayCycles);
-
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose(
-                "OPL: PortRead extra delay on port 0x{Port:X4}: {DelayCycles} cycles consumed (TickCycleMax={TickCycleMax}, total IO delay removed={IoDelayRemoved})",
-                port, delayCycles, _cyclesLimiter.TickCycleMax, _cyclesLimiter.IoDelayRemoved);
-        }
+        //// Roughly half a microsecond (as we already do 1 us on each port read
+        //// and some tests revealed it taking 1.5 us to read an AdLib port).
+        //// Reference: DOSBox opl.cpp Opl::PortRead():
+        ////   auto delaycyc = (CPU_CycleMax / 2048);
+        ////   if (delaycyc > CPU_Cycles) delaycyc = CPU_Cycles;
+        ////   CPU_Cycles -= delaycyc;
+        ////   CPU_IODelayRemoved += delaycyc;
+        //int delayCycles = _cyclesLimiter.TickCycleMax / 2048;
+        //_cyclesLimiter.ConsumeIoCycles(delayCycles);
 
         switch (_mode) {
             case OplMode.Opl2:
@@ -763,7 +757,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             // AudioCallback runs on the mixer thread, so we must use AtomicFullIndex
             // to avoid torn reads of the emulation thread's cycle state.
             // Reference: DOSBox mixer.cpp mixer_thread_loop() uses PIC_AtomicIndex()
-            _lastRenderedMs = _clock.AtomicFullIndex;
+            _lastRenderedMs = _clock.ElapsedTimeMs;
         }
     }
 
@@ -810,12 +804,12 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         public bool Write(ushort reg, byte value) {
             switch (reg) {
                 case 0x02:
-                    _timer0.Update(_clock.FullIndex);
+                    _timer0.Update(_clock.ElapsedTimeMs);
                     _timer0.SetCounter(value);
                     return true;
 
                 case 0x03:
-                    _timer1.Update(_clock.FullIndex);
+                    _timer1.Update(_clock.ElapsedTimeMs);
                     _timer1.SetCounter(value);
                     return true;
 
@@ -825,7 +819,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                         _timer0.Reset();
                         _timer1.Reset();
                     } else {
-                        double time = _clock.FullIndex;
+                        double time = _clock.ElapsedTimeMs;
 
                         if ((value & 0x01) != 0) {
                             _timer0.Start(time);
@@ -854,7 +848,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         ///     Reference: OplChip::Read() in DOSBox â€” calls PIC_FullIndex() internally.
         /// </summary>
         public byte Read() {
-            double time = _clock.FullIndex;
+            double time = _clock.ElapsedTimeMs;
             byte ret = 0;
 
             // Overflow won't be set if a channel is masked

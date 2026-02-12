@@ -106,21 +106,21 @@ public class DosFileManagerTests {
         Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
-        EmulatorStateSerializationFolder emulatorStateSerializationFolder = 
+        EmulatorStateSerializationFolder emulatorStateSerializationFolder =
             new EmulatorStateSerializationFolderFactory(loggerService)
                 .ComputeFolder(configuration.Exe, configuration.RecordedDataDirectory);
         EmulationStateDataReader reader = new(emulatorStateSerializationFolder, loggerService);
         State state = new(CpuModel.INTEL_80286);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
-        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, configuration.FailOnUnhandledPort, new NullCyclesLimiter());
+        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
         A20Gate a20Gate = new(configuration.A20Gate);
         Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
-        IEmulatedClock emulatedClock = new EmulatedClock(new NullCyclesLimiter());
-        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, state, loggerService);
+        IEmulatedClock emulatedClock = new EmulatedClock();
+        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
-        
+
         BiosDataArea biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
 

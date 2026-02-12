@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -54,7 +53,7 @@ public sealed class DualPicTests {
             Logger = Substitute.For<ILoggerService>();
             State = new State(CpuModel.ZET_86);
             var breakpoints = new AddressReadWriteBreakpoints();
-            Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false, new NullCyclesLimiter());
+            Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false);
             DualPic = new DualPic(Dispatcher, State, Logger, false);
         }
 
@@ -64,3 +63,6 @@ public sealed class DualPicTests {
         public DualPic DualPic { get; }
     }
 }
+
+
+

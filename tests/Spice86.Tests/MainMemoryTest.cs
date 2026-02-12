@@ -1,4 +1,4 @@
-﻿namespace Spice86.Tests;
+namespace Spice86.Tests;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
@@ -644,3 +644,6 @@ public class MainMemoryTest {
         Assert.Equal(0x0304, addr.Offset);
     }
 }
+
+
+

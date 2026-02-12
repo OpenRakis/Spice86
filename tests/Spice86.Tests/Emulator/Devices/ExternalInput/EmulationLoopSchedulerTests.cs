@@ -6,7 +6,6 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
@@ -22,8 +21,8 @@ public sealed class EmulationLoopSchedulerTests {
         _logger = Substitute.For<ILoggerService>();
         _state = new State(CpuModel.INTEL_8086);
         // 1000 cycles = 1 second for simplicity in tests
-        _cyclesClock = new CyclesClock(_state, new NullCyclesLimiter(), 1000);
-        _scheduler = new EmulationLoopScheduler(_cyclesClock, _state, _logger);
+        _cyclesClock = new CyclesClock(_state, 1000);
+        _scheduler = new EmulationLoopScheduler(_cyclesClock, _logger);
     }
 
     [Fact]
@@ -190,3 +189,7 @@ public sealed class EmulationLoopSchedulerTests {
         }
     }
 }
+
+
+
+

@@ -201,7 +201,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             /// Reference: src/hardware/audio/soundblaster.cpp Dac::MeasureDacRateHz()
             /// </summary>
             public int? MeasureDacRateHz() {
-                float currWriteMs = (float)_clock.FullIndex;
+                float currWriteMs = (float)_clock.ElapsedTimeMs;
                 float elapsedMs = currWriteMs - _lastWriteMs;
                 _lastWriteMs = currWriteMs;
 
@@ -253,17 +253,17 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private static byte[] DecodeAdpcm2Bit(byte data, ref byte reference, ref ushort stepsize) {
-        ReadOnlySpan<sbyte> scaleMap = stackalloc sbyte[] {
+        ReadOnlySpan<sbyte> scaleMap = [
              0,  1,  0,  -1,  1,  3,  -1,  -3,
              2,  6, -2,  -6,  4, 12,  -4, -12,
              8, 24, -8, -24,  6, 48, -16, -48
-        };
-        ReadOnlySpan<byte> adjustMap = stackalloc byte[] {
+        ];
+        ReadOnlySpan<byte> adjustMap = [
               0,   4,   0,   4,
             252,   4, 252,   4, 252,   4, 252,   4,
             252,   4, 252,   4, 252,   4, 252,   4,
             252,   0, 252,   0
-        };
+        ];
         const int lastIndex = 23;
 
         byte[] samples = new byte[4];
@@ -275,20 +275,20 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private static byte[] DecodeAdpcm3Bit(byte data, ref byte reference, ref ushort stepsize) {
-        ReadOnlySpan<sbyte> scaleMap = stackalloc sbyte[] {
+        ReadOnlySpan<sbyte> scaleMap = [
              0,  1,  2,  3,  0,  -1,  -2,  -3,
              1,  3,  5,  7, -1,  -3,  -5,  -7,
              2,  6, 10, 14, -2,  -6, -10, -14,
              4, 12, 20, 28, -4, -12, -20, -28,
              5, 15, 25, 35, -5, -15, -25, -35
-        };
-        ReadOnlySpan<byte> adjustMap = stackalloc byte[] {
+        ];
+        ReadOnlySpan<byte> adjustMap = [
               0, 0, 0,   8,   0, 0, 0,   8,
             248, 0, 0,   8, 248, 0, 0,   8,
             248, 0, 0,   8, 248, 0, 0,   8,
             248, 0, 0,   8, 248, 0, 0,   8,
             248, 0, 0,   0, 248, 0, 0,   0
-        };
+        ];
         const int lastIndex = 39;
 
         byte[] samples = new byte[3];
@@ -299,13 +299,13 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private static byte[] DecodeAdpcm4Bit(byte data, ref byte reference, ref ushort stepsize) {
-        ReadOnlySpan<sbyte> scaleMap = stackalloc sbyte[] {
+        ReadOnlySpan<sbyte> scaleMap = [
              0,  1,  2,  3,  4,  5,  6,  7,  0,  -1,  -2,  -3,  -4,  -5,  -6,  -7,
              1,  3,  5,  7,  9, 11, 13, 15, -1,  -3,  -5,  -7,  -9, -11, -13, -15,
              2,  6, 10, 14, 18, 22, 26, 30, -2,  -6, -10, -14, -18, -22, -26, -30,
              4, 12, 20, 28, 36, 44, 52, 60, -4, -12, -20, -28, -36, -44, -52, -60
-        };
-        ReadOnlySpan<byte> adjustMap = stackalloc byte[] {
+        ];
+        ReadOnlySpan<byte> adjustMap = [
               0, 0, 0, 0, 0, 16, 16, 16,
               0, 0, 0, 0, 0, 16, 16, 16,
             240, 0, 0, 0, 0, 16, 16, 16,
@@ -314,7 +314,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             240, 0, 0, 0, 0, 16, 16, 16,
             240, 0, 0, 0, 0,  0,  0,  0,
             240, 0, 0, 0, 0,  0,  0,  0
-        };
+        ];
         const int lastIndex = 63;
 
         byte[] samples = new byte[2];
@@ -750,7 +750,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 if (_sb.Mode == DspMode.Dma) {
                     // Catch up to current time, but don't generate an IRQ!
                     // Fixes problems with later sci games.
-                    double t = _clock.FullIndex - _lastDmaCallbackTime;
+                    double t = _clock.ElapsedTimeMs - _lastDmaCallbackTime;
                     uint s = (uint)(_sb.Dma.Rate * t / 1000.0);
 
                     if (s > _sb.Dma.Min) {
@@ -815,8 +815,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             // Unregister callback and write the E2 value
             channel.RegisterCallback(null);
-            Span<byte> buffer = stackalloc byte[1];
-            buffer[0] = val;
+            Span<byte> buffer = [val];
             channel.Write(1, buffer);
         }
     }
@@ -832,9 +831,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
 
         // Write silence (128 = center for 8-bit unsigned audio) to the DMA buffer
-        Span<byte> buffer = stackalloc byte[1];
-        buffer[0] = 128;
-
+        Span<byte> buffer = [128];
         while (_sb.Dma.Left > 0) {
             channel.Write(1, buffer);
             _sb.Dma.Left--;
@@ -870,7 +867,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         byte channels = _sb.Dma.Stereo ? (byte)2 : (byte)1;
 
         // Use FullIndex (emulated time) for timing
-        _lastDmaCallbackTime = _clock.FullIndex;
+        _lastDmaCallbackTime = _clock.ElapsedTimeMs;
 
         // Read the actual data, process it and send it off to the mixer
         switch (_sb.Dma.Mode) {
@@ -1333,7 +1330,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Used for very short DMA transfers where per-tick callbacks would be too infrequent.
     /// Reference: src/hardware/audio/soundblaster.cpp per_frame_callback()
     /// </summary>
-    private void per_frame_callback(uint _) {
+    private void per_frame_callback() {
         LogMethodEntry(nameof(per_frame_callback));
         if (!_dacChannel.IsEnabled) {
             SetCallbackNone();
@@ -1362,7 +1359,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private void AddNextFrameCallback() {
         LogMethodEntry(nameof(AddNextFrameCallback));
         double millisPerFrame = _dacChannel.GetMillisPerFrame();
-        _scheduler.AddEvent(per_frame_callback, millisPerFrame, 0);
+        _scheduler.AddEvent((_) => per_frame_callback(), millisPerFrame, 0);
     }
 
     /// <summary>
@@ -1373,9 +1370,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         LogMethodEntry(nameof(SetCallbackNone));
         if (_timingType != TimingType.None) {
             if (_timingType == TimingType.PerTick) {
-                _scheduler.DelTickHandler(per_tick_callback);
+                _scheduler.RemoveEvents((_) => per_tick_callback());
             } else {
-                _scheduler.RemoveEvents(per_frame_callback);
+                _scheduler.RemoveEvents((_) => per_frame_callback());
             }
 
             _timingType = TimingType.None;
@@ -1393,7 +1390,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             _framesAddedThisTick = 0;
 
-            _scheduler.AddTickHandler(per_tick_callback);
+            _scheduler.AddEvent((_) => per_tick_callback(), 1);
 
             _timingType = TimingType.PerTick;
         }

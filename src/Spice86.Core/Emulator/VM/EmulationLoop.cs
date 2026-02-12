@@ -125,19 +125,11 @@ public class EmulationLoop {
             if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
                 _emulatorBreakpointsManager.CheckExecutionBreakPoints();
             }
-            _cpu.ExecuteNext();
-            // Process events AFTER instruction execution, matching DOSBox's normal_loop():
-            // DOSBox: cpudecoder() runs first, then PIC_RunQueue() processes events.
-            // This ensures the cycle count is updated before event timing checks.
+            _pauseHandler.WaitIfPaused();
             _emulationLoopScheduler.ProcessEvents();
+            _cpu.ExecuteNext();
+            _inputEventQueue.ProcessAllPendingInputEvents();
             _cyclesLimiter.RegulateCycles();
-            // All per-tick work happens here, matching DOSBox's normal_loop():
-            // DOSBox does GFX_PollAndHandleEvents() + pause checks between ticks,
-            // not every instruction. This saves a virtual call per instruction.
-            if (_cyclesLimiter.TickOccurred) {
-                _pauseHandler.WaitIfPaused();
-                _inputEventQueue.ProcessAllPendingInputEvents();
-            }
         }
 
         _performanceStopwatch.Stop();

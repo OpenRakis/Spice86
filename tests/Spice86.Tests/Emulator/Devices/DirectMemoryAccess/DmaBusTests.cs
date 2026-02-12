@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -92,7 +91,7 @@ public class DmaBusTests {
         logger.IsEnabled(Arg.Any<LogEventLevel>()).Returns(false);
 
         AddressReadWriteBreakpoints ioBreakpoints = new();
-        dispatcher = new IOPortDispatcher(ioBreakpoints, state, logger, false, new NullCyclesLimiter());
+        dispatcher = new IOPortDispatcher(ioBreakpoints, state, logger, false);
 
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         memory = new Memory(memoryBreakpoints, new Ram(0x200000), new A20Gate());
@@ -100,3 +99,6 @@ public class DmaBusTests {
         return new DmaBus(memory, state, dispatcher, false, logger);
     }
 }
+
+
+

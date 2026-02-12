@@ -45,3 +45,6 @@ public class Registers {
     [JsonPropertyName("ip")] public uint? IP { get; set; }
     [JsonPropertyName("flags")] public uint? Flags { get; set; }
 }
+
+
+

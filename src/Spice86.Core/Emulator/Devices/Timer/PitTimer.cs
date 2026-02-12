@@ -108,11 +108,7 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     // can read the output level through bit 5 of the same port.
     private ref PitChannel Channel2 => ref _pitChannels[2];
 
-    /// <summary>
-    ///     Sub-millisecond precision emulated time index.
-    ///     Reference: DOSBox uses PIC_FullIndex() = PIC_Ticks + PIC_TickIndex() for timer calculations.
-    /// </summary>
-    private double PicFullIndex => _clock.FullIndex;
+    private double PicFullIndex => _clock.ElapsedTimeMs;
 
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {

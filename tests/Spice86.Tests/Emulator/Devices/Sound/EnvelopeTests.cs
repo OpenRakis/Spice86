@@ -90,3 +90,7 @@ public sealed class EnvelopeTests {
         frame3.Left.Should().Be(10.0f);
     }
 }
+
+
+
+

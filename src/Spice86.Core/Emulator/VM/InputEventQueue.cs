@@ -7,7 +7,6 @@ using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
 using System;
-using System.Threading;
 
 /// <summary>
 /// Represents a queue for handling and processing keyboard and mouse events. <br/>
@@ -15,14 +14,15 @@ using System.Threading;
 /// while the emulator thread is reading the keyboard via the same instance of the <see cref="Intel8042Controller"/> class. <br/>
 /// Same deal for the Mouse event. If Joystick support is implemented, joystick UI events will also pass through here.
 /// </summary>
-/// <remarks>
-/// Input events are processed at tick boundaries (~1000 times/sec), matching DOSBox's
-/// <c>GFX_PollAndHandleEvents()</c> which runs between ticks in <c>normal_loop()</c>.
-/// A simple <see cref="Queue{T}"/> with a lock is sufficient at this frequency.
-/// </remarks>
+/// <remarks>This class provides a mechanism to enqueue and process input events in a controlled manner. It wraps 
+/// around implementations of <see cref="IGuiKeyboardEvents"/> and <see cref="IGuiMouseEvents"/> to capture  and queue
+/// their events. The queued events can then be processed one at a time using the  <see cref="ProcessAllPendingInputEvents"/> method.
+/// The <see cref="InputEventHub"/> also exposes properties and methods for interacting with mouse  coordinates and
+/// cursor visibility, delegating these operations to the underlying implementation, if available.</remarks>
 public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
     private readonly Queue<Action> _eventQueue = new();
-    private readonly Lock _lock = new();
+    // a thread-safe queue, accessed by both UI thread and emulation thread, requires a lock.
+    private readonly object _lock = new();
     private readonly IGuiMouseEvents? _mouseEvents;
     private readonly IGuiKeyboardEvents? _keyboardEvents;
 

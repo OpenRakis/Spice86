@@ -43,7 +43,7 @@ public class Spice86Creator {
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
             HeadlessMode = HeadlessType.Minimal,
-            // Use Cycles for proper CpuCycleLimiter + EmulatedClock timing tests for sound
+            // Use Cycles for proper CpuCycleLimiter + EmulatedClock (DOSBox-aligned timing)
             Cycles = enablePit ? ICyclesLimiter.RealModeCpuCyclesPerMs : null,
             AudioEngine = AudioEngine.Dummy,
             SbType = sbType,
@@ -77,7 +77,3 @@ public class Spice86Creator {
         return res;
     }
 }
-
-
-
-
