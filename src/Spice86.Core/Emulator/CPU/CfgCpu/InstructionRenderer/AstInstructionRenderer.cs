@@ -108,10 +108,11 @@ public class AstInstructionRenderer : IAstVisitor<string> {
 
         // Then compute delta
         long delta = (long)(node.Value - node.BaseAddress.Offset);
-        string plus = delta > 0 ? "+" : "";
-        
+        string plus = delta > 0 ? "+" : "-";
+        ulong deltaAbsolute = (ulong)Math.Abs(delta);
+        string deltaString = $"{plus}{deltaAbsolute:X}".ToLower();
         // Then render
-        return $"{addressString} (${plus}{delta:X})";
+        return $"{addressString} (${deltaString})";
     }
 
     public string VisitSegmentedAddressConstantNode(SegmentedAddressConstantNode node) {
