@@ -340,7 +340,7 @@ public class Spice86DependencyInjection : IDisposable {
             ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher,
-            pauseHandler, loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
+            loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
 
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock,
             loggerService, configuration.FailOnUnhandledPort);

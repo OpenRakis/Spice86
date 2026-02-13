@@ -1,392 +1,391 @@
-namespace Spice86.Shared.Utils;
+﻿namespace Spice86.Shared.Utils;
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 /// <summary>
-///     Fixed-size thread-safe queue that blocks both the producer until space is
-///     available, and the consumer until items are available.
-///     Port of DOSBox Staging's <c>RWQueue&lt;T&gt;</c> from <c>src/utils/rwqueue.h</c>
-///     and <c>src/misc/rwqueue.cpp</c>.
+/// A fixed-size thread-safe queue that blocks both the producer until space is
+/// available, and the consumer until items are available.
+/// Port of DOSBox Staging's <c>RWQueue&lt;T&gt;</c> from <c>src/utils/rwqueue.h</c>
+/// and <c>src/misc/rwqueue.cpp</c>.
 /// </summary>
+/// <remarks>
+/// For optimal performance inside the rwqueue, blocking is accomplished by
+/// putting the thread into the waiting state, then waking it up via notify when
+/// the required conditions are met.
+/// Producer and consumer thread(s) are expected to simply call the enqueue and
+/// dequeue methods directly without any thread state management.
+/// </remarks>
 /// <typeparam name="T">The element type stored in the queue.</typeparam>
 public sealed class RWQueue<T> {
-    private readonly T[] _buffer;
-    private int _head;
-    private int _tail;
-    private int _count;
+    // Using List<T> similar to std::deque - dynamically growing
+    private readonly List<T> _queue = new();
+    private readonly object _mutex = new();
     private int _capacity;
     private bool _isRunning = true;
-    private readonly object _lock = new();
 
     /// <summary>
-    ///     Initializes a new queue with the specified capacity.
+    /// Initializes a new queue with the specified capacity.
     /// </summary>
     /// <param name="capacity">Maximum number of items the queue can hold.</param>
     public RWQueue(int capacity) {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(capacity);
-        _capacity = capacity;
-        _buffer = new T[capacity];
+        Resize(capacity);
     }
 
     /// <summary>
-    ///     Changes the logical capacity of the queue.
-    ///     Items beyond the new capacity are discarded.
+    /// Changes the capacity of the queue.
+    /// This is a fast operation that only sets the capacity variable.
+    /// It does not drop frames or append zeros to the underlying data structure.
     /// </summary>
+    /// <param name="newCapacity">The new capacity.</param>
     public void Resize(int newCapacity) {
-        lock (_lock) {
-            if (newCapacity <= 0 || newCapacity > _buffer.Length) {
-                return;
-            }
+        lock (_mutex) {
             _capacity = newCapacity;
-            while (_count > _capacity) {
-                _head = (_head + 1) % _buffer.Length;
-                _count--;
-            }
         }
     }
 
     /// <summary>
-    ///     Returns the current number of items in the queue.
+    /// Returns the current number of items in the queue.
     /// </summary>
     public int Size {
         get {
-            lock (_lock) {
-                return _count;
+            lock (_mutex) {
+                return _queue.Count;
             }
         }
     }
 
     /// <summary>
-    ///     Returns the maximum capacity of the queue.
+    /// Returns the maximum capacity of the queue.
     /// </summary>
     public int MaxCapacity {
         get {
-            lock (_lock) {
+            lock (_mutex) {
                 return _capacity;
             }
         }
     }
 
     /// <summary>
-    ///     Returns true if the queue contains no items.
+    /// Returns true if the queue contains no items.
     /// </summary>
     public bool IsEmpty {
         get {
-            lock (_lock) {
-                return _count == 0;
+            lock (_mutex) {
+                return _queue.Count == 0;
             }
         }
     }
 
     /// <summary>
-    ///     Returns true if the queue is at capacity.
+    /// Returns true if the queue is at capacity.
     /// </summary>
     public bool IsFull {
         get {
-            lock (_lock) {
-                return _count >= _capacity;
+            lock (_mutex) {
+                return _queue.Count >= _capacity;
             }
         }
     }
 
     /// <summary>
-    ///     Returns true if the queue has not been stopped.
+    /// Returns true if the queue has not been stopped.
     /// </summary>
     public bool IsRunning {
         get {
-            lock (_lock) {
+            lock (_mutex) {
                 return _isRunning;
             }
         }
     }
 
     /// <summary>
-    ///     Returns the fill percentage of the queue (0–100).
+    /// Returns the fill percentage of the queue (0–100).
     /// </summary>
     public float GetPercentFull() {
         float curLevel = Size;
-        float maxLevel = MaxCapacity;
+        float maxLevel = _capacity;
         return 100.0f * curLevel / maxLevel;
     }
 
     /// <summary>
-    ///     Re-enables the queue after a <see cref="Stop" /> call.
+    /// Re-enables the queue after a <see cref="Stop" /> call.
     /// </summary>
     public void Start() {
-        lock (_lock) {
+        lock (_mutex) {
             _isRunning = true;
         }
     }
 
     /// <summary>
-    ///     Stops the queue, unblocking any waiting producers and consumers.
+    /// Stops the queue, unblocking any waiting producers and consumers.
     /// </summary>
     public void Stop() {
-        lock (_lock) {
+        lock (_mutex) {
             if (!_isRunning) {
                 return;
             }
             _isRunning = false;
-            Monitor.PulseAll(_lock);
+            // notify the conditions
+            Monitor.PulseAll(_mutex);
         }
     }
 
     /// <summary>
-    ///     Removes all items from the queue and notifies waiting producers.
+    /// Removes all items from the queue and notifies waiting producers.
     /// </summary>
     public void Clear() {
-        lock (_lock) {
-            _head = 0;
-            _tail = 0;
-            _count = 0;
-            Monitor.PulseAll(_lock);
+        lock (_mutex) {
+            _queue.Clear();
+        }
+        lock (_mutex) {
+            Monitor.PulseAll(_mutex);
         }
     }
 
     /// <summary>
-    ///     Blocking enqueue of a single item. Waits until space is available
-    ///     or the queue is stopped.
+    /// Blocking enqueue of a single item. Waits until space is available
+    /// or the queue is stopped.
+    /// If queuing has stopped prior to enqueing, then this will immediately
+    /// return false and the item will not be queued.
     /// </summary>
+    /// <param name="item">The item to enqueue.</param>
     /// <returns>True if the item was enqueued; false if the queue was stopped.</returns>
     public bool Enqueue(T item) {
-        lock (_lock) {
-            while (_isRunning && _count >= _capacity) {
-                Monitor.Wait(_lock);
+        lock (_mutex) {
+            // wait until we're stopped or the queue has room to accept the item
+            while (_isRunning && _queue.Count >= _capacity) {
+                Monitor.Wait(_mutex);
             }
-            if (!_isRunning) {
-                return false;
+
+            // add it, and notify the next waiting thread that we've got an item
+            if (_isRunning) {
+                _queue.Add(item);
+                Monitor.Pulse(_mutex);
+                return true;
             }
-            _buffer[_tail] = item;
-            _tail = (_tail + 1) % _buffer.Length;
-            _count++;
-            Monitor.PulseAll(_lock);
-            return true;
+            // If we stopped while enqueing, then anything that was enqueued prior
+            // to being stopped is safely in the queue.
+            return false;
         }
     }
 
     /// <summary>
-    ///     Non-blocking enqueue of a single item.
-    ///     Returns false immediately if the queue is full or stopped.
+    /// Non-blocking enqueue of a single item.
+    /// Returns false and does nothing if the queue is at capacity or the queue is not running.
+    /// Otherwise the item gets moved into the queue and it returns true.
     /// </summary>
+    /// <param name="item">The item to enqueue.</param>
+    /// <returns>True if the item was enqueued; false otherwise.</returns>
     public bool NonblockingEnqueue(T item) {
-        lock (_lock) {
-            if (!_isRunning || _count >= _capacity) {
+        lock (_mutex) {
+            if (!_isRunning || _queue.Count >= _capacity) {
                 return false;
             }
-            _buffer[_tail] = item;
-            _tail = (_tail + 1) % _buffer.Length;
-            _count++;
-            Monitor.PulseAll(_lock);
+            _queue.Add(item);
+            Monitor.Pulse(_mutex);
             return true;
         }
     }
 
     /// <summary>
-    ///     Blocking dequeue of a single item. Waits until an item is available.
-    ///     Returns <c>default</c> with <paramref name="success" /> set to false
-    ///     when the queue is stopped and empty.
+    /// Blocking dequeue of a single item. Waits until an item is available.
+    /// If queuing has stopped, this will continue to return item(s) until
+    /// none remain in the queue, at which point it returns null/default.
     /// </summary>
+    /// <param name="success">Set to true if an item was dequeued; false if queue is stopped and empty.</param>
+    /// <returns>The dequeued item, or default if none available.</returns>
     public T Dequeue(out bool success) {
-        lock (_lock) {
-            while (_isRunning && _count == 0) {
-                Monitor.Wait(_lock);
+        lock (_mutex) {
+            // wait until we're stopped or the queue has an item
+            while (_isRunning && _queue.Count == 0) {
+                Monitor.Wait(_mutex);
             }
-            if (_count == 0) {
-                success = false;
-                return default!;
+
+            // Even if the queue has stopped, we need to drain the (previously)
+            // queued items before we're done.
+            if (_queue.Count > 0) {
+                T item = _queue[0];
+                _queue.RemoveAt(0);
+                // notify the first waiting thread that the queue has room
+                Monitor.Pulse(_mutex);
+                success = true;
+                return item;
             }
-            T item = _buffer[_head];
-            _buffer[_head] = default!;
-            _head = (_head + 1) % _buffer.Length;
-            _count--;
-            Monitor.PulseAll(_lock);
-            success = true;
-            return item;
+
+            success = false;
+            return default!;
         }
     }
 
     /// <summary>
-    ///     Blocking bulk enqueue. Moves items from <paramref name="source" /> into the
-    ///     queue, blocking until all requested items have been enqueued or the queue is
-    ///     stopped.
+    /// Blocking bulk enqueue. Moves items from <paramref name="source" /> into the
+    /// queue, blocking until all requested items have been enqueued or the queue is
+    /// stopped.
+    /// If the queue is stopped then the function unblocks and returns the
+    /// quantity enqueued (which can be less than the number requested).
     /// </summary>
     /// <param name="source">Source span to read items from.</param>
     /// <returns>Number of items actually enqueued.</returns>
     public int BulkEnqueue(ReadOnlySpan<T> source) {
-        int totalEnqueued = 0;
-        // Can't use ReadOnlySpan across Monitor.Wait, copy to array if needed
-        // Actually we process in chunks, each inside a single lock acquisition
-        int remaining = source.Length;
-        int offset = 0;
-
-        while (remaining > 0) {
-            lock (_lock) {
-                while (_isRunning && _count >= _capacity) {
-                    Monitor.Wait(_lock);
-                }
-                if (!_isRunning) {
-                    return totalEnqueued;
-                }
-
-                int space = _capacity - _count;
-                int toEnqueue = Math.Min(remaining, space);
-
-                BulkCopyIn(source.Slice(offset, toEnqueue));
-                _count += toEnqueue;
-                totalEnqueued += toEnqueue;
-                offset += toEnqueue;
-                remaining -= toEnqueue;
-                Monitor.PulseAll(_lock);
-            }
-        }
-        return totalEnqueued;
+        return BulkEnqueue(source, source.Length);
     }
 
     /// <summary>
-    ///     Blocking bulk enqueue from a float array segment (for audio interop).
-    ///     Blocks until all data has been enqueued or the queue is stopped.
+    /// Blocking bulk enqueue. Moves items from <paramref name="source" /> into the
+    /// queue, blocking until all requested items have been enqueued or the queue is
+    /// stopped.
+    /// </summary>
+    /// <param name="source">Source span to read items from.</param>
+    /// <param name="numRequested">Number of items to enqueue.</param>
+    /// <returns>Number of items actually enqueued.</returns>
+    public int BulkEnqueue(ReadOnlySpan<T> source, int numRequested) {
+        const int minItems = 1;
+
+        int sourceOffset = 0;
+        int numRemaining = numRequested;
+
+        while (numRemaining > 0) {
+            lock (_mutex) {
+                int freeCapacity = _capacity - _queue.Count;
+                int numItems = Math.Clamp(freeCapacity, minItems, numRemaining);
+
+                // wait until we're stopped or the queue has enough room for the items
+                while (_isRunning && _capacity - _queue.Count < numItems) {
+                    Monitor.Wait(_mutex);
+                }
+
+                if (_isRunning) {
+                    // Add items to queue
+                    for (int i = 0; i < numItems; i++) {
+                        _queue.Add(source[sourceOffset + i]);
+                    }
+
+                    // notify the first waiting thread that we have an item
+                    Monitor.Pulse(_mutex);
+
+                    sourceOffset += numItems;
+                    numRemaining -= numItems;
+                } else {
+                    // If we stopped while bulk enqueing, then stop here.
+                    // Anything that was enqueued prior to being stopped is
+                    // safely in the queue.
+                    break;
+                }
+            }
+        }
+
+        return numRequested - numRemaining;
+    }
+
+    /// <summary>
+    /// Blocking bulk enqueue from an array segment.
+    /// Blocks until all data has been enqueued or the queue is stopped.
     /// </summary>
     /// <param name="data">Source array.</param>
     /// <param name="offset">Starting offset in the source array.</param>
     /// <param name="count">Number of items to enqueue.</param>
     /// <returns>Number of items actually enqueued.</returns>
     public int BulkEnqueue(T[] data, int offset, int count) {
-        int totalEnqueued = 0;
-        int remaining = count;
-
-        while (remaining > 0) {
-            lock (_lock) {
-                while (_isRunning && _count >= _capacity) {
-                    Monitor.Wait(_lock);
-                }
-                if (!_isRunning) {
-                    return totalEnqueued;
-                }
-
-                int space = _capacity - _count;
-                int toEnqueue = Math.Min(remaining, space);
-
-                BulkCopyIn(data.AsSpan(offset, toEnqueue));
-                _count += toEnqueue;
-                totalEnqueued += toEnqueue;
-                offset += toEnqueue;
-                remaining -= toEnqueue;
-                Monitor.PulseAll(_lock);
-            }
-        }
-        return totalEnqueued;
+        return BulkEnqueue(data.AsSpan(offset, count), count);
     }
 
     /// <summary>
-    ///     Non-blocking bulk enqueue. Enqueues as many items as possible without
-    ///     waiting. Items that cannot fit are silently dropped.
+    /// Non-blocking bulk enqueue. Does nothing if queue is at capacity or queue is not running.
+    /// Otherwise, enqueues as many elements as possible until the queue is at capacity.
     /// </summary>
     /// <param name="source">Source span to read items from.</param>
     /// <returns>Number of items actually enqueued.</returns>
     public int NonblockingBulkEnqueue(ReadOnlySpan<T> source) {
-        lock (_lock) {
-            if (!_isRunning || _count >= _capacity) {
+        return NonblockingBulkEnqueue(source, source.Length);
+    }
+
+    /// <summary>
+    /// Non-blocking bulk enqueue. Does nothing if queue is at capacity or queue is not running.
+    /// Otherwise, enqueues as many elements as possible until the queue is at capacity.
+    /// </summary>
+    /// <param name="source">Source span to read items from.</param>
+    /// <param name="numRequested">Number of items to enqueue.</param>
+    /// <returns>Number of items actually enqueued.</returns>
+    public int NonblockingBulkEnqueue(ReadOnlySpan<T> source, int numRequested) {
+        lock (_mutex) {
+            if (!_isRunning || _queue.Count >= _capacity) {
                 return 0;
             }
-            int space = _capacity - _count;
-            int toEnqueue = Math.Min(source.Length, space);
-            BulkCopyIn(source.Slice(0, toEnqueue));
-            _count += toEnqueue;
-            Monitor.PulseAll(_lock);
-            return toEnqueue;
+
+            int availableCapacity = _capacity - _queue.Count;
+            int numItems = Math.Min(availableCapacity, numRequested);
+
+            for (int i = 0; i < numItems; i++) {
+                _queue.Add(source[i]);
+            }
+
+            Monitor.Pulse(_mutex);
+            return numItems;
         }
     }
 
     /// <summary>
-    ///     Non-blocking bulk dequeue. Dequeues up to <paramref name="maxItems" />
-    ///     items into <paramref name="target" />, returning the count actually dequeued.
-    ///     Never blocks — returns 0 if the queue is empty.
+    /// Blocking bulk dequeue. Dequeues the requested number of items into the given container
+    /// in-bulk, and returns the quantity dequeued. This potentially blocks
+    /// until the requested number of items have been dequeued.
+    /// If queuing was stopped prior to bulk dequeueing then this
+    /// immediately returns with a value of 0 and no items dequeued.
+    /// If queuing was stopped in the middle of bulk dequeueing then this
+    /// immediately returns with a value indicating the subset dequeued.
     /// </summary>
     /// <param name="target">Destination array for dequeued items.</param>
-    /// <param name="maxItems">Maximum number of items to dequeue.</param>
+    /// <param name="numRequested">Number of items to dequeue.</param>
     /// <returns>Number of items actually dequeued.</returns>
-    public int BulkDequeue(T[] target, int maxItems) {
-        lock (_lock) {
-            int toDequeue = Math.Min(maxItems, _count);
-            if (toDequeue == 0) {
-                return 0;
+    public int BulkDequeue(T[] target, int numRequested) {
+        int targetOffset = 0;
+        int numRemaining = numRequested;
+
+        while (numRemaining > 0) {
+            lock (_mutex) {
+                const int minItems = 1;
+                int numItems = Math.Clamp(_queue.Count, minItems, numRemaining);
+
+                // wait until we're stopped or the queue has enough items
+                while (_isRunning && _queue.Count < numItems) {
+                    Monitor.Wait(_mutex);
+                }
+
+                // Even if the queue has stopped, we need to drain the
+                // (previously) queued items before we're done.
+                if (_isRunning || _queue.Count > 0) {
+                    numItems = Math.Min(_queue.Count, numRemaining);
+
+                    // Move items to target (matching std::move behavior)
+                    for (int i = 0; i < numItems; i++) {
+                        target[targetOffset + i] = _queue[i];
+                    }
+                    _queue.RemoveRange(0, numItems);
+
+                    // notify the first waiting thread that the queue has room
+                    Monitor.Pulse(_mutex);
+
+                    targetOffset += numItems;
+                    numRemaining -= numItems;
+                } else {
+                    // The queue was stopped mid-dequeue!
+                    break;
+                }
             }
-            BulkCopyOut(target.AsSpan(0, toDequeue));
-            _count -= toDequeue;
-            Monitor.PulseAll(_lock);
-            return toDequeue;
         }
+
+        return numRequested - numRemaining;
     }
 
     /// <summary>
-    ///     Blocking bulk dequeue. Waits until the requested number of items
-    ///     are available, or the queue is stopped.
+    /// Blocking bulk dequeue. Waits until the requested number of items
+    /// are available, or the queue is stopped.
     /// </summary>
     /// <param name="target">Destination array for dequeued items.</param>
     /// <param name="numRequested">Number of items to dequeue.</param>
     /// <returns>Number of items actually dequeued.</returns>
     public int BlockingBulkDequeue(T[] target, int numRequested) {
-        int totalDequeued = 0;
-        int remaining = numRequested;
-
-        while (remaining > 0) {
-            lock (_lock) {
-                int toDequeue = Math.Min(Math.Max(_count, 1), remaining);
-
-                while ((_isRunning || _count > 0) && _count < toDequeue) {
-                    Monitor.Wait(_lock);
-                }
-
-                if (_count == 0) {
-                    return totalDequeued;
-                }
-
-                toDequeue = Math.Min(_count, remaining);
-                BulkCopyOut(target.AsSpan(totalDequeued, toDequeue));
-                _count -= toDequeue;
-                totalDequeued += toDequeue;
-                remaining -= toDequeue;
-                Monitor.PulseAll(_lock);
-            }
-        }
-        return totalDequeued;
-    }
-
-    /// <summary>
-    ///     Copies items from <paramref name="source"/> into the ring buffer at _tail,
-    ///     handling wrap-around with at most two bulk copies.
-    ///     Caller must hold _lock and ensure sufficient capacity.
-    /// </summary>
-    private void BulkCopyIn(ReadOnlySpan<T> source) {
-        int toEnqueue = source.Length;
-        int firstChunk = Math.Min(toEnqueue, _buffer.Length - _tail);
-        source.Slice(0, firstChunk).CopyTo(_buffer.AsSpan(_tail, firstChunk));
-        int secondChunk = toEnqueue - firstChunk;
-        if (secondChunk > 0) {
-            source.Slice(firstChunk, secondChunk).CopyTo(_buffer.AsSpan(0, secondChunk));
-        }
-        _tail = (_tail + toEnqueue) % _buffer.Length;
-    }
-
-    /// <summary>
-    ///     Copies items from the ring buffer at _head into <paramref name="target"/>,
-    ///     handling wrap-around with at most two bulk copies, and clears the vacated slots.
-    ///     Caller must hold _lock and ensure sufficient items are available.
-    /// </summary>
-    private void BulkCopyOut(Span<T> target) {
-        int toDequeue = target.Length;
-        int firstChunk = Math.Min(toDequeue, _buffer.Length - _head);
-        _buffer.AsSpan(_head, firstChunk).CopyTo(target.Slice(0, firstChunk));
-        int secondChunk = toDequeue - firstChunk;
-        if (secondChunk > 0) {
-            _buffer.AsSpan(0, secondChunk).CopyTo(target.Slice(firstChunk, secondChunk));
-        }
-        // Clear vacated slots to allow GC of reference types
-        _buffer.AsSpan(_head, firstChunk).Clear();
-        if (secondChunk > 0) {
-            _buffer.AsSpan(0, secondChunk).Clear();
-        }
-        _head = (_head + toDequeue) % _buffer.Length;
+        return BulkDequeue(target, numRequested);
     }
 }

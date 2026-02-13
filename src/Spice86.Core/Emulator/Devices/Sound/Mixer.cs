@@ -953,4 +953,101 @@ public sealed class Mixer : IDisposable {
 
         _disposed = true;
     }
+
+    /// <summary>
+    /// Generic callback for audio devices that generate audio on the main thread.
+    /// These devices produce audio on the main thread and consume on the mixer thread.
+    /// This callback is the consumer part.
+    /// Reference: DOSBox mixer.h MIXER_PullFromQueueCallback
+    /// </summary>
+    /// <typeparam name="TDevice">The device type implementing IAudioQueueDevice.</typeparam>
+    /// <param name="framesRequested">Number of audio frames requested by the mixer.</param>
+    /// <param name="device">The audio device (passed as 'this' from the device).</param>
+    public void PullFromQueueCallback<TDevice>(int framesRequested, TDevice device)
+        where TDevice : IAudioQueueDevice<float> {
+        // Size to 2x blocksize. The mixer callback will request 1x blocksize.
+        // This provides a good size to avoid over-runs and stalls.
+        // Resize is a fast operation, only setting a variable for max capacity.
+        // It does not drop frames or append zeros to the underlying data structure.
+        int queueSize = (int)Math.Ceiling(device.Channel.GetFramesPerBlock() * 2.0f);
+        device.OutputQueue.Resize(queueSize);
+
+        // Dequeue samples in bulk
+        float[] toMix = new float[framesRequested];
+        int framesReceived = device.OutputQueue.BulkDequeue(toMix, framesRequested);
+
+        if (framesReceived > 0) {
+            device.Channel.AddSamples_mfloat(framesReceived, toMix);
+        }
+
+        // Fill any shortfall with silence
+        if (framesReceived < framesRequested) {
+            device.Channel.AddSilence();
+        }
+    }
+
+    /// <summary>
+    /// Generic callback for audio devices that generate audio on the main thread.
+    /// Overload that takes queue and channel directly for simpler use cases.
+    /// Reference: DOSBox mixer.h MIXER_PullFromQueueCallback
+    /// </summary>
+    /// <param name="framesRequested">Number of audio frames requested by the mixer.</param>
+    /// <param name="outputQueue">The device's output queue containing audio samples.</param>
+    /// <param name="channel">The mixer channel to write audio to.</param>
+    public void PullFromQueueCallback(int framesRequested, RWQueue<float> outputQueue, MixerChannel channel) {
+        // Size to 2x blocksize. The mixer callback will request 1x blocksize.
+        // This provides a good size to avoid over-runs and stalls.
+        // Resize is a fast operation, only setting a variable for max capacity.
+        // It does not drop frames or append zeros to the underlying data structure.
+        int queueSize = (int)Math.Ceiling(channel.GetFramesPerBlock() * 2.0f);
+        outputQueue.Resize(queueSize);
+
+        // Dequeue samples in bulk
+        float[] toMix = new float[framesRequested];
+        int framesReceived = outputQueue.BulkDequeue(toMix, framesRequested);
+
+        if (framesReceived > 0) {
+            channel.AddSamples_mfloat(framesReceived, toMix);
+        }
+
+        // Fill any shortfall with silence
+        if (framesReceived < framesRequested) {
+            channel.AddSilence();
+        }
+    }
+
+    /// <summary>
+    /// Generic callback for audio devices that generate stereo AudioFrame output.
+    /// These devices produce audio on the main thread and consume on the mixer thread.
+    /// This callback is the consumer part.
+    /// Reference: DOSBox mixer.h MIXER_PullFromQueueCallback (AudioFrame variant)
+    /// </summary>
+    /// <typeparam name="TDevice">The device type implementing IAudioQueueDevice&lt;AudioFrame&gt;.</typeparam>
+    /// <param name="framesRequested">Number of audio frames requested by the mixer.</param>
+    /// <param name="device">The audio device (passed as 'this' from the device).</param>
+    /// <param name="framesNeeded">Atomic counter tracking frames needed by the device.</param>
+    public void PullFromQueueCallback<TDevice>(int framesRequested, TDevice device, ref int framesNeeded)
+        where TDevice : IAudioQueueDevice<AudioFrame> {
+        // Calculate shortage and update framesNeeded atomically
+        int queueSize = device.OutputQueue.Size;
+        int shortage = Math.Max(framesRequested - queueSize, 0);
+        System.Threading.Interlocked.Exchange(ref framesNeeded, shortage);
+
+        // Size to 2x blocksize to avoid over-runs and stalls
+        int queueCapacity = (int)Math.Ceiling(device.Channel.GetFramesPerBlock() * 2.0f);
+        device.OutputQueue.Resize(queueCapacity);
+
+        // Dequeue frames in bulk
+        AudioFrame[] toMix = new AudioFrame[framesRequested];
+        int framesReceived = device.OutputQueue.BulkDequeue(toMix, framesRequested);
+
+        if (framesReceived > 0) {
+            device.Channel.AddAudioFrames(toMix.AsSpan(0, framesReceived));
+        }
+
+        // Fill any shortfall with silence
+        if (framesReceived < framesRequested) {
+            device.Channel.AddSilence();
+        }
+    }
 }

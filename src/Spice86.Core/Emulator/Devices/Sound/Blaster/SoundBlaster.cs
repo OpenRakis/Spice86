@@ -17,7 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider {
+using EventHandler = VM.EmulationLoopScheduler.EventHandler;
+
+public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame> {
     private const int DmaBufSize = 1024;
     private const int DspBufSize = 64;
     private const int MinPlaybackRateHz = 5000;
@@ -542,6 +544,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
     private int _framesNeeded = 0;
 
+    /// <inheritdoc />
+    public RWQueue<AudioFrame> OutputQueue => _outputQueue;
+
+    /// <inheritdoc />
+    public MixerChannel Channel => _dacChannel;
+
     // Tracks frames added during current tick to prevent over-generation
     // Reference: src/hardware/audio/soundblaster.cpp line 291 (static int frames_added_this_tick)
     private int _framesAddedThisTick = 0;
@@ -551,6 +559,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// Reference: src/hardware/audio/soundblaster.cpp CallbackType class
     /// </summary>
     private TimingType _timingType = TimingType.None;
+
+    /// <summary>
+    /// Stored handler delegate for per-tick callback to enable proper RemoveEvents matching.
+    /// </summary>
+    private readonly EventHandler _perTickHandler;
+
+    /// <summary>
+    /// Stored handler delegate for per-frame callback to enable proper RemoveEvents matching.
+    /// </summary>
+    private readonly EventHandler _perFrameHandler;
 
     /// <summary>
     /// Maximum DMA base count for using per-frame callback.
@@ -589,6 +607,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _scheduler = scheduler;
         _clock = clock;
         _sb = new SbInfo(clock);
+
+        // Initialize stored handlers for proper scheduler event matching
+        _perTickHandler = (_) => per_tick_callback();
+        _perFrameHandler = (_) => per_frame_callback();
 
         _primaryDmaChannel = dmaBus.GetChannel(_config.LowDma)
             ?? throw new InvalidOperationException($"DMA channel {_config.LowDma} unavailable for Sound Blaster.");
@@ -1323,6 +1345,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         // frames_added_this_tick -= total_frames;
         _framesAddedThisTick -= total_frames;
+
+        // Reschedule for next tick (1ms) - matches DOSBox's TIMER_AddTickHandler behavior
+        _scheduler.AddEvent(_perTickHandler, 1);
     }
 
     /// <summary>
@@ -1359,7 +1384,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private void AddNextFrameCallback() {
         LogMethodEntry(nameof(AddNextFrameCallback));
         double millisPerFrame = _dacChannel.GetMillisPerFrame();
-        _scheduler.AddEvent((_) => per_frame_callback(), millisPerFrame, 0);
+        _scheduler.AddEvent(_perFrameHandler, millisPerFrame, 0);
     }
 
     /// <summary>
@@ -1370,9 +1395,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         LogMethodEntry(nameof(SetCallbackNone));
         if (_timingType != TimingType.None) {
             if (_timingType == TimingType.PerTick) {
-                _scheduler.RemoveEvents((_) => per_tick_callback());
+                _scheduler.RemoveEvents(_perTickHandler);
             } else {
-                _scheduler.RemoveEvents((_) => per_frame_callback());
+                _scheduler.RemoveEvents(_perFrameHandler);
             }
 
             _timingType = TimingType.None;
@@ -1390,7 +1415,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             _framesAddedThisTick = 0;
 
-            _scheduler.AddEvent((_) => per_tick_callback(), 1);
+            _scheduler.AddEvent(_perTickHandler, 1);
 
             _timingType = TimingType.PerTick;
         }

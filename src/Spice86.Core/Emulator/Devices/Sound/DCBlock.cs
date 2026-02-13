@@ -35,10 +35,6 @@ public sealed class DCBlock {
     /// </summary>
     /// <param name="sample">Reference to the sample to process (modified in-place).</param>
     /// <param name="cutoff">Cutoff control (0.0-1.0). Higher values = more DC blocking.</param>
-    /// <remarks>
-    /// Formula: output = input - previous_input + (0.999 - cutoff*0.4) * previous_output
-    /// This is a first-order high-pass filter with adjustable cutoff frequency.
-    /// </remarks>
     public void Tick(ref float sample, float cutoff) {
         _outputs = sample - _inputs + (0.999f - cutoff * 0.4f) * _outputs;
         _inputs = sample;
