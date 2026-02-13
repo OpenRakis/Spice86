@@ -53,11 +53,6 @@ internal partial class App : Application {
                 desktop.Args!)!;
         Spice86DependencyInjection dependencyInjection = new(configuration, mainWindow);
         if (mainWindow.DataContext is MainWindowViewModel mainVm) {
-            mainVm.CloseMainWindow += (_, _) => mainWindow.Close();
-            mainVm.InvalidateBitmap += mainWindow.Image.InvalidateVisual;
-            mainWindow.Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, mainWindow.Image);
-            mainWindow.Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, mainWindow.Image);
-            mainWindow.Image.PointerReleased += (s, e) => mainVm.OnMouseButtonUp(e, mainWindow.Image);
             mainVm.Disposing += dependencyInjection.Dispose;
         }
         desktop.MainWindow = mainWindow;
