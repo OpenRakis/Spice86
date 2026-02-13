@@ -535,6 +535,27 @@ public class DosFileManager {
     }
 
     /// <summary>
+    /// Opens a device at a requested DOS handle if that handle is available.
+    /// This is used during initialization to ensure standard devices occupy fixed handles.
+    /// </summary>
+    /// <param name="device">The device to open.</param>
+    /// <param name="requestedHandle">The DOS handle to open the device at.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    public DosFileOperationResult OpenDeviceAtHandle(VirtualFileBase device, ushort requestedHandle) {
+        if (!IsHandleInRange(requestedHandle)) {
+            return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
+        }
+
+        if (OpenFiles[requestedHandle] != null) {
+            // Slot already used
+            return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
+        }
+
+        SetOpenFile(requestedHandle, device);
+        return DosFileOperationResult.Value16(requestedHandle);
+    }
+
+    /// <summary>
     /// Read a file using a handle
     /// </summary>
     /// <param name="fileHandle">The handle to the file.</param>
