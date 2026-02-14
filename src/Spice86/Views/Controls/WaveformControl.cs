@@ -9,7 +9,8 @@ using System.Collections.Generic;
 
 /// <summary>
 /// A waveform display control that shows audio samples as a waveform visualization.
-/// Similar to the waveform view in Audacity.
+/// Similar to the waveform view in Audacity. Scale-aware so rendering stays crisp
+/// inside a <see cref="Viewbox"/> or under DPI scaling.
 /// </summary>
 public sealed class WaveformControl : Control {
     private const double WaveformPadding = 2.0;
@@ -47,6 +48,7 @@ public sealed class WaveformControl : Control {
     private static readonly SolidColorBrush LeftChannelBrush = new(Color.FromRgb(100, 180, 100));
     private static readonly SolidColorBrush RightChannelBrush = new(Color.FromRgb(100, 140, 200));
     private static readonly SolidColorBrush CenterLineBrush = new(Color.FromRgb(80, 80, 80));
+    private static readonly SolidColorBrush BackgroundBrush = new(Color.FromRgb(30, 30, 35));
     private static readonly Pen LeftChannelPen = new(LeftChannelBrush, 1.0);
     private static readonly Pen RightChannelPen = new(RightChannelBrush, 1.0);
     private static readonly Pen CenterLinePen = new(CenterLineBrush, 0.5);
@@ -64,6 +66,25 @@ public sealed class WaveformControl : Control {
     }
 
     /// <summary>
+    /// Computes the horizontal and vertical scale factors from the visual transform chain
+    /// (Viewbox, DPI, etc.) so drawing can target actual screen pixels.
+    /// </summary>
+    private (double ScaleX, double ScaleY) GetEffectiveScale() {
+        Visual? root = VisualRoot as Visual;
+        if (root is null) {
+            return (1.0, 1.0);
+        }
+        Matrix? transform = this.TransformToVisual(root);
+        if (!transform.HasValue) {
+            return (1.0, 1.0);
+        }
+        Matrix m = transform.Value;
+        double scaleX = Math.Sqrt(m.M11 * m.M11 + m.M21 * m.M21);
+        double scaleY = Math.Sqrt(m.M12 * m.M12 + m.M22 * m.M22);
+        return (Math.Max(scaleX, 1.0), Math.Max(scaleY, 1.0));
+    }
+
+    /// <summary>
     /// Renders the waveform display.
     /// </summary>
     public override void Render(DrawingContext context) {
@@ -76,28 +97,29 @@ public sealed class WaveformControl : Control {
             return;
         }
 
-        // Draw background
-        context.FillRectangle(new SolidColorBrush(Color.FromRgb(30, 30, 35)), new Rect(0, 0, width, height));
+        (double scaleX, double scaleY) = GetEffectiveScale();
 
-        // Calculate channel heights (split vertically for stereo)
+        Pen leftPen = scaleX > 1.0 ? new Pen(LeftChannelBrush, 1.0 / scaleX) : LeftChannelPen;
+        Pen rightPen = scaleX > 1.0 ? new Pen(RightChannelBrush, 1.0 / scaleX) : RightChannelPen;
+        Pen centerPen = scaleX > 1.0 ? new Pen(CenterLineBrush, 0.5 / scaleX) : CenterLinePen;
+
+        context.FillRectangle(BackgroundBrush, new Rect(0, 0, width, height));
+
         double channelHeight = (height - WaveformPadding) / 2.0;
         double leftCenterY = channelHeight / 2.0;
         double rightCenterY = channelHeight + WaveformPadding + channelHeight / 2.0;
 
-        // Draw center lines
-        context.DrawLine(CenterLinePen, new Point(0, leftCenterY), new Point(width, leftCenterY));
-        context.DrawLine(CenterLinePen, new Point(0, rightCenterY), new Point(width, rightCenterY));
+        context.DrawLine(centerPen, new Point(0, leftCenterY), new Point(width, leftCenterY));
+        context.DrawLine(centerPen, new Point(0, rightCenterY), new Point(width, rightCenterY));
 
-        // Draw left channel waveform
         IReadOnlyList<float>? leftSamples = SamplesLeft;
         if (leftSamples is { Count: > 0 }) {
-            DrawWaveform(context, leftSamples, 0, channelHeight, width, LeftChannelPen);
+            DrawWaveform(context, leftSamples, 0, channelHeight, width, scaleX, scaleY, leftPen);
         }
 
-        // Draw right channel waveform
         IReadOnlyList<float>? rightSamples = SamplesRight;
         if (rightSamples is { Count: > 0 }) {
-            DrawWaveform(context, rightSamples, channelHeight + WaveformPadding, channelHeight, width, RightChannelPen);
+            DrawWaveform(context, rightSamples, channelHeight + WaveformPadding, channelHeight, width, scaleX, scaleY, rightPen);
         }
     }
 
@@ -110,6 +132,8 @@ public sealed class WaveformControl : Control {
         double yOffset,
         double channelHeight,
         double width,
+        double scaleX,
+        double scaleY,
         Pen pen) {
 
         int sampleCount = samples.Count;
@@ -118,17 +142,15 @@ public sealed class WaveformControl : Control {
         }
 
         double centerY = yOffset + channelHeight / 2.0;
-        double amplitude = (channelHeight / 2.0) - 2.0; // Leave 2px margin
+        double amplitude = (channelHeight / 2.0) - 2.0;
 
-        // Calculate how many samples per pixel
-        double samplesPerPixel = (double)sampleCount / width;
+        double effectiveWidth = width * scaleX;
+        double samplesPerPixel = sampleCount / effectiveWidth;
 
         if (samplesPerPixel <= 1.0) {
-            // Less samples than pixels - draw point to point
             DrawPointToPoint(context, samples, centerY, amplitude, width, pen);
         } else {
-            // More samples than pixels - draw min/max envelope
-            DrawEnvelope(context, samples, centerY, amplitude, width, samplesPerPixel, pen);
+            DrawEnvelope(context, samples, centerY, amplitude, effectiveWidth, scaleX, scaleY, pen);
         }
     }
 
@@ -162,20 +184,24 @@ public sealed class WaveformControl : Control {
     }
 
     /// <summary>
-    /// Draws waveform as min/max envelope (when zoomed out or many samples).
-    /// This is the Audacity-style rendering for efficiency.
+    /// Draws waveform as min/max envelope at effective screen resolution.
+    /// Each iteration targets one actual screen pixel, mapped back to local coordinates.
     /// </summary>
     private static void DrawEnvelope(
         DrawingContext context,
         IReadOnlyList<float> samples,
         double centerY,
         double amplitude,
-        double width,
-        double samplesPerPixel,
+        double effectiveWidth,
+        double scaleX,
+        double scaleY,
         Pen pen) {
 
         int sampleCount = samples.Count;
-        int pixelCount = (int)width;
+        int pixelCount = (int)effectiveWidth;
+        double samplesPerPixel = (double)sampleCount / effectiveWidth;
+        double inverseScaleX = 1.0 / scaleX;
+        double minLineHeight = 1.0 / scaleY;
 
         for (int pixel = 0; pixel < pixelCount; pixel++) {
             int startSample = (int)(pixel * samplesPerPixel);
@@ -185,7 +211,6 @@ public sealed class WaveformControl : Control {
                 break;
             }
 
-            // Find min and max in this pixel's sample range
             float minVal = samples[startSample];
             float maxVal = samples[startSample];
 
@@ -199,18 +224,17 @@ public sealed class WaveformControl : Control {
                 }
             }
 
-            // Draw vertical line from min to max
+            double x = pixel * inverseScaleX;
             double yMin = centerY - maxVal * amplitude;
             double yMax = centerY - minVal * amplitude;
 
-            // Ensure we draw at least 1 pixel
-            if (Math.Abs(yMax - yMin) < 1.0) {
+            if (Math.Abs(yMax - yMin) < minLineHeight) {
                 double mid = (yMin + yMax) / 2.0;
-                yMin = mid - 0.5;
-                yMax = mid + 0.5;
+                yMin = mid - minLineHeight / 2.0;
+                yMax = mid + minLineHeight / 2.0;
             }
 
-            context.DrawLine(pen, new Point(pixel, yMin), new Point(pixel, yMax));
+            context.DrawLine(pen, new Point(x, yMin), new Point(x, yMax));
         }
     }
 }
