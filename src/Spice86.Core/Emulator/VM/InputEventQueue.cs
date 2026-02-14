@@ -69,6 +69,9 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
         Enqueue(() => KeyDown?.Invoke(sender, e));
 
     internal void ProcessAllPendingInputEvents() {
+        if (_eventQueue.Count == 0) {
+            return;
+        }
         lock (_lock) {
             while (_eventQueue.TryDequeue(out Action? action)) {
                 action.Invoke();
