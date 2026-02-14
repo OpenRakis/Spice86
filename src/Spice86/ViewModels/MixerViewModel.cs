@@ -26,8 +26,9 @@ public partial class MixerViewModel : ViewModelBase {
         _mixer = mixer;
 
         // Start dispatcher timer to update channel state
+        // Use 50ms for near real-time VU meter feedback
         DispatcherTimerStarter.StartNewDispatcherTimer(
-            TimeSpan.FromMilliseconds(400),
+            TimeSpan.FromMilliseconds(50),
             DispatcherPriority.Background,
             OnTimerTick);
 

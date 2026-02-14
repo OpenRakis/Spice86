@@ -13,6 +13,16 @@ using System;
 public partial class MixerChannelViewModel : ViewModelBase {
     private readonly MixerChannel _channel;
 
+    // Peak level tracking with decay (UI-side calculation, no impact on core)
+    // Decay rate per update tick (at 50ms updates, this gives smooth falloff)
+    private const double PeakDecayRate = 0.75;
+    // Normalization factor for 16-bit audio samples
+    private const double SampleNormalizationFactor = 1.0 / 32768.0;
+    // Amplification to make typical audio levels more visible on the meter
+    private const double SignalAmplification = 2.5;
+    private double _currentPeakLeft;
+    private double _currentPeakRight;
+
     [ObservableProperty]
     private string _name = string.Empty;
 
@@ -40,6 +50,12 @@ public partial class MixerChannelViewModel : ViewModelBase {
     [ObservableProperty]
     private bool _isMuted;
 
+    [ObservableProperty]
+    private double _peakLevelLeft;
+
+    [ObservableProperty]
+    private double _peakLevelRight;
+
     public MixerChannelViewModel(MixerChannel channel) {
         _channel = channel ?? throw new ArgumentNullException(nameof(channel));
         UpdateFromChannel();
@@ -66,6 +82,60 @@ public partial class MixerChannelViewModel : ViewModelBase {
         IsMuted = userVolume.Left == 0.0f && userVolume.Right == 0.0f;
 
         Features = string.Join(", ", _channel.GetFeatures());
+
+        // Update peak levels for VU meters (read-only access to AudioFrames, no core impact)
+        UpdatePeakLevels();
+    }
+
+    /// <summary>
+    /// Calculates peak levels from the channel's audio frame buffer.
+    /// This is a UI-only calculation that reads from the public AudioFrames buffer
+    /// without impacting the core mixing logic.
+    /// </summary>
+    private void UpdatePeakLevels() {
+        // Apply decay to existing peaks (smooth falloff between updates)
+        _currentPeakLeft *= PeakDecayRate;
+        _currentPeakRight *= PeakDecayRate;
+
+        // Read current audio frames (read-only snapshot access)
+        AudioFrameBuffer audioFrames = _channel.AudioFrames;
+        int frameCount = audioFrames.Count;
+
+        // Find peak amplitude in current buffer
+        double maxLeft = 0.0;
+        double maxRight = 0.0;
+
+        // Sample frames for peak detection (every 2nd frame for efficiency)
+        for (int i = 0; i < frameCount; i += 2) {
+            AudioFrame frame = audioFrames[i];
+
+            // Get absolute amplitude
+            double absLeft = Math.Abs(frame.Left);
+            double absRight = Math.Abs(frame.Right);
+
+            if (absLeft > maxLeft) {
+                maxLeft = absLeft;
+            }
+            if (absRight > maxRight) {
+                maxRight = absRight;
+            }
+        }
+
+        // Normalize and amplify for better visual feedback
+        double normalizedLeft = maxLeft * SampleNormalizationFactor * SignalAmplification;
+        double normalizedRight = maxRight * SampleNormalizationFactor * SignalAmplification;
+
+        // Update peaks if new values are higher (peak hold behavior)
+        if (normalizedLeft > _currentPeakLeft) {
+            _currentPeakLeft = normalizedLeft;
+        }
+        if (normalizedRight > _currentPeakRight) {
+            _currentPeakRight = normalizedRight;
+        }
+
+        // Clamp and update observable properties
+        PeakLevelLeft = Math.Clamp(_currentPeakLeft, 0.0, 1.0);
+        PeakLevelRight = Math.Clamp(_currentPeakRight, 0.0, 1.0);
     }
 
     partial void OnIsEnabledChanged(bool value) {

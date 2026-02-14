@@ -1,22 +1,23 @@
 <Window
-    x:Class="Spice86.Views.MixerView"
-    xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:vm="using:Spice86.ViewModels"
-    xmlns:local="using:Spice86.Views.Converters"
-    x:CompileBindings="True"
-    x:DataType="vm:MixerViewModel"
-    WindowStartupLocation="CenterOwner"
-    ShowInTaskbar="True"
-    CanResize="True"
-    Title="Audio Mixer"
-    MinWidth="600"
-    MinHeight="400"
-    Width="900"
-    Height="600"
-    mc:Ignorable="d">
+	x:Class="Spice86.Views.MixerView"
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:vm="using:Spice86.ViewModels"
+	xmlns:local="using:Spice86.Views.Converters"
+	xmlns:controls="using:Spice86.Views.Controls"
+	x:CompileBindings="True"
+	x:DataType="vm:MixerViewModel"
+	WindowStartupLocation="CenterOwner"
+	ShowInTaskbar="True"
+	CanResize="True"
+	Title="Audio Mixer"
+	MinWidth="600"
+	MinHeight="400"
+	Width="900"
+	Height="600"
+	mc:Ignorable="d">
 	<Design.DataContext>
 		<vm:MixerViewModel />
 	</Design.DataContext>
@@ -38,48 +39,64 @@
 					<Border Margin="10" Padding="10" BorderBrush="Gray" BorderThickness="1" CornerRadius="5">
 						<Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto">
 							<TextBlock
-                                Grid.Row="0"
-                                HorizontalAlignment="Center"
-                                FontWeight="Bold"
-                                FontSize="14"
-                                Text="{Binding Name}" />
+								Grid.Row="0"
+								HorizontalAlignment="Center"
+								FontWeight="Bold"
+								FontSize="14"
+								Text="{Binding Name}" />
 							<TextBlock
-                                Grid.Row="1"
-                                HorizontalAlignment="Center"
-                                FontSize="10"
-                                Text="{Binding SampleRate, StringFormat='{}{0} Hz'}" />
+								Grid.Row="1"
+								HorizontalAlignment="Center"
+								FontSize="10"
+								Text="{Binding SampleRate, StringFormat='{}{0} Hz'}" />
 							<StackPanel Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Center">
 								<Label Content="User Volume" HorizontalAlignment="Center" />
-								<Grid ColumnDefinitions="Auto,Auto">
+								<Grid ColumnDefinitions="Auto,Auto,Auto">
+									<!-- Left channel: slider + VU meter -->
 									<StackPanel Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Center" Margin="5">
 										<Label Content="L" HorizontalAlignment="Center" FontSize="10" />
-										<Slider
-                                            MinHeight="200"
-                                            Width="40"
-                                            Maximum="100"
-                                            Minimum="0"
-                                            Orientation="Vertical"
-                                            Value="{Binding UserVolumeLeftPercent, Mode=TwoWay}"
-                                            ToolTip.Tip="{Binding UserVolumeLeftPercent, StringFormat='Left: {0:F0}%'}" />
+										<StackPanel Orientation="Horizontal">
+											<Slider
+												MinHeight="200"
+												Width="40"
+												Maximum="100"
+												Minimum="0"
+												Orientation="Vertical"
+												Value="{Binding UserVolumeLeftPercent, Mode=TwoWay}"
+												ToolTip.Tip="{Binding UserVolumeLeftPercent, StringFormat='Left: {0:F0}%'}" />
+											<controls:VuMeterControl
+												Width="12"
+												Height="200"
+												Margin="2,0,0,0"
+												Level="{Binding PeakLevelLeft}" />
+										</StackPanel>
 										<TextBlock
-                                            HorizontalAlignment="Center"
-                                            FontSize="10"
-                                            Text="{Binding UserVolumeLeftPercent, StringFormat='{}{0:F0}%'}" />
+											HorizontalAlignment="Center"
+											FontSize="10"
+											Text="{Binding UserVolumeLeftPercent, StringFormat='{}{0:F0}%'}" />
 									</StackPanel>
+									<!-- Right channel: slider + VU meter -->
 									<StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Center" Margin="5">
 										<Label Content="R" HorizontalAlignment="Center" FontSize="10" />
-										<Slider
-                                            MinHeight="200"
-                                            Width="40"
-                                            Maximum="100"
-                                            Minimum="0"
-                                            Orientation="Vertical"
-                                            Value="{Binding UserVolumeRightPercent, Mode=TwoWay}"
-                                            ToolTip.Tip="{Binding UserVolumeRightPercent, StringFormat='Right: {0:F0}%'}" />
+										<StackPanel Orientation="Horizontal">
+											<Slider
+												MinHeight="200"
+												Width="40"
+												Maximum="100"
+												Minimum="0"
+												Orientation="Vertical"
+												Value="{Binding UserVolumeRightPercent, Mode=TwoWay}"
+												ToolTip.Tip="{Binding UserVolumeRightPercent, StringFormat='Right: {0:F0}%'}" />
+											<controls:VuMeterControl
+												Width="12"
+												Height="200"
+												Margin="2,0,0,0"
+												Level="{Binding PeakLevelRight}" />
+										</StackPanel>
 										<TextBlock
-                                            HorizontalAlignment="Center"
-                                            FontSize="10"
-                                            Text="{Binding UserVolumeRightPercent, StringFormat='{}{0:F0}%'}" />
+											HorizontalAlignment="Center"
+											FontSize="10"
+											Text="{Binding UserVolumeRightPercent, StringFormat='{}{0:F0}%'}" />
 									</StackPanel>
 								</Grid>
 							</StackPanel>
@@ -94,29 +111,29 @@
 							</StackPanel>
 							<StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
 								<Button
-                                    Margin="2"
-                                    Padding="5,2"
-                                    Command="{Binding $parent[Window].DataContext.ToggleChannelCommand}"
-                                    CommandParameter="{Binding}"
-                                    Content="{Binding IsEnabled, Converter={StaticResource EnabledToTextConverter}}"
-                                    ToolTip.Tip="Enable or disable this channel" />
+									Margin="2"
+									Padding="5,2"
+									Command="{Binding $parent[Window].DataContext.ToggleChannelCommand}"
+									CommandParameter="{Binding}"
+									Content="{Binding IsEnabled, Converter={StaticResource EnabledToTextConverter}}"
+									ToolTip.Tip="Enable or disable this channel" />
 								<Button
-                                    Margin="2"
-                                    Padding="5,2"
-                                    Command="{Binding $parent[Window].DataContext.ToggleMuteCommand}"
-                                    CommandParameter="{Binding}"
-                                    Content="{Binding IsMuted, Converter={StaticResource MutedToTextConverter}}"
-                                    ToolTip.Tip="Mute or unmute this channel" />
+									Margin="2"
+									Padding="5,2"
+									Command="{Binding $parent[Window].DataContext.ToggleMuteCommand}"
+									CommandParameter="{Binding}"
+									Content="{Binding IsMuted, Converter={StaticResource MutedToTextConverter}}"
+									ToolTip.Tip="Mute or unmute this channel" />
 							</StackPanel>
 							<TextBlock
-                                Grid.Row="5"
-                                HorizontalAlignment="Center"
-                                FontSize="9"
-                                Text="{Binding Features}"
-                                TextWrapping="Wrap"
-                                MaxWidth="150" />
+								Grid.Row="5"
+								HorizontalAlignment="Center"
+								FontSize="9"
+								Text="{Binding Features}"
+								TextWrapping="Wrap"
+								MaxWidth="150" />
 						</Grid>
-                    </Border>
+					</Border>
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
 		</ItemsControl>
