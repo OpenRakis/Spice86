@@ -36,7 +36,7 @@
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
 					<Border Margin="10" Padding="10" BorderBrush="Gray" BorderThickness="1" CornerRadius="5">
-						<Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto">
+						<Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto">
 							<TextBlock
                                 Grid.Row="0"
                                 HorizontalAlignment="Center"
@@ -92,30 +92,7 @@
 									<TextBlock Text="{Binding AppVolumeRightPercent, StringFormat='{}{0:F0}%'}" FontSize="10" />
 								</StackPanel>
 							</StackPanel>
-							<StackPanel Grid.Row="4" Orientation="Vertical" Margin="5">
-								<Label Content="Stereo Separation" HorizontalAlignment="Center" FontSize="10" />
-								<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-									<Slider
-                                        MinWidth="120"
-                                        Margin="5,0"
-                                        Maximum="100"
-                                        Minimum="-100"
-                                        Orientation="Horizontal"
-                                        Value="{Binding StereoSeparation, Mode=TwoWay}"
-                                        ToolTip.Tip="{Binding StereoSeparation, StringFormat='Separation: {0:F0}'}" />
-									<Button
-                                        Padding="3"
-                                        Command="{Binding $parent[Window].DataContext.ResetStereoSeparationCommand}"
-                                        CommandParameter="{Binding}"
-                                        Content="Reset"
-                                        ToolTip.Tip="Reset to 100" />
-								</StackPanel>
-								<TextBlock
-                                    HorizontalAlignment="Center"
-                                    FontSize="9"
-                                    Text="{Binding StereoSeparation, StringFormat='{}{0:F0}'}" />
-							</StackPanel>
-							<StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
+							<StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
 								<Button
                                     Margin="2"
                                     Padding="5,2"
@@ -132,14 +109,14 @@
                                     ToolTip.Tip="Mute or unmute this channel" />
 							</StackPanel>
 							<TextBlock
-                                Grid.Row="6"
+                                Grid.Row="5"
                                 HorizontalAlignment="Center"
                                 FontSize="9"
                                 Text="{Binding Features}"
                                 TextWrapping="Wrap"
                                 MaxWidth="150" />
 						</Grid>
-					</Border>
+                    </Border>
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
 		</ItemsControl>

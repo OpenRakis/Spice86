@@ -38,9 +38,6 @@ public partial class MixerChannelViewModel : ViewModelBase {
     private string _features = string.Empty;
 
     [ObservableProperty]
-    private double _stereoSeparation = 100.0;
-
-    [ObservableProperty]
     private bool _isMuted;
 
     public MixerChannelViewModel(MixerChannel channel) {
@@ -69,20 +66,6 @@ public partial class MixerChannelViewModel : ViewModelBase {
         IsMuted = userVolume.Left == 0.0f && userVolume.Right == 0.0f;
 
         Features = string.Join(", ", _channel.GetFeatures());
-
-        // Calculate stereo separation from channel map
-        StereoLine channelMap = _channel.GetChannelMap();
-        if (channelMap.Left == LineIndex.Left && channelMap.Right == LineIndex.Right) {
-            StereoSeparation = 100.0; // Normal stereo
-        } else if (channelMap.Left == LineIndex.Right && channelMap.Right == LineIndex.Left) {
-            StereoSeparation = -100.0; // Reversed
-        } else if (channelMap.Left == LineIndex.Left && channelMap.Right == LineIndex.Left) {
-            StereoSeparation = 0.0; // Mono (left)
-        } else if (channelMap.Left == LineIndex.Right && channelMap.Right == LineIndex.Right) {
-            StereoSeparation = 0.0; // Mono (right)
-        } else {
-            StereoSeparation = 100.0; // Default
-        }
     }
 
     partial void OnIsEnabledChanged(bool value) {
@@ -100,27 +83,6 @@ public partial class MixerChannelViewModel : ViewModelBase {
             _channel.SetUserVolume(new AudioFrame(1.0f, 1.0f));
             UserVolumeLeftPercent = 100.0;
             UserVolumeRightPercent = 100.0;
-        }
-    }
-
-    partial void OnStereoSeparationChanged(double value) {
-        // Map separation percentage to channel mapping
-        if (value >= 75.0) {
-            // Normal stereo (100 to 75): L->L, R->R
-            _channel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Right });
-        } else if (value >= 25.0) {
-            // Reduced stereo (75 to 25): gradually mix
-            // For simplicity, keep normal until we implement proper mixing
-            _channel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Right });
-        } else if (value >= -25.0) {
-            // Mono (25 to -25): both to both
-            _channel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Left });
-        } else if (value >= -75.0) {
-            // Reduced reverse (−25 to −75)
-            _channel.SetChannelMap(new StereoLine { Left = LineIndex.Right, Right = LineIndex.Left });
-        } else {
-            // Reversed stereo (−75 to −100): L->R, R->L
-            _channel.SetChannelMap(new StereoLine { Left = LineIndex.Right, Right = LineIndex.Left });
         }
     }
 

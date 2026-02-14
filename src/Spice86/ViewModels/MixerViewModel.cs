@@ -39,13 +39,6 @@ public partial class MixerViewModel : ViewModelBase {
     }
 
     [RelayCommand]
-    private void ResetStereoSeparation(MixerChannelViewModel channel) {
-        if (channel != null) {
-            channel.StereoSeparation = 100.0;
-        }
-    }
-
-    [RelayCommand]
     private void ToggleChannel(MixerChannelViewModel channel) {
         if (channel != null) {
             channel.IsEnabled = !channel.IsEnabled;
