@@ -676,13 +676,17 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         Span<short> buf = stackalloc short[2];
         _chip.GenerateStream(buf);
 
+        AudioFrame frame = new();
         if (_adlibGold is not null) {
             Span<float> floatBuf = stackalloc float[2];
             _adlibGold.Process(buf, 1, floatBuf);
-            return new AudioFrame { Left = floatBuf[0], Right = floatBuf[1] };
+            frame.Left = floatBuf[0];
+            frame.Right = floatBuf[1];
+        } else {
+            frame.Left = buf[0];
+            frame.Right = buf[1];
         }
-
-        return new AudioFrame { Left = buf[0], Right = buf[1] };
+        return frame;
     }
 
     private sealed class OplChip {
