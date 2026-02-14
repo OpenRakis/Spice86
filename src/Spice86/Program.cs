@@ -49,8 +49,8 @@ public class Program {
                 }).StartWithClassicDesktopLifetime(args, ShutdownMode.OnLastWindowClose);
                 break;
             default:
-                // Start the application
-                BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+                // Start the application - close all windows when main window closes
+                BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, ShutdownMode.OnMainWindowClose);
                 break;
         }
     }
