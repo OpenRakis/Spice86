@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.Sound;
+﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.VM;
@@ -326,9 +326,9 @@ public sealed class Mixer : IDisposable {
             string name = channel.Name;
             bool applyCrossfeed = name is (nameof(Opl)) or "Cms";
             if (applyCrossfeed && channel.HasFeature(ChannelFeature.Stereo)) {
-                channel.                CrossfeedStrength = globalStrength;
+                channel.CrossfeedStrength = globalStrength;
             } else {
-                channel.                CrossfeedStrength = 0.0f;
+                channel.CrossfeedStrength = 0.0f;
             }
         }
     }
@@ -523,8 +523,8 @@ public sealed class Mixer : IDisposable {
         MixerChannel channel = new(handler, name, features, _loggerService);
         channel.SetMixerSampleRate(_sampleRateHz); // Tell channel about mixer rate
         channel.SetSampleRate(sampleRateHz);
-        channel.        AppVolume = new AudioFrame(1.0f, 1.0f);
-        channel.        UserVolume = new AudioFrame(1.0f, 1.0f);
+        channel.AppVolume = new AudioFrame(1.0f, 1.0f);
+        channel.UserVolume = new AudioFrame(1.0f, 1.0f);
 
         int channelRate = channel.GetSampleRate();
         if (channelRate == _sampleRateHz) {
@@ -548,7 +548,7 @@ public sealed class Mixer : IDisposable {
         } else {
             // Set default state
             channel.Enable(false);
-            channel.            UserVolume = new AudioFrame(1.0f, 1.0f);
+            channel.UserVolume = new AudioFrame(1.0f, 1.0f);
             channel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Right });
             SetGlobalCrossfeed();
             SetGlobalReverb();
@@ -568,21 +568,21 @@ public sealed class Mixer : IDisposable {
 
     private void ApplyCachedEffectSettings(MixerChannel channel, MixerChannelSettings settings) {
         if (_doCrossfeed) {
-            channel.            CrossfeedStrength = settings.CrossfeedStrength;
+            channel.CrossfeedStrength = settings.CrossfeedStrength;
         } else {
-            channel.            CrossfeedStrength = 0.0f;
+            channel.CrossfeedStrength = 0.0f;
         }
 
         if (_doReverb) {
-            channel.            ReverbLevel = settings.ReverbLevel;
+            channel.ReverbLevel = settings.ReverbLevel;
         } else {
-            channel.            ReverbLevel = 0.0f;
+            channel.ReverbLevel = 0.0f;
         }
 
         if (_doChorus) {
-            channel.            ChorusLevel = settings.ChorusLevel;
+            channel.ChorusLevel = settings.ChorusLevel;
         } else {
-            channel.            ChorusLevel = 0.0f;
+            channel.ChorusLevel = 0.0f;
         }
     }
 
