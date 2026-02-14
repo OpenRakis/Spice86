@@ -12,52 +12,32 @@ using System.Runtime.CompilerServices;
 
 using Xunit;
 
-/// <summary>
-/// Integration tests for Sound Blaster and OPL timing that run machine code
-/// through the full emulation stack. These verify that hardware delays match
-/// DOSBox Staging's behavior.
-/// </summary>
 [Trait("Category", "Sound")]
 public class SoundIntegrationTests {
     private const int ResultPort = 0x999;
     private const int DetailsPort = 0x998;
 
     /// <summary>
-    /// Tests that the SB DSP reset produces 0xAA after a non-zero delay.
-    /// <para>
-    /// The DSP reset protocol: write 1 to port 0x226 (reset on),
-    /// then write 0 (reset off). DOSBox Staging schedules a 20-microsecond
-    /// event before placing 0xAA in the read buffer. At 3000 cycles/ms
-    /// that is 60 cycles, so the poll loop must spin several iterations
-    /// before data appears — exactly like real SB hardware.
-    /// </para>
-    /// <para>
-    /// The .asm source is in Resources/Sound/sb_reset_delay.asm,
-    /// assembled with: nasm -f bin -o sb_reset_delay.com sb_reset_delay.asm
-    /// DOSBox Staging at 3000 cycles/ms reports: OK after 6 iterations.
-    /// </para>
+    /// Tests that the SB DSP reset produces 0xAA after an expected delay coming from real hardware behavior.
     /// </summary>
     [Fact]
-    public void SoundBlasterDspReset_ProducesAA_AfterMeasurableDelay() {
+    public void SoundBlasterDspReset_ProducesAA_AfterHardwareDelay() {
+        // Arrange
         string comPath = Path.Combine("Resources", "Sound", "sb_reset_delay.com");
         byte[] program = File.ReadAllBytes(comPath);
 
+        // Act
         SoundTestHandler testHandler = RunSoundTest(program, enablePit: true, maxCycles: 500000L,
             sbType: SbType.SBPro2);
 
-        // The DSP must have responded with 0xAA (success = 0x00)
+        // Assert
         testHandler.Results.Should().Contain(0x00, "DSP reset should succeed with 0xAA");
         testHandler.Results.Should().NotContain(0xFF, "DSP reset should not time out");
-
-        // The delay must be non-zero: at least a few poll iterations
         testHandler.Details.Should().HaveCountGreaterThanOrEqualTo(2, "should report low and high byte of iteration count");
         int iterationCount = testHandler.Details[0] | (testHandler.Details[1] << 8);
         iterationCount.Should().BeGreaterThan(0, "reset delay should require multiple poll iterations (20us hardware delay)");
     }
 
-    /// <summary>
-    /// Runs a sound test program through the full emulation stack.
-    /// </summary>
     private SoundTestHandler RunSoundTest(byte[] program, bool enablePit,
         long maxCycles, SbType sbType = SbType.None, OplMode oplMode = OplMode.None,
         [CallerMemberName] string unitTestName = "test") {
