@@ -228,13 +228,19 @@ public sealed class Mixer : IDisposable {
     /// </summary>
     public AudioFrame MasterGain {
         get {
-            lock (_mixerLock) {
+            LockMixerThread();
+            try {
                 return _masterGain;
+            } finally {
+                UnlockMixerThread();
             }
         }
         set {
-            lock (_mixerLock) {
+            LockMixerThread();
+            try {
                 _masterGain = value;
+            } finally {
+                UnlockMixerThread();
             }
         }
     }
@@ -244,8 +250,11 @@ public sealed class Mixer : IDisposable {
     /// </summary>
     /// <returns>The current master gain as an AudioFrame.</returns>
     public AudioFrame GetMasterVolume() {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             return _masterGain;
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -254,8 +263,11 @@ public sealed class Mixer : IDisposable {
     /// </summary>
     /// <param name="gain">The new master gain to apply.</param>
     public void SetMasterVolume(AudioFrame gain) {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             _masterGain = gain;
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -263,7 +275,8 @@ public sealed class Mixer : IDisposable {
     /// Mutes audio output while keeping the audio device active.
     /// </summary>
     public void Mute() {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             if (_state == MixerState.On) {
                 // Clear out any audio in the queue to avoid a stutter on un-mute
                 _audioPlayer.ClearQueuedData();
@@ -271,6 +284,8 @@ public sealed class Mixer : IDisposable {
                 _isManuallyMuted = true;
                 _loggerService.Information("MIXER: Muted audio output");
             }
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -278,12 +293,15 @@ public sealed class Mixer : IDisposable {
     /// Unmutes audio output, resuming playback.
     /// </summary>
     public void Unmute() {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             if (_state == MixerState.Muted) {
                 _state = MixerState.On;
                 _isManuallyMuted = false;
                 _loggerService.Information("MIXER: Unmuted audio output");
             }
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -292,8 +310,11 @@ public sealed class Mixer : IDisposable {
     /// </summary>
     /// <returns>True if audio is manually muted, false otherwise.</returns>
     public bool IsManuallyMuted() {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             return _isManuallyMuted;
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -301,8 +322,11 @@ public sealed class Mixer : IDisposable {
     /// Gets the current crossfeed preset.
     /// </summary>
     public CrossfeedPreset GetCrossfeedPreset() {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             return _crossfeedPreset;
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -310,7 +334,8 @@ public sealed class Mixer : IDisposable {
     /// Sets the crossfeed preset and configures the effect.
     /// </summary>
     public void SetCrossfeedPreset(CrossfeedPreset preset) {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             // Unchanged?
             if (_crossfeedPreset == preset) {
                 return;
@@ -342,6 +367,8 @@ public sealed class Mixer : IDisposable {
             } else {
                 _loggerService.Information("MIXER: Crossfeed disabled");
             }
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -363,13 +390,17 @@ public sealed class Mixer : IDisposable {
     }
 
     public ReverbPreset GetReverbPreset() {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             return _reverbPreset;
+        } finally {
+            UnlockMixerThread();
         }
     }
 
     public void SetReverbPreset(ReverbPreset preset) {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             if (_reverbPreset == preset) {
                 return;
             }
@@ -416,6 +447,8 @@ public sealed class Mixer : IDisposable {
             }
 
             SetGlobalReverb();
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -464,13 +497,17 @@ public sealed class Mixer : IDisposable {
     }
 
     public ChorusPreset GetChorusPreset() {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             return _chorusPreset;
+        } finally {
+            UnlockMixerThread();
         }
     }
 
     public void SetChorusPreset(ChorusPreset preset) {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             if (_chorusPreset == preset) {
                 return;
             }
@@ -512,6 +549,8 @@ public sealed class Mixer : IDisposable {
             }
 
             SetGlobalChorus();
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -846,7 +885,8 @@ public sealed class Mixer : IDisposable {
     }
 
     private void CloseAudioDevice() {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             // Signal the mixer thread to stop
             _threadShouldQuit = true;
             _cancellationTokenSource.Cancel();
@@ -854,6 +894,8 @@ public sealed class Mixer : IDisposable {
             foreach (MixerChannel channel in _channels.Values) {
                 channel.Enable(false);
             }
+        } finally {
+            UnlockMixerThread();
         }
         if (_mixerThread.IsAlive) {
             _mixerThread.Join(TimeSpan.FromSeconds(2));
