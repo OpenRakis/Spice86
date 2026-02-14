@@ -1,26 +1,27 @@
-namespace Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Windows;
+namespace Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Linux;
 
 using System;
 using System.Runtime.Versioning;
 
-using Spice86.Core.Backend.Audio.CrossPlatform.Sdl;
-using Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Windows.DirectSound;
-using Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Windows.Wasapi;
+using Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Linux.Alsa;
 
 /// <summary>
-/// SDL audio backend for Windows, implemented in C# to match SDL behavior.
+/// SDL audio backend for Linux using ALSA.
+/// Reference: DOSBox Staging's SDL audio integration (mixer.cpp)
+/// - Opens ALSA device via SdlAlsaDriver (matching SDL_alsa_audio.c behavior)
+/// - Uses SdlAudioDevice for thread management (matching SDL_RunAudio)
 /// </summary>
-[SupportedOSPlatform("windows")]
-public sealed class SdlWindowsBackend : IAudioBackend {
+[SupportedOSPlatform("linux")]
+public sealed class SdlLinuxBackend : IAudioBackend {
     private SdlAudioDevice _device;
     private AudioDeviceState _state = AudioDeviceState.Stopped;
     private string? _lastError;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SdlWindowsBackend"/> class.
+    /// Initializes a new instance of the <see cref="SdlLinuxBackend"/> class.
     /// </summary>
-    public SdlWindowsBackend() {
-        _device = new SdlAudioDevice(new SdlWasapiDriver());
+    public SdlLinuxBackend() {
+        _device = new SdlAudioDevice(new SdlAlsaDriver());
     }
 
     /// <inheritdoc/>

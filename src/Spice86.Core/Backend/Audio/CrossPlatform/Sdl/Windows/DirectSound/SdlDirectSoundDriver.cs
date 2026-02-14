@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Threading;
 
+using Spice86.Core.Backend.Audio.CrossPlatform.Sdl;
+
 [SupportedOSPlatform("windows")]
 internal sealed class SdlDirectSoundDriver : ISdlAudioDriver {
     private const uint NumChunks = 8;

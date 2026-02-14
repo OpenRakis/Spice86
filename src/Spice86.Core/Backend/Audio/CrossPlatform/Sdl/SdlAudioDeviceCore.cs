@@ -1,17 +1,34 @@
-namespace Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Windows;
+namespace Spice86.Core.Backend.Audio.CrossPlatform.Sdl;
 
 using System;
-using Spice86.Core.Backend.Audio.CrossPlatform;
 
+/// <summary>
+/// Core audio buffer fill logic shared across all platform backends.
+/// Invokes the user callback and handles silence padding.
+/// Reference: SDL_RunAudio callback fill logic (SDL_audio.c lines 720-770)
+/// </summary>
 internal sealed class SdlAudioDeviceCore {
+    /// <summary>
+    /// Creates a new core with the given spec and buffer size.
+    /// </summary>
     public SdlAudioDeviceCore(AudioSpec spec, int bufferSizeBytes) {
         Spec = spec;
         BufferSizeBytes = bufferSizeBytes;
     }
 
+    /// <summary>
+    /// The audio spec for this device.
+    /// </summary>
     public AudioSpec Spec { get; }
+
+    /// <summary>
+    /// The buffer size in bytes.
+    /// </summary>
     public int BufferSizeBytes { get; }
 
+    /// <summary>
+    /// Fills the device buffer by invoking the callback.
+    /// </summary>
     public unsafe void FillDeviceBuffer(IntPtr bufferPtr, int bufferBytes) {
         int clampedBytes = Math.Min(bufferBytes, BufferSizeBytes);
         int sampleCount = clampedBytes / sizeof(float);

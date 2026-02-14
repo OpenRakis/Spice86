@@ -1,9 +1,17 @@
-namespace Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Windows;
+namespace Spice86.Core.Backend.Audio.CrossPlatform.Sdl;
 
 using System;
 using System.Threading;
 
+/// <summary>
+/// Shared audio playback thread iteration logic.
+/// Reference: SDL_RunAudio from SDL_audio.c lines 669-800
+/// </summary>
 internal static class SdlPlaybackThread {
+    /// <summary>
+    /// Performs one iteration of the audio playback loop.
+    /// Reference: SDL_RunAudio main loop body (lines 704-790)
+    /// </summary>
     internal static bool Iterate(SdlAudioDevice device, ISdlAudioDriver driver, object deviceLock) {
         if (IsShutdownRequested(device)) {
             return false;
@@ -47,6 +55,10 @@ internal static class SdlPlaybackThread {
         return true;
     }
 
+    /// <summary>
+    /// Performs shutdown drain and deinit.
+    /// Reference: SDL_RunAudio lines 793-800
+    /// </summary>
     internal static void Shutdown(SdlAudioDevice device, ISdlAudioDriver driver) {
         int frames = device.BufferSizeBytes / (device.ObtainedSpec.Channels * sizeof(float));
         int delayMs = ((frames * 1000) / device.ObtainedSpec.SampleRate) * 2;

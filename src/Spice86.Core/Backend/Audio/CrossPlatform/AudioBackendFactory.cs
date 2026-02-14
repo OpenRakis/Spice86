@@ -3,12 +3,16 @@ namespace Spice86.Core.Backend.Audio.CrossPlatform;
 using System;
 using System.Runtime.Versioning;
 
-using Spice86.Core.Backend.Audio.CrossPlatform.Sdl;
+using Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Linux;
+using Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Mac;
 using Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Windows;
 
 /// <summary>
 /// Factory for creating platform-specific audio backends.
-/// Uses SDL on all platforms to align behavior and API semantics.
+/// Each platform has a native C# port of the corresponding SDL2 audio driver:
+/// - Windows: WASAPI (primary) + DirectSound (fallback)
+/// - Linux: ALSA
+/// - macOS: CoreAudio (AudioQueue)
 /// </summary>
 public static class AudioBackendFactory {
     /// <summary>
@@ -20,7 +24,15 @@ public static class AudioBackendFactory {
             return CreateSdlWindowsBackend();
         }
 
-        return CreateSdlBackend();
+        if (OperatingSystem.IsLinux()) {
+            return CreateSdlLinuxBackend();
+        }
+
+        if (OperatingSystem.IsMacOS()) {
+            return CreateSdlMacBackend();
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -34,29 +46,37 @@ public static class AudioBackendFactory {
     }
 
     /// <summary>
-    /// Tries to create an SDL backend.
-    /// </summary>
-    private static SdlBackend? CreateSdlBackend() {
-        try {
-            if (!SdlNativeMethods.Initialize()) {
-                return null;
-            }
-            return new SdlBackend();
-        } catch (DllNotFoundException) {
-            return null;
-        } catch (TypeInitializationException) {
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Tries to create the SDL Windows backend.
+    /// Tries to create the SDL Windows backend (WASAPI).
     /// </summary>
     [SupportedOSPlatform("windows")]
     private static IAudioBackend? CreateSdlWindowsBackend() {
         try {
             return new SdlWindowsBackend();
         } catch (InvalidOperationException) {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Tries to create the SDL Linux backend (ALSA).
+    /// </summary>
+    [SupportedOSPlatform("linux")]
+    private static IAudioBackend? CreateSdlLinuxBackend() {
+        try {
+            return new SdlLinuxBackend();
+        } catch (DllNotFoundException) {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Tries to create the SDL macOS backend (CoreAudio).
+    /// </summary>
+    [SupportedOSPlatform("osx")]
+    private static IAudioBackend? CreateSdlMacBackend() {
+        try {
+            return new SdlMacBackend();
+        } catch (DllNotFoundException) {
             return null;
         }
     }
