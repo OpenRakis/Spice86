@@ -986,7 +986,9 @@ public sealed class MixerChannel {
                 frameWithGain.Left = _prevFrame[(int)mappedChannelLeft];
                 frameWithGain.Right = _prevFrame[(int)mappedChannelRight];
             } else {
-                frameWithGain.Left = _prevFrame[(int)mappedChannelLeft];
+                float monoSample = _prevFrame[(int)mappedChannelLeft];
+                frameWithGain.Left = monoSample;
+                frameWithGain.Right = monoSample;
             }
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
 
