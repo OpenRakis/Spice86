@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.ViewModels.Services;
 
 using System;
@@ -22,8 +23,14 @@ public partial class MixerViewModel : ViewModelBase {
     /// </summary>
     public ObservableCollection<MixerChannelViewModel> Channels { get; } = new();
 
-    public MixerViewModel(Mixer mixer) {
+    /// <summary>
+    /// Gets the audio settings sub-viewmodel.
+    /// </summary>
+    public AudioSettingsViewModel AudioSettings { get; }
+
+    public MixerViewModel(Mixer mixer, SoundBlaster soundBlaster, Opl opl) {
         _mixer = mixer;
+        AudioSettings = new AudioSettingsViewModel(soundBlaster, opl);
 
         // Start dispatcher timer to update channel state
         // Use 50ms for near real-time VU meter feedback
@@ -41,21 +48,16 @@ public partial class MixerViewModel : ViewModelBase {
 
     [RelayCommand]
     private void ToggleChannel(MixerChannelViewModel channel) {
-        if (channel != null) {
-            channel.IsEnabled = !channel.IsEnabled;
-        }
+        channel?.IsEnabled = !channel.IsEnabled;
     }
 
     [RelayCommand]
     private void ToggleMute(MixerChannelViewModel channel) {
-        if (channel != null) {
-            channel.IsMuted = !channel.IsMuted;
-        }
+        channel?.IsMuted = !channel.IsMuted;
     }
 
     private void RefreshChannels() {
-        // Get all channels from mixer
-        System.Collections.Generic.List<MixerChannel> currentChannels = [.. _mixer.GetAllChannels()];
+        List<MixerChannel> currentChannels = [.. _mixer.GetAllChannels()];
 
         // Remove channels that no longer exist
         for (int i = Channels.Count - 1; i >= 0; i--) {

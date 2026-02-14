@@ -76,15 +76,7 @@
 						<MenuItem.Header>
 							<StackPanel Orientation="Horizontal">
 								<fluent:SymbolIcon Symbol="MusicNote2" />
-								<Label Content="Audio Mixer" />
-							</StackPanel>
-						</MenuItem.Header>
-					</MenuItem>
-					<MenuItem Command="{Binding ShowAudioSettingsCommand}">
-						<MenuItem.Header>
-							<StackPanel Orientation="Horizontal">
-								<fluent:SymbolIcon Symbol="Settings" />
-								<Label Content="Audio Settings" />
+								<Label Content="Audio Mixer &amp; Settings" />
 							</StackPanel>
 						</MenuItem.Header>
 					</MenuItem>

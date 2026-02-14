@@ -1,23 +1,25 @@
 <Window
-	x:Class="Spice86.Views.MixerView"
-	xmlns="https://github.com/avaloniaui"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	xmlns:vm="using:Spice86.ViewModels"
-	xmlns:local="using:Spice86.Views.Converters"
-	xmlns:controls="using:Spice86.Views.Controls"
-	x:CompileBindings="True"
-	x:DataType="vm:MixerViewModel"
-	WindowStartupLocation="CenterOwner"
-	ShowInTaskbar="True"
-	CanResize="True"
-	MinWidth="600"
-	MinHeight="450"
-	Width="700"
-	Height="500"
-	Title="Audio Mixer"
-	mc:Ignorable="d">
+x:Class="Spice86.Views.MixerView"
+xmlns="https://github.com/avaloniaui"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+xmlns:vm="using:Spice86.ViewModels"
+xmlns:local="using:Spice86.Views.Converters"
+xmlns:controls="using:Spice86.Views.Controls"
+xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+x:CompileBindings="True"
+x:DataType="vm:MixerViewModel"
+WindowStartupLocation="CenterOwner"
+ShowInTaskbar="True"
+CanResize="True"
+MinWidth="800"
+MinHeight="600"
+Width="800"
+Height="600"
+Title="Audio Mixer"
+Icon="/Views/Assets/Spice86.ico"
+mc:Ignorable="d">
 	<Design.DataContext>
 		<vm:MixerViewModel />
 	</Design.DataContext>
@@ -27,122 +29,228 @@
 			<local:BoolToMutedTextConverter x:Key="MutedToTextConverter" />
 		</ResourceDictionary>
 	</Window.Resources>
-	<ItemsControl ItemsSource="{Binding Channels}" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
-		<ItemsControl.ItemsPanel>
-			<ItemsPanelTemplate>
-				<UniformGrid Rows="1" />
-			</ItemsPanelTemplate>
-		</ItemsControl.ItemsPanel>
-		<ItemsControl.ItemTemplate>
-			<DataTemplate>
-				<Border Margin="5" Padding="10" BorderBrush="Gray" BorderThickness="1" CornerRadius="5">
-					<Viewbox Stretch="Uniform" StretchDirection="Both">
-						<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Width="200">
-							<TextBlock
-								Grid.Row="0"
-								HorizontalAlignment="Center"
-								FontWeight="Bold"
-								FontSize="16"
-								Text="{Binding Name}" />
-							<TextBlock
-								Grid.Row="1"
-								HorizontalAlignment="Center"
-								FontSize="12"
-								Text="{Binding SampleRate, StringFormat='{}{0} Hz'}" />
-							<Label Grid.Row="2" Content="User Volume" HorizontalAlignment="Center" FontSize="12" />
-							<StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center">
-								<!-- Left channel: slider + VU meter -->
-								<StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="5">
-									<Label Content="L" HorizontalAlignment="Center" FontSize="12" />
-									<StackPanel Orientation="Horizontal">
-										<Slider
-											Height="200"
-											Maximum="100"
-											Minimum="0"
-											Orientation="Vertical"
-											Value="{Binding UserVolumeLeftPercent, Mode=TwoWay}"
-											ToolTip.Tip="{Binding UserVolumeLeftPercent, StringFormat='Left: {0:F0}%'}" />
-										<controls:VuMeterControl
-											Width="20"
-											Height="200"
-											Margin="2,0,0,0"
-											Level="{Binding PeakLevelLeft}" />
-									</StackPanel>
-									<TextBlock
-										HorizontalAlignment="Center"
-										FontSize="12"
-										Text="{Binding UserVolumeLeftPercent, StringFormat='{}{0:F0}%'}" />
-								</StackPanel>
-								<!-- Right channel: slider + VU meter -->
-								<StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="5">
-									<Label Content="R" HorizontalAlignment="Center" FontSize="12" />
-									<StackPanel Orientation="Horizontal">
-										<Slider
-											Height="200"
-											Maximum="100"
-											Minimum="0"
-											Orientation="Vertical"
-											Value="{Binding UserVolumeRightPercent, Mode=TwoWay}"
-											ToolTip.Tip="{Binding UserVolumeRightPercent, StringFormat='Right: {0:F0}%'}" />
-										<controls:VuMeterControl
-											Width="20"
-											Height="200"
-											Margin="2,0,0,0"
-											Level="{Binding PeakLevelRight}" />
-									</StackPanel>
-									<TextBlock
-										HorizontalAlignment="Center"
-										FontSize="12"
-										Text="{Binding UserVolumeRightPercent, StringFormat='{}{0:F0}%'}" />
-								</StackPanel>
+	<Grid>
+		<TabControl TabStripPlacement="Top">
+			<!-- Mixer Tab -->
+			<TabItem>
+				<TabItem.Header>
+					<StackPanel MaxWidth="100" MaxHeight="30"  Orientation="Horizontal">
+						<fluent:SymbolIcon Symbol="MusicNote2" />
+						<TextBlock Text="Mixer" VerticalAlignment="Center" />
+					</StackPanel>
+				</TabItem.Header>
+				<TabItem.Content>
+					<ItemsControl ItemsSource="{Binding Channels}" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<UniformGrid Rows="1" />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<Border Margin="5" Padding="10" BorderBrush="Gray" BorderThickness="1" CornerRadius="5">
+									<Viewbox Stretch="Uniform" StretchDirection="Both">
+										<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Width="200">
+											<TextBlock
+											Grid.Row="0"
+											HorizontalAlignment="Center"
+											FontWeight="Bold"
+											FontSize="16"
+											Text="{Binding Name}" />
+											<TextBlock
+											Grid.Row="1"
+											HorizontalAlignment="Center"
+											FontSize="12"
+											Text="{Binding SampleRate, StringFormat='{}{0} Hz'}" />
+											<Label Grid.Row="2" Content="User Volume" HorizontalAlignment="Center" FontSize="12" />
+											<StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center">
+												<!-- Left channel: slider + VU meter -->
+												<StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="5">
+													<Label Content="L" HorizontalAlignment="Center" FontSize="12" />
+													<StackPanel Orientation="Horizontal">
+														<Slider
+														Height="200"
+														Maximum="100"
+														Minimum="0"
+														Orientation="Vertical"
+														Value="{Binding UserVolumeLeftPercent, Mode=TwoWay}"
+														ToolTip.Tip="{Binding UserVolumeLeftPercent, StringFormat='Left: {0:F0}%'}" />
+														<controls:VuMeterControl
+														Width="20"
+														Height="200"
+														Margin="2,0,0,0"
+														Level="{Binding PeakLevelLeft}" />
+													</StackPanel>
+													<TextBlock
+													HorizontalAlignment="Center"
+													FontSize="12"
+													Text="{Binding UserVolumeLeftPercent, StringFormat='{}{0:F0}%'}" />
+												</StackPanel>
+												<!-- Right channel: slider + VU meter -->
+												<StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="5">
+													<Label Content="R" HorizontalAlignment="Center" FontSize="12" />
+													<StackPanel Orientation="Horizontal">
+														<Slider
+														Height="200"
+														Maximum="100"
+														Minimum="0"
+														Orientation="Vertical"
+														Value="{Binding UserVolumeRightPercent, Mode=TwoWay}"
+														ToolTip.Tip="{Binding UserVolumeRightPercent, StringFormat='Right: {0:F0}%'}" />
+														<controls:VuMeterControl
+														Width="20"
+														Height="200"
+														Margin="2,0,0,0"
+														Level="{Binding PeakLevelRight}" />
+													</StackPanel>
+													<TextBlock
+													HorizontalAlignment="Center"
+													FontSize="12"
+													Text="{Binding UserVolumeRightPercent, StringFormat='{}{0:F0}%'}" />
+												</StackPanel>
+											</StackPanel>
+											<!-- Waveform display -->
+											<controls:WaveformControl
+											Grid.Row="4"
+											Height="100"
+											Width="180"
+											Margin="5"
+											SamplesLeft="{Binding WaveformSamplesLeft}"
+											SamplesRight="{Binding WaveformSamplesRight}"
+											ToolTip.Tip="Audio waveform (L: green, R: blue)" />
+											<StackPanel Grid.Row="5" Orientation="Vertical" Margin="5">
+												<Label Content="App Volume" HorizontalAlignment="Center" FontSize="12" />
+												<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+													<TextBlock Text="L: " FontSize="12" />
+													<TextBlock Text="{Binding AppVolumeLeftPercent, StringFormat='{}{0:F0}%'}" FontSize="12" />
+													<TextBlock Text=" R: " FontSize="12" Margin="10,0,0,0" />
+													<TextBlock Text="{Binding AppVolumeRightPercent, StringFormat='{}{0:F0}%'}" FontSize="12" />
+												</StackPanel>
+											</StackPanel>
+											<StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
+												<Button
+												Margin="2"
+												Padding="8,4"
+												FontSize="12"
+												Command="{Binding $parent[Window].DataContext.ToggleChannelCommand}"
+												CommandParameter="{Binding}"
+												Content="{Binding IsEnabled, Converter={StaticResource EnabledToTextConverter}}"
+												ToolTip.Tip="Enable or disable this channel" />
+												<Button
+												Margin="2"
+												Padding="8,4"
+												FontSize="12"
+												Command="{Binding $parent[Window].DataContext.ToggleMuteCommand}"
+												CommandParameter="{Binding}"
+												Content="{Binding IsMuted, Converter={StaticResource MutedToTextConverter}}"
+												ToolTip.Tip="Mute or unmute this channel" />
+											</StackPanel>
+											<TextBlock
+											Grid.Row="7"
+											HorizontalAlignment="Center"
+											FontSize="10"
+											Text="{Binding Features}"
+											TextWrapping="Wrap"
+											MaxWidth="180" />
+										</Grid>
+									</Viewbox>
+								</Border>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</TabItem.Content>
+			</TabItem>
+			<!-- Settings Tab -->
+			<TabItem>
+				<TabItem.Header>
+					<StackPanel MaxWidth="100" MaxHeight="30" Orientation="Horizontal">
+						<fluent:SymbolIcon Symbol="Settings" />
+						<TextBlock Text="Settings" VerticalAlignment="Center" />
+					</StackPanel>
+				</TabItem.Header>
+				<TabItem.Content>
+					<ScrollViewer>
+						<StackPanel DataContext="{Binding AudioSettings}">
+							<!-- Info Banner -->
+							<TextBlock Text="Audio hardware settings are configured at startup via CLI options." TextWrapping="Wrap" />
+
+							<!-- Current Configuration Section -->
+							<Grid RowDefinitions="Auto,*">
+								<TextBlock Grid.Row="0" Text="Current Configuration" FontWeight="Bold" FontSize="16" />
+
+								<UniformGrid Grid.Row="1">
+									<!-- Sound Blaster Type -->
+									<Grid ColumnDefinitions="150,*">
+										<TextBlock Grid.Column="0" Text="Sound Blaster Type:" VerticalAlignment="Center" />
+										<TextBlock Grid.Column="1" Text="{Binding SbType}" FontWeight="SemiBold" VerticalAlignment="Center" />
+									</Grid>
+
+									<!-- OPL Mode -->
+									<Grid ColumnDefinitions="150,*">
+										<TextBlock Grid.Column="0" Text="OPL Mode:" VerticalAlignment="Center" />
+										<TextBlock Grid.Column="1" Text="{Binding OplMode}" FontWeight="SemiBold" VerticalAlignment="Center" />
+									</Grid>
+
+									<!-- Base Address -->
+									<Grid ColumnDefinitions="150,*">
+										<TextBlock Grid.Column="0" Text="Base Address:" VerticalAlignment="Center" />
+										<TextBlock Grid.Column="1" Text="{Binding SbBase, StringFormat='0x{0:X3}'}" FontWeight="SemiBold" VerticalAlignment="Center" />
+									</Grid>
+
+									<!-- IRQ -->
+									<Grid ColumnDefinitions="150,*">
+										<TextBlock Grid.Column="0" Text="IRQ:" VerticalAlignment="Center" />
+										<TextBlock Grid.Column="1" Text="{Binding SbIrq}" FontWeight="SemiBold" VerticalAlignment="Center" />
+									</Grid>
+
+									<!-- DMA -->
+									<Grid ColumnDefinitions="150,*">
+										<TextBlock Grid.Column="0" Text="8-bit DMA:" VerticalAlignment="Center" />
+										<TextBlock Grid.Column="1" Text="{Binding SbDma}" FontWeight="SemiBold" VerticalAlignment="Center" />
+									</Grid>
+
+									<!-- High DMA -->
+									<Grid ColumnDefinitions="150,*">
+										<TextBlock Grid.Column="0" Text="16-bit DMA:" VerticalAlignment="Center" />
+										<TextBlock Grid.Column="1" Text="{Binding SbHdma}" FontWeight="SemiBold" VerticalAlignment="Center" />
+									</Grid>
+								</UniformGrid>
+							</Grid>
+
+							<!-- BLASTER Environment Variable -->
+							<StackPanel>
+								<TextBlock Text="BLASTER Environment Variable" FontWeight="Bold" FontSize="16" />
+								<TextBox Text="{Binding BlasterString}" IsReadOnly="True" FontFamily="Consolas" />
+								<TextBlock Text="{Binding BlasterFormatString}" FontSize="11" />
 							</StackPanel>
-							<!-- Waveform display -->
-							<controls:WaveformControl
-								Grid.Row="4"
-								Height="100"
-								Width="180"
-								Margin="5"
-								SamplesLeft="{Binding WaveformSamplesLeft}"
-								SamplesRight="{Binding WaveformSamplesRight}"
-								ToolTip.Tip="Audio waveform (L: green, R: blue)" />
-							<StackPanel Grid.Row="5" Orientation="Vertical" Margin="5">
-								<Label Content="App Volume" HorizontalAlignment="Center" FontSize="12" />
-								<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-									<TextBlock Text="L: " FontSize="12" />
-									<TextBlock Text="{Binding AppVolumeLeftPercent, StringFormat='{}{0:F0}%'}" FontSize="12" />
-									<TextBlock Text=" R: " FontSize="12" Margin="10,0,0,0" />
-									<TextBlock Text="{Binding AppVolumeRightPercent, StringFormat='{}{0:F0}%'}" FontSize="12" />
-								</StackPanel>
+
+							<!-- CLI Options Reference -->
+							<StackPanel>
+								<TextBlock Text="CLI Options Reference" FontWeight="Bold" FontSize="16" />
+								<TextBlock Text="Use these command line options to configure audio at startup:" />
+								<ItemsControl ItemsSource="{Binding CliOptions}" x:DataType="vm:AudioSettingsViewModel">
+									<ItemsControl.ItemTemplate>
+										<DataTemplate x:DataType="vm:CliOptionInfo">
+											<StackPanel Spacing="2" Margin="0,5">
+												<TextBlock Text="{Binding OptionName}" FontWeight="SemiBold" FontFamily="Consolas" />
+												<TextBlock Text="{Binding Description}" FontSize="12" />
+												<StackPanel Orientation="Horizontal" Spacing="5">
+													<TextBlock Text="Values:" FontSize="11" />
+													<TextBlock Text="{Binding ValidValues}" FontSize="11" FontFamily="Consolas" />
+												</StackPanel>
+												<StackPanel Orientation="Horizontal" Spacing="5">
+													<TextBlock Text="Default:" FontSize="11" />
+													<TextBlock Text="{Binding DefaultValue}" FontSize="11" FontWeight="SemiBold" FontFamily="Consolas" />
+												</StackPanel>
+											</StackPanel>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
 							</StackPanel>
-							<StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
-								<Button
-									Margin="2"
-									Padding="8,4"
-									FontSize="12"
-									Command="{Binding $parent[Window].DataContext.ToggleChannelCommand}"
-									CommandParameter="{Binding}"
-									Content="{Binding IsEnabled, Converter={StaticResource EnabledToTextConverter}}"
-									ToolTip.Tip="Enable or disable this channel" />
-								<Button
-									Margin="2"
-									Padding="8,4"
-									FontSize="12"
-									Command="{Binding $parent[Window].DataContext.ToggleMuteCommand}"
-									CommandParameter="{Binding}"
-									Content="{Binding IsMuted, Converter={StaticResource MutedToTextConverter}}"
-									ToolTip.Tip="Mute or unmute this channel" />
-							</StackPanel>
-							<TextBlock
-								Grid.Row="7"
-								HorizontalAlignment="Center"
-								FontSize="10"
-								Text="{Binding Features}"
-								TextWrapping="Wrap"
-								MaxWidth="180" />
-						</Grid>
-					</Viewbox>
-				</Border>
-			</DataTemplate>
-		</ItemsControl.ItemTemplate>
-	</ItemsControl>
+						</StackPanel>
+					</ScrollViewer>
+				</TabItem.Content>
+			</TabItem>
+		</TabControl>
+	</Grid>
 </Window>

@@ -27,6 +27,8 @@ using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
 
+using System.Linq;
+
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
 
@@ -161,32 +163,24 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             }
         }
 
+        Window? mainWindow = lifetime.Windows.FirstOrDefault(w => w is MainWindow);
+
         // Create new mixer window
         MixerView newMixerWindow = new() {
-            DataContext = new MixerViewModel(_mixer)
+            DataContext = new MixerViewModel(_mixer, _soundBlaster, _opl)
         };
-        newMixerWindow.Show();
+
+        if (mainWindow != null) {
+            newMixerWindow.Show(mainWindow);
+        } else {
+            newMixerWindow.Show();
+        }
     }
 
     [RelayCommand]
     private void ShowAudioSettings() {
-        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime lifetime) {
-            return;
-        }
-
-        // Check if audio settings window already exists
-        foreach (Window window in lifetime.Windows) {
-            if (window is AudioSettingsView audioSettingsView) {
-                audioSettingsView.Activate();
-                return;
-            }
-        }
-
-        // Create new audio settings window
-        AudioSettingsView newAudioSettingsWindow = new() {
-            DataContext = new AudioSettingsViewModel(_soundBlaster, _opl)
-        };
-        newAudioSettingsWindow.Show();
+        // Audio settings is now a tab in the mixer window
+        ShowMixer();
     }
 
     internal void OnMainWindowClosing() => _isAppClosing = true;

@@ -1,5 +1,9 @@
 namespace Spice86.ViewModels;
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Sound;
@@ -59,16 +63,14 @@ public partial class AudioSettingsViewModel : ViewModelBase {
     private bool _isAdlibGoldEnabled;
 
     /// <summary>
-    /// Gets the OPL mode description.
+    /// Gets the BLASTER environment variable format description.
     /// </summary>
-    [ObservableProperty]
-    private string _oplModeDescription = string.Empty;
+    public string BlasterFormatString { get; } = "Format: A[base] I[irq] D[dma] H[hdma] T[type]";
 
     /// <summary>
-    /// Gets the Sound Blaster type description.
+    /// Gets the CLI options reference for audio configuration.
     /// </summary>
-    [ObservableProperty]
-    private string _sbTypeDescription = string.Empty;
+    public IReadOnlyList<CliOptionInfo> CliOptions { get; }
 
     public AudioSettingsViewModel(SoundBlaster soundBlaster, Opl opl) {
         SbType = soundBlaster.SbTypeProperty;
@@ -79,32 +81,19 @@ public partial class AudioSettingsViewModel : ViewModelBase {
         OplMode = opl.Mode;
         BlasterString = soundBlaster.BlasterString;
         IsAdlibGoldEnabled = opl.IsAdlibGoldEnabled;
-
-        OplModeDescription = GetOplModeDescription(OplMode);
-        SbTypeDescription = GetSbTypeDescription(SbType);
+        CliOptions = BuildCliOptions();
     }
 
-    private static string GetOplModeDescription(OplMode mode) {
-        return mode switch {
-            OplMode.None => "Disabled",
-            OplMode.Opl2 => "OPL2 (Mono, 9 channels) - Original AdLib",
-            OplMode.DualOpl2 => "Dual OPL2 (Stereo, 18 channels) - Sound Blaster Pro 1",
-            OplMode.Opl3 => "OPL3 (Stereo, 18 channels, 4-op) - Sound Blaster Pro 2/16",
-            OplMode.Opl3Gold => "OPL3 Gold (Stereo + Surround) - AdLib Gold 1000",
-            _ => "Unknown"
-        };
-    }
-
-    private static string GetSbTypeDescription(SbType sbType) {
-        return sbType switch {
-            SbType.None => "Disabled",
-            SbType.SB1 => "Sound Blaster 1.0/1.5 (8-bit, mono, OPL2)",
-            SbType.SB2 => "Sound Blaster 2.0 (8-bit, mono, OPL2, auto-init DMA)",
-            SbType.SBPro1 => "Sound Blaster Pro (8-bit, stereo, Dual OPL2)",
-            SbType.SBPro2 => "Sound Blaster Pro 2 (8-bit, stereo, OPL3)",
-            SbType.Sb16 => "Sound Blaster 16 (16-bit, stereo, OPL3)",
-            SbType.GameBlaster => "Creative Game Blaster (CMS chips, no OPL)",
-            _ => "Unknown"
+    private static IReadOnlyList<CliOptionInfo> BuildCliOptions() {
+        string sbTypeValues = string.Join(", ", Enum.GetNames<SbType>());
+        string oplModeValues = string.Join(", ", Enum.GetNames<OplMode>());
+        return new List<CliOptionInfo> {
+            new("--SbType", "Sound Blaster card type", sbTypeValues, nameof(SbType.SBPro2)),
+            new("--OplMode", "OPL synthesis mode", oplModeValues, nameof(OplMode.Opl3)),
+            new("--SbBase", "Sound Blaster base I/O address", "0x220, 0x240, 0x260, 0x280", "0x220"),
+            new("--SbIrq", "Sound Blaster IRQ line", "5, 7, 9, 10", "7"),
+            new("--SbDma", "Sound Blaster 8-bit DMA channel", "0, 1, 3", "1"),
+            new("--SbHdma", "Sound Blaster 16-bit high DMA channel", "5, 6, 7", "5")
         };
     }
 }
