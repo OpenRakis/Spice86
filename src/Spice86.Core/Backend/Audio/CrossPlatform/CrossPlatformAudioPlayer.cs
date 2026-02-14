@@ -92,9 +92,9 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
 
     /// <inheritdoc/>
     internal override int WriteData(Span<float> data) {
-        // BulkEnqueue(ReadOnlySpan<T>) processes in chunks within lock acquisitions,
+        // BulkEnqueue(Span<T>) processes in chunks within lock acquisitions,
         // avoiding the need to copy to a temporary array.
-        return _queue.BulkEnqueue((ReadOnlySpan<float>)data);
+        return _queue.BulkEnqueue(data);
     }
 
     /// <summary>

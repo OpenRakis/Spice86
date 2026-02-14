@@ -18,7 +18,7 @@ using System.Threading;
 /// Uses a circular buffer internally for O(1) enqueue/dequeue operations.
 /// </remarks>
 /// <typeparam name="T">The element type stored in the queue.</typeparam>
-public sealed class RWQueue<T> {
+public sealed class RWQueue<T> where T : struct {
     // Circular buffer implementation matching std::deque semantics
     private T[] _buffer;
     private int _head;  // Read position (front of queue)
@@ -27,6 +27,43 @@ public sealed class RWQueue<T> {
     private readonly object _mutex = new();
     private int _capacity;
     private bool _isRunning = true;
+
+    /// <summary>
+    /// Moves items from <paramref name="source"/> into the circular buffer at <c>_tail</c>,
+    /// handling wrap-around. Clears the source span and advances <c>_tail</c> and <c>_count</c>.
+    /// </summary>
+    private void MoveIn(Span<T> source) {
+        int numItems = source.Length;
+        int firstSegment = Math.Min(numItems, _capacity - _tail);
+        source[..firstSegment].CopyTo(_buffer.AsSpan(_tail, firstSegment));
+        int secondSegment = numItems - firstSegment;
+        if (secondSegment > 0) {
+            source.Slice(firstSegment, secondSegment).CopyTo(_buffer.AsSpan(0, secondSegment));
+        }
+        source.Clear();
+        _tail = (_tail + numItems) % _capacity;
+        _count += numItems;
+    }
+
+    /// <summary>
+    /// Moves items from the circular buffer at <c>_head</c> into <paramref name="target"/>,
+    /// handling wrap-around. Clears the buffer region and advances <c>_head</c> and <c>_count</c>.
+    /// </summary>
+    private void MoveOut(Span<T> target) {
+        int numItems = target.Length;
+        int firstSegment = Math.Min(numItems, _capacity - _head);
+        _buffer.AsSpan(_head, firstSegment).CopyTo(target[..firstSegment]);
+        int secondSegment = numItems - firstSegment;
+        if (secondSegment > 0) {
+            _buffer.AsSpan(0, secondSegment).CopyTo(target.Slice(firstSegment, secondSegment));
+        }
+        _buffer.AsSpan(_head, firstSegment).Clear();
+        if (secondSegment > 0) {
+            _buffer.AsSpan(0, secondSegment).Clear();
+        }
+        _head = (_head + numItems) % _capacity;
+        _count -= numItems;
+    }
 
     /// <summary>
     /// Initializes a new queue with the specified capacity.
@@ -212,7 +249,7 @@ public sealed class RWQueue<T> {
 
             if (_count > 0) {
                 T item = _buffer[_head];
-                _buffer[_head] = default!; // Clear reference for GC
+                _buffer[_head] = default;
                 _head = (_head + 1) % _capacity;
                 _count--;
                 Monitor.Pulse(_mutex);
@@ -221,26 +258,27 @@ public sealed class RWQueue<T> {
             }
 
             success = false;
-            return default!;
+            return default;
         }
     }
 
     /// <summary>
     /// Blocking bulk enqueue from a span.
     /// </summary>
-    /// <param name="source">Source span to read items from.</param>
+    /// <param name="source">Source span to read items from. Will be cleared after enqueueing.</param>
     /// <returns>Number of items actually enqueued.</returns>
-    public int BulkEnqueue(ReadOnlySpan<T> source) {
+    public int BulkEnqueue(Span<T> source) {
         return BulkEnqueue(source, source.Length);
     }
 
     /// <summary>
     /// Blocking bulk enqueue. Moves items from source into the queue.
+    /// Source span is cleared after items are enqueued (simulates C++ move semantics).
     /// </summary>
-    /// <param name="source">Source span to read items from.</param>
+    /// <param name="source">Source span to read items from. Will be cleared after enqueueing.</param>
     /// <param name="numRequested">Number of items to enqueue.</param>
     /// <returns>Number of items actually enqueued.</returns>
-    public int BulkEnqueue(ReadOnlySpan<T> source, int numRequested) {
+    public int BulkEnqueue(Span<T> source, int numRequested) {
         const int minItems = 1;
         int sourceOffset = 0;
         int numRemaining = numRequested;
@@ -256,13 +294,7 @@ public sealed class RWQueue<T> {
 
                 if (_isRunning) {
                     numItems = Math.Min(_capacity - _count, numRemaining);
-
-                    // Copy items into circular buffer, handling wrap-around
-                    for (int i = 0; i < numItems; i++) {
-                        _buffer[_tail] = source[sourceOffset + i];
-                        _tail = (_tail + 1) % _capacity;
-                    }
-                    _count += numItems;
+                    MoveIn(source.Slice(sourceOffset, numItems));
 
                     Monitor.Pulse(_mutex);
                     sourceOffset += numItems;
@@ -290,19 +322,20 @@ public sealed class RWQueue<T> {
     /// <summary>
     /// Non-blocking bulk enqueue from a span.
     /// </summary>
-    /// <param name="source">Source span to read items from.</param>
+    /// <param name="source">Source span to read items from. Will be cleared after enqueueing.</param>
     /// <returns>Number of items actually enqueued.</returns>
-    public int NonblockingBulkEnqueue(ReadOnlySpan<T> source) {
+    public int NonblockingBulkEnqueue(Span<T> source) {
         return NonblockingBulkEnqueue(source, source.Length);
     }
 
     /// <summary>
-    /// Non-blocking bulk enqueue.
+    /// Non-blocking bulk enqueue. Moves items from source into the queue.
+    /// Source span is cleared after items are enqueued (simulates C++ move semantics).
     /// </summary>
-    /// <param name="source">Source span to read items from.</param>
+    /// <param name="source">Source span to read items from. Will be cleared after enqueueing.</param>
     /// <param name="numRequested">Number of items to enqueue.</param>
     /// <returns>Number of items actually enqueued.</returns>
-    public int NonblockingBulkEnqueue(ReadOnlySpan<T> source, int numRequested) {
+    public int NonblockingBulkEnqueue(Span<T> source, int numRequested) {
         lock (_mutex) {
             if (!_isRunning || _count >= _capacity) {
                 return 0;
@@ -310,12 +343,7 @@ public sealed class RWQueue<T> {
 
             int availableCapacity = _capacity - _count;
             int numItems = Math.Min(availableCapacity, numRequested);
-
-            for (int i = 0; i < numItems; i++) {
-                _buffer[_tail] = source[i];
-                _tail = (_tail + 1) % _capacity;
-            }
-            _count += numItems;
+            MoveIn(source.Slice(0, numItems));
 
             Monitor.Pulse(_mutex);
             return numItems;
@@ -343,23 +371,7 @@ public sealed class RWQueue<T> {
 
                 if (_isRunning || _count > 0) {
                     numItems = Math.Min(_count, numRemaining);
-
-                    // Bulk copy from circular buffer to target span
-                    // Handle wrap-around by copying in up to two segments
-                    int firstSegment = Math.Min(numItems, _capacity - _head);
-                    _buffer.AsSpan(_head, firstSegment).CopyTo(target.Slice(targetOffset));
-
-                    int secondSegment = numItems - firstSegment;
-                    if (secondSegment > 0) {
-                        _buffer.AsSpan(0, secondSegment).CopyTo(target.Slice(targetOffset + firstSegment));
-                    }
-
-                    // Clear references for GC and advance head
-                    for (int i = 0; i < numItems; i++) {
-                        _buffer[_head] = default!;
-                        _head = (_head + 1) % _capacity;
-                    }
-                    _count -= numItems;
+                    MoveOut(target.Slice(targetOffset, numItems));
 
                     Monitor.Pulse(_mutex);
                     targetOffset += numItems;

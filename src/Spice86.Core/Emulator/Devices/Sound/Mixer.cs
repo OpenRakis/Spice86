@@ -925,7 +925,8 @@ public sealed class Mixer : IDisposable {
     /// <param name="framesRequested">Number of audio frames requested by the mixer.</param>
     /// <param name="device">The audio device (passed as 'this' from the device).</param>
     internal void PullFromQueueCallback<TDevice, TItem>(int framesRequested, TDevice device)
-        where TDevice : IAudioQueueDevice<TItem> {
+        where TDevice : IAudioQueueDevice<TItem>
+        where TItem : struct {
         // Size to 2x blocksize. The mixer callback will request 1x blocksize.
         // This provides a good size to avoid over-runs and stalls.
         int queueSize = (int)Math.Ceiling(device.Channel.FramesPerBlock * 2.0f);
