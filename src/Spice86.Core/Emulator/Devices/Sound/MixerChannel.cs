@@ -37,7 +37,6 @@ public sealed class MixerChannel {
     private AudioFrame _combinedVolumeGain = new(1.0f, 1.0f);
 
     private bool _doLerpUpsample;
-    // LERP upsampler state - matches DOSBox lerp_upsampler struct
     private float _lerpPos;
     private float _lerpStep;
     private AudioFrame _lerpLastFrame;
@@ -1198,12 +1197,9 @@ public sealed class MixerChannel {
     /// Applies Speex resampling to convert_buffer → audio_frames.
     /// </summary>
     private void ApplySpeexResampling(int audioFramesStartingSize) {
-        if (_speexResampler == null || !_speexResampler.IsInitialized) {
-            // Fallback: just copy convert_buffer if resampler isn't ready
-            AudioFrames.AddRange(_convertBuffer.AsSpan());
-            return;
+        if(_speexResampler is null or { IsInitialized: false}) {
+            throw new InvalidOperationException("Speex Resampler was null or not initialized before audio resampling");
         }
-
         int inFrames = _convertBuffer.Count;
         if (inFrames == 0) {
             return;
@@ -1236,7 +1232,7 @@ public sealed class MixerChannel {
         _speexResampler.ProcessInterleavedFloat(
             _resampleInputBuffer.AsSpan(0, inputSize),
             _resampleOutputBuffer.AsSpan(0, outputSize),
-            out uint inFramesConsumed,
+            out uint _,
             out uint outFramesGenerated);
 
         // Copy resampled frames back to audio_frames
@@ -1311,129 +1307,9 @@ public sealed class MixerChannel {
     }
 
     /// <summary>
-    /// Adds mono 16-bit signed samples with resampling.
+    /// Adds stereo 32-bit float samples with resampling.
     /// </summary>
-    public void AddSamples_m16(int numFrames, ReadOnlySpan<short> data) {
-        if (numFrames <= 0) {
-            return;
-        }
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _loggerService.Debug("MIXER_CHANNEL: {Channel}: AddSamples_m16 frames={Frames} doResample={DoResample} doLerp={DoLerp} doZoh={DoZoh}",
-                _name, numFrames, _doResample, _doLerpUpsample, _doZohUpsample);
-        }
-
-        lock (_mutex) {
-            _lastSamplesWereStereo = false;
-
-            // Assert that we're not attempting to do both LERP and Speex resample
-            if (_doLerpUpsample && _doResample) {
-                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
-            }
-
-            // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
-            ConvertSamplesAndMaybeZohUpsampleShorts(data, numFrames);
-
-            // Starting index this function will start writing to
-            int audioFramesStartingSize = AudioFrames.Count;
-
-            // Step 2: Apply resampling if needed
-            if (_doLerpUpsample) {
-                // LERP upsampling
-                for (int i = 0; i < _convertBuffer.Count;) {
-                    AudioFrame currFrame = _convertBuffer[i];
-
-                    AudioFrame lerpedFrame = new AudioFrame(
-                        Lerp(_lerpLastFrame.Left, currFrame.Left, _lerpPos),
-                        Lerp(_lerpLastFrame.Right, currFrame.Right, _lerpPos)
-                    );
-
-                    AudioFrames.Add(lerpedFrame);
-
-                    _lerpPos += _lerpStep;
-
-                    if (_lerpPos > 1.0f) {
-                        _lerpPos -= 1.0f;
-                        _lerpLastFrame = currFrame;
-                        i++;
-                    }
-                }
-            } else if (_doResample) {
-                // Speex resampling
-                ApplySpeexResampling(audioFramesStartingSize);
-            } else {
-                // No resampling
-                AudioFrames.AddRange(_convertBuffer.AsSpan());
-            }
-
-            // Step 3: Apply in-place processing to newly added frames
-            ApplyInPlaceProcessing(audioFramesStartingSize);
-        }
-    }
-
-    /// <summary>
-    /// Adds stereo 16-bit signed samples with resampling.
-    /// </summary>
-    public void AddSamples_s16(int numFrames, ReadOnlySpan<short> data) {
-        if (numFrames <= 0) {
-            return;
-        }
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _loggerService.Debug("MIXER_CHANNEL: {Channel}: AddSamples_s16 frames={Frames} doResample={DoResample} doLerp={DoLerp} doZoh={DoZoh}",
-                _name, numFrames, _doResample, _doLerpUpsample, _doZohUpsample);
-        }
-
-        lock (_mutex) {
-            _lastSamplesWereStereo = true;
-
-            // Assert that we're not attempting to do both LERP and Speex resample
-            if (_doLerpUpsample && _doResample) {
-                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
-            }
-
-            // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
-            ConvertSamplesAndMaybeZohUpsample_s16(data, numFrames);
-
-            // Starting index this function will start writing to
-            int audioFramesStartingSize = AudioFrames.Count;
-
-            // Step 2: Apply resampling if needed
-            if (_doLerpUpsample) {
-                // LERP upsampling
-                for (int i = 0; i < _convertBuffer.Count;) {
-                    AudioFrame currFrame = _convertBuffer[i];
-
-                    AudioFrame lerpedFrame = new AudioFrame(
-                        Lerp(_lerpLastFrame.Left, currFrame.Left, _lerpPos),
-                        Lerp(_lerpLastFrame.Right, currFrame.Right, _lerpPos)
-                    );
-
-                    AudioFrames.Add(lerpedFrame);
-
-                    _lerpPos += _lerpStep;
-
-                    if (_lerpPos > 1.0f) {
-                        _lerpPos -= 1.0f;
-                        _lerpLastFrame = currFrame;
-                        i++;
-                    }
-                }
-            } else if (_doResample) {
-                // Speex resampling
-                ApplySpeexResampling(audioFramesStartingSize);
-            } else {
-                // No resampling
-                AudioFrames.AddRange(_convertBuffer.AsSpan());
-            }
-
-            // Step 3: Apply in-place processing to newly added frames
-            ApplyInPlaceProcessing(audioFramesStartingSize);
-        }
-    }
-
-    /// <summary>
-    /// Adds mono 32-bit float samples with resampling.
-    /// </summary>
-    public void AddSamples_mfloat(int numFrames, ReadOnlySpan<float> data) {
+    public void AddSamplesFloat(int numFrames, ReadOnlySpan<float> data) {
         if (numFrames <= 0) {
             return;
         }
@@ -1490,65 +1366,6 @@ public sealed class MixerChannel {
         }
     }
 
-    /// <summary>
-    /// Adds stereo 32-bit float samples with resampling.
-    /// </summary>
-    public void AddSamples_sfloat(int numFrames, ReadOnlySpan<float> data) {
-        if (numFrames <= 0) {
-            return;
-        }
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _loggerService.Debug("MIXER_CHANNEL: {Channel}: AddSamples_sfloat frames={Frames} doResample={DoResample} doLerp={DoLerp} doZoh={DoZoh}",
-                _name, numFrames, _doResample, _doLerpUpsample, _doZohUpsample);
-        }
-
-        lock (_mutex) {
-            _lastSamplesWereStereo = true;
-
-            // Assert that we're not attempting to do both LERP and Speex resample
-            if (_doLerpUpsample && _doResample) {
-                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
-            }
-
-            // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
-            ConvertSamplesAndMaybeZohUpsample_sfloat(data, numFrames);
-
-            // Starting index this function will start writing to
-            int audioFramesStartingSize = AudioFrames.Count;
-
-            // Step 2: Apply resampling if needed
-            if (_doLerpUpsample) {
-                // LERP upsampling
-                for (int i = 0; i < _convertBuffer.Count;) {
-                    AudioFrame currFrame = _convertBuffer[i];
-
-                    AudioFrame lerpedFrame = new AudioFrame(
-                        Lerp(_lerpLastFrame.Left, currFrame.Left, _lerpPos),
-                        Lerp(_lerpLastFrame.Right, currFrame.Right, _lerpPos)
-                    );
-
-                    AudioFrames.Add(lerpedFrame);
-
-                    _lerpPos += _lerpStep;
-
-                    if (_lerpPos > 1.0f) {
-                        _lerpPos -= 1.0f;
-                        _lerpLastFrame = currFrame;
-                        i++;
-                    }
-                }
-            } else if (_doResample) {
-                // Speex resampling
-                ApplySpeexResampling(audioFramesStartingSize);
-            } else {
-                // No resampling
-                AudioFrames.AddRange(_convertBuffer.AsSpan());
-            }
-
-            // Step 3: Apply in-place processing to newly added frames
-            ApplyInPlaceProcessing(audioFramesStartingSize);
-        }
-    }
 
     /// <summary>
     /// Adds audio frames directly with resampling.
@@ -1687,17 +1504,6 @@ public sealed class MixerChannel {
     }
 
     /// <summary>
-    /// Configures fade-out behavior for this channel.
-    /// </summary>
-    /// <param name="prefs">Configuration string (e.g., "true", "false", "500 500" for wait_ms and fade_ms)</param>
-    /// <returns>True if configuration succeeded, false otherwise</returns>
-    public bool ConfigureFadeOut(string prefs) {
-        lock (_mutex) {
-            return _sleeper.ConfigureFadeOut(prefs);
-        }
-    }
-
-    /// <summary>
     /// Nested class that manages channel sleep/wake behavior with optional fade-out.
     /// </summary>
     private sealed class Sleeper {
@@ -1710,11 +1516,7 @@ public sealed class MixerChannel {
 
         private AudioFrame _lastFrame;
         private long _wokenAtMs;
-        private float _fadeoutLevel;
-        private float _fadeoutDecrementPerMs;
-        private int _fadeoutOrSleepAfterMs;
-
-        private bool _wantsFadeout;
+        private readonly int _fadeoutOrSleepAfterMs;
         private bool _hadSignal;
 
         public Sleeper(MixerChannel channel, int sleepAfterMs = DefaultWaitMs) {
@@ -1729,101 +1531,16 @@ public sealed class MixerChannel {
         }
 
         /// <summary>
-        /// Configures fade-out behavior.
-        /// </summary>
-        public bool ConfigureFadeOut(string prefs) {
-            void SetWaitAndFade(int waitMs, int fadeMs) {
-                _fadeoutOrSleepAfterMs = waitMs;
-                _fadeoutDecrementPerMs = 1.0f / fadeMs;
-
-                // LOG_MSG equivalent - using Verbose level
-                if (_channel._loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                    _channel._loggerService.Verbose(
-                        "{Channel}: Fade-out enabled (wait {Wait} ms then fade for {Fade} ms)",
-                        _channel._name, waitMs, fadeMs);
-                }
-            }
-
-            // Disable fade-out (default)
-            if (HasFalse(prefs)) {
-                _wantsFadeout = false;
-                return true;
-            }
-
-            // Enable fade-out with defaults
-            if (HasTrue(prefs)) {
-                SetWaitAndFade(DefaultWaitMs, DefaultWaitMs);
-                _wantsFadeout = true;
-                return true;
-            }
-
-            // Let the fade-out last between 10 ms and 3 seconds
-            const int MinFadeMs = 10;
-            const int MaxFadeMs = 3000;
-
-            // Custom setting in 'WAIT FADE' syntax, where both are milliseconds
-            string[] parts = prefs.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 2) {
-                if (int.TryParse(parts[0], out int waitMs) && int.TryParse(parts[1], out int fadeMs)) {
-                    bool waitIsValid = waitMs is >= MinWaitMs and <= MaxWaitMs;
-                    bool fadeIsValid = fadeMs is >= MinFadeMs and <= MaxFadeMs;
-
-                    if (waitIsValid && fadeIsValid) {
-                        SetWaitAndFade(waitMs, fadeMs);
-                        _wantsFadeout = true;
-                        return true;
-                    }
-                }
-            }
-
-            // Otherwise inform the user and disable the fade
-            if (_channel._loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                _channel._loggerService.Warning(
-                    "{Channel}: Invalid custom fadeout '{Prefs}'. " +
-                    "Expected 'true', 'false', or 'WAIT FADE' where WAIT is {MinWait}-{MaxWait} ms " +
-                    "and FADE is {MinFade}-{MaxFade} ms",
-                    _channel._name, prefs, MinWaitMs, MaxWaitMs, MinFadeMs, MaxFadeMs);
-            }
-
-            _wantsFadeout = false;
-            return false;
-        }
-
-        /// <summary>
-        /// Decrements the fade level based on elapsed time.
-        /// </summary>
-        private void DecrementFadeLevel(int awakeForMs) {
-            if (awakeForMs < _fadeoutOrSleepAfterMs) {
-                throw new ArgumentException("awakeForMs must be >= fadeoutOrSleepAfterMs");
-            }
-
-            float elapsedFadeMs = awakeForMs - _fadeoutOrSleepAfterMs;
-            float decrement = _fadeoutDecrementPerMs * elapsedFadeMs;
-
-            const float MinLevel = 0.0f;
-            const float MaxLevel = 1.0f;
-            _fadeoutLevel = Math.Clamp(MaxLevel - decrement, MinLevel, MaxLevel);
-        }
-
-        /// <summary>
         /// Either fades the frame or checks if the channel had any signal output.
         /// </summary>
         public AudioFrame MaybeFadeOrListen(AudioFrame frame) {
-            if (_wantsFadeout) {
-                // When fading, we actively drive down the channel level
-                return frame * _fadeoutLevel;
-            }
-
             if (!_hadSignal) {
                 // Otherwise, we inspect the running signal for changes
                 const float ChangeThreshold = 1.0f;
-
                 _hadSignal = Math.Abs(frame.Left - _lastFrame.Left) > ChangeThreshold ||
                             Math.Abs(frame.Right - _lastFrame.Right) > ChangeThreshold;
-
                 _lastFrame = frame;
             }
-
             return frame;
         }
 
@@ -1839,13 +1556,7 @@ public sealed class MixerChannel {
                 return;
             }
 
-            if (_wantsFadeout) {
-                // The channel is still fading out... try to sleep later
-                if (_fadeoutLevel > 0.0f) {
-                    DecrementFadeLevel((int)awakeForMs);
-                    return;
-                }
-            } else if (_hadSignal) {
+            if (_hadSignal) {
                 // The channel is still producing a signal... so stay awake
                 WakeUp();
                 return;
@@ -1863,7 +1574,6 @@ public sealed class MixerChannel {
         public bool WakeUp() {
             // Always reset for another round of awakeness
             _wokenAtMs = Environment.TickCount64;
-            _fadeoutLevel = 1.0f;
             _hadSignal = false;
 
             bool wasSleeping = !_channel.IsEnabled;
@@ -1872,18 +1582,6 @@ public sealed class MixerChannel {
             }
 
             return wasSleeping;
-        }
-
-        private static bool HasFalse(string value) {
-            return string.Equals(value, "false", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(value, "off", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(value, "0", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool HasTrue(string value) {
-            return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(value, "on", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(value, "1", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

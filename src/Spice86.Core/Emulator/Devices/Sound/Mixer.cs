@@ -866,7 +866,7 @@ public sealed class Mixer : IDisposable {
         int framesReceived = device.OutputQueue.BulkDequeue(toMix, framesRequested);
 
         if (framesReceived > 0) {
-            device.Channel.AddSamples_mfloat(framesReceived, toMix);
+            device.Channel.AddSamplesFloat(framesReceived, toMix);
         }
 
         // Fill any shortfall with silence

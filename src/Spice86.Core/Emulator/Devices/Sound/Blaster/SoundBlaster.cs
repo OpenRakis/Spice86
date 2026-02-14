@@ -599,9 +599,11 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _primaryDmaChannel = dmaBus.GetChannel(_config.LowDma)
             ?? throw new InvalidOperationException($"DMA channel {_config.LowDma} unavailable for Sound Blaster.");
 
-        _secondaryDmaChannel = ShouldUseHighDmaChannel()
-            ? dmaBus.GetChannel(_config.HighDma)
-            : null;
+        if (ShouldUseHighDmaChannel()) {
+            _secondaryDmaChannel = dmaBus.GetChannel(_config.HighDma);
+        } else {
+            _secondaryDmaChannel = null;
+        }
 
         if (_primaryDmaChannel.ChannelNumber == 4 ||
             (_secondaryDmaChannel is not null && _secondaryDmaChannel.ChannelNumber == 4)) {
@@ -678,19 +680,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         mixer.UnlockMixerThread();
     }
 
-    private void MixerCallback(int frames_requested) {
+    private void MixerCallback(int framesRequested) {
         int queueSize = _outputQueue.Size;
-        int shortage = Math.Max(frames_requested - queueSize, 0);
+        int shortage = Math.Max(framesRequested - queueSize, 0);
         System.Threading.Interlocked.Exchange(ref _framesNeeded, shortage);
 
-        int maxFrames = Math.Min(frames_requested, _dequeueBatch.Length);
+        int maxFrames = Math.Min(framesRequested, _dequeueBatch.Length);
         int frames_received = _outputQueue.BulkDequeue(_dequeueBatch, maxFrames);
 
         if (frames_received > 0) {
             _dacChannel.AddAudioFrames(_dequeueBatch.AsSpan(0, frames_received));
         }
 
-        if (frames_received < frames_requested) {
+        if (frames_received < framesRequested) {
             _dacChannel.AddSilence();
         }
     }

@@ -169,10 +169,10 @@ public sealed class SpeexResamplerCSharp {
 
     public SpeexResamplerCSharp(uint channels, uint in_rate_init, uint out_rate_init, int quality) {
         if (channels is 0 or > 256) {
-            throw new ArgumentException("channels");
+            throw new ArgumentException(null, nameof(channels));
         }
         if (quality is < 0 or > 10) {
-            throw new ArgumentException("quality");
+            throw new ArgumentException(null, nameof(quality));
         }
 
         nb_channels = channels;
@@ -193,14 +193,14 @@ public sealed class SpeexResamplerCSharp {
         in_stride = 1;
         out_stride = 1;
         started = 0;
-        resampler_ptr = resampler_basic_zero;
+        resampler_ptr = ResamplerBasicZero;
 
-        if (update_filter() == RESAMPLER_ERR_SUCCESS) {
-            // Filter updated successfully
+        if (UpdateFilter() != RESAMPLER_ERR_SUCCESS) {
+            throw new InvalidOperationException("Could not update speex resampler filter");
         }
     }
 
-    private static double compute_func(float x, FuncDef func) {
+    private static double ComputeFunc(float x, FuncDef func) {
         float y = x * func.oversample;
         int ind = (int)Math.Floor(y);
         float frac = y - ind;
@@ -215,24 +215,24 @@ public sealed class SpeexResamplerCSharp {
                interp[2] * func.table[ind + 2] + interp[3] * func.table[ind + 3];
     }
 
-    private static float sinc(float cutoff, float x, int N, FuncDef window_func) {
+    private static float Sinc(float cutoff, float x, int N, FuncDef window_func) {
         float xx = x * cutoff;
         if (Math.Abs(x) < 1e-6) {
             return cutoff;
         } else if (Math.Abs(x) > 0.5f * N) {
             return 0;
         }
-        return (float)(cutoff * Math.Sin(M_PI * xx) / (M_PI * xx) * compute_func(Math.Abs(2.0f * x / N), window_func));
+        return (float)(cutoff * Math.Sin(M_PI * xx) / (M_PI * xx) * ComputeFunc(Math.Abs(2.0f * x / N), window_func));
     }
 
-    private static void cubic_coef(float frac, float[] interp) {
+    private static void CubicCoef(float frac, float[] interp) {
         interp[0] = -0.16667f * frac + 0.16667f * frac * frac * frac;
         interp[1] = frac + 0.5f * frac * frac - 0.5f * frac * frac * frac;
         interp[3] = -0.33333f * frac + 0.5f * frac * frac - 0.16667f * frac * frac * frac;
         interp[2] = 1.0f - interp[0] - interp[1] - interp[3];
     }
 
-    private int resampler_basic_direct_single(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
+    private int ResamplerBasicDirectSingle(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -259,7 +259,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int resampler_basic_direct_double(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
+    private int ResamplerBasicDirectDouble(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -289,7 +289,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int resampler_basic_interpolate_single(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
+    private int ResamplerBasicInterpolateSingle(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -299,7 +299,7 @@ public sealed class SpeexResamplerCSharp {
             int offset = (int)(samp_frac_num_val * oversample / den_rate);
             float frac = ((float)((samp_frac_num_val * oversample) % den_rate)) / den_rate;
             float[] interp = new float[4];
-            cubic_coef(frac, interp);
+            CubicCoef(frac, interp);
 
             double accum0 = 0, accum1 = 0, accum2 = 0, accum3 = 0;
             for (int j = 0; j < N; j++) {
@@ -327,7 +327,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int resampler_basic_interpolate_double(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
+    private int ResamplerBasicInterpolateDouble(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -337,7 +337,7 @@ public sealed class SpeexResamplerCSharp {
             int offset = (int)(samp_frac_num_val * oversample / den_rate);
             float frac = ((float)((samp_frac_num_val * oversample) % den_rate)) / den_rate;
             float[] interp = new float[4];
-            cubic_coef(frac, interp);
+            CubicCoef(frac, interp);
 
             double accum0 = 0, accum1 = 0, accum2 = 0, accum3 = 0;
             for (int j = 0; j < N; j++) {
@@ -365,7 +365,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int resampler_basic_zero(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
+    private int ResamplerBasicZero(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
         uint samp_frac_num_val = samp_frac_num[channel_index];
@@ -386,7 +386,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private static int multiply_frac(out uint result, uint value, uint num, uint den) {
+    private static int MultiplyFrac(out uint result, uint value, uint num, uint den) {
         result = 0;
         uint major = value / den;
         uint remain = value % den;
@@ -399,7 +399,7 @@ public sealed class SpeexResamplerCSharp {
         return RESAMPLER_ERR_SUCCESS;
     }
 
-    private int update_filter() {
+    private int UpdateFilter() {
         uint old_length = filt_len;
         uint old_alloc_size = mem_alloc_size;
         bool use_direct;
@@ -413,7 +413,7 @@ public sealed class SpeexResamplerCSharp {
 
         if (num_rate > den_rate) {
             cutoff = quality_map[quality].downsample_bandwidth * den_rate / num_rate;
-            if (multiply_frac(out filt_len, filt_len, num_rate, den_rate) != RESAMPLER_ERR_SUCCESS) {
+            if (MultiplyFrac(out filt_len, filt_len, num_rate, den_rate) != RESAMPLER_ERR_SUCCESS) {
                 goto fail;
             }
             filt_len = ((filt_len - 1) & (~0x7u)) + 8;
@@ -447,24 +447,24 @@ public sealed class SpeexResamplerCSharp {
             for (uint i = 0; i < den_rate; i++) {
                 for (int j = 0; j < (int)filt_len; j++) {
                     sinc_table[i * filt_len + (uint)j] =
-                        sinc(cutoff, ((j - (int)filt_len / 2 + 1) - ((float)i) / den_rate), (int)filt_len,
+                        Sinc(cutoff, ((j - (int)filt_len / 2 + 1) - ((float)i) / den_rate), (int)filt_len,
                              quality_map[quality].window_func);
                 }
             }
             if (quality > 8) {
-                resampler_ptr = resampler_basic_direct_double;
+                resampler_ptr = ResamplerBasicDirectDouble;
             } else {
-                resampler_ptr = resampler_basic_direct_single;
+                resampler_ptr = ResamplerBasicDirectSingle;
             }
         } else {
             for (int i = -4; i < (int)(oversample * filt_len + 4); i++) {
-                sinc_table[i + 4] = sinc(cutoff, i / (float)oversample - filt_len / 2.0f, (int)filt_len,
+                sinc_table[i + 4] = Sinc(cutoff, i / (float)oversample - filt_len / 2.0f, (int)filt_len,
                                         quality_map[quality].window_func);
             }
             if (quality > 8) {
-                resampler_ptr = resampler_basic_interpolate_double;
+                resampler_ptr = ResamplerBasicInterpolateDouble;
             } else {
-                resampler_ptr = resampler_basic_interpolate_single;
+                resampler_ptr = ResamplerBasicInterpolateSingle;
             }
         }
 
@@ -529,7 +529,7 @@ public sealed class SpeexResamplerCSharp {
         return RESAMPLER_ERR_SUCCESS;
 
 fail:
-        resampler_ptr = resampler_basic_zero;
+        resampler_ptr = ResamplerBasicZero;
         filt_len = old_length;
         return RESAMPLER_ERR_ALLOC_FAILED;
     }
@@ -537,7 +537,7 @@ fail:
     /// <summary>
     /// Process native resampling - matches speex_resampler_process_native from resample.c
     /// </summary>
-    private int speex_resampler_process_native(uint channel_index, ref uint in_len, float[] outBuf, int outOffset, ref uint out_len) {
+    private int SpeexResamplerProcessNative(uint channel_index, ref uint in_len, float[] outBuf, int outOffset, ref uint out_len) {
         int N = (int)filt_len;
         int memOffset = (int)(channel_index * mem_alloc_size);
         
@@ -565,13 +565,13 @@ fail:
     /// <summary>
     /// Handle magic samples - matches speex_resampler_magic from resample.c
     /// </summary>
-    private int speex_resampler_magic(uint channel_index, float[] outBuf, ref int outOffset, uint out_len) {
+    private int SpeexResamplerMagic(uint channel_index, float[] outBuf, ref int outOffset, uint out_len) {
         uint tmp_in_len = magic_samples[channel_index];
         int memOffset = (int)(channel_index * mem_alloc_size);
         int N = (int)filt_len;
         
         uint out_len_temp = out_len;
-        speex_resampler_process_native(channel_index, ref tmp_in_len, outBuf, outOffset, ref out_len_temp);
+        SpeexResamplerProcessNative(channel_index, ref tmp_in_len, outBuf, outOffset, ref out_len_temp);
         
         magic_samples[channel_index] -= tmp_in_len;
         
@@ -610,7 +610,7 @@ fail:
         if (magic_samples[channel_index] != 0) {
             float[] tempOut = new float[output.Length];
             output.CopyTo(tempOut);
-            olen -= (uint)speex_resampler_magic(channel_index, tempOut, ref currentOutOffset, olen);
+            olen -= (uint)SpeexResamplerMagic(channel_index, tempOut, ref currentOutOffset, olen);
             tempOut.AsSpan().CopyTo(output);
         }
         
@@ -641,7 +641,7 @@ fail:
                     tempOut[i] = output[i];
                 }
                 
-                speex_resampler_process_native(channel_index, ref ichunk, tempOut, currentOutOffset, ref ochunk);
+                SpeexResamplerProcessNative(channel_index, ref ichunk, tempOut, currentOutOffset, ref ochunk);
                 
                 // Copy back to output
                 for (int i = 0; i < tempOut.Length && i < output.Length; i++) {
@@ -660,7 +660,7 @@ fail:
         in_len -= ilen;
         out_len -= olen;
         
-        return resampler_ptr == resampler_basic_zero ? RESAMPLER_ERR_ALLOC_FAILED : RESAMPLER_ERR_SUCCESS;
+        return resampler_ptr == ResamplerBasicZero ? RESAMPLER_ERR_ALLOC_FAILED : RESAMPLER_ERR_SUCCESS;
     }
 
     /// <summary>
@@ -691,7 +691,7 @@ fail:
         in_stride = istride_save;
         out_stride = ostride_save;
         
-        return resampler_ptr == resampler_basic_zero ? RESAMPLER_ERR_ALLOC_FAILED : RESAMPLER_ERR_SUCCESS;
+        return resampler_ptr == ResamplerBasicZero ? RESAMPLER_ERR_ALLOC_FAILED : RESAMPLER_ERR_SUCCESS;
     }
 
     /// <summary>
@@ -745,7 +745,7 @@ fail:
         num_rate /= a;
         den_rate /= a;
 
-        update_filter();
+        UpdateFilter();
     }
 
     public void Reset() {

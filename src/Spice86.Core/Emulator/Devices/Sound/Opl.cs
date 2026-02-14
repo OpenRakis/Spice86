@@ -654,7 +654,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 AudioFrame frame = _fifo.Dequeue();
                 frameData[0] = frame.Left;
                 frameData[1] = frame.Right;
-                _mixerChannel.AddSamples_sfloat(1, frameData);
+                _mixerChannel.AddSamplesFloat(1, frameData);
                 framesRemaining--;
             }
             // If the queue's run dry, render the remainder and sync-up our time datum
@@ -662,7 +662,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 AudioFrame frame = RenderFrame();
                 frameData[0] = frame.Left;
                 frameData[1] = frame.Right;
-                _mixerChannel.AddSamples_sfloat(1, frameData);
+                _mixerChannel.AddSamplesFloat(1, frameData);
                 framesRemaining--;
             }
             // Update last rendered time to now using the atomic snapshot.
