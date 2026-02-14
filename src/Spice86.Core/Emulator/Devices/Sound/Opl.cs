@@ -448,9 +448,31 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             if (_logger.IsEnabled(LogEventLevel.Verbose)) {
                 _logger.Verbose("OPL: WriteByte port=0x{Port:X4} value=0x{Value:X2} mode={Mode}", port, value, _mode);
             }
-            RenderUpToNow();
+            if (!IsAdlibGoldControlWrite(port, value)) {
+                RenderUpToNow();
+            }
             PortWrite(port, value);
         }
+    }
+
+    private bool IsAdlibGoldControlWrite(ushort port, byte value) {
+        if (_mode != OplMode.Opl3Gold) {
+            return false;
+        }
+
+        if (port is not 0x38A and not 0x38B) {
+            return false;
+        }
+
+        if (port == 0x38A && (value == 0xFF || value == 0xFE)) {
+            return true;
+        }
+
+        if (_ctrlActive) {
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
