@@ -12,10 +12,10 @@
 	WindowStartupLocation="CenterOwner"
 	ShowInTaskbar="True"
 	CanResize="True"
-	MinWidth="1024"
-	MinHeight="768"
-	Width="1024"
-	Height="768"
+	MinWidth="600"
+	MinHeight="450"
+	Width="700"
+	Height="500"
 	Title="Audio Mixer"
 	mc:Ignorable="d">
 	<Design.DataContext>
