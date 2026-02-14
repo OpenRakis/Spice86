@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Libs.Sound.Common;
 
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// View model wrapping a single MixerChannel for display/editing.
@@ -22,6 +23,14 @@ public partial class MixerChannelViewModel : ViewModelBase {
     private const double SignalAmplification = 2.5;
     private double _currentPeakLeft;
     private double _currentPeakRight;
+
+    // Waveform display buffer settings
+    // Display approximately 2 seconds of audio, downsampled for display efficiency
+    private const int WaveformDisplaySamples = 400; // ~2 seconds at 50ms updates with ~4 samples per update
+    private const int WaveformDownsampleFactor = 128; // Downsample factor for efficiency
+    private readonly float[] _waveformBufferLeft = new float[WaveformDisplaySamples];
+    private readonly float[] _waveformBufferRight = new float[WaveformDisplaySamples];
+    private int _waveformWriteIndex;
 
     [ObservableProperty]
     private string _name = string.Empty;
@@ -55,6 +64,12 @@ public partial class MixerChannelViewModel : ViewModelBase {
 
     [ObservableProperty]
     private double _peakLevelRight;
+
+    [ObservableProperty]
+    private IReadOnlyList<float>? _waveformSamplesLeft;
+
+    [ObservableProperty]
+    private IReadOnlyList<float>? _waveformSamplesRight;
 
     public MixerChannelViewModel(MixerChannel channel) {
         _channel = channel ?? throw new ArgumentNullException(nameof(channel));
@@ -105,11 +120,16 @@ public partial class MixerChannelViewModel : ViewModelBase {
         double maxLeft = 0.0;
         double maxRight = 0.0;
 
-        // Sample frames for peak detection (every 2nd frame for efficiency)
+        // Also collect downsampled waveform data
+        float waveformSampleLeft = 0.0f;
+        float waveformSampleRight = 0.0f;
+        int waveformSampleCount = 0;
+
+        // Sample frames for peak detection and waveform (every 2nd frame for efficiency)
         for (int i = 0; i < frameCount; i += 2) {
             AudioFrame frame = audioFrames[i];
 
-            // Get absolute amplitude
+            // Get absolute amplitude for peak detection
             double absLeft = Math.Abs(frame.Left);
             double absRight = Math.Abs(frame.Right);
 
@@ -119,6 +139,35 @@ public partial class MixerChannelViewModel : ViewModelBase {
             if (absRight > maxRight) {
                 maxRight = absRight;
             }
+
+            // Accumulate for waveform (downsample by averaging)
+            waveformSampleLeft += frame.Left;
+            waveformSampleRight += frame.Right;
+            waveformSampleCount++;
+
+            // Every WaveformDownsampleFactor samples, add a point to the waveform buffer
+            if (waveformSampleCount >= WaveformDownsampleFactor) {
+                float avgLeft = (float)(waveformSampleLeft / waveformSampleCount * SampleNormalizationFactor);
+                float avgRight = (float)(waveformSampleRight / waveformSampleCount * SampleNormalizationFactor);
+
+                _waveformBufferLeft[_waveformWriteIndex] = Math.Clamp(avgLeft, -1.0f, 1.0f);
+                _waveformBufferRight[_waveformWriteIndex] = Math.Clamp(avgRight, -1.0f, 1.0f);
+                _waveformWriteIndex = (_waveformWriteIndex + 1) % WaveformDisplaySamples;
+
+                waveformSampleLeft = 0.0f;
+                waveformSampleRight = 0.0f;
+                waveformSampleCount = 0;
+            }
+        }
+
+        // Handle remaining samples
+        if (waveformSampleCount > 0) {
+            float avgLeft = (float)(waveformSampleLeft / waveformSampleCount * SampleNormalizationFactor);
+            float avgRight = (float)(waveformSampleRight / waveformSampleCount * SampleNormalizationFactor);
+
+            _waveformBufferLeft[_waveformWriteIndex] = Math.Clamp(avgLeft, -1.0f, 1.0f);
+            _waveformBufferRight[_waveformWriteIndex] = Math.Clamp(avgRight, -1.0f, 1.0f);
+            _waveformWriteIndex = (_waveformWriteIndex + 1) % WaveformDisplaySamples;
         }
 
         // Normalize and amplify for better visual feedback
@@ -136,6 +185,27 @@ public partial class MixerChannelViewModel : ViewModelBase {
         // Clamp and update observable properties
         PeakLevelLeft = Math.Clamp(_currentPeakLeft, 0.0, 1.0);
         PeakLevelRight = Math.Clamp(_currentPeakRight, 0.0, 1.0);
+
+        // Update waveform display (create linearized view from circular buffer)
+        UpdateWaveformDisplay();
+    }
+
+    /// <summary>
+    /// Creates a linearized view of the circular waveform buffer for display.
+    /// </summary>
+    private void UpdateWaveformDisplay() {
+        // Create linearized arrays from circular buffer (oldest to newest)
+        float[] linearLeft = new float[WaveformDisplaySamples];
+        float[] linearRight = new float[WaveformDisplaySamples];
+
+        for (int i = 0; i < WaveformDisplaySamples; i++) {
+            int bufferIndex = (_waveformWriteIndex + i) % WaveformDisplaySamples;
+            linearLeft[i] = _waveformBufferLeft[bufferIndex];
+            linearRight[i] = _waveformBufferRight[bufferIndex];
+        }
+
+        WaveformSamplesLeft = linearLeft;
+        WaveformSamplesRight = linearRight;
     }
 
     partial void OnIsEnabledChanged(bool value) {
