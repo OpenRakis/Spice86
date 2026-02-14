@@ -18,7 +18,6 @@ internal sealed class SdlDirectSoundDriver : ISdlAudioDriver {
     private uint _numBuffers;
     private uint _totalBufferBytes;
     private IntPtr _lockedBuffer;
-    private bool _needsSilenceOnRestore;
 
     public bool OpenDevice(SdlAudioDevice device, AudioSpec desiredSpec, out AudioSpec obtainedSpec, out int sampleFrames, out string? error) {
         obtainedSpec = desiredSpec;
@@ -75,7 +74,6 @@ internal sealed class SdlDirectSoundDriver : ISdlAudioDriver {
                 error = "DirectSound failed to silence buffer";
                 return false;
             }
-            _needsSilenceOnRestore = false;
         } finally {
             Marshal.FreeHGlobal(formatPtr);
         }
@@ -109,44 +107,43 @@ internal sealed class SdlDirectSoundDriver : ISdlAudioDriver {
             return false;
         }
 
-        int hr = _mixBuffer.GetCurrentPosition(out uint playCursor, out _);
-        if (hr == SdlDirectSoundConstants.DsErrBufferLost) {
-            _mixBuffer.Restore();
-            _needsSilenceOnRestore = true;
-            hr = _mixBuffer.GetCurrentPosition(out playCursor, out _);
-        }
-
+        // Reference: DSOUND_WaitDevice (SDL_directsound.c)
+        // Semi-busy wait, since we have no way of getting play notification
+        // on a primary mixing buffer located in hardware (DirectX 5.0)
+        int hr = _mixBuffer.GetCurrentPosition(out _, out uint cursor);
         if (hr != SdlDirectSoundConstants.DsOk) {
-            return false;
+            if (hr == SdlDirectSoundConstants.DsErrBufferLost) {
+                _mixBuffer.Restore();
+            }
+            return true;
         }
 
-        while ((playCursor / _bufferSize) == _lastChunk) {
+        while ((cursor / _bufferSize) == _lastChunk) {
+            // FIXME: find out how much time is left and sleep that long
             Thread.Sleep(1);
 
+            // Try to restore a lost sound buffer
             hr = _mixBuffer.GetStatus(out uint status);
-            if (hr != SdlDirectSoundConstants.DsOk) {
-                return false;
-            }
-
             if ((status & SdlDirectSoundConstants.DsbstatusBufferLost) != 0) {
                 _mixBuffer.Restore();
-                _needsSilenceOnRestore = true;
-            } else if ((status & SdlDirectSoundConstants.DsbstatusPlaying) == 0) {
-                hr = _mixBuffer.Play(0, 0, SdlDirectSoundConstants.DsbplayLooping);
-                if (hr is not SdlDirectSoundConstants.DsOk and not SdlDirectSoundConstants.DsErrBufferLost) {
-                    return false;
+                _mixBuffer.GetStatus(out status);
+                if ((status & SdlDirectSoundConstants.DsbstatusBufferLost) != 0) {
+                    break;
                 }
             }
-
-            hr = _mixBuffer.GetCurrentPosition(out playCursor, out _);
-            if (hr is not SdlDirectSoundConstants.DsOk and not SdlDirectSoundConstants.DsErrBufferLost) {
-                return false;
+            if ((status & SdlDirectSoundConstants.DsbstatusPlaying) == 0) {
+                hr = _mixBuffer.Play(0, 0, SdlDirectSoundConstants.DsbplayLooping);
+                if (hr == SdlDirectSoundConstants.DsOk) {
+                    continue;
+                }
+                return true;
             }
-        }
 
-        if (_needsSilenceOnRestore) {
-            SilenceBuffer(_totalBufferBytes);
-            _needsSilenceOnRestore = false;
+            // Find out where we are playing
+            hr = _mixBuffer.GetCurrentPosition(out _, out cursor);
+            if (hr != SdlDirectSoundConstants.DsOk) {
+                return true;
+            }
         }
 
         return true;
@@ -158,11 +155,13 @@ internal sealed class SdlDirectSoundDriver : ISdlAudioDriver {
             return IntPtr.Zero;
         }
 
-        int hr = _mixBuffer.GetCurrentPosition(out uint playCursor, out _);
+        // Reference: DSOUND_GetDeviceBuf (SDL_directsound.c)
+        // Figure out which blocks to fill next
+        _lockedBuffer = IntPtr.Zero;
+        int hr = _mixBuffer.GetCurrentPosition(out _, out uint cursor);
         if (hr == SdlDirectSoundConstants.DsErrBufferLost) {
             _mixBuffer.Restore();
-            _needsSilenceOnRestore = true;
-            hr = _mixBuffer.GetCurrentPosition(out playCursor, out _);
+            hr = _mixBuffer.GetCurrentPosition(out _, out cursor);
         }
 
         if (hr != SdlDirectSoundConstants.DsOk) {
@@ -170,20 +169,16 @@ internal sealed class SdlDirectSoundDriver : ISdlAudioDriver {
             return IntPtr.Zero;
         }
 
-        if (_needsSilenceOnRestore) {
-            SilenceBuffer(_totalBufferBytes);
-            _needsSilenceOnRestore = false;
-        }
+        cursor /= _bufferSize;
+        _lastChunk = cursor;
+        cursor = (cursor + 1) % _numBuffers;
+        cursor *= _bufferSize;
 
-        _lastChunk = playCursor / _bufferSize;
-        uint nextChunk = (_lastChunk + 1) % _numBuffers;
-        uint offset = nextChunk * _bufferSize;
-
-        hr = _mixBuffer.Lock(offset, _bufferSize, out IntPtr ptr1, out uint bytes1, out IntPtr ptr2, out uint bytes2, 0);
+        // Lock the audio buffer
+        hr = _mixBuffer.Lock(cursor, _bufferSize, out IntPtr ptr1, out uint bytes1, out IntPtr ptr2, out uint bytes2, 0);
         if (hr == SdlDirectSoundConstants.DsErrBufferLost) {
             _mixBuffer.Restore();
-            _needsSilenceOnRestore = true;
-            hr = _mixBuffer.Lock(offset, _bufferSize, out ptr1, out bytes1, out ptr2, out bytes2, 0);
+            hr = _mixBuffer.Lock(cursor, _bufferSize, out ptr1, out bytes1, out ptr2, out bytes2, 0);
         }
 
         if (hr != SdlDirectSoundConstants.DsOk) {
@@ -201,20 +196,24 @@ internal sealed class SdlDirectSoundDriver : ISdlAudioDriver {
             return false;
         }
 
+        // Reference: DSOUND_PlayDevice (SDL_directsound.c)
+        // Unlock the buffer, allowing it to play
         if (_lockedBuffer != IntPtr.Zero) {
-            _mixBuffer.Unlock(_lockedBuffer, (uint)bufferBytes, IntPtr.Zero, 0);
+            _mixBuffer.Unlock(_lockedBuffer, _bufferSize, IntPtr.Zero, 0);
             _lockedBuffer = IntPtr.Zero;
-        }
-
-        int hr = _mixBuffer.Play(0, 0, SdlDirectSoundConstants.DsbplayLooping);
-        if (hr is not SdlDirectSoundConstants.DsOk and not SdlDirectSoundConstants.DsErrBufferLost) {
-            return false;
         }
 
         return true;
     }
 
     public void ThreadInit(SdlAudioDevice device) {
+        // Reference: SDL_audio.c SDL_RunAudio line 692
+        // SDL_SetThreadPriority(SDL_THREAD_PRIORITY_TIME_CRITICAL)
+        try {
+            Thread.CurrentThread.Priority = ThreadPriority.Highest;
+        } catch (PlatformNotSupportedException) {
+            // Ignore on platforms that don't support thread priority changes
+        }
     }
 
     public void ThreadDeinit(SdlAudioDevice device) {

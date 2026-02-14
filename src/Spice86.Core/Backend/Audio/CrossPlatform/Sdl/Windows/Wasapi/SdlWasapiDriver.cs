@@ -72,50 +72,56 @@ internal sealed partial class SdlWasapiDriver : ISdlAudioDriver {
                 return false;
             }
 
-            // Reference: SDL gets the device's mix format and uses it as a base
-            // Then only adds AutoConvertPcm if sample rate differs
-            IntPtr mixFormatPtr = IntPtr.Zero;
-            hr = _audioClient.GetMixFormat(out mixFormatPtr);
-            if (SdlWasapiResult.Failed(hr) || mixFormatPtr == IntPtr.Zero) {
+            // Reference: SDL_wasapi.c WASAPI_PrepDevice
+            // Get the device's mix format and use it as a base
+            IntPtr waveformatPtr = IntPtr.Zero;
+            hr = _audioClient.GetMixFormat(out waveformatPtr);
+            if (SdlWasapiResult.Failed(hr) || waveformatPtr == IntPtr.Zero) {
                 error = $"Failed to get mix format: 0x{hr:X8}";
                 return false;
             }
 
-            // Read the device's mix format to check if we need sample rate conversion
-            WaveFormatEx mixFormat = Marshal.PtrToStructure<WaveFormatEx>(mixFormatPtr);
-            int deviceNativeRate = (int)mixFormat.SamplesPerSec;
+            long defaultPeriod = 0;
 
-            // Use our desired format (IEEE float stereo) like SDL does
-            WaveFormatEx format = WaveFormatEx.CreateIeeeFloat(desiredSpec.SampleRate, desiredSpec.Channels);
-            IntPtr formatPtr = Marshal.AllocHGlobal(Marshal.SizeOf<WaveFormatEx>());
             try {
-                Marshal.StructureToPtr(format, formatPtr, false);
+                // Reference: SDL_wasapi.c line ~444
+                // this->spec.channels = (Uint8)waveformat->nChannels;
+                // SDL adopts the device's native channel count
+                WaveFormatEx waveformat = Marshal.PtrToStructure<WaveFormatEx>(waveformatPtr);
+                int deviceChannels = waveformat.Channels;
 
-                // Reference: SDL_wasapi.c WASAPI_PrepDevice lines ~470-480
-                // Only add AutoConvertPcm when sample rate differs from device native rate
-                // This avoids unnecessary resampling overhead
-                AudioClientStreamFlags flags = AudioClientStreamFlags.EventCallback;
-                if (desiredSpec.SampleRate != deviceNativeRate) {
-                    flags |= AudioClientStreamFlags.AutoConvertPcm |
-                             AudioClientStreamFlags.SrcDefaultQuality;
-                }
-
-                hr = _audioClient.Initialize(AudioClientShareMode.Shared, flags, 0, 0, formatPtr, IntPtr.Zero);
+                // Reference: SDL_wasapi.c WASAPI_PrepDevice
+                // GetDevicePeriod is called before Initialize in SDL
+                hr = _audioClient.GetDevicePeriod(out defaultPeriod, out _);
                 if (SdlWasapiResult.Failed(hr)) {
-                    // Fallback: try again with AutoConvertPcm in case the device
-                    // doesn't natively support our float format
-                    flags = AudioClientStreamFlags.EventCallback |
-                            AudioClientStreamFlags.AutoConvertPcm |
-                            AudioClientStreamFlags.SrcDefaultQuality;
-                    hr = _audioClient.Initialize(AudioClientShareMode.Shared, flags, 0, 0, formatPtr, IntPtr.Zero);
-                    if (SdlWasapiResult.Failed(hr)) {
-                        error = $"Failed to initialize audio client: 0x{hr:X8}";
-                        return false;
-                    }
+                    error = $"Failed to get device period: 0x{hr:X8}";
+                    return false;
                 }
+
+                // Reference: SDL_wasapi.c lines ~466-472
+                // Favor WASAPI's resampler over our own.
+                // Only add AutoConvertPcm + SrcDefaultQuality when sample rate differs.
+                // Modify the mix format's sample rate in-place.
+                AudioClientStreamFlags streamflags = AudioClientStreamFlags.None;
+                if (desiredSpec.SampleRate != (int)waveformat.SamplesPerSec) {
+                    streamflags |= AudioClientStreamFlags.AutoConvertPcm |
+                                   AudioClientStreamFlags.SrcDefaultQuality;
+                    waveformat.SamplesPerSec = (uint)desiredSpec.SampleRate;
+                    waveformat.AvgBytesPerSec = waveformat.SamplesPerSec * waveformat.Channels * (ushort)(waveformat.BitsPerSample / 8);
+                    Marshal.StructureToPtr(waveformat, waveformatPtr, false);
+                }
+
+                streamflags |= AudioClientStreamFlags.EventCallback;
+                hr = _audioClient.Initialize(AudioClientShareMode.Shared, streamflags, 0, 0, waveformatPtr, IntPtr.Zero);
+                if (SdlWasapiResult.Failed(hr)) {
+                    error = $"Failed to initialize audio client: 0x{hr:X8}";
+                    return false;
+                }
+
+                // Store adopted channel count for later use
+                _channels = deviceChannels;
             } finally {
-                Marshal.FreeHGlobal(formatPtr);
-                NativeMethods.CoTaskMemFree(mixFormatPtr);
+                NativeMethods.CoTaskMemFree(waveformatPtr);
             }
 
             hr = _audioClient.SetEventHandle(_bufferEvent);
@@ -127,12 +133,6 @@ internal sealed partial class SdlWasapiDriver : ISdlAudioDriver {
             hr = _audioClient.GetBufferSize(out uint bufferFrameCount);
             if (SdlWasapiResult.Failed(hr)) {
                 error = $"Failed to get buffer size: 0x{hr:X8}";
-                return false;
-            }
-
-            hr = _audioClient.GetDevicePeriod(out long defaultPeriod, out _);
-            if (SdlWasapiResult.Failed(hr)) {
-                error = $"Failed to get device period: 0x{hr:X8}";
                 return false;
             }
 
@@ -164,12 +164,20 @@ internal sealed partial class SdlWasapiDriver : ISdlAudioDriver {
             _renderClient = renderClient;
             _sampleFrames = calculatedFrames;
             _bufferFrameCount = (int)bufferFrameCount;
-            _channels = desiredSpec.Channels;
+            // _channels was already set above from the device's native mix format
             _bytesPerFrame = _channels * sizeof(float);
+
+            // Reference: SDL_wasapi.c WASAPI_PrepDevice line ~536
+            // IAudioClient_Start(client) is called at the end of PrepDevice
+            hr = _audioClient.Start();
+            if (SdlWasapiResult.Failed(hr)) {
+                error = $"Failed to start audio client: 0x{hr:X8}";
+                return false;
+            }
 
             obtainedSpec = new AudioSpec {
                 SampleRate = desiredSpec.SampleRate,
-                Channels = desiredSpec.Channels,
+                Channels = _channels,
                 BufferFrames = calculatedFrames,
                 Callback = desiredSpec.Callback,
                 PostmixCallback = desiredSpec.PostmixCallback
@@ -292,20 +300,12 @@ internal sealed partial class SdlWasapiDriver : ISdlAudioDriver {
     }
 
     public void ThreadInit(SdlAudioDevice device) {
+        // Reference: SDL_wasapi_win32.c WASAPI_PlatformThreadInit
+        // this thread uses COM.
         NativeMethods.CoInitializeEx(IntPtr.Zero, NativeMethods.COINIT_MULTITHREADED);
 
-        // Start the WASAPI audio client on the audio thread.
-        // Reference: SDL_wasapi.c WASAPI_PrepDevice line ~536: IAudioClient_Start(client)
-        // In SDL, the client is started during PrepDevice (which runs from the main thread
-        // while the audio thread is starting). We start it here in ThreadInit so the audio
-        // thread is ready to handle WASAPI buffer events immediately.
-        if (_audioClient != null) {
-            int hr = _audioClient.Start();
-            if (SdlWasapiResult.Failed(hr)) {
-                // Log but don't crash - the thread loop will detect missing buffers
-            }
-        }
-
+        // Reference: SDL_wasapi_win32.c WASAPI_PlatformThreadInit
+        // Set this thread to very high "Pro Audio" priority.
         _avrtHandle = NativeMethods.LoadLibraryW("avrt.dll");
         if (_avrtHandle != IntPtr.Zero) {
             IntPtr procAddr = NativeMethods.GetProcAddress(_avrtHandle, "AvSetMmThreadCharacteristicsW");
