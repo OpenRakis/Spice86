@@ -21,7 +21,7 @@ using System.Linq;
 
 using EventHandler = VM.EmulationLoopScheduler.EventHandler;
 
-public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame> {
+public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier {
     private const int DmaBufSize = 1024;
     private const int DspBufSize = 64;
     private const int MinPlaybackRateHz = 5000;
@@ -542,6 +542,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// <inheritdoc />
     public MixerChannel Channel => _dacChannel;
 
+    /// <inheritdoc />
+    public void NotifyLockMixer() {
+        _outputQueue.Stop();
+    }
+
+    /// <inheritdoc />
+    public void NotifyUnlockMixer() {
+        _outputQueue.Start();
+    }
+
     // Tracks frames added during current tick to prevent over-generation
     private int _framesAddedThisTick = 0;
 
@@ -579,6 +589,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         IEmulatedClock clock,
         SoundBlasterHardwareConfig soundBlasterHardwareConfig)
         : base(state, false, loggerService) {
+        // Register queue notifier before locking (matches DOSBox pattern)
+        mixer.RegisterQueueNotifier(this);
         // Lock mixer thread during construction to prevent concurrent modifications
         mixer.LockMixerThread();
 
@@ -678,7 +690,10 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         mixer.UnlockMixerThread();
     }
 
+    // Wake up the queue and channel to resume processing and playback.
+    // Matches DOSBox: output_queue.Start() then channel->WakeUp().
     private bool MaybeWakeUp() {
+        _outputQueue.Start();
         bool wokeUp = _dacChannel.WakeUp();
         if (wokeUp && _loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("SB: DAC channel woke up");

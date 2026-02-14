@@ -32,6 +32,12 @@ public sealed class Mixer : IDisposable {
     private readonly Dictionary<string, MixerChannel> _channels = new();
     private readonly Dictionary<string, MixerChannelSettings> _channelSettingsCache = new();
 
+    // Queue notifiers for devices that run on the main thread.
+    // The mixer thread can be waiting on these queues. We need to stop them
+    // before acquiring the mutex lock to avoid a deadlock.
+    // Matches DOSBox Staging's MIXER_LockMixerThread / MIXER_UnlockMixerThread pattern.
+    private readonly List<IMixerQueueNotifier> _queueNotifiers = new();
+
     // Mixer thread that produces audio and sends to the audio backend
     private readonly Thread _mixerThread;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -181,16 +187,39 @@ public sealed class Mixer : IDisposable {
     public int PreBufferMs => _prebufferMs;
 
     /// <summary>
+    /// Registers a queue notifier for a device that produces audio on the main thread.
+    /// The notifier will be called before the mixer mutex is acquired and after it is released.
+    /// </summary>
+    /// <param name="notifier">The device notifier to register.</param>
+    public void RegisterQueueNotifier(IMixerQueueNotifier notifier) {
+        _queueNotifiers.Add(notifier);
+    }
+
+    /// <summary>
     /// Locks the mixer thread to prevent mixing during critical operations.
+    /// The queues listed here are for audio devices that run on the main thread.
+    /// The mixer thread can be waiting on the main thread to produce audio in these
+    /// queues. We need to stop them before acquiring a mutex lock to avoid a
+    /// deadlock. These are called infrequently when global mixer state is changed
+    /// (mostly on device init/destroy and in the MIXER command line program).
+    /// Individual channels also have a mutex which can be safely acquired without
+    /// stopping these queues.
     /// </summary>
     public void LockMixerThread() {
+        foreach (IMixerQueueNotifier notifier in _queueNotifiers) {
+            notifier.NotifyLockMixer();
+        }
         _mixerLock.Enter();
     }
 
     /// <summary>
     /// Unlocks the mixer thread after critical operations complete.
+    /// Restarts the device queues to resume normal operation.
     /// </summary>
     public void UnlockMixerThread() {
+        foreach (IMixerQueueNotifier notifier in _queueNotifiers) {
+            notifier.NotifyUnlockMixer();
+        }
         _mixerLock.Exit();
     }
 

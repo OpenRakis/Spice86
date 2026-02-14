@@ -16,7 +16,7 @@ using System.Diagnostics;
 /// <summary>
 ///     PC speaker device
 /// </summary>
-public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<float>, IDisposable {
+public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<float>, IMixerQueueNotifier, IDisposable {
     private const int PcSpeakerPortNumber = 0x61;
 
     private const float PwmScalar = 0.5f;
@@ -62,6 +62,16 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     /// <inheritdoc />
     public MixerChannel Channel => _mixerChannel;
 
+    /// <inheritdoc />
+    public void NotifyLockMixer() {
+        _outputQueue.Stop();
+    }
+
+    /// <inheritdoc />
+    public void NotifyUnlockMixer() {
+        _outputQueue.Start();
+    }
+
     /// <summary>
     ///     Initializes a new instance of the <see cref="PcSpeaker" /> class.
     /// </summary>
@@ -81,7 +91,6 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         IEmulatedClock clock,
         bool failOnUnhandledPort)
         : base(state, failOnUnhandledPort, loggerService) {
-        mixer.LockMixerThread();
         _logger = loggerService;
         _scheduler = scheduler;
         _clock = clock;
@@ -90,6 +99,10 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         // Create queue first with initial capacity. Will be resized in callback.
         const int initialQueueSize = 256;
         _outputQueue = new RWQueue<float>(initialQueueSize);
+
+        // Register after queue exists so NotifyLockMixer won't hit a null queue
+        mixer.RegisterQueueNotifier(this);
+        mixer.LockMixerThread();
 
         HashSet<ChannelFeature> features = new HashSet<ChannelFeature> {
             ChannelFeature.Sleep,
