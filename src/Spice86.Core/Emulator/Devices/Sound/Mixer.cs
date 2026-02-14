@@ -882,7 +882,7 @@ public sealed class Mixer : IDisposable {
     /// Processing flow:
     /// 1. For each frame in chorus aux buffer (contains sum of channel chorus sends)
     /// 2. Process through ChorusEngine (modulated delay with LFO)
-    /// 3. Add processed chorus output to master output buffer
+    /// 3. Add processed chorus output to master output
     /// 
     /// The ChorusEngine processes samples in-place, modifying them with the chorus effect.
     /// </remarks>
@@ -908,23 +908,27 @@ public sealed class Mixer : IDisposable {
     /// </summary>
     private void CloseAudioDevice() {
         lock (_mixerLock) {
-            // Stop mixer thread
-            if (_mixerThread.IsAlive) {
-                _threadShouldQuit = true;
-                _cancellationTokenSource.Cancel();
-                _mixerThread.Join(TimeSpan.FromSeconds(5));
-            }
+            // Signal the mixer thread to stop
+            _threadShouldQuit = true;
+            _cancellationTokenSource.Cancel();
+
+            // Stop the audio player first to unblock any WriteData calls
+            // This is critical - the mixer thread may be blocked in WriteData()
+            _audioPlayer.Dispose();
 
             // Disable all channels
             foreach (MixerChannel channel in _channels.Values) {
                 channel.Enable(false);
             }
-
-            // Close audio player
-            _audioPlayer.Dispose();
-
-            _loggerService.Information("MIXER: Closed audio device");
         }
+
+        // Join the thread OUTSIDE the lock to avoid deadlock
+        // The thread should now be unblocked and will exit
+        if (_mixerThread.IsAlive) {
+            _mixerThread.Join(TimeSpan.FromSeconds(2));
+        }
+
+        _loggerService.Information("MIXER: Closed audio device");
     }
 
     public void Dispose() {
@@ -932,24 +936,17 @@ public sealed class Mixer : IDisposable {
             return;
         }
 
-        CloseAudioDevice();
-
         _loggerService.Debug("MIXER: Disposing mixer");
 
         // Unsubscribe from pause events
         _pauseHandler.Pausing -= OnEmulatorPausing;
         _pauseHandler.Resumed -= OnEmulatorResumed;
 
-        _threadShouldQuit = true;
-        _cancellationTokenSource.Cancel();
+        // Close audio device and stop threads
+        CloseAudioDevice();
 
-        if (_mixerThread.IsAlive) {
-            _mixerThread.Join(TimeSpan.FromSeconds(1));
-        }
-
+        // Dispose cancellation token
         _cancellationTokenSource.Dispose();
-        _audioPlayer.Dispose();
-        //_chorusEngine.Dispose();
 
         _disposed = true;
     }
