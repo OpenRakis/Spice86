@@ -95,11 +95,11 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
             ChannelFeature.Sleep,
             ChannelFeature.ChorusSend,
             ChannelFeature.ReverbSend,
-            ChannelFeature.Synthesizer
+            ChannelFeature.Synthesizer,
         };
         // Pass 'this' to callback like DOSBox's std::bind(callback, _1, this) pattern
         _mixerChannel = mixer.AddChannel(
-            framesRequested => _mixer.PullFromQueueCallback(framesRequested, this),
+            framesRequested => _mixer.PullFromQueueCallback<PcSpeaker, float>(framesRequested, this),
             SampleRateHz, nameof(PcSpeaker), features);
         _mixerChannel.        AppVolume = new AudioFrame(1.0f, 1.0f);
         _mixerChannel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Left });
@@ -111,12 +111,12 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         const int highPassOrder = 3;
         const int highPassCutoffHz = 120;
         _mixerChannel.ConfigureHighPassFilter(highPassOrder, highPassCutoffHz);
-        _mixerChannel.        HighPassFilter = FilterState.On;
+        _mixerChannel.HighPassFilter = FilterState.On;
 
         const int lowPassOrder = 3;
         const int lowPassCutoffHz = 4300;
         _mixerChannel.ConfigureLowPassFilter(lowPassOrder, lowPassCutoffHz);
-        _mixerChannel.        LowPassFilter = FilterState.On;
+        _mixerChannel.LowPassFilter = FilterState.On;
 
         InitializeImpulseLUT();
         InitializePitChannelState();

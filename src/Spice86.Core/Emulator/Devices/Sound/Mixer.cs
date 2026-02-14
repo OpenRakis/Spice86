@@ -847,26 +847,32 @@ public sealed class Mixer : IDisposable {
     /// <summary>
     /// Generic callback for audio devices that generate audio on the main thread.
     /// These devices produce audio on the main thread and consume on the mixer thread.
-    /// This callback is the consumer part.
+    /// This callback dispatches to the appropriate AddSamples method based on the sample type.
     /// </summary>
     /// <typeparam name="TDevice">The device type implementing IAudioQueueDevice.</typeparam>
+    /// <typeparam name="TItem">The sample type (float or AudioFrame) in the device queue.</typeparam>
     /// <param name="framesRequested">Number of audio frames requested by the mixer.</param>
     /// <param name="device">The audio device (passed as 'this' from the device).</param>
-    public void PullFromQueueCallback<TDevice>(int framesRequested, TDevice device)
-        where TDevice : IAudioQueueDevice<float> {
+    internal void PullFromQueueCallback<TDevice, TItem>(int framesRequested, TDevice device)
+        where TDevice : IAudioQueueDevice<TItem> {
         // Size to 2x blocksize. The mixer callback will request 1x blocksize.
         // This provides a good size to avoid over-runs and stalls.
-        // Resize is a fast operation, only setting a variable for max capacity.
-        // It does not drop frames or append zeros to the underlying data structure.
         int queueSize = (int)Math.Ceiling(device.Channel.FramesPerBlock * 2.0f);
         device.OutputQueue.Resize(queueSize);
 
         // Dequeue samples in bulk
-        float[] toMix = new float[framesRequested];
+        TItem[] toMix = new TItem[framesRequested];
         int framesReceived = device.OutputQueue.BulkDequeue(toMix, framesRequested);
 
         if (framesReceived > 0) {
-            device.Channel.AddSamplesFloat(framesReceived, toMix);
+            if (typeof(TItem) == typeof(float)) {
+                float[] floatArray = toMix as float[] ?? Array.Empty<float>();
+                // PcSpeaker produces mono float data
+                device.Channel.AddSamplesGeneric(framesReceived, floatArray.AsSpan(), isStereo: false);
+            } else if (typeof(TItem) == typeof(AudioFrame)) {
+                AudioFrame[] frameArray = toMix as AudioFrame[] ?? Array.Empty<AudioFrame>();
+                device.Channel.AddAudioFrames(frameArray.AsSpan());
+            }
         }
 
         // Fill any shortfall with silence

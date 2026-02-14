@@ -518,8 +518,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private readonly AudioFrame[] _enqueueBatch = new AudioFrame[4096];
     private int _enqueueBatchCount;
 
-    private readonly AudioFrame[] _dequeueBatch = new AudioFrame[4096];
-
     private BlasterState _blasterState = BlasterState.WaitingForCommand;
 
     /// <summary>
@@ -650,7 +648,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             dacFeatures.Add(ChannelFeature.Stereo);
         }
 
-        _dacChannel = _mixer.AddChannel(MixerCallback, (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
+        _dacChannel = _mixer.AddChannel(framesRequested => _mixer.PullFromQueueCallback<SoundBlaster, AudioFrame>(framesRequested, this), (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
 
         // Configure Zero-Order-Hold upsampler and resample method for SB Pro 2 only
         // ZOH upsampler provides vintage DAC sound characteristic
@@ -678,23 +676,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
         // Unlock mixer thread after construction completes
         mixer.UnlockMixerThread();
-    }
-
-    private void MixerCallback(int framesRequested) {
-        int queueSize = _outputQueue.Size;
-        int shortage = Math.Max(framesRequested - queueSize, 0);
-        System.Threading.Interlocked.Exchange(ref _framesNeeded, shortage);
-
-        int maxFrames = Math.Min(framesRequested, _dequeueBatch.Length);
-        int frames_received = _outputQueue.BulkDequeue(_dequeueBatch, maxFrames);
-
-        if (frames_received > 0) {
-            _dacChannel.AddAudioFrames(_dequeueBatch.AsSpan(0, frames_received));
-        }
-
-        if (frames_received < framesRequested) {
-            _dacChannel.AddSilence();
-        }
     }
 
     private bool MaybeWakeUp() {
@@ -2871,7 +2852,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                                     _loggerService.Debug("{Action} low-pass filter",
                                         _sb.Mixer.FilterEnabled ? "Enabling" : "Disabling");
                                 }
-                                _dacChannel.                                LowPassFilter = _sb.Mixer.FilterEnabled ? FilterState.On : FilterState.Off;
+                                _dacChannel.LowPassFilter = _sb.Mixer.FilterEnabled ? FilterState.On : FilterState.Off;
                             }
                         }
                     }
