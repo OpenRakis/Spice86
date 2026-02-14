@@ -12,7 +12,6 @@ using System;
 public sealed class CrossPlatformAudioPlayer : AudioPlayer {
     private readonly IAudioBackend _backend;
     private readonly RWQueue<float> _queue;
-    private readonly float[] _callbackBuffer;
     private volatile bool _started;
     private volatile bool _muted;
 
@@ -46,7 +45,6 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
         int queueFrames = obtainedSpec.BufferFrames + prebufferFrames;
         int queueCapacity = queueFrames * obtainedSpec.Channels;
         _queue = new RWQueue<float>(queueCapacity);
-        _callbackBuffer = new float[queueCapacity];
     }
 
     /// <summary>
@@ -60,14 +58,10 @@ public sealed class CrossPlatformAudioPlayer : AudioPlayer {
         }
 
         int samplesNeeded = buffer.Length;
-        int received = _queue.BulkDequeue(_callbackBuffer, samplesNeeded);
-
-        if (received > 0) {
-            _callbackBuffer.AsSpan(0, received).CopyTo(buffer);
-        }
+        int received = _queue.BulkDequeue(buffer, samplesNeeded);
 
         if (received < samplesNeeded) {
-            buffer.Slice(received).Clear();
+            buffer[received..].Clear();
         }
     }
 

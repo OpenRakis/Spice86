@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Shared.Utils;
 
 using System;
-using System.Collections.Generic;
 using System.Threading;
 
 /// <summary>
@@ -16,11 +15,15 @@ using System.Threading;
 /// the required conditions are met.
 /// Producer and consumer thread(s) are expected to simply call the enqueue and
 /// dequeue methods directly without any thread state management.
+/// Uses a circular buffer internally for O(1) enqueue/dequeue operations.
 /// </remarks>
 /// <typeparam name="T">The element type stored in the queue.</typeparam>
 public sealed class RWQueue<T> {
-    // Using List<T> similar to std::deque - dynamically growing
-    private readonly List<T> _queue = new();
+    // Circular buffer implementation matching std::deque semantics
+    private T[] _buffer;
+    private int _head;  // Read position (front of queue)
+    private int _tail;  // Write position (back of queue)
+    private int _count; // Number of items in queue
     private readonly object _mutex = new();
     private int _capacity;
     private bool _isRunning = true;
@@ -30,17 +33,29 @@ public sealed class RWQueue<T> {
     /// </summary>
     /// <param name="capacity">Maximum number of items the queue can hold.</param>
     public RWQueue(int capacity) {
-        Resize(capacity);
+        _buffer = new T[capacity];
+        _capacity = capacity;
     }
 
     /// <summary>
     /// Changes the capacity of the queue.
-    /// This is a fast operation that only sets the capacity variable.
-    /// It does not drop frames or append zeros to the underlying data structure.
+    /// This operation reallocates the buffer if capacity changes.
     /// </summary>
     /// <param name="newCapacity">The new capacity.</param>
     public void Resize(int newCapacity) {
         lock (_mutex) {
+            if (newCapacity == _capacity) {
+                return;
+            }
+            T[] newBuffer = new T[newCapacity];
+            int itemsToCopy = Math.Min(_count, newCapacity);
+            for (int i = 0; i < itemsToCopy; i++) {
+                newBuffer[i] = _buffer[(_head + i) % _buffer.Length];
+            }
+            _buffer = newBuffer;
+            _head = 0;
+            _tail = itemsToCopy;
+            _count = itemsToCopy;
             _capacity = newCapacity;
         }
     }
@@ -51,7 +66,7 @@ public sealed class RWQueue<T> {
     public int Size {
         get {
             lock (_mutex) {
-                return _queue.Count;
+                return _count;
             }
         }
     }
@@ -73,7 +88,7 @@ public sealed class RWQueue<T> {
     public bool IsEmpty {
         get {
             lock (_mutex) {
-                return _queue.Count == 0;
+                return _count == 0;
             }
         }
     }
@@ -84,7 +99,7 @@ public sealed class RWQueue<T> {
     public bool IsFull {
         get {
             lock (_mutex) {
-                return _queue.Count >= _capacity;
+                return _count >= _capacity;
             }
         }
     }
@@ -127,7 +142,6 @@ public sealed class RWQueue<T> {
                 return;
             }
             _isRunning = false;
-            // notify the conditions
             Monitor.PulseAll(_mutex);
         }
     }
@@ -137,9 +151,9 @@ public sealed class RWQueue<T> {
     /// </summary>
     public void Clear() {
         lock (_mutex) {
-            _queue.Clear();
-        }
-        lock (_mutex) {
+            _head = 0;
+            _tail = 0;
+            _count = 0;
             Monitor.PulseAll(_mutex);
         }
     }
@@ -147,43 +161,39 @@ public sealed class RWQueue<T> {
     /// <summary>
     /// Blocking enqueue of a single item. Waits until space is available
     /// or the queue is stopped.
-    /// If queuing has stopped prior to enqueing, then this will immediately
-    /// return false and the item will not be queued.
     /// </summary>
     /// <param name="item">The item to enqueue.</param>
     /// <returns>True if the item was enqueued; false if the queue was stopped.</returns>
     public bool Enqueue(T item) {
         lock (_mutex) {
-            // wait until we're stopped or the queue has room to accept the item
-            while (_isRunning && _queue.Count >= _capacity) {
+            while (_isRunning && _count >= _capacity) {
                 Monitor.Wait(_mutex);
             }
 
-            // add it, and notify the next waiting thread that we've got an item
             if (_isRunning) {
-                _queue.Add(item);
+                _buffer[_tail] = item;
+                _tail = (_tail + 1) % _capacity;
+                _count++;
                 Monitor.Pulse(_mutex);
                 return true;
             }
-            // If we stopped while enqueing, then anything that was enqueued prior
-            // to being stopped is safely in the queue.
             return false;
         }
     }
 
     /// <summary>
     /// Non-blocking enqueue of a single item.
-    /// Returns false and does nothing if the queue is at capacity or the queue is not running.
-    /// Otherwise the item gets moved into the queue and it returns true.
     /// </summary>
     /// <param name="item">The item to enqueue.</param>
     /// <returns>True if the item was enqueued; false otherwise.</returns>
     public bool NonblockingEnqueue(T item) {
         lock (_mutex) {
-            if (!_isRunning || _queue.Count >= _capacity) {
+            if (!_isRunning || _count >= _capacity) {
                 return false;
             }
-            _queue.Add(item);
+            _buffer[_tail] = item;
+            _tail = (_tail + 1) % _capacity;
+            _count++;
             Monitor.Pulse(_mutex);
             return true;
         }
@@ -191,24 +201,20 @@ public sealed class RWQueue<T> {
 
     /// <summary>
     /// Blocking dequeue of a single item. Waits until an item is available.
-    /// If queuing has stopped, this will continue to return item(s) until
-    /// none remain in the queue, at which point it returns null/default.
     /// </summary>
-    /// <param name="success">Set to true if an item was dequeued; false if queue is stopped and empty.</param>
+    /// <param name="success">Set to true if an item was dequeued.</param>
     /// <returns>The dequeued item, or default if none available.</returns>
     public T Dequeue(out bool success) {
         lock (_mutex) {
-            // wait until we're stopped or the queue has an item
-            while (_isRunning && _queue.Count == 0) {
+            while (_isRunning && _count == 0) {
                 Monitor.Wait(_mutex);
             }
 
-            // Even if the queue has stopped, we need to drain the (previously)
-            // queued items before we're done.
-            if (_queue.Count > 0) {
-                T item = _queue[0];
-                _queue.RemoveAt(0);
-                // notify the first waiting thread that the queue has room
+            if (_count > 0) {
+                T item = _buffer[_head];
+                _buffer[_head] = default!; // Clear reference for GC
+                _head = (_head + 1) % _capacity;
+                _count--;
                 Monitor.Pulse(_mutex);
                 success = true;
                 return item;
@@ -220,11 +226,7 @@ public sealed class RWQueue<T> {
     }
 
     /// <summary>
-    /// Blocking bulk enqueue. Moves items from <paramref name="source" /> into the
-    /// queue, blocking until all requested items have been enqueued or the queue is
-    /// stopped.
-    /// If the queue is stopped then the function unblocks and returns the
-    /// quantity enqueued (which can be less than the number requested).
+    /// Blocking bulk enqueue from a span.
     /// </summary>
     /// <param name="source">Source span to read items from.</param>
     /// <returns>Number of items actually enqueued.</returns>
@@ -233,44 +235,39 @@ public sealed class RWQueue<T> {
     }
 
     /// <summary>
-    /// Blocking bulk enqueue. Moves items from <paramref name="source" /> into the
-    /// queue, blocking until all requested items have been enqueued or the queue is
-    /// stopped.
+    /// Blocking bulk enqueue. Moves items from source into the queue.
     /// </summary>
     /// <param name="source">Source span to read items from.</param>
     /// <param name="numRequested">Number of items to enqueue.</param>
     /// <returns>Number of items actually enqueued.</returns>
     public int BulkEnqueue(ReadOnlySpan<T> source, int numRequested) {
         const int minItems = 1;
-
         int sourceOffset = 0;
         int numRemaining = numRequested;
 
         while (numRemaining > 0) {
             lock (_mutex) {
-                int freeCapacity = _capacity - _queue.Count;
+                int freeCapacity = _capacity - _count;
                 int numItems = Math.Clamp(freeCapacity, minItems, numRemaining);
 
-                // wait until we're stopped or the queue has enough room for the items
-                while (_isRunning && _capacity - _queue.Count < numItems) {
+                while (_isRunning && _capacity - _count < numItems) {
                     Monitor.Wait(_mutex);
                 }
 
                 if (_isRunning) {
-                    // Add items to queue
+                    numItems = Math.Min(_capacity - _count, numRemaining);
+
+                    // Copy items into circular buffer, handling wrap-around
                     for (int i = 0; i < numItems; i++) {
-                        _queue.Add(source[sourceOffset + i]);
+                        _buffer[_tail] = source[sourceOffset + i];
+                        _tail = (_tail + 1) % _capacity;
                     }
+                    _count += numItems;
 
-                    // notify the first waiting thread that we have an item
                     Monitor.Pulse(_mutex);
-
                     sourceOffset += numItems;
                     numRemaining -= numItems;
                 } else {
-                    // If we stopped while bulk enqueing, then stop here.
-                    // Anything that was enqueued prior to being stopped is
-                    // safely in the queue.
                     break;
                 }
             }
@@ -281,7 +278,6 @@ public sealed class RWQueue<T> {
 
     /// <summary>
     /// Blocking bulk enqueue from an array segment.
-    /// Blocks until all data has been enqueued or the queue is stopped.
     /// </summary>
     /// <param name="data">Source array.</param>
     /// <param name="offset">Starting offset in the source array.</param>
@@ -292,8 +288,7 @@ public sealed class RWQueue<T> {
     }
 
     /// <summary>
-    /// Non-blocking bulk enqueue. Does nothing if queue is at capacity or queue is not running.
-    /// Otherwise, enqueues as many elements as possible until the queue is at capacity.
+    /// Non-blocking bulk enqueue from a span.
     /// </summary>
     /// <param name="source">Source span to read items from.</param>
     /// <returns>Number of items actually enqueued.</returns>
@@ -302,24 +297,25 @@ public sealed class RWQueue<T> {
     }
 
     /// <summary>
-    /// Non-blocking bulk enqueue. Does nothing if queue is at capacity or queue is not running.
-    /// Otherwise, enqueues as many elements as possible until the queue is at capacity.
+    /// Non-blocking bulk enqueue.
     /// </summary>
     /// <param name="source">Source span to read items from.</param>
     /// <param name="numRequested">Number of items to enqueue.</param>
     /// <returns>Number of items actually enqueued.</returns>
     public int NonblockingBulkEnqueue(ReadOnlySpan<T> source, int numRequested) {
         lock (_mutex) {
-            if (!_isRunning || _queue.Count >= _capacity) {
+            if (!_isRunning || _count >= _capacity) {
                 return 0;
             }
 
-            int availableCapacity = _capacity - _queue.Count;
+            int availableCapacity = _capacity - _count;
             int numItems = Math.Min(availableCapacity, numRequested);
 
             for (int i = 0; i < numItems; i++) {
-                _queue.Add(source[i]);
+                _buffer[_tail] = source[i];
+                _tail = (_tail + 1) % _capacity;
             }
+            _count += numItems;
 
             Monitor.Pulse(_mutex);
             return numItems;
@@ -327,49 +323,48 @@ public sealed class RWQueue<T> {
     }
 
     /// <summary>
-    /// Blocking bulk dequeue. Dequeues the requested number of items into the given container
-    /// in-bulk, and returns the quantity dequeued. This potentially blocks
-    /// until the requested number of items have been dequeued.
-    /// If queuing was stopped prior to bulk dequeueing then this
-    /// immediately returns with a value of 0 and no items dequeued.
-    /// If queuing was stopped in the middle of bulk dequeueing then this
-    /// immediately returns with a value indicating the subset dequeued.
+    /// Blocking bulk dequeue into a span. O(1) per item using circular buffer.
     /// </summary>
-    /// <param name="target">Destination array for dequeued items.</param>
+    /// <param name="target">Destination span for dequeued items.</param>
     /// <param name="numRequested">Number of items to dequeue.</param>
     /// <returns>Number of items actually dequeued.</returns>
-    public int BulkDequeue(T[] target, int numRequested) {
+    public int BulkDequeue(Span<T> target, int numRequested) {
         int targetOffset = 0;
         int numRemaining = numRequested;
 
         while (numRemaining > 0) {
             lock (_mutex) {
                 const int minItems = 1;
-                int numItems = Math.Clamp(_queue.Count, minItems, numRemaining);
+                int numItems = Math.Clamp(_count, minItems, numRemaining);
 
-                // wait until we're stopped or the queue has enough items
-                while (_isRunning && _queue.Count < numItems) {
+                while (_isRunning && _count < numItems) {
                     Monitor.Wait(_mutex);
                 }
 
-                // Even if the queue has stopped, we need to drain the
-                // (previously) queued items before we're done.
-                if (_isRunning || _queue.Count > 0) {
-                    numItems = Math.Min(_queue.Count, numRemaining);
+                if (_isRunning || _count > 0) {
+                    numItems = Math.Min(_count, numRemaining);
 
-                    // Move items to target (matching std::move behavior)
-                    for (int i = 0; i < numItems; i++) {
-                        target[targetOffset + i] = _queue[i];
+                    // Bulk copy from circular buffer to target span
+                    // Handle wrap-around by copying in up to two segments
+                    int firstSegment = Math.Min(numItems, _capacity - _head);
+                    _buffer.AsSpan(_head, firstSegment).CopyTo(target.Slice(targetOffset));
+
+                    int secondSegment = numItems - firstSegment;
+                    if (secondSegment > 0) {
+                        _buffer.AsSpan(0, secondSegment).CopyTo(target.Slice(targetOffset + firstSegment));
                     }
-                    _queue.RemoveRange(0, numItems);
 
-                    // notify the first waiting thread that the queue has room
+                    // Clear references for GC and advance head
+                    for (int i = 0; i < numItems; i++) {
+                        _buffer[_head] = default!;
+                        _head = (_head + 1) % _capacity;
+                    }
+                    _count -= numItems;
+
                     Monitor.Pulse(_mutex);
-
                     targetOffset += numItems;
                     numRemaining -= numItems;
                 } else {
-                    // The queue was stopped mid-dequeue!
                     break;
                 }
             }
@@ -379,8 +374,7 @@ public sealed class RWQueue<T> {
     }
 
     /// <summary>
-    /// Blocking bulk dequeue. Waits until the requested number of items
-    /// are available, or the queue is stopped.
+    /// Blocking bulk dequeue into an array.
     /// </summary>
     /// <param name="target">Destination array for dequeued items.</param>
     /// <param name="numRequested">Number of items to dequeue.</param>
