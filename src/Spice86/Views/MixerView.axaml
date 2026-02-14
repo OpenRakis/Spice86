@@ -36,7 +36,7 @@ mc:Ignorable="d">
 				<TabItem.Header>
 					<StackPanel MaxWidth="100" MaxHeight="30"  Orientation="Horizontal">
 						<fluent:SymbolIcon Symbol="MusicNote2" />
-						<TextBlock Text="Mixer" VerticalAlignment="Center" />
+						<TextBlock Margin="5" Text="Mixer" VerticalAlignment="Center" />
 					</StackPanel>
 				</TabItem.Header>
 				<TabItem.Content>
@@ -50,7 +50,7 @@ mc:Ignorable="d">
 							<DataTemplate>
 								<Border Margin="5" Padding="10" BorderBrush="Gray" BorderThickness="1" CornerRadius="5">
 										<Viewbox Stretch="Uniform" StretchDirection="Both">
-											<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Width="200">
+											<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" Width="200">
 											<TextBlock
 											Grid.Row="0"
 											HorizontalAlignment="Center"
@@ -145,13 +145,6 @@ mc:Ignorable="d">
 												Content="{Binding IsMuted, Converter={StaticResource MutedToTextConverter}}"
 												ToolTip.Tip="Mute or unmute this channel" />
 											</StackPanel>
-											<TextBlock
-											Grid.Row="7"
-											HorizontalAlignment="Center"
-											FontSize="10"
-											Text="{Binding Features}"
-											TextWrapping="Wrap"
-											MaxWidth="180" />
 													</Grid>
 												</Viewbox>
 											</Border>
@@ -165,7 +158,7 @@ mc:Ignorable="d">
 				<TabItem.Header>
 					<StackPanel MaxWidth="100" MaxHeight="30" Orientation="Horizontal">
 						<fluent:SymbolIcon Symbol="Settings" />
-						<TextBlock Text="Settings" VerticalAlignment="Center" />
+						<TextBlock Margin="5" Text="Settings" VerticalAlignment="Center" />
 					</StackPanel>
 				</TabItem.Header>
 				<TabItem.Content>
