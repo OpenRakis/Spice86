@@ -53,9 +53,7 @@ public abstract class AudioPlayer : IDisposable
     internal abstract int WriteData(Span<float> data);
 
     /// <summary>
-    /// Starts audio playback. Matches DOSBox behavior where SDL audio starts paused
-    /// and is unpaused via SDL_PauseAudioDevice when ready.
-    /// Reference: DOSBox mixer.cpp - "An opened audio device starts out paused"
+    /// Starts audio playback.
     /// </summary>
     internal abstract void Start();
 
@@ -67,14 +65,12 @@ public abstract class AudioPlayer : IDisposable
     /// <summary>
     /// Mutes the audio output at the callback level.
     /// The callback fills with silence regardless of queued data.
-    /// Reference: SDL_PauseAudioDevice(device, 1) behavior in DOSBox.
     /// </summary>
     internal abstract void MuteOutput();
 
     /// <summary>
     /// Unmutes the audio output at the callback level.
     /// The callback resumes reading from the queue.
-    /// Reference: SDL_PauseAudioDevice(device, 0) behavior in DOSBox.
     /// </summary>
     internal abstract void UnmuteOutput();
 

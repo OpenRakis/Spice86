@@ -13,11 +13,6 @@ using System;
 /// Copyright (c) 2005-2010 Patrick Kunz, TAL - Togu Audio Line, Inc.
 /// Licensed under GNU General Public License v2.0
 /// http://kunz.corrupt.ch
-/// 
-/// DOSBox Configuration:
-/// - Chorus1 enabled (left/right pair)
-/// - Chorus2 disabled (left/right pair)
-/// 
 /// Each chorus pair processes stereo signals independently with different LFO phases
 /// to create a wider, more natural stereo chorus effect.
 /// </remarks>
@@ -57,10 +52,6 @@ public sealed class ChorusEngine {
     /// </summary>
     /// <param name="isChorus1Enabled">Enable Chorus1 (left/right pair).</param>
     /// <param name="isChorus2Enabled">Enable Chorus2 (left/right pair).</param>
-    /// <remarks>
-    /// DOSBox Staging configuration: Chorus1 enabled, Chorus2 disabled.
-    /// See mixer.cpp:146-147.
-    /// </remarks>
     public void SetEnablesChorus(bool isChorus1Enabled, bool isChorus2Enabled) {
         _isChorus1Enabled = isChorus1Enabled;
         _isChorus2Enabled = isChorus2Enabled;
@@ -70,13 +61,6 @@ public sealed class ChorusEngine {
     /// Initializes or reinitializes all chorus lines with given sample rate.
     /// </summary>
     /// <param name="sampleRate">Sample rate in Hz.</param>
-    /// <remarks>
-    /// Chorus parameters from DOSBox ChorusEngine.h:74-77:
-    /// - Chorus1L: phase=1.0, rate=0.5Hz, delayTime=7.0ms
-    /// - Chorus1R: phase=0.0, rate=0.5Hz, delayTime=7.0ms
-    /// - Chorus2L: phase=0.0, rate=0.83Hz, delayTime=7.0ms
-    /// - Chorus2R: phase=1.0, rate=0.83Hz, delayTime=7.0ms
-    /// </remarks>
     private void SetUpChorus(float sampleRate) {
         // Create new chorus instances with DOSBox parameters
         _chorus1L = new Chorus(sampleRate, phase: 1.0f, rate: 0.5f, delayTime: 7.0f);
@@ -91,12 +75,6 @@ public sealed class ChorusEngine {
     /// </summary>
     /// <param name="sampleL">Left channel sample (modified in-place).</param>
     /// <param name="sampleR">Right channel sample (modified in-place).</param>
-    /// <remarks>
-    /// 1. Process enabled chorus lines
-    /// 2. Apply DC blocking to each output
-    /// 3. Mix wet signal back with dry input (1.4x wet gain)
-    /// 4. Update input samples in-place with wet+dry mix
-    /// </remarks>
     public void Process(ref float sampleL, ref float sampleR) {
         float resultL = 0.0f;
         float resultR = 0.0f;

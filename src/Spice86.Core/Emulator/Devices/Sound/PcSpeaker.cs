@@ -101,7 +101,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         _mixerChannel = mixer.AddChannel(
             framesRequested => _mixer.PullFromQueueCallback(framesRequested, this),
             SampleRateHz, nameof(PcSpeaker), features);
-        _mixerChannel.SetAppVolume(new AudioFrame(1.0f, 1.0f));
+        _mixerChannel.        AppVolume = new AudioFrame(1.0f, 1.0f);
         _mixerChannel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Left });
         _mixerChannel.SetPeakAmplitude((int)PositiveAmplitude);
 
@@ -111,12 +111,12 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         const int highPassOrder = 3;
         const int highPassCutoffHz = 120;
         _mixerChannel.ConfigureHighPassFilter(highPassOrder, highPassCutoffHz);
-        _mixerChannel.SetHighPassFilter(FilterState.On);
+        _mixerChannel.        HighPassFilter = FilterState.On;
 
         const int lowPassOrder = 3;
         const int lowPassCutoffHz = 4300;
         _mixerChannel.ConfigureLowPassFilter(lowPassOrder, lowPassCutoffHz);
-        _mixerChannel.SetLowPassFilter(FilterState.On);
+        _mixerChannel.        LowPassFilter = FilterState.On;
 
         InitializeImpulseLUT();
         InitializePitChannelState();
@@ -328,7 +328,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
             _scheduler.AddEvent(_tickHandler, 1);
             return;
         }
-        _frameCounter += _mixerChannel.GetFramesPerTick();
+        _frameCounter += _mixerChannel.FramesPerTick;
         int requestedFrames = (int)Math.Floor(_frameCounter);
         _frameCounter -= requestedFrames;
 

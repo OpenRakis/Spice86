@@ -8,39 +8,6 @@ using System.Threading;
 /// <summary>
 /// CoreAudio (AudioQueue) driver implementing ISdlAudioDriver.
 /// This is an exact port of SDL_coreaudio.m (SDL2) to C#.
-/// 
-/// IMPORTANT ARCHITECTURE DIFFERENCE:
-/// Unlike ALSA/WASAPI/DirectSound, CoreAudio uses ProvidesOwnCallbackThread = SDL_TRUE.
-/// The AudioQueue runs its own callback thread via CFRunLoop. The outputCallback
-/// directly calls the user callback to fill audio buffers.
-/// 
-/// This means WaitDevice/GetDeviceBuffer/PlayDevice are NOT used in the normal
-/// SDL_RunAudio loop. Instead, OpenDevice starts an AudioQueue thread that:
-/// 1. Creates the AudioQueue bound to a CFRunLoop
-/// 2. Allocates and enqueues audio buffers
-/// 3. Starts the AudioQueue
-/// 4. Runs CFRunLoopRunInMode in a loop
-/// 5. The AudioQueue callback (outputCallback) fills buffers with audio data
-/// 
-/// Since ISdlAudioDriver requires implementing WaitDevice/GetDeviceBuffer/PlayDevice,
-/// we need to internally manage the AudioQueue thread and bypass those methods.
-/// The SdlAudioDevice will still create its own thread, but the CoreAudio driver's
-/// OpenDevice starts the AudioQueue which manages its own callback invocations.
-/// 
-/// Actually, to match SDL2 exactly: CoreAudio's ProvidesOwnCallbackThread means
-/// SDL_RunAudio is NOT called at all. Instead, the audioqueue_thread runs
-/// CFRunLoop and the AudioQueue callbacks fire from that CFRunLoop.
-/// 
-/// We handle this by having the SdlAudioDevice thread simply sleep while
-/// CoreAudio's AudioQueue thread does the actual work. WaitDevice blocks until
-/// shutdown, and GetDeviceBuffer/PlayDevice are no-ops.
-/// 
-/// Reference: SDL_coreaudio.m
-/// - COREAUDIO_OpenDevice (line 1062): Creates AudioQueue thread
-/// - audioqueue_thread (line 991): Runs CFRunLoop
-/// - prepare_audioqueue (line 896): Creates AudioQueue, allocates buffers
-/// - outputCallback (line 461): Fills buffers from user callback
-/// - COREAUDIO_CloseDevice (line 665): Disposes AudioQueue
 /// </summary>
 [SupportedOSPlatform("osx")]
 internal sealed class SdlCoreAudioDriver : ISdlAudioDriver {

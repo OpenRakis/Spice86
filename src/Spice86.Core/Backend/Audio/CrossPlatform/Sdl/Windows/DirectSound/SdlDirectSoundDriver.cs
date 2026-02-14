@@ -133,13 +133,13 @@ internal sealed class SdlDirectSoundDriver : ISdlAudioDriver {
                 _needsSilenceOnRestore = true;
             } else if ((status & SdlDirectSoundConstants.DsbstatusPlaying) == 0) {
                 hr = _mixBuffer.Play(0, 0, SdlDirectSoundConstants.DsbplayLooping);
-                if (hr != SdlDirectSoundConstants.DsOk && hr != SdlDirectSoundConstants.DsErrBufferLost) {
+                if (hr is not SdlDirectSoundConstants.DsOk and not SdlDirectSoundConstants.DsErrBufferLost) {
                     return false;
                 }
             }
 
             hr = _mixBuffer.GetCurrentPosition(out playCursor, out _);
-            if (hr != SdlDirectSoundConstants.DsOk && hr != SdlDirectSoundConstants.DsErrBufferLost) {
+            if (hr is not SdlDirectSoundConstants.DsOk and not SdlDirectSoundConstants.DsErrBufferLost) {
                 return false;
             }
         }
@@ -207,7 +207,7 @@ internal sealed class SdlDirectSoundDriver : ISdlAudioDriver {
         }
 
         int hr = _mixBuffer.Play(0, 0, SdlDirectSoundConstants.DsbplayLooping);
-        if (hr != SdlDirectSoundConstants.DsOk && hr != SdlDirectSoundConstants.DsErrBufferLost) {
+        if (hr is not SdlDirectSoundConstants.DsOk and not SdlDirectSoundConstants.DsErrBufferLost) {
             return false;
         }
 

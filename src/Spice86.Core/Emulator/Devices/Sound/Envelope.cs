@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Reference: src/audio/private/envelope.h
 
 namespace Spice86.Core.Emulator.Devices.Sound;
 
@@ -92,10 +91,6 @@ public sealed class Envelope {
         _isActive = true;
     }
 
-    /// <summary>
-    /// Clamps a sample to [-lip, lip] if its absolute value exceeds the current edge.
-    /// Returns true if the sample was clamped.
-    /// </summary>
     private bool ClampSample(ref float sample, float lip) {
         if (MathF.Abs(sample) > _edge) {
             sample = Math.Clamp(sample, -lip, lip);

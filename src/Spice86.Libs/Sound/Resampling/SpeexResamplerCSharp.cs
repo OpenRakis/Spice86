@@ -168,10 +168,10 @@ public sealed class SpeexResamplerCSharp {
     private int out_stride;
 
     public SpeexResamplerCSharp(uint channels, uint in_rate_init, uint out_rate_init, int quality) {
-        if (channels == 0 || channels > 256) {
+        if (channels is 0 or > 256) {
             throw new ArgumentException("channels");
         }
-        if (quality < 0 || quality > 10) {
+        if (quality is < 0 or > 10) {
             throw new ArgumentException("quality");
         }
 

@@ -1,5 +1,4 @@
 // Port of Thomas Scott Stillwell's "Master Tom Compressor" JSFX effect
-// Original DOSBox source: https://github.com/dosbox-staging/dosbox-staging/blob/main/src/audio/compressor.cpp
 // Original license: GPL-2.0-or-later
 //
 // This is a simplified port of Thomas Scott Stillwell's "Master Tom

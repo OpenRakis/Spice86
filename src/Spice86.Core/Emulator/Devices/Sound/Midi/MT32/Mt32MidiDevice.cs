@@ -49,8 +49,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
         _context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(48000);
         _context.SetSampleRate(48000);
         _context.OpenSynth();
-        // DON'T enable the channel here - it starts disabled and wakes up on first MIDI message
-        // The channel will be enabled when MIDI messages are played (via WakeUp call)
     }
 
     /// <inheritdoc/>
@@ -69,16 +67,10 @@ public sealed class Mt32MidiDevice : MidiDevice {
         }
     }
 
-    private void PlaybackLoopBody() {
-        ((Span<float>)_buffer).Clear();
-        _context.Render(_buffer);
-    }
-
     private void RenderCallback(int framesRequested) {
         if (_mixerChannel is null) {
             return;
         }
-        // Generate audio and push into mixer; emit verbose counts for side-by-side tracing
         ((Span<float>)_buffer).Clear();
         _context.Render(_buffer);
 

@@ -68,12 +68,6 @@ public sealed class GeneralMidiDevice : MidiDevice {
 
     ~GeneralMidiDevice() => Dispose(false);
 
-    private void PlaybackLoopBody() {
-        ((Span<float>)_buffer).Clear();
-
-        FillBuffer(_synthesizer, _buffer);
-    }
-
     private void RenderCallback(int framesRequested) {
         if (_mixerChannel is null) {
             return;

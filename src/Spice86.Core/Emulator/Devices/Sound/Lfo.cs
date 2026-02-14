@@ -7,8 +7,6 @@ using System;
 /// Provides various waveforms with linear interpolation for smooth modulation.
 /// </summary>
 /// <remarks>
-/// Ported from DOSBox Staging: /src/libs/tal-chorus/Lfo.h and Lfo.cpp
-/// 
 /// Implementation by Remy Muller (2003-08-22)
 /// Part of TAL-NoiseMaker by Patrick Kunz
 /// Copyright (c) 2005-2010 Patrick Kunz, TAL - Togu Audio Line, Inc.
@@ -61,7 +59,7 @@ public sealed class Lfo {
         ResultSmooth = 0.0f;
 
         // Initialize all waveform tables
-        InitializeWaveforms();
+        InitializeWaveformsLUT();
 
         // Set default rate of 1Hz
         SetRate(1.0f);
@@ -145,11 +143,7 @@ public sealed class Lfo {
         _sampleRate = sampleRate > 0.0f ? sampleRate : 44100.0f;
     }
 
-    /// <summary>
-    /// Initializes all waveform lookup tables.
-    /// Called during construction and when waveform settings change.
-    /// </summary>
-    private void InitializeWaveforms() {
+    private void InitializeWaveformsLUT() {
         // Waveform 0: Sine wave
         float pi = MathF.PI;
         for (int i = 0; i <= 256; i++) {

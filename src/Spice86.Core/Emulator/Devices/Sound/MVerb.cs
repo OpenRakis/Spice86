@@ -313,28 +313,18 @@ public sealed class MVerb {
     }
 
     public float GetParameter(int index) {
-        switch (index) {
-            case (int)Parameter.DampingFreq:
-                return _dampingFreq * 100.0f;
-            case (int)Parameter.Density:
-                return _density1 * 100.0f;
-            case (int)Parameter.BandwidthFreq:
-                return _bandwidthFreq * 100.0f;
-            case (int)Parameter.Predelay:
-                return _preDelayTime * 100.0f;
-            case (int)Parameter.Size:
-                return ((0.95f * _size) + 0.05f) * 100.0f;
-            case (int)Parameter.Decay:
-                return _decay * 100.0f;
-            case (int)Parameter.Gain:
-                return _gain * 100.0f;
-            case (int)Parameter.Mix:
-                return _mix * 100.0f;
-            case (int)Parameter.EarlyMix:
-                return _earlyMix * 100.0f;
-            default:
-                return 0.0f;
-        }
+        return index switch {
+            (int)Parameter.DampingFreq => _dampingFreq * 100.0f,
+            (int)Parameter.Density => _density1 * 100.0f,
+            (int)Parameter.BandwidthFreq => _bandwidthFreq * 100.0f,
+            (int)Parameter.Predelay => _preDelayTime * 100.0f,
+            (int)Parameter.Size => ((0.95f * _size) + 0.05f) * 100.0f,
+            (int)Parameter.Decay => _decay * 100.0f,
+            (int)Parameter.Gain => _gain * 100.0f,
+            (int)Parameter.Mix => _mix * 100.0f,
+            (int)Parameter.EarlyMix => _earlyMix * 100.0f,
+            _ => 0.0f,
+        };
     }
 
     public void SetSampleRate(float sampleRate) {
@@ -429,18 +419,13 @@ public sealed class MVerb {
         }
 
         public float GetIndex(int index) {
-            switch (index) {
-                case 0:
-                    return _buffer[_index1];
-                case 1:
-                    return _buffer[_index2];
-                case 2:
-                    return _buffer[_index3];
-                case 3:
-                    return _buffer[_index4];
-                default:
-                    return _buffer[_index1];
-            }
+            return index switch {
+                0 => _buffer[_index1],
+                1 => _buffer[_index2],
+                2 => _buffer[_index3],
+                3 => _buffer[_index4],
+                _ => _buffer[_index1],
+            };
         }
 
         public void SetLength(int length) {
@@ -528,18 +513,13 @@ public sealed class MVerb {
         }
 
         public float GetIndex(int index) {
-            switch (index) {
-                case 0:
-                    return _buffer[_index1];
-                case 1:
-                    return _buffer[_index2];
-                case 2:
-                    return _buffer[_index3];
-                case 3:
-                    return _buffer[_index4];
-                default:
-                    return _buffer[_index1];
-            }
+            return index switch {
+                0 => _buffer[_index1],
+                1 => _buffer[_index2],
+                2 => _buffer[_index3],
+                3 => _buffer[_index4],
+                _ => _buffer[_index1],
+            };
         }
 
         public void SetLength(int length) {
@@ -607,26 +587,17 @@ public sealed class MVerb {
         }
 
         public float GetIndex(int index) {
-            switch (index) {
-                case 0:
-                    return _buffer[_index1];
-                case 1:
-                    return _buffer[_index2];
-                case 2:
-                    return _buffer[_index3];
-                case 3:
-                    return _buffer[_index4];
-                case 4:
-                    return _buffer[_index5];
-                case 5:
-                    return _buffer[_index6];
-                case 6:
-                    return _buffer[_index7];
-                case 7:
-                    return _buffer[_index8];
-                default:
-                    return _buffer[_index1];
-            }
+            return index switch {
+                0 => _buffer[_index1],
+                1 => _buffer[_index2],
+                2 => _buffer[_index3],
+                3 => _buffer[_index4],
+                4 => _buffer[_index5],
+                5 => _buffer[_index6],
+                6 => _buffer[_index7],
+                7 => _buffer[_index8],
+                _ => _buffer[_index1],
+            };
         }
 
         public void SetLength(int length) {

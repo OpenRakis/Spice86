@@ -5,7 +5,7 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 /// </summary>
 public enum AudioEngine {
     /// <summary>
-    /// Cross-platform audio backend using WASAPI on Windows and SDL on other platforms.
+    /// Cross-platform audio backend.
     /// This is the recommended and default audio engine.
     /// </summary>
     CrossPlatform,

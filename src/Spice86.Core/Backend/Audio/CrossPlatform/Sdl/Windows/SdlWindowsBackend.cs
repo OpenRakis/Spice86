@@ -12,7 +12,7 @@ using Spice86.Core.Backend.Audio.CrossPlatform.Sdl.Windows.Wasapi;
 /// </summary>
 [SupportedOSPlatform("windows")]
 public sealed class SdlWindowsBackend : IAudioBackend {
-    private SdlAudioDevice _device;
+    private readonly SdlAudioDevice _device;
     private AudioDeviceState _state = AudioDeviceState.Stopped;
     private string? _lastError;
 

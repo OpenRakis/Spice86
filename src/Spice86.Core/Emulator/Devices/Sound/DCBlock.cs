@@ -5,8 +5,6 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 /// Removes DC offset (zero-frequency component) from audio signal using a high-pass filter.
 /// </summary>
 /// <remarks>
-/// Ported from DOSBox Staging: /src/libs/tal-chorus/DCBlock.h
-/// 
 /// Part of TAL-NoiseMaker by Patrick Kunz
 /// Copyright (c) 2005-2010 Patrick Kunz, TAL - Togu Audio Line, Inc.
 /// Licensed under GNU General Public License v2.0
