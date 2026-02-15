@@ -134,6 +134,34 @@ public abstract class Indexable : IIndexable {
     }
 
     /// <summary>
+    /// Read a space-padded string from memory.
+    /// </summary>
+    /// <param name="address">The address in memory from where to read</param>
+    /// <param name="length">The fixed length of the string field</param>
+    /// <returns>The space-padded string retrieved from memory, including trailing spaces.</returns>
+    public virtual string GetSpacePaddedString(uint address, int length) {
+        StringBuilder result = new();
+        for (int i = 0; i < length; i++) {
+            byte b = UInt8[address + (uint)i];
+            result.Append((char)b);
+        }
+        return result.ToString();
+    }
+
+    /// <summary>
+    /// Write a space-padded string to memory.
+    /// </summary>
+    /// <param name="address">The address at which to write the string</param>
+    /// <param name="value">The string value to write</param>
+    /// <param name="length">The fixed length of the string field</param>
+    public virtual void SetSpacePaddedString(uint address, string value, int length) {
+        byte[] bytes = Encoding.ASCII.GetBytes(value.PadRight(length));
+        for (int i = 0; i < length; i++) {
+            UInt8[address + (uint)i] = bytes[i];
+        }
+    }
+
+    /// <summary>
     ///     Load data from a byte array into memory.
     /// </summary>
     /// <param name="address">The memory address to start writing</param>

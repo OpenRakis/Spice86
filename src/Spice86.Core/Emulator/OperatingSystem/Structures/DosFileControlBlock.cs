@@ -3,8 +3,6 @@ namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
-using System.Text;
-
 /// <summary>
 /// Represents a DOS File Control Block (FCB) in memory - a legacy CP/M-style data structure for file operations.
 /// </summary>
@@ -273,33 +271,5 @@ public class DosFileControlBlock : MemoryBasedDataStructure {
     /// </summary>
     public void SetRandomFromPosition() {
         RandomRecord = AbsoluteRecord;
-    }
-
-    /// <summary>
-    /// Gets a space-padded string from memory.
-    /// </summary>
-    /// <param name="offset">The offset from the base address.</param>
-    /// <param name="length">The fixed length of the string field.</param>
-    /// <returns>The string, including trailing spaces.</returns>
-    private string GetSpacePaddedString(int offset, int length) {
-        StringBuilder result = new();
-        for (int i = 0; i < length; i++) {
-            byte b = UInt8[(uint)offset + (uint)i];
-            result.Append((char)b);
-        }
-        return result.ToString();
-    }
-
-    /// <summary>
-    /// Sets a space-padded string in memory.
-    /// </summary>
-    /// <param name="offset">The offset from the base address.</param>
-    /// <param name="value">The string value to write.</param>
-    /// <param name="length">The fixed length of the string field.</param>
-    private void SetSpacePaddedString(int offset, string value, int length) {
-        byte[] bytes = Encoding.ASCII.GetBytes(value.PadRight(length));
-        for (int i = 0; i < length; i++) {
-            UInt8[(uint)offset + (uint)i] = bytes[i];
-        }
     }
 }
