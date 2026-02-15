@@ -1182,6 +1182,10 @@ public class DosFcbManager {
     /// <param name="statusCode">FcbStatus.Success or FcbStatus.SegmentWrap on overflow.</param>
     /// <returns>True if offset computed successfully, false if overflow would occur.</returns>
     private bool TryComputeOffset(uint absoluteRecord, int recordSize, out int offset, out FcbStatus statusCode) {
+        // Use signed long (not ulong) for 64-bit intermediate calculation:
+        // - Multiplying uint × int requires 64-bit to detect overflow beyond int.MaxValue (2GB DOS file limit)
+        // - Signed long provides natural comparison semantics with int.MaxValue
+        // - DOSBox Staging uses uint32_t and wraps; Spice86 explicitly detects overflow via SegmentWrap status
         long offsetValue = (long)absoluteRecord * recordSize;
         if (offsetValue > int.MaxValue) {
             offset = 0;
