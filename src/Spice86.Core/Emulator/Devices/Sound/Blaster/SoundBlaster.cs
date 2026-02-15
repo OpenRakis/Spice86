@@ -1231,6 +1231,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             GenerateFrames(total_frames - _framesAddedThisTick);
         }
         _framesAddedThisTick -= total_frames;
+        _scheduler.AddEvent(_perTickHandler, 1);
     }
 
     private void PerFrameCallback() {
@@ -1275,7 +1276,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             _framesAddedThisTick = 0;
 
-            _scheduler.AddPermanentEvent(_perTickHandler, 1, 0);
+            _scheduler.AddEvent(_perTickHandler, 1);
 
             _timingType = TimingType.PerTick;
         }

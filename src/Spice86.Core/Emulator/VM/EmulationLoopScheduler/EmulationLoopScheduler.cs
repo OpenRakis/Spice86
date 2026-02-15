@@ -74,35 +74,6 @@ public class EmulationLoopScheduler {
     }
 
     /// <summary>
-    ///     Schedules a permanent event that auto-reschedules after each execution.
-    /// </summary>
-    /// <param name="handler">Callback to invoke.</param>
-    /// <param name="interval">Interval in milliseconds between executions.</param>
-    /// <param name="val">Value forwarded to the callback.</param>
-    public void AddPermanentEvent(EventHandler handler, double interval, uint val = 0) {
-        if (_queue.Count >= MaxQueueSize) {
-            if (_logger.IsEnabled(LogEventLevel.Error)) {
-                _logger.Error("Event queue full when scheduling permanent handler {Handler}", GetHandlerName(handler));
-            }
-            return;
-        }
-
-        double baseTime = _isServicingEvents ? _activeEventScheduledTime : _clock.ElapsedTimeMs;
-        double absoluteScheduledTime = baseTime + interval;
-
-        ScheduledEntry entry = GetEntry(handler, absoluteScheduledTime, val, interval);
-
-        _queue.Enqueue(entry, (float)absoluteScheduledTime);
-
-        if (!_activeEventsByHandler.TryGetValue(handler, out List<ScheduledEntry>? events)) {
-            events = new List<ScheduledEntry>();
-            _activeEventsByHandler[handler] = events;
-        }
-
-        events.Add(entry);
-    }
-
-    /// <summary>
     ///     Removes all queued events matching the provided handler.
     /// </summary>
     public void RemoveEvents(EventHandler handler) {
@@ -154,35 +125,25 @@ public class EmulationLoopScheduler {
             try {
                 entry.Handler.Invoke(entry.Value);
             } finally {
-                if (entry.Interval > 0) {
-                    entry.ScheduledTime += entry.Interval;
-                    _queue.Enqueue(entry, (float)entry.ScheduledTime);
-                    if (_activeEventsByHandler.TryGetValue(entry.Handler, out List<ScheduledEntry>? list)) {
-                        list.Add(entry);
-                    }
-                } else {
-                    ReturnEntry(entry);
-                }
+                ReturnEntry(entry);
             }
         }
 
         _isServicingEvents = false;
     }
 
-    private ScheduledEntry GetEntry(EventHandler handler, double scheduledTime, uint value, double interval = 0) {
+    private ScheduledEntry GetEntry(EventHandler handler, double scheduledTime, uint value) {
         if (_entryPool.TryPop(out ScheduledEntry? entry)) {
             entry.Handler = handler;
             entry.ScheduledTime = scheduledTime;
             entry.Value = value;
-            entry.Interval = interval;
             return entry;
         }
 
-        return new ScheduledEntry(handler, scheduledTime, value, interval);
+        return new ScheduledEntry(handler, scheduledTime, value);
     }
 
     private void ReturnEntry(ScheduledEntry entry) {
-        entry.Interval = 0;
         _entryPool.Push(entry);
     }
 
@@ -196,13 +157,11 @@ public class EmulationLoopScheduler {
         public EventHandler Handler { get; set; }
         public double ScheduledTime { get; set; }
         public uint Value { get; set; }
-        public double Interval { get; set; }
 
-        public ScheduledEntry(EventHandler handler, double scheduledTime, uint value, double interval = 0) {
+        public ScheduledEntry(EventHandler handler, double scheduledTime, uint value) {
             Handler = handler;
             ScheduledTime = scheduledTime;
             Value = value;
-            Interval = interval;
         }
     }
 }

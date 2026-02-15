@@ -74,8 +74,8 @@ public partial class PS2Keyboard {
         _typematicTickHandler = TypematicTickHandler;
         _ledsAllOnExpireHandler = LedsAllOnExpireHandler;
 
-        // Schedule 1ms periodic service for typematic repeat
-        _scheduler.AddPermanentEvent(_typematicTickHandler, 1, 0);
+        // Schedule first 1ms periodic service (typematic + LED timeout)
+        _scheduler.AddEvent(_typematicTickHandler, 0.001);
 
         KeyboardReset(isStartup: true);
         SetCodeSet(1);

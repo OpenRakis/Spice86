@@ -137,7 +137,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         _tickHandler = (_) => OnSchedulerTick();
         // Initialize last tick time before first tick fires
         _lastTickTimeMs = _clock.ElapsedTimeMs;
-        _scheduler.AddPermanentEvent(_tickHandler, 1, 0);
+        _scheduler.AddEvent(_tickHandler, 1);
         mixer.UnlockMixerThread();
     }
 
@@ -338,6 +338,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         _lastTickTimeMs = _clock.ElapsedTimeMs;
 
         if (!_mixerChannel.IsEnabled) {
+            _scheduler.AddEvent(_tickHandler, 1);
             return;
         }
         _frameCounter += _mixerChannel.FramesPerTick;
@@ -350,6 +351,9 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
             }
             PicCallback(requestedFrames);
         }
+
+        // Reschedule for next tick (1ms) - matches DOSBox's TIMER_AddTickHandler behavior
+        _scheduler.AddEvent(_tickHandler, 1);
     }
 
     private void PicCallback(int requestedFrames) {
