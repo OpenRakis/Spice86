@@ -1167,8 +1167,8 @@ public class DosFcbManager {
         }
 
         // Trim and format result
-        string finalName = newName.ToString().TrimEnd();
-        string finalExt = newExt.ToString().TrimEnd();
+        string finalName = newName.ToString().TrimEnd(' ');
+        string finalExt = newExt.ToString().TrimEnd(' ');
         return string.IsNullOrEmpty(finalExt) ? finalName : $"{finalName}.{finalExt}";
     }
 
