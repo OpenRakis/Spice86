@@ -17,6 +17,11 @@ using Spice86.Shared.Utils;
 /// </summary>
 /// <remarks>
 /// <para>
+/// <b>Implementation Reference:</b> This implementation is based on DOSBox Staging dos_files.cpp
+/// (https://github.com/dosbox-staging/dosbox-staging) and validated against the MS-DOS Encyclopedia
+/// (https://www.pcjs.org/documents/books/mspl13/msdos/encyclopedia/appendix-g/).
+/// </para>
+/// <para>
 /// <b>Supported Operations:</b> Open/Close (0Fh/10h), Create/Delete/Rename (16h/13h/17h),
 /// Sequential R/W (14h/15h), Random R/W (21h/22h), Block R/W (27h/28h), Find First/Next (11h/12h),
 /// Get Size/Set Random (23h/24h), Parse Filename (29h). Extended FCB support for file attributes.
@@ -1167,6 +1172,15 @@ public class DosFcbManager {
         return string.IsNullOrEmpty(finalExt) ? finalName : $"{finalName}.{finalExt}";
     }
 
+    /// <summary>
+    /// Computes a file offset from an absolute record number and record size.
+    /// Validates that the result fits within DOS file system limits (int.MaxValue = 2GB).
+    /// </summary>
+    /// <param name="absoluteRecord">Absolute record number.</param>
+    /// <param name="recordSize">Size of each record in bytes.</param>
+    /// <param name="offset">The computed file offset, or 0 if overflow occurs.</param>
+    /// <param name="statusCode">FcbStatus.Success or FcbStatus.SegmentWrap on overflow.</param>
+    /// <returns>True if offset computed successfully, false if overflow would occur.</returns>
     private bool TryComputeOffset(uint absoluteRecord, int recordSize, out int offset, out FcbStatus statusCode) {
         ulong offsetValue = absoluteRecord * (ulong)recordSize;
         if (offsetValue > int.MaxValue) {
