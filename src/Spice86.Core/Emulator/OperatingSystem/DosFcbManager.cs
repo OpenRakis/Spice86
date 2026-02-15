@@ -1182,7 +1182,7 @@ public class DosFcbManager {
     /// <param name="statusCode">FcbStatus.Success or FcbStatus.SegmentWrap on overflow.</param>
     /// <returns>True if offset computed successfully, false if overflow would occur.</returns>
     private bool TryComputeOffset(uint absoluteRecord, int recordSize, out int offset, out FcbStatus statusCode) {
-        ulong offsetValue = absoluteRecord * (ulong)recordSize;
+        long offsetValue = (long)absoluteRecord * recordSize;
         if (offsetValue > int.MaxValue) {
             offset = 0;
             statusCode = FcbStatus.SegmentWrap;
