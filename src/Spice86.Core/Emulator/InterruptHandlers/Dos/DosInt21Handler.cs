@@ -1768,9 +1768,8 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>so don't open or alter the FCB between calls to Fns 11h and 12h.</para>
     /// </remarks>
     private void FcbFindNext() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("FCB FIND NEXT at {Address}", fcbAddress);
+            LoggerService.Verbose("FCB FIND NEXT at {Address}", GetFcbAddress());
         }
         State.AL = (byte)_dosFcbManager.FindNext();
     }
