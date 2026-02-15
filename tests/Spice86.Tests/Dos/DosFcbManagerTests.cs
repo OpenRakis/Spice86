@@ -75,7 +75,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "TEST.TXT", 128);
 
         // Act
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged, out uint bytesAdvanced);
+        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -92,7 +92,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "C:FILE.DAT", 128);
 
         // Act
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, 0, out uint bytesAdvanced);
+        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, 0);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -109,7 +109,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "Z:TEST.TXT", 128);
 
         // Act - Undocumented behavior: should keep parsing even if drive specification is invalid
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, 0, out uint bytesAdvanced);
+        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, 0);
 
         // Assert
         result.Should().Be(FcbParseResult.InvalidDrive);
@@ -126,7 +126,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "*.TXT", 128);
 
         // Act
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged, out uint bytesAdvanced);
+        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged);
 
         // Assert
         result.Should().Be(FcbParseResult.WildcardsPresent);
@@ -142,7 +142,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "TEST?.TX?", 128);
 
         // Act
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged, out uint bytesAdvanced);
+        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged);
 
         // Assert
         result.Should().Be(FcbParseResult.WildcardsPresent);
@@ -158,7 +158,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "  :;,=+  TEST.TXT", 128);
 
         // Act
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.SkipLeadingSeparators | FcbParseControl.LeaveDriveUnchanged, out uint bytesAdvanced);
+        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.SkipLeadingSeparators | FcbParseControl.LeaveDriveUnchanged);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -173,7 +173,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "   \t  TEST.TXT", 128);
 
         // Act
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, 0, out uint bytesAdvanced);
+        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, 0);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -188,7 +188,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, ".", 128);
 
         // Act
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged, out uint bytesAdvanced);
+        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -203,7 +203,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "..", 128);
 
         // Act
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged, out uint bytesAdvanced);
+        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -218,7 +218,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "NOEXT", 128);
 
         // Act
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged, out uint bytesAdvanced);
+        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -234,7 +234,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "lowercase.ext", 128);
 
         // Act
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged, out uint bytesAdvanced);
+        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.LeaveDriveUnchanged);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -250,7 +250,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "TEST.TXT", 128);
 
         // Act - PARSE_BLNK_FNAME: should blank filename field
-        FcbParseResult result = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.BlankFilename, out _);
+        (FcbParseResult result, _) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, FcbParseControl.BlankFilename);
 
         // Assert - filename field should be blanked before parsing
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -581,14 +581,14 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.DosFcbManager.OpenFile(FcbAddr);
         fcb.RecordSize = 4;
         fcb.RandomRecord = 0;
-        ushort recordCount = 3;
+        ushort requestedRecordCount = 3;
 
         // Act
-        FcbStatus readResult = _fixture.DosFcbManager.RandomBlockRead(FcbAddr, DtaAddr, ref recordCount);
+        (FcbStatus readResult, ushort actualRecordCount) = _fixture.DosFcbManager.RandomBlockRead(FcbAddr, DtaAddr, requestedRecordCount);
 
         // Assert
         readResult.Should().Be(FcbStatus.Success);
-        recordCount.Should().Be(3);
+        actualRecordCount.Should().Be(3);
         _fixture.Memory.UInt8[DtaAddr + 0].Should().Be(0x41);
         _fixture.Memory.UInt8[DtaAddr + 4].Should().Be(0x42);
         _fixture.Memory.UInt8[DtaAddr + 8].Should().Be(0x43);
@@ -610,14 +610,14 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.DosFcbManager.OpenFile(FcbAddr);
         fcb.RecordSize = 10;
         fcb.RandomRecord = 5;
-        ushort recordCount = 0;
+        ushort requestedRecordCount = 0;
 
         // Act
-        FcbStatus writeResult = _fixture.DosFcbManager.RandomBlockWrite(FcbAddr, DtaAddr, ref recordCount);
+        (FcbStatus writeResult, ushort actualRecordCount) = _fixture.DosFcbManager.RandomBlockWrite(FcbAddr, DtaAddr, requestedRecordCount);
 
         // Assert
         writeResult.Should().Be(FcbStatus.Success);
-        recordCount.Should().Be(0);
+        actualRecordCount.Should().Be(0);
         fcb.FileSize.Should().Be(50);
         _fixture.DosFcbManager.CloseFile(FcbAddr);
         new FileInfo(testFile).Length.Should().Be(50);
