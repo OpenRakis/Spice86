@@ -17,6 +17,11 @@ using Spice86.Shared.Utils;
 /// </summary>
 /// <remarks>
 /// <para>
+/// <b>Implementation Reference:</b> This implementation is based on DOSBox Staging dos_files.cpp
+/// (https://github.com/dosbox-staging/dosbox-staging) and validated against the MS-DOS Encyclopedia
+/// (https://www.pcjs.org/documents/books/mspl13/msdos/encyclopedia/appendix-g/).
+/// </para>
+/// <para>
 /// <b>Supported Operations:</b> Open/Close (0Fh/10h), Create/Delete/Rename (16h/13h/17h),
 /// Sequential R/W (14h/15h), Random R/W (21h/22h), Block R/W (27h/28h), Find First/Next (11h/12h),
 /// Get Size/Set Random (23h/24h), Parse Filename (29h). Extended FCB support for file attributes.
@@ -58,9 +63,8 @@ public class DosFcbManager {
     /// <param name="stringAddress">Linear address of the ASCIIZ string to parse.</param>
     /// <param name="fcbAddress">Linear address of the destination FCB (standard or extended).</param>
     /// <param name="parseControl">Parsing control flags.</param>
-    /// <param name="bytesAdvanced">Number of bytes consumed from the input string.</param>
-    /// <returns>An <see cref="FcbParseResult"/> describing parse status.</returns>
-    public FcbParseResult ParseFilename(uint stringAddress, uint fcbAddress, FcbParseControl parseControl, out uint bytesAdvanced) {
+    /// <returns>A tuple of (FcbParseResult, bytesAdvanced) where bytesAdvanced is the number of bytes consumed from the input string.</returns>
+    public (FcbParseResult, uint) ParseFilename(uint stringAddress, uint fcbAddress, FcbParseControl parseControl) {
         string filename = _memory.GetZeroTerminatedString(stringAddress, 128);
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
 
@@ -122,8 +126,8 @@ public class DosFcbManager {
             }
 
             fcb.FileName = nameBuilder.ToString();
-            bytesAdvanced = (uint)pos;
-            return retCodeDrive ? FcbParseResult.InvalidDrive : FcbParseResult.NoWildcards;
+            uint bytesAdvanced = (uint)pos;
+            return retCodeDrive ? (FcbParseResult.InvalidDrive, bytesAdvanced) : (FcbParseResult.NoWildcards, bytesAdvanced);
         }
 
         // Parse filename field
@@ -139,18 +143,18 @@ public class DosFcbManager {
             fcb.FileExtension = ExtractAndPadField(filename, extStart, pos, 3);
         }
 
-        bytesAdvanced = (uint)pos;
+        uint finalBytesAdvanced = (uint)pos;
 
         // Return appropriate code
         if (retCodeDrive) {
-            return FcbParseResult.InvalidDrive;
+            return (FcbParseResult.InvalidDrive, finalBytesAdvanced);
         }
 
         if (hasWildcardName || retCodeExt) {
-            return FcbParseResult.WildcardsPresent;
+            return (FcbParseResult.WildcardsPresent, finalBytesAdvanced);
         }
 
-        return FcbParseResult.NoWildcards;
+        return (FcbParseResult.NoWildcards, finalBytesAdvanced);
     }
 
     /// <summary>
@@ -659,9 +663,9 @@ public class DosFcbManager {
     /// </summary>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
-    /// <param name="recordCount">On input, requested record count; on output, number actually read.</param>
-    /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
-    public FcbStatus RandomBlockRead(uint fcbAddress, uint dtaAddress, ref ushort recordCount) {
+    /// <param name="requestedRecordCount">Number of records requested to read.</param>
+    /// <returns>A tuple of (FcbStatus, actualRecordCount) describing the outcome and number of records actually read.</returns>
+    public (FcbStatus, ushort) RandomBlockRead(uint fcbAddress, uint dtaAddress, ushort requestedRecordCount) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
@@ -671,8 +675,7 @@ public class DosFcbManager {
             FcbStatus reopenStatus = OpenFile(fcbAddress);
             if (reopenStatus != FcbStatus.Success) {
                 LogFcbWarning("RAND BLK READ", baseAddr, "Auto-reopen failed");
-                recordCount = 0;
-                return FcbStatus.NoData;
+                return (FcbStatus.NoData, 0);
             }
             fcb = new DosFileControlBlock(_memory, baseAddr);
             handle = fcb.SftNumber;
@@ -680,7 +683,7 @@ public class DosFcbManager {
 
         if (handle == 0) {
             LogFcbWarning("RAND BLK READ", baseAddr, "Handle is zero");
-            return FcbStatus.Error;
+            return (FcbStatus.Error, 0);
         }
         if (fcb.RecordSize == 0) {
             fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
@@ -695,7 +698,7 @@ public class DosFcbManager {
         FcbStatus lastError = FcbStatus.Success;
 
         // Loop for each record
-        for (ushort i = 0; i < recordCount; i++) {
+        for (ushort i = 0; i < requestedRecordCount; i++) {
             uint absoluteRecord = startRecord + i;
             if (!TryComputeOffset(absoluteRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
                 lastError = offsetStatus;
@@ -741,11 +744,10 @@ public class DosFcbManager {
         // Update RandomRecord with new position
         fcb.RandomRecord = (uint)fcb.CurrentBlock * 128 + fcb.CurrentRecord;
 
-        recordCount = totalRead;
         if (totalRead == 0) {
-            return FcbStatus.NoData;
+            return (FcbStatus.NoData, 0);
         }
-        return lastError == FcbStatus.EndOfFile ? FcbStatus.EndOfFile : FcbStatus.Success;
+        return (lastError == FcbStatus.EndOfFile ? FcbStatus.EndOfFile : FcbStatus.Success, totalRead);
     }
 
     /// <summary>
@@ -753,9 +755,9 @@ public class DosFcbManager {
     /// </summary>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
-    /// <param name="recordCount">On input, requested record count; on output, number actually written.</param>
-    /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
-    public FcbStatus RandomBlockWrite(uint fcbAddress, uint dtaAddress, ref ushort recordCount) {
+    /// <param name="requestedRecordCount">Number of records requested to write (0 = truncate file to random record position).</param>
+    /// <returns>A tuple of (FcbStatus, actualRecordCount) describing the outcome and number of records actually written.</returns>
+    public (FcbStatus, ushort) RandomBlockWrite(uint fcbAddress, uint dtaAddress, ushort requestedRecordCount) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
@@ -765,8 +767,7 @@ public class DosFcbManager {
             FcbStatus reopenStatus = OpenFile(fcbAddress);
             if (reopenStatus != FcbStatus.Success) {
                 LogFcbWarning("RAND BLK WRITE", baseAddr, "Auto-reopen failed");
-                recordCount = 0;
-                return FcbStatus.NoData;
+                return (FcbStatus.NoData, 0);
             }
             fcb = new DosFileControlBlock(_memory, baseAddr);
             handle = fcb.SftNumber;
@@ -774,7 +775,7 @@ public class DosFcbManager {
 
         if (handle == 0) {
             LogFcbWarning("RAND BLK WRITE", baseAddr, "Handle is zero");
-            return FcbStatus.Error;
+            return (FcbStatus.Error, 0);
         }
         if (fcb.RecordSize == 0) {
             fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
@@ -785,10 +786,10 @@ public class DosFcbManager {
         // Set block/record from random field
         fcb.CalculateRecordPosition();
 
-        if (recordCount == 0) {
+        if (requestedRecordCount == 0) {
             // Truncate/extend file to random record position
             if (!TryComputeOffset(startRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
-                return offsetStatus;
+                return (offsetStatus, 0);
             }
             VirtualFileBase? vf = _dosFileManager.OpenFiles[handle];
             if (vf is DosFile dosFile) {
@@ -797,17 +798,17 @@ public class DosFcbManager {
                 fcb.FileSize = (uint)offset;
                 UpdateFcbDateTime(fcb);
                 LogFcbDebug("RAND BLK WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
-                return FcbStatus.Success;
+                return (FcbStatus.Success, 0);
             }
             LogFcbWarning("RAND BLK WRITE", baseAddr, "Handle is not a file");
-            return FcbStatus.Error;
+            return (FcbStatus.Error, 0);
         }
 
         ushort totalWritten = 0;
         FcbStatus lastError = FcbStatus.Success;
 
         // Loop for each record
-        for (ushort i = 0; i < recordCount; i++) {
+        for (ushort i = 0; i < requestedRecordCount; i++) {
             uint absoluteRecord = startRecord + i;
             if (!TryComputeOffset(absoluteRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
                 lastError = offsetStatus;
@@ -847,15 +848,14 @@ public class DosFcbManager {
         // Update RandomRecord with new position
         fcb.RandomRecord = (uint)fcb.CurrentBlock * 128 + fcb.CurrentRecord;
 
-        recordCount = totalWritten;
         if (totalWritten == 0) {
-            return FcbStatus.NoData;
+            return (FcbStatus.NoData, 0);
         }
         if (lastError != FcbStatus.Success) {
-            return lastError;
+            return (lastError, totalWritten);
         }
         LogFcbDebug("RAND BLK WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
-        return FcbStatus.Success;
+        return (FcbStatus.Success, totalWritten);
     }
 
     /// <summary>
@@ -915,8 +915,7 @@ public class DosFcbManager {
             return FcbStatus.Error;
         }
         while (true) {
-            DosDiskTransferArea dta = new DosDiskTransferArea(_memory, MemoryUtils.ToPhysicalAddress(
-                _dosFileManager.DiskTransferAreaAddressSegment, _dosFileManager.DiskTransferAreaAddressOffset));
+            DosDiskTransferArea dta = _dosFileManager.DiskTransferArea;
             string dosName = dta.FileName;
             DosFileOperationResult del = _dosFileManager.RemoveFile(dosName);
             if (del.IsError) {
@@ -963,8 +962,7 @@ public class DosFcbManager {
         HashSet<string> seenSources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         HashSet<string> seenDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         while (true) {
-            DosDiskTransferArea dta = new DosDiskTransferArea(_memory, MemoryUtils.ToPhysicalAddress(
-                _dosFileManager.DiskTransferAreaAddressSegment, _dosFileManager.DiskTransferAreaAddressOffset));
+            DosDiskTransferArea dta = _dosFileManager.DiskTransferArea;
             string sourceDos = dta.FileName;
             string destDos = ApplyWildcardRename(sourceDos, newPattern);
 
@@ -1092,25 +1090,16 @@ public class DosFcbManager {
         bool noExtension = fcbName.Length > 0 && fcbName[0] == '.';
 
         // Trim trailing spaces from name
-        int nameEnd = fcbName.Length - 1;
-        while (nameEnd >= 0 && fcbName[nameEnd] == ' ') {
-            nameEnd--;
-        }
-        string name = nameEnd >= 0 ? fcbName.Substring(0, nameEnd + 1) : "";
+        string name = fcbName.TrimEnd(' ');
 
         if (noExtension) {
             return name;
         }
 
-        // Trim trailing spaces from extension
-        int extEnd = fcbExt.Length - 1;
-        while (extEnd >= 0 && fcbExt[extEnd] == ' ') {
-            extEnd--;
-        }
+        string ext = fcbExt.TrimEnd(' ');
 
         // Only add extension if there are non-space chars
-        if (extEnd >= 0) {
-            string ext = fcbExt.Substring(0, extEnd + 1);
+        if (ext.Length > 0) {
             return $"{name}.{ext}";
         }
 
@@ -1178,11 +1167,20 @@ public class DosFcbManager {
         }
 
         // Trim and format result
-        string finalName = newName.ToString().TrimEnd();
-        string finalExt = newExt.ToString().TrimEnd();
+        string finalName = newName.ToString().TrimEnd(' ');
+        string finalExt = newExt.ToString().TrimEnd(' ');
         return string.IsNullOrEmpty(finalExt) ? finalName : $"{finalName}.{finalExt}";
     }
 
+    /// <summary>
+    /// Computes a file offset from an absolute record number and record size.
+    /// Validates that the result fits within DOS file system limits (int.MaxValue = 2GB).
+    /// </summary>
+    /// <param name="absoluteRecord">Absolute record number.</param>
+    /// <param name="recordSize">Size of each record in bytes.</param>
+    /// <param name="offset">The computed file offset, or 0 if overflow occurs.</param>
+    /// <param name="statusCode">FcbStatus.Success or FcbStatus.SegmentWrap on overflow.</param>
+    /// <returns>True if offset computed successfully, false if overflow would occur.</returns>
     private bool TryComputeOffset(uint absoluteRecord, int recordSize, out int offset, out FcbStatus statusCode) {
         ulong offsetValue = absoluteRecord * (ulong)recordSize;
         if (offsetValue > int.MaxValue) {

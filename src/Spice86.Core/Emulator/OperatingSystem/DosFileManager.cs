@@ -451,6 +451,15 @@ public class DosFileManager {
     public ushort DiskTransferAreaAddressSegment => _diskTransferAreaAddressSegment;
 
     /// <summary>
+    /// Gets the current Disk Transfer Area structure.
+    /// </summary>
+    /// <remarks>
+    /// This property creates a new <see cref="DosDiskTransferArea"/> instance on each access.
+    /// For repeated access within loops, consider caching the result in a local variable.
+    /// </remarks>
+    public DosDiskTransferArea DiskTransferArea => new DosDiskTransferArea(_memory, GetDiskTransferAreaPhysicalAddress());
+
+    /// <summary>
     /// Seeks to specified location in file.
     /// </summary>
     /// <param name="originOfMove">Can be one of those values: <br/>
@@ -685,7 +694,11 @@ public class DosFileManager {
         return null;
     }
 
-    private uint GetDiskTransferAreaPhysicalAddress() => MemoryUtils.ToPhysicalAddress(
+    /// <summary>
+    /// Gets the physical address of the Disk Transfer Area (DTA).
+    /// </summary>
+    /// <returns>The physical address computed from DTA segment and offset.</returns>
+    public uint GetDiskTransferAreaPhysicalAddress() => MemoryUtils.ToPhysicalAddress(
         _diskTransferAreaAddressSegment, _diskTransferAreaAddressOffset);
 
     private VirtualFileBase? GetOpenFile(ushort fileHandle) {
