@@ -592,6 +592,9 @@ public class DosInt21Handler : InterruptHandler {
         DosFileOperationResult dosFileOperationResult = _dosFileManager.CloseFileOrDevice(
             fileHandle);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+        if (!dosFileOperationResult.IsError) {
+            State.AL = dosFileOperationResult.RefCount;
+        }
     }
 
     /// <summary>
