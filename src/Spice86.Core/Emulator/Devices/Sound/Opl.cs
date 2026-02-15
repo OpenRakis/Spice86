@@ -384,6 +384,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     }
 
     public override void WriteByte(ushort port, byte value) {
+        if(_disposed) {
+            return;
+        }
         _chipLock.EnterWriteLock();
         try {
             if (_logger.IsEnabled(LogEventLevel.Verbose)) {
@@ -650,6 +653,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     ///     OPL mixer callback - called by the mixer thread to generate frames.
     /// </summary>
     private void AudioCallback(int framesRequested) {
+        if (_disposed) {
+            return;
+        }
         int framesRemaining = framesRequested;
         _chipLock.EnterWriteLock();
         try {
