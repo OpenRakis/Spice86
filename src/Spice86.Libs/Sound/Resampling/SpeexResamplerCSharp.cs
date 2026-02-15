@@ -6,7 +6,7 @@
    Arbitrary resampling code - Faithful C# port from libspeexdsp/resample.c
 
    Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are
+   modification, are permitted providing that the following conditions are
    met:
 
    1. Redistributions of source code must retain the above copyright notice,
@@ -161,7 +161,7 @@ public sealed class SpeexResamplerCSharp {
     private float[] mem;
     private float[] sinc_table;
     private uint sinc_table_length;
-    private delegate int ResamplerFunc(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride);
+    private delegate int ResamplerFunc(uint channel_index, Span<float> inBuf, int inBufOffset, ref uint in_len, Span<float> outBuf, int outBufOffset, ref uint out_len, int outStride);
     private ResamplerFunc resampler_ptr;
 
     private int in_stride;
@@ -232,7 +232,7 @@ public sealed class SpeexResamplerCSharp {
         interp[2] = 1.0f - interp[0] - interp[1] - interp[3];
     }
 
-    private int ResamplerBasicDirectSingle(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
+    private int ResamplerBasicDirectSingle(uint channel_index, Span<float> inBuf, int inBufOffset, ref uint in_len, Span<float> outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -259,7 +259,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int ResamplerBasicDirectDouble(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
+    private int ResamplerBasicDirectDouble(uint channel_index, Span<float> inBuf, int inBufOffset, ref uint in_len, Span<float> outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -289,7 +289,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int ResamplerBasicInterpolateSingle(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
+    private int ResamplerBasicInterpolateSingle(uint channel_index, Span<float> inBuf, int inBufOffset, ref uint in_len, Span<float> outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -298,8 +298,13 @@ public sealed class SpeexResamplerCSharp {
         while (!(last_sample_val >= (int)in_len || out_sample >= (int)out_len)) {
             int offset = (int)(samp_frac_num_val * oversample / den_rate);
             float frac = ((float)((samp_frac_num_val * oversample) % den_rate)) / den_rate;
-            float[] interp = new float[4];
-            CubicCoef(frac, interp);
+            
+            // Compute cubic interpolation coefficients inline (no allocation)
+            // Matches libspeexdsp/resample.c:318-328 cubic_coef() function
+            float c0 = -0.16667f * frac + 0.16667f * frac * frac * frac;
+            float c1 = frac + 0.5f * frac * frac - 0.5f * frac * frac * frac;
+            float c3 = -0.33333f * frac + 0.5f * frac * frac - 0.16667f * frac * frac * frac;
+            float c2 = 1.0f - c0 - c1 - c3;
 
             double accum0 = 0, accum1 = 0, accum2 = 0, accum3 = 0;
             for (int j = 0; j < N; j++) {
@@ -311,7 +316,7 @@ public sealed class SpeexResamplerCSharp {
                 accum3 += curr * sinc_table[idx + 1];
             }
 
-            double sum = interp[0] * accum0 + interp[1] * accum1 + interp[2] * accum2 + interp[3] * accum3;
+            double sum = c0 * accum0 + c1 * accum1 + c2 * accum2 + c3 * accum3;
             outBuf[outBufOffset + outStride * out_sample++] = (float)sum;
 
             last_sample_val += int_advance;
@@ -327,7 +332,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int ResamplerBasicInterpolateDouble(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
+    private int ResamplerBasicInterpolateDouble(uint channel_index, Span<float> inBuf, int inBufOffset, ref uint in_len, Span<float> outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int N = (int)filt_len;
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
@@ -336,8 +341,13 @@ public sealed class SpeexResamplerCSharp {
         while (!(last_sample_val >= (int)in_len || out_sample >= (int)out_len)) {
             int offset = (int)(samp_frac_num_val * oversample / den_rate);
             float frac = ((float)((samp_frac_num_val * oversample) % den_rate)) / den_rate;
-            float[] interp = new float[4];
-            CubicCoef(frac, interp);
+            
+            // Compute cubic interpolation coefficients inline (no allocation)
+            // Matches libspeexdsp/resample.c:318-328 cubic_coef() function
+            float c0 = -0.16667f * frac + 0.16667f * frac * frac * frac;
+            float c1 = frac + 0.5f * frac * frac - 0.5f * frac * frac * frac;
+            float c3 = -0.33333f * frac + 0.5f * frac * frac - 0.16667f * frac * frac * frac;
+            float c2 = 1.0f - c0 - c1 - c3;
 
             double accum0 = 0, accum1 = 0, accum2 = 0, accum3 = 0;
             for (int j = 0; j < N; j++) {
@@ -349,7 +359,7 @@ public sealed class SpeexResamplerCSharp {
                 accum3 += curr * sinc_table[idx + 1];
             }
 
-            double sum = interp[0] * accum0 + interp[1] * accum1 + interp[2] * accum2 + interp[3] * accum3;
+            double sum = c0 * accum0 + c1 * accum1 + c2 * accum2 + c3 * accum3;
             outBuf[outBufOffset + outStride * out_sample++] = (float)sum;
 
             last_sample_val += int_advance;
@@ -365,7 +375,7 @@ public sealed class SpeexResamplerCSharp {
         return out_sample;
     }
 
-    private int ResamplerBasicZero(uint channel_index, float[] inBuf, int inBufOffset, ref uint in_len, float[] outBuf, int outBufOffset, ref uint out_len, int outStride) {
+    private int ResamplerBasicZero(uint channel_index, Span<float> inBuf, int inBufOffset, ref uint in_len, Span<float> outBuf, int outBufOffset, ref uint out_len, int outStride) {
         int out_sample = 0;
         int last_sample_val = last_sample[channel_index];
         uint samp_frac_num_val = samp_frac_num[channel_index];
@@ -508,9 +518,15 @@ public sealed class SpeexResamplerCSharp {
                 } else {
                     magic = (olen - filt_len) / 2;
                     for (j = 0; j < filt_len - 1 + magic; j++) {
-                        mem[start + j] = mem[start + j + magic];
+                        mem[start + (filt_len - 2 - j)] = mem[start + (olen - 2 - j)];
                     }
-                    magic_samples[i] = magic;
+                    for (j = filt_len - 1 + magic; j < olen; j++) {
+                        mem[start + (filt_len - 2 - j)] = mem[start + (olen - 2 - j)];
+                    }
+                    for (j = 0; j < filt_len - 1; j++) {
+                        mem[start + (filt_len - 2 - j)] = 0;
+                    }
+                    last_sample[i] += (int)((filt_len - olen) / 2);
                 }
             }
         } else if (filt_len < old_length) {
@@ -537,7 +553,7 @@ fail:
     /// <summary>
     /// Process native resampling - matches speex_resampler_process_native from resample.c
     /// </summary>
-    private int SpeexResamplerProcessNative(uint channel_index, ref uint in_len, float[] outBuf, int outOffset, ref uint out_len) {
+    private int SpeexResamplerProcessNative(uint channel_index, ref uint in_len, Span<float> outBuf, int outOffset, ref uint out_len) {
         int N = (int)filt_len;
         int memOffset = (int)(channel_index * mem_alloc_size);
         
@@ -565,7 +581,7 @@ fail:
     /// <summary>
     /// Handle magic samples - matches speex_resampler_magic from resample.c
     /// </summary>
-    private int SpeexResamplerMagic(uint channel_index, float[] outBuf, ref int outOffset, uint out_len) {
+    private int SpeexResamplerMagic(uint channel_index, Span<float> outBuf, ref int outOffset, uint out_len) {
         uint tmp_in_len = magic_samples[channel_index];
         int memOffset = (int)(channel_index * mem_alloc_size);
         int N = (int)filt_len;
@@ -608,10 +624,7 @@ fail:
         int currentInOffset = inputOffset;
         
         if (magic_samples[channel_index] != 0) {
-            float[] tempOut = new float[output.Length];
-            output.CopyTo(tempOut);
-            olen -= (uint)SpeexResamplerMagic(channel_index, tempOut, ref currentOutOffset, olen);
-            tempOut.AsSpan().CopyTo(output);
+            olen -= (uint)SpeexResamplerMagic(channel_index, output, ref currentOutOffset, olen);
         }
         
         if (magic_samples[channel_index] == 0) {
@@ -635,18 +648,7 @@ fail:
                     }
                 }
                 
-                // Prepare temp output buffer at correct offset
-                float[] tempOut = new float[output.Length];
-                for (int i = 0; i < output.Length; i++) {
-                    tempOut[i] = output[i];
-                }
-                
-                SpeexResamplerProcessNative(channel_index, ref ichunk, tempOut, currentOutOffset, ref ochunk);
-                
-                // Copy back to output
-                for (int i = 0; i < tempOut.Length && i < output.Length; i++) {
-                    output[i] = tempOut[i];
-                }
+                SpeexResamplerProcessNative(channel_index, ref ichunk, output, currentOutOffset, ref ochunk);
                 
                 ilen -= ichunk;
                 olen -= ochunk;
