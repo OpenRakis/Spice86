@@ -125,7 +125,7 @@ public class DosProcessManager {
         }
     }
 
-    private DosProgramSegmentPrefix GetCurrentPsp() => 
+    private DosProgramSegmentPrefix GetCurrentPsp() =>
         new(_memory, MemoryUtils.ToPhysicalAddress(_sda.CurrentProgramSegmentPrefix, 0));
 
     public void TrackResidentBlock(DosMemoryControlBlock block) {
