@@ -1,4 +1,4 @@
-﻿namespace Spice86.Tests;
+namespace Spice86.Tests;
 
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.Indexer;
@@ -194,3 +194,6 @@ public class MemoryBasedDataStructureTest {
         return (data, memoryBasedDataStructure);
     }
 }
+
+
+

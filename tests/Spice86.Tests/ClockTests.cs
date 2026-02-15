@@ -1,10 +1,12 @@
-namespace Spice86.Tests;
+﻿namespace Spice86.Tests;
 
 using FluentAssertions;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM.Clock;
+
 using Xunit;
 
 /// <summary>
@@ -41,7 +43,7 @@ public class ClockTests {
         // Arrange
         DateTime startTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         EmulatedClock clock = new EmulatedClock();
-        
+
         // Act
         clock.StartTime = startTime;
         DateTime currentDateTime = clock.CurrentDateTime;

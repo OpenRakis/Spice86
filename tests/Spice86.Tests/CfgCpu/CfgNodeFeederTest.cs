@@ -1,4 +1,4 @@
-﻿using JetBrains.Annotations;
+using JetBrains.Annotations;
 
 using NSubstitute;
 
@@ -279,3 +279,6 @@ public class CfgNodeFeederTest {
         Assert.Null(movAx1RegImm16.ValueField.SignatureValue[1]);
     }
 }
+
+
+

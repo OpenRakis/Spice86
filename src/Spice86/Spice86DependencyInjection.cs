@@ -123,6 +123,12 @@ public class Spice86DependencyInjection : IDisposable {
         AddressReadWriteBreakpoints memoryReadWriteBreakpoints = new();
         AddressReadWriteBreakpoints ioReadWriteBreakpoints = new();
 
+        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(state, configuration);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Cycles limiter created...");
+        }
+
         IOPortDispatcher ioPortDispatcher = new(
             ioReadWriteBreakpoints, state,
             loggerService, configuration.FailOnUnhandledPort);
@@ -169,8 +175,8 @@ public class Spice86DependencyInjection : IDisposable {
         IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null
             ? new CyclesClock(state, configuration.InstructionsPerSecond.Value)
             : new EmulatedClock();
-        
-        // Register clock to pause/resume events
+
+        // Register clock and limiter to pause/resume events
         pauseHandler.Pausing += () => emulatedClock.OnPause();
         pauseHandler.Resumed += () => emulatedClock.OnResume();
         
@@ -329,12 +335,12 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
-        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        var midiDevice = new Midi(configuration, softwareMixer, state,
+        Mixer mixer = new(loggerService, configuration.AudioEngine, pauseHandler);
+        var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
-        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher,
-            pauseHandler, loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
+        PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher,
+            loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
 
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock,
             loggerService, configuration.FailOnUnhandledPort);
@@ -342,13 +348,25 @@ public class Spice86DependencyInjection : IDisposable {
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SbPro2);
+        // Create OPL FM device; it creates and registers its own mixer channel internally
+        SoundBlasterHardwareConfig soundBlasterHardwareConfig = new(
+            configuration.SbIrq,
+            configuration.SbDma,
+            configuration.SbHdma,
+            configuration.SbType,
+            configuration.SbBase);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
-        var soundBlaster = new SoundBlaster(ioPortDispatcher,
-            softwareMixer, state, dmaSystem, dualPic, emulationLoopScheduler, emulatedClock,
-            configuration.FailOnUnhandledPort,
-            loggerService, soundBlasterHardwareConfig, pauseHandler);
-        var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
+
+        Opl OPL = new(mixer, state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService,
+            emulationLoopScheduler, emulatedClock, cyclesLimiter, dualPic,
+            mode: configuration.OplMode, sbBase: configuration.SbBase, enableOplIrq: false);
+
+        SoundBlaster soundBlaster = new(ioPortDispatcher,
+            state, dmaSystem, dualPic, mixer, OPL, loggerService,
+            emulationLoopScheduler, emulatedClock,
+            soundBlasterHardwareConfig);
+        GravisUltraSound gravisUltraSound = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
         loggerService.Information("Sound devices created...");
@@ -370,8 +388,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
             emulationStateDataReader.ReadBreakpointsFromFileOrCreate();
-
-        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(state, configuration);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
@@ -403,7 +419,8 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
                 pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter);
+                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter,
+                mixer, soundBlaster, OPL);
 
             // Subscribe to video mode changes for dynamic aspect ratio correction
             vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
@@ -533,7 +550,7 @@ public class Spice86DependencyInjection : IDisposable {
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
-            dmaSystem, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
+            dmaSystem, OPL, mixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -589,8 +606,6 @@ public class Spice86DependencyInjection : IDisposable {
             PaletteViewModel paletteViewModel = new(videoState.DacRegisters.ArgbPalette,
                 uiDispatcher);
 
-            SoftwareMixerViewModel softwareMixerViewModel = new(softwareMixer);
-
             VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState, hostStorageProvider);
 
             CpuViewModel cpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
@@ -621,7 +636,7 @@ public class Spice86DependencyInjection : IDisposable {
             DebugWindowViewModel debugWindowViewModel = new(
                 WeakReferenceMessenger.Default, uiDispatcher, pauseHandler,
                 breakpointsViewModel, disassemblyViewModel,
-                paletteViewModel, softwareMixerViewModel, videoCardViewModel,
+                paletteViewModel, videoCardViewModel,
                 cpuViewModel, midiViewModel, cfgCpuViewModel,
                 [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
 

@@ -1063,3 +1063,7 @@ public class EmsUnitTests {
         _memory.UInt8[pageFrameAddress].Should().Be(0x11, "After restore, logical page 0 should be mapped back");
     }
 }
+
+
+
+

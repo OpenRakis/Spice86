@@ -48,33 +48,33 @@ public class VideoMemory : IVideoMemory {
 
                 break;
             case ReadMode.ReadMode1: {
-                // Read mode 1 reads 8 pixels from the planes and compares each to a colorCompare register
-                // If the color matches, the corresponding bit in the result is set
-                // The colorDontCare bits indicate which bits in the colorCompare register to ignore.
+                    // Read mode 1 reads 8 pixels from the planes and compares each to a colorCompare register
+                    // If the color matches, the corresponding bit in the result is set
+                    // The colorDontCare bits indicate which bits in the colorCompare register to ignore.
 
-                // We take the inverse of the colorDontCare register and OR both the colorCompare and
-                // the extracted bits with them. This makes sure that the colorDontCare bits are always
-                // considered a match.
-                int colorDontCare = ~_state.GraphicsControllerRegisters.ColorDontCare;
-                int colorCompare = _state.GraphicsControllerRegisters.ColorCompare | colorDontCare;
-                // We loop through the 8 pixels in the latches, as well as the 8 bits in the result.
-                for (int i = 0; i < 8; i++) {
-                    // A pixel consists of 4 bits, one from each plane. We extract the bits from the
-                    // latches and OR them together to get the pixel.
-                    byte pixel = 0;
-                    for (int j = 0; j < 4; j++) {
-                        int bit = (_latches[j] >> i) & 1;
-                        pixel |= (byte)(bit << j);
+                    // We take the inverse of the colorDontCare register and OR both the colorCompare and
+                    // the extracted bits with them. This makes sure that the colorDontCare bits are always
+                    // considered a match.
+                    int colorDontCare = ~_state.GraphicsControllerRegisters.ColorDontCare;
+                    int colorCompare = _state.GraphicsControllerRegisters.ColorCompare | colorDontCare;
+                    // We loop through the 8 pixels in the latches, as well as the 8 bits in the result.
+                    for (int i = 0; i < 8; i++) {
+                        // A pixel consists of 4 bits, one from each plane. We extract the bits from the
+                        // latches and OR them together to get the pixel.
+                        byte pixel = 0;
+                        for (int j = 0; j < 4; j++) {
+                            int bit = (_latches[j] >> i) & 1;
+                            pixel |= (byte)(bit << j);
+                        }
+                        // Then we compare the pixel to the colorCompare register, and set the corresponding
+                        // bit in the result if they match.
+                        if ((pixel | colorDontCare) == colorCompare) {
+                            result |= (byte)(1 << i);
+                        }
                     }
-                    // Then we compare the pixel to the colorCompare register, and set the corresponding
-                    // bit in the result if they match.
-                    if ((pixel | colorDontCare) == colorCompare) {
-                        result |= (byte)(1 << i);
-                    }
+
+                    break;
                 }
-
-                break;
-            }
             default:
                 throw new InvalidOperationException($"Unknown readMode {_state.GraphicsControllerRegisters.GraphicsModeRegister.ReadMode}");
         }
@@ -99,7 +99,17 @@ public class VideoMemory : IVideoMemory {
             return;
         }
         (byte planes, uint offset) = DecodeWriteAddress(address);
-        bool[] writePlane = planes.ToBits();
+        ReadOnlySpan<bool> writePlane =
+        [
+            (planes & (1 << 0)) != 0,
+            (planes & (1 << 1)) != 0,
+            (planes & (1 << 2)) != 0,
+            (planes & (1 << 3)) != 0,
+            (planes & (1 << 4)) != 0,
+            (planes & (1 << 5)) != 0,
+            (planes & (1 << 6)) != 0,
+            (planes & (1 << 7)) != 0,
+        ];
         Register8 planeEnable = _state.SequencerRegisters.PlaneMaskRegister;
         Register8 setReset = _state.GraphicsControllerRegisters.SetReset;
         Register8 setResetEnable = _state.GraphicsControllerRegisters.EnableSetReset;
@@ -134,7 +144,7 @@ public class VideoMemory : IVideoMemory {
     /// <inheritdoc />
     public byte[,] Planes { get; }
 
-    private void HandleWriteMode3(byte value, Register8 planeEnable, bool[] writePlane, Register8 setReset, uint offset) {
+    private void HandleWriteMode3(byte value, Register8 planeEnable, ReadOnlySpan<bool> writePlane, Register8 setReset, uint offset) {
         value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
         byte bitMask = (byte)(value & _state.GraphicsControllerRegisters.BitMask);
         for (int plane = 0; plane < 4; plane++) {
@@ -152,8 +162,18 @@ public class VideoMemory : IVideoMemory {
         }
     }
 
-    private void HandleWriteMode2(byte value, Register8 planeEnable, bool[] writePlane, uint offset) {
-        bool[] unpacked = value.ToBits();
+    private void HandleWriteMode2(byte value, Register8 planeEnable, ReadOnlySpan<bool> writePlane, uint offset) {
+        ReadOnlySpan<bool> unpacked =
+        [
+            (value & (1 << 0)) != 0,
+            (value & (1 << 1)) != 0,
+            (value & (1 << 2)) != 0,
+            (value & (1 << 3)) != 0,
+            (value & (1 << 4)) != 0,
+            (value & (1 << 5)) != 0,
+            (value & (1 << 6)) != 0,
+            (value & (1 << 7)) != 0,
+        ];
         for (int plane = 0; plane < 4; plane++) {
             // Skip if plane is disabled or we're not writing to it.
             if (!planeEnable[plane] || !writePlane[plane]) {

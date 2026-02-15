@@ -2,6 +2,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -13,6 +14,8 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
@@ -22,6 +25,9 @@ using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
+using Spice86.Views;
+
+using System.Linq;
 
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
@@ -83,12 +89,17 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
     internal event EventHandler? CloseMainWindow;
 
+    private readonly Mixer _mixer;
+    private readonly SoundBlaster _soundBlaster;
+    private readonly Opl _opl;
+
     public MainWindowViewModel(SharedMouseData sharedMouseData,
         ITimeMultiplier pit, IUIDispatcher uiDispatcher,
         IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
         Configuration configuration, ILoggerService loggerService,
         IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel,
-        IExceptionHandler exceptionHandler, ICyclesLimiter cyclesLimiter)
+        IExceptionHandler exceptionHandler, ICyclesLimiter cyclesLimiter,
+        Mixer mixer, SoundBlaster soundBlaster, Opl opl)
         : base(uiDispatcher, textClipboard) {
         _sharedMouseData = sharedMouseData;
         _pit = pit;
@@ -98,6 +109,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
         _cyclesLimiter = cyclesLimiter;
+        _mixer = mixer;
+        _soundBlaster = soundBlaster;
+        _opl = opl;
         TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
         _pauseHandler = pauseHandler;
         _pauseHandler.Paused += OnPaused;
@@ -134,6 +148,40 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     [RelayCommand]
     public void SetLogLevelToFatal() => SetLogLevel("Fatal");
+
+    [RelayCommand]
+    private void ShowMixer() {
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime lifetime) {
+            return;
+        }
+
+        // Check if mixer window already exists
+        foreach (Window window in lifetime.Windows) {
+            if (window is MixerView mixerView) {
+                mixerView.Activate();
+                return;
+            }
+        }
+
+        Window? mainWindow = lifetime.Windows.FirstOrDefault(w => w is MainWindow);
+
+        // Create new mixer window
+        MixerView newMixerWindow = new() {
+            DataContext = new MixerViewModel(_mixer, _soundBlaster, _opl)
+        };
+
+        if (mainWindow != null) {
+            newMixerWindow.Show(mainWindow);
+        } else {
+            newMixerWindow.Show();
+        }
+    }
+
+    [RelayCommand]
+    private void ShowAudioSettings() {
+        // Audio settings is now a tab in the mixer window
+        ShowMixer();
+    }
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
 

@@ -1,4 +1,4 @@
-﻿namespace Spice86.Tests.Dos.Xms;
+namespace Spice86.Tests.Dos.Xms;
 
 using FluentAssertions;
 
@@ -309,3 +309,6 @@ public class Xms32BitFunctionsTests {
         _state.BL.Should().Be(0, "No error should be reported");
     }
 }
+
+
+

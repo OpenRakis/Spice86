@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 
 public sealed partial class Opl3Chip {
     /* Original C: static void OPL3_PhaseGenerate(opl3_slot *slot) */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void PhaseGenerate(Opl3Operator slot) {
         Opl3Chip chip = slot.Chip ?? throw new InvalidOperationException("Slot chip not assigned.");
         Opl3Channel channel = slot.Channel ?? throw new InvalidOperationException("Slot channel not assigned.");
@@ -530,6 +531,7 @@ public sealed partial class Opl3Chip {
     }
 
     /* Original C: void OPL3_Generate4Ch(opl3_chip *chip, int16_t *buf4) */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void Generate4ChCore(Span<short> buffer) {
         if (buffer.Length < 4) {
             throw new ArgumentException("Buffer must contain at least four samples.", nameof(buffer));

@@ -49,7 +49,7 @@ public class SingleStepTestMinimalMachine {
         }
         _modifiedAddresses.Clear();
     }
-    
+
     public CfgCpu Cpu { get; }
     public State State { get; }
     public Memory Memory { get; }

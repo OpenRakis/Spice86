@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
+namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 /// <summary>
 /// This class contains the register addresses for the SoundBlaster mixer.
@@ -25,6 +25,11 @@ public static class MixerRegisters {
     public const byte DMA = 0x81;
 
     /// <summary>
+    /// Master Volume register (SB2 only, mono).
+    /// </summary>
+    public const byte MasterVolumeSb2 = 0x02;
+
+    /// <summary>
     /// Master Volume register (SB Pro).
     /// </summary>
     public const byte MasterVolume = 0x22;
@@ -33,6 +38,16 @@ public static class MixerRegisters {
     /// DAC/Voice Volume register (SB Pro).
     /// </summary>
     public const byte DacVolume = 0x04;
+
+    /// <summary>
+    /// FM Volume register (SB2 only, mono) + FM output selection.
+    /// </summary>
+    public const byte FmVolumeSb2 = 0x06;
+
+    /// <summary>
+    /// CD Audio Volume register (SB2 only, mono).
+    /// </summary>
+    public const byte CdVolumeSb2 = 0x08;
 
     /// <summary>
     /// FM Volume register (SB Pro).
@@ -55,138 +70,143 @@ public static class MixerRegisters {
     public const byte MicVolume = 0x0A;
 
     /// <summary>
+    /// Input control register (SBPro only, stored as unhandled).
+    /// </summary>
+    public const byte InputControl = 0x0C;
+
+    /// <summary>
     /// Output/Stereo Select register.
     /// </summary>
     public const byte OutputStereoSelect = 0x0E;
 
-    // SB16-specific registers
+    // Sb16-specific registers
     /// <summary>
-    /// Master Volume Left register (SB16).
+    /// Master Volume Left register (Sb16).
     /// </summary>
     public const byte MasterVolumeLeft = 0x30;
 
     /// <summary>
-    /// Master Volume Right register (SB16).
+    /// Master Volume Right register (Sb16).
     /// </summary>
     public const byte MasterVolumeRight = 0x31;
 
     /// <summary>
-    /// DAC Volume Left register (SB16).
+    /// DAC Volume Left register (Sb16).
     /// </summary>
     public const byte DacVolumeLeft = 0x32;
 
     /// <summary>
-    /// DAC Volume Right register (SB16).
+    /// DAC Volume Right register (Sb16).
     /// </summary>
     public const byte DacVolumeRight = 0x33;
 
     /// <summary>
-    /// FM Volume Left register (SB16).
+    /// FM Volume Left register (Sb16).
     /// </summary>
     public const byte FmVolumeLeft = 0x34;
 
     /// <summary>
-    /// FM Volume Right register (SB16).
+    /// FM Volume Right register (Sb16).
     /// </summary>
     public const byte FmVolumeRight = 0x35;
 
     /// <summary>
-    /// CD Volume Left register (SB16).
+    /// CD Volume Left register (Sb16).
     /// </summary>
     public const byte CdVolumeLeft = 0x36;
 
     /// <summary>
-    /// CD Volume Right register (SB16).
+    /// CD Volume Right register (Sb16).
     /// </summary>
     public const byte CdVolumeRight = 0x37;
 
     /// <summary>
-    /// Line-in Volume Left register (SB16).
+    /// Line-in Volume Left register (Sb16).
     /// </summary>
     public const byte LineVolumeLeft = 0x38;
 
     /// <summary>
-    /// Line-in Volume Right register (SB16).
+    /// Line-in Volume Right register (Sb16).
     /// </summary>
     public const byte LineVolumeRight = 0x39;
 
     /// <summary>
-    /// Mic Volume register (SB16).
+    /// Mic Volume register (Sb16).
     /// </summary>
     public const byte MicVolumeSb16 = 0x3A;
 
     /// <summary>
-    /// SB16 Advanced register 0x3B - PCM Level.
+    /// Sb16 Advanced register 0x3B - PCM Level.
     /// </summary>
     public const byte Sb16PcmLevel = 0x3B;
 
     /// <summary>
-    /// SB16 Advanced register 0x3C - Recording Monitor.
+    /// Sb16 Advanced register 0x3C - Recording Monitor.
     /// </summary>
     public const byte Sb16RecordingMonitor = 0x3C;
 
     /// <summary>
-    /// SB16 Advanced register 0x3D - Recording Source.
+    /// Sb16 Advanced register 0x3D - Recording Source.
     /// </summary>
     public const byte Sb16RecordingSource = 0x3D;
 
     /// <summary>
-    /// SB16 Advanced register 0x3E - Recording Gain.
+    /// Sb16 Advanced register 0x3E - Recording Gain.
     /// </summary>
     public const byte Sb16RecordingGain = 0x3E;
 
     /// <summary>
-    /// SB16 Advanced register 0x3F - Recording Gain Left.
+    /// Sb16 Advanced register 0x3F - Recording Gain Left.
     /// </summary>
     public const byte Sb16RecordingGainLeft = 0x3F;
 
     /// <summary>
-    /// SB16 Advanced register 0x40 - Recording Gain Right.
+    /// Sb16 Advanced register 0x40 - Recording Gain Right.
     /// </summary>
     public const byte Sb16RecordingGainRight = 0x40;
 
     /// <summary>
-    /// SB16 Advanced register 0x41 - Output Filter.
+    /// Sb16 Advanced register 0x41 - Output Filter.
     /// </summary>
     public const byte Sb16OutputFilter = 0x41;
 
     /// <summary>
-    /// SB16 Advanced register 0x42 - Input Filter.
+    /// Sb16 Advanced register 0x42 - Input Filter.
     /// </summary>
     public const byte Sb16InputFilter = 0x42;
 
     /// <summary>
-    /// SB16 Advanced register 0x43 - 3D Effects Control.
+    /// Sb16 Advanced register 0x43 - 3D Effects Control.
     /// </summary>
     public const byte Sb16Effects3D = 0x43;
 
     /// <summary>
-    /// SB16 Advanced register 0x44 - Alt Feature Enable 1.
+    /// Sb16 Advanced register 0x44 - Alt Feature Enable 1.
     /// </summary>
     public const byte Sb16AltFeatureEnable1 = 0x44;
 
     /// <summary>
-    /// SB16 Advanced register 0x45 - Alt Feature Enable 2.
+    /// Sb16 Advanced register 0x45 - Alt Feature Enable 2.
     /// </summary>
     public const byte Sb16AltFeatureEnable2 = 0x45;
 
     /// <summary>
-    /// SB16 Advanced register 0x46 - Alt Feature Status.
+    /// Sb16 Advanced register 0x46 - Alt Feature Status.
     /// </summary>
     public const byte Sb16AltFeatureStatus = 0x46;
 
     /// <summary>
-    /// SB16 Advanced register 0x47 - Game Port Control.
+    /// Sb16 Advanced register 0x47 - Game Port Control.
     /// </summary>
     public const byte Sb16GamePortControl = 0x47;
 
     /// <summary>
-    /// SB16 Advanced register 0x48 - Volume Control Mode.
+    /// Sb16 Advanced register 0x48 - Volume Control Mode.
     /// </summary>
     public const byte Sb16VolumeControlMode = 0x48;
 
     /// <summary>
-    /// SB16 Advanced register 0x49 - Reserved.
+    /// Sb16 Advanced register 0x49 - Reserved.
     /// </summary>
     public const byte Sb16Reserved = 0x49;
 }

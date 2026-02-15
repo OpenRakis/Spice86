@@ -1,4 +1,4 @@
-﻿namespace Spice86.Tests.Dos;
+namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
@@ -7,11 +7,9 @@ using NSubstitute;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
@@ -28,6 +26,7 @@ using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 using Spice86.Tests.Utility;
@@ -107,7 +106,7 @@ public class DosFileManagerTests {
         Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
-        EmulatorStateSerializationFolder emulatorStateSerializationFolder = 
+        EmulatorStateSerializationFolder emulatorStateSerializationFolder =
             new EmulatorStateSerializationFolderFactory(loggerService)
                 .ComputeFolder(configuration.Exe, configuration.RecordedDataDirectory);
         EmulationStateDataReader reader = new(emulatorStateSerializationFolder, loggerService);
@@ -121,7 +120,7 @@ public class DosFileManagerTests {
         IEmulatedClock emulatedClock = new EmulatedClock();
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
-        
+
         BiosDataArea biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
 
@@ -136,20 +135,12 @@ public class DosFileManagerTests {
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             false, true, loggerService);
 
-        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
-            configuration.FailOnUnhandledPort);
+        Mixer mixer = new(loggerService, configuration.AudioEngine, pauseHandler);
+        PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher,
+            loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService, configuration.FailOnUnhandledPort);
 
         pcSpeaker.AttachPitControl(pitTimer);
-
-        DmaBus dmaSystem =
-            new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
-
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaSystem, dualPic, emulationLoopScheduler, emulatedClock,
-            configuration.FailOnUnhandledPort,
-            loggerService, soundBlasterHardwareConfig, pauseHandler);
 
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory, interruptVectorTable, ioPortDispatcher,
@@ -174,7 +165,7 @@ public class DosFileManagerTests {
 
         Dos dos = new Dos(configuration, memory, cfgCpu, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
-            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
+            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", "A220 I7 D1 H5 P330 T6" } },
             ioPortDispatcher, loggerService);
 
         return dos.FileManager;

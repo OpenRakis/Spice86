@@ -40,9 +40,6 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private AvaloniaList<DisassemblyViewModel> _disassemblyViewModels = new();
 
     [ObservableProperty]
-    private SoftwareMixerViewModel _softwareMixerViewModel;
-
-    [ObservableProperty]
     private CfgCpuViewModel _cfgCpuViewModel;
 
     [ObservableProperty]
@@ -56,7 +53,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
     public DebugWindowViewModel(IMessenger messenger, IUIDispatcher uiDispatcher,
         IPauseHandler pauseHandler, BreakpointsViewModel breakpointsViewModel,
         DisassemblyViewModel disassemblyViewModel, PaletteViewModel paletteViewModel,
-        SoftwareMixerViewModel softwareMixerViewModel, VideoCardViewModel videoCardViewModel,
+        VideoCardViewModel videoCardViewModel,
         CpuViewModel cpuViewModel, MidiViewModel midiViewModel, CfgCpuViewModel cfgCpuViewModel,
         IList<MemoryViewModel> memoryViewModels) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
@@ -74,7 +71,6 @@ public partial class DebugWindowViewModel : ViewModelBase,
         DisassemblyViewModel disassemblyVm = disassemblyViewModel;
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = paletteViewModel;
-        SoftwareMixerViewModel = softwareMixerViewModel;
         VideoCardViewModel = videoCardViewModel;
         CpuViewModel = cpuViewModel;
         MidiViewModel = midiViewModel;

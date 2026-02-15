@@ -462,3 +462,7 @@ public class ConditionalBreakpointIntegrationTests {
         capturedEax.Should().NotBeNull("the EAX value should have been captured");
     }
 }
+
+
+
+

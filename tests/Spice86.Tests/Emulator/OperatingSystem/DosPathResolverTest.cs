@@ -1,4 +1,4 @@
-﻿namespace Spice86.Tests.Emulator.OperatingSystem;
+namespace Spice86.Tests.Emulator.OperatingSystem;
 
 using FluentAssertions;
 
@@ -148,3 +148,6 @@ public class DosPathResolverTest {
         DoCmp("A.TXTX", "A.???").Should().BeTrue();
     }
 }
+
+
+

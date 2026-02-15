@@ -125,11 +125,13 @@ public class EmulationLoop {
             if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
                 _emulatorBreakpointsManager.CheckExecutionBreakPoints();
             }
-            _pauseHandler.WaitIfPaused();
-            _emulationLoopScheduler.ProcessEvents();
             _cpu.ExecuteNext();
-            _inputEventQueue.ProcessAllPendingInputEvents();
+            _emulationLoopScheduler.ProcessEvents();
             _cyclesLimiter.RegulateCycles();
+            _pauseHandler.WaitIfPaused();
+            if (_cpuState.Cycles % 100 == 0) {
+                _inputEventQueue.ProcessAllPendingInputEvents();
+            }
         }
 
         _performanceStopwatch.Stop();

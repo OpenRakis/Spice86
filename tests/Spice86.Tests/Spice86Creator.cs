@@ -3,9 +3,11 @@ namespace Spice86.Tests;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
 using Xunit;
@@ -14,17 +16,18 @@ public class Spice86Creator {
     private readonly Configuration _configuration;
     private readonly long _maxCycles;
 
-    public Spice86Creator(string binName, bool enablePit = false, 
+    public Spice86Creator(string binName, bool enablePit = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
         bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, string? cDrive = null,
-        ushort programEntryPointSegment = 0x170) {
+        ushort programEntryPointSegment = 0x170,
+        SbType sbType = SbType.None, OplMode oplMode = OplMode.None,
+        ushort sbBase = 0x220, byte sbIrq = 7, byte sbDma = 1, byte sbHdma = 5) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
             overrideSupplier = CommandLineParser.ParseFunctionInformationSupplierClassName(overrideSupplierClassName);
         }
 
-        int? instructionsPerSecond = enablePit ? 100000 : null;
         string exportFolder = Path.Join(
             Path.GetTempPath(),
             Guid.NewGuid().ToString()
@@ -40,16 +43,23 @@ public class Spice86Creator {
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
             HeadlessMode = HeadlessType.Minimal,
-            // Use instructions per second based timer for predictability if timer is enabled
-            InstructionsPerSecond = instructionsPerSecond,
+            // Use Cycles for proper CpuCycleLimiter + EmulatedClock timing tests for sound
+            Cycles = enablePit ? ICyclesLimiter.RealModeCpuCyclesPerMs : null,
             AudioEngine = AudioEngine.Dummy,
+            SbType = sbType,
+            SbBase = sbBase,
+            SbIrq = sbIrq,
+            SbDma = sbDma,
+            SbHdma = sbHdma,
+            OplMode = oplMode,
             FailOnUnhandledPort = failOnUnhandledPort,
             A20Gate = enableA20Gate,
             OverrideSupplier = overrideSupplier,
             Xms = enableXms,
             Ems = enableEms,
             CDrive = cDrive,
-            RecordedDataDirectory = exportFolder
+            RecordedDataDirectory = exportFolder,
+            SilencedLogs = true,
         };
 
         _maxCycles = maxCycles;
@@ -67,3 +77,7 @@ public class Spice86Creator {
         return res;
     }
 }
+
+
+
+

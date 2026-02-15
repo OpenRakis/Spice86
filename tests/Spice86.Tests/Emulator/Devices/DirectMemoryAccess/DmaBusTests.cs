@@ -1,4 +1,4 @@
-﻿namespace Spice86.Tests.Emulator.Devices.DirectMemoryAccess;
+namespace Spice86.Tests.Emulator.Devices.DirectMemoryAccess;
 
 using FluentAssertions;
 
@@ -99,3 +99,6 @@ public class DmaBusTests {
         return new DmaBus(memory, state, dispatcher, false, logger);
     }
 }
+
+
+
