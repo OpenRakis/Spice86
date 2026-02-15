@@ -161,8 +161,16 @@ public sealed class SpeexResamplerCSharp {
     private float[] mem;
     private float[] sinc_table;
     private uint sinc_table_length;
-    private delegate int ResamplerFunc(uint channel_index, Span<float> inBuf, int inBufOffset, ref uint in_len, Span<float> outBuf, int outBufOffset, ref uint out_len, int outStride);
-    private ResamplerFunc resampler_ptr;
+    
+    // Resampler function selector - eliminates delegate allocations
+    private enum ResamplerType {
+        Zero,
+        DirectSingle,
+        DirectDouble,
+        InterpolateSingle,
+        InterpolateDouble
+    }
+    private ResamplerType resampler_type = ResamplerType.Zero;
 
     private int in_stride;
     private int out_stride;
@@ -193,7 +201,7 @@ public sealed class SpeexResamplerCSharp {
         in_stride = 1;
         out_stride = 1;
         started = 0;
-        resampler_ptr = ResamplerBasicZero;
+        resampler_type = ResamplerType.Zero;
 
         if (UpdateFilter() != RESAMPLER_ERR_SUCCESS) {
             throw new InvalidOperationException("Could not update speex resampler filter");
@@ -462,9 +470,9 @@ public sealed class SpeexResamplerCSharp {
                 }
             }
             if (quality > 8) {
-                resampler_ptr = ResamplerBasicDirectDouble;
+                resampler_type = ResamplerType.DirectDouble;
             } else {
-                resampler_ptr = ResamplerBasicDirectSingle;
+                resampler_type = ResamplerType.DirectSingle;
             }
         } else {
             for (int i = -4; i < (int)(oversample * filt_len + 4); i++) {
@@ -472,9 +480,9 @@ public sealed class SpeexResamplerCSharp {
                                         quality_map[quality].window_func);
             }
             if (quality > 8) {
-                resampler_ptr = ResamplerBasicInterpolateDouble;
+                resampler_type = ResamplerType.InterpolateDouble;
             } else {
-                resampler_ptr = ResamplerBasicInterpolateSingle;
+                resampler_type = ResamplerType.InterpolateSingle;
             }
         }
 
@@ -545,7 +553,7 @@ public sealed class SpeexResamplerCSharp {
         return RESAMPLER_ERR_SUCCESS;
 
 fail:
-        resampler_ptr = ResamplerBasicZero;
+        resampler_type = ResamplerType.Zero;
         filt_len = old_length;
         return RESAMPLER_ERR_ALLOC_FAILED;
     }
@@ -558,9 +566,27 @@ fail:
         int memOffset = (int)(channel_index * mem_alloc_size);
         
         started = 1;
-        
+
         // Call the right resampler through the function ptr
-        int out_sample = resampler_ptr(channel_index, mem, memOffset, ref in_len, outBuf, outOffset, ref out_len, out_stride);
+        int out_sample;
+        switch (resampler_type) {
+            case ResamplerType.DirectSingle:
+                out_sample = ResamplerBasicDirectSingle(channel_index, mem, memOffset, ref in_len, outBuf, outOffset, ref out_len, out_stride);
+                break;
+            case ResamplerType.DirectDouble:
+                out_sample = ResamplerBasicDirectDouble(channel_index, mem, memOffset, ref in_len, outBuf, outOffset, ref out_len, out_stride);
+                break;
+            case ResamplerType.InterpolateSingle:
+                out_sample = ResamplerBasicInterpolateSingle(channel_index, mem, memOffset, ref in_len, outBuf, outOffset, ref out_len, out_stride);
+                break;
+            case ResamplerType.InterpolateDouble:
+                out_sample = ResamplerBasicInterpolateDouble(channel_index, mem, memOffset, ref in_len, outBuf, outOffset, ref out_len, out_stride);
+                break;
+            case ResamplerType.Zero:
+            default:
+                out_sample = ResamplerBasicZero(channel_index, mem, memOffset, ref in_len, outBuf, outOffset, ref out_len, out_stride);
+                break;
+        }
         
         if (last_sample[channel_index] < (int)in_len) {
             in_len = (uint)last_sample[channel_index];
@@ -662,7 +688,7 @@ fail:
         in_len -= ilen;
         out_len -= olen;
         
-        return resampler_ptr == ResamplerBasicZero ? RESAMPLER_ERR_ALLOC_FAILED : RESAMPLER_ERR_SUCCESS;
+        return resampler_type == ResamplerType.Zero ? RESAMPLER_ERR_ALLOC_FAILED : RESAMPLER_ERR_SUCCESS;
     }
 
     /// <summary>
@@ -693,7 +719,7 @@ fail:
         in_stride = istride_save;
         out_stride = ostride_save;
         
-        return resampler_ptr == ResamplerBasicZero ? RESAMPLER_ERR_ALLOC_FAILED : RESAMPLER_ERR_SUCCESS;
+        return resampler_type == ResamplerType.Zero ? RESAMPLER_ERR_ALLOC_FAILED : RESAMPLER_ERR_SUCCESS;
     }
 
     /// <summary>
