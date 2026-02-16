@@ -100,102 +100,90 @@ public sealed class MVerb {
         Reset();
     }
 
-    public void Process(ReadOnlySpan<float> leftInput, ReadOnlySpan<float> rightInput, Span<float> leftOutput, Span<float> rightOutput, int sampleFrames) {
-        float oneOverSampleFrames = 1.0f / sampleFrames;
-        float mixDelta = (_mix - _mixSmooth) * oneOverSampleFrames;
-        float earlyLateDelta = (_earlyMix - _earlyLateSmooth) * oneOverSampleFrames;
-
-        float bandwidthDelta = (((_bandwidthFreq * _maxFreq) + 100.0f) - _bandwidthSmooth) * oneOverSampleFrames;
-        float dampingDelta = (((_dampingFreq * _maxFreq) + 100.0f) - _dampingSmooth) * oneOverSampleFrames;
-
-        float predelayDelta = ((_preDelayTime * 200 * (_sampleRate / 1000)) - _predelaySmooth) * oneOverSampleFrames;
-        float sizeDelta = (_size - _sizeSmooth) * oneOverSampleFrames;
-        float decayDelta = (((0.7995f * _decay) + 0.005f) - _decaySmooth) * oneOverSampleFrames;
-        float densityDelta = (((0.7995f * _density1) + 0.005f) - _densitySmooth) * oneOverSampleFrames;
-        for (int i = 0; i < sampleFrames; ++i) {
-            float left = leftInput[i];
-            float right = rightInput[i];
-            _mixSmooth += mixDelta;
-            _earlyLateSmooth += earlyLateDelta;
-            _bandwidthSmooth += bandwidthDelta;
-            _dampingSmooth += dampingDelta;
-            _predelaySmooth += predelayDelta;
-            _sizeSmooth += sizeDelta;
-            _decaySmooth += decayDelta;
-            _densitySmooth += densityDelta;
-            if (_controlRateCounter >= _controlRate) {
-                _controlRateCounter = 0;
-                _bandwidthFilter[0].Frequency(_bandwidthSmooth);
-                _bandwidthFilter[1].Frequency(_bandwidthSmooth);
-                _damping[0].Frequency(_dampingSmooth);
-                _damping[1].Frequency(_dampingSmooth);
-            }
-            ++_controlRateCounter;
-            _predelay.SetLength((int)_predelaySmooth);
-            _density2 = _decaySmooth + 0.15f;
-            if (_density2 > 0.5f)
-                _density2 = 0.5f;
-            if (_density2 < 0.25f)
-                _density2 = 0.25f;
-            _allpassFourTap[1].SetFeedback(_density2);
-            _allpassFourTap[3].SetFeedback(_density2);
-            _allpassFourTap[0].SetFeedback(_density1);
-            _allpassFourTap[2].SetFeedback(_density1);
-            float bandwidthLeft = _bandwidthFilter[0].Process(left);
-            float bandwidthRight = _bandwidthFilter[1].Process(right);
-            float earlyReflectionsL = _earlyReflectionsDelayLine[0].Process(bandwidthLeft * 0.5f + bandwidthRight * 0.3f)
-                                + _earlyReflectionsDelayLine[0].GetIndex(2) * 0.6f
-                                + _earlyReflectionsDelayLine[0].GetIndex(3) * 0.4f
-                                + _earlyReflectionsDelayLine[0].GetIndex(4) * 0.3f
-                                + _earlyReflectionsDelayLine[0].GetIndex(5) * 0.3f
-                                + _earlyReflectionsDelayLine[0].GetIndex(6) * 0.1f
-                                + _earlyReflectionsDelayLine[0].GetIndex(7) * 0.1f
-                                + (bandwidthLeft * 0.4f + bandwidthRight * 0.2f) * 0.5f;
-            float earlyReflectionsR = _earlyReflectionsDelayLine[1].Process(bandwidthLeft * 0.3f + bandwidthRight * 0.5f)
-                                + _earlyReflectionsDelayLine[1].GetIndex(2) * 0.6f
-                                + _earlyReflectionsDelayLine[1].GetIndex(3) * 0.4f
-                                + _earlyReflectionsDelayLine[1].GetIndex(4) * 0.3f
-                                + _earlyReflectionsDelayLine[1].GetIndex(5) * 0.3f
-                                + _earlyReflectionsDelayLine[1].GetIndex(6) * 0.1f
-                                + _earlyReflectionsDelayLine[1].GetIndex(7) * 0.1f
-                                + (bandwidthLeft * 0.2f + bandwidthRight * 0.4f) * 0.5f;
-            float predelayMonoInput = _predelay.Process((bandwidthRight + bandwidthLeft) * 0.5f);
-            float smearedInput = predelayMonoInput;
-            for (int j = 0; j < 4; j++)
-                smearedInput = _allpass[j].Process(smearedInput);
-            float leftTank = _allpassFourTap[0].Process(smearedInput + _previousRightTank);
-            leftTank = _staticDelayLine[0].Process(leftTank);
-            leftTank = _damping[0].Process(leftTank);
-            leftTank = _allpassFourTap[1].Process(leftTank);
-            leftTank = _staticDelayLine[1].Process(leftTank);
-            float rightTank = _allpassFourTap[2].Process(smearedInput + _previousLeftTank);
-            rightTank = _staticDelayLine[2].Process(rightTank);
-            rightTank = _damping[1].Process(rightTank);
-            rightTank = _allpassFourTap[3].Process(rightTank);
-            rightTank = _staticDelayLine[3].Process(rightTank);
-            _previousLeftTank = leftTank * _decaySmooth;
-            _previousRightTank = rightTank * _decaySmooth;
-            float accumulatorL = (0.6f * _staticDelayLine[2].GetIndex(1))
-                            + (0.6f * _staticDelayLine[2].GetIndex(2))
-                            - (0.6f * _allpassFourTap[3].GetIndex(1))
-                            + (0.6f * _staticDelayLine[3].GetIndex(1))
-                            - (0.6f * _staticDelayLine[0].GetIndex(1))
-                            - (0.6f * _allpassFourTap[1].GetIndex(1))
-                            - (0.6f * _staticDelayLine[1].GetIndex(1));
-            float accumulatorR = (0.6f * _staticDelayLine[0].GetIndex(2))
-                            + (0.6f * _staticDelayLine[0].GetIndex(3))
-                            - (0.6f * _allpassFourTap[1].GetIndex(2))
-                            + (0.6f * _staticDelayLine[1].GetIndex(2))
-                            - (0.6f * _staticDelayLine[2].GetIndex(3))
-                            - (0.6f * _allpassFourTap[3].GetIndex(2))
-                            - (0.6f * _staticDelayLine[3].GetIndex(2));
-            accumulatorL = ((accumulatorL * _earlyMix) + ((1 - _earlyMix) * earlyReflectionsL));
-            accumulatorR = ((accumulatorR * _earlyMix) + ((1 - _earlyMix) * earlyReflectionsR));
-            left = (left + _mixSmooth * (accumulatorL - left)) * _gain;
-            right = (right + _mixSmooth * (accumulatorR - right)) * _gain;
-            leftOutput[i] = left;
-            rightOutput[i] = right;
+    /// <summary>
+    /// Processes a single audio frame through the reverb.
+    /// Matches DOSBox's per-frame <c>mverb.process(in_buf, out_buf, 1)</c> call pattern
+    /// where sampleFrames=1 causes parameter deltas to snap instantly.
+    /// </summary>
+    public void Process(ref float left, ref float right) {
+        _mixSmooth += _mix - _mixSmooth;
+        _earlyLateSmooth += _earlyMix - _earlyLateSmooth;
+        _bandwidthSmooth += ((_bandwidthFreq * _maxFreq) + 100.0f) - _bandwidthSmooth;
+        _dampingSmooth += ((_dampingFreq * _maxFreq) + 100.0f) - _dampingSmooth;
+        _predelaySmooth += (_preDelayTime * 200 * (_sampleRate / 1000)) - _predelaySmooth;
+        _sizeSmooth += _size - _sizeSmooth;
+        _decaySmooth += ((0.7995f * _decay) + 0.005f) - _decaySmooth;
+        _densitySmooth += ((0.7995f * _density1) + 0.005f) - _densitySmooth;
+        if (_controlRateCounter >= _controlRate) {
+            _controlRateCounter = 0;
+            _bandwidthFilter[0].Frequency(_bandwidthSmooth);
+            _bandwidthFilter[1].Frequency(_bandwidthSmooth);
+            _damping[0].Frequency(_dampingSmooth);
+            _damping[1].Frequency(_dampingSmooth);
         }
+        ++_controlRateCounter;
+        _predelay.SetLength((int)_predelaySmooth);
+        _density2 = _decaySmooth + 0.15f;
+        if (_density2 > 0.5f)
+            _density2 = 0.5f;
+        if (_density2 < 0.25f)
+            _density2 = 0.25f;
+        _allpassFourTap[1].SetFeedback(_density2);
+        _allpassFourTap[3].SetFeedback(_density2);
+        _allpassFourTap[0].SetFeedback(_density1);
+        _allpassFourTap[2].SetFeedback(_density1);
+        float bandwidthLeft = _bandwidthFilter[0].Process(left);
+        float bandwidthRight = _bandwidthFilter[1].Process(right);
+        float earlyReflectionsL = _earlyReflectionsDelayLine[0].Process(bandwidthLeft * 0.5f + bandwidthRight * 0.3f)
+                            + _earlyReflectionsDelayLine[0].GetIndex(2) * 0.6f
+                            + _earlyReflectionsDelayLine[0].GetIndex(3) * 0.4f
+                            + _earlyReflectionsDelayLine[0].GetIndex(4) * 0.3f
+                            + _earlyReflectionsDelayLine[0].GetIndex(5) * 0.3f
+                            + _earlyReflectionsDelayLine[0].GetIndex(6) * 0.1f
+                            + _earlyReflectionsDelayLine[0].GetIndex(7) * 0.1f
+                            + (bandwidthLeft * 0.4f + bandwidthRight * 0.2f) * 0.5f;
+        float earlyReflectionsR = _earlyReflectionsDelayLine[1].Process(bandwidthLeft * 0.3f + bandwidthRight * 0.5f)
+                            + _earlyReflectionsDelayLine[1].GetIndex(2) * 0.6f
+                            + _earlyReflectionsDelayLine[1].GetIndex(3) * 0.4f
+                            + _earlyReflectionsDelayLine[1].GetIndex(4) * 0.3f
+                            + _earlyReflectionsDelayLine[1].GetIndex(5) * 0.3f
+                            + _earlyReflectionsDelayLine[1].GetIndex(6) * 0.1f
+                            + _earlyReflectionsDelayLine[1].GetIndex(7) * 0.1f
+                            + (bandwidthLeft * 0.2f + bandwidthRight * 0.4f) * 0.5f;
+        float predelayMonoInput = _predelay.Process((bandwidthRight + bandwidthLeft) * 0.5f);
+        float smearedInput = predelayMonoInput;
+        for (int j = 0; j < 4; j++)
+            smearedInput = _allpass[j].Process(smearedInput);
+        float leftTank = _allpassFourTap[0].Process(smearedInput + _previousRightTank);
+        leftTank = _staticDelayLine[0].Process(leftTank);
+        leftTank = _damping[0].Process(leftTank);
+        leftTank = _allpassFourTap[1].Process(leftTank);
+        leftTank = _staticDelayLine[1].Process(leftTank);
+        float rightTank = _allpassFourTap[2].Process(smearedInput + _previousLeftTank);
+        rightTank = _staticDelayLine[2].Process(rightTank);
+        rightTank = _damping[1].Process(rightTank);
+        rightTank = _allpassFourTap[3].Process(rightTank);
+        rightTank = _staticDelayLine[3].Process(rightTank);
+        _previousLeftTank = leftTank * _decaySmooth;
+        _previousRightTank = rightTank * _decaySmooth;
+        float accumulatorL = (0.6f * _staticDelayLine[2].GetIndex(1))
+                        + (0.6f * _staticDelayLine[2].GetIndex(2))
+                        - (0.6f * _allpassFourTap[3].GetIndex(1))
+                        + (0.6f * _staticDelayLine[3].GetIndex(1))
+                        - (0.6f * _staticDelayLine[0].GetIndex(1))
+                        - (0.6f * _allpassFourTap[1].GetIndex(1))
+                        - (0.6f * _staticDelayLine[1].GetIndex(1));
+        float accumulatorR = (0.6f * _staticDelayLine[0].GetIndex(2))
+                        + (0.6f * _staticDelayLine[0].GetIndex(3))
+                        - (0.6f * _allpassFourTap[1].GetIndex(2))
+                        + (0.6f * _staticDelayLine[1].GetIndex(2))
+                        - (0.6f * _staticDelayLine[2].GetIndex(3))
+                        - (0.6f * _allpassFourTap[3].GetIndex(2))
+                        - (0.6f * _staticDelayLine[3].GetIndex(2));
+        accumulatorL = ((accumulatorL * _earlyMix) + ((1 - _earlyMix) * earlyReflectionsL));
+        accumulatorR = ((accumulatorR * _earlyMix) + ((1 - _earlyMix) * earlyReflectionsR));
+        left = (left + _mixSmooth * (accumulatorL - left)) * _gain;
+        right = (right + _mixSmooth * (accumulatorR - right)) * _gain;
     }
 
     public void Reset() {

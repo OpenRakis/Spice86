@@ -1061,8 +1061,9 @@ public sealed class MixerChannel {
             out uint outFramesGenerated);
 
         // Copy resampled frames back to audio_frames
+        Span<AudioFrame> audioSpan = AudioFrames.AsSpan();
         for (int i = 0; i < (int)outFramesGenerated; i++) {
-            AudioFrames[audioFramesStartingSize + i] = new AudioFrame(
+            audioSpan[audioFramesStartingSize + i] = new AudioFrame(
                 _resampleOutputBuffer[i * 2],
                 _resampleOutputBuffer[i * 2 + 1]);
         }
@@ -1088,27 +1089,30 @@ public sealed class MixerChannel {
     private void ApplyInPlaceProcessing(int startIndex) {
         // Optionally gate, filter, and apply crossfeed.
         // Runs in-place over newly added frames.
-        for (int i = startIndex; i < AudioFrames.Count; i++) {
+        Span<AudioFrame> frames = AudioFrames.AsSpan();
+        for (int i = startIndex; i < frames.Length; i++) {
             if (_doNoiseGate) {
-                AudioFrames[i] = _noiseGate.Process(AudioFrames[i]);
+                frames[i] = _noiseGate.Process(frames[i]);
             }
 
             if (_highPassFilterState == FilterState.On) {
-                AudioFrames[i] = new AudioFrame(
-                    _highPassFilters[0].Filter(AudioFrames[i].Left),
-                    _highPassFilters[1].Filter(AudioFrames[i].Right)
+                ref AudioFrame frame = ref frames[i];
+                frame = new AudioFrame(
+                    _highPassFilters[0].Filter(frame.Left),
+                    _highPassFilters[1].Filter(frame.Right)
                 );
             }
 
             if (_lowPassFilterState == FilterState.On) {
-                AudioFrames[i] = new AudioFrame(
-                    _lowPassFilters[0].Filter(AudioFrames[i].Left),
-                    _lowPassFilters[1].Filter(AudioFrames[i].Right)
+                ref AudioFrame frame = ref frames[i];
+                frame = new AudioFrame(
+                    _lowPassFilters[0].Filter(frame.Left),
+                    _lowPassFilters[1].Filter(frame.Right)
                 );
             }
 
             if (_doCrossfeed) {
-                AudioFrames[i] = ApplyCrossfeed(AudioFrames[i]);
+                frames[i] = ApplyCrossfeed(frames[i]);
             }
         }
     }
@@ -1149,8 +1153,9 @@ public sealed class MixerChannel {
             int audioFramesStartingSize = AudioFrames.Count;
 
             if (_doLerpUpsample) {
-                for (int i = 0; i < _convertBuffer.Count;) {
-                    AudioFrame currFrame = _convertBuffer[i];
+                Span<AudioFrame> convertSpan = _convertBuffer.AsSpan();
+                for (int i = 0; i < convertSpan.Length;) {
+                    AudioFrame currFrame = convertSpan[i];
 
                     AudioFrame lerpedFrame = new AudioFrame(
                         Lerp(_lerpLastFrame.Left, currFrame.Left, _lerpPos),

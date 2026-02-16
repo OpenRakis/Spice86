@@ -77,10 +77,8 @@ public sealed class Mixer : IDisposable {
     private float _reverbDigitalSendLevel = 0.0f;
 
     // Pre-allocated reverb processing buffers (avoids per-tick GC allocations)
-    private float[] _reverbLeftIn = new float[DefaultBlocksize];
-    private float[] _reverbRightIn = new float[DefaultBlocksize];
-    private float[] _reverbLeftOut = new float[DefaultBlocksize];
-    private float[] _reverbRightOut = new float[DefaultBlocksize];
+    private float _reverbLeftIn;
+    private float _reverbRightIn;
 
     // Chorus state - TAL-Chorus professional modulated chorus
     private bool _doChorus = false;
@@ -485,7 +483,7 @@ public sealed class Mixer : IDisposable {
     private void SetGlobalReverb() {
         foreach (MixerChannel channel in _channels.Values) {
             if (!_doReverb || !channel.HasFeature(ChannelFeature.ReverbSend)) {
-                channel.                ReverbLevel = 0.0f;
+                channel.ReverbLevel = 0.0f;
             } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
                 // Use configured synth send level from preset
                 channel.                // Use configured synth send level from preset
@@ -559,7 +557,7 @@ public sealed class Mixer : IDisposable {
     private void SetGlobalChorus() {
         foreach (MixerChannel channel in _channels.Values) {
             if (!_doChorus || !channel.HasFeature(ChannelFeature.ChorusSend)) {
-                channel.                ChorusLevel = 0.0f;
+                channel.ChorusLevel = 0.0f;
             } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
                 // Use configured synth send level from preset
                 channel.                // Use configured synth send level from preset
@@ -707,7 +705,7 @@ public sealed class Mixer : IDisposable {
             if (framesToWrite == 0) {
                 continue;
             }
-            
+
             Span<AudioFrame> outputFrames = _outputBuffer.AsSpan(0, framesToWrite);
             Span<float> interleavedBuffer = MemoryMarshal.Cast<AudioFrame, float>(outputFrames);
             _audioPlayer.WriteData(interleavedBuffer);
@@ -727,25 +725,30 @@ public sealed class Mixer : IDisposable {
         _reverbAuxBuffer.AsSpan().Clear();
         _chorusAuxBuffer.AsSpan().Clear();
 
+        Span<AudioFrame> output = _outputBuffer.AsSpan();
+        Span<AudioFrame> reverbAux = _reverbAuxBuffer.AsSpan();
+        Span<AudioFrame> chorusAux = _chorusAuxBuffer.AsSpan();
+
         // Render all channels and accumulate results in the master mixbuffer
         foreach (MixerChannel channel in _channels.Values) {
             channel.Mix(framesRequested);
 
-            int numFrames = Math.Min(_outputBuffer.Count, channel.AudioFrames.Count);
+            Span<AudioFrame> channelFrames = channel.AudioFrames.AsSpan();
+            int numFrames = Math.Min(output.Length, channelFrames.Length);
 
             for (int i = 0; i < numFrames; i++) {
                 if (channel.DoSleep) {
-                    _outputBuffer[i] = _outputBuffer[i] + channel.MaybeFadeOrListen(channel.AudioFrames[i]);
+                    output[i] += channel.MaybeFadeOrListen(channelFrames[i]);
                 } else {
-                    _outputBuffer[i] = _outputBuffer[i] + channel.AudioFrames[i];
+                    output[i] += channelFrames[i];
                 }
 
                 if (_doReverb && channel.DoReverbSend) {
-                    _reverbAuxBuffer[i] = _reverbAuxBuffer[i] + (channel.AudioFrames[i] * channel.ReverbSendGain);
+                    reverbAux[i] += channelFrames[i] * channel.ReverbSendGain;
                 }
 
                 if (_doChorus && channel.DoChorusSend) {
-                    _chorusAuxBuffer[i] = _chorusAuxBuffer[i] + (channel.AudioFrames[i] * channel.ChorusSendGain);
+                    chorusAux[i] += channelFrames[i] * channel.ChorusSendGain;
                 }
             }
 
@@ -765,9 +768,10 @@ public sealed class Mixer : IDisposable {
         }
 
         // Apply high-pass filter to the master output
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            AudioFrame frame = _outputBuffer[i];
-            _outputBuffer[i] = new AudioFrame(
+        Span<AudioFrame> masterOutput = _outputBuffer.AsSpan();
+        for (int i = 0; i < masterOutput.Length; i++) {
+            ref AudioFrame frame = ref masterOutput[i];
+            frame = new AudioFrame(
                 _masterHighPassFilter[0].Filter(frame.Left),
                 _masterHighPassFilter[1].Filter(frame.Right)
             );
@@ -775,21 +779,21 @@ public sealed class Mixer : IDisposable {
 
         // Apply master gain
         AudioFrame gain = _masterGain;
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            _outputBuffer[i] = _outputBuffer[i] * gain;
+        for (int i = 0; i < masterOutput.Length; i++) {
+            masterOutput[i] *= gain;
         }
 
         if (_doCompressor) {
             // Apply compressor to the master output as the very last step
-            for (int i = 0; i < _outputBuffer.Count; i++) {
-                _outputBuffer[i] = _compressor.Process(_outputBuffer[i]);
+            for (int i = 0; i < masterOutput.Length; i++) {
+                masterOutput[i] = _compressor.Process(masterOutput[i]);
             }
         }
 
         // Normalize the final output before sending to SDL
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            AudioFrame frame = _outputBuffer[i];
-            _outputBuffer[i] = new AudioFrame(
+        for (int i = 0; i < masterOutput.Length; i++) {
+            ref AudioFrame frame = ref masterOutput[i];
+            frame = new AudioFrame(
                 NormalizeSample(frame.Left),
                 NormalizeSample(frame.Right)
             );
@@ -832,57 +836,42 @@ public sealed class Mixer : IDisposable {
     }
 
     private void ApplyReverb() {
-        // Prepare buffers for MVerb processing
-        // MVerb operates on non-interleaved sample streams (separate L/R arrays)
-        int frameCount = _reverbAuxBuffer.Count;
+        // Apply reverb effect to the reverb aux buffer, then mix the
+        // results to the master output.
+        Span<AudioFrame> reverbAux = _reverbAuxBuffer.AsSpan();
+        Span<AudioFrame> output = _outputBuffer.AsSpan();
 
-        // Ensure pre-allocated buffers are large enough
-        if (_reverbLeftIn.Length < frameCount) {
-            _reverbLeftIn = new float[frameCount];
-            _reverbRightIn = new float[frameCount];
-            _reverbLeftOut = new float[frameCount];
-            _reverbRightOut = new float[frameCount];
-        }
-
-        // Extract left and right channels from reverb aux buffer
-        // Apply high-pass filter to reverb input (removes low-frequency buildup)
-        for (int i = 0; i < frameCount; i++) {
-            AudioFrame frame = _reverbAuxBuffer[i];
-            _reverbLeftIn[i] = _reverbHighPassFilter[0].Filter(frame.Left);
-            _reverbRightIn[i] = _reverbHighPassFilter[1].Filter(frame.Right);
-        }
-
-        // Process through MVerb (FDN reverb algorithm)
-        _mverb.Process(
-            _reverbLeftIn.AsSpan(0, frameCount),
-            _reverbRightIn.AsSpan(0, frameCount),
-            _reverbLeftOut.AsSpan(0, frameCount),
-            _reverbRightOut.AsSpan(0, frameCount),
-            frameCount);
-
-        // Mix reverb output with main output buffer
-        for (int i = 0; i < frameCount; i++) {
-            _outputBuffer[i] = new AudioFrame(
-                _outputBuffer[i].Left + _reverbLeftOut[i],
-                _outputBuffer[i].Right + _reverbRightOut[i]
+        for (int i = 0; i < reverbAux.Length; i++) {
+            // High-pass filter the reverb input
+            AudioFrame inFrame = reverbAux[i];
+            inFrame = new AudioFrame(
+                _reverbHighPassFilter[0].Filter(inFrame.Left),
+                _reverbHighPassFilter[1].Filter(inFrame.Right)
             );
+
+            // MVerb operates on two non-interleaved sample streams
+            _reverbLeftIn = inFrame.Left;
+            _reverbRightIn = inFrame.Right;
+
+            _mverb.Process(ref _reverbLeftIn, ref _reverbRightIn);
+
+            output[i] += new AudioFrame(_reverbLeftIn, _reverbRightIn);
         }
     }
 
     private void ApplyChorus() {
         // Apply chorus effect to the chorus aux buffer, then mix to master output
-        for (int i = 0; i < _chorusAuxBuffer.Count; i++) {
-            float left = _chorusAuxBuffer[i].Left;
-            float right = _chorusAuxBuffer[i].Right;
+        Span<AudioFrame> chorusAux = _chorusAuxBuffer.AsSpan();
+        Span<AudioFrame> output = _outputBuffer.AsSpan();
+        for (int i = 0; i < chorusAux.Length; i++) {
+            float left = chorusAux[i].Left;
+            float right = chorusAux[i].Right;
 
             // Process through TAL-Chorus engine (in-place modification)
             _chorusEngine.Process(ref left, ref right);
 
             // Add processed chorus to output buffer
-            _outputBuffer[i] = new AudioFrame(
-                _outputBuffer[i].Left + left,
-                _outputBuffer[i].Right + right
-            );
+            output[i] += new AudioFrame(left, right);
         }
     }
 
