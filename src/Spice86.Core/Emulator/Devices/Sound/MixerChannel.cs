@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Spice86.Audio.Mixer;
+
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Shared.Interfaces;
 
 using System.Threading;
 
-using AudioFrame = Spice86.Libs.Sound.Common.AudioFrame;
-using HighPass = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
-using LowPass = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.LowPass;
+using AudioFrame = Spice86.Audio.Sound.Common.AudioFrame;
+using HighPass = Spice86.Audio.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
+using LowPass = Spice86.Audio.Sound.Filters.IirFilters.Filters.Butterworth.LowPass;
 
 /// <summary>
 /// Represents a single audio channel in the mixer.
@@ -47,7 +49,7 @@ public sealed class MixerChannel {
     private int _zohTargetRateHz;
 
     // Initialized ONCE when first needed (see ConfigureResampler)
-    private Spice86.Libs.Sound.Resampling.SpeexResamplerCSharp? _speexResampler;
+    private Spice86.Audio.Sound.Resampling.SpeexResamplerCSharp? _speexResampler;
 
     // Pre-allocated resample buffers (avoids per-tick GC allocations)
     private float[] _resampleInputBuffer = Array.Empty<float>();
@@ -345,7 +347,7 @@ public sealed class MixerChannel {
             uint speexOutRate = (uint)mixerRateHz;
 
             if (_speexResampler == null) {
-                _speexResampler = new Spice86.Libs.Sound.Resampling.SpeexResamplerCSharp(
+                _speexResampler = new Spice86.Audio.Sound.Resampling.SpeexResamplerCSharp(
                     SpeexChannels,
                     speexInRate,
                     speexOutRate,
@@ -1072,7 +1074,7 @@ public sealed class MixerChannel {
         }
     }
 
-    private static int EstimateMaxOutFrames(Spice86.Libs.Sound.Resampling.SpeexResamplerCSharp resampler, int inFrames) {
+    private static int EstimateMaxOutFrames(Spice86.Audio.Sound.Resampling.SpeexResamplerCSharp resampler, int inFrames) {
         resampler.GetRatio(out uint ratioNum, out uint ratioDen);
         if (ratioNum == 0 || ratioDen == 0 || inFrames <= 0) {
             return inFrames;

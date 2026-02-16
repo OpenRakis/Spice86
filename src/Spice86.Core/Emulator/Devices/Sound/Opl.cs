@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound;
+namespace Spice86.Core.Emulator.Devices.Sound;
+
+using Spice86.Audio.Mixer;
 
 using Serilog.Events;
 
@@ -8,9 +10,9 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
-using Spice86.Libs.Sound.Common;
-using Spice86.Libs.Sound.Devices.AdlibGold;
-using Spice86.Libs.Sound.Devices.NukedOpl3;
+using Spice86.Audio.Sound.Common;
+using Spice86.Audio.Sound.Devices.AdlibGold;
+using Spice86.Audio.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
 
 using System.Threading;

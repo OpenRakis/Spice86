@@ -1,11 +1,13 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Midi;
 
+using Spice86.Audio.Mixer;
+
 using MeltySynth;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM;
-using Spice86.Libs.Sound.Common;
+using Spice86.Audio.Sound.Common;
 using Spice86.Shared.Interfaces;
 
 using System.Linq;

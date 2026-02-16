@@ -2,8 +2,9 @@ namespace Spice86.ViewModels;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Audio.Mixer;
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Libs.Sound.Common;
+using Spice86.Audio.Sound.Common;
 
 using System;
 using System.Collections.Generic;
@@ -230,11 +231,11 @@ public partial class MixerChannelViewModel : ViewModelBase {
 
     partial void OnUserVolumeLeftPercentChanged(double value) {
         AudioFrame current = _channel.UserVolume;
-        _channel.        UserVolume = new AudioFrame((float)(value / 100.0), current.Right);
+        _channel.UserVolume = new AudioFrame((float)(value / 100.0), current.Right);
     }
 
     partial void OnUserVolumeRightPercentChanged(double value) {
         AudioFrame current = _channel.UserVolume;
-        _channel.        UserVolume = new AudioFrame(current.Left, (float)(value / 100.0));
+        _channel.UserVolume = new AudioFrame(current.Left, (float)(value / 100.0));
     }
 }

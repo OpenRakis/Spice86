@@ -3,6 +3,7 @@
         <PackageReference Include="Serilog" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj"/>
+        <ProjectReference Include="..\Spice86.Audio\Spice86.Audio.csproj" />
+        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
     </ItemGroup>
 </Project>

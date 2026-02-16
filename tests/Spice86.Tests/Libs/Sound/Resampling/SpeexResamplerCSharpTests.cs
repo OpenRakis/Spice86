@@ -2,7 +2,7 @@ namespace Spice86.Tests.Libs.Sound.Resampling;
 
 using FluentAssertions;
 
-using Spice86.Libs.Sound.Resampling;
+using Spice86.Audio.Sound.Resampling;
 
 using Xunit;
 

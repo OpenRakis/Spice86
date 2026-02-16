@@ -1,10 +1,12 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 
+using Spice86.Audio.Mixer;
+
 using Mt32emu;
 
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM;
-using Spice86.Libs.Sound.Common;
+using Spice86.Audio.Sound.Common;
 using Spice86.Shared.Interfaces;
 
 using System.IO.Compression;

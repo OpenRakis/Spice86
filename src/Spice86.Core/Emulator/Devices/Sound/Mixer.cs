@@ -1,6 +1,8 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound;
+namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Spice86.Core.Backend.Audio;
+using Spice86.Audio.Mixer;
+
+using Spice86.Audio.Backend.Audio;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -9,8 +11,8 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-using AudioFrame = Spice86.Libs.Sound.Common.AudioFrame;
-using HighPassFilter = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
+using AudioFrame = Spice86.Audio.Sound.Common.AudioFrame;
+using HighPassFilter = Spice86.Audio.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
 
 /// <summary>
 /// Central audio mixer that runs in its own thread and produces final mixed output.

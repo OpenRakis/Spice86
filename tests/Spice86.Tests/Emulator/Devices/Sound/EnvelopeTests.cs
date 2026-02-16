@@ -2,8 +2,8 @@ namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
 
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Libs.Sound.Common;
+using Spice86.Audio.Mixer;
+using Spice86.Audio.Sound.Common;
 
 using Xunit;
 
