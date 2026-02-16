@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.DataModels;
 using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.Services;
@@ -49,7 +50,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     private StructType? _selectedStructure;
 
     [ObservableProperty]
-    private AvaloniaList<StructureMember> _structureMembers = new() {ResetBehavior = ResetBehavior.Remove};
+    private AvaloniaList<StructureMember> _structureMembers = new() { ResetBehavior = ResetBehavior.Remove };
 
     [ObservableProperty]
     private IBinaryDocument _structureMemory;

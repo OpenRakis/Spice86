@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.Sound;
+namespace Spice86.Audio.Mixer;
 
 using Spice86.Shared.Utils;
 

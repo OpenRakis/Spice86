@@ -9,7 +9,6 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
@@ -2743,16 +2742,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         float m1 = CalcVol(_sb.Mixer.Master[1]);
 
         AudioFrame dacVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Dac[0]), m1 * CalcVol(_sb.Mixer.Dac[1]));
-        _dacChannel.        AppVolume = dacVolume;
+        _dacChannel.AppVolume = dacVolume;
 
         MixerChannel oplChannel = _opl.MixerChannel;
         AudioFrame oplVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Fm[0]), m1 * CalcVol(_sb.Mixer.Fm[1]));
-        oplChannel.        AppVolume = oplVolume;
+        oplChannel.AppVolume = oplVolume;
 
         MixerChannel? cdAudioChannel = _mixer.FindChannel("CdAudio");
         if (cdAudioChannel != null) {
             AudioFrame cdVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Cda[0]), m1 * CalcVol(_sb.Mixer.Cda[1]));
-            cdAudioChannel.            AppVolume = cdVolume;
+            cdAudioChannel.AppVolume = cdVolume;
         }
     }
 

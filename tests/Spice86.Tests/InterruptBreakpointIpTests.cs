@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
+using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using Xunit;
@@ -22,7 +23,7 @@ public class InterruptBreakpointIpTests {
     public void TestInterruptBreakpointIpPointsToIntInstruction() {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("interrupt",
             installInterruptVectors: true).Create();
-        
+
         State state = spice86DependencyInjection.Machine.CpuState;
         EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
@@ -30,7 +31,7 @@ public class InterruptBreakpointIpTests {
 
         SegmentedAddress? capturedInCallback = null;
         SegmentedAddress? capturedInPausedEvent = null;
-        
+
         // Subscribe to Paused event like the UI does
         pauseHandler.Paused += () => {
             // This simulates what the UI does in OnPaused - immediately read State.IP
@@ -39,8 +40,8 @@ public class InterruptBreakpointIpTests {
 
         // Set up a breakpoint on INT 0Dh (which is in the interrupt test binary)
         emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(
-            BreakPointType.CPU_INTERRUPT, 
-            0xD, 
+            BreakPointType.CPU_INTERRUPT,
+            0xD,
             breakpoint => {
                 // Capture the current IP when the breakpoint callback is invoked (synchronous)
                 capturedInCallback = state.IpSegmentedAddress;
@@ -48,8 +49,8 @@ public class InterruptBreakpointIpTests {
                 pauseHandler.RequestPause($"Breakpoint {breakpoint.BreakPointType} reached");
                 // Immediately resume so the test doesn't hang
                 pauseHandler.Resume();
-            }, 
-            false), 
+            },
+            false),
             true);
 
         // Run the program which will trigger INT 0Dh

@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-namespace Spice86.Core.Emulator.Devices.Sound;
+namespace Spice86.Audio.Mixer;
 
-using Spice86.Audio.Mixer;
-
-using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Shared.Interfaces;
 
 using System.Threading;

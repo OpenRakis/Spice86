@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.Services;
 

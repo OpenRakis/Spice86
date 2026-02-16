@@ -1,9 +1,6 @@
-namespace Spice86.Core.Emulator.Devices.Sound;
-
-using Spice86.Audio.Mixer;
+namespace Spice86.Audio.Mixer;
 
 using Spice86.Audio.Backend.Audio;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -380,7 +377,7 @@ public sealed class Mixer : IDisposable {
         float globalStrength = _doCrossfeed ? _crossfeedGlobalStrength : 0.0f;
         foreach (MixerChannel channel in _channels.Values) {
             string name = channel.Name;
-            bool applyCrossfeed = name is (nameof(Opl)) or "Cms";
+            bool applyCrossfeed = name is "Opl" or "Cms";
             if (applyCrossfeed && channel.HasFeature(ChannelFeature.Stereo)) {
                 channel.CrossfeedStrength = globalStrength;
             } else {
@@ -389,6 +386,9 @@ public sealed class Mixer : IDisposable {
         }
     }
 
+    /// <summary>
+    /// Gets the current reverb preset.
+    /// </summary>
     public ReverbPreset GetReverbPreset() {
         LockMixerThread();
         try {
@@ -398,6 +398,9 @@ public sealed class Mixer : IDisposable {
         }
     }
 
+    /// <summary>
+    /// Sets the reverb preset and configures the effect.
+    /// </summary>
     public void SetReverbPreset(ReverbPreset preset) {
         LockMixerThread();
         try {
@@ -496,6 +499,9 @@ public sealed class Mixer : IDisposable {
         }
     }
 
+    /// <summary>
+    /// Gets the current chorus preset.
+    /// </summary>
     public ChorusPreset GetChorusPreset() {
         LockMixerThread();
         try {
@@ -505,6 +511,9 @@ public sealed class Mixer : IDisposable {
         }
     }
 
+    /// <summary>
+    /// Sets the chorus preset and configures the effect.
+    /// </summary>
     public void SetChorusPreset(ChorusPreset preset) {
         LockMixerThread();
         try {
@@ -894,6 +903,9 @@ public sealed class Mixer : IDisposable {
         _loggerService.Information("MIXER: Closed audio device");
     }
 
+    /// <summary>
+    /// Disposes of the mixer, stopping the audio thread and releasing resources.
+    /// </summary>
     public void Dispose() {
         if (_disposed) {
             return;

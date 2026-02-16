@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.VM;
+namespace Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Interface for handling pausing and resuming the emulator.

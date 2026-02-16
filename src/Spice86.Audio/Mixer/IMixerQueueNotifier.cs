@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.Sound;
+namespace Spice86.Audio.Mixer;
 
 /// <summary>
 /// Interface for audio devices that run on the main thread and use a queue
