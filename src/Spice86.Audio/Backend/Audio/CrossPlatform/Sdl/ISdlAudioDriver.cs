@@ -5,7 +5,7 @@ using System;
 /// <summary>
 /// Platform-specific SDL audio driver interface.
 /// Reference: SDL_AudioDriverImpl from SDL_sysaudio.h
-/// Each platform (WASAPI, DirectSound, ALSA, CoreAudio) implements this interface.
+/// Each platform (WASAPI, ALSA, CoreAudio) implements this interface.
 /// </summary>
 internal interface ISdlAudioDriver {
     /// <summary>

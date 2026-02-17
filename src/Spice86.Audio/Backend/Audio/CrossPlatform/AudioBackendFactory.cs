@@ -10,7 +10,7 @@ using Spice86.Audio.Backend.Audio.CrossPlatform.Sdl.Windows;
 /// <summary>
 /// Factory for creating platform-specific audio backends.
 /// Each platform has a native C# port of the corresponding SDL2 audio driver:
-/// - Windows: WASAPI (primary) + DirectSound (fallback)
+/// - Windows: WASAPI
 /// - Linux: ALSA
 /// - macOS: CoreAudio (AudioQueue)
 /// </summary>

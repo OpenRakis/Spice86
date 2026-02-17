@@ -4,7 +4,6 @@ using System;
 using System.Runtime.Versioning;
 
 using Spice86.Audio.Backend.Audio.CrossPlatform.Sdl;
-using Spice86.Audio.Backend.Audio.CrossPlatform.Sdl.Windows.DirectSound;
 using Spice86.Audio.Backend.Audio.CrossPlatform.Sdl.Windows.Wasapi;
 
 /// <summary>
