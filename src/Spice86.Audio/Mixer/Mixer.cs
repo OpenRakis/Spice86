@@ -895,7 +895,7 @@ public sealed class Mixer : IDisposable {
     /// <typeparam name="TItem">The sample type (float or AudioFrame) in the device queue.</typeparam>
     /// <param name="framesRequested">Number of audio frames requested by the mixer.</param>
     /// <param name="device">The audio device (passed as 'this' from the device).</param>
-    internal void PullFromQueueCallback<TDevice, TItem>(int framesRequested, TDevice device)
+    internal static void PullFromQueueCallback<TDevice, TItem>(int framesRequested, TDevice device)
         where TDevice : IAudioQueueDevice<TItem>
         where TItem : struct {
         // Size to 2x blocksize. The mixer callback will request 1x blocksize.
@@ -909,11 +909,11 @@ public sealed class Mixer : IDisposable {
 
         if (framesReceived > 0) {
             if (typeof(TItem) == typeof(float)) {
-                float[] floatArray = toMix as float[] ?? Array.Empty<float>();
+                float[] floatArray = toMix as float[] ?? [];
                 // PcSpeaker produces mono float data
                 device.Channel.AddSamplesGeneric(framesReceived, floatArray.AsSpan(), isStereo: false);
             } else if (typeof(TItem) == typeof(AudioFrame)) {
-                AudioFrame[] frameArray = toMix as AudioFrame[] ?? Array.Empty<AudioFrame>();
+                AudioFrame[] frameArray = toMix as AudioFrame[] ?? [];
                 device.Channel.AddAudioFrames(frameArray.AsSpan());
             }
         }

@@ -193,8 +193,8 @@ public sealed class SpeexResamplerCSharp {
         last_sample = new int[channels];
         samp_frac_num = new uint[channels];
         magic_samples = new uint[channels];
-        mem = Array.Empty<float>();
-        sinc_table = Array.Empty<float>();
+        mem = [];
+        sinc_table = [];
         sinc_table_length = 0;
         mem_alloc_size = 0;
 
@@ -712,7 +712,7 @@ fail:
             if (input.Length > 0) {
                 ProcessFloat(i, input, (int)i, ref in_len, output, (int)i, ref out_len);
             } else {
-                ProcessFloat(i, ReadOnlySpan<float>.Empty, 0, ref in_len, output, (int)i, ref out_len);
+                ProcessFloat(i, [], 0, ref in_len, output, (int)i, ref out_len);
             }
         }
         

@@ -661,7 +661,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             dacFeatures.Add(ChannelFeature.Stereo);
         }
 
-        _dacChannel = _mixer.AddChannel(framesRequested => _mixer.PullFromQueueCallback<SoundBlaster, AudioFrame>(framesRequested, this), (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
+        _dacChannel = _mixer.AddChannel(framesRequested => Mixer.PullFromQueueCallback<SoundBlaster, AudioFrame>(framesRequested, this), (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
 
         // Configure Zero-Order-Hold upsampler and resample method for SB Pro 2 only
         // ZOH upsampler provides vintage DAC sound characteristic

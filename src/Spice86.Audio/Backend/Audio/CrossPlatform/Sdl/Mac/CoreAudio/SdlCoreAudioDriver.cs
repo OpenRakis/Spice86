@@ -12,7 +12,7 @@ using System.Threading;
 [SupportedOSPlatform("osx")]
 internal sealed class SdlCoreAudioDriver : ISdlAudioDriver {
     private IntPtr _audioQueue;
-    private IntPtr[] _audioBuffers = Array.Empty<IntPtr>();
+    private IntPtr[] _audioBuffers = [];
     private IntPtr _mixBuffer;
     private int _mixBufferSize;
     private int _mixBufferOffset;
@@ -145,7 +145,7 @@ internal sealed class SdlCoreAudioDriver : ISdlAudioDriver {
             _callbackHandle.Free();
         }
 
-        _audioBuffers = Array.Empty<IntPtr>();
+        _audioBuffers = [];
     }
 
     /// <summary>

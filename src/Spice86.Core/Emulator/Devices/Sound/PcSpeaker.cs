@@ -114,7 +114,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         };
         // Pass 'this' to callback like DOSBox's std::bind(callback, _1, this) pattern
         _mixerChannel = mixer.AddChannel(
-            framesRequested => _mixer.PullFromQueueCallback<PcSpeaker, float>(framesRequested, this),
+            framesRequested => Mixer.PullFromQueueCallback<PcSpeaker, float>(framesRequested, this),
             SampleRateHz, nameof(PcSpeaker), features);
         _mixerChannel.        AppVolume = new AudioFrame(1.0f, 1.0f);
         _mixerChannel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Left });

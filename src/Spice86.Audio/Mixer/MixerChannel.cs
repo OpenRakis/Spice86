@@ -49,8 +49,8 @@ public sealed class MixerChannel {
     private Spice86.Audio.Sound.Resampling.SpeexResamplerCSharp? _speexResampler;
 
     // Pre-allocated resample buffers (avoids per-tick GC allocations)
-    private float[] _resampleInputBuffer = Array.Empty<float>();
-    private float[] _resampleOutputBuffer = Array.Empty<float>();
+    private float[] _resampleInputBuffer = [];
+    private float[] _resampleOutputBuffer = [];
 
     private bool _doResample;
 
