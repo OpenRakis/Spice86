@@ -39,7 +39,6 @@ public sealed class Mixer : IDisposable {
 
     // Mixer thread that produces audio and sends to the audio backend
     private readonly Thread _mixerThread;
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly Lock _mixerLock = new();
 
     // Atomic state
@@ -140,7 +139,8 @@ public sealed class Mixer : IDisposable {
         // Initialize compressor with default parameters
         InitCompressor(compressorEnabled: true);
 
-        // Start mixer thread (produces frames and sends to audio backend)
+        _audioPlayer.Start();
+
         _mixerThread = new Thread(MixerThreadLoop) {
             Name = nameof(Mixer),
             IsBackground = true,
@@ -488,13 +488,9 @@ public sealed class Mixer : IDisposable {
             if (!_doReverb || !channel.HasFeature(ChannelFeature.ReverbSend)) {
                 channel.ReverbLevel = 0.0f;
             } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
-                // Use configured synth send level from preset
-                channel.                // Use configured synth send level from preset
-                ReverbLevel = _reverbSynthSendLevel;
+                channel.ReverbLevel = _reverbSynthSendLevel;
             } else if (channel.HasFeature(ChannelFeature.DigitalAudio)) {
-                // Use configured digital send level from preset
-                channel.                // Use configured digital send level from preset
-                ReverbLevel = _reverbDigitalSendLevel;
+                channel.ReverbLevel = _reverbDigitalSendLevel;
             }
         }
     }
@@ -568,13 +564,9 @@ public sealed class Mixer : IDisposable {
             if (!_doChorus || !channel.HasFeature(ChannelFeature.ChorusSend)) {
                 channel.ChorusLevel = 0.0f;
             } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
-                // Use configured synth send level from preset
-                channel.                // Use configured synth send level from preset
-                ChorusLevel = _chorusSynthSendLevel;
+                channel.ChorusLevel = _chorusSynthSendLevel;
             } else if (channel.HasFeature(ChannelFeature.DigitalAudio)) {
-                // Use configured digital send level from preset
-                channel.                // Use configured digital send level from preset
-                ChorusLevel = _chorusDigitalSendLevel;
+                channel.ChorusLevel = _chorusDigitalSendLevel;
             }
         }
     }
@@ -668,60 +660,40 @@ public sealed class Mixer : IDisposable {
     /// </summary>
     public IEnumerable<MixerChannel> AllChannels => _channels.Values;
 
-    /// <summary>
-    /// Main mixer thread loop.
-    /// </summary>
+
     private void MixerThreadLoop() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _loggerService.Debug("MIXER: Mixer thread started. sampleRate={SampleRateHz}, blocksize={Blocksize}", _sampleRateHz, _blocksize);
-        }
-        _audioPlayer.Start();
-        _loggerService.Information("MIXER: Audio stream started");
-
-        CancellationToken token = _cancellationTokenSource.Token;
-
-        float[] silenceBlock = new float[_blocksize * 2]; // stereo interleaved
-
-        while (!_threadShouldQuit && !token.IsCancellationRequested) {
-            MixerState state;
-            int framesRequested = _blocksize;
-
+        while (!_threadShouldQuit) {
             lock (_mixerLock) {
-                state = _state;
-                if (state == MixerState.On) {
-                    MixSamples(framesRequested);
-                }
-            } // Unlock mixer for state checks and I/O
+                // "Underflow" is not a concern since moving to a threaded
+                // mixer. If the CPU is running slower than real-time, the audio
+                // drivers will naturally slow down the audio. Therefore, we can
+                // always request at least a blocksize worth of audio.
+                int framesRequested = _blocksize;
 
-            // Handle NoSound state - sleep for expected duration
-            if (state == MixerState.NoSound) {
-                // SDL callback is not running. Mixed sound gets discarded.
-                // Sleep for the expected duration to simulate playback time.
-                double expectedTimeMs = (double)_blocksize / _sampleRateHz * 1000.0;
+                MixSamples(framesRequested);
+            }
+
+            double expectedTimeMs = (double)_blocksize / _sampleRateHz * 1000.0;
+
+            if (_state == MixerState.NoSound) {
+                // SDL callback is not running. Mixed sound gets
+                // discarded. Sleep for the expected duration to
+                // simulate the time it would have taken to playback the
+                // audio.
                 HighResolutionWaiter.WaitMilliseconds(expectedTimeMs);
                 continue;
-            }
+            } else if (_state == MixerState.Muted) {
+                // SDL callback remains active. Enqueue silence.
+                _outputBuffer.Resize(_blocksize);
+                _outputBuffer.AsSpan().Clear();
 
-            // Enqueue silence to keep the audio callback fed while muted.
-            // Prevents clicks/pops on unmute because the audio pipeline stays active.
-            // BulkEnqueue blocks until the callback drains enough space.
-            if (state == MixerState.Muted) {
-                _audioPlayer.WriteData(silenceBlock.AsSpan());
+                Span<float> silenceInterleaved = MemoryMarshal.Cast<AudioFrame, float>(_outputBuffer.AsSpan());
+                _audioPlayer.WriteData(silenceInterleaved);
                 continue;
             }
 
-            int framesToWrite = _outputBuffer.Count;
-            if (framesToWrite == 0) {
-                continue;
-            }
-
-            Span<AudioFrame> outputFrames = _outputBuffer.AsSpan(0, framesToWrite);
-            Span<float> interleavedBuffer = MemoryMarshal.Cast<AudioFrame, float>(outputFrames);
-            _audioPlayer.WriteData(interleavedBuffer);
-
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("MIXER: Wrote frames to audio backend frames={Frames}", framesToWrite);
-            }
+            _audioPlayer.WriteData(
+                MemoryMarshal.Cast<AudioFrame, float>(_outputBuffer.AsSpan()));
         }
     }
 
@@ -885,21 +857,18 @@ public sealed class Mixer : IDisposable {
     }
 
     private void CloseAudioDevice() {
-        LockMixerThread();
-        try {
-            // Signal the mixer thread to stop
-            _threadShouldQuit = true;
-            _cancellationTokenSource.Cancel();
-            _audioPlayer.Dispose();
-            foreach (MixerChannel channel in _channels.Values) {
-                channel.Enable(false);
-            }
-        } finally {
-            UnlockMixerThread();
-        }
+        _threadShouldQuit = true;
+        _audioPlayer.MuteOutput();
+
         if (_mixerThread.IsAlive) {
             _mixerThread.Join(TimeSpan.FromSeconds(2));
         }
+
+        foreach (MixerChannel channel in _channels.Values) {
+            channel.Enable(false);
+        }
+
+        _audioPlayer.Dispose();
         _loggerService.Information("MIXER: Closed audio device");
     }
 
@@ -914,7 +883,6 @@ public sealed class Mixer : IDisposable {
         _pauseHandler.Pausing -= OnEmulatorPausing;
         _pauseHandler.Resumed -= OnEmulatorResumed;
         CloseAudioDevice();
-        _cancellationTokenSource.Dispose();
         _disposed = true;
     }
 
