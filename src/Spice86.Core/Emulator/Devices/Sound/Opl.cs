@@ -386,7 +386,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     }
 
     public override void WriteByte(ushort port, byte value) {
-        if(_disposed) {
+        if (_disposed) {
             return;
         }
         _chipLock.EnterWriteLock();
@@ -394,33 +394,11 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             if (_logger.IsEnabled(LogEventLevel.Verbose)) {
                 _logger.Verbose("OPL: WriteByte port=0x{Port:X4} value=0x{Value:X2} mode={Mode}", port, value, _mode);
             }
-            if (!IsAdlibGoldControlWrite(port, value)) {
-                RenderUpToNow();
-            }
+            RenderUpToNow();
             PortWrite(port, value);
         } finally {
             _chipLock.ExitWriteLock();
         }
-    }
-
-    private bool IsAdlibGoldControlWrite(ushort port, byte value) {
-        if (_mode != OplMode.Opl3Gold) {
-            return false;
-        }
-
-        if (port is not 0x38A and not 0x38B) {
-            return false;
-        }
-
-        if (port == 0x38A && (value == 0xFF || value == 0xFE)) {
-            return true;
-        }
-
-        if (_ctrlActive) {
-            return true;
-        }
-
-        return false;
     }
 
     private void PortWrite(ushort port, byte value) {
@@ -626,7 +604,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             // Dune CD version uses 32 volume steps in an apparent mistake, should be 128
             float leftVol = (_ctrlLvol & 0x1F) / 31.0f;
             float rightVol = (_ctrlRvol & 0x1F) / 31.0f;
-            _mixerChannel.            AppVolume = new AudioFrame(leftVol, rightVol);
+            _mixerChannel.AppVolume = new AudioFrame(leftVol, rightVol);
         }
     }
 
