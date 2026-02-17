@@ -15,6 +15,7 @@ using Spice86.Audio.Sound.Devices.AdlibGold;
 using Spice86.Audio.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
 
+using System.Runtime.InteropServices;
 using System.Threading;
 
 /// <summary>
@@ -62,9 +63,29 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     // OPL3 new mode flag
     private byte _newMode;
 
-    // Last selected address in the chip
-    private ushort _selectedRegister;
-    private readonly byte[] _selectedRegisterDual = new byte[2];
+    // Last selected address in the chip — mirrors dosbox-staging's
+    // union { uint16_t normal; uint8_t dual[2]; } reg;
+    private OplRegister _reg;
+
+    /// <summary>
+    ///     Union-compatible register address, matching dosbox-staging's
+    ///     <c>union { uint16_t normal; uint8_t dual[2]; } reg</c>.
+    ///     On little-endian, <see cref="Dual0"/> is the low byte of <see cref="Normal"/>.
+    /// </summary>
+    [StructLayout(LayoutKind.Explicit)]
+    private struct OplRegister {
+        /// <summary>Full 16-bit register address (used by Opl2/Opl3/Opl3Gold modes).</summary>
+        [FieldOffset(0)]
+        public ushort Normal;
+
+        /// <summary>Low byte — dual register index 0 (used by DualOpl2 mode).</summary>
+        [FieldOffset(0)]
+        public byte Dual0;
+
+        /// <summary>High byte — dual register index 1 (used by DualOpl2 mode).</summary>
+        [FieldOffset(1)]
+        public byte Dual1;
+    }
 
     // AdLib Gold control state
     private byte _ctrlIndex;
@@ -429,9 +450,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
 
                 case OplMode.Opl2:
                 case OplMode.Opl3:
-                    if (!_timerChips[0].Write(_selectedRegister, value)) {
-                        WriteReg(_selectedRegister, value);
-                        CacheWrite(_selectedRegister, value);
+                    if (!_timerChips[0].Write(_reg.Normal, value)) {
+                        WriteReg(_reg.Normal, value);
+                        CacheWrite(_reg.Normal, value);
                     }
                     break;
 
@@ -439,17 +460,18 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                     // Not a 0x??8 port, then write to a specific port
                     if ((port & 0x08) == 0) {
                         int index = (port & 2) >> 1;
+                        byte dualReg = index == 0 ? _reg.Dual0 : _reg.Dual1;
                         if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                            _logger.Debug("OPL: Dual data write index={Index} reg=0x{Reg:X2} value=0x{Value:X2}", index, _selectedRegisterDual[index], value);
+                            _logger.Debug("OPL: Dual data write index={Index} reg=0x{Reg:X2} value=0x{Value:X2}", index, dualReg, value);
                         }
-                        DualWrite((byte)index, _selectedRegisterDual[index], value);
+                        DualWrite((byte)index, dualReg, value);
                     } else {
                         // Write to both ports
                         if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                            _logger.Debug("OPL: Dual data broadcast write reg0=0x{Reg0:X2} reg1=0x{Reg1:X2} value=0x{Value:X2}", _selectedRegisterDual[0], _selectedRegisterDual[1], value);
+                            _logger.Debug("OPL: Dual data broadcast write reg0=0x{Reg0:X2} reg1=0x{Reg1:X2} value=0x{Value:X2}", _reg.Dual0, _reg.Dual1, value);
                         }
-                        DualWrite(0, _selectedRegisterDual[0], value);
-                        DualWrite(1, _selectedRegisterDual[1], value);
+                        DualWrite(0, _reg.Dual0, value);
+                        DualWrite(1, _reg.Dual1, value);
                     }
                     break;
             }
@@ -457,9 +479,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             // Address write
             switch (_mode) {
                 case OplMode.Opl2:
-                    _selectedRegister = (ushort)(ComputeRegisterAddress(port, value) & 0xFF);
+                    _reg.Normal = (ushort)(ComputeRegisterAddress(port, value) & 0xFF);
                     if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("OPL: Address write selected register set to 0x{Reg:X3} (Opl2)", _selectedRegister);
+                        _logger.Debug("OPL: Address write selected register set to 0x{Reg:X3} (Opl2)", _reg.Normal);
                     }
                     break;
 
@@ -467,10 +489,14 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                     // Not a 0x?88 port, write to a specific side
                     if ((port & 0x08) == 0) {
                         int index = (port & 2) >> 1;
-                        _selectedRegisterDual[index] = (byte)(value & 0xFF);
+                        if (index == 0) {
+                            _reg.Dual0 = (byte)(value & 0xFF);
+                        } else {
+                            _reg.Dual1 = (byte)(value & 0xFF);
+                        }
                     } else {
-                        _selectedRegisterDual[0] = (byte)(value & 0xFF);
-                        _selectedRegisterDual[1] = (byte)(value & 0xFF);
+                        _reg.Dual0 = (byte)(value & 0xFF);
+                        _reg.Dual1 = (byte)(value & 0xFF);
                     }
                     break;
 
@@ -496,9 +522,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                     goto case OplMode.Opl3;
 
                 case OplMode.Opl3:
-                    _selectedRegister = (ushort)(ComputeRegisterAddress(port, value) & 0x1FF);
+                    _reg.Normal = (ushort)(ComputeRegisterAddress(port, value) & 0x1FF);
                     if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("OPL: Address write selected register set to 0x{Reg:X3} (Opl3)", _selectedRegister);
+                        _logger.Debug("OPL: Address write selected register set to 0x{Reg:X3} (Opl3)", _reg.Normal);
                     }
                     break;
             }
