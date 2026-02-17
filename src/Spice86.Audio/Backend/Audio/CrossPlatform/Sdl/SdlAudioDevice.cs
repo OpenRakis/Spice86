@@ -110,7 +110,7 @@ internal sealed class SdlAudioDevice {
         // device->work_buffer = (Uint8 *)SDL_malloc(device->callbackspec.size)
         _workBuffer = Marshal.AllocHGlobal(BufferSizeBytes);
         unsafe {
-            new Span<byte>(_workBuffer.ToPointer(), BufferSizeBytes).Clear();
+            NativeMemory.Clear(_workBuffer.ToPointer(), (nuint)BufferSizeBytes);
         }
 
         // Reference: open_audio_device lines 1548-1572
@@ -207,7 +207,7 @@ internal sealed class SdlAudioDevice {
             lock (_mixerLock) {
                 if (_paused) {
                     // SDL_memset(data, device->callbackspec.silence, data_len)
-                    new Span<byte>(data.ToPointer(), dataLen).Clear();
+                    NativeMemory.Clear(data.ToPointer(), (nuint)dataLen);
                 } else if (_core != null) {
                     _core.FillDeviceBuffer(data, dataLen);
                 }
@@ -246,9 +246,7 @@ internal sealed class SdlAudioDevice {
     internal unsafe void FillAudioBuffer(IntPtr bufferPtr, int bufferBytes) {
         // Reference: SDL_RunAudio lines 740-743
         if (_paused) {
-            int pausedSampleCount = bufferBytes / sizeof(float);
-            Span<float> pausedBuffer = new Span<float>(bufferPtr.ToPointer(), pausedSampleCount);
-            pausedBuffer.Clear();
+            NativeMemory.Clear(bufferPtr.ToPointer(), (nuint)bufferBytes);
             return;
         }
 
@@ -257,9 +255,7 @@ internal sealed class SdlAudioDevice {
             return;
         }
 
-        int fallbackSampleCount = bufferBytes / sizeof(float);
-        Span<float> fallbackBuffer = new Span<float>(bufferPtr.ToPointer(), fallbackSampleCount);
-        fallbackBuffer.Clear();
+        NativeMemory.Clear(bufferPtr.ToPointer(), (nuint)bufferBytes);
     }
 
     /// <summary>

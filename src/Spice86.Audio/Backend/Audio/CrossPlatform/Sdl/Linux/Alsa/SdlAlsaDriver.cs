@@ -174,8 +174,7 @@ internal sealed class SdlAlsaDriver : ISdlAudioDriver {
             // Reference: ALSA_OpenDevice line 758-762
             _mixBuffer = Marshal.AllocHGlobal(_mixBufferBytes);
             unsafe {
-                Span<byte> mixSpan = new Span<byte>(_mixBuffer.ToPointer(), _mixBufferBytes);
-                mixSpan.Clear(); // silence = 0 for float
+                NativeMemory.Clear(_mixBuffer.ToPointer(), (nuint)_mixBufferBytes);
             }
 
             // Reference: ALSA_OpenDevice line 766-768

@@ -1,6 +1,7 @@
 namespace Spice86.Audio.Backend.Audio.CrossPlatform.Sdl;
 
 using System;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Core audio buffer fill logic shared across all platform backends.
@@ -33,14 +34,14 @@ internal sealed class SdlAudioDeviceCore {
     /// </summary>
     public unsafe void FillDeviceBuffer(IntPtr bufferPtr, int bufferBytes) {
         int clampedBytes = Math.Min(bufferBytes, BufferSizeBytes);
-        int sampleCount = clampedBytes / sizeof(float);
-        Span<float> buffer = new Span<float>(bufferPtr.ToPointer(), sampleCount);
 
         AudioCallback? callback = Spec.Callback;
         if (callback != null) {
+            int sampleCount = clampedBytes / sizeof(float);
+            Span<float> buffer = new Span<float>(bufferPtr.ToPointer(), sampleCount);
             callback.Invoke(buffer);
         } else {
-            buffer.Clear();
+            NativeMemory.Clear(bufferPtr.ToPointer(), (nuint)clampedBytes);
         }
     }
 }

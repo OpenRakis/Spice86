@@ -63,7 +63,7 @@ internal sealed class SdlCoreAudioDriver : ISdlAudioDriver {
         // Reference: prepare_audioqueue line ~949-953
         _mixBuffer = Marshal.AllocHGlobal(_mixBufferSize);
         unsafe {
-            new Span<byte>(_mixBuffer.ToPointer(), _mixBufferSize).Clear();
+            NativeMemory.Clear(_mixBuffer.ToPointer(), (nuint)_mixBufferSize);
         }
 
         // Get kCFRunLoopDefaultMode
@@ -359,7 +359,7 @@ internal sealed class SdlCoreAudioDriver : ISdlAudioDriver {
             unsafe {
                 CoreAudioNativeMethods.AudioQueueBuffer* bufPtr =
                     (CoreAudioNativeMethods.AudioQueueBuffer*)_audioBuffers[i];
-                new Span<byte>(bufPtr->AudioData.ToPointer(), (int)bufPtr->AudioDataBytesCapacity).Clear();
+                NativeMemory.Clear(bufPtr->AudioData.ToPointer(), bufPtr->AudioDataBytesCapacity);
                 bufPtr->AudioDataByteSize = bufPtr->AudioDataBytesCapacity;
             }
 
