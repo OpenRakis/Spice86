@@ -697,10 +697,8 @@ public class Opl : DefaultIOPortHandler, IDisposable {
 
         AudioFrame frame = new();
         if (_adlibGold is not null) {
-            Span<float> floatBuf = stackalloc float[2];
-            _adlibGold.Process(buf, 1, floatBuf);
-            frame.Left = floatBuf[0];
-            frame.Right = floatBuf[1];
+            Span<float> frameSpan = MemoryMarshal.CreateSpan(ref frame.Left, 2);
+            _adlibGold.Process(buf, 1, frameSpan);
         } else {
             frame.Left = buf[0];
             frame.Right = buf[1];
