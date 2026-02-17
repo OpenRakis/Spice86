@@ -224,79 +224,76 @@ internal sealed partial class SdlWasapiDriver : ISdlAudioDriver {
         }
     }
 
-    public bool WaitDevice(SdlAudioDevice device) {
+    public void WaitDevice(SdlAudioDevice device) {
         if (_audioClient == null || _renderClient == null || _bufferEvent == IntPtr.Zero) {
-            return false;
+            device.SetDeviceDisconnected();
+            return;
         }
 
         // Reference: SDL_wasapi.c WASAPI_WaitDevice
-        // Wait for WASAPI buffer event, then check padding to see if we can write.
-        // For playback: break when padding <= maxpadding (spec.samples)
         while (true) {
             uint waitResult = NativeMethods.WaitForSingleObjectEx(_bufferEvent, WaitTimeoutMs, false);
             if (waitResult == WaitObject0) {
                 int hr = _audioClient.GetCurrentPadding(out uint padding);
                 if (SdlWasapiResult.Failed(hr)) {
-                    return false;
+                    device.SetDeviceDisconnected();
+                    return;
                 }
 
-                // Reference: SDL_wasapi.c line ~285
                 // const UINT32 maxpadding = this->spec.samples;
                 // if (padding <= maxpadding) { break; }
                 if (padding <= (uint)_sampleFrames) {
-                    return true;
+                    return;
                 }
-                // Not enough room yet, keep waiting
             } else if (waitResult == WaitTimeout) {
                 continue;
             } else {
                 _audioClient.Stop();
-                return false;
+                device.SetDeviceDisconnected();
+                return;
             }
         }
     }
 
-    public IntPtr GetDeviceBuffer(SdlAudioDevice device, out int bufferBytes) {
+    public IntPtr GetDeviceBuf(SdlAudioDevice device) {
         if (_renderClient == null) {
-            bufferBytes = -1;
+            device.SetDeviceDisconnected();
             return IntPtr.Zero;
         }
 
-        // Reference: SDL_wasapi.c WASAPI_GetDeviceBuf lines 183-198
-        // SDL retries internally on BUFFER_TOO_LARGE by calling WaitDevice in a loop.
-        // This is critical for glitch-free playback - the caller must receive a valid
-        // buffer pointer every time, not a "try again" signal.
+        // Reference: SDL_wasapi.c WASAPI_GetDeviceBuf
         while (true) {
             int hr = _renderClient.GetBuffer((uint)_sampleFrames, out IntPtr dataPtr);
             if (hr == SdlWasapiResult.AudioClientEBufferTooLarge) {
-                // Not enough room yet - wait for buffer to drain
-                // Reference: SDL_wasapi.c line 191: WASAPI_WaitDevice(this)
-                if (!WaitDevice(device)) {
-                    bufferBytes = -1;
+                // WASAPI_WaitDevice(this)
+                WaitDevice(device);
+                if (!device.Enabled) {
                     return IntPtr.Zero;
                 }
-                continue; // retry GetBuffer
+                continue;
             }
 
             if (SdlWasapiResult.Failed(hr)) {
-                bufferBytes = -1;
+                device.SetDeviceDisconnected();
                 return IntPtr.Zero;
             }
 
-            bufferBytes = _sampleFrames * _bytesPerFrame;
             return dataPtr;
         }
     }
 
-    public bool PlayDevice(SdlAudioDevice device, IntPtr buffer, int bufferBytes) {
+    public void PlayDevice(SdlAudioDevice device) {
         if (_renderClient == null) {
-            return false;
+            device.SetDeviceDisconnected();
+            return;
         }
 
         // Reference: SDL_wasapi.c WASAPI_PlayDevice
-        // Releases exactly spec.samples frames (the same count passed to GetBuffer)
+        // WasapiFailed(this, IAudioRenderClient_ReleaseBuffer(this->hidden->render, this->spec.samples, 0))
         int hr = _renderClient.ReleaseBuffer((uint)_sampleFrames, 0);
-        return !SdlWasapiResult.Failed(hr);
+        if (SdlWasapiResult.Failed(hr)) {
+            device.SetDeviceDisconnected();
+        }
     }
 
     public void ThreadInit(SdlAudioDevice device) {

@@ -24,19 +24,19 @@ internal interface ISdlAudioDriver {
     /// Waits until the device is ready for more data.
     /// Reference: SDL_AudioDriverImpl.WaitDevice
     /// </summary>
-    bool WaitDevice(SdlAudioDevice device);
+    void WaitDevice(SdlAudioDevice device);
 
     /// <summary>
     /// Gets a buffer pointer to fill with audio data.
     /// Reference: SDL_AudioDriverImpl.GetDeviceBuf
     /// </summary>
-    IntPtr GetDeviceBuffer(SdlAudioDevice device, out int bufferBytes);
+    IntPtr GetDeviceBuf(SdlAudioDevice device);
 
     /// <summary>
     /// Submits the filled buffer to the device for playback.
     /// Reference: SDL_AudioDriverImpl.PlayDevice
     /// </summary>
-    bool PlayDevice(SdlAudioDevice device, IntPtr buffer, int bufferBytes);
+    void PlayDevice(SdlAudioDevice device);
 
     /// <summary>
     /// Called at the start of the audio thread.

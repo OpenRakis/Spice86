@@ -155,20 +155,17 @@ internal sealed class SdlCoreAudioDriver : ISdlAudioDriver {
     /// The SdlAudioDevice thread will just idle, and CloseDevice's
     /// shutdown flag will break it out.
     /// </summary>
-    public bool WaitDevice(SdlAudioDevice device) {
-        // Block until shutdown since CoreAudio manages its own callbacks
-        // via CFRunLoop in the audioqueue_thread.
-        // We sleep briefly to avoid busy-waiting.
+    public void WaitDevice(SdlAudioDevice device) {
+        // CoreAudio uses ProvidesOwnCallbackThread.
+        // The SdlAudioDevice thread is idle; sleep to avoid busy-waiting.
         Thread.Sleep(100);
-        return !device.ShutdownRequested;
     }
 
     /// <summary>
-    /// GetDeviceBuffer for CoreAudio returns null.
+    /// GetDeviceBuf for CoreAudio returns null.
     /// CoreAudio fills buffers directly in its outputCallback.
     /// </summary>
-    public IntPtr GetDeviceBuffer(SdlAudioDevice device, out int bufferBytes) {
-        bufferBytes = 0;
+    public IntPtr GetDeviceBuf(SdlAudioDevice device) {
         return IntPtr.Zero;
     }
 
@@ -176,8 +173,7 @@ internal sealed class SdlCoreAudioDriver : ISdlAudioDriver {
     /// PlayDevice for CoreAudio is a no-op.
     /// CoreAudio enqueues buffers directly in its outputCallback.
     /// </summary>
-    public bool PlayDevice(SdlAudioDevice device, IntPtr buffer, int bufferBytes) {
-        return true;
+    public void PlayDevice(SdlAudioDevice device) {
     }
 
     /// <summary>
@@ -217,11 +213,7 @@ internal sealed class SdlCoreAudioDriver : ISdlAudioDriver {
 
         // Reference: audioqueue_thread line 1020
         // SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH)
-        try {
-            Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
-        } catch (PlatformNotSupportedException) {
-            // Ignore
-        }
+        Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
 
         // Reference: audioqueue_thread line 1023
         // "init was successful, alert parent thread and start running..."

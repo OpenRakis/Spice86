@@ -235,12 +235,10 @@ internal sealed class SdlAlsaDriver : ISdlAudioDriver {
     /// snd_pcm_writei in blocking mode already waits. SDL's default ALSA path
     /// uses blocking writes.
     /// </summary>
-    public bool WaitDevice(SdlAudioDevice device) {
+    public void WaitDevice(SdlAudioDevice device) {
         // Reference: ALSA_WaitDevice
         // When SDL_ALSA_NON_BLOCKING is 0 (default), this function is empty.
-        // The blocking snd_pcm_writei in PlayDevice will handle the wait.
-        // This matches SDL's default behavior exactly.
-        return true;
+        // The blocking snd_pcm_writei in PlayDevice handles the wait.
     }
 
     /// <summary>
@@ -248,10 +246,9 @@ internal sealed class SdlAlsaDriver : ISdlAudioDriver {
     /// Reference: ALSA_GetDeviceBuf (SDL_alsa_audio.c line 415)
     /// Returns this->hidden->mixbuf
     /// </summary>
-    public IntPtr GetDeviceBuffer(SdlAudioDevice device, out int bufferBytes) {
+    public IntPtr GetDeviceBuf(SdlAudioDevice device) {
         // Reference: ALSA_GetDeviceBuf line 417
         // return this->hidden->mixbuf
-        bufferBytes = _mixBufferBytes;
         return _mixBuffer;
     }
 
@@ -266,25 +263,19 @@ internal sealed class SdlAlsaDriver : ISdlAudioDriver {
     /// 4. On unrecoverable error: return false (disconnected)
     /// 5. On status==0: delay half the remaining time, retry
     /// </summary>
-    public bool PlayDevice(SdlAudioDevice device, IntPtr buffer, int bufferBytes) {
+    public void PlayDevice(SdlAudioDevice device) {
         // Reference: ALSA_PlayDevice (SDL_alsa_audio.c line 373-413)
-        IntPtr sampleBuf = buffer;
+        IntPtr sampleBuf = _mixBuffer;
         int frameSize = _frameSize;
         long framesLeft = _sampleFrames;
 
-        // Note: SDL calls swizzle_func here for 6/8 channel layouts.
-        // We only support stereo (2 channels) for now, so no swizzle needed.
-        // Channel swizzling is only needed for 6ch and 8ch surround sound.
-
-        while (framesLeft > 0 && !device.ShutdownRequested) {
+        while (framesLeft > 0 && device.Enabled) {
             // Reference: ALSA_PlayDevice line 383-384
             long status = AlsaNativeMethods.snd_pcm_writei(_pcmHandle, sampleBuf, (ulong)framesLeft);
 
             if (status < 0) {
                 if (status == -AlsaConstants.Eagain) {
                     // Reference: ALSA_PlayDevice line 387-391
-                    // Apparently snd_pcm_recover() doesn't handle this case -
-                    // does it assume snd_pcm_wait() above?
                     Thread.Sleep(1);
                     continue;
                 }
@@ -294,13 +285,13 @@ internal sealed class SdlAlsaDriver : ISdlAudioDriver {
                 if (recoverStatus < 0) {
                     // Hmm, not much we can do - abort
                     // Reference: ALSA_PlayDevice line 394-400
-                    return false;
+                    // SDL_OpenedAudioDeviceDisconnected(this)
+                    device.SetDeviceDisconnected();
+                    return;
                 }
                 continue;
             } else if (status == 0) {
                 // Reference: ALSA_PlayDevice line 402-406
-                // No frames were written (no available space in pcm device).
-                // Allow other threads to catch up.
                 int delay = (int)((framesLeft / 2 * 1000) / device.ObtainedSpec.SampleRate);
                 if (delay > 0) {
                     Thread.Sleep(delay);
@@ -311,25 +302,13 @@ internal sealed class SdlAlsaDriver : ISdlAudioDriver {
             sampleBuf = IntPtr.Add(sampleBuf, (int)(status * frameSize));
             framesLeft -= status;
         }
-
-        return true;
     }
 
     /// <summary>
     /// Called at the start of the audio thread.
-    /// Reference: SDL_audio.c SDL_RunAudio line 692
-    /// SDL_SetThreadPriority(SDL_THREAD_PRIORITY_TIME_CRITICAL)
-    /// ALSA has no ThreadInit callback.
+    /// ALSA has no ThreadInit callback in SDL.
     /// </summary>
     public void ThreadInit(SdlAudioDevice device) {
-        // Reference: SDL_audio.c SDL_RunAudio line 692
-        // SDL sets thread priority to TIME_CRITICAL here.
-        // .NET doesn't directly expose real-time priority, but we set highest available.
-        try {
-            Thread.CurrentThread.Priority = ThreadPriority.Highest;
-        } catch (PlatformNotSupportedException) {
-            // Ignore on platforms that don't support thread priority changes
-        }
     }
 
     /// <summary>
@@ -337,7 +316,6 @@ internal sealed class SdlAlsaDriver : ISdlAudioDriver {
     /// ALSA has no ThreadDeinit callback in SDL.
     /// </summary>
     public void ThreadDeinit(SdlAudioDevice device) {
-        // No-op for ALSA, matching SDL's default SDL_AudioThreadDeinit_Default
     }
 
     /// <summary>

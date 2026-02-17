@@ -28,21 +28,19 @@ internal sealed class SdlAudioDeviceCore {
 
     /// <summary>
     /// Fills the device buffer by invoking the callback.
+    /// Reference: SDL_RunAudio callback invocation (line 742)
+    /// callback(udata, data, data_len)
     /// </summary>
     public unsafe void FillDeviceBuffer(IntPtr bufferPtr, int bufferBytes) {
         int clampedBytes = Math.Min(bufferBytes, BufferSizeBytes);
         int sampleCount = clampedBytes / sizeof(float);
         Span<float> buffer = new Span<float>(bufferPtr.ToPointer(), sampleCount);
-        buffer.Clear();
 
         AudioCallback? callback = Spec.Callback;
         if (callback != null) {
             callback.Invoke(buffer);
-        }
-
-        if (clampedBytes < bufferBytes) {
-            Span<byte> tail = new Span<byte>(((byte*)bufferPtr) + clampedBytes, bufferBytes - clampedBytes);
-            tail.Clear();
+        } else {
+            buffer.Clear();
         }
     }
 }
