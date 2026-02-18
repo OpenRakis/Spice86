@@ -1133,10 +1133,6 @@ public sealed class MixerChannel {
         if (numFrames <= 0) {
             return;
         }
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _loggerService.Debug("MIXER_CHANNEL: {Channel}: AddSamples frames={Frames} stereo={Stereo} doResample={DoResample} doLerp={DoLerp} doZoh={DoZoh}",
-                _name, numFrames, isStereo, _doResample, _doLerpUpsample, _doZohUpsample);
-        }
 
         lock (_mutex) {
             _lastSamplesWereStereo = isStereo;
