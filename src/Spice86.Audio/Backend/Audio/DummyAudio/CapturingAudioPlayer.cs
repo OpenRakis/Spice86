@@ -2,7 +2,6 @@ namespace Spice86.Audio.Backend.Audio.DummyAudio;
 
 using System;
 using System.Collections.Generic;
-using System.Threading;
 
 /// <summary>
 /// Audio player that captures all mixer output into memory for analysis.
@@ -22,8 +21,9 @@ public sealed class CapturingAudioPlayer : AudioPlayer {
 
     /// <summary>
     /// Writes audio data while capturing it for later analysis.
-    /// Sleeps for the expected playback duration to simulate real audio
-    /// device backpressure.
+    /// Does not sleep — allows the mixer thread to produce blocks as fast
+    /// as possible so that tests can capture meaningful audio during
+    /// short CPU execution windows.
     /// </summary>
     /// <param name="data">The input audio data (interleaved stereo float samples).</param>
     /// <returns>The data parameter length.</returns>
@@ -31,17 +31,6 @@ public sealed class CapturingAudioPlayer : AudioPlayer {
         lock (_lock) {
             for (int i = 0; i < data.Length; i++) {
                 _capturedSamples.Add(data[i]);
-            }
-        }
-
-        // Simulate backpressure like DummyAudioPlayer
-        int sampleRate = Format.SampleRate;
-        int channels = Format.Channels;
-        if (sampleRate > 0 && channels > 0) {
-            int frames = data.Length / channels;
-            int sleepMs = (int)((long)frames * 1000 / sampleRate);
-            if (sleepMs > 0) {
-                Thread.Sleep(sleepMs);
             }
         }
         return data.Length;
