@@ -101,13 +101,24 @@ public sealed class Mixer : IDisposable {
     /// <param name="loggerService">Logger service.</param>
     /// <param name="audioEngine">Audio engine to use.</param>
     /// <param name="pauseHandler">Pause handler to mute audio when emulator is paused.</param>
-    public Mixer(ILoggerService loggerService, AudioEngine audioEngine, IPauseHandler pauseHandler) {
+    public Mixer(ILoggerService loggerService, AudioEngine audioEngine, IPauseHandler pauseHandler)
+        : this(loggerService, pauseHandler,
+              new AudioPlayerFactory(loggerService, audioEngine)
+                  .CreatePlayer(DefaultSampleRateHz, DefaultBlocksize, DefaultPrebufferMs)) {
+    }
+
+    /// <summary>
+    /// Creates a new Mixer instance with a caller-supplied audio player.
+    /// </summary>
+    /// <param name="loggerService">Logger service.</param>
+    /// <param name="pauseHandler">Pause handler to mute audio when emulator is paused.</param>
+    /// <param name="audioPlayer">The audio player to use for output.</param>
+    internal Mixer(ILoggerService loggerService, IPauseHandler pauseHandler, AudioPlayer audioPlayer) {
         _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
         _pauseHandler = pauseHandler ?? throw new ArgumentNullException(nameof(pauseHandler));
-        _audioPlayerFactory = new AudioPlayerFactory(_loggerService, audioEngine);
+        _audioPlayerFactory = new AudioPlayerFactory(_loggerService, AudioEngine.Dummy);
 
-        // Create the audio player with our sample rate and blocksize
-        _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize, _prebufferMs);
+        _audioPlayer = audioPlayer;
         if (_audioPlayer.Format.SampleRate > 0) {
             _sampleRateHz = _audioPlayer.Format.SampleRate;
         }

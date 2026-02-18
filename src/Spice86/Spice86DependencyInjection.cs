@@ -20,6 +20,7 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
+using Spice86.Audio.Backend.Audio;
 using Spice86.Audio.Mixer;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
@@ -70,10 +71,15 @@ public class Spice86DependencyInjection : IDisposable {
     private bool _machineDisposedAfterRun;
 
     public Spice86DependencyInjection(Configuration configuration)
-        : this(configuration, null) {
+        : this(configuration, null, null) {
     }
 
-    internal Spice86DependencyInjection(Configuration configuration, MainWindow? mainWindow) {
+    internal Spice86DependencyInjection(Configuration configuration, MainWindow? mainWindow)
+        : this(configuration, mainWindow, null) {
+    }
+
+    internal Spice86DependencyInjection(Configuration configuration, MainWindow? mainWindow,
+        AudioPlayer? audioPlayer) {
         LoggerService loggerService = new LoggerService();
         _loggerService = loggerService;
         SetLoggingLevel(loggerService, configuration);
@@ -336,7 +342,9 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
-        Mixer mixer = new(loggerService, configuration.AudioEngine, pauseHandler);
+        Mixer mixer = audioPlayer is not null
+            ? new Mixer(loggerService, pauseHandler, audioPlayer)
+            : new Mixer(loggerService, configuration.AudioEngine, pauseHandler);
         var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);

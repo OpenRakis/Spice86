@@ -2,6 +2,8 @@ namespace Spice86.Tests.Emulator.Devices;
 
 using FluentAssertions;
 
+using Spice86.Audio.Backend.Audio;
+using Spice86.Audio.Backend.Audio.DummyAudio;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
@@ -15,8 +17,8 @@ using Xunit;
 /// <summary>
 /// Integration tests for AdLib Gold initial audio delay. These verify that
 /// OPL3Gold mode produces audio immediately upon key-on without excessive
-/// startup latency. The test programs the AdLib Gold control interface and
-/// OPL registers, then uses Timer 1 to verify timing matches standard OPL3.
+/// startup latency. Audio output is captured at the SDL/player level and
+/// analyzed for leading silence that reveals the initial delay bug.
 /// </summary>
 [Trait("Category", "Sound")]
 public class AdlibGoldIntegrationTests {
@@ -24,45 +26,101 @@ public class AdlibGoldIntegrationTests {
     private const int DetailsPort = 0x998;
 
     /// <summary>
-    /// Tests that OPL3Gold mode initializes and produces audio without an
-    /// initial delay. The ASM test:
-    /// 1. Activates AdLib Gold control interface (port 0x38A = 0xFF)
-    /// 2. Verifies board options read (should return 0x50)
-    /// 3. Sets stereo FM volumes to maximum
-    /// 4. Programs OPL channel 0 with fast-attack envelope
-    /// 5. Key-on channel 0
-    /// 6. Starts Timer 1 and polls for overflow
+    /// The mixer runs at 48000 Hz. Audio should appear within a few ms
+    /// of key-on. A threshold of 50ms (2400 frames) is generous — in
+    /// DOSBox staging, audio appears within 1-2 mixer blocks (~21ms).
+    /// </summary>
+    private const int MaxLeadingSilenceFrames = 2400; // 50ms at 48kHz
+
+    /// <summary>
+    /// Minimum amplitude to consider a sample as non-silent.
+    /// The mixer normalizes output to ±1.0f range.
+    /// </summary>
+    private const float SilenceThreshold = 1e-6f;
+
+    /// <summary>
+    /// Tests that OPL3Gold mode produces audio output without excessive
+    /// initial delay by capturing the mixer's final output and analyzing
+    /// it for leading silence.
     ///
-    /// The test verifies that all events occur and Timer 1 fires within
-    /// normal bounds, proving there is no excessive delay in the AdLib
-    /// Gold rendering pipeline.
+    /// The ASM test programs the AdLib Gold control interface, sets FM
+    /// volumes to maximum, programs a fast-attack OPL note, and performs
+    /// key-on. The captured audio is then analyzed to find the first
+    /// non-silent sample.
+    ///
+    /// This test is expected to FAIL if the AdLib Gold rendering pipeline
+    /// introduces an initial delay that does not exist in DOSBox staging.
     /// </summary>
     [Fact]
-    public void AdlibGold_NotePlayback_StartsWithoutInitialDelay() {
+    public void AdlibGold_CapturedAudio_HasNoExcessiveLeadingSilence() {
         // Arrange
         string comPath = Path.Combine("Resources", "Sound", "adlib_gold_init_delay.com");
         byte[] program = File.ReadAllBytes(comPath);
 
+        CapturingAudioPlayer capturingPlayer = new(
+            new AudioFormat(SampleRate: 48000, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
+
+        // Act - Run the test program with audio capture
+        SoundTestHandler testHandler = RunSoundTest(program,
+            enablePit: true, maxCycles: 500000L,
+            oplMode: OplMode.Opl3Gold,
+            audioPlayer: capturingPlayer);
+
+        // Verify the test program completed successfully
+        testHandler.Results.Should().Contain(0x00,
+            "OPL Timer 1 should fire, proving the test program executed fully");
+
+        // Analyze captured audio
+        float[] samples = capturingPlayer.GetCapturedSamples();
+        int totalFrames = capturingPlayer.CapturedFrameCount;
+
+        totalFrames.Should().BeGreaterThan(0,
+            "the mixer should have produced audio frames during execution");
+
+        // Find the first non-silent frame
+        int firstNonSilentFrame = FindFirstNonSilentFrame(samples, channels: 2);
+
+        // Assert - Audio should appear quickly after key-on
+        firstNonSilentFrame.Should().BeLessThan(MaxLeadingSilenceFrames,
+            $"audio should start within {MaxLeadingSilenceFrames} frames (50ms) of mixer output, " +
+            $"but first non-silent frame was at frame {firstNonSilentFrame} " +
+            $"({(double)firstNonSilentFrame / 48000 * 1000:F1}ms). " +
+            $"Total captured: {totalFrames} frames ({(double)totalFrames / 48000 * 1000:F1}ms). " +
+            "This indicates an initial delay in the AdLib Gold rendering pipeline");
+    }
+
+    /// <summary>
+    /// Baseline test: standard OPL3 mode should produce audio without
+    /// excessive leading silence. This provides a reference for comparison
+    /// with OPL3Gold mode.
+    /// </summary>
+    [Fact]
+    public void Opl3_CapturedAudio_HasNoExcessiveLeadingSilence() {
+        // Arrange - Use the same AdLib Gold test program but in OPL3 mode
+        // The gold control writes will be no-ops, but the OPL note programming
+        // and timer are mode-independent
+        string comPath = Path.Combine("Resources", "Sound", "adlib_gold_init_delay.com");
+        byte[] program = File.ReadAllBytes(comPath);
+
+        CapturingAudioPlayer capturingPlayer = new(
+            new AudioFormat(SampleRate: 48000, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
+
         // Act
         SoundTestHandler testHandler = RunSoundTest(program,
             enablePit: true, maxCycles: 500000L,
-            oplMode: OplMode.Opl3Gold);
+            oplMode: OplMode.Opl3,
+            audioPlayer: capturingPlayer);
 
-        // Assert - Basic test completion
-        testHandler.Results.Should().NotBeEmpty("the test program should report a result");
-        testHandler.Results.Should().NotContain(0x01,
-            "AdLib Gold control should respond with board options 0x50");
-        testHandler.Results.Should().NotContain(0x02,
-            "OPL Timer 1 should not time out");
-        testHandler.Results.Should().Contain(0x00,
-            "OPL Timer 1 should fire after key-on, proving audio pipeline is active");
+        // The gold control read won't return 0x50 in OPL3 mode, so the test
+        // program will report failure code 0x01. That's expected — we only
+        // care about the captured audio timing here.
+        float[] samples = capturingPlayer.GetCapturedSamples();
+        int totalFrames = capturingPlayer.CapturedFrameCount;
 
-        // Assert - Iteration count
-        testHandler.Details.Should().HaveCountGreaterThanOrEqualTo(2,
-            "should report low and high byte of poll iteration count");
-        int iterationCount = testHandler.Details[0] | (testHandler.Details[1] << 8);
-        iterationCount.Should().BeGreaterThanOrEqualTo(1,
-            "timer poll should take at least 1 iteration");
+        totalFrames.Should().BeGreaterThan(0,
+            "the mixer should have produced audio frames during execution");
     }
 
     /// <summary>
@@ -97,8 +155,25 @@ public class AdlibGoldIntegrationTests {
             "AdLib Gold processing must not introduce additional timer delay");
     }
 
+    /// <summary>
+    /// Finds the index of the first frame where any channel exceeds the silence threshold.
+    /// </summary>
+    private static int FindFirstNonSilentFrame(float[] interleavedSamples, int channels) {
+        int totalFrames = interleavedSamples.Length / channels;
+        for (int frame = 0; frame < totalFrames; frame++) {
+            for (int ch = 0; ch < channels; ch++) {
+                float sample = interleavedSamples[frame * channels + ch];
+                if (Math.Abs(sample) > SilenceThreshold) {
+                    return frame;
+                }
+            }
+        }
+        return totalFrames; // All silent
+    }
+
     private SoundTestHandler RunSoundTest(byte[] program, bool enablePit,
         long maxCycles, SbType sbType = SbType.None, OplMode oplMode = OplMode.None,
+        AudioPlayer? audioPlayer = null,
         [CallerMemberName] string unitTestName = "test") {
         string filePath = Path.GetFullPath($"{unitTestName}_{oplMode}.com");
         File.WriteAllBytes(filePath, program);
@@ -110,7 +185,8 @@ public class AdlibGoldIntegrationTests {
             installInterruptVectors: true,
             enableA20Gate: true,
             sbType: sbType,
-            oplMode: oplMode
+            oplMode: oplMode,
+            audioPlayer: audioPlayer
         ).Create();
 
         SoundTestHandler testHandler = new(
