@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
 
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 using Xunit;/// <summary>
 /// Integration tests for AdLib Gold initial audio delay. These verify that
@@ -60,9 +61,13 @@ public class AdlibGoldIntegrationTests {
 
         // Act - Run the test program with audio capture
         SoundTestHandler testHandler = RunSoundTest(program,
-            enablePit: true, maxCycles: 500000L,
+            enablePit: true, maxCycles: 2000000L,
             oplMode: OplMode.Opl3Gold,
             audioPlayer: capturingPlayer);
+
+        // Allow the mixer thread to produce a few more blocks after the
+        // CPU finishes, so we capture audio generated after key-on.
+        Thread.Sleep(100);
 
         // Verify the test program completed successfully
         testHandler.Results.Should().Contain(0x00,
@@ -78,13 +83,21 @@ public class AdlibGoldIntegrationTests {
         // Count non-silent frames in the captured output
         int nonSilentCount = CountNonSilentFrames(samples, channels: 2);
 
+        // Diagnostic: find max absolute value across all samples
+        float maxAbsValue = 0;
+        for (int i = 0; i < samples.Length; i++) {
+            float abs = Math.Abs(samples[i]);
+            if (abs > maxAbsValue) { maxAbsValue = abs; }
+        }
+
         // Assert - The captured output must contain non-silent audio.
         // With a fast-attack OPL note and key-on, the OPL chip should
         // generate audible output during the mixer blocks that overlap
         // with the key-on period.
         nonSilentCount.Should().BeGreaterThan(0,
             $"captured audio should contain non-silent frames after OPL key-on, " +
-            $"but all {totalFrames} frames ({(double)totalFrames / 48000 * 1000:F1}ms) were silent. " +
+            $"but all {totalFrames} frames ({(double)totalFrames / 48000 * 1000:F1}ms) were silent " +
+            $"(max abs sample value = {maxAbsValue:E3}). " +
             "This indicates the AdLib Gold rendering pipeline is not producing audio");
     }
 
@@ -114,9 +127,13 @@ public class AdlibGoldIntegrationTests {
 
         // Act
         SoundTestHandler testHandler = RunSoundTest(program,
-            enablePit: true, maxCycles: 500000L,
+            enablePit: true, maxCycles: 2000000L,
             oplMode: OplMode.Opl3,
             audioPlayer: capturingPlayer);
+
+        // Allow the mixer thread to produce a few more blocks after the
+        // CPU finishes, so we capture audio generated after key-on.
+        Thread.Sleep(100);
 
         // Verify the test program completed successfully
         testHandler.Results.Should().Contain(0x00,
@@ -258,9 +275,7 @@ public class AdlibGoldIntegrationTests {
 
     /// <summary>
     /// Verifies that the OPL3 chip generates non-zero samples after key-on
-    /// in both standard and AdLib Gold mode, using the same chip programming.
-    /// This isolates whether the issue is in the OPL chip or in the mixer/channel
-    /// integration.
+    /// when OPL3 new mode is NOT enabled (same as the OPL3 baseline test).
     /// </summary>
     [Fact]
     public void AdlibGold_OplChipOutput_IsNonZeroAfterKeyOn() {
@@ -269,8 +284,7 @@ public class AdlibGoldIntegrationTests {
         Audio.Sound.Devices.NukedOpl3.Opl3Chip chip = new();
         chip.Reset(49716);
 
-        // Program the same registers as the ASM test
-        chip.WriteRegisterBuffered(0x105, 1); // OPL3 mode
+        // Program WITHOUT OPL3 new mode (like the passing OPL3 test)
         chip.WriteRegisterBuffered(0x20, 0x01); // op0 mult=1
         chip.WriteRegisterBuffered(0x40, 0x00); // op0 volume max
         chip.WriteRegisterBuffered(0x60, 0xF0); // op0 fast attack
@@ -283,36 +297,66 @@ public class AdlibGoldIntegrationTests {
         chip.WriteRegisterBuffered(0xA0, 0xA5); // freq low
         chip.WriteRegisterBuffered(0xB0, 0x31); // key-on + freq high
 
-        // Generate 100 frames directly from chip
         short[] buf = new short[2];
         int rawNonZero = 0;
         int goldNonZero = 0;
 
         for (int i = 0; i < 100; i++) {
             chip.GenerateStream(buf);
-
-            if (buf[0] != 0 || buf[1] != 0) {
-                rawNonZero++;
-            }
+            if (buf[0] != 0 || buf[1] != 0) { rawNonZero++; }
 
             Audio.Sound.Common.AudioFrame frame = new();
             Span<float> frameSpan = System.Runtime.InteropServices.MemoryMarshal.CreateSpan(
                 ref frame.Left, 2);
             gold.Process(buf, 1, frameSpan);
-
-            if (frame.Left != 0f || frame.Right != 0f) {
-                goldNonZero++;
-            }
+            if (frame.Left != 0f || frame.Right != 0f) { goldNonZero++; }
         }
 
         gold.Dispose();
 
         rawNonZero.Should().BeGreaterThan(0,
-            "the OPL3 chip should produce non-zero samples after key-on");
+            "the OPL3 chip should produce non-zero samples after key-on (no OPL3 mode)");
         goldNonZero.Should().BeGreaterThan(0,
-            $"AdlibGold.Process should produce non-zero output, " +
+            $"AdlibGold.Process should produce non-zero output (no OPL3 mode), " +
             $"but only {goldNonZero}/100 frames were non-zero " +
             $"(raw chip: {rawNonZero}/100 non-zero)");
+    }
+
+    /// <summary>
+    /// Same test but WITH OPL3 new mode enabled — this matches what the
+    /// AdLib Gold ASM test does. If this fails but the non-OPL3 version
+    /// passes, it reveals that enabling OPL3 mode changes the rendering
+    /// behavior for the register programming used.
+    /// </summary>
+    [Fact]
+    public void AdlibGold_OplChipOutput_WithOpl3Mode_IsNonZeroAfterKeyOn() {
+        Audio.Sound.Devices.NukedOpl3.Opl3Chip chip = new();
+        chip.Reset(49716);
+
+        // Program WITH OPL3 new mode (same as AdLib Gold ASM test)
+        chip.WriteRegisterBuffered(0x105, 1); // Enable OPL3 new mode
+        chip.WriteRegisterBuffered(0x20, 0x01);
+        chip.WriteRegisterBuffered(0x40, 0x00);
+        chip.WriteRegisterBuffered(0x60, 0xF0);
+        chip.WriteRegisterBuffered(0x80, 0x00);
+        chip.WriteRegisterBuffered(0x23, 0x01);
+        chip.WriteRegisterBuffered(0x43, 0x00);
+        chip.WriteRegisterBuffered(0x63, 0xF0);
+        chip.WriteRegisterBuffered(0x83, 0x00);
+        chip.WriteRegisterBuffered(0xC0, 0x31);
+        chip.WriteRegisterBuffered(0xA0, 0xA5);
+        chip.WriteRegisterBuffered(0xB0, 0x31);
+
+        short[] buf = new short[2];
+        int nonZero = 0;
+        for (int i = 0; i < 100; i++) {
+            chip.GenerateStream(buf);
+            if (buf[0] != 0 || buf[1] != 0) { nonZero++; }
+        }
+
+        nonZero.Should().BeGreaterThan(0,
+            $"the OPL3 chip should produce non-zero samples after key-on in OPL3 mode, " +
+            $"but only {nonZero}/100 frames were non-zero");
     }
 
     private class SoundTestHandler : DefaultIOPortHandler {
