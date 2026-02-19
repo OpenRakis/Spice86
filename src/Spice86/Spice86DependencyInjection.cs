@@ -361,7 +361,7 @@ public class Spice86DependencyInjection : IDisposable {
         Opl OPL = new(mixer, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService,
             emulationLoopScheduler, emulatedClock, cyclesLimiter, dualPic,
-            mode: configuration.OplMode, sbBase: configuration.SbBase, enableOplIrq: false);
+            mode: configuration.OplMode, sbBase: configuration.SbBase);
 
         SoundBlaster soundBlaster = new(ioPortDispatcher,
             state, dmaSystem, dualPic, mixer, OPL, loggerService,

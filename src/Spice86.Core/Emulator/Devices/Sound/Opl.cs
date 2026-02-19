@@ -36,7 +36,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly IEmulatedClock _clock;
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly DualPic _dualPic;
-    private readonly byte _oplIrqLine;
     private readonly OplMode _mode;
 
     // Two timer chips for DualOpl2 mode or single chip for other modes
@@ -57,21 +56,13 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private readonly MixerChannel _mixerChannel;
 
-    private readonly bool _useOplIrq;
     private bool _disposed;
 
     // OPL3 new mode flag
     private byte _newMode;
 
-    // Last selected address in the chip — mirrors dosbox-staging's
-    // union { uint16_t normal; uint8_t dual[2]; } reg;
     private OplRegister _reg;
 
-    /// <summary>
-    ///     Union-compatible register address, matching dosbox-staging's
-    ///     <c>union { uint16_t normal; uint8_t dual[2]; } reg</c>.
-    ///     On little-endian, <see cref="Dual0"/> is the low byte of <see cref="Normal"/>.
-    /// </summary>
     [StructLayout(LayoutKind.Explicit)]
     private struct OplRegister {
         /// <summary>Full 16-bit register address (used by Opl2/Opl3/Opl3Gold modes).</summary>
@@ -125,13 +116,11 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <param name="dualPic">The dual PIC.</param>
     /// <param name="mode">OPL synthesis mode.</param>
     /// <param name="sbBase">Sound Blaster base I/O address for port registration.</param>
-    /// <param name="enableOplIrq">True to forward OPL IRQs to the PIC.</param>
-    /// <param name="oplIrqLine">IRQ line used when OPL IRQs are enabled.</param>
     public Opl(Mixer mixer, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
         ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock,
         ICyclesLimiter cyclesLimiter, DualPic dualPic,
-        OplMode mode = OplMode.Opl3, ushort sbBase = 0x220, bool enableOplIrq = false, byte oplIrqLine = 5)
+        OplMode mode = OplMode.Opl3, ushort sbBase = 0x220)
         : base(state, failOnUnhandledPort, loggerService) {
 
         _logger = loggerService;
@@ -145,8 +134,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         _cyclesLimiter = cyclesLimiter;
         _timerChips = [new OplChip(clock), new OplChip(clock)];
         _dualPic = dualPic;
-        _useOplIrq = enableOplIrq;
-        _oplIrqLine = oplIrqLine;
         _ctrl = new AdLibGoldControl(mixerEnabled: true);
 
         // Build channel features based on mode
@@ -356,11 +343,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             if (_logger.IsEnabled(LogEventLevel.Information)) {
                 _logger.Information("OPL: Shutting down {Mode}", _mode);
             }
-
-            if (_useOplIrq) {
-                _dualPic.DeactivateIrq(_oplIrqLine);
-            }
-
             _adlibGold?.Dispose();
             _chipLock.Dispose();
         }
