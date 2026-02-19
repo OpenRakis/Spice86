@@ -127,13 +127,11 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <param name="sbBase">Sound Blaster base I/O address for port registration.</param>
     /// <param name="enableOplIrq">True to forward OPL IRQs to the PIC.</param>
     /// <param name="oplIrqLine">IRQ line used when OPL IRQs are enabled.</param>
-    /// <param name="mixerEnabled">True if SB mixer controls OPL volume.</param>
     public Opl(Mixer mixer, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
         ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock,
         ICyclesLimiter cyclesLimiter, DualPic dualPic,
-        OplMode mode = OplMode.Opl3, ushort sbBase = 0x220, bool enableOplIrq = false, byte oplIrqLine = 5,
-        bool mixerEnabled = false)
+        OplMode mode = OplMode.Opl3, ushort sbBase = 0x220, bool enableOplIrq = false, byte oplIrqLine = 5)
         : base(state, failOnUnhandledPort, loggerService) {
 
         _logger = loggerService;
@@ -149,7 +147,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         _dualPic = dualPic;
         _useOplIrq = enableOplIrq;
         _oplIrqLine = oplIrqLine;
-        _ctrl = new AdLibGoldControl(mixerEnabled);
+        _ctrl = new AdLibGoldControl(mixerEnabled: true);
 
         // Build channel features based on mode
         HashSet<ChannelFeature> features = [
