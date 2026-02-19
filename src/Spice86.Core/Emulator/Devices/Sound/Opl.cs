@@ -31,7 +31,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly AdlibGold? _adlibGold;
     private readonly ILoggerService _logger;
     private readonly Opl3Chip _chip = new();
-    private readonly ReaderWriterLockSlim _chipLock = new();
+    private readonly Lock _chipLock = new();
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly CyclesClock _renderClock;
@@ -138,17 +138,20 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         _oplIrqLine = oplIrqLine;
         _ctrlMixerEnabled = mixerEnabled;
 
-        // Render timing uses a cycle-based clock for deterministic audio
-        // synchronization between the CPU and mixer threads, matching
-        // DOSBox staging's PIC_FullIndex / PIC_AtomicFullIndex pattern.
-        // The OPL timers continue using the external clock (wall-clock)
-        // which matches real hardware behavior where timers run
-        // independently of CPU speed.
-        int cyclesPerMs = cyclesLimiter.TargetCpuCyclesPerMs > 0
-            ? cyclesLimiter.TargetCpuCyclesPerMs
-            : ICyclesLimiter.RealModeCpuCyclesPerMs;
-        long renderCyclesPerSecond = (long)cyclesPerMs * 1000;
-        _renderClock = new CyclesClock(state, renderCyclesPerSecond);
+        // Render timing uses the same clock as the rest of the emulator.
+        // When --Cycles is specified, the global clock is already a
+        // CyclesClock (matching DOSBox staging's PIC_FullIndex). When
+        // running at unconstrained speed, create a separate CyclesClock
+        // for deterministic render timing.
+        if (clock is CyclesClock cyclesClock) {
+            _renderClock = cyclesClock;
+        } else {
+            int cyclesPerMs = cyclesLimiter.TargetCpuCyclesPerMs > 0
+                ? cyclesLimiter.TargetCpuCyclesPerMs
+                : ICyclesLimiter.RealModeCpuCyclesPerMs;
+            long renderCyclesPerSecond = (long)cyclesPerMs * 1000;
+            _renderClock = new CyclesClock(state, renderCyclesPerSecond);
+        }
 
         // Build channel features based on mode
         HashSet<ChannelFeature> features = [
@@ -200,10 +203,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     }
 
     private void RenderUpToNow() {
-        // Update the atomic snapshot for the mixer thread, matching
-        // DOSBox staging's PIC_UpdateAtomicIndex() in PIC_RunQueue().
-        _renderClock.UpdateAtomicIndex();
-
         double now = _renderClock.ElapsedTimeMs;
         // Wake up the channel and update the last rendered time datum.
         if (_mixerChannel.WakeUp()) {
@@ -367,7 +366,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             }
 
             _adlibGold?.Dispose();
-            _chipLock.Dispose();
         }
 
         _disposed = true;
@@ -427,15 +425,12 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         if (_disposed) {
             return;
         }
-        _chipLock.EnterWriteLock();
-        try {
+        lock (_chipLock) {
             if (_logger.IsEnabled(LogEventLevel.Verbose)) {
                 _logger.Verbose("OPL: WriteByte port=0x{Port:X4} value=0x{Value:X2} mode={Mode}", port, value, _mode);
             }
             RenderUpToNow();
             PortWrite(port, value);
-        } finally {
-            _chipLock.ExitWriteLock();
         }
     }
 
@@ -680,8 +675,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             return;
         }
         int framesRemaining = framesRequested;
-        _chipLock.EnterWriteLock();
-        try {
+        lock (_chipLock) {
             Span<float> frameData = stackalloc float[2];
             // First, send any frames we've queued since the last callback
             while (framesRemaining > 0 && _fifo.Count > 0) {
@@ -699,16 +693,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 _mixerChannel.AddSamplesFloat(1, frameData);
                 framesRemaining--;
             }
-            // Update last rendered time to now using the atomic snapshot.
-            // AudioCallback runs on the mixer thread, so we must use
-            // AtomicElapsedTimeMs (equivalent to DOSBox staging's
-            // PIC_AtomicIndex) to avoid torn reads of the emulation
-            // thread's cycle state and to keep last_rendered_ms slightly
-            // behind the CPU thread's precise time — this ensures
-            // RenderUpToNow generates FIFO frames on the next WriteByte.
-            _lastRenderedMs = _renderClock.AtomicElapsedTimeMs;
-        } finally {
-            _chipLock.ExitWriteLock();
+            _lastRenderedMs = _renderClock.ElapsedTimeMs;
         }
     }
 
