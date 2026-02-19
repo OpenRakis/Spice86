@@ -2,6 +2,7 @@ namespace Spice86.Audio.Backend.Audio.DummyAudio;
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 
 /// <summary>
@@ -86,5 +87,47 @@ public sealed class CapturingAudioPlayer : AudioPlayer {
 
     /// <inheritdoc/>
     public override void UnmuteOutput() {
+    }
+
+    /// <summary>
+    /// Saves the captured audio to a WAV file for manual inspection.
+    /// </summary>
+    /// <param name="filePath">The path to save the WAV file.</param>
+    public void SaveToWav(string filePath) {
+        float[] samples;
+        lock (_lock) {
+            samples = _capturedSamples.ToArray();
+        }
+        int sampleRate = Format.SampleRate;
+        int channels = Format.Channels;
+        int bitsPerSample = 32;
+        int byteRate = sampleRate * channels * (bitsPerSample / 8);
+        int blockAlign = channels * (bitsPerSample / 8);
+        int dataSize = samples.Length * (bitsPerSample / 8);
+
+        using FileStream fs = File.Create(filePath);
+        using BinaryWriter bw = new(fs);
+
+        // RIFF header
+        bw.Write("RIFF"u8);
+        bw.Write(36 + dataSize);
+        bw.Write("WAVE"u8);
+
+        // fmt chunk
+        bw.Write("fmt "u8);
+        bw.Write(16);           // chunk size
+        bw.Write((short)3);     // IEEE float
+        bw.Write((short)channels);
+        bw.Write(sampleRate);
+        bw.Write(byteRate);
+        bw.Write((short)blockAlign);
+        bw.Write((short)bitsPerSample);
+
+        // data chunk
+        bw.Write("data"u8);
+        bw.Write(dataSize);
+        foreach (float sample in samples) {
+            bw.Write(sample);
+        }
     }
 }

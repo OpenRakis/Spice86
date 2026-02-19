@@ -389,3 +389,6 @@ Knowledge/
 
 #Lost Dump files
 spice86dump*.json
+
+# Test audio capture artifacts
+*.wav

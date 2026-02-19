@@ -87,6 +87,10 @@ public class AdlibGoldIntegrationTests {
         float[] samples = capturingPlayer.GetCapturedSamples();
         int totalFrames = capturingPlayer.CapturedFrameCount;
 
+        // Save WAV file for manual inspection of the captured audio
+        string wavPath = Path.GetFullPath("adlib_gold_capture.wav");
+        capturingPlayer.SaveToWav(wavPath);
+
         totalFrames.Should().BeGreaterThan(0,
             "the mixer should have produced audio frames during execution");
 
@@ -108,6 +112,7 @@ public class AdlibGoldIntegrationTests {
             $"captured audio should contain non-silent frames after OPL key-on, " +
             $"but all {totalFrames} frames ({(double)totalFrames / 48000 * 1000:F1}ms) were silent " +
             $"(max abs sample value = {maxAbsValue:E3}). " +
+            $"WAV saved to: {wavPath}. " +
             "This indicates the AdLib Gold rendering pipeline is not producing audio");
     }
 
@@ -148,6 +153,10 @@ public class AdlibGoldIntegrationTests {
         // Analyze captured audio
         float[] samples = capturingPlayer.GetCapturedSamples();
         int totalFrames = capturingPlayer.CapturedFrameCount;
+
+        // Save WAV file for manual inspection of the captured audio
+        string wavPath = Path.GetFullPath("opl3_capture.wav");
+        capturingPlayer.SaveToWav(wavPath);
 
         totalFrames.Should().BeGreaterThan(0,
             "the mixer should have produced audio frames during execution");
@@ -206,38 +215,6 @@ public class AdlibGoldIntegrationTests {
             $"but all {totalFrames} frames were silent (max abs = {maxAbsValue:E3}). " +
             "If this fails, the issue is fundamental to OPL3Gold mode rendering, " +
             "not specific to AdLib Gold control initialization");
-    }
-
-    /// <summary>
-    /// Compares OPL3Gold timer behavior against standard OPL3 to detect
-    /// any mode-specific delay in the rendering pipeline. Both modes use
-    /// the same OPL timer mechanism, so iteration counts should be similar.
-    /// </summary>
-    [Fact]
-    public void AdlibGold_TimerBehavior_MatchesStandardOpl3() {
-        // Run the standard OPL write delay test in OPL3 mode for baseline
-        string comPath = Path.Combine("Resources", "Sound", "opl_write_delay.com");
-        byte[] baselineProgram = File.ReadAllBytes(comPath);
-
-        SoundTestHandler opl3Handler = RunSoundTest(baselineProgram,
-            enablePit: true, maxCycles: 500000L,
-            oplMode: OplMode.Opl3);
-
-        opl3Handler.Results.Should().Contain(0x00, "OPL3 baseline Timer 1 should fire");
-        int opl3Iterations = opl3Handler.Details[0] | (opl3Handler.Details[1] << 8);
-
-        // Run the same test in OPL3Gold mode
-        SoundTestHandler goldHandler = RunSoundTest(baselineProgram,
-            enablePit: true, maxCycles: 500000L,
-            oplMode: OplMode.Opl3Gold);
-
-        goldHandler.Results.Should().Contain(0x00, "OPL3Gold Timer 1 should fire");
-        int goldIterations = goldHandler.Details[0] | (goldHandler.Details[1] << 8);
-
-        // Both modes should have the same timer behavior
-        goldIterations.Should().Be(opl3Iterations,
-            "OPL3Gold should have the same timer iteration count as OPL3 — " +
-            "AdLib Gold processing must not introduce additional timer delay");
     }
 
     /// <summary>

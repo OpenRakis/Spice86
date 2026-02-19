@@ -565,7 +565,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private void WriteReg(ushort selectedReg, byte value) {
         _chip.WriteRegisterBuffered(selectedReg, value);
         if (selectedReg == 0x105) {
-            _newMode = (byte)(selectedReg & 0x01);
+            _newMode = (byte)(value & 0x01);
         }
     }
 
