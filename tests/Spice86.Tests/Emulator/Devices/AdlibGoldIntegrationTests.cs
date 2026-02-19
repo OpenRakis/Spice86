@@ -4,11 +4,19 @@ using FluentAssertions;
 
 using Spice86.Audio.Backend.Audio;
 using Spice86.Audio.Backend.Audio.DummyAudio;
+using Spice86.Audio.Mixer;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
+
+using NSubstitute;
 
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -157,6 +165,54 @@ public class AdlibGoldIntegrationTests {
     }
 
     /// <summary>
+    /// Diagnostic: runs the OPL3-only ASM program (no gold control writes)
+    /// in OPL3Gold mode. If this passes, the issue is in gold control
+    /// initialization. If it fails, the issue is fundamental to OPL3Gold mode.
+    /// </summary>
+    [Fact]
+    public void Opl3Gold_WithStandardOplProgram_ProducesAudio() {
+        // Use the same OPL3-only program that passes in OPL3 mode
+        string comPath = Path.Combine("Resources", "Sound", "opl3_note_playback.com");
+        byte[] program = File.ReadAllBytes(comPath);
+
+        CapturingAudioPlayer capturingPlayer = new(
+            new AudioFormat(SampleRate: 48000, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
+
+        // Run in OPL3Gold mode but with OPL3-only program (no gold control)
+        SoundTestHandler testHandler = RunSoundTest(program,
+            enablePit: true, maxCycles: 2000000L,
+            oplMode: OplMode.Opl3Gold,
+            audioPlayer: capturingPlayer);
+
+        Thread.Sleep(100);
+
+        testHandler.Results.Should().Contain(0x00,
+            "OPL Timer 1 should fire");
+
+        float[] samples = capturingPlayer.GetCapturedSamples();
+        int totalFrames = capturingPlayer.CapturedFrameCount;
+
+        totalFrames.Should().BeGreaterThan(0,
+            "the mixer should have produced audio frames during execution");
+
+        int nonSilentCount = CountNonSilentFrames(samples, channels: 2);
+
+        // Diagnostic: find max absolute value
+        float maxAbsValue = 0;
+        for (int i = 0; i < samples.Length; i++) {
+            float abs = Math.Abs(samples[i]);
+            if (abs > maxAbsValue) { maxAbsValue = abs; }
+        }
+
+        nonSilentCount.Should().BeGreaterThan(0,
+            $"OPL3Gold mode with standard OPL program should produce audio, " +
+            $"but all {totalFrames} frames were silent (max abs = {maxAbsValue:E3}). " +
+            "If this fails, the issue is fundamental to OPL3Gold mode rendering, " +
+            "not specific to AdLib Gold control initialization");
+    }
+
+    /// <summary>
     /// Compares OPL3Gold timer behavior against standard OPL3 to detect
     /// any mode-specific delay in the rendering pipeline. Both modes use
     /// the same OPL timer mechanism, so iteration counts should be similar.
@@ -242,12 +298,203 @@ public class AdlibGoldIntegrationTests {
 
         SoundTestHandler testHandler = new(
             spice86DependencyInjection.Machine.CpuState,
-            NSubstitute.Substitute.For<ILoggerService>(),
+            Substitute.For<ILoggerService>(),
             spice86DependencyInjection.Machine.IoPortDispatcher
         );
         spice86DependencyInjection.ProgramExecutor.Run();
 
         return testHandler;
+    }
+
+    /// <summary>
+    /// Diagnostic: feeds known non-zero frames through a Mixer + MixerChannel
+    /// with OPL-identical configuration (noise gate, resampling, envelope)
+    /// to isolate whether the mixer pipeline itself zeros the signal.
+    /// </summary>
+    [Fact]
+    public void MixerChannel_WithOplConfig_ProducesNonZeroOutput() {
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
+
+        CapturingAudioPlayer capturingPlayer = new(
+            new AudioFormat(SampleRate: 48000, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
+
+        Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
+        mixer.LockMixerThread();
+
+        HashSet<ChannelFeature> features = [
+            ChannelFeature.Sleep,
+            ChannelFeature.FadeOut,
+            ChannelFeature.NoiseGate,
+            ChannelFeature.ReverbSend,
+            ChannelFeature.ChorusSend,
+            ChannelFeature.Synthesizer,
+            ChannelFeature.Stereo
+        ];
+
+        int callbackCount = 0;
+        MixerChannel? channelRef = null;
+        MixerChannel channel = mixer.AddChannel(framesRequested => {
+            MixerChannel ch = channelRef!;
+            // Feed known non-zero frames — simulate OPL chip output
+            float[] frameData = new float[2];
+            for (int i = 0; i < framesRequested; i++) {
+                // Simulate a simple tone (like OPL3 output passed through AdlibGold)
+                float value = 5000.0f * MathF.Sin(2.0f * MathF.PI * 440 * (callbackCount * framesRequested + i) / 49716.0f);
+                frameData[0] = value;
+                frameData[1] = value;
+                ch.AddSamplesFloat(1, frameData);
+            }
+            callbackCount++;
+        }, 49716, "Opl", features);
+        channelRef = channel;
+
+        channel.SetResampleMethod(ResampleMethod.Resample);
+
+        const float OplVolumeGain = 1.5f;
+        channel.Set0dbScalar(OplVolumeGain);
+
+        float thresholdDb = -65.0f + 20.0f * MathF.Log10(OplVolumeGain);
+        channel.ConfigureNoiseGate(thresholdDb, 1.0f, 100.0f);
+        channel.EnableNoiseGate(true);
+
+        // Enable the channel (simulating WakeUp)
+        channel.Enable(true);
+
+        mixer.UnlockMixerThread();
+
+        // Let mixer thread produce some blocks
+        Thread.Sleep(200);
+
+        mixer.Dispose();
+
+        float[] samples = capturingPlayer.GetCapturedSamples();
+        int totalFrames = capturingPlayer.CapturedFrameCount;
+
+        float maxAbsValue = 0;
+        for (int i = 0; i < samples.Length; i++) {
+            float abs = Math.Abs(samples[i]);
+            if (abs > maxAbsValue) { maxAbsValue = abs; }
+        }
+
+        int nonSilentCount = CountNonSilentFrames(samples, channels: 2);
+
+        totalFrames.Should().BeGreaterThan(0,
+            "mixer should have produced frames");
+        nonSilentCount.Should().BeGreaterThan(0,
+            $"mixer channel with OPL config should produce non-zero audio, " +
+            $"but all {totalFrames} frames were silent (max abs = {maxAbsValue:E3})");
+    }
+
+    /// <summary>
+    /// Diagnostic: creates an OPL directly (not through the emulator) with
+    /// a controlled mock clock, programs it identically to the ASM test,
+    /// and checks if the AudioCallback produces non-zero output.
+    /// </summary>
+    [Fact]
+    public void Opl_DirectInstance_OPL3GoldProducesAudio() {
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
+
+        CapturingAudioPlayer capturingPlayer = new(
+            new AudioFormat(SampleRate: 48000, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
+
+        Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
+
+        State state = new(CpuModel.INTEL_8086);
+        AddressReadWriteBreakpoints ioBreakpoints = new();
+        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
+
+        // Use a mock clock that starts at 0 and advances with each call
+        IEmulatedClock mockClock = Substitute.For<IEmulatedClock>();
+        double clockMs = 0.0;
+        mockClock.ElapsedTimeMs.Returns(_ => clockMs);
+
+        EmulationLoopScheduler scheduler = new(mockClock, loggerService);
+
+        ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
+        cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
+
+        DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
+
+        // Create OPL in OPL3Gold mode
+        Opl opl = new(mixer, state, ioPortDispatcher, false, loggerService,
+            scheduler, mockClock, cyclesLimiter, dualPic,
+            mode: OplMode.Opl3Gold, sbBase: 0x220);
+
+        // Advance time slightly (simulating time passing before first write)
+        clockMs = 1.0;
+
+        // Program OPL registers (same as opl3_note_playback.asm)
+        // Reset timers
+        opl.WriteByte(0x388, 0x04); clockMs += 0.01; // addr: reg 0x04
+        opl.WriteByte(0x389, 0x60); clockMs += 0.01; // data: reset timers
+        opl.WriteByte(0x388, 0x04); clockMs += 0.01;
+        opl.WriteByte(0x389, 0x80); clockMs += 0.01;
+
+        // Operator 0: multiplier=1
+        opl.WriteByte(0x388, 0x20); clockMs += 0.01;
+        opl.WriteByte(0x389, 0x01); clockMs += 0.01;
+
+        // Operator 0: total level = max volume
+        opl.WriteByte(0x388, 0x40); clockMs += 0.01;
+        opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+
+        // Operator 0: attack=15 (fastest), decay=0
+        opl.WriteByte(0x388, 0x60); clockMs += 0.01;
+        opl.WriteByte(0x389, 0xF0); clockMs += 0.01;
+
+        // Operator 0: sustain=0 (max level), release=0
+        opl.WriteByte(0x388, 0x80); clockMs += 0.01;
+        opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+
+        // Operator 3 (carrier): same settings
+        opl.WriteByte(0x388, 0x23); clockMs += 0.01;
+        opl.WriteByte(0x389, 0x01); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x43); clockMs += 0.01;
+        opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x63); clockMs += 0.01;
+        opl.WriteByte(0x389, 0xF0); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x83); clockMs += 0.01;
+        opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+
+        // Channel 0: stereo output, feedback=1, additive
+        opl.WriteByte(0x388, 0xC0); clockMs += 0.01;
+        opl.WriteByte(0x389, 0x31); clockMs += 0.01;
+
+        // Frequency: A4 = 440 Hz
+        opl.WriteByte(0x388, 0xA0); clockMs += 0.01;
+        opl.WriteByte(0x389, 0xA5); clockMs += 0.01;
+
+        // Key-on + frequency high
+        opl.WriteByte(0x388, 0xB0); clockMs += 0.01;
+        opl.WriteByte(0x389, 0x31); clockMs += 0.01;
+
+        // Let mixer thread render some blocks after key-on
+        Thread.Sleep(200);
+
+        opl.Dispose();
+        mixer.Dispose();
+
+        // Analyze captured audio
+        float[] samples = capturingPlayer.GetCapturedSamples();
+        int totalFrames = capturingPlayer.CapturedFrameCount;
+
+        float maxAbsValue = 0;
+        for (int i = 0; i < samples.Length; i++) {
+            float abs = Math.Abs(samples[i]);
+            if (abs > maxAbsValue) { maxAbsValue = abs; }
+        }
+
+        int nonSilentCount = CountNonSilentFrames(samples, channels: 2);
+
+        totalFrames.Should().BeGreaterThan(0,
+            "mixer should have produced frames");
+        nonSilentCount.Should().BeGreaterThan(0,
+            $"OPL3Gold with direct register programming should produce audio, " +
+            $"but all {totalFrames} frames were silent (max abs = {maxAbsValue:E3})");
     }
 
     /// <summary>
