@@ -498,6 +498,171 @@ public class AdlibGoldIntegrationTests {
     }
 
     /// <summary>
+    /// Same as the mock-clock test but with the real EmulatedClock (wall-clock).
+    /// If this fails while the mock-clock test passes, the issue is in the
+    /// wall-clock timing interaction with the mixer thread.
+    /// </summary>
+    [Fact]
+    public void Opl_DirectInstance_RealClock_OPL3GoldProducesAudio() {
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
+
+        CapturingAudioPlayer capturingPlayer = new(
+            new AudioFormat(SampleRate: 48000, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
+
+        Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
+
+        State state = new(CpuModel.INTEL_8086);
+        AddressReadWriteBreakpoints ioBreakpoints = new();
+        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
+
+        // Use the real EmulatedClock (wall-clock based)
+        EmulatedClock realClock = new();
+
+        EmulationLoopScheduler scheduler = new(realClock, loggerService);
+
+        ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
+        cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
+
+        DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
+
+        // Create OPL in OPL3Gold mode
+        Opl opl = new(mixer, state, ioPortDispatcher, false, loggerService,
+            scheduler, realClock, cyclesLimiter, dualPic,
+            mode: OplMode.Opl3Gold, sbBase: 0x220);
+
+        // Program OPL registers (same as opl3_note_playback.asm)
+        opl.WriteByte(0x388, 0x04);
+        opl.WriteByte(0x389, 0x60);
+        opl.WriteByte(0x388, 0x04);
+        opl.WriteByte(0x389, 0x80);
+        opl.WriteByte(0x388, 0x20);
+        opl.WriteByte(0x389, 0x01);
+        opl.WriteByte(0x388, 0x40);
+        opl.WriteByte(0x389, 0x00);
+        opl.WriteByte(0x388, 0x60);
+        opl.WriteByte(0x389, 0xF0);
+        opl.WriteByte(0x388, 0x80);
+        opl.WriteByte(0x389, 0x00);
+        opl.WriteByte(0x388, 0x23);
+        opl.WriteByte(0x389, 0x01);
+        opl.WriteByte(0x388, 0x43);
+        opl.WriteByte(0x389, 0x00);
+        opl.WriteByte(0x388, 0x63);
+        opl.WriteByte(0x389, 0xF0);
+        opl.WriteByte(0x388, 0x83);
+        opl.WriteByte(0x389, 0x00);
+        opl.WriteByte(0x388, 0xC0);
+        opl.WriteByte(0x389, 0x31);
+        opl.WriteByte(0x388, 0xA0);
+        opl.WriteByte(0x389, 0xA5);
+        opl.WriteByte(0x388, 0xB0);
+        opl.WriteByte(0x389, 0x31);
+
+        // Let mixer thread render some blocks after key-on
+        Thread.Sleep(200);
+
+        opl.Dispose();
+        mixer.Dispose();
+
+        float[] samples = capturingPlayer.GetCapturedSamples();
+        int totalFrames = capturingPlayer.CapturedFrameCount;
+
+        float maxAbsValue = 0;
+        for (int i = 0; i < samples.Length; i++) {
+            float abs = Math.Abs(samples[i]);
+            if (abs > maxAbsValue) { maxAbsValue = abs; }
+        }
+
+        int nonSilentCount = CountNonSilentFrames(samples, channels: 2);
+
+        totalFrames.Should().BeGreaterThan(0,
+            "mixer should have produced frames");
+        nonSilentCount.Should().BeGreaterThan(0,
+            $"OPL3Gold with real clock should produce audio, " +
+            $"but all {totalFrames} frames were silent (max abs = {maxAbsValue:E3}). " +
+            "If this fails while mock-clock test passes, the issue is wall-clock timing");
+    }
+
+    /// <summary>
+    /// Diagnostic: delays register programming by 500ms after OPL creation to
+    /// simulate the real-world scenario where the mixer thread runs many blocks
+    /// of silence before the CPU programs OPL registers. Tests if the noise gate
+    /// or other time-dependent mixer features suppress audio after a long
+    /// initial silence period.
+    /// </summary>
+    [Fact]
+    public void Opl_DirectInstance_DelayedProgramming_OPL3GoldProducesAudio() {
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
+
+        CapturingAudioPlayer capturingPlayer = new(
+            new AudioFormat(SampleRate: 48000, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
+
+        Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
+
+        State state = new(CpuModel.INTEL_8086);
+        AddressReadWriteBreakpoints ioBreakpoints = new();
+        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
+
+        EmulatedClock realClock = new();
+        EmulationLoopScheduler scheduler = new(realClock, loggerService);
+        ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
+        cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
+        DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
+
+        Opl opl = new(mixer, state, ioPortDispatcher, false, loggerService,
+            scheduler, realClock, cyclesLimiter, dualPic,
+            mode: OplMode.Opl3Gold, sbBase: 0x220);
+
+        // *** KEY: Delay 500ms before programming registers ***
+        // This simulates the real scenario where the mixer thread runs many
+        // blocks of silence before the CPU programs the OPL.
+        Thread.Sleep(500);
+
+        // Now program the OPL (key-on a note)
+        opl.WriteByte(0x388, 0x04); opl.WriteByte(0x389, 0x60);
+        opl.WriteByte(0x388, 0x04); opl.WriteByte(0x389, 0x80);
+        opl.WriteByte(0x388, 0x20); opl.WriteByte(0x389, 0x01);
+        opl.WriteByte(0x388, 0x40); opl.WriteByte(0x389, 0x00);
+        opl.WriteByte(0x388, 0x60); opl.WriteByte(0x389, 0xF0);
+        opl.WriteByte(0x388, 0x80); opl.WriteByte(0x389, 0x00);
+        opl.WriteByte(0x388, 0x23); opl.WriteByte(0x389, 0x01);
+        opl.WriteByte(0x388, 0x43); opl.WriteByte(0x389, 0x00);
+        opl.WriteByte(0x388, 0x63); opl.WriteByte(0x389, 0xF0);
+        opl.WriteByte(0x388, 0x83); opl.WriteByte(0x389, 0x00);
+        opl.WriteByte(0x388, 0xC0); opl.WriteByte(0x389, 0x31);
+        opl.WriteByte(0x388, 0xA0); opl.WriteByte(0x389, 0xA5);
+        opl.WriteByte(0x388, 0xB0); opl.WriteByte(0x389, 0x31);
+
+        // Wait for mixer to render post-key-on audio
+        Thread.Sleep(200);
+
+        opl.Dispose();
+        mixer.Dispose();
+
+        float[] samples = capturingPlayer.GetCapturedSamples();
+        int totalFrames = capturingPlayer.CapturedFrameCount;
+
+        float maxAbsValue = 0;
+        for (int i = 0; i < samples.Length; i++) {
+            float abs = Math.Abs(samples[i]);
+            if (abs > maxAbsValue) { maxAbsValue = abs; }
+        }
+
+        int nonSilentCount = CountNonSilentFrames(samples, channels: 2);
+
+        totalFrames.Should().BeGreaterThan(0, "mixer should have produced frames");
+        nonSilentCount.Should().BeGreaterThan(0,
+            $"OPL3Gold with 500ms delayed programming should still produce audio, " +
+            $"but all {totalFrames} frames were silent (max abs = {maxAbsValue:E3}). " +
+            "If this fails, the noise gate or sleep/wake cycle suppresses audio after " +
+            "prolonged initial silence");
+    }
+
+    /// <summary>
     /// Verifies that AdlibGold.Process produces non-zero output when given
     /// non-zero input. This isolates the Gold processing pipeline from the
     /// rest of the emulator to confirm it works correctly in isolation.

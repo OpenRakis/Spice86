@@ -34,6 +34,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly ReaderWriterLockSlim _chipLock = new();
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
+    private readonly IEmulatedClock _renderClock;
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly DualPic _dualPic;
     private readonly byte _oplIrqLine;
@@ -137,6 +138,17 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         _oplIrqLine = oplIrqLine;
         _ctrlMixerEnabled = mixerEnabled;
 
+        // Render timing uses a cycle-based clock for deterministic audio
+        // synchronization between the CPU and mixer threads, matching
+        // DOSBox staging's PIC_FullIndex / PIC_AtomicFullIndex pattern.
+        // The OPL timers continue using the external clock (wall-clock)
+        // which matches real hardware behavior where timers run
+        // independently of CPU speed.
+        long renderCyclesPerSecond = (long)cyclesLimiter.TargetCpuCyclesPerMs * 1000;
+        _renderClock = renderCyclesPerSecond > 0
+            ? new CyclesClock(state, renderCyclesPerSecond)
+            : clock;
+
         // Build channel features based on mode
         HashSet<ChannelFeature> features = [
             ChannelFeature.Sleep,
@@ -180,14 +192,14 @@ public class Opl : DefaultIOPortHandler, IDisposable {
 
         const double MillisInSecond = 1000.0;
         _msPerFrame = MillisInSecond / OplSampleRateHz;
-        _lastRenderedMs = _clock.ElapsedTimeMs;
+        _lastRenderedMs = _renderClock.ElapsedTimeMs;
         Init();
         InitPortHandlers(ioPortDispatcher);
         mixer.UnlockMixerThread();
     }
 
     private void RenderUpToNow() {
-        double now = _clock.ElapsedTimeMs;
+        double now = _renderClock.ElapsedTimeMs;
         // Wake up the channel and update the last rendered time datum.
         if (_mixerChannel.WakeUp()) {
             _lastRenderedMs = now;
@@ -685,7 +697,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             // Update last rendered time to now using the atomic snapshot.
             // AudioCallback runs on the mixer thread, so we must use AtomicFullIndex
             // to avoid torn reads of the emulation thread's cycle state.
-            _lastRenderedMs = _clock.ElapsedTimeMs;
+            _lastRenderedMs = _renderClock.ElapsedTimeMs;
         } finally {
             _chipLock.ExitWriteLock();
         }
