@@ -22,8 +22,10 @@ public sealed class CapturingAudioPlayer : AudioPlayer {
 
     /// <summary>
     /// Writes audio data while capturing it for later analysis.
-    /// Yields the current time slice after each write to prevent the mixer
-    /// thread from monopolizing CPU time when there is no real audio device.
+    /// Simulates real audio device backpressure by sleeping for the expected
+    /// playback duration, preventing the mixer thread from racing far ahead
+    /// of the emulation thread and producing thousands of silence blocks
+    /// before the CPU has time to program the sound hardware.
     /// </summary>
     /// <param name="data">The input audio data (interleaved stereo float samples).</param>
     /// <returns>The data parameter length.</returns>
@@ -33,11 +35,18 @@ public sealed class CapturingAudioPlayer : AudioPlayer {
                 _capturedSamples.Add(data[i]);
             }
         }
-        // Yield to prevent mixer thread starvation of the emulation thread.
-        // A real audio device blocks here until the callback drains the queue;
-        // Thread.Sleep(0) achieves a similar effect by relinquishing the
-        // remainder of the current time slice.
-        Thread.Sleep(0);
+        // Simulate real audio device backpressure: sleep for the expected
+        // playback duration, just like DummyAudioPlayer and the real
+        // CrossPlatformAudioPlayer (which blocks in BulkEnqueue).
+        int sampleRate = Format.SampleRate;
+        int channels = Format.Channels;
+        if (sampleRate > 0 && channels > 0) {
+            int frames = data.Length / channels;
+            int sleepMs = (int)((long)frames * 1000 / sampleRate);
+            if (sleepMs > 0) {
+                Thread.Sleep(sleepMs);
+            }
+        }
         return data.Length;
     }
 
