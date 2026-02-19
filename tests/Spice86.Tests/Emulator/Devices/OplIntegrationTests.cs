@@ -43,7 +43,7 @@ public class OplIntegrationTests {
         testHandler.Details.Should().HaveCountGreaterThanOrEqualTo(2,
             "should report low and high byte of iteration count");
         int iterationCount = testHandler.Details[0] | (testHandler.Details[1] << 8);
-        // With CyclesClock (cycle-based timing matching DOSBox staging's
+        // With cycle-based EmulatedClock (matching DOSBox staging's
         // PIC_FullIndex), each instruction advances ~0.333us of emulated time
         // at 3000 cycles/ms. The 80us timer period requires ~240 cycles.
         // The poll loop body has ~27 instructions → ~9 iterations.

@@ -14,14 +14,14 @@ using Xunit;
 public sealed class EmulationLoopSchedulerTests {
     private readonly ILoggerService _logger;
     private readonly State _state;
-    private readonly CyclesClock _cyclesClock;
+    private readonly EmulatedClock _cyclesClock;
     private readonly EmulationLoopScheduler _scheduler;
 
     public EmulationLoopSchedulerTests() {
         _logger = Substitute.For<ILoggerService>();
         _state = new State(CpuModel.INTEL_8086);
         // 1000 cycles = 1 second for simplicity in tests
-        _cyclesClock = new CyclesClock(_state, 1000);
+        _cyclesClock = new EmulatedClock(_state, 1000);
         _scheduler = new EmulationLoopScheduler(_cyclesClock, _logger);
     }
 

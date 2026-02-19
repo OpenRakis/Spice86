@@ -14,13 +14,13 @@ using Xunit;
 /// </summary>
 public class ClockTests {
     /// <summary>
-    /// Tests that CyclesClock correctly calculates CurrentDateTime from StartTime and cycles.
+    /// Tests that EmulatedClock with cycle-based timing correctly calculates CurrentDateTime.
     /// </summary>
     [Fact]
-    public void CyclesClock_CurrentDateTime_ShouldReflectStartTimePlusElapsed() {
+    public void EmulatedClock_CycleBased_CurrentDateTime_ShouldReflectStartTimePlusElapsed() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        CyclesClock clock = new CyclesClock(state, 1000); // 1000 cycles per second
+        EmulatedClock clock = new EmulatedClock(state, 1000); // 1000 cycles per second
         DateTime startTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         clock.StartTime = startTime;
 
@@ -36,10 +36,10 @@ public class ClockTests {
     }
 
     /// <summary>
-    /// Tests that EmulatedClock StartTime can be set and CurrentDateTime is calculated correctly.
+    /// Tests that EmulatedClock with wall-clock timing works correctly.
     /// </summary>
     [Fact]
-    public void EmulatedClock_StartTime_CanBeSetAndCurrentDateTimeCalculated() {
+    public void EmulatedClock_WallClock_StartTime_CanBeSetAndCurrentDateTimeCalculated() {
         // Arrange
         DateTime startTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         EmulatedClock clock = new EmulatedClock();
@@ -57,10 +57,10 @@ public class ClockTests {
     /// Tests that StartTime can be set and retrieved correctly.
     /// </summary>
     [Fact]
-    public void Clock_StartTime_CanBeSetAndRetrieved() {
+    public void EmulatedClock_StartTime_CanBeSetAndRetrieved() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        CyclesClock clock = new CyclesClock(state, 1000);
+        EmulatedClock clock = new EmulatedClock(state, 1000);
         DateTime expectedStartTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
         // Act
@@ -75,10 +75,10 @@ public class ClockTests {
     /// Tests that pause/resume methods can be called without throwing exceptions.
     /// </summary>
     [Fact]
-    public void Clock_OnPauseAndOnResume_ShouldNotThrow() {
+    public void EmulatedClock_OnPauseAndOnResume_ShouldNotThrow() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        CyclesClock clock = new CyclesClock(state, 1000);
+        EmulatedClock clock = new EmulatedClock(state, 1000);
 
         // Act
         Action act = () => {
@@ -88,5 +88,26 @@ public class ClockTests {
 
         // Assert
         act.Should().NotThrow();
+    }
+
+    /// <summary>
+    /// Tests that IsCycleBased returns true for cycle-based clock.
+    /// </summary>
+    [Fact]
+    public void EmulatedClock_IsCycleBased_TrueWhenStateProvided() {
+        State state = new State(CpuModel.INTEL_80286);
+        EmulatedClock clock = new EmulatedClock(state, 1000);
+
+        clock.IsCycleBased.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Tests that IsCycleBased returns false for wall-clock mode.
+    /// </summary>
+    [Fact]
+    public void EmulatedClock_IsCycleBased_FalseWhenNoState() {
+        EmulatedClock clock = new EmulatedClock();
+
+        clock.IsCycleBased.Should().BeFalse();
     }
 }

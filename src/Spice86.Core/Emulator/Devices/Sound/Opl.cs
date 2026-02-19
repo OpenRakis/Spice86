@@ -34,7 +34,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly Lock _chipLock = new();
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
-    private readonly CyclesClock _renderClock;
+    private readonly EmulatedClock _renderClock;
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly DualPic _dualPic;
     private readonly byte _oplIrqLine;
@@ -139,18 +139,18 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         _ctrlMixerEnabled = mixerEnabled;
 
         // Render timing uses the same clock as the rest of the emulator.
-        // When --Cycles is specified, the global clock is already a
-        // CyclesClock (matching DOSBox staging's PIC_FullIndex). When
-        // running at unconstrained speed, create a separate CyclesClock
-        // for deterministic render timing.
-        if (clock is CyclesClock cyclesClock) {
-            _renderClock = cyclesClock;
+        // When the global clock is cycle-based (matching DOSBox staging's
+        // PIC_FullIndex), use it directly. When running with a wall-clock
+        // EmulatedClock, create a separate cycle-based instance for
+        // deterministic render timing.
+        if (clock is EmulatedClock emClock && emClock.IsCycleBased) {
+            _renderClock = emClock;
         } else {
             int cyclesPerMs = cyclesLimiter.TargetCpuCyclesPerMs > 0
                 ? cyclesLimiter.TargetCpuCyclesPerMs
                 : ICyclesLimiter.RealModeCpuCyclesPerMs;
             long renderCyclesPerSecond = (long)cyclesPerMs * 1000;
-            _renderClock = new CyclesClock(state, renderCyclesPerSecond);
+            _renderClock = new EmulatedClock(state, renderCyclesPerSecond);
         }
 
         // Build channel features based on mode

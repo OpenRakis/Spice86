@@ -762,13 +762,13 @@ public class AdlibGoldIntegrationTests {
     }
 
     /// <summary>
-    /// Reproduces the integrated test conditions with CyclesClock advancing.
+    /// Reproduces the integrated test conditions with cycle-based EmulatedClock advancing.
     /// State.Cycles starts high (simulating BIOS/DOS init) and advances between
-    /// writes (simulating CPU execution). This isolates whether the CyclesClock
+    /// writes (simulating CPU execution). This isolates whether the cycle-based
     /// timing interaction causes the silence.
     /// </summary>
     [Fact]
-    public void Opl_DirectInstance_CyclesClock_WithAdvancingCycles_ProducesAudio() {
+    public void Opl_DirectInstance_EmulatedClock_WithAdvancingCycles_ProducesAudio() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
 
@@ -870,9 +870,9 @@ public class AdlibGoldIntegrationTests {
 
         totalFrames.Should().BeGreaterThan(0, "mixer should have produced frames");
         nonSilentCount.Should().BeGreaterThan(0,
-            $"OPL3Gold with CyclesClock and advancing cycles should produce audio, " +
+            $"OPL3Gold with cycle-based EmulatedClock and advancing cycles should produce audio, " +
             $"but all {totalFrames} frames were silent (max abs = {maxAbsValue:E3}). " +
-            "If this fails, the CyclesClock timing interaction causes silence.");
+            "If this fails, the cycle-based timing interaction causes silence.");
     }
 
     /// <summary>
