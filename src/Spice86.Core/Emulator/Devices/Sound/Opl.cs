@@ -34,7 +34,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly ReaderWriterLockSlim _chipLock = new();
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
-    private readonly IEmulatedClock _renderClock;
+    private readonly CyclesClock _renderClock;
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly DualPic _dualPic;
     private readonly byte _oplIrqLine;
@@ -200,6 +200,10 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     }
 
     private void RenderUpToNow() {
+        // Update the atomic snapshot for the mixer thread, matching
+        // DOSBox staging's PIC_UpdateAtomicIndex() in PIC_RunQueue().
+        _renderClock.UpdateAtomicIndex();
+
         double now = _renderClock.ElapsedTimeMs;
         // Wake up the channel and update the last rendered time datum.
         if (_mixerChannel.WakeUp()) {
@@ -696,9 +700,13 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 framesRemaining--;
             }
             // Update last rendered time to now using the atomic snapshot.
-            // AudioCallback runs on the mixer thread, so we must use AtomicFullIndex
-            // to avoid torn reads of the emulation thread's cycle state.
-            _lastRenderedMs = _renderClock.ElapsedTimeMs;
+            // AudioCallback runs on the mixer thread, so we must use
+            // AtomicElapsedTimeMs (equivalent to DOSBox staging's
+            // PIC_AtomicIndex) to avoid torn reads of the emulation
+            // thread's cycle state and to keep last_rendered_ms slightly
+            // behind the CPU thread's precise time — this ensures
+            // RenderUpToNow generates FIFO frames on the next WriteByte.
+            _lastRenderedMs = _renderClock.AtomicElapsedTimeMs;
         } finally {
             _chipLock.ExitWriteLock();
         }
