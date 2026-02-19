@@ -498,6 +498,109 @@ public class AdlibGoldIntegrationTests {
     }
 
     /// <summary>
+    /// Mimics the EXACT register write sequence from the AdLib Gold ASM test
+    /// (gold control activation, FM volumes, OPL3 mode enable, note programming)
+    /// using direct OPL.WriteByte calls. If this passes but the integrated
+    /// ASM test fails, the issue is in the emulator timing/threading path.
+    /// </summary>
+    [Fact]
+    public void Opl_DirectInstance_GoldControlSequence_ProducesAudio() {
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
+
+        CapturingAudioPlayer capturingPlayer = new(
+            new AudioFormat(SampleRate: 48000, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
+
+        Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
+
+        State state = new(CpuModel.INTEL_8086);
+        AddressReadWriteBreakpoints ioBreakpoints = new();
+        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
+
+        IEmulatedClock mockClock = Substitute.For<IEmulatedClock>();
+        double clockMs = 0.0;
+        mockClock.ElapsedTimeMs.Returns(_ => clockMs);
+
+        EmulationLoopScheduler scheduler = new(mockClock, loggerService);
+        ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
+        cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
+        DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
+
+        Opl opl = new(mixer, state, ioPortDispatcher, false, loggerService,
+            scheduler, mockClock, cyclesLimiter, dualPic,
+            mode: OplMode.Opl3Gold, sbBase: 0x220);
+
+        clockMs = 1.0;
+
+        // === EXACT SEQUENCE FROM adlib_gold_init_delay.asm ===
+
+        // Step 1: Activate AdLib Gold control
+        opl.WriteByte(0x38A, 0xFF); clockMs += 0.01;
+
+        // Read board options (index 0x00)
+        opl.WriteByte(0x38A, 0x00); clockMs += 0.01;
+        byte boardOpts = opl.ReadByte(0x38B);
+        boardOpts.Should().Be(0x50, "Board options should indicate 16-bit ISA + surround");
+
+        // Step 2: Set FM volumes to max
+        opl.WriteByte(0x38A, 0x09); clockMs += 0.01; // Left FM Volume index
+        opl.WriteByte(0x38B, 0x1F); clockMs += 0.01; // Max
+        opl.WriteByte(0x38A, 0x0A); clockMs += 0.01; // Right FM Volume index
+        opl.WriteByte(0x38B, 0x1F); clockMs += 0.01; // Max
+
+        // Step 3: Reset timers
+        opl.WriteByte(0x388, 0x04); clockMs += 0.01;
+        opl.WriteByte(0x389, 0x60); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x04); clockMs += 0.01;
+        opl.WriteByte(0x389, 0x80); clockMs += 0.01;
+
+        // Step 4: Deactivate gold control, enable OPL3 mode
+        opl.WriteByte(0x38A, 0xFE); clockMs += 0.01; // Deactivate gold control
+        opl.WriteByte(0x38A, 0x05); clockMs += 0.01; // High bank reg 0x05
+        opl.WriteByte(0x38B, 0x01); clockMs += 0.01; // OPL3 mode enable
+
+        // Step 5: Program operators (same as ASM)
+        opl.WriteByte(0x388, 0x20); clockMs += 0.01; opl.WriteByte(0x389, 0x01); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x40); clockMs += 0.01; opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x60); clockMs += 0.01; opl.WriteByte(0x389, 0xF0); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x80); clockMs += 0.01; opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x23); clockMs += 0.01; opl.WriteByte(0x389, 0x01); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x43); clockMs += 0.01; opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x63); clockMs += 0.01; opl.WriteByte(0x389, 0xF0); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x83); clockMs += 0.01; opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+
+        // Channel 0: stereo output, feedback=1, additive
+        opl.WriteByte(0x388, 0xC0); clockMs += 0.01; opl.WriteByte(0x389, 0x31); clockMs += 0.01;
+
+        // Frequency + Key-on
+        opl.WriteByte(0x388, 0xA0); clockMs += 0.01; opl.WriteByte(0x389, 0xA5); clockMs += 0.01;
+        opl.WriteByte(0x388, 0xB0); clockMs += 0.01; opl.WriteByte(0x389, 0x31); clockMs += 0.01;
+
+        Thread.Sleep(200);
+
+        opl.Dispose();
+        mixer.Dispose();
+
+        float[] samples = capturingPlayer.GetCapturedSamples();
+        int totalFrames = capturingPlayer.CapturedFrameCount;
+
+        float maxAbsValue = 0;
+        for (int i = 0; i < samples.Length; i++) {
+            float abs = Math.Abs(samples[i]);
+            if (abs > maxAbsValue) { maxAbsValue = abs; }
+        }
+
+        int nonSilentCount = CountNonSilentFrames(samples, channels: 2);
+
+        totalFrames.Should().BeGreaterThan(0, "mixer should have produced frames");
+        nonSilentCount.Should().BeGreaterThan(0,
+            $"OPL3Gold with gold control + OPL register sequence should produce audio, " +
+            $"but all {totalFrames} frames were silent (max abs = {maxAbsValue:E3}). " +
+            "If this fails, the gold control writes interfere with OPL rendering");
+    }
+
+    /// <summary>
     /// Same as the mock-clock test but with the real EmulatedClock (wall-clock).
     /// If this fails while the mock-clock test passes, the issue is in the
     /// wall-clock timing interaction with the mixer thread.
