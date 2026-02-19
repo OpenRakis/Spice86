@@ -73,9 +73,11 @@ public class AdlibGoldIntegrationTests {
             oplMode: OplMode.Opl3Gold,
             audioPlayer: capturingPlayer);
 
-        // Allow the mixer thread to produce a few more blocks after the
-        // CPU finishes, so we capture audio generated after key-on.
-        Thread.Sleep(100);
+        // The ASM program busy-waits ~200ms after key-on (consuming
+        // ~600k cycles with CycleLimiter throttling), giving the mixer
+        // thread ~10 callbacks to capture audio while key-on is active.
+        // Machine.Dispose() is called inside Run() via EmulationStopped,
+        // so no post-execution sleep is useful.
 
         // Verify the test program completed successfully
         testHandler.Results.Should().Contain(0x00,
@@ -139,10 +141,6 @@ public class AdlibGoldIntegrationTests {
             oplMode: OplMode.Opl3,
             audioPlayer: capturingPlayer);
 
-        // Allow the mixer thread to produce a few more blocks after the
-        // CPU finishes, so we capture audio generated after key-on.
-        Thread.Sleep(100);
-
         // Verify the test program completed successfully
         testHandler.Results.Should().Contain(0x00,
             "OPL Timer 1 should fire, proving the test program executed fully");
@@ -184,8 +182,6 @@ public class AdlibGoldIntegrationTests {
             enablePit: true, maxCycles: 2000000L,
             oplMode: OplMode.Opl3Gold,
             audioPlayer: capturingPlayer);
-
-        Thread.Sleep(100);
 
         testHandler.Results.Should().Contain(0x00,
             "OPL Timer 1 should fire");

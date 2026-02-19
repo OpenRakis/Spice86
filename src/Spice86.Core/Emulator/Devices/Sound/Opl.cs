@@ -144,10 +144,11 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         // The OPL timers continue using the external clock (wall-clock)
         // which matches real hardware behavior where timers run
         // independently of CPU speed.
-        long renderCyclesPerSecond = (long)cyclesLimiter.TargetCpuCyclesPerMs * 1000;
-        _renderClock = renderCyclesPerSecond > 0
-            ? new CyclesClock(state, renderCyclesPerSecond)
-            : clock;
+        int cyclesPerMs = cyclesLimiter.TargetCpuCyclesPerMs > 0
+            ? cyclesLimiter.TargetCpuCyclesPerMs
+            : ICyclesLimiter.RealModeCpuCyclesPerMs;
+        long renderCyclesPerSecond = (long)cyclesPerMs * 1000;
+        _renderClock = new CyclesClock(state, renderCyclesPerSecond);
 
         // Build channel features based on mode
         HashSet<ChannelFeature> features = [

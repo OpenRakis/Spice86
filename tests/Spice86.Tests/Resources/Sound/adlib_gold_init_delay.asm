@@ -11,8 +11,9 @@
 ;   3. Resets OPL timers
 ;   4. Programs operator envelopes + frequency for channel 0
 ;   5. Key-on channel 0
-;   6. Uses Timer 1 to measure time from key-on to timer overflow
-;   7. Reports elapsed poll count - verifies timing is not delayed
+;   6. Busy-waits for ~500,000 cycles to let the mixer capture audio
+;   7. Uses Timer 1 to verify timing is not delayed
+;   8. Reports elapsed poll count
 ;
 ; Results (reported via ports 0x999/0x998):
 ;   Port 0x998: iteration count (low byte, then high byte)
@@ -218,6 +219,26 @@ start:
     mov al, 0x31       ; key-on=1, block=4, fnum-high=1
     out dx, al
     call opl_data_delay
+
+    ; ========================================
+    ; Step 5b: Busy-wait to let mixer capture audio
+    ; ========================================
+    ; At 3000 cycles/ms, we need ~600,000 cycles for ~200ms of
+    ; wall-clock time. The cycle limiter throttles execution to
+    ; real time, giving the mixer thread ~10 audio callbacks.
+    ; Inner loop: ~3 cycles per iteration (dec + jnz)
+    ; Outer x Inner = 200 x 3000 = 600,000 iterations x 3 = 1,800,000 cycles
+    mov cx, 200
+.busy_outer:
+    push cx
+    mov cx, 3000
+.busy_inner:
+    nop
+    dec cx
+    jnz .busy_inner
+    pop cx
+    dec cx
+    jnz .busy_outer
 
     ; ========================================
     ; Step 6: Start Timer 1 and poll
