@@ -617,14 +617,14 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 _adlibGold.SurroundControlWrite(value);
                 break;
         }
-    }
 
-    private void SetVolume() {
-        if (_ctrl.MixerEnabled) {
-            // Dune CD version uses 32 volume steps in an apparent mistake, should be 128
-            float leftVol = (_ctrl.LeftVolume & 0x1F) / 31.0f;
-            float rightVol = (_ctrl.RightVolume & 0x1F) / 31.0f;
-            _mixerChannel.AppVolume = new AudioFrame(leftVol, rightVol);
+        void SetVolume() {
+            if (_ctrl.MixerEnabled) {
+                // Dune CD version uses 32 volume steps in an apparent mistake, should be 128
+                float leftVol = (_ctrl.LeftVolume & 0x1F) / 31.0f;
+                float rightVol = (_ctrl.RightVolume & 0x1F) / 31.0f;
+                _mixerChannel.AppVolume = new AudioFrame(leftVol, rightVol);
+            }
         }
     }
 
