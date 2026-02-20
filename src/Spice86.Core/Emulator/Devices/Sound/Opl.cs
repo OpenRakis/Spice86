@@ -66,8 +66,10 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     // monitoring. All instruments are static so they survive Opl disposal and
     // aggregate across instances (useful in multi-instance scenarios).
 
+    private const string OplMeterVersion = "1.0.0";
+
     /// <summary>Meter for all OPL audio-thread diagnostics.</summary>
-    internal static readonly Meter OplMeter = new("Spice86.Opl", "1.0.0");
+    internal static readonly Meter OplMeter = new("Spice86.Opl", OplMeterVersion);
 
     // ── AudioCallback metrics ─────────────────────────────────────────
     internal static readonly Counter<long> AudioCallbackCount =

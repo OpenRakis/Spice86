@@ -34,10 +34,10 @@ using Xunit.Abstractions;
 /// </summary>
 [Trait("Category", "Sound")]
 public class AdlibGoldIntegrationTests {
-    private readonly ITestOutputHelper _output;
+    private readonly ITestOutputHelper _testOutputHelper;
 
-    public AdlibGoldIntegrationTests(ITestOutputHelper output) {
-        _output = output;
+    public AdlibGoldIntegrationTests(ITestOutputHelper testOutputHelper) {
+        _testOutputHelper = testOutputHelper;
     }
 
     private const int ResultPort = 0x999;
@@ -1103,21 +1103,21 @@ public class AdlibGoldIntegrationTests {
               FIFO frames served: {fifoServed} ({(framesRequested > 0 ? (double)fifoServed / framesRequested * 100 : 0):F1}%)
               Direct-rendered:    {directRendered} ({(framesRequested > 0 ? (double)directRendered / framesRequested * 100 : 0):F1}%)
               FIFO starvations:   {fifoStarvations} / {callbackCount} callbacks ({(callbackCount > 0 ? (double)fifoStarvations / callbackCount * 100 : 0):F1}%)
-              Duration (ms):      min={Stat(callbackDurations, s => s.Min()):F3}  avg={Stat(callbackDurations, s => s.Average()):F3}  max={Stat(callbackDurations, s => s.Max()):F3}
+              Duration (ms):      min={SafeAggregate(callbackDurations, s => s.Min()):F3}  avg={SafeAggregate(callbackDurations, s => s.Average()):F3}  max={SafeAggregate(callbackDurations, s => s.Max()):F3}
 
             ── RenderUpToNow (CPU thread) ─────────────────────────────────
               Invocations:        {renderCount}
               FIFO frames gen'd:  {renderFrames}
               Channel wake-ups:   {wakeUps}
-              Gap ms (now-last):  min={Stat(renderGaps, s => s.Min()):F3}  avg={Stat(renderGaps, s => s.Average()):F3}  max={Stat(renderGaps, s => s.Max()):F3}
+              Gap ms (now-last):  min={SafeAggregate(renderGaps, s => s.Min()):F3}  avg={SafeAggregate(renderGaps, s => s.Average()):F3}  max={SafeAggregate(renderGaps, s => s.Max()):F3}
 
             ── FIFO Queue ─────────────────────────────────────────────────
-              Depth at callback:  min={Stat(fifoDepths, s => s.Min()):F0}  avg={Stat(fifoDepths, s => s.Average()):F1}  max={Stat(fifoDepths, s => s.Max()):F0}
+              Depth at callback:  min={SafeAggregate(fifoDepths, s => s.Min()):F0}  avg={SafeAggregate(fifoDepths, s => s.Average()):F1}  max={SafeAggregate(fifoDepths, s => s.Max()):F0}
 
             ── Timing ─────────────────────────────────────────────────────
-              _lastRenderedMs@CB: min={Stat(lastRenderedAtCb, s => s.Min()):F1}  max={Stat(lastRenderedAtCb, s => s.Max()):F1}
-              _clock@CB:          min={Stat(clockAtCb, s => s.Min()):F1}  max={Stat(clockAtCb, s => s.Max()):F1}
-              _clock@Render:      min={Stat(clockAtRender, s => s.Min()):F1}  max={Stat(clockAtRender, s => s.Max()):F1}
+              _lastRenderedMs@CB: min={SafeAggregate(lastRenderedAtCb, s => s.Min()):F1}  max={SafeAggregate(lastRenderedAtCb, s => s.Max()):F1}
+              _clock@CB:          min={SafeAggregate(clockAtCb, s => s.Min()):F1}  max={SafeAggregate(clockAtCb, s => s.Max()):F1}
+              _clock@Render:      min={SafeAggregate(clockAtRender, s => s.Min()):F1}  max={SafeAggregate(clockAtRender, s => s.Max()):F1}
 
             ── Captured Audio ─────────────────────────────────────────────
               Total frames:       {totalFrames} ({(double)totalFrames / MixerSampleRate * 1000:F1}ms)
@@ -1128,7 +1128,7 @@ public class AdlibGoldIntegrationTests {
             """;
 
         // Always write metrics report to xUnit output for diagnostic visibility
-        _output.WriteLine(report);
+        _testOutputHelper.WriteLine(report);
 
         callbackCount.Should().BeGreaterThan(0,
             $"AudioCallback should have been invoked. Metrics report:\n{report}");
@@ -1217,16 +1217,16 @@ public class AdlibGoldIntegrationTests {
               FIFO frames served: {fifoServed} ({(framesRequested > 0 ? (double)fifoServed / framesRequested * 100 : 0):F1}%)
               Direct-rendered:    {directRendered} ({(framesRequested > 0 ? (double)directRendered / framesRequested * 100 : 0):F1}%)
               FIFO starvations:   {fifoStarvations} / {callbackCount} callbacks ({(callbackCount > 0 ? (double)fifoStarvations / callbackCount * 100 : 0):F1}%)
-              Duration (ms):      min={Stat(callbackDurations, s => s.Min()):F3}  avg={Stat(callbackDurations, s => s.Average()):F3}  max={Stat(callbackDurations, s => s.Max()):F3}
+              Duration (ms):      min={SafeAggregate(callbackDurations, s => s.Min()):F3}  avg={SafeAggregate(callbackDurations, s => s.Average()):F3}  max={SafeAggregate(callbackDurations, s => s.Max()):F3}
 
             ── RenderUpToNow (CPU thread) ─────────────────────────────────
               Invocations:        {renderCount}
               FIFO frames gen'd:  {renderFrames}
               Channel wake-ups:   {wakeUps}
-              Gap ms (now-last):  min={Stat(renderGaps, s => s.Min()):F3}  avg={Stat(renderGaps, s => s.Average()):F3}  max={Stat(renderGaps, s => s.Max()):F3}
+              Gap ms (now-last):  min={SafeAggregate(renderGaps, s => s.Min()):F3}  avg={SafeAggregate(renderGaps, s => s.Average()):F3}  max={SafeAggregate(renderGaps, s => s.Max()):F3}
 
             ── FIFO Queue ─────────────────────────────────────────────────
-              Depth at callback:  min={Stat(fifoDepths, s => s.Min()):F0}  avg={Stat(fifoDepths, s => s.Average()):F1}  max={Stat(fifoDepths, s => s.Max()):F0}
+              Depth at callback:  min={SafeAggregate(fifoDepths, s => s.Min()):F0}  avg={SafeAggregate(fifoDepths, s => s.Average()):F1}  max={SafeAggregate(fifoDepths, s => s.Max()):F0}
 
             ── ASM Test Results ───────────────────────────────────────────
               Timer 1 fired:      {testHandler.Results.Contains((byte)0x00)}
@@ -1239,7 +1239,7 @@ public class AdlibGoldIntegrationTests {
             ═══════════════════════════════════════════════════════════════
             """;
 
-        _output.WriteLine(report);
+        _testOutputHelper.WriteLine(report);
 
         callbackCount.Should().BeGreaterThan(0,
             $"AudioCallback should have been invoked. Metrics report:\n{report}");
@@ -1253,7 +1253,7 @@ public class AdlibGoldIntegrationTests {
     /// Helper to safely compute aggregate statistics on a list.
     /// Returns 0.0 for empty lists.
     /// </summary>
-    private static double Stat(List<double> values, Func<IEnumerable<double>, double> fn) {
+    private static double SafeAggregate(List<double> values, Func<IEnumerable<double>, double> fn) {
         if (values.Count == 0) { return 0.0; }
         return fn(values);
     }
