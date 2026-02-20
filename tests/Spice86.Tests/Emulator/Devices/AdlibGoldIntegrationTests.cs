@@ -964,6 +964,91 @@ public class AdlibGoldIntegrationTests {
             $"but only {nonZero}/100 frames were non-zero");
     }
 
+    /// <summary>
+    /// Runs the real Dune CD game (DNCDPRG.EXE with ADG330 SBP2227) in AdLib Gold
+    /// mode and captures audio output. Verifies that non-silent audio appears within
+    /// the first 6 seconds of execution, reproducing the real-world initial silence bug.
+    /// Requires DUNE_CD_PATH environment variable pointing to the directory containing
+    /// DNCDPRG.EXE. Skips when the game files are not available.
+    /// </summary>
+    [Fact]
+    public void DuneCd_AdlibGold_HasNoExcessiveLeadingSilence() {
+        string? duneCdPath = Environment.GetEnvironmentVariable("DUNE_CD_PATH");
+        if (string.IsNullOrEmpty(duneCdPath)) {
+            // Skip: game files not available
+            return;
+        }
+
+        string exePath = Path.Combine(duneCdPath, "DNCDPRG.EXE");
+        if (!File.Exists(exePath)) {
+            // Skip: DNCDPRG.EXE not found at specified path
+            return;
+        }
+
+        CapturingAudioPlayer capturingPlayer = new(
+            new AudioFormat(SampleRate: 48000, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
+
+        // Run for ~10 seconds worth of cycles (3000 cycles/ms * 10000ms = 30M cycles)
+        // This should be enough to cover the ~6-second silence window
+        long maxCycles = 30_000_000L;
+
+        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+            binName: exePath,
+            enablePit: true,
+            maxCycles: maxCycles,
+            installInterruptVectors: true,
+            enableA20Gate: true,
+            enableXms: true,
+            enableEms: true,
+            cDrive: duneCdPath,
+            sbType: SbType.SBPro2,
+            oplMode: OplMode.Opl3Gold,
+            audioPlayer: capturingPlayer,
+            exeArgs: "ADG330 SBP2227"
+        ).Create();
+
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        // Save WAV for manual inspection
+        string wavPath = Path.GetFullPath("dune_cd_adlib_gold.wav");
+        capturingPlayer.SaveToWav(wavPath);
+
+        float[] samples = capturingPlayer.GetCapturedSamples();
+        int totalFrames = capturingPlayer.CapturedFrameCount;
+
+        // Check first 6 seconds (288000 frames at 48kHz) for non-silent audio
+        int sixSecondsFrames = Math.Min(6 * 48000, totalFrames);
+        int channels = 2;
+        int nonSilentInFirst6Seconds = 0;
+        int firstNonSilentFrame = -1;
+
+        for (int frame = 0; frame < sixSecondsFrames; frame++) {
+            int idx = frame * channels;
+            if (idx + 1 >= samples.Length) { break; }
+            float left = Math.Abs(samples[idx]);
+            float right = Math.Abs(samples[idx + 1]);
+            if (left > SilenceThreshold || right > SilenceThreshold) {
+                nonSilentInFirst6Seconds++;
+                if (firstNonSilentFrame < 0) {
+                    firstNonSilentFrame = frame;
+                }
+            }
+        }
+
+        int totalNonSilent = CountNonSilentFrames(samples, channels);
+
+        totalFrames.Should().BeGreaterThan(0,
+            "Dune CD should have produced audio frames");
+
+        // The test FAILS if the first 6 seconds are all silent (reproducing the bug)
+        nonSilentInFirst6Seconds.Should().BeGreaterThan(0,
+            $"Dune CD AdLib Gold music should be audible within the first 6 seconds, " +
+            $"but all {sixSecondsFrames} frames ({sixSecondsFrames / 48.0:F1}ms) in that window were silent. " +
+            $"Total frames: {totalFrames}, total non-silent: {totalNonSilent}. " +
+            $"WAV saved to: {wavPath}");
+    }
+
     private class SoundTestHandler : DefaultIOPortHandler {
         public List<byte> Results { get; } = new();
         public List<byte> Details { get; } = new();
