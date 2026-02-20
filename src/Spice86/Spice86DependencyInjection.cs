@@ -179,18 +179,13 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS data area created...");
         }
 
-        // Always use cycle-based clock matching DOSBox staging's PIC_FullIndex
-        // timing model where all emulated time derives from CPU cycles.
-        // Falls back to wall-clock (Stopwatch) only when no cycle rate is available.
-        EmulatedClock emulatedClock;
-        if (configuration.InstructionsPerSecond != null) {
-            emulatedClock = new EmulatedClock(state, configuration.InstructionsPerSecond.Value);
-        } else if (configuration.Cycles != null) {
-            long cyclesPerSecond = (long)cyclesLimiter.TargetCpuCyclesPerMs * 1000;
-            emulatedClock = new EmulatedClock(state, cyclesPerSecond);
-        } else {
-            emulatedClock = new EmulatedClock(state, (long)ICyclesLimiter.RealModeCpuCyclesPerMs * 1000);
-        }
+        // Cycle-based clock matching DOSBox staging's PIC_FullIndex timing model
+        // where all emulated time derives from CPU cycles.
+        long cyclesPerSecond = configuration.InstructionsPerSecond
+            ?? (configuration.Cycles != null
+                ? (long)cyclesLimiter.TargetCpuCyclesPerMs * 1000
+                : (long)ICyclesLimiter.RealModeCpuCyclesPerMs * 1000);
+        EmulatedClock emulatedClock = new(state, cyclesPerSecond);
 
         // Register clock and limiter to pause/resume events
         pauseHandler.Pausing += () => emulatedClock.OnPause();

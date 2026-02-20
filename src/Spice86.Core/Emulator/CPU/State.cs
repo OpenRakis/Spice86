@@ -365,16 +365,6 @@ public class State {
     }
 
     /// <summary>
-    /// Adds a specified number of cycles, used by I/O device handlers
-    /// to simulate hardware I/O delays (matching DOSBox staging's
-    /// <c>CPU_Cycles -= delaycyc</c> pattern).
-    /// </summary>
-    /// <param name="count">The number of additional cycles to add.</param>
-    public void AddCycles(int count) {
-        Cycles += count;
-    }
-
-    /// <summary>
     /// Returns all the CPU registers dumped into a string
     /// </summary>
     /// <returns>All the CPU registers dumped into a string</returns>

@@ -117,13 +117,6 @@ public class AdlibGoldIntegrationTests {
     }
 
     /// <summary>
-    /// Baseline test: standard OPL3 mode should produce audio without
-    /// excessive leading silence. Uses a dedicated OPL3-only test program
-    /// (no AdLib Gold control) to program a note and capture the mixer
-    /// output. This confirms that OPL3 has no initial delay, serving as
-    /// the reference for comparison with OPL3Gold mode.
-    /// </summary>
-    /// <summary>
     /// Baseline test: standard OPL3 mode must produce non-silent audio
     /// during execution. Uses a dedicated OPL3-only test program (no AdLib
     /// Gold control) to program a note and capture the mixer output.
@@ -218,22 +211,6 @@ public class AdlibGoldIntegrationTests {
     }
 
     /// <summary>
-    /// Finds the index of the first frame where any channel exceeds the silence threshold.
-    /// </summary>
-    private static int FindFirstNonSilentFrame(float[] interleavedSamples, int channels) {
-        int totalFrames = interleavedSamples.Length / channels;
-        for (int frame = 0; frame < totalFrames; frame++) {
-            for (int ch = 0; ch < channels; ch++) {
-                float sample = interleavedSamples[frame * channels + ch];
-                if (Math.Abs(sample) > SilenceThreshold) {
-                    return frame;
-                }
-            }
-        }
-        return totalFrames; // All silent
-    }
-
-    /// <summary>
     /// Counts the number of frames where any channel exceeds the silence threshold.
     /// </summary>
     private static int CountNonSilentFrames(float[] interleavedSamples, int channels) {
@@ -249,6 +226,12 @@ public class AdlibGoldIntegrationTests {
             }
         }
         return count;
+    }
+
+    private static void AdvanceCycles(State state, int count) {
+        for (int i = 0; i < count; i++) {
+            state.IncCycles();
+        }
     }
 
     private SoundTestHandler RunSoundTest(byte[] program, bool enablePit,
@@ -362,7 +345,7 @@ public class AdlibGoldIntegrationTests {
 
     /// <summary>
     /// Diagnostic: creates an OPL directly (not through the emulator) with
-    /// a controlled mock clock, programs it identically to the ASM test,
+    /// a cycle-based clock, programs it identically to the ASM test,
     /// and checks if the AudioCallback produces non-zero output.
     /// </summary>
     [Fact]
@@ -380,12 +363,8 @@ public class AdlibGoldIntegrationTests {
         AddressReadWriteBreakpoints ioBreakpoints = new();
         IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
 
-        // Use a mock clock that starts at 0 and advances with each call
-        IEmulatedClock mockClock = Substitute.For<IEmulatedClock>();
-        double clockMs = 0.0;
-        mockClock.ElapsedTimeMs.Returns(_ => clockMs);
-
-        EmulationLoopScheduler scheduler = new(mockClock, loggerService);
+        EmulatedClock clock = new(state, 3000000);
+        EmulationLoopScheduler scheduler = new(clock, loggerService);
 
         ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
         cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
@@ -394,56 +373,59 @@ public class AdlibGoldIntegrationTests {
 
         // Create OPL in OPL3Gold mode
         Opl opl = new(mixer, state, ioPortDispatcher, false, loggerService,
-            scheduler, mockClock, cyclesLimiter, dualPic,
+            scheduler, clock, cyclesLimiter, dualPic,
             mode: OplMode.Opl3Gold, sbBase: 0x220);
 
         // Advance time slightly (simulating time passing before first write)
-        clockMs = 1.0;
+        AdvanceCycles(state, 3000); // 1ms
 
         // Program OPL registers (same as opl3_note_playback.asm)
         // Reset timers
-        opl.WriteByte(0x388, 0x04); clockMs += 0.01; // addr: reg 0x04
-        opl.WriteByte(0x389, 0x60); clockMs += 0.01; // data: reset timers
-        opl.WriteByte(0x388, 0x04); clockMs += 0.01;
-        opl.WriteByte(0x389, 0x80); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x04); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x60); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x04); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x80); AdvanceCycles(state, 30);
 
         // Operator 0: multiplier=1
-        opl.WriteByte(0x388, 0x20); clockMs += 0.01;
-        opl.WriteByte(0x389, 0x01); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x20); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x01); AdvanceCycles(state, 30);
 
         // Operator 0: total level = max volume
-        opl.WriteByte(0x388, 0x40); clockMs += 0.01;
-        opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x40); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x00); AdvanceCycles(state, 30);
 
         // Operator 0: attack=15 (fastest), decay=0
-        opl.WriteByte(0x388, 0x60); clockMs += 0.01;
-        opl.WriteByte(0x389, 0xF0); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x60); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0xF0); AdvanceCycles(state, 30);
 
         // Operator 0: sustain=0 (max level), release=0
-        opl.WriteByte(0x388, 0x80); clockMs += 0.01;
-        opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x80); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x00); AdvanceCycles(state, 30);
 
         // Operator 3 (carrier): same settings
-        opl.WriteByte(0x388, 0x23); clockMs += 0.01;
-        opl.WriteByte(0x389, 0x01); clockMs += 0.01;
-        opl.WriteByte(0x388, 0x43); clockMs += 0.01;
-        opl.WriteByte(0x389, 0x00); clockMs += 0.01;
-        opl.WriteByte(0x388, 0x63); clockMs += 0.01;
-        opl.WriteByte(0x389, 0xF0); clockMs += 0.01;
-        opl.WriteByte(0x388, 0x83); clockMs += 0.01;
-        opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x23); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x01); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x43); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x00); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x63); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0xF0); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x83); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x00); AdvanceCycles(state, 30);
 
         // Channel 0: stereo output, feedback=1, additive
-        opl.WriteByte(0x388, 0xC0); clockMs += 0.01;
-        opl.WriteByte(0x389, 0x31); clockMs += 0.01;
+        opl.WriteByte(0x388, 0xC0); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x31); AdvanceCycles(state, 30);
 
         // Frequency: A4 = 440 Hz
-        opl.WriteByte(0x388, 0xA0); clockMs += 0.01;
-        opl.WriteByte(0x389, 0xA5); clockMs += 0.01;
+        opl.WriteByte(0x388, 0xA0); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0xA5); AdvanceCycles(state, 30);
 
         // Key-on + frequency high
-        opl.WriteByte(0x388, 0xB0); clockMs += 0.01;
-        opl.WriteByte(0x389, 0x31); clockMs += 0.01;
+        opl.WriteByte(0x388, 0xB0); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x31); AdvanceCycles(state, 30);
+
+        // Advance cycles for 200ms to let OPL render audio
+        AdvanceCycles(state, 600000);
 
         // Let mixer thread render some blocks after key-on
         Thread.Sleep(200);
@@ -491,64 +473,64 @@ public class AdlibGoldIntegrationTests {
         AddressReadWriteBreakpoints ioBreakpoints = new();
         IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
 
-        IEmulatedClock mockClock = Substitute.For<IEmulatedClock>();
-        double clockMs = 0.0;
-        mockClock.ElapsedTimeMs.Returns(_ => clockMs);
-
-        EmulationLoopScheduler scheduler = new(mockClock, loggerService);
+        EmulatedClock clock = new(state, 3000000);
+        EmulationLoopScheduler scheduler = new(clock, loggerService);
         ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
         cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
         DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
 
         Opl opl = new(mixer, state, ioPortDispatcher, false, loggerService,
-            scheduler, mockClock, cyclesLimiter, dualPic,
+            scheduler, clock, cyclesLimiter, dualPic,
             mode: OplMode.Opl3Gold, sbBase: 0x220);
 
-        clockMs = 1.0;
+        AdvanceCycles(state, 3000); // 1ms
 
         // === EXACT SEQUENCE FROM adlib_gold_init_delay.asm ===
 
         // Step 1: Activate AdLib Gold control
-        opl.WriteByte(0x38A, 0xFF); clockMs += 0.01;
+        opl.WriteByte(0x38A, 0xFF); AdvanceCycles(state, 30);
 
         // Read board options (index 0x00)
-        opl.WriteByte(0x38A, 0x00); clockMs += 0.01;
+        opl.WriteByte(0x38A, 0x00); AdvanceCycles(state, 30);
         byte boardOpts = opl.ReadByte(0x38B);
         boardOpts.Should().Be(0x50, "Board options should indicate 16-bit ISA + surround");
 
         // Step 2: Set FM volumes to max
-        opl.WriteByte(0x38A, 0x09); clockMs += 0.01; // Left FM Volume index
-        opl.WriteByte(0x38B, 0x1F); clockMs += 0.01; // Max
-        opl.WriteByte(0x38A, 0x0A); clockMs += 0.01; // Right FM Volume index
-        opl.WriteByte(0x38B, 0x1F); clockMs += 0.01; // Max
+        opl.WriteByte(0x38A, 0x09); AdvanceCycles(state, 30);
+        opl.WriteByte(0x38B, 0x1F); AdvanceCycles(state, 30);
+        opl.WriteByte(0x38A, 0x0A); AdvanceCycles(state, 30);
+        opl.WriteByte(0x38B, 0x1F); AdvanceCycles(state, 30);
 
         // Step 3: Reset timers
-        opl.WriteByte(0x388, 0x04); clockMs += 0.01;
-        opl.WriteByte(0x389, 0x60); clockMs += 0.01;
-        opl.WriteByte(0x388, 0x04); clockMs += 0.01;
-        opl.WriteByte(0x389, 0x80); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x04); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x60); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x04); AdvanceCycles(state, 30);
+        opl.WriteByte(0x389, 0x80); AdvanceCycles(state, 30);
 
         // Step 4: Deactivate gold control, enable OPL3 mode
-        opl.WriteByte(0x38A, 0xFE); clockMs += 0.01; // Deactivate gold control
-        opl.WriteByte(0x38A, 0x05); clockMs += 0.01; // High bank reg 0x05
-        opl.WriteByte(0x38B, 0x01); clockMs += 0.01; // OPL3 mode enable
+        opl.WriteByte(0x38A, 0xFE); AdvanceCycles(state, 30);
+        opl.WriteByte(0x38A, 0x05); AdvanceCycles(state, 30);
+        opl.WriteByte(0x38B, 0x01); AdvanceCycles(state, 30);
 
         // Step 5: Program operators (same as ASM)
-        opl.WriteByte(0x388, 0x20); clockMs += 0.01; opl.WriteByte(0x389, 0x01); clockMs += 0.01;
-        opl.WriteByte(0x388, 0x40); clockMs += 0.01; opl.WriteByte(0x389, 0x00); clockMs += 0.01;
-        opl.WriteByte(0x388, 0x60); clockMs += 0.01; opl.WriteByte(0x389, 0xF0); clockMs += 0.01;
-        opl.WriteByte(0x388, 0x80); clockMs += 0.01; opl.WriteByte(0x389, 0x00); clockMs += 0.01;
-        opl.WriteByte(0x388, 0x23); clockMs += 0.01; opl.WriteByte(0x389, 0x01); clockMs += 0.01;
-        opl.WriteByte(0x388, 0x43); clockMs += 0.01; opl.WriteByte(0x389, 0x00); clockMs += 0.01;
-        opl.WriteByte(0x388, 0x63); clockMs += 0.01; opl.WriteByte(0x389, 0xF0); clockMs += 0.01;
-        opl.WriteByte(0x388, 0x83); clockMs += 0.01; opl.WriteByte(0x389, 0x00); clockMs += 0.01;
+        opl.WriteByte(0x388, 0x20); AdvanceCycles(state, 30); opl.WriteByte(0x389, 0x01); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x40); AdvanceCycles(state, 30); opl.WriteByte(0x389, 0x00); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x60); AdvanceCycles(state, 30); opl.WriteByte(0x389, 0xF0); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x80); AdvanceCycles(state, 30); opl.WriteByte(0x389, 0x00); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x23); AdvanceCycles(state, 30); opl.WriteByte(0x389, 0x01); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x43); AdvanceCycles(state, 30); opl.WriteByte(0x389, 0x00); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x63); AdvanceCycles(state, 30); opl.WriteByte(0x389, 0xF0); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0x83); AdvanceCycles(state, 30); opl.WriteByte(0x389, 0x00); AdvanceCycles(state, 30);
 
         // Channel 0: stereo output, feedback=1, additive
-        opl.WriteByte(0x388, 0xC0); clockMs += 0.01; opl.WriteByte(0x389, 0x31); clockMs += 0.01;
+        opl.WriteByte(0x388, 0xC0); AdvanceCycles(state, 30); opl.WriteByte(0x389, 0x31); AdvanceCycles(state, 30);
 
         // Frequency + Key-on
-        opl.WriteByte(0x388, 0xA0); clockMs += 0.01; opl.WriteByte(0x389, 0xA5); clockMs += 0.01;
-        opl.WriteByte(0x388, 0xB0); clockMs += 0.01; opl.WriteByte(0x389, 0x31); clockMs += 0.01;
+        opl.WriteByte(0x388, 0xA0); AdvanceCycles(state, 30); opl.WriteByte(0x389, 0xA5); AdvanceCycles(state, 30);
+        opl.WriteByte(0x388, 0xB0); AdvanceCycles(state, 30); opl.WriteByte(0x389, 0x31); AdvanceCycles(state, 30);
+
+        // Advance cycles for 200ms to let OPL render audio
+        AdvanceCycles(state, 600000);
 
         Thread.Sleep(200);
 
@@ -574,171 +556,6 @@ public class AdlibGoldIntegrationTests {
     }
 
     /// <summary>
-    /// Same as the mock-clock test but with the real EmulatedClock (wall-clock).
-    /// If this fails while the mock-clock test passes, the issue is in the
-    /// wall-clock timing interaction with the mixer thread.
-    /// </summary>
-    [Fact]
-    public void Opl_DirectInstance_RealClock_OPL3GoldProducesAudio() {
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
-        IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
-
-        CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
-                SampleFormat: SampleFormat.IeeeFloat32));
-
-        Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
-
-        State state = new(CpuModel.INTEL_8086);
-        AddressReadWriteBreakpoints ioBreakpoints = new();
-        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
-
-        // Use the real EmulatedClock (wall-clock based)
-        EmulatedClock realClock = new();
-
-        EmulationLoopScheduler scheduler = new(realClock, loggerService);
-
-        ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
-        cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
-
-        DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
-
-        // Create OPL in OPL3Gold mode
-        Opl opl = new(mixer, state, ioPortDispatcher, false, loggerService,
-            scheduler, realClock, cyclesLimiter, dualPic,
-            mode: OplMode.Opl3Gold, sbBase: 0x220);
-
-        // Program OPL registers (same as opl3_note_playback.asm)
-        opl.WriteByte(0x388, 0x04);
-        opl.WriteByte(0x389, 0x60);
-        opl.WriteByte(0x388, 0x04);
-        opl.WriteByte(0x389, 0x80);
-        opl.WriteByte(0x388, 0x20);
-        opl.WriteByte(0x389, 0x01);
-        opl.WriteByte(0x388, 0x40);
-        opl.WriteByte(0x389, 0x00);
-        opl.WriteByte(0x388, 0x60);
-        opl.WriteByte(0x389, 0xF0);
-        opl.WriteByte(0x388, 0x80);
-        opl.WriteByte(0x389, 0x00);
-        opl.WriteByte(0x388, 0x23);
-        opl.WriteByte(0x389, 0x01);
-        opl.WriteByte(0x388, 0x43);
-        opl.WriteByte(0x389, 0x00);
-        opl.WriteByte(0x388, 0x63);
-        opl.WriteByte(0x389, 0xF0);
-        opl.WriteByte(0x388, 0x83);
-        opl.WriteByte(0x389, 0x00);
-        opl.WriteByte(0x388, 0xC0);
-        opl.WriteByte(0x389, 0x31);
-        opl.WriteByte(0x388, 0xA0);
-        opl.WriteByte(0x389, 0xA5);
-        opl.WriteByte(0x388, 0xB0);
-        opl.WriteByte(0x389, 0x31);
-
-        // Let mixer thread render some blocks after key-on
-        Thread.Sleep(200);
-
-        opl.Dispose();
-        mixer.Dispose();
-
-        float[] samples = capturingPlayer.GetCapturedSamples();
-        int totalFrames = capturingPlayer.CapturedFrameCount;
-
-        float maxAbsValue = 0;
-        for (int i = 0; i < samples.Length; i++) {
-            float abs = Math.Abs(samples[i]);
-            if (abs > maxAbsValue) { maxAbsValue = abs; }
-        }
-
-        int nonSilentCount = CountNonSilentFrames(samples, channels: 2);
-
-        totalFrames.Should().BeGreaterThan(0,
-            "mixer should have produced frames");
-        nonSilentCount.Should().BeGreaterThan(0,
-            $"OPL3Gold with real clock should produce audio, " +
-            $"but all {totalFrames} frames were silent (max abs = {maxAbsValue:E3}). " +
-            "If this fails while mock-clock test passes, the issue is wall-clock timing");
-    }
-
-    /// <summary>
-    /// Diagnostic: delays register programming by 500ms after OPL creation to
-    /// simulate the real-world scenario where the mixer thread runs many blocks
-    /// of silence before the CPU programs OPL registers. Tests if the noise gate
-    /// or other time-dependent mixer features suppress audio after a long
-    /// initial silence period.
-    /// </summary>
-    [Fact]
-    public void Opl_DirectInstance_DelayedProgramming_OPL3GoldProducesAudio() {
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
-        IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
-
-        CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
-                SampleFormat: SampleFormat.IeeeFloat32));
-
-        Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
-
-        State state = new(CpuModel.INTEL_8086);
-        AddressReadWriteBreakpoints ioBreakpoints = new();
-        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
-
-        EmulatedClock realClock = new();
-        EmulationLoopScheduler scheduler = new(realClock, loggerService);
-        ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
-        cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
-        DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
-
-        Opl opl = new(mixer, state, ioPortDispatcher, false, loggerService,
-            scheduler, realClock, cyclesLimiter, dualPic,
-            mode: OplMode.Opl3Gold, sbBase: 0x220);
-
-        // *** KEY: Delay 500ms before programming registers ***
-        // This simulates the real scenario where the mixer thread runs many
-        // blocks of silence before the CPU programs the OPL.
-        Thread.Sleep(500);
-
-        // Now program the OPL (key-on a note)
-        opl.WriteByte(0x388, 0x04); opl.WriteByte(0x389, 0x60);
-        opl.WriteByte(0x388, 0x04); opl.WriteByte(0x389, 0x80);
-        opl.WriteByte(0x388, 0x20); opl.WriteByte(0x389, 0x01);
-        opl.WriteByte(0x388, 0x40); opl.WriteByte(0x389, 0x00);
-        opl.WriteByte(0x388, 0x60); opl.WriteByte(0x389, 0xF0);
-        opl.WriteByte(0x388, 0x80); opl.WriteByte(0x389, 0x00);
-        opl.WriteByte(0x388, 0x23); opl.WriteByte(0x389, 0x01);
-        opl.WriteByte(0x388, 0x43); opl.WriteByte(0x389, 0x00);
-        opl.WriteByte(0x388, 0x63); opl.WriteByte(0x389, 0xF0);
-        opl.WriteByte(0x388, 0x83); opl.WriteByte(0x389, 0x00);
-        opl.WriteByte(0x388, 0xC0); opl.WriteByte(0x389, 0x31);
-        opl.WriteByte(0x388, 0xA0); opl.WriteByte(0x389, 0xA5);
-        opl.WriteByte(0x388, 0xB0); opl.WriteByte(0x389, 0x31);
-
-        // Wait for mixer to render post-key-on audio
-        Thread.Sleep(200);
-
-        opl.Dispose();
-        mixer.Dispose();
-
-        float[] samples = capturingPlayer.GetCapturedSamples();
-        int totalFrames = capturingPlayer.CapturedFrameCount;
-
-        float maxAbsValue = 0;
-        for (int i = 0; i < samples.Length; i++) {
-            float abs = Math.Abs(samples[i]);
-            if (abs > maxAbsValue) { maxAbsValue = abs; }
-        }
-
-        int nonSilentCount = CountNonSilentFrames(samples, channels: 2);
-
-        totalFrames.Should().BeGreaterThan(0, "mixer should have produced frames");
-        nonSilentCount.Should().BeGreaterThan(0,
-            $"OPL3Gold with 500ms delayed programming should still produce audio, " +
-            $"but all {totalFrames} frames were silent (max abs = {maxAbsValue:E3}). " +
-            "If this fails, the noise gate or sleep/wake cycle suppresses audio after " +
-            "prolonged initial silence");
-    }
-
-    /// <summary>
     /// Reproduces the integrated test conditions with cycle-based EmulatedClock advancing.
     /// State.Cycles starts high (simulating BIOS/DOS init) and advances between
     /// writes (simulating CPU execution). This isolates whether the cycle-based
@@ -757,12 +574,12 @@ public class AdlibGoldIntegrationTests {
 
         State state = new(CpuModel.INTEL_8086);
         // Simulate BIOS/DOS init having executed 100k cycles before OPL creation
-        state.AddCycles(100000);
+        for (int i = 0; i < 100000; i++) { state.IncCycles(); };
 
         AddressReadWriteBreakpoints ioBreakpoints = new();
         IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
 
-        EmulatedClock realClock = new();
+        EmulatedClock realClock = new(state, 3000000);
         EmulationLoopScheduler scheduler = new(realClock, loggerService);
         ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
         cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
@@ -773,60 +590,60 @@ public class AdlibGoldIntegrationTests {
             mode: OplMode.Opl3Gold, sbBase: 0x220);
 
         // Simulate CPU executing more instructions after OPL creation
-        state.AddCycles(10000);
+        for (int i = 0; i < 10000; i++) { state.IncCycles(); };
 
         // Gold control init (like the ASM test)
         opl.WriteByte(0x38A, 0xFF); // Activate gold control
-        state.AddCycles(30);
+        for (int i = 0; i < 30; i++) { state.IncCycles(); };
         opl.WriteByte(0x38A, 0x09); // Left FM volume index
-        state.AddCycles(30);
+        for (int i = 0; i < 30; i++) { state.IncCycles(); };
         opl.WriteByte(0x38B, 0x1F); // Left FM volume = max
-        state.AddCycles(30);
+        for (int i = 0; i < 30; i++) { state.IncCycles(); };
         opl.WriteByte(0x38A, 0x0A); // Right FM volume index
-        state.AddCycles(30);
+        for (int i = 0; i < 30; i++) { state.IncCycles(); };
         opl.WriteByte(0x38B, 0x1F); // Right FM volume = max
-        state.AddCycles(30);
+        for (int i = 0; i < 30; i++) { state.IncCycles(); };
 
         // Deactivate gold control and enable OPL3 mode
         opl.WriteByte(0x38A, 0xFE);
-        state.AddCycles(30);
+        for (int i = 0; i < 30; i++) { state.IncCycles(); };
         opl.WriteByte(0x38A, 0x05); // OPL3 enable high bank addr
-        state.AddCycles(30);
+        for (int i = 0; i < 30; i++) { state.IncCycles(); };
         opl.WriteByte(0x38B, 0x01); // OPL3 enable
-        state.AddCycles(30);
+        for (int i = 0; i < 30; i++) { state.IncCycles(); };
 
         // Timer reset
-        opl.WriteByte(0x388, 0x04); state.AddCycles(30);
-        opl.WriteByte(0x389, 0x60); state.AddCycles(30);
-        opl.WriteByte(0x388, 0x04); state.AddCycles(30);
-        opl.WriteByte(0x389, 0x80); state.AddCycles(30);
+        opl.WriteByte(0x388, 0x04); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0x60); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x388, 0x04); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0x80); for (int i = 0; i < 30; i++) { state.IncCycles(); };
 
         // OPL register programming
-        opl.WriteByte(0x388, 0x20); state.AddCycles(30);
-        opl.WriteByte(0x389, 0x01); state.AddCycles(30);
-        opl.WriteByte(0x388, 0x40); state.AddCycles(30);
-        opl.WriteByte(0x389, 0x00); state.AddCycles(30);
-        opl.WriteByte(0x388, 0x60); state.AddCycles(30);
-        opl.WriteByte(0x389, 0xF0); state.AddCycles(30);
-        opl.WriteByte(0x388, 0x80); state.AddCycles(30);
-        opl.WriteByte(0x389, 0x00); state.AddCycles(30);
-        opl.WriteByte(0x388, 0x23); state.AddCycles(30);
-        opl.WriteByte(0x389, 0x01); state.AddCycles(30);
-        opl.WriteByte(0x388, 0x43); state.AddCycles(30);
-        opl.WriteByte(0x389, 0x00); state.AddCycles(30);
-        opl.WriteByte(0x388, 0x63); state.AddCycles(30);
-        opl.WriteByte(0x389, 0xF0); state.AddCycles(30);
-        opl.WriteByte(0x388, 0x83); state.AddCycles(30);
-        opl.WriteByte(0x389, 0x00); state.AddCycles(30);
-        opl.WriteByte(0x388, 0xC0); state.AddCycles(30);
-        opl.WriteByte(0x389, 0x31); state.AddCycles(30);
-        opl.WriteByte(0x388, 0xA0); state.AddCycles(30);
-        opl.WriteByte(0x389, 0xA5); state.AddCycles(30);
-        opl.WriteByte(0x388, 0xB0); state.AddCycles(30);
-        opl.WriteByte(0x389, 0x31); state.AddCycles(30); // Key-on
+        opl.WriteByte(0x388, 0x20); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0x01); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x388, 0x40); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0x00); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x388, 0x60); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0xF0); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x388, 0x80); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0x00); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x388, 0x23); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0x01); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x388, 0x43); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0x00); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x388, 0x63); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0xF0); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x388, 0x83); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0x00); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x388, 0xC0); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0x31); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x388, 0xA0); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0xA5); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x388, 0xB0); for (int i = 0; i < 30; i++) { state.IncCycles(); };
+        opl.WriteByte(0x389, 0x31); for (int i = 0; i < 30; i++) { state.IncCycles(); }; // Key-on
 
         // Simulate busy-wait: advance cycles for 200ms equivalent
-        state.AddCycles(600000); // 200ms * 3000 cycles/ms
+        for (int i = 0; i < 600000; i++) { state.IncCycles(); }; // 200ms * 3000 cycles/ms
 
         // Let mixer thread capture audio
         Thread.Sleep(200);

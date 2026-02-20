@@ -118,7 +118,7 @@ public class DosFileManagerTests {
         A20Gate a20Gate = new(configuration.A20Gate);
         Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
-        IEmulatedClock emulatedClock = new EmulatedClock();
+        IEmulatedClock emulatedClock = new EmulatedClock(state, (long)ICyclesLimiter.RealModeCpuCyclesPerMs * 1000);
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
 

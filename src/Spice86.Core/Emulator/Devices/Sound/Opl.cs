@@ -138,20 +138,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         _oplIrqLine = oplIrqLine;
         _ctrlMixerEnabled = mixerEnabled;
 
-        // Render timing uses the same clock as the rest of the emulator.
-        // When the global clock is cycle-based (matching DOSBox staging's
-        // PIC_FullIndex), use it directly. When running with a wall-clock
-        // EmulatedClock, create a separate cycle-based instance for
-        // deterministic render timing.
-        if (clock is EmulatedClock emClock && emClock.IsCycleBased) {
-            _renderClock = emClock;
-        } else {
-            int cyclesPerMs = cyclesLimiter.TargetCpuCyclesPerMs > 0
-                ? cyclesLimiter.TargetCpuCyclesPerMs
-                : ICyclesLimiter.RealModeCpuCyclesPerMs;
-            long renderCyclesPerSecond = (long)cyclesPerMs * 1000;
-            _renderClock = new EmulatedClock(state, renderCyclesPerSecond);
-        }
+        // Render timing: the global clock is always cycle-based
+        // (matching DOSBox staging's PIC_FullIndex model).
+        _renderClock = (EmulatedClock)clock;
 
         // Build channel features based on mode
         HashSet<ChannelFeature> features = [
@@ -203,6 +192,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     }
 
     private void RenderUpToNow() {
+        _renderClock.UpdateAtomicIndex();
         double now = _renderClock.ElapsedTimeMs;
         // Wake up the channel and update the last rendered time datum.
         if (_mixerChannel.WakeUp()) {
@@ -693,7 +683,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 _mixerChannel.AddSamplesFloat(1, frameData);
                 framesRemaining--;
             }
-            _lastRenderedMs = _renderClock.ElapsedTimeMs;
+            _lastRenderedMs = _renderClock.AtomicElapsedTimeMs;
         }
     }
 

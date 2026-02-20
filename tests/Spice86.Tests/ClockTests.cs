@@ -2,9 +2,7 @@
 
 using FluentAssertions;
 
-using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM.Clock;
 
 using Xunit;
@@ -33,24 +31,6 @@ public class ClockTests {
         // Assert
         DateTime expectedDateTime = startTime.AddSeconds(2);
         currentDateTime.Should().BeCloseTo(expectedDateTime, TimeSpan.FromMilliseconds(100));
-    }
-
-    /// <summary>
-    /// Tests that EmulatedClock with wall-clock timing works correctly.
-    /// </summary>
-    [Fact]
-    public void EmulatedClock_WallClock_StartTime_CanBeSetAndCurrentDateTimeCalculated() {
-        // Arrange
-        DateTime startTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-        EmulatedClock clock = new EmulatedClock();
-
-        // Act
-        clock.StartTime = startTime;
-        DateTime currentDateTime = clock.CurrentDateTime;
-
-        // Assert - CurrentDateTime should be StartTime plus elapsed time
-        // Since the stopwatch has been running, it should be after StartTime
-        currentDateTime.Should().BeOnOrAfter(startTime);
     }
 
     /// <summary>
@@ -88,26 +68,5 @@ public class ClockTests {
 
         // Assert
         act.Should().NotThrow();
-    }
-
-    /// <summary>
-    /// Tests that IsCycleBased returns true for cycle-based clock.
-    /// </summary>
-    [Fact]
-    public void EmulatedClock_IsCycleBased_TrueWhenStateProvided() {
-        State state = new State(CpuModel.INTEL_80286);
-        EmulatedClock clock = new EmulatedClock(state, 1000);
-
-        clock.IsCycleBased.Should().BeTrue();
-    }
-
-    /// <summary>
-    /// Tests that IsCycleBased returns false for wall-clock mode.
-    /// </summary>
-    [Fact]
-    public void EmulatedClock_IsCycleBased_FalseWhenNoState() {
-        EmulatedClock clock = new EmulatedClock();
-
-        clock.IsCycleBased.Should().BeFalse();
     }
 }

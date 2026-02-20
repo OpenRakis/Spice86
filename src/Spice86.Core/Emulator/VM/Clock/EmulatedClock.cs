@@ -2,19 +2,16 @@
 
 using Spice86.Core.Emulator.CPU;
 
-using System.Diagnostics;
-
 /// <summary>
-/// Emulated clock that derives time from CPU cycles when <see cref="State"/> is provided,
-/// matching DOSBox staging's <c>PIC_FullIndex</c> timing model. Falls back to
-/// wall-clock (<see cref="Stopwatch"/>) when running without cycle tracking.
+/// Emulated clock that derives time from CPU cycles, matching DOSBox staging's
+/// <c>PIC_FullIndex</c> timing model.
 /// </summary>
 /// <remarks>
 /// Two time accessors are provided for thread-safe use:
 /// <list type="bullet">
 ///   <item><see cref="ElapsedTimeMs"/> — precise, reads <c>State.Cycles</c> directly
-///     (equivalent to DOSBox staging's <c>PIC_FullIndex()</c>). When no <c>State</c>
-///     is provided, reads from <see cref="Stopwatch"/>. Used from the emulation thread.</item>
+///     (equivalent to DOSBox staging's <c>PIC_FullIndex()</c>).
+///     Used from the emulation thread.</item>
 ///   <item><see cref="AtomicElapsedTimeMs"/> — thread-safe snapshot updated periodically
 ///     via <see cref="UpdateAtomicIndex"/>. Equivalent to DOSBox staging's
 ///     <c>PIC_AtomicIndex()</c>. Used from the mixer thread
@@ -22,13 +19,8 @@ using System.Diagnostics;
 /// </list>
 /// </remarks>
 public class EmulatedClock : IEmulatedClock {
-    private readonly State? _cpuState;
+    private readonly State _cpuState;
     private long _cyclesPerSecond;
-
-    // Wall-clock fallback when no CPU state is provided
-    private int _ticks;
-    private readonly Stopwatch _stopwatch = new();
-    private double _cachedTime;
 
     // Stores the atomic snapshot as raw bits via BitConverter,
     // because C# volatile does not support double directly.
@@ -39,51 +31,21 @@ public class EmulatedClock : IEmulatedClock {
     /// </summary>
     /// <param name="cpuState">CPU state providing the cycle counter.</param>
     /// <param name="cyclesPerSecond">Number of CPU cycles per second.</param>
-    /// <param name="startTime">Optional start time for date/time calculations.</param>
-    public EmulatedClock(State cpuState, long cyclesPerSecond, DateTime? startTime = null) {
+    public EmulatedClock(State cpuState, long cyclesPerSecond) {
         _cpuState = cpuState;
         _cyclesPerSecond = cyclesPerSecond;
-        StartTime = startTime ?? DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Creates a wall-clock (Stopwatch) based clock. Used when CPU state is not available.
-    /// </summary>
-    /// <param name="startTime">Optional start time for date/time calculations.</param>
-    public EmulatedClock(DateTime? startTime = null) {
-        StartTime = startTime ?? DateTime.UtcNow;
-        _stopwatch.Start();
+        StartTime = DateTime.UtcNow;
     }
 
     /// <summary>
     /// Gets or sets the number of CPU cycles per second.
-    /// Only meaningful when using cycle-based timing.
     /// </summary>
     public long CyclesPerSecond {
         get => _cyclesPerSecond;
         set => _cyclesPerSecond = value;
     }
 
-    /// <summary>
-    /// Gets whether this clock uses cycle-based timing (vs wall-clock).
-    /// </summary>
-    public bool IsCycleBased => _cpuState is not null;
-
-    public double ElapsedTimeMs {
-        get {
-            if (_cpuState is not null) {
-                return (double)_cpuState.Cycles * 1000 / _cyclesPerSecond;
-            }
-
-            // Wall-clock fallback: Stopwatch.GetTimestamp can be slow,
-            // so we only query it periodically.
-            if (_ticks++ % 100 != 0) {
-                return _cachedTime;
-            }
-            _cachedTime = _stopwatch.Elapsed.TotalMilliseconds;
-            return _cachedTime;
-        }
-    }
+    public double ElapsedTimeMs => (double)_cpuState.Cycles * 1000 / _cyclesPerSecond;
 
     /// <summary>
     /// Returns a thread-safe snapshot of elapsed time, updated periodically
@@ -107,17 +69,15 @@ public class EmulatedClock : IEmulatedClock {
 
     public DateTime CurrentDateTime => StartTime.AddMilliseconds(ElapsedTimeMs);
 
+    /// <summary>
+    /// Pause is a no-op for cycle-based clocks: cycles don't advance when the CPU is paused.
+    /// </summary>
     public void OnPause() {
-        if (_cpuState is null) {
-            _stopwatch.Stop();
-        }
-        // When cycle-based, pause is a no-op: cycles don't advance when CPU is paused
     }
 
+    /// <summary>
+    /// Resume is a no-op for cycle-based clocks: cycles resume advancing with the CPU.
+    /// </summary>
     public void OnResume() {
-        if (_cpuState is null) {
-            _stopwatch.Start();
-        }
-        // When cycle-based, resume is a no-op: cycles don't advance when CPU is paused
     }
 }
