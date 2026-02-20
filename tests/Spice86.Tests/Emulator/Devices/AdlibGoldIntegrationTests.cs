@@ -363,7 +363,7 @@ public class AdlibGoldIntegrationTests {
         AddressReadWriteBreakpoints ioBreakpoints = new();
         IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
 
-        EmulatedClock clock = new(state, 3000000);
+        CyclesClock clock = new(state, 3000000);
         EmulationLoopScheduler scheduler = new(clock, loggerService);
 
         ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
@@ -473,7 +473,7 @@ public class AdlibGoldIntegrationTests {
         AddressReadWriteBreakpoints ioBreakpoints = new();
         IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
 
-        EmulatedClock clock = new(state, 3000000);
+        CyclesClock clock = new(state, 3000000);
         EmulationLoopScheduler scheduler = new(clock, loggerService);
         ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
         cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
@@ -556,13 +556,13 @@ public class AdlibGoldIntegrationTests {
     }
 
     /// <summary>
-    /// Reproduces the integrated test conditions with cycle-based EmulatedClock advancing.
+    /// Reproduces the integrated test conditions with cycle-based CyclesClock advancing.
     /// State.Cycles starts high (simulating BIOS/DOS init) and advances between
     /// writes (simulating CPU execution). This isolates whether the cycle-based
     /// timing interaction causes the silence.
     /// </summary>
     [Fact]
-    public void Opl_DirectInstance_EmulatedClock_WithAdvancingCycles_ProducesAudio() {
+    public void Opl_DirectInstance_CyclesClock_WithAdvancingCycles_ProducesAudio() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
 
@@ -579,7 +579,7 @@ public class AdlibGoldIntegrationTests {
         AddressReadWriteBreakpoints ioBreakpoints = new();
         IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
 
-        EmulatedClock realClock = new(state, 3000000);
+        CyclesClock realClock = new(state, 3000000);
         EmulationLoopScheduler scheduler = new(realClock, loggerService);
         ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
         cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
@@ -664,7 +664,7 @@ public class AdlibGoldIntegrationTests {
 
         totalFrames.Should().BeGreaterThan(0, "mixer should have produced frames");
         nonSilentCount.Should().BeGreaterThan(0,
-            $"OPL3Gold with cycle-based EmulatedClock and advancing cycles should produce audio, " +
+            $"OPL3Gold with cycle-based CyclesClock and advancing cycles should produce audio, " +
             $"but all {totalFrames} frames were silent (max abs = {maxAbsValue:E3}). " +
             "If this fails, the cycle-based timing interaction causes silence.");
     }

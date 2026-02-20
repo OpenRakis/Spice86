@@ -71,15 +71,14 @@ public class Spice86DependencyInjection : IDisposable {
     private bool _machineDisposedAfterRun;
 
     public Spice86DependencyInjection(Configuration configuration)
-        : this(configuration, null, null) {
+        : this(configuration, null) {
     }
 
     internal Spice86DependencyInjection(Configuration configuration, MainWindow? mainWindow)
         : this(configuration, mainWindow, null) {
     }
 
-    internal Spice86DependencyInjection(Configuration configuration, MainWindow? mainWindow,
-        AudioPlayer? audioPlayer) {
+    internal Spice86DependencyInjection(Configuration configuration, MainWindow? mainWindow, AudioPlayer? audioPlayer) {
         LoggerService loggerService = new LoggerService();
         _loggerService = loggerService;
         SetLoggingLevel(loggerService, configuration);
@@ -179,13 +178,9 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS data area created...");
         }
 
-        // Cycle-based clock matching DOSBox staging's PIC_FullIndex timing model
-        // where all emulated time derives from CPU cycles.
-        long cyclesPerSecond = configuration.InstructionsPerSecond
-            ?? (configuration.Cycles != null
-                ? (long)cyclesLimiter.TargetCpuCyclesPerMs * 1000
-                : (long)ICyclesLimiter.RealModeCpuCyclesPerMs * 1000);
-        EmulatedClock emulatedClock = new(state, cyclesPerSecond);
+        IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null
+            ? new CyclesClock(state, configuration.InstructionsPerSecond.Value)
+            : new EmulatedClock();
 
         // Register clock and limiter to pause/resume events
         pauseHandler.Pausing += () => emulatedClock.OnPause();
@@ -346,9 +341,9 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
-        Mixer mixer = audioPlayer is not null
-            ? new Mixer(loggerService, pauseHandler, audioPlayer)
-            : new Mixer(loggerService, configuration.AudioEngine, pauseHandler);
+        Mixer mixer = audioPlayer != null
+            ? new(loggerService, pauseHandler, audioPlayer)
+            : new(loggerService, configuration.AudioEngine, pauseHandler);
         var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
@@ -373,8 +368,7 @@ public class Spice86DependencyInjection : IDisposable {
         Opl OPL = new(mixer, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService,
             emulationLoopScheduler, emulatedClock, cyclesLimiter, dualPic,
-            mode: configuration.OplMode, sbBase: configuration.SbBase, enableOplIrq: false,
-            mixerEnabled: configuration.SbType != SbType.None);
+            mode: configuration.OplMode, sbBase: configuration.SbBase, enableOplIrq: false);
 
         SoundBlaster soundBlaster = new(ioPortDispatcher,
             state, dmaSystem, dualPic, mixer, OPL, loggerService,

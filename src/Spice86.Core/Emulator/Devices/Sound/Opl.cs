@@ -31,12 +31,12 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly AdlibGold? _adlibGold;
     private readonly ILoggerService _logger;
     private readonly Opl3Chip _chip = new();
-    private readonly Lock _chipLock = new();
+    private readonly ReaderWriterLockSlim _chipLock = new();
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
-    private readonly EmulatedClock _renderClock;
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly DualPic _dualPic;
+    private readonly byte _oplIrqLine;
     private readonly OplMode _mode;
 
     // Two timer chips for DualOpl2 mode or single chip for other modes
@@ -57,13 +57,21 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private readonly MixerChannel _mixerChannel;
 
+    private readonly bool _useOplIrq;
     private bool _disposed;
 
     // OPL3 new mode flag
     private byte _newMode;
 
+    // Last selected address in the chip — mirrors dosbox-staging's
+    // union { uint16_t normal; uint8_t dual[2]; } reg;
     private OplRegister _reg;
 
+    /// <summary>
+    ///     Union-compatible register address, matching dosbox-staging's
+    ///     <c>union { uint16_t normal; uint8_t dual[2]; } reg</c>.
+    ///     On little-endian, <see cref="Dual0"/> is the low byte of <see cref="Normal"/>.
+    /// </summary>
     [StructLayout(LayoutKind.Explicit)]
     private struct OplRegister {
         /// <summary>Full 16-bit register address (used by Opl2/Opl3/Opl3Gold modes).</summary>
@@ -79,26 +87,12 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         public byte Dual1;
     }
 
-    private struct AdLibGoldControl {
-        private const byte DefaultVolume = 0xFF;
-
-        public byte Index;
-        public byte LeftVolume;
-        public byte RightVolume;
-        public bool Active;
-        public bool MixerEnabled;
-
-        public AdLibGoldControl(bool mixerEnabled) {
-            Index = 0;
-            LeftVolume = DefaultVolume;
-            RightVolume = DefaultVolume;
-            Active = false;
-            MixerEnabled = mixerEnabled;
-        }
-    }
-
     // AdLib Gold control state
-    private AdLibGoldControl _ctrl;
+    private byte _ctrlIndex;
+    private byte _ctrlLvol = 0xFF;
+    private byte _ctrlRvol = 0xFF;
+    private bool _ctrlActive;
+    private readonly bool _ctrlMixerEnabled;
 
     // Sound Blaster base address for port registration
     private readonly ushort _sbBase;
@@ -117,11 +111,15 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <param name="dualPic">The dual PIC.</param>
     /// <param name="mode">OPL synthesis mode.</param>
     /// <param name="sbBase">Sound Blaster base I/O address for port registration.</param>
+    /// <param name="enableOplIrq">True to forward OPL IRQs to the PIC.</param>
+    /// <param name="oplIrqLine">IRQ line used when OPL IRQs are enabled.</param>
+    /// <param name="mixerEnabled">True if SB mixer controls OPL volume.</param>
     public Opl(Mixer mixer, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
         ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock,
         ICyclesLimiter cyclesLimiter, DualPic dualPic,
-        OplMode mode = OplMode.Opl3, ushort sbBase = 0x220)
+        OplMode mode = OplMode.Opl3, ushort sbBase = 0x220, bool enableOplIrq = false, byte oplIrqLine = 5,
+        bool mixerEnabled = false)
         : base(state, failOnUnhandledPort, loggerService) {
 
         _logger = loggerService;
@@ -135,11 +133,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         _cyclesLimiter = cyclesLimiter;
         _timerChips = [new OplChip(clock), new OplChip(clock)];
         _dualPic = dualPic;
-        _ctrl = new AdLibGoldControl(mixerEnabled: true);
-
-        // Render timing: the global clock is always cycle-based
-        // (matching DOSBox staging's PIC_FullIndex model).
-        _renderClock = (EmulatedClock)clock;
+        _useOplIrq = enableOplIrq;
+        _oplIrqLine = oplIrqLine;
+        _ctrlMixerEnabled = mixerEnabled;
 
         // Build channel features based on mode
         HashSet<ChannelFeature> features = [
@@ -184,15 +180,14 @@ public class Opl : DefaultIOPortHandler, IDisposable {
 
         const double MillisInSecond = 1000.0;
         _msPerFrame = MillisInSecond / OplSampleRateHz;
-        _lastRenderedMs = _renderClock.ElapsedTimeMs;
+        _lastRenderedMs = _clock.ElapsedTimeMs;
         Init();
         InitPortHandlers(ioPortDispatcher);
         mixer.UnlockMixerThread();
     }
 
     private void RenderUpToNow() {
-        _renderClock.UpdateAtomicIndex();
-        double now = _renderClock.ElapsedTimeMs;
+        double now = _clock.ElapsedTimeMs;
         // Wake up the channel and update the last rendered time datum.
         if (_mixerChannel.WakeUp()) {
             _lastRenderedMs = now;
@@ -349,7 +344,13 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             if (_logger.IsEnabled(LogEventLevel.Information)) {
                 _logger.Information("OPL: Shutting down {Mode}", _mode);
             }
+
+            if (_useOplIrq) {
+                _dualPic.DeactivateIrq(_oplIrqLine);
+            }
+
             _adlibGold?.Dispose();
+            _chipLock.Dispose();
         }
 
         _disposed = true;
@@ -382,7 +383,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 return (byte)(_timerChips[(port >> 1) & 1].Read() | 0x06);
 
             case OplMode.Opl3Gold:
-                if (_ctrl.Active) {
+                if (_ctrlActive) {
                     if (port == 0x38A) {
                         // Control status, not busy
                         return 0;
@@ -409,12 +410,15 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         if (_disposed) {
             return;
         }
-        lock (_chipLock) {
+        _chipLock.EnterWriteLock();
+        try {
             if (_logger.IsEnabled(LogEventLevel.Verbose)) {
                 _logger.Verbose("OPL: WriteByte port=0x{Port:X4} value=0x{Value:X2} mode={Mode}", port, value, _mode);
             }
             RenderUpToNow();
             PortWrite(port, value);
+        } finally {
+            _chipLock.ExitWriteLock();
         }
     }
 
@@ -424,9 +428,9 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             // Data write
             switch (_mode) {
                 case OplMode.Opl3Gold:
-                    if (port == 0x38B && _ctrl.Active) {
+                    if (port == 0x38B && _ctrlActive) {
                         if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                            string desc = _ctrl.Index switch {
+                            string desc = _ctrlIndex switch {
                                 0x04 => "Stereo Volume Left",
                                 0x05 => "Stereo Volume Right",
                                 0x06 => "Bass",
@@ -437,7 +441,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                                 0x18 => "Surround Control",
                                 _ => "AdlibGold control"
                             };
-                            _logger.Debug("OPL: AdlibGold control write index=0x{Idx:X2} ({Desc}) value=0x{Value:X2}", _ctrl.Index, desc, value);
+                            _logger.Debug("OPL: AdlibGold control write index=0x{Idx:X2} ({Desc}) value=0x{Value:X2}", _ctrlIndex, desc, value);
                         }
                         AdlibGoldControlWrite(value);
                         return;
@@ -499,18 +503,18 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 case OplMode.Opl3Gold:
                     if (port == 0x38A) {
                         if (value == 0xFF) {
-                            _ctrl.Active = true;
+                            _ctrlActive = true;
                             return;
                         }
                         if (value == 0xFE) {
-                            _ctrl.Active = false;
+                            _ctrlActive = false;
                             return;
                         }
-                        if (_ctrl.Active) {
-                            _ctrl.Index = value;
-                            string idxDesc = GetAdlibGoldControlDescription(_ctrl.Index);
+                        if (_ctrlActive) {
+                            _ctrlIndex = value;
+                            string idxDesc = GetAdlibGoldControlDescription(_ctrlIndex);
                             if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                                _logger.Debug("OPL: AdlibGold control index set to 0x{Idx:X2} ({Desc})", _ctrl.Index, idxDesc);
+                                _logger.Debug("OPL: AdlibGold control index set to 0x{Idx:X2} ({Desc})", _ctrlIndex, idxDesc);
                             }
                             return;
                         }
@@ -549,7 +553,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private void WriteReg(ushort selectedReg, byte value) {
         _chip.WriteRegisterBuffered(selectedReg, value);
         if (selectedReg == 0x105) {
-            _newMode = (byte)(value & 0x01);
+            _newMode = (byte)(selectedReg & 0x01);
         }
     }
 
@@ -591,7 +595,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             return;
         }
 
-        switch (_ctrl.Index) {
+        switch (_ctrlIndex) {
             case 0x04:
                 _adlibGold.StereoControlWrite(StereoProcessorControlReg.VolumeLeft, value);
                 break;
@@ -608,11 +612,11 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 _adlibGold.StereoControlWrite(StereoProcessorControlReg.SwitchFunctions, value);
                 break;
             case 0x09: // Left FM Volume
-                _ctrl.LeftVolume = value;
+                _ctrlLvol = value;
                 SetVolume();
                 break;
             case 0x0A: // Right FM Volume
-                _ctrl.RightVolume = value;
+                _ctrlRvol = value;
                 SetVolume();
                 break;
             case 0x18: // Surround
@@ -622,19 +626,19 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     }
 
     private void SetVolume() {
-        if (_ctrl.MixerEnabled) {
+        if (_ctrlMixerEnabled) {
             // Dune CD version uses 32 volume steps in an apparent mistake, should be 128
-            float leftVol = (_ctrl.LeftVolume & 0x1F) / 31.0f;
-            float rightVol = (_ctrl.RightVolume & 0x1F) / 31.0f;
+            float leftVol = (_ctrlLvol & 0x1F) / 31.0f;
+            float rightVol = (_ctrlRvol & 0x1F) / 31.0f;
             _mixerChannel.AppVolume = new AudioFrame(leftVol, rightVol);
         }
     }
 
     private byte AdlibGoldControlRead() {
-        return _ctrl.Index switch {
+        return _ctrlIndex switch {
             0x00 => 0x50, // Board Options: 16-bit ISA, surround module, no telephone/CDROM
-            0x09 => _ctrl.LeftVolume, // Left FM Volume
-            0x0A => _ctrl.RightVolume, // Right FM Volume
+            0x09 => _ctrlLvol, // Left FM Volume
+            0x0A => _ctrlRvol, // Right FM Volume
             0x15 => 0x388 >> 3, // Audio Relocation - Cryo installer detection
             _ => 0xFF
         };
@@ -659,7 +663,8 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             return;
         }
         int framesRemaining = framesRequested;
-        lock (_chipLock) {
+        _chipLock.EnterWriteLock();
+        try {
             Span<float> frameData = stackalloc float[2];
             // First, send any frames we've queued since the last callback
             while (framesRemaining > 0 && _fifo.Count > 0) {
@@ -677,7 +682,12 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 _mixerChannel.AddSamplesFloat(1, frameData);
                 framesRemaining--;
             }
-            _lastRenderedMs = _renderClock.AtomicElapsedTimeMs;
+            // Update last rendered time to now using the atomic snapshot.
+            // AudioCallback runs on the mixer thread, so we must use AtomicFullIndex
+            // to avoid torn reads of the emulation thread's cycle state.
+            _lastRenderedMs = _clock.ElapsedTimeMs;
+        } finally {
+            _chipLock.ExitWriteLock();
         }
     }
 

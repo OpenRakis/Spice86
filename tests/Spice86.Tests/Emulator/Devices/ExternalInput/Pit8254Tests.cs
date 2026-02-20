@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
@@ -33,7 +32,7 @@ public class Pit8254Tests {
         State state = new(CpuModel.INTEL_80286);
         _ioPortDispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
         var pic = new DualPic(_ioPortDispatcher, state, logger, false);
-        var emulatedClock = new EmulatedClock(state, (long)ICyclesLimiter.RealModeCpuCyclesPerMs * 1000);
+        var emulatedClock = new EmulatedClock();
         var emulationLoopScheduler = new EmulationLoopScheduler(emulatedClock, logger);
         _pit = new PitTimer(_ioPortDispatcher, state, pic, _speaker, emulationLoopScheduler, emulatedClock, logger, false);
     }
