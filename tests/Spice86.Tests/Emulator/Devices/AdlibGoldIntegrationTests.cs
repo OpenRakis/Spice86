@@ -31,6 +31,7 @@ using Xunit;/// <summary>
 public class AdlibGoldIntegrationTests {
     private const int ResultPort = 0x999;
     private const int DetailsPort = 0x998;
+    private const int MixerSampleRate = 48000;
 
     /// <summary>
     /// The mixer runs at 48000 Hz. Audio should appear within a few ms
@@ -64,7 +65,7 @@ public class AdlibGoldIntegrationTests {
         byte[] program = File.ReadAllBytes(comPath);
 
         CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
                 SampleFormat: SampleFormat.IeeeFloat32));
 
         // Act - Run the test program with audio capture
@@ -110,7 +111,7 @@ public class AdlibGoldIntegrationTests {
         // with the key-on period.
         nonSilentCount.Should().BeGreaterThan(0,
             $"captured audio should contain non-silent frames after OPL key-on, " +
-            $"but all {totalFrames} frames ({(double)totalFrames / 48000 * 1000:F1}ms) were silent " +
+            $"but all {totalFrames} frames ({(double)totalFrames / MixerSampleRate * 1000:F1}ms) were silent " +
             $"(max abs sample value = {maxAbsValue:E3}). " +
             $"WAV saved to: {wavPath}. " +
             "This indicates the AdLib Gold rendering pipeline is not producing audio");
@@ -130,7 +131,7 @@ public class AdlibGoldIntegrationTests {
         byte[] program = File.ReadAllBytes(comPath);
 
         CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
                 SampleFormat: SampleFormat.IeeeFloat32));
 
         // Act
@@ -160,7 +161,7 @@ public class AdlibGoldIntegrationTests {
         // Assert - OPL3 must produce non-silent audio (no delay issue)
         nonSilentCount.Should().BeGreaterThan(0,
             $"captured audio should contain non-silent frames after OPL key-on, " +
-            $"but all {totalFrames} frames ({(double)totalFrames / 48000 * 1000:F1}ms) were silent. " +
+            $"but all {totalFrames} frames ({(double)totalFrames / MixerSampleRate * 1000:F1}ms) were silent. " +
             "OPL3 should produce audio immediately — this is the baseline for comparison");
     }
 
@@ -176,7 +177,7 @@ public class AdlibGoldIntegrationTests {
         byte[] program = File.ReadAllBytes(comPath);
 
         CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
                 SampleFormat: SampleFormat.IeeeFloat32));
 
         // Run in OPL3Gold mode but with OPL3-only program (no gold control)
@@ -273,7 +274,7 @@ public class AdlibGoldIntegrationTests {
         IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
 
         CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
                 SampleFormat: SampleFormat.IeeeFloat32));
 
         Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
@@ -354,7 +355,7 @@ public class AdlibGoldIntegrationTests {
         IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
 
         CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
                 SampleFormat: SampleFormat.IeeeFloat32));
 
         Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
@@ -464,7 +465,7 @@ public class AdlibGoldIntegrationTests {
         IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
 
         CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
                 SampleFormat: SampleFormat.IeeeFloat32));
 
         Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
@@ -567,7 +568,7 @@ public class AdlibGoldIntegrationTests {
         IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
 
         CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
                 SampleFormat: SampleFormat.IeeeFloat32));
 
         Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
@@ -682,7 +683,7 @@ public class AdlibGoldIntegrationTests {
         IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
 
         CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
                 SampleFormat: SampleFormat.IeeeFloat32));
 
         Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
@@ -771,7 +772,7 @@ public class AdlibGoldIntegrationTests {
         nonSilentCount.Should().BeGreaterThan(0,
             $"After 1s startup delay then OPL key-on + 500ms playback, " +
             $"captured audio should contain non-silent frames, " +
-            $"but all {totalFrames} frames ({(double)totalFrames / 48000 * 1000:F1}ms) were silent " +
+            $"but all {totalFrames} frames ({(double)totalFrames / MixerSampleRate * 1000:F1}ms) were silent " +
             $"(max abs = {maxAbsValue:E3}). WAV: {wavPath}. " +
             "This reproduces the real-game initial silence condition.");
     }
@@ -787,7 +788,7 @@ public class AdlibGoldIntegrationTests {
         IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
 
         CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
                 SampleFormat: SampleFormat.IeeeFloat32));
 
         Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
@@ -986,12 +987,12 @@ public class AdlibGoldIntegrationTests {
         }
 
         CapturingAudioPlayer capturingPlayer = new(
-            new AudioFormat(SampleRate: 48000, Channels: 2,
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
                 SampleFormat: SampleFormat.IeeeFloat32));
 
-        // Run for ~10 seconds worth of cycles (3000 cycles/ms * 10000ms = 30M cycles)
+        // Run for ~10 seconds worth of cycles (RealModeCpuCyclesPerMs * 10000ms)
         // This should be enough to cover the ~6-second silence window
-        long maxCycles = 30_000_000L;
+        long maxCycles = ICyclesLimiter.RealModeCpuCyclesPerMs * 10_000L;
 
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: exePath,
@@ -1018,7 +1019,7 @@ public class AdlibGoldIntegrationTests {
         int totalFrames = capturingPlayer.CapturedFrameCount;
 
         // Check first 6 seconds (288000 frames at 48kHz) for non-silent audio
-        int sixSecondsFrames = Math.Min(6 * 48000, totalFrames);
+        int sixSecondsFrames = Math.Min(6 * MixerSampleRate, totalFrames);
         int channels = 2;
         int nonSilentInFirst6Seconds = 0;
         int firstNonSilentFrame = -1;
