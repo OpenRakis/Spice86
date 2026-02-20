@@ -666,7 +666,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 frameData[0] = frame.Left;
                 frameData[1] = frame.Right;
                 _mixerChannel.AddSamplesFloat(1, frameData);
-                framesRemaining--;
+                --framesRemaining;
             }
             // If the queue's run dry, render the remainder and sync-up our time datum
             while (framesRemaining > 0) {
@@ -674,7 +674,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 frameData[0] = frame.Left;
                 frameData[1] = frame.Right;
                 _mixerChannel.AddSamplesFloat(1, frameData);
-                framesRemaining--;
+                --framesRemaining;
             }
             // Update last rendered time to now using the atomic snapshot.
             // AudioCallback runs on the mixer thread, so we must use AtomicFullIndex
