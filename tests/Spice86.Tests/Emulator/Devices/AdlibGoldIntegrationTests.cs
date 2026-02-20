@@ -1079,12 +1079,12 @@ public class AdlibGoldIntegrationTests {
         List<double> clockAtRender = histograms.GetValueOrDefault("opl.timing.clock_elapsed_ms_at_render", new());
 
         // Lock contention metrics
-        List<double> lockWaitCb = histograms.GetValueOrDefault("opl.lock.wait_ms_at_callback", new());
-        List<double> lockWaitWrite = histograms.GetValueOrDefault("opl.lock.wait_ms_at_write_byte", new());
+        List<double> lockWaitAtCallback = histograms.GetValueOrDefault("opl.lock.wait_ms_at_callback", new());
+        List<double> lockWaitAtWriteByte = histograms.GetValueOrDefault("opl.lock.wait_ms_at_write_byte", new());
 
         // DOSBox comparison metrics
-        List<double> lastRenderedAssigned = histograms.GetValueOrDefault("opl.timing.last_rendered_assigned_at_callback", new());
-        List<double> lastRenderedOnEntry = histograms.GetValueOrDefault("opl.timing.last_rendered_on_entry_at_render", new());
+        List<double> lastRenderedMsAssignedAtCallback = histograms.GetValueOrDefault("opl.timing.last_rendered_assigned_at_callback", new());
+        List<double> lastRenderedMsOnEntryAtRender = histograms.GetValueOrDefault("opl.timing.last_rendered_on_entry_at_render", new());
 
         // ── Analyze captured audio ───────────────────────────────────
         float[] samples = capturingPlayer.GetCapturedSamples();
@@ -1123,15 +1123,15 @@ public class AdlibGoldIntegrationTests {
               Depth at callback:  min={SafeAggregate(fifoDepths, s => s.Min()):F0}  avg={SafeAggregate(fifoDepths, s => s.Average()):F1}  max={SafeAggregate(fifoDepths, s => s.Max()):F0}
 
             ── Lock Contention (RWLS) ─────────────────────────────────────
-              AudioCallback wait: min={SafeAggregate(lockWaitCb, s => s.Min()):F3}  avg={SafeAggregate(lockWaitCb, s => s.Average()):F3}  max={SafeAggregate(lockWaitCb, s => s.Max()):F3} ms
-              WriteByte wait:     min={SafeAggregate(lockWaitWrite, s => s.Min()):F3}  avg={SafeAggregate(lockWaitWrite, s => s.Average()):F3}  max={SafeAggregate(lockWaitWrite, s => s.Max()):F3} ms
+              AudioCallback wait: min={SafeAggregate(lockWaitAtCallback, s => s.Min()):F3}  avg={SafeAggregate(lockWaitAtCallback, s => s.Average()):F3}  max={SafeAggregate(lockWaitAtCallback, s => s.Max()):F3} ms
+              WriteByte wait:     min={SafeAggregate(lockWaitAtWriteByte, s => s.Min()):F3}  avg={SafeAggregate(lockWaitAtWriteByte, s => s.Average()):F3}  max={SafeAggregate(lockWaitAtWriteByte, s => s.Max()):F3} ms
 
             ── Timing ─────────────────────────────────────────────────────
               _lastRenderedMs@CB: min={SafeAggregate(lastRenderedAtCb, s => s.Min()):F1}  max={SafeAggregate(lastRenderedAtCb, s => s.Max()):F1}
               _clock@CB:          min={SafeAggregate(clockAtCb, s => s.Min()):F1}  max={SafeAggregate(clockAtCb, s => s.Max()):F1}
               _clock@Render:      min={SafeAggregate(clockAtRender, s => s.Min()):F1}  max={SafeAggregate(clockAtRender, s => s.Max()):F1}
-              _lastRendered assigned@CB:   min={SafeAggregate(lastRenderedAssigned, s => s.Min()):F1}  max={SafeAggregate(lastRenderedAssigned, s => s.Max()):F1}
-              _lastRendered on entry@Rndr: min={SafeAggregate(lastRenderedOnEntry, s => s.Min()):F1}  max={SafeAggregate(lastRenderedOnEntry, s => s.Max()):F1}
+              _lastRendered assigned@CB:   min={SafeAggregate(lastRenderedMsAssignedAtCallback, s => s.Min()):F1}  max={SafeAggregate(lastRenderedMsAssignedAtCallback, s => s.Max()):F1}
+              _lastRendered on entry@Rndr: min={SafeAggregate(lastRenderedMsOnEntryAtRender, s => s.Min()):F1}  max={SafeAggregate(lastRenderedMsOnEntryAtRender, s => s.Max()):F1}
 
             ── DOSBox staging comparison ───────────────────────────────────
               ┌───────────────────────┬──────────────────────┬───────────────────────┐
