@@ -31,7 +31,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly AdlibGold? _adlibGold;
     private readonly ILoggerService _logger;
     private readonly Opl3Chip _chip = new();
-    private readonly ReaderWriterLockSlim _chipLock = new();
+    private readonly Lock _chipLock = new();
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly ICyclesLimiter _cyclesLimiter;
@@ -344,7 +344,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
                 _logger.Information("OPL: Shutting down {Mode}", _mode);
             }
             _adlibGold?.Dispose();
-            _chipLock.Dispose();
         }
 
         _disposed = true;
@@ -404,16 +403,12 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         if (_disposed) {
             return;
         }
-        _chipLock.EnterWriteLock();
-        try {
-            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                _logger.Verbose("OPL: WriteByte port=0x{Port:X4} value=0x{Value:X2} mode={Mode}", port, value, _mode);
-            }
-            RenderUpToNow();
-            PortWrite(port, value);
-        } finally {
-            _chipLock.ExitWriteLock();
+        using Lock.Scope scope = _chipLock.EnterScope();
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("OPL: WriteByte port=0x{Port:X4} value=0x{Value:X2} mode={Mode}", port, value, _mode);
         }
+        RenderUpToNow();
+        PortWrite(port, value);
     }
 
     private void PortWrite(ushort port, byte value) {
@@ -657,8 +652,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             return;
         }
         int framesRemaining = framesRequested;
-        _chipLock.EnterWriteLock();
-        try {
+        using (Lock.Scope scope = _chipLock.EnterScope()) {
             Span<float> frameData = stackalloc float[2];
             // First, send any frames we've queued since the last callback
             while (framesRemaining > 0 && _fifo.Count > 0) {
@@ -680,8 +674,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             // AudioCallback runs on the mixer thread, so we must use AtomicFullIndex
             // to avoid torn reads of the emulation thread's cycle state.
             _lastRenderedMs = _clock.ElapsedTimeMs;
-        } finally {
-            _chipLock.ExitWriteLock();
         }
     }
 
