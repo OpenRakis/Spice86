@@ -18,10 +18,15 @@ using Spice86.Shared.Interfaces;
 
 using NSubstitute;
 
+using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-using Xunit;/// <summary>
+using Xunit;
+using Xunit.Abstractions;
+
+/// <summary>
 /// Integration tests for AdLib Gold initial audio delay. These verify that
 /// OPL3Gold mode produces audio immediately upon key-on without excessive
 /// startup latency. Audio output is captured at the SDL/player level and
@@ -29,6 +34,12 @@ using Xunit;/// <summary>
 /// </summary>
 [Trait("Category", "Sound")]
 public class AdlibGoldIntegrationTests {
+    private readonly ITestOutputHelper _output;
+
+    public AdlibGoldIntegrationTests(ITestOutputHelper output) {
+        _output = output;
+    }
+
     private const int ResultPort = 0x999;
     private const int DetailsPort = 0x998;
     private const int MixerSampleRate = 48000;
@@ -963,6 +974,288 @@ public class AdlibGoldIntegrationTests {
         nonZero.Should().BeGreaterThan(0,
             $"the OPL3 chip should produce non-zero samples after key-on in OPL3 mode, " +
             $"but only {nonZero}/100 frames were non-zero");
+    }
+
+    /// <summary>
+    /// Instruments the audio thread with .NET Metrics (System.Diagnostics.Metrics).
+    /// Collects AudioCallback, RenderUpToNow, FIFO, and timing measurements using a
+    /// MeterListener, then reports a comprehensive diagnostic summary.
+    ///
+    /// Uses the real EmulatedClock (Stopwatch-based), matching production, with a
+    /// 1-second startup delay before OPL programming to simulate real-game init.
+    /// </summary>
+    [Fact]
+    public void Opl_AudioThread_Metrics_WithStartupDelay() {
+        // ── Collect metrics via MeterListener ─────────────────────────
+        ConcurrentDictionary<string, List<double>> histograms = new();
+        ConcurrentDictionary<string, long> counters = new();
+
+        MeterListener listener = new();
+        listener.InstrumentPublished = (instrument, meterListener) => {
+            if (instrument.Meter.Name == "Spice86.Opl") {
+                meterListener.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((instrument, value, _, _) => {
+            counters.AddOrUpdate(instrument.Name, value, (_, old) => old + value);
+        });
+        listener.SetMeasurementEventCallback<double>((instrument, value, _, _) => {
+            histograms.GetOrAdd(instrument.Name, _ => new()).Add(value);
+        });
+        listener.SetMeasurementEventCallback<int>((instrument, value, _, _) => {
+            histograms.GetOrAdd(instrument.Name, _ => new()).Add(value);
+        });
+        listener.Start();
+
+        // ── Set up OPL in OPL3Gold mode ───────────────────────────────
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
+
+        CapturingAudioPlayer capturingPlayer = new(
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
+
+        Spice86.Audio.Mixer.Mixer mixer = new(loggerService, pauseHandler, capturingPlayer);
+
+        State state = new(CpuModel.INTEL_8086);
+        AddressReadWriteBreakpoints ioBreakpoints = new();
+        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, false);
+
+        EmulatedClock clock = new();
+        EmulationLoopScheduler scheduler = new(clock, loggerService);
+        ICyclesLimiter cyclesLimiter = Substitute.For<ICyclesLimiter>();
+        cyclesLimiter.TargetCpuCyclesPerMs.Returns(3000);
+        DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
+
+        Opl opl = new(mixer, state, ioPortDispatcher, false, loggerService,
+            scheduler, clock, cyclesLimiter, dualPic,
+            mode: OplMode.Opl3Gold, sbBase: 0x220);
+
+        // ── Startup delay (simulates game init) ──────────────────────
+        Thread.Sleep(1000);
+
+        // ── Program OPL registers ────────────────────────────────────
+        opl.WriteByte(0x38A, 0xFF); // Activate gold control
+        opl.WriteByte(0x38A, 0x09); opl.WriteByte(0x38B, 0x1F); // Left FM vol
+        opl.WriteByte(0x38A, 0x0A); opl.WriteByte(0x38B, 0x1F); // Right FM vol
+        opl.WriteByte(0x38A, 0xFE); // Deactivate gold control
+
+        opl.WriteByte(0x388, 0x04); opl.WriteByte(0x389, 0x60); // Timer reset
+        opl.WriteByte(0x388, 0x04); opl.WriteByte(0x389, 0x80);
+        opl.WriteByte(0x388, 0x20); opl.WriteByte(0x389, 0x01); // op0 mult=1
+        opl.WriteByte(0x388, 0x40); opl.WriteByte(0x389, 0x00); // op0 vol max
+        opl.WriteByte(0x388, 0x60); opl.WriteByte(0x389, 0xF0); // op0 fast attack
+        opl.WriteByte(0x388, 0x80); opl.WriteByte(0x389, 0x00); // op0 sustain max
+        opl.WriteByte(0x388, 0x23); opl.WriteByte(0x389, 0x01); // op3 mult=1
+        opl.WriteByte(0x388, 0x43); opl.WriteByte(0x389, 0x00); // op3 vol max
+        opl.WriteByte(0x388, 0x63); opl.WriteByte(0x389, 0xF0); // op3 fast attack
+        opl.WriteByte(0x388, 0x83); opl.WriteByte(0x389, 0x00); // op3 sustain max
+        opl.WriteByte(0x388, 0xC0); opl.WriteByte(0x389, 0x31); // ch0 stereo
+        opl.WriteByte(0x388, 0xA0); opl.WriteByte(0x389, 0xA5); // freq low
+        opl.WriteByte(0x388, 0xB0); opl.WriteByte(0x389, 0x31); // key-on
+
+        // ── Let mixer render audio ───────────────────────────────────
+        Thread.Sleep(500);
+
+        opl.Dispose();
+        mixer.Dispose();
+        listener.Dispose();
+
+        // ── Report all collected metrics ──────────────────────────────
+        long callbackCount = counters.GetValueOrDefault("opl.audio_callback.count", 0);
+        long framesRequested = counters.GetValueOrDefault("opl.audio_callback.frames_requested", 0);
+        long fifoServed = counters.GetValueOrDefault("opl.audio_callback.fifo_frames_served", 0);
+        long directRendered = counters.GetValueOrDefault("opl.audio_callback.direct_render_frames", 0);
+        long fifoStarvations = counters.GetValueOrDefault("opl.audio_callback.fifo_starvations", 0);
+        long renderCount = counters.GetValueOrDefault("opl.render_up_to_now.count", 0);
+        long renderFrames = counters.GetValueOrDefault("opl.render_up_to_now.frames_generated", 0);
+        long wakeUps = counters.GetValueOrDefault("opl.render_up_to_now.wake_ups", 0);
+
+        List<double> callbackDurations = histograms.GetValueOrDefault("opl.audio_callback.duration_ms", new());
+        List<double> renderGaps = histograms.GetValueOrDefault("opl.render_up_to_now.gap_ms", new());
+        List<double> fifoDepths = histograms.GetValueOrDefault("opl.fifo.depth_at_callback", new());
+        List<double> lastRenderedAtCb = histograms.GetValueOrDefault("opl.timing.last_rendered_ms_at_callback", new());
+        List<double> clockAtCb = histograms.GetValueOrDefault("opl.timing.clock_elapsed_ms_at_callback", new());
+        List<double> clockAtRender = histograms.GetValueOrDefault("opl.timing.clock_elapsed_ms_at_render", new());
+
+        // ── Analyze captured audio ───────────────────────────────────
+        float[] samples = capturingPlayer.GetCapturedSamples();
+        int totalFrames = capturingPlayer.CapturedFrameCount;
+        int nonSilentCount = CountNonSilentFrames(samples, channels: 2);
+        float maxAbsValue = 0;
+        for (int i = 0; i < samples.Length; i++) {
+            float abs = Math.Abs(samples[i]);
+            if (abs > maxAbsValue) { maxAbsValue = abs; }
+        }
+
+        string wavPath = Path.GetFullPath("opl_metrics_startup_delay.wav");
+        capturingPlayer.SaveToWav(wavPath);
+
+        // ── Build diagnostic report ──────────────────────────────────
+        string report = $"""
+            ═══════════════════════════════════════════════════════════════
+            OPL Audio Thread Metrics Report
+            ═══════════════════════════════════════════════════════════════
+
+            ── AudioCallback (mixer thread) ───────────────────────────────
+              Invocations:        {callbackCount}
+              Total frames req:   {framesRequested}
+              FIFO frames served: {fifoServed} ({(framesRequested > 0 ? (double)fifoServed / framesRequested * 100 : 0):F1}%)
+              Direct-rendered:    {directRendered} ({(framesRequested > 0 ? (double)directRendered / framesRequested * 100 : 0):F1}%)
+              FIFO starvations:   {fifoStarvations} / {callbackCount} callbacks ({(callbackCount > 0 ? (double)fifoStarvations / callbackCount * 100 : 0):F1}%)
+              Duration (ms):      min={Stat(callbackDurations, s => s.Min()):F3}  avg={Stat(callbackDurations, s => s.Average()):F3}  max={Stat(callbackDurations, s => s.Max()):F3}
+
+            ── RenderUpToNow (CPU thread) ─────────────────────────────────
+              Invocations:        {renderCount}
+              FIFO frames gen'd:  {renderFrames}
+              Channel wake-ups:   {wakeUps}
+              Gap ms (now-last):  min={Stat(renderGaps, s => s.Min()):F3}  avg={Stat(renderGaps, s => s.Average()):F3}  max={Stat(renderGaps, s => s.Max()):F3}
+
+            ── FIFO Queue ─────────────────────────────────────────────────
+              Depth at callback:  min={Stat(fifoDepths, s => s.Min()):F0}  avg={Stat(fifoDepths, s => s.Average()):F1}  max={Stat(fifoDepths, s => s.Max()):F0}
+
+            ── Timing ─────────────────────────────────────────────────────
+              _lastRenderedMs@CB: min={Stat(lastRenderedAtCb, s => s.Min()):F1}  max={Stat(lastRenderedAtCb, s => s.Max()):F1}
+              _clock@CB:          min={Stat(clockAtCb, s => s.Min()):F1}  max={Stat(clockAtCb, s => s.Max()):F1}
+              _clock@Render:      min={Stat(clockAtRender, s => s.Min()):F1}  max={Stat(clockAtRender, s => s.Max()):F1}
+
+            ── Captured Audio ─────────────────────────────────────────────
+              Total frames:       {totalFrames} ({(double)totalFrames / MixerSampleRate * 1000:F1}ms)
+              Non-silent frames:  {nonSilentCount}
+              Max abs value:      {maxAbsValue:E3}
+              WAV saved to:       {wavPath}
+            ═══════════════════════════════════════════════════════════════
+            """;
+
+        // Always write metrics report to xUnit output for diagnostic visibility
+        _output.WriteLine(report);
+
+        callbackCount.Should().BeGreaterThan(0,
+            $"AudioCallback should have been invoked. Metrics report:\n{report}");
+
+        totalFrames.Should().BeGreaterThan(0,
+            $"Mixer should have produced frames. Metrics report:\n{report}");
+
+        nonSilentCount.Should().BeGreaterThan(0,
+            $"Captured audio should be non-silent after key-on. Metrics report:\n{report}");
+    }
+
+    /// <summary>
+    /// Same metrics test but using the integrated emulator with the AdLib Gold
+    /// ASM test program. Collects AudioCallback/RenderUpToNow metrics during
+    /// the full emulation run to reveal the FIFO starvation pattern.
+    /// </summary>
+    [Fact]
+    public void Opl_AudioThread_Metrics_IntegratedAsmTest() {
+        ConcurrentDictionary<string, List<double>> histograms = new();
+        ConcurrentDictionary<string, long> counters = new();
+
+        MeterListener listener = new();
+        listener.InstrumentPublished = (instrument, meterListener) => {
+            if (instrument.Meter.Name == "Spice86.Opl") {
+                meterListener.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((instrument, value, _, _) => {
+            counters.AddOrUpdate(instrument.Name, value, (_, old) => old + value);
+        });
+        listener.SetMeasurementEventCallback<double>((instrument, value, _, _) => {
+            histograms.GetOrAdd(instrument.Name, _ => new()).Add(value);
+        });
+        listener.SetMeasurementEventCallback<int>((instrument, value, _, _) => {
+            histograms.GetOrAdd(instrument.Name, _ => new()).Add(value);
+        });
+        listener.Start();
+
+        string comPath = Path.Combine("Resources", "Sound", "adlib_gold_init_delay.com");
+        byte[] program = File.ReadAllBytes(comPath);
+
+        CapturingAudioPlayer capturingPlayer = new(
+            new AudioFormat(SampleRate: MixerSampleRate, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
+
+        SoundTestHandler testHandler = RunSoundTest(program,
+            enablePit: true, maxCycles: 2000000L,
+            oplMode: OplMode.Opl3Gold,
+            audioPlayer: capturingPlayer);
+
+        listener.Dispose();
+
+        long callbackCount = counters.GetValueOrDefault("opl.audio_callback.count", 0);
+        long framesRequested = counters.GetValueOrDefault("opl.audio_callback.frames_requested", 0);
+        long fifoServed = counters.GetValueOrDefault("opl.audio_callback.fifo_frames_served", 0);
+        long directRendered = counters.GetValueOrDefault("opl.audio_callback.direct_render_frames", 0);
+        long fifoStarvations = counters.GetValueOrDefault("opl.audio_callback.fifo_starvations", 0);
+        long renderCount = counters.GetValueOrDefault("opl.render_up_to_now.count", 0);
+        long renderFrames = counters.GetValueOrDefault("opl.render_up_to_now.frames_generated", 0);
+        long wakeUps = counters.GetValueOrDefault("opl.render_up_to_now.wake_ups", 0);
+
+        List<double> callbackDurations = histograms.GetValueOrDefault("opl.audio_callback.duration_ms", new());
+        List<double> renderGaps = histograms.GetValueOrDefault("opl.render_up_to_now.gap_ms", new());
+        List<double> fifoDepths = histograms.GetValueOrDefault("opl.fifo.depth_at_callback", new());
+
+        float[] samples = capturingPlayer.GetCapturedSamples();
+        int totalFrames = capturingPlayer.CapturedFrameCount;
+        int nonSilentCount = CountNonSilentFrames(samples, channels: 2);
+        float maxAbsValue = 0;
+        for (int i = 0; i < samples.Length; i++) {
+            float abs = Math.Abs(samples[i]);
+            if (abs > maxAbsValue) { maxAbsValue = abs; }
+        }
+
+        string wavPath = Path.GetFullPath("opl_metrics_integrated.wav");
+        capturingPlayer.SaveToWav(wavPath);
+
+        string report = $"""
+            ═══════════════════════════════════════════════════════════════
+            OPL Audio Thread Metrics — Integrated ASM Test
+            ═══════════════════════════════════════════════════════════════
+
+            ── AudioCallback (mixer thread) ───────────────────────────────
+              Invocations:        {callbackCount}
+              Total frames req:   {framesRequested}
+              FIFO frames served: {fifoServed} ({(framesRequested > 0 ? (double)fifoServed / framesRequested * 100 : 0):F1}%)
+              Direct-rendered:    {directRendered} ({(framesRequested > 0 ? (double)directRendered / framesRequested * 100 : 0):F1}%)
+              FIFO starvations:   {fifoStarvations} / {callbackCount} callbacks ({(callbackCount > 0 ? (double)fifoStarvations / callbackCount * 100 : 0):F1}%)
+              Duration (ms):      min={Stat(callbackDurations, s => s.Min()):F3}  avg={Stat(callbackDurations, s => s.Average()):F3}  max={Stat(callbackDurations, s => s.Max()):F3}
+
+            ── RenderUpToNow (CPU thread) ─────────────────────────────────
+              Invocations:        {renderCount}
+              FIFO frames gen'd:  {renderFrames}
+              Channel wake-ups:   {wakeUps}
+              Gap ms (now-last):  min={Stat(renderGaps, s => s.Min()):F3}  avg={Stat(renderGaps, s => s.Average()):F3}  max={Stat(renderGaps, s => s.Max()):F3}
+
+            ── FIFO Queue ─────────────────────────────────────────────────
+              Depth at callback:  min={Stat(fifoDepths, s => s.Min()):F0}  avg={Stat(fifoDepths, s => s.Average()):F1}  max={Stat(fifoDepths, s => s.Max()):F0}
+
+            ── ASM Test Results ───────────────────────────────────────────
+              Timer 1 fired:      {testHandler.Results.Contains((byte)0x00)}
+
+            ── Captured Audio ─────────────────────────────────────────────
+              Total frames:       {totalFrames} ({(double)totalFrames / MixerSampleRate * 1000:F1}ms)
+              Non-silent frames:  {nonSilentCount}
+              Max abs value:      {maxAbsValue:E3}
+              WAV saved to:       {wavPath}
+            ═══════════════════════════════════════════════════════════════
+            """;
+
+        _output.WriteLine(report);
+
+        callbackCount.Should().BeGreaterThan(0,
+            $"AudioCallback should have been invoked. Metrics report:\n{report}");
+        totalFrames.Should().BeGreaterThan(0,
+            $"Mixer should have produced frames. Metrics report:\n{report}");
+        nonSilentCount.Should().BeGreaterThan(0,
+            $"Captured audio should be non-silent. Metrics report:\n{report}");
+    }
+
+    /// <summary>
+    /// Helper to safely compute aggregate statistics on a list.
+    /// Returns 0.0 for empty lists.
+    /// </summary>
+    private static double Stat(List<double> values, Func<IEnumerable<double>, double> fn) {
+        if (values.Count == 0) { return 0.0; }
+        return fn(values);
     }
 
     /// <summary>
