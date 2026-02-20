@@ -121,6 +121,29 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         OplMeter.CreateHistogram<double>("opl.timing.clock_elapsed_ms_at_render",
             "ms", "_clock.ElapsedTimeMs value when RenderUpToNow starts");
 
+    // ── Lock contention metrics ───────────────────────────────────────
+    // Measures how long each thread waits to acquire the ReaderWriterLockSlim.
+    // DOSBox staging uses std::mutex (equivalent to C# lock/Monitor), which has
+    // ~3-5x less overhead than RWLS in write-only mode.
+    internal static readonly Histogram<double> LockWaitMsAtCallback =
+        OplMeter.CreateHistogram<double>("opl.lock.wait_ms_at_callback",
+            "ms", "Time spent waiting for chipLock in AudioCallback (mixer thread)");
+    internal static readonly Histogram<double> LockWaitMsAtWriteByte =
+        OplMeter.CreateHistogram<double>("opl.lock.wait_ms_at_write_byte",
+            "ms", "Time spent waiting for chipLock in WriteByte (CPU thread)");
+
+    // ── DOSBox comparison metrics ─────────────────────────────────────
+    // DOSBox staging's AudioCallback uses PIC_AtomicIndex() (stale snapshot)
+    // instead of PIC_FullIndex() (current time) for _lastRenderedMs. This
+    // creates a deliberate gap that allows RenderUpToNow to fill the FIFO.
+    // These metrics track the equivalent values to quantify the divergence.
+    internal static readonly Histogram<double> AudioCallbackLastRenderedMsAssigned =
+        OplMeter.CreateHistogram<double>("opl.timing.last_rendered_assigned_at_callback",
+            "ms", "_lastRenderedMs value assigned at end of AudioCallback (DOSBox uses PIC_AtomicIndex here)");
+    internal static readonly Histogram<double> RenderUpToNowLastRenderedMsOnEntry =
+        OplMeter.CreateHistogram<double>("opl.timing.last_rendered_on_entry_at_render",
+            "ms", "_lastRenderedMs value when RenderUpToNow enters (set by previous AudioCallback)");
+
     // OPL3 new mode flag
     private byte _newMode;
 
@@ -254,6 +277,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         RenderUpToNowCount.Add(1);
         RenderUpToNowGapMs.Record(gap);
         ClockElapsedMsAtRenderUpToNow.Record(now);
+        RenderUpToNowLastRenderedMsOnEntry.Record(_lastRenderedMs);
         // Wake up the channel and update the last rendered time datum.
         if (_mixerChannel.WakeUp()) {
             RenderUpToNowWakeUps.Add(1);
@@ -475,7 +499,10 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         if (_disposed) {
             return;
         }
+        long lockWaitStart = Stopwatch.GetTimestamp();
         _chipLock.EnterWriteLock();
+        double lockWaitMs = Stopwatch.GetElapsedTime(lockWaitStart).TotalMilliseconds;
+        LockWaitMsAtWriteByte.Record(lockWaitMs);
         try {
             if (_logger.IsEnabled(LogEventLevel.Verbose)) {
                 _logger.Verbose("OPL: WriteByte port=0x{Port:X4} value=0x{Value:X2} mode={Mode}", port, value, _mode);
@@ -731,7 +758,10 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         AudioCallbackCount.Add(1);
         AudioCallbackFramesRequested.Add(framesRequested);
         int framesRemaining = framesRequested;
+        long lockWaitStart = Stopwatch.GetTimestamp();
         _chipLock.EnterWriteLock();
+        double lockWaitMs = Stopwatch.GetElapsedTime(lockWaitStart).TotalMilliseconds;
+        LockWaitMsAtCallback.Record(lockWaitMs);
         try {
             int fifoDepth = _fifo.Count;
             FifoDepthAtCallback.Record(fifoDepth);
@@ -770,6 +800,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             // AudioCallback runs on the mixer thread, so we must use AtomicFullIndex
             // to avoid torn reads of the emulation thread's cycle state.
             _lastRenderedMs = _clock.ElapsedTimeMs;
+            AudioCallbackLastRenderedMsAssigned.Record(_lastRenderedMs);
         } finally {
             _chipLock.ExitWriteLock();
         }

@@ -1078,6 +1078,14 @@ public class AdlibGoldIntegrationTests {
         List<double> clockAtCb = histograms.GetValueOrDefault("opl.timing.clock_elapsed_ms_at_callback", new());
         List<double> clockAtRender = histograms.GetValueOrDefault("opl.timing.clock_elapsed_ms_at_render", new());
 
+        // Lock contention metrics
+        List<double> lockWaitCb = histograms.GetValueOrDefault("opl.lock.wait_ms_at_callback", new());
+        List<double> lockWaitWrite = histograms.GetValueOrDefault("opl.lock.wait_ms_at_write_byte", new());
+
+        // DOSBox comparison metrics
+        List<double> lastRenderedAssigned = histograms.GetValueOrDefault("opl.timing.last_rendered_assigned_at_callback", new());
+        List<double> lastRenderedOnEntry = histograms.GetValueOrDefault("opl.timing.last_rendered_on_entry_at_render", new());
+
         // ── Analyze captured audio ───────────────────────────────────
         float[] samples = capturingPlayer.GetCapturedSamples();
         int totalFrames = capturingPlayer.CapturedFrameCount;
@@ -1094,7 +1102,7 @@ public class AdlibGoldIntegrationTests {
         // ── Build diagnostic report ──────────────────────────────────
         string report = $"""
             ═══════════════════════════════════════════════════════════════
-            OPL Audio Thread Metrics Report
+            OPL Audio Thread Metrics Report (with DOSBox staging comparison)
             ═══════════════════════════════════════════════════════════════
 
             ── AudioCallback (mixer thread) ───────────────────────────────
@@ -1114,10 +1122,37 @@ public class AdlibGoldIntegrationTests {
             ── FIFO Queue ─────────────────────────────────────────────────
               Depth at callback:  min={SafeAggregate(fifoDepths, s => s.Min()):F0}  avg={SafeAggregate(fifoDepths, s => s.Average()):F1}  max={SafeAggregate(fifoDepths, s => s.Max()):F0}
 
+            ── Lock Contention (RWLS) ─────────────────────────────────────
+              AudioCallback wait: min={SafeAggregate(lockWaitCb, s => s.Min()):F3}  avg={SafeAggregate(lockWaitCb, s => s.Average()):F3}  max={SafeAggregate(lockWaitCb, s => s.Max()):F3} ms
+              WriteByte wait:     min={SafeAggregate(lockWaitWrite, s => s.Min()):F3}  avg={SafeAggregate(lockWaitWrite, s => s.Average()):F3}  max={SafeAggregate(lockWaitWrite, s => s.Max()):F3} ms
+
             ── Timing ─────────────────────────────────────────────────────
               _lastRenderedMs@CB: min={SafeAggregate(lastRenderedAtCb, s => s.Min()):F1}  max={SafeAggregate(lastRenderedAtCb, s => s.Max()):F1}
               _clock@CB:          min={SafeAggregate(clockAtCb, s => s.Min()):F1}  max={SafeAggregate(clockAtCb, s => s.Max()):F1}
               _clock@Render:      min={SafeAggregate(clockAtRender, s => s.Min()):F1}  max={SafeAggregate(clockAtRender, s => s.Max()):F1}
+              _lastRendered assigned@CB:   min={SafeAggregate(lastRenderedAssigned, s => s.Min()):F1}  max={SafeAggregate(lastRenderedAssigned, s => s.Max()):F1}
+              _lastRendered on entry@Rndr: min={SafeAggregate(lastRenderedOnEntry, s => s.Min()):F1}  max={SafeAggregate(lastRenderedOnEntry, s => s.Max()):F1}
+
+            ── DOSBox staging comparison ───────────────────────────────────
+              ┌───────────────────────┬──────────────────────┬───────────────────────┐
+              │ Aspect                │ DOSBox staging       │ Spice86 (this test)   │
+              ├───────────────────────┼──────────────────────┼───────────────────────┤
+              │ Threading             │ Single-threaded      │ Multi-threaded         │
+              │ AudioCallback time    │ PIC_AtomicIndex()    │ _clock.ElapsedTimeMs   │
+              │   (stale snapshot)    │ (stale, CPU-updated) │ (live wall-clock)      │
+              │ RenderUpToNow time    │ PIC_FullIndex()      │ _clock.ElapsedTimeMs   │
+              │   (current time)      │ (current emul time)  │ (live wall-clock)      │
+              │ Lock type             │ std::mutex           │ ReaderWriterLockSlim   │
+              │   (write-only usage)  │ (~1x baseline)       │ (~3-5x overhead)       │
+              │ I/O read delay        │ CPU_Cycles -= delay  │ No delay               │
+              │ FIFO starvation       │ 0% (gap guaranteed)  │ {(callbackCount > 0 ? (double)fifoStarvations / callbackCount * 100 : 0):F1}% ({fifoStarvations}/{callbackCount})  │
+              │ FIFO frames generated │ >0 per callback      │ {renderFrames}         │
+              └───────────────────────┴──────────────────────┴───────────────────────┘
+
+              Root cause: AudioCallback sets _lastRenderedMs = _clock.ElapsedTimeMs
+              (current wall-clock time). DOSBox staging uses PIC_AtomicIndex() (stale
+              snapshot updated only by the CPU thread). This means RenderUpToNow always
+              sees _lastRenderedMs ≈ now, gap ≈ 0, and generates 0 FIFO frames.
 
             ── Captured Audio ─────────────────────────────────────────────
               Total frames:       {totalFrames} ({(double)totalFrames / MixerSampleRate * 1000:F1}ms)
