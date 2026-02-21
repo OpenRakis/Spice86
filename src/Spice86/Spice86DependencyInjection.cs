@@ -349,8 +349,9 @@ public class Spice86DependencyInjection : IDisposable {
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
-        // Create OPL FM device; it creates and registers its own mixer channel internally
+        OplConfig oplConfig = new(configuration.OplMode, configuration.SbBase, configuration.SbMixer is true);
         SoundBlasterHardwareConfig soundBlasterHardwareConfig = new(
+            oplConfig,
             configuration.SbIrq,
             configuration.SbDma,
             configuration.SbHdma,
@@ -360,8 +361,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         Opl OPL = new(mixer, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService,
-            emulationLoopScheduler, emulatedClock, cyclesLimiter, dualPic,
-            mode: configuration.OplMode, sbBase: configuration.SbBase);
+            emulationLoopScheduler, emulatedClock, cyclesLimiter, dualPic, oplConfig);
 
         SoundBlaster soundBlaster = new(ioPortDispatcher,
             state, dmaSystem, dualPic, mixer, OPL, loggerService,

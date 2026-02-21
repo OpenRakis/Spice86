@@ -216,6 +216,13 @@ public sealed class Configuration {
         HelpText = "Sound Blaster 16-bit high DMA channel. Default is 5. Common values: 5, 6, 7.")]
     public byte SbHdma { get; init; }
 
+    /// <summary>
+    /// Enable Sound Blaster mixer control of OPL voices.
+    /// </summary>
+    [Option(nameof(SbMixer), Default = true, Required = false,
+        HelpText = "Enable Sound Blaster mixer control of OPL voices. Default is true.")]
+    public bool? SbMixer { get; init; }
+
     [Option(nameof(Xms), Default = null, Required = false, HelpText = "Enable XMS. Default is true.")]
     public bool? Xms { get; init; }
 

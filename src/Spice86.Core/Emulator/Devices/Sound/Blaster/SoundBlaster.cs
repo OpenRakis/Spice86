@@ -32,7 +32,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private const ushort SbShiftMask = (1 << SbShift) - 1;
     private const byte MinAdaptiveStepSize = 0;
     private const byte DspInitialResetLimit = 4;
-
     private enum DspState { Reset, ResetWait, Normal, HighSpeed }
     private enum DmaMode { None, Adpcm2Bit, Adpcm3Bit, Adpcm4Bit, Pcm8Bit, Pcm16Bit, Pcm16BitAliased }
     private enum DspMode { None, Dac, Dma, DmaPause, DmaMasked }
@@ -578,6 +577,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// </summary>
     private const int MaxSingleFrameBaseCount = sizeof(short) * 2 - 1;
 
+    /// <summary>
+    /// Initializes a new instance of the Sound Blaster device.
+    /// </summary>
+    /// <param name="ioPortDispatcher">I/O port dispatcher.</param>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="dmaBus">DMA bus for audio transfers.</param>
+    /// <param name="dualPic">The dual PIC.</param>
+    /// <param name="mixer">The global software mixer.</param>
+    /// <param name="opl">OPL synthesizer for FM output.</param>
+    /// <param name="loggerService">The logger service.</param>
+    /// <param name="scheduler">The event scheduler.</param>
+    /// <param name="clock">The emulated clock.</param>
+    /// <param name="soundBlasterHardwareConfig">Sound Blaster hardware configuration.</param>
     public SoundBlaster(
         IOPortDispatcher ioPortDispatcher,
         State state,
@@ -648,7 +660,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _sb.FreqHz = DefaultPlaybackRateHz;
         _sb.TimeConstant = 45;
 
-        _sb.Mixer.Enabled = true;
+        _sb.Mixer.Enabled = soundBlasterHardwareConfig.OplConfig.SbMixer;
         _sb.Mixer.StereoEnabled = false;
 
         HashSet<ChannelFeature> dacFeatures = new HashSet<ChannelFeature> {

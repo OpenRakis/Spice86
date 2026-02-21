@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using NukedOPL3Sharp;
+
 using Serilog.Events;
 
 using Spice86.Audio.Mixer;
@@ -113,27 +114,22 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <param name="clock">The emulated clock.</param>
     /// <param name="cyclesLimiter">The CPU cycle limiter, used for I/O port read delay simulation.</param>
     /// <param name="dualPic">The dual PIC.</param>
-    /// <param name="mode">OPL synthesis mode.</param>
-    /// <param name="sbBase">Sound Blaster base I/O address for port registration.</param>
+    /// <param name="config">OPL configuration options (mode, SB base, and mixer enable).</param>
     public Opl(Mixer mixer, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
         ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock,
-        ICyclesLimiter cyclesLimiter, DualPic dualPic,
-        OplMode mode = OplMode.Opl3, ushort sbBase = 0x220)
+        ICyclesLimiter cyclesLimiter, DualPic dualPic, OplConfig config)
         : base(state, failOnUnhandledPort, loggerService) {
-
         _logger = loggerService;
-
         mixer.LockMixerThread();
-
-        _mode = mode;
-        _sbBase = sbBase;
+        _mode = config.Mode;
+        _sbBase = config.SbBase;
         _scheduler = scheduler;
         _clock = clock;
         _cyclesLimiter = cyclesLimiter;
         _timerChips = [new OplChip(clock), new OplChip(clock)];
         _dualPic = dualPic;
-        _ctrl = new AdLibGoldControl(mixerEnabled: true);
+        _ctrl = new AdLibGoldControl(mixerEnabled: config.SbMixer);
 
         // Build channel features based on mode
         HashSet<ChannelFeature> features = [
