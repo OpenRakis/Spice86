@@ -5,12 +5,10 @@ namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Spice86.Audio.Mixer;
 using Spice86.Audio.Sound.Common;
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System;
@@ -23,10 +21,6 @@ using EventHandler = VM.EmulationLoopScheduler.EventHandler;
 /// and private/soundblaster.h class members.
 /// </summary>
 public partial class SoundBlaster {
-
-    // -----------------------------------------------------------------------
-    // soundblaster.cpp constexpr
-    // -----------------------------------------------------------------------
 
     private const int DmaBufSize = 1024;
     private const int DspBufSize = 64;
@@ -85,14 +79,16 @@ public partial class SoundBlaster {
 
     private enum BlasterState { WaitingForCommand, ReadingCommand }
 
-    // CallbackType::TimingType
     private enum TimingType { None, PerTick, PerFrame }
 
-    // -----------------------------------------------------------------------
-    // soundblaster.cpp struct SbInfo
-    // -----------------------------------------------------------------------
-
     private class SbInfo {
+        private readonly IEmulatedClock _clock;
+
+        public SbInfo(IEmulatedClock clock) {
+            _clock = clock;
+            _dac = new DacState(this, _clock);
+        }
+
         public uint FreqHz { get; set; }
 
         public class DmaState {
@@ -162,7 +158,6 @@ public partial class SoundBlaster {
         }
         public DspStateInfo Dsp { get; } = new();
 
-        // soundblaster.cpp class Dac
         public class DacState {
             // We use two criteria to monitor and decide when the rate's changed:
             // percent difference (versus current) and when the new rate persists
@@ -231,8 +226,11 @@ public partial class SoundBlaster {
             }
         }
 
-        private DacState? _dac;
-        public DacState Dac => _dac ??= new DacState(this, _clock);
+        private DacState _dac;
+        public DacState Dac {
+            get => _dac;
+            set => _dac = value;
+        }
 
         public class MixerState {
             public byte Index { get; set; } = 0;
@@ -293,17 +291,7 @@ public partial class SoundBlaster {
         }
 
         public E2State E2 { get; } = new E2State();
-
-        private readonly IEmulatedClock _clock;
-
-        public SbInfo(IEmulatedClock clock) {
-            _clock = clock;
-        }
     }
-
-    // -----------------------------------------------------------------------
-    // soundblaster.cpp static data
-    // -----------------------------------------------------------------------
 
     // Number of bytes in input for commands (sb/sbpro)
     private static readonly byte[] DspCommandLengthsSb = new byte[256] {
@@ -352,11 +340,7 @@ public partial class SoundBlaster {
         new int[] {  0x01, -0x02,  0x04, -0x08, -0x10,  0x20, -0x40,  0x80,   90 }
     };
 
-    private static readonly byte[] AspRegsInit = new byte[256];
-
-    // -----------------------------------------------------------------------
-    // private/soundblaster.h class members + soundblaster.cpp file-scope state
-    // -----------------------------------------------------------------------
+    private static readonly byte[] AspRegs = new byte[256];
 
     private readonly SbInfo _sb;
     private readonly SoundBlasterHardwareConfig _config;
@@ -368,8 +352,6 @@ public partial class SoundBlaster {
     private readonly Opl _opl;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
-
-    // Public members used by MIXER_PullFromQueueCallback
     private readonly RWQueue<AudioFrame> _outputQueue = new(4096);
     private int _framesNeeded = 0;
 

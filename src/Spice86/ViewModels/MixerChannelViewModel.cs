@@ -83,7 +83,7 @@ public partial class MixerChannelViewModel : ViewModelBase {
     public void UpdateFromChannel() {
         Name = _channel.Name;
         IsEnabled = _channel.IsEnabled;
-        SampleRate = _channel.GetSampleRate();
+        SampleRate = _channel.SampleRate;
 
         AudioFrame userVolume = _channel.UserVolume;
         UserVolumeLeftPercent = userVolume.Left * 100.0;

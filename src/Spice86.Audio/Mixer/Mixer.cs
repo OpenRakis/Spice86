@@ -591,11 +591,11 @@ public sealed class Mixer : IDisposable {
 
         MixerChannel channel = new(handler, name, features, _loggerService);
         channel.SetMixerSampleRate(_sampleRateHz); // Tell channel about mixer rate
-        channel.SetSampleRate(sampleRateHz);
+        channel.        SampleRate = sampleRateHz;
         channel.AppVolume = new AudioFrame(1.0f, 1.0f);
         channel.UserVolume = new AudioFrame(1.0f, 1.0f);
 
-        int channelRate = channel.GetSampleRate();
+        int channelRate = channel.SampleRate;
         if (channelRate == _sampleRateHz) {
             _loggerService.Information("{ChannelName}: Operating at {Rate} Hz without resampling",
                 name, channelRate);

@@ -189,38 +189,37 @@ public sealed class MixerChannel {
     }
 
     /// <summary>
-    /// Gets the channel sample rate.
+    /// Gets or sets the channel sample rate.
     /// </summary>
-    public int GetSampleRate() {
-        lock (_mutex) {
-            return _sampleRateHz;
+    public int SampleRate {
+        get {
+            lock (_mutex) {
+                return _sampleRateHz;
+            }
         }
-    }
 
-    /// <summary>
-    /// Sets the channel sample rate.
-    /// </summary>
-    public void SetSampleRate(int sampleRateHz) {
-        lock (_mutex) {
-            _sampleRateHz = sampleRateHz;
+        set {
+            lock (_mutex) {
+                _sampleRateHz = value;
 
-            _envelope.Update(_sampleRateHz,
-                _peakAmplitude,
-                EnvelopeMaxExpansionOverMs,
-                EnvelopeExpiresAfterSeconds);
+                _envelope.Update(_sampleRateHz,
+                    _peakAmplitude,
+                    EnvelopeMaxExpansionOverMs,
+                    EnvelopeExpiresAfterSeconds);
 
-            if (_doNoiseGate) {
-                InitNoiseGate();
+                if (_doNoiseGate) {
+                    InitNoiseGate();
+                }
+
+                if (_highPassFilterState == FilterState.On) {
+                    InitHighPassFilter();
+                }
+                if (_lowPassFilterState == FilterState.On) {
+                    InitLowPassFilter();
+                }
+
+                ConfigureResampler();
             }
-
-            if (_highPassFilterState == FilterState.On) {
-                InitHighPassFilter();
-            }
-            if (_lowPassFilterState == FilterState.On) {
-                InitLowPassFilter();
-            }
-
-            ConfigureResampler();
         }
     }
 
