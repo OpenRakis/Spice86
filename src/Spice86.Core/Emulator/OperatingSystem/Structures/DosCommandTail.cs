@@ -51,9 +51,11 @@ public class DosCommandTail : MemoryBasedDataStructure {
             throw new ArgumentException($"Command length cannot exceed {MaxCharacterLength} characters.");
         }
 
-        if (value.Contains('\r')) {
-            throw new ArgumentException("Command should not contain CR.");
-        }
+        // the parameter string "can" contain \r and \n
+        // happens with Brotherbund Stunts
+        // stunts.com starts load.exe with this commandline
+        // " /u MCGA  /spc \r\nStunts\r\ndisk 'B'\r\ndisk 'B'\r\ntdy.cod\r\n"
+
         if (value.Contains('\0')) {
             throw new ArgumentException("Command should not contain byte(0).");
         }
