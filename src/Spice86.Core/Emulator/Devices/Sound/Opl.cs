@@ -171,7 +171,10 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         _mixerChannel.Set0dbScalar(OplVolumeGain);
 
         // Noise gate configuration
-        float thresholdDb = -65.0f + GainToDecibel(OplVolumeGain);
+        // AdLib Gold output can be very quiet during startup (e.g., Dune), and a higher threshold can gate it entirely,
+        // presenting as "startup silence". Use a lower threshold for Opl3Gold to avoid cutting legitimate low-level audio.
+        float baseThresholdDb = _mode == OplMode.Opl3Gold ? -80.0f : -65.0f;
+        float thresholdDb = baseThresholdDb + GainToDecibel(OplVolumeGain);
         const float AttackTimeMs = 1.0f;
         const float ReleaseTimeMs = 100.0f;
         _mixerChannel.ConfigureNoiseGate(thresholdDb, AttackTimeMs, ReleaseTimeMs);
