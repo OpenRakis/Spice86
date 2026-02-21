@@ -22,220 +22,7 @@ using System.Linq;
 
 using EventHandler = VM.EmulationLoopScheduler.EventHandler;
 
-public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier {
-    private const int DmaBufSize = 1024;
-    private const int DspBufSize = 64;
-    private const int MinPlaybackRateHz = 5000;
-    private const int NativeDacRateHz = 45454;
-    private const ushort DefaultPlaybackRateHz = 22050;
-    private const int SbShift = 14;
-    private const ushort SbShiftMask = (1 << SbShift) - 1;
-    private const byte MinAdaptiveStepSize = 0;
-    private const byte DspInitialResetLimit = 4;
-    private enum DspState { Reset, ResetWait, Normal, HighSpeed }
-    private enum DmaMode { None, Adpcm2Bit, Adpcm3Bit, Adpcm4Bit, Pcm8Bit, Pcm16Bit, Pcm16BitAliased }
-    private enum DspMode { None, Dac, Dma, DmaPause, DmaMasked }
-    private enum EssType { None, Es1688 }
-    private enum SbIrq { Irq8, Irq16, IrqMpu }
-    private enum BlasterState { WaitingForCommand, ReadingCommand }
-
-    /// <summary>
-    /// Callback timing type for audio frame generation.
-    /// </summary>
-    private enum TimingType { None, PerTick, PerFrame }
-
-    private class SbInfo {
-        public uint FreqHz { get; set; }
-        public class DmaState {
-            public bool Stereo { get; set; }
-            public bool Sign { get; set; }
-            public bool AutoInit { get; set; }
-            public bool FirstTransfer { get; set; } = true;
-            public DmaMode Mode { get; set; }
-            public uint Rate { get; set; }
-            public uint Mul { get; set; }
-            public uint SingleSize { get; set; }
-            public uint AutoSize { get; set; }
-            public uint Left { get; set; }
-            public uint Min { get; set; }
-            public byte[] Buf8 { get; } = new byte[DmaBufSize];
-            public short[] Buf16 { get; } = new short[DmaBufSize];
-            public uint Bits { get; set; }
-            public DmaChannel? Channel { get; set; }
-            public uint RemainSize { get; set; }
-        }
-        public DmaState Dma { get; } = new();
-        public bool SpeakerEnabled { get; set; }
-        public bool MidiEnabled { get; set; }
-        public byte TimeConstant { get; set; }
-        public DspMode Mode { get; set; }
-        public SbType Type { get; set; }
-        public EssType EssType { get; set; }
-        public class IrqState {
-            public bool Pending8Bit { get; set; }
-            public bool Pending16Bit { get; set; }
-        }
-        public IrqState Irq { get; } = new();
-        public class DspStateInfo {
-            public DspState State { get; set; }
-            public byte Cmd { get; set; }
-            public byte CmdLen { get; set; }
-            public class FifoState {
-                public byte LastVal { get; set; }
-                public byte[] Data { get; } = new byte[DspBufSize];
-                public byte Pos { get; set; }
-                public byte Used { get; set; }
-            }
-            public FifoState In { get; } = new();
-            public FifoState Out { get; } = new();
-            public byte TestRegister { get; set; }
-            public byte WriteStatusCounter { get; set; }
-            public uint ResetTally { get; set; }
-            public int ColdWarmupMs { get; set; }
-            public int HotWarmupMs { get; set; }
-            public int WarmupRemainingMs { get; set; }
-        }
-        public DspStateInfo Dsp { get; } = new();
-        public class MixerState {
-            public byte Index { get; set; } = 0;
-
-            // If true, DOS software can programmatically change the Sound
-            // Blaster mixer's volume levels on SB Pro 1 and later card for
-            // the SB (DAC), OPL (FM) and CDAUDIO channels. These are called
-            // "app levels". The final output level is the "user level" set
-            // in the mixer multiplied with the "app level" for these
-            // channels.
-            //
-            // If the Sound Blaster mixer is disabled, the "app levels"
-            // default to unity gain.
-            public bool Enabled { get; set; } = false;
-
-            public byte[] Dac { get; } = new byte[2];
-            public byte[] Fm { get; } = new byte[2];
-            public byte[] Cda { get; } = new byte[2];
-
-            public byte[] Master { get; } = new byte[2];
-            public byte[] Lin { get; } = new byte[2];
-            public byte Mic { get; set; } = 0;
-
-            public bool StereoEnabled { get; set; } = false;
-
-            public bool FilterEnabled { get; set; } = true;
-            public bool FilterConfigured { get; set; } = false;
-            public bool FilterAlwaysOn { get; set; } = false;
-
-            public byte[] Unhandled { get; } = new byte[0x48];
-
-            public byte[] EssIdStr { get; } = new byte[4];
-            public byte EssIdStrPos { get; set; } = 0;
-        }
-
-        public MixerState Mixer { get; } = new MixerState();
-
-        public class AdpcmState {
-            public byte Reference { get; set; } = 0;
-            public ushort Stepsize { get; set; } = 0;
-            public bool HaveRef { get; set; } = false;
-        }
-
-        public AdpcmState Adpcm { get; } = new AdpcmState();
-
-        public class HwState {
-            public ushort Base { get; set; } = 0;
-            public byte Irq { get; set; } = 0;
-            public byte Dma8 { get; set; } = 0;
-            public byte Dma16 { get; set; } = 0;
-        }
-
-        public HwState Hw { get; } = new HwState();
-
-        public class E2State {
-            public int Value { get; set; } = 0;
-            public uint Count { get; set; } = 0;
-        }
-
-        public E2State E2 { get; } = new E2State();
-
-        /// <summary>
-        /// DAC state handler.
-        /// </summary>
-        public class DacState {
-            private const float PercentDifferenceThreshold = 0.01f;
-            private const int SequentialChangesThreshold = 10;
-            private const float MillisInSecond = 1000.0f;
-
-            private readonly SbInfo _sb;
-            private readonly IEmulatedClock _clock;
-
-            private float _lastWriteMs;
-            private int _currentRateHz = MinPlaybackRateHz;
-            private int _sequentialChangesTally;
-
-            public DacState(SbInfo sb, IEmulatedClock clock) {
-                _sb = sb;
-                _clock = clock;
-            }
-
-            /// <summary>
-            /// Resets the DAC state. Called when the DAC wakes up or mode changes.
-            /// </summary>
-            public void Reset() {
-                _lastWriteMs = 0;
-                _currentRateHz = MinPlaybackRateHz;
-                _sequentialChangesTally = 0;
-            }
-
-            /// <summary>
-            /// Renders a DAC audio frame.
-            /// </summary>
-            public AudioFrame RenderFrame() {
-                if (_sb.SpeakerEnabled && _sb.Dsp.In.Data.Length > 0) {
-                    float sample = LookupTables.ToUnsigned8(_sb.Dsp.In.Data[0]);
-                    return new AudioFrame(sample, sample);
-                }
-                return new AudioFrame(0.0f, 0.0f);
-            }
-
-            /// <summary>
-            /// Measures the DAC write rate by timing consecutive writes.
-            /// Returns the new rate in Hz if the rate has changed significantly, or <c>null</c> otherwise.
-            /// </summary>
-            public int? MeasureDacRateHz() {
-                float currWriteMs = (float)_clock.ElapsedTimeMs;
-                float elapsedMs = currWriteMs - _lastWriteMs;
-                _lastWriteMs = currWriteMs;
-
-                if (elapsedMs <= 0) {
-                    return null;
-                }
-
-                float measuredRate = MillisInSecond / elapsedMs;
-
-                float changePct = Math.Abs(measuredRate - _currentRateHz) / _currentRateHz;
-
-                _sequentialChangesTally = (changePct > PercentDifferenceThreshold)
-                    ? _sequentialChangesTally + 1
-                    : 0;
-
-                if (_sequentialChangesTally > SequentialChangesThreshold) {
-                    _sequentialChangesTally = 0;
-                    _currentRateHz = (int)Math.Round(measuredRate);
-                    return _currentRateHz;
-                }
-
-                return null;
-            }
-        }
-
-        private DacState? _dac;
-        public DacState Dac => _dac ??= new DacState(this, _clock);
-
-        private readonly IEmulatedClock _clock;
-
-        public SbInfo(IEmulatedClock clock) {
-            _clock = clock;
-        }
-    }
+public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier {
 
     private static byte DecodeAdpcmPortion(
         int bitPortion,
@@ -456,92 +243,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         }
     }
 
-    private static readonly byte[] DspCommandLengthsSb = new byte[256] {
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x00
-        1, 0, 0, 0,  2, 2, 2, 2,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x10 (Wari hack: 0x15-0x17 have 2 bytes)
-        0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x20
-        0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  // 0x30
-        1, 2, 2, 0,  0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  // 0x40
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x50
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x60
-        0, 0, 0, 0,  2, 2, 2, 2,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x70
-        2, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x80
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x90
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xA0
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xB0
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xC0
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xD0
-        1, 0, 1, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xE0
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0   // 0xF0
-    };
-
-    private static readonly byte[] DspCommandLengthsSb16 = new byte[256] {
-        0, 0, 0, 0,  1, 2, 0, 0,  1, 0, 0, 0,  0, 0, 2, 1,  // 0x00
-        1, 0, 0, 0,  2, 2, 2, 2,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x10
-        0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x20
-        0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  // 0x30
-        1, 2, 2, 0,  0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  // 0x40
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x50
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x60
-        0, 0, 0, 0,  2, 2, 2, 2,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x70
-        2, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x80
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x90
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xA0
-        3, 3, 3, 3,  3, 3, 3, 3,  3, 3, 3, 3,  3, 3, 3, 3,  // 0xB0
-        3, 3, 3, 3,  3, 3, 3, 3,  3, 3, 3, 3,  3, 3, 3, 3,  // 0xC0
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xD0
-        1, 0, 1, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xE0
-        0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0   // 0xF0
-    };
-
-
-    private static readonly int[][] E2IncrTable = new int[][] {
-        new int[] { 0x01, -0x02, -0x04, 0x08, -0x10, 0x20, 0x40, -0x80, -106 },
-        new int[] { -0x01, 0x02, -0x04, 0x08, 0x10, -0x20, 0x40, -0x80, 165 },
-        new int[] { -0x01, 0x02, 0x04, -0x08, 0x10, -0x20, -0x40, 0x80, -151 },
-        new int[] { 0x01, -0x02, 0x04, -0x08, -0x10, 0x20, -0x40, 0x80, 90 }
-    };
-
-    private readonly SbInfo _sb;
-    private readonly SoundBlasterHardwareConfig _config;
-    private readonly DualPic _dualPic;
-    private readonly DmaChannel _primaryDmaChannel;
-    private readonly DmaChannel? _secondaryDmaChannel;
-    private readonly Mixer _mixer;
-    private readonly MixerChannel _dacChannel;
-    private readonly Opl _opl;
-    private readonly EmulationLoopScheduler _scheduler;
-    private readonly IEmulatedClock _clock;
-
-    private readonly RWQueue<AudioFrame> _outputQueue = new(4096);
-
-    private readonly AudioFrame[] _enqueueBatch = new AudioFrame[4096];
-    private int _enqueueBatchCount;
-
-    private BlasterState _blasterState = BlasterState.WaitingForCommand;
-
-    /// <summary>
-    /// ASP/CSP register storage for SB16 Advanced Signal Processing.
-    /// </summary>
-    private readonly byte[] _aspRegs = new byte[256];
-
-    /// <summary>
-    /// Tracks whether ASP initialization is in progress (toggling register 0x83).
-    /// </summary>
-    private bool _aspInitInProgress;
-
-    private double _lastDmaCallbackTime;
-
-    private float _frameCounter = 0.0f;
-
-    private int _framesNeeded = 0;
-
-    /// <inheritdoc />
-    public RWQueue<AudioFrame> OutputQueue => _outputQueue;
-
-    /// <inheritdoc />
-    public MixerChannel Channel => _dacChannel;
-
     /// <inheritdoc />
     public void NotifyLockMixer() {
         _outputQueue.Stop();
@@ -551,31 +252,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     public void NotifyUnlockMixer() {
         _outputQueue.Start();
     }
-
-    // Tracks frames added during current tick to prevent over-generation
-    private int _framesAddedThisTick = 0;
-
-    /// <summary>
-    /// Current callback timing type for audio frame generation.
-    /// </summary>
-    private TimingType _timingType = TimingType.None;
-
-    /// <summary>
-    /// Stored handler delegate for per-tick callback to enable proper RemoveEvents matching.
-    /// </summary>
-    private readonly EventHandler _perTickHandler;
-
-    /// <summary>
-    /// Stored handler delegate for per-frame callback to enable proper RemoveEvents matching.
-    /// </summary>
-    private readonly EventHandler _perFrameHandler;
-
-    /// <summary>
-    /// Maximum DMA base count for using per-frame callback.
-    /// If base_count is less than or equal to this value, use SetPerFrame() for fine-grained timing.
-    /// Value is 3 (sizeof(short) * 2 - 1)
-    /// </summary>
-    private const int MaxSingleFrameBaseCount = sizeof(short) * 2 - 1;
 
     /// <summary>
     /// Initializes a new instance of the Sound Blaster device.
@@ -602,9 +278,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         IEmulatedClock clock,
         SoundBlasterHardwareConfig soundBlasterHardwareConfig)
         : base(state, false, loggerService) {
-        // Register queue notifier before locking (matches DOSBox pattern)
         mixer.RegisterQueueNotifier(this);
-        // Lock mixer thread during construction to prevent concurrent modifications
         mixer.LockMixerThread();
 
         _config = soundBlasterHardwareConfig;
@@ -615,53 +289,43 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         _clock = clock;
         _sb = new SbInfo(clock);
 
-        // Initialize stored handlers for proper scheduler event matching
         _perTickHandler = (_) => PerTickCallback();
         _perFrameHandler = (_) => PerFrameCallback();
 
-        _primaryDmaChannel = dmaBus.GetChannel(_config.LowDma)
-            ?? throw new InvalidOperationException($"DMA channel {_config.LowDma} unavailable for Sound Blaster.");
-
-        if (ShouldUseHighDmaChannel()) {
-            _secondaryDmaChannel = dmaBus.GetChannel(_config.HighDma);
-        } else {
-            _secondaryDmaChannel = null;
-        }
-
-        if (_primaryDmaChannel.ChannelNumber == 4 ||
-            (_secondaryDmaChannel is not null && _secondaryDmaChannel.ChannelNumber == 4)) {
-            throw new InvalidOperationException("Sound Blaster cannot attach to cascade DMA channel 4.");
-        }
-
-        // This prevents other devices from hijacking our channels
-        if (this._loggerService.IsEnabled(LogEventLevel.Debug)) {
-            this._loggerService.Debug("SOUNDBLASTER: Reserving DMA channel {Channel} for Sound Blaster",
-                _primaryDmaChannel.ChannelNumber);
-        }
-        _primaryDmaChannel.ReserveFor("SoundBlaster", OnDmaChannelEvicted);
-
-        if (_secondaryDmaChannel is not null) {
-            if (this._loggerService.IsEnabled(LogEventLevel.Debug)) {
-                this._loggerService.Debug("SOUNDBLASTER: Reserving secondary DMA channel {Channel} for Sound Blaster 16-bit",
-                    _secondaryDmaChannel.ChannelNumber);
-            }
-            _secondaryDmaChannel.ReserveFor("SoundBlaster16", OnDmaChannelEvicted);
-        }
-
-        _sb.Type = _config.SbType;
         _sb.Hw.Base = _config.BaseAddress;
         _sb.Hw.Irq = _config.Irq;
-        _sb.Hw.Dma8 = _config.LowDma;
-        _sb.Hw.Dma16 = _config.HighDma;
 
         const int ColdWarmupMs = 100;
         _sb.Dsp.ColdWarmupMs = ColdWarmupMs;
+        // Magic 32 divisor was probably the result of experimentation
         _sb.Dsp.HotWarmupMs = ColdWarmupMs / 32;
-        _sb.FreqHz = DefaultPlaybackRateHz;
-        _sb.TimeConstant = 45;
 
         _sb.Mixer.Enabled = soundBlasterHardwareConfig.OplConfig.SbMixer;
         _sb.Mixer.StereoEnabled = false;
+
+        _sb.Type = _config.SbType;
+
+        _sb.Hw.Dma8 = _config.LowDma;
+
+        _primaryDmaChannel = dmaBus.GetChannel(_config.LowDma)
+            ?? throw new InvalidOperationException($"DMA channel {_config.LowDma} unavailable for Sound Blaster.");
+        _primaryDmaChannel.ReserveFor("SoundBlaster", OnDmaChannelEvicted);
+
+        // Only Sound Blaster 16 uses a 16-bit DMA channel.
+        if (_config.SbType == SbType.Sb16) {
+            _sb.Hw.Dma16 = _config.HighDma;
+            // Reserve the second DMA channel only if it's unique.
+            if (ShouldUseHighDmaChannel()) {
+                _secondaryDmaChannel = dmaBus.GetChannel(_config.HighDma);
+                if (_secondaryDmaChannel is not null) {
+                    _secondaryDmaChannel.ReserveFor("SoundBlaster16", OnDmaChannelEvicted);
+                }
+            } else {
+                _secondaryDmaChannel = null;
+            }
+        } else {
+            _secondaryDmaChannel = null;
+        }
 
         HashSet<ChannelFeature> dacFeatures = new HashSet<ChannelFeature> {
             ChannelFeature.ReverbSend,
@@ -673,38 +337,66 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             dacFeatures.Add(ChannelFeature.Stereo);
         }
 
-        _dacChannel = _mixer.AddChannel(framesRequested => Mixer.PullFromQueueCallback<SoundBlaster, AudioFrame>(framesRequested, this), (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
+        _dacChannel = _mixer.AddChannel(
+            framesRequested => MixerCallback(framesRequested),
+            DefaultPlaybackRateHz,
+            "SoundBlasterDAC",
+            dacFeatures);
 
-        // Configure Zero-Order-Hold upsampler and resample method for SB Pro 2 only
-        // ZOH upsampler provides vintage DAC sound characteristic
-        // Native DAC rate is 49716 Hz, then resampled to host rate (typically 48000 Hz)
         if (_config.SbType == SbType.SBPro2) {
             _dacChannel.SetZeroOrderHoldUpsamplerTargetRate(NativeDacRateHz);
             _dacChannel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
         }
+
         _sb.Dsp.State = DspState.Normal;
         _sb.Dsp.Out.LastVal = 0xAA;
+        _sb.Dma.Channel = null;
 
         InitPortHandlers(ioPortDispatcher);
+
         _aspRegs[5] = 0x01;
         _aspRegs[9] = 0xF8;
+
         DspReset();
         CtmixerReset();
 
         _dualPic.SetIrqMask(_config.Irq, false);
 
         if (this._loggerService.IsEnabled(LogEventLevel.Information)) {
-            string highDmaSegment = ShouldUseHighDmaChannel() ? $", high DMA {_config.HighDma}" : string.Empty;
-            this._loggerService.Information(
-                "SoundBlaster: Initialized {SbType} on port {Port:X3}, IRQ {Irq}, DMA {LowDma}{HighDmaSegment}",
-                _sb.Type, _sb.Hw.Base, _sb.Hw.Irq, _sb.Hw.Dma8, highDmaSegment);
+            if (_config.SbType == SbType.Sb16) {
+                this._loggerService.Information(
+                    "SoundBlaster: Running on port {Port:X3}h, IRQ {Irq}, DMA {Dma8}, and high DMA {Dma16}",
+                    _sb.Hw.Base, _sb.Hw.Irq, _sb.Hw.Dma8, _sb.Hw.Dma16);
+            } else {
+                this._loggerService.Information(
+                    "SoundBlaster: Running on port {Port:X3}h, IRQ {Irq}, and DMA {Dma8}",
+                    _sb.Hw.Base, _sb.Hw.Irq, _sb.Hw.Dma8);
+            }
         }
-        // Unlock mixer thread after construction completes
+
+        // Size to 2x blocksize. The mixer callback will request 1x blocksize.
+        // This provides a good size to avoid over-runs and stalls.
+        _outputQueue.Resize((int)Math.Ceiling(_dacChannel.FramesPerBlock * 2.0f));
+
         mixer.UnlockMixerThread();
     }
 
-    // Wake up the queue and channel to resume processing and playback.
-    // Matches DOSBox: output_queue.Start() then channel->WakeUp().
+    /// <summary>
+    /// Called by the mixer thread to pull audio frames from the output queue.
+    /// Sets frames_needed so the emulation-thread callbacks know how much to generate,
+    /// then delegates to the generic queue-pull helper.
+    /// </summary>
+    private void MixerCallback(int framesRequested) {
+        int queueSize = _outputQueue.Size;
+        int needed = Math.Max(framesRequested - queueSize, 0);
+        System.Threading.Interlocked.Exchange(ref _framesNeeded, needed);
+
+        Mixer.PullFromQueueCallback<SoundBlaster, AudioFrame>(framesRequested, this);
+    }
+
+    /// <summary>
+    ///  Wake up the queue and channel to resume processing and playback
+    /// </summary>
     private bool MaybeWakeUp() {
         _outputQueue.Start();
         bool wokeUp = _dacChannel.WakeUp();
@@ -2404,9 +2096,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             _loggerService.Verbose("SB: SuppressDmaTransfer requested={Requested} actual={Actual} left={Left}", bytesToRead, numBytes, _sb.Dma.Left);
         }
 
-        // Read and discard the DMA data through the standard DMA read path,
-        // which matches DOSBox's use of read_dma_8bit(). The data goes into
-        // _sb.Dma.Buf8 but is never processed.
         uint read = ReadDma8Bit(numBytes);
 
         _sb.Dma.Left -= read;
