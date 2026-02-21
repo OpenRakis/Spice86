@@ -3,6 +3,8 @@
 
 namespace Spice86.Libs.Sound.Devices.NukedOpl3;
 
+using NukedOPL3Sharp;
+
 using Spice86.Libs.Sound.Devices.AdlibGold;
 
 [Flags]
