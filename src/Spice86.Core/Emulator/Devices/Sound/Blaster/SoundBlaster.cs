@@ -861,7 +861,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             case 0x0E: { // DspReadStatus
                     // Acknowledges 8-bit IRQ. Bit 7 = 1 if output FIFO has data.
                     // Lower 7 bits are always 1.
-                    bool wasIrqPending = _sb.Irq.Pending8Bit;
                     if (_sb.Irq.Pending8Bit) {
                         _sb.Irq.Pending8Bit = false;
                         _dualPic.DeactivateIrq(_sb.Hw.Irq);
@@ -965,7 +964,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         _sb.Dsp.WriteStatusCounter = 0;
         _sb.Dsp.ResetTally++;
-        _blasterState = BlasterState.WaitingForCommand;
         _scheduler.RemoveEvents(DspFinishResetEvent);
 
         _sb.Dma.Left = 0;
@@ -997,8 +995,8 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void DspDoWrite(byte value) {
-        switch (_blasterState) {
-            case BlasterState.WaitingForCommand:
+        switch (_sb.Dsp.Cmd) {
+            case (byte)BlasterState.WaitingForCommand:
                 _sb.Dsp.Cmd = value;
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Dsp.CmdLen = DspCommandLengthsSb16[value];
@@ -1006,13 +1004,12 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     _sb.Dsp.CmdLen = DspCommandLengthsSb[value];
                 }
                 _sb.Dsp.In.Pos = 0;
-                _blasterState = BlasterState.ReadingCommand;
                 if (_sb.Dsp.CmdLen == 0) {
                     DspDoCommand();
                 }
                 break;
 
-            case BlasterState.ReadingCommand:
+            default:
                 _sb.Dsp.In.Data[_sb.Dsp.In.Pos] = value;
                 _sb.Dsp.In.Pos++;
                 if (_sb.Dsp.In.Pos >= _sb.Dsp.CmdLen) {
@@ -1099,40 +1096,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x14:
-            case 0x15:
-            case 0x91:
-                // Single Cycle 8-Bit DMA DAC
-                DspPrepareDmaOld(DmaMode.Pcm8Bit, false, false);
-                break;
-
-            case 0x1c:
-            case 0x90:
-                // Auto Init 8-bit DMA
-                // Uses AutoSize previously set by command 0x48
-                if (_sb.Type > SbType.SB1) {
-                    DspPrepareDmaOld(DmaMode.Pcm8Bit, true, false);
-                } else {
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("SB: Game uses Auto-init DMA (cmd=0x{Cmd:X2}) but {SbType} does not support it", _sb.Dsp.Cmd, _sb.Type);
-                    }
-                }
-                break;
-
-            case 0x7f:
-            case 0x1f:
-                if (_sb.Type > SbType.SB1) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                        _loggerService.Error("DSP:Unimplemented auto-init DMA ADPCM command {Cmd:X2}",
-                                            _sb.Dsp.Cmd);
-                    }
-                }
-                break;
-
-            case 0x20:
-                DspAddData(0x7f); // Fake silent input for Creative parrot
-                break;
-
             case 0x24:
                 // Single Cycle 8-Bit DMA ADC
                 _sb.Dma.Left = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
@@ -1140,23 +1103,27 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 _primaryDmaChannel.RegisterCallback(DspAdcCallback);
                 break;
 
-            case 0x30:
-            case 0x31:
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("DSP:Unimplemented MIDI I/O command {Cmd:X2}",
-                                        _sb.Dsp.Cmd);
-                }
+            case 0x14: // Single Cycle 8-Bit DMA DAC
+                goto case 0x15;
+
+            case 0x15:
+                // Wari hack. Waru uses this one instead of 0x14, but some
+                // weird stuff going on there anyway
+                goto case 0x91;
+
+            case 0x91:
+                // Singe Cycle 8-Bit DMA High speed DAC
+                // Note: 0x91 is documented only for DSP ver.2.x and 3.x,
+                // not 4.x
+                DspPrepareDmaOld(DmaMode.Pcm8Bit, false, false);
                 break;
 
-            case 0x34:
-            case 0x35:
-            case 0x36:
-            case 0x37:
+            case 0x1c: // Auto Init 8-bit DMA
+            case 0x90: // Auto Init 8-bit DMA High Speed
+                // Note: 0x90 is documented only for DSP ver.2.x and 3.x,
+                // not 4.x
                 if (_sb.Type > SbType.SB1) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                        _loggerService.Error("DSP:Unimplemented MIDI UART command {Cmd:X2}",
-                                            _sb.Dsp.Cmd);
-                    }
+                    DspPrepareDmaOld(DmaMode.Pcm8Bit, true, false);
                 }
                 break;
 
@@ -1172,9 +1139,8 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 DspChangeRate((uint)(1000000 / (256 - _sb.Dsp.In.Data[0])));
                 break;
 
-            case 0x41:
+            case 0x41: // Set Output/Input Samplerate
             case 0x42:
-                // Set Output/Input Samplerate (Sb16)
                 // Note: 0x42 is handled like 0x41, needed by Fasttracker II
                 if (_sb.Type == SbType.Sb16) {
                     uint rate = (uint)((_sb.Dsp.In.Data[0] << 8) | _sb.Dsp.In.Data[1]);
@@ -1191,55 +1157,41 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 // Set DMA Block Size
                 if (_sb.Type > SbType.SB1) {
                     _sb.Dma.AutoSize = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
-                } else {
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("SB: Game uses DMA block size command (0x48) but {SbType} does not support it", _sb.Type);
-                    }
                 }
                 break;
 
-            case 0x16:
-            case 0x17:
-                // Single Cycle 2-bit ADPCM
-                // 0x17 includes reference byte
-                if (_sb.Dsp.Cmd == 0x17) {
-                    _sb.Adpcm.HaveRef = true;
-                }
-                DspPrepareDmaOld(DmaMode.Adpcm2Bit, false, false);
-                break;
+            case 0x75:  // 075h : Single Cycle 4-bit ADPCM Reference
+                _sb.Adpcm.HaveRef = true;
+                goto case 0x74;
 
-            case 0x74:
-            case 0x75:
-                // Single Cycle 4-bit ADPCM
-                if (_sb.Dsp.Cmd == 0x75) {
-                    _sb.Adpcm.HaveRef = true;
-                }
+            case 0x74:  // 074h : Single Cycle 4-bit ADPCM
                 DspPrepareDmaOld(DmaMode.Adpcm4Bit, false, false);
                 break;
 
-            case 0x76:
-            case 0x77:
-                // Single Cycle 3-bit ADPCM
-                if (_sb.Dsp.Cmd == 0x77) {
-                    _sb.Adpcm.HaveRef = true;
-                }
+            case 0x77: // 077h : Single Cycle 3-bit(2.6bit) ADPCM Reference
+                _sb.Adpcm.HaveRef = true;
+                goto case 0x76;
+
+            case 0x76: // 076h : Single Cycle 3-bit(2.6bit) ADPCM
                 DspPrepareDmaOld(DmaMode.Adpcm3Bit, false, false);
                 break;
 
-            case 0x7d:
-                // Auto Init 4-bit ADPCM
+            case 0x7d: // Auto Init 4-bit ADPCM Reference
                 if (_sb.Type > SbType.SB1) {
                     _sb.Adpcm.HaveRef = true;
                     DspPrepareDmaOld(DmaMode.Adpcm4Bit, true, false);
-                } else {
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("SB: Game uses Auto-init ADPCM (0x7D) but {SbType} does not support it", _sb.Type);
-                    }
                 }
                 break;
 
-            case 0x80:
-                // Silence DAC - schedule IRQ after specified duration
+            case 0x17:  // 017h : Single Cycle 2-bit ADPCM Reference
+                _sb.Adpcm.HaveRef = true;
+                goto case 0x16;
+
+            case 0x16: // 016h : Single Cycle 2-bit ADPCM
+                DspPrepareDmaOld(DmaMode.Adpcm2Bit, false, false);
+                break;
+
+            case 0x80: // Silence DAC
                 {
                     uint samples = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
                     double delayMs = (1000.0 * samples) / _sb.FreqHz;
@@ -1247,18 +1199,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x98:
-            case 0x99: // Documented only for DSP 2.x and 3.x
-            case 0xa0:
-            case 0xa8: // Documented only for DSP 3.x
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("DSP:Unimplemented input command {Cmd:X2}",
-                                        _sb.Dsp.Cmd);
-                }
-                break;
-
             // Generic 8/16-bit DMA commands (SB16 only) - 0xB0-0xCF
-            // Reference: DOSBox soundblaster.cpp lines 2068-2097
             case 0xb0:
             case 0xb1:
             case 0xb2:
@@ -1291,24 +1232,28 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             case 0xcd:
             case 0xce:
             case 0xcf:
-                // Generic DMA commands (SB16 only)
+                // Generic 8/16 bit DMA commands (SB16 only)
+                if (_sb.Type != SbType.Sb16) {
+                    break;
+                }
+                // Parse command byte and mode byte
+                // Command bit 4 (0x10): 0=8-bit, 1=16-bit
+                // Mode byte bit 4 (0x10): signed data
+                // Mode byte bit 5 (0x20): stereo
+                // Command bit 2 (0x04): FIFO enable (we don't emulate FIFO delay)
+                _sb.Dma.Sign = (_sb.Dsp.In.Data[0] & 0x10) != 0;
+                bool is16Bit = (_sb.Dsp.Cmd & 0x10) != 0;
+                bool autoInit = (_sb.Dsp.Cmd & 0x04) != 0;
+                bool stereo = (_sb.Dsp.In.Data[0] & 0x20) != 0;
+                // Length is in bytes (for 8-bit) or words (for 16-bit)
+                uint length = (uint)(1 + _sb.Dsp.In.Data[1] + (_sb.Dsp.In.Data[2] << 8));
+                DspPrepareDmaNew(is16Bit ? DmaMode.Pcm16Bit : DmaMode.Pcm8Bit, length, autoInit, stereo);
+                break;
+
+            case 0xd5:
+                // Halt 16-bit DMA
                 if (_sb.Type == SbType.Sb16) {
-                    // Parse command byte and mode byte
-                    // Command bit 4 (0x10): 0=8-bit, 1=16-bit
-                    // Mode byte bit 4 (0x10): signed data
-                    // Mode byte bit 5 (0x20): stereo
-                    // Command bit 2 (0x04): FIFO enable (we don't emulate FIFO delay)
-                    _sb.Dma.Sign = (_sb.Dsp.In.Data[0] & 0x10) != 0;
-                    bool is16Bit = (_sb.Dsp.Cmd & 0x10) != 0;
-                    bool autoInit = (_sb.Dsp.Cmd & 0x04) != 0;
-                    bool stereo = (_sb.Dsp.In.Data[0] & 0x20) != 0;
-                    // Length is in bytes (for 8-bit) or words (for 16-bit)
-                    uint length = (uint)(1 + _sb.Dsp.In.Data[1] + (_sb.Dsp.In.Data[2] << 8));
-                    DspPrepareDmaNew(is16Bit ? DmaMode.Pcm16Bit : DmaMode.Pcm8Bit, length, autoInit, stereo);
-                } else {
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("SB: Game uses Generic DMA commands (0xB0-0xCF) but running as {SbType}, requires SB16", _sb.Type);
-                    }
+                    goto case 0xd0;
                 }
                 break;
 
@@ -1328,6 +1273,30 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 SetSpeakerEnabled(false);
                 break;
 
+            case 0xd8:
+                // Speaker status
+                if (_sb.Type <= SbType.SB1) {
+                    break;
+                }
+                DspFlushData();
+                if (_sb.SpeakerEnabled) {
+                    DspAddData(0xff);
+                    // If the game is courteous enough to ask if the speaker
+                    // is ready, then we can be confident it won't play
+                    // garbage content, so we zero the warmup count down.
+                    _sb.Dsp.WarmupRemainingMs = 0;
+                } else {
+                    DspAddData(0x00);
+                }
+                break;
+
+            case 0xd6:
+                // Continue DMA 16-bit
+                if (_sb.Type != SbType.Sb16) {
+                    break;
+                }
+                goto case 0xd4;
+
             case 0xd4:
                 // Continue DMA 8-bit
                 if (_sb.Mode == DspMode.DmaPause) {
@@ -1336,69 +1305,22 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0xd5:
-                // Halt 16-bit DMA
-                if (_sb.Type != SbType.Sb16) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("SB: Game uses 16-bit DMA halt (0xD5) but running as {SbType}, requires SB16", _sb.Type);
-                    }
-                    break;
-                }
-                _sb.Mode = DspMode.DmaPause;
-                _scheduler.RemoveEvents(ProcessDmaTransferEvent);
-                break;
-
-            case 0xd6:
-                // Continue DMA 16-bit
-                if (_sb.Type != SbType.Sb16) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("SB: Game uses 16-bit DMA continue (0xD6) but running as {SbType}, requires SB16", _sb.Type);
-                    }
-                    break;
-                }
-                if (_sb.Mode == DspMode.DmaPause) {
-                    _sb.Mode = DspMode.DmaMasked;
-                    _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
-                }
-                break;
-
-            case 0xd8:
-                // Speaker status
-                if (_sb.Type > SbType.SB1) {
-                    DspFlushData();
-                    if (_sb.SpeakerEnabled) {
-                        DspAddData(0xff);
-                        _sb.Dsp.WarmupRemainingMs = 0;
-                    } else {
-                        DspAddData(0x00);
-                    }
-                } else {
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("SB: Game uses speaker status query (0xD8) but {SbType} does not support it", _sb.Type);
-                    }
-                }
-                break;
-
             case 0xd9:
                 // Exit Autoinitialize 16-bit
                 if (_sb.Type == SbType.Sb16) {
-                    _sb.Dma.AutoInit = false;
-                } else {
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("SB: Game uses 16-bit exit auto-init (0xD9) but running as {SbType}, requires SB16", _sb.Type);
-                    }
+                    goto case 0xda;
                 }
                 break;
 
             case 0xda:
                 // Exit Autoinitialize 8-bit
                 if (_sb.Type > SbType.SB1) {
+                    // Should stop itself
                     _sb.Dma.AutoInit = false;
                 }
                 break;
 
-            case 0xe0:
-                // DSP Identification
+            case 0xe0: // DSP Identification - SB2.0+
                 DspFlushData();
                 DspAddData((byte)~_sb.Dsp.In.Data[0]);
                 break;
@@ -1454,12 +1376,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 if (_sb.EssType != EssType.None) {
                     DspAddData(0);
                 } else {
-                    string copyright = "COPYRIGHT (C) CREATIVE TECHNOLOGY LTD, 1992.";
+                    const string copyright = "COPYRIGHT (C) CREATIVE TECHNOLOGY LTD, 1992.";
                     foreach (char c in copyright) {
                         DspAddData((byte)c);
                     }
-                    // Include null terminator - games read until they encounter it
-                    DspAddData(0);
                 }
                 break;
 
@@ -1507,9 +1427,55 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 DspAddData(0);
                 break;
 
+            case 0x30:
+            case 0x31:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("DSP:Unimplemented MIDI I/O command {Cmd:X2}",
+                                        _sb.Dsp.Cmd);
+                }
+                break;
+
+            case 0x34:
+            case 0x35:
+            case 0x36:
+            case 0x37:
+                if (_sb.Type > SbType.SB1) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                        _loggerService.Error("DSP:Unimplemented MIDI UART command {Cmd:X2}",
+                                            _sb.Dsp.Cmd);
+                    }
+                }
+                break;
+
+            case 0x7f:
+            case 0x1f:
+                if (_sb.Type > SbType.SB1) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                        _loggerService.Error("DSP:Unimplemented auto-init DMA ADPCM command {Cmd:X2}",
+                                            _sb.Dsp.Cmd);
+                    }
+                }
+                break;
+
+            case 0x20:
+                DspAddData(0x7f); // Fake silent input for Creative parrot
+                break;
+
+            case 0x2c:
+            case 0x98:
+            case 0x99: // Documented only for DSP 2.x and 3.x
+            case 0xa0:
+            case 0xa8: // Documented only for DSP 3.x
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("DSP:Unimplemented input command {Cmd:X2}",
+                                        _sb.Dsp.Cmd);
+                }
+                break;
+
             case 0xf9:
                 // Sb16 ASP unknown function
                 if (_sb.Type == SbType.Sb16) {
+                    // Just feed it what it expects
                     switch (_sb.Dsp.In.Data[0]) {
                         case 0x0b: DspAddData(0x00); break;
                         case 0x0e: DspAddData(0xff); break;
@@ -1535,7 +1501,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Dsp.Cmd = 0;
         _sb.Dsp.CmdLen = 0;
         _sb.Dsp.In.Pos = 0;
-        _blasterState = BlasterState.WaitingForCommand;
     }
 
     private void DspChangeMode(DspMode mode) {

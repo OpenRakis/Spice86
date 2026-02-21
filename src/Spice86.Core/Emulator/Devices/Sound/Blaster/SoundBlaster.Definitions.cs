@@ -77,7 +77,7 @@ public partial class SoundBlaster {
 
     private enum SbIrq { Irq8, Irq16, IrqMpu }
 
-    private enum BlasterState { WaitingForCommand, ReadingCommand }
+    private enum BlasterState : byte { WaitingForCommand, ReadingCommand }
 
     private enum TimingType { None, PerTick, PerFrame }
 
@@ -363,8 +363,6 @@ public partial class SoundBlaster {
 
     private readonly AudioFrame[] _enqueueBatch = new AudioFrame[4096];
     private int _enqueueBatchCount;
-
-    private BlasterState _blasterState = BlasterState.WaitingForCommand;
 
     private readonly byte[] _aspRegs = new byte[256];
     private bool _aspInitInProgress;
