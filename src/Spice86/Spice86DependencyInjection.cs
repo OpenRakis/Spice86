@@ -419,8 +419,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
                 pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter,
-                mixer, soundBlaster, opl);
+                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter);
 
             // Subscribe to video mode changes for dynamic aspect ratio correction
             vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
@@ -640,8 +639,12 @@ public class Spice86DependencyInjection : IDisposable {
                 cpuViewModel, midiViewModel, cfgCpuViewModel,
                 [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
 
+            MixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
+
             Application.Current!.Resources[nameof(DebugWindowViewModel)] =
                 debugWindowViewModel;
+            Application.Current!.Resources[nameof(MixerViewModel)] =
+                mixerViewModel;
             mainWindow.DataContext = mainWindowViewModel;
         }
     }

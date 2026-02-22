@@ -10,7 +10,7 @@ using Spice86.Views;
 
 using System.Diagnostics.CodeAnalysis;
 
-internal class ShowInternalDebuggerBehavior : Behavior<Control> {
+internal class ShowAdditionnalWindowBehavior : Behavior<Control> {
     protected override void OnAttached() {
         base.OnAttached();
         if (AssociatedObject is null) {
@@ -26,6 +26,34 @@ internal class ShowInternalDebuggerBehavior : Behavior<Control> {
         }
         AssociatedObject.PointerPressed -= OnPointerPressed;
     }
+
+    private void ShowRegisteredWindow<T>(ref object? dataContext, string name) where T : Window, new() {
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime lifetime) {
+            throw new PlatformNotSupportedException("This behavior is only supported on Desktop platforms.");
+        }
+        IReadOnlyList<Window>? ownedWindows = lifetime.MainWindow!.OwnedWindows;
+        if (TryShowRegisteredWindow(ownedWindows, out T? ownedWindow)) {
+            dataContext = ownedWindow.DataContext;
+            return;
+        }
+        IReadOnlyList<Window> appWindows = lifetime.Windows;
+        if (TryShowRegisteredWindow(appWindows, out T? appWindow)) {
+            dataContext = appWindow.DataContext;
+        } else {
+            dataContext ??= Application.Current.Resources[name];
+            T window = new() {
+                DataContext = dataContext
+            };
+            dataContext = window.DataContext;
+            window.Show();
+        }
+    }
+
+    private object? _audioMixerDataContext;
+
+    internal void ShowAudioMixer() {
+        ShowRegisteredWindow<MixerView>(ref _audioMixerDataContext, nameof(MixerViewModel));
+    }
     
     private object? _debugWindowDataContext;
 
@@ -34,37 +62,19 @@ internal class ShowInternalDebuggerBehavior : Behavior<Control> {
     /// </summary>
     /// <exception cref="PlatformNotSupportedException">The platform is not <see cref="IClassicDesktopStyleApplicationLifetime"/></exception>
     internal void ShowInternalDebugger() {
-        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime lifetime) {
-            throw new PlatformNotSupportedException("This behavior is only supported on Desktop platforms.");
-        }
-        IReadOnlyList<Window>? ownedWindows = lifetime.MainWindow!.OwnedWindows;
-        if (TryShowDebugWindow(ownedWindows, out DebugWindow? ownedDebugWindow)) {
-            _debugWindowDataContext = ownedDebugWindow.DataContext;
-            return;
-        }
-        IReadOnlyList<Window> appWindows = lifetime.Windows;
-        if (TryShowDebugWindow(appWindows, out DebugWindow? appDebugWindow)) {
-            _debugWindowDataContext = appDebugWindow.DataContext;
-        } else {
-            _debugWindowDataContext ??= Application.Current.Resources[nameof(DebugWindowViewModel)];
-            DebugWindow debugWindow = new() {
-                DataContext = _debugWindowDataContext
-            };
-            _debugWindowDataContext = debugWindow.DataContext;
-            debugWindow.Show();
-        }
+        ShowRegisteredWindow<DebugWindow>(ref _debugWindowDataContext, nameof(DebugWindowViewModel));
     }
 
     private void OnPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e) {
         ShowInternalDebugger();
     }
 
-    private static bool TryShowDebugWindow(IReadOnlyList<Window> windows, [NotNullWhen(true)] out DebugWindow? debugWindow) {
+    private static bool TryShowRegisteredWindow<T>(IReadOnlyList<Window> windows, [NotNullWhen(true)] out T? debugWindow) where T : Window {
         foreach (Window window in windows) {
-            if (window is not DebugWindow dbgWindow) {
+            if (window is not T registeredWindow) {
                 continue;
             }
-            debugWindow = dbgWindow;
+            debugWindow = registeredWindow;
             if (debugWindow.IsVisible) {
                 debugWindow.Activate();
             }
