@@ -8,10 +8,8 @@ using Spice86.Audio.Mixer;
 using Spice86.Audio.Sound.Common;
 using Spice86.Audio.Sound.Devices.AdlibGold;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Interfaces;
 
 using System.Runtime.InteropServices;
@@ -32,8 +30,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly Opl3Chip _chip = new();
     private readonly Lock _chipLock = new();
     private readonly IEmulatedClock _clock;
-    private readonly ICyclesLimiter _cyclesLimiter;
-    private readonly DualPic _dualPic;
     private readonly OplMode _mode;
 
     // Two timer chips for DualOpl2 mode or single chip for other modes
@@ -103,28 +99,23 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     Initializes a new instance of the OPL synth chip.
     /// </summary>
+    /// <param name="config">OPL configuration options (mode, SB base, and mixer enable).</param>
     /// <param name="mixer">The global software mixer.</param>
     /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="clock">The emulated clock.</param>
     /// <param name="ioPortDispatcher">I/O port dispatcher.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
     /// <param name="loggerService">The logger service.</param>
-    /// <param name="clock">The emulated clock.</param>
-    /// <param name="cyclesLimiter">The CPU cycle limiter, used for I/O port read delay simulation.</param>
-    /// <param name="dualPic">The dual PIC.</param>
-    /// <param name="config">OPL configuration options (mode, SB base, and mixer enable).</param>
-    public Opl(Mixer mixer, State state,
+    public Opl(OplConfig config, Mixer mixer, State state, IEmulatedClock clock,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
-        ILoggerService loggerService, IEmulatedClock clock,
-        ICyclesLimiter cyclesLimiter, DualPic dualPic, OplConfig config)
+        ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _logger = loggerService;
         mixer.LockMixerThread();
         _mode = config.Mode;
         _sbBase = config.SbBase;
         _clock = clock;
-        _cyclesLimiter = cyclesLimiter;
         _timerChips = [new OplChip(clock), new OplChip(clock)];
-        _dualPic = dualPic;
         _ctrl = new AdLibGoldControl(mixerEnabled: config.SbMixer);
 
         // Build channel features based on mode
