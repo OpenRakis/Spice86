@@ -234,14 +234,12 @@ Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
 | Sound Type | Support Level | Notes |
 |------------|---------------|-------|
 | PC Speaker | ✅ Full | Implemented |
-| Adlib/SB OPL | ✅ Full | FM synthesis supported |
-| SoundBlaster PCM | ✅ Full | Digital audio supported |
-| SoundBlaster Mixer | ⚠️ Partial | Some registers are unimplemented |
+| Adlib/SB OPL | ✅ Full | Ported from DOSBox Staging |
+| SoundBlaster | ✅ Full | Ported from DOSBox Staging |
+| Adlib Gold | ✅ Full | Ported from DOSBox Staging |
 | MT-32 | ⚠️ Partial | Not available on macOS |
 | Gravis Ultrasound | ❌ None | Not implemented yet | 
 | General MIDI | ✅ Full | Supported |
-
-On Unix-like systems, libportaudio must be installed for sound to work.
 
 ## Misc
 
@@ -457,7 +455,10 @@ Betrayal at Krondor:
 
 ## Credits
 
-Some emulation code was adapted from the [Aeon emulator](https://github.com/gregdivis/Aeon) by @gregdivis. Those are: The DMA Controller, the SoundBlaster, the MT-32, and General MIDI.
+The SoundBlaster implementation is fully ported from [dosbox-staging](https://github.com/dosbox-staging/dosbox-staging), replacing the previous Aeon implementation. This includes PCM and OPL sound quality improvements, emulation accuracy, SB/OPL compatibility, mixer thread logic, audio events, audio hardware delays, and a complete audio re-architecture.
+
+Additionally, the project no longer relies on PortAudio. Instead, it uses a fully cross-platform C# port of the SDL2 audio APIs.
+We only depend on WASAPI (Windows), ALSA (Linux), or CoreAudio (macOS).
 
 This project uses JetBrains Rider licenses, thanks to JetBrains' [Open Source Community Support](https://www.jetbrains.com/community/opensource/#support).
 
