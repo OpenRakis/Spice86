@@ -12,7 +12,6 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
 using System.Runtime.InteropServices;
@@ -32,7 +31,6 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     private readonly ILoggerService _logger;
     private readonly Opl3Chip _chip = new();
     private readonly Lock _chipLock = new();
-    private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly DualPic _dualPic;
@@ -110,21 +108,19 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <param name="ioPortDispatcher">I/O port dispatcher.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
     /// <param name="loggerService">The logger service.</param>
-    /// <param name="scheduler">The event scheduler.</param>
     /// <param name="clock">The emulated clock.</param>
     /// <param name="cyclesLimiter">The CPU cycle limiter, used for I/O port read delay simulation.</param>
     /// <param name="dualPic">The dual PIC.</param>
     /// <param name="config">OPL configuration options (mode, SB base, and mixer enable).</param>
     public Opl(Mixer mixer, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
-        ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock,
+        ILoggerService loggerService, IEmulatedClock clock,
         ICyclesLimiter cyclesLimiter, DualPic dualPic, OplConfig config)
         : base(state, failOnUnhandledPort, loggerService) {
         _logger = loggerService;
         mixer.LockMixerThread();
         _mode = config.Mode;
         _sbBase = config.SbBase;
-        _scheduler = scheduler;
         _clock = clock;
         _cyclesLimiter = cyclesLimiter;
         _timerChips = [new OplChip(clock), new OplChip(clock)];
