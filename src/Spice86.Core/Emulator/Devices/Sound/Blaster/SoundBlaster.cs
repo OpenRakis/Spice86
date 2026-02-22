@@ -14,6 +14,7 @@ using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier {
     /// <summary>
@@ -1660,7 +1661,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             GenerateFrames(total_frames - _framesAddedThisTick);
         }
         _framesAddedThisTick -= total_frames;
-        _scheduler.AddEvent(_perTickHandler, 1);
+        if(_timingType == TimingType.PerTick) {
+            double delay = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond).TotalMilliseconds;
+            _scheduler.AddEvent(_perTickHandler, delay);
+        }
     }
 
     private void PerFrameCallback() {
@@ -1702,11 +1706,9 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     private void SetCallbackPerTick() {
         if (_timingType != TimingType.PerTick) {
             SetCallbackNone();
-
             _framesAddedThisTick = 0;
-
-            _scheduler.AddEvent(_perTickHandler, 1);
-
+            double delay = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond).TotalMilliseconds;
+            _scheduler.AddEvent(_perTickHandler, delay);
             _timingType = TimingType.PerTick;
         }
     }
