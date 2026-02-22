@@ -27,6 +27,7 @@ public class EmulationLoop {
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly InputEventHub _inputEventQueue;
     private readonly EmulationLoopScheduler.EmulationLoopScheduler _emulationLoopScheduler;
+    private readonly EmulationLoopScheduler.EventHandler _inputEventsHandler;
 
     /// <summary>
     /// Gets or sets whether the emulation is paused.
@@ -67,6 +68,13 @@ public class EmulationLoop {
         _pauseHandler = pauseHandler;
         _inputEventQueue = inputEventQueue;
         _cyclesLimiter = cyclesLimiter;
+        _inputEventsHandler = new EmulationLoopScheduler.EventHandler(InputEventsHandler);
+        _emulationLoopScheduler.AddEvent(_inputEventsHandler, 100);
+    }
+
+    private void InputEventsHandler(uint _) {
+        _inputEventQueue.ProcessAllPendingInputEvents();
+        _emulationLoopScheduler.AddEvent(_inputEventsHandler, 100);
     }
 
     /// <summary>
@@ -126,12 +134,9 @@ public class EmulationLoop {
                 _emulatorBreakpointsManager.CheckExecutionBreakPoints();
             }
             _cpu.ExecuteNext();
-            _emulationLoopScheduler.ProcessEvents();
             _cyclesLimiter.RegulateCycles();
             _pauseHandler.WaitIfPaused();
-            if (_cpuState.Cycles % 100 == 0) {
-                _inputEventQueue.ProcessAllPendingInputEvents();
-            }
+            _emulationLoopScheduler.ProcessEvents();
         }
 
         _performanceStopwatch.Stop();
