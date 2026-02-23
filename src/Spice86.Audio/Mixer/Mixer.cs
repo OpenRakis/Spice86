@@ -32,31 +32,22 @@ public sealed class Mixer : IDisposable {
     // Queue notifiers for devices that run on the main thread.
     // The mixer thread can be waiting on these queues. We need to stop them
     // before acquiring the mutex lock to avoid a deadlock.
-    // Matches DOSBox Staging's MIXER_LockMixerThread / MIXER_UnlockMixerThread pattern.
     private readonly List<IMixerQueueNotifier> _queueNotifiers = new();
 
     // Mixer thread that produces audio and sends to the audio backend
     private readonly Thread _mixerThread;
     private readonly Lock _mixerLock = new();
 
-    // Atomic state
     private volatile bool _threadShouldQuit;
     private readonly int _sampleRateHz = DefaultSampleRateHz;
     private readonly int _blocksize = DefaultBlocksize;
     private readonly int _prebufferMs = DefaultPrebufferMs;
 
-    // Master volume (atomic via Interlocked operations)
-    private AudioFrame _masterGain = new(Minus6db, Minus6db);
+    private AudioFrame _masterVolume = new(Minus6db, Minus6db);
 
     // Controls whether audio is playing, muted, or disabled
     private MixerState _state = MixerState.On;
-    private bool _isManuallyMuted = false;
 
-    private CrossfeedPreset _crossfeedPreset = CrossfeedPreset.None;
-    private ReverbPreset _reverbPreset = ReverbPreset.None;
-    private ChorusPreset _chorusPreset = ChorusPreset.None;
-
-    // Output buffers - matches DOSBox mixer output_buffer
     private readonly AudioFrameBuffer _outputBuffer = new(0);
     private readonly AudioFrameBuffer _reverbAuxBuffer = new(0);
     private readonly AudioFrameBuffer _chorusAuxBuffer = new(0);
@@ -67,29 +58,26 @@ public sealed class Mixer : IDisposable {
     // Reverb state - MVerb professional algorithmic reverb
     private bool _doReverb = false;
     private readonly MVerb _mverb = new();
-    private float _reverbSynthSendLevel = 0.0f;
-    private float _reverbDigitalSendLevel = 0.0f;
+    private readonly float _reverbSynthSendLevel = 0.0f;
+    private readonly float _reverbDigitalSendLevel = 0.0f;
 
-    // Pre-allocated reverb processing buffers (avoids per-tick GC allocations)
     private float _reverbLeftIn;
     private float _reverbRightIn;
 
-    // Chorus state - TAL-Chorus professional modulated chorus
-    private bool _doChorus = false;
+    private readonly bool _doChorus = false;
     private readonly ChorusEngine _chorusEngine;
-    private float _chorusSynthSendLevel = 0.0f;
-    private float _chorusDigitalSendLevel = 0.0f;
+    private readonly float _chorusSynthSendLevel = 0.0f;
+    private readonly float _chorusDigitalSendLevel = 0.0f;
 
     // Crossfeed state - stereo mixing for headphone spatialization
-    private bool _doCrossfeed = false;
-    private float _crossfeedGlobalStrength = 0.0f; // Varies by preset: Light=0.20f, Normal=0.40f, Strong=0.60f
+    private readonly bool _doCrossfeed = false;
+    private readonly float _crossfeedGlobalStrength = 0.0f; // Varies by preset: Light=0.20f, Normal=0.40f, Strong=0.60f
 
     // Used on reverb input and master output
     private readonly HighPassFilter[] _reverbHighPassFilter;
     private readonly HighPassFilter[] _masterHighPassFilter;
     private const int HighPassFilterOrder = 2; // 2nd-order Butterworth
     private const float MasterHighPassCutoffHz = 20.0f;
-
 
     private bool _disposed;
 
@@ -157,26 +145,6 @@ public sealed class Mixer : IDisposable {
     }
 
     /// <summary>
-    /// Gets the current mixer sample rate.
-    /// </summary>
-    public int SampleRateHz => _sampleRateHz;
-
-    /// <summary>
-    /// Gets the mixer sample rate.
-    /// </summary>
-    public int SampleRate => _sampleRateHz;
-
-    /// <summary>
-    /// Gets the current blocksize.
-    /// </summary>
-    public int Blocksize => _blocksize;
-
-    /// <summary>
-    /// Gets the prebuffer time in milliseconds.
-    /// </summary>
-    public int PreBufferMs => _prebufferMs;
-
-    /// <summary>
     /// Registers a queue notifier for a device that produces audio on the main thread.
     /// The notifier will be called before the mixer mutex is acquired and after it is released.
     /// </summary>
@@ -214,54 +182,6 @@ public sealed class Mixer : IDisposable {
     }
 
     /// <summary>
-    /// Gets or sets the master volume gain.
-    /// </summary>
-    public AudioFrame MasterGain {
-        get {
-            LockMixerThread();
-            try {
-                return _masterGain;
-            } finally {
-                UnlockMixerThread();
-            }
-        }
-        set {
-            LockMixerThread();
-            try {
-                _masterGain = value;
-            } finally {
-                UnlockMixerThread();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Gets the current master volume gain.
-    /// </summary>
-    /// <returns>The current master gain as an AudioFrame.</returns>
-    public AudioFrame GetMasterVolume() {
-        LockMixerThread();
-        try {
-            return _masterGain;
-        } finally {
-            UnlockMixerThread();
-        }
-    }
-
-    /// <summary>
-    /// Sets the master volume gain atomically.
-    /// </summary>
-    /// <param name="gain">The new master gain to apply.</param>
-    public void SetMasterVolume(AudioFrame gain) {
-        LockMixerThread();
-        try {
-            _masterGain = gain;
-        } finally {
-            UnlockMixerThread();
-        }
-    }
-
-    /// <summary>
     /// Mutes audio output while keeping the audio device active.
     /// </summary>
     public void Mute() {
@@ -271,7 +191,6 @@ public sealed class Mixer : IDisposable {
                 // Clear out any audio in the queue to avoid a stutter on un-mute
                 _audioPlayer.ClearQueuedData();
                 _state = MixerState.Muted;
-                _isManuallyMuted = true;
             }
         } finally {
             UnlockMixerThread();
@@ -286,68 +205,7 @@ public sealed class Mixer : IDisposable {
         try {
             if (_state == MixerState.Muted) {
                 _state = MixerState.On;
-                _isManuallyMuted = false;
             }
-        } finally {
-            UnlockMixerThread();
-        }
-    }
-
-    /// <summary>
-    /// Returns whether audio has been manually muted by the user.
-    /// </summary>
-    /// <returns>True if audio is manually muted, false otherwise.</returns>
-    public bool IsManuallyMuted() {
-        LockMixerThread();
-        try {
-            return _isManuallyMuted;
-        } finally {
-            UnlockMixerThread();
-        }
-    }
-
-    /// <summary>
-    /// Gets the current crossfeed preset.
-    /// </summary>
-    public CrossfeedPreset GetCrossfeedPreset() {
-        LockMixerThread();
-        try {
-            return _crossfeedPreset;
-        } finally {
-            UnlockMixerThread();
-        }
-    }
-
-    /// <summary>
-    /// Sets the crossfeed preset and configures the effect.
-    /// </summary>
-    public void SetCrossfeedPreset(CrossfeedPreset preset) {
-        LockMixerThread();
-        try {
-            // Unchanged?
-            if (_crossfeedPreset == preset) {
-                return;
-            }
-            _crossfeedPreset = preset;
-            switch (preset) {
-                case CrossfeedPreset.None:
-                    _crossfeedGlobalStrength = 0.0f;
-                    break;
-                case CrossfeedPreset.Light:
-                    _crossfeedGlobalStrength = 0.20f; // DOSBox: 0.20f
-                    break;
-                case CrossfeedPreset.Normal:
-                    _crossfeedGlobalStrength = 0.40f; // DOSBox: 0.40f
-                    break;
-                case CrossfeedPreset.Strong:
-                    _crossfeedGlobalStrength = 0.60f; // DOSBox: 0.60f
-                    break;
-            }
-
-            // Configure the channels
-            _doCrossfeed = (preset != CrossfeedPreset.None);
-
-            SetGlobalCrossfeed();
         } finally {
             UnlockMixerThread();
         }
@@ -370,95 +228,6 @@ public sealed class Mixer : IDisposable {
         }
     }
 
-    /// <summary>
-    /// Gets the current reverb preset.
-    /// </summary>
-    public ReverbPreset GetReverbPreset() {
-        LockMixerThread();
-        try {
-            return _reverbPreset;
-        } finally {
-            UnlockMixerThread();
-        }
-    }
-
-    /// <summary>
-    /// Sets the reverb preset and configures the effect.
-    /// </summary>
-    public void SetReverbPreset(ReverbPreset preset) {
-        LockMixerThread();
-        try {
-            if (_reverbPreset == preset) {
-                return;
-            }
-
-            _reverbPreset = preset;
-
-            // Parameters: PREDLY EARLY  SIZE   DENSITY BW_FREQ DECAY  DAMP_LV SYN_LV DIG_LV HIPASS_HZ
-            switch (preset) {
-                case ReverbPreset.Tiny:
-                    SetupMVerb(predelay: 0.00f, earlyMix: 1.00f, size: 0.05f, density: 0.50f,
-                              bandwidthFreq: 0.50f, decay: 0.00f, dampingFreq: 1.00f,
-                              synthLevel: 0.65f, digitalLevel: 0.65f, highpassHz: 200.0f);
-                    break;
-                case ReverbPreset.Small:
-                    SetupMVerb(predelay: 0.00f, earlyMix: 1.00f, size: 0.17f, density: 0.42f,
-                              bandwidthFreq: 0.50f, decay: 0.50f, dampingFreq: 0.70f,
-                              synthLevel: 0.40f, digitalLevel: 0.08f, highpassHz: 200.0f);
-                    break;
-                case ReverbPreset.Medium:
-                    SetupMVerb(predelay: 0.00f, earlyMix: 0.75f, size: 0.50f, density: 0.50f,
-                              bandwidthFreq: 0.95f, decay: 0.42f, dampingFreq: 0.21f,
-                              synthLevel: 0.54f, digitalLevel: 0.07f, highpassHz: 170.0f);
-                    break;
-                case ReverbPreset.Large:
-                    SetupMVerb(predelay: 0.00f, earlyMix: 0.75f, size: 0.75f, density: 0.50f,
-                              bandwidthFreq: 0.95f, decay: 0.52f, dampingFreq: 0.21f,
-                              synthLevel: 0.70f, digitalLevel: 0.05f, highpassHz: 140.0f);
-                    break;
-                case ReverbPreset.Huge:
-                    SetupMVerb(predelay: 0.00f, earlyMix: 0.75f, size: 0.75f, density: 0.50f,
-                              bandwidthFreq: 0.95f, decay: 0.52f, dampingFreq: 0.21f,
-                              synthLevel: 0.85f, digitalLevel: 0.05f, highpassHz: 140.0f);
-                    break;
-                case ReverbPreset.None:
-                    break;
-            }
-            _doReverb = preset != ReverbPreset.None;
-            SetGlobalReverb();
-        } finally {
-            UnlockMixerThread();
-        }
-    }
-
-    private void SetupMVerb(float predelay, float earlyMix, float size, float density,
-                           float bandwidthFreq, float decay, float dampingFreq,
-                           float synthLevel, float digitalLevel, float highpassHz) {
-        _reverbSynthSendLevel = synthLevel;
-        _reverbDigitalSendLevel = digitalLevel;
-
-        _mverb.SetParameter((int)MVerb.Parameter.Predelay, predelay);
-        _mverb.SetParameter((int)MVerb.Parameter.EarlyMix, earlyMix);
-        _mverb.SetParameter((int)MVerb.Parameter.Size, size);
-        _mverb.SetParameter((int)MVerb.Parameter.Density, density);
-        _mverb.SetParameter((int)MVerb.Parameter.BandwidthFreq, bandwidthFreq);
-        _mverb.SetParameter((int)MVerb.Parameter.Decay, decay);
-        _mverb.SetParameter((int)MVerb.Parameter.DampingFreq, dampingFreq);
-
-        // Always max gain (no attenuation)
-        _mverb.SetParameter((int)MVerb.Parameter.Gain, 1.0f);
-
-        // Always 100% wet output signal
-        _mverb.SetParameter((int)MVerb.Parameter.Mix, 1.0f);
-
-        _mverb.SetSampleRate(_sampleRateHz);
-
-        // Update reverb high-pass filter cutoff
-        for (int i = 0; i < 2; i++) {
-            _reverbHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, highpassHz);
-        }
-    }
-
     private void SetGlobalReverb() {
         foreach (MixerChannel channel in _channels.Values) {
             if (!_doReverb || !channel.HasFeature(ChannelFeature.ReverbSend)) {
@@ -468,60 +237,6 @@ public sealed class Mixer : IDisposable {
             } else if (channel.HasFeature(ChannelFeature.DigitalAudio)) {
                 channel.ReverbLevel = _reverbDigitalSendLevel;
             }
-        }
-    }
-
-    /// <summary>
-    /// Gets the current chorus preset.
-    /// </summary>
-    public ChorusPreset GetChorusPreset() {
-        LockMixerThread();
-        try {
-            return _chorusPreset;
-        } finally {
-            UnlockMixerThread();
-        }
-    }
-
-    /// <summary>
-    /// Sets the chorus preset and configures the effect.
-    /// </summary>
-    public void SetChorusPreset(ChorusPreset preset) {
-        LockMixerThread();
-        try {
-            if (_chorusPreset == preset) {
-                return;
-            }
-
-            _chorusPreset = preset;
-
-            // Configure chorus with DOSBox preset values (mixer.cpp:633-636)
-            // Preset values: Light (0.33, 0.00), Normal (0.54, 0.00), Strong (0.75, 0.00)
-            // Format: (synth_level, digital_level)
-            switch (preset) {
-                case ChorusPreset.Light:
-                    _chorusSynthSendLevel = 0.33f;
-                    _chorusDigitalSendLevel = 0.00f;
-                    break;
-                case ChorusPreset.Normal:
-                    _chorusSynthSendLevel = 0.54f;
-                    _chorusDigitalSendLevel = 0.00f;
-                    break;
-                case ChorusPreset.Strong:
-                    _chorusSynthSendLevel = 0.75f;
-                    _chorusDigitalSendLevel = 0.00f;
-                    break;
-                case ChorusPreset.None:
-                    _chorusSynthSendLevel = 0.0f;
-                    _chorusDigitalSendLevel = 0.0f;
-                    break;
-            }
-            _chorusEngine.SetSampleRate(_sampleRateHz);
-            _chorusEngine.SetEnablesChorus(isChorus1Enabled: true, isChorus2Enabled: false);
-            _doChorus = preset != ChorusPreset.None;
-            SetGlobalChorus();
-        } finally {
-            UnlockMixerThread();
         }
     }
 
@@ -617,7 +332,6 @@ public sealed class Mixer : IDisposable {
     /// </summary>
     public IEnumerable<MixerChannel> AllChannels => _channels.Values;
 
-
     private void MixerThreadLoop() {
         while (!_threadShouldQuit) {
             lock (_mixerLock) {
@@ -658,7 +372,6 @@ public sealed class Mixer : IDisposable {
         _outputBuffer.Resize(framesRequested);
         _reverbAuxBuffer.Resize(framesRequested);
         _chorusAuxBuffer.Resize(framesRequested);
-
         _outputBuffer.AsSpan().Clear();
         _reverbAuxBuffer.AsSpan().Clear();
         _chorusAuxBuffer.AsSpan().Clear();
@@ -670,37 +383,29 @@ public sealed class Mixer : IDisposable {
         // Render all channels and accumulate results in the master mixbuffer
         foreach (MixerChannel channel in _channels.Values) {
             channel.Mix(framesRequested);
-
             Span<AudioFrame> channelFrames = channel.AudioFrames.AsSpan();
             int numFrames = Math.Min(output.Length, channelFrames.Length);
-
             for (int i = 0; i < numFrames; i++) {
                 if (channel.DoSleep) {
                     output[i] += channel.MaybeFadeOrListen(channelFrames[i]);
                 } else {
                     output[i] += channelFrames[i];
                 }
-
                 if (_doReverb && channel.DoReverbSend) {
                     reverbAux[i] += channelFrames[i] * channel.ReverbSendGain;
                 }
-
                 if (_doChorus && channel.DoChorusSend) {
                     chorusAux[i] += channelFrames[i] * channel.ChorusSendGain;
                 }
             }
-
             channel.AudioFrames.RemoveRange(0, numFrames);
-
             if (channel.DoSleep) {
                 channel.MaybeSleep();
             }
         }
-
         if (_doReverb) {
             ApplyReverb();
         }
-
         if (_doChorus) {
             ApplyChorus();
         }
@@ -716,7 +421,7 @@ public sealed class Mixer : IDisposable {
         }
 
         // Apply master gain
-        AudioFrame gain = _masterGain;
+        AudioFrame gain = _masterVolume;
         for (int i = 0; i < masterOutput.Length; i++) {
             masterOutput[i] *= gain;
         }
@@ -777,13 +482,10 @@ public sealed class Mixer : IDisposable {
                 _reverbHighPassFilter[0].Filter(inFrame.Left),
                 _reverbHighPassFilter[1].Filter(inFrame.Right)
             );
-
             // MVerb operates on two non-interleaved sample streams
             _reverbLeftIn = inFrame.Left;
             _reverbRightIn = inFrame.Right;
-
             _mverb.Process(ref _reverbLeftIn, ref _reverbRightIn);
-
             output[i] += new AudioFrame(_reverbLeftIn, _reverbRightIn);
         }
     }
@@ -795,10 +497,8 @@ public sealed class Mixer : IDisposable {
         for (int i = 0; i < chorusAux.Length; i++) {
             float left = chorusAux[i].Left;
             float right = chorusAux[i].Right;
-
             // Process through TAL-Chorus engine (in-place modification)
             _chorusEngine.Process(ref left, ref right);
-
             // Add processed chorus to output buffer
             output[i] += new AudioFrame(left, right);
         }
@@ -807,15 +507,12 @@ public sealed class Mixer : IDisposable {
     private void CloseAudioDevice() {
         _threadShouldQuit = true;
         _audioPlayer.MuteOutput();
-
         if (_mixerThread.IsAlive) {
             _mixerThread.Join(TimeSpan.FromSeconds(2));
         }
-
         foreach (MixerChannel channel in _channels.Values) {
             channel.Enable(false);
         }
-
         _audioPlayer.Dispose();
     }
 
