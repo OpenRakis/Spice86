@@ -5,7 +5,7 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Audio.Backend.Audio;
 using Spice86.Audio.Filters;
-using Spice86.Shared.Interfaces;
+using Spice86.Core.Emulator.VM;
 
 using System.Collections.Generic;
 using System.Runtime.InteropServices;

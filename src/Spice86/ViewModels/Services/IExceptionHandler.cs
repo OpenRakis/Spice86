@@ -3,7 +3,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 
-using Spice86.Shared.Interfaces;
+using Spice86.Core.Emulator.VM;
 
 using System.Runtime.InteropServices;
 

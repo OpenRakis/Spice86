@@ -16,7 +16,6 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
 
 using System.Diagnostics;
