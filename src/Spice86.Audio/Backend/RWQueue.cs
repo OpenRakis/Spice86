@@ -1,4 +1,4 @@
-﻿namespace Spice86.Shared.Utils;
+﻿namespace Spice86.Audio.Backend;
 
 using System;
 using System.Threading;

@@ -1,6 +1,6 @@
 namespace Spice86.Audio.Mixer;
 
-using Spice86.Shared.Utils;
+using Spice86.Audio.Backend;
 
 /// <summary>
 /// Interface for audio devices that produce audio on the main thread and

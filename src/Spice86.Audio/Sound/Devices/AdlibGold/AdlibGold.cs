@@ -3,8 +3,6 @@
 
 namespace Spice86.Audio.Sound.Devices.AdlibGold;
 
-using Serilog;
-
 using Spice86.Audio.Sound.Common;
 
 using System.Runtime.CompilerServices;
@@ -21,10 +19,9 @@ public sealed class AdlibGold : IDisposable {
     ///     Initializes a new instance of the <see cref="AdlibGold" /> class.
     /// </summary>
     /// <param name="sampleRateHz">The sample rate used for audio processing.</param>
-    /// <param name="logger">Logger for diagnostic output.</param>
-    public AdlibGold(int sampleRateHz, ILogger logger) {
-        _surroundProcessor = new SurroundProcessor(sampleRateHz, logger);
-        _stereoProcessor = new StereoProcessor(sampleRateHz, logger);
+    public AdlibGold(int sampleRateHz) {
+        _surroundProcessor = new SurroundProcessor(sampleRateHz);
+        _stereoProcessor = new StereoProcessor(sampleRateHz);
     }
 
     /// <summary>

@@ -11,9 +11,9 @@ using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Audio.Sound.Common;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
 
 using System.Diagnostics;
+using Spice86.Audio.Backend;
 
 /// <summary>
 ///     PC speaker device

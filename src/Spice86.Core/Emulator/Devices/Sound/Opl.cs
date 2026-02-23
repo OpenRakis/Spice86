@@ -139,7 +139,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
 
         // Initialize AdLib Gold for Opl3Gold mode
         if (_mode == OplMode.Opl3Gold) {
-            _adlibGold = new AdlibGold(OplSampleRateHz, loggerService);
+            _adlibGold = new AdlibGold(OplSampleRateHz);
         }
 
         if (_logger.IsEnabled(LogEventLevel.Information)) {

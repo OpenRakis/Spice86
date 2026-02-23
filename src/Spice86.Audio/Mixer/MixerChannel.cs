@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 namespace Spice86.Audio.Mixer;
 
-using Spice86.Shared.Interfaces;
-
 using System.Threading;
 
 using AudioFrame = Spice86.Audio.Sound.Common.AudioFrame;
@@ -22,7 +20,6 @@ public sealed class MixerChannel {
     private readonly Action<int> _handler;
     private readonly string _name;
     private readonly HashSet<ChannelFeature> _features;
-    private readonly ILoggerService _loggerService;
     private readonly Lock _mutex = new();
 
     // Sample rate and timing
@@ -119,13 +116,11 @@ public sealed class MixerChannel {
     public MixerChannel(
         Action<int> handler,
         string name,
-        HashSet<ChannelFeature> features,
-        ILoggerService loggerService) {
+        HashSet<ChannelFeature> features) {
 
         _handler = handler ?? throw new ArgumentNullException(nameof(handler));
         _name = name ?? throw new ArgumentNullException(nameof(name));
         _features = features ?? throw new ArgumentNullException(nameof(features));
-        _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
 
         _doSleep = HasFeature(ChannelFeature.Sleep);
         _sleeper = new Sleeper(this);
@@ -351,12 +346,6 @@ public sealed class MixerChannel {
             }
 
             _speexResampler.SetRate(speexInRate, speexOutRate);
-
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                _loggerService.Debug(
-                    "MIXER: {Name}: Speex resampler is on, input rate: {InRate} Hz, output rate: {OutRate} Hz",
-                    _name, inRateHz, mixerRateHz);
-            }
         }
 
         switch (_resampleMethod) {
@@ -559,13 +548,6 @@ public sealed class MixerChannel {
             // Reset Speex resampler memory and skip zeros
             _speexResampler.Reset();
             _speexResampler.SkipZeros();
-
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                int inputLatency = _speexResampler.GetInputLatency();
-                _loggerService.Debug(
-                    "MIXER: {Name}: Speex resampler cleared and primed {Latency}-frame input queue",
-                    _name, inputLatency);
-            }
         }
     }
 
@@ -723,10 +705,6 @@ public sealed class MixerChannel {
     /// <param name="enabled">True to enable, false to disable</param>
     internal void EnableNoiseGate(bool enabled) {
         lock (_mutex) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("{Channel}: Noise gate {State}",
-                    _name, enabled ? "enabled" : "disabled");
-            }
             _doNoiseGate = enabled;
         }
     }
@@ -763,11 +741,6 @@ public sealed class MixerChannel {
                         throw new InvalidOperationException(
                             "High-pass filter must be configured before enabling");
                     }
-                    if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                        _loggerService.Information(
-                            "{Channel}: High-pass filter enabled (order={Order}, cutoff={Cutoff}Hz)",
-                            _name, _highPassFilterOrder, _highPassFilterCutoffHz);
-                    }
                 }
             }
         }
@@ -790,12 +763,6 @@ public sealed class MixerChannel {
                     if (_lowPassFilterOrder <= 0 || _lowPassFilterCutoffHz <= 0) {
                         throw new InvalidOperationException(
                             "Low-pass filter must be configured before enabling");
-                    }
-
-                    if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                        _loggerService.Information(
-                            "{Channel}: Low-pass filter enabled (order={Order}, cutoff={Cutoff}Hz)",
-                            _name, _lowPassFilterOrder, _lowPassFilterCutoffHz);
                     }
                 }
             }
@@ -1132,11 +1099,6 @@ public sealed class MixerChannel {
         if (numFrames <= 0) {
             return;
         }
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _loggerService.Debug("MIXER_CHANNEL: {Channel}: AddSamples frames={Frames} stereo={Stereo} doResample={DoResample} doLerp={DoLerp} doZoh={DoZoh}",
-                _name, numFrames, isStereo, _doResample, _doLerpUpsample, _doZohUpsample);
-        }
-
         lock (_mutex) {
             _lastSamplesWereStereo = isStereo;
 

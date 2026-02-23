@@ -1,6 +1,6 @@
 namespace Spice86.Audio.Backend.Audio.CrossPlatform;
 
-using Spice86.Shared.Utils;
+using Spice86.Audio.Backend;
 
 using System;
 

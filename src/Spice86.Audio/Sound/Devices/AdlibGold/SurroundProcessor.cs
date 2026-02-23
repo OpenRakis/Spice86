@@ -1,7 +1,5 @@
 namespace Spice86.Audio.Sound.Devices.AdlibGold;
 
-using Serilog;
-
 using Spice86.Audio.Sound.Common;
 using Spice86.Audio.Sound.Devices.YM7128B;
 
@@ -10,7 +8,6 @@ using Spice86.Audio.Sound.Devices.YM7128B;
 /// </summary>
 internal sealed class SurroundProcessor : IDisposable {
     private readonly Ym7128BChip _chip = new();
-    private readonly ILogger _logger;
     private readonly Ym7128BChipIdealProcessData _processData = new();
 
     private ControlState _control;
@@ -19,30 +16,19 @@ internal sealed class SurroundProcessor : IDisposable {
     ///     Initializes a new instance of the <see cref="SurroundProcessor" /> class.
     /// </summary>
     /// <param name="sampleRateHz">The sample rate used by the mixer.</param>
-    /// <param name="logger">Logger used to trace register activity.</param>
-    internal SurroundProcessor(int sampleRateHz, ILogger logger) {
-        _logger = logger.ForContext<SurroundProcessor>();
-
+    internal SurroundProcessor(int sampleRateHz) {
         if (sampleRateHz < 10) {
-            _logger.Error(
-                "The surround processor requires a sample rate of at least 10 Hz. Provided value: {SampleRateHz}",
-                sampleRateHz);
             throw new ArgumentOutOfRangeException(nameof(sampleRateHz), "Sample rate must be at least 10 Hz.");
         }
-
         _chip.IdealSetup((nuint)sampleRateHz);
         _chip.IdealReset();
         _chip.IdealStart();
-
-        _logger.Debug("Surround processor initialized at sample rate {SampleRateHz}", sampleRateHz);
     }
 
     /// <summary>
     ///     Releases the unmanaged resources owned by the surround chip.
     /// </summary>
     public void Dispose() {
-        _logger.Debug("Disposing surround processor.");
-
         _chip.IdealStop();
         _chip.IdealDtor();
     }
@@ -55,11 +41,6 @@ internal sealed class SurroundProcessor : IDisposable {
         var reg = new SurroundControlReg(value);
 
         if (_control.A0 != 0 && reg.A0 == 0) {
-            _logger.Verbose(
-                "Writing surround register {Register} with value {Data}",
-                _control.Address,
-                _control.Data);
-
             _chip.IdealWrite(_control.Address, _control.Data);
         } else {
             if (_control.Sci == 0 && reg.Sci != 0) {

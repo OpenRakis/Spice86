@@ -3,13 +3,13 @@
 
 namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
+using Spice86.Audio.Backend;
 using Spice86.Audio.Mixer;
 using Spice86.Audio.Sound.Common;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
-using Spice86.Shared.Utils;
 
 using System;
 

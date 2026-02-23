@@ -2,7 +2,6 @@ namespace Spice86.Audio.Mixer;
 
 using Spice86.Audio.Backend.Audio;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
 
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -22,7 +21,6 @@ public sealed class Mixer : IDisposable {
     // This shows up nicely as 50% and -6.00 dB in the MIXER command's output
     private const float Minus6db = 0.501f;
 
-    private readonly ILoggerService _loggerService;
     private readonly AudioPlayerFactory _audioPlayerFactory;
     private readonly AudioPlayer _audioPlayer;
     private readonly IPauseHandler _pauseHandler;
@@ -98,13 +96,11 @@ public sealed class Mixer : IDisposable {
     /// <summary>
     /// Creates a new Mixer instance.
     /// </summary>
-    /// <param name="loggerService">Logger service.</param>
     /// <param name="audioEngine">Audio engine to use.</param>
     /// <param name="pauseHandler">Pause handler to mute audio when emulator is paused.</param>
-    public Mixer(ILoggerService loggerService, AudioEngine audioEngine, IPauseHandler pauseHandler) {
-        _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
+    public Mixer(AudioEngine audioEngine, IPauseHandler pauseHandler) {
         _pauseHandler = pauseHandler ?? throw new ArgumentNullException(nameof(pauseHandler));
-        _audioPlayerFactory = new AudioPlayerFactory(_loggerService, audioEngine);
+        _audioPlayerFactory = new AudioPlayerFactory(audioEngine);
 
         // Create the audio player with our sample rate and blocksize
         _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize, _prebufferMs);
@@ -150,9 +146,6 @@ public sealed class Mixer : IDisposable {
 
         _pauseHandler.Pausing += OnEmulatorPausing;
         _pauseHandler.Resumed += OnEmulatorResumed;
-
-        _loggerService.Information("MIXER: Initialized stereo {SampleRate} Hz audio with {BlockSize} sample frame buffer",
-            _sampleRateHz, _blocksize);
     }
 
     private void OnEmulatorPausing() {
@@ -279,7 +272,6 @@ public sealed class Mixer : IDisposable {
                 _audioPlayer.ClearQueuedData();
                 _state = MixerState.Muted;
                 _isManuallyMuted = true;
-                _loggerService.Information("MIXER: Muted audio output");
             }
         } finally {
             UnlockMixerThread();
@@ -295,7 +287,6 @@ public sealed class Mixer : IDisposable {
             if (_state == MixerState.Muted) {
                 _state = MixerState.On;
                 _isManuallyMuted = false;
-                _loggerService.Information("MIXER: Unmuted audio output");
             }
         } finally {
             UnlockMixerThread();
@@ -357,13 +348,6 @@ public sealed class Mixer : IDisposable {
             _doCrossfeed = (preset != CrossfeedPreset.None);
 
             SetGlobalCrossfeed();
-
-            // Log the change
-            if (_doCrossfeed) {
-                _loggerService.Information("MIXER: Crossfeed enabled ('{Preset}' preset)", preset);
-            } else {
-                _loggerService.Information("MIXER: Crossfeed disabled");
-            }
         } finally {
             UnlockMixerThread();
         }
@@ -440,15 +424,7 @@ public sealed class Mixer : IDisposable {
                 case ReverbPreset.None:
                     break;
             }
-
             _doReverb = preset != ReverbPreset.None;
-
-            if (_doReverb) {
-                _loggerService.Information("MIXER: Reverb enabled ('{Preset}' preset)", preset);
-            } else {
-                _loggerService.Information("MIXER: Reverb disabled");
-            }
-
             SetGlobalReverb();
         } finally {
             UnlockMixerThread();
@@ -540,19 +516,9 @@ public sealed class Mixer : IDisposable {
                     _chorusDigitalSendLevel = 0.0f;
                     break;
             }
-
-            // Update ChorusEngine configuration (matches DOSBox mixer.cpp:641-647)
             _chorusEngine.SetSampleRate(_sampleRateHz);
             _chorusEngine.SetEnablesChorus(isChorus1Enabled: true, isChorus2Enabled: false);
-
             _doChorus = preset != ChorusPreset.None;
-
-            if (_doChorus) {
-                _loggerService.Information("MIXER: Chorus enabled ('{Preset}' preset)", preset);
-            } else {
-                _loggerService.Information("MIXER: Chorus disabled");
-            }
-
             SetGlobalChorus();
         } finally {
             UnlockMixerThread();
@@ -589,22 +555,13 @@ public sealed class Mixer : IDisposable {
             sampleRateHz = _sampleRateHz;
         }
 
-        MixerChannel channel = new(handler, name, features, _loggerService);
+        MixerChannel channel = new(handler, name, features);
         channel.SetMixerSampleRate(_sampleRateHz); // Tell channel about mixer rate
         channel.        SampleRate = sampleRateHz;
         channel.AppVolume = new AudioFrame(1.0f, 1.0f);
         channel.UserVolume = new AudioFrame(1.0f, 1.0f);
 
         int channelRate = channel.SampleRate;
-        if (channelRate == _sampleRateHz) {
-            _loggerService.Information("{ChannelName}: Operating at {Rate} Hz without resampling",
-                name, channelRate);
-        } else {
-            _loggerService.Information("{ChannelName}: Operating at {Rate} Hz and {Direction} to the output rate",
-                name, channelRate,
-                channelRate > _sampleRateHz ? "downsampling" : "upsampling");
-        }
-
         // Add to channels registry
         if (!_channels.TryAdd(name, channel)) {
             // Replace existing
@@ -680,7 +637,7 @@ public sealed class Mixer : IDisposable {
                 // discarded. Sleep for the expected duration to
                 // simulate the time it would have taken to playback the
                 // audio.
-                HighResolutionWaiter.WaitMilliseconds(expectedTimeMs);
+                Thread.Sleep(TimeSpan.FromMilliseconds(expectedTimeMs));
                 continue;
             } else if (_state == MixerState.Muted) {
                 // SDL callback remains active. Enqueue silence.
@@ -787,13 +744,7 @@ public sealed class Mixer : IDisposable {
 
     private void InitCompressor(bool compressorEnabled) {
         _doCompressor = compressorEnabled;
-        if (!_doCompressor) {
-            _loggerService.Information("MIXER: Master compressor disabled");
-            return;
-        }
-
         LockMixerThread();
-
         const float ZeroDbfsSampleValue = 32767.0f;
         const float ThresholdDb = -6.0f;
         const float Ratio = 3.0f;
@@ -810,10 +761,7 @@ public sealed class Mixer : IDisposable {
             ReleaseTimeMs,
             RmsWindowMs
         );
-
         UnlockMixerThread();
-
-        _loggerService.Information("MIXER: Master compressor enabled");
     }
 
     private void ApplyReverb() {
@@ -869,7 +817,6 @@ public sealed class Mixer : IDisposable {
         }
 
         _audioPlayer.Dispose();
-        _loggerService.Information("MIXER: Closed audio device");
     }
 
     /// <summary>
@@ -879,7 +826,6 @@ public sealed class Mixer : IDisposable {
         if (_disposed) {
             return;
         }
-        _loggerService.Debug("MIXER: Disposing mixer");
         _pauseHandler.Pausing -= OnEmulatorPausing;
         _pauseHandler.Resumed -= OnEmulatorResumed;
         CloseAudioDevice();

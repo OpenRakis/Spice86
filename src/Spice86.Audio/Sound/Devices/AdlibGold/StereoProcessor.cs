@@ -1,7 +1,5 @@
 namespace Spice86.Audio.Sound.Devices.AdlibGold;
 
-using Serilog;
-
 using Spice86.Audio.Sound.Common;
 using Spice86.Audio.Sound.Filters.IirFilters.Filters.RBJ;
 
@@ -96,7 +94,6 @@ internal sealed class StereoProcessor {
     private readonly AllPass _allPass = new();
     private readonly HighShelf[] _highShelf = [new(), new()];
 
-    private readonly ILogger _logger;
     private readonly LowShelf[] _lowShelf = [new(), new()];
     private readonly int _sampleRateHz;
     private AudioFrame _gain;
@@ -107,25 +104,21 @@ internal sealed class StereoProcessor {
     ///     Initializes a new <see cref="StereoProcessor" /> instance.
     /// </summary>
     /// <param name="sampleRateHz">The host sample rate used to configure the filters.</param>
-    /// <param name="logger">Logger used to report configuration changes.</param>
-    internal StereoProcessor(int sampleRateHz, ILogger logger) {
+    internal StereoProcessor(int sampleRateHz) {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(sampleRateHz);
         _sampleRateHz = sampleRateHz;
-        _logger = logger.ForContext<StereoProcessor>();
 
         const double allpassFreqHz = 400.0;
         const double qFactor = 1.7;
         _allPass.Setup(sampleRateHz, allpassFreqHz, qFactor);
 
         Reset();
-        _logger.Debug("Stereo processor initialized at sample rate {SampleRateHz}", sampleRateHz);
     }
 
     /// <summary>
     ///     Restores the default register values for the stereo processor.
     /// </summary>
     private void Reset() {
-        _logger.Debug("Resetting stereo processor at sample rate {SampleRateHz}", _sampleRateHz);
         ResetFilters();
         ControlWrite(StereoProcessorControlReg.VolumeLeft, Volume0DbValue);
         ControlWrite(StereoProcessorControlReg.VolumeRight, Volume0DbValue);
@@ -154,20 +147,17 @@ internal sealed class StereoProcessor {
             case StereoProcessorControlReg.VolumeLeft: {
                 int value = data & volumeControlMask;
                 _gain.Left = CalcVolumeGain(value);
-                LogRegisterWrite(reg, data);
                 break;
             }
             case StereoProcessorControlReg.VolumeRight: {
                 int value = data & volumeControlMask;
                 _gain.Right = CalcVolumeGain(value);
-                LogRegisterWrite(reg, data);
                 break;
             }
             case StereoProcessorControlReg.Bass: {
                 int value = data & filterControlMask;
                 double gainDb = CalcFilterGainDb(value);
                 SetLowShelfGain(gainDb);
-                LogRegisterWrite(reg, data);
                 break;
             }
             case StereoProcessorControlReg.Treble: {
@@ -175,29 +165,18 @@ internal sealed class StereoProcessor {
                 const int extraTreble = 1;
                 double gainDb = CalcFilterGainDb(value + extraTreble);
                 SetHighShelfGain(gainDb);
-                LogRegisterWrite(reg, data);
                 break;
             }
             case StereoProcessorControlReg.SwitchFunctions: {
                 var sf = new StereoProcessorSwitchFunctions(data);
                 _sourceSelector = (StereoProcessorSourceSelector)sf.SourceSelector;
                 _stereoMode = (StereoProcessorStereoMode)sf.StereoMode;
-                LogRegisterWrite(reg, data);
                 break;
             }
 
             default:
-                _logger.Warning("Unsupported stereo processor register {Register} written with value {Value:X2}", reg,
-                    data);
                 break;
         }
-    }
-
-    /// <summary>
-    ///     Emits a verbose log entry describing a handled register write.
-    /// </summary>
-    private void LogRegisterWrite(StereoProcessorControlReg reg, byte data) {
-        _logger.Verbose("Stereo register {Register} updated with value {Value:X2}", reg, data);
     }
 
     /// <summary>
@@ -334,8 +313,6 @@ internal sealed class StereoProcessor {
             case StereoProcessorStereoMode.LinearStereo:
                 break;
             default:
-                _logger.Warning("Unsupported stereo mode {StereoMode} encountered. Leaving frame unchanged.",
-                    _stereoMode);
                 break;
         }
     }
