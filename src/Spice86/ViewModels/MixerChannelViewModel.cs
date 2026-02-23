@@ -76,9 +76,7 @@ public partial class MixerChannelViewModel : ViewModelBase {
         UpdateFromChannel();
     }
 
-    public MixerChannel GetChannel() {
-        return _channel;
-    }
+    public MixerChannel Channel => _channel;
 
     public void UpdateFromChannel() {
         Name = _channel.Name;

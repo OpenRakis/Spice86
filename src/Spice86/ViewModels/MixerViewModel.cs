@@ -62,14 +62,14 @@ public partial class MixerViewModel : ViewModelBase {
 
         // Remove channels that no longer exist
         for (int i = Channels.Count - 1; i >= 0; i--) {
-            if (!currentChannels.Contains(Channels[i].GetChannel())) {
+            if (!currentChannels.Contains(Channels[i].Channel)) {
                 Channels.RemoveAt(i);
             }
         }
 
         // Add new channels and update existing ones
         foreach (MixerChannel channel in currentChannels) {
-            MixerChannelViewModel? existingVm = Channels.FirstOrDefault(vm => vm.GetChannel() == channel);
+            MixerChannelViewModel? existingVm = Channels.FirstOrDefault(vm => vm.Channel == channel);
             if (existingVm != null) {
                 existingVm.UpdateFromChannel();
             } else {
