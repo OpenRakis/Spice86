@@ -2,7 +2,6 @@ namespace Spice86.Tests;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Audio.Mixer;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Video;
@@ -12,6 +11,7 @@ using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
 using Xunit;
+using Spice86.Audio.Filters;
 
 public class Spice86Creator {
     private readonly Configuration _configuration;

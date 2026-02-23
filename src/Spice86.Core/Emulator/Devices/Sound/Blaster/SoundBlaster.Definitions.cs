@@ -4,10 +4,10 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Spice86.Audio.Backend;
-using Spice86.Audio.Mixer;
-using Spice86.Audio.Sound.Common;
+using Spice86.Audio.Common;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 
@@ -347,8 +347,8 @@ public partial class SoundBlaster {
     private readonly DualPic _dualPic;
     private readonly DmaChannel _primaryDmaChannel;
     private readonly DmaChannel? _secondaryDmaChannel;
-    private readonly Mixer _mixer;
-    private readonly MixerChannel _dacChannel;
+    private readonly SoftwareMixer _mixer;
+    private readonly SoundChannel _dacChannel;
     private readonly Opl _opl;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
@@ -359,7 +359,7 @@ public partial class SoundBlaster {
     public RWQueue<AudioFrame> OutputQueue => _outputQueue;
 
     /// <inheritdoc />
-    public MixerChannel Channel => _dacChannel;
+    public SoundChannel Channel => _dacChannel;
 
     private readonly AudioFrame[] _enqueueBatch = new AudioFrame[4096];
     private int _enqueueBatchCount;

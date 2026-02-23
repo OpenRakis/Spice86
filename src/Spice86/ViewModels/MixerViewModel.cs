@@ -4,7 +4,6 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Input;
 
-using Spice86.Audio.Mixer;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.ViewModels.Services;
@@ -17,7 +16,7 @@ using System.Linq;
 /// View model for the mixer window, displaying and controlling mixer channels.
 /// </summary>
 public partial class MixerViewModel : ViewModelBase {
-    private readonly Mixer _mixer;
+    private readonly SoftwareMixer _mixer;
 
     /// <summary>
     /// Collection of mixer channel view models.
@@ -29,7 +28,7 @@ public partial class MixerViewModel : ViewModelBase {
     /// </summary>
     public AudioSettingsViewModel AudioSettings { get; }
 
-    public MixerViewModel(Mixer mixer, SoundBlaster soundBlaster, Opl opl) {
+    public MixerViewModel(SoftwareMixer mixer, SoundBlaster soundBlaster, Opl opl) {
         _mixer = mixer;
         AudioSettings = new AudioSettingsViewModel(soundBlaster, opl);
 
@@ -58,7 +57,7 @@ public partial class MixerViewModel : ViewModelBase {
     }
 
     private void RefreshChannels() {
-        List<MixerChannel> currentChannels = [.. _mixer.AllChannels];
+        List<SoundChannel> currentChannels = [.. _mixer.AllChannels];
 
         // Remove channels that no longer exist
         for (int i = Channels.Count - 1; i >= 0; i--) {
@@ -68,7 +67,7 @@ public partial class MixerViewModel : ViewModelBase {
         }
 
         // Add new channels and update existing ones
-        foreach (MixerChannel channel in currentChannels) {
+        foreach (SoundChannel channel in currentChannels) {
             MixerChannelViewModel? existingVm = Channels.FirstOrDefault(vm => vm.Channel == channel);
             if (existingVm != null) {
                 existingVm.UpdateFromChannel();

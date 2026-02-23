@@ -20,7 +20,6 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
-using Spice86.Audio.Mixer;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
@@ -336,9 +335,9 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
-        Mixer mixer = new(configuration.AudioEngine, pauseHandler);
+        SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler);
         var midiDevice = new Midi(configuration, mixer, state,
-            ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
+            ioPortDispatcher, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher,
             loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);

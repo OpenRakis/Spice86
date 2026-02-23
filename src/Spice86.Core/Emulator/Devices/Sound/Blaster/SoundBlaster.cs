@@ -2,11 +2,12 @@ namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Serilog.Events;
 
-using Spice86.Audio.Mixer;
-using Spice86.Audio.Sound.Common;
+using Spice86.Audio.Common;
+using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
@@ -35,7 +36,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         State state,
         DmaBus dmaBus,
         DualPic dualPic,
-        Mixer mixer,
+        SoftwareMixer mixer,
         Opl opl,
         ILoggerService loggerService,
         EmulationLoopScheduler scheduler,
@@ -165,7 +166,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         int needed = Math.Max(framesRequested - queueSize, 0);
         System.Threading.Interlocked.Exchange(ref _framesNeeded, needed);
 
-        Mixer.PullFromQueueCallback<SoundBlaster, AudioFrame>(framesRequested, this);
+        SoftwareMixer.PullFromQueueCallback<SoundBlaster, AudioFrame>(framesRequested, this);
     }
 
     /// <summary>
@@ -831,7 +832,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
     public byte DspTestRegister => _sb.Dsp.TestRegister;
 
-    public MixerChannel DacChannel => _dacChannel;
+    public SoundChannel DacChannel => _dacChannel;
 
     public override byte ReadByte(ushort port) {
         byte result;
@@ -1988,11 +1989,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         AudioFrame dacVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Dac[0]), m1 * CalcVol(_sb.Mixer.Dac[1]));
         _dacChannel.AppVolume = dacVolume;
 
-        MixerChannel oplChannel = _opl.MixerChannel;
+        SoundChannel oplChannel = _opl.MixerChannel;
         AudioFrame oplVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Fm[0]), m1 * CalcVol(_sb.Mixer.Fm[1]));
         oplChannel.AppVolume = oplVolume;
 
-        MixerChannel? cdAudioChannel = _mixer.FindChannel("CdAudio");
+        SoundChannel? cdAudioChannel = _mixer.FindChannel("CdAudio");
         if (cdAudioChannel != null) {
             AudioFrame cdVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Cda[0]), m1 * CalcVol(_sb.Mixer.Cda[1]));
             cdAudioChannel.AppVolume = cdVolume;

@@ -9,7 +9,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
-using Spice86.Audio.Mixer;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
@@ -33,6 +32,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Tests.Utility;
 
 using Xunit;
+using Spice86.Audio.Filters;
 
 public class DosFileManagerTests {
     private static readonly string MountPoint = Path.GetFullPath(Path.Combine("Resources", "MountPoint"));
@@ -136,7 +136,7 @@ public class DosFileManagerTests {
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             false, true, loggerService);
 
-        Mixer mixer = new(configuration.AudioEngine, pauseHandler);
+        SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler);
         PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher,
             loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService, configuration.FailOnUnhandledPort);

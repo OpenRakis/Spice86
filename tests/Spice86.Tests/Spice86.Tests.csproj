@@ -85,7 +85,4 @@
             <LogicalName>80286.C0-FF.zip</LogicalName>
         </EmbeddedResource>
     </ItemGroup>
-    <ItemGroup>
-      <Folder Include="Emulator\Devices\Sound\" />
-    </ItemGroup>
 </Project>

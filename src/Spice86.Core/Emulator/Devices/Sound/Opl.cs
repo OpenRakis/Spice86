@@ -4,8 +4,8 @@ using NukedOPL3Sharp;
 
 using Serilog.Events;
 
-using Spice86.Audio.Mixer;
-using Spice86.Audio.Sound.Common;
+using Spice86.Audio.Common;
+using Spice86.Audio.Filters;
 using Spice86.Audio.Sound.Devices.AdlibGold;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
@@ -48,7 +48,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     The mixer channel used for the OPL synth.
     /// </summary>
-    private readonly MixerChannel _mixerChannel;
+    private readonly SoundChannel _mixerChannel;
 
     private bool _disposed;
 
@@ -106,7 +106,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <param name="ioPortDispatcher">I/O port dispatcher.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
     /// <param name="loggerService">The logger service.</param>
-    public Opl(OplConfig config, Mixer mixer, State state, IEmulatedClock clock,
+    public Opl(OplConfig config, SoftwareMixer mixer, State state, IEmulatedClock clock,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
         ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
@@ -187,7 +187,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     Exposes the OPL mixer channel for other components (e.g., SoundBlaster hardware mixer).
     /// </summary>
-    public MixerChannel MixerChannel => _mixerChannel;
+    public SoundChannel MixerChannel => _mixerChannel;
 
     /// <summary>
     ///     Gets the current OPL synthesis mode.

@@ -2,7 +2,7 @@ namespace Spice86.Core.CLI;
 
 using CommandLine;
 
-using Spice86.Audio.Mixer;
+using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;

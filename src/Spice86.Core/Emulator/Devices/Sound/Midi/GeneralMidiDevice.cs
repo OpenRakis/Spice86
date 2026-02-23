@@ -1,18 +1,18 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Midi;
 
-using Spice86.Audio.Mixer;
-
 using MeltySynth;
 
 using Spice86.Core.CLI;
 using Spice86.Shared.Interfaces;
-using Spice86.Audio.Sound.Common;
 
 using System.Linq;
 
 using Windows;
 
 using OperatingSystem = System.OperatingSystem;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Audio.Filters;
+using Spice86.Audio.Common;
 
 /// <summary>
 /// Represents an external General MIDI device. <br/>
@@ -21,7 +21,7 @@ using OperatingSystem = System.OperatingSystem;
 /// </summary>
 public sealed class GeneralMidiDevice : MidiDevice {
     private readonly Configuration _configuration;
-    private readonly MixerChannel? _mixerChannel;
+    private readonly SoundChannel? _mixerChannel;
     private readonly Synthesizer? _synthesizer;
 
     private bool _disposed;
@@ -45,9 +45,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
     /// </summary>
     /// <param name="configuration">The class that tells us what to run and how.</param>
     /// <param name="mixer">The software mixer for sound channels.</param>
-    /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
-    /// <param name="loggerService">The service used to log messages.</param>
-    public GeneralMidiDevice(Configuration configuration, Mixer mixer, IPauseHandler pauseHandler, ILoggerService loggerService) {
+    public GeneralMidiDevice(Configuration configuration, SoftwareMixer mixer) {
         _configuration = configuration;
         if (GetType().Assembly.GetManifestResourceNames().Any(x => x == SoundFontResourceName)) {
             Stream? resource = GetType().Assembly.GetManifestResourceStream(SoundFontResourceName);

@@ -1,0 +1,18 @@
+namespace Spice86.Audio.Filters;
+
+/// <summary>
+/// Available audio engines.
+/// </summary>
+public enum AudioEngine {
+    /// <summary>
+    /// Cross-platform audio backend.
+    /// This is the recommended and default audio engine.
+    /// </summary>
+    CrossPlatform,
+
+    /// <summary>
+    /// Dummy audio engine that produces no sound.
+    /// Useful for testing or when no audio output is needed.
+    /// </summary>
+    Dummy
+}

@@ -2,8 +2,9 @@ namespace Spice86.ViewModels;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using Spice86.Audio.Mixer;
-using Spice86.Audio.Sound.Common;
+using Spice86.Audio.Common;
+using Spice86.Audio.Filters;
+using Spice86.Core.Emulator.Devices.Sound;
 
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using System.Collections.Generic;
 /// View model wrapping a single MixerChannel for display
 /// </summary>
 public partial class MixerChannelViewModel : ViewModelBase {
-    private readonly MixerChannel _channel;
+    private readonly SoundChannel _channel;
 
     // Peak level tracking with decay (UI-side calculation, no impact on core)
     // Decay rate per update tick (at 50ms updates, this gives smooth falloff)
@@ -68,12 +69,12 @@ public partial class MixerChannelViewModel : ViewModelBase {
     [ObservableProperty]
     private IReadOnlyList<float>? _waveformSamplesRight;
 
-    public MixerChannelViewModel(MixerChannel channel) {
+    public MixerChannelViewModel(SoundChannel channel) {
         _channel = channel ?? throw new ArgumentNullException(nameof(channel));
         UpdateFromChannel();
     }
 
-    public MixerChannel Channel => _channel;
+    public SoundChannel Channel => _channel;
 
     public void UpdateFromChannel() {
         Name = _channel.Name;

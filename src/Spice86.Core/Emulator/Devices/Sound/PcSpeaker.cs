@@ -1,7 +1,5 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Spice86.Audio.Mixer;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
@@ -9,11 +7,12 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
-using Spice86.Audio.Sound.Common;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 using Spice86.Audio.Backend;
+using Spice86.Audio.Filters;
+using Spice86.Audio.Common;
 
 /// <summary>
 ///     PC speaker device
@@ -42,10 +41,10 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     private readonly IEmulatedClock _clock;
     private readonly float[] _impulseLookup = new float[SincFilterWidth];
     private readonly ILoggerService _logger;
-    private readonly Mixer _mixer;
+    private readonly SoftwareMixer _mixer;
     private readonly RWQueue<float> _outputQueue;
     private readonly PitChannelState _pitChannelState = new();
-    private readonly MixerChannel _mixerChannel;
+    private readonly SoundChannel _mixerChannel;
     private readonly EventHandler _tickHandler;
     private readonly float[] _waveform = new float[WaveformSize];
     private float _accumulator;
@@ -62,7 +61,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     public RWQueue<float> OutputQueue => _outputQueue;
 
     /// <inheritdoc />
-    public MixerChannel Channel => _mixerChannel;
+    public SoundChannel Channel => _mixerChannel;
 
     /// <inheritdoc />
     public void NotifyLockMixer() {
@@ -85,7 +84,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     /// <param name="clock">The emulated clock for tick timing.</param>
     /// <param name="failOnUnhandledPort">Indicates whether unhandled port accesses should throw.</param>
     public PcSpeaker(
-        Mixer mixer,
+        SoftwareMixer mixer,
         State state,
         IOPortDispatcher ioPortDispatcher,
         ILoggerService loggerService,
@@ -114,7 +113,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         };
         // Pass 'this' to callback like DOSBox's std::bind(callback, _1, this) pattern
         _mixerChannel = mixer.AddChannel(
-            framesRequested => Mixer.PullFromQueueCallback<PcSpeaker, float>(framesRequested, this),
+            framesRequested => SoftwareMixer.PullFromQueueCallback<PcSpeaker, float>(framesRequested, this),
             SampleRateHz, nameof(PcSpeaker), features);
         _mixerChannel.        AppVolume = new AudioFrame(1.0f, 1.0f);
         _mixerChannel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Left });

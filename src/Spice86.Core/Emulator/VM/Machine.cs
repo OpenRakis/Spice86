@@ -7,7 +7,6 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
-using Spice86.Audio.Mixer;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
@@ -206,7 +205,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The internal software mixer for all sound channels.
     /// </summary>
-    public Mixer Mixer { get; }
+    public SoftwareMixer Mixer { get; }
 
     /// <summary>
     /// The size of the conventional memory in kilobytes.
@@ -270,7 +269,7 @@ public sealed class Machine : IDisposable {
         VgaRom vgaRom,
         DmaBus dmaSystem,
         Opl opl,
-        Mixer mixer,
+        SoftwareMixer mixer,
         IMouseDevice mouseDevice,
         IMouseDriver mouseDriver,
         IVgaFunctionality vgaFunctions,
