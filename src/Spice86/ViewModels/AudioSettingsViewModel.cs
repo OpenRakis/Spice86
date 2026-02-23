@@ -1,9 +1,5 @@
 namespace Spice86.ViewModels;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Sound;
@@ -67,11 +63,6 @@ public partial class AudioSettingsViewModel : ViewModelBase {
     /// </summary>
     public string BlasterFormatString { get; } = "Format: A[base] I[irq] D[dma] H[hdma] T[type]";
 
-    /// <summary>
-    /// Gets the CLI options reference for audio configuration.
-    /// </summary>
-    public IReadOnlyList<CliOptionInfo> CliOptions { get; }
-
     public AudioSettingsViewModel(SoundBlaster soundBlaster, Opl opl) {
         SbType = soundBlaster.SbTypeProperty;
         SbIrq = soundBlaster.IRQ;
@@ -81,19 +72,5 @@ public partial class AudioSettingsViewModel : ViewModelBase {
         OplMode = opl.Mode;
         BlasterString = soundBlaster.BlasterString;
         IsAdlibGoldEnabled = opl.IsAdlibGoldEnabled;
-        CliOptions = BuildCliOptions();
-    }
-
-    private static IReadOnlyList<CliOptionInfo> BuildCliOptions() {
-        string sbTypeValues = string.Join(", ", Enum.GetNames<SbType>());
-        string oplModeValues = string.Join(", ", Enum.GetNames<OplMode>());
-        return new List<CliOptionInfo> {
-            new("--SbType", "Sound Blaster card type", sbTypeValues, nameof(SbType.SBPro2)),
-            new("--OplMode", "OPL synthesis mode", oplModeValues, nameof(OplMode.Opl3)),
-            new("--SbBase", "Sound Blaster base I/O address", "0x220, 0x240, 0x260, 0x280", "0x220"),
-            new("--SbIrq", "Sound Blaster IRQ line", "5, 7, 9, 10", "7"),
-            new("--SbDma", "Sound Blaster 8-bit DMA channel", "0, 1, 3", "1"),
-            new("--SbHdma", "Sound Blaster 16-bit high DMA channel", "5, 6, 7", "5")
-        };
     }
 }
