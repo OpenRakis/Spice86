@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// View model wrapping a single MixerChannel for display/editing.
+/// View model wrapping a single MixerChannel for display
 /// </summary>
 public partial class MixerChannelViewModel : ViewModelBase {
     private readonly MixerChannel _channel;
@@ -54,9 +54,6 @@ public partial class MixerChannelViewModel : ViewModelBase {
     private int _sampleRate;
 
     [ObservableProperty]
-    private string _features = string.Empty;
-
-    [ObservableProperty]
     private bool _isMuted;
 
     [ObservableProperty]
@@ -82,52 +79,33 @@ public partial class MixerChannelViewModel : ViewModelBase {
         Name = _channel.Name;
         IsEnabled = _channel.IsEnabled;
         SampleRate = _channel.SampleRate;
-
         AudioFrame userVolume = _channel.UserVolume;
         UserVolumeLeftPercent = userVolume.Left * 100.0;
         UserVolumeRightPercent = userVolume.Right * 100.0;
-
         AudioFrame appVolume = _channel.AppVolume;
         AppVolumeLeftPercent = appVolume.Left * 100.0;
         AppVolumeRightPercent = appVolume.Right * 100.0;
-
-        // Muted is when both user volumes are zero
         IsMuted = userVolume.Left == 0.0f && userVolume.Right == 0.0f;
-
-        Features = string.Join(", ", _channel.Features);
-
-        // Update peak levels for VU meters (read-only access to AudioFrames, no core impact)
         UpdatePeakLevels();
     }
 
-    /// <summary>
-    /// Calculates peak levels from the channel's audio frame buffer.
-    /// This is a UI-only calculation that reads from the public AudioFrames buffer
-    /// without impacting the core mixing logic.
-    /// </summary>
     private void UpdatePeakLevels() {
-        // Apply decay to existing peaks (smooth falloff between updates)
         _currentPeakLeft *= PeakDecayRate;
         _currentPeakRight *= PeakDecayRate;
 
-        // Read current audio frames (read-only snapshot access)
         AudioFrameBuffer audioFrames = _channel.AudioFrames;
         int frameCount = audioFrames.Count;
 
-        // Find peak amplitude in current buffer
         double maxLeft = 0.0;
         double maxRight = 0.0;
 
-        // Also collect downsampled waveform data
         float waveformSampleLeft = 0.0f;
         float waveformSampleRight = 0.0f;
         int waveformSampleCount = 0;
 
-        // Sample frames for peak detection and waveform (every 2nd frame for efficiency)
         for (int i = 0; i < frameCount; i += 2) {
             AudioFrame frame = audioFrames[i];
 
-            // Get absolute amplitude for peak detection
             double absLeft = Math.Abs(frame.Left);
             double absRight = Math.Abs(frame.Right);
 
@@ -138,12 +116,10 @@ public partial class MixerChannelViewModel : ViewModelBase {
                 maxRight = absRight;
             }
 
-            // Accumulate for waveform (downsample by averaging)
             waveformSampleLeft += frame.Left;
             waveformSampleRight += frame.Right;
             waveformSampleCount++;
 
-            // Every WaveformDownsampleFactor samples, add a point to the waveform buffer
             if (waveformSampleCount >= WaveformDownsampleFactor) {
                 float avgLeft = (float)(waveformSampleLeft / waveformSampleCount * SampleNormalizationFactor);
                 float avgRight = (float)(waveformSampleRight / waveformSampleCount * SampleNormalizationFactor);
@@ -158,7 +134,6 @@ public partial class MixerChannelViewModel : ViewModelBase {
             }
         }
 
-        // Handle remaining samples
         if (waveformSampleCount > 0) {
             float avgLeft = (float)(waveformSampleLeft / waveformSampleCount * SampleNormalizationFactor);
             float avgRight = (float)(waveformSampleRight / waveformSampleCount * SampleNormalizationFactor);
@@ -168,31 +143,21 @@ public partial class MixerChannelViewModel : ViewModelBase {
             _waveformWriteIndex = (_waveformWriteIndex + 1) % WaveformDisplaySamples;
         }
 
-        // Normalize and amplify for better visual feedback
         double normalizedLeft = maxLeft * SampleNormalizationFactor * SignalAmplification;
         double normalizedRight = maxRight * SampleNormalizationFactor * SignalAmplification;
 
-        // Update peaks if new values are higher (peak hold behavior)
         if (normalizedLeft > _currentPeakLeft) {
             _currentPeakLeft = normalizedLeft;
         }
         if (normalizedRight > _currentPeakRight) {
             _currentPeakRight = normalizedRight;
         }
-
-        // Clamp and update observable properties
         PeakLevelLeft = Math.Clamp(_currentPeakLeft, 0.0, 1.0);
         PeakLevelRight = Math.Clamp(_currentPeakRight, 0.0, 1.0);
-
-        // Update waveform display (create linearized view from circular buffer)
         UpdateWaveformDisplay();
     }
 
-    /// <summary>
-    /// Creates a linearized view of the circular waveform buffer for display.
-    /// </summary>
     private void UpdateWaveformDisplay() {
-        // Create linearized arrays from circular buffer (oldest to newest)
         float[] linearLeft = new float[WaveformDisplaySamples];
         float[] linearRight = new float[WaveformDisplaySamples];
 
@@ -201,7 +166,6 @@ public partial class MixerChannelViewModel : ViewModelBase {
             linearLeft[i] = _waveformBufferLeft[bufferIndex];
             linearRight[i] = _waveformBufferRight[bufferIndex];
         }
-
         WaveformSamplesLeft = linearLeft;
         WaveformSamplesRight = linearRight;
     }
@@ -212,15 +176,11 @@ public partial class MixerChannelViewModel : ViewModelBase {
 
     partial void OnIsMutedChanged(bool value) {
         if (value) {
-            // Mute: set user volume to zero
-            _channel.            // Mute: set user volume to zero
-            UserVolume = new AudioFrame(0.0f, 0.0f);
+            _channel.UserVolume = new AudioFrame(0.0f, 0.0f);
             UserVolumeLeftPercent = 0.0;
             UserVolumeRightPercent = 0.0;
         } else {
-            // Unmute: restore to 100%
-            _channel.            // Unmute: restore to 100%
-            UserVolume = new AudioFrame(1.0f, 1.0f);
+            _channel.UserVolume = new AudioFrame(1.0f, 1.0f);
             UserVolumeLeftPercent = 100.0;
             UserVolumeRightPercent = 100.0;
         }
