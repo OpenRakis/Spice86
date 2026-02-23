@@ -33,11 +33,11 @@
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Morris.Moxy" />
 		<PackageReference Include="NukedOPL3Sharp" />
+		<PackageReference Include="Spice86.Audio" />
         <!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
         <PackageReference Include="Mt32emu.net" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\Spice86.Audio\Spice86.Audio.csproj" />
         <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
     </ItemGroup>

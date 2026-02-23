@@ -54,5 +54,6 @@
     <PackageVersion Include="System.Text.Encoding.CodePages" Version="10.0.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.0" />
     <PackageVersion Include="Xaml.Behaviors.Avalonia" Version="11.3.9.3" />
+	<PackageVersion Include="Spice86.Audio" Version="11.1.0" />
   </ItemGroup>
 </Project>
