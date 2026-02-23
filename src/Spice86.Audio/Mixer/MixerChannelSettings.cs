@@ -4,7 +4,6 @@ namespace Spice86.Audio.Mixer;
 
 /// <summary>
 /// Used to save and restore channel configuration.
-/// Reference: DOSBox mixer.h lines 114-121
 /// </summary>
 public struct MixerChannelSettings {
     /// <summary>

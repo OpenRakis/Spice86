@@ -125,7 +125,7 @@ public sealed class MixerChannel {
         _doSleep = HasFeature(ChannelFeature.Sleep);
         _sleeper = new Sleeper(this);
 
-        _envelope = new Envelope(name);
+        _envelope = new Envelope();
     }
 
     /// <summary>

@@ -11,7 +11,6 @@ using Spice86.Audio.Sound.Common;
 /// unnatural waveforms.
 /// </summary>
 public sealed class Envelope {
-    private readonly string _channelName;
     private bool _isActive;
     private int _expireAfterFrames;
     private int _framesDone;
@@ -19,8 +18,7 @@ public sealed class Envelope {
     private float _edgeIncrement;
     private float _edgeLimit;
 
-    public Envelope(string channelName) {
-        _channelName = channelName;
+    public Envelope() {
         _isActive = false;
     }
 
