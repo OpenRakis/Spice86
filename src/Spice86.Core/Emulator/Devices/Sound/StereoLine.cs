@@ -5,6 +5,9 @@ using Spice86.Audio.Filters;
 /// <summary>
 /// Defines how stereo channels map to output lines.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public struct StereoLine {
     public LineIndex Left;
     public LineIndex Right;

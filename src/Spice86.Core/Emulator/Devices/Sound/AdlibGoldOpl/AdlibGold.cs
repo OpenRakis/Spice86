@@ -1,5 +1,3 @@
-// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
-
 namespace Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 
 using Spice86.Audio.Common;
@@ -10,6 +8,9 @@ using System.Runtime.InteropServices;
 /// <summary>
 ///     AdLib Gold module providing surround and stereo processing.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public sealed class AdlibGold : IDisposable {
     private readonly SurroundProcessor _surroundProcessor;
     private readonly StereoProcessor _stereoProcessor;

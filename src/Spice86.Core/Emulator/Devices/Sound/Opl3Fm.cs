@@ -1,5 +1,3 @@
-// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
-
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using NukedOPL3Sharp;
@@ -19,10 +17,12 @@ using System.Threading;
 
 /// <summary>
 /// Represents the SB OPL synthesizer chip for audio emulation, supporting multiple synthesis modes and providing methods
-/// for rendering audio frames and handling I/O operations.
-/// </summary>
-/// <remarks>The Opl class supports OPL2, Dual OPL2, OPL3, and OPL3 Gold synthesis modes. It manages audio
+/// for rendering audio frames and handling I/O operations. <br/><br/>
+/// The Opl class supports OPL2, Dual OPL2, OPL3, and OPL3 Gold synthesis modes. It manages audio
 /// rendering, integrates with a mixer for sound output, and handles I/O port registration based on the selected mode.
+/// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
 /// </remarks>
 public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private const int OplSampleRateHz = 49716;

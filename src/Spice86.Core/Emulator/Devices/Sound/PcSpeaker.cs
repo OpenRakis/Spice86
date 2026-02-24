@@ -1,4 +1,3 @@
-// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Serilog.Events;
@@ -18,6 +17,9 @@ using Spice86.Audio.Common;
 /// <summary>
 ///     PC speaker device
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<float>, IMixerQueueNotifier, IDisposable {
     private const int PcSpeakerPortNumber = 0x61;
 

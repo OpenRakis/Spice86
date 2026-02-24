@@ -1,4 +1,3 @@
-// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Audio.Backend.Audio;
@@ -14,6 +13,9 @@ using HighPassFilter = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.High
 /// <summary>
 /// Central audio mixer that runs in its own thread and produces final mixed output.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public sealed class SoftwareMixer : IDisposable {
     private const int DefaultSampleRateHz = 48000;
     private const int DefaultBlocksize = 1024;

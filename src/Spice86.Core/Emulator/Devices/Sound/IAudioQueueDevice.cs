@@ -1,5 +1,3 @@
-// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
-
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Audio.Backend;
@@ -8,6 +6,9 @@ using Spice86.Audio.Backend;
 /// Interface for audio devices that produce audio on the main thread and
 /// consume on the mixer thread using a queue-based callback pattern.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 /// <typeparam name="T">The audio sample type (typically float).</typeparam>
 public interface IAudioQueueDevice<T> where T : struct {
     /// <summary>

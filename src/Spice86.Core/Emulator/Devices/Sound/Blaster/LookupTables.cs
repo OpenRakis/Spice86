@@ -3,6 +3,9 @@ namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 /// <summary>
 /// Lookup tables for converting 8-bit and 16-bit audio samples to floating-point format.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 internal static class LookupTables {
     private const int Max16BitSampleValue = 32767;
     private const double PositiveScalar = Max16BitSampleValue / 127.0; // 257.834...

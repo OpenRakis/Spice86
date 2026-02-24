@@ -2,8 +2,10 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 
 /// <summary>
 /// Selectable OPL synthesis modes.
-/// Matches DOSBox staging OplMode enum.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public enum OplMode {
     /// <summary>
     /// No OPL synthesis.

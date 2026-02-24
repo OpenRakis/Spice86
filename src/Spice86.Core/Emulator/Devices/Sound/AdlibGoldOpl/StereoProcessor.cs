@@ -1,4 +1,3 @@
-// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
 namespace Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 
 using Spice86.Audio.Common;
@@ -7,6 +6,9 @@ using Spice86.Audio.Filters.IirFilters.Filters.RBJ;
 /// <summary>
 ///     Identifies the signal source selected by the stereo processor.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 internal enum StereoProcessorSourceSelector : byte {
     /// <summary>
     ///     Uses input channel A, position 1.

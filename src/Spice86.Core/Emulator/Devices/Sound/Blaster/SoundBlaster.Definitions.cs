@@ -1,7 +1,3 @@
-// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
-// Corresponds to private/soundblaster.h class definition
-// and soundblaster.cpp file-scope types, constants, and static data.
-
 namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Spice86.Audio.Backend;
@@ -21,11 +17,12 @@ using EventHandler = VM.EmulationLoopScheduler.EventHandler;
 /// for the Sound Blaster emulation. Mirrors soundblaster.cpp file-scope definitions
 /// and private/soundblaster.h class members.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public partial class SoundBlaster {
-
     private const int DmaBufSize = 1024;
     private const int DspBufSize = 64;
-
     private const int SbShift = 14;
     private const ushort SbShiftMask = (1 << SbShift) - 1;
 

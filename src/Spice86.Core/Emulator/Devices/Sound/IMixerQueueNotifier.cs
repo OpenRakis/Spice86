@@ -1,5 +1,3 @@
-// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
-
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 /// <summary>
@@ -8,6 +6,9 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 /// are notified before the mixer mutex is acquired (to stop their queues
 /// and avoid deadlocks) and after the mutex is released (to restart them).
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public interface IMixerQueueNotifier {
     /// <summary>
     /// Called before the mixer mutex is acquired. Implementations must stop

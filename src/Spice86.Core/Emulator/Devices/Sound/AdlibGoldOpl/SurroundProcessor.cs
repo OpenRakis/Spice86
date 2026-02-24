@@ -1,5 +1,3 @@
-// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
-
 namespace Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 
 using Spice86.Audio.Common;
@@ -8,6 +6,9 @@ using Spice86.Audio.Sound.Devices.YM7128B;
 /// <summary>
 ///     Provides surround processing emulation for the AdLib Gold optional module.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 internal sealed class SurroundProcessor : IDisposable {
     private readonly Ym7128BChip _chip = new();
     private readonly Ym7128BChipIdealProcessData _processData = new();

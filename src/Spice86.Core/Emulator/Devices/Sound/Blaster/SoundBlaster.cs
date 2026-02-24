@@ -1,5 +1,3 @@
-// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
-
 namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Serilog.Events;
@@ -18,6 +16,13 @@ using Spice86.Shared.Interfaces;
 using System;
 using System.Collections.Generic;
 
+/// <summary>
+/// Emulates a Sound Blaster audio device, providing digital audio playback, mixing, and hardware-level DSP command
+/// support for various Sound Blaster models.
+/// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier {
     /// <summary>
     /// Initializes a new instance of the Sound Blaster device.

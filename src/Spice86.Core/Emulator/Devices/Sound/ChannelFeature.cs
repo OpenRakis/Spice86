@@ -1,9 +1,11 @@
-// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 /// <summary>
 /// Features that a software mixer channel can have.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public enum ChannelFeature {
     /// <summary>
     /// Channel can send to chorus effect.

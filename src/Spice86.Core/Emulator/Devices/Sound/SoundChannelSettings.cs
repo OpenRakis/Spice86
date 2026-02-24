@@ -1,10 +1,13 @@
-using Spice86.Audio.Common;
-
 namespace Spice86.Core.Emulator.Devices.Sound;
+
+using Spice86.Audio.Common;
 
 /// <summary>
 /// Used to specify software mixer level channel settings
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public struct SoundChannelSettings {
     /// <summary>
     /// Whether the channel is enabled.

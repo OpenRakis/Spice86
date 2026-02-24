@@ -12,6 +12,9 @@ using System.Threading;
 /// <summary>
 /// Represents a single audio channel in the mixer.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public sealed class SoundChannel {
     private const uint SpeexChannels = 2; // Always use stereo for processing
     private const int SpeexQuality = 5; // Medium quality - good balance between CPU and quality
