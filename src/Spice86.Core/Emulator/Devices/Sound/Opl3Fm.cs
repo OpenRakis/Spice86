@@ -47,9 +47,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private double _lastRenderedMs;
     private readonly double _msPerFrame;
 
-    /// <summary>
-    ///     The mixer channel used for the OPL synth.
-    /// </summary>
     private readonly SoundChannel _mixerChannel;
 
     private bool _disposed;
