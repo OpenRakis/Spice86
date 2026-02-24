@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
-// SPDX-License-Identifier: GPL-2.0-or-later
 
-namespace Spice86.Audio.Sound.Devices.AdlibGold;
+namespace Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 
 using Spice86.Audio.Common;
 

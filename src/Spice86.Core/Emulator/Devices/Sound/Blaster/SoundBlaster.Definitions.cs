@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
 // Corresponds to private/soundblaster.h class definition
 // and soundblaster.cpp file-scope types, constants, and static data.
 

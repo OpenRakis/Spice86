@@ -3,6 +3,8 @@
 
 namespace Spice86.Audio.Sound.Devices.YM7128B;
 
+using Spice86.Core.Emulator.Devices.Sound.YM7128B;
+
 internal sealed partial class Ym7128BChip {
     private Ym7128BChipFloat Float { get; } = new();
 

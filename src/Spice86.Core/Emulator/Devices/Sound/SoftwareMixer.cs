@@ -1,18 +1,15 @@
-using Spice86.Audio.Common;
-using Spice86.Audio.Filters.IirFilters.Filters.Butterworth;
-
+// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Audio.Backend.Audio;
+using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.VM;
-
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-using AudioFrame = AudioFrame;
-using HighPassFilter = HighPass;
+using HighPassFilter = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.HighPass;
 
 /// <summary>
 /// Central audio mixer that runs in its own thread and produces final mixed output.

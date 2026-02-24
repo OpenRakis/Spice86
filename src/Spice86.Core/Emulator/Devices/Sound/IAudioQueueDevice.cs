@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
+
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Audio.Backend;

@@ -1,4 +1,6 @@
-namespace Spice86.Audio.Sound.Devices.AdlibGold;
+// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
+
+namespace Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 
 /// <summary>
 ///     Enumerates the stereo processor control registers exposed over the AdLib Gold I/O interface.

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
+
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using NukedOPL3Sharp;
@@ -6,8 +8,8 @@ using Serilog.Events;
 
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
-using Spice86.Audio.Sound.Devices.AdlibGold;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Interfaces;

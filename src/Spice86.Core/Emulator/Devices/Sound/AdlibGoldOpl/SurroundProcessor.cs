@@ -1,4 +1,6 @@
-namespace Spice86.Audio.Sound.Devices.AdlibGold;
+// SPDX-FileCopyrightText: 2022-2025 The DOSBox Staging Team
+
+namespace Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 
 using Spice86.Audio.Common;
 using Spice86.Audio.Sound.Devices.YM7128B;

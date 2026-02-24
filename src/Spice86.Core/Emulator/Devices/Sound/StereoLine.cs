@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
+namespace Spice86.Core.Emulator.Devices.Sound;
 
-namespace Spice86.Audio.Filters;
+using Spice86.Audio.Filters;
+
 /// <summary>
 /// Defines how stereo channels map to output lines.
 /// </summary>

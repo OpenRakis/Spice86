@@ -26,7 +26,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-namespace Spice86.Audio.Sound.Devices.YM7128B;
+namespace Spice86.Core.Emulator.Devices.Sound.YM7128B;
 
 internal static class Ym7128BTables {
     private static readonly sbyte[] GainDecibelData = [

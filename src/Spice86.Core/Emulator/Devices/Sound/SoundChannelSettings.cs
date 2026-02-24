@@ -1,5 +1,4 @@
 using Spice86.Audio.Common;
-using Spice86.Audio.Filters;
 
 namespace Spice86.Core.Emulator.Devices.Sound;
 
