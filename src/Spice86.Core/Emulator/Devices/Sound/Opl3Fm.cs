@@ -217,25 +217,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         InitializeToneGenerators();
         Array.Clear(_registerCache);
 
-        switch (_mode) {
-            case OplMode.Opl2:
-                break;
-
-            case OplMode.DualOpl2:
-                // Set up OPL3 mode in the handler
-                WriteReg(0x105, 1);
-                CacheWrite(0x105, 1);
-                break;
-
-            case OplMode.Opl3:
-                break;
-
-            case OplMode.Opl3Gold:
-                // AdLib Gold already initialized in constructor
-                break;
-
-            case OplMode.None:
-                break;
+        if (_mode is OplMode.DualOpl2) {
+            // Set up OPL3 mode in the handler
+            WriteReg(0x105, 1);
+            CacheWrite(0x105, 1);
         }
     }
 
