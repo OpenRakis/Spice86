@@ -22,6 +22,8 @@ public partial class MixerChannelViewModel : ViewModelBase {
     private const double SampleNormalizationFactor = 1.0 / 32768.0;
     // Amplification to make typical audio levels more visible on the meter
     private const double SignalAmplification = 2.5;
+    // Threshold below which a user volume is considered effectively muted
+    private const float VolumeMuteEpsilon = 1e-4f;
     private double _currentPeakLeft;
     private double _currentPeakRight;
 
@@ -86,7 +88,8 @@ public partial class MixerChannelViewModel : ViewModelBase {
         AudioFrame appVolume = _channel.AppVolume;
         AppVolumeLeftPercent = appVolume.Left * 100.0;
         AppVolumeRightPercent = appVolume.Right * 100.0;
-        IsMuted = userVolume.Left == 0.0f && userVolume.Right == 0.0f;
+        IsMuted = Math.Abs(userVolume.Left) <= VolumeMuteEpsilon &&
+                  Math.Abs(userVolume.Right) <= VolumeMuteEpsilon;
         UpdatePeakLevels();
     }
 
