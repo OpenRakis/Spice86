@@ -97,12 +97,12 @@ public sealed class SoundChannel {
     private float _noiseGateReleaseTimeMs = 20.0f;
     private bool _doNoiseGate;
 
-    private readonly HighPass[] _highPassFilters = new HighPass[2] { new(), new() };
+    private readonly HighPass[] _highPassFilters = [new(), new()];
     private FilterState _highPassFilterState = FilterState.Off;
     private int _highPassFilterOrder;
     private int _highPassFilterCutoffHz;
 
-    private readonly LowPass[] _lowPassFilters = new LowPass[2] { new(), new() };
+    private readonly LowPass[] _lowPassFilters = [new(), new()];
     private FilterState _lowPassFilterState = FilterState.Off;
     private int _lowPassFilterOrder;
     private int _lowPassFilterCutoffHz;

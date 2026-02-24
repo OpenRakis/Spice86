@@ -292,7 +292,7 @@ public partial class SoundBlaster {
     }
 
     // Number of bytes in input for commands (sb/sbpro)
-    private static readonly byte[] DspCommandLengthsSb = new byte[256] {
+    private static readonly byte[] DspCommandLengthsSb = [
         0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x00
         1, 0, 0, 0,  2, 2, 2, 2,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x10 Wari hack
         0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x20
@@ -309,10 +309,10 @@ public partial class SoundBlaster {
         0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xD0
         1, 0, 1, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xE0
         0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0   // 0xF0
-    };
+    ];
 
     // Number of bytes in input for commands (sb16)
-    private static readonly byte[] DspCommandLengthsSb16 = new byte[256] {
+    private static readonly byte[] DspCommandLengthsSb16 = [
         0, 0, 0, 0,  1, 2, 0, 0,  1, 0, 0, 0,  0, 0, 2, 1,  // 0x00
         1, 0, 0, 0,  2, 2, 2, 2,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x10 Wari hack
         0, 0, 0, 0,  2, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0x20
@@ -329,14 +329,14 @@ public partial class SoundBlaster {
         0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xD0
         1, 0, 1, 0,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  // 0xE0
         0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0   // 0xF0
-    };
+    ];
 
-    private static readonly int[][] E2IncrTable = new int[][] {
-        new int[] {  0x01, -0x02, -0x04,  0x08, -0x10,  0x20,  0x40, -0x80, -106 },
-        new int[] { -0x01,  0x02, -0x04,  0x08,  0x10, -0x20,  0x40, -0x80,  165 },
-        new int[] { -0x01,  0x02,  0x04, -0x08,  0x10, -0x20, -0x40,  0x80, -151 },
-        new int[] {  0x01, -0x02,  0x04, -0x08, -0x10,  0x20, -0x40,  0x80,   90 }
-    };
+    private static readonly int[][] E2IncrTable = [
+        [0x01, -0x02, -0x04,  0x08, -0x10,  0x20,  0x40, -0x80, -106],
+        [-0x01,  0x02, -0x04,  0x08,  0x10, -0x20,  0x40, -0x80,  165],
+        [-0x01,  0x02,  0x04, -0x08,  0x10, -0x20, -0x40,  0x80, -151],
+        [0x01, -0x02,  0x04, -0x08, -0x10,  0x20, -0x40,  0x80,   90]
+    ];
 
     private static readonly byte[] AspRegs = new byte[256];
 

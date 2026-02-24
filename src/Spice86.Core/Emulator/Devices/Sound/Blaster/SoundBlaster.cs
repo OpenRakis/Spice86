@@ -263,59 +263,63 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private static byte[] DecodeAdpcm2Bit(byte data, ref byte reference, ref ushort stepsize) {
-        ReadOnlySpan<sbyte> scaleMap = new sbyte[] {
+        ReadOnlySpan<sbyte> scaleMap = [
              0,  1,  0,  -1,  1,  3,  -1,  -3,
              2,  6, -2,  -6,  4, 12,  -4, -12,
              8, 24, -8, -24,  6, 48, -16, -48
-        };
-        ReadOnlySpan<byte> adjustMap = new byte[] {
+        ];
+        ReadOnlySpan<byte> adjustMap = [
               0,   4,   0,   4,
             252,   4, 252,   4, 252,   4, 252,   4,
             252,   4, 252,   4, 252,   4, 252,   4,
             252,   0, 252,   0
-        };
+        ];
         const int lastIndex = 23;
 
-        byte[] samples = new byte[4];
-        samples[0] = DecodeAdpcmPortion((data >> 6) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
-        samples[1] = DecodeAdpcmPortion((data >> 4) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
-        samples[2] = DecodeAdpcmPortion((data >> 2) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
-        samples[3] = DecodeAdpcmPortion((data >> 0) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        byte[] samples =
+        [
+            DecodeAdpcmPortion((data >> 6) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion((data >> 4) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion((data >> 2) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion((data >> 0) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+        ];
         return samples;
     }
 
     private static byte[] DecodeAdpcm3Bit(byte data, ref byte reference, ref ushort stepsize) {
-        ReadOnlySpan<sbyte> scaleMap = new sbyte[] {
+        ReadOnlySpan<sbyte> scaleMap = [
              0,  1,  2,  3,  0,  -1,  -2,  -3,
              1,  3,  5,  7, -1,  -3,  -5,  -7,
              2,  6, 10, 14, -2,  -6, -10, -14,
              4, 12, 20, 28, -4, -12, -20, -28,
              5, 15, 25, 35, -5, -15, -25, -35
-        };
-        ReadOnlySpan<byte> adjustMap = new byte[] {
+        ];
+        ReadOnlySpan<byte> adjustMap = [
               0, 0, 0,   8,   0, 0, 0,   8,
             248, 0, 0,   8, 248, 0, 0,   8,
             248, 0, 0,   8, 248, 0, 0,   8,
             248, 0, 0,   8, 248, 0, 0,   8,
             248, 0, 0,   0, 248, 0, 0,   0
-        };
+        ];
         const int lastIndex = 39;
 
-        byte[] samples = new byte[3];
-        samples[0] = DecodeAdpcmPortion((data >> 5) & 0x7, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
-        samples[1] = DecodeAdpcmPortion((data >> 2) & 0x7, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
-        samples[2] = DecodeAdpcmPortion((data & 0x3) << 1, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        byte[] samples =
+        [
+            DecodeAdpcmPortion((data >> 5) & 0x7, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion((data >> 2) & 0x7, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion((data & 0x3) << 1, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+        ];
         return samples;
     }
 
     private static byte[] DecodeAdpcm4Bit(byte data, ref byte reference, ref ushort stepsize) {
-        ReadOnlySpan<sbyte> scaleMap = new sbyte[] {
+        ReadOnlySpan<sbyte> scaleMap = [
              0,  1,  2,  3,  4,  5,  6,  7,  0,  -1,  -2,  -3,  -4,  -5,  -6,  -7,
              1,  3,  5,  7,  9, 11, 13, 15, -1,  -3,  -5,  -7,  -9, -11, -13, -15,
              2,  6, 10, 14, 18, 22, 26, 30, -2,  -6, -10, -14, -18, -22, -26, -30,
              4, 12, 20, 28, 36, 44, 52, 60, -4, -12, -20, -28, -36, -44, -52, -60
-        };
-        ReadOnlySpan<byte> adjustMap = new byte[] {
+        ];
+        ReadOnlySpan<byte> adjustMap = [
               0, 0, 0, 0, 0, 16, 16, 16,
               0, 0, 0, 0, 0, 16, 16, 16,
             240, 0, 0, 0, 0, 16, 16, 16,
@@ -324,12 +328,14 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             240, 0, 0, 0, 0, 16, 16, 16,
             240, 0, 0, 0, 0,  0,  0,  0,
             240, 0, 0, 0, 0,  0,  0,  0
-        };
+        ];
         const int lastIndex = 63;
 
-        byte[] samples = new byte[2];
-        samples[0] = DecodeAdpcmPortion(data >> 4, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
-        samples[1] = DecodeAdpcmPortion(data & 0xF, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize);
+        byte[] samples =
+        [
+            DecodeAdpcmPortion(data >> 4, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion(data & 0xF, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+        ];
         return samples;
     }
 
