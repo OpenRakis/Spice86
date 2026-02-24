@@ -79,7 +79,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         public byte LeftVolume;
         public byte RightVolume;
         public bool Active;
-        public bool MixerEnabled;
+        public readonly bool MixerEnabled;
 
         public AdLibGoldControl(bool mixerEnabled) {
             Index = 0;
