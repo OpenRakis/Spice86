@@ -35,11 +35,11 @@ public class BreakpointTests {
         int readWrite0Triggered = 0;
         AddressBreakPoint readWrite0 = new AddressBreakPoint(BreakPointType.MEMORY_ACCESS, 0, breakpoint => { readWrite0Triggered++; }, false);
         emulatorBreakpointsManager.ToggleBreakPoint(readWrite0, true);
-        _ =  memory.UInt8[0];
+        _ = memory.UInt8[0];
         memory.UInt8[0] = 0;
         emulatorBreakpointsManager.ToggleBreakPoint(readWrite0, false);
         // Should not trigger
-        _ =  memory.UInt8[0];
+        _ = memory.UInt8[0];
         Assert.Equal(2, readWrite0Triggered);
 
         // Memset
@@ -200,6 +200,3 @@ public class BreakpointTests {
         Assert.Equal(1, intOtriggers);
     }
 }
-
-
-

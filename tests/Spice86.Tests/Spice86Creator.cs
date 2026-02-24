@@ -78,7 +78,3 @@ public class Spice86Creator {
         return res;
     }
 }
-
-
-
-
