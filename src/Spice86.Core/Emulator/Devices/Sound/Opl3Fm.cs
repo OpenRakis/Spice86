@@ -637,7 +637,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             return;
         }
         int framesRemaining = framesRequested;
-        using (Lock.Scope scope = _chipLock.EnterScope()) {
+        using (_chipLock.EnterScope()) {
             Span<float> frameData = stackalloc float[2];
             // First, send any frames we've queued since the last callback
             while (framesRemaining > 0 && _fifo.Count > 0) {
