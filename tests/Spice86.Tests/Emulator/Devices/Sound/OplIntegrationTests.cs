@@ -29,7 +29,7 @@ public class OplIntegrationTests {
     [Fact]
     public void OplWriteDelay_Timer1Fires_AfterHardwareDelay() {
         // Arrange
-        string comPath = Path.Combine("Resources", "Sound", "opl_write_delay.com");
+        string comPath = Path.Join("Resources", "Sound", "opl_write_delay.com");
         byte[] program = File.ReadAllBytes(comPath);
 
         // Act
@@ -55,7 +55,7 @@ public class OplIntegrationTests {
     [Fact]
     public void OplReadDelay_StatusReadCount_MatchesHardware() {
         // Arrange
-        string comPath = Path.Combine("Resources", "Sound", "opl_read_delay.com");
+        string comPath = Path.Join("Resources", "Sound", "opl_read_delay.com");
         byte[] program = File.ReadAllBytes(comPath);
 
         // Act

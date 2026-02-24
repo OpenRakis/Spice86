@@ -23,7 +23,7 @@ public class SoundIntegrationTests {
     [Fact]
     public void SoundBlasterDspReset_ProducesAA_AfterHardwareDelay() {
         // Arrange
-        string comPath = Path.Combine("Resources", "Sound", "sb_reset_delay.com");
+        string comPath = Path.Join("Resources", "Sound", "sb_reset_delay.com");
         byte[] program = File.ReadAllBytes(comPath);
 
         // Act
