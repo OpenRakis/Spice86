@@ -19,11 +19,13 @@ NOTE: This is a port, and a continuation from the [original Java Spice86](https:
 It requires [.NET 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) and runs on Windows, macOS, and Linux.
 
 ## Approach
+
 Rewriting a program from only the binary is a hard task.
 
 Spice86 is a tool that helps you do so with a methodic divide and conquer approach.
 
 General process:
+
 - You start by emulating the program in the Spice86 emulator.
 - At the end of each run, the emulator dumps some runtime data (memory dump and execution flow)
 - You load those data into [ghidra](https://github.com/NationalSecurityAgency/ghidra) via the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin)
@@ -53,6 +55,7 @@ General process:
 **Note:** Regardless of the base directory setting, dumps are always placed in a subdirectory named with the program's SHA-256 hash. This ensures that multiple executables from the same game (e.g., SETUP.EXE, GAME.EXE) have isolated dump folders.
 
 The emulator dumps the following files:
+
 - **spice86dumpMemoryDump.bin**: Snapshot of the real mode address space
 - **spice86dumpExecutionFlow.json**: Contains function addresses, labels, and executed instructions
 
@@ -72,6 +75,7 @@ For detailed debugging, you can enable CPU heavy logging which records every exe
 **Log Format:** Each line contains: `SegmentedAddress InstructionString`
 
 **Example:**
+
 ```
 017D:0000 mov AX,0xDD1D
 017D:0003 call near 0xE4AD
@@ -79,6 +83,7 @@ For detailed debugging, you can enable CPU heavy logging which records every exe
 ```
 
 **Usage:**
+
 ```bash
 # Enable with default location
 Spice86 -e program.exe --CpuHeavyLog
@@ -86,7 +91,6 @@ Spice86 -e program.exe --CpuHeavyLog
 # Use custom log file path
 Spice86 -e program.exe --CpuHeavyLog --CpuHeavyLogDumpFile "C:\logs\cpu.log"
 ```
-
 
 ## Command line options
 
@@ -123,41 +127,50 @@ Spice86 -e program.exe --CpuHeavyLog --CpuHeavyLogDumpFile "C:\logs\cpu.log"
 ```
 
 ## Dynamic analysis
+
 Spice86 speaks the [GDB](https://www.gnu.org/software/gdb/) remote protocol:
+
 - it supports most of the commands you need to debug.
 - it also provides custom GDB commands to do dynamic analysis.
 
 ### Connecting to GDB
+
 The GDB server is always started along with the program to execute unless option is set to 0.
 Default port is 10000.
 
 If you want to pause before starting execution to setup breakpoints and so on, use the --Debug option.
 
 Here is how to connect from GDB command line client and how to set the architecture:
+
 ```
 (gdb) target remote localhost:10000
 (gdb) set architecture i8086
 ```
 
 ### Vanilla GDB
+
 You can add breakpoints, step, view memory and so on.
 
 Example with a breakpoint on VGA VRAM writes:
+
 ```
 (gdb) watch *0xA0000
 ```
 
 Viewing assembly:
+
 ```
 (gdb) layout asm
 ```
 
 Removing a breakpoint:
+
 ```
 (gdb) remove 1
 ```
 
 Searching for a sequence of bytes in memory (start address 0, length F0000, ascii bytes of 'Spice86' string):
+
 ```
 (gdb) find /b 0x0, 0xF0000, 0x53, 0x70, 0x69, 0x63, 0x65, 0x38, 0x36
 ```
@@ -167,32 +180,41 @@ GDB does not support x86 real mode segmented addressing, so pointers need to ref
 Similarly, The $pc variable in GDB will be exposed by Spice86 as the physical address pointed by CS:IP.
 
 ### Custom GDB commands (where the magic happens)
+
 The list of custom commands can be displayed like this:
+
 ```
 (gdb) monitor help
 ```
 
 #### Dump information about current run
+
 ```
 (gdb) monitor dumpall
 ```
+
 Dumps everything described below in one shot. Files are created in the dump folder as explained [here](https://github.com/OpenRakis/Spice86#dumping-data)
 Several files are produced:
- - spice86dumpMemoryDump.bin: Snapshot of the real mode address space. Contains the instructions that are actually loaded and executed. They may differ from the exe you are running because DOS programs can rewrite some of their instructions / load additional modules in memory.
- - spice86dumpExecutionFlow.json: Contains information used by the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) to make sense of the memory dump, like addresses of the functions, the labels, the instructions that have been executed ...
+
+- spice86dumpMemoryDump.bin: Snapshot of the real mode address space. Contains the instructions that are actually loaded and executed. They may differ from the exe you are running because DOS programs can rewrite some of their instructions / load additional modules in memory.
+- spice86dumpExecutionFlow.json: Contains information used by the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) to make sense of the memory dump, like addresses of the functions, the labels, the instructions that have been executed ...
 
 #### Special breakpoints
+
 Break after x emulated CPU Cycles:
+
 ```
 (gdb) monitor breakCycles 1000
 ```
 
 Break at the end of the emulated program:
+
 ```
 (gdb) monitor breakStop
 ```
 
 ## Seer
+
 For a pleasing and productive experience with GDB, the
 [seerGDB](https://github.com/epasveer/seer) client is highly recommended.
 
@@ -238,7 +260,7 @@ Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
 | SoundBlaster | ✅ Full | Ported from DOSBox Staging |
 | Adlib Gold | ✅ Full | Ported from DOSBox Staging |
 | MT-32 | ⚠️ Partial | Not available on macOS |
-| Gravis Ultrasound | ❌ None | Not implemented yet | 
+| Gravis Ultrasound | ❌ None | Not implemented yet |
 | General MIDI | ✅ Full | Supported |
 
 ## Misc
@@ -252,13 +274,15 @@ Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
 | **Structure Viewer** | Requires C header file (`--StructureFile`) to display memory structures |
 
 ## Reverse engineering process
+
 Concrete example with Cryo Dune [here](https://github.com/OpenRakis/Cryogenic).
 
 First run your program and make sure everything works fine in Spice86. If you encounter issues it could be due to unimplemented hardware / DOS / BIOS features.
 
-When Spice86 exits, it should dump data in current folder or in folder specified by env variable 
+When Spice86 exits, it should dump data in current folder or in folder specified by env variable
 
 Open the data in [ghidra](https://github.com/NationalSecurityAgency/ghidra) with the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) and generate code. You can import the generated files in a template project you generate via the [spice86-dotnet-templates](https://github.com/OpenRakis/spice86-dotnet-templates):
+
 ```
 dotnet new spice86.project
 ```
@@ -268,11 +292,13 @@ dotnet new spice86.project
 You can provide your own C# code to override the program original assembly code.
 
 ### Defining overrides
+
 Spice86 can take in input an instance of Spice86.Core.Emulator.Function.IOverrideSupplier that builds a mapping between the memory address of functions and their C# overrides.
 
 For a complete example you can check the source code of [Cryogenic](https://github.com/OpenRakis/Cryogenic).
 
 Here is a simple example of how it would look like:
+
 ```csharp
 namespace My.Program;
 
@@ -372,14 +398,19 @@ Exporting a new C header file from Ghidra or IDA will also update the structure 
 You can also enter the Structure view by selecting a range of bytes in the Memory tab and right-clicking on it.
 
 ## Misc details
+
 ### C Drive
+
 It is possible to provide a C: Drive for emulated DOS functions with the option **--CDrive**. Default is current folder. For some games you may need to set the C drive to the game folder.
 
 ### Emulated program arguments
+
 You can pass arguments (max 127 chars!) to the emulated program with the option **--ExeArgs**. Default is empty.
 
 ### Time
+
 The emulated Timer hardware of the PC (Intel 8259) supports measuring time from either:
+
 - The real elapsed time. Speed can be altered with parameter **--TimeMultiplier**.
 - The number of instructions the emulated CPU executed. This is the behaviour that is activated with parameter **--InstructionsPerSecond** and is forced when in GDB mode so that you can debug with peace of mind without the timer triggering.
 
@@ -407,7 +438,6 @@ or use this where Spice86.csproj is located:
    dotnet run -e <path to executable>
 ```
 
-
 ### Ghidra plugin
 
 This uses Ghidra and Java 17.
@@ -428,9 +458,11 @@ Remember: if Ghidra displays SUBROUTINES, use the 'f' key to convert them into f
 Also, if you have any weird behaviour, make sure you have Java 17 and ONLY Java 17. That's how Ghidra likes it.
 
 ### Cfg Cpu
+
 Doc [here](doc/cfgcpuReadme.md)
 
 ### Some screenshots
+
 Cryo dune:
 
 ![](doc/cryodune_worm.png)
@@ -455,7 +487,7 @@ Betrayal at Krondor:
 
 ## Credits
 
-The SoundBlaster implementation is fully ported from [dosbox-staging](https://github.com/dosbox-staging/dosbox-staging), replacing the previous Aeon implementation. This includes PCM and OPL sound quality improvements, emulation accuracy, SB/OPL compatibility, mixer thread logic, audio events, audio hardware delays, and a complete audio re-architecture.
+The SoundBlaster implementation is fully ported from [dosbox-staging](https://github.com/dosbox-staging/dosbox-staging), replacing the previous one which was modified from the Aeon emulator. This includes PCM and OPL sound quality improvements, emulation accuracy, SB/OPL compatibility, mixer thread logic, audio events, audio hardware delays, and a complete audio re-architecture.
 
 Additionally, the project no longer relies on PortAudio. Instead, it uses a fully cross-platform C# port of the SDL2 audio APIs.
 We only depend on WASAPI (Windows), ALSA (Linux), or CoreAudio (macOS).
