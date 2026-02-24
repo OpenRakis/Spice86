@@ -338,13 +338,11 @@ public sealed class SoundChannel {
             uint speexInRate = (uint)inRateHz;
             uint speexOutRate = (uint)mixerRateHz;
 
-            if (_speexResampler == null) {
-                _speexResampler = new SpeexResamplerCSharp(
+            _speexResampler ??= new SpeexResamplerCSharp(
                     SpeexChannels,
                     speexInRate,
                     speexOutRate,
                     SpeexQuality);
-            }
 
             _speexResampler.SetRate(speexInRate, speexOutRate);
         }
@@ -737,11 +735,10 @@ public sealed class SoundChannel {
         set {
             lock (_mutex) {
                 _highPassFilterState = value;
-                if (_highPassFilterState == FilterState.On) {
-                    if (_highPassFilterOrder <= 0 || _highPassFilterCutoffHz <= 0) {
-                        throw new InvalidOperationException(
-                            "High-pass filter must be configured before enabling");
-                    }
+                if (_highPassFilterState == FilterState.On &&
+                    (_highPassFilterOrder <= 0 || _highPassFilterCutoffHz <= 0)) {
+                    throw new InvalidOperationException(
+                        "High-pass filter must be configured before enabling");
                 }
             }
         }
@@ -760,11 +757,10 @@ public sealed class SoundChannel {
             lock (_mutex) {
                 _lowPassFilterState = value;
 
-                if (_lowPassFilterState == FilterState.On) {
-                    if (_lowPassFilterOrder <= 0 || _lowPassFilterCutoffHz <= 0) {
-                        throw new InvalidOperationException(
-                            "Low-pass filter must be configured before enabling");
-                    }
+                if (_lowPassFilterState == FilterState.On &&
+                    (_lowPassFilterOrder <= 0 || _lowPassFilterCutoffHz <= 0)) {
+                    throw new InvalidOperationException(
+                        "Low-pass filter must be configured before enabling");
                 }
             }
         }
