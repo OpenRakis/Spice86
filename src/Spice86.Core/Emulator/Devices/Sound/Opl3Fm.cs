@@ -422,7 +422,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                         AdlibGoldControlWrite(value);
                         return;
                     }
-                    goto case OplMode.Opl3;
+                    goto case OplMode.Opl2;
 
                 case OplMode.Opl2:
                 case OplMode.Opl3:
