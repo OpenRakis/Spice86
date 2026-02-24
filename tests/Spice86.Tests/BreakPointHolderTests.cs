@@ -143,7 +143,3 @@ public class BreakPointHolderTests {
         Assert.True(holder.HasActiveBreakpoints);
     }
 }
-
-
-
-

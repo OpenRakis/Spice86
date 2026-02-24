@@ -394,7 +394,3 @@ public class AstExpressionParserRoundTripTest {
         AssertRoundTrip("~ax&0xFF", "~AX&0x000000FF");
     }
 }
-
-
-
-

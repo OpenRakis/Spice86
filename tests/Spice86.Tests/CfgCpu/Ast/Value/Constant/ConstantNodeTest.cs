@@ -111,7 +111,3 @@ public class ConstantNodeTest {
         Assert.Equal(0x0Fu, result);
     }
 }
-
-
-
-

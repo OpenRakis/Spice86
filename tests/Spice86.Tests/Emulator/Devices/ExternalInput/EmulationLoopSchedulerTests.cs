@@ -189,7 +189,3 @@ public sealed class EmulationLoopSchedulerTests {
         }
     }
 }
-
-
-
-

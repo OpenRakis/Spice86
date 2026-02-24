@@ -171,7 +171,3 @@ public class GdbConditionalBreakpointTests : IDisposable {
         addressBreakpoint.ConditionExpression.Should().BeNull();
     }
 }
-
-
-
-

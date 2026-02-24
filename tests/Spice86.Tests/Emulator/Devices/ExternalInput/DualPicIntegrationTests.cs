@@ -29,7 +29,3 @@ public sealed class DualPicIntegrationTests {
         snapshot.Mode.Should().Be(PitMode.SquareWave);
     }
 }
-
-
-
-

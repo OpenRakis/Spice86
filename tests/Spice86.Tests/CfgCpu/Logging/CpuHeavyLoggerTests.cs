@@ -107,7 +107,3 @@ public class CpuHeavyLoggerTests : IDisposable {
         return new(address, opcodeField);
     }
 }
-
-
-
-

@@ -176,7 +176,3 @@ public class Pit8254Tests {
         return (byte)((counter << 6) | (readWritePolicy << 4) | (mode << 1) | bcd);
     }
 }
-
-
-
-

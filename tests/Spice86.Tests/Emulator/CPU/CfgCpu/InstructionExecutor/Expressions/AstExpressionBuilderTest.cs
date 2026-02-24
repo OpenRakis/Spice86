@@ -1,4 +1,4 @@
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
+﻿using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 
 namespace Spice86.Tests.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 
@@ -174,6 +174,3 @@ public class AstExpressionBuilderTest {
         Execute(operation);
     }
 }
-
-
-

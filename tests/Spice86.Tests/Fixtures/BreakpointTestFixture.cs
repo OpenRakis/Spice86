@@ -112,7 +112,3 @@ public class BreakpointTestFixture : IDisposable {
         return new AddressBreakPoint(type, address, onReached, isRemovedOnTrigger, condition, conditionExpression);
     }
 }
-
-
-
-

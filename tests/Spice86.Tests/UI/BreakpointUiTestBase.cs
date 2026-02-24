@@ -177,7 +177,3 @@ public abstract class BreakpointUiTestBase : IDisposable {
         GC.SuppressFinalize(this);
     }
 }
-
-
-
-

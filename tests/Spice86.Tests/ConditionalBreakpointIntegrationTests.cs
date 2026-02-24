@@ -27,9 +27,9 @@ public class ConditionalBreakpointIntegrationTests {
     public void ConditionalBreakpoint_WhenConditionMet_TriggersAndPauses() {
         // Arrange - Use the full emulator with a real test binary
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
-            "add",
+            "add", 
             maxCycles: 10000).Create();
-
+        
         Machine machine = spice86DependencyInjection.Machine;
         State state = machine.CpuState;
         EmulatorBreakpointsManager breakpointsManager = machine.EmulatorBreakpointsManager;
@@ -204,7 +204,7 @@ public class ConditionalBreakpointIntegrationTests {
         breakpointsManager.ToggleBreakPoint(breakpoint, true);
 
         // Act - Serialize and verify
-        SerializableUserBreakpointCollection serialized =
+        SerializableUserBreakpointCollection serialized = 
             breakpointsManager.CreateSerializableBreakpoints();
 
         // Assert
@@ -462,7 +462,3 @@ public class ConditionalBreakpointIntegrationTests {
         capturedEax.Should().NotBeNull("the EAX value should have been captured");
     }
 }
-
-
-
-

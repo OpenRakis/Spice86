@@ -137,7 +137,3 @@ public class ConditionalBreakpointTests : IDisposable {
         BreakpointsManager.ToggleBreakPoint(breakpoint, false);
     }
 }
-
-
-
-

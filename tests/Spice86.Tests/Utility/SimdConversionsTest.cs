@@ -1,4 +1,4 @@
-using static Spice86.Shared.Utils.SimdConversions;
+﻿using static Spice86.Shared.Utils.SimdConversions;
 
 namespace Spice86.Tests.Utility;
 
@@ -100,6 +100,3 @@ public class SimdConversionsTest {
         return data;
     }
 }
-
-
-

@@ -123,7 +123,3 @@ public class EmulatorStateSerializationFolderTests {
         }
     }
 }
-
-
-
-

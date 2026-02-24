@@ -1,4 +1,4 @@
-namespace Spice86.Tests.Dos.Xms;
+﻿namespace Spice86.Tests.Dos.Xms;
 
 using FluentAssertions;
 
@@ -804,7 +804,3 @@ public class XmsUnitTests
         _state.BL.Should().Be(0xA9, "Parity error should be reported");
     }
 }
-
-
-
-

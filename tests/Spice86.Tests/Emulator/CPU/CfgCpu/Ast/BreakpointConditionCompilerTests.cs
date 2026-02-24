@@ -660,7 +660,3 @@ public class BreakpointConditionCompilerTests {
         ast.Should().NotBeNull();
     }
 }
-
-
-
-

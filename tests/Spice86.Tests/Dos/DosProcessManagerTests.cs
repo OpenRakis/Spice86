@@ -613,7 +613,3 @@ public class DosProcessManagerTests {
             new DosSwappableDataArea(Memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0)).CurrentProgramSegmentPrefix;
     }
 }
-
-
-
-

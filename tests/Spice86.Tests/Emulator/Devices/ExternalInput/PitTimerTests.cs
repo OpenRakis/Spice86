@@ -89,7 +89,3 @@ public sealed class PitTimerTests {
         }
     }
 }
-
-
-
-

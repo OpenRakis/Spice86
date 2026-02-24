@@ -1,4 +1,4 @@
-namespace Spice86.Tests.Emulator.OperatingSystem.Structures;
+﻿namespace Spice86.Tests.Emulator.OperatingSystem.Structures;
 
 using FluentAssertions;
 
@@ -37,6 +37,3 @@ public class DosFileTests {
         memoryStream.Position.Should().Be(60);
     }
 }
-
-
-

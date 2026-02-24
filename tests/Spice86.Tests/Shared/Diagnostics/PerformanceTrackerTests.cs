@@ -88,7 +88,3 @@ public class PerformanceTrackerTests {
         public DateTime Now => CurrentTime;
     }
 }
-
-
-
-

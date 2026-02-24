@@ -1,4 +1,4 @@
-namespace Spice86.Tests.Dos;
+﻿namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
@@ -66,7 +66,3 @@ public class DosExecIntegrationTests {
         Directory.Delete(directoryPath, true);
     }
 }
-
-
-
-

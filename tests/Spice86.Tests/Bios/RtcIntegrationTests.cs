@@ -210,6 +210,3 @@ public class RtcIntegrationTests {
         }
     }
 }
-
-
-

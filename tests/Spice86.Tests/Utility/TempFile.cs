@@ -30,6 +30,3 @@ public sealed class TempFile : IDisposable {
         }
     }
 }
-
-
-
