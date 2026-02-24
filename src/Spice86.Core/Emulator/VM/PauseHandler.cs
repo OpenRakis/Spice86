@@ -2,7 +2,6 @@
 
 using Spice86.Shared.Interfaces;
 
-
 /// <summary>
 /// Provides functionality to handle pausing of the emulator.
 /// </summary>
