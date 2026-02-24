@@ -60,7 +60,7 @@ public sealed class SoftwareMixer : IDisposable {
     private readonly Compressor _compressor = new();
 
     // Reverb state - MVerb professional algorithmic reverb
-    private readonly bool _doReverb;
+    private readonly bool _doReverb = false;
     private readonly MVerb _mverb = new();
     private readonly float _reverbSynthSendLevel = 0.0f;
     private readonly float _reverbDigitalSendLevel = 0.0f;
