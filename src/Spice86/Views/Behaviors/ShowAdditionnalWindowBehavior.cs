@@ -52,7 +52,7 @@ internal class ShowAdditionnalWindowBehavior : Behavior<Control> {
     private object? _audioMixerDataContext;
 
     internal void ShowAudioMixer() {
-        ShowRegisteredWindow<MixerView>(ref _audioMixerDataContext, nameof(MixerViewModel));
+        ShowRegisteredWindow<MixerView>(ref _audioMixerDataContext, nameof(SoftwareMixerViewModel));
     }
     
     private object? _debugWindowDataContext;

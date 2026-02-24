@@ -9,7 +9,7 @@
 	xmlns:controls="using:Spice86.Views.Controls"
 	xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
 	x:CompileBindings="True"
-	x:DataType="vm:MixerViewModel"
+	x:DataType="vm:SoftwareMixerViewModel"
 	WindowStartupLocation="CenterOwner"
 	ShowInTaskbar="True"
 	CanResize="True"
@@ -21,7 +21,7 @@
 	Icon="/Views/Assets/Spice86.ico"
 	mc:Ignorable="d">
 	<Design.DataContext>
-		<vm:MixerViewModel />
+		<vm:SoftwareMixerViewModel />
 	</Design.DataContext>
 	<Window.Resources>
 		<ResourceDictionary>

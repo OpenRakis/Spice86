@@ -15,7 +15,7 @@ using System.Linq;
 /// <summary>
 /// View model for the mixer window, displaying and controlling mixer channels.
 /// </summary>
-public partial class MixerViewModel : ViewModelBase {
+public partial class SoftwareMixerViewModel : ViewModelBase {
     private readonly SoftwareMixer _mixer;
 
     /// <summary>
@@ -28,7 +28,7 @@ public partial class MixerViewModel : ViewModelBase {
     /// </summary>
     public AudioSettingsViewModel AudioSettings { get; }
 
-    public MixerViewModel(SoftwareMixer mixer, SoundBlaster soundBlaster, Opl3Fm opl) {
+    public SoftwareMixerViewModel(SoftwareMixer mixer, SoundBlaster soundBlaster, Opl3Fm opl) {
         _mixer = mixer;
         AudioSettings = new AudioSettingsViewModel(soundBlaster, opl);
 

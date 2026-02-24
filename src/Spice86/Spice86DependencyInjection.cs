@@ -638,11 +638,11 @@ public class Spice86DependencyInjection : IDisposable {
                 cpuViewModel, midiViewModel, cfgCpuViewModel,
                 [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
 
-            MixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
+            SoftwareMixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
 
             Application.Current!.Resources[nameof(DebugWindowViewModel)] =
                 debugWindowViewModel;
-            Application.Current!.Resources[nameof(MixerViewModel)] =
+            Application.Current!.Resources[nameof(SoftwareMixerViewModel)] =
                 mixerViewModel;
             mainWindow.DataContext = mainWindowViewModel;
         }
