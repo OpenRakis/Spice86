@@ -63,7 +63,7 @@ public partial class AudioSettingsViewModel : ViewModelBase {
     /// </summary>
     public string BlasterFormatString { get; } = "Format: A[base] I[irq] D[dma] H[hdma] T[type]";
 
-    public AudioSettingsViewModel(SoundBlaster soundBlaster, Opl opl) {
+    public AudioSettingsViewModel(SoundBlaster soundBlaster, Opl3Fm opl) {
         SbType = soundBlaster.SbTypeProperty;
         SbIrq = soundBlaster.IRQ;
         SbBase = soundBlaster.BaseAddress;

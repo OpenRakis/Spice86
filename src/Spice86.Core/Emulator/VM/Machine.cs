@@ -199,7 +199,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The OPL FM Synth chip.
     /// </summary>
-    public Opl OPL { get; }
+    public Opl3Fm OPL { get; }
 
     /// <summary>
     /// The internal software mixer for all sound channels.
@@ -267,7 +267,7 @@ public sealed class Machine : IDisposable {
         IVideoInt10Handler videoInt10Handler,
         VgaRom vgaRom,
         DmaBus dmaSystem,
-        Opl opl,
+        Opl3Fm opl,
         SoftwareMixer mixer,
         IMouseDevice mouseDevice,
         IMouseDriver mouseDriver,

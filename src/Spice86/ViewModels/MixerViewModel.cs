@@ -28,7 +28,7 @@ public partial class MixerViewModel : ViewModelBase {
     /// </summary>
     public AudioSettingsViewModel AudioSettings { get; }
 
-    public MixerViewModel(SoftwareMixer mixer, SoundBlaster soundBlaster, Opl opl) {
+    public MixerViewModel(SoftwareMixer mixer, SoundBlaster soundBlaster, Opl3Fm opl) {
         _mixer = mixer;
         AudioSettings = new AudioSettingsViewModel(soundBlaster, opl);
 

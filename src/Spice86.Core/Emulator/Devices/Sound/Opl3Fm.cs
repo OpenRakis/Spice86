@@ -22,7 +22,7 @@ using System.Threading;
 /// <remarks>The Opl class supports OPL2, Dual OPL2, OPL3, and OPL3 Gold synthesis modes. It manages audio
 /// rendering, integrates with a mixer for sound output, and handles I/O port registration based on the selected mode.
 /// </remarks>
-public class Opl : DefaultIOPortHandler, IDisposable {
+public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private const int OplSampleRateHz = 49716;
 
     private readonly AdlibGold? _adlibGold;
@@ -106,7 +106,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <param name="ioPortDispatcher">I/O port dispatcher.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
     /// <param name="loggerService">The logger service.</param>
-    public Opl(OplConfig config, SoftwareMixer mixer, State state, IEmulatedClock clock,
+    public Opl3Fm(OplConfig config, SoftwareMixer mixer, State state, IEmulatedClock clock,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
         ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
@@ -134,7 +134,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             features.Add(ChannelFeature.Stereo);
         }
 
-        _mixerChannel = mixer.AddChannel(AudioCallback, OplSampleRateHz, nameof(Opl), features);
+        _mixerChannel = mixer.AddChannel(AudioCallback, OplSampleRateHz, nameof(Opl3Fm), features);
         _mixerChannel.SetResampleMethod(ResampleMethod.Resample);
 
         // Initialize AdLib Gold for Opl3Gold mode

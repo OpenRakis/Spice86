@@ -37,7 +37,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         DmaBus dmaBus,
         DualPic dualPic,
         SoftwareMixer mixer,
-        Opl opl,
+        Opl3Fm opl,
         ILoggerService loggerService,
         EmulationLoopScheduler scheduler,
         IEmulatedClock clock,

@@ -358,7 +358,7 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.SbBase);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
 
-        Opl opl = new(oplConfig, mixer, state, emulatedClock, ioPortDispatcher,
+        Opl3Fm opl = new(oplConfig, mixer, state, emulatedClock, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
         SoundBlaster soundBlaster = new(ioPortDispatcher,

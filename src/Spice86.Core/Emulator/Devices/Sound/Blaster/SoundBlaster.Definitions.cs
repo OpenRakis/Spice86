@@ -349,7 +349,7 @@ public partial class SoundBlaster {
     private readonly DmaChannel? _secondaryDmaChannel;
     private readonly SoftwareMixer _mixer;
     private readonly SoundChannel _dacChannel;
-    private readonly Opl _opl;
+    private readonly Opl3Fm _opl;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly RWQueue<AudioFrame> _outputQueue = new(4096);
