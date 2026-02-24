@@ -41,7 +41,6 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     private readonly IEmulatedClock _clock;
     private readonly float[] _impulseLookup = new float[SincFilterWidth];
     private readonly ILoggerService _logger;
-    private readonly SoftwareMixer _mixer;
     private readonly RWQueue<float> _outputQueue;
     private readonly PitChannelState _pitChannelState = new();
     private readonly SoundChannel _mixerChannel;
@@ -95,7 +94,6 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         _logger = loggerService;
         _scheduler = scheduler;
         _clock = clock;
-        _mixer = mixer;
 
         // Create queue first with initial capacity. Will be resized in callback.
         const int initialQueueSize = 256;
@@ -334,8 +332,6 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     }
 
     private void OnSchedulerTick() {
-        // Record tick start time for GetPicTickIndex() calculations
-        // Reference: DOSBox's PIC_TickIndex() returns position within current tick
         _lastTickTimeMs = _clock.ElapsedTimeMs;
 
         if (!_mixerChannel.IsEnabled) {
@@ -352,8 +348,6 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
             }
             PicCallback(requestedFrames);
         }
-
-        // Reschedule for next tick (1ms) - matches DOSBox's TIMER_AddTickHandler behavior
         _scheduler.AddEvent(_tickHandler, 1);
     }
 
