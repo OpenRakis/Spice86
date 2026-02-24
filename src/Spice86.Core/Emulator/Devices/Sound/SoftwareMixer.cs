@@ -60,7 +60,7 @@ public sealed class SoftwareMixer : IDisposable {
     private readonly Compressor _compressor = new();
 
     // Reverb state - MVerb professional algorithmic reverb
-    private bool _doReverb = false;
+    private readonly bool _doReverb;
     private readonly MVerb _mverb = new();
     private readonly float _reverbSynthSendLevel = 0.0f;
     private readonly float _reverbDigitalSendLevel = 0.0f;
@@ -280,7 +280,6 @@ public sealed class SoftwareMixer : IDisposable {
         channel.AppVolume = new AudioFrame(1.0f, 1.0f);
         channel.UserVolume = new AudioFrame(1.0f, 1.0f);
 
-        int channelRate = channel.SampleRate;
         // Add to channels registry
         if (!_channels.TryAdd(name, channel)) {
             // Replace existing
