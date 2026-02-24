@@ -873,7 +873,8 @@ public sealed class SoundChannel {
     public void AddSilence() {
         lock (_mutex) {
             if (AudioFrames.Count < _framesNeeded) {
-                if (_prevFrame.Left == 0.0f && _prevFrame.Right == 0.0f) {
+                const float SilenceThreshold = 1e-5f;
+                if (Math.Abs(_prevFrame.Left) <= SilenceThreshold && Math.Abs(_prevFrame.Right) <= SilenceThreshold) {
                     // Pure silence - just add zero frames
                     while (AudioFrames.Count < _framesNeeded) {
                         AudioFrames.Add(new AudioFrame(0.0f, 0.0f));
