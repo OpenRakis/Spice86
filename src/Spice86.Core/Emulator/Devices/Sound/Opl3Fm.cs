@@ -169,7 +169,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         mixer.UnlockMixerThread();
     }
 
-
     public override byte ReadByte(ushort port) {
         byte result = PortRead(port);
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
