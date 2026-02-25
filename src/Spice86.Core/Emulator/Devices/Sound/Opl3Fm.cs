@@ -169,154 +169,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         mixer.UnlockMixerThread();
     }
 
-    private void RenderUpToNow() {
-        double now = _clock.ElapsedTimeMs;
-        // Wake up the channel and update the last rendered time datum.
-        if (_mixerChannel.WakeUp()) {
-            _lastRenderedMs = now;
-            return;
-        }
-        // Keep rendering until we're current
-        while (_lastRenderedMs < now) {
-            _lastRenderedMs += _msPerFrame;
-            _fifo.Enqueue(RenderFrame());
-        }
-    }
-
-    /// <summary>
-    ///     Exposes the OPL mixer channel for other components (e.g., SoundBlaster hardware mixer).
-    /// </summary>
-    public SoundChannel MixerChannel => _mixerChannel;
-
-    /// <summary>
-    ///     Gets the current OPL synthesis mode.
-    /// </summary>
-    public OplMode Mode => _mode;
-
-    /// <inheritdoc />
-    public void Dispose() {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    /// <summary>
-    ///     Gets a value indicating whether AdLib Gold processing is enabled.
-    /// </summary>
-    public bool IsAdlibGoldEnabled => _adlibGold is not null;
-
-    /// <summary>
-    ///     Converts linear gain to decibels.
-    /// </summary>
-    private static float GainToDecibel(float gain) {
-        return 20.0f * MathF.Log10(gain);
-    }
-
-    private void Init() {
-        _newMode = 0;
-        _chip.Reset(OplSampleRateHz);
-        InitializeToneGenerators();
-        Array.Clear(_registerCache);
-
-        if (_mode is OplMode.DualOpl2) {
-            // Set up OPL3 mode in the handler
-            WriteReg(0x105, 1);
-            CacheWrite(0x105, 1);
-        }
-    }
-
-    /// <summary>
-    ///     Initializes default envelopes and rates for the OPL operators.
-    /// </summary>
-    /// <remarks>
-    /// Initialize the OPL chip's 4-op and 2-op FM synthesis tone generators per the
-    /// Adlib v1.51 driver's values. Games and audio players typically overwrite the
-    /// card with their own settings however we know the following eight games by
-    /// Silmarils rely on the card being initialized by the Adlib driver:
-    ///
-    /// - Boston Bomb Club (1991),
-    /// - Bunny Bricks (1993),
-    /// - Crystals of Arborea (1990),
-    /// - Ishar 1 (1992),
-    /// - Ishar 2 (1993),
-    /// - Metal Mutant (1991),
-    /// - Storm Master (1992), and
-    /// - Transantarctica (1993).
-    /// </remarks>
-    private void InitializeToneGenerators() {
-        // The first 9 operators are used for 4-op FM synthesis.
-        int[] fourOp = [0, 1, 2, 6, 7, 8, 12, 13, 14];
-        foreach (int index in fourOp) {
-            Opl3Operator slot = _chip.Slots[index];
-            slot.EnvelopeGeneratorOutput = 511;
-            slot.EnvelopeGeneratorLevel = 571;
-            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Release;
-            slot.RegFrequencyMultiplier = 1;
-            slot.RegKeyScaleLevel = 1;
-            slot.RegTotalLevel = 15;
-            slot.RegAttackRate = 15;
-            slot.RegDecayRate = 1;
-            slot.RegSustainLevel = 5;
-            slot.RegReleaseRate = 3;
-            // all other non-pointer slot members are zero
-        }
-
-        // The remaining 9 operators are used for 2-op FM synthesis.
-        int[] twoOp = [3, 4, 5, 9, 10, 11, 15, 16, 17];
-        foreach (int index in twoOp) {
-            Opl3Operator slot = _chip.Slots[index];
-            slot.EnvelopeGeneratorOutput = 511;
-            slot.EnvelopeGeneratorLevel = 511;
-            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Release;
-            slot.RegKeyScaleRate = 1;
-            slot.RegFrequencyMultiplier = 1;
-            slot.RegAttackRate = 15;
-            slot.RegDecayRate = 2;
-            slot.RegSustainLevel = 7;
-            slot.RegReleaseRate = 4;
-            // all other non-pointer slot members are zero
-        }
-    }
-
-    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        // Don't register any ports when OPL is disabled
-        if (_mode == OplMode.None) {
-            return;
-        }
-
-        // 0x388-0x38b ports (AdLib base ports) - always registered
-        ioPortDispatcher.AddIOPortHandler(0x388, this);
-        ioPortDispatcher.AddIOPortHandler(0x389, this);
-        ioPortDispatcher.AddIOPortHandler(0x38A, this);
-        ioPortDispatcher.AddIOPortHandler(0x38B, this);
-
-        // Sound Blaster base ports (0x220-0x223) for dual OPL modes
-        bool isDualOpl = _mode != OplMode.Opl2;
-        if (isDualOpl) {
-            ioPortDispatcher.AddIOPortHandler(_sbBase, this);
-            ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 1), this);
-            ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 2), this);
-            ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 3), this);
-        }
-
-        // 0x228-0x229 ports (advanced OPL3 ports)
-        ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 8), this);
-        ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 9), this);
-    }
-
-    private void Dispose(bool disposing) {
-        if (_disposed) {
-            return;
-        }
-
-        if (disposing) {
-            if (_logger.IsEnabled(LogEventLevel.Information)) {
-                _logger.Information("OPL: Shutting down {Mode}", _mode);
-            }
-            _adlibGold?.Dispose();
-        }
-
-        _disposed = true;
-    }
 
     public override byte ReadByte(ushort port) {
         byte result = PortRead(port);
@@ -489,6 +341,166 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         }
     }
 
+    public override void WriteWord(ushort port, ushort value) {
+        WriteByte(port, (byte)value);
+        WriteByte((ushort)(port + 1), (byte)(value >> 8));
+    }
+
+    public override ushort ReadWord(ushort port) {
+        byte low = ReadByte(port);
+        byte high = ReadByte((ushort)(port + 1));
+        return (ushort)(low | (high << 8));
+    }
+
+    private void RenderUpToNow() {
+        double now = _clock.ElapsedTimeMs;
+        // Wake up the channel and update the last rendered time datum.
+        if (_mixerChannel.WakeUp()) {
+            _lastRenderedMs = now;
+            return;
+        }
+        // Keep rendering until we're current
+        while (_lastRenderedMs < now) {
+            _lastRenderedMs += _msPerFrame;
+            _fifo.Enqueue(RenderFrame());
+        }
+    }
+
+    /// <summary>
+    ///     Exposes the OPL mixer channel for other components (e.g., SoundBlaster hardware mixer).
+    /// </summary>
+    public SoundChannel MixerChannel => _mixerChannel;
+
+    /// <summary>
+    ///     Gets the current OPL synthesis mode.
+    /// </summary>
+    public OplMode Mode => _mode;
+
+    /// <inheritdoc />
+    public void Dispose() {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    ///     Gets a value indicating whether AdLib Gold processing is enabled.
+    /// </summary>
+    public bool IsAdlibGoldEnabled => _adlibGold is not null;
+
+    /// <summary>
+    ///     Converts linear gain to decibels.
+    /// </summary>
+    private static float GainToDecibel(float gain) {
+        return 20.0f * MathF.Log10(gain);
+    }
+
+    private void Init() {
+        _newMode = 0;
+        _chip.Reset(OplSampleRateHz);
+        InitializeToneGenerators();
+        Array.Clear(_registerCache);
+
+        if (_mode is OplMode.DualOpl2) {
+            // Set up OPL3 mode in the handler
+            WriteReg(0x105, 1);
+            CacheWrite(0x105, 1);
+        }
+    }
+
+    /// <summary>
+    ///     Initializes default envelopes and rates for the OPL operators.
+    /// </summary>
+    /// <remarks>
+    /// Initialize the OPL chip's 4-op and 2-op FM synthesis tone generators per the
+    /// Adlib v1.51 driver's values. Games and audio players typically overwrite the
+    /// card with their own settings however we know the following eight games by
+    /// Silmarils rely on the card being initialized by the Adlib driver:
+    ///
+    /// - Boston Bomb Club (1991),
+    /// - Bunny Bricks (1993),
+    /// - Crystals of Arborea (1990),
+    /// - Ishar 1 (1992),
+    /// - Ishar 2 (1993),
+    /// - Metal Mutant (1991),
+    /// - Storm Master (1992), and
+    /// - Transantarctica (1993).
+    /// </remarks>
+    private void InitializeToneGenerators() {
+        // The first 9 operators are used for 4-op FM synthesis.
+        int[] fourOp = [0, 1, 2, 6, 7, 8, 12, 13, 14];
+        foreach (int index in fourOp) {
+            Opl3Operator slot = _chip.Slots[index];
+            slot.EnvelopeGeneratorOutput = 511;
+            slot.EnvelopeGeneratorLevel = 571;
+            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Release;
+            slot.RegFrequencyMultiplier = 1;
+            slot.RegKeyScaleLevel = 1;
+            slot.RegTotalLevel = 15;
+            slot.RegAttackRate = 15;
+            slot.RegDecayRate = 1;
+            slot.RegSustainLevel = 5;
+            slot.RegReleaseRate = 3;
+            // all other non-pointer slot members are zero
+        }
+
+        // The remaining 9 operators are used for 2-op FM synthesis.
+        int[] twoOp = [3, 4, 5, 9, 10, 11, 15, 16, 17];
+        foreach (int index in twoOp) {
+            Opl3Operator slot = _chip.Slots[index];
+            slot.EnvelopeGeneratorOutput = 511;
+            slot.EnvelopeGeneratorLevel = 511;
+            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Release;
+            slot.RegKeyScaleRate = 1;
+            slot.RegFrequencyMultiplier = 1;
+            slot.RegAttackRate = 15;
+            slot.RegDecayRate = 2;
+            slot.RegSustainLevel = 7;
+            slot.RegReleaseRate = 4;
+            // all other non-pointer slot members are zero
+        }
+    }
+
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        // Don't register any ports when OPL is disabled
+        if (_mode == OplMode.None) {
+            return;
+        }
+
+        // 0x388-0x38b ports (AdLib base ports) - always registered
+        ioPortDispatcher.AddIOPortHandler(0x388, this);
+        ioPortDispatcher.AddIOPortHandler(0x389, this);
+        ioPortDispatcher.AddIOPortHandler(0x38A, this);
+        ioPortDispatcher.AddIOPortHandler(0x38B, this);
+
+        // Sound Blaster base ports (0x220-0x223) for dual OPL modes
+        bool isDualOpl = _mode != OplMode.Opl2;
+        if (isDualOpl) {
+            ioPortDispatcher.AddIOPortHandler(_sbBase, this);
+            ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 1), this);
+            ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 2), this);
+            ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 3), this);
+        }
+
+        // 0x228-0x229 ports (advanced OPL3 ports)
+        ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 8), this);
+        ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 9), this);
+    }
+
+    private void Dispose(bool disposing) {
+        if (_disposed) {
+            return;
+        }
+
+        if (disposing) {
+            if (_logger.IsEnabled(LogEventLevel.Information)) {
+                _logger.Information("OPL: Shutting down {Mode}", _mode);
+            }
+            _adlibGold?.Dispose();
+        }
+
+        _disposed = true;
+    }
+
     private ushort ComputeRegisterAddress(ushort port, byte value) {
         ushort addr = value;
         // High bank if port bit 1 is set AND (writing to reg 0x05 OR newm is set)
@@ -600,17 +612,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             0x15 => 0x388 >> 3, // Audio Relocation - Cryo installer detection
             _ => 0xFF
         };
-    }
-
-    public override void WriteWord(ushort port, ushort value) {
-        WriteByte(port, (byte)value);
-        WriteByte((ushort)(port + 1), (byte)(value >> 8));
-    }
-
-    public override ushort ReadWord(ushort port) {
-        byte low = ReadByte(port);
-        byte high = ReadByte((ushort)(port + 1));
-        return (ushort)(low | (high << 8));
     }
 
     /// <summary>
