@@ -88,9 +88,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             // Reserve the second DMA channel only if it's unique.
             if (ShouldUseHighDmaChannel()) {
                 _secondaryDmaChannel = dmaBus.GetChannel(_config.HighDma);
-                if (_secondaryDmaChannel is not null) {
-                    _secondaryDmaChannel.ReserveFor("SoundBlaster16", OnDmaChannelEvicted);
-                }
+                _secondaryDmaChannel?.ReserveFor("SoundBlaster16", OnDmaChannelEvicted);
             } else {
                 _secondaryDmaChannel = null;
             }
@@ -152,6 +150,120 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         mixer.UnlockMixerThread();
     }
 
+    public bool PendingIrq8Bit {
+        get => _sb.Irq.Pending8Bit;
+        set => _sb.Irq.Pending8Bit = value;
+    }
+
+    public bool PendingIrq16Bit {
+        get => _sb.Irq.Pending16Bit;
+        set => _sb.Irq.Pending16Bit = value;
+    }
+
+    public bool IsSpeakerEnabled => _sb.SpeakerEnabled;
+
+    public uint DspFrequencyHz => _sb.FreqHz;
+
+    public byte DspTestRegister => _sb.Dsp.TestRegister;
+
+    public SoundChannel DacChannel => _dacChannel;
+
+    public override byte ReadByte(ushort port) {
+        byte result;
+        int offset = port - _config.BaseAddress;
+        switch (offset) {
+            case 0x04: // MixerIndex
+                result = _sb.Mixer.Index;
+                return result;
+
+            case 0x05: // MixerData
+                result = CtmixerRead();
+                return result;
+
+            case 0x0A: // DspReadData
+                result = DspReadData();
+                return result;
+
+            case 0x0C: { // DspWriteStatus
+                    // Bit 7 = 1 means buffer at capacity (not ready to receive).
+                    // Lower 7 bits are always 1.
+                    byte writeStatus = 0x7F; // lower 7 bits always set
+                    if (WriteBufferAtCapacity()) {
+                        writeStatus |= 0x80;
+                    }
+                    return writeStatus;
+                }
+
+            case 0x0E: { // DspReadStatus
+                    // Acknowledges 8-bit IRQ. Bit 7 = 1 if output FIFO has data.
+                    // Lower 7 bits are always 1.
+                    if (_sb.Irq.Pending8Bit) {
+                        _sb.Irq.Pending8Bit = false;
+                        _dualPic.DeactivateIrq(_sb.Hw.Irq);
+                    }
+                    byte readStatus = 0x7F; // lower 7 bits always set
+                    if (_sb.Dsp.Out.Used != 0) {
+                        readStatus |= 0x80;
+                    }
+                    return readStatus;
+                }
+
+            case 0x0F: // DspAck16Bit
+                _sb.Irq.Pending16Bit = false;
+                return 0xFF;
+
+            case 0x06: // DspReset read
+                return 0xFF;
+
+            default:
+                return 0xFF;
+        }
+    }
+
+    public override void WriteByte(ushort port, byte value) {
+        int offset = port - _config.BaseAddress;
+        switch (offset) {
+            case 0x06:
+                DspDoReset(value);
+                break;
+            case 0x0C:
+                DspDoWrite(value);
+                break;
+            case 0x04:
+                _sb.Mixer.Index = value;
+                break;
+            case 0x05:
+                CtmixerWrite(value);
+                break;
+            case 0x07:
+                break;
+            default:
+                base.WriteByte(port, value);
+                break;
+        }
+    }
+
+    public override void WriteWord(ushort port, ushort value) {
+        int offset = port - _config.BaseAddress;
+        if (offset is < 4 or > 0xF) {
+            base.WriteWord(port, value);
+            return;
+        }
+        WriteByte(port, (byte)(value & 0xFF));
+        WriteByte((ushort)(port + 1), (byte)(value >> 8));
+    }
+
+    public override ushort ReadWord(ushort port) {
+        int offset = port - _config.BaseAddress;
+        if (offset is < 4 or > 0xF) {
+            return base.ReadWord(port);
+        }
+        byte low = ReadByte(port);
+        byte high = ReadByte((ushort)(port + 1));
+        ushort result = (ushort)(low | (high << 8));
+        return result;
+    }
+
     /// <inheritdoc />
     public void NotifyLockMixer() {
         _outputQueue.Stop();
@@ -160,6 +272,53 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     /// <inheritdoc />
     public void NotifyUnlockMixer() {
         _outputQueue.Start();
+    }
+
+
+    /// <summary>
+    /// Event callback for delayed IRQ raising.
+    /// </summary>
+    private void DspRaiseIrqEvent(uint val) {
+        RaiseIrq(SbIrq.Irq8);
+    }
+
+    public void RaiseInterruptRequest() {
+        RaiseIrq(SbIrq.Irq8);
+    }
+
+    /// <summary>
+    /// Gets the configured Sound Blaster type.
+    /// </summary>
+    public SbType SbTypeProperty => _sb.Type;
+
+    /// <summary>
+    /// Gets the configured IRQ line.
+    /// </summary>
+    public byte IRQ => _config.Irq;
+
+    /// <summary>
+    /// Gets the configured base I/O address.
+    /// </summary>
+    public ushort BaseAddress => _config.BaseAddress;
+
+    /// <summary>
+    /// Gets the configured 8-bit DMA channel.
+    /// </summary>
+    public byte LowDma => _config.LowDma;
+
+    /// <summary>
+    /// Gets the configured 16-bit DMA channel.
+    /// </summary>
+    public byte HighDma => _config.HighDma;
+
+    /// <summary>
+    /// Gets the BLASTER environment variable string.
+    /// </summary>
+    public string BlasterString {
+        get {
+            string highChannelSegment = ShouldUseHighDmaChannel() ? $" H{_config.HighDma}" : string.Empty;
+            return $"A{_config.BaseAddress:X3} I{_config.Irq} D{_config.LowDma}{highChannelSegment} T{(int)_sb.Type}";
+        }
     }
 
     /// <summary>
@@ -826,120 +985,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 _loggerService.Warning("SOUNDBLASTER: MPU-401 IRQ not yet implemented");
                 break;
         }
-    }
-
-    public bool PendingIrq8Bit {
-        get => _sb.Irq.Pending8Bit;
-        set => _sb.Irq.Pending8Bit = value;
-    }
-
-    public bool PendingIrq16Bit {
-        get => _sb.Irq.Pending16Bit;
-        set => _sb.Irq.Pending16Bit = value;
-    }
-
-    public bool IsSpeakerEnabled => _sb.SpeakerEnabled;
-
-    public uint DspFrequencyHz => _sb.FreqHz;
-
-    public byte DspTestRegister => _sb.Dsp.TestRegister;
-
-    public SoundChannel DacChannel => _dacChannel;
-
-    public override byte ReadByte(ushort port) {
-        byte result;
-        int offset = port - _config.BaseAddress;
-        switch (offset) {
-            case 0x04: // MixerIndex
-                result = _sb.Mixer.Index;
-                return result;
-
-            case 0x05: // MixerData
-                result = CtmixerRead();
-                return result;
-
-            case 0x0A: // DspReadData
-                result = DspReadData();
-                return result;
-
-            case 0x0C: { // DspWriteStatus
-                    // Bit 7 = 1 means buffer at capacity (not ready to receive).
-                    // Lower 7 bits are always 1.
-                    byte writeStatus = 0x7F; // lower 7 bits always set
-                    if (WriteBufferAtCapacity()) {
-                        writeStatus |= 0x80;
-                    }
-                    return writeStatus;
-                }
-
-            case 0x0E: { // DspReadStatus
-                    // Acknowledges 8-bit IRQ. Bit 7 = 1 if output FIFO has data.
-                    // Lower 7 bits are always 1.
-                    if (_sb.Irq.Pending8Bit) {
-                        _sb.Irq.Pending8Bit = false;
-                        _dualPic.DeactivateIrq(_sb.Hw.Irq);
-                    }
-                    byte readStatus = 0x7F; // lower 7 bits always set
-                    if (_sb.Dsp.Out.Used != 0) {
-                        readStatus |= 0x80;
-                    }
-                    return readStatus;
-                }
-
-            case 0x0F: // DspAck16Bit
-                _sb.Irq.Pending16Bit = false;
-                return 0xFF;
-
-            case 0x06: // DspReset read
-                return 0xFF;
-
-            default:
-                return 0xFF;
-        }
-    }
-
-    public override void WriteByte(ushort port, byte value) {
-        int offset = port - _config.BaseAddress;
-        switch (offset) {
-            case 0x06:
-                DspDoReset(value);
-                break;
-            case 0x0C:
-                DspDoWrite(value);
-                break;
-            case 0x04:
-                _sb.Mixer.Index = value;
-                break;
-            case 0x05:
-                CtmixerWrite(value);
-                break;
-            case 0x07:
-                break;
-            default:
-                base.WriteByte(port, value);
-                break;
-        }
-    }
-
-    public override void WriteWord(ushort port, ushort value) {
-        int offset = port - _config.BaseAddress;
-        if (offset is < 4 or > 0xF) {
-            base.WriteWord(port, value);
-            return;
-        }
-        WriteByte(port, (byte)(value & 0xFF));
-        WriteByte((ushort)(port + 1), (byte)(value >> 8));
-    }
-
-    public override ushort ReadWord(ushort port) {
-        int offset = port - _config.BaseAddress;
-        if (offset is < 4 or > 0xF) {
-            return base.ReadWord(port);
-        }
-        byte low = ReadByte(port);
-        byte high = ReadByte((ushort)(port + 1));
-        ushort result = (ushort)(low | (high << 8));
-        return result;
     }
 
     private void DspDoReset(byte value) {
@@ -1674,7 +1719,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             GenerateFrames(total_frames - _framesAddedThisTick);
         }
         _framesAddedThisTick -= total_frames;
-        if(_timingType == TimingType.PerTick) {
+        if (_timingType == TimingType.PerTick) {
             double delay = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond).TotalMilliseconds;
             _scheduler.AddEvent(_perTickHandler, delay);
         }
@@ -2501,52 +2546,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         // The DMA buffer is considered full until it can accept a full write
         return _sb.Dma.Left > _sb.Dma.Min;
-    }
-
-    /// <summary>
-    /// Event callback for delayed IRQ raising.
-    /// </summary>
-    private void DspRaiseIrqEvent(uint val) {
-        RaiseIrq(SbIrq.Irq8);
-    }
-
-    public void RaiseInterruptRequest() {
-        RaiseIrq(SbIrq.Irq8);
-    }
-
-    /// <summary>
-    /// Gets the configured Sound Blaster type.
-    /// </summary>
-    public SbType SbTypeProperty => _sb.Type;
-
-    /// <summary>
-    /// Gets the configured IRQ line.
-    /// </summary>
-    public byte IRQ => _config.Irq;
-
-    /// <summary>
-    /// Gets the configured base I/O address.
-    /// </summary>
-    public ushort BaseAddress => _config.BaseAddress;
-
-    /// <summary>
-    /// Gets the configured 8-bit DMA channel.
-    /// </summary>
-    public byte LowDma => _config.LowDma;
-
-    /// <summary>
-    /// Gets the configured 16-bit DMA channel.
-    /// </summary>
-    public byte HighDma => _config.HighDma;
-
-    /// <summary>
-    /// Gets the BLASTER environment variable string.
-    /// </summary>
-    public string BlasterString {
-        get {
-            string highChannelSegment = ShouldUseHighDmaChannel() ? $" H{_config.HighDma}" : string.Empty;
-            return $"A{_config.BaseAddress:X3} I{_config.Irq} D{_config.LowDma}{highChannelSegment} T{(int)_sb.Type}";
-        }
     }
 
     /// <summary>
