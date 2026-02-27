@@ -126,6 +126,16 @@ Spice86 -e program.exe --CpuHeavyLog --CpuHeavyLogDumpFile "C:\logs\cpu.log"
   --version                          Display version information.
 ```
 
+### Sound Blaster and OPL/Adlib Gold Options
+
+- SbType: Sound Blaster card type. Values: None, SB1, SB2, SBPro1, SBPro2, Sb16, GameBlaster, AdlibGold.
+- SbIrq: Sound Blaster IRQ line. Default is 7. Common values: 5, 7, 9, 10.
+- SbDma: Sound Blaster 8-bit DMA channel. Default is 1. Common values: 0, 1, 3.
+- SbHdma: Sound Blaster 16-bit high DMA channel. Default is 5. Common values: 5, 6, 7.
+- SbBase: Sound Blaster base I/O address (hex). Default is 0x220. Common values: 0x220, 0x240, 0x260, 0x280.
+- OplMode: OPL synthesis mode. Values: None, Opl2, DualOpl2, Opl3, Opl3Gold. Default is Opl3.
+- SbMixer: Enable Sound Blaster mixer control of OPL voices. Default is true.
+
 ## Dynamic analysis
 
 Spice86 speaks the [GDB](https://www.gnu.org/software/gdb/) remote protocol:
