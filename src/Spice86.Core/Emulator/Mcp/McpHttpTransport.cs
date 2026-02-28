@@ -36,12 +36,13 @@ public sealed class McpHttpTransport : IDisposable {
 
     private async Task BroadcastNotificationAsync(string json) {
         byte[] buffer = Encoding.UTF8.GetBytes($"data: {json}\n\n");
-        foreach (var client in _clients) {
+        foreach (KeyValuePair<Guid, HttpListenerResponse> client in _clients) {
             try {
                 await client.Value.OutputStream.WriteAsync(buffer, 0, buffer.Length);
                 await client.Value.OutputStream.FlushAsync();
             } catch {
                 // Client probably disconnected
+                _clients.TryRemove(client.Key, out _);
             }
         }
     }
@@ -51,26 +52,17 @@ public sealed class McpHttpTransport : IDisposable {
             return;
         }
 
-        try {
-            _listener.Start();
-            _loggerService.Information("MCP HTTP/SSE server started on http://localhost:{Port}/", _port);
-            Task.Run(ListenLoop, _cts.Token);
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "Failed to start MCP HTTP server on port {Port}", _port);
-        }
+        _listener.Start();
+        _loggerService.Information("MCP HTTP/SSE server started on http://localhost:{Port}/", _port);
+        Task.Run(ListenLoop, _cts.Token);
     }
 
     private async Task ListenLoop() {
-        try {
-            while (!_cts.Token.IsCancellationRequested && _listener.IsListening) {
-                var context = await _listener.GetContextAsync();
-                _ = HandleRequestAsync(context);
-            }
-        } catch (Exception ex) when (ex is ObjectDisposedException or HttpListenerException) {
-            // Normal shutdown
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "Error in MCP HTTP listen loop");
+        while (!_cts.Token.IsCancellationRequested && _listener.IsListening) {
+            HttpListenerContext context = await _listener.GetContextAsync();
+            _ = HandleRequestAsync(context);
         }
+
     }
 
     private async Task HandleRequestAsync(HttpListenerContext context) {
@@ -101,12 +93,8 @@ public sealed class McpHttpTransport : IDisposable {
             }
         } catch (Exception ex) {
             _loggerService.Error(ex, "Error handling MCP HTTP request {Method} {Path}", request.HttpMethod, request.Url?.AbsolutePath);
-            try {
-                response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                response.Close();
-            } catch {
-                // Ignore errors closing response
-            }
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            response.Close();
         }
     }
 
@@ -115,42 +103,30 @@ public sealed class McpHttpTransport : IDisposable {
         response.ContentType = "text/event-stream";
         response.Headers.Add("Cache-Control", "no-cache");
         response.Headers.Add("Connection", "keep-alive");
-        
+
         Guid clientId = Guid.NewGuid();
         _clients.TryAdd(clientId, response);
         _loggerService.Information("New MCP SSE client connected: {ClientId}", clientId);
 
-        try {
-            // Send endpoint event
-            string endpointMsg = $"event: endpoint\ndata: http://localhost:{_port}/messages\n\n";
-            byte[] buffer = Encoding.UTF8.GetBytes(endpointMsg);
-            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-            await response.OutputStream.FlushAsync();
+        // Send endpoint event
+        string endpointMsg = $"event: endpoint\ndata: http://localhost:{_port}/messages\n\n";
+        byte[] buffer = Encoding.UTF8.GetBytes(endpointMsg);
+        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+        await response.OutputStream.FlushAsync();
 
-            // Keep connection open
-            while (!_cts.Token.IsCancellationRequested) {
-                await Task.Delay(15000, _cts.Token);
-                // Heartbeat
-                await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(": heartbeat\n\n"));
-                await response.OutputStream.FlushAsync();
-            }
-        } catch (Exception) {
-            // Client disconnected
-        } finally {
-            _clients.TryRemove(clientId, out _);
-            _loggerService.Information("MCP SSE client disconnected: {ClientId}", clientId);
-            try {
-                response.Close();
-            } catch {
-                // Ignore
-            }
+        // Keep connection open
+        while (!_cts.Token.IsCancellationRequested) {
+            await Task.Delay(15000, _cts.Token);
+            // Heartbeat
+            await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(": heartbeat\n\n"));
+            await response.OutputStream.FlushAsync();
         }
     }
 
     private async Task HandlePostAsync(HttpListenerContext context) {
         using var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8);
         string requestJson = await reader.ReadToEndAsync();
-        
+
         string responseJson;
         try {
             responseJson = _mcpServer.HandleRequest(requestJson);
@@ -183,31 +159,17 @@ public sealed class McpHttpTransport : IDisposable {
 
         _cts.Cancel();
         _mcpServer.OnNotification -= HandleNotification;
-        
-        try {
-            if (_listener.IsListening) {
-                _listener.Stop();
-            }
-        } catch (ObjectDisposedException) {
-            // Already disposed
-        } catch (Exception ex) {
-            _loggerService.Error(ex, "Error stopping MCP HTTP listener");
+
+        if (_listener.IsListening) {
+            _listener.Stop();
         }
 
-        try {
-            _listener.Close();
-        } catch (ObjectDisposedException) {
-            // Already disposed
-        }
+        _listener.Close();
 
         _cts.Dispose();
 
-        foreach (var client in _clients.Values) {
-            try {
-                client.Close();
-            } catch {
-                // Ignore
-            }
+        foreach (HttpListenerResponse client in _clients.Values) {
+            client.Close();
         }
     }
 }

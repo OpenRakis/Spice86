@@ -24,6 +24,8 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Mcp.Request;
 using Spice86.Core.Emulator.Mcp.Response;
 using Spice86.Core.Emulator.Mcp.Schema;
+using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// MCP server exposing emulator inspection and control tools.
@@ -36,6 +38,7 @@ public sealed class McpServer : IMcpServer {
     private readonly CfgCpu _cfgCpu;
     private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly IVgaRenderer _vgaRenderer;
+    private readonly IVgaFunctionality _vgaFunctions;
     private readonly IPauseHandler _pauseHandler;
     private readonly ExpandedMemoryManager? _emsManager;
     private readonly ExtendedMemoryManager? _xmsManager;
@@ -47,11 +50,12 @@ public sealed class McpServer : IMcpServer {
     private int _nextBreakpointId = 1;
 
     public McpServer(IMemory memory, State state, FunctionCatalogue functionCatalogue, CfgCpu cfgCpu,
-        IOPortDispatcher ioPortDispatcher, IVgaRenderer vgaRenderer, 
+        IOPortDispatcher ioPortDispatcher, IVgaRenderer vgaRenderer, IVgaFunctionality vgaFunctions,
         IPauseHandler pauseHandler, ExpandedMemoryManager? emsManager, ExtendedMemoryManager? xmsManager,
         EmulatorBreakpointsManager breakpointsManager, ILoggerService loggerService) {
         _memory = memory;
         _state = state;
+        _vgaFunctions = vgaFunctions;
         _functionCatalogue = functionCatalogue;
         _cfgCpu = cfgCpu;
         _ioPortDispatcher = ioPortDispatcher;
@@ -173,7 +177,7 @@ public sealed class McpServer : IMcpServer {
             Description = "Remove an MCP-managed breakpoint by ID",
             InputSchema = ConvertToJsonElement(CreateRemoveBreakpointInputSchema())
         });
-        
+
         tools.Add(new Tool {
             Name = "clear_breakpoints",
             Description = "Remove ALL breakpoints currently managed by the MCP server.",
@@ -320,10 +324,10 @@ public sealed class McpServer : IMcpServer {
     }
 
     private static bool IsFatalException(Exception ex) =>
-        ex is OutOfMemoryException ||
-        ex is StackOverflowException ||
-        ex is ThreadAbortException ||
-        ex is AccessViolationException;
+        ex is OutOfMemoryException or
+        StackOverflowException or
+        ThreadAbortException or
+        AccessViolationException;
 
     private CpuRegistersResponse ReadCpuRegisters() {
         return new CpuRegistersResponse {
@@ -379,7 +383,7 @@ public sealed class McpServer : IMcpServer {
         uint address = addressElement.GetUInt32();
         int length = lengthElement.GetInt32();
 
-        if (length <= 0 || length > 4096) {
+        if (length is <= 0 or > 4096) {
             throw new McpInternalErrorException("Tool execution error: Length must be between 1 and 4096");
         }
 
@@ -388,7 +392,7 @@ public sealed class McpServer : IMcpServer {
         return new MemoryReadResponse {
             Address = address,
             Length = length,
-            Data = Convert.ToHexString(data)
+            Data = data
         };
     }
 
@@ -406,7 +410,7 @@ public sealed class McpServer : IMcpServer {
             .OrderByDescending(f => f.CalledCount)
             .Take(limit)
             .Select(f => new FunctionInfo {
-                Address = f.Address.ToString(),
+                Address = f.Address,
                 Name = f.Name,
                 CalledCount = f.CalledCount,
                 HasOverride = f.HasOverride
@@ -415,7 +419,6 @@ public sealed class McpServer : IMcpServer {
 
         return new FunctionListResponse {
             Functions = functions,
-            TotalCount = _functionCatalogue.FunctionInformations.Count
         };
     }
 
@@ -452,12 +455,8 @@ public sealed class McpServer : IMcpServer {
             throw new McpInvalidParametersException("Missing port parameter");
         }
 
-        int port = portElement.GetInt32();
-        if (port < 0 || port > 65535) {
-            throw new McpInvalidParametersException("Port must be 0-65535");
-        }
-
-        byte value = _ioPortDispatcher.ReadByte((ushort)port);
+        ushort port = portElement.GetUInt16();
+        byte value = _ioPortDispatcher.ReadByte(port);
         return new IoPortReadResponse { Port = port, Value = value };
     }
 
@@ -479,17 +478,8 @@ public sealed class McpServer : IMcpServer {
             throw new McpInvalidParametersException("Missing value parameter");
         }
 
-        int port = portElement.GetInt32();
-        int value = valueElement.GetInt32();
-
-        if (port < 0 || port > 65535) {
-            throw new McpInvalidParametersException("Port must be 0-65535");
-        }
-
-        if (value < 0 || value > 255) {
-            throw new McpInvalidParametersException("Value must be 0-255");
-        }
-
+        ushort port = portElement.GetUInt16();
+        byte value = valueElement.GetByte();
         _ioPortDispatcher.WriteByte((ushort)port, (byte)value);
         return new IoPortWriteResponse { Port = port, Value = value, Success = true };
     }
@@ -498,7 +488,8 @@ public sealed class McpServer : IMcpServer {
         return new VideoStateResponse {
             Width = _vgaRenderer.Width,
             Height = _vgaRenderer.Height,
-            BufferSize = _vgaRenderer.BufferSize
+            BufferSize = _vgaRenderer.BufferSize,
+            Mode = _vgaFunctions.GetCurrentMode()
         };
     }
 
@@ -506,18 +497,17 @@ public sealed class McpServer : IMcpServer {
         int width = _vgaRenderer.Width;
         int height = _vgaRenderer.Height;
         uint[] buffer = new uint[width * height];
-        
+
         _vgaRenderer.Render(buffer);
 
         byte[] bytes = new byte[buffer.Length * 4];
         Buffer.BlockCopy(buffer, 0, bytes, 0, bytes.Length);
-        string base64 = Convert.ToBase64String(bytes);
 
         return new ScreenshotResponse {
             Width = width,
             Height = height,
-            Format = "bgra32",
-            Data = base64
+            Format = PixelFormat.Bgra32,
+            Data = bytes
         };
     }
 
@@ -539,11 +529,11 @@ public sealed class McpServer : IMcpServer {
 
     private EmulatorControlResponse Step() {
         if (!_pauseHandler.IsPaused) {
-             _pauseHandler.RequestPause("Step requested while running");
+            _pauseHandler.RequestPause("Step requested while running");
         }
 
         string id = "step-" + _nextBreakpointId++;
-        
+
         Action<BreakPoint> onReached = (bp) => {
             _pauseHandler.RequestPause($"Single step hit");
             SendBreakpointHitNotification(id, bp);
@@ -554,7 +544,7 @@ public sealed class McpServer : IMcpServer {
         _breakpointsManager.ToggleBreakPoint(stepBp, true);
 
         _pauseHandler.Resume();
-        
+
         return new EmulatorControlResponse { Success = true, Message = "Stepping..." };
     }
 
@@ -564,19 +554,19 @@ public sealed class McpServer : IMcpServer {
             count = countElem.GetInt32();
         }
 
-        if (count <= 0 || count > 100) {
+        if (count is <= 0 or > 100) {
             throw new McpInvalidParametersException("Count must be between 1 and 100");
         }
 
         ushort ss = _state.SS;
         ushort sp = _state.SP;
         uint baseAddress = (uint)(ss << 4) + sp;
-        
+
         List<StackValue> values = new();
         for (int i = 0; i < count; i++) {
             uint addr = baseAddress + (uint)(i * 2);
             if (addr + 1 >= _memory.Length) break;
-            
+
             ushort val = _memory.UInt16[addr];
             values.Add(new StackValue { Address = addr, Value = val });
         }
@@ -669,7 +659,7 @@ public sealed class McpServer : IMcpServer {
         int offset = offsetElement.GetInt32();
         int length = lengthElement.GetInt32();
 
-        if (length <= 0 || length > 4096) {
+        if (length is <= 0 or > 4096) {
             throw new McpInternalErrorException("Tool execution error: Length must be between 1 and 4096");
         }
 
@@ -700,7 +690,7 @@ public sealed class McpServer : IMcpServer {
             LogicalPage = logicalPage,
             Offset = offset,
             Length = length,
-            Data = Convert.ToHexString(dataArray)
+            Data = dataArray
         };
     }
 
@@ -731,7 +721,7 @@ public sealed class McpServer : IMcpServer {
         uint offset = offsetElement.GetUInt32();
         int length = lengthElement.GetInt32();
 
-        if (length <= 0 || length > 4096) {
+        if (length is <= 0 or > 4096) {
             throw new McpInternalErrorException("Tool execution error: Length must be between 1 and 4096");
         }
 
@@ -755,7 +745,7 @@ public sealed class McpServer : IMcpServer {
             Handle = handle,
             Offset = offset,
             Length = length,
-            Data = Convert.ToHexString(dataArray)
+            Data = dataArray
         };
     }
 
@@ -869,7 +859,7 @@ public sealed class McpServer : IMcpServer {
                     Description = "Number of bytes to read (max 4096)"
                 }
             },
-            Required = new string[] { "handle", "offset", "length" }
+            Required = ["handle", "offset", "length"]
         };
     }
 
@@ -895,7 +885,7 @@ public sealed class McpServer : IMcpServer {
         string? condition = args.TryGetProperty("condition", out JsonElement condElem) ? condElem.GetString() : null;
 
         string id = _nextBreakpointId++.ToString();
-        
+
         Action<BreakPoint> onReached = (bp) => {
             _pauseHandler.RequestPause($"MCP Breakpoint {id} hit");
             SendBreakpointHitNotification(id, bp);
@@ -909,8 +899,8 @@ public sealed class McpServer : IMcpServer {
                 BreakpointConditionCompiler compiler = new(_state, _memory as Memory ?? throw new InvalidOperationException("Memory must be of type Memory"));
                 Func<long, bool> compiledCondition = compiler.Compile(condition);
                 breakPoint = new AddressBreakPoint(type, address, onReached, false, compiledCondition, condition);
-            } catch (Exception ex) {
-                throw new McpInvalidParametersException($"Failed to compile condition: {ex.Message}");
+            } catch (ArgumentException ex) {
+                throw new McpInvalidParametersException($"Failed to compile condition: {ex.Message}", ex);
             }
         }
 
@@ -920,7 +910,7 @@ public sealed class McpServer : IMcpServer {
         return new BreakpointInfo {
             Id = id,
             Address = address,
-            Type = typeStr,
+            Type = type,
             Condition = condition,
             IsEnabled = true
         };
@@ -930,7 +920,7 @@ public sealed class McpServer : IMcpServer {
         var list = _mcpBreakpoints.Select(kvp => new BreakpointInfo {
             Id = kvp.Key,
             Address = (kvp.Value as AddressBreakPoint)?.Address ?? 0,
-            Type = kvp.Value.BreakPointType.ToString(),
+            Type = kvp.Value.BreakPointType,
             Condition = (kvp.Value as AddressBreakPoint)?.ConditionExpression,
             IsEnabled = kvp.Value.IsEnabled
         }).ToList();
@@ -950,13 +940,12 @@ public sealed class McpServer : IMcpServer {
             _breakpointsManager.ToggleBreakPoint(bp, false);
             return new EmulatorControlResponse { Success = true, Message = $"Breakpoint {id} removed." };
         }
-
         throw new McpInvalidParametersException($"Breakpoint {id} not found.");
     }
 
     private EmulatorControlResponse ClearBreakpoints() {
         int count = _mcpBreakpoints.Count;
-        foreach (var bp in _mcpBreakpoints.Values) {
+        foreach (BreakPoint bp in _mcpBreakpoints.Values) {
             _breakpointsManager.ToggleBreakPoint(bp, false);
         }
         _mcpBreakpoints.Clear();
@@ -976,7 +965,7 @@ public sealed class McpServer : IMcpServer {
         string json = JsonSerializer.Serialize(notification, new JsonSerializerOptions {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        
+
         OnNotification?.Invoke(this, json);
     }
 
@@ -985,8 +974,8 @@ public sealed class McpServer : IMcpServer {
             type = "object",
             properties = new {
                 address = new { type = "integer", description = "Memory address, IO port, or cycle count" },
-                type = new { 
-                    type = "string", 
+                type = new {
+                    type = "string",
                     description = "Breakpoint type",
                     @enum = Enum.GetNames(typeof(BreakPointType))
                 },

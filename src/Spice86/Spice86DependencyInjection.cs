@@ -585,15 +585,11 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         McpServer mcpServer = new(memory, state, functionCatalogue, cfgCpu, 
-            ioPortDispatcher, vgaRenderer, pauseHandler, dos.Ems, xms,
+            ioPortDispatcher, vgaRenderer, vgaFunctionality, pauseHandler, dos.Ems, xms,
             emulatorBreakpointsManager, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("MCP server created...");
-        }
-
-        if (mainWindowViewModel != null) {
-            mainWindowViewModel.McpStatusViewModel = new McpStatusViewModel(mcpServer);
         }
 
         McpStdioTransport mcpStdioTransport = new(mcpServer, loggerService);
@@ -620,6 +616,8 @@ public class Spice86DependencyInjection : IDisposable {
         if (mainWindow != null && uiDispatcher != null &&
             hostStorageProvider != null && textClipboard != null) {
             IMessenger messenger = WeakReferenceMessenger.Default;
+
+            mainWindowViewModel?.McpStatusViewModel = new McpStatusViewModel(mcpServer);
 
             BreakpointsViewModel breakpointsViewModel = new(
                 state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);

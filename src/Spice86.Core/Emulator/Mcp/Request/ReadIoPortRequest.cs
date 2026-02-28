@@ -7,5 +7,5 @@ public sealed record ReadIoPortRequest {
     /// <summary>
     /// Gets the IO port number (0-65535).
     /// </summary>
-    public required int Port { get; init; }
+    public required ushort Port { get; init; }
 }

@@ -17,19 +17,18 @@ public sealed class McpStdioTransport {
     private readonly TextReader _inputReader;
     private readonly TextWriter _outputWriter;
     private readonly CancellationTokenSource _cancellationTokenSource;
-    private Thread? _readerThread;
+    private Thread _readerThread;
 
-    public McpStdioTransport(IMcpServer mcpServer, ILoggerService loggerService)
-        : this(mcpServer, loggerService, Console.In, Console.Out) {
-    }
+    private bool _readerThreadStarted;
 
-    internal McpStdioTransport(IMcpServer mcpServer, ILoggerService loggerService, TextReader inputReader, TextWriter outputWriter) {
+    public McpStdioTransport(IMcpServer mcpServer, ILoggerService loggerService){
         _mcpServer = mcpServer;
         _loggerService = loggerService;
-        _inputReader = inputReader;
-        _outputWriter = outputWriter;
+        _inputReader = Console.In;
+        _outputWriter = Console.Out;
         _cancellationTokenSource = new CancellationTokenSource();
         _mcpServer.OnNotification += HandleNotification;
+        _readerThread = new Thread(Run) { IsBackground = true, Name = "MCP-Server" };
     }
 
     private void HandleNotification(object? sender, string json) {
@@ -38,10 +37,10 @@ public sealed class McpStdioTransport {
     }
 
     public void Start() {
-        if (_readerThread != null) {
-            throw new InvalidOperationException("MCP stdio transport is already started");
+        if (_readerThreadStarted) {
+            return;
         }
-
+        _readerThreadStarted = true;
         _loggerService.Information("MCP server starting with stdio transport");
         _readerThread = new Thread(Run) { IsBackground = true, Name = "MCP-Server" };
         _readerThread.Start();
@@ -59,10 +58,8 @@ public sealed class McpStdioTransport {
         if (!_readerThread.Join(TimeSpan.FromSeconds(5))) {
             _loggerService.Warning("MCP server thread did not stop within timeout");
         }
-
         _cancellationTokenSource.Dispose();
-
-        _readerThread = null;
+        _readerThreadStarted = false;
     }
 
     private void Run() {

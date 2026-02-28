@@ -6,7 +6,7 @@ namespace Spice86.Core.Emulator.Mcp.Request;
 public sealed record ListFunctionsRequest {
     /// <summary>
     /// Gets the optional limit on number of functions to return.
-    /// If not specified, returns all functions.
+    /// If zero is specified, returns all functions.
     /// </summary>
-    public int? Limit { get; init; }
+    public int Limit { get; init; }
 }

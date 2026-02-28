@@ -7,10 +7,10 @@ public sealed record WriteIoPortRequest {
     /// <summary>
     /// Gets the IO port number (0-65535).
     /// </summary>
-    public required int Port { get; init; }
+    public required ushort Port { get; init; }
 
     /// <summary>
     /// Gets the value to write (0-255).
     /// </summary>
-    public required int Value { get; init; }
+    public required byte Value { get; init; }
 }

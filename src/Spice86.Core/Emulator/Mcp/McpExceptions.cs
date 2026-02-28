@@ -25,6 +25,9 @@ public sealed class McpMethodNotFoundException : McpException {
     public McpMethodNotFoundException(string methodName) 
         : base($"Method not found: {methodName}", -32601) {
     }
+    public McpMethodNotFoundException(string methodName, Exception innerException) 
+        : base($"Method not found: {methodName}", -32601, innerException) {
+    }
 }
 
 /// <summary>
@@ -33,6 +36,10 @@ public sealed class McpMethodNotFoundException : McpException {
 public sealed class McpInvalidParametersException : McpException {
     public McpInvalidParametersException(string message) 
         : base(message, -32602) {
+    }
+    
+    public McpInvalidParametersException(string message, Exception innerException) 
+        : base(message, -32602, innerException) {
     }
 }
 
