@@ -453,11 +453,7 @@ public class DosFileManager {
     /// <summary>
     /// Gets the current Disk Transfer Area structure.
     /// </summary>
-    /// <remarks>
-    /// This property creates a new <see cref="DosDiskTransferArea"/> instance on each access.
-    /// For repeated access within loops, consider caching the result in a local variable.
-    /// </remarks>
-    public DosDiskTransferArea DiskTransferArea => new DosDiskTransferArea(_memory, GetDiskTransferAreaPhysicalAddress());
+    public DosDiskTransferArea DiskTransferArea => new(_memory, GetDiskTransferAreaPhysicalAddress());
 
     /// <summary>
     /// Seeks to specified location in file.
