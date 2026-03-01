@@ -54,6 +54,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+using Spice86.Mcp;
 using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
@@ -83,7 +84,7 @@ public class Spice86DependencyInjection : IDisposable {
     public FunctionCatalogue FunctionCatalogue { get; }
 
     private readonly McpStdioTransport _mcpStdioTransport;
-    private readonly McpHttpTransport _mcpHttpTransport;
+    private readonly McpHttpHost _mcpHttpTransport;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -599,19 +600,23 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Program executor created...");
         }
 
-        McpServer mcpServer = new(memory, state, functionCatalogue, cfgCpu, 
-            ioPortDispatcher, vgaRenderer, vgaFunctionality, pauseHandler, dos.Ems, xms,
+        McpServer mcpServer = new(memory, state, functionCatalogue, cfgCpu,
+            ioPortDispatcher, vgaRenderer, pauseHandler, dos.Ems, xms,
             emulatorBreakpointsManager, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("MCP server created...");
         }
 
+        EmulatorMcpServices emulatorMcpServices = new(memory, state, functionCatalogue, cfgCpu,
+            ioPortDispatcher, vgaRenderer, pauseHandler, dos.Ems, xms,
+            emulatorBreakpointsManager, loggerService);
+
         McpStdioTransport mcpStdioTransport = new(mcpServer, loggerService);
         mcpStdioTransport.Start();
 
-        McpHttpTransport mcpHttpTransport = new(mcpServer, loggerService);
-        mcpHttpTransport.Start();
+        McpHttpHost mcpHttpTransport = new(loggerService);
+        mcpHttpTransport.Start(emulatorMcpServices, 8081, null, null, configuration.EnableLegacyMcp, mcpServer);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("MCP transports started (Stdio and HTTP)");

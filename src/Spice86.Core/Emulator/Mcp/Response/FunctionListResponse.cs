@@ -8,4 +8,9 @@ public sealed record FunctionListResponse : McpToolResponse {
     /// Gets the array of functions.
     /// </summary>
     public required FunctionInfo[] Functions { get; init; }
+
+    /// <summary>
+    /// Gets the total count of functions in the catalogue.
+    /// </summary>
+    public required int TotalCount { get; init; }
 }

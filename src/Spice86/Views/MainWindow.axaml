@@ -126,6 +126,7 @@
 					<MenuItem Header="Tools" ItemsSource="{Binding McpStatusViewModel.Tools}">
 						<MenuItem.Styles>
 							<Style Selector="MenuItem" x:DataType="vm:McpToolViewModel">
+								<Setter Property="IsEnabled" Value="{Binding CanToggle}"/>
 								<Setter Property="ToggleType" Value="CheckBox"/>
 								<Setter Property="IsChecked" Value="{Binding IsEnabled}"/>
 								<Setter Property="Header" Value="{Binding Name}"/>
@@ -186,7 +187,7 @@
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem>
-				<TextBlock Text="{Binding EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />	
+				<TextBlock Text="{Binding EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem>

@@ -1,7 +1,5 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-using Spice86.Shared.Emulator.Memory;
-
 /// <summary>
 /// Response for memory read operation.
 /// </summary>
@@ -17,7 +15,7 @@ public sealed record MemoryReadResponse : McpToolResponse {
     public required int Length { get; init; }
 
     /// <summary>
-    /// Gets the memory data as a byte array.
+    /// Gets the memory data as a hexadecimal string.
     /// </summary>
-    public required byte[] Data { get; init; }
+    public required string Data { get; init; }
 }

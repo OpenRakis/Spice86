@@ -8,7 +8,7 @@ public sealed record IoPortReadResponse : McpToolResponse {
     /// <summary>
     /// The IO port number that was read.
     /// </summary>
-    public required ushort Port { get; init; }
+    public required int Port { get; init; }
     /// <summary>
     /// The value read from the IO port.
     /// </summary>

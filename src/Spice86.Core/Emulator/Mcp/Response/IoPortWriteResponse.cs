@@ -8,11 +8,11 @@ public sealed record IoPortWriteResponse : McpToolResponse {
     /// <summary>
     /// The IO port number to which the value was written.
     /// </summary>
-    public required ushort Port { get; init; }
+    public required int Port { get; init; }
     /// <summary>
     /// The value that was written to the IO port.
     /// </summary>
-    public required byte Value { get; init; }
+    public required int Value { get; init; }
     /// <summary>
     /// Indicates whether the write operation was successful.
     /// </summary>

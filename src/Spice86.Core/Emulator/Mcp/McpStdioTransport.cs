@@ -17,18 +17,19 @@ public sealed class McpStdioTransport {
     private readonly TextReader _inputReader;
     private readonly TextWriter _outputWriter;
     private readonly CancellationTokenSource _cancellationTokenSource;
-    private Thread _readerThread;
+    private Thread? _readerThread;
 
-    private bool _readerThreadStarted;
+    public McpStdioTransport(IMcpServer mcpServer, ILoggerService loggerService)
+        : this(mcpServer, loggerService, Console.In, Console.Out) {
+    }
 
-    public McpStdioTransport(IMcpServer mcpServer, ILoggerService loggerService){
+    internal McpStdioTransport(IMcpServer mcpServer, ILoggerService loggerService, TextReader inputReader, TextWriter outputWriter) {
         _mcpServer = mcpServer;
         _loggerService = loggerService;
-        _inputReader = Console.In;
-        _outputWriter = Console.Out;
+        _inputReader = inputReader;
+        _outputWriter = outputWriter;
         _cancellationTokenSource = new CancellationTokenSource();
         _mcpServer.OnNotification += HandleNotification;
-        _readerThread = new Thread(Run) { IsBackground = true, Name = "MCP-Server" };
     }
 
     private void HandleNotification(object? sender, string json) {
@@ -37,10 +38,10 @@ public sealed class McpStdioTransport {
     }
 
     public void Start() {
-        if (_readerThreadStarted) {
-            return;
+        if (_readerThread != null) {
+            throw new InvalidOperationException("MCP stdio transport is already started");
         }
-        _readerThreadStarted = true;
+
         _loggerService.Information("MCP server starting with stdio transport");
         _readerThread = new Thread(Run) { IsBackground = true, Name = "MCP-Server" };
         _readerThread.Start();
@@ -58,8 +59,10 @@ public sealed class McpStdioTransport {
         if (!_readerThread.Join(TimeSpan.FromSeconds(5))) {
             _loggerService.Warning("MCP server thread did not stop within timeout");
         }
+
         _cancellationTokenSource.Dispose();
-        _readerThreadStarted = false;
+
+        _readerThread = null;
     }
 
     private void Run() {
@@ -84,7 +87,12 @@ public sealed class McpStdioTransport {
                 messageBuffer.Clear();
 
                 try {
-                    string responseJson = _mcpServer.HandleRequest(requestJson);
+                    string? responseJson = _mcpServer.HandleRequest(requestJson);
+
+                    if (responseJson == null) {
+                        // Notification — no response per JSON-RPC 2.0 spec
+                        continue;
+                    }
 
                     _outputWriter.WriteLine(responseJson);
                     _outputWriter.Flush();
