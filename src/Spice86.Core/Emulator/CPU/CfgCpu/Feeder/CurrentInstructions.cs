@@ -2,16 +2,17 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
+
+using System.Linq;
 
 /// <summary>
 /// Cache of current instructions in memory.
 /// Cache coherency is managed by breakpoints, as soon as an instruction is written in memory it is evicted.
 /// </summary>
-public class CurrentInstructions : InstructionReplacer {
+public class CurrentInstructions : InstructionReplacer, IClearable {
     private readonly IMemory _memory;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
 
@@ -109,5 +110,13 @@ public class CurrentInstructions : InstructionReplacer {
 
         _currentInstructionAtAddress.Remove(instruction.Address);
         instruction.SetLive(false);
+    }
+
+    /// <inheritdoc />
+    public void Clear() {
+        // Clear all instructions by removing breakpoints and marking them as not live
+        foreach (CfgInstruction instruction in _currentInstructionAtAddress.Values.ToList()) {
+            ClearCurrentInstruction(instruction);
+        }
     }
 }
