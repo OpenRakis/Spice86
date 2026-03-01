@@ -116,6 +116,7 @@ Spice86 -e program.exe --CpuHeavyLog --CpuHeavyLogDumpFile "C:\logs\cpu.log"
   -i, --InitializeDOS                (Default: true) Install DOS interrupt vectors or not.
   --CpuHeavyLog                      (Default: false) Enable CPU heavy logging. Logs every executed instruction to a file. Warning: significant performance impact.
   --CpuHeavyLogDumpFile              Custom file path for CPU heavy log output. If not specified, defaults to {DumpDirectory}/cpu_heavy.log
+  --AsmRenderingStyle                Style of the ASM rendering. Spice86 or DosBox.
   --StructureFile                    Path to a C header file that describes the structures in the application. Works best with exports from IDA or Ghidra
   --help                             Display this help screen.
   --version                          Display version information.

@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
+        <PackageReference Include="NukedOPL3Sharp"/>
         <PackageReference Include="Serilog" />
     </ItemGroup>
     <ItemGroup>

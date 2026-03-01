@@ -17,7 +17,8 @@ using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField,
-        List<InstructionPrefix> prefixes, int segmentRegisterIndex) : base(address, opcodeField, prefixes, segmentRegisterIndex, 1) {
+        List<InstructionPrefix> prefixes, int segmentRegisterIndex, int defaultSegmentRegisterIndex) 
+        : base(address, opcodeField, prefixes, segmentRegisterIndex, defaultSegmentRegisterIndex, 1) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
@@ -30,7 +31,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
         return new InstructionNode(InstructionOperation.XLAT, 
             builder.Pointer.ToSegmentedPointer(
                 DataType.UINT8,
-                SegmentRegisterIndex,
+                SegmentRegisterIndex, DefaultSegmentRegisterIndex,
                 new BinaryOperationNode(builder.AddressType(this),
                     builder.Register.Reg(builder.AddressType(this), RegisterIndex.BxIndex),
                     BinaryOperation.PLUS,

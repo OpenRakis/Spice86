@@ -37,7 +37,7 @@ public class AstExpressionBuilderTest {
         // Arrange
         ConstantNode one = new ConstantNode(DataType.UINT16, 1);
         ConstantNode two = new ConstantNode(DataType.UINT16, 2);
-        SegmentedPointerNode pointerNode = new SegmentedPointerNode(DataType.UINT8, one, two);
+        SegmentedPointerNode pointerNode = new SegmentedPointerNode(DataType.UINT8, one, null, two);
 
         // Act
         ExecuteAssignment(pointerNode, 0xF8);
@@ -77,7 +77,7 @@ public class AstExpressionBuilderTest {
         _state.DI = 2;
         RegisterNode offset = new RegisterNode(DataType.UINT16, (int)RegisterIndex.DiIndex);
         SegmentRegisterNode segmentRegister = new SegmentRegisterNode((int)SegmentRegisterIndex.EsIndex);
-        SegmentedPointerNode pointerNode = new SegmentedPointerNode(DataType.UINT8, segmentRegister, offset);
+        SegmentedPointerNode pointerNode = new SegmentedPointerNode(DataType.UINT8, segmentRegister, null, offset);
 
         // Act
         ExecuteAssignment(pointerNode, 0xF8);

@@ -8,6 +8,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.Registers;
 
 public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBuilder instructionField, PointerAstBuilder pointer) {
+    private readonly TypeConversionAstBuilder _typeConversion = new();
+
     public RegisterAstBuilder Register { get; } = register;
     public InstructionFieldAstBuilder InstructionField { get; } = instructionField;
     public PointerAstBuilder Pointer { get; } = pointer;
@@ -21,8 +23,16 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
         return ToMemoryAddressNode(targetDataType, modRmContext);
     }
 
+    public ValueNode RmToNodeSigned(DataType targetDataType, ModRmContext modRmContext) {
+        return _typeConversion.ToSigned(RmToNode(targetDataType, modRmContext));
+    }
+
     public ValueNode RToNode(DataType dataType, ModRmContext modRmContext) {
         return new RegisterNode(dataType, modRmContext.RegisterIndex);
+    }
+
+    public ValueNode RToNodeSigned(DataType dataType, ModRmContext modRmContext) {
+        return _typeConversion.ToSigned(RToNode(dataType, modRmContext));
     }
 
     public ValueNode ToMemoryAddressNode(DataType targetDataType, ModRmContext modRmContext) {
@@ -31,13 +41,14 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
                 $"MemoryAddressType is {modRmContext.MemoryAddressType} which should never happen when computing addresses.");
         }
 
-        if (modRmContext.SegmentIndex == null) {
+        if (modRmContext.SegmentIndex == null || modRmContext.DefaultSegmentIndex == null) {
             throw new ArgumentException("SegmentIndex is null");
         }
 
+        ValueNode defaultSegment = new SegmentRegisterNode(modRmContext.DefaultSegmentIndex.Value);
         ValueNode segment = new SegmentRegisterNode(modRmContext.SegmentIndex.Value);
         ValueNode offset = MemoryOffsetToNode(modRmContext);
-        return Pointer.ToSegmentedPointer(targetDataType, segment, offset);
+        return Pointer.ToSegmentedPointer(targetDataType, segment, defaultSegment, offset);
     }
 
     public ValueNode MemoryOffsetToNode(ModRmContext modRmContext) {
@@ -51,6 +62,15 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
         ValueNode? result = BiOperationWithResultNode(new DataType(modRmContext.AddressSize, false), offset, BinaryOperation.PLUS,
             displacement);
         return result ?? new ConstantNode(new DataType(modRmContext.AddressSize, false), 0);
+    }
+
+    /// <summary>
+    /// Creates a memory address node with an adjusted offset.
+    /// Useful for instructions that need to access memory at an offset from the ModRM address.
+    /// </summary>
+    public ValueNode ToMemoryAddressNodeWithOffsetAdjustment(DataType targetDataType, ModRmContext modRmContext, ValueNode offsetAdjustment) {
+        ValueNode basePointer = ToMemoryAddressNode(targetDataType, modRmContext);
+        return Pointer.WithOffsetAdjustment((SegmentedPointerNode)basePointer, offsetAdjustment);
     }
 
     private ValueNode? ModRmDisplacementToNode(ModRmContext modRmContext) {

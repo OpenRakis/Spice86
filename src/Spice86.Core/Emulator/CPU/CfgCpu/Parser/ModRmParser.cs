@@ -28,7 +28,7 @@ public class ModRmParser {
             // value at reg[memoryRegisterIndex] to be used instead of memoryAddress
             memoryOffsetType = MemoryOffsetType.NONE;
             memoryAddressType = MemoryAddressType.NONE;
-            return new(modRmByteField, mode, registerIndex, registerMemoryIndex, context.AddressWidthFromPrefixes, memoryOffsetType, memoryAddressType, null, null, null, null, null, null);
+            return new(modRmByteField, mode, registerIndex, registerMemoryIndex, context.AddressWidthFromPrefixes, memoryOffsetType, memoryAddressType, null, null, null, null, null, null, null);
         }
         memoryOffsetType = MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT;
         memoryAddressType = MemoryAddressType.SEGMENT_OFFSET;
@@ -57,9 +57,11 @@ public class ModRmParser {
             displacementType = ComputeDisplacementType32(mode);
             displacementField = ReadDisplacementField(displacementType);
         }
-        int segmentIndex = context.SegmentOverrideFromPrefixes ?? ComputeDefaultSegmentIndex(mode, registerMemoryIndex);
+
+        int defaultSegmentIndex = ComputeDefaultSegmentIndex(mode, registerMemoryIndex);
+        int segmentIndex = context.SegmentOverrideFromPrefixes ?? defaultSegmentIndex;
         return new(modRmByteField, mode, registerIndex, registerMemoryIndex, context.AddressWidthFromPrefixes, memoryOffsetType, memoryAddressType, sibContext,
-            displacementType, displacementField, modRmOffsetType, modRmOffsetField, segmentIndex);
+            displacementType, displacementField, modRmOffsetType, modRmOffsetField, segmentIndex, defaultSegmentIndex);
     }
 
     private SibContext ParseSibContext(uint mode) {

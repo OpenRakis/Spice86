@@ -170,4 +170,4 @@ F000:01E1 aad
 F000:01E3 mov word ptr DS:[0x007C],AX
 F000:01E6 pushf
 F000:01E7 hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

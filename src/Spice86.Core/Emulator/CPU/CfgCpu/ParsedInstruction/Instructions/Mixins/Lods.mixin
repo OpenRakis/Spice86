@@ -16,7 +16,8 @@ using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex, StringInstruction {
     public {{ moxy.Class.Name }}(SegmentedAddress address,
-        InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, int segmentRegisterIndex) : base(address, opcodeField, prefixes, segmentRegisterIndex, 1) {
+        InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, int segmentRegisterIndex,
+        int defaultSegmentRegisterIndex) : base(address, opcodeField, prefixes, segmentRegisterIndex, defaultSegmentRegisterIndex, 1) {
     }
 
     public bool ChangesFlags => false;
@@ -36,7 +37,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
             builder.Register.Accumulator(builder.UType({{Size}})),
             builder.Pointer.ToSegmentedPointer(
                 builder.UType({{Size}}), 
-                SegmentRegisterIndex,
+                SegmentRegisterIndex, DefaultSegmentRegisterIndex,
                 builder.Register.Reg(builder.AddressType(this), RegisterIndex.SiIndex)
             )
         );

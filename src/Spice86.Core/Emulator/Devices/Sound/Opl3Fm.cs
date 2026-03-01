@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
+using NukedOPL3Sharp;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;

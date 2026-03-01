@@ -14,8 +14,8 @@ using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndexAndOffsetField<ushort> {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
-        int segmentRegisterIndex, InstructionField<ushort> offsetField) : base(address, opcodeField, prefixes,
-        segmentRegisterIndex, offsetField, 1) {
+        int segmentRegisterIndex, int defaultSegmentRegisterIndex, InstructionField<ushort> offsetField) :
+         base(address, opcodeField, prefixes, segmentRegisterIndex, defaultSegmentRegisterIndex, offsetField, 1) {
     }
     
     public override void Execute(InstructionExecutionHelper helper) {
@@ -26,6 +26,10 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.MOV,
             builder.Register.Accumulator(builder.UType({{Size}})),
-            builder.Pointer.ToSegmentedPointer(builder.UType({{Size}}), SegmentRegisterIndex, builder.InstructionField.ToNode(OffsetField)));
+            builder.Pointer.ToSegmentedPointer(
+                builder.UType({{Size}}), 
+                SegmentRegisterIndex, DefaultSegmentRegisterIndex, 
+                builder.InstructionField.ToNode(OffsetField))
+            );
     }
 }

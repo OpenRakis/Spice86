@@ -32,8 +32,8 @@ F000:003B jmp near AX
 F000:0102 jmp near 0x304D
 F000:0607 jmp near 0x302F
 F000:0809 jmp near 0x300D
-F000:0FFC jmp near 0x100E
-F000:0FFE jmp near 0x1007
+F000:0FFC jmp short 0x100E
+F000:0FFE jmp short 0x1007
 F000:1000 mov CX,0
 F000:1003 push CX
 F000:1005 jmp near SP
@@ -165,4 +165,4 @@ F000:6026 hlt
 F000:F003 jmp near 0x303C
 F000:FFF0 mov SP,0x1000
 F000:FFF3 mov SS,SP
-F000:FFF5 jmp near 0
+F000:FFF5 jmp short 0

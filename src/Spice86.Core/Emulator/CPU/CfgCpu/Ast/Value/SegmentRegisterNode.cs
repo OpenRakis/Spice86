@@ -2,7 +2,7 @@
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 
-public class SegmentRegisterNode(int registerIndex) : RegisterNode(DataType.UINT16, registerIndex) {
+public record SegmentRegisterNode(int RegisterIndex) : RegisterNode(DataType.UINT16, RegisterIndex) {
     public override T Accept<T>(IAstVisitor<T> astVisitor) {
         return astVisitor.VisitSegmentRegisterNode(this);
     }

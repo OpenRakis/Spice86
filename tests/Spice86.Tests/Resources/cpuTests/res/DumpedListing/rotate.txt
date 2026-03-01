@@ -160,4 +160,4 @@ F000:01B2 mov word ptr DS:[0x004E],DX
 F000:01B6 ror byte ptr DS:[0x001E],CL
 F000:01BA pushf
 F000:01BB hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

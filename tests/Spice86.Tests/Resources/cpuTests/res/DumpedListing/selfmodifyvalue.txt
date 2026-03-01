@@ -7,4 +7,4 @@ F000:000C mov word ptr CS:[9],1
 F000:0013 cmp AX,0xFFFF
 F000:0016 je short 8
 F000:0018 hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

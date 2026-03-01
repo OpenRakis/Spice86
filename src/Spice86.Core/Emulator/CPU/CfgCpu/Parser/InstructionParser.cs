@@ -551,10 +551,10 @@ public class InstructionParser : BaseInstructionParser {
             case 0xD7:
                 if (context.AddressWidthFromPrefixes == BitWidth.DWORD_32) {
                     return new Xlat32(context.Address, context.OpcodeField, context.Prefixes,
-                        SegmentFromPrefixesOrDs(context));
+                        SegmentFromPrefixesOrDs(context), (int)SegmentRegisterIndex.DsIndex);
                 }
                 return new Xlat16(context.Address, context.OpcodeField, context.Prefixes,
-                    SegmentFromPrefixesOrDs(context));
+                    SegmentFromPrefixesOrDs(context), (int)SegmentRegisterIndex.DsIndex);
             case 0xD8:
                 // FPU stuff
                 return HandleInvalidOpcode(context);

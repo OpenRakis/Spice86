@@ -24,4 +24,4 @@ F000:0021 mov DS,CX
 F000:0023 mov word ptr DS:[0],AX
 F000:0026 mov word ptr DS:[2],BX
 F000:002A hlt
-F000:FFF0 jmp near 0
+F000:FFF0 jmp short 0

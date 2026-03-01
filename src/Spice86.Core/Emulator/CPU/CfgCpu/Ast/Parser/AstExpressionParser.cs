@@ -323,7 +323,7 @@ public class AstExpressionParser {
                     throw new ExpressionParseException("Expected ']'", _input, _position);
                 }
                 Advance();
-                return new SegmentedPointerNode(dataType, potentialSegment, offset);
+                return new SegmentedPointerNode(dataType, potentialSegment, null, offset);
             }
             // Not a segmented pointer, restore position
             _position = savedPosition;

@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
@@ -12,7 +13,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 
 public class NodeLinker : InstructionReplacer {
-    private readonly NodeToString _nodeToString = new();
+    private readonly NodeToString _nodeToString = new(AsmRenderingConfig.CreateSpice86Style());
 
     public NodeLinker(InstructionReplacerRegistry replacerRegistry) : base(replacerRegistry) {
     }

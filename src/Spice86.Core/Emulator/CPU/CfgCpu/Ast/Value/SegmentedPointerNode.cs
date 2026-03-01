@@ -2,10 +2,7 @@
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 
-public class SegmentedPointerNode(DataType dataType, ValueNode segment, ValueNode offset) : ValueNode(dataType) {
-    public ValueNode Segment { get; } = segment;
-    public ValueNode Offset { get; } = offset;
-    
+public record SegmentedPointerNode(DataType DataType, ValueNode Segment, ValueNode? DefaultSegment, ValueNode Offset) : ValueNode(DataType) {
     public override T Accept<T>(IAstVisitor<T> astVisitor) {
         return astVisitor.VisitSegmentedPointer(this);
     }
