@@ -8,7 +8,7 @@ using System.Linq;
 /// <summary>
 /// Cache of previous instructions that existed in a memory address at a time.
 /// </summary>
-public class PreviousInstructions : InstructionReplacer {
+public class PreviousInstructions : InstructionReplacer, IClearable {
     private readonly MemoryInstructionMatcher _memoryInstructionMatcher;
 
     /// <summary>
@@ -58,5 +58,10 @@ public class PreviousInstructions : InstructionReplacer {
         }
 
         previousInstructionsAtAddress.Add(instruction);
+    }
+
+    /// <inheritdoc />
+    public void Clear() {
+        _previousInstructionsAtAddress.Clear();
     }
 }
