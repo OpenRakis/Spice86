@@ -8,51 +8,45 @@ on:
 
 jobs:
   build:
-
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
       fail-fast: false
-    
+
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v1
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: '10.0.x'
+      - uses: actions/checkout@v1
 
-    - name: Test with dotnet
-      working-directory: ./src
-      run: dotnet test --configuration Release
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "10.0.x"
 
-    - name: Package NuGet
-      working-directory: ./src
-      run: dotnet pack --include-symbols --include-source --configuration Release -p:NoWarn=NU5104
+      - name: Test with dotnet
+        working-directory: ./src
+        run: dotnet test --configuration Release
 
-    - name: Upload NuGet Bufdio.Spice86
-      if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
-      working-directory: ./src/Bufdio.Spice86/bin/Release
-      run: dotnet nuget push Bufdio.Spice86.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      - name: Package NuGet
+        working-directory: ./src
+        run: dotnet pack --include-symbols --include-source --configuration Release -p:NoWarn=NU5104
 
-    - name: Upload NuGet Spice86.Shared
-      if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
-      working-directory: ./src/Spice86.Shared/bin/Release
-      run: dotnet nuget push Spice86.Shared.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      - name: Upload NuGet Spice86.Shared
+        if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
+        working-directory: ./src/Spice86.Shared/bin/Release
+        run: dotnet nuget push Spice86.Shared.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
-    - name: Upload NuGet Spice86.Logging
-      if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
-      working-directory: ./src/Spice86.Logging/bin/Release
-      run: dotnet nuget push Spice86.Logging.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      - name: Upload NuGet Spice86.Logging
+        if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
+        working-directory: ./src/Spice86.Logging/bin/Release
+        run: dotnet nuget push Spice86.Logging.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
-    - name: Upload NuGet Spice86.Core
-      if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
-      working-directory: ./src/Spice86.Core/bin/Release
-      run: dotnet nuget push Spice86.Core.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      - name: Upload NuGet Spice86.Core
+        if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
+        working-directory: ./src/Spice86.Core/bin/Release
+        run: dotnet nuget push Spice86.Core.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
-    - name: Upload NuGet Spice86
-      if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
-      working-directory: ./src/Spice86/bin/Release
-      run: dotnet nuget push Spice86.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      - name: Upload NuGet Spice86
+        if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
+        working-directory: ./src/Spice86/bin/Release
+        run: dotnet nuget push Spice86.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate

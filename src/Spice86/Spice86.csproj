@@ -16,13 +16,6 @@
             AVALONIA_TELEMETRY_OPTOUT=1
         </EnvironmentVariables>
     </PropertyGroup>
-    <ItemGroup>
-        <Content Include="libportaudio.dll">
-            <PackagePath>lib\net10.0\libportaudio.dll</PackagePath>
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-            <Pack>True</Pack>
-        </Content>
-    </ItemGroup>
     <!-- Package references -->
     <ItemGroup>
         <PackageReference Include="Avalonia" />
@@ -60,5 +53,10 @@
         <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
         <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+      <Compile Update="Views\SoftwareMixerView.axaml.cs">
+        <DependentUpon>SoftwareMixerView.axaml</DependentUpon>
+      </Compile>
     </ItemGroup>
 </Project>
