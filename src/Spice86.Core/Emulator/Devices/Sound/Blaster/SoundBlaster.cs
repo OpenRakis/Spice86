@@ -59,6 +59,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _scheduler = scheduler;
         _clock = clock;
         _sb = new SbInfo(clock);
+        _dmaBus = dmaBus;
 
         _perTickHandler = (_) => PerTickCallback();
         _perFrameHandler = (_) => PerFrameCallback();
@@ -78,22 +79,18 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         _sb.Hw.Dma8 = _config.LowDma;
 
-        _primaryDmaChannel = dmaBus.GetChannel(_config.LowDma)
+        DmaChannel? primaryDmaChannel = dmaBus.GetChannel(_config.LowDma)
             ?? throw new InvalidOperationException($"DMA channel {_config.LowDma} unavailable for Sound Blaster.");
-        _primaryDmaChannel.ReserveFor("SoundBlaster", OnDmaChannelEvicted);
+        primaryDmaChannel.ReserveFor("SoundBlaster", OnDmaChannelEvicted);
 
         // Only Sound Blaster 16 uses a 16-bit DMA channel.
         if (_sb.Type == SbType.Sb16) {
             _sb.Hw.Dma16 = _config.HighDma;
             // Reserve the second DMA channel only if it's unique.
             if (ShouldUseHighDmaChannel()) {
-                _secondaryDmaChannel = dmaBus.GetChannel(_config.HighDma);
-                _secondaryDmaChannel?.ReserveFor("SoundBlaster16", OnDmaChannelEvicted);
-            } else {
-                _secondaryDmaChannel = null;
+                DmaChannel? secondaryDmaChannel = dmaBus.GetChannel(_config.HighDma);
+                secondaryDmaChannel?.ReserveFor("SoundBlaster16", OnDmaChannelEvicted);
             }
-        } else {
-            _secondaryDmaChannel = null;
         }
 
         HashSet<ChannelFeature> dacFeatures = new HashSet<ChannelFeature> {
@@ -989,6 +986,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
     private void DspDoReset(byte value) {
         if (((value & 1) != 0) && (_sb.Dsp.State != DspState.Reset)) {
+            // TODO Get out of highspeed mode
             DspReset();
             _sb.Dsp.State = DspState.Reset;
         } else if (((value & 1) == 0) && (_sb.Dsp.State == DspState.Reset)) {
@@ -996,6 +994,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             _sb.Dsp.State = DspState.ResetWait;
             _scheduler.RemoveEvents(DspFinishResetEvent);
             _scheduler.AddEvent(DspFinishResetEvent, 20.0 / 1000.0, 0);  // 20 microseconds = 0.020 ms
+            _loggerService.Information("Resetting SB DSP");
         }
     }
 
@@ -1036,11 +1035,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Dma.RemainSize = 0;
         _sb.Dma.Channel?.ClearRequest();
 
+        _sb.Adpcm = new();
         _sb.Adpcm.Reference = 0;
         _sb.Adpcm.Stepsize = 0;
         _sb.Adpcm.HaveRef = false;
-
-        _sb.Dac.Reset();
+        _sb.Dac = new(_sb, _clock);
 
         _sb.FreqHz = DefaultPlaybackRateHz;
         _sb.TimeConstant = 45;
@@ -1144,7 +1143,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     // If we're waking up, then the DAC hasn't been running
                     // (or maybe wasn't running at all), so start with a
                     // fresh DAC state.
-                    _sb.Dac.Reset();
+                    _sb.Dac = new(_sb, _clock);
                 }
 
                 // Ensure we're using per-frame callback timing because DAC samples
@@ -1161,7 +1160,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 // Single Cycle 8-Bit DMA ADC
                 _sb.Dma.Left = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
                 _sb.Dma.Sign = false;
-                _primaryDmaChannel.RegisterCallback(DspAdcCallback);
+                _dmaBus.GetChannel(_sb.Hw.Dma8)?.RegisterCallback(DspAdcCallback);
                 break;
 
             case 0x14: // Single Cycle 8-Bit DMA DAC
@@ -1428,7 +1427,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 _sb.E2.Value += E2IncrTable[_sb.E2.Count % 4][8];
                 _sb.E2.Count++;
                 // Register callback to write E2 value when DMA is unmasked
-                _primaryDmaChannel.RegisterCallback(DspE2DmaCallback);
+                _dmaBus.GetChannel(_sb.Hw.Dma8)?.RegisterCallback(DspE2DmaCallback);
                 break;
 
             case 0xe3:
@@ -1702,21 +1701,15 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Dma.Stereo = stereo;
 
         // Double the reading speed for stereo mode
-        if (stereo) {
+        if (_sb.Dma.Stereo) {
             _sb.Dma.Mul *= 2;
         }
 
         // Calculate rate and minimum transfer size
         _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
         _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
-
-        // Update channel sample rate
         SetChannelRateHz((int)freqHz);
-
-        // Remove any pending DMA transfer events
         _scheduler.RemoveEvents(ProcessDmaTransferEvent);
-
-        // Set to be masked, the dma call can change this again
         _sb.Mode = DspMode.DmaMasked;
         _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
     }
@@ -1798,6 +1791,9 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void GenerateFrames(int frames_requested) {
+        if(!OutputQueue.IsRunning) {
+            return;
+        }
         switch (_sb.Mode) {
             case DspMode.None:
             case DspMode.DmaPause:
@@ -1869,14 +1865,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         }
 
         // Always use 8-bit DMA channel for old-style commands
-        _sb.Dma.Channel = _primaryDmaChannel;
-
-        // Calculate frequency - divide by 2 for stereo
-        uint freqHz = _sb.FreqHz;
-        if (_sb.Mixer.StereoEnabled) {
-            freqHz /= 2;
-        }
-        DspDoDmaTransfer(mode, freqHz, autoInit, _sb.Mixer.StereoEnabled);
+        _sb.Dma.Channel = _dmaBus.GetChannel(_sb.Hw.Dma8);
+        DspDoDmaTransfer(mode,
+            (uint)(_sb.FreqHz / (_sb.Mixer.StereoEnabled ? 2 : 1)),
+            autoInit,
+            _sb.Mixer.StereoEnabled);
     }
 
     /// <summary>
@@ -1889,17 +1882,22 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         // Equal length if data format and dma channel are both 16-bit or 8-bit
         if (mode == DmaMode.Pcm16Bit) {
-            if (_secondaryDmaChannel is not null) {
-                _sb.Dma.Channel = _secondaryDmaChannel;
+            if (_sb.Hw.Dma16 != 0xff) {
+                _sb.Dma.Channel = _dmaBus.GetChannel(_sb.Hw.Dma16);
+                if (_sb.Dma.Channel is null) {
+                    _sb.Dma.Channel = _dmaBus.GetChannel(_sb.Hw.Dma8);
+                    newMode = DmaMode.Pcm16BitAliased;
+                    newLength *= 2;
+                }
             } else {
-                _sb.Dma.Channel = _primaryDmaChannel;
+                _sb.Dma.Channel = _dmaBus.GetChannel(_sb.Hw.Dma8);
                 newMode = DmaMode.Pcm16BitAliased;
                 // UNDOCUMENTED: In aliased mode sample length is written to DSP as
                 // number of 16-bit samples so we need double 8-bit DMA buffer length
                 newLength *= 2;
             }
         } else {
-            _sb.Dma.Channel = _primaryDmaChannel;
+            _sb.Dma.Channel = _dmaBus.GetChannel(_sb.Hw.Dma8);
         }
 
         // Set the length to the correct register depending on mode
