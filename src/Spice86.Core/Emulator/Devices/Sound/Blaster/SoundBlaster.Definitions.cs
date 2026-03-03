@@ -180,12 +180,6 @@ public partial class SoundBlaster {
                 _clock = clock;
             }
 
-            public void Reset() {
-                _lastWriteMs = 0;
-                _currentRateHz = MinPlaybackRateHz;
-                _sequentialChangesTally = 0;
-            }
-
             public AudioFrame RenderFrame() {
                 if (_sb.SpeakerEnabled && _sb.Dsp.In.Data.Length > 0) {
                     float sample = LookupTables.ToUnsigned8(_sb.Dsp.In.Data[0]);
@@ -272,7 +266,7 @@ public partial class SoundBlaster {
             public bool HaveRef { get; set; } = false;
         }
 
-        public AdpcmState Adpcm { get; } = new AdpcmState();
+        public AdpcmState Adpcm { get; set; } = new AdpcmState();
 
         public class HwState {
             public ushort Base { get; set; } = 0;
@@ -341,13 +335,12 @@ public partial class SoundBlaster {
     private readonly SbInfo _sb;
     private readonly SoundBlasterHardwareConfig _config;
     private readonly DualPic _dualPic;
-    private readonly DmaChannel _primaryDmaChannel;
-    private readonly DmaChannel? _secondaryDmaChannel;
     private readonly SoftwareMixer _mixer;
     private readonly SoundChannel _dacChannel;
     private readonly Opl3Fm _opl;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
+    private readonly DmaBus _dmaBus;
     private readonly RWQueue<AudioFrame> _outputQueue = new(4096);
     private int _framesNeeded = 0;
 

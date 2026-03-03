@@ -249,7 +249,7 @@ public sealed class DmaChannel {
                 destinationBuffer.Length);
         }
 
-        return ReadOrWrite(DmaDirection.Read, words, destinationBuffer, ReadOnlySpan<byte>.Empty);
+        return ReadOrWrite(DmaDirection.Read, words, destinationBuffer, []);
     }
 
     /// <summary>
