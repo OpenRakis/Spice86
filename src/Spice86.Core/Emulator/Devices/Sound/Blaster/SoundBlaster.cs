@@ -563,7 +563,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         if (is16BitChannel) {
             clampedWords /= 2;
         }
-        Span<byte> unsignedBuf = System.Runtime.InteropServices.MemoryMarshal.Cast<short, byte>(_sb.Dma.Buf16.AsSpan());
+        Span<byte> unsignedBuf = System.Runtime.InteropServices.MemoryMarshal.Cast<short, byte>(_sb.Dma.Buf16.AsSpan((int)bufferIndex));
         uint wordsRead = (uint)_sb.Dma.Channel.Read((int)clampedWords, unsignedBuf);
         return wordsRead;
     }
@@ -1040,6 +1040,8 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Adpcm.Stepsize = 0;
         _sb.Adpcm.HaveRef = false;
 
+        _sb.Dac.Reset();
+
         _sb.FreqHz = DefaultPlaybackRateHz;
         _sb.TimeConstant = 45;
         _sb.E2.Value = 0xaa;
@@ -1121,7 +1123,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             case 0x0e:
                 // Sb16 ASP set register
                 if (_sb.Type == SbType.Sb16) {
-                    AspRegs[_sb.Dsp.In.Data[0]] = _sb.Dsp.In.Data[1];
+                    _aspRegs[_sb.Dsp.In.Data[0]] = _sb.Dsp.In.Data[1];
                 }
                 break;
 
@@ -1651,21 +1653,37 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void DspDoDmaTransfer(DmaMode mode, uint freqHz, bool autoInit, bool stereo) {
-        // Starting a new transfer will clear any active irqs
+        // Starting a new transfer will clear any active irqs?
         _sb.Irq.Pending8Bit = false;
         _sb.Irq.Pending16Bit = false;
         _dualPic.DeactivateIrq(_sb.Hw.Irq);
 
         // Set up the multiplier based on DMA mode
-        _sb.Dma.Mul = mode switch {
-            DmaMode.Adpcm2Bit => (1 << SbShift) / 4,
-            DmaMode.Adpcm3Bit => (1 << SbShift) / 3,
-            DmaMode.Adpcm4Bit => (1 << SbShift) / 2,
-            DmaMode.Pcm8Bit => 1 << SbShift,
-            DmaMode.Pcm16Bit => 1 << SbShift,
-            DmaMode.Pcm16BitAliased => (1 << SbShift) * 2,
-            _ => LogIllegalTransferMode(mode)
-        };
+        switch (mode) {
+            case DmaMode.Adpcm2Bit:
+                _sb.Dma.Mul = (1 << SbShift) / 4;
+                break;
+            case DmaMode.Adpcm3Bit:
+                _sb.Dma.Mul = (1 << SbShift) / 3;
+                break;
+            case DmaMode.Adpcm4Bit:
+                _sb.Dma.Mul = (1 << SbShift) / 2;
+                break;
+            case DmaMode.Pcm8Bit:
+                _sb.Dma.Mul = 1 << SbShift;
+                break;
+            case DmaMode.Pcm16Bit:
+                _sb.Dma.Mul = 1 << SbShift;
+                break;
+            case DmaMode.Pcm16BitAliased:
+                _sb.Dma.Mul = (1 << SbShift) * 2;
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("SOUNDBLASTER: Illegal transfer mode {Mode}", mode);
+                }
+                return;
+        }
 
         // Going from an active autoinit into a single cycle
         if (_sb.Mode >= DspMode.Dma && _sb.Dma.AutoInit && !autoInit) {
@@ -1689,7 +1707,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         }
 
         // Calculate rate and minimum transfer size
-        _sb.Dma.Rate = (freqHz * _sb.Dma.Mul) >> SbShift;
+        _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
         _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
 
         // Update channel sample rate
@@ -2546,15 +2564,5 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         // The DMA buffer is considered full until it can accept a full write
         return _sb.Dma.Left > _sb.Dma.Min;
-    }
-
-    /// <summary>
-    /// Logs an illegal DMA transfer mode and returns a safe default multiplier.
-    /// </summary>
-    private uint LogIllegalTransferMode(DmaMode mode) {
-        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-            _loggerService.Error("SOUNDBLASTER: Illegal transfer mode {Mode}", mode);
-        }
-        return 1u << SbShift;
     }
 }
