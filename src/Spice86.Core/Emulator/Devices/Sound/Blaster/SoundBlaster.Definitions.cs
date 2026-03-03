@@ -338,8 +338,6 @@ public partial class SoundBlaster {
         [0x01, -0x02,  0x04, -0x08, -0x10,  0x20, -0x40,  0x80,   90]
     ];
 
-    private static readonly byte[] AspRegs = new byte[256];
-
     private readonly SbInfo _sb;
     private readonly SoundBlasterHardwareConfig _config;
     private readonly DualPic _dualPic;
