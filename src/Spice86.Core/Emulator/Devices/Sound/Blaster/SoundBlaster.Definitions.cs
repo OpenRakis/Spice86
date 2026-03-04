@@ -69,6 +69,11 @@ public partial class SoundBlaster {
         Pcm16BitAliased
     }
 
+    private enum FrameType {
+        Mono,
+        Stereo
+    }
+
     private enum DspMode { None, Dac, Dma, DmaPause, DmaMasked }
 
     private enum EssType { None, Es1688 }
@@ -353,6 +358,8 @@ public partial class SoundBlaster {
     private readonly AudioFrame[] _enqueueBatch = new AudioFrame[4096];
     private int _enqueueBatchCount;
 
+    private AudioFrame[] _emptyFrames = Array.Empty<AudioFrame>();
+
     private readonly byte[] _aspRegs = new byte[256];
     private bool _aspInitInProgress;
 
@@ -366,6 +373,11 @@ public partial class SoundBlaster {
 
     private readonly EventHandler _perTickHandler;
     private readonly EventHandler _perFrameHandler;
+
+    private Func<ReadOnlySpan<byte>, int, float> _toFloatUnsigned8;
+    private Func<ReadOnlySpan<sbyte>, int, float> _toFloatSigned8;
+    private Func<ReadOnlySpan<ushort>, int, float> _toFloatUnsigned16;
+    private Func<ReadOnlySpan<short>, int, float> _toFloatSigned16;
 
     private const int MaxSingleFrameBaseCount = sizeof(short) * 2 - 1;
 }
