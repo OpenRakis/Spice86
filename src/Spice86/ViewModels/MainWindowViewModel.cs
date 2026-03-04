@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
+using Spice86.Audio.Diagnostics;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
@@ -500,5 +501,17 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private void UpdateShownEmulatorMouseCursorPosition() {
         MouseStatusRecord mouseDeviceStatus = _sharedMouseData.CurrentMouseStatus;
         EmulatorMouseCursorInfo = $"X: {mouseDeviceStatus.X} Y: {mouseDeviceStatus.Y}";
+    }
+
+    [ObservableProperty]
+    private bool _audioTraceEnabled = AudioTraceLog.IsEnabled;
+
+    [RelayCommand]
+    private void ToggleAudioTrace() {
+        AudioTraceEnabled = !AudioTraceEnabled;
+    }
+
+    partial void OnAudioTraceEnabledChanged(bool value) {
+        AudioTraceLog.IsEnabled = value;
     }
 }

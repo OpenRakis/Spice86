@@ -2,8 +2,10 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Audio.Backend.Audio;
 using Spice86.Audio.Common;
+using Spice86.Audio.Diagnostics;
 using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.VM;
+
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -137,6 +139,11 @@ public sealed class SoftwareMixer : IDisposable {
 
         _pauseHandler.Pausing += OnEmulatorPausing;
         _pauseHandler.Resumed += OnEmulatorResumed;
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("MIXER.CTOR",
+                $"sampleRate={_sampleRateHz};blocksize={_blocksize};prebufferMs={_prebufferMs};audioEngine={audioEngine}");
+        }
     }
 
     private void OnEmulatorPausing() {
@@ -275,7 +282,7 @@ public sealed class SoftwareMixer : IDisposable {
 
         SoundChannel channel = new(handler, name, features);
         channel.SetMixerSampleRate(_sampleRateHz); // Tell channel about mixer rate
-        channel.        SampleRate = sampleRateHz;
+        channel.SampleRate = sampleRateHz;
         channel.AppVolume = new AudioFrame(1.0f, 1.0f);
         channel.UserVolume = new AudioFrame(1.0f, 1.0f);
 
@@ -335,6 +342,10 @@ public sealed class SoftwareMixer : IDisposable {
     public IEnumerable<SoundChannel> AllChannels => _channels.Values;
 
     private void MixerThreadLoop() {
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("MIXER.THREAD.START", "started=true");
+        }
+
         while (!_threadShouldQuit) {
             lock (_mixerLock) {
                 // "Underflow" is not a concern since moving to a threaded
@@ -342,6 +353,11 @@ public sealed class SoftwareMixer : IDisposable {
                 // drivers will naturally slow down the audio. Therefore, we can
                 // always request at least a blocksize worth of audio.
                 int framesRequested = _blocksize;
+
+                if (AudioTraceLog.IsEnabled) {
+                    AudioTraceLog.Trace("MIXER.THREAD.TICK",
+                        $"state={_state};framesRequested={framesRequested};channels={_channels.Count}");
+                }
 
                 MixSamples(framesRequested);
             }
@@ -362,15 +378,34 @@ public sealed class SoftwareMixer : IDisposable {
 
                 Span<float> silenceInterleaved = MemoryMarshal.Cast<AudioFrame, float>(_outputBuffer.AsSpan());
                 _audioPlayer.WriteData(silenceInterleaved);
+
+                if (AudioTraceLog.IsEnabled) {
+                    AudioTraceLog.Trace("MIXER.THREAD.WRITE", $"mode=muted;frames={_blocksize};samples={silenceInterleaved.Length}");
+                }
                 continue;
             }
 
             _audioPlayer.WriteData(
                 MemoryMarshal.Cast<AudioFrame, float>(_outputBuffer.AsSpan()));
+
+            if (AudioTraceLog.IsEnabled) {
+                Span<AudioFrame> outFrames = _outputBuffer.AsSpan();
+                AudioFrame first = outFrames.Length > 0 ? outFrames[0] : new AudioFrame(0.0f, 0.0f);
+                AudioTraceLog.Trace("MIXER.THREAD.WRITE",
+                    $"mode=normal;frames={outFrames.Length};firstL={first.Left};firstR={first.Right}");
+            }
+        }
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("MIXER.THREAD.END", "stopped=true");
         }
     }
 
     private void MixSamples(int framesRequested) {
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("MIXER.MIX.BEGIN", $"framesRequested={framesRequested};channels={_channels.Count}");
+        }
+
         _outputBuffer.Resize(framesRequested);
         _reverbAuxBuffer.Resize(framesRequested);
         _chorusAuxBuffer.Resize(framesRequested);
@@ -387,6 +422,13 @@ public sealed class SoftwareMixer : IDisposable {
             channel.Mix(framesRequested);
             Span<AudioFrame> channelFrames = channel.AudioFrames.AsSpan();
             int numFrames = Math.Min(output.Length, channelFrames.Length);
+
+            if (AudioTraceLog.IsEnabled) {
+                AudioFrame first = numFrames > 0 ? channelFrames[0] : new AudioFrame(0.0f, 0.0f);
+                AudioTraceLog.Trace("MIXER.CHANNEL",
+                    $"name={channel.Name};frames={numFrames};reverbSend={channel.DoReverbSend};chorusSend={channel.DoChorusSend};firstL={first.Left};firstR={first.Right}");
+            }
+
             for (int i = 0; i < numFrames; i++) {
                 if (channel.DoSleep) {
                     output[i] += channel.MaybeFadeOrListen(channelFrames[i]);
@@ -405,6 +447,12 @@ public sealed class SoftwareMixer : IDisposable {
                 channel.MaybeSleep();
             }
         }
+
+        // Apply effects
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("MIXER.EFFECTS.BEGIN", $"reverb={_doReverb};chorus={_doChorus};hpf=true;compressor={_doCompressor}");
+        }
+
         if (_doReverb) {
             ApplyReverb();
         }
@@ -435,6 +483,10 @@ public sealed class SoftwareMixer : IDisposable {
             }
         }
 
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("MIXER.EFFECTS.END", $"masterGainLeft={_masterVolume.Left};masterGainRight={_masterVolume.Right};bufferSize={masterOutput.Length}");
+        }
+
         // Normalize the final output before sending to SDL
         for (int i = 0; i < masterOutput.Length; i++) {
             ref AudioFrame frame = ref masterOutput[i];
@@ -442,6 +494,12 @@ public sealed class SoftwareMixer : IDisposable {
                 NormalizeSample(frame.Left),
                 NormalizeSample(frame.Right)
             );
+        }
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioFrame first = masterOutput.Length > 0 ? masterOutput[0] : new AudioFrame(0.0f, 0.0f);
+            AudioTraceLog.Trace("MIXER.MIX.END",
+                $"frames={masterOutput.Length};firstL={first.Left};firstR={first.Right};reverb={_doReverb};chorus={_doChorus};compressor={_doCompressor}");
         }
     }
 
@@ -552,6 +610,11 @@ public sealed class SoftwareMixer : IDisposable {
         TItem[] toMix = new TItem[framesRequested];
         int framesReceived = device.OutputQueue.BulkDequeue(toMix, framesRequested);
 
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("MIXER.PULL",
+                $"device={typeof(TDevice).Name};item={typeof(TItem).Name};requested={framesRequested};received={framesReceived};queueAfter={device.OutputQueue.Size}");
+        }
+
         if (framesReceived > 0) {
             if (typeof(TItem) == typeof(float)) {
                 float[] floatArray = toMix as float[] ?? [];
@@ -566,6 +629,11 @@ public sealed class SoftwareMixer : IDisposable {
         // Fill any shortfall with silence
         if (framesReceived < framesRequested) {
             device.Channel.AddSilence();
+
+            if (AudioTraceLog.IsEnabled) {
+                AudioTraceLog.Trace("MIXER.PULL.SILENCE",
+                    $"device={typeof(TDevice).Name};requested={framesRequested};received={framesReceived}");
+            }
         }
     }
 }

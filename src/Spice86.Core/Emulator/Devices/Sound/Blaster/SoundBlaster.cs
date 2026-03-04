@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Serilog.Events;
 
 using Spice86.Audio.Common;
+using Spice86.Audio.Diagnostics;
 using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
@@ -151,6 +152,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _toFloatSigned16 = (s, i) => ToFloat(s[i]);
 
         mixer.UnlockMixerThread();
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.CTOR",
+                $"base=0x{_sb.Hw.Base:X};irq={_sb.Hw.Irq};dma8={_sb.Hw.Dma8};dma16={_sb.Hw.Dma16};type={_sb.Type}");
+        }
     }
 
     public bool PendingIrq8Bit {
@@ -174,17 +180,29 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     public override byte ReadByte(ushort port) {
         byte result;
         int offset = port - _config.BaseAddress;
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.PORT.READ.BEGIN", $"port=0x{port:X};offset=0x{offset:X}");
+        }
         switch (offset) {
             case 0x04: // MixerIndex
                 result = _sb.Mixer.Index;
+                if (AudioTraceLog.IsEnabled) {
+                    AudioTraceLog.Trace("SB.PORT.READ.END", $"port=0x{port:X};offset=0x{offset:X};value=0x{result:X2};source=MixerIndex");
+                }
                 return result;
 
             case 0x05: // MixerData
                 result = CtmixerRead();
+                if (AudioTraceLog.IsEnabled) {
+                    AudioTraceLog.Trace("SB.PORT.READ.END", $"port=0x{port:X};offset=0x{offset:X};value=0x{result:X2};source=MixerData");
+                }
                 return result;
 
             case 0x0A: // DspReadData
                 result = DspReadData();
+                if (AudioTraceLog.IsEnabled) {
+                    AudioTraceLog.Trace("SB.PORT.READ.END", $"port=0x{port:X};offset=0x{offset:X};value=0x{result:X2};source=DspReadData");
+                }
                 return result;
 
             case 0x0C: { // DspWriteStatus
@@ -193,6 +211,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     byte writeStatus = 0x7F; // lower 7 bits always set
                     if (WriteBufferAtCapacity()) {
                         writeStatus |= 0x80;
+                    }
+                    if (AudioTraceLog.IsEnabled) {
+                        AudioTraceLog.Trace("SB.PORT.READ.END",
+                            $"port=0x{port:X};offset=0x{offset:X};value=0x{writeStatus:X2};source=DspWriteStatus");
                     }
                     return writeStatus;
                 }
@@ -208,23 +230,39 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     if (_sb.Dsp.Out.Used != 0) {
                         readStatus |= 0x80;
                     }
+                    if (AudioTraceLog.IsEnabled) {
+                        AudioTraceLog.Trace("SB.PORT.READ.END",
+                            $"port=0x{port:X};offset=0x{offset:X};value=0x{readStatus:X2};source=DspReadStatus;pending8={_sb.Irq.Pending8Bit}");
+                    }
                     return readStatus;
                 }
 
             case 0x0F: // DspAck16Bit
                 _sb.Irq.Pending16Bit = false;
+                if (AudioTraceLog.IsEnabled) {
+                    AudioTraceLog.Trace("SB.PORT.READ.END", $"port=0x{port:X};offset=0x{offset:X};value=0xFF;source=DspAck16Bit");
+                }
                 return 0xFF;
 
             case 0x06: // DspReset read
+                if (AudioTraceLog.IsEnabled) {
+                    AudioTraceLog.Trace("SB.PORT.READ.END", $"port=0x{port:X};offset=0x{offset:X};value=0xFF;source=DspResetRead");
+                }
                 return 0xFF;
 
             default:
+                if (AudioTraceLog.IsEnabled) {
+                    AudioTraceLog.Trace("SB.PORT.READ.END", $"port=0x{port:X};offset=0x{offset:X};value=0xFF;source=Default");
+                }
                 return 0xFF;
         }
     }
 
     public override void WriteByte(ushort port, byte value) {
         int offset = port - _config.BaseAddress;
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.PORT.WRITE", $"port=0x{port:X};offset=0x{offset:X};value=0x{value:X2}");
+        }
         switch (offset) {
             case 0x06:
                 DspDoReset(value);
@@ -334,6 +372,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         int needed = Math.Max(framesRequested - queueSize, 0);
         System.Threading.Interlocked.Exchange(ref _framesNeeded, needed);
 
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.MIXER.CALLBACK",
+                $"framesRequested={framesRequested};queueSize={queueSize};needed={needed}");
+        }
+
         SoftwareMixer.PullFromQueueCallback<SoundBlaster, AudioFrame>(framesRequested, this);
     }
 
@@ -357,6 +400,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void DspDmaCallback(DmaChannel channel, DmaChannel.DmaEvent dmaEvent) {
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DMA.CALLBACK",
+                $"event={dmaEvent};mode={_sb.Mode};dmaMode={_sb.Dma.Mode};left={_sb.Dma.Left};min={_sb.Dma.Min};autoInit={_sb.Dma.AutoInit}");
+        }
+
         switch (dmaEvent) {
             case DmaChannel.DmaEvent.ReachedTerminalCount:
                 break;
@@ -536,6 +584,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         Span<byte> buffer = _sb.Dma.Buf8.AsSpan((int)bufferIndex, (int)clampedBytes);
         uint bytesRead = (uint)_sb.Dma.Channel.Read((int)clampedBytes, buffer);
+        if (AudioTraceLog.IsEnabled) {
+            byte first = bytesRead > 0 ? _sb.Dma.Buf8[(int)bufferIndex] : (byte)0;
+            AudioTraceLog.Trace("SB.DMA.READ8",
+                $"requested={bytesToRead};clamped={clampedBytes};read={bytesRead};bufferIndex={bufferIndex};first=0x{first:X2}");
+        }
         return bytesRead;
     }
 
@@ -568,6 +621,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         }
         Span<byte> unsignedBuf = System.Runtime.InteropServices.MemoryMarshal.Cast<short, byte>(_sb.Dma.Buf16.AsSpan((int)bufferIndex));
         uint wordsRead = (uint)_sb.Dma.Channel.Read((int)clampedWords, unsignedBuf);
+        if (AudioTraceLog.IsEnabled) {
+            short first = wordsRead > 0 ? _sb.Dma.Buf16[(int)bufferIndex] : (short)0;
+            AudioTraceLog.Trace("SB.DMA.READ16",
+                $"requestedWords={wordsToRead};clampedWords={clampedWords};read={wordsRead};is16BitChannel={is16BitChannel};bufferIndex={bufferIndex};first={first}");
+        }
         return wordsRead;
     }
 
@@ -597,6 +655,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void PlayDmaTransfer(uint bytesRequested) {
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DMA.PLAY.BEGIN",
+                $"requested={bytesRequested};left={_sb.Dma.Left};mode={_sb.Dma.Mode};stereo={_sb.Dma.Stereo};sign={_sb.Dma.Sign};autoInit={_sb.Dma.AutoInit}");
+        }
+
         // How many bytes should we read from DMA?
         uint lowerBound = _sb.Dma.AutoInit ? bytesRequested : _sb.Dma.Min;
         uint bytesToRead = _sb.Dma.Left <= lowerBound ? _sb.Dma.Left : bytesRequested;
@@ -725,6 +788,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             _loggerService.Error("SOUNDBLASTER: Frames {Frames} should never exceed samples {Samples}", frames, samples);
         }
 
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DMA.PLAY.DECODED",
+                $"bytesRead={bytesRead};samples={samples};frames={frames};remain={_sb.Dma.RemainSize};firstTransfer={_sb.Dma.FirstTransfer}");
+        }
+
         // If the first DMA transfer after a reset contains a single sample, it
         // should be ignored. Quake and SBTEST.EXE have this behavior. If not
         // ignored, the channels will be incorrectly reversed.
@@ -739,6 +807,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         // Deduct the DMA bytes read from the remaining to still read
         _sb.Dma.Left -= bytesRead;
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DMA.PLAY.END",
+                $"bytesRead={bytesRead};samples={samples};frames={frames};framesQueued={_outputQueue.Size};left={_sb.Dma.Left};rate={_sb.Dma.Rate};freqHz={_sb.FreqHz};mode={_sb.Mode};dmaMode={_sb.Dma.Mode};autoInit={_sb.Dma.AutoInit}");
+        }
 
         if (_sb.Dma.Left == 0) {
             _scheduler.RemoveEvents(ProcessDmaTransferEvent);
@@ -808,6 +881,12 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         _framesAddedThisTick += frames.Length;
         _outputQueue.NonblockingBulkEnqueue(frames);
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioFrame first = frames[0];
+            AudioTraceLog.Trace("SB.QUEUE.ENQUEUE",
+                $"frames={frames.Length};firstL={first.Left};firstR={first.Right};queueSize={_outputQueue.Size};framesAddedThisTick={_framesAddedThisTick}");
+        }
     }
 
     private void EnqueueSilentFrames(uint count) {
@@ -960,6 +1039,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void DspDoReset(byte value) {
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DSP.RESET", $"value=0x{value:X2};state={_sb.Dsp.State}");
+        }
+
         if (((value & 1) != 0) && (_sb.Dsp.State != DspState.Reset)) {
             // TODO Get out of highspeed mode
             DspReset();
@@ -987,6 +1070,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void DspReset() {
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DSP.RESET.HARD", $"irq={_sb.Hw.Irq};mode={_sb.Mode};dmaMode={_sb.Dma.Mode}");
+        }
+
         _dualPic.DeactivateIrq(_sb.Hw.Irq);
         DspChangeMode(DspMode.None);
         DspFlushData();
@@ -1030,6 +1117,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void DspDoWrite(byte value) {
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DSP.WRITE",
+                $"value=0x{value:X2};cmd=0x{_sb.Dsp.Cmd:X2};cmdLen={_sb.Dsp.CmdLen};inPos={_sb.Dsp.In.Pos}");
+        }
+
         switch (_sb.Dsp.Cmd) {
             case (byte)BlasterState.WaitingForCommand:
                 _sb.Dsp.Cmd = value;
@@ -1055,6 +1147,13 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void DspDoCommand() {
+        if (AudioTraceLog.IsEnabled) {
+            byte arg0 = _sb.Dsp.CmdLen > 0 ? _sb.Dsp.In.Data[0] : (byte)0;
+            byte arg1 = _sb.Dsp.CmdLen > 1 ? _sb.Dsp.In.Data[1] : (byte)0;
+            AudioTraceLog.Trace("SB.DSP.CMD.BEGIN",
+                $"cmd=0x{_sb.Dsp.Cmd:X2};cmdLen={_sb.Dsp.CmdLen};inPos={_sb.Dsp.In.Pos};arg0=0x{arg0:X2};arg1=0x{arg1:X2};mode={_sb.Mode}");
+        }
+
         switch (_sb.Dsp.Cmd) {
             case 0x04:
                 if (_sb.Type == SbType.Sb16) {
@@ -1542,6 +1641,9 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         if (_sb.Mode == mode) {
             return;
         }
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DSP.MODE.CHANGE", $"from={_sb.Mode};to={mode}");
+        }
         switch (mode) {
             case DspMode.Dac:
                 _sb.Dac = new(_sb, _clock);
@@ -1556,12 +1658,16 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void DspChangeRate(uint freqHz) {
+        uint oldFreq = _sb.FreqHz;
         if (_sb.FreqHz != freqHz && _sb.Dma.Mode != DmaMode.None) {
             int effectiveFreq = (int)(freqHz / (_sb.Mixer.StereoEnabled ? 2 : 1));
             SetChannelRateHz(effectiveFreq);
 
             _sb.Dma.Rate = (freqHz * _sb.Dma.Mul) >> SbShift;
             _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
+        }
+        if (AudioTraceLog.IsEnabled && oldFreq != freqHz) {
+            AudioTraceLog.Trace("SB.DSP.RATE", $"old={oldFreq};new={freqHz}");
         }
         _sb.FreqHz = freqHz;
     }
@@ -1586,6 +1692,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void ProcessDmaTransferEvent(uint bytesToProcess) {
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DMA.EVENT", $"bytesToProcess={bytesToProcess};left={_sb.Dma.Left}");
+        }
+
         if (_sb.Dma.Left > 0) {
             uint toProcess = Math.Min(bytesToProcess, _sb.Dma.Left);
             PlayDmaTransfer(toProcess);
@@ -1627,6 +1737,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void DspDoDmaTransfer(DmaMode mode, uint freqHz, bool autoInit, bool stereo) {
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DMA.CONFIG.BEGIN",
+                $"mode={mode};freqHz={freqHz};autoInit={autoInit};stereo={stereo};currentDmaMode={_sb.Dma.Mode}");
+        }
+
         // Starting a new transfer will clear any active irqs?
         _sb.Irq.Pending8Bit = false;
         _sb.Irq.Pending16Bit = false;
@@ -1687,6 +1802,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _scheduler.RemoveEvents(ProcessDmaTransferEvent);
         _sb.Mode = DspMode.DmaMasked;
         _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DMA.CONFIG.END",
+                $"rate={_sb.Dma.Rate};mul={_sb.Dma.Mul};left={_sb.Dma.Left};autoSize={_sb.Dma.AutoSize}");
+        }
     }
 
     private void PerTickCallback() {
@@ -1993,6 +2113,9 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             }
             _sb.Dsp.Out.Used--;
         }
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DSP.READ", $"value=0x{_sb.Dsp.Out.LastVal:X2};used={_sb.Dsp.Out.Used};pos={_sb.Dsp.Out.Pos}");
+        }
         return _sb.Dsp.Out.LastVal;
     }
 
@@ -2092,6 +2215,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void CtmixerWrite(byte value) {
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.MIXER.WRITE", $"index=0x{_sb.Mixer.Index:X2};value=0x{value:X2}");
+        }
+
         switch (_sb.Mixer.Index) {
             case 0x00: // Reset
                 CtmixerReset();
@@ -2320,6 +2447,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
         }
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.DSP.CMD.END",
+            $"cmd=0x{_sb.Dsp.Cmd:X2};mode={_sb.Mode};dmaMode={_sb.Dma.Mode};left={_sb.Dma.Left};freq={_sb.FreqHz};stereo={_sb.Dma.Stereo};sign={_sb.Dma.Sign}");
+        }
     }
 
     private byte CtmixerRead() {
@@ -2509,6 +2641,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     ret = 0x0A;
                 }
                 break;
+        }
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("SB.MIXER.READ",
+            $"index=0x{_sb.Mixer.Index:X2};value=0x{ret:X2};stereo={_sb.Mixer.StereoEnabled};filter={_sb.Mixer.FilterEnabled}");
         }
         return ret;
     }

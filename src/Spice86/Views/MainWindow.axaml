@@ -26,6 +26,7 @@
 	</Window.DataTemplates>
 	<Window.Resources>
 		<converters:NullableToBooleanConverter x:Key="NullableToBooleanConverter" />
+		<converters:BoolToOnOffConverter x:Key="BoolToOnOffConverter" />
         <b:ShowAdditionnalWindowBehavior x:Key="ShowAdditionnalWindowBehavior" />
 	</Window.Resources>
 	<Design.DataContext>
@@ -81,6 +82,8 @@
 							</StackPanel>
 						</MenuItem.Header>
 					</MenuItem>
+					<Separator />
+					<MenuItem Header="{Binding AudioTraceEnabled, StringFormat='Audio Trace ({0})'}" Command="{Binding ToggleAudioTraceCommand}" />
 				</MenuItem>
 				<MenuItem Header="Video" IsEnabled="{Binding IsEmulatorRunning}">
 					<MenuItem>
@@ -158,6 +161,10 @@
 			<Separator />
 			<controls:StatusBarItem>
 				<TextBlock Text="{Binding EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />	
+			</controls:StatusBarItem>
+			<Separator />
+			<controls:StatusBarItem>
+				<TextBlock Text="{Binding AudioTraceEnabled, Converter={StaticResource BoolToOnOffConverter}, StringFormat='Audio Trace: {0}'}" />
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem HorizontalAlignment="Right" HorizontalContentAlignment="Right">

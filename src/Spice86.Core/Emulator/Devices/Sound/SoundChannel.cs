@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Audio.Common;
+using Spice86.Audio.Diagnostics;
 using Spice86.Audio.Filters;
 using Spice86.Audio.Filters.Speex;
 
@@ -130,6 +131,10 @@ public sealed class SoundChannel {
         _sleeper = new Sleeper(this);
 
         _envelope = new Envelope();
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("CH.CTOR", $"name={_name};features={string.Join(',', _features)}");
+        }
     }
 
     /// <summary>
@@ -333,6 +338,11 @@ public sealed class SoundChannel {
         int channelRateHz = _sampleRateHz;
         int mixerRateHz = _mixerSampleRateHz;
 
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("CH.RESAMPLE.CONFIG.BEGIN",
+                $"name={_name};method={_resampleMethod};channelRate={channelRateHz};mixerRate={mixerRateHz};zohTarget={_zohTargetRateHz}");
+        }
+
         _doLerpUpsample = false;
         _doZohUpsample = false;
         _doResample = false;
@@ -388,6 +398,11 @@ public sealed class SoundChannel {
                     ConfigureSpeexResampler(channelRateHz);
                 }
                 break;
+        }
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("CH.RESAMPLE.CONFIG.END",
+            $"name={_name};lerp={_doLerpUpsample};zoh={_doZohUpsample};speex={_doResample};sampleRate={_sampleRateHz};mixerRate={_mixerSampleRateHz}");
         }
     }
 
@@ -565,6 +580,11 @@ public sealed class SoundChannel {
             return;
         }
 
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("CH.MIX.BEGIN",
+                $"name={_name};framesRequested={framesRequested};available={AudioFrames.Count};sampleRate={_sampleRateHz};mixerRate={_mixerSampleRateHz}");
+        }
+
         _framesNeeded = framesRequested;
 
         // Simple loop that calls handler until we have enough frames
@@ -584,6 +604,15 @@ public sealed class SoundChannel {
             }
 
             _handler(framesRemaining);
+
+            if (AudioTraceLog.IsEnabled) {
+                AudioTraceLog.Trace("CH.MIX.HANDLER",
+                    $"name={_name};framesRemaining={framesRemaining};availableNow={AudioFrames.Count};needed={_framesNeeded}");
+            }
+        }
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("CH.MIX.END", $"name={_name};available={AudioFrames.Count};needed={_framesNeeded}");
         }
     }
 
@@ -994,6 +1023,11 @@ public sealed class SoundChannel {
             return;
         }
 
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("CH.SPX.BEGIN",
+                $"name={_name};inFrames={inFrames};startSize={audioFramesStartingSize};sampleRate={_sampleRateHz};mixerRate={_mixerSampleRateHz}");
+        }
+
         int estimatedOutFrames = EstimateMaxOutFrames(_speexResampler, inFrames);
 
         // Resize audio_frames to accommodate new frames
@@ -1024,6 +1058,13 @@ public sealed class SoundChannel {
             out uint _,
             out uint outFramesGenerated);
 
+        if (AudioTraceLog.IsEnabled) {
+            float firstLeft = outFramesGenerated > 0 ? _resampleOutputBuffer[0] : 0.0f;
+            float firstRight = outFramesGenerated > 0 ? _resampleOutputBuffer[1] : 0.0f;
+            AudioTraceLog.Trace("CH.SPX.PROCESSED",
+                $"name={_name};outFrames={outFramesGenerated};firstL={firstLeft};firstR={firstRight}");
+        }
+
         // Copy resampled frames back to audio_frames
         Span<AudioFrame> audioSpan = AudioFrames.AsSpan();
         for (int i = 0; i < (int)outFramesGenerated; i++) {
@@ -1036,6 +1077,10 @@ public sealed class SoundChannel {
         int actualSize = audioFramesStartingSize + (int)outFramesGenerated;
         if (AudioFrames.Count > actualSize) {
             AudioFrames.RemoveRange(actualSize, AudioFrames.Count - actualSize);
+        }
+
+        if (AudioTraceLog.IsEnabled) {
+            AudioTraceLog.Trace("CH.SPX.END", $"name={_name};actualSize={actualSize}");
         }
     }
 
@@ -1100,6 +1145,14 @@ public sealed class SoundChannel {
         if (numFrames <= 0) {
             return;
         }
+
+        if (AudioTraceLog.IsEnabled) {
+            float firstLeft = data.Length > 0 ? data[0] : 0.0f;
+            float firstRight = data.Length > 1 ? data[1] : firstLeft;
+            AudioTraceLog.Trace("CH.ADD.BEGIN",
+                $"name={_name};numFrames={numFrames};stereo={isStereo};firstL={firstLeft};firstR={firstRight};available={AudioFrames.Count}");
+        }
+
         lock (_mutex) {
             _lastSamplesWereStereo = isStereo;
 
@@ -1137,6 +1190,14 @@ public sealed class SoundChannel {
             }
 
             ApplyInPlaceProcessing(audioFramesStartingSize);
+
+            if (AudioTraceLog.IsEnabled) {
+                AudioFrame firstOut = AudioFrames.Count > audioFramesStartingSize
+                    ? AudioFrames[audioFramesStartingSize]
+                    : new AudioFrame(0.0f, 0.0f);
+                AudioTraceLog.Trace("CH.ADD.END",
+                    $"name={_name};added={AudioFrames.Count - audioFramesStartingSize};total={AudioFrames.Count};firstOutL={firstOut.Left};firstOutR={firstOut.Right};lerp={_doLerpUpsample};zoh={_doZohUpsample};speex={_doResample}");
+            }
         }
     }
 
