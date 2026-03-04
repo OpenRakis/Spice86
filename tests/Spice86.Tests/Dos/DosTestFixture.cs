@@ -72,7 +72,7 @@ public class DosTestFixture {
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             false, true, LoggerService);
 
-        SoftwareMixer softwareMixer = new(LoggerService, configuration.AudioEngine);
+        Mixer softwareMixer = new(LoggerService, configuration.AudioEngine);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, LoggerService, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort);
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, LoggerService, configuration.FailOnUnhandledPort);
@@ -81,11 +81,6 @@ public class DosTestFixture {
 
         DmaBus dmaSystem =
             new(Memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, LoggerService);
-
-        SoundBlasterHardwareConfig soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaSystem, dualPic, emulationLoopScheduler, emulatedClock,
-            configuration.FailOnUnhandledPort,
-            LoggerService, soundBlasterHardwareConfig, pauseHandler);
 
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(Memory, interruptVectorTable, ioPortDispatcher,
@@ -109,7 +104,7 @@ public class DosTestFixture {
 
         Dos = new Dos(configuration, Memory, cfgCpu, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
-            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
+            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", "" } },
             ioPortDispatcher, LoggerService);
 
         DosFileManager = Dos.FileManager;

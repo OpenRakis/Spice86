@@ -16,6 +16,12 @@ using Priority_Queue;
 public delegate void EventHandler(uint value);
 
 /// <summary>
+///     Represents the callback signature for tick handlers that are called every tick.
+///     Reference: DOSBox staging src/hardware/pic.cpp TIMER_TickHandler
+/// </summary>
+public delegate void TickHandler();
+
+/// <summary>
 ///     Manages deterministic scheduling of emulation events using an emulated clock.
 /// </summary>
 public class EmulationLoopScheduler {
@@ -28,6 +34,18 @@ public class EmulationLoopScheduler {
     private readonly Stack<ScheduledEntry> _entryPool = new(MaxQueueSize);
     private readonly Dictionary<EventHandler, List<ScheduledEntry>> _activeEventsByHandler = new();
     private readonly EmulationLoopSchedulerMonitor _monitor;
+
+    /// <summary>
+    ///     Linked list of tick handlers called every tick.
+    ///     Reference: DOSBox staging src/hardware/pic.cpp firstticker linked list
+    /// </summary>
+    private readonly LinkedList<TickHandler> _tickHandlers = new();
+
+    /// <summary>
+    ///     Tracks the last tick time to determine when to fire tick handlers.
+    ///     Reference: DOSBox staging calls TIMER_AddTick() every ~1ms (1000 cycles at 1MHz)
+    /// </summary>
+    private double _lastTickTimeMs;
 
     private bool _isServicingEvents;
     private double _activeEventScheduledTime;
@@ -98,15 +116,60 @@ public class EmulationLoopScheduler {
     }
 
     /// <summary>
+    ///     Registers a tick handler to be called every tick.
+    ///     Reference: DOSBox staging src/hardware/pic.cpp TIMER_AddTickHandler()
+    /// </summary>
+    /// <param name="handler">The handler to call every tick.</param>
+    public void AddTickHandler(TickHandler handler) {
+        // Add to front of list (matches DOSBox: newticker->next=firstticker; firstticker=newticker)
+        _tickHandlers.AddFirst(handler);
+
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("Added tick handler {Handler}", handler.Method.Name);
+        }
+    }
+
+    /// <summary>
+    ///     Removes a previously registered tick handler.
+    ///     Reference: DOSBox staging src/hardware/pic.cpp TIMER_DelTickHandler()
+    /// </summary>
+    /// <param name="handler">The handler to remove.</param>
+    public void DelTickHandler(TickHandler handler) {
+        bool removed = _tickHandlers.Remove(handler);
+
+        if (removed && _logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("Removed tick handler {Handler}", handler.Method.Name);
+        }
+    }
+
+    /// <summary>
     ///     Executes all events that are due as of the current time provided by the clock.
+    ///     Also invokes all registered tick handlers every 1ms.
+    ///     Reference: DOSBox staging src/hardware/pic.cpp TIMER_AddTick()
     /// </summary>
     public void ProcessEvents() {
+        double currentTime = _clock.ElapsedTimeMs;
+
+        // Call tick handlers every 1ms (like DOSBox's TIMER_AddTick)
+        // Reference: src/hardware/pic.cpp lines 607-624
+        while (currentTime >= _lastTickTimeMs + 1.0) {
+            _lastTickTimeMs += 1.0;
+
+            // Call our list of ticker handlers
+            // Reference: DOSBox iterates through firstticker linked list
+            LinkedListNode<TickHandler>? ticker = _tickHandlers.First;
+            while (ticker is not null) {
+                LinkedListNode<TickHandler>? nextTicker = ticker.Next;
+                ticker.Value.Invoke();
+                ticker = nextTicker;
+            }
+        }
+
         if (_queue.Count == 0) {
             return;
         }
 
         _isServicingEvents = true;
-        double currentTime = _clock.ElapsedTimeMs;
 
         while (_queue.Count > 0 && _queue.First.ScheduledTime <= currentTime) {
             ScheduledEntry entry = _queue.Dequeue();
