@@ -15,6 +15,7 @@ using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Emulates a Sound Blaster audio device, providing digital audio playback, mixing, and hardware-level DSP command
@@ -143,6 +144,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         // Size to 2x blocksize. The mixer callback will request 1x blocksize.
         // This provides a good size to avoid over-runs and stalls.
         _outputQueue.Resize((int)Math.Ceiling(_dacChannel.FramesPerBlock * 2.0f));
+
+        _toFloatUnsigned8 = (s, i) => ToFloat(s[i]);
+        _toFloatSigned8 = (s, i) => ToFloat(s[i]);
+        _toFloatUnsigned16 = (s, i) => ToFloat(s[i]);
+        _toFloatSigned16 = (s, i) => ToFloat(s[i]);
 
         mixer.UnlockMixerThread();
     }
@@ -637,9 +643,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     // therefore user-space data.
                     if (frames > 0) {
                         if (_sb.Dma.Sign) {
-                            EnqueueFramesStereo(_sb.Dma.Buf8, samples, true);
+                            ReadOnlySpan<sbyte> signedBuf = MemoryMarshal.Cast<byte, sbyte>(_sb.Dma.Buf8.AsSpan());
+                            EnqueueFrames(MaybeSilence(signedBuf, samples, FrameType.Stereo));
                         } else {
-                            EnqueueFramesStereo(_sb.Dma.Buf8, samples, false);
+                            EnqueueFrames(MaybeSilence(_sb.Dma.Buf8, samples, FrameType.Stereo));
                         }
                     }
                     // Otherwise there's an unhandled dangling sample from the last round
@@ -657,9 +664,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                         _loggerService.Error("SOUNDBLASTER: Mono mode but channels={Channels}", channels);
                     }
                     if (_sb.Dma.Sign) {
-                        EnqueueFramesMono(_sb.Dma.Buf8, samples, true);
+                        ReadOnlySpan<sbyte> signedBuf = MemoryMarshal.Cast<byte, sbyte>(_sb.Dma.Buf8.AsSpan());
+                        EnqueueFrames(MaybeSilence(signedBuf, samples, FrameType.Mono));
                     } else {
-                        EnqueueFramesMono(_sb.Dma.Buf8, samples, false);
+                        EnqueueFrames(MaybeSilence(_sb.Dma.Buf8, samples, FrameType.Mono));
                     }
                 }
                 break;
@@ -674,9 +682,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     // Only add whole frames when in stereo DMA mode
                     if (frames > 0) {
                         if (_sb.Dma.Sign) {
-                            EnqueueFramesStereo16(_sb.Dma.Buf16, samples, true);
+                            EnqueueFrames(MaybeSilence(_sb.Dma.Buf16, samples, FrameType.Stereo));
                         } else {
-                            EnqueueFramesStereo16(_sb.Dma.Buf16, samples, false);
+                            ReadOnlySpan<ushort> unsignedBuf = MemoryMarshal.Cast<short, ushort>(_sb.Dma.Buf16.AsSpan());
+                            EnqueueFrames(MaybeSilence(unsignedBuf, samples, FrameType.Stereo));
                         }
                     }
                     if ((samples & 1) != 0) {
@@ -697,9 +706,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     }
 
                     if (_sb.Dma.Sign) {
-                        EnqueueFramesMono16(_sb.Dma.Buf16, samples, true);
+                        EnqueueFrames(MaybeSilence(_sb.Dma.Buf16, samples, FrameType.Mono));
                     } else {
-                        EnqueueFramesMono16(_sb.Dma.Buf16, samples, false);
+                        ReadOnlySpan<ushort> unsignedBuf = MemoryMarshal.Cast<short, ushort>(_sb.Dma.Buf16.AsSpan());
+                        EnqueueFrames(MaybeSilence(unsignedBuf, samples, FrameType.Mono));
                     }
                 }
                 break;
@@ -781,7 +791,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             _sb.Adpcm.Stepsize = stepsize;
 
             byte numDecoded = (byte)decoded.Length;
-            EnqueueFramesMono(decoded, numDecoded, false);
+            EnqueueFrames(MaybeSilence(decoded, numDecoded, FrameType.Mono));
             numSamples += numDecoded;
             i++;
         }
@@ -791,170 +801,135 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         return (numBytes, numSamples, numFrames);
     }
 
-    private void EnqueueFramesMono(byte[] samples, uint numSamples, bool signed) {
-        if (numSamples == 0) {
+    private void EnqueueFrames(Span<AudioFrame> frames) {
+        if (frames.Length == 0) {
             return;
         }
 
-        // Return silent frames if still in warmup
-        if (_sb.Dsp.WarmupRemainingMs > 0) {
-            _sb.Dsp.WarmupRemainingMs--;
-            EnqueueSilentFrames(numSamples);
-            return;
-        }
-
-        // Return silent frames if speaker is disabled
-        if (!_sb.SpeakerEnabled) {
-            EnqueueSilentFrames(numSamples);
-            return;
-        }
-
-        // Batch process samples into AudioFrames and enqueue to output_queue
-        _enqueueBatchCount = 0;
-        for (uint i = 0; i < numSamples; i++) {
-            float value = signed
-                ? LookupTables.ToSigned8(unchecked((sbyte)samples[i]))
-                : LookupTables.ToUnsigned8(samples[i]);
-            _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(value, value);
-        }
-        FlushEnqueueBatch();
-        _framesAddedThisTick += (int)numSamples;
+        _framesAddedThisTick += frames.Length;
+        _outputQueue.NonblockingBulkEnqueue(frames);
     }
 
     private void EnqueueSilentFrames(uint count) {
         _enqueueBatchCount = 0;
-        AudioFrame silence = new AudioFrame(0.0f, 0.0f);
-        for (uint i = 0; i < count; i++) {
-            _enqueueBatch[_enqueueBatchCount++] = silence;
-        }
+        AddSilentFramesToBatch((int)count);
         FlushEnqueueBatch();
-        _framesAddedThisTick += (int)count;
     }
 
     private void FlushEnqueueBatch() {
         if (_enqueueBatchCount == 0) {
             return;
         }
-        _outputQueue.NonblockingBulkEnqueue(_enqueueBatch.AsSpan(0, _enqueueBatchCount));
+        EnqueueFrames(_enqueueBatch.AsSpan(0, _enqueueBatchCount));
         _enqueueBatchCount = 0;
     }
 
-    private void EnqueueFramesStereo(byte[] samples, uint numSamples, bool signed) {
-        if (numSamples == 0) {
-            return;
+    private void AddSilentFramesToBatch(int numFrames) {
+        AudioFrame silence = new AudioFrame(0.0f, 0.0f);
+        for (int i = 0; i < numFrames; i++) {
+            _enqueueBatch[_enqueueBatchCount++] = silence;
         }
+    }
 
-        uint numFrames = numSamples / 2;
+    private static float ToFloat(byte sample) {
+        return LookupTables.ToUnsigned8(sample);
+    }
 
-        // Return silent frames if still in warmup
-        if (_sb.Dsp.WarmupRemainingMs > 0) {
-            _sb.Dsp.WarmupRemainingMs--;
-            EnqueueSilentFrames(numFrames);
-            return;
+    private static float ToFloat(sbyte sample) {
+        return LookupTables.ToSigned8(sample);
+    }
+
+    private static float ToFloat(ushort sample) {
+        return LookupTables.ToUnsigned16(sample);
+    }
+
+    private static float ToFloat(short sample) {
+        return LookupTables.ToSigned16(sample);
+    }
+
+    private Span<AudioFrame> MaybeSilence<T>(ReadOnlySpan<T> samples, uint numSamples, FrameType frameType) where T : unmanaged {
+        int samplesPerFrame;
+        if (frameType == FrameType.Mono) {
+            samplesPerFrame = 1;
+        } else {
+            samplesPerFrame = 2;
         }
+        int numFrames = (int)(numSamples / (uint)samplesPerFrame);
 
-        // Return silent frames if speaker is disabled
-        if (!_sb.SpeakerEnabled) {
-            EnqueueSilentFrames(numFrames);
-            return;
+        if (numFrames <= 0) {
+            return [];
         }
-
-        // Batch process samples into AudioFrames
-        // Note: SB Pro 1 and 2 swap left/right channels
-        bool swapChannels = _sb.Type is SbType.SBPro1 or SbType.SBPro2;
 
         _enqueueBatchCount = 0;
-        for (uint i = 0; i < numFrames; i++) {
-            float left = signed
-                ? LookupTables.ToSigned8(unchecked((sbyte)samples[i * 2]))
-                : LookupTables.ToUnsigned8(samples[i * 2]);
 
-            float right = signed
-                ? LookupTables.ToSigned8(unchecked((sbyte)samples[i * 2 + 1]))
-                : LookupTables.ToUnsigned8(samples[i * 2 + 1]);
+        if (_sb.Dsp.WarmupRemainingMs > 0) {
+            _sb.Dsp.WarmupRemainingMs--;
+            AddSilentFramesToBatch(numFrames);
+            _framesAddedThisTick += numFrames;
+            return _enqueueBatch.AsSpan(0, _enqueueBatchCount);
+        }
 
-            if (swapChannels) {
+        if (!_sb.SpeakerEnabled) {
+            AddSilentFramesToBatch(numFrames);
+            _framesAddedThisTick += numFrames;
+            return _enqueueBatch.AsSpan(0, _enqueueBatchCount);
+        }
+
+        BuildFrames(samples, numFrames, samplesPerFrame, frameType);
+        _framesAddedThisTick += numFrames;
+        return _enqueueBatch.AsSpan(0, _enqueueBatchCount);
+    }
+
+    private void BuildFrames<T>(ReadOnlySpan<T> samples, int numFrames, int samplesPerFrame, FrameType frameType) where T : unmanaged {
+        bool isUnsigned8 = typeof(T) == typeof(byte);
+        bool isSigned8 = typeof(T) == typeof(sbyte);
+        bool isUnsigned16 = typeof(T) == typeof(ushort);
+        bool isSigned16 = typeof(T) == typeof(short);
+
+        if (isUnsigned8) {
+            BuildFramesUnsigned8(MemoryMarshal.Cast<T, byte>(samples), numFrames, samplesPerFrame, frameType);
+        } else if (isSigned8) {
+            BuildFramesSigned8(MemoryMarshal.Cast<T, sbyte>(samples), numFrames, samplesPerFrame, frameType);
+        } else if (isUnsigned16) {
+            BuildFramesUnsigned16(MemoryMarshal.Cast<T, ushort>(samples), numFrames, samplesPerFrame, frameType);
+        } else if (isSigned16) {
+            BuildFramesSigned16(MemoryMarshal.Cast<T, short>(samples), numFrames, samplesPerFrame, frameType);
+        }
+    }
+
+    private void BuildFramesUnsigned8(ReadOnlySpan<byte> samples, int numFrames, int samplesPerFrame, FrameType frameType) {
+        BuildFramesShared(samples, numFrames, samplesPerFrame, frameType, _toFloatUnsigned8);
+    }
+
+    private void BuildFramesSigned8(ReadOnlySpan<sbyte> samples, int numFrames, int samplesPerFrame, FrameType frameType) {
+        BuildFramesShared(samples, numFrames, samplesPerFrame, frameType, _toFloatSigned8);
+    }
+
+    private void BuildFramesUnsigned16(ReadOnlySpan<ushort> samples, int numFrames, int samplesPerFrame, FrameType frameType) {
+        BuildFramesShared(samples, numFrames, samplesPerFrame, frameType, _toFloatUnsigned16);
+    }
+
+    private void BuildFramesSigned16(ReadOnlySpan<short> samples, int numFrames, int samplesPerFrame, FrameType frameType) {
+        BuildFramesShared(samples, numFrames, samplesPerFrame, frameType, _toFloatSigned16);
+    }
+
+    private void BuildFramesShared<TSample>(ReadOnlySpan<TSample> samples, int numFrames, int samplesPerFrame, FrameType frameType, Func<ReadOnlySpan<TSample>, int, float> getSample) where TSample : unmanaged {
+        for (int i = 0; i < numFrames; ++i) {
+            int leftIndex = i * samplesPerFrame;
+            float left = getSample(samples, leftIndex);
+            float right;
+            if (frameType == FrameType.Mono) {
+                right = left;
+            } else {
+                right = getSample(samples, i * 2 + 1);
+            }
+
+            if (_sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2) {
                 _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(right, left);
             } else {
                 _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(left, right);
             }
         }
-        FlushEnqueueBatch();
-        _framesAddedThisTick += (int)numFrames;
-    }
-
-    private void EnqueueFramesMono16(short[] samples, uint numSamples, bool signed) {
-        if (numSamples == 0) {
-            return;
-        }
-
-        // Return silent frames if still in warmup
-        if (_sb.Dsp.WarmupRemainingMs > 0) {
-            _sb.Dsp.WarmupRemainingMs--;
-            EnqueueSilentFrames(numSamples);
-            return;
-        }
-
-        // Return silent frames if speaker is disabled
-        if (!_sb.SpeakerEnabled) {
-            EnqueueSilentFrames(numSamples);
-            return;
-        }
-
-        // Batch process samples into AudioFrames
-        _enqueueBatchCount = 0;
-        for (uint i = 0; i < numSamples; i++) {
-            float value = signed
-                ? LookupTables.ToSigned16(samples[i])
-                : LookupTables.ToUnsigned16((ushort)samples[i]);
-            _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(value, value);
-        }
-        FlushEnqueueBatch();
-        _framesAddedThisTick += (int)numSamples;
-    }
-
-    private void EnqueueFramesStereo16(short[] samples, uint numSamples, bool signed) {
-        if (numSamples == 0) {
-            return;
-        }
-
-        uint numFrames = numSamples / 2;
-
-        // Return silent frames if still in warmup
-        if (_sb.Dsp.WarmupRemainingMs > 0) {
-            _sb.Dsp.WarmupRemainingMs--;
-            EnqueueSilentFrames(numFrames);
-            return;
-        }
-
-        // Return silent frames if speaker is disabled
-        if (!_sb.SpeakerEnabled) {
-            EnqueueSilentFrames(numFrames);
-            return;
-        }
-
-        // Batch process samples into AudioFrames
-        // Note: SB Pro 1 and 2 swap left/right channels
-        bool swapChannels = _sb.Type is SbType.SBPro1 or SbType.SBPro2;
-
-        _enqueueBatchCount = 0;
-        for (uint i = 0; i < numFrames; i++) {
-            float left = signed
-                ? LookupTables.ToSigned16(samples[i * 2])
-                : LookupTables.ToUnsigned16((ushort)samples[i * 2]);
-
-            float right = signed
-                ? LookupTables.ToSigned16(samples[i * 2 + 1])
-                : LookupTables.ToUnsigned16((ushort)samples[i * 2 + 1]);
-
-            if (swapChannels) {
-                _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(right, left);
-            } else {
-                _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(left, right);
-            }
-        }
-        FlushEnqueueBatch();
-        _framesAddedThisTick += (int)numFrames;
     }
 
     private void RaiseIrq(SbIrq irqType) {
@@ -1744,7 +1719,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         int mixer_needs = Math.Max(System.Threading.Interlocked.Exchange(ref _framesNeeded, 0), 1);
 
         // Frames added this tick is only useful when we're in an underflow
-        // situation with the mixer. generate_frames() may not give us
+        // situation with the mixer. GenerateFrames() may not give us
         // everything we need in a single call. We're not concerned about
         // over-filling while in this mode so just zero it out.
         _framesAddedThisTick = 0;
@@ -1798,7 +1773,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             case DspMode.None:
             case DspMode.DmaPause:
             case DspMode.DmaMasked: {
-                    EnqueueSilentFrames((uint)frames_requested);
+                    if (_emptyFrames.Length < frames_requested) {
+                        _emptyFrames = new AudioFrame[frames_requested];
+                    }
+                    EnqueueFrames(_emptyFrames.AsSpan(0, frames_requested));
                     break;
                 }
 
@@ -1807,14 +1785,9 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 // DOS program will be writing to the DAC register at the
                 // playback rate. In a mixer underflow situation, we render the
                 // current frame multiple times.
-                _enqueueBatchCount = 0;
                 for (int i = 0; i < frames_requested; i++) {
-                    _enqueueBatch[_enqueueBatchCount++] = _sb.Dac.RenderFrame();
-                    if (_enqueueBatchCount == _enqueueBatch.Length) {
-                        FlushEnqueueBatch();
-                    }
+                    _outputQueue.NonblockingEnqueue(_sb.Dac.RenderFrame());
                 }
-                FlushEnqueueBatch();
                 _framesAddedThisTick += frames_requested;
                 break;
 
@@ -2180,7 +2153,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                                     _loggerService.Debug("{Action} low-pass filter",
                                         _sb.Mixer.FilterEnabled ? "Enabling" : "Disabling");
                                 }
-                                _dacChannel.LowPassFilter = _sb.Mixer.FilterEnabled ? FilterState.On : FilterState.Off;
                             }
                         }
                     }
