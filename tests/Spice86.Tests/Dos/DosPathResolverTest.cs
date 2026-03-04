@@ -1,4 +1,4 @@
-﻿namespace Spice86.Tests.Emulator.OperatingSystem;
+﻿namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
