@@ -18,8 +18,9 @@ using HighPassFilter = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.High
 /// </remarks>
 public sealed class SoftwareMixer : IDisposable {
     private const int DefaultSampleRateHz = 48000;
-    private const int DefaultBlocksize = 1024;
-    private const int DefaultPrebufferMs = 25;
+
+    private static readonly int DefaultBlocksize = System.OperatingSystem.IsWindows() ? 1024 : 512;
+    private static readonly int DefaultPrebufferMs = System.OperatingSystem.IsWindows() ? 25 : 20;
 
     // This shows up nicely as 50% and -6.00 dB in the MIXER command's output
     private const float Minus6db = 0.501f;
