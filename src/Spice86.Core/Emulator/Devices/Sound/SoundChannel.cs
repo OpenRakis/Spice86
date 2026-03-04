@@ -32,6 +32,7 @@ public sealed class SoundChannel {
     private int _sampleRateHz;
     private int _framesNeeded;
     private int _mixerSampleRateHz = 48000; // Default mixer rate
+    private int _mixerBlocksize = 1024; // Default blocksize, updated from mixer
 
     private AudioFrame _userVolumeGain = new(1.0f, 1.0f);
     private AudioFrame _appVolumeGain = new(1.0f, 1.0f);
@@ -237,6 +238,15 @@ public sealed class SoundChannel {
     }
 
     /// <summary>
+    /// Sets the mixer blocksize for queue sizing calculations.
+    /// </summary>
+    public void SetMixerBlocksize(int blocksize) {
+        lock (_mutex) {
+            _mixerBlocksize = blocksize;
+        }
+    }
+
+    /// <summary>
     /// Gets the number of frames per tick.
     /// </summary>
     public float FramesPerTick {
@@ -256,9 +266,7 @@ public sealed class SoundChannel {
         get {
             lock (_mutex) {
                 float stretchFactor = (float)_sampleRateHz / _mixerSampleRateHz;
-                // Assuming default blocksize of 1024 (would need to get from mixer)
-                int blocksize = 1024;
-                return blocksize * stretchFactor;
+                return _mixerBlocksize * stretchFactor;
             }
         }
     }

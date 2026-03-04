@@ -282,6 +282,7 @@ public sealed class SoftwareMixer : IDisposable {
 
         SoundChannel channel = new(handler, name, features);
         channel.SetMixerSampleRate(_sampleRateHz); // Tell channel about mixer rate
+        channel.SetMixerBlocksize(_blocksize); // Tell channel about actual blocksize
         channel.SampleRate = sampleRateHz;
         channel.AppVolume = new AudioFrame(1.0f, 1.0f);
         channel.UserVolume = new AudioFrame(1.0f, 1.0f);

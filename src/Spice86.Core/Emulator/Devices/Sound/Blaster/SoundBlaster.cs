@@ -395,6 +395,12 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     private void SetChannelRateHz(int requestedRateHz) {
         int rateHz = Math.Clamp(requestedRateHz, MinPlaybackRateHz, NativeDacRateHz);
         if (_dacChannel.SampleRate != rateHz) {
+            // Flush stale frames produced at the old rate to prevent them
+            // from being resampled at the new rate (which causes wrong pitch).
+            // In DOSBox staging this is not needed because the queue is tiny
+            // (single-threaded mixer), but Spice86's async queue can hold
+            // hundreds of frames that would otherwise play at the wrong speed.
+            _outputQueue.Flush();
             _dacChannel.SampleRate = rateHz;
         }
     }
