@@ -171,7 +171,7 @@ public partial class SoundBlaster {
             private readonly SbInfo _sb;
             private readonly IEmulatedClock _clock;
 
-            private float _lastWriteMs;
+            private double _lastWriteMs;
             private int _currentRateHz = MinPlaybackRateHz;
             private int _sequentialChangesTally;
 
@@ -192,17 +192,17 @@ public partial class SoundBlaster {
             // the DAC is being written to and generate frame by frame. To support
             // this, we need to measure the rate the DAC is being written to.
             public int? MeasureDacRateHz() {
-                float currWriteMs = (float)_clock.ElapsedTimeMs;
-                float elapsedMs = currWriteMs - _lastWriteMs;
+                double currWriteMs = _clock.ElapsedTimeMs;
+                double elapsedMs = currWriteMs - _lastWriteMs;
                 _lastWriteMs = currWriteMs;
 
                 if (elapsedMs <= 0) {
                     return null;
                 }
 
-                float measuredRate = MillisInSecond / elapsedMs;
+                double measuredRate = MillisInSecond / elapsedMs;
 
-                float changePct = Math.Abs(measuredRate - _currentRateHz) / _currentRateHz;
+                double changePct = Math.Abs(measuredRate - _currentRateHz) / _currentRateHz;
 
                 _sequentialChangesTally = (changePct > PercentDifferenceThreshold)
                     ? _sequentialChangesTally + 1

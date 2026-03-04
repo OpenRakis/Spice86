@@ -1791,7 +1791,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void GenerateFrames(int frames_requested) {
-        if(!OutputQueue.IsRunning) {
+        if (!OutputQueue.IsRunning) {
             return;
         }
         switch (_sb.Mode) {
