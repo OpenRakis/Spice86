@@ -374,10 +374,10 @@ public partial class SoundBlaster {
     private readonly EventHandler _perTickHandler;
     private readonly EventHandler _perFrameHandler;
 
-    private Func<ReadOnlySpan<byte>, int, float> _toFloatUnsigned8;
-    private Func<ReadOnlySpan<sbyte>, int, float> _toFloatSigned8;
-    private Func<ReadOnlySpan<ushort>, int, float> _toFloatUnsigned16;
-    private Func<ReadOnlySpan<short>, int, float> _toFloatSigned16;
+    private readonly Func<ReadOnlySpan<byte>, int, float> _toFloatUnsigned8;
+    private readonly Func<ReadOnlySpan<sbyte>, int, float> _toFloatSigned8;
+    private readonly Func<ReadOnlySpan<ushort>, int, float> _toFloatUnsigned16;
+    private readonly Func<ReadOnlySpan<short>, int, float> _toFloatSigned16;
 
     private const int MaxSingleFrameBaseCount = sizeof(short) * 2 - 1;
 }
