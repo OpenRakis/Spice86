@@ -84,6 +84,656 @@ public partial class SoundBlaster {
 
     private enum TimingType { None, PerTick, PerFrame }
 
+    /// <summary>
+    /// Sound Blaster port offsets relative to the base address.
+    /// </summary>
+    public enum SoundBlasterPortOffset : byte {
+        /// <summary>
+        /// Mixer index register.
+        /// </summary>
+        MixerIndex = 0x04,
+
+        /// <summary>
+        /// Mixer data register.
+        /// </summary>
+        MixerData = 0x05,
+
+        /// <summary>
+        /// DSP reset register (read/write).
+        /// </summary>
+        DspReset = 0x06,
+
+        /// <summary>
+        /// DSP read data register.
+        /// </summary>
+        DspReadData = 0x0A,
+
+        /// <summary>
+        /// DSP write command/data register.
+        /// </summary>
+        DspWriteData = 0x0C,
+
+        /// <summary>
+        /// DSP write buffer status (bit 7 = buffer full).
+        /// </summary>
+        DspWriteStatus = 0x0C,
+
+        /// <summary>
+        /// DSP read buffer status (bit 7 = data available). Also acknowledges 8-bit IRQ.
+        /// </summary>
+        DspReadStatus = 0x0E,
+
+        /// <summary>
+        /// DSP 16-bit IRQ acknowledge.
+        /// </summary>
+        DspAck16Bit = 0x0F
+    }
+
+    /// <summary>
+    /// DSP command codes for Sound Blaster.
+    /// </summary>
+    public enum DspCommand : byte {
+        /// <summary>
+        /// DSP status (SB 2.0/Pro only, not SB16). For SB16, this is ASP set mode register.
+        /// </summary>
+        DspStatusOrAspSetMode = 0x04,
+
+        /// <summary>
+        /// SB16 ASP set codec parameter.
+        /// </summary>
+        AspSetCodecParameter = 0x05,
+
+        /// <summary>
+        /// SB16 ASP get version.
+        /// </summary>
+        AspGetVersion = 0x08,
+
+        /// <summary>
+        /// SB16 ASP set register.
+        /// </summary>
+        AspSetRegister = 0x0E,
+
+        /// <summary>
+        /// SB16 ASP get register.
+        /// </summary>
+        AspGetRegister = 0x0F,
+
+        /// <summary>
+        /// Direct DAC output (8-bit).
+        /// </summary>
+        DirectDac = 0x10,
+
+        /// <summary>
+        /// Single cycle 8-bit DMA DAC.
+        /// </summary>
+        SingleCycle8BitDmaDac = 0x14,
+
+        /// <summary>
+        /// Single cycle 8-bit DMA DAC (Wari hack).
+        /// </summary>
+        SingleCycle8BitDmaDacWari = 0x15,
+
+        /// <summary>
+        /// Single cycle 2-bit ADPCM.
+        /// </summary>
+        SingleCycleAdpcm2Bit = 0x16,
+
+        /// <summary>
+        /// Single cycle 2-bit ADPCM with reference byte.
+        /// </summary>
+        SingleCycleAdpcm2BitRef = 0x17,
+
+        /// <summary>
+        /// Auto-init 8-bit DMA.
+        /// </summary>
+        AutoInit8BitDma = 0x1C,
+
+        /// <summary>
+        /// Creative Parrot - fake silent input.
+        /// </summary>
+        CreativeParrotInput = 0x20,
+
+        /// <summary>
+        /// Single cycle 8-bit DMA ADC.
+        /// </summary>
+        SingleCycle8BitDmaAdc = 0x24,
+
+        /// <summary>
+        /// Unimplemented input command.
+        /// </summary>
+        UnimplementedInput2C = 0x2C,
+
+        /// <summary>
+        /// Unimplemented MIDI I/O command.
+        /// </summary>
+        UnimplementedMidiIo30 = 0x30,
+
+        /// <summary>
+        /// Unimplemented MIDI I/O command.
+        /// </summary>
+        UnimplementedMidiIo31 = 0x31,
+
+        /// <summary>
+        /// Unimplemented MIDI UART command.
+        /// </summary>
+        UnimplementedMidiUart34 = 0x34,
+
+        /// <summary>
+        /// Unimplemented MIDI UART command.
+        /// </summary>
+        UnimplementedMidiUart35 = 0x35,
+
+        /// <summary>
+        /// Unimplemented MIDI UART command.
+        /// </summary>
+        UnimplementedMidiUart36 = 0x36,
+
+        /// <summary>
+        /// Unimplemented MIDI UART command.
+        /// </summary>
+        UnimplementedMidiUart37 = 0x37,
+
+        /// <summary>
+        /// Write to SB MIDI output.
+        /// </summary>
+        WriteMidiOutput = 0x38,
+
+        /// <summary>
+        /// Set time constant for playback rate.
+        /// </summary>
+        SetTimeConstant = 0x40,
+
+        /// <summary>
+        /// Set output sample rate (SB16).
+        /// </summary>
+        SetOutputSampleRate = 0x41,
+
+        /// <summary>
+        /// Set input sample rate (SB16, handled like 0x41).
+        /// </summary>
+        SetInputSampleRate = 0x42,
+
+        /// <summary>
+        /// Set DMA block size.
+        /// </summary>
+        SetDmaBlockSize = 0x48,
+
+        /// <summary>
+        /// Single cycle 4-bit ADPCM.
+        /// </summary>
+        SingleCycleAdpcm4Bit = 0x74,
+
+        /// <summary>
+        /// Single cycle 4-bit ADPCM with reference byte.
+        /// </summary>
+        SingleCycleAdpcm4BitRef = 0x75,
+
+        /// <summary>
+        /// Single cycle 3-bit (2.6-bit) ADPCM.
+        /// </summary>
+        SingleCycleAdpcm3Bit = 0x76,
+
+        /// <summary>
+        /// Single cycle 3-bit (2.6-bit) ADPCM with reference byte.
+        /// </summary>
+        SingleCycleAdpcm3BitRef = 0x77,
+
+        /// <summary>
+        /// Auto-init 4-bit ADPCM with reference byte.
+        /// </summary>
+        AutoInitAdpcm4BitRef = 0x7D,
+
+        /// <summary>
+        /// Unimplemented auto-init DMA ADPCM command.
+        /// </summary>
+        UnimplementedAutoInitAdpcm1F = 0x1F,
+
+        /// <summary>
+        /// Unimplemented auto-init DMA ADPCM command.
+        /// </summary>
+        UnimplementedAutoInitAdpcm7F = 0x7F,
+
+        /// <summary>
+        /// Silence DAC.
+        /// </summary>
+        SilenceDac = 0x80,
+
+        /// <summary>
+        /// Auto-init 8-bit DMA high speed (DSP 2.x/3.x).
+        /// </summary>
+        AutoInit8BitDmaHighSpeed = 0x90,
+
+        /// <summary>
+        /// Single cycle 8-bit DMA high speed DAC (DSP 2.x/3.x).
+        /// </summary>
+        SingleCycle8BitDmaHighSpeed = 0x91,
+
+        /// <summary>
+        /// Unimplemented input command (DSP 2.x/3.x).
+        /// </summary>
+        UnimplementedInput98 = 0x98,
+
+        /// <summary>
+        /// Unimplemented input command (DSP 2.x/3.x).
+        /// </summary>
+        UnimplementedInput99 = 0x99,
+
+        /// <summary>
+        /// Unimplemented input command.
+        /// </summary>
+        UnimplementedInputA0 = 0xA0,
+
+        /// <summary>
+        /// Unimplemented input command (DSP 3.x).
+        /// </summary>
+        UnimplementedInputA8 = 0xA8,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaB0 = 0xB0,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaB1 = 0xB1,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaB2 = 0xB2,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaB3 = 0xB3,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaB4 = 0xB4,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaB5 = 0xB5,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaB6 = 0xB6,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaB7 = 0xB7,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaB8 = 0xB8,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaB9 = 0xB9,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaBA = 0xBA,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaBB = 0xBB,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaBC = 0xBC,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaBD = 0xBD,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaBE = 0xBE,
+
+        /// <summary>
+        /// Generic 8-bit DMA command (SB16).
+        /// </summary>
+        Generic8BitDmaBF = 0xBF,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaC0 = 0xC0,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaC1 = 0xC1,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaC2 = 0xC2,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaC3 = 0xC3,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaC4 = 0xC4,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaC5 = 0xC5,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaC6 = 0xC6,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaC7 = 0xC7,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaC8 = 0xC8,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaC9 = 0xC9,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaCA = 0xCA,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaCB = 0xCB,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaCC = 0xCC,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaCD = 0xCD,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaCE = 0xCE,
+
+        /// <summary>
+        /// Generic 16-bit DMA command (SB16).
+        /// </summary>
+        Generic16BitDmaCF = 0xCF,
+
+        /// <summary>
+        /// Halt 8-bit DMA.
+        /// </summary>
+        Halt8BitDma = 0xD0,
+
+        /// <summary>
+        /// Enable speaker.
+        /// </summary>
+        EnableSpeaker = 0xD1,
+
+        /// <summary>
+        /// Disable speaker.
+        /// </summary>
+        DisableSpeaker = 0xD3,
+
+        /// <summary>
+        /// Continue 8-bit DMA.
+        /// </summary>
+        Continue8BitDma = 0xD4,
+
+        /// <summary>
+        /// Halt 16-bit DMA (SB16).
+        /// </summary>
+        Halt16BitDma = 0xD5,
+
+        /// <summary>
+        /// Continue 16-bit DMA (SB16).
+        /// </summary>
+        Continue16BitDma = 0xD6,
+
+        /// <summary>
+        /// Get speaker status.
+        /// </summary>
+        GetSpeakerStatus = 0xD8,
+
+        /// <summary>
+        /// Exit auto-initialize 8-bit DMA.
+        /// </summary>
+        ExitAutoInit8Bit = 0xDA,
+
+        /// <summary>
+        /// Exit auto-initialize 16-bit DMA (SB16).
+        /// </summary>
+        ExitAutoInit16Bit = 0xD9,
+
+        /// <summary>
+        /// DSP identification (SB2.0+).
+        /// </summary>
+        DspIdentification = 0xE0,
+
+        /// <summary>
+        /// Get DSP version.
+        /// </summary>
+        GetDspVersion = 0xE1,
+
+        /// <summary>
+        /// Weird DMA identification write routine.
+        /// </summary>
+        DmaIdentification = 0xE2,
+
+        /// <summary>
+        /// Get DSP copyright string.
+        /// </summary>
+        GetDspCopyright = 0xE3,
+
+        /// <summary>
+        /// Write test register.
+        /// </summary>
+        WriteTestRegister = 0xE4,
+
+        /// <summary>
+        /// ESS detect/read config.
+        /// </summary>
+        EssDetectReadConfig = 0xE7,
+
+        /// <summary>
+        /// Read test register.
+        /// </summary>
+        ReadTestRegister = 0xE8,
+
+        /// <summary>
+        /// Trigger 8-bit IRQ.
+        /// </summary>
+        Trigger8BitIrq = 0xF2,
+
+        /// <summary>
+        /// Trigger 16-bit IRQ (SB16).
+        /// </summary>
+        Trigger16BitIrq = 0xF3,
+
+        /// <summary>
+        /// Undocumented command (pre-SB16 only).
+        /// </summary>
+        UndocumentedF8 = 0xF8,
+
+        /// <summary>
+        /// SB16 ASP unknown function.
+        /// </summary>
+        AspUnknownFunction = 0xF9
+    }
+
+    /// <summary>
+    /// Sound Blaster mixer register indices.
+    /// </summary>
+    public enum MixerRegister : byte {
+        /// <summary>
+        /// Reset mixer.
+        /// </summary>
+        Reset = 0x00,
+
+        /// <summary>
+        /// Master volume (SB2 only).
+        /// </summary>
+        MasterVolumeSb2 = 0x02,
+
+        /// <summary>
+        /// DAC volume (SB Pro).
+        /// </summary>
+        DacVolumeSbPro = 0x04,
+
+        /// <summary>
+        /// FM output selection.
+        /// </summary>
+        FmOutputSelection = 0x06,
+
+        /// <summary>
+        /// CD audio volume (SB2 only).
+        /// </summary>
+        CdAudioVolumeSb2 = 0x08,
+
+        /// <summary>
+        /// Mic level (SB Pro) or DAC volume (SB2).
+        /// </summary>
+        MicLevelOrDacVolume = 0x0A,
+
+        /// <summary>
+        /// Output/stereo select and filter enable.
+        /// </summary>
+        OutputStereoSelect = 0x0E,
+
+        /// <summary>
+        /// Audio 1 play volume (ESS).
+        /// </summary>
+        Audio1PlayVolumeEss = 0x14,
+
+        /// <summary>
+        /// Master volume (SB Pro).
+        /// </summary>
+        MasterVolumeSbPro = 0x22,
+
+        /// <summary>
+        /// FM volume (SB Pro).
+        /// </summary>
+        FmVolumeSbPro = 0x26,
+
+        /// <summary>
+        /// CD audio volume (SB Pro).
+        /// </summary>
+        CdAudioVolumeSbPro = 0x28,
+
+        /// <summary>
+        /// Line-in volume (SB Pro).
+        /// </summary>
+        LineInVolumeSbPro = 0x2E,
+
+        /// <summary>
+        /// Master volume left (SB16).
+        /// </summary>
+        MasterVolumeLeft = 0x30,
+
+        /// <summary>
+        /// Master volume right (SB16).
+        /// </summary>
+        MasterVolumeRight = 0x31,
+
+        /// <summary>
+        /// DAC volume left (SB16) or master volume (ESS).
+        /// </summary>
+        DacVolumeLeftOrMasterEss = 0x32,
+
+        /// <summary>
+        /// DAC volume right (SB16).
+        /// </summary>
+        DacVolumeRight = 0x33,
+
+        /// <summary>
+        /// FM volume left (SB16).
+        /// </summary>
+        FmVolumeLeft = 0x34,
+
+        /// <summary>
+        /// FM volume right (SB16).
+        /// </summary>
+        FmVolumeRight = 0x35,
+
+        /// <summary>
+        /// CD audio volume left (SB16) or FM volume (ESS).
+        /// </summary>
+        CdAudioVolumeLeftOrFmEss = 0x36,
+
+        /// <summary>
+        /// CD audio volume right (SB16).
+        /// </summary>
+        CdAudioVolumeRight = 0x37,
+
+        /// <summary>
+        /// Line-in volume left (SB16) or CD audio volume (ESS).
+        /// </summary>
+        LineInVolumeLeftOrCdEss = 0x38,
+
+        /// <summary>
+        /// Line-in volume right (SB16).
+        /// </summary>
+        LineInVolumeRight = 0x39,
+
+        /// <summary>
+        /// Mic volume (SB16).
+        /// </summary>
+        MicVolume = 0x3A,
+
+        /// <summary>
+        /// Line volume (ESS).
+        /// </summary>
+        LineVolumeEss = 0x3E,
+
+        /// <summary>
+        /// ESS identification value (ES1488 and later).
+        /// </summary>
+        EssIdentification = 0x40,
+
+        /// <summary>
+        /// IRQ select register.
+        /// </summary>
+        IrqSelect = 0x80,
+
+        /// <summary>
+        /// DMA select register.
+        /// </summary>
+        DmaSelect = 0x81,
+
+        /// <summary>
+        /// IRQ status register.
+        /// </summary>
+        IrqStatus = 0x82
+    }
+
     private class SbInfo {
         private readonly IEmulatedClock _clock;
 

@@ -175,19 +175,19 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         byte result;
         int offset = port - _config.BaseAddress;
         switch (offset) {
-            case 0x04: // MixerIndex
+            case (byte)SoundBlasterPortOffset.MixerIndex:
                 result = _sb.Mixer.Index;
                 return result;
 
-            case 0x05: // MixerData
+            case (byte)SoundBlasterPortOffset.MixerData:
                 result = CtmixerRead();
                 return result;
 
-            case 0x0A: // DspReadData
+            case (byte)SoundBlasterPortOffset.DspReadData:
                 result = DspReadData();
                 return result;
 
-            case 0x0C: { // DspWriteStatus
+            case (byte)SoundBlasterPortOffset.DspWriteStatus: {
                     // Bit 7 = 1 means buffer at capacity (not ready to receive).
                     // Lower 7 bits are always 1.
                     byte writeStatus = 0x7F; // lower 7 bits always set
@@ -197,7 +197,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     return writeStatus;
                 }
 
-            case 0x0E: { // DspReadStatus
+            case (byte)SoundBlasterPortOffset.DspReadStatus: {
                     // Acknowledges 8-bit IRQ. Bit 7 = 1 if output FIFO has data.
                     // Lower 7 bits are always 1.
                     if (_sb.Irq.Pending8Bit) {
@@ -211,11 +211,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     return readStatus;
                 }
 
-            case 0x0F: // DspAck16Bit
+            case (byte)SoundBlasterPortOffset.DspAck16Bit:
                 _sb.Irq.Pending16Bit = false;
                 return 0xFF;
 
-            case 0x06: // DspReset read
+            case (byte)SoundBlasterPortOffset.DspReset:
                 return 0xFF;
 
             default:
@@ -226,16 +226,16 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     public override void WriteByte(ushort port, byte value) {
         int offset = port - _config.BaseAddress;
         switch (offset) {
-            case 0x06:
+            case (byte)SoundBlasterPortOffset.DspReset:
                 DspDoReset(value);
                 break;
-            case 0x0C:
+            case (byte)SoundBlasterPortOffset.DspWriteData:
                 DspDoWrite(value);
                 break;
-            case 0x04:
+            case (byte)SoundBlasterPortOffset.MixerIndex:
                 _sb.Mixer.Index = value;
                 break;
-            case 0x05:
+            case (byte)SoundBlasterPortOffset.MixerData:
                 CtmixerWrite(value);
                 break;
             case 0x07:
@@ -1056,32 +1056,29 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
     private void DspDoCommand() {
         switch (_sb.Dsp.Cmd) {
-            case 0x04:
+            case (byte)DspCommand.DspStatusOrAspSetMode:
                 if (_sb.Type == SbType.Sb16) {
-                    // Sb16 ASP set mode register or DSP Status
                     if ((_sb.Dsp.In.Data[0] & 0xf1) == 0xf1) {
                         _aspInitInProgress = true;
                     } else {
                         _aspInitInProgress = false;
                     }
                 } else {
-                    // DSP Status SB 2.0/pro version. NOT SB16.
                     DspFlushData();
                     if (_sb.Type == SbType.SB2) {
                         DspAddData(0x88);
                     } else if (_sb.Type is SbType.SBPro1 or SbType.SBPro2) {
                         DspAddData(0x7b);
                     } else {
-                        // Everything enabled
                         DspAddData(0xff);
                     }
                 }
                 break;
 
-            case 0x05: // SB16 ASP set codec parameter
+            case (byte)DspCommand.AspSetCodecParameter:
                 break;
 
-            case 0x08: // SB16 ASP get version
+            case (byte)DspCommand.AspGetVersion:
                 if (_sb.Type == SbType.Sb16) {
                     switch (_sb.Dsp.In.Data[0]) {
                         case 0x03:
@@ -1094,15 +1091,13 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x0e:
-                // Sb16 ASP set register
+            case (byte)DspCommand.AspSetRegister:
                 if (_sb.Type == SbType.Sb16) {
                     _aspRegs[_sb.Dsp.In.Data[0]] = _sb.Dsp.In.Data[1];
                 }
                 break;
 
-            case 0x0f:
-                // Sb16 ASP get register
+            case (byte)DspCommand.AspGetRegister:
                 if (_sb.Type == SbType.Sb16) {
                     if (_aspInitInProgress && (_sb.Dsp.In.Data[0] == 0x83)) {
                         _aspRegs[0x83] = (byte)~_aspRegs[0x83];
@@ -1111,8 +1106,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x10:
-                // Direct DAC
+            case (byte)DspCommand.DirectDac:
                 DspChangeMode(DspMode.Dac);
                 if (MaybeWakeUp()) {
                     // If we're waking up, then the DAC hasn't been running
@@ -1131,51 +1125,41 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x24:
-                // Single Cycle 8-Bit DMA ADC
+            case (byte)DspCommand.SingleCycle8BitDmaAdc:
                 _sb.Dma.Left = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
                 _sb.Dma.Sign = false;
                 _dmaBus.GetChannel(_sb.Hw.Dma8)?.RegisterCallback(DspAdcCallback);
                 break;
 
-            case 0x14: // Single Cycle 8-Bit DMA DAC
-                goto case 0x15;
+            case (byte)DspCommand.SingleCycle8BitDmaDac:
+                goto case (byte)DspCommand.SingleCycle8BitDmaDacWari;
 
-            case 0x15:
-                // Wari hack. Waru uses this one instead of 0x14, but some
-                // weird stuff going on there anyway
-                goto case 0x91;
+            case (byte)DspCommand.SingleCycle8BitDmaDacWari:
+                goto case (byte)DspCommand.SingleCycle8BitDmaHighSpeed;
 
-            case 0x91:
-                // Singe Cycle 8-Bit DMA High speed DAC
-                // Note: 0x91 is documented only for DSP ver.2.x and 3.x,
-                // not 4.x
+            case (byte)DspCommand.SingleCycle8BitDmaHighSpeed:
                 DspPrepareDmaOld(DmaMode.Pcm8Bit, false, false);
                 break;
 
-            case 0x1c: // Auto Init 8-bit DMA
-            case 0x90: // Auto Init 8-bit DMA High Speed
-                // Note: 0x90 is documented only for DSP ver.2.x and 3.x,
-                // not 4.x
+            case (byte)DspCommand.AutoInit8BitDma:
+            case (byte)DspCommand.AutoInit8BitDmaHighSpeed:
                 if (_sb.Type > SbType.SB1) {
                     DspPrepareDmaOld(DmaMode.Pcm8Bit, true, false);
                 }
                 break;
 
-            case 0x38:
-                // Write to SB MIDI Output
+            case (byte)DspCommand.WriteMidiOutput:
                 if (_sb.MidiEnabled) {
                     // TODO: Forward to MIDI subsystem
                 }
                 break;
 
-            case 0x40:
-                // Set Timeconstant
+            case (byte)DspCommand.SetTimeConstant:
                 DspChangeRate((uint)(1000000 / (256 - _sb.Dsp.In.Data[0])));
                 break;
 
-            case 0x41: // Set Output/Input Samplerate
-            case 0x42:
+            case (byte)DspCommand.SetOutputSampleRate:
+            case (byte)DspCommand.SetInputSampleRate:
                 // Note: 0x42 is handled like 0x41, needed by Fasttracker II
                 if (_sb.Type == SbType.Sb16) {
                     uint rate = (uint)((_sb.Dsp.In.Data[0] << 8) | _sb.Dsp.In.Data[1]);
@@ -1188,86 +1172,82 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x48:
-                // Set DMA Block Size
+            case (byte)DspCommand.SetDmaBlockSize:
                 if (_sb.Type > SbType.SB1) {
                     _sb.Dma.AutoSize = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
                 }
                 break;
 
-            case 0x75:  // 075h : Single Cycle 4-bit ADPCM Reference
+            case (byte)DspCommand.SingleCycleAdpcm4BitRef:
                 _sb.Adpcm.HaveRef = true;
-                goto case 0x74;
+                goto case (byte)DspCommand.SingleCycleAdpcm4Bit;
 
-            case 0x74:  // 074h : Single Cycle 4-bit ADPCM
+            case (byte)DspCommand.SingleCycleAdpcm4Bit:
                 DspPrepareDmaOld(DmaMode.Adpcm4Bit, false, false);
                 break;
 
-            case 0x77: // 077h : Single Cycle 3-bit(2.6bit) ADPCM Reference
+            case (byte)DspCommand.SingleCycleAdpcm3BitRef:
                 _sb.Adpcm.HaveRef = true;
-                goto case 0x76;
+                goto case (byte)DspCommand.SingleCycleAdpcm3Bit;
 
-            case 0x76: // 076h : Single Cycle 3-bit(2.6bit) ADPCM
+            case (byte)DspCommand.SingleCycleAdpcm3Bit:
                 DspPrepareDmaOld(DmaMode.Adpcm3Bit, false, false);
                 break;
 
-            case 0x7d: // Auto Init 4-bit ADPCM Reference
+            case (byte)DspCommand.AutoInitAdpcm4BitRef:
                 if (_sb.Type > SbType.SB1) {
                     _sb.Adpcm.HaveRef = true;
                     DspPrepareDmaOld(DmaMode.Adpcm4Bit, true, false);
                 }
                 break;
 
-            case 0x17:  // 017h : Single Cycle 2-bit ADPCM Reference
+            case (byte)DspCommand.SingleCycleAdpcm2BitRef:
                 _sb.Adpcm.HaveRef = true;
-                goto case 0x16;
+                goto case (byte)DspCommand.SingleCycleAdpcm2Bit;
 
-            case 0x16: // 016h : Single Cycle 2-bit ADPCM
+            case (byte)DspCommand.SingleCycleAdpcm2Bit:
                 DspPrepareDmaOld(DmaMode.Adpcm2Bit, false, false);
                 break;
 
-            case 0x80: // Silence DAC
-                {
+            case (byte)DspCommand.SilenceDac: {
                     uint samples = (uint)(1 + _sb.Dsp.In.Data[0] + (_sb.Dsp.In.Data[1] << 8));
                     double delayMs = (1000.0 * samples) / _sb.FreqHz;
                     _scheduler.AddEvent(DspRaiseIrqEvent, delayMs, 0);
                 }
                 break;
 
-            // Generic 8/16-bit DMA commands (SB16 only) - 0xB0-0xCF
-            case 0xb0:
-            case 0xb1:
-            case 0xb2:
-            case 0xb3:
-            case 0xb4:
-            case 0xb5:
-            case 0xb6:
-            case 0xb7:
-            case 0xb8:
-            case 0xb9:
-            case 0xba:
-            case 0xbb:
-            case 0xbc:
-            case 0xbd:
-            case 0xbe:
-            case 0xbf:
-            case 0xc0:
-            case 0xc1:
-            case 0xc2:
-            case 0xc3:
-            case 0xc4:
-            case 0xc5:
-            case 0xc6:
-            case 0xc7:
-            case 0xc8:
-            case 0xc9:
-            case 0xca:
-            case 0xcb:
-            case 0xcc:
-            case 0xcd:
-            case 0xce:
-            case 0xcf:
-                // Generic 8/16 bit DMA commands (SB16 only)
+            case (byte)DspCommand.Generic8BitDmaB0:
+            case (byte)DspCommand.Generic8BitDmaB1:
+            case (byte)DspCommand.Generic8BitDmaB2:
+            case (byte)DspCommand.Generic8BitDmaB3:
+            case (byte)DspCommand.Generic8BitDmaB4:
+            case (byte)DspCommand.Generic8BitDmaB5:
+            case (byte)DspCommand.Generic8BitDmaB6:
+            case (byte)DspCommand.Generic8BitDmaB7:
+            case (byte)DspCommand.Generic8BitDmaB8:
+            case (byte)DspCommand.Generic8BitDmaB9:
+            case (byte)DspCommand.Generic8BitDmaBA:
+            case (byte)DspCommand.Generic8BitDmaBB:
+            case (byte)DspCommand.Generic8BitDmaBC:
+            case (byte)DspCommand.Generic8BitDmaBD:
+            case (byte)DspCommand.Generic8BitDmaBE:
+            case (byte)DspCommand.Generic8BitDmaBF:
+            case (byte)DspCommand.Generic16BitDmaC0:
+            case (byte)DspCommand.Generic16BitDmaC1:
+            case (byte)DspCommand.Generic16BitDmaC2:
+            case (byte)DspCommand.Generic16BitDmaC3:
+            case (byte)DspCommand.Generic16BitDmaC4:
+            case (byte)DspCommand.Generic16BitDmaC5:
+            case (byte)DspCommand.Generic16BitDmaC6:
+            case (byte)DspCommand.Generic16BitDmaC7:
+            case (byte)DspCommand.Generic16BitDmaC8:
+            case (byte)DspCommand.Generic16BitDmaC9:
+            case (byte)DspCommand.Generic16BitDmaCA:
+            case (byte)DspCommand.Generic16BitDmaCB:
+            case (byte)DspCommand.Generic16BitDmaCC:
+            case (byte)DspCommand.Generic16BitDmaCD:
+            case (byte)DspCommand.Generic16BitDmaCE:
+            case (byte)DspCommand.Generic16BitDmaCF:
                 if (_sb.Type != SbType.Sb16) {
                     break;
                 }
@@ -1285,31 +1265,26 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 DspPrepareDmaNew(is16Bit ? DmaMode.Pcm16Bit : DmaMode.Pcm8Bit, length, autoInit, stereo);
                 break;
 
-            case 0xd5:
-                // Halt 16-bit DMA
+            case (byte)DspCommand.Halt16BitDma:
                 if (_sb.Type == SbType.Sb16) {
-                    goto case 0xd0;
+                    goto case (byte)DspCommand.Halt8BitDma;
                 }
                 break;
 
-            case 0xd0:
-                // Halt 8-bit DMA
+            case (byte)DspCommand.Halt8BitDma:
                 _sb.Mode = DspMode.DmaPause;
                 _scheduler.RemoveEvents(ProcessDmaTransferEvent);
                 break;
 
-            case 0xd1:
-                // Enable Speaker
+            case (byte)DspCommand.EnableSpeaker:
                 SetSpeakerEnabled(true);
                 break;
 
-            case 0xd3:
-                // Disable Speaker
+            case (byte)DspCommand.DisableSpeaker:
                 SetSpeakerEnabled(false);
                 break;
 
-            case 0xd8:
-                // Speaker status
+            case (byte)DspCommand.GetSpeakerStatus:
                 if (_sb.Type <= SbType.SB1) {
                     break;
                 }
@@ -1325,43 +1300,37 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0xd6:
-                // Continue DMA 16-bit
+            case (byte)DspCommand.Continue16BitDma:
                 if (_sb.Type != SbType.Sb16) {
                     break;
                 }
-                goto case 0xd4;
+                goto case (byte)DspCommand.Continue8BitDma;
 
-            case 0xd4:
-                // Continue DMA 8-bit
+            case (byte)DspCommand.Continue8BitDma:
                 if (_sb.Mode == DspMode.DmaPause) {
                     _sb.Mode = DspMode.DmaMasked;
                     _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
                 }
                 break;
 
-            case 0xd9:
-                // Exit Autoinitialize 16-bit
+            case (byte)DspCommand.ExitAutoInit16Bit:
                 if (_sb.Type == SbType.Sb16) {
-                    goto case 0xda;
+                    goto case (byte)DspCommand.ExitAutoInit8Bit;
                 }
                 break;
 
-            case 0xda:
-                // Exit Autoinitialize 8-bit
+            case (byte)DspCommand.ExitAutoInit8Bit:
                 if (_sb.Type > SbType.SB1) {
-                    // Should stop itself
                     _sb.Dma.AutoInit = false;
                 }
                 break;
 
-            case 0xe0: // DSP Identification - SB2.0+
+            case (byte)DspCommand.DspIdentification:
                 DspFlushData();
                 DspAddData((byte)~_sb.Dsp.In.Data[0]);
                 break;
 
-            case 0xe1:
-                // Get DSP Version
+            case (byte)DspCommand.GetDspVersion:
                 DspFlushData();
                 switch (_sb.Type) {
                     case SbType.SB1:
@@ -1392,8 +1361,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0xe2:
-                // Weird DMA identification write routine
+            case (byte)DspCommand.DmaIdentification:
                 for (int i = 0; i < 8; i++) {
                     if (((_sb.Dsp.In.Data[0] >> i) & 0x01) != 0) {
                         _sb.E2.Value += E2IncrTable[_sb.E2.Count % 4][i];
@@ -1401,12 +1369,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 _sb.E2.Value += E2IncrTable[_sb.E2.Count % 4][8];
                 _sb.E2.Count++;
-                // Register callback to write E2 value when DMA is unmasked
                 _dmaBus.GetChannel(_sb.Hw.Dma8)?.RegisterCallback(DspE2DmaCallback);
                 break;
 
-            case 0xe3:
-                // DSP Copyright
+            case (byte)DspCommand.GetDspCopyright:
                 DspFlushData();
                 if (_sb.EssType != EssType.None) {
                     DspAddData(0);
@@ -1418,12 +1384,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0xe4:
-                // Write Test Register
+            case (byte)DspCommand.WriteTestRegister:
                 _sb.Dsp.TestRegister = _sb.Dsp.In.Data[0];
                 break;
 
-            case 0xe7: // ESS detect/read config
+            case (byte)DspCommand.EssDetectReadConfig:
                 switch (_sb.EssType) {
                     case EssType.None:
                         break;
@@ -1437,43 +1402,39 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0xe8:
-                // Read Test Register
+            case (byte)DspCommand.ReadTestRegister:
                 DspFlushData();
                 DspAddData(_sb.Dsp.TestRegister);
                 break;
 
-            case 0xf2:
-                // Trigger 8bit IRQ
+            case (byte)DspCommand.Trigger8BitIrq:
                 // Small delay to emulate DSP slowness, fixes Llamatron 2012 and Lemmings 3D
                 _scheduler.AddEvent(DspRaiseIrqEvent, 0.01, 0);
                 break;
 
-            case 0xf3:
-                // Trigger 16bit IRQ
+            case (byte)DspCommand.Trigger16BitIrq:
                 if (_sb.Type == SbType.Sb16) {
                     RaiseIrq(SbIrq.Irq16);
                 }
                 break;
 
-            case 0xf8:
-                // Undocumented, pre-Sb16 only
+            case (byte)DspCommand.UndocumentedF8:
                 DspFlushData();
                 DspAddData(0);
                 break;
 
-            case 0x30:
-            case 0x31:
+            case (byte)DspCommand.UnimplementedMidiIo30:
+            case (byte)DspCommand.UnimplementedMidiIo31:
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error("DSP:Unimplemented MIDI I/O command {Cmd:X2}",
                                         _sb.Dsp.Cmd);
                 }
                 break;
 
-            case 0x34:
-            case 0x35:
-            case 0x36:
-            case 0x37:
+            case (byte)DspCommand.UnimplementedMidiUart34:
+            case (byte)DspCommand.UnimplementedMidiUart35:
+            case (byte)DspCommand.UnimplementedMidiUart36:
+            case (byte)DspCommand.UnimplementedMidiUart37:
                 if (_sb.Type > SbType.SB1) {
                     if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                         _loggerService.Error("DSP:Unimplemented MIDI UART command {Cmd:X2}",
@@ -1482,8 +1443,8 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x7f:
-            case 0x1f:
+            case (byte)DspCommand.UnimplementedAutoInitAdpcm7F:
+            case (byte)DspCommand.UnimplementedAutoInitAdpcm1F:
                 if (_sb.Type > SbType.SB1) {
                     if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                         _loggerService.Error("DSP:Unimplemented auto-init DMA ADPCM command {Cmd:X2}",
@@ -1492,25 +1453,23 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x20:
-                DspAddData(0x7f); // Fake silent input for Creative parrot
+            case (byte)DspCommand.CreativeParrotInput:
+                DspAddData(0x7f);
                 break;
 
-            case 0x2c:
-            case 0x98:
-            case 0x99: // Documented only for DSP 2.x and 3.x
-            case 0xa0:
-            case 0xa8: // Documented only for DSP 3.x
+            case (byte)DspCommand.UnimplementedInput2C:
+            case (byte)DspCommand.UnimplementedInput98:
+            case (byte)DspCommand.UnimplementedInput99:
+            case (byte)DspCommand.UnimplementedInputA0:
+            case (byte)DspCommand.UnimplementedInputA8:
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error("DSP:Unimplemented input command {Cmd:X2}",
                                         _sb.Dsp.Cmd);
                 }
                 break;
 
-            case 0xf9:
-                // Sb16 ASP unknown function
+            case (byte)DspCommand.AspUnknownFunction:
                 if (_sb.Type == SbType.Sb16) {
-                    // Just feed it what it expects
                     switch (_sb.Dsp.In.Data[0]) {
                         case 0x0b: DspAddData(0x00); break;
                         case 0x0e: DspAddData(0xff); break;
@@ -2093,21 +2052,21 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
     private void CtmixerWrite(byte value) {
         switch (_sb.Mixer.Index) {
-            case 0x00: // Reset
+            case (byte)MixerRegister.Reset:
                 CtmixerReset();
                 break;
 
-            case 0x02: // Master Volume (SB2 Only)
+            case (byte)MixerRegister.MasterVolumeSb2:
                 WriteSbProVolume(_sb.Mixer.Master, (byte)((value & 0x0F) | (value << 4)));
                 CtmixerUpdateVolumes();
                 break;
 
-            case 0x04: // DAC Volume (SBPRO)
+            case (byte)MixerRegister.DacVolumeSbPro:
                 WriteSbProVolume(_sb.Mixer.Dac, value);
                 CtmixerUpdateVolumes();
                 break;
 
-            case 0x06: { // FM output selection
+            case (byte)MixerRegister.FmOutputSelection: {
                     WriteSbProVolume(_sb.Mixer.Fm, (byte)((value & 0x0F) | (value << 4)));
                     CtmixerUpdateVolumes();
 
@@ -2119,12 +2078,12 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x08: // CDA Volume (SB2 Only)
+            case (byte)MixerRegister.CdAudioVolumeSb2:
                 WriteSbProVolume(_sb.Mixer.Cda, (byte)((value & 0x0F) | (value << 4)));
                 CtmixerUpdateVolumes();
                 break;
 
-            case 0x0A: // Mic Level (SBPRO) or DAC Volume (SB2)
+            case (byte)MixerRegister.MicLevelOrDacVolume:
                 if (_sb.Type == SbType.SB2) {
                     byte dacValue = (byte)(((value & 0x06) << 2) | 3);
                     _sb.Mixer.Dac[0] = dacValue;
@@ -2135,7 +2094,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x0E: {
+            case (byte)MixerRegister.OutputStereoSelect: {
                     _sb.Mixer.StereoEnabled = (value & 0x02) != 0;
 
                     if (_sb.Type == SbType.SBPro2) {
@@ -2163,47 +2122,47 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x14: // Audio 1 Play Volume (ESS)
+            case (byte)MixerRegister.Audio1PlayVolumeEss:
                 if (_sb.EssType != EssType.None) {
                     WriteEssVolume(value, _sb.Mixer.Dac);
                     CtmixerUpdateVolumes();
                 }
                 break;
 
-            case 0x22: // Master Volume (SBPRO)
+            case (byte)MixerRegister.MasterVolumeSbPro:
                 WriteSbProVolume(_sb.Mixer.Master, value);
                 CtmixerUpdateVolumes();
                 break;
 
-            case 0x26: // FM Volume (SBPRO)
+            case (byte)MixerRegister.FmVolumeSbPro:
                 WriteSbProVolume(_sb.Mixer.Fm, value);
                 CtmixerUpdateVolumes();
                 break;
 
-            case 0x28: // CD Audio Volume (SBPRO)
+            case (byte)MixerRegister.CdAudioVolumeSbPro:
                 WriteSbProVolume(_sb.Mixer.Cda, value);
                 CtmixerUpdateVolumes();
                 break;
 
-            case 0x2E: // Line-in Volume (SBPRO)
+            case (byte)MixerRegister.LineInVolumeSbPro:
                 WriteSbProVolume(_sb.Mixer.Lin, value);
                 break;
 
-            case 0x30: // Master Volume Left (SB16)
+            case (byte)MixerRegister.MasterVolumeLeft:
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Mixer.Master[0] = (byte)(value >> 3);
                     CtmixerUpdateVolumes();
                 }
                 break;
 
-            case 0x31: // Master Volume Right (SB16)
+            case (byte)MixerRegister.MasterVolumeRight:
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Mixer.Master[1] = (byte)(value >> 3);
                     CtmixerUpdateVolumes();
                 }
                 break;
 
-            case 0x32:
+            case (byte)MixerRegister.DacVolumeLeftOrMasterEss:
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Mixer.Dac[0] = (byte)(value >> 3);
                     CtmixerUpdateVolumes();
@@ -2213,28 +2172,28 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x33: // DAC Volume Right (SB16)
+            case (byte)MixerRegister.DacVolumeRight:
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Mixer.Dac[1] = (byte)(value >> 3);
                     CtmixerUpdateVolumes();
                 }
                 break;
 
-            case 0x34: // FM Volume Left (SB16)
+            case (byte)MixerRegister.FmVolumeLeft:
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Mixer.Fm[0] = (byte)(value >> 3);
                     CtmixerUpdateVolumes();
                 }
                 break;
 
-            case 0x35: // FM Volume Right (SB16)
+            case (byte)MixerRegister.FmVolumeRight:
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Mixer.Fm[1] = (byte)(value >> 3);
                     CtmixerUpdateVolumes();
                 }
                 break;
 
-            case 0x36:
+            case (byte)MixerRegister.CdAudioVolumeLeftOrFmEss:
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Mixer.Cda[0] = (byte)(value >> 3);
                     CtmixerUpdateVolumes();
@@ -2244,14 +2203,14 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x37: // CD Volume Right (SB16)
+            case (byte)MixerRegister.CdAudioVolumeRight:
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Mixer.Cda[1] = (byte)(value >> 3);
                     CtmixerUpdateVolumes();
                 }
                 break;
 
-            case 0x38:
+            case (byte)MixerRegister.LineInVolumeLeftOrCdEss:
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Mixer.Lin[0] = (byte)(value >> 3);
                 } else if (_sb.EssType != EssType.None) {
@@ -2260,25 +2219,25 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x39: // Line-in Volume Right (SB16)
+            case (byte)MixerRegister.LineInVolumeRight:
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Mixer.Lin[1] = (byte)(value >> 3);
                 }
                 break;
 
-            case 0x3A: // Mic Volume (SB16)
+            case (byte)MixerRegister.MicVolume:
                 if (_sb.Type == SbType.Sb16) {
                     _sb.Mixer.Mic = (byte)(value >> 3);
                 }
                 break;
 
-            case 0x3E: // Line Volume (ESS)
+            case (byte)MixerRegister.LineVolumeEss:
                 if (_sb.EssType != EssType.None) {
                     WriteEssVolume(value, _sb.Mixer.Lin);
                 }
                 break;
 
-            case 0x80: // IRQ Select
+            case (byte)MixerRegister.IrqSelect:
                 _sb.Hw.Irq = 0xFF;
                 if ((value & 0x01) != 0) {
                     _sb.Hw.Irq = 2;
@@ -2291,7 +2250,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x81: // DMA Select
+            case (byte)MixerRegister.DmaSelect:
                 _sb.Hw.Dma8 = 0xFF;
                 _sb.Hw.Dma16 = 0xFF;
 
@@ -2326,63 +2285,63 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         byte ret = 0;
 
         switch (_sb.Mixer.Index) {
-            case 0x00: // Reset
+            case (byte)MixerRegister.Reset:
                 return 0x00;
 
-            case 0x02: // Master Volume (SB2 only)
+            case (byte)MixerRegister.MasterVolumeSb2:
                 return (byte)((_sb.Mixer.Master[1] >> 1) & 0x0E);
 
-            case 0x14: // Audio 1 Play Volume (ESS)
+            case (byte)MixerRegister.Audio1PlayVolumeEss:
                 if (_sb.EssType != EssType.None) {
                     ret = ReadEssVolume(_sb.Mixer.Dac);
                 }
                 break;
 
-            case 0x22: // Master Volume (SB Pro)
+            case (byte)MixerRegister.MasterVolumeSbPro:
                 return ReadSbProVolume(_sb.Mixer.Master);
 
-            case 0x04: // DAC Volume (SB Pro)
+            case (byte)MixerRegister.DacVolumeSbPro:
                 return ReadSbProVolume(_sb.Mixer.Dac);
 
-            case 0x06: // FM Volume (SB2 only) + FM output selection
+            case (byte)MixerRegister.FmOutputSelection:
                 return (byte)((_sb.Mixer.Fm[1] >> 1) & 0x0E);
 
-            case 0x08: // CD Volume (SB2 only)
+            case (byte)MixerRegister.CdAudioVolumeSb2:
                 return (byte)((_sb.Mixer.Cda[1] >> 1) & 0x0E);
 
-            case 0x0A: // Mic Level (SB Pro) or Voice (SB2 only)
+            case (byte)MixerRegister.MicLevelOrDacVolume:
                 if (_sb.Type == SbType.SB2) {
                     return (byte)(_sb.Mixer.Dac[0] >> 2);
                 }
                 return (byte)((_sb.Mixer.Mic >> 2) & (_sb.Type == SbType.Sb16 ? 7 : 6));
 
-            case 0x0E: // Output/Stereo Select
+            case (byte)MixerRegister.OutputStereoSelect:
                 return (byte)(0x11 | (_sb.Mixer.StereoEnabled ? 0x02 : 0x00) | (_sb.Mixer.FilterEnabled ? 0x00 : 0x20));
 
-            case 0x26: // FM Volume (SB Pro)
+            case (byte)MixerRegister.FmVolumeSbPro:
                 return ReadSbProVolume(_sb.Mixer.Fm);
 
-            case 0x28: // CD Audio Volume (SB Pro)
+            case (byte)MixerRegister.CdAudioVolumeSbPro:
                 return ReadSbProVolume(_sb.Mixer.Cda);
 
-            case 0x2E: // Line-in Volume (SB Pro)
+            case (byte)MixerRegister.LineInVolumeSbPro:
                 return ReadSbProVolume(_sb.Mixer.Lin);
 
-            case 0x30: // Master Volume Left (SB16)
+            case (byte)MixerRegister.MasterVolumeLeft:
                 if (_sb.Type == SbType.Sb16) {
                     return (byte)(_sb.Mixer.Master[0] << 3);
                 }
                 ret = 0x0A;
                 break;
 
-            case 0x31: // Master Volume Right (SB16)
+            case (byte)MixerRegister.MasterVolumeRight:
                 if (_sb.Type == SbType.Sb16) {
                     return (byte)(_sb.Mixer.Master[1] << 3);
                 }
                 ret = 0x0A;
                 break;
 
-            case 0x32:
+            case (byte)MixerRegister.DacVolumeLeftOrMasterEss:
                 if (_sb.Type == SbType.Sb16) {
                     return (byte)(_sb.Mixer.Dac[0] << 3);
                 }
@@ -2392,28 +2351,28 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 ret = 0x0A;
                 break;
 
-            case 0x33: // DAC Volume Right (SB16)
+            case (byte)MixerRegister.DacVolumeRight:
                 if (_sb.Type == SbType.Sb16) {
                     return (byte)(_sb.Mixer.Dac[1] << 3);
                 }
                 ret = 0x0A;
                 break;
 
-            case 0x34: // FM Volume Left (SB16)
+            case (byte)MixerRegister.FmVolumeLeft:
                 if (_sb.Type == SbType.Sb16) {
                     return (byte)(_sb.Mixer.Fm[0] << 3);
                 }
                 ret = 0x0A;
                 break;
 
-            case 0x35: // FM Volume Right (SB16)
+            case (byte)MixerRegister.FmVolumeRight:
                 if (_sb.Type == SbType.Sb16) {
                     return (byte)(_sb.Mixer.Fm[1] << 3);
                 }
                 ret = 0x0A;
                 break;
 
-            case 0x36:
+            case (byte)MixerRegister.CdAudioVolumeLeftOrFmEss:
                 if (_sb.Type == SbType.Sb16) {
                     return (byte)(_sb.Mixer.Cda[0] << 3);
                 }
@@ -2423,14 +2382,14 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 ret = 0x0A;
                 break;
 
-            case 0x37: // CD Volume Right (SB16)
+            case (byte)MixerRegister.CdAudioVolumeRight:
                 if (_sb.Type == SbType.Sb16) {
                     return (byte)(_sb.Mixer.Cda[1] << 3);
                 }
                 ret = 0x0A;
                 break;
 
-            case 0x38:
+            case (byte)MixerRegister.LineInVolumeLeftOrCdEss:
                 if (_sb.Type == SbType.Sb16) {
                     return (byte)(_sb.Mixer.Lin[0] << 3);
                 }
@@ -2440,27 +2399,21 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 ret = 0x0A;
                 break;
 
-            case 0x39: // Line-in Volume Right (SB16)
+            case (byte)MixerRegister.LineInVolumeRight:
                 if (_sb.Type == SbType.Sb16) {
                     return (byte)(_sb.Mixer.Lin[1] << 3);
                 }
                 ret = 0x0A;
                 break;
 
-            case 0x3A: // Mic Volume (SB16)
+            case (byte)MixerRegister.MicVolume:
                 if (_sb.Type == SbType.Sb16) {
                     return (byte)(_sb.Mixer.Mic << 3);
                 }
                 ret = 0x0A;
                 break;
 
-            case 0x3E: // Line Volume (ESS)
-                if (_sb.EssType != EssType.None) {
-                    ret = ReadEssVolume(_sb.Mixer.Lin);
-                }
-                break;
-
-            case 0x40: // ESS Identification Value (ES1488 and later)
+            case (byte)MixerRegister.EssIdentification:
                 if (_sb.EssType is EssType.Es1688 or EssType.None) {
                     ret = _sb.Mixer.EssIdStr[_sb.Mixer.EssIdStrPos];
                     _sb.Mixer.EssIdStrPos++;
@@ -2472,7 +2425,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 break;
 
-            case 0x80: // IRQ Select
+            case (byte)MixerRegister.IrqSelect:
                 ret = 0;
                 return _sb.Hw.Irq switch {
                     2 => 0x01,
@@ -2481,7 +2434,8 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     10 => 0x08,
                     _ => ret,
                 };
-            case 0x81: // DMA Select
+
+            case (byte)MixerRegister.DmaSelect:
                 ret = 0;
                 switch (_sb.Hw.Dma8) {
                     case 0: ret |= 0x01; break;
@@ -2495,7 +2449,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 return ret;
 
-            case 0x82: // IRQ Status
+            case (byte)MixerRegister.IrqStatus:
                 return (byte)((_sb.Irq.Pending8Bit ? 0x01 : 0x00) |
                               (_sb.Irq.Pending16Bit ? 0x02 : 0x00) |
                               (_sb.Type == SbType.Sb16 ? 0x20 : 0x00));
