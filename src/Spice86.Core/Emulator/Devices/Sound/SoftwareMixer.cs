@@ -4,6 +4,7 @@ using Spice86.Audio.Backend.Audio;
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.VM;
+
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -19,8 +20,11 @@ using HighPassFilter = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.High
 public sealed class SoftwareMixer : IDisposable {
     private const int DefaultSampleRateHz = 48000;
 
+    // Longstanding known-good defaults for Windows
+    // Non-Windows platforms tolerate slightly lower latency
     private static readonly int DefaultBlocksize = System.OperatingSystem.IsWindows() ? 1024 : 512;
     private static readonly int DefaultPrebufferMs = System.OperatingSystem.IsWindows() ? 25 : 20;
+    private static readonly bool DefaultAllowNegotiate = !System.OperatingSystem.IsWindows();
 
     // This shows up nicely as 50% and -6.00 dB in the MIXER command's output
     private const float Minus6db = 0.501f;
@@ -95,12 +99,9 @@ public sealed class SoftwareMixer : IDisposable {
         _audioPlayerFactory = new AudioPlayerFactory(audioEngine);
 
         // Create the audio player with our sample rate and blocksize
-        _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize, _prebufferMs);
+        _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize, _prebufferMs, DefaultAllowNegotiate);
         if (_audioPlayer.Format.SampleRate > 0) {
             _sampleRateHz = _audioPlayer.Format.SampleRate;
-        }
-        if (_audioPlayer.BufferFrames > 0) {
-            _blocksize = _audioPlayer.BufferFrames;
         }
 
         // Initialize high-pass filters (2 channels - left and right)
@@ -276,7 +277,7 @@ public sealed class SoftwareMixer : IDisposable {
 
         SoundChannel channel = new(handler, name, features);
         channel.SetMixerSampleRate(_sampleRateHz); // Tell channel about mixer rate
-        channel.        SampleRate = sampleRateHz;
+        channel.SampleRate = sampleRateHz;
         channel.AppVolume = new AudioFrame(1.0f, 1.0f);
         channel.UserVolume = new AudioFrame(1.0f, 1.0f);
 
