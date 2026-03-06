@@ -42,7 +42,7 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
 
     // Three PIT channels are supported. Each uses the same state machine while addressing distinct peripherals.
     private readonly PitChannel[] _pitChannels = new PitChannel[3];
-    private readonly IWallClock _wallClock;
+    private readonly WallClock _wallClock;
 
     private bool _isChannel2GateHigh;
 
@@ -208,9 +208,7 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     ///     Reports the current channel 2 output level for consumers that poll the PPI mirror.
     /// </summary>
     /// <returns>True when the OUT signal is high; otherwise, false.</returns>
-    public bool IsChannel2OutputHigh() {
-        return IsChannelOutputHigh(Channel2);
-    }
+    public bool IsChannel2OutputHigh => IsChannelOutputHigh(Channel2);
 
     /// <summary>
     ///     Adjusts the PIT time multiplier applied to subsequent scheduling operations.

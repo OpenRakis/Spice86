@@ -225,7 +225,7 @@ public sealed class DmaChannel {
     /// <summary>
     ///     Clears the request line, signaling the transfer source no longer needs service.
     /// </summary>
-    private void ClearRequest() {
+    internal void ClearRequest() {
         HasRaisedRequest = false;
         _logger.Verbose("DMA[{Channel}]: Request line cleared", ChannelNumber);
     }
@@ -249,7 +249,7 @@ public sealed class DmaChannel {
                 destinationBuffer.Length);
         }
 
-        return ReadOrWrite(DmaDirection.Read, words, destinationBuffer, ReadOnlySpan<byte>.Empty);
+        return ReadOrWrite(DmaDirection.Read, words, destinationBuffer, []);
     }
 
     /// <summary>

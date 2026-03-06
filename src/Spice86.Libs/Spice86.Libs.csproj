@@ -1,9 +1,0 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-    <ItemGroup>
-        <PackageReference Include="NukedOPL3Sharp"/>
-        <PackageReference Include="Serilog" />
-    </ItemGroup>
-    <ItemGroup>
-        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj"/>
-    </ItemGroup>
-</Project>

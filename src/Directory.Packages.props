@@ -35,7 +35,7 @@
     <PackageVersion Include="Mt32emu.net" Version="1.0.0-rc.1" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
-      <PackageVersion Include="NukedOPL3Sharp" Version="1.1.0"/>
+    <PackageVersion Include="NukedOPL3Sharp" Version="1.1.0"/>
     <PackageVersion Include="OptimizedPriorityQueue" Version="5.1.0" />
     <PackageVersion Include="PanAndZoom" Version="11.3.9.1" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
@@ -54,5 +54,6 @@
     <PackageVersion Include="System.Text.Encoding.CodePages" Version="10.0.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.0" />
     <PackageVersion Include="Xaml.Behaviors.Avalonia" Version="11.3.9.3" />
+    <PackageVersion Include="Spice86.Audio" Version="11.3.0" />
   </ItemGroup>
 </Project>
