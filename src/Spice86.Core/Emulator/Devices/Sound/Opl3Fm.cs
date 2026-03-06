@@ -640,8 +640,6 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 --framesRemaining;
             }
             // Update last rendered time to now using the atomic snapshot.
-            // AudioCallback runs on the mixer thread, so we must use AtomicFullIndex
-            // to avoid torn reads of the emulation thread's cycle state.
             _lastRenderedMs = _clock.ElapsedTimeMs;
         }
     }
