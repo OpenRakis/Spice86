@@ -475,6 +475,8 @@ Doc [here](doc/cfgcpuReadme.md)
 
 Cryo dune:
 
+![](doc/cryodune_duke.png)
+
 ![](doc/cryodune_worm.png)
 
 ![](doc/cryodune_orni.png)
