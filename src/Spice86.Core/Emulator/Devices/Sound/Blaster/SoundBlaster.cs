@@ -1668,7 +1668,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void AddPerTickCallback() {
-        const double delay = 0.5; //0.1 is way too fast, 1 was too slow, 0.5 is perfect both with Dune and Krondor sound effects / voices
+        // 1 (old value): too much delays, underruns in Dune voices and sound effects
+        // 0.1: way too fast with Dune voices, lips moved at light speed
+        // 0.5: Good value for both Krondor and Dune
+        // 0.6: Good value, tested with Krondor, Dune, Prince of Persia, and Wolf3D
+        const double delay = 0.6;
         _scheduler.AddEvent(_perTickHandler, delay);
     }
 
