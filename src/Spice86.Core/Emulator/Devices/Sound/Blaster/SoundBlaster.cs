@@ -741,7 +741,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Dma.Left -= bytesRead;
 
         if (_sb.Dma.Left == 0) {
-            _scheduler.RemoveEvents(ProcessDmaTransferEvent);
+            _scheduler.RemoveEvents(PlayDmaTransfer);
 
             if (_sb.Dma.Mode >= DmaMode.Pcm16Bit) {
                 RaiseIrq(SbIrq.Irq16);
@@ -750,10 +750,13 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             }
 
             if (!_sb.Dma.AutoInit) {
+                // Not new single cycle transfer waiting?
                 if (_sb.Dma.SingleSize == 0) {
                     _sb.Mode = DspMode.None;
                     _sb.Dma.Mode = DmaMode.None;
                 } else {
+                    // A single size transfer is still waiting,
+                    // handle that now
                     _sb.Dma.Left = _sb.Dma.SingleSize;
                     _sb.Dma.SingleSize = 0;
                 }
@@ -761,6 +764,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 if (_sb.Dma.AutoSize == 0) {
                     _sb.Mode = DspMode.None;
                 }
+                // Continue with a new auto init transfer
                 _sb.Dma.Left = _sb.Dma.AutoSize;
             }
         }
@@ -1026,7 +1030,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         SetChannelRateHz(DefaultPlaybackRateHz);
         InitSpeakerState();
-        _scheduler.RemoveEvents(ProcessDmaTransferEvent);
+        _scheduler.RemoveEvents(PlayDmaTransfer);
     }
 
     private void DspDoWrite(byte value) {
@@ -1273,7 +1277,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
             case (byte)DspCommand.Halt8BitDma:
                 _sb.Mode = DspMode.DmaPause;
-                _scheduler.RemoveEvents(ProcessDmaTransferEvent);
+                _scheduler.RemoveEvents(PlayDmaTransfer);
                 break;
 
             case (byte)DspCommand.EnableSpeaker:
@@ -1540,14 +1544,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             _scheduler.AddEvent(SuppressDmaTransfer, delayMs, numBytes);
         } else if (_sb.Dma.Left < _sb.Dma.Min) {
             double delayMs = (_sb.Dma.Left * 1000.0) / _sb.Dma.Rate;
-            _scheduler.AddEvent(ProcessDmaTransferEvent, delayMs, _sb.Dma.Left);
-        }
-    }
-
-    private void ProcessDmaTransferEvent(uint bytesToProcess) {
-        if (_sb.Dma.Left > 0) {
-            uint toProcess = Math.Min(bytesToProcess, _sb.Dma.Left);
-            PlayDmaTransfer(toProcess);
+            _scheduler.AddEvent(PlayDmaTransfer, delayMs, _sb.Dma.Left);
         }
     }
 
@@ -1643,7 +1640,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
         _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
         SetChannelRateHz((int)freqHz);
-        _scheduler.RemoveEvents(ProcessDmaTransferEvent);
+        _scheduler.RemoveEvents(PlayDmaTransfer);
         _sb.Mode = DspMode.DmaMasked;
         _sb.Dma.Channel?.RegisterCallback(DspDmaCallback);
     }
@@ -1665,9 +1662,13 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         }
         _framesAddedThisTick -= total_frames;
         if (_timingType == TimingType.PerTick) {
-            double delay = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond).TotalMilliseconds;
-            _scheduler.AddEvent(_perTickHandler, delay);
+            AddPerTickCallback();
         }
+    }
+
+    private void AddPerTickCallback() {
+        const double delay = 0.5; //0.1 is way too fast, 1 was too slow, 0.5 is perfect both with Dune and Krondor sound effects / voices
+        _scheduler.AddEvent(_perTickHandler, delay);
     }
 
     private void PerFrameCallback() {
@@ -1675,23 +1676,23 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             SetCallbackNone();
             return;
         }
-        int mixer_needs = Math.Max(System.Threading.Interlocked.Exchange(ref _framesNeeded, 0), 1);
+        int mixerNeeds = Math.Max(System.Threading.Interlocked.Exchange(ref _framesNeeded, 0), 1);
 
         // Frames added this tick is only useful when we're in an underflow
         // situation with the mixer. GenerateFrames() may not give us
         // everything we need in a single call. We're not concerned about
         // over-filling while in this mode so just zero it out.
         _framesAddedThisTick = 0;
-        while (_framesAddedThisTick < mixer_needs) {
-            GenerateFrames(mixer_needs - _framesAddedThisTick);
+        while (_framesAddedThisTick < mixerNeeds) {
+            GenerateFrames(mixerNeeds - _framesAddedThisTick);
         }
 
         AddNextFrameCallback();
     }
 
     private void AddNextFrameCallback() {
-        double millisPerFrame = _dacChannel.MillisPerFrame;
-        _scheduler.AddEvent(_perFrameHandler, millisPerFrame, 0);
+        double delay = _dacChannel.MillisPerFrame;
+        _scheduler.AddEvent(_perFrameHandler, delay, 0);
     }
 
     private void SetCallbackNone() {
@@ -1710,8 +1711,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         if (_timingType != TimingType.PerTick) {
             SetCallbackNone();
             _framesAddedThisTick = 0;
-            double delay = TimeSpan.FromTicks(TimeSpan.TicksPerMillisecond).TotalMilliseconds;
-            _scheduler.AddEvent(_perTickHandler, delay);
+            AddPerTickCallback();
             _timingType = TimingType.PerTick;
         }
     }
