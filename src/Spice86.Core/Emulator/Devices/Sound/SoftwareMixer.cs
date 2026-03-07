@@ -3,11 +3,8 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Audio.Backend.Audio;
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
-using AudioFrame = Spice86.Audio.Common.AudioFrame;
 using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Interfaces;
 
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -17,100 +14,104 @@ using HighPassFilter = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.High
 /// <summary>
 /// Central audio mixer that runs in its own thread and produces final mixed output.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public sealed class SoftwareMixer : IDisposable {
     private const int DefaultSampleRateHz = 48000;
+
+    // Longstanding known-good defaults for Windows
+    // Non-Windows platforms tolerate slightly lower latency
     private static readonly int DefaultBlocksize = System.OperatingSystem.IsWindows() ? 1024 : 512;
     private static readonly int DefaultPrebufferMs = System.OperatingSystem.IsWindows() ? 25 : 20;
     private static readonly bool DefaultAllowNegotiate = !System.OperatingSystem.IsWindows();
-    private const int MaxPrebufferMs = 100;
 
     // This shows up nicely as 50% and -6.00 dB in the MIXER command's output
     private const float Minus6db = 0.501f;
 
-    private readonly ILoggerService _loggerService;
-    private readonly IPauseHandler _pauseHandler;
     private readonly AudioPlayerFactory _audioPlayerFactory;
     private readonly AudioPlayer _audioPlayer;
+    private readonly IPauseHandler _pauseHandler;
 
     // Channels registry - matches DOSBox mixer.channels
-    private readonly ConcurrentDictionary<string, SoundChannel> _channels = new();
+    private readonly Dictionary<string, SoundChannel> _channels = new();
+    private readonly Dictionary<string, SoundChannelSettings> _channelSettingsCache = new();
 
     // Queue notifiers for devices that run on the main thread.
     // The mixer thread can be waiting on these queues. We need to stop them
     // before acquiring the mutex lock to avoid a deadlock.
     private readonly List<IMixerQueueNotifier> _queueNotifiers = new();
 
-    // Mixer thread that produces and writes directly to PortAudio
+    // Mixer thread that produces audio and sends to the audio backend
     private readonly Thread _mixerThread;
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly Lock _mixerLock = new();
 
-    // Atomic state
     private volatile bool _threadShouldQuit;
-    private volatile int _sampleRateHz = DefaultSampleRateHz;
-    private volatile int _blocksize = DefaultBlocksize;
+    private readonly int _sampleRateHz = DefaultSampleRateHz;
+    private readonly int _blocksize = DefaultBlocksize;
+    private readonly int _prebufferMs = DefaultPrebufferMs;
 
-    // Master volume (atomic via Interlocked operations)
-    private AudioFrame _masterGain = new(Minus6db, Minus6db);
+    private AudioFrame _masterVolume = new(Minus6db, Minus6db);
 
     // Controls whether audio is playing, muted, or disabled
     private MixerState _state = MixerState.On;
-    private bool _isManuallyMuted = false;
 
-    private CrossfeedPreset _crossfeedPreset = CrossfeedPreset.None;
-    private ReverbPreset _reverbPreset = ReverbPreset.None;
-    private ChorusPreset _chorusPreset = ChorusPreset.None;
-
-    // Output buffers - matches DOSBox mixer output_buffer
     private readonly AudioFrameBuffer _outputBuffer = new(0);
     private readonly AudioFrameBuffer _reverbAuxBuffer = new(0);
     private readonly AudioFrameBuffer _chorusAuxBuffer = new(0);
 
     private bool _doCompressor = false;
-    private readonly Spice86.Audio.Filters.Compressor _compressor = new();
+    private readonly Compressor _compressor = new();
 
     // Reverb state - MVerb professional algorithmic reverb
-    private bool _doReverb = false;
+    private readonly bool _doReverb = false;
     private readonly MVerb _mverb = new();
-    private float _reverbSynthSendLevel = 0.0f;
-    private float _reverbDigitalSendLevel = 0.0f;
+    private readonly float _reverbSynthSendLevel = 0.0f;
+    private readonly float _reverbDigitalSendLevel = 0.0f;
 
-    // Chorus state - TAL-Chorus professional modulated chorus
-    private bool _doChorus = false;
-    private readonly Spice86.Audio.Filters.ChorusEngine _chorusEngine;
-    private float _chorusSynthSendLevel = 0.0f;
-    private float _chorusDigitalSendLevel = 0.0f;
+    private float _reverbLeftIn;
+    private float _reverbRightIn;
+
+    private readonly bool _doChorus = false;
+    private readonly ChorusEngine _chorusEngine;
+    private readonly float _chorusSynthSendLevel = 0.0f;
+    private readonly float _chorusDigitalSendLevel = 0.0f;
 
     // Crossfeed state - stereo mixing for headphone spatialization
-    private bool _doCrossfeed = false;
-    private float _crossfeedGlobalStrength = 0.0f; // Varies by preset: Light=0.20f, Normal=0.40f, Strong=0.60f
+    private readonly bool _doCrossfeed = false;
+    private readonly float _crossfeedGlobalStrength = 0.0f; // Varies by preset: Light=0.20f, Normal=0.40f, Strong=0.60f
 
     // Used on reverb input and master output
     private readonly HighPassFilter[] _reverbHighPassFilter;
     private readonly HighPassFilter[] _masterHighPassFilter;
     private const int HighPassFilterOrder = 2; // 2nd-order Butterworth
-    private const float ReverbHighPassCutoffHz = 120.0f; // Low-frequency cutoff for reverb
-    private const float MasterHighPassCutoffHz = 3.0f; // Very low DC-blocking filter for master
-
-    // Final output queue is not used; mixer writes directly
+    private const float MasterHighPassCutoffHz = 20.0f;
 
     private bool _disposed;
 
-    public SoftwareMixer(AudioEngine audioEngine, IPauseHandler pauseHandler, ILoggerService loggerService) {
+    /// <summary>
+    /// Creates a new Mixer instance.
+    /// </summary>
+    /// <param name="audioEngine">Audio engine to use.</param>
+    /// <param name="pauseHandler">Pause handler to mute audio when emulator is paused.</param>
+    public SoftwareMixer(AudioEngine audioEngine, IPauseHandler pauseHandler) {
         _pauseHandler = pauseHandler ?? throw new ArgumentNullException(nameof(pauseHandler));
-        _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
         _audioPlayerFactory = new AudioPlayerFactory(audioEngine);
 
         // Create the audio player with our sample rate and blocksize
-        _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize, DefaultPrebufferMs, DefaultAllowNegotiate);
+        _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize, _prebufferMs, DefaultAllowNegotiate);
+        if (_audioPlayer.Format.SampleRate > 0) {
+            _sampleRateHz = _audioPlayer.Format.SampleRate;
+        }
 
         // Initialize high-pass filters (2 channels - left and right)
         _reverbHighPassFilter = new HighPassFilter[2];
         _masterHighPassFilter = new HighPassFilter[2];
+        const float DefaultReverbHighPassHz = 200.0f;
 
         for (int i = 0; i < 2; i++) {
             _reverbHighPassFilter[i] = new HighPassFilter(HighPassFilterOrder);
-            _reverbHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, ReverbHighPassCutoffHz);
+            _reverbHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, DefaultReverbHighPassHz);
 
             _masterHighPassFilter[i] = new HighPassFilter(HighPassFilterOrder);
             _masterHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, MasterHighPassCutoffHz);
@@ -120,28 +121,21 @@ public sealed class SoftwareMixer : IDisposable {
         _mverb.SetSampleRate(_sampleRateHz);
 
         // Initialize ChorusEngine with default sample rate
-        _chorusEngine = new Spice86.Audio.Filters.ChorusEngine(_sampleRateHz);
+        _chorusEngine = new ChorusEngine(_sampleRateHz);
 
-        // Configure chorus: Chorus1 enabled, Chorus2 disabled (matches DOSBox)
-        // See DOSBox mixer.cpp lines 146-147
         _chorusEngine.SetEnablesChorus(isChorus1Enabled: true, isChorus2Enabled: false);
 
         // Initialize compressor with default parameters
         InitCompressor(compressorEnabled: true);
 
-        // Start the audio player before starting the mixer thread
         _audioPlayer.Start();
 
-        // Start mixer thread (produces frames and writes to PortAudio directly)
         _mixerThread = new Thread(MixerThreadLoop) {
-            Name = "Spice86-Mixer",
+            Name = nameof(SoftwareMixer),
             IsBackground = true,
             Priority = ThreadPriority.AboveNormal
         };
         _mixerThread.Start();
-
-        _loggerService.Information("MIXER: Initialized stereo {SampleRate} Hz audio with {BlockSize} sample frame buffer",
-            _sampleRateHz, _blocksize);
 
         _pauseHandler.Pausing += OnEmulatorPausing;
         _pauseHandler.Resumed += OnEmulatorResumed;
@@ -156,32 +150,7 @@ public sealed class SoftwareMixer : IDisposable {
     }
 
     /// <summary>
-    /// Gets the current mixer sample rate.
-    /// </summary>
-    public int SampleRateHz => _sampleRateHz;
-
-    /// <summary>
-    /// Gets the mixer sample rate.
-    /// </summary>
-    public int GetSampleRate() {
-        return _sampleRateHz;
-    }
-
-    /// <summary>
-    /// Gets the current blocksize.
-    /// </summary>
-    public int Blocksize => _blocksize;
-
-    /// <summary>
-    /// Gets the prebuffer time in milliseconds.
-    /// </summary>
-    public int GetPreBufferMs() {
-        // For now return a constant; DOSBox calculates based on buffer size
-        return MaxPrebufferMs / 2; // Conservative default
-    }
-
-    /// <summary>
-    /// Registers a device to be notified before and after the mixer mutex is acquired.
+    /// Registers a queue notifier for a device that produces audio on the main thread.
     /// The notifier will be called before the mixer mutex is acquired and after it is released.
     /// </summary>
     /// <param name="notifier">The device notifier to register.</param>
@@ -191,9 +160,13 @@ public sealed class SoftwareMixer : IDisposable {
 
     /// <summary>
     /// Locks the mixer thread to prevent mixing during critical operations.
-    /// Stops device queues first to avoid deadlock. These are called infrequently when
-    /// global mixer state is changed (mostly on device init/destroy and in the MIXER command).
-    /// Individual channels also have a mutex which can be safely acquired without stopping these queues.
+    /// The queues listed here are for audio devices that run on the main thread.
+    /// The mixer thread can be waiting on the main thread to produce audio in these
+    /// queues. We need to stop them before acquiring a mutex lock to avoid a
+    /// deadlock. These are called infrequently when global mixer state is changed
+    /// (mostly on device init/destroy and in the MIXER command line program).
+    /// Individual channels also have a mutex which can be safely acquired without
+    /// stopping these queues.
     /// </summary>
     public void LockMixerThread() {
         foreach (IMixerQueueNotifier notifier in _queueNotifiers) {
@@ -207,59 +180,25 @@ public sealed class SoftwareMixer : IDisposable {
     /// Restarts the device queues to resume normal operation.
     /// </summary>
     public void UnlockMixerThread() {
-        _mixerLock.Exit();
         foreach (IMixerQueueNotifier notifier in _queueNotifiers) {
             notifier.NotifyUnlockMixer();
         }
-    }
-
-    /// <summary>
-    /// Gets or sets the master volume gain.
-    /// </summary>
-    public AudioFrame MasterGain {
-        get {
-            lock (_mixerLock) {
-                return _masterGain;
-            }
-        }
-        set {
-            lock (_mixerLock) {
-                _masterGain = value;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Gets the current master volume gain.
-    /// DOSBox doesn't have a getter function; this provides read access to master_gain.
-    /// </summary>
-    /// <returns>The current master gain as an AudioFrame.</returns>
-    public AudioFrame GetMasterVolume() {
-        lock (_mixerLock) {
-            return _masterGain;
-        }
-    }
-
-    /// <summary>
-    /// Sets the master volume gain atomically.
-    /// </summary>
-    /// <param name="gain">The new master gain to apply.</param>
-    public void SetMasterVolume(AudioFrame gain) {
-        lock (_mixerLock) {
-            _masterGain = gain;
-        }
+        _mixerLock.Exit();
     }
 
     /// <summary>
     /// Mutes audio output while keeping the audio device active.
     /// </summary>
     public void Mute() {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             if (_state == MixerState.On) {
+                // Clear out any audio in the queue to avoid a stutter on un-mute
+                _audioPlayer.ClearQueuedData();
                 _state = MixerState.Muted;
-                _isManuallyMuted = true;
-                _loggerService.Information("MIXER: Muted audio output");
             }
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -267,73 +206,13 @@ public sealed class SoftwareMixer : IDisposable {
     /// Unmutes audio output, resuming playback.
     /// </summary>
     public void Unmute() {
-        lock (_mixerLock) {
+        LockMixerThread();
+        try {
             if (_state == MixerState.Muted) {
                 _state = MixerState.On;
-                _isManuallyMuted = false;
-                _loggerService.Information("MIXER: Unmuted audio output");
             }
-        }
-    }
-
-    /// <summary>
-    /// Returns whether audio has been manually muted by the user.
-    /// </summary>
-    /// <returns>True if audio is manually muted, false otherwise.</returns>
-    public bool IsManuallyMuted() {
-        lock (_mixerLock) {
-            return _isManuallyMuted;
-        }
-    }
-
-    /// <summary>
-    /// Gets the current crossfeed preset.
-    /// DOSBox doesn't have a getter; this provides read access to mixer.crossfeed.preset
-    /// </summary>
-    public CrossfeedPreset GetCrossfeedPreset() {
-        lock (_mixerLock) {
-            return _crossfeedPreset;
-        }
-    }
-
-    /// <summary>
-    /// Sets the crossfeed preset and configures the effect.
-    /// </summary>
-    public void SetCrossfeedPreset(CrossfeedPreset preset) {
-        lock (_mixerLock) {
-            // Unchanged?
-            if (_crossfeedPreset == preset) {
-                return;
-            }
-
-            // Set new preset and strength values matching DOSBox mixer.cpp:434-436
-            _crossfeedPreset = preset;
-            switch (preset) {
-                case CrossfeedPreset.None:
-                    _crossfeedGlobalStrength = 0.0f;
-                    break;
-                case CrossfeedPreset.Light:
-                    _crossfeedGlobalStrength = 0.20f; // DOSBox: 0.20f
-                    break;
-                case CrossfeedPreset.Normal:
-                    _crossfeedGlobalStrength = 0.40f; // DOSBox: 0.40f
-                    break;
-                case CrossfeedPreset.Strong:
-                    _crossfeedGlobalStrength = 0.60f; // DOSBox: 0.60f
-                    break;
-            }
-
-            // Configure the channels
-            _doCrossfeed = (preset != CrossfeedPreset.None);
-
-            SetGlobalCrossfeed();
-
-            // Log the change
-            if (_doCrossfeed) {
-                _loggerService.Information("MIXER: Crossfeed enabled ('{Preset}' preset)", preset);
-            } else {
-                _loggerService.Information("MIXER: Crossfeed disabled");
-            }
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -341,210 +220,51 @@ public sealed class SoftwareMixer : IDisposable {
     /// Applies global crossfeed settings to all channels.
     /// </summary>
     private void SetGlobalCrossfeed() {
-        // Apply preset-specific crossfeed strength to stereo channels
-        // DOSBox applies to OPL and CMS channels; we apply to all stereo channels
+        // Apply preset-specific crossfeed strength to OPL and CMS channels only
         float globalStrength = _doCrossfeed ? _crossfeedGlobalStrength : 0.0f;
-
         foreach (SoundChannel channel in _channels.Values) {
-            if (channel.HasFeature(ChannelFeature.Stereo)) {
-                channel.SetCrossfeedStrength(globalStrength);
+            string name = channel.Name;
+            bool applyCrossfeed = name is "Opl" or "Cms";
+            if (applyCrossfeed && channel.HasFeature(ChannelFeature.Stereo)) {
+                channel.CrossfeedStrength = globalStrength;
             } else {
-                channel.SetCrossfeedStrength(0.0f);
+                channel.CrossfeedStrength = 0.0f;
             }
         }
     }
 
-    /// <summary>
-    /// Gets the current reverb preset.
-    /// DOSBox doesn't have a getter; this provides read access to mixer.reverb.preset
-    /// </summary>
-    public ReverbPreset GetReverbPreset() {
-        lock (_mixerLock) {
-            return _reverbPreset;
-        }
-    }
-
-    /// <summary>
-    /// Sets the reverb preset and configures the effect.
-    /// </summary>
-    public void SetReverbPreset(ReverbPreset preset) {
-        lock (_mixerLock) {
-            if (_reverbPreset == preset) {
-                return;
-            }
-
-            _reverbPreset = preset;
-
-            // Parameters: PREDLY EARLY  SIZE   DENSITY BW_FREQ DECAY  DAMP_LV SYN_LV DIG_LV HIPASS_HZ
-            switch (preset) {
-                case ReverbPreset.Tiny:
-                    SetupMVerb(predelay: 0.00f, earlyMix: 1.00f, size: 0.05f, density: 0.50f,
-                              bandwidthFreq: 0.50f, decay: 0.00f, dampingFreq: 1.00f,
-                              synthLevel: 0.65f, digitalLevel: 0.65f, highpassHz: 200.0f);
-                    break;
-                case ReverbPreset.Small:
-                    SetupMVerb(predelay: 0.00f, earlyMix: 1.00f, size: 0.17f, density: 0.42f,
-                              bandwidthFreq: 0.50f, decay: 0.50f, dampingFreq: 0.70f,
-                              synthLevel: 0.40f, digitalLevel: 0.08f, highpassHz: 200.0f);
-                    break;
-                case ReverbPreset.Medium:
-                    SetupMVerb(predelay: 0.00f, earlyMix: 0.75f, size: 0.50f, density: 0.50f,
-                              bandwidthFreq: 0.95f, decay: 0.42f, dampingFreq: 0.21f,
-                              synthLevel: 0.54f, digitalLevel: 0.07f, highpassHz: 170.0f);
-                    break;
-                case ReverbPreset.Large:
-                    SetupMVerb(predelay: 0.00f, earlyMix: 0.75f, size: 0.75f, density: 0.50f,
-                              bandwidthFreq: 0.95f, decay: 0.52f, dampingFreq: 0.21f,
-                              synthLevel: 0.70f, digitalLevel: 0.05f, highpassHz: 140.0f);
-                    break;
-                case ReverbPreset.Huge:
-                    SetupMVerb(predelay: 0.00f, earlyMix: 0.75f, size: 0.75f, density: 0.50f,
-                              bandwidthFreq: 0.95f, decay: 0.52f, dampingFreq: 0.21f,
-                              synthLevel: 0.85f, digitalLevel: 0.05f, highpassHz: 140.0f);
-                    break;
-                case ReverbPreset.None:
-                    break;
-            }
-
-            _doReverb = preset != ReverbPreset.None;
-
-            if (_doReverb) {
-                _loggerService.Information("MIXER: Reverb enabled ('{Preset}' preset)", preset);
-            } else {
-                _loggerService.Information("MIXER: Reverb disabled");
-            }
-
-            SetGlobalReverb();
-        }
-    }
-
-    /// <summary>
-    /// Configures MVerb reverb parameters.
-    /// </summary>
-    private void SetupMVerb(float predelay, float earlyMix, float size, float density,
-                           float bandwidthFreq, float decay, float dampingFreq,
-                           float synthLevel, float digitalLevel, float highpassHz) {
-        _reverbSynthSendLevel = synthLevel;
-        _reverbDigitalSendLevel = digitalLevel;
-
-        _mverb.SetParameter((int)MVerb.Parameter.Predelay, predelay);
-        _mverb.SetParameter((int)MVerb.Parameter.EarlyMix, earlyMix);
-        _mverb.SetParameter((int)MVerb.Parameter.Size, size);
-        _mverb.SetParameter((int)MVerb.Parameter.Density, density);
-        _mverb.SetParameter((int)MVerb.Parameter.BandwidthFreq, bandwidthFreq);
-        _mverb.SetParameter((int)MVerb.Parameter.Decay, decay);
-        _mverb.SetParameter((int)MVerb.Parameter.DampingFreq, dampingFreq);
-
-        // Always max gain (no attenuation)
-        _mverb.SetParameter((int)MVerb.Parameter.Gain, 1.0f);
-
-        // Always 100% wet output signal
-        _mverb.SetParameter((int)MVerb.Parameter.Mix, 1.0f);
-
-        _mverb.SetSampleRate(_sampleRateHz);
-
-        // Update reverb high-pass filter cutoff
-        for (int i = 0; i < 2; i++) {
-            _reverbHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, highpassHz);
-        }
-    }
-
-    /// <summary>
-    /// Applies global reverb settings to all channels.
-    /// </summary>
     private void SetGlobalReverb() {
         foreach (SoundChannel channel in _channels.Values) {
             if (!_doReverb || !channel.HasFeature(ChannelFeature.ReverbSend)) {
-                channel.SetReverbLevel(0.0f);
+                channel.ReverbLevel = 0.0f;
             } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
-                // Use configured synth send level from preset
-                channel.SetReverbLevel(_reverbSynthSendLevel);
+                channel.ReverbLevel = _reverbSynthSendLevel;
             } else if (channel.HasFeature(ChannelFeature.DigitalAudio)) {
-                // Use configured digital send level from preset
-                channel.SetReverbLevel(_reverbDigitalSendLevel);
+                channel.ReverbLevel = _reverbDigitalSendLevel;
             }
         }
     }
 
-    /// <summary>
-    /// Gets the current chorus preset.
-    /// DOSBox doesn't have a getter; this provides read access to mixer.chorus.preset
-    /// </summary>
-    public ChorusPreset GetChorusPreset() {
-        lock (_mixerLock) {
-            return _chorusPreset;
-        }
-    }
-
-    /// <summary>
-    /// Sets the chorus preset and configures the effect.
-    /// </summary>
-    public void SetChorusPreset(ChorusPreset preset) {
-        lock (_mixerLock) {
-            if (_chorusPreset == preset) {
-                return;
-            }
-
-            _chorusPreset = preset;
-
-            // Configure chorus with DOSBox preset values (mixer.cpp:633-636)
-            // Preset values: Light (0.33, 0.00), Normal (0.54, 0.00), Strong (0.75, 0.00)
-            // Format: (synth_level, digital_level)
-            switch (preset) {
-                case ChorusPreset.Light:
-                    _chorusSynthSendLevel = 0.33f;
-                    _chorusDigitalSendLevel = 0.00f;
-                    break;
-                case ChorusPreset.Normal:
-                    _chorusSynthSendLevel = 0.54f;
-                    _chorusDigitalSendLevel = 0.00f;
-                    break;
-                case ChorusPreset.Strong:
-                    _chorusSynthSendLevel = 0.75f;
-                    _chorusDigitalSendLevel = 0.00f;
-                    break;
-                case ChorusPreset.None:
-                    _chorusSynthSendLevel = 0.0f;
-                    _chorusDigitalSendLevel = 0.0f;
-                    break;
-            }
-
-            // Update ChorusEngine configuration (matches DOSBox mixer.cpp:641-647)
-            _chorusEngine.SetSampleRate(_sampleRateHz);
-            _chorusEngine.SetEnablesChorus(isChorus1Enabled: true, isChorus2Enabled: false);
-
-            _doChorus = preset != ChorusPreset.None;
-
-            if (_doChorus) {
-                _loggerService.Information("MIXER: Chorus enabled ('{Preset}' preset)", preset);
-            } else {
-                _loggerService.Information("MIXER: Chorus disabled");
-            }
-
-            SetGlobalChorus();
-        }
-    }
-
-    /// <summary>
-    /// Applies global chorus settings to all channels.
-    /// </summary>
     private void SetGlobalChorus() {
         foreach (SoundChannel channel in _channels.Values) {
             if (!_doChorus || !channel.HasFeature(ChannelFeature.ChorusSend)) {
-                channel.SetChorusLevel(0.0f);
+                channel.ChorusLevel = 0.0f;
             } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
-                // Use configured synth send level from preset
-                channel.SetChorusLevel(_chorusSynthSendLevel);
+                channel.ChorusLevel = _chorusSynthSendLevel;
             } else if (channel.HasFeature(ChannelFeature.DigitalAudio)) {
-                // Use configured digital send level from preset
-                channel.SetChorusLevel(_chorusDigitalSendLevel);
+                channel.ChorusLevel = _chorusDigitalSendLevel;
             }
         }
     }
 
     /// <summary>
-    /// Adds a channel to the mixer.
+    /// Adds a new mixer channel with the specified configuration and registers it with the mixer.
     /// </summary>
+    /// <param name="handler">A callback that is invoked with the channel's sample rate whenever it changes.</param>
+    /// <param name="sampleRateHz">The desired sample rate for the channel, in hertz.</param>
+    /// <param name="name">The unique name used to identify the channel within the mixer.</param>
+    /// <param name="features">A set of features that define the channel's capabilities and behavior.</param>
+    /// <returns>A MixerChannel instance configured with the specified settings and registered in the mixer.</returns>
     public SoundChannel AddChannel(
         Action<int> handler,
         int sampleRateHz,
@@ -555,21 +275,11 @@ public sealed class SoftwareMixer : IDisposable {
             sampleRateHz = _sampleRateHz;
         }
 
-        SoundChannel channel = new(handler, name, features, _loggerService);
+        SoundChannel channel = new(handler, name, features);
         channel.SetMixerSampleRate(_sampleRateHz); // Tell channel about mixer rate
-        channel.SetSampleRate(sampleRateHz);
-        channel.SetAppVolume(new AudioFrame(1.0f, 1.0f));
-        channel.SetUserVolume(new AudioFrame(1.0f, 1.0f));
-
-        int channelRate = channel.GetSampleRate();
-        if (channelRate == _sampleRateHz) {
-            _loggerService.Information("{ChannelName}: Operating at {Rate} Hz without resampling",
-                name, channelRate);
-        } else {
-            _loggerService.Information("{ChannelName}: Operating at {Rate} Hz and {Direction} to the output rate",
-                name, channelRate,
-                channelRate > _sampleRateHz ? "downsampling" : "upsampling");
-        }
+        channel.SampleRate = sampleRateHz;
+        channel.AppVolume = new AudioFrame(1.0f, 1.0f);
+        channel.UserVolume = new AudioFrame(1.0f, 1.0f);
 
         // Add to channels registry
         if (!_channels.TryAdd(name, channel)) {
@@ -577,9 +287,18 @@ public sealed class SoftwareMixer : IDisposable {
             _channels[name] = channel;
         }
 
-        // Set default state
-        channel.Enable(false);
-        channel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Right });
+        if (_channelSettingsCache.TryGetValue(name, out SoundChannelSettings cachedSettings)) {
+            channel.SetSettings(cachedSettings);
+            ApplyCachedEffectSettings(channel, cachedSettings);
+        } else {
+            // Set default state
+            channel.Enable(false);
+            channel.UserVolume = new AudioFrame(1.0f, 1.0f);
+            channel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Right });
+            SetGlobalCrossfeed();
+            SetGlobalReverb();
+            SetGlobalChorus();
+        }
 
         return channel;
     }
@@ -592,192 +311,150 @@ public sealed class SoftwareMixer : IDisposable {
         return channel;
     }
 
-    /// <summary>
-    /// Removes a channel from the mixer.
-    /// </summary>
-    public void DeregisterChannel(string name) {
-        if (_channels.TryRemove(name, out SoundChannel? channel)) {
-            channel.Enable(false);
-            _loggerService.Debug("MIXER: Deregistered channel {ChannelName}", name);
+    private void ApplyCachedEffectSettings(SoundChannel channel, SoundChannelSettings settings) {
+        if (_doCrossfeed) {
+            channel.CrossfeedStrength = settings.CrossfeedStrength;
+        } else {
+            channel.CrossfeedStrength = 0.0f;
+        }
+
+        if (_doReverb) {
+            channel.ReverbLevel = settings.ReverbLevel;
+        } else {
+            channel.ReverbLevel = 0.0f;
+        }
+
+        if (_doChorus) {
+            channel.ChorusLevel = settings.ChorusLevel;
+        } else {
+            channel.ChorusLevel = 0.0f;
         }
     }
 
     /// <summary>
     /// Gets all registered mixer channels.
     /// </summary>
-    public IEnumerable<SoundChannel> GetAllChannels() {
-        return _channels.Values;
-    }
+    public IEnumerable<SoundChannel> AllChannels => _channels.Values;
 
-    /// <summary>
-    /// Main mixer thread loop.
-    /// </summary>
     private void MixerThreadLoop() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _loggerService.Debug("MIXER: Mixer thread started. sampleRate={SampleRateHz}, blocksize={Blocksize}", _sampleRateHz, _blocksize);
-        }
-
-        CancellationToken token = _cancellationTokenSource.Token;
-        while (!_threadShouldQuit && !token.IsCancellationRequested) {
-            int framesRequested = _blocksize;
-
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("MIXER: Begin mix cycle frames={FramesRequested} channels={ChannelCount}", framesRequested, _channels.Count);
-            }
-
+        while (!_threadShouldQuit) {
             lock (_mixerLock) {
+                // "Underflow" is not a concern since moving to a threaded
+                // mixer. If the CPU is running slower than real-time, the audio
+                // drivers will naturally slow down the audio. Therefore, we can
+                // always request at least a blocksize worth of audio.
+                int framesRequested = _blocksize;
+
                 MixSamples(framesRequested);
             }
 
-            // Check state and write audio OUTSIDE the lock to avoid deadlock
-            if (_state == MixerState.Muted) {
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("MIXER: Skipping audio output (muted)");
-                }
+            double expectedTimeMs = (double)_blocksize / _sampleRateHz * 1000.0;
+
+            if (_state == MixerState.NoSound) {
+                // SDL callback is not running. Mixed sound gets
+                // discarded. Sleep for the expected duration to
+                // simulate the time it would have taken to playback the
+                // audio.
+                Thread.Sleep(TimeSpan.FromMilliseconds(expectedTimeMs));
+                continue;
+            } else if (_state == MixerState.Muted) {
+                // SDL callback remains active. Enqueue silence.
+                _outputBuffer.Resize(_blocksize);
+                _outputBuffer.AsSpan().Clear();
+
+                Span<float> silenceInterleaved = MemoryMarshal.Cast<AudioFrame, float>(_outputBuffer.AsSpan());
+                _audioPlayer.WriteData(silenceInterleaved);
                 continue;
             }
 
-            int framesToWrite = _outputBuffer.Count;
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("MIXER: Mixed frames={Frames}", framesToWrite);
-            }
-
-            if (framesToWrite == 0) {
-                continue;
-            }
-
-            // Use MemoryMarshal.Cast to reinterpret AudioFrame[] as float[] for efficient interleaved audio
-            // AudioFrame is a struct with Left and Right floats in the correct order
-            _audioPlayer.WriteData(MemoryMarshal.Cast<AudioFrame, float>(_outputBuffer.AsSpan()));
-
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("MIXER: Wrote frames to audio player frames={Frames}", framesToWrite);
-            }
+            _audioPlayer.WriteData(
+                MemoryMarshal.Cast<AudioFrame, float>(_outputBuffer.AsSpan()));
         }
     }
 
-    // No consumer thread: mixer thread writes directly to the audio backend
-
-    /// <summary>
-    /// Mixes samples from all channels into the output buffer.
-    /// </summary>
     private void MixSamples(int framesRequested) {
-        // Clear output buffers
         _outputBuffer.Resize(framesRequested);
         _reverbAuxBuffer.Resize(framesRequested);
         _chorusAuxBuffer.Resize(framesRequested);
-
-        // Initialize with silence
         _outputBuffer.AsSpan().Clear();
         _reverbAuxBuffer.AsSpan().Clear();
         _chorusAuxBuffer.AsSpan().Clear();
 
-        // Mix all enabled channels
+        Span<AudioFrame> output = _outputBuffer.AsSpan();
+        Span<AudioFrame> reverbAux = _reverbAuxBuffer.AsSpan();
+        Span<AudioFrame> chorusAux = _chorusAuxBuffer.AsSpan();
+
+        // Render all channels and accumulate results in the master mixbuffer
         foreach (SoundChannel channel in _channels.Values) {
-            if (!channel.IsEnabled) {
-                continue;
-            }
-
-            // Request frames from the channel
             channel.Mix(framesRequested);
-
-            // Accumulate channel output into master mix
-            int numFrames = Math.Min(framesRequested, channel.AudioFrames.Count);
-            Span<AudioFrame> channelFrames = channel.AudioFrames.AsSpan(0, numFrames);
-            Span<AudioFrame> outputFrames = _outputBuffer.AsSpan(0, numFrames);
-            Span<AudioFrame> reverbFrames = _reverbAuxBuffer.AsSpan(0, numFrames);
-            Span<AudioFrame> chorusFrames = _chorusAuxBuffer.AsSpan(0, numFrames);
+            Span<AudioFrame> channelFrames = channel.AudioFrames.AsSpan();
+            int numFrames = Math.Min(output.Length, channelFrames.Length);
             for (int i = 0; i < numFrames; i++) {
-                AudioFrame channelFrame = channelFrames[i];
-
-                // Apply sleep/wake fade-out or signal detection if enabled
-                channelFrame = channel.MaybeFadeOrListen(channelFrame);
-
-                // Add to master output using operator
-                outputFrames[i] = outputFrames[i] + channelFrame;
-
+                if (channel.DoSleep) {
+                    output[i] += channel.MaybeFadeOrListen(channelFrames[i]);
+                } else {
+                    output[i] += channelFrames[i];
+                }
                 if (_doReverb && channel.DoReverbSend) {
-                    reverbFrames[i] = reverbFrames[i] + (channelFrame * channel.ReverbSendGain);
+                    reverbAux[i] += channelFrames[i] * channel.ReverbSendGain;
                 }
-
                 if (_doChorus && channel.DoChorusSend) {
-                    chorusFrames[i] = chorusFrames[i] + (channelFrame * channel.ChorusSendGain);
+                    chorusAux[i] += channelFrames[i] * channel.ChorusSendGain;
                 }
             }
-
-            // Remove consumed frames from channel
-            if (numFrames > 0) {
-                channel.AudioFrames.RemoveRange(0, numFrames);
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("MIXER: Channel {Channel} provided frames={Frames}", channel.GetName(), numFrames);
-                }
+            channel.AudioFrames.RemoveRange(0, numFrames);
+            if (channel.DoSleep) {
+                channel.MaybeSleep();
             }
-
-            channel.MaybeSleep();
         }
-
-        // Apply master gain using operator
-        AudioFrame masterGainSnapshot = _masterGain;
-        Span<AudioFrame> outputAll = _outputBuffer.AsSpan();
-        for (int i = 0; i < outputAll.Length; i++) {
-            outputAll[i] = outputAll[i] * masterGainSnapshot;
-        }
-
         if (_doReverb) {
-            // Apply high-pass filter to reverb aux buffer before reverb processing
-            Span<AudioFrame> reverbAll = _reverbAuxBuffer.AsSpan();
-            for (int i = 0; i < reverbAll.Length; i++) {
-                AudioFrame frame = reverbAll[i];
-                frame = new AudioFrame(
-                    _reverbHighPassFilter[0].Filter(frame.Left),
-                    _reverbHighPassFilter[1].Filter(frame.Right)
-                );
-                reverbAll[i] = frame;
-            }
-
             ApplyReverb();
         }
-
         if (_doChorus) {
             ApplyChorus();
         }
 
-        // Apply crossfeed if enabled (uses per-channel strength set by SetGlobalCrossfeed)
-        if (_doCrossfeed) {
-            ApplyCrossfeed();
-        }
-
-        // This is a DC-blocking filter to prevent low-frequency buildup
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            AudioFrame frame = _outputBuffer[i];
+        // Apply high-pass filter to the master output
+        Span<AudioFrame> masterOutput = _outputBuffer.AsSpan();
+        for (int i = 0; i < masterOutput.Length; i++) {
+            ref AudioFrame frame = ref masterOutput[i];
             frame = new AudioFrame(
                 _masterHighPassFilter[0].Filter(frame.Left),
                 _masterHighPassFilter[1].Filter(frame.Right)
             );
-            _outputBuffer[i] = frame;
+        }
+
+        // Apply master gain
+        AudioFrame gain = _masterVolume;
+        for (int i = 0; i < masterOutput.Length; i++) {
+            masterOutput[i] *= gain;
         }
 
         if (_doCompressor) {
-            ApplyCompressor();
+            // Apply compressor to the master output as the very last step
+            for (int i = 0; i < masterOutput.Length; i++) {
+                masterOutput[i] = _compressor.Process(masterOutput[i]);
+            }
         }
 
-        ApplyMasterNormalization();
+        // Normalize the final output before sending to SDL
+        for (int i = 0; i < masterOutput.Length; i++) {
+            ref AudioFrame frame = ref masterOutput[i];
+            frame = new AudioFrame(
+                NormalizeSample(frame.Left),
+                NormalizeSample(frame.Right)
+            );
+        }
     }
 
-    /// <summary>
-    /// Initializes the master compressor with professional RMS-based configuration.
-    /// </summary>
-    /// <param name="compressorEnabled">Whether to enable the compressor</param>
+    private static float NormalizeSample(float sample) {
+        return sample / 32768.0f;
+    }
+
     private void InitCompressor(bool compressorEnabled) {
         _doCompressor = compressorEnabled;
-        if (!_doCompressor) {
-            _loggerService.Information("MIXER: Master compressor disabled");
-            return;
-        }
-
         LockMixerThread();
-
-        const float ZeroDbfsSampleValue = 32767.0f; // Max16BitSampleValue = INT16_MAX
+        const float ZeroDbfsSampleValue = 32767.0f;
         const float ThresholdDb = -6.0f;
         const float Ratio = 3.0f;
         const float AttackTimeMs = 0.01f;
@@ -793,149 +470,104 @@ public sealed class SoftwareMixer : IDisposable {
             ReleaseTimeMs,
             RmsWindowMs
         );
-
         UnlockMixerThread();
-
-        _loggerService.Information("MIXER: Master compressor enabled");
     }
 
-    /// <summary>
-    /// Applies professional RMS-based compressor to reduce dynamic range.
-    /// </summary>
-    private void ApplyCompressor() {
-        // Process each frame through the compressor
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            _outputBuffer[i] = _compressor.Process(_outputBuffer[i]);
-        }
-    }
-
-    /// <summary>
-    /// Applies master normalization to prevent clipping and maintain consistent levels.
-    /// </summary>
-    private void ApplyMasterNormalization() {
-        // Normalize from int16 range to float range [-1.0, 1.0]
-        // Reference: DOSBox Staging normalize_sample() in src/hardware/audio/softwaremixer.cpp
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            AudioFrame frame = _outputBuffer[i];
-            _outputBuffer[i] = new AudioFrame(
-                frame.Left / 32768.0f,
-                frame.Right / 32768.0f
-            );
-        }
-    }
-
-    /// <summary>
-    /// Applies MVerb professional algorithmic reverb effect.
-    /// </summary>
     private void ApplyReverb() {
-        // Package MVerb processes one stereo frame at a time via ref params.
-        int frameCount = _reverbAuxBuffer.Count;
+        // Apply reverb effect to the reverb aux buffer, then mix the
+        // results to the master output.
+        Span<AudioFrame> reverbAux = _reverbAuxBuffer.AsSpan();
+        Span<AudioFrame> output = _outputBuffer.AsSpan();
 
-        for (int i = 0; i < frameCount; i++) {
-            AudioFrame frame = _reverbAuxBuffer[i];
-            float left = (float)_reverbHighPassFilter[0].Filter(frame.Left);
-            float right = (float)_reverbHighPassFilter[1].Filter(frame.Right);
-
-            _mverb.Process(ref left, ref right);
-
-            _outputBuffer[i] = new AudioFrame(
-                _outputBuffer[i].Left + left,
-                _outputBuffer[i].Right + right
+        for (int i = 0; i < reverbAux.Length; i++) {
+            // High-pass filter the reverb input
+            AudioFrame inFrame = reverbAux[i];
+            inFrame = new AudioFrame(
+                _reverbHighPassFilter[0].Filter(inFrame.Left),
+                _reverbHighPassFilter[1].Filter(inFrame.Right)
             );
+            // MVerb operates on two non-interleaved sample streams
+            _reverbLeftIn = inFrame.Left;
+            _reverbRightIn = inFrame.Right;
+            _mverb.Process(ref _reverbLeftIn, ref _reverbRightIn);
+            output[i] += new AudioFrame(_reverbLeftIn, _reverbRightIn);
         }
     }
 
-    /// <summary>
-    /// Applies TAL-Chorus effect to the chorus aux buffer and mixes to output.
-    /// </summary>
-    /// <remarks>
-    /// Processing flow:
-    /// 1. For each frame in chorus aux buffer (contains sum of channel chorus sends)
-    /// 2. Process through ChorusEngine (modulated delay with LFO)
-    /// 3. Add processed chorus output to master output buffer
-    /// 
-    /// The ChorusEngine processes samples in-place, modifying them with the chorus effect.
-    /// </remarks>
     private void ApplyChorus() {
         // Apply chorus effect to the chorus aux buffer, then mix to master output
-        for (int i = 0; i < _chorusAuxBuffer.Count; i++) {
-            float left = _chorusAuxBuffer[i].Left;
-            float right = _chorusAuxBuffer[i].Right;
-
+        Span<AudioFrame> chorusAux = _chorusAuxBuffer.AsSpan();
+        Span<AudioFrame> output = _outputBuffer.AsSpan();
+        for (int i = 0; i < chorusAux.Length; i++) {
+            float left = chorusAux[i].Left;
+            float right = chorusAux[i].Right;
             // Process through TAL-Chorus engine (in-place modification)
             _chorusEngine.Process(ref left, ref right);
-
             // Add processed chorus to output buffer
-            _outputBuffer[i] = new AudioFrame(
-                _outputBuffer[i].Left + left,
-                _outputBuffer[i].Right + right
-            );
+            output[i] += new AudioFrame(left, right);
         }
+    }
+
+    private void CloseAudioDevice() {
+        _threadShouldQuit = true;
+        _audioPlayer.MuteOutput();
+        if (_mixerThread.IsAlive) {
+            _mixerThread.Join(TimeSpan.FromSeconds(2));
+        }
+        foreach (SoundChannel channel in _channels.Values) {
+            channel.Enable(false);
+        }
+        _audioPlayer.Dispose();
     }
 
     /// <summary>
-    /// Applies crossfeed effect for headphone spatialization.
-    /// Note: In DOSBox, crossfeed is applied per-channel in MixerChannel::ApplyCrossfeed.
-    /// This is a master-level crossfeed for any remaining unmixed channels.
+    /// Disposes of the mixer, stopping the audio thread and releasing resources.
     /// </summary>
-    private void ApplyCrossfeed() {
-        for (int i = 0; i < _outputBuffer.Count; i++) {
-            AudioFrame frame = _outputBuffer[i];
-
-            // Mix some of each channel into the opposite channel
-            // This simulates speaker crosstalk for headphone listening
-            float newLeft = frame.Left + frame.Right * _crossfeedGlobalStrength;
-            float newRight = frame.Right + frame.Left * _crossfeedGlobalStrength;
-
-            _outputBuffer[i] = new AudioFrame(newLeft, newRight);
-        }
-    }
-
-    /// <summary>
-    /// Closes the audio device and stops all channels.
-    /// </summary>
-    public void CloseAudioDevice() {
-        lock (_mixerLock) {
-            // Stop mixer thread
-            if (_mixerThread.IsAlive) {
-                _threadShouldQuit = true;
-                _cancellationTokenSource.Cancel();
-                _mixerThread.Join(TimeSpan.FromSeconds(5));
-            }
-
-            // Disable all channels
-            foreach (SoundChannel channel in _channels.Values) {
-                channel.Enable(false);
-            }
-
-            // Close audio player
-            _audioPlayer.Dispose();
-
-            _loggerService.Information("MIXER: Closed audio device");
-        }
-    }
-
     public void Dispose() {
         if (_disposed) {
             return;
         }
-
         _pauseHandler.Pausing -= OnEmulatorPausing;
         _pauseHandler.Resumed -= OnEmulatorResumed;
+        CloseAudioDevice();
+        _disposed = true;
+    }
 
-        _loggerService.Debug("MIXER: Disposing mixer");
+    /// <summary>
+    /// Generic callback for audio devices that generate audio on the main thread.
+    /// These devices produce audio on the main thread and consume on the mixer thread.
+    /// This callback dispatches to the appropriate AddSamples method based on the sample type.
+    /// </summary>
+    /// <typeparam name="TDevice">The device type implementing IAudioQueueDevice.</typeparam>
+    /// <typeparam name="TItem">The sample type (float or AudioFrame) in the device queue.</typeparam>
+    /// <param name="framesRequested">Number of audio frames requested by the mixer.</param>
+    /// <param name="device">The audio device (passed as 'this' from the device).</param>
+    internal static void PullFromQueueCallback<TDevice, TItem>(int framesRequested, TDevice device)
+        where TDevice : IAudioQueueDevice<TItem>
+        where TItem : struct {
+        // Size to 2x blocksize. The mixer callback will request 1x blocksize.
+        // This provides a good size to avoid over-runs and stalls.
+        int queueSize = (int)Math.Ceiling(device.Channel.FramesPerBlock * 2.0f);
+        device.OutputQueue.Resize(queueSize);
 
-        _threadShouldQuit = true;
-        _cancellationTokenSource.Cancel();
+        // Dequeue samples in bulk
+        TItem[] toMix = new TItem[framesRequested];
+        int framesReceived = device.OutputQueue.BulkDequeue(toMix, framesRequested);
 
-        if (_mixerThread.IsAlive) {
-            _mixerThread.Join(TimeSpan.FromSeconds(1));
+        if (framesReceived > 0) {
+            if (typeof(TItem) == typeof(float)) {
+                float[] floatArray = toMix as float[] ?? [];
+                // PcSpeaker produces mono float data
+                device.Channel.AddSamplesGeneric(framesReceived, floatArray.AsSpan(), isStereo: false);
+            } else if (typeof(TItem) == typeof(AudioFrame)) {
+                AudioFrame[] frameArray = toMix as AudioFrame[] ?? [];
+                device.Channel.AddAudioFrames(frameArray.AsSpan());
+            }
         }
 
-        _cancellationTokenSource.Dispose();
-        _audioPlayer.Dispose();
-        //_chorusEngine.Dispose();
-
-        _disposed = true;
+        // Fill any shortfall with silence
+        if (framesReceived < framesRequested) {
+            device.Channel.AddSilence();
+        }
     }
 }

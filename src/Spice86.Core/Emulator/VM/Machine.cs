@@ -197,14 +197,14 @@ public sealed class Machine : IDisposable {
     public DmaBus DmaSystem { get; }
 
     /// <summary>
-    /// The OPL3 FM synth chip.
+    /// The OPL FM Synth chip.
     /// </summary>
-    public Opl3Fm Opl3Fm { get; }
+    public Opl3Fm OPL { get; }
 
     /// <summary>
     /// The internal software mixer for all sound channels.
     /// </summary>
-    public SoftwareMixer Mixer { get; }
+    public SoftwareMixer SoftwareMixer { get; }
 
     /// <summary>
     /// The size of the conventional memory in kilobytes.
@@ -306,8 +306,8 @@ public sealed class Machine : IDisposable {
         VideoInt10Handler = videoInt10Handler;
         VgaRom = vgaRom;
         DmaSystem = dmaSystem;
-        Opl3Fm = opl;
-        Mixer = mixer;
+        OPL = opl;
+        SoftwareMixer = mixer;
         MouseDevice = mouseDevice;
         MouseDriver = mouseDriver;
         VgaFunctions = vgaFunctions;
@@ -322,9 +322,9 @@ public sealed class Machine : IDisposable {
         if (!_disposed) {
             if (disposing) {
                 MidiDevice.Dispose();
-                Opl3Fm.Dispose();
+                OPL.Dispose();
                 PcSpeaker.Dispose();
-                Mixer.Dispose();
+                SoftwareMixer.Dispose();
                 RealTimeClock.Dispose();
             }
             _disposed = true;

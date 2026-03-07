@@ -79,13 +79,13 @@ public partial class MixerChannelViewModel : ViewModelBase {
     public SoundChannel Channel => _channel;
 
     public void UpdateFromChannel() {
-        Name = _channel.GetName();
+        Name = _channel.Name;
         IsEnabled = _channel.IsEnabled;
-        SampleRate = _channel.GetSampleRate();
-        AudioFrame userVolume = _channel.GetUserVolume();
+        SampleRate = _channel.SampleRate;
+        AudioFrame userVolume = _channel.UserVolume;
         UserVolumeLeftPercent = userVolume.Left * 100.0;
         UserVolumeRightPercent = userVolume.Right * 100.0;
-        AudioFrame appVolume = _channel.GetAppVolume();
+        AudioFrame appVolume = _channel.AppVolume;
         AppVolumeLeftPercent = appVolume.Left * 100.0;
         AppVolumeRightPercent = appVolume.Right * 100.0;
         IsMuted = Math.Abs(userVolume.Left) <= VolumeMuteEpsilon &&
@@ -97,7 +97,7 @@ public partial class MixerChannelViewModel : ViewModelBase {
         _currentPeakLeft *= PeakDecayRate;
         _currentPeakRight *= PeakDecayRate;
 
-        Spice86.Core.Emulator.Devices.Sound.AudioFrameBuffer audioFrames = _channel.AudioFrames;
+        AudioFrameBuffer audioFrames = _channel.AudioFrames;
         int frameCount = audioFrames.Count;
 
         double maxLeft = 0.0;
@@ -180,23 +180,23 @@ public partial class MixerChannelViewModel : ViewModelBase {
 
     partial void OnIsMutedChanged(bool value) {
         if (value) {
-            _channel.SetUserVolume(new AudioFrame(0.0f, 0.0f));
+            _channel.UserVolume = new AudioFrame(0.0f, 0.0f);
             UserVolumeLeftPercent = 0.0;
             UserVolumeRightPercent = 0.0;
         } else {
-            _channel.SetUserVolume(new AudioFrame(1.0f, 1.0f));
+            _channel.UserVolume = new AudioFrame(1.0f, 1.0f);
             UserVolumeLeftPercent = 100.0;
             UserVolumeRightPercent = 100.0;
         }
     }
 
     partial void OnUserVolumeLeftPercentChanged(double value) {
-        AudioFrame current = _channel.GetUserVolume();
-        _channel.SetUserVolume(new AudioFrame((float)(value / 100.0), current.Right));
+        AudioFrame current = _channel.UserVolume;
+        _channel.UserVolume = new AudioFrame((float)(value / 100.0), current.Right);
     }
 
     partial void OnUserVolumeRightPercentChanged(double value) {
-        AudioFrame current = _channel.GetUserVolume();
-        _channel.SetUserVolume(new AudioFrame(current.Left, (float)(value / 100.0)));
+        AudioFrame current = _channel.UserVolume;
+        _channel.UserVolume = new AudioFrame(current.Left, (float)(value / 100.0));
     }
 }

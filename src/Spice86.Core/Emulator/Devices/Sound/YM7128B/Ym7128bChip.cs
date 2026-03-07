@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.Sound.YM7128B;
+namespace Spice86.Audio.Sound.Devices.YM7128B;
 
 /*
 BSD 2-Clause License

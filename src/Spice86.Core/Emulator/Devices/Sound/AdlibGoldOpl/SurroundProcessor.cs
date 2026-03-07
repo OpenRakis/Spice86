@@ -1,11 +1,14 @@
 namespace Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 
 using Spice86.Audio.Common;
-using Spice86.Core.Emulator.Devices.Sound.YM7128B;
+using Spice86.Audio.Sound.Devices.YM7128B;
 
 /// <summary>
 ///     Provides surround processing emulation for the AdLib Gold optional module.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 internal sealed class SurroundProcessor : IDisposable {
     private readonly Ym7128BChip _chip = new();
     private readonly Ym7128BChipIdealProcessData _processData = new();
@@ -20,7 +23,6 @@ internal sealed class SurroundProcessor : IDisposable {
         if (sampleRateHz < 10) {
             throw new ArgumentOutOfRangeException(nameof(sampleRateHz), "Sample rate must be at least 10 Hz.");
         }
-
         _chip.IdealSetup((nuint)sampleRateHz);
         _chip.IdealReset();
         _chip.IdealStart();

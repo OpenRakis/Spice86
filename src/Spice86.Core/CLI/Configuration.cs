@@ -171,7 +171,7 @@ public sealed class Configuration {
     /// <summary>
     /// Audio engine to use
     /// </summary>
-    [Option(nameof(AudioEngine), Default = AudioEngine.CrossPlatform, Required = false, HelpText = "Audio engine to use. Values are CrossPlatform or Dummy")]
+    [Option(nameof(AudioEngine), Default = AudioEngine.CrossPlatform, Required = false, HelpText = "Audio engine to use. CrossPlatform uses WASAPI on Windows and SDL on other platforms. Values are CrossPlatform or Dummy")]
     public AudioEngine AudioEngine { get; init; }
 
     /// <summary>
@@ -215,6 +215,13 @@ public sealed class Configuration {
     [Option(nameof(SbHdma), Default = (byte)5, Required = false,
         HelpText = "Sound Blaster 16-bit high DMA channel. Default is 5. Common values: 5, 6, 7.")]
     public byte SbHdma { get; init; }
+
+    /// <summary>
+    /// Enable Sound Blaster mixer control of OPL voices.
+    /// </summary>
+    [Option(nameof(SbMixer), Default = true, Required = false,
+        HelpText = "Enable Sound Blaster mixer control of OPL voices. Default is true.")]
+    public bool? SbMixer { get; init; }
 
     [Option(nameof(Xms), Default = null, Required = false, HelpText = "Enable XMS. Default is true.")]
     public bool? Xms { get; init; }

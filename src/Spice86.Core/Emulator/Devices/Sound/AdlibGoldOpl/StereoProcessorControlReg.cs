@@ -4,6 +4,9 @@ namespace Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 ///     Enumerates the stereo processor control registers exposed over the AdLib Gold I/O interface.
 ///     Reference: enum class StereoProcessorControlReg in DOSBox adlib_gold.h
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public enum StereoProcessorControlReg {
     /// <summary>
     ///     Left channel master volume register.

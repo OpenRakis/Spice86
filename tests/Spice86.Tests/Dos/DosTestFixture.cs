@@ -43,7 +43,7 @@ public class DosTestFixture {
             CDrive = mountPoint,
             RecordedDataDirectory = Path.GetTempPath()
         };
-
+        
         Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
         LoggerService = new LoggerService();
         IPauseHandler pauseHandler = new PauseHandler(LoggerService);
@@ -58,7 +58,7 @@ public class DosTestFixture {
         IEmulatedClock emulatedClock = new EmulatedClock();
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, LoggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, Memory, memoryBreakpoints, ioBreakpoints);
-
+        
         BiosDataArea biosDataArea =
             new BiosDataArea(Memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
 
@@ -73,8 +73,8 @@ public class DosTestFixture {
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             false, true, LoggerService);
 
-        SoftwareMixer softwareMixer = new(configuration.AudioEngine, pauseHandler, LoggerService);
-        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, LoggerService, emulationLoopScheduler, emulatedClock,
+        SoftwareMixer softwareMixer = new(configuration.AudioEngine, pauseHandler);
+        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, LoggerService, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort);
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, LoggerService, configuration.FailOnUnhandledPort);
 

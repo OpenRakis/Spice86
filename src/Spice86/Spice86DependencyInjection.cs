@@ -335,12 +335,12 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
-        SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler, loggerService);
+        SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler);
         var midiDevice = new Midi(configuration, mixer, state,
-            ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
+            ioPortDispatcher, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher,
-            pauseHandler, loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
+            loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
 
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock,
             loggerService, configuration.FailOnUnhandledPort);
@@ -348,7 +348,9 @@ public class Spice86DependencyInjection : IDisposable {
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
+        OplConfig oplConfig = new(configuration.OplMode, configuration.SbBase, configuration.SbMixer is true);
         SoundBlasterHardwareConfig soundBlasterHardwareConfig = new(
+            oplConfig,
             configuration.SbIrq,
             configuration.SbDma,
             configuration.SbHdma,
@@ -356,7 +358,6 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.SbBase);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
 
-        OplConfig oplConfig = new(configuration.OplMode, configuration.SbBase, true);
         Opl3Fm opl = new(oplConfig, mixer, state, emulatedClock, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 

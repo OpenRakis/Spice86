@@ -63,31 +63,6 @@ public partial class AudioSettingsViewModel : ViewModelBase {
     /// </summary>
     public string BlasterFormatString { get; } = "Format: A[base] I[irq] D[dma] H[hdma] T[type]";
 
-    /// <summary>
-    /// Gets the description for the current OPL mode.
-    /// </summary>
-    public string OplModeDescription => OplMode switch {
-        OplMode.Opl2 => "Yamaha OPL2 FM synthesizer",
-        OplMode.Opl3 => "Yamaha OPL3 FM synthesizer",
-        OplMode.DualOpl2 => "Dual OPL2 FM synthesizers",
-        OplMode.Opl3Gold => "AdLib Gold OPL3 FM synthesizer",
-        _ => "Unknown OPL mode"
-    };
-
-    /// <summary>
-    /// Gets the description for the current Sound Blaster type.
-    /// </summary>
-    public string SbTypeDescription => SbType switch {
-        SbType.None => "Sound Blaster disabled",
-        SbType.SB1 => "Sound Blaster 1.0",
-        SbType.SB2 => "Sound Blaster 2.0",
-        SbType.SBPro1 => "Sound Blaster Pro (mono)",
-        SbType.SBPro2 => "Sound Blaster Pro (stereo)",
-        SbType.Sb16 => "Sound Blaster 16",
-        SbType.GameBlaster => "Creative GameBlaster",
-        _ => "Unknown Sound Blaster type"
-    };
-
     public AudioSettingsViewModel(SoundBlaster soundBlaster, Opl3Fm opl) {
         SbType = soundBlaster.SbTypeProperty;
         SbIrq = soundBlaster.IRQ;

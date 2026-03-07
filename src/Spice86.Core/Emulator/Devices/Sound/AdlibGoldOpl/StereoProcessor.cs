@@ -4,88 +4,6 @@ using Spice86.Audio.Common;
 using Spice86.Audio.Filters.IirFilters.Filters.RBJ;
 
 /// <summary>
-///     Identifies the signal source selected by the stereo processor.
-/// </summary>
-internal enum StereoProcessorSourceSelector : byte {
-    /// <summary>
-    ///     Uses input channel A, position 1.
-    /// </summary>
-    SoundA1 = 2,
-
-    /// <summary>
-    ///     Uses input channel A, position 2.
-    /// </summary>
-    SoundA2 = 3,
-
-    /// <summary>
-    ///     Uses input channel B, position 1.
-    /// </summary>
-    SoundB1 = 4,
-
-    /// <summary>
-    ///     Uses input channel B, position 2.
-    /// </summary>
-    SoundB2 = 5,
-
-    /// <summary>
-    ///     Uses the primary stereo input.
-    /// </summary>
-    Stereo1 = 6,
-
-    /// <summary>
-    ///     Uses the secondary stereo input.
-    /// </summary>
-    Stereo2 = 7
-}
-
-/// <summary>
-///     Describes the stereo matrix applied to the selected source.
-/// </summary>
-internal enum StereoProcessorStereoMode : byte {
-    /// <summary>
-    ///     Mixes both channels together into mono.
-    /// </summary>
-    ForcedMono = 0,
-
-    /// <summary>
-    ///     Passes the stereo channels through unchanged.
-    /// </summary>
-    LinearStereo = 1,
-
-    /// <summary>
-    ///     Applies an all-pass filter to create pseudo-stereo depth.
-    /// </summary>
-    PseudoStereo = 2,
-
-    /// <summary>
-    ///     Introduces crosstalk for the spatial stereo effect.
-    /// </summary>
-    SpatialStereo = 3
-}
-
-/// <summary>
-///     Represents the packed switch-function register format.
-/// </summary>
-internal readonly struct StereoProcessorSwitchFunctions(byte data) {
-    /// <summary>
-    ///     Gets the encoded source selector value.
-    /// </summary>
-    internal byte SourceSelector => (byte)(data & 0x07);
-
-    /// <summary>
-    ///     Gets the encoded stereo mode value.
-    /// </summary>
-    internal byte StereoMode => (byte)((data >> 3) & 0x03);
-
-    /// <summary>
-    ///     Combines the source selector and stereo mode into a packed byte.
-    /// </summary>
-    internal static byte Compose(byte sourceSelector, byte stereoMode) {
-        return (byte)((sourceSelector & 0x07) | ((stereoMode & 0x03) << 3));
-    }
-}
-
-/// <summary>
 ///     Implements the AdLib Gold stereo processor, including tone controls and stereo field shaping.
 /// </summary>
 internal sealed class StereoProcessor {
@@ -145,34 +63,34 @@ internal sealed class StereoProcessor {
 
         switch (reg) {
             case StereoProcessorControlReg.VolumeLeft: {
-                    int value = data & volumeControlMask;
-                    _gain.Left = CalcVolumeGain(value);
-                    break;
-                }
+                int value = data & volumeControlMask;
+                _gain.Left = CalcVolumeGain(value);
+                break;
+            }
             case StereoProcessorControlReg.VolumeRight: {
-                    int value = data & volumeControlMask;
-                    _gain.Right = CalcVolumeGain(value);
-                    break;
-                }
+                int value = data & volumeControlMask;
+                _gain.Right = CalcVolumeGain(value);
+                break;
+            }
             case StereoProcessorControlReg.Bass: {
-                    int value = data & filterControlMask;
-                    double gainDb = CalcFilterGainDb(value);
-                    SetLowShelfGain(gainDb);
-                    break;
-                }
+                int value = data & filterControlMask;
+                double gainDb = CalcFilterGainDb(value);
+                SetLowShelfGain(gainDb);
+                break;
+            }
             case StereoProcessorControlReg.Treble: {
-                    int value = data & filterControlMask;
-                    const int extraTreble = 1;
-                    double gainDb = CalcFilterGainDb(value + extraTreble);
-                    SetHighShelfGain(gainDb);
-                    break;
-                }
+                int value = data & filterControlMask;
+                const int extraTreble = 1;
+                double gainDb = CalcFilterGainDb(value + extraTreble);
+                SetHighShelfGain(gainDb);
+                break;
+            }
             case StereoProcessorControlReg.SwitchFunctions: {
-                    var sf = new StereoProcessorSwitchFunctions(data);
-                    _sourceSelector = (StereoProcessorSourceSelector)sf.SourceSelector;
-                    _stereoMode = (StereoProcessorStereoMode)sf.StereoMode;
-                    break;
-                }
+                var sf = new StereoProcessorSwitchFunctions(data);
+                _sourceSelector = (StereoProcessorSourceSelector)sf.SourceSelector;
+                _stereoMode = (StereoProcessorStereoMode)sf.StereoMode;
+                break;
+            }
 
             default:
                 break;
@@ -261,18 +179,18 @@ internal sealed class StereoProcessor {
         switch (_sourceSelector) {
             case StereoProcessorSourceSelector.SoundA1:
             case StereoProcessorSourceSelector.SoundA2: {
-                    float left = frame.Left;
-                    frame.Left = left;
-                    frame.Right = left;
-                    break;
-                }
+                float left = frame.Left;
+                frame.Left = left;
+                frame.Right = left;
+                break;
+            }
             case StereoProcessorSourceSelector.SoundB1:
             case StereoProcessorSourceSelector.SoundB2: {
-                    float right = frame.Right;
-                    frame.Left = right;
-                    frame.Right = right;
-                    break;
-                }
+                float right = frame.Right;
+                frame.Left = right;
+                frame.Right = right;
+                break;
+            }
         }
     }
 
@@ -301,24 +219,24 @@ internal sealed class StereoProcessor {
     private void ProcessStereoProcessing(ref AudioFrame frame) {
         switch (_stereoMode) {
             case StereoProcessorStereoMode.ForcedMono: {
-                    float mono = frame.Left + frame.Right;
-                    frame.Left = mono;
-                    frame.Right = mono;
-                    break;
-                }
+                float mono = frame.Left + frame.Right;
+                frame.Left = mono;
+                frame.Right = mono;
+                break;
+            }
             case StereoProcessorStereoMode.PseudoStereo: {
-                    frame.Left = _allPass.Filter(frame.Left);
-                    break;
-                }
+                frame.Left = _allPass.Filter(frame.Left);
+                break;
+            }
             case StereoProcessorStereoMode.SpatialStereo: {
-                    const float crosstalkPercentage = 52.0f;
-                    const float k = crosstalkPercentage / 100.0f;
-                    float l = frame.Left;
-                    float r = frame.Right;
-                    frame.Left = l + ((l - r) * k);
-                    frame.Right = r + ((r - l) * k);
-                    break;
-                }
+                const float crosstalkPercentage = 52.0f;
+                const float k = crosstalkPercentage / 100.0f;
+                float l = frame.Left;
+                float r = frame.Right;
+                frame.Left = l + ((l - r) * k);
+                frame.Right = r + ((r - l) * k);
+                break;
+            }
             case StereoProcessorStereoMode.LinearStereo:
                 break;
             default:

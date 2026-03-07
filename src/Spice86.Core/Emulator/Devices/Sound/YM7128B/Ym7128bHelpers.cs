@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2020-2023, Andrea Zoppi
 // SPDX-License-Identifier: BSD 2-Clause License
 
+using Spice86.Audio.Sound.Devices.YM7128B;
+
 namespace Spice86.Core.Emulator.Devices.Sound.YM7128B;
 
 using System.Runtime.CompilerServices;

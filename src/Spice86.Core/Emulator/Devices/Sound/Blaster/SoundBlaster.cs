@@ -574,7 +574,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         // Size to 2x blocksize. The mixer callback typically requests 1x blocksize.
         // This helps prevent queue underruns/stalls under load.
-        _outputQueue.Resize((int)Math.Ceiling(_dacChannel.GetFramesPerBlock() * 2.0f));
+        _outputQueue.Resize((int)Math.Ceiling(_dacChannel.FramesPerBlock * 2.0f));
 
         // Configure Zero-Order-Hold upsampler and resample method for SB Pro 2 only.
         // Match master's native SB DAC target rate.
@@ -1295,7 +1295,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         // frame_counter += std::max(static_cast<float>(sblaster->frames_needed.exchange(0)), 
         //                           sblaster->channel->GetFramesPerTick());
         int frames_needed_val = System.Threading.Interlocked.Exchange(ref _framesNeeded, 0);
-        float frames_per_tick = _dacChannel.GetFramesPerTick();
+        float frames_per_tick = _dacChannel.FramesPerTick;
         _frameCounter += Math.Max(frames_needed_val, frames_per_tick);
 
         // const int total_frames = ifloor(frame_counter);
@@ -1346,7 +1346,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     /// Reference: src/hardware/audio/soundblaster.cpp add_next_frame_callback()
     /// </summary>
     private void AddNextFrameCallback() {
-        double millisPerFrame = _dacChannel.GetMillisPerFrame();
+        double millisPerFrame = _dacChannel.MillisPerFrame;
         _scheduler.AddEvent(per_frame_callback, millisPerFrame, 0);
     }
 
@@ -1656,7 +1656,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Irq.Pending16Bit = false;
 
         // Update channel sample rate to default
-        _dacChannel.SetSampleRate(DefaultPlaybackRateHz);
+        _dacChannel.SampleRate = (DefaultPlaybackRateHz);
 
         // Re-initialize speaker state
         // Reference: src/hardware/audio/soundblaster.cpp dsp_reset() line 1751
@@ -2254,7 +2254,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         // If rate changes during active DMA, update the DMA-related timing values
         if (_sb.FreqHz != freqHz && _sb.Dma.Mode != DmaMode.None) {
             uint effectiveFreq = _sb.Mixer.StereoEnabled ? freqHz / 2 : freqHz;
-            _dacChannel.SetSampleRate((int)effectiveFreq);
+            _dacChannel.SampleRate = ((int)effectiveFreq);
 
             _sb.Dma.Rate = (freqHz * _sb.Dma.Mul) >> SbShift;
             _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
@@ -2407,7 +2407,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         // Update channel sample rate
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() lines 1612-1613
-        _dacChannel.SetSampleRate((int)freqHz);
+        _dacChannel.SampleRate = ((int)freqHz);
 
         // Remove any pending DMA transfer events
         // Reference: src/hardware/audio/soundblaster.cpp dsp_do_dma_transfer() line 1615

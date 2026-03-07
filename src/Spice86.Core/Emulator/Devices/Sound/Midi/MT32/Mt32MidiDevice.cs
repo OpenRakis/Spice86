@@ -2,9 +2,8 @@ namespace Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 
 using Mt32emu;
 
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.VM;
 using Spice86.Audio.Common;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Shared.Interfaces;
 
 using System.IO.Compression;
@@ -15,7 +14,7 @@ using System.Linq;
 /// </summary>
 public sealed class Mt32MidiDevice : MidiDevice {
     private readonly Mt32Context _context;
-    private readonly SoundChannel? _mixerChannel;
+    private readonly SoundChannel _mixerChannel;
 
     /// <summary>
     /// Indicates whether this object has been disposed.
@@ -29,10 +28,9 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// </summary>
     /// <param name="mixer">The software mixer for sound channels.</param>
     /// <param name="romsPath">The path to the MT-32 ROM files.</param>
-    /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
     /// <param name="loggerService">The logger service to use for logging messages.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
-    public Mt32MidiDevice(SoftwareMixer mixer, string romsPath, IPauseHandler pauseHandler, ILoggerService loggerService) {
+    public Mt32MidiDevice(SoftwareMixer mixer, string romsPath, ILoggerService loggerService) {
         _mixerChannel = mixer.AddChannel(RenderCallback, 48000, nameof(Mt32MidiDevice), new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
         _context = new();
         if (string.IsNullOrWhiteSpace(romsPath)) {
@@ -49,8 +47,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
         _context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(48000);
         _context.SetSampleRate(48000);
         _context.OpenSynth();
-        // DON'T enable the channel here - it starts disabled and wakes up on first MIDI message
-        // The channel will be enabled when MIDI messages are played (via WakeUp call)
     }
 
     /// <inheritdoc/>
@@ -69,16 +65,10 @@ public sealed class Mt32MidiDevice : MidiDevice {
         }
     }
 
-    private void PlaybackLoopBody() {
-        ((Span<float>)_buffer).Clear();
-        _context.Render(_buffer);
-    }
-
     private void RenderCallback(int framesRequested) {
         if (_mixerChannel is null) {
             return;
         }
-        // Generate audio and push into mixer; emit verbose counts for side-by-side tracing
         ((Span<float>)_buffer).Clear();
         _context.Render(_buffer);
 

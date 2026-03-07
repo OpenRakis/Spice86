@@ -57,7 +57,7 @@ public partial class SoftwareMixerViewModel : ViewModelBase {
     }
 
     private void RefreshChannels() {
-        List<SoundChannel> currentChannels = [.. _mixer.GetAllChannels()];
+        List<SoundChannel> currentChannels = [.. _mixer.AllChannels];
 
         // Remove channels that no longer exist
         for (int i = Channels.Count - 1; i >= 0; i--) {

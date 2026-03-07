@@ -570,13 +570,13 @@ public class HardwareMixer {
         float dacRight = CalculatePercentage(_dacVolume[1]) * masterRight;
 
         // Set app volume on the mixer channel (programmatic control from DOS software)
-        _pcmMixerChannel.SetAppVolume(new AudioFrame(dacLeft, dacRight));
+        _pcmMixerChannel.AppVolume = (new AudioFrame(dacLeft, dacRight));
 
         float fmLeft = CalculatePercentage(_fmVolume[0]) * masterLeft;
         float fmRight = CalculatePercentage(_fmVolume[1]) * masterRight;
 
         // Set app volume on the mixer channel (programmatic control from DOS software)
-        _OPLMixerChannel.SetAppVolume(new AudioFrame(fmLeft, fmRight));
+        _OPLMixerChannel.AppVolume = (new AudioFrame(fmLeft, fmRight));
     }
 
     private float CalculatePercentage(byte volume) {

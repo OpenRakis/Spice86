@@ -17,7 +17,7 @@ public interface IMixerQueueNotifier {
     void NotifyLockMixer();
 
     /// <summary>
-    /// Called after the mixer mutex is released. Implementations must
+    /// Called before the mixer mutex is released. Implementations must
     /// restart their output queue so normal operation can resume.
     /// </summary>
     void NotifyUnlockMixer();

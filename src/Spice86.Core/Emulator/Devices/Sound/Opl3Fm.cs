@@ -598,7 +598,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 // Dune CD version uses 32 volume steps in an apparent mistake, should be 128
                 float leftVol = (_ctrl.LeftVolume & 0x1F) / 31.0f;
                 float rightVol = (_ctrl.RightVolume & 0x1F) / 31.0f;
-                _mixerChannel.SetAppVolume(new AudioFrame(leftVol, rightVol));
+                _mixerChannel.AppVolume = new AudioFrame(leftVol, rightVol);
             }
         }
     }
@@ -628,7 +628,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 AudioFrame frame = _fifo.Dequeue();
                 frameData[0] = frame.Left;
                 frameData[1] = frame.Right;
-                _mixerChannel.AddSamples_sfloat(1, frameData);
+                _mixerChannel.AddSamplesFloat(1, frameData);
                 --framesRemaining;
             }
             // If the queue's run dry, render the remainder and sync-up our time datum
@@ -636,7 +636,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 AudioFrame frame = RenderFrame();
                 frameData[0] = frame.Left;
                 frameData[1] = frame.Right;
-                _mixerChannel.AddSamples_sfloat(1, frameData);
+                _mixerChannel.AddSamplesFloat(1, frameData);
                 --framesRemaining;
             }
             // Update last rendered time to now using the atomic snapshot.
