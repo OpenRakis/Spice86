@@ -32,6 +32,7 @@
         <PackageReference Include="CommandLineParser" />
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Morris.Moxy" />
+        <PackageReference Include="Spice86.Audio" />
         <!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
         <PackageReference Include="Mt32emu.net" />
     </ItemGroup>
