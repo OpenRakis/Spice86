@@ -87,9 +87,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
     internal event EventHandler? CloseMainWindow;
 
-    private readonly Mixer _mixer;
+    private readonly SoftwareMixer _mixer;
     private readonly SoundBlaster _soundBlaster;
-    private readonly Opl _opl;
+    private readonly Opl3Fm _opl;
 
     public MainWindowViewModel(SharedMouseData sharedMouseData,
         ITimeMultiplier pit, IUIDispatcher uiDispatcher,
@@ -97,7 +97,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         Configuration configuration, ILoggerService loggerService,
         IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel,
         IExceptionHandler exceptionHandler, ICyclesLimiter cyclesLimiter,
-        Mixer mixer, SoundBlaster soundBlaster, Opl opl)
+        SoftwareMixer mixer, SoundBlaster soundBlaster, Opl3Fm opl)
         : base(uiDispatcher, textClipboard) {
         _sharedMouseData = sharedMouseData;
         _pit = pit;
@@ -155,15 +155,15 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
         // Check if mixer window already exists
         foreach (Window window in lifetime.Windows) {
-            if (window is MixerView mixerView) {
+            if (window is SoftwareMixerView mixerView) {
                 mixerView.Activate();
                 return;
             }
         }
 
         // Create new mixer window
-        MixerView newMixerWindow = new() {
-            DataContext = new MixerViewModel(_mixer)
+        SoftwareMixerView newMixerWindow = new() {
+            DataContext = new SoftwareMixerViewModel(_mixer)
         };
         newMixerWindow.Show();
     }

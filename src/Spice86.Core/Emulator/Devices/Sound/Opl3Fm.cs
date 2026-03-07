@@ -21,7 +21,7 @@ using System.Threading;
 ///     Virtual device which emulates OPL FM sound.
 ///     Reference: DOSBox-staging src/hardware/audio/opl.cpp
 /// </summary>
-public class Opl : DefaultIOPortHandler, IDisposable {
+public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private const int OplSampleRateHz = 49716;
 
     private readonly AdlibGold? _adlibGold;
@@ -52,7 +52,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     The mixer channel used for the OPL synth.
     /// </summary>
-    private readonly MixerChannel _mixerChannel;
+    private readonly SoundChannel _mixerChannel;
 
     private readonly bool _useOplIrq;
     private bool _disposed;
@@ -93,7 +93,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <param name="enableOplIrq">True to forward OPL IRQs to the PIC.</param>
     /// <param name="oplIrqLine">IRQ line used when OPL IRQs are enabled.</param>
     /// <param name="mixerEnabled">True if SB mixer controls OPL volume.</param>
-    public Opl(Mixer mixer, State state,
+    public Opl3Fm(SoftwareMixer mixer, State state,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
         ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
         OplMode mode = OplMode.Opl3, ushort sbBase = 0x220, bool enableOplIrq = false, byte oplIrqLine = 5,
@@ -127,7 +127,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
             features.Add(ChannelFeature.Stereo);
         }
 
-        _mixerChannel = mixer.AddChannel(AudioCallback, OplSampleRateHz, nameof(Opl), features);
+        _mixerChannel = mixer.AddChannel(AudioCallback, OplSampleRateHz, nameof(Opl3Fm), features);
         _mixerChannel.SetResampleMethod(ResampleMethod.Resample);
 
         // Initialize AdLib Gold for Opl3Gold mode
@@ -169,7 +169,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     Exposes the OPL mixer channel for other components (e.g., SoundBlaster hardware mixer).
     /// </summary>
-    public MixerChannel MixerChannel => _mixerChannel;
+    public SoundChannel MixerChannel => _mixerChannel;
 
     /// <summary>
     ///     Gets the current OPL synthesis mode.
@@ -275,18 +275,21 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         ioPortDispatcher.AddIOPortHandler(0x38A, this);
         ioPortDispatcher.AddIOPortHandler(0x38B, this);
 
-        // Sound Blaster base ports (0x220-0x223) for dual OPL modes
-        bool isDualOpl = _mode != OplMode.Opl2;
-        if (isDualOpl) {
+        // Sound Blaster base ports (0x220-0x223) are only used in dual OPL2 mode.
+        bool isDualOpl = _mode == OplMode.DualOpl2;
+        bool hasSoundBlasterBase = _sbBase != 0;
+        if (isDualOpl && hasSoundBlasterBase) {
             ioPortDispatcher.AddIOPortHandler(_sbBase, this);
             ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 1), this);
             ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 2), this);
             ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 3), this);
         }
 
-        // 0x228-0x229 ports (advanced OPL3 ports)
-        ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 8), this);
-        ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 9), this);
+        // 0x228-0x229 ports (advanced OPL3 ports) are relative to SB base when configured.
+        if (hasSoundBlasterBase) {
+            ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 8), this);
+            ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 9), this);
+        }
     }
 
     /// <summary>

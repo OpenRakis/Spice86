@@ -14,15 +14,15 @@ using System.Linq;
 /// <summary>
 /// View model for the mixer window, displaying and controlling mixer channels.
 /// </summary>
-public partial class MixerViewModel : ViewModelBase {
-    private readonly Mixer _mixer;
+public partial class SoftwareMixerViewModel : ViewModelBase {
+    private readonly SoftwareMixer _mixer;
 
     /// <summary>
     /// Collection of mixer channel view models.
     /// </summary>
     public ObservableCollection<MixerChannelViewModel> Channels { get; } = new();
 
-    public MixerViewModel(Mixer mixer) {
+    public SoftwareMixerViewModel(SoftwareMixer mixer) {
         _mixer = mixer;
 
         // Start dispatcher timer to update channel state
@@ -61,7 +61,7 @@ public partial class MixerViewModel : ViewModelBase {
 
     private void RefreshChannels() {
         // Get all channels from mixer
-        System.Collections.Generic.List<MixerChannel> currentChannels = [.. _mixer.GetAllChannels()];
+        System.Collections.Generic.List<SoundChannel> currentChannels = [.. _mixer.GetAllChannels()];
 
         // Remove channels that no longer exist
         for (int i = Channels.Count - 1; i >= 0; i--) {
@@ -71,7 +71,7 @@ public partial class MixerViewModel : ViewModelBase {
         }
 
         // Add new channels and update existing ones
-        foreach (MixerChannel channel in currentChannels) {
+        foreach (SoundChannel channel in currentChannels) {
             MixerChannelViewModel? existingVm = Channels.FirstOrDefault(vm => vm.GetChannel() == channel);
             if (existingVm != null) {
                 existingVm.UpdateFromChannel();

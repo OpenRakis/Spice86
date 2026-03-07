@@ -10,8 +10,8 @@ using Spice86.Shared.Interfaces;
 public class HardwareMixer {
     private readonly SoundBlasterHardwareConfig _blasterHardwareConfig;
     private readonly ILoggerService _logger;
-    private readonly MixerChannel _pcmMixerChannel;
-    private readonly MixerChannel _OPLMixerChannel;
+    private readonly SoundChannel _pcmMixerChannel;
+    private readonly SoundChannel _OPLMixerChannel;
 
     // Mixer volume registers (0-31 range)
     private readonly byte[] _masterVolume = new byte[2] { 31, 31 }; // Left, Right
@@ -49,7 +49,7 @@ public class HardwareMixer {
     /// <param name="OPLMixerChannel">The mixer channel for FM synth music.</param>
     /// <param name="loggerService">The service used for logging.</param>
     public HardwareMixer(SoundBlasterHardwareConfig soundBlasterHardwareConfig,
-        MixerChannel pcmMixerChannel, MixerChannel OPLMixerChannel,
+        SoundChannel pcmMixerChannel, SoundChannel OPLMixerChannel,
         ILoggerService loggerService) {
         _logger = loggerService;
         _blasterHardwareConfig = soundBlasterHardwareConfig;

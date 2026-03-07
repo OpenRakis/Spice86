@@ -17,8 +17,8 @@ using System.Collections.Concurrent;
 [SimpleJob(RuntimeMoniker.Net90)]
 [MemoryDiagnoser]
 public class MixerChannelIterationBenchmark {
-    private ConcurrentDictionary<string, MixerChannel>? _concurrentChannels;
-    private Dictionary<string, MixerChannel>? _dictionaryChannels;
+    private ConcurrentDictionary<string, SoundChannel>? _concurrentChannels;
+    private Dictionary<string, SoundChannel>? _dictionaryChannels;
     private readonly object _lock = new();
     private const int ChannelCount = 8; // Typical number of active channels
     private const int IterationCount = 1000; // Simulate mixing frames
@@ -27,15 +27,15 @@ public class MixerChannelIterationBenchmark {
     public void Setup() {
         ILoggerService logger = Substitute.For<ILoggerService>();
 
-        _concurrentChannels = new ConcurrentDictionary<string, MixerChannel>();
-        _dictionaryChannels = new Dictionary<string, MixerChannel>();
+        _concurrentChannels = new ConcurrentDictionary<string, SoundChannel>();
+        _dictionaryChannels = new Dictionary<string, SoundChannel>();
 
         // Create typical game audio channels
         string[] channelNames = { "SB", "OPL", "CDAUDIO", "PCSPKR", "GUS", "MIDI", "TANDY", "DISNEY" };
 
         for (int i = 0; i < ChannelCount; i++) {
             string name = channelNames[i];
-            MixerChannel channel = new MixerChannel(
+            SoundChannel channel = new SoundChannel(
                 _ => { },
                 name,
                 new HashSet<ChannelFeature> { ChannelFeature.Stereo },
@@ -52,7 +52,7 @@ public class MixerChannelIterationBenchmark {
     public int ConcurrentDictionary_Iteration() {
         int frameCount = 0;
         for (int iter = 0; iter < IterationCount; iter++) {
-            foreach (MixerChannel channel in _concurrentChannels!.Values) {
+            foreach (SoundChannel channel in _concurrentChannels!.Values) {
                 if (channel.IsEnabled) {
                     frameCount++;
                 }
@@ -66,7 +66,7 @@ public class MixerChannelIterationBenchmark {
         int frameCount = 0;
         for (int iter = 0; iter < IterationCount; iter++) {
             lock (_lock) {
-                foreach (MixerChannel channel in _dictionaryChannels!.Values) {
+                foreach (SoundChannel channel in _dictionaryChannels!.Values) {
                     if (channel.IsEnabled) {
                         frameCount++;
                     }
@@ -79,13 +79,13 @@ public class MixerChannelIterationBenchmark {
     [Benchmark]
     public int Dictionary_CachedSnapshot_Iteration() {
         int frameCount = 0;
-        MixerChannel[] snapshot;
+        SoundChannel[] snapshot;
         lock (_lock) {
             snapshot = _dictionaryChannels!.Values.ToArray();
         }
 
         for (int iter = 0; iter < IterationCount; iter++) {
-            foreach (MixerChannel channel in snapshot) {
+            foreach (SoundChannel channel in snapshot) {
                 if (channel.IsEnabled) {
                     frameCount++;
                 }
@@ -100,7 +100,7 @@ public class MixerChannelIterationBenchmark {
 
         for (int i = 0; i < 100; i++) {
             string name = $"TEMP{i}";
-            MixerChannel channel = new MixerChannel(
+            SoundChannel channel = new SoundChannel(
                 _ => { },
                 name,
                 new HashSet<ChannelFeature>(),
@@ -118,7 +118,7 @@ public class MixerChannelIterationBenchmark {
 
         for (int i = 0; i < 100; i++) {
             string name = $"TEMP{i}";
-            MixerChannel channel = new MixerChannel(
+            SoundChannel channel = new SoundChannel(
                 _ => { },
                 name,
                 new HashSet<ChannelFeature>(),

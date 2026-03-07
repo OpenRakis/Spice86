@@ -9,10 +9,10 @@ using Spice86.Core.Emulator.Devices.Sound;
 using System;
 
 /// <summary>
-/// View model wrapping a single MixerChannel for display/editing.
+/// View model wrapping a single SoundChannel for display/editing.
 /// </summary>
 public partial class MixerChannelViewModel : ViewModelBase {
-    private readonly MixerChannel _channel;
+    private readonly SoundChannel _channel;
 
     [ObservableProperty]
     private string _name = string.Empty;
@@ -44,12 +44,12 @@ public partial class MixerChannelViewModel : ViewModelBase {
     [ObservableProperty]
     private bool _isMuted;
 
-    public MixerChannelViewModel(MixerChannel channel) {
+    public MixerChannelViewModel(SoundChannel channel) {
         _channel = channel ?? throw new ArgumentNullException(nameof(channel));
         UpdateFromChannel();
     }
 
-    public MixerChannel GetChannel() {
+    public SoundChannel GetChannel() {
         return _channel;
     }
 

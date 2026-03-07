@@ -15,7 +15,7 @@ using System.Linq;
 /// </summary>
 public sealed class Mt32MidiDevice : MidiDevice {
     private readonly Mt32Context _context;
-    private readonly MixerChannel? _mixerChannel;
+    private readonly SoundChannel? _mixerChannel;
 
     /// <summary>
     /// Indicates whether this object has been disposed.
@@ -32,7 +32,7 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
     /// <param name="loggerService">The logger service to use for logging messages.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
-    public Mt32MidiDevice(Mixer mixer, string romsPath, IPauseHandler pauseHandler, ILoggerService loggerService) {
+    public Mt32MidiDevice(SoftwareMixer mixer, string romsPath, IPauseHandler pauseHandler, ILoggerService loggerService) {
         _mixerChannel = mixer.AddChannel(RenderCallback, 48000, nameof(Mt32MidiDevice), new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
         _context = new();
         if (string.IsNullOrWhiteSpace(romsPath)) {

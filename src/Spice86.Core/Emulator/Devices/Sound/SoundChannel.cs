@@ -18,7 +18,7 @@ using LowPass = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.LowPass;
 /// <summary>
 /// Represents a single audio channel in the mixer.
 /// </summary>
-public sealed class MixerChannel {
+public sealed class SoundChannel {
     private const uint SpeexChannels = 2; // Always use stereo for processing
     private const int SpeexQuality = 5; // Medium quality - good balance between CPU and quality
 
@@ -131,7 +131,7 @@ public sealed class MixerChannel {
 
     private readonly Spice86.Audio.Filters.Envelope _envelope;
 
-    public MixerChannel(
+    public SoundChannel(
         Action<int> handler,
         string name,
         HashSet<ChannelFeature> features,
@@ -1829,7 +1829,7 @@ public sealed class MixerChannel {
     /// Reference: DOSBox mixer.cpp lines 1960-2130
     /// </summary>
     private sealed class Sleeper {
-        private readonly MixerChannel _channel;
+        private readonly SoundChannel _channel;
 
         // The wait before fading or sleeping is bound between these values
         private const int MinWaitMs = 100;
@@ -1845,7 +1845,7 @@ public sealed class MixerChannel {
         private bool _wantsFadeout;
         private bool _hadSignal;
 
-        public Sleeper(MixerChannel channel, int sleepAfterMs = DefaultWaitMs) {
+        public Sleeper(SoundChannel channel, int sleepAfterMs = DefaultWaitMs) {
             _channel = channel ?? throw new ArgumentNullException(nameof(channel));
             _fadeoutOrSleepAfterMs = sleepAfterMs;
 

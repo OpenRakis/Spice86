@@ -17,7 +17,7 @@ using HighPassFilter = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.High
 /// <summary>
 /// Central audio mixer that runs in its own thread and produces final mixed output.
 /// </summary>
-public sealed class Mixer : IDisposable {
+public sealed class SoftwareMixer : IDisposable {
     private const int DefaultSampleRateHz = 48000;
     private static readonly int DefaultBlocksize = System.OperatingSystem.IsWindows() ? 1024 : 512;
     private static readonly int DefaultPrebufferMs = System.OperatingSystem.IsWindows() ? 25 : 20;
@@ -33,7 +33,7 @@ public sealed class Mixer : IDisposable {
     private readonly AudioPlayer _audioPlayer;
 
     // Channels registry - matches DOSBox mixer.channels
-    private readonly ConcurrentDictionary<string, MixerChannel> _channels = new();
+    private readonly ConcurrentDictionary<string, SoundChannel> _channels = new();
 
     // Queue notifiers for devices that run on the main thread.
     // The mixer thread can be waiting on these queues. We need to stop them
@@ -96,7 +96,7 @@ public sealed class Mixer : IDisposable {
 
     private bool _disposed;
 
-    public Mixer(AudioEngine audioEngine, IPauseHandler pauseHandler, ILoggerService loggerService) {
+    public SoftwareMixer(AudioEngine audioEngine, IPauseHandler pauseHandler, ILoggerService loggerService) {
         _pauseHandler = pauseHandler ?? throw new ArgumentNullException(nameof(pauseHandler));
         _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
         _audioPlayerFactory = new AudioPlayerFactory(audioEngine);
@@ -345,7 +345,7 @@ public sealed class Mixer : IDisposable {
         // DOSBox applies to OPL and CMS channels; we apply to all stereo channels
         float globalStrength = _doCrossfeed ? _crossfeedGlobalStrength : 0.0f;
 
-        foreach (MixerChannel channel in _channels.Values) {
+        foreach (SoundChannel channel in _channels.Values) {
             if (channel.HasFeature(ChannelFeature.Stereo)) {
                 channel.SetCrossfeedStrength(globalStrength);
             } else {
@@ -427,19 +427,19 @@ public sealed class Mixer : IDisposable {
         _reverbSynthSendLevel = synthLevel;
         _reverbDigitalSendLevel = digitalLevel;
 
-        _mverb.SetParameter(MVerb.Parameter.Predelay, predelay);
-        _mverb.SetParameter(MVerb.Parameter.EarlyMix, earlyMix);
-        _mverb.SetParameter(MVerb.Parameter.Size, size);
-        _mverb.SetParameter(MVerb.Parameter.Density, density);
-        _mverb.SetParameter(MVerb.Parameter.BandwidthFreq, bandwidthFreq);
-        _mverb.SetParameter(MVerb.Parameter.Decay, decay);
-        _mverb.SetParameter(MVerb.Parameter.DampingFreq, dampingFreq);
+        _mverb.SetParameter((int)MVerb.Parameter.Predelay, predelay);
+        _mverb.SetParameter((int)MVerb.Parameter.EarlyMix, earlyMix);
+        _mverb.SetParameter((int)MVerb.Parameter.Size, size);
+        _mverb.SetParameter((int)MVerb.Parameter.Density, density);
+        _mverb.SetParameter((int)MVerb.Parameter.BandwidthFreq, bandwidthFreq);
+        _mverb.SetParameter((int)MVerb.Parameter.Decay, decay);
+        _mverb.SetParameter((int)MVerb.Parameter.DampingFreq, dampingFreq);
 
         // Always max gain (no attenuation)
-        _mverb.SetParameter(MVerb.Parameter.Gain, 1.0f);
+        _mverb.SetParameter((int)MVerb.Parameter.Gain, 1.0f);
 
         // Always 100% wet output signal
-        _mverb.SetParameter(MVerb.Parameter.Mix, 1.0f);
+        _mverb.SetParameter((int)MVerb.Parameter.Mix, 1.0f);
 
         _mverb.SetSampleRate(_sampleRateHz);
 
@@ -453,7 +453,7 @@ public sealed class Mixer : IDisposable {
     /// Applies global reverb settings to all channels.
     /// </summary>
     private void SetGlobalReverb() {
-        foreach (MixerChannel channel in _channels.Values) {
+        foreach (SoundChannel channel in _channels.Values) {
             if (!_doReverb || !channel.HasFeature(ChannelFeature.ReverbSend)) {
                 channel.SetReverbLevel(0.0f);
             } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
@@ -529,7 +529,7 @@ public sealed class Mixer : IDisposable {
     /// Applies global chorus settings to all channels.
     /// </summary>
     private void SetGlobalChorus() {
-        foreach (MixerChannel channel in _channels.Values) {
+        foreach (SoundChannel channel in _channels.Values) {
             if (!_doChorus || !channel.HasFeature(ChannelFeature.ChorusSend)) {
                 channel.SetChorusLevel(0.0f);
             } else if (channel.HasFeature(ChannelFeature.Synthesizer)) {
@@ -545,7 +545,7 @@ public sealed class Mixer : IDisposable {
     /// <summary>
     /// Adds a channel to the mixer.
     /// </summary>
-    public MixerChannel AddChannel(
+    public SoundChannel AddChannel(
         Action<int> handler,
         int sampleRateHz,
         string name,
@@ -555,7 +555,7 @@ public sealed class Mixer : IDisposable {
             sampleRateHz = _sampleRateHz;
         }
 
-        MixerChannel channel = new(handler, name, features, _loggerService);
+        SoundChannel channel = new(handler, name, features, _loggerService);
         channel.SetMixerSampleRate(_sampleRateHz); // Tell channel about mixer rate
         channel.SetSampleRate(sampleRateHz);
         channel.SetAppVolume(new AudioFrame(1.0f, 1.0f));
@@ -587,8 +587,8 @@ public sealed class Mixer : IDisposable {
     /// <summary>
     /// Finds a channel by name.
     /// </summary>
-    public MixerChannel? FindChannel(string name) {
-        _channels.TryGetValue(name, out MixerChannel? channel);
+    public SoundChannel? FindChannel(string name) {
+        _channels.TryGetValue(name, out SoundChannel? channel);
         return channel;
     }
 
@@ -596,7 +596,7 @@ public sealed class Mixer : IDisposable {
     /// Removes a channel from the mixer.
     /// </summary>
     public void DeregisterChannel(string name) {
-        if (_channels.TryRemove(name, out MixerChannel? channel)) {
+        if (_channels.TryRemove(name, out SoundChannel? channel)) {
             channel.Enable(false);
             _loggerService.Debug("MIXER: Deregistered channel {ChannelName}", name);
         }
@@ -605,7 +605,7 @@ public sealed class Mixer : IDisposable {
     /// <summary>
     /// Gets all registered mixer channels.
     /// </summary>
-    public IEnumerable<MixerChannel> GetAllChannels() {
+    public IEnumerable<SoundChannel> GetAllChannels() {
         return _channels.Values;
     }
 
@@ -673,7 +673,7 @@ public sealed class Mixer : IDisposable {
         _chorusAuxBuffer.AsSpan().Clear();
 
         // Mix all enabled channels
-        foreach (MixerChannel channel in _channels.Values) {
+        foreach (SoundChannel channel in _channels.Values) {
             if (!channel.IsEnabled) {
                 continue;
             }
@@ -828,30 +828,19 @@ public sealed class Mixer : IDisposable {
     /// Applies MVerb professional algorithmic reverb effect.
     /// </summary>
     private void ApplyReverb() {
-        // Prepare buffers for MVerb processing
-        // MVerb operates on non-interleaved sample streams (separate L/R arrays)
+        // Package MVerb processes one stereo frame at a time via ref params.
         int frameCount = _reverbAuxBuffer.Count;
-        float[] leftIn = new float[frameCount];
-        float[] rightIn = new float[frameCount];
-        float[] leftOut = new float[frameCount];
-        float[] rightOut = new float[frameCount];
 
-        // Extract left and right channels from reverb aux buffer
-        // Apply high-pass filter to reverb input (removes low-frequency buildup)
         for (int i = 0; i < frameCount; i++) {
             AudioFrame frame = _reverbAuxBuffer[i];
-            leftIn[i] = (float)_reverbHighPassFilter[0].Filter(frame.Left);
-            rightIn[i] = (float)_reverbHighPassFilter[1].Filter(frame.Right);
-        }
+            float left = (float)_reverbHighPassFilter[0].Filter(frame.Left);
+            float right = (float)_reverbHighPassFilter[1].Filter(frame.Right);
 
-        // Process through MVerb (FDN reverb algorithm)
-        _mverb.Process(leftIn, rightIn, leftOut, rightOut, frameCount);
+            _mverb.Process(ref left, ref right);
 
-        // Mix reverb output with main output buffer
-        for (int i = 0; i < frameCount; i++) {
             _outputBuffer[i] = new AudioFrame(
-                _outputBuffer[i].Left + leftOut[i],
-                _outputBuffer[i].Right + rightOut[i]
+                _outputBuffer[i].Left + left,
+                _outputBuffer[i].Right + right
             );
         }
     }
@@ -915,7 +904,7 @@ public sealed class Mixer : IDisposable {
             }
 
             // Disable all channels
-            foreach (MixerChannel channel in _channels.Values) {
+            foreach (SoundChannel channel in _channels.Values) {
                 channel.Enable(false);
             }
 

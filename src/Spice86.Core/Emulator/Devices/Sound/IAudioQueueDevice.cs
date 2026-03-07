@@ -19,5 +19,5 @@ public interface IAudioQueueDevice<T> where T : struct {
     /// <summary>
     /// Gets the mixer channel associated with this device.
     /// </summary>
-    MixerChannel Channel { get; }
+    SoundChannel Channel { get; }
 }

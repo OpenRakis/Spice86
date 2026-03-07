@@ -73,7 +73,7 @@ public class DosTestFixture {
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             false, true, LoggerService);
 
-        Mixer softwareMixer = new(configuration.AudioEngine, pauseHandler, LoggerService);
+        SoftwareMixer softwareMixer = new(configuration.AudioEngine, pauseHandler, LoggerService);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, LoggerService, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort);
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, LoggerService, configuration.FailOnUnhandledPort);

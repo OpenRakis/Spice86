@@ -22,7 +22,7 @@ using OperatingSystem = System.OperatingSystem;
 /// </summary>
 public sealed class GeneralMidiDevice : MidiDevice {
     private readonly Configuration _configuration;
-    private readonly MixerChannel? _mixerChannel;
+    private readonly SoundChannel? _mixerChannel;
     private readonly Synthesizer? _synthesizer;
 
     private bool _disposed;
@@ -48,7 +48,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
     /// <param name="mixer">The software mixer for sound channels.</param>
     /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
     /// <param name="loggerService">The service used to log messages.</param>
-    public GeneralMidiDevice(Configuration configuration, Mixer mixer, IPauseHandler pauseHandler, ILoggerService loggerService) {
+    public GeneralMidiDevice(Configuration configuration, SoftwareMixer mixer, IPauseHandler pauseHandler, ILoggerService loggerService) {
         _configuration = configuration;
         if (GetType().Assembly.GetManifestResourceNames().Any(x => x == SoundFontResourceName)) {
             Stream? resource = GetType().Assembly.GetManifestResourceStream(SoundFontResourceName);

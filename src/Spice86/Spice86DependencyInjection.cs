@@ -329,7 +329,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
-        Mixer mixer = new(configuration.AudioEngine, pauseHandler, loggerService);
+        SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler, loggerService);
         var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
@@ -351,13 +351,13 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.SbBase);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
 
-        Opl OPL = new(mixer, state, ioPortDispatcher,
+        Opl3Fm opl3Fm = new(mixer, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService,
             emulationLoopScheduler, emulatedClock, dualPic,
             mode: configuration.OplMode, sbBase: configuration.SbBase, enableOplIrq: false);
 
         SoundBlaster soundBlaster = new(ioPortDispatcher,
-            state, dmaSystem, dualPic, mixer, OPL, loggerService,
+            state, dmaSystem, dualPic, mixer, opl3Fm, loggerService,
             emulationLoopScheduler, emulatedClock,
             soundBlasterHardwareConfig);
         GravisUltraSound gravisUltraSound = new(state, ioPortDispatcher,
@@ -416,7 +416,7 @@ public class Spice86DependencyInjection : IDisposable {
             mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
                 pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
                 loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter,
-                mixer, soundBlaster, OPL);
+                mixer, soundBlaster, opl3Fm);
 
             // Subscribe to video mode changes for dynamic aspect ratio correction
             vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
@@ -546,7 +546,7 @@ public class Spice86DependencyInjection : IDisposable {
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
-            dmaSystem, OPL, mixer, mouse, mouseDriver,
+            dmaSystem, opl3Fm, mixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {

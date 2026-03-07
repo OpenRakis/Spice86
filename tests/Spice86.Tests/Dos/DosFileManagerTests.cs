@@ -136,7 +136,7 @@ public class DosFileManagerTests {
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             false, true, loggerService);
 
-        Mixer mixer = new(configuration.AudioEngine, pauseHandler, loggerService);
+        SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler, loggerService);
         PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort);
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService, configuration.FailOnUnhandledPort);

@@ -52,7 +52,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker, IAudioQ
     private readonly LowPass _lowPassFilter = new();
     private readonly RWQueue<float> _outputQueue;
     private readonly PitState _pit = new();
-    private readonly MixerChannel _mixerChannel;
+    private readonly SoundChannel _mixerChannel;
     private readonly TickHandler _tickHandler;
     private readonly float[] _waveform = new float[WaveformSize];
     private float _accumulator;
@@ -78,7 +78,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker, IAudioQ
     /// <param name="failOnUnhandledPort">Indicates whether unhandled port accesses should throw.</param>
     /// <param name="pitControl">Optional PIT control used to synchronize channel 2 output.</param>
     public PcSpeaker(
-        Mixer mixer,
+        SoftwareMixer mixer,
         State state,
         IOPortDispatcher ioPortDispatcher,
         IPauseHandler pauseHandler,
@@ -147,7 +147,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker, IAudioQ
     public RWQueue<float> OutputQueue => _outputQueue;
 
     /// <inheritdoc />
-    public MixerChannel Channel => _mixerChannel;
+    public SoundChannel Channel => _mixerChannel;
 
     /// <inheritdoc />
     public void NotifyLockMixer() {

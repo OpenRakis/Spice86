@@ -444,9 +444,9 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     private readonly DualPic _dualPic;
     private readonly DmaChannel _primaryDmaChannel;
     private readonly DmaChannel? _secondaryDmaChannel;
-    private readonly Mixer _mixer;
-    private readonly MixerChannel _dacChannel;
-    private readonly Opl _opl;
+    private readonly SoftwareMixer _mixer;
+    private readonly SoundChannel _dacChannel;
+    private readonly Opl3Fm _opl;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly HardwareMixer _hardwareMixer;
@@ -494,8 +494,8 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         State state,
         DmaBus dmaBus,
         DualPic dualPic,
-        Mixer mixer,
-        Opl opl,
+        SoftwareMixer mixer,
+        Opl3Fm opl,
         ILoggerService loggerService,
         EmulationLoopScheduler scheduler,
         IEmulatedClock clock,
@@ -613,7 +613,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     public RWQueue<AudioFrame> OutputQueue => _outputQueue;
 
     /// <inheritdoc />
-    public MixerChannel Channel => _dacChannel;
+    public SoundChannel Channel => _dacChannel;
 
     /// <inheritdoc />
     public void NotifyLockMixer() {
@@ -1486,7 +1486,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
     public byte DspTestRegister => _sb.Dsp.TestRegister;
 
-    public MixerChannel DacChannel => _dacChannel;
+    public SoundChannel DacChannel => _dacChannel;
 
     // ReadByte, WriteByte, Reset, and other existing methods...
     public override byte ReadByte(ushort port) {
@@ -2531,6 +2531,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        if (_config.SbType == SbType.None || _config.BaseAddress == 0) {
+            return;
+        }
+
         int basePort = _config.BaseAddress;
         ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x06), this);
         ioPortDispatcher.AddIOPortHandler((ushort)(basePort + 0x0A), this);

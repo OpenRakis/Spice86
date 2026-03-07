@@ -60,7 +60,7 @@ public sealed class Machine : IDisposable {
     /// The emulated CPU state.
     /// </summary>
     public State CpuState { get; }
-    
+
     /// <summary>
     /// The in memory stack used by the CPU
     /// </summary>
@@ -197,14 +197,14 @@ public sealed class Machine : IDisposable {
     public DmaBus DmaSystem { get; }
 
     /// <summary>
-    /// The OPL FM Synth chip.
+    /// The OPL3 FM synth chip.
     /// </summary>
-    public Opl OPL { get; }
+    public Opl3Fm Opl3Fm { get; }
 
     /// <summary>
     /// The internal software mixer for all sound channels.
     /// </summary>
-    public Mixer Mixer { get; }
+    public SoftwareMixer Mixer { get; }
 
     /// <summary>
     /// The size of the conventional memory in kilobytes.
@@ -267,8 +267,8 @@ public sealed class Machine : IDisposable {
         IVideoInt10Handler videoInt10Handler,
         VgaRom vgaRom,
         DmaBus dmaSystem,
-        Opl opl,
-        Mixer mixer,
+        Opl3Fm opl,
+        SoftwareMixer mixer,
         IMouseDevice mouseDevice,
         IMouseDriver mouseDriver,
         IVgaFunctionality vgaFunctions,
@@ -306,7 +306,7 @@ public sealed class Machine : IDisposable {
         VideoInt10Handler = videoInt10Handler;
         VgaRom = vgaRom;
         DmaSystem = dmaSystem;
-        OPL = opl;
+        Opl3Fm = opl;
         Mixer = mixer;
         MouseDevice = mouseDevice;
         MouseDriver = mouseDriver;
@@ -322,7 +322,7 @@ public sealed class Machine : IDisposable {
         if (!_disposed) {
             if (disposing) {
                 MidiDevice.Dispose();
-                OPL.Dispose();
+                Opl3Fm.Dispose();
                 PcSpeaker.Dispose();
                 Mixer.Dispose();
                 RealTimeClock.Dispose();
