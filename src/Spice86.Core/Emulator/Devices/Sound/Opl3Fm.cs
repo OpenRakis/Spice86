@@ -7,72 +7,90 @@ using Serilog.Events;
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
 using System.Runtime.InteropServices;
 using System.Threading;
 
 /// <summary>
-///     Virtual device which emulates OPL FM sound.
-///     Reference: DOSBox-staging src/hardware/audio/opl.cpp
+/// Represents the SB OPL synthesizer chip for audio emulation, supporting multiple synthesis modes and providing methods
+/// for rendering audio frames and handling I/O operations. <br/><br/>
+/// The Opl class supports OPL2, Dual OPL2, OPL3, and OPL3 Gold synthesis modes. It manages audio
+/// rendering, integrates with a mixer for sound output, and handles I/O port registration based on the selected mode.
 /// </summary>
+/// <remarks>
+/// 2022-2025 The DOSBox Staging Team
+/// </remarks>
 public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private const int OplSampleRateHz = 49716;
 
     private readonly AdlibGold? _adlibGold;
+    private readonly ILoggerService _logger;
     private readonly Opl3Chip _chip = new();
     private readonly Lock _chipLock = new();
-    private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
-    private readonly DualPic _dualPic;
-    private readonly byte _oplIrqLine;
     private readonly OplMode _mode;
 
     // Two timer chips for DualOpl2 mode or single chip for other modes
-    // Reference: OplChip chip[2] in DOSBox
-    private readonly OplTimerChip[] _timerChips = [new OplTimerChip(), new OplTimerChip()];
+    private readonly OplChip[] _timerChips;
 
     // FIFO queue for cycle-accurate OPL frame generation
-    // Reference: std::queue<AudioFrame> fifo in DOSBox opl.h
     private readonly Queue<AudioFrame> _fifo = new();
 
     // Register cache for two chips (512 bytes)
-    // Reference: OplRegisterCache cache[512] in DOSBox
     private readonly byte[] _registerCache = new byte[512];
 
     // Time tracking for cycle-accurate rendering
     private double _lastRenderedMs;
     private readonly double _msPerFrame;
 
-    /// <summary>
-    ///     The mixer channel used for the OPL synth.
-    /// </summary>
     private readonly SoundChannel _mixerChannel;
 
-    private readonly bool _useOplIrq;
     private bool _disposed;
 
     // OPL3 new mode flag
-    // Reference: opl.newm in DOSBox
     private byte _newMode;
 
-    // Last selected address in the chip
-    // Reference: union { uint16_t normal; uint8_t dual[2]; } reg in DOSBox
-    private ushort _selectedRegister;
-    private readonly byte[] _selectedRegisterDual = new byte[2];
+    private OplRegister _reg;
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct OplRegister {
+        /// <summary>Full 16-bit register address (used by Opl2/Opl3/Opl3Gold modes).</summary>
+        [FieldOffset(0)]
+        public ushort Normal;
+
+        /// <summary>Low byte — dual register index 0 (used by DualOpl2 mode).</summary>
+        [FieldOffset(0)]
+        public byte Dual0;
+
+        /// <summary>High byte — dual register index 1 (used by DualOpl2 mode).</summary>
+        [FieldOffset(1)]
+        public byte Dual1;
+    }
+
+    private struct AdLibGoldControl {
+        private const byte DefaultVolume = 0xFF;
+
+        public byte Index;
+        public byte LeftVolume;
+        public byte RightVolume;
+        public bool Active;
+        public readonly bool MixerEnabled;
+
+        public AdLibGoldControl(bool mixerEnabled) {
+            Index = 0;
+            LeftVolume = DefaultVolume;
+            RightVolume = DefaultVolume;
+            Active = false;
+            MixerEnabled = mixerEnabled;
+        }
+    }
 
     // AdLib Gold control state
-    // Reference: struct ctrl in DOSBox
-    private byte _ctrlIndex;
-    private byte _ctrlLvol = 0xFF;
-    private byte _ctrlRvol = 0xFF;
-    private bool _ctrlActive;
-    private readonly bool _ctrlMixerEnabled;
+    private AdLibGoldControl _ctrl;
 
     // Sound Blaster base address for port registration
     private readonly ushort _sbBase;
@@ -80,38 +98,26 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     Initializes a new instance of the OPL synth chip.
     /// </summary>
+    /// <param name="config">OPL configuration options (mode, SB base, and mixer enable).</param>
     /// <param name="mixer">The global software mixer.</param>
     /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="clock">The emulated clock.</param>
     /// <param name="ioPortDispatcher">I/O port dispatcher.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
     /// <param name="loggerService">The logger service.</param>
-    /// <param name="scheduler">The event scheduler.</param>
-    /// <param name="clock">The emulated clock.</param>
-    /// <param name="dualPic">The dual PIC.</param>
-    /// <param name="mode">OPL synthesis mode.</param>
-    /// <param name="sbBase">Sound Blaster base I/O address for port registration.</param>
-    /// <param name="enableOplIrq">True to forward OPL IRQs to the PIC.</param>
-    /// <param name="oplIrqLine">IRQ line used when OPL IRQs are enabled.</param>
-    /// <param name="mixerEnabled">True if SB mixer controls OPL volume.</param>
-    public Opl3Fm(SoftwareMixer mixer, State state,
+    public Opl3Fm(OplConfig config, SoftwareMixer mixer, State state, IEmulatedClock clock,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
-        ILoggerService loggerService, EmulationLoopScheduler scheduler, IEmulatedClock clock, DualPic dualPic,
-        OplMode mode = OplMode.Opl3, ushort sbBase = 0x220, bool enableOplIrq = false, byte oplIrqLine = 5,
-        bool mixerEnabled = false)
+        ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
+        _logger = loggerService;
         mixer.LockMixerThread();
-
-        _mode = mode;
-        _sbBase = sbBase;
-        _scheduler = scheduler;
+        _mode = config.Mode;
+        _sbBase = config.SbBase;
         _clock = clock;
-        _dualPic = dualPic;
-        _useOplIrq = enableOplIrq;
-        _oplIrqLine = oplIrqLine;
-        _ctrlMixerEnabled = mixerEnabled;
+        _timerChips = [new OplChip(clock), new OplChip(clock)];
+        _ctrl = new AdLibGoldControl(mixerEnabled: config.SbMixer);
 
         // Build channel features based on mode
-        // Reference: DOSBox channel_features setup
         HashSet<ChannelFeature> features = [
             ChannelFeature.Sleep,
             ChannelFeature.FadeOut,
@@ -131,23 +137,25 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         _mixerChannel.SetResampleMethod(ResampleMethod.Resample);
 
         // Initialize AdLib Gold for Opl3Gold mode
-        // Reference: adlib_gold = std::make_unique<AdlibGold>(OplSampleRateHz)
         if (_mode == OplMode.Opl3Gold) {
             _adlibGold = new AdlibGold(OplSampleRateHz);
         }
 
-        _loggerService.Debug(
-            "Initializing OPL FM synth. Mode: {Mode}, Sample rate: {SampleRate}",
-            _mode, OplSampleRateHz);
+        if (_logger.IsEnabled(LogEventLevel.Information)) {
+            _logger.Information(
+                "OPL: Running {Mode} on ports {BasePort:X3}h and {AdLibPort:X3}h at {SampleRate} Hz",
+                _mode, _sbBase, 0x388, OplSampleRateHz);
+        }
 
-        // Volume gain matching DOSBox
-        // Reference: constexpr auto OplVolumeGain = 1.5f
+        // Volume gain
         const float OplVolumeGain = 1.5f;
         _mixerChannel.Set0dbScalar(OplVolumeGain);
 
-        // Noise gate configuration matching DOSBox
-        // Reference: threshold_db = -65.0f + gain_to_decibel(OplVolumeGain)
-        float thresholdDb = -65.0f + GainToDecibel(OplVolumeGain);
+        // Noise gate configuration
+        // AdLib Gold output can be very quiet during startup (e.g., Dune), and a higher threshold can gate it entirely,
+        // presenting as "startup silence". Use a lower threshold for Opl3Gold to avoid cutting legitimate low-level audio.
+        float baseThresholdDb = _mode == OplMode.Opl3Gold ? -80.0f : -65.0f;
+        float thresholdDb = baseThresholdDb + GainToDecibel(OplVolumeGain);
         const float AttackTimeMs = 1.0f;
         const float ReleaseTimeMs = 100.0f;
         _mixerChannel.ConfigureNoiseGate(thresholdDb, AttackTimeMs, ReleaseTimeMs);
@@ -156,14 +164,205 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         const double MillisInSecond = 1000.0;
         _msPerFrame = MillisInSecond / OplSampleRateHz;
         _lastRenderedMs = _clock.ElapsedTimeMs;
-
-        // Initialize chip
         Init();
-
-        // Register I/O port handlers
         InitPortHandlers(ioPortDispatcher);
-
         mixer.UnlockMixerThread();
+    }
+
+    public override byte ReadByte(ushort port) {
+        byte result = PortRead(port);
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("OPL: ReadByte port=0x{Port:X4} => 0x{Result:X2}", port, result);
+        }
+        return result;
+    }
+
+    private byte PortRead(ushort port) {
+        switch (_mode) {
+            case OplMode.Opl2:
+                // We allocated 4 ports, so just return -1 for the higher ones.
+                if ((port & 0x03) == 0) {
+                    // Make sure the low bits are 6 on OPL2
+                    return (byte)(_timerChips[0].Read() | 0x06);
+                }
+                return 0xFF;
+
+            case OplMode.DualOpl2:
+                // Only return for the lower ports
+                if ((port & 0x01) != 0) {
+                    return 0xFF;
+                }
+                // Make sure the low bits are 6 on OPL2
+                return (byte)(_timerChips[(port >> 1) & 1].Read() | 0x06);
+
+            case OplMode.Opl3Gold:
+                if (_ctrl.Active) {
+                    if (port == 0x38A) {
+                        // Control status, not busy
+                        return 0;
+                    }
+                    if (port == 0x38B) {
+                        return AdlibGoldControlRead();
+                    }
+                }
+                goto case OplMode.Opl3;
+
+            case OplMode.Opl3:
+                // We allocated 4 ports, so just return -1 for the higher ones
+                if ((port & 0x03) == 0) {
+                    return _timerChips[0].Read();
+                }
+                return 0xFF;
+
+            default:
+                return 0xFF;
+        }
+    }
+
+    public override void WriteByte(ushort port, byte value) {
+        if (_disposed) {
+            return;
+        }
+        using Lock.Scope scope = _chipLock.EnterScope();
+        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
+            _logger.Verbose("OPL: WriteByte port=0x{Port:X4} value=0x{Value:X2} mode={Mode}", port, value, _mode);
+        }
+        RenderUpToNow();
+        PortWrite(port, value);
+    }
+
+    private void PortWrite(ushort port, byte value) {
+        bool isDataPort = (port & 0x01) != 0;
+        if (isDataPort) {
+            // Data write
+            switch (_mode) {
+                case OplMode.Opl3Gold:
+                    if (port == 0x38B && _ctrl.Active) {
+                        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                            string desc = _ctrl.Index switch {
+                                0x04 => "Stereo Volume Left",
+                                0x05 => "Stereo Volume Right",
+                                0x06 => "Bass",
+                                0x07 => "Treble",
+                                0x08 => "Switch Functions",
+                                0x09 => "Left FM Volume",
+                                0x0A => "Right FM Volume",
+                                0x18 => "Surround Control",
+                                _ => "AdlibGold control"
+                            };
+                            _logger.Debug("OPL: AdlibGold control write index=0x{Idx:X2} ({Desc}) value=0x{Value:X2}", _ctrl.Index, desc, value);
+                        }
+                        AdlibGoldControlWrite(value);
+                        return;
+                    }
+                    goto case OplMode.Opl2;
+
+                case OplMode.Opl2:
+                case OplMode.Opl3:
+                    if (!_timerChips[0].Write(_reg.Normal, value)) {
+                        WriteReg(_reg.Normal, value);
+                        CacheWrite(_reg.Normal, value);
+                    }
+                    break;
+
+                case OplMode.DualOpl2:
+                    // Not a 0x??8 port, then write to a specific port
+                    if ((port & 0x08) == 0) {
+                        int index = (port & 2) >> 1;
+                        byte dualReg = index == 0 ? _reg.Dual0 : _reg.Dual1;
+                        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                            _logger.Debug("OPL: Dual data write index={Index} reg=0x{Reg:X2} value=0x{Value:X2}", index, dualReg, value);
+                        }
+                        DualWrite((byte)index, dualReg, value);
+                    } else {
+                        // Write to both ports
+                        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                            _logger.Debug("OPL: Dual data broadcast write reg0=0x{Reg0:X2} reg1=0x{Reg1:X2} value=0x{Value:X2}", _reg.Dual0, _reg.Dual1, value);
+                        }
+                        DualWrite(0, _reg.Dual0, value);
+                        DualWrite(1, _reg.Dual1, value);
+                    }
+                    break;
+            }
+        } else {
+            // Address write
+            switch (_mode) {
+                case OplMode.Opl2:
+                    _reg.Normal = (ushort)(ComputeRegisterAddress(port, value) & 0xFF);
+                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                        _logger.Debug("OPL: Address write selected register set to 0x{Reg:X3} (Opl2)", _reg.Normal);
+                    }
+                    break;
+
+                case OplMode.DualOpl2:
+                    // Not a 0x?88 port, write to a specific side
+                    if ((port & 0x08) == 0) {
+                        int index = (port & 2) >> 1;
+                        if (index == 0) {
+                            _reg.Dual0 = (byte)(value & 0xFF);
+                        } else {
+                            _reg.Dual1 = (byte)(value & 0xFF);
+                        }
+                    } else {
+                        _reg.Dual0 = (byte)(value & 0xFF);
+                        _reg.Dual1 = (byte)(value & 0xFF);
+                    }
+                    break;
+
+                case OplMode.Opl3Gold:
+                    if (port == 0x38A) {
+                        if (value == 0xFF) {
+                            _ctrl.Active = true;
+                            return;
+                        }
+                        if (value == 0xFE) {
+                            _ctrl.Active = false;
+                            return;
+                        }
+                        if (_ctrl.Active) {
+                            _ctrl.Index = value;
+                            string idxDesc = GetAdlibGoldControlDescription(_ctrl.Index);
+                            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                                _logger.Debug("OPL: AdlibGold control index set to 0x{Idx:X2} ({Desc})", _ctrl.Index, idxDesc);
+                            }
+                            return;
+                        }
+                    }
+                    goto case OplMode.Opl3;
+
+                case OplMode.Opl3:
+                    _reg.Normal = (ushort)(ComputeRegisterAddress(port, value) & 0x1FF);
+                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                        _logger.Debug("OPL: Address write selected register set to 0x{Reg:X3} (Opl3)", _reg.Normal);
+                    }
+                    break;
+            }
+        }
+    }
+
+    public override void WriteWord(ushort port, ushort value) {
+        WriteByte(port, (byte)value);
+        WriteByte((ushort)(port + 1), (byte)(value >> 8));
+    }
+
+    public override ushort ReadWord(ushort port) {
+        byte low = ReadByte(port);
+        byte high = ReadByte((ushort)(port + 1));
+        return (ushort)(low | (high << 8));
+    }
+
+    private void RenderUpToNow() {
+        double now = _clock.ElapsedTimeMs;
+        // Wake up the channel and update the last rendered time datum.
+        if (_mixerChannel.WakeUp()) {
+            _lastRenderedMs = now;
+            return;
+        }
+        // Keep rendering until we're current
+        while (_lastRenderedMs < now) {
+            _lastRenderedMs += _msPerFrame;
+            _fifo.Enqueue(RenderFrame());
+        }
     }
 
     /// <summary>
@@ -194,43 +393,37 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         return 20.0f * MathF.Log10(gain);
     }
 
-    /// <summary>
-    ///     Initializes the OPL chip state.
-    ///     Reference: Opl::Init() in DOSBox
-    /// </summary>
     private void Init() {
         _newMode = 0;
-        _chip.Reset((uint)OplSampleRateHz);
+        _chip.Reset(OplSampleRateHz);
         InitializeToneGenerators();
         Array.Clear(_registerCache);
 
-        switch (_mode) {
-            case OplMode.Opl2:
-                break;
-
-            case OplMode.DualOpl2:
-                // Set up OPL3 mode in the handler
-                // Reference: WriteReg(0x105, 1); CacheWrite(0x105, 1);
-                WriteReg(0x105, 1);
-                CacheWrite(0x105, 1);
-                break;
-
-            case OplMode.Opl3:
-                break;
-
-            case OplMode.Opl3Gold:
-                // AdLib Gold already initialized in constructor
-                break;
-
-            case OplMode.None:
-                break;
+        if (_mode is OplMode.DualOpl2) {
+            // Set up OPL3 mode in the handler
+            WriteReg(0x105, 1);
+            CacheWrite(0x105, 1);
         }
     }
 
     /// <summary>
     ///     Initializes default envelopes and rates for the OPL operators.
-    ///     Reference: initialize_opl_tone_generators() in DOSBox
     /// </summary>
+    /// <remarks>
+    /// Initialize the OPL chip's 4-op and 2-op FM synthesis tone generators per the
+    /// Adlib v1.51 driver's values. Games and audio players typically overwrite the
+    /// card with their own settings however we know the following eight games by
+    /// Silmarils rely on the card being initialized by the Adlib driver:
+    ///
+    /// - Boston Bomb Club (1991),
+    /// - Bunny Bricks (1993),
+    /// - Crystals of Arborea (1990),
+    /// - Ishar 1 (1992),
+    /// - Ishar 2 (1993),
+    /// - Metal Mutant (1991),
+    /// - Storm Master (1992), and
+    /// - Transantarctica (1993).
+    /// </remarks>
     private void InitializeToneGenerators() {
         // The first 9 operators are used for 4-op FM synthesis.
         int[] fourOp = [0, 1, 2, 6, 7, 8, 12, 13, 14];
@@ -238,7 +431,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             Opl3Operator slot = _chip.Slots[index];
             slot.EnvelopeGeneratorOutput = 511;
             slot.EnvelopeGeneratorLevel = 571;
-            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Sustain;
+            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Release;
             slot.RegFrequencyMultiplier = 1;
             slot.RegKeyScaleLevel = 1;
             slot.RegTotalLevel = 15;
@@ -246,6 +439,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             slot.RegDecayRate = 1;
             slot.RegSustainLevel = 5;
             slot.RegReleaseRate = 3;
+            // all other non-pointer slot members are zero
         }
 
         // The remaining 9 operators are used for 2-op FM synthesis.
@@ -254,216 +448,59 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             Opl3Operator slot = _chip.Slots[index];
             slot.EnvelopeGeneratorOutput = 511;
             slot.EnvelopeGeneratorLevel = 511;
-            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Sustain;
+            slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Release;
             slot.RegKeyScaleRate = 1;
             slot.RegFrequencyMultiplier = 1;
             slot.RegAttackRate = 15;
             slot.RegDecayRate = 2;
             slot.RegSustainLevel = 7;
             slot.RegReleaseRate = 4;
+            // all other non-pointer slot members are zero
         }
     }
 
-    /// <summary>
-    ///     Registers this device for the appropriate I/O port ranges based on mode.
-    ///     Reference: Port handler installation in DOSBox Opl constructor
-    /// </summary>
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+        // Don't register any ports when OPL is disabled
+        if (_mode == OplMode.None) {
+            return;
+        }
+
         // 0x388-0x38b ports (AdLib base ports) - always registered
         ioPortDispatcher.AddIOPortHandler(0x388, this);
         ioPortDispatcher.AddIOPortHandler(0x389, this);
         ioPortDispatcher.AddIOPortHandler(0x38A, this);
         ioPortDispatcher.AddIOPortHandler(0x38B, this);
 
-        // Sound Blaster base ports (0x220-0x223) are only used in dual OPL2 mode.
-        bool isDualOpl = _mode == OplMode.DualOpl2;
-        bool hasSoundBlasterBase = _sbBase != 0;
-        if (isDualOpl && hasSoundBlasterBase) {
+        // Sound Blaster base ports (0x220-0x223) for dual OPL modes
+        bool isDualOpl = _mode != OplMode.Opl2;
+        if (isDualOpl) {
             ioPortDispatcher.AddIOPortHandler(_sbBase, this);
             ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 1), this);
             ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 2), this);
             ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 3), this);
         }
 
-        // 0x228-0x229 ports (advanced OPL3 ports) are relative to SB base when configured.
-        if (hasSoundBlasterBase) {
-            ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 8), this);
-            ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 9), this);
-        }
+        // 0x228-0x229 ports (advanced OPL3 ports)
+        ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 8), this);
+        ioPortDispatcher.AddIOPortHandler((ushort)(_sbBase + 9), this);
     }
 
-    /// <summary>
-    ///     Releases resources held by the OPL FM device.
-    /// </summary>
     private void Dispose(bool disposing) {
         if (_disposed) {
             return;
         }
 
         if (disposing) {
-            if (_useOplIrq) {
-                _dualPic.DeactivateIrq(_oplIrqLine);
+            if (_logger.IsEnabled(LogEventLevel.Information)) {
+                _logger.Information("OPL: Shutting down {Mode}", _mode);
             }
-
             _adlibGold?.Dispose();
         }
 
         _disposed = true;
     }
 
-    /// <inheritdoc />
-    /// <summary>
-    ///     Reads from OPL I/O ports.
-    ///     Reference: Opl::PortRead() in DOSBox
-    /// </summary>
-    public override byte ReadByte(ushort port) {
-        lock (_chipLock) {
-            return PortRead(port);
-        }
-    }
-
-    /// <summary>
-    ///     Port read implementation matching DOSBox.
-    ///     Reference: Opl::PortRead() in DOSBox
-    /// </summary>
-    private byte PortRead(ushort port) {
-        switch (_mode) {
-            case OplMode.Opl2:
-                // Only respond on primary port, return 0xFF for others
-                // Make sure the low bits are 6 on OPL2
-                if ((port & 0x03) == 0) {
-                    return (byte)(_timerChips[0].Read(_clock.ElapsedTimeMs) | 0x06);
-                }
-                return 0xFF;
-
-            case OplMode.DualOpl2:
-                // Only return for the lower ports
-                if ((port & 0x01) != 0) {
-                    return 0xFF;
-                }
-                // Make sure the low bits are 6 on OPL2
-                return (byte)(_timerChips[(port >> 1) & 1].Read(_clock.ElapsedTimeMs) | 0x06);
-
-            case OplMode.Opl3Gold:
-                if (_ctrlActive) {
-                    if (port == 0x38A) {
-                        // Control status, not busy
-                        return 0;
-                    }
-                    if (port == 0x38B) {
-                        return AdlibGoldControlRead();
-                    }
-                }
-                goto case OplMode.Opl3;
-
-            case OplMode.Opl3:
-                // Return timer status only on base port
-                if ((port & 0x03) == 0) {
-                    return _timerChips[0].Read(_clock.ElapsedTimeMs);
-                }
-                return 0xFF;
-
-            default:
-                return 0xFF;
-        }
-    }
-
-    /// <inheritdoc />
-    /// <summary>
-    ///     Writes to OPL I/O ports.
-    ///     Reference: Opl::PortWrite() in DOSBox
-    /// </summary>
-    public override void WriteByte(ushort port, byte value) {
-        lock (_chipLock) {
-            RenderUpToNow();
-            PortWrite(port, value);
-        }
-    }
-
-    /// <summary>
-    ///     Port write implementation matching DOSBox.
-    ///     Reference: Opl::PortWrite() in DOSBox
-    /// </summary>
-    private void PortWrite(ushort port, byte value) {
-        bool isDataPort = (port & 0x01) != 0;
-
-        if (isDataPort) {
-            // Data write
-            switch (_mode) {
-                case OplMode.Opl3Gold:
-                    if (port == 0x38B && _ctrlActive) {
-                        AdlibGoldControlWrite(value);
-                        return;
-                    }
-                    goto case OplMode.Opl3;
-
-                case OplMode.Opl2:
-                case OplMode.Opl3:
-                    if (!_timerChips[0].Write((byte)(_selectedRegister & 0xFF), value, _clock.ElapsedTimeMs)) {
-                        WriteReg(_selectedRegister, value);
-                        CacheWrite(_selectedRegister, value);
-                    }
-                    break;
-
-                case OplMode.DualOpl2:
-                    // Not a 0x??8 port, then write to a specific port
-                    if ((port & 0x08) == 0) {
-                        int index = (port & 2) >> 1;
-                        DualWrite((byte)index, _selectedRegisterDual[index], value);
-                    } else {
-                        // Write to both ports
-                        DualWrite(0, _selectedRegisterDual[0], value);
-                        DualWrite(1, _selectedRegisterDual[1], value);
-                    }
-                    break;
-            }
-        } else {
-            // Address write
-            switch (_mode) {
-                case OplMode.Opl2:
-                    _selectedRegister = (ushort)(WriteAddr(port, value) & 0xFF);
-                    break;
-
-                case OplMode.DualOpl2:
-                    // Not a 0x?88 port, write to a specific side
-                    if ((port & 0x08) == 0) {
-                        int index = (port & 2) >> 1;
-                        _selectedRegisterDual[index] = (byte)(value & 0xFF);
-                    } else {
-                        _selectedRegisterDual[0] = (byte)(value & 0xFF);
-                        _selectedRegisterDual[1] = (byte)(value & 0xFF);
-                    }
-                    break;
-
-                case OplMode.Opl3Gold:
-                    if (port == 0x38A) {
-                        if (value == 0xFF) {
-                            _ctrlActive = true;
-                            return;
-                        }
-                        if (value == 0xFE) {
-                            _ctrlActive = false;
-                            return;
-                        }
-                        if (_ctrlActive) {
-                            _ctrlIndex = value;
-                            return;
-                        }
-                    }
-                    goto case OplMode.Opl3;
-
-                case OplMode.Opl3:
-                    _selectedRegister = (ushort)(WriteAddr(port, value) & 0x1FF);
-                    break;
-            }
-        }
-    }
-
-    /// <summary>
-    ///     Computes register address from port and value.
-    ///     Reference: Opl::WriteAddr() in DOSBox
-    /// </summary>
-    private ushort WriteAddr(ushort port, byte value) {
+    private ushort ComputeRegisterAddress(ushort port, byte value) {
         ushort addr = value;
         // High bank if port bit 1 is set AND (writing to reg 0x05 OR newm is set)
         if ((port & 2) != 0 && (addr == 0x05 || _newMode != 0)) {
@@ -472,29 +509,27 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         return addr;
     }
 
-    /// <summary>
-    ///     Writes to OPL register.
-    ///     Reference: Opl::WriteReg() in DOSBox
-    /// </summary>
+    private static string GetAdlibGoldControlDescription(byte idx) {
+        return idx switch {
+            0x00 => "Board Options (0x50 expected)",
+            0x09 => "Left FM Volume (_ctrlLvol)",
+            0x0A => "Right FM Volume (_ctrlRvol)",
+            0x15 => "Audio Relocation (Cryo detection)",
+            _ => "AdlibGold control index"
+        };
+    }
+
     private void WriteReg(ushort selectedReg, byte value) {
         _chip.WriteRegisterBuffered(selectedReg, value);
         if (selectedReg == 0x105) {
-            _newMode = (byte)(value & 0x01);
+            _newMode = (byte)(selectedReg & 0x01);
         }
     }
 
-    /// <summary>
-    ///     Caches register write for capture support.
-    ///     Reference: Opl::CacheWrite() in DOSBox
-    /// </summary>
     private void CacheWrite(ushort port, byte value) {
         _registerCache[port & 0x1FF] = value;
     }
 
-    /// <summary>
-    ///     Writes to both OPL chips in DualOpl2 mode.
-    ///     Reference: Opl::DualWrite() in DOSBox
-    /// </summary>
     private void DualWrite(byte index, byte reg, byte value) {
         // Make sure we don't use OPL3 features
         // Don't allow write to disable OPL3
@@ -509,12 +544,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         }
 
         // Write to the timer?
-        if (_timerChips[index].Write(reg, val, _clock.ElapsedTimeMs)) {
+        if (_timerChips[index].Write(reg, val)) {
             return;
         }
 
         // Enabling panning
-        if (reg >= 0xC0 && reg <= 0xC8) {
+        if (reg is >= 0xC0 and <= 0xC8) {
             val &= 0x0F;
             val |= (byte)(index != 0 ? 0xA0 : 0x50);
         }
@@ -524,16 +559,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         CacheWrite(fullPort, val);
     }
 
-    /// <summary>
-    ///     AdLib Gold control register write.
-    ///     Reference: Opl::AdlibGoldControlWrite() in DOSBox
-    /// </summary>
     private void AdlibGoldControlWrite(byte value) {
         if (_adlibGold is null) {
             return;
         }
 
-        switch (_ctrlIndex) {
+        switch (_ctrl.Index) {
             case 0x04:
                 _adlibGold.StereoControlWrite(StereoProcessorControlReg.VolumeLeft, value);
                 break;
@@ -550,146 +581,105 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 _adlibGold.StereoControlWrite(StereoProcessorControlReg.SwitchFunctions, value);
                 break;
             case 0x09: // Left FM Volume
-                _ctrlLvol = value;
+                _ctrl.LeftVolume = value;
                 SetVolume();
                 break;
             case 0x0A: // Right FM Volume
-                _ctrlRvol = value;
+                _ctrl.RightVolume = value;
                 SetVolume();
                 break;
             case 0x18: // Surround
                 _adlibGold.SurroundControlWrite(value);
                 break;
         }
-    }
 
-    /// <summary>
-    ///     Sets OPL volume from AdLib Gold control registers.
-    /// </summary>
-    private void SetVolume() {
-        if (_ctrlMixerEnabled) {
-            // Dune CD version uses 32 volume steps in an apparent mistake, should be 128
-            float leftVol = (_ctrlLvol & 0x1F) / 31.0f;
-            float rightVol = (_ctrlRvol & 0x1F) / 31.0f;
-            _mixerChannel.SetAppVolume(new AudioFrame(leftVol, rightVol));
+        void SetVolume() {
+            if (_ctrl.MixerEnabled) {
+                // Dune CD version uses 32 volume steps in an apparent mistake, should be 128
+                float leftVol = (_ctrl.LeftVolume & 0x1F) / 31.0f;
+                float rightVol = (_ctrl.RightVolume & 0x1F) / 31.0f;
+                _mixerChannel.SetAppVolume(new AudioFrame(leftVol, rightVol));
+            }
         }
     }
 
-    /// <summary>
-    ///     AdLib Gold control register read.
-    ///     Reference: Opl::AdlibGoldControlRead() in DOSBox
-    /// </summary>
     private byte AdlibGoldControlRead() {
-        return _ctrlIndex switch {
+        return _ctrl.Index switch {
             0x00 => 0x50, // Board Options: 16-bit ISA, surround module, no telephone/CDROM
-            0x09 => _ctrlLvol, // Left FM Volume
-            0x0A => _ctrlRvol, // Right FM Volume
+            0x09 => _ctrl.LeftVolume, // Left FM Volume
+            0x0A => _ctrl.RightVolume, // Right FM Volume
             0x15 => 0x388 >> 3, // Audio Relocation - Cryo installer detection
             _ => 0xFF
         };
     }
 
-    /// <inheritdoc />
-    public override void WriteWord(ushort port, ushort value) {
-        WriteByte(port, (byte)value);
-        WriteByte((ushort)(port + 1), (byte)(value >> 8));
-    }
-
     /// <summary>
     ///     OPL mixer callback - called by the mixer thread to generate frames.
-    ///     Reference: Opl::AudioCallback() in DOSBox opl.cpp lines 433-458
     /// </summary>
-    public void AudioCallback(int framesRequested) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("OPL: AudioCallback framesRequested={Frames}, FIFO size={FifoSize}",
-                framesRequested, _fifo.Count);
+    private void AudioCallback(int framesRequested) {
+        if (_disposed) {
+            return;
         }
-
-        lock (_chipLock) {
-            int framesRemaining = framesRequested;
+        int framesRemaining = framesRequested;
+        using (_chipLock.EnterScope()) {
             Span<float> frameData = stackalloc float[2];
-
             // First, send any frames we've queued since the last callback
-            // Reference: while (frames_remaining && fifo.size())
             while (framesRemaining > 0 && _fifo.Count > 0) {
                 AudioFrame frame = _fifo.Dequeue();
                 frameData[0] = frame.Left;
                 frameData[1] = frame.Right;
                 _mixerChannel.AddSamples_sfloat(1, frameData);
-                framesRemaining--;
+                --framesRemaining;
             }
-
             // If the queue's run dry, render the remainder and sync-up our time datum
-            // Reference: while (frames_remaining)
             while (framesRemaining > 0) {
                 AudioFrame frame = RenderFrame();
                 frameData[0] = frame.Left;
                 frameData[1] = frame.Right;
                 _mixerChannel.AddSamples_sfloat(1, frameData);
-                framesRemaining--;
+                --framesRemaining;
             }
-
+            // Update last rendered time to now using the atomic snapshot.
             _lastRenderedMs = _clock.ElapsedTimeMs;
         }
     }
 
-    /// <summary>
-    ///     Renders cycle-accurate OPL frames up to the current emulated time.
-    ///     Reference: Opl::RenderUpToNow() in DOSBox
-    /// </summary>
-    private void RenderUpToNow() {
-        double now = _clock.ElapsedTimeMs;
-
-        if (_mixerChannel.WakeUp()) {
-            _lastRenderedMs = now;
-            return;
-        }
-
-        while (_lastRenderedMs < now) {
-            _lastRenderedMs += _msPerFrame;
-            AudioFrame frame = RenderFrame();
-            _fifo.Enqueue(frame);
-        }
-    }
-
-    /// <summary>
-    ///     Renders a single OPL audio frame.
-    ///     Reference: Opl::RenderFrame() in DOSBox
-    /// </summary>
     private AudioFrame RenderFrame() {
         Span<short> buf = stackalloc short[2];
         _chip.GenerateStream(buf);
 
+        AudioFrame frame = new();
         if (_adlibGold is not null) {
-            Span<float> floatBuf = stackalloc float[2];
-            _adlibGold.Process(buf, 1, floatBuf);
-            return new AudioFrame { Left = floatBuf[0], Right = floatBuf[1] };
+            Span<float> frameSpan = MemoryMarshal.CreateSpan(ref frame.Left, 2);
+            _adlibGold.Process(buf, 1, frameSpan);
+        } else {
+            frame.Left = buf[0];
+            frame.Right = buf[1];
         }
-
-        return new AudioFrame { Left = buf[0], Right = buf[1] };
+        return frame;
     }
 
-    /// <summary>
-    ///     OPL timer chip for handling timer registers and status.
-    ///     Reference: OplChip class in DOSBox opl.h/opl.cpp
-    /// </summary>
-    private sealed class OplTimerChip {
-        private readonly OplTimer _timer0 = new(80);  // 80 microseconds
-        private readonly OplTimer _timer1 = new(320); // 320 microseconds
+    private sealed class OplChip {
+        private readonly Timer _timer0 = new(80);  // 80 microseconds
+        private readonly Timer _timer1 = new(320); // 320 microseconds
+        private readonly IEmulatedClock _clock;
+
+        public OplChip(IEmulatedClock clock) {
+            _clock = clock;
+        }
 
         /// <summary>
         ///     Handles timer register writes.
-        ///     Reference: OplChip::Write() in DOSBox
         /// </summary>
-        public bool Write(byte reg, byte value, double time) {
+        public bool Write(ushort reg, byte value) {
             switch (reg) {
                 case 0x02:
-                    _timer0.Update(time);
+                    _timer0.Update(_clock.ElapsedTimeMs);
                     _timer0.SetCounter(value);
                     return true;
 
                 case 0x03:
-                    _timer1.Update(time);
+                    _timer1.Update(_clock.ElapsedTimeMs);
                     _timer1.SetCounter(value);
                     return true;
 
@@ -699,6 +689,8 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                         _timer0.Reset();
                         _timer1.Reset();
                     } else {
+                        double time = _clock.ElapsedTimeMs;
+
                         if ((value & 0x01) != 0) {
                             _timer0.Start(time);
                         } else {
@@ -723,9 +715,9 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         /// <summary>
         ///     Reads timer status.
-        ///     Reference: OplChip::Read() in DOSBox
         /// </summary>
-        public byte Read(double time) {
+        public byte Read() {
+            double time = _clock.ElapsedTimeMs;
             byte ret = 0;
 
             // Overflow won't be set if a channel is masked
@@ -742,9 +734,8 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
     /// <summary>
     ///     Individual OPL timer.
-    ///     Reference: Timer class in DOSBox opl.h/opl.cpp
     /// </summary>
-    private sealed class OplTimer {
+    private sealed class Timer {
         private readonly double _clockInterval;
         private double _start;
         private double _trigger;
@@ -754,15 +745,11 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         private bool _overflow;
         private bool _masked;
 
-        public OplTimer(int micros) {
+        public Timer(int micros) {
             _clockInterval = micros * 0.001; // interval in milliseconds
             SetCounter(0);
         }
 
-        /// <summary>
-        ///     Updates timer state and returns true if overflow occurred.
-        ///     Reference: Timer::Update() in DOSBox
-        /// </summary>
         public bool Update(double time) {
             if (_enabled && time >= _trigger) {
                 // How far into the next cycle
@@ -782,27 +769,16 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             return _overflow;
         }
 
-        /// <summary>
-        ///     Resets overflow flag.
-        ///     Reference: Timer::Reset() in DOSBox
-        /// </summary>
         public void Reset() {
+            // On a reset make sure the start is in sync with the next cycle
             _overflow = false;
         }
 
-        /// <summary>
-        ///     Sets timer counter value.
-        ///     Reference: Timer::SetCounter() in DOSBox
-        /// </summary>
         public void SetCounter(byte value) {
             _counter = value;
             _counterInterval = (256 - _counter) * _clockInterval;
         }
 
-        /// <summary>
-        ///     Sets timer mask.
-        ///     Reference: Timer::SetMask() in DOSBox
-        /// </summary>
         public void SetMask(bool set) {
             _masked = set;
             if (_masked) {
@@ -810,18 +786,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
             }
         }
 
-        /// <summary>
-        ///     Stops the timer.
-        ///     Reference: Timer::Stop() in DOSBox
-        /// </summary>
         public void Stop() {
             _enabled = false;
         }
 
-        /// <summary>
-        ///     Starts the timer.
-        ///     Reference: Timer::Start() in DOSBox
-        /// </summary>
         public void Start(double time) {
             // Only properly start when not running before
             if (!_enabled) {
