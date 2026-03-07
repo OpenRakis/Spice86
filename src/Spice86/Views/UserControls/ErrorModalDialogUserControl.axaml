@@ -11,7 +11,7 @@
              x:DataType="viewModels:ViewModelWithErrorDialog">
     <UserControl.Resources>
         <converters:ClassToTypeStringConverter x:Key="ClassToTypeStringConverter" />
-        <b:ShowInternalDebuggerBehavior x:Key="ShowInternalDebuggerBehavior" />
+        <b:ShowAdditionnalWindowBehavior x:Key="ShowAdditionnalWindowBehavior" />
     </UserControl.Resources>
     <dialogHostAvalonia:DialogHost
         CloseOnClickAway="False"
@@ -41,7 +41,7 @@
                             </Expander>
                         </WrapPanel>
                         <Button Content="OK" Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Grid.Row="2" Grid.Column="2" Command="{Binding ClearDialog}" />
-                        <Button Content="Debug..." Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Grid.Row="2" Grid.Column="3" Command="{Binding ShowInternalDebugger}" CommandParameter="{StaticResource ShowInternalDebuggerBehavior}" />
+                        <Button Content="Debug..." Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Grid.Row="2" Grid.Column="3" Command="{Binding ShowInternalDebugger}" CommandParameter="{StaticResource ShowAdditionnalWindowBehavior}" />
                     </Grid>
                 </WrapPanel>
             </Grid>

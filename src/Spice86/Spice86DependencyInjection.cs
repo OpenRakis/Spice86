@@ -123,6 +123,12 @@ public class Spice86DependencyInjection : IDisposable {
         AddressReadWriteBreakpoints memoryReadWriteBreakpoints = new();
         AddressReadWriteBreakpoints ioReadWriteBreakpoints = new();
 
+        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(state, configuration);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Cycles limiter created...");
+        }
+
         IOPortDispatcher ioPortDispatcher = new(
             ioReadWriteBreakpoints, state,
             loggerService, configuration.FailOnUnhandledPort);
@@ -170,7 +176,7 @@ public class Spice86DependencyInjection : IDisposable {
             ? new CyclesClock(state, configuration.InstructionsPerSecond.Value)
             : new EmulatedClock();
 
-        // Register clock to pause/resume events
+        // Register clock and limiter to pause/resume events
         pauseHandler.Pausing += () => emulatedClock.OnPause();
         pauseHandler.Resumed += () => emulatedClock.OnResume();
 
@@ -342,7 +348,6 @@ public class Spice86DependencyInjection : IDisposable {
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
-        // Create OPL FM device; it creates and registers its own mixer channel internally
         SoundBlasterHardwareConfig soundBlasterHardwareConfig = new(
             configuration.SbIrq,
             configuration.SbDma,
@@ -351,13 +356,12 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.SbBase);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
 
-        Opl3Fm opl3Fm = new(mixer, state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService,
-            emulationLoopScheduler, emulatedClock, dualPic,
-            mode: configuration.OplMode, sbBase: configuration.SbBase, enableOplIrq: false);
+        Opl3Fm opl = new(mixer, state, ioPortDispatcher, configuration.FailOnUnhandledPort,
+            loggerService, emulationLoopScheduler, emulatedClock, dualPic,
+            configuration.OplMode, configuration.SbBase, false, 5, true);
 
         SoundBlaster soundBlaster = new(ioPortDispatcher,
-            state, dmaSystem, dualPic, mixer, opl3Fm, loggerService,
+            state, dmaSystem, dualPic, mixer, opl, loggerService,
             emulationLoopScheduler, emulatedClock,
             soundBlasterHardwareConfig);
         GravisUltraSound gravisUltraSound = new(state, ioPortDispatcher,
@@ -382,8 +386,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
             emulationStateDataReader.ReadBreakpointsFromFileOrCreate();
-
-        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(state, configuration);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
@@ -415,8 +417,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
                 pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter,
-                mixer, soundBlaster, opl3Fm);
+                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter);
 
             // Subscribe to video mode changes for dynamic aspect ratio correction
             vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
@@ -546,7 +547,7 @@ public class Spice86DependencyInjection : IDisposable {
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
-            dmaSystem, opl3Fm, mixer, mouse, mouseDriver,
+            dmaSystem, opl, mixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -636,8 +637,12 @@ public class Spice86DependencyInjection : IDisposable {
                 cpuViewModel, midiViewModel, cfgCpuViewModel,
                 [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
 
+            SoftwareMixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
+
             Application.Current!.Resources[nameof(DebugWindowViewModel)] =
                 debugWindowViewModel;
+            Application.Current!.Resources[nameof(SoftwareMixerViewModel)] =
+                mixerViewModel;
             mainWindow.DataContext = mainWindowViewModel;
         }
     }

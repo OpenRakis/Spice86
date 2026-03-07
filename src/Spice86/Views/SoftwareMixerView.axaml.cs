@@ -2,8 +2,8 @@ namespace Spice86.Views;
 
 using Avalonia.Controls;
 
-public partial class SoftwareMixerView : Window {
-    public SoftwareMixerView() {
+public partial class MixerView : Window {
+    public MixerView() {
         InitializeComponent();
     }
 }

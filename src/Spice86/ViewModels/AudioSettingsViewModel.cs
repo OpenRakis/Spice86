@@ -59,16 +59,34 @@ public partial class AudioSettingsViewModel : ViewModelBase {
     private bool _isAdlibGoldEnabled;
 
     /// <summary>
-    /// Gets the OPL mode description.
+    /// Gets the BLASTER environment variable format description.
     /// </summary>
-    [ObservableProperty]
-    private string _oplModeDescription = string.Empty;
+    public string BlasterFormatString { get; } = "Format: A[base] I[irq] D[dma] H[hdma] T[type]";
 
     /// <summary>
-    /// Gets the Sound Blaster type description.
+    /// Gets the description for the current OPL mode.
     /// </summary>
-    [ObservableProperty]
-    private string _sbTypeDescription = string.Empty;
+    public string OplModeDescription => OplMode switch {
+        OplMode.Opl2 => "Yamaha OPL2 FM synthesizer",
+        OplMode.Opl3 => "Yamaha OPL3 FM synthesizer",
+        OplMode.DualOpl2 => "Dual OPL2 FM synthesizers",
+        OplMode.Opl3Gold => "AdLib Gold OPL3 FM synthesizer",
+        _ => "Unknown OPL mode"
+    };
+
+    /// <summary>
+    /// Gets the description for the current Sound Blaster type.
+    /// </summary>
+    public string SbTypeDescription => SbType switch {
+        SbType.None => "Sound Blaster disabled",
+        SbType.SB1 => "Sound Blaster 1.0",
+        SbType.SB2 => "Sound Blaster 2.0",
+        SbType.SBPro1 => "Sound Blaster Pro (mono)",
+        SbType.SBPro2 => "Sound Blaster Pro (stereo)",
+        SbType.Sb16 => "Sound Blaster 16",
+        SbType.GameBlaster => "Creative GameBlaster",
+        _ => "Unknown Sound Blaster type"
+    };
 
     public AudioSettingsViewModel(SoundBlaster soundBlaster, Opl3Fm opl) {
         SbType = soundBlaster.SbTypeProperty;
@@ -79,32 +97,5 @@ public partial class AudioSettingsViewModel : ViewModelBase {
         OplMode = opl.Mode;
         BlasterString = soundBlaster.BlasterString;
         IsAdlibGoldEnabled = opl.IsAdlibGoldEnabled;
-
-        OplModeDescription = GetOplModeDescription(OplMode);
-        SbTypeDescription = GetSbTypeDescription(SbType);
-    }
-
-    private static string GetOplModeDescription(OplMode mode) {
-        return mode switch {
-            OplMode.None => "Disabled",
-            OplMode.Opl2 => "OPL2 (Mono, 9 channels) - Original AdLib",
-            OplMode.DualOpl2 => "Dual OPL2 (Stereo, 18 channels) - Sound Blaster Pro 1",
-            OplMode.Opl3 => "OPL3 (Stereo, 18 channels, 4-op) - Sound Blaster Pro 2/16",
-            OplMode.Opl3Gold => "OPL3 Gold (Stereo + Surround) - AdLib Gold 1000",
-            _ => "Unknown"
-        };
-    }
-
-    private static string GetSbTypeDescription(SbType sbType) {
-        return sbType switch {
-            SbType.None => "Disabled",
-            SbType.SB1 => "Sound Blaster 1.0/1.5 (8-bit, mono, OPL2)",
-            SbType.SB2 => "Sound Blaster 2.0 (8-bit, mono, OPL2, auto-init DMA)",
-            SbType.SBPro1 => "Sound Blaster Pro (8-bit, stereo, Dual OPL2)",
-            SbType.SBPro2 => "Sound Blaster Pro 2 (8-bit, stereo, OPL3)",
-            SbType.Sb16 => "Sound Blaster 16 (16-bit, stereo, OPL3)",
-            SbType.GameBlaster => "Creative Game Blaster (CMS chips, no OPL)",
-            _ => "Unknown"
-        };
     }
 }

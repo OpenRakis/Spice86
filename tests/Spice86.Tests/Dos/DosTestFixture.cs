@@ -1,7 +1,7 @@
 namespace Spice86.Tests.Dos;
 
-using Spice86.Core.CLI;
 using Spice86.Audio.Filters;
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
@@ -79,9 +79,6 @@ public class DosTestFixture {
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, LoggerService, configuration.FailOnUnhandledPort);
 
         pcSpeaker.AttachPitControl(pitTimer);
-
-        DmaBus dmaSystem =
-            new(Memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, LoggerService);
 
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(Memory, interruptVectorTable, ioPortDispatcher,

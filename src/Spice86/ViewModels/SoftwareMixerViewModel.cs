@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.ViewModels.Services;
 
 using System;
@@ -22,12 +23,19 @@ public partial class SoftwareMixerViewModel : ViewModelBase {
     /// </summary>
     public ObservableCollection<MixerChannelViewModel> Channels { get; } = new();
 
-    public SoftwareMixerViewModel(SoftwareMixer mixer) {
+    /// <summary>
+    /// Gets the audio settings sub-viewmodel.
+    /// </summary>
+    public AudioSettingsViewModel AudioSettings { get; }
+
+    public SoftwareMixerViewModel(SoftwareMixer mixer, SoundBlaster soundBlaster, Opl3Fm opl) {
         _mixer = mixer;
+        AudioSettings = new AudioSettingsViewModel(soundBlaster, opl);
 
         // Start dispatcher timer to update channel state
+        // Use 50ms for near real-time VU meter feedback
         DispatcherTimerStarter.StartNewDispatcherTimer(
-            TimeSpan.FromMilliseconds(400),
+            TimeSpan.FromMilliseconds(50),
             DispatcherPriority.Background,
             OnTimerTick);
 
@@ -39,40 +47,28 @@ public partial class SoftwareMixerViewModel : ViewModelBase {
     }
 
     [RelayCommand]
-    private void ResetStereoSeparation(MixerChannelViewModel channel) {
-        if (channel != null) {
-            channel.StereoSeparation = 100.0;
-        }
-    }
-
-    [RelayCommand]
     private void ToggleChannel(MixerChannelViewModel channel) {
-        if (channel != null) {
-            channel.IsEnabled = !channel.IsEnabled;
-        }
+        channel?.IsEnabled = !channel.IsEnabled;
     }
 
     [RelayCommand]
     private void ToggleMute(MixerChannelViewModel channel) {
-        if (channel != null) {
-            channel.IsMuted = !channel.IsMuted;
-        }
+        channel?.IsMuted = !channel.IsMuted;
     }
 
     private void RefreshChannels() {
-        // Get all channels from mixer
-        System.Collections.Generic.List<SoundChannel> currentChannels = [.. _mixer.GetAllChannels()];
+        List<SoundChannel> currentChannels = [.. _mixer.GetAllChannels()];
 
         // Remove channels that no longer exist
         for (int i = Channels.Count - 1; i >= 0; i--) {
-            if (!currentChannels.Contains(Channels[i].GetChannel())) {
+            if (!currentChannels.Contains(Channels[i].Channel)) {
                 Channels.RemoveAt(i);
             }
         }
 
         // Add new channels and update existing ones
         foreach (SoundChannel channel in currentChannels) {
-            MixerChannelViewModel? existingVm = Channels.FirstOrDefault(vm => vm.GetChannel() == channel);
+            MixerChannelViewModel? existingVm = Channels.FirstOrDefault(vm => vm.Channel == channel);
             if (existingVm != null) {
                 existingVm.UpdateFromChannel();
             } else {

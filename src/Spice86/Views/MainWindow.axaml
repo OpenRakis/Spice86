@@ -26,6 +26,7 @@
 	</Window.DataTemplates>
 	<Window.Resources>
 		<converters:NullableToBooleanConverter x:Key="NullableToBooleanConverter" />
+        <b:ShowAdditionnalWindowBehavior x:Key="ShowAdditionnalWindowBehavior" />
 	</Window.Resources>
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
@@ -42,7 +43,7 @@
 							</StackPanel>
 						</MenuItem.Header>
 						<Interaction.Behaviors>
-							<b:ShowInternalDebuggerBehavior />
+							<b:ShowAdditionnalWindowBehavior />
 						</Interaction.Behaviors>
 					</MenuItem>
 					<MenuItem>
@@ -72,19 +73,11 @@
 					</MenuItem>
 				</MenuItem>
 				<MenuItem Header="Audio" IsEnabled="{Binding IsEmulatorRunning}">
-					<MenuItem Command="{Binding ShowMixerCommand}">
+					<MenuItem Command="{Binding ShowAudioMixerCommand}" CommandParameter="{StaticResource ShowAdditionnalWindowBehavior}">
 						<MenuItem.Header>
 							<StackPanel Orientation="Horizontal">
 								<fluent:SymbolIcon Symbol="MusicNote2" />
-								<Label Content="Audio Mixer" />
-							</StackPanel>
-						</MenuItem.Header>
-					</MenuItem>
-					<MenuItem Command="{Binding ShowAudioSettingsCommand}">
-						<MenuItem.Header>
-							<StackPanel Orientation="Horizontal">
-								<fluent:SymbolIcon Symbol="Settings" />
-								<Label Content="Audio Settings" />
+								<Label Content="Audio Mixer &amp; Settings" />
 							</StackPanel>
 						</MenuItem.Header>
 					</MenuItem>
