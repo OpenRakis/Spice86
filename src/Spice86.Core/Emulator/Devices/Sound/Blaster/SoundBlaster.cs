@@ -1277,7 +1277,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     /// ensure partial frames are accounted for and generated across N calls.
     /// Reference: DOSBox staging calls this via TIMER_AddTickHandler (no parameters)
     /// </summary>
-    private void per_tick_callback() {
+    private void per_tick_callback(uint _) {
         // assert(sblaster);
         // assert(sblaster->channel);
 
@@ -1312,6 +1312,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         // frames_added_this_tick -= total_frames;
         _framesAddedThisTick -= total_frames;
+        AddPerTickCallback();
     }
 
     /// <summary>
@@ -1356,7 +1357,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     private void SetCallbackNone() {
         if (_timingType != TimingType.None) {
             if (_timingType == TimingType.PerTick) {
-                _scheduler.DelTickHandler(per_tick_callback);
+                _scheduler.RemoveEvents(per_tick_callback);
             } else {
                 _scheduler.RemoveEvents(per_frame_callback);
             }
@@ -1374,11 +1375,14 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             SetCallbackNone();
 
             _framesAddedThisTick = 0;
-
-            _scheduler.AddTickHandler(per_tick_callback);
+            AddPerTickCallback();
 
             _timingType = TimingType.PerTick;
         }
+    }
+
+    private void AddPerTickCallback() {
+        _scheduler.AddEvent(per_tick_callback, 1);
     }
 
     /// <summary>
