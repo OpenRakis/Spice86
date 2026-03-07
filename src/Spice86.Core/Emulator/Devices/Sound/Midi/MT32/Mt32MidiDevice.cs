@@ -4,7 +4,7 @@ using Mt32emu;
 
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM;
-using Spice86.Libs.Sound.Common;
+using Spice86.Audio.Common;
 using Spice86.Shared.Interfaces;
 
 using System.IO.Compression;
@@ -38,7 +38,7 @@ public sealed class Mt32MidiDevice : MidiDevice {
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
-        
+
         if (!LoadRoms(romsPath)) {
             if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 loggerService.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created",

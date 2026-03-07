@@ -169,11 +169,11 @@ public class Spice86DependencyInjection : IDisposable {
         IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null
             ? new CyclesClock(state, configuration.InstructionsPerSecond.Value)
             : new EmulatedClock();
-        
+
         // Register clock to pause/resume events
         pauseHandler.Pausing += () => emulatedClock.OnPause();
         pauseHandler.Resumed += () => emulatedClock.OnResume();
-        
+
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
@@ -242,7 +242,7 @@ public class Spice86DependencyInjection : IDisposable {
         if (configuration.CpuHeavyLog) {
             cpuHeavyLogger = new CpuHeavyLogger(emulatorStateSerializationFolder, configuration.CpuHeavyLogDumpFile, nodeToString, state, asmRenderingConfig);
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
-                loggerService.Information("CPU heavy logger created. Logging to: {LogFile}", 
+                loggerService.Information("CPU heavy logger created. Logging to: {LogFile}",
                     configuration.CpuHeavyLogDumpFile ?? Path.Join(emulatorStateSerializationFolder.Folder, "cpu_heavy.log"));
             }
         }
@@ -329,7 +329,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
-        Mixer mixer = new(loggerService, configuration.AudioEngine);
+        Mixer mixer = new(configuration.AudioEngine, pauseHandler, loggerService);
         var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);

@@ -4,6 +4,7 @@ using FluentAssertions;
 
 using NSubstitute;
 
+using Spice86.Audio.Filters;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
@@ -106,7 +107,7 @@ public class DosFileManagerTests {
         Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
-        EmulatorStateSerializationFolder emulatorStateSerializationFolder = 
+        EmulatorStateSerializationFolder emulatorStateSerializationFolder =
             new EmulatorStateSerializationFolderFactory(loggerService)
                 .ComputeFolder(configuration.Exe, configuration.RecordedDataDirectory);
         EmulationStateDataReader reader = new(emulatorStateSerializationFolder, loggerService);
@@ -120,7 +121,7 @@ public class DosFileManagerTests {
         IEmulatedClock emulatedClock = new EmulatedClock();
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
-        
+
         BiosDataArea biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
 
@@ -135,7 +136,7 @@ public class DosFileManagerTests {
             dualPic, emulatorBreakpointsManager, functionCatalogue,
             false, true, loggerService);
 
-        Mixer mixer = new(loggerService, configuration.AudioEngine);
+        Mixer mixer = new(configuration.AudioEngine, pauseHandler, loggerService);
         PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher, pauseHandler, loggerService, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort);
         PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService, configuration.FailOnUnhandledPort);

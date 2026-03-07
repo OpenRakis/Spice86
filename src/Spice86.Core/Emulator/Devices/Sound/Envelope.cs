@@ -3,7 +3,7 @@
 
 namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Spice86.Libs.Sound.Common;
+using Spice86.Audio.Common;
 
 /// <summary>
 /// Audio envelope that applies a step-wise earned-volume envelope.

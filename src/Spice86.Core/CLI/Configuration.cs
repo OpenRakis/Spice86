@@ -2,6 +2,7 @@ namespace Spice86.Core.CLI;
 
 using CommandLine;
 
+using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -16,7 +17,7 @@ public sealed class Configuration {
     /// </summary>
     [Option(nameof(Cycles), Default = null, Required = false, HelpText = "Precise control of the number of emulated CPU cycles per ms. For the rare speed-sensitive game. Default is undefined. Overrides instructions per second option if used.")]
     public int? Cycles { get; init; }
-    
+
     /// <summary>
     /// Cpu Model to emulate
     /// </summary>
@@ -28,7 +29,7 @@ public sealed class Configuration {
     /// </summary>
     [Option(nameof(A20Gate), Default = false, Required = false, HelpText = "Whether the 20th address line is silenced. Used for legacy 8086 programs.")]
     public bool A20Gate { get; init; }
-    
+
     /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>
@@ -170,7 +171,7 @@ public sealed class Configuration {
     /// <summary>
     /// Audio engine to use
     /// </summary>
-    [Option(nameof(AudioEngine), Default = AudioEngine.PortAudio, Required = false, HelpText = "Audio engine to use. Values are PortAudio or Dummy")]
+    [Option(nameof(AudioEngine), Default = AudioEngine.CrossPlatform, Required = false, HelpText = "Audio engine to use. Values are CrossPlatform or Dummy")]
     public AudioEngine AudioEngine { get; init; }
 
     /// <summary>
@@ -241,7 +242,7 @@ public sealed class Configuration {
     [Option(nameof(CpuHeavyLogDumpFile), Default = null, Required = false,
         HelpText = "Custom file path for CPU heavy log output. If not specified, defaults to {DumpDirectory}/cpu_heavy.log")]
     public string? CpuHeavyLogDumpFile { get; init; }
-    
+
     [Option(nameof(AsmRenderingStyle), Default = AsmRenderingStyle.Spice86, Required = false,
         HelpText = "Style of the ASM rendering. Spice86 or DosBox.")]
     public AsmRenderingStyle AsmRenderingStyle { get; init; }

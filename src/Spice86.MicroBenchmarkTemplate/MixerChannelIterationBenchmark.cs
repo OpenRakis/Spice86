@@ -2,10 +2,12 @@ namespace Spice86.MicroBenchmarkTemplate;
 
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
+
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;
+
 using NSubstitute;
+
 using System.Collections.Concurrent;
 
 /// <summary>
@@ -24,13 +26,13 @@ public class MixerChannelIterationBenchmark {
     [GlobalSetup]
     public void Setup() {
         ILoggerService logger = Substitute.For<ILoggerService>();
-        
+
         _concurrentChannels = new ConcurrentDictionary<string, MixerChannel>();
         _dictionaryChannels = new Dictionary<string, MixerChannel>();
 
         // Create typical game audio channels
         string[] channelNames = { "SB", "OPL", "CDAUDIO", "PCSPKR", "GUS", "MIDI", "TANDY", "DISNEY" };
-        
+
         for (int i = 0; i < ChannelCount; i++) {
             string name = channelNames[i];
             MixerChannel channel = new MixerChannel(
@@ -40,7 +42,7 @@ public class MixerChannelIterationBenchmark {
                 logger
             );
             channel.Enable(true);
-            
+
             _concurrentChannels[name] = channel;
             _dictionaryChannels[name] = channel;
         }
@@ -81,7 +83,7 @@ public class MixerChannelIterationBenchmark {
         lock (_lock) {
             snapshot = _dictionaryChannels!.Values.ToArray();
         }
-        
+
         for (int iter = 0; iter < IterationCount; iter++) {
             foreach (MixerChannel channel in snapshot) {
                 if (channel.IsEnabled) {
@@ -95,7 +97,7 @@ public class MixerChannelIterationBenchmark {
     [Benchmark]
     public void ConcurrentDictionary_AddRemove() {
         ILoggerService logger = Substitute.For<ILoggerService>();
-        
+
         for (int i = 0; i < 100; i++) {
             string name = $"TEMP{i}";
             MixerChannel channel = new MixerChannel(
@@ -104,7 +106,7 @@ public class MixerChannelIterationBenchmark {
                 new HashSet<ChannelFeature>(),
                 logger
             );
-            
+
             _concurrentChannels!.TryAdd(name, channel);
             _concurrentChannels.TryRemove(name, out _);
         }
@@ -113,7 +115,7 @@ public class MixerChannelIterationBenchmark {
     [Benchmark]
     public void Dictionary_WithLock_AddRemove() {
         ILoggerService logger = Substitute.For<ILoggerService>();
-        
+
         for (int i = 0; i < 100; i++) {
             string name = $"TEMP{i}";
             MixerChannel channel = new MixerChannel(
@@ -122,7 +124,7 @@ public class MixerChannelIterationBenchmark {
                 new HashSet<ChannelFeature>(),
                 logger
             );
-            
+
             lock (_lock) {
                 _dictionaryChannels![name] = channel;
                 _dictionaryChannels.Remove(name);

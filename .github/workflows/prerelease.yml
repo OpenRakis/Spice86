@@ -15,82 +15,82 @@ jobs:
     runs-on: "ubuntu-latest"
 
     steps:
-       - uses: actions/checkout@v1
+      - uses: actions/checkout@v1
 
-       - name: Determine prerelease version
-         run: |
-              COMMIT_SHA=$(git rev-parse --short HEAD)
-              echo "PRERELEASE_VERSION=11.0.0-${COMMIT_SHA}" >> $GITHUB_ENV
+      - name: Determine prerelease version
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          echo "PRERELEASE_VERSION=11.0.0-${COMMIT_SHA}" >> $GITHUB_ENV
 
-       - name: Setup .NET
-         uses: actions/setup-dotnet@v1
-         with:
-           dotnet-version: '10.0.x'
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "10.0.x"
 
-       - name: Install zip
-         uses: montudor/action-zip@v1
+      - name: Install zip
+        uses: montudor/action-zip@v1
 
-       - name: Test with dotnet
-         working-directory: ./src
-         run: dotnet test --configuration Release
+      - name: Test with dotnet
+        working-directory: ./src
+        run: dotnet test --configuration Release
 
-       - name: Build with dotnet
-         working-directory: ./src/Spice86
-         run: |
-              dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/linux
-              dotnet publish -c Release -r linux-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/linux-arm64
-              dotnet publish -c Release -r win-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/windows-arm64
-              dotnet publish -c Release -r win-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/windows
-              dotnet publish -c Release -r osx-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/macos
-              dotnet publish -c Release -r osx-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/macos-arm64
-              dotnet publish -c Debug -r linux-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/linux
-              dotnet publish -c Debug -r linux-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/linux-arm64
-              dotnet publish -c Debug -r win-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/windows-arm64
-              dotnet publish -c Debug -r win-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/windows
-              dotnet publish -c Debug -r osx-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/macos
-              dotnet publish -c Debug -r osx-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/macos-arm64
+      - name: Build with dotnet
+        working-directory: ./src/Spice86
+        run: |
+          dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/linux
+          dotnet publish -c Release -r linux-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/linux-arm64
+          dotnet publish -c Release -r win-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/windows-arm64
+          dotnet publish -c Release -r win-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/windows
+          dotnet publish -c Release -r osx-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/macos
+          dotnet publish -c Release -r osx-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Release/macos-arm64
+          dotnet publish -c Debug -r linux-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/linux
+          dotnet publish -c Debug -r linux-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/linux-arm64
+          dotnet publish -c Debug -r win-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/windows-arm64
+          dotnet publish -c Debug -r win-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/windows
+          dotnet publish -c Debug -r osx-x64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/macos
+          dotnet publish -c Debug -r osx-arm64 --self-contained true -p:PublishReadyToRunComposite=true -p:PublishSingleFile=true -o ../Debug/macos-arm64
 
-       - name: Zip Debug output
-         run: zip -qq -r DebugBuild.zip Debug
-         working-directory: ./src/Spice86/bin
+      - name: Zip Debug output
+        run: zip -qq -r DebugBuild.zip Debug
+        working-directory: ./src/Spice86/bin
 
-       - name: Zip Release output
-         run: zip -qq -r ReleaseBuild.zip Release
-         working-directory: ./src/Spice86/bin
+      - name: Zip Release output
+        run: zip -qq -r ReleaseBuild.zip Release
+        working-directory: ./src/Spice86/bin
 
-       # Suppress the following warnings during NuGet packing:
-       #   1591   - Missing XML documentation
-       #   NU5104 - Package icon issues
-       #   NU1507 - Package validation issues
-       # Semicolons are URL-encoded as %3B for compatibility.
-       - name: Pack prerelease NuGet packages
-         working-directory: ./src
-         run: dotnet pack Spice86.sln --configuration Release --include-symbols --include-source -p:PackageVersion=${PRERELEASE_VERSION} -p:SymbolPackageFormat=snupkg -p:NoWarn=1591%3BNU5104%3BNU1507
+      # Suppress the following warnings during NuGet packing:
+      #   1591   - Missing XML documentation
+      #   NU5104 - Package icon issues
+      #   NU1507 - Package validation issues
+      # Semicolons are URL-encoded as %3B for compatibility.
+      - name: Pack prerelease NuGet packages
+        working-directory: ./src
+        run: dotnet pack Spice86.sln --configuration Release --include-symbols --include-source -p:PackageVersion=${PRERELEASE_VERSION} -p:SymbolPackageFormat=snupkg -p:NoWarn=1591%3BNU5104%3BNU1507
 
-       - name: Publish prerelease NuGet packages
-         env:
-           PACKAGE_VERSION: ${{ env.PRERELEASE_VERSION }}
-           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-         run: |
-              set -euo pipefail
-              SOURCE="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-              for project in Bufdio.Spice86 Spice86.Shared Spice86.Logging Spice86.Core Spice86; do
-                   PACKAGE_PATH="./src/${project}/bin/Release/${project}.${PACKAGE_VERSION}.nupkg"
-                   if [ -f "$PACKAGE_PATH" ]; then
-                        dotnet nuget push "$PACKAGE_PATH" --source "$SOURCE" --api-key "$GITHUB_TOKEN" --skip-duplicate
-                   else
-                        echo "::error::Package not found: $PACKAGE_PATH"
-                        exit 1
-                   fi
-              done
+      - name: Publish prerelease NuGet packages
+        env:
+          PACKAGE_VERSION: ${{ env.PRERELEASE_VERSION }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          SOURCE="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          for project in Spice86.Shared Spice86.Logging Spice86.Core Spice86; do
+               PACKAGE_PATH="./src/${project}/bin/Release/${project}.${PACKAGE_VERSION}.nupkg"
+               if [ -f "$PACKAGE_PATH" ]; then
+                    dotnet nuget push "$PACKAGE_PATH" --source "$SOURCE" --api-key "$GITHUB_TOKEN" --skip-duplicate
+               else
+                    echo "::error::Package not found: $PACKAGE_PATH"
+                    exit 1
+               fi
+          done
 
-       - name: Publish GitHub Release
-         uses: "marvinpinto/action-automatic-releases@latest"
-         with:
-           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-           automatic_release_tag: "latest"
-           prerelease: true
-           title: "Development Build"
-           files: |
-             ./src/Spice86/bin/DebugBuild.zip
-             ./src/Spice86/bin/ReleaseBuild.zip
+      - name: Publish GitHub Release
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            ./src/Spice86/bin/DebugBuild.zip
+            ./src/Spice86/bin/ReleaseBuild.zip

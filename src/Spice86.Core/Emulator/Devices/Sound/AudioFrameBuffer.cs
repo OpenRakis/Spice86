@@ -1,18 +1,20 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Spice86.Audio.Common;
+
 using System;
 
 public sealed class AudioFrameBuffer {
-    private Spice86.Libs.Sound.Common.AudioFrame[] _buffer;
+    private AudioFrame[] _buffer;
 
     public AudioFrameBuffer(int initialCapacity) {
         ArgumentOutOfRangeException.ThrowIfNegative(initialCapacity);
-        _buffer = new Spice86.Libs.Sound.Common.AudioFrame[initialCapacity];
+        _buffer = new AudioFrame[initialCapacity];
     }
 
     public int Count { get; private set; }
 
-    public Spice86.Libs.Sound.Common.AudioFrame this[int index] {
+    public AudioFrame this[int index] {
         get {
             return _buffer[index];
         }
@@ -36,13 +38,13 @@ public sealed class AudioFrameBuffer {
         Array.Resize(ref _buffer, newSize);
     }
 
-    public void Add(Spice86.Libs.Sound.Common.AudioFrame frame) {
+    public void Add(AudioFrame frame) {
         EnsureCapacity(Count + 1);
         _buffer[Count] = frame;
         Count++;
     }
 
-    public void AddRange(ReadOnlySpan<Spice86.Libs.Sound.Common.AudioFrame> frames) {
+    public void AddRange(ReadOnlySpan<AudioFrame> frames) {
         if (frames.Length == 0) {
             return;
         }
@@ -74,11 +76,11 @@ public sealed class AudioFrameBuffer {
         Count -= count;
     }
 
-    public Span<Spice86.Libs.Sound.Common.AudioFrame> AsSpan() {
+    public Span<AudioFrame> AsSpan() {
         return _buffer.AsSpan(0, Count);
     }
 
-    public Span<Spice86.Libs.Sound.Common.AudioFrame> AsSpan(int start, int length) {
+    public Span<AudioFrame> AsSpan(int start, int length) {
         return _buffer.AsSpan(start, length);
     }
 }

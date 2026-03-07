@@ -1,33 +1,44 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Spice86.Core.Backend.Audio;
-using Spice86.Libs.Sound.Common;
-using AudioFrame = Spice86.Libs.Sound.Common.AudioFrame;
+using Spice86.Audio.Backend.Audio;
+using Spice86.Audio.Common;
+using Spice86.Audio.Filters;
+using AudioFrame = Spice86.Audio.Common.AudioFrame;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 
-using HighPassFilter = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
+using HighPassFilter = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.HighPass;
 
 /// <summary>
 /// Central audio mixer that runs in its own thread and produces final mixed output.
 /// </summary>
 public sealed class Mixer : IDisposable {
     private const int DefaultSampleRateHz = 48000;
-    private const int DefaultBlocksize = 1024;
+    private static readonly int DefaultBlocksize = System.OperatingSystem.IsWindows() ? 1024 : 512;
+    private static readonly int DefaultPrebufferMs = System.OperatingSystem.IsWindows() ? 25 : 20;
+    private static readonly bool DefaultAllowNegotiate = !System.OperatingSystem.IsWindows();
     private const int MaxPrebufferMs = 100;
 
     // This shows up nicely as 50% and -6.00 dB in the MIXER command's output
     private const float Minus6db = 0.501f;
 
     private readonly ILoggerService _loggerService;
+    private readonly IPauseHandler _pauseHandler;
     private readonly AudioPlayerFactory _audioPlayerFactory;
     private readonly AudioPlayer _audioPlayer;
 
     // Channels registry - matches DOSBox mixer.channels
     private readonly ConcurrentDictionary<string, MixerChannel> _channels = new();
+
+    // Queue notifiers for devices that run on the main thread.
+    // The mixer thread can be waiting on these queues. We need to stop them
+    // before acquiring the mutex lock to avoid a deadlock.
+    private readonly List<IMixerQueueNotifier> _queueNotifiers = new();
 
     // Mixer thread that produces and writes directly to PortAudio
     private readonly Thread _mixerThread;
@@ -56,11 +67,7 @@ public sealed class Mixer : IDisposable {
     private readonly AudioFrameBuffer _chorusAuxBuffer = new(0);
 
     private bool _doCompressor = false;
-    private readonly Compressor _compressor = new();
-
-    private float _peakLeft = 0.0f;
-    private float _peakRight = 0.0f;
-    private const float PeakDecayCoeff = 0.995f; // Slow decay for peak tracking
+    private readonly Spice86.Audio.Filters.Compressor _compressor = new();
 
     // Reverb state - MVerb professional algorithmic reverb
     private bool _doReverb = false;
@@ -89,12 +96,13 @@ public sealed class Mixer : IDisposable {
 
     private bool _disposed;
 
-    public Mixer(ILoggerService loggerService, AudioEngine audioEngine) {
+    public Mixer(AudioEngine audioEngine, IPauseHandler pauseHandler, ILoggerService loggerService) {
+        _pauseHandler = pauseHandler ?? throw new ArgumentNullException(nameof(pauseHandler));
         _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
-        _audioPlayerFactory = new AudioPlayerFactory(_loggerService, audioEngine);
+        _audioPlayerFactory = new AudioPlayerFactory(audioEngine);
 
         // Create the audio player with our sample rate and blocksize
-        _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize);
+        _audioPlayer = _audioPlayerFactory.CreatePlayer(_sampleRateHz, _blocksize, DefaultPrebufferMs, DefaultAllowNegotiate);
 
         // Initialize high-pass filters (2 channels - left and right)
         _reverbHighPassFilter = new HighPassFilter[2];
@@ -121,6 +129,9 @@ public sealed class Mixer : IDisposable {
         // Initialize compressor with default parameters
         InitCompressor(compressorEnabled: true);
 
+        // Start the audio player before starting the mixer thread
+        _audioPlayer.Start();
+
         // Start mixer thread (produces frames and writes to PortAudio directly)
         _mixerThread = new Thread(MixerThreadLoop) {
             Name = "Spice86-Mixer",
@@ -131,13 +142,24 @@ public sealed class Mixer : IDisposable {
 
         _loggerService.Information("MIXER: Initialized stereo {SampleRate} Hz audio with {BlockSize} sample frame buffer",
             _sampleRateHz, _blocksize);
+
+        _pauseHandler.Pausing += OnEmulatorPausing;
+        _pauseHandler.Resumed += OnEmulatorResumed;
+    }
+
+    private void OnEmulatorPausing() {
+        Mute();
+    }
+
+    private void OnEmulatorResumed() {
+        Unmute();
     }
 
     /// <summary>
     /// Gets the current mixer sample rate.
     /// </summary>
     public int SampleRateHz => _sampleRateHz;
-    
+
     /// <summary>
     /// Gets the mixer sample rate.
     /// </summary>
@@ -159,19 +181,36 @@ public sealed class Mixer : IDisposable {
     }
 
     /// <summary>
+    /// Registers a device to be notified before and after the mixer mutex is acquired.
+    /// The notifier will be called before the mixer mutex is acquired and after it is released.
+    /// </summary>
+    /// <param name="notifier">The device notifier to register.</param>
+    public void RegisterQueueNotifier(IMixerQueueNotifier notifier) {
+        _queueNotifiers.Add(notifier);
+    }
+
+    /// <summary>
     /// Locks the mixer thread to prevent mixing during critical operations.
-    /// Note: DOSBox also stops device queues; we just lock the mixer.
-    /// Use within a using statement or with UnlockMixerThread().
+    /// Stops device queues first to avoid deadlock. These are called infrequently when
+    /// global mixer state is changed (mostly on device init/destroy and in the MIXER command).
+    /// Individual channels also have a mutex which can be safely acquired without stopping these queues.
     /// </summary>
     public void LockMixerThread() {
+        foreach (IMixerQueueNotifier notifier in _queueNotifiers) {
+            notifier.NotifyLockMixer();
+        }
         _mixerLock.Enter();
     }
 
     /// <summary>
     /// Unlocks the mixer thread after critical operations complete.
+    /// Restarts the device queues to resume normal operation.
     /// </summary>
     public void UnlockMixerThread() {
         _mixerLock.Exit();
+        foreach (IMixerQueueNotifier notifier in _queueNotifiers) {
+            notifier.NotifyUnlockMixer();
+        }
     }
 
     /// <summary>
@@ -586,47 +625,33 @@ public sealed class Mixer : IDisposable {
                 _loggerService.Verbose("MIXER: Begin mix cycle frames={FramesRequested} channels={ChannelCount}", framesRequested, _channels.Count);
             }
 
-            float[] rentedBuffer = Array.Empty<float>();
-            try {
-                lock (_mixerLock) {
-                    MixSamples(framesRequested);
+            lock (_mixerLock) {
+                MixSamples(framesRequested);
+            }
 
-                    if (_state == MixerState.Muted) {
-                        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                            _loggerService.Verbose("MIXER: Skipping audio output (muted)");
-                        }
-                        continue;
-                    }
-
-                    int framesToWrite = _outputBuffer.Count;
-                    if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                        _loggerService.Verbose("MIXER: Mixed frames={Frames}", framesToWrite);
-                    }
-
-                    if (framesToWrite == 0) {
-                        continue;
-                    }
-
-                    rentedBuffer = System.Buffers.ArrayPool<float>.Shared.Rent(framesToWrite * 2);
-                    Span<float> interleavedBuffer = rentedBuffer.AsSpan(0, framesToWrite * 2);
-                    const float normalizeFactor = 1.0f / 32768.0f;
-                    Span<AudioFrame> outputFrames = _outputBuffer.AsSpan(0, framesToWrite);
-                    for (int i = 0; i < framesToWrite; i++) {
-                        int offset = i * 2;
-                        interleavedBuffer[offset] = outputFrames[i].Left * normalizeFactor;
-                        interleavedBuffer[offset + 1] = outputFrames[i].Right * normalizeFactor;
-                    }
-
-                    _audioPlayer.WriteData(interleavedBuffer);
-
-                    if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                        _loggerService.Verbose("MIXER: Wrote frames to PortAudio frames={Frames}", framesToWrite);
-                    }
+            // Check state and write audio OUTSIDE the lock to avoid deadlock
+            if (_state == MixerState.Muted) {
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("MIXER: Skipping audio output (muted)");
                 }
-            } finally {
-                if (rentedBuffer != null) {
-                    System.Buffers.ArrayPool<float>.Shared.Return(rentedBuffer);
-                }
+                continue;
+            }
+
+            int framesToWrite = _outputBuffer.Count;
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("MIXER: Mixed frames={Frames}", framesToWrite);
+            }
+
+            if (framesToWrite == 0) {
+                continue;
+            }
+
+            // Use MemoryMarshal.Cast to reinterpret AudioFrame[] as float[] for efficient interleaved audio
+            // AudioFrame is a struct with Left and Right floats in the correct order
+            _audioPlayer.WriteData(MemoryMarshal.Cast<AudioFrame, float>(_outputBuffer.AsSpan()));
+
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("MIXER: Wrote frames to audio player frames={Frames}", framesToWrite);
             }
         }
     }
@@ -788,50 +813,15 @@ public sealed class Mixer : IDisposable {
     /// Applies master normalization to prevent clipping and maintain consistent levels.
     /// </summary>
     private void ApplyMasterNormalization() {
-        // Track peaks for adaptive gain
+        // Normalize from int16 range to float range [-1.0, 1.0]
+        // Reference: DOSBox Staging normalize_sample() in src/hardware/audio/softwaremixer.cpp
         for (int i = 0; i < _outputBuffer.Count; i++) {
             AudioFrame frame = _outputBuffer[i];
-
-            // Update peak trackers
-            float absLeft = Math.Abs(frame.Left);
-            float absRight = Math.Abs(frame.Right);
-
-            if (absLeft > _peakLeft) {
-                _peakLeft = absLeft;
-            } else {
-                _peakLeft *= PeakDecayCoeff;
-            }
-
-            if (absRight > _peakRight) {
-                _peakRight = absRight;
-            } else {
-                _peakRight *= PeakDecayCoeff;
-            }
-
-            // Apply soft clipping to both channels
-            float left = ApplySoftClipping(frame.Left);
-            float right = ApplySoftClipping(frame.Right);
-
-            _outputBuffer[i] = new AudioFrame(left, right);
+            _outputBuffer[i] = new AudioFrame(
+                frame.Left / 32768.0f,
+                frame.Right / 32768.0f
+            );
         }
-    }
-
-    /// <summary>
-    /// Applies soft-knee limiting to a single sample to prevent harsh clipping.
-    /// Similar to DOSBox normalize_sample() soft-limiting approach
-    /// </summary>
-    private static float ApplySoftClipping(float sample) {
-        const float softClipThreshold = 32000.0f;
-        const float hardLimit = 32767.0f;
-
-        if (Math.Abs(sample) > softClipThreshold) {
-            float sign = Math.Sign(sample);
-            float excess = Math.Abs(sample) - softClipThreshold;
-            float softened = softClipThreshold + excess * 0.5f; // Reduce overshoot by half
-            return Math.Clamp(sign * softened, -hardLimit, hardLimit);
-        }
-
-        return sample;
     }
 
     /// <summary>
@@ -911,7 +901,7 @@ public sealed class Mixer : IDisposable {
             _outputBuffer[i] = new AudioFrame(newLeft, newRight);
         }
     }
-    
+
     /// <summary>
     /// Closes the audio device and stops all channels.
     /// </summary>
@@ -923,15 +913,15 @@ public sealed class Mixer : IDisposable {
                 _cancellationTokenSource.Cancel();
                 _mixerThread.Join(TimeSpan.FromSeconds(5));
             }
-            
+
             // Disable all channels
             foreach (MixerChannel channel in _channels.Values) {
                 channel.Enable(false);
             }
-            
+
             // Close audio player
             _audioPlayer.Dispose();
-            
+
             _loggerService.Information("MIXER: Closed audio device");
         }
     }
@@ -940,6 +930,9 @@ public sealed class Mixer : IDisposable {
         if (_disposed) {
             return;
         }
+
+        _pauseHandler.Pausing -= OnEmulatorPausing;
+        _pauseHandler.Resumed -= OnEmulatorResumed;
 
         _loggerService.Debug("MIXER: Disposing mixer");
 

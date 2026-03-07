@@ -8,9 +8,12 @@ using Spice86.Shared.Interfaces;
 
 using System.Threading;
 
-using AudioFrame = Spice86.Libs.Sound.Common.AudioFrame;
-using HighPass = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.HighPass;
-using LowPass = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.LowPass;
+using Spice86.Audio.Common;
+using Spice86.Audio.Filters;
+using Spice86.Audio.Filters.Speex;
+using AudioFrame = Spice86.Audio.Common.AudioFrame;
+using HighPass = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.HighPass;
+using LowPass = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.LowPass;
 
 /// <summary>
 /// Represents a single audio channel in the mixer.
@@ -18,10 +21,10 @@ using LowPass = Spice86.Libs.Sound.Filters.IirFilters.Filters.Butterworth.LowPas
 public sealed class MixerChannel {
     private const uint SpeexChannels = 2; // Always use stereo for processing
     private const int SpeexQuality = 5; // Medium quality - good balance between CPU and quality
-    
+
     private const byte EnvelopeMaxExpansionOverMs = 15; // Envelope expands over 15ms
     private const byte EnvelopeExpiresAfterSeconds = 10; // Envelope expires after 10s
-    
+
     private readonly Action<int> _handler;
     private readonly string _name;
     private readonly HashSet<ChannelFeature> _features;
@@ -37,27 +40,27 @@ public sealed class MixerChannel {
     private AudioFrame _appVolumeGain = new(1.0f, 1.0f);
     private float _db0VolumeGain = 1.0f;
     private AudioFrame _combinedVolumeGain = new(1.0f, 1.0f);
-    
+
     private bool _doLerpUpsample;
     private double _lerpPhase;
     private AudioFrame _lerpPrevFrame;
     private AudioFrame _lerpNextFrame;
-    
+
     private bool _doZohUpsample;
     private float _zohStep;
     private float _zohPos;
     private int _zohTargetRateHz;
-    
+
     // Speex resampler state - pure C# implementation
     // Replaces P/Invoke version with faithful C# port
     // Initialized ONCE when first needed (see ConfigureResampler)
-    private Bufdio.Spice86.SpeexResamplerCSharp? _speexResampler;
-    
+    private SpeexResamplerCSharp? _speexResampler;
+
     private bool _doResample;
-    
+
     // DOSBox default: ResampleMethod::Resample (always use Speex)
     private ResampleMethod _resampleMethod = ResampleMethod.Resample;
-    
+
     // Used as intermediate buffer during sample conversion and resampling
     // Matches DOSBox: std::vector<AudioFrame> convert_buffer
     private readonly AudioFrameBuffer _convertBuffer = new(0);
@@ -75,10 +78,10 @@ public sealed class MixerChannel {
     // State flags
     public bool IsEnabled { get; private set; }
     private bool _lastSamplesWereStereo;
-    
+
     // Tracks whether last AddSamples call was silence (for debugging/optimization)
     private bool _lastSamplesWereSilence = true;
-    
+
     /// <summary>
     /// Gets whether the last samples added were silence.
     /// </summary>
@@ -89,25 +92,25 @@ public sealed class MixerChannel {
             }
         }
     }
-    
+
     // Defines the peak sample amplitude we can expect in this channel.
     // Default to signed 16bit max
     private int _peakAmplitude = 32767; // Max16BitSampleValue
-    
+
     private bool _doCrossfeed;
     private float _crossfeedStrength;
     private float _crossfeedPanLeft;
     private float _crossfeedPanRight;
-    
+
     private bool _doReverbSend;
     private float _reverbLevel;
     private float _reverbSendGain;
-    
+
     private bool _doChorusSend;
     private float _chorusLevel;
     private float _chorusSendGain;
 
-    private readonly NoiseGate _noiseGate = new();
+    private readonly Spice86.Audio.Filters.NoiseGate _noiseGate = new();
     private float _noiseGateThresholdDb = -60.0f;
     private float _noiseGateAttackTimeMs = 1.0f;
     private float _noiseGateReleaseTimeMs = 20.0f;
@@ -122,7 +125,7 @@ public sealed class MixerChannel {
     private FilterState _lowPassFilterState = FilterState.Off;
     private int _lowPassFilterOrder;
     private int _lowPassFilterCutoffHz;
-    
+
     private readonly Sleeper _sleeper;
     private bool _doSleep;
 
@@ -133,15 +136,15 @@ public sealed class MixerChannel {
         string name,
         HashSet<ChannelFeature> features,
         ILoggerService loggerService) {
-        
+
         _handler = handler ?? throw new ArgumentNullException(nameof(handler));
         _name = name ?? throw new ArgumentNullException(nameof(name));
         _features = features ?? throw new ArgumentNullException(nameof(features));
         _loggerService = loggerService ?? throw new ArgumentNullException(nameof(loggerService));
-        
+
         _doSleep = HasFeature(ChannelFeature.Sleep);
         _sleeper = new Sleeper(this);
-        
+
         _envelope = new Envelope(name);
     }
 
@@ -153,7 +156,7 @@ public sealed class MixerChannel {
             return _name;
         }
     }
-    
+
     /// <summary>
     /// Gets whether reverb send is enabled for this channel.
     /// </summary>
@@ -164,7 +167,7 @@ public sealed class MixerChannel {
             }
         }
     }
-    
+
     /// <summary>
     /// Gets the reverb send gain for this channel.
     /// </summary>
@@ -175,7 +178,7 @@ public sealed class MixerChannel {
             }
         }
     }
-    
+
     /// <summary>
     /// Gets whether chorus send is enabled for this channel.
     /// </summary>
@@ -186,7 +189,7 @@ public sealed class MixerChannel {
             }
         }
     }
-    
+
     /// <summary>
     /// Gets the chorus send gain for this channel.
     /// </summary>
@@ -213,27 +216,27 @@ public sealed class MixerChannel {
     public void SetSampleRate(int sampleRateHz) {
         lock (_mutex) {
             _sampleRateHz = sampleRateHz;
-            
-            _envelope.Update(_sampleRateHz, 
-                           _peakAmplitude, 
-                           EnvelopeMaxExpansionOverMs, 
+
+            _envelope.Update(_sampleRateHz,
+                           _peakAmplitude,
+                           EnvelopeMaxExpansionOverMs,
                            EnvelopeExpiresAfterSeconds);
-            
+
             if (_doNoiseGate) {
                 InitNoiseGate();
             }
-            
+
             if (_highPassFilterState == FilterState.On) {
                 InitHighPassFilter();
             }
             if (_lowPassFilterState == FilterState.On) {
                 InitLowPassFilter();
             }
-            
+
             ConfigureResampler();
         }
     }
-    
+
     /// <summary>
     /// Sets the mixer sample rate for resampling calculations.
     /// </summary>
@@ -242,7 +245,7 @@ public sealed class MixerChannel {
             _mixerSampleRateHz = mixerSampleRateHz;
         }
     }
-    
+
     /// <summary>
     /// Gets the number of frames per tick.
     /// </summary>
@@ -254,7 +257,7 @@ public sealed class MixerChannel {
             return (_mixerSampleRateHz / 1000.0f) * MillisPerTick * stretchFactor;
         }
     }
-    
+
     /// <summary>
     /// Gets the number of frames per block.
     /// </summary>
@@ -266,7 +269,7 @@ public sealed class MixerChannel {
             return blocksize * stretchFactor;
         }
     }
-    
+
     /// <summary>
     /// Gets milliseconds per frame for this channel.
     /// </summary>
@@ -275,20 +278,20 @@ public sealed class MixerChannel {
             return 1000.0 / _sampleRateHz;
         }
     }
-    
+
     /// <summary>
     /// Sets the peak amplitude for this channel.
     /// </summary>
     public void SetPeakAmplitude(int peak) {
         lock (_mutex) {
             _peakAmplitude = peak;
-            _envelope.Update(_sampleRateHz, 
-                           _peakAmplitude, 
-                           EnvelopeMaxExpansionOverMs, 
+            _envelope.Update(_sampleRateHz,
+                           _peakAmplitude,
+                           EnvelopeMaxExpansionOverMs,
                            EnvelopeExpiresAfterSeconds);
         }
     }
-    
+
     /// <summary>
     /// Initializes the linear interpolation upsampler state.
     /// </summary>
@@ -297,7 +300,7 @@ public sealed class MixerChannel {
         _lerpPrevFrame = new AudioFrame(0.0f, 0.0f);
         _lerpNextFrame = new AudioFrame(0.0f, 0.0f);
     }
-    
+
     /// <summary>
     /// Initializes the zero-order-hold upsampler state.
     /// </summary>
@@ -305,11 +308,11 @@ public sealed class MixerChannel {
         if (_sampleRateHz >= _zohTargetRateHz) {
             throw new InvalidOperationException("ZoH upsampler requires channel rate < target rate");
         }
-        
+
         _zohStep = (float)_sampleRateHz / _zohTargetRateHz;
         _zohPos = 0.0f;
     }
-    
+
     /// <summary>
     /// Sets the zero-order-hold upsampler target rate.
     /// </summary>
@@ -317,13 +320,13 @@ public sealed class MixerChannel {
         if (targetRateHz <= 0) {
             throw new ArgumentException("Target rate must be positive", nameof(targetRateHz));
         }
-        
+
         lock (_mutex) {
             _zohTargetRateHz = targetRateHz;
             ConfigureResampler();
         }
     }
-    
+
     /// <summary>
     /// Sets the resample method for this channel.
     /// </summary>
@@ -333,39 +336,39 @@ public sealed class MixerChannel {
             ConfigureResampler();
         }
     }
-    
+
     /// <summary>
     /// Configures the resampler based on channel rate and resample method.
     /// </summary>
     private void ConfigureResampler() {
         int channelRateHz = _sampleRateHz;
         int mixerRateHz = _mixerSampleRateHz;
-        
+
         _doLerpUpsample = false;
         _doZohUpsample = false;
         _doResample = false;
-        
+
         void ConfigureSpeexResampler(int inRateHz) {
             uint speexInRate = (uint)inRateHz;
             uint speexOutRate = (uint)mixerRateHz;
-            
+
             if (_speexResampler == null) {
-                _speexResampler = new Bufdio.Spice86.SpeexResamplerCSharp(
+                _speexResampler = new SpeexResamplerCSharp(
                     SpeexChannels,
                     speexInRate,
                     speexOutRate,
                     SpeexQuality);
             }
-            
+
             _speexResampler.SetRate(speexInRate, speexOutRate);
-            
+
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
                 _loggerService.Debug(
                     "MIXER: {Name}: Speex resampler is on, input rate: {InRate} Hz, output rate: {OutRate} Hz",
                     _name, inRateHz, mixerRateHz);
             }
         }
-        
+
         switch (_resampleMethod) {
             case ResampleMethod.LerpUpsampleOrResample:
                 if (channelRateHz < mixerRateHz) {
@@ -379,7 +382,7 @@ public sealed class MixerChannel {
                     // no resampling is needed
                 }
                 break;
-                
+
             case ResampleMethod.ZeroOrderHoldAndResample:
                 if (channelRateHz < _zohTargetRateHz) {
                     _doZohUpsample = true;
@@ -397,7 +400,7 @@ public sealed class MixerChannel {
                     }
                 }
                 break;
-                
+
             case ResampleMethod.Resample:
                 if (channelRateHz != mixerRateHz) {
                     _doResample = true;
@@ -406,7 +409,7 @@ public sealed class MixerChannel {
                 break;
         }
     }
-    
+
     /// <summary>
     /// Checks if the channel has a specific feature.
     /// </summary>
@@ -520,7 +523,7 @@ public sealed class MixerChannel {
             return _outputMap;
         }
     }
-    
+
     /// <summary>
     /// Describes the lineout configuration in human-readable form.
     /// </summary>
@@ -538,7 +541,7 @@ public sealed class MixerChannel {
             return "Unknown";
         }
     }
-    
+
     /// <summary>
     /// Gets the current channel settings.
     /// </summary>
@@ -555,7 +558,7 @@ public sealed class MixerChannel {
             return settings;
         }
     }
-    
+
     /// <summary>
     /// Sets the channel settings from a saved configuration.
     /// </summary>
@@ -564,7 +567,7 @@ public sealed class MixerChannel {
             IsEnabled = settings.IsEnabled;
             SetUserVolume(settings.UserVolumeGain);
             SetLineoutMap(settings.LineoutMap);
-            
+
             // Only set effect levels if effects are enabled
             // (would need access to mixer state to check do_crossfeed, do_reverb, do_chorus)
             // For now, always set them
@@ -588,14 +591,14 @@ public sealed class MixerChannel {
                 AudioFrames.Clear();
                 _prevFrame = new AudioFrame(0.0f, 0.0f);
                 _nextFrame = new AudioFrame(0.0f, 0.0f);
-                
+
                 ClearResampler();
             }
 
             IsEnabled = shouldEnable;
         }
     }
-    
+
     /// <summary>
     /// Clears and resets all resampler state.
     /// </summary>
@@ -610,7 +613,7 @@ public sealed class MixerChannel {
             // Reset Speex resampler memory and skip zeros
             _speexResampler.Reset();
             _speexResampler.SkipZeros();
-            
+
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
                 int inputLatency = _speexResampler.GetInputLatency();
                 _loggerService.Debug(
@@ -627,7 +630,7 @@ public sealed class MixerChannel {
         if (framesRequested <= 0) {
             throw new ArgumentException("Frames requested must be positive", nameof(framesRequested));
         }
-        
+
         if (!IsEnabled) {
             return;
         }
@@ -640,20 +643,20 @@ public sealed class MixerChannel {
             lock (_mutex) {
                 // Calculate stretch factor based on sample rates
                 float stretchFactor = (float)_sampleRateHz / (float)_mixerSampleRateHz;
-                
+
                 // Calculate how many frames we still need
                 framesRemaining = (int)Math.Ceiling(
                     (_framesNeeded - AudioFrames.Count) * stretchFactor);
-                
+
                 if (framesRemaining <= 0) {
                     break;
                 }
             }
-            
+
             _handler(framesRemaining);
         }
     }
-    
+
     /// <summary>
     /// Sets the crossfeed strength for this channel.
     /// </summary>
@@ -661,19 +664,19 @@ public sealed class MixerChannel {
         lock (_mutex) {
             _crossfeedStrength = Math.Clamp(strength, 0.0f, 1.0f);
             _doCrossfeed = HasFeature(ChannelFeature.Stereo) && _crossfeedStrength > 0.0f;
-            
+
             if (!_doCrossfeed) {
                 _crossfeedStrength = 0.0f;
                 return;
             }
-            
+
             float p = (1.0f - _crossfeedStrength) / 2.0f;
             const float center = 0.5f;
             _crossfeedPanLeft = center - p;
             _crossfeedPanRight = center + p;
         }
     }
-    
+
     /// <summary>
     /// Gets the crossfeed strength for this channel.
     /// </summary>
@@ -682,7 +685,7 @@ public sealed class MixerChannel {
             return _crossfeedStrength;
         }
     }
-    
+
     /// <summary>
     /// Sets the reverb send level for this channel.
     /// </summary>
@@ -692,24 +695,24 @@ public sealed class MixerChannel {
             const float levelMax = 1.0f;
             const float levelMinDb = -40.0f;
             const float levelMaxDb = 0.0f;
-            
+
             level = Math.Clamp(level, levelMin, levelMax);
             _doReverbSend = HasFeature(ChannelFeature.ReverbSend) && level > levelMin;
-            
+
             if (!_doReverbSend) {
                 _reverbLevel = levelMin;
                 _reverbSendGain = 0.0f;
                 return;
             }
-            
+
             _reverbLevel = level;
-            
+
             // Remap level to decibels and convert to gain
             float levelDb = Remap(levelMin, levelMax, levelMinDb, levelMaxDb, level);
             _reverbSendGain = DecibelToGain(levelDb);
         }
     }
-    
+
     /// <summary>
     /// Gets the reverb send level for this channel.
     /// </summary>
@@ -718,7 +721,7 @@ public sealed class MixerChannel {
             return _reverbLevel;
         }
     }
-    
+
     /// <summary>
     /// Sets the chorus send level for this channel.
     /// </summary>
@@ -728,24 +731,24 @@ public sealed class MixerChannel {
             const float levelMax = 1.0f;
             const float levelMinDb = -24.0f;
             const float levelMaxDb = 0.0f;
-            
+
             level = Math.Clamp(level, levelMin, levelMax);
             _doChorusSend = HasFeature(ChannelFeature.ChorusSend) && level > levelMin;
-            
+
             if (!_doChorusSend) {
                 _chorusLevel = levelMin;
                 _chorusSendGain = 0.0f;
                 return;
             }
-            
+
             _chorusLevel = level;
-            
+
             // Remap level to decibels and convert to gain
             float levelDb = Remap(levelMin, levelMax, levelMinDb, levelMaxDb, level);
             _chorusSendGain = DecibelToGain(levelDb);
         }
     }
-    
+
     /// <summary>
     /// Gets the chorus send level for this channel.
     /// </summary>
@@ -969,7 +972,7 @@ public sealed class MixerChannel {
             }
         }
     }
-    
+
     /// <summary>
     /// Remaps a value from one range to another.
     /// Helper for effect level calculations.
@@ -978,7 +981,7 @@ public sealed class MixerChannel {
         float normalized = (value - inMin) / (inMax - inMin);
         return outMin + normalized * (outMax - outMin);
     }
-    
+
     /// <summary>
     /// Converts decibel value to linear gain.
     /// Helper for effect level calculations.
@@ -994,13 +997,13 @@ public sealed class MixerChannel {
         lock (_mutex) {
             while (AudioFrames.Count < _framesNeeded) {
                 AudioFrame frameWithGain;
-                
+
                 if (_prevFrame.Left == 0.0f && _prevFrame.Right == 0.0f) {
                     frameWithGain = new AudioFrame(0.0f, 0.0f);
                 } else {
                     // Fade to silence to avoid clicks
                     const float fadeAmount = 4.0f;
-                    
+
                     float nextLeft;
                     if (_prevFrame.Left > fadeAmount) {
                         nextLeft = _prevFrame.Left - fadeAmount;
@@ -1009,7 +1012,7 @@ public sealed class MixerChannel {
                     } else {
                         nextLeft = 0.0f;
                     }
-                    
+
                     float nextRight;
                     if (_prevFrame.Right > fadeAmount) {
                         nextRight = _prevFrame.Right - fadeAmount;
@@ -1018,24 +1021,24 @@ public sealed class MixerChannel {
                     } else {
                         nextRight = 0.0f;
                     }
-                    
+
                     _nextFrame = new AudioFrame(nextLeft, nextRight);
-                    
+
                     AudioFrame baseFrame = _lastSamplesWereStereo
                         ? _prevFrame
                         : new AudioFrame(_prevFrame.Left);
                     frameWithGain = baseFrame.Multiply(_combinedVolumeGain);
-                    
+
                     _prevFrame = _nextFrame;
                 }
 
                 AudioFrame outFrame = new();
                 outFrame[(int)_outputMap.Left] = frameWithGain.Left;
                 outFrame[(int)_outputMap.Right] = frameWithGain.Right;
-                
+
                 AudioFrames.Add(outFrame);
             }
-            
+
             _lastSamplesWereSilence = true;
         }
     }
@@ -1046,32 +1049,32 @@ public sealed class MixerChannel {
     /// </summary>
     private void ConvertSamplesAndMaybeZohUpsample_m8(ReadOnlySpan<byte> data, int numFrames) {
         _convertBuffer.Clear();
-        
+
         LineIndex mappedOutputLeft = _outputMap.Left;
         LineIndex mappedOutputRight = _outputMap.Right;
         LineIndex mappedChannelLeft = _channelMap.Left;
-        
+
         int pos = 0;
         while (pos < numFrames) {
             _prevFrame = _nextFrame;
-            
+
             // Convert 8-bit unsigned to float
             _nextFrame = new AudioFrame(LookupTables.U8To16[data[pos]], LookupTables.U8To16[data[pos]]);
-            
+
             // Apply channel mapping (mono uses left channel) - use _nextFrame (current sample)
             AudioFrame frameWithGain = new AudioFrame(_nextFrame[(int)mappedChannelLeft]);
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
-            
+
             // Process through envelope to prevent clicks
             _envelope.Process(false, ref frameWithGain);
-            
+
             // Apply output mapping
             AudioFrame outFrame = new();
             outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
             outFrame[(int)mappedOutputRight] = frameWithGain.Right;
-            
+
             _convertBuffer.Add(outFrame);
-            
+
             if (_doZohUpsample) {
                 _zohPos += _zohStep;
                 if (_zohPos > 1.0f) {
@@ -1083,39 +1086,39 @@ public sealed class MixerChannel {
             }
         }
     }
-    
+
     /// <summary>
     /// Converts mono 16-bit signed samples to AudioFrames with optional ZoH upsampling.
     /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
     /// </summary>
     private void ConvertSamplesAndMaybeZohUpsample_m16(ReadOnlySpan<short> data, int numFrames) {
         _convertBuffer.Clear();
-        
+
         LineIndex mappedOutputLeft = _outputMap.Left;
         LineIndex mappedOutputRight = _outputMap.Right;
         LineIndex mappedChannelLeft = _channelMap.Left;
-        
+
         int pos = 0;
         while (pos < numFrames) {
             _prevFrame = _nextFrame;
-            
+
             // Convert 16-bit signed to float
             _nextFrame = new AudioFrame(data[pos], data[pos]);
-            
+
             // Apply channel mapping (mono uses left channel) - use _nextFrame (current sample)
             AudioFrame frameWithGain = new AudioFrame(_nextFrame[(int)mappedChannelLeft]);
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
-            
+
             // Process through envelope to prevent clicks
             _envelope.Process(false, ref frameWithGain);
-            
+
             // Apply output mapping
             AudioFrame outFrame = new();
             outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
             outFrame[(int)mappedOutputRight] = frameWithGain.Right;
-            
+
             _convertBuffer.Add(outFrame);
-            
+
             if (_doZohUpsample) {
                 _zohPos += _zohStep;
                 if (_zohPos > 1.0f) {
@@ -1127,43 +1130,43 @@ public sealed class MixerChannel {
             }
         }
     }
-    
+
     /// <summary>
     /// Converts stereo 16-bit signed samples to AudioFrames with optional ZoH upsampling.
     /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
     /// </summary>
     private void ConvertSamplesAndMaybeZohUpsample_s16(ReadOnlySpan<short> data, int numFrames) {
         _convertBuffer.Clear();
-        
+
         LineIndex mappedOutputLeft = _outputMap.Left;
         LineIndex mappedOutputRight = _outputMap.Right;
         LineIndex mappedChannelLeft = _channelMap.Left;
         LineIndex mappedChannelRight = _channelMap.Right;
-        
+
         int pos = 0;
         while (pos < numFrames) {
             _prevFrame = _nextFrame;
-            
+
             // Convert stereo 16-bit signed to float
             _nextFrame = new AudioFrame(data[pos * 2], data[pos * 2 + 1]);
-            
+
             // Apply channel mapping (stereo) - use _nextFrame (current sample)
             AudioFrame frameWithGain = new AudioFrame(
                 _nextFrame[(int)mappedChannelLeft],
                 _nextFrame[(int)mappedChannelRight]
             );
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
-            
+
             // Process through envelope to prevent clicks
             _envelope.Process(true, ref frameWithGain);
-            
+
             // Apply output mapping
             AudioFrame outFrame = new();
             outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
             outFrame[(int)mappedOutputRight] = frameWithGain.Right;
-            
+
             _convertBuffer.Add(outFrame);
-            
+
             if (_doZohUpsample) {
                 _zohPos += _zohStep;
                 if (_zohPos > 1.0f) {
@@ -1175,7 +1178,7 @@ public sealed class MixerChannel {
             }
         }
     }
-    
+
     /// <summary>
     /// Converts mono 32-bit float samples to AudioFrames with optional ZoH upsampling.
     /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
@@ -1184,34 +1187,34 @@ public sealed class MixerChannel {
     /// </summary>
     private void ConvertSamplesAndMaybeZohUpsample_mfloat(ReadOnlySpan<float> data, int numFrames) {
         _convertBuffer.Clear();
-        
+
         LineIndex mappedOutputLeft = _outputMap.Left;
         LineIndex mappedOutputRight = _outputMap.Right;
         LineIndex mappedChannelLeft = _channelMap.Left;
-        
+
         int pos = 0;
         while (pos < numFrames) {
             _prevFrame = _nextFrame;
-            
+
             // Float samples are already in int16 range (like DOSBox staging)
             // Reference: DOSBox mixer.cpp just does static_cast<float>(data[pos]) with no conversion
             float sample = data[pos];
             _nextFrame = new AudioFrame(sample, sample);
-            
+
             // Apply channel mapping (mono uses left channel) - use _nextFrame (current sample)
             AudioFrame frameWithGain = new AudioFrame(_nextFrame[(int)mappedChannelLeft]);
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
-            
+
             // Process through envelope to prevent clicks
             _envelope.Process(false, ref frameWithGain);
-            
+
             // Apply output mapping
             AudioFrame outFrame = new();
             outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
             outFrame[(int)mappedOutputRight] = frameWithGain.Right;
-            
+
             _convertBuffer.Add(outFrame);
-            
+
             if (_doZohUpsample) {
                 _zohPos += _zohStep;
                 if (_zohPos > 1.0f) {
@@ -1223,46 +1226,46 @@ public sealed class MixerChannel {
             }
         }
     }
-    
+
     /// <summary>
     /// Converts stereo 32-bit float samples to AudioFrames with optional ZoH upsampling.
     /// Fills convert_buffer with converted and potentially ZoH-upsampled frames.
     /// </summary>
     private void ConvertSamplesAndMaybeZohUpsample_sfloat(ReadOnlySpan<float> data, int numFrames) {
         _convertBuffer.Clear();
-        
+
         LineIndex mappedOutputLeft = _outputMap.Left;
         LineIndex mappedOutputRight = _outputMap.Right;
         LineIndex mappedChannelLeft = _channelMap.Left;
         LineIndex mappedChannelRight = _channelMap.Right;
-        
+
         int pos = 0;
         while (pos < numFrames) {
             _prevFrame = _nextFrame;
-            
+
             // Float samples are already in int16-ranged format (like DOSBox staging)
             // DOSBox: just does static_cast<float> with no conversion
             float left = data[pos * 2];
             float right = data[pos * 2 + 1];
             _nextFrame = new AudioFrame(left, right);
-            
+
             // Apply channel mapping (stereo) - use _nextFrame (current sample)
             AudioFrame frameWithGain = new AudioFrame(
                 _nextFrame[(int)mappedChannelLeft],
                 _nextFrame[(int)mappedChannelRight]
             );
             frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
-            
+
             // Process through envelope to prevent clicks
             _envelope.Process(true, ref frameWithGain);
-            
+
             // Apply output mapping
             AudioFrame outFrame = new();
             outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
             outFrame[(int)mappedOutputRight] = frameWithGain.Right;
-            
+
             _convertBuffer.Add(outFrame);
-            
+
             if (_doZohUpsample) {
                 _zohPos += _zohStep;
                 if (_zohPos > 1.0f) {
@@ -1274,7 +1277,7 @@ public sealed class MixerChannel {
             }
         }
     }
-    
+
     /// <summary>
     /// Adds mono 8-bit unsigned samples with resampling.
     /// </summary>
@@ -1401,7 +1404,7 @@ public sealed class MixerChannel {
         }
     }
 
-    private static int EstimateMaxOutFrames(Bufdio.Spice86.SpeexResamplerCSharp resampler, int inFrames) {
+    private static int EstimateMaxOutFrames(SpeexResamplerCSharp resampler, int inFrames) {
         resampler.GetRatio(out uint ratioNum, out uint ratioDen);
         if (ratioNum == 0 || ratioDen == 0 || inFrames <= 0) {
             return inFrames;
@@ -1614,7 +1617,7 @@ public sealed class MixerChannel {
             ApplyInPlaceProcessing(audioFramesStartingSize);
         }
     }
-    
+
     /// <summary>
     /// Adds stereo 32-bit float samples with resampling.
     /// </summary>
@@ -1691,34 +1694,34 @@ public sealed class MixerChannel {
 
             // Convert AudioFrame[] to convert_buffer with ZoH if needed
             _convertBuffer.Clear();
-            
+
             LineIndex mappedOutputLeft = _outputMap.Left;
             LineIndex mappedOutputRight = _outputMap.Right;
             LineIndex mappedChannelLeft = _channelMap.Left;
             LineIndex mappedChannelRight = _channelMap.Right;
-            
+
             int pos = 0;
             while (pos < frames.Length) {
                 _prevFrame = _nextFrame;
                 _nextFrame = frames[pos];
-                
+
                 // Apply channel mapping - use _nextFrame (current sample)
                 AudioFrame frameWithGain = new AudioFrame(
                     _nextFrame[(int)mappedChannelLeft],
                     _nextFrame[(int)mappedChannelRight]
                 );
                 frameWithGain = frameWithGain.Multiply(_combinedVolumeGain);
-                
+
                 // Process through envelope
                 _envelope.Process(true, ref frameWithGain);
-                
+
                 // Apply output mapping
                 AudioFrame outFrame = new();
                 outFrame[(int)mappedOutputLeft] = frameWithGain.Left;
                 outFrame[(int)mappedOutputRight] = frameWithGain.Right;
-                
+
                 _convertBuffer.Add(outFrame);
-                
+
                 if (_doZohUpsample) {
                     _zohPos += _zohStep;
                     if (_zohPos > 1.0f) {
@@ -1767,7 +1770,7 @@ public sealed class MixerChannel {
             ApplyInPlaceProcessing(audioFramesStartingSize);
         }
     }
-    
+
     /// <summary>
     /// Applies fade-out or signal detection to a frame if sleep is enabled.
     /// Called by mixer during frame processing.
@@ -1776,11 +1779,11 @@ public sealed class MixerChannel {
         if (!_doSleep) {
             return frame;
         }
-        
+
         // No lock needed here - called within mixer's processing loop
         return _sleeper.MaybeFadeOrListen(frame);
     }
-    
+
     /// <summary>
     /// Attempts to put the channel to sleep if conditions are met.
     /// Called by mixer after frame processing.
@@ -1789,11 +1792,11 @@ public sealed class MixerChannel {
         if (!_doSleep) {
             return;
         }
-        
+
         // No lock needed here - called within mixer's processing loop
         _sleeper.MaybeSleep();
     }
-    
+
     /// <summary>
     /// Wakes up a sleeping channel.
     /// Audio devices that use the sleep feature need to wake up the channel whenever
@@ -1804,12 +1807,12 @@ public sealed class MixerChannel {
         if (!_doSleep) {
             return false;
         }
-        
+
         lock (_mutex) {
             return _sleeper.WakeUp();
         }
     }
-    
+
     /// <summary>
     /// Configures fade-out behavior for this channel.
     /// </summary>
@@ -1820,39 +1823,39 @@ public sealed class MixerChannel {
             return _sleeper.ConfigureFadeOut(prefs);
         }
     }
-    
+
     /// <summary>
     /// Nested class that manages channel sleep/wake behavior with optional fade-out.
     /// Reference: DOSBox mixer.cpp lines 1960-2130
     /// </summary>
     private sealed class Sleeper {
         private readonly MixerChannel _channel;
-        
+
         // The wait before fading or sleeping is bound between these values
         private const int MinWaitMs = 100;
         private const int DefaultWaitMs = 500;
         private const int MaxWaitMs = 5000;
-        
+
         private AudioFrame _lastFrame;
         private long _wokenAtMs;
         private float _fadeoutLevel;
         private float _fadeoutDecrementPerMs;
         private int _fadeoutOrSleepAfterMs;
-        
+
         private bool _wantsFadeout;
         private bool _hadSignal;
-        
+
         public Sleeper(MixerChannel channel, int sleepAfterMs = DefaultWaitMs) {
             _channel = channel ?? throw new ArgumentNullException(nameof(channel));
             _fadeoutOrSleepAfterMs = sleepAfterMs;
-            
+
             // The constructed sleep period is programmatically controlled
             if (sleepAfterMs < MinWaitMs || sleepAfterMs > MaxWaitMs) {
-                throw new ArgumentOutOfRangeException(nameof(sleepAfterMs), 
+                throw new ArgumentOutOfRangeException(nameof(sleepAfterMs),
                     $"Sleep period must be between {MinWaitMs} and {MaxWaitMs} ms");
             }
         }
-        
+
         /// <summary>
         /// Configures fade-out behavior.
         /// </summary>
@@ -1860,7 +1863,7 @@ public sealed class MixerChannel {
             void SetWaitAndFade(int waitMs, int fadeMs) {
                 _fadeoutOrSleepAfterMs = waitMs;
                 _fadeoutDecrementPerMs = 1.0f / (float)fadeMs;
-                
+
                 // LOG_MSG equivalent - using Verbose level
                 if (_channel._loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
                     _channel._loggerService.Verbose(
@@ -1868,31 +1871,31 @@ public sealed class MixerChannel {
                         _channel._name, waitMs, fadeMs);
                 }
             }
-            
+
             // Disable fade-out (default)
             if (HasFalse(prefs)) {
                 _wantsFadeout = false;
                 return true;
             }
-            
+
             // Enable fade-out with defaults
             if (HasTrue(prefs)) {
                 SetWaitAndFade(DefaultWaitMs, DefaultWaitMs);
                 _wantsFadeout = true;
                 return true;
             }
-            
+
             // Let the fade-out last between 10 ms and 3 seconds
             const int MinFadeMs = 10;
             const int MaxFadeMs = 3000;
-            
+
             // Custom setting in 'WAIT FADE' syntax, where both are milliseconds
             string[] parts = prefs.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 2) {
                 if (int.TryParse(parts[0], out int waitMs) && int.TryParse(parts[1], out int fadeMs)) {
                     bool waitIsValid = waitMs >= MinWaitMs && waitMs <= MaxWaitMs;
                     bool fadeIsValid = fadeMs >= MinFadeMs && fadeMs <= MaxFadeMs;
-                    
+
                     if (waitIsValid && fadeIsValid) {
                         SetWaitAndFade(waitMs, fadeMs);
                         _wantsFadeout = true;
@@ -1900,7 +1903,7 @@ public sealed class MixerChannel {
                     }
                 }
             }
-            
+
             // Otherwise inform the user and disable the fade
             if (_channel._loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 _channel._loggerService.Warning(
@@ -1909,11 +1912,11 @@ public sealed class MixerChannel {
                     "and FADE is {MinFade}-{MaxFade} ms",
                     _channel._name, prefs, MinWaitMs, MaxWaitMs, MinFadeMs, MaxFadeMs);
             }
-            
+
             _wantsFadeout = false;
             return false;
         }
-        
+
         /// <summary>
         /// Decrements the fade level based on elapsed time.
         /// </summary>
@@ -1921,15 +1924,15 @@ public sealed class MixerChannel {
             if (awakeForMs < _fadeoutOrSleepAfterMs) {
                 throw new ArgumentException("awakeForMs must be >= fadeoutOrSleepAfterMs");
             }
-            
+
             float elapsedFadeMs = (float)(awakeForMs - _fadeoutOrSleepAfterMs);
             float decrement = _fadeoutDecrementPerMs * elapsedFadeMs;
-            
+
             const float MinLevel = 0.0f;
             const float MaxLevel = 1.0f;
             _fadeoutLevel = Math.Clamp(MaxLevel - decrement, MinLevel, MaxLevel);
         }
-        
+
         /// <summary>
         /// Either fades the frame or checks if the channel had any signal output.
         /// </summary>
@@ -1938,32 +1941,32 @@ public sealed class MixerChannel {
                 // When fading, we actively drive down the channel level
                 return frame * _fadeoutLevel;
             }
-            
+
             if (!_hadSignal) {
                 // Otherwise, we inspect the running signal for changes
                 const float ChangeThreshold = 1.0f;
-                
+
                 _hadSignal = Math.Abs(frame.Left - _lastFrame.Left) > ChangeThreshold ||
                             Math.Abs(frame.Right - _lastFrame.Right) > ChangeThreshold;
-                
+
                 _lastFrame = frame;
             }
-            
+
             return frame;
         }
-        
+
         /// <summary>
         /// Attempts to put the channel to sleep if conditions are met.
         /// </summary>
         public void MaybeSleep() {
             // A signed integer can hold a duration of ~24 days in milliseconds
             long awakeForMs = Environment.TickCount64 - _wokenAtMs;
-            
+
             // Not enough time has passed... try to sleep later
             if (awakeForMs < _fadeoutOrSleepAfterMs) {
                 return;
             }
-            
+
             if (_wantsFadeout) {
                 // The channel is still fading out... try to sleep later
                 if (_fadeoutLevel > 0.0f) {
@@ -1975,14 +1978,14 @@ public sealed class MixerChannel {
                 WakeUp();
                 return;
             }
-            
+
             if (_channel.IsEnabled) {
                 _channel.Enable(false);
                 // LOG_INFO equivalent - commented out to match DOSBox behavior
                 // _channel._loggerService.Information("MIXER: {Channel} fell asleep", _channel._name);
             }
         }
-        
+
         /// <summary>
         /// Wakes up the channel.
         /// </summary>
@@ -1992,23 +1995,23 @@ public sealed class MixerChannel {
             _wokenAtMs = Environment.TickCount64;
             _fadeoutLevel = 1.0f;
             _hadSignal = false;
-            
+
             bool wasSleeping = !_channel.IsEnabled;
             if (wasSleeping) {
                 _channel.Enable(true);
                 // LOG_INFO equivalent - commented out to match DOSBox behavior
                 // _channel._loggerService.Information("MIXER: {Channel} woke up", _channel._name);
             }
-            
+
             return wasSleeping;
         }
-        
+
         private static bool HasFalse(string value) {
             return string.Equals(value, "false", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(value, "off", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(value, "0", StringComparison.OrdinalIgnoreCase);
         }
-        
+
         private static bool HasTrue(string value) {
             return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(value, "on", StringComparison.OrdinalIgnoreCase) ||

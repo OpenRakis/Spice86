@@ -2,8 +2,8 @@ namespace Spice86.ViewModels;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Audio.Common;
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Libs.Sound.Common;
 
 using System;
 

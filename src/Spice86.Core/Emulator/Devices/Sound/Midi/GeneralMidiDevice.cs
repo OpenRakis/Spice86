@@ -2,10 +2,11 @@ namespace Spice86.Core.Emulator.Devices.Sound.Midi;
 
 using MeltySynth;
 
+using Spice86.Audio.Common;
+using Spice86.Audio.Filters;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM;
-using Spice86.Libs.Sound.Common;
 using Spice86.Shared.Interfaces;
 
 using System.Linq;
@@ -60,7 +61,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
             // DON'T enable the channel here - it starts disabled and wakes up on first MIDI message
             // The channel will be enabled when MIDI messages are played (via WakeUp call)
         }
-        
+
         if (OperatingSystem.IsWindows() && configuration.AudioEngine != AudioEngine.Dummy) {
             NativeMethods.midiOutOpen(out _midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
         }

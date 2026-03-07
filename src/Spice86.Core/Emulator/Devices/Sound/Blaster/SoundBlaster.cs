@@ -2,6 +2,8 @@ namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Serilog.Events;
 
+using Spice86.Audio.Common;
+using Spice86.Audio.Backend;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -9,8 +11,6 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
-using Spice86.Libs.Sound.Common;
-using Spice86.Libs.Sound.Devices.NukedOpl3;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -18,7 +18,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
-public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider {
+public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnvVarProvider, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier {
     private const int DmaBufSize = 1024;
     private const int DspBufSize = 64;
     private const int MinPlaybackRateHz = 5000;
@@ -450,15 +450,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private readonly IEmulatedClock _clock;
     private readonly HardwareMixer _hardwareMixer;
 
-    // Output queue for audio frames - uses Lock for bulk operations like DOSBox's RWQueue
+    // Output queue for audio frames - uses RWQueue matching DOSBox's RWQueue
     // Reference: DOSBox uses RWQueue with NonblockingBulkEnqueue/BulkDequeue
-    private readonly Queue<AudioFrame> _outputQueue = new();
-    private readonly Lock _outputQueueLock = new();
-    
+    private readonly RWQueue<AudioFrame> _outputQueue;
+
     // Reusable buffer for batch enqueue operations - avoids per-sample Enqueue overhead
     private readonly AudioFrame[] _enqueueBatch = new AudioFrame[4096];
     private int _enqueueBatchCount;
-    
+
     // Reusable buffer for mixer callback dequeue - avoids per-callback List allocation
     private readonly AudioFrame[] _dequeueBatch = new AudioFrame[4096];
 
@@ -502,16 +501,23 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         SoundBlasterHardwareConfig soundBlasterHardwareConfig)
         : base(state, false, loggerService) {
 
-        // Lock mixer thread during construction to prevent concurrent modifications
-        // Reference: src/hardware/audio/soundblaster.cpp:3858
-        mixer.LockMixerThread();
-
         _config = soundBlasterHardwareConfig;
         _dualPic = dualPic;
         _mixer = mixer;
         _opl = opl;
         _scheduler = scheduler;
         _clock = clock;
+
+        // Create queue first with initial capacity. Will be resized in callback.
+        const int initialQueueSize = 256;
+        _outputQueue = new RWQueue<AudioFrame>(initialQueueSize);
+
+        // Register after queue exists so NotifyLockMixer won't hit a null queue
+        mixer.RegisterQueueNotifier(this);
+
+        // Lock mixer thread during construction to prevent concurrent modifications
+        // Reference: src/hardware/audio/soundblaster.cpp:3858
+        mixer.LockMixerThread();
 
         _primaryDmaChannel = dmaBus.GetChannel(_config.LowDma)
             ?? throw new InvalidOperationException($"DMA channel {_config.LowDma} unavailable for Sound Blaster.");
@@ -565,11 +571,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Reference: channel = MIXER_AddChannel(&SoundBlaster::MixerCallback, ...)
         _dacChannel = _mixer.AddChannel(MixerCallback, (int)_sb.FreqHz, "SoundBlasterDAC", dacFeatures);
 
-        // Configure Zero-Order-Hold upsampler and resample method for SB Pro 2 only
-        // ZOH upsampler provides vintage DAC sound characteristic
-        // Native DAC rate is 49716 Hz, then resampled to host rate (typically 48000 Hz)
+        // Size to 2x blocksize. The mixer callback typically requests 1x blocksize.
+        // This helps prevent queue underruns/stalls under load.
+        _outputQueue.Resize((int)Math.Ceiling(_dacChannel.GetFramesPerBlock() * 2.0f));
+
+        // Configure Zero-Order-Hold upsampler and resample method for SB Pro 2 only.
+        // Match master's native SB DAC target rate.
         if (_config.SbType == SbType.SBPro2) {
-            const int NativeDacRateHz = 49716;
+            const int NativeDacRateHz = 45454;
             _dacChannel.SetZeroOrderHoldUpsamplerTargetRate(NativeDacRateHz);
             _dacChannel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
         }
@@ -599,6 +608,22 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         mixer.UnlockMixerThread();
     }
 
+    /// <inheritdoc />
+    public RWQueue<AudioFrame> OutputQueue => _outputQueue;
+
+    /// <inheritdoc />
+    public MixerChannel Channel => _dacChannel;
+
+    /// <inheritdoc />
+    public void NotifyLockMixer() {
+        _outputQueue.Stop();
+    }
+
+    /// <inheritdoc />
+    public void NotifyUnlockMixer() {
+        _outputQueue.Start();
+    }
+
     /// <summary>
     /// Mixer callback - called by mixer when it needs audio frames.
     /// Reference: src/hardware/audio/soundblaster.cpp SoundBlaster::MixerCallback()
@@ -608,26 +633,28 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
         // Set frames_needed based on shortage
         // frames_needed = max(frames_requested - output_queue.Size(), 0)
-        int queueSize;
-        lock (_outputQueueLock) {
-            queueSize = _outputQueue.Count;
-        }
+        int queueSize = _outputQueue.Size;
         int shortage = Math.Max(frames_requested - queueSize, 0);
         System.Threading.Interlocked.Exchange(ref _framesNeeded, shortage);
 
         // Pull from queue callback - exact port of MIXER_PullFromQueueCallback
         // Reference: src/audio/mixer.h lines 498-553 BulkDequeue pattern
-        // Uses single lock for bulk dequeue like DOSBox's RWQueue
+        // Uses RWQueue's BulkDequeue for efficient batch operations
         int frames_received = 0;
-        int maxFrames = Math.Min(frames_requested, _dequeueBatch.Length);
-        lock (_outputQueueLock) {
-            while (frames_received < maxFrames && _outputQueue.Count > 0) {
-                _dequeueBatch[frames_received++] = _outputQueue.Dequeue();
+        int remaining = frames_requested;
+        while (remaining > 0) {
+            int chunk = Math.Min(remaining, _dequeueBatch.Length);
+            int dequeued = _outputQueue.BulkDequeue(_dequeueBatch.AsSpan(0, chunk), chunk);
+            if (dequeued > 0) {
+                _dacChannel.AddAudioFrames(_dequeueBatch.AsSpan(0, dequeued));
+                frames_received += dequeued;
+                remaining -= dequeued;
             }
-        }
 
-        if (frames_received > 0) {
-            _dacChannel.AddAudioFrames(_dequeueBatch.AsSpan(0, frames_received));
+            // Queue is empty for now.
+            if (dequeued < chunk) {
+                break;
+            }
         }
 
         // Fill any shortfall with silence
@@ -637,6 +664,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     }
 
     private bool MaybeWakeUp() {
+        _outputQueue.Start();
         return _dacChannel.WakeUp();
     }
 
@@ -761,7 +789,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     private void DspE2DmaCallback(DmaChannel channel, DmaChannel.DmaEvent dmaEvent) {
         if (dmaEvent == DmaChannel.DmaEvent.IsUnmasked) {
             byte val = (byte)(_sb.E2.Value & 0xff);
-            
+
             // Unregister callback and write the E2 value
             channel.RegisterCallback(null);
             Span<byte> buffer = stackalloc byte[1];
@@ -1053,7 +1081,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         // Reference: src/hardware/audio/soundblaster.cpp enqueue_frames()
         _framesAddedThisTick += (int)numSamples;
     }
-    
+
     /// <summary>
     /// Enqueues silent frames in batch. Used during warmup and when speaker is disabled.
     /// </summary>
@@ -1066,21 +1094,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
         FlushEnqueueBatch();
         _framesAddedThisTick += (int)count;
     }
-    
+
     /// <summary>
     /// Flushes the enqueue batch to the output queue.
-    /// Uses single lock like DOSBox's NonblockingBulkEnqueue for efficiency.
+    /// Uses RWQueue's NonblockingBulkEnqueue for efficiency.
     /// Reference: src/misc/rwqueue.cpp NonblockingBulkEnqueue
     /// </summary>
     private void FlushEnqueueBatch() {
         if (_enqueueBatchCount == 0) {
             return;
         }
-        lock (_outputQueueLock) {
-            for (int i = 0; i < _enqueueBatchCount; i++) {
-                _outputQueue.Enqueue(_enqueueBatch[i]);
-            }
-        }
+
+        // Use RWQueue's NonblockingBulkEnqueue which returns number of items actually enqueued
+        _outputQueue.NonblockingBulkEnqueue(_enqueueBatch.AsSpan(0, _enqueueBatchCount), _enqueueBatchCount);
         _enqueueBatchCount = 0;
     }
 
@@ -1377,12 +1403,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
             case DspMode.None:
             case DspMode.DmaPause:
             case DspMode.DmaMasked: {
-                // Reference: static std::vector<AudioFrame> empty_frames = {};
-                // empty_frames.resize(frames_requested);
-                // enqueue_frames(empty_frames);
-                EnqueueSilentFrames((uint)frames_requested);
-                break;
-            }
+                    // Reference: static std::vector<AudioFrame> empty_frames = {};
+                    // empty_frames.resize(frames_requested);
+                    // enqueue_frames(empty_frames);
+                    EnqueueSilentFrames((uint)frames_requested);
+                    break;
+                }
 
             case DspMode.Dac:
                 // DAC mode typically renders one frame at a time because the
@@ -1401,27 +1427,27 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
                 break;
 
             case DspMode.Dma: {
-                // This is a no-op if the channel is already running. DMA
-                // processing can go for some time using auto-init mode without
-                // having to send IO calls to the card; so we keep it awake when
-                // DMA is still running.
-                MaybeWakeUp();
+                    // This is a no-op if the channel is already running. DMA
+                    // processing can go for some time using auto-init mode without
+                    // having to send IO calls to the card; so we keep it awake when
+                    // DMA is still running.
+                    MaybeWakeUp();
 
-                uint len = (uint)frames_requested;
-                len *= _sb.Dma.Mul;
-                if ((len & SbShiftMask) != 0) {
-                    len += 1 << SbShift;
+                    uint len = (uint)frames_requested;
+                    len *= _sb.Dma.Mul;
+                    if ((len & SbShiftMask) != 0) {
+                        len += 1 << SbShift;
+                    }
+                    len >>= SbShift;
+
+                    if (len > _sb.Dma.Left) {
+                        len = _sb.Dma.Left;
+                    }
+
+                    // ProcessDMATransfer(len);
+                    PlayDmaTransfer(len);
+                    break;
                 }
-                len >>= SbShift;
-
-                if (len > _sb.Dma.Left) {
-                    len = _sb.Dma.Left;
-                }
-
-                // ProcessDMATransfer(len);
-                PlayDmaTransfer(len);
-                break;
-            }
         }
     }
 
@@ -1927,14 +1953,38 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
 
             // Generic 8/16-bit DMA commands (SB16 only) - 0xB0-0xCF
             // Reference: DOSBox soundblaster.cpp lines 2068-2097
-            case 0xb0: case 0xb1: case 0xb2: case 0xb3:
-            case 0xb4: case 0xb5: case 0xb6: case 0xb7:
-            case 0xb8: case 0xb9: case 0xba: case 0xbb:
-            case 0xbc: case 0xbd: case 0xbe: case 0xbf:
-            case 0xc0: case 0xc1: case 0xc2: case 0xc3:
-            case 0xc4: case 0xc5: case 0xc6: case 0xc7:
-            case 0xc8: case 0xc9: case 0xca: case 0xcb:
-            case 0xcc: case 0xcd: case 0xce: case 0xcf:
+            case 0xb0:
+            case 0xb1:
+            case 0xb2:
+            case 0xb3:
+            case 0xb4:
+            case 0xb5:
+            case 0xb6:
+            case 0xb7:
+            case 0xb8:
+            case 0xb9:
+            case 0xba:
+            case 0xbb:
+            case 0xbc:
+            case 0xbd:
+            case 0xbe:
+            case 0xbf:
+            case 0xc0:
+            case 0xc1:
+            case 0xc2:
+            case 0xc3:
+            case 0xc4:
+            case 0xc5:
+            case 0xc6:
+            case 0xc7:
+            case 0xc8:
+            case 0xc9:
+            case 0xca:
+            case 0xcb:
+            case 0xcc:
+            case 0xcd:
+            case 0xce:
+            case 0xcf:
                 // Generic DMA commands (SB16 only)
                 // Reference: src/hardware/audio/soundblaster.cpp case 0xb0-0xcf
                 if (_config.SbType == SbType.Sb16) {
@@ -2256,7 +2306,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBlasterEnv
     /// </summary>
     private void SuppressDmaTransfer(uint bytesToRead) {
         uint numBytes = Math.Min(bytesToRead, _sb.Dma.Left);
-        
+
         // Read and discard the DMA data silently
         DmaChannel? dmaChannel = _sb.Dma.Channel;
         if (dmaChannel is not null && numBytes > 0) {

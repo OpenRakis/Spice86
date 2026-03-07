@@ -8,7 +8,6 @@ Spice86 is a .NET 8 cross-platform emulator for reverse engineering real-mode DO
 ### Project Structure
 - **`Spice86.Core`**: Core emulation engine (CPU, memory, devices, DOS/BIOS handlers)
 - **`Spice86`**: Main application with Avalonia UI (ViewModels, Views, manual composition root)
-- **`Bufdio.Spice86`**: Audio subsystem (PortAudio bindings)
 - **`Spice86.Logging`**: Serilog-based logging infrastructure
 - **`Spice86.Shared`**: Shared interfaces and utilities
 - **`Spice86.Tests`**: XUnit tests with FluentAssertions and NSubstitute
@@ -214,7 +213,6 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 
 ### External Dependencies
 - **Avalonia**: Cross-platform UI framework (MVVM pattern)
-- **PortAudio**: Audio output via `Bufdio.Spice86` (requires `libportaudio` on Unix)
 - **Serilog**: Structured logging with console/debug/file sinks
 - **Morris.Moxy**: Code generation for CPU instruction parsing mixins
 - **CommandLineParser**: CLI argument parsing into `Configuration` class

@@ -2,15 +2,19 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 
 using NukedOPL3Sharp;
 
+using Serilog.Events;
+
+using Spice86.Audio.Common;
+using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
-using Spice86.Libs.Sound.Common;
-using Spice86.Libs.Sound.Devices.AdlibGold;
 using Spice86.Shared.Interfaces;
 
+using System.Runtime.InteropServices;
 using System.Threading;
 
 /// <summary>
@@ -129,7 +133,7 @@ public class Opl : DefaultIOPortHandler, IDisposable {
         // Initialize AdLib Gold for Opl3Gold mode
         // Reference: adlib_gold = std::make_unique<AdlibGold>(OplSampleRateHz)
         if (_mode == OplMode.Opl3Gold) {
-            _adlibGold = new AdlibGold(OplSampleRateHz, loggerService);
+            _adlibGold = new AdlibGold(OplSampleRateHz);
         }
 
         _loggerService.Debug(

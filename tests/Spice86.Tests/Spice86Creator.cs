@@ -1,6 +1,7 @@
 namespace Spice86.Tests;
 
 using Spice86.Core.CLI;
+using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
@@ -14,7 +15,7 @@ public class Spice86Creator {
     private readonly Configuration _configuration;
     private readonly long _maxCycles;
 
-    public Spice86Creator(string binName, bool enablePit = false, 
+    public Spice86Creator(string binName, bool enablePit = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
         bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, string? cDrive = null,
         ushort programEntryPointSegment = 0x170) {

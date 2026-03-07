@@ -8,16 +8,20 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
-using Spice86.Libs.Sound.Common;
-using Spice86.Libs.Sound.Filters.IirFilters.Filters.RBJ;
+using Spice86.Audio.Common;
+using Spice86.Audio.Filters;
+using Spice86.Audio.Backend;
 using Spice86.Shared.Interfaces;
+
+using HighPass = Spice86.Audio.Filters.IirFilters.Filters.RBJ.HighPass;
+using LowPass = Spice86.Audio.Filters.IirFilters.Filters.RBJ.LowPass;
 
 using System.Threading;
 
 /// <summary>
 ///     PC speaker device
 /// </summary>
-public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
+public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker, IAudioQueueDevice<float>, IMixerQueueNotifier {
     private const int PcSpeakerPortNumber = 0x61;
 
     private const float PwmScalar = 0.5f;
@@ -46,8 +50,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     private readonly float[] _impulseLookup = new float[SincFilterWidth];
     private readonly ILoggerService _logger;
     private readonly LowPass _lowPassFilter = new();
-    private readonly Lock _outputLock = new();
-    private readonly Queue<float> _outputQueue = new();
+    private readonly RWQueue<float> _outputQueue;
     private readonly PitState _pit = new();
     private readonly MixerChannel _mixerChannel;
     private readonly TickHandler _tickHandler;
@@ -85,15 +88,22 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         bool failOnUnhandledPort,
         IPitControl? pitControl = null)
         : base(state, failOnUnhandledPort, loggerService) {
-        // Lock mixer thread during construction to prevent concurrent modifications
-        // Reference: src/hardware/audio/pcspeaker.cpp:119
-        mixer.LockMixerThread();
-
         _logger = loggerService;
         _scheduler = scheduler;
         _clock = clock;
         _pitControl = pitControl;
-        
+
+        // Create queue first with initial capacity. Will be resized in callback.
+        const int initialQueueSize = 256;
+        _outputQueue = new RWQueue<float>(initialQueueSize);
+
+        // Register after queue exists so NotifyLockMixer won't hit a null queue
+        mixer.RegisterQueueNotifier(this);
+
+        // Lock mixer thread during construction to prevent concurrent modifications
+        // Reference: src/hardware/audio/pcspeaker.cpp:119
+        mixer.LockMixerThread();
+
         // Create and register the PC Speaker mixer channel
         // Features: Sleep (CPU efficiency), ChorusSend, ReverbSend (effect sends), Synthesizer (square wave)
         // Note: PC Speaker is mono but uses stereo channel for left output only (SetChannelMap below)
@@ -131,6 +141,22 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     public void Dispose() {
         Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    /// <inheritdoc />
+    public RWQueue<float> OutputQueue => _outputQueue;
+
+    /// <inheritdoc />
+    public MixerChannel Channel => _mixerChannel;
+
+    /// <inheritdoc />
+    public void NotifyLockMixer() {
+        _outputQueue.Stop();
+    }
+
+    /// <inheritdoc />
+    public void NotifyUnlockMixer() {
+        _outputQueue.Start();
     }
 
     /// <summary>
@@ -327,7 +353,7 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         if (!_mixerChannel.IsEnabled) {
             return;
         }
-        
+
         // Reference: src/hardware/audio/pcspeaker.cpp:20-22
         // frame_counter += channel->GetFramesPerTick();
         // const int requested_frames = ifloor(frame_counter);
@@ -610,43 +636,39 @@ public class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     }
 
     private void EnqueueSample(float value) {
-        lock (_outputLock) {
-            if (_outputQueue.Count >= MaxBufferedFrames) {
-                _outputQueue.Dequeue();
-            }
-
-            _outputQueue.Enqueue(value);
-        }
+        _outputQueue.NonblockingEnqueue(value);
     }
 
     private void RenderCallback(int framesRequested) {
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("PCSPEAKER: RenderCallback framesRequested={Frames} queueCount={Count}", framesRequested, _outputQueue.Count);
+            _logger.Verbose("PCSPEAKER: RenderCallback framesRequested={Frames} queueCount={Count}", framesRequested, _outputQueue.Size);
         }
-        lock (_outputLock) {
-            int framesToAdd = Math.Min(framesRequested, _outputQueue.Count);
-            
-            if (framesToAdd <= 0) {
-                return;
-            }
-            
-            // Dequeue samples and collect into array for batch processing
-            Span<float> samples = stackalloc float[framesToAdd];
-            for (int i = 0; i < framesToAdd; i++) {
-                float sample = _outputQueue.Dequeue();
-                
-                // Apply filters
-                sample = _highPassFilter.Filter(sample);
-                sample = _lowPassFilter.Filter(sample);
-                
-                samples[i] = sample;
-            }
-            
-            // Use AddSamples_mfloat which expects int16-ranged floats (like DOSBox staging)
-            // Reference: DOSBox pcspeaker_impulse.cpp uses MIXER_PullFromQueueCallback<..., float, Stereo=false, SignedData=true, ...>
-            // which calls AddSamples<float, false, true, true> expecting int16-ranged floats
-            _mixerChannel.AddSamples_mfloat(framesToAdd, samples);
+
+        int framesToAdd = Math.Min(framesRequested, _outputQueue.Size);
+
+        if (framesToAdd <= 0) {
+            return;
         }
+
+        // Bulk dequeue from RWQueue for efficiency
+        Span<float> samples = stackalloc float[framesToAdd];
+        int actuallyDequeued = _outputQueue.BulkDequeue(samples, framesToAdd);
+
+        if (actuallyDequeued <= 0) {
+            return;
+        }
+
+        // Apply filters to dequeued samples
+        for (int i = 0; i < actuallyDequeued; i++) {
+            samples[i] = _highPassFilter.Filter(samples[i]);
+            samples[i] = _lowPassFilter.Filter(samples[i]);
+        }
+
+        // Use AddSamples_mfloat which expects int16-ranged floats (like DOSBox staging)
+        // Reference: DOSBox pcspeaker_impulse.cpp uses MIXER_PullFromQueueCallback<..., float, Stereo=false, SignedData=true, ...>
+        // which calls AddSamples<float, false, true, true> expecting int16-ranged floats
+        _mixerChannel.AddSamples_mfloat(actuallyDequeued, samples.Slice(0, actuallyDequeued));
+
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             _logger.Verbose("PCSPEAKER: RenderCallback completed");
         }
