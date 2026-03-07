@@ -10,6 +10,7 @@ using System.Threading;
 
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
+using Spice86.Audio.Filters.Speex;
 using AudioFrame = Spice86.Audio.Common.AudioFrame;
 using HighPass = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.HighPass;
 using LowPass = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.LowPass;
@@ -18,6 +19,9 @@ using LowPass = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.LowPass;
 /// Represents a single audio channel in the mixer.
 /// </summary>
 public sealed class SoundChannel {
+    private const uint SpeexChannels = 2; // Always use stereo for processing
+    private const int SpeexQuality = 5; // Medium quality - good balance between CPU and quality
+
     private const byte EnvelopeMaxExpansionOverMs = 15; // Envelope expands over 15ms
     private const byte EnvelopeExpiresAfterSeconds = 10; // Envelope expires after 10s
 
@@ -47,8 +51,15 @@ public sealed class SoundChannel {
     private float _zohPos;
     private int _zohTargetRateHz;
 
-    // DOSBox default: ResampleMethod::Resample (now uses LERP as fallback)
-    private ResampleMethod _resampleMethod = ResampleMethod.LerpUpsampleOrResample;
+    // Speex resampler state - pure C# implementation
+    // Replaces P/Invoke version with faithful C# port
+    // Initialized ONCE when first needed (see ConfigureResampler)
+    private SpeexResamplerCSharp? _speexResampler;
+
+    private bool _doResample;
+
+    // DOSBox default: ResampleMethod::Resample (always use Speex)
+    private ResampleMethod _resampleMethod = ResampleMethod.Resample;
 
     // Used as intermediate buffer during sample conversion and resampling
     // Matches DOSBox: std::vector<AudioFrame> convert_buffer
@@ -328,7 +339,6 @@ public sealed class SoundChannel {
 
     /// <summary>
     /// Configures the resampler based on channel rate and resample method.
-    /// Note: Speex resampler has been removed; uses LERP upsampling as fallback.
     /// </summary>
     private void ConfigureResampler() {
         int channelRateHz = _sampleRateHz;
@@ -336,6 +346,28 @@ public sealed class SoundChannel {
 
         _doLerpUpsample = false;
         _doZohUpsample = false;
+        _doResample = false;
+
+        void ConfigureSpeexResampler(int inRateHz) {
+            uint speexInRate = (uint)inRateHz;
+            uint speexOutRate = (uint)mixerRateHz;
+
+            if (_speexResampler == null) {
+                _speexResampler = new SpeexResamplerCSharp(
+                    SpeexChannels,
+                    speexInRate,
+                    speexOutRate,
+                    SpeexQuality);
+            }
+
+            _speexResampler.SetRate(speexInRate, speexOutRate);
+
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _loggerService.Debug(
+                    "MIXER: {Name}: Speex resampler is on, input rate: {InRate} Hz, output rate: {OutRate} Hz",
+                    _name, inRateHz, mixerRateHz);
+            }
+        }
 
         switch (_resampleMethod) {
             case ResampleMethod.LerpUpsampleOrResample:
@@ -343,12 +375,8 @@ public sealed class SoundChannel {
                     _doLerpUpsample = true;
                     InitLerpUpsamplerState();
                 } else if (channelRateHz > mixerRateHz) {
-                    // Downsampling not supported; use no resampling
-                    if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                        _loggerService.Warning(
-                            "MIXER: {Name}: Downsampling not supported (input: {InRate} Hz > output: {OutRate} Hz), no resampling applied",
-                            _name, channelRateHz, mixerRateHz);
-                    }
+                    _doResample = true;
+                    ConfigureSpeexResampler(channelRateHz);
                 } else {
                     // channel_rate_hz == mixer_rate_hz
                     // no resampling is needed
@@ -359,27 +387,24 @@ public sealed class SoundChannel {
                 if (channelRateHz < _zohTargetRateHz) {
                     _doZohUpsample = true;
                     InitZohUpsamplerState();
-                    // Don't attempt further resampling after ZoH
+                    if (_zohTargetRateHz != mixerRateHz) {
+                        _doResample = true;
+                        ConfigureSpeexResampler(_zohTargetRateHz);
+                    }
                 } else {
                     // channel_rate_hz >= zoh_upsampler.target_rate_hz
-                    // Cannot ZoH upsample
-                    if (channelRateHz != mixerRateHz && channelRateHz < mixerRateHz) {
-                        _doLerpUpsample = true;
-                        InitLerpUpsamplerState();
+                    // We cannot ZoH upsample, but we might need to resample
+                    if (channelRateHz != mixerRateHz) {
+                        _doResample = true;
+                        ConfigureSpeexResampler(channelRateHz);
                     }
                 }
                 break;
 
             case ResampleMethod.Resample:
-                if (channelRateHz < mixerRateHz) {
-                    _doLerpUpsample = true;
-                    InitLerpUpsamplerState();
-                } else if (channelRateHz > mixerRateHz) {
-                    if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                        _loggerService.Warning(
-                            "MIXER: {Name}: Downsampling not supported, using no resampling",
-                            _name);
-                    }
+                if (channelRateHz != mixerRateHz) {
+                    _doResample = true;
+                    ConfigureSpeexResampler(channelRateHz);
                 }
                 break;
         }
@@ -583,6 +608,18 @@ public sealed class SoundChannel {
         }
         if (_doZohUpsample) {
             InitZohUpsamplerState();
+        }
+        if (_doResample && _speexResampler != null) {
+            // Reset Speex resampler memory and skip zeros
+            _speexResampler.Reset();
+            _speexResampler.SkipZeros();
+
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                int inputLatency = _speexResampler.GetInputLatency();
+                _loggerService.Debug(
+                    "MIXER: {Name}: Speex resampler cleared and primed {Latency}-frame input queue",
+                    _name, inputLatency);
+            }
         }
     }
 
@@ -1261,6 +1298,12 @@ public sealed class SoundChannel {
             // Zero-order-hold upsampling is performed in ConvertSamplesAndMaybeZohUpsample
             // to reduce the number of temporary buffers and simplify the code.
 
+            // Assert that we're not attempting to do both LERP and Speex resample
+            // We can do one or neither
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
+
             // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
             ConvertSamplesAndMaybeZohUpsample_m8(data, numFrames);
 
@@ -1289,6 +1332,8 @@ public sealed class SoundChannel {
                         i++; // Move to next input frame
                     }
                 }
+            } else if (_doResample) {
+                ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling - just copy convert_buffer to audio_frames
                 AudioFrames.AddRange(_convertBuffer.AsSpan());
@@ -1306,7 +1351,69 @@ public sealed class SoundChannel {
         return a * (1.0f - t) + b * t;
     }
 
+    /// <summary>
+    /// Applies Speex resampling to convert_buffer → audio_frames.
+    /// </summary>
+    private void ApplySpeexResampling(int audioFramesStartingSize) {
+        if (_speexResampler == null || !_speexResampler.IsInitialized) {
+            // Fallback: just copy convert_buffer if resampler isn't ready
+            AudioFrames.AddRange(_convertBuffer.AsSpan());
+            return;
+        }
 
+        int inFrames = _convertBuffer.Count;
+        if (inFrames == 0) {
+            return;
+        }
+
+        int estimatedOutFrames = EstimateMaxOutFrames(_speexResampler, inFrames);
+
+        // Resize audio_frames to accommodate new frames
+        int targetSize = audioFramesStartingSize + estimatedOutFrames;
+        AudioFrames.Resize(targetSize);
+
+        // Prepare input buffer - convert AudioFrame[] to interleaved float[]
+        float[] inputBuffer = new float[inFrames * 2];
+        Span<AudioFrame> convertSpan = _convertBuffer.AsSpan();
+        for (int i = 0; i < inFrames; i++) {
+            inputBuffer[i * 2] = convertSpan[i].Left;
+            inputBuffer[i * 2 + 1] = convertSpan[i].Right;
+        }
+
+        // Prepare output buffer
+        float[] outputBuffer = new float[estimatedOutFrames * 2];
+
+        // Process through Speex resampler (interleaved stereo)
+        _speexResampler.ProcessInterleavedFloat(
+            inputBuffer.AsSpan(),
+            outputBuffer.AsSpan(),
+            out uint inFramesConsumed,
+            out uint outFramesGenerated);
+
+        // Copy resampled frames back to audio_frames
+        for (int i = 0; i < (int)outFramesGenerated; i++) {
+            AudioFrames[audioFramesStartingSize + i] = new AudioFrame(
+                outputBuffer[i * 2],
+                outputBuffer[i * 2 + 1]);
+        }
+
+        // Trim audio_frames to actual size
+        int actualSize = audioFramesStartingSize + (int)outFramesGenerated;
+        if (AudioFrames.Count > actualSize) {
+            AudioFrames.RemoveRange(actualSize, AudioFrames.Count - actualSize);
+        }
+    }
+
+    private static int EstimateMaxOutFrames(SpeexResamplerCSharp resampler, int inFrames) {
+        resampler.GetRatio(out uint ratioNum, out uint ratioDen);
+        if (ratioNum == 0 || ratioDen == 0 || inFrames <= 0) {
+            return inFrames;
+        }
+
+        double numerator = (double)inFrames * ratioDen;
+        int estimated = (int)Math.Ceiling(numerator / ratioNum);
+        return estimated <= 0 ? inFrames : estimated;
+    }
 
     /// <summary>
     /// Applies in-place processing (filters, crossfeed) to newly added frames.
@@ -1351,6 +1458,11 @@ public sealed class SoundChannel {
         lock (_mutex) {
             _lastSamplesWereStereo = false;
 
+            // Assert that we're not attempting to do both LERP and Speex resample
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
+
             // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
             ConvertSamplesAndMaybeZohUpsample_m16(data, numFrames);
 
@@ -1379,6 +1491,9 @@ public sealed class SoundChannel {
                         i++;
                     }
                 }
+            } else if (_doResample) {
+                // Speex resampling
+                ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling
                 AudioFrames.AddRange(_convertBuffer.AsSpan());
@@ -1399,6 +1514,11 @@ public sealed class SoundChannel {
 
         lock (_mutex) {
             _lastSamplesWereStereo = true;
+
+            // Assert that we're not attempting to do both LERP and Speex resample
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
 
             // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
             ConvertSamplesAndMaybeZohUpsample_s16(data, numFrames);
@@ -1428,6 +1548,9 @@ public sealed class SoundChannel {
                         i++;
                     }
                 }
+            } else if (_doResample) {
+                // Speex resampling
+                ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling
                 AudioFrames.AddRange(_convertBuffer.AsSpan());
@@ -1448,6 +1571,11 @@ public sealed class SoundChannel {
 
         lock (_mutex) {
             _lastSamplesWereStereo = false;
+
+            // Assert that we're not attempting to do both LERP and Speex resample
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
 
             // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
             ConvertSamplesAndMaybeZohUpsample_mfloat(data, numFrames);
@@ -1477,6 +1605,9 @@ public sealed class SoundChannel {
                         i++;
                     }
                 }
+            } else if (_doResample) {
+                // Speex resampling
+                ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling
                 AudioFrames.AddRange(_convertBuffer.AsSpan());
@@ -1497,6 +1628,11 @@ public sealed class SoundChannel {
 
         lock (_mutex) {
             _lastSamplesWereStereo = true;
+
+            // Assert that we're not attempting to do both LERP and Speex resample
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
 
             // Step 1: Convert samples and maybe apply ZoH upsampling → fills convert_buffer
             ConvertSamplesAndMaybeZohUpsample_sfloat(data, numFrames);
@@ -1526,6 +1662,9 @@ public sealed class SoundChannel {
                         i++;
                     }
                 }
+            } else if (_doResample) {
+                // Speex resampling
+                ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling
                 AudioFrames.AddRange(_convertBuffer.AsSpan());
@@ -1547,6 +1686,11 @@ public sealed class SoundChannel {
 
         lock (_mutex) {
             _lastSamplesWereStereo = true;
+
+            // Assert that we're not attempting to do both LERP and Speex resample
+            if (_doLerpUpsample && _doResample) {
+                throw new InvalidOperationException("Cannot do both LERP upsample and Speex resample");
+            }
 
             // Convert AudioFrame[] to convert_buffer with ZoH if needed
             _convertBuffer.Clear();
@@ -1614,6 +1758,9 @@ public sealed class SoundChannel {
                         i++;
                     }
                 }
+            } else if (_doResample) {
+                // Speex resampling
+                ApplySpeexResampling(audioFramesStartingSize);
             } else {
                 // No resampling
                 AudioFrames.AddRange(_convertBuffer.AsSpan());
