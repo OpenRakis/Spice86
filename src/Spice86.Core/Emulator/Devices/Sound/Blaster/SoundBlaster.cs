@@ -1650,17 +1650,18 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             SetCallbackNone();
             return;
         }
-        int frames_needed_val = System.Threading.Interlocked.Exchange(ref _framesNeeded, 0);
-        float frames_per_tick = _dacChannel.FramesPerTick;
-        _frameCounter += Math.Max(frames_needed_val, frames_per_tick);
+        _frameCounter += MathF.Max(
+            Interlocked.Exchange(ref _framesNeeded, 0),
+            _dacChannel.FramesPerTick);
 
-        int total_frames = (int)Math.Floor(_frameCounter);
-        _frameCounter -= total_frames;
+        int totalFrames = (int)MathF.Floor(_frameCounter);
+        _frameCounter -= totalFrames;
 
-        while (_framesAddedThisTick < total_frames) {
-            GenerateFrames(total_frames - _framesAddedThisTick);
+        while (_framesAddedThisTick < totalFrames) {
+            GenerateFrames(totalFrames - _framesAddedThisTick);
         }
-        _framesAddedThisTick -= total_frames;
+
+        _framesAddedThisTick -= totalFrames;
         if (_timingType == TimingType.PerTick) {
             AddPerTickCallback();
         }
@@ -1676,7 +1677,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             SetCallbackNone();
             return;
         }
-        int mixerNeeds = Math.Max(System.Threading.Interlocked.Exchange(ref _framesNeeded, 0), 1);
+        int mixerNeeds = Math.Max(Interlocked.Exchange(ref _framesNeeded, 0), 1);
 
         // Frames added this tick is only useful when we're in an underflow
         // situation with the mixer. GenerateFrames() may not give us
