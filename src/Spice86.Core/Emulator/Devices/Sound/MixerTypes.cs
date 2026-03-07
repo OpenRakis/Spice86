@@ -3,6 +3,7 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Audio.Common;
+using Spice86.Audio.Filters;
 
 /// <summary>
 /// Features that a mixer channel can have.
@@ -50,29 +51,6 @@ public enum ChannelFeature {
 }
 
 /// <summary>
-/// Filter state - on or off.
-/// </summary>
-public enum FilterState {
-    /// <summary>
-    /// Filter is disabled.
-    /// </summary>
-    Off,
-
-    /// <summary>
-    /// Filter is enabled.
-    /// </summary>
-    On
-}
-
-/// <summary>
-/// Represents a line index in the audio output (left or right).
-/// </summary>
-public enum LineIndex {
-    Left = 0,
-    Right = 1
-}
-
-/// <summary>
 /// Defines how stereo channels map to output lines.
 /// </summary>
 public struct StereoLine {
@@ -101,132 +79,6 @@ public struct StereoLine {
     public static bool operator !=(StereoLine left, StereoLine right) {
         return !left.Equals(right);
     }
-}
-
-/// <summary>
-/// Crossfeed mixes a portion of the left channel into the right and vice-versa,
-/// creating a more natural stereo image for headphone listening.
-/// </summary>
-public enum CrossfeedPreset {
-    /// <summary>
-    /// No crossfeed processing.
-    /// </summary>
-    None,
-
-    /// <summary>
-    /// Light crossfeed (20% strength).
-    /// </summary>
-    Light,
-
-    /// <summary>
-    /// Normal crossfeed (40% strength) - default.
-    /// </summary>
-    Normal,
-
-    /// <summary>
-    /// Strong crossfeed (60% strength).
-    /// </summary>
-    Strong
-}
-
-/// <summary>
-/// Reverb simulates acoustic reflections in various room sizes.
-/// </summary>
-public enum ReverbPreset {
-    /// <summary>
-    /// No reverb processing.
-    /// </summary>
-    None,
-
-    /// <summary>
-    /// Tiny room reverb (very short decay).
-    /// </summary>
-    Tiny,
-
-    /// <summary>
-    /// Small room reverb.
-    /// </summary>
-    Small,
-
-    /// <summary>
-    /// Medium room reverb - default.
-    /// </summary>
-    Medium,
-
-    /// <summary>
-    /// Large hall reverb.
-    /// </summary>
-    Large,
-
-    /// <summary>
-    /// Huge cathedral-like reverb (long decay).
-    /// </summary>
-    Huge
-}
-
-/// <summary>
-/// Chorus creates a thicker, richer sound by adding delayed copies with pitch variation.
-/// </summary>
-public enum ChorusPreset {
-    /// <summary>
-    /// No chorus processing.
-    /// </summary>
-    None,
-
-    /// <summary>
-    /// Light chorus effect.
-    /// </summary>
-    Light,
-
-    /// <summary>
-    /// Normal chorus effect - default.
-    /// </summary>
-    Normal,
-
-    /// <summary>
-    /// Strong chorus effect.
-    /// </summary>
-    Strong
-}
-
-/// <summary>
-/// Controls how audio is resampled when channel rate differs from mixer rate.
-/// </summary>
-public enum ResampleMethod {
-    /// <summary>
-    /// Use linear interpolation for upsampling, Speex-like for downsampling.
-    /// </summary>
-    LerpUpsampleOrResample,
-
-    /// <summary>
-    /// Zero-order hold upsampling followed by resampling (vintage DAC sound).
-    /// </summary>
-    ZeroOrderHoldAndResample,
-
-    /// <summary>
-    /// High-quality Speex-like resampling for both up and down.
-    /// </summary>
-    Resample
-}
-
-/// <summary>
-/// Controls overall mixer behavior and audio output.
-/// </summary>
-public enum MixerState {
-    /// <summary>
-    /// Audio device is not initialized or disabled.
-    /// </summary>
-    NoSound,
-
-    /// <summary>
-    /// Audio is actively playing and mixing.
-    /// </summary>
-    On,
-
-    /// <summary>
-    /// Audio is muted (device active but producing silence).
-    /// </summary>
-    Muted
 }
 
 /// <summary>

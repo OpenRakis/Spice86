@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Audio.Common;
 using Spice86.Audio.Backend;
+using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;

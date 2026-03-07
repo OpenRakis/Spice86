@@ -129,7 +129,7 @@ public sealed class MixerChannel {
     private readonly Sleeper _sleeper;
     private bool _doSleep;
 
-    private readonly Envelope _envelope;
+    private readonly Spice86.Audio.Filters.Envelope _envelope;
 
     public MixerChannel(
         Action<int> handler,
@@ -145,7 +145,7 @@ public sealed class MixerChannel {
         _doSleep = HasFeature(ChannelFeature.Sleep);
         _sleeper = new Sleeper(this);
 
-        _envelope = new Envelope(name);
+        _envelope = new Spice86.Audio.Filters.Envelope();
     }
 
     /// <summary>

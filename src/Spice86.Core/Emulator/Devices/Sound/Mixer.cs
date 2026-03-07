@@ -77,7 +77,7 @@ public sealed class Mixer : IDisposable {
 
     // Chorus state - TAL-Chorus professional modulated chorus
     private bool _doChorus = false;
-    private readonly ChorusEngine _chorusEngine;
+    private readonly Spice86.Audio.Filters.ChorusEngine _chorusEngine;
     private float _chorusSynthSendLevel = 0.0f;
     private float _chorusDigitalSendLevel = 0.0f;
 
@@ -120,7 +120,7 @@ public sealed class Mixer : IDisposable {
         _mverb.SetSampleRate(_sampleRateHz);
 
         // Initialize ChorusEngine with default sample rate
-        _chorusEngine = new ChorusEngine(_sampleRateHz);
+        _chorusEngine = new Spice86.Audio.Filters.ChorusEngine(_sampleRateHz);
 
         // Configure chorus: Chorus1 enabled, Chorus2 disabled (matches DOSBox)
         // See DOSBox mixer.cpp lines 146-147
