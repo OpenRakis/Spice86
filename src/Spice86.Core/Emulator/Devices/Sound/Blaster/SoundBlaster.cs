@@ -158,13 +158,13 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     /// <summary>
     /// Mixer callback - called by mixer when it needs audio frames.
     /// </summary>
-    private void MixerCallback(int frames_requested) {
+    private void MixerCallback(int framesRequested) {
         int queueSize = _outputQueue.Size;
-        int shortage = Math.Max(frames_requested - queueSize, 0);
+        int shortage = Math.Max(framesRequested - queueSize, 0);
         System.Threading.Interlocked.Exchange(ref _framesNeeded, shortage);
 
         int frames_received = 0;
-        int remaining = frames_requested;
+        int remaining = framesRequested;
         while (remaining > 0) {
             int chunk = Math.Min(remaining, _dequeueBatch.Length);
             int dequeued = _outputQueue.BulkDequeue(_dequeueBatch.AsSpan(0, chunk), chunk);
@@ -179,7 +179,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             }
         }
 
-        if (frames_received < frames_requested) {
+        if (frames_received < framesRequested) {
             _dacChannel.AddSilence();
         }
     }
@@ -668,7 +668,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     /// so this function keeps track of exact fractional frames and uses rounding to
     /// ensure partial frames are accounted for and generated across N calls.
     /// </summary>
-    private void per_tick_callback(uint _) {
+    private void PerTickCallback(uint _) {
         // assert(sblaster);
         // assert(sblaster->channel);
 
@@ -689,7 +689,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _frameCounter -= total_frames;
 
         while (_framesAddedThisTick < total_frames) {
-            generate_frames(total_frames - _framesAddedThisTick);
+            GenerateFrames(total_frames - _framesAddedThisTick);
         }
 
         _framesAddedThisTick -= total_frames;
@@ -700,7 +700,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     /// Per-frame callback for fine-grained audio generation.
     /// Used for very short DMA transfers where per-tick callbacks would be too infrequent.
     /// </summary>
-    private void per_frame_callback(uint _) {
+    private void PerFrameCallback(uint _) {
         if (!_dacChannel.IsEnabled) {
             SetCallbackNone();
             return;
@@ -710,7 +710,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         _framesAddedThisTick = 0;
         while (_framesAddedThisTick < mixer_needs) {
-            generate_frames(mixer_needs - _framesAddedThisTick);
+            GenerateFrames(mixer_needs - _framesAddedThisTick);
         }
 
         AddNextFrameCallback();
@@ -721,7 +721,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     /// </summary>
     private void AddNextFrameCallback() {
         double millisPerFrame = _dacChannel.MillisPerFrame;
-        _scheduler.AddEvent(per_frame_callback, millisPerFrame, 0);
+        _scheduler.AddEvent(PerFrameCallback, millisPerFrame, 0);
     }
 
     /// <summary>
@@ -730,9 +730,9 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     private void SetCallbackNone() {
         if (_timingType != TimingType.None) {
             if (_timingType == TimingType.PerTick) {
-                _scheduler.RemoveEvents(per_tick_callback);
+                _scheduler.RemoveEvents(PerTickCallback);
             } else {
-                _scheduler.RemoveEvents(per_frame_callback);
+                _scheduler.RemoveEvents(PerFrameCallback);
             }
 
             _timingType = TimingType.None;
@@ -754,7 +754,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void AddPerTickCallback() {
-        _scheduler.AddEvent(per_tick_callback, 1);
+        _scheduler.AddEvent(PerTickCallback, 1);
     }
 
     /// <summary>
@@ -771,7 +771,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         }
     }
 
-    private void generate_frames(int frames_requested) {
+    private void GenerateFrames(int frames_requested) {
         switch (_sb.Mode) {
             case DspMode.None:
             case DspMode.DmaPause:
@@ -1013,7 +1013,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     _loggerService.Debug("SB: Command 0x{Cmd:X2} received; expecting {Len} bytes", _sb.Dsp.Cmd, _sb.Dsp.CmdLen);
                 }
                 if (_sb.Dsp.CmdLen == 0) {
-                    ProcessCommand();
+                    DspDoCommand();
                 }
                 break;
 
@@ -1024,13 +1024,13 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                     _loggerService.Verbose("SB: Command 0x{Cmd:X2} param[{Count}] = 0x{Val:X2}", _sb.Dsp.Cmd, _sb.Dsp.In.Pos - 1, value);
                 }
                 if (_sb.Dsp.In.Pos >= _sb.Dsp.CmdLen) {
-                    ProcessCommand();
+                    DspDoCommand();
                 }
                 break;
         }
     }
 
-    private bool ProcessCommand() {
+    private void DspDoCommand() {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             string paramsHex = _sb.Dsp.In.Pos > 0 ? string.Join(" ", _sb.Dsp.In.Data.Take(_sb.Dsp.In.Pos).Select(b => b.ToString("X2"))) : string.Empty;
             _loggerService.Debug("SB: Processing command 0x{Cmd:X2} params={Params}", _sb.Dsp.Cmd, paramsHex);
@@ -1501,14 +1501,13 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 _sb.Dsp.CmdLen = 0;
                 _sb.Dsp.In.Pos = 0;
                 _blasterState = BlasterState.WaitingForCommand;
-                return false;
+                return;
         }
 
         _sb.Dsp.Cmd = 0;
         _sb.Dsp.CmdLen = 0;
         _sb.Dsp.In.Pos = 0;
         _blasterState = BlasterState.WaitingForCommand;
-        return true;
     }
 
     private void DspChangeMode(DspMode mode) {
