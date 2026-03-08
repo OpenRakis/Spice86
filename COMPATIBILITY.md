@@ -37,6 +37,7 @@ Here is a list of old games I tested with what worked and what didn't:
 | Hero Quest |  :sunglasses: Fully playable | | 2022/09/02  |
 | Indiana Jones and The Fate of Atlantis |  :sunglasses: Fully playable | | 2026/02/22  |
 | Jill of the Jungle |  :sunglasses: Fully playable | | 2026/02/22  |
+| Lands Of Lore (floppy) | :sunglasses: Fully Playable | Avoid crash --SbType SB2 | 2026/03/08 |
 | KGB | :sunglasses: Fully playable | | 2021/09/26  |
 | Knights of Xentar | :sunglasses: Fully playable | | 2026/02/22  |
 | Legends of Kyrandia | :sunglasses: Fully playable | | 2026/02/22  |
