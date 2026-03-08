@@ -19,6 +19,7 @@ public partial class SoundBlaster {
     private const int DspBufSize = 64;
     private const int MinPlaybackRateHz = 5000;
     private const ushort DefaultPlaybackRateHz = 22050;
+    private const int NativeDacRateHz = 45454;
     private const int SbShift = 14;
     private const ushort SbShiftMask = (1 << SbShift) - 1;
     private const byte MinAdaptiveStepSize = 0;
@@ -31,6 +32,146 @@ public partial class SoundBlaster {
     private enum SbIrq { Irq8, Irq16, IrqMpu }
     private enum BlasterState { WaitingForCommand, ResetRequest, Resetting, ReadingCommand }
     private enum TimingType { None, PerTick, PerFrame }
+
+    /// <summary>
+    /// Sound Blaster mixer register indices.
+    /// </summary>
+    private enum MixerRegister : byte {
+        /// <summary>
+        /// Reset mixer.
+        /// </summary>
+        Reset = 0x00,
+
+        /// <summary>
+        /// Master volume (SB2 only).
+        /// </summary>
+        MasterVolumeSb2 = 0x02,
+
+        /// <summary>
+        /// DAC volume (SB Pro).
+        /// </summary>
+        DacVolumeSbPro = 0x04,
+
+        /// <summary>
+        /// FM output selection.
+        /// </summary>
+        FmOutputSelection = 0x06,
+
+        /// <summary>
+        /// CD audio volume (SB2 only).
+        /// </summary>
+        CdAudioVolumeSb2 = 0x08,
+
+        /// <summary>
+        /// Mic level (SB Pro) or DAC volume (SB2).
+        /// </summary>
+        MicLevelOrDacVolume = 0x0A,
+
+        /// <summary>
+        /// Output/stereo select and filter enable.
+        /// </summary>
+        OutputStereoSelect = 0x0E,
+
+        /// <summary>
+        /// Audio 1 play volume (ESS).
+        /// </summary>
+        Audio1PlayVolumeEss = 0x14,
+
+        /// <summary>
+        /// Master volume (SB Pro).
+        /// </summary>
+        MasterVolumeSbPro = 0x22,
+
+        /// <summary>
+        /// FM volume (SB Pro).
+        /// </summary>
+        FmVolumeSbPro = 0x26,
+
+        /// <summary>
+        /// CD audio volume (SB Pro).
+        /// </summary>
+        CdAudioVolumeSbPro = 0x28,
+
+        /// <summary>
+        /// Line-in volume (SB Pro).
+        /// </summary>
+        LineInVolumeSbPro = 0x2E,
+
+        /// <summary>
+        /// Master volume left (SB16).
+        /// </summary>
+        MasterVolumeLeft = 0x30,
+
+        /// <summary>
+        /// Master volume right (SB16).
+        /// </summary>
+        MasterVolumeRight = 0x31,
+
+        /// <summary>
+        /// DAC volume left (SB16) or master volume (ESS).
+        /// </summary>
+        DacVolumeLeftOrMasterEss = 0x32,
+
+        /// <summary>
+        /// DAC volume right (SB16).
+        /// </summary>
+        DacVolumeRight = 0x33,
+
+        /// <summary>
+        /// FM volume left (SB16).
+        /// </summary>
+        FmVolumeLeft = 0x34,
+
+        /// <summary>
+        /// FM volume right (SB16).
+        /// </summary>
+        FmVolumeRight = 0x35,
+
+        /// <summary>
+        /// CD audio volume left (SB16) or FM volume (ESS).
+        /// </summary>
+        CdAudioVolumeLeftOrFmEss = 0x36,
+
+        /// <summary>
+        /// CD audio volume right (SB16).
+        /// </summary>
+        CdAudioVolumeRight = 0x37,
+
+        /// <summary>
+        /// Line-in volume left (SB16) or CD audio volume (ESS).
+        /// </summary>
+        LineInVolumeLeftOrCdEss = 0x38,
+
+        /// <summary>
+        /// Line-in volume right (SB16).
+        /// </summary>
+        LineInVolumeRight = 0x39,
+
+        /// <summary>
+        /// Mic volume (SB16).
+        /// </summary>
+        MicVolume = 0x3A,
+
+        /// <summary>
+        /// Line volume (ESS).
+        /// </summary>
+        LineVolumeEss = 0x3E,
+
+        /// <summary>
+        /// ESS identification value (ES1488 and later).
+        /// </summary>
+        EssIdentification = 0x40,
+
+        /// <summary>
+        /// IRQ select register.
+        /// </summary>
+        IrqSelect = 0x80,
+
+        /// <summary>
+        /// DMA select register.
+        /// </summary>
+        DmaSelect = 0x81,
+    }
 
     private class SbInfo {
         public uint FreqHz { get; set; }
@@ -417,7 +558,6 @@ public partial class SoundBlaster {
     private readonly Opl3Fm _opl;
     private readonly EmulationLoopScheduler _scheduler;
     private readonly IEmulatedClock _clock;
-    private readonly HardwareMixer _hardwareMixer;
     private readonly RWQueue<AudioFrame> _outputQueue;
     private readonly AudioFrame[] _enqueueBatch = new AudioFrame[4096];
     private int _enqueueBatchCount;

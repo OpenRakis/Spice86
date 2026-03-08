@@ -121,8 +121,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             _dacChannel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
         }
 
-        _hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, _dacChannel, opl.MixerChannel, loggerService);
-        _hardwareMixer.Reset();
+        _sb.Mixer.Enabled = soundBlasterHardwareConfig.OplConfig.SbMixer;
+        _sb.Mixer.StereoEnabled = false;
+
+        DspReset();
+        CtmixerReset();
 
         InitSpeakerState();
         InitPortHandlers(ioPortDispatcher);
@@ -191,10 +194,10 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 return 0xFF;
 
             case 0x04:
-                return (byte)_hardwareMixer.CurrentAddress;
+                return _sb.Mixer.Index;
 
             case 0x05:
-                return _hardwareMixer.ReadData();
+                return CtmixerRead();
 
             case 0x06:
                 return 0xFF;
@@ -215,11 +218,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 break;
 
             case 0x04:
-                _hardwareMixer.CurrentAddress = value;
+                _sb.Mixer.Index = value;
                 break;
 
             case 0x05:
-                _hardwareMixer.Write(value);
+                CtmixerWrite(value);
                 break;
 
             case 0x07:
@@ -318,6 +321,13 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     private bool MaybeWakeUp() {
         _outputQueue.Start();
         return _dacChannel.WakeUp();
+    }
+
+    private void SetChannelRateHz(int requestedRateHz) {
+        int rateHz = Math.Clamp(requestedRateHz, MinPlaybackRateHz, NativeDacRateHz);
+        if (_dacChannel.SampleRate != rateHz) {
+            _dacChannel.SampleRate = rateHz;
+        }
     }
 
     private void DspDmaCallback(DmaChannel channel, DmaChannel.DmaEvent dmaEvent) {
@@ -1559,6 +1569,21 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Mode = mode;
     }
 
+    private void DspChangeStereo(bool stereo) {
+        if (!_sb.Dma.Stereo && stereo) {
+            SetChannelRateHz((int)(_sb.FreqHz / 2));
+            _sb.Dma.Mul *= 2;
+            _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
+            _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
+        } else if (_sb.Dma.Stereo && !stereo) {
+            SetChannelRateHz((int)_sb.FreqHz);
+            _sb.Dma.Mul /= 2;
+            _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
+            _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
+        }
+        _sb.Dma.Stereo = stereo;
+    }
+
     /// <summary>
     /// Updates the sample rate during playback.
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_change_rate()
@@ -1850,6 +1875,508 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
     private void DspAddData(byte value) {
         _outputData.Enqueue(value);
+    }
+
+    private float CalcVol(byte amount) {
+        int count = 31 - amount;
+        float db = count;
+
+        if (_sb.Type is SbType.SBPro1 or SbType.SBPro2) {
+            if (count != 0) {
+                if (count < 16) {
+                    db -= 1.0f;
+                } else if (count > 16) {
+                    db += 1.0f;
+                }
+                if (count == 24) {
+                    db += 2.0f;
+                }
+                if (count > 27) {
+                    return 0.0f;
+                }
+            }
+        } else {
+            db *= 2.0f;
+            if (count > 20) {
+                db -= 1.0f;
+            }
+        }
+
+        return MathF.Pow(10.0f, -0.05f * db);
+    }
+
+    private void CtmixerUpdateVolumes() {
+        if (!_sb.Mixer.Enabled) {
+            return;
+        }
+
+        float m0 = CalcVol(_sb.Mixer.Master[0]);
+        float m1 = CalcVol(_sb.Mixer.Master[1]);
+
+        AudioFrame dacVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Dac[0]), m1 * CalcVol(_sb.Mixer.Dac[1]));
+        _dacChannel.AppVolume = dacVolume;
+
+        SoundChannel oplChannel = _opl.MixerChannel;
+        AudioFrame oplVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Fm[0]), m1 * CalcVol(_sb.Mixer.Fm[1]));
+        oplChannel.AppVolume = oplVolume;
+
+        SoundChannel? cdAudioChannel = _mixer.FindChannel("CdAudio");
+        if (cdAudioChannel != null) {
+            AudioFrame cdVolume = new AudioFrame(m0 * CalcVol(_sb.Mixer.Cda[0]), m1 * CalcVol(_sb.Mixer.Cda[1]));
+            cdAudioChannel.AppVolume = cdVolume;
+        }
+    }
+
+    private void CtmixerReset() {
+        const byte DefaultVolume = 31;
+
+        _sb.Mixer.Fm[0] = DefaultVolume;
+        _sb.Mixer.Fm[1] = DefaultVolume;
+
+        _sb.Mixer.Cda[0] = DefaultVolume;
+        _sb.Mixer.Cda[1] = DefaultVolume;
+
+        _sb.Mixer.Dac[0] = DefaultVolume;
+        _sb.Mixer.Dac[1] = DefaultVolume;
+
+        _sb.Mixer.Master[0] = DefaultVolume;
+        _sb.Mixer.Master[1] = DefaultVolume;
+
+        CtmixerUpdateVolumes();
+    }
+
+    private void WriteSbProVolume(byte[] dest, byte value) {
+        dest[0] = (byte)(((value & 0xF0) >> 3) | (_sb.Type == SbType.Sb16 ? 1 : 3));
+        dest[1] = (byte)(((value & 0x0F) << 1) | (_sb.Type == SbType.Sb16 ? 1 : 3));
+    }
+
+    private byte ReadSbProVolume(byte[] src) {
+        int result = ((src[0] & 0x1E) << 3) | ((src[1] & 0x1E) >> 1);
+        if (_sb.Type is SbType.SBPro1 or SbType.SBPro2) {
+            result |= 0x11;
+        }
+        return (byte)result;
+    }
+
+    private void WriteEssVolume(byte value, byte[] output) {
+        byte high = (byte)((value >> 4) & 0x0F);
+        byte low = (byte)(value & 0x0F);
+
+        output[0] = (byte)((high << 1) | (high >> 3));
+        output[1] = (byte)((low << 1) | (low >> 3));
+    }
+
+    private byte ReadEssVolume(byte[] input) {
+        byte high = (byte)(input[0] >> 1);
+        byte low = (byte)(input[1] >> 1);
+        return (byte)((high << 4) + low);
+    }
+
+    private void CtmixerWrite(byte value) {
+        switch (_sb.Mixer.Index) {
+            case (byte)MixerRegister.Reset:
+                CtmixerReset();
+                break;
+
+            case (byte)MixerRegister.MasterVolumeSb2:
+                WriteSbProVolume(_sb.Mixer.Master, (byte)((value & 0x0F) | (value << 4)));
+                CtmixerUpdateVolumes();
+                break;
+
+            case (byte)MixerRegister.DacVolumeSbPro:
+                WriteSbProVolume(_sb.Mixer.Dac, value);
+                CtmixerUpdateVolumes();
+                break;
+
+            case (byte)MixerRegister.FmOutputSelection: {
+                    WriteSbProVolume(_sb.Mixer.Fm, (byte)((value & 0x0F) | (value << 4)));
+                    CtmixerUpdateVolumes();
+
+                    if ((value & 0x60) != 0) {
+                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                            _loggerService.Warning("Turned FM one channel off. not implemented {Value:X2}", value);
+                        }
+                    }
+                }
+                break;
+
+            case (byte)MixerRegister.CdAudioVolumeSb2:
+                WriteSbProVolume(_sb.Mixer.Cda, (byte)((value & 0x0F) | (value << 4)));
+                CtmixerUpdateVolumes();
+                break;
+
+            case (byte)MixerRegister.MicLevelOrDacVolume:
+                if (_sb.Type == SbType.SB2) {
+                    byte dacValue = (byte)(((value & 0x06) << 2) | 3);
+                    _sb.Mixer.Dac[0] = dacValue;
+                    _sb.Mixer.Dac[1] = dacValue;
+                    CtmixerUpdateVolumes();
+                } else {
+                    _sb.Mixer.Mic = (byte)(((value & 0x07) << 2) | (_sb.Type == SbType.Sb16 ? 1 : 3));
+                }
+                break;
+
+            case (byte)MixerRegister.OutputStereoSelect: {
+                    _sb.Mixer.StereoEnabled = (value & 0x02) != 0;
+
+                    if (_sb.Type == SbType.SBPro2) {
+                        bool lastFilterEnabled = _sb.Mixer.FilterEnabled;
+                        _sb.Mixer.FilterEnabled = (value & 0x20) == 0;
+
+                        if (_sb.Mixer.FilterConfigured && _sb.Mixer.FilterEnabled != lastFilterEnabled) {
+                            if (_sb.Mixer.FilterAlwaysOn) {
+                                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                                    _loggerService.Debug("{Action} low-pass filter",
+                                        _sb.Mixer.FilterEnabled ? "Enabling" : "Disabling");
+                                }
+                            }
+                        }
+                    }
+                    DspChangeStereo(_sb.Mixer.StereoEnabled);
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning("Mixer set to {Mode}", _sb.Dma.Stereo ? "STEREO" : "MONO");
+                    }
+                }
+                break;
+
+            case (byte)MixerRegister.Audio1PlayVolumeEss:
+                if (_sb.EssType != EssType.None) {
+                    WriteEssVolume(value, _sb.Mixer.Dac);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case (byte)MixerRegister.MasterVolumeSbPro:
+                WriteSbProVolume(_sb.Mixer.Master, value);
+                CtmixerUpdateVolumes();
+                break;
+
+            case (byte)MixerRegister.FmVolumeSbPro:
+                WriteSbProVolume(_sb.Mixer.Fm, value);
+                CtmixerUpdateVolumes();
+                break;
+
+            case (byte)MixerRegister.CdAudioVolumeSbPro:
+                WriteSbProVolume(_sb.Mixer.Cda, value);
+                CtmixerUpdateVolumes();
+                break;
+
+            case (byte)MixerRegister.LineInVolumeSbPro:
+                WriteSbProVolume(_sb.Mixer.Lin, value);
+                break;
+
+            case (byte)MixerRegister.MasterVolumeLeft:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Master[0] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case (byte)MixerRegister.MasterVolumeRight:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Master[1] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case (byte)MixerRegister.DacVolumeLeftOrMasterEss:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Dac[0] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                } else if (_sb.EssType != EssType.None) {
+                    WriteEssVolume(value, _sb.Mixer.Master);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case (byte)MixerRegister.DacVolumeRight:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Dac[1] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case (byte)MixerRegister.FmVolumeLeft:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Fm[0] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case (byte)MixerRegister.FmVolumeRight:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Fm[1] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case (byte)MixerRegister.CdAudioVolumeLeftOrFmEss:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Cda[0] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                } else if (_sb.EssType != EssType.None) {
+                    WriteEssVolume(value, _sb.Mixer.Fm);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case (byte)MixerRegister.CdAudioVolumeRight:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Cda[1] = (byte)(value >> 3);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case (byte)MixerRegister.LineInVolumeLeftOrCdEss:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Lin[0] = (byte)(value >> 3);
+                } else if (_sb.EssType != EssType.None) {
+                    WriteEssVolume(value, _sb.Mixer.Cda);
+                    CtmixerUpdateVolumes();
+                }
+                break;
+
+            case (byte)MixerRegister.LineInVolumeRight:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Lin[1] = (byte)(value >> 3);
+                }
+                break;
+
+            case (byte)MixerRegister.MicVolume:
+                if (_sb.Type == SbType.Sb16) {
+                    _sb.Mixer.Mic = (byte)(value >> 3);
+                }
+                break;
+
+            case (byte)MixerRegister.LineVolumeEss:
+                if (_sb.EssType != EssType.None) {
+                    WriteEssVolume(value, _sb.Mixer.Lin);
+                }
+                break;
+
+            case (byte)MixerRegister.IrqSelect:
+                _sb.Hw.Irq = 0xFF;
+                if ((value & 0x01) != 0) {
+                    _sb.Hw.Irq = 2;
+                } else if ((value & 0x02) != 0) {
+                    _sb.Hw.Irq = 5;
+                } else if ((value & 0x04) != 0) {
+                    _sb.Hw.Irq = 7;
+                } else if ((value & 0x08) != 0) {
+                    _sb.Hw.Irq = 10;
+                }
+                break;
+
+            case (byte)MixerRegister.DmaSelect:
+                _sb.Hw.Dma8 = 0xFF;
+                _sb.Hw.Dma16 = 0xFF;
+
+                if ((value & 0x01) != 0) {
+                    _sb.Hw.Dma8 = 0;
+                } else if ((value & 0x02) != 0) {
+                    _sb.Hw.Dma8 = 1;
+                } else if ((value & 0x08) != 0) {
+                    _sb.Hw.Dma8 = 3;
+                }
+
+                if ((value & 0x20) != 0) {
+                    _sb.Hw.Dma16 = 5;
+                } else if ((value & 0x40) != 0) {
+                    _sb.Hw.Dma16 = 6;
+                } else if ((value & 0x80) != 0) {
+                    _sb.Hw.Dma16 = 7;
+                }
+                break;
+
+            default:
+                if (((_sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2) &&
+                     _sb.Mixer.Index == 0x0C) ||
+                    (_sb.Type == SbType.Sb16 && _sb.Mixer.Index >= 0x3B && _sb.Mixer.Index <= 0x47)) {
+                    _sb.Mixer.Unhandled[_sb.Mixer.Index] = value;
+                }
+                break;
+        }
+    }
+
+    private byte CtmixerRead() {
+        byte ret = 0;
+
+        switch (_sb.Mixer.Index) {
+            case (byte)MixerRegister.Reset:
+                return 0x00;
+
+            case (byte)MixerRegister.MasterVolumeSb2:
+                return (byte)((_sb.Mixer.Master[1] >> 1) & 0x0E);
+
+            case (byte)MixerRegister.Audio1PlayVolumeEss:
+                if (_sb.EssType != EssType.None) {
+                    ret = ReadEssVolume(_sb.Mixer.Dac);
+                }
+                break;
+
+            case (byte)MixerRegister.MasterVolumeSbPro:
+                return ReadSbProVolume(_sb.Mixer.Master);
+
+            case (byte)MixerRegister.DacVolumeSbPro:
+                return ReadSbProVolume(_sb.Mixer.Dac);
+
+            case (byte)MixerRegister.FmOutputSelection:
+                return (byte)((_sb.Mixer.Fm[1] >> 1) & 0x0E);
+
+            case (byte)MixerRegister.CdAudioVolumeSb2:
+                return (byte)((_sb.Mixer.Cda[1] >> 1) & 0x0E);
+
+            case (byte)MixerRegister.MicLevelOrDacVolume:
+                if (_sb.Type == SbType.SB2) {
+                    return (byte)(_sb.Mixer.Dac[0] >> 2);
+                }
+                return (byte)((_sb.Mixer.Mic >> 2) & (_sb.Type == SbType.Sb16 ? 7 : 6));
+
+            case (byte)MixerRegister.OutputStereoSelect:
+                return (byte)(0x11 | (_sb.Mixer.StereoEnabled ? 0x02 : 0x00) | (_sb.Mixer.FilterEnabled ? 0x00 : 0x20));
+
+            case (byte)MixerRegister.FmVolumeSbPro:
+                return ReadSbProVolume(_sb.Mixer.Fm);
+
+            case (byte)MixerRegister.CdAudioVolumeSbPro:
+                return ReadSbProVolume(_sb.Mixer.Cda);
+
+            case (byte)MixerRegister.LineInVolumeSbPro:
+                return ReadSbProVolume(_sb.Mixer.Lin);
+
+            case (byte)MixerRegister.MasterVolumeLeft:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Master[0] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.MasterVolumeRight:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Master[1] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.DacVolumeLeftOrMasterEss:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Dac[0] << 3);
+                }
+                if (_sb.EssType != EssType.None) {
+                    return ReadEssVolume(_sb.Mixer.Master);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.DacVolumeRight:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Dac[1] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.FmVolumeLeft:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Fm[0] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.FmVolumeRight:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Fm[1] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.CdAudioVolumeLeftOrFmEss:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Cda[0] << 3);
+                }
+                if (_sb.EssType != EssType.None) {
+                    return ReadEssVolume(_sb.Mixer.Fm);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.CdAudioVolumeRight:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Cda[1] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.LineInVolumeLeftOrCdEss:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Lin[0] << 3);
+                }
+                if (_sb.EssType != EssType.None) {
+                    return ReadEssVolume(_sb.Mixer.Cda);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.LineInVolumeRight:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Lin[1] << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.MicVolume:
+                if (_sb.Type == SbType.Sb16) {
+                    return (byte)(_sb.Mixer.Mic << 3);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.LineVolumeEss:
+                if (_sb.EssType != EssType.None) {
+                    return ReadEssVolume(_sb.Mixer.Lin);
+                }
+                ret = 0x0A;
+                break;
+
+            case (byte)MixerRegister.IrqSelect:
+                if (_sb.Hw.Irq == 2) {
+                    ret = 0x01;
+                } else if (_sb.Hw.Irq == 5) {
+                    ret = 0x02;
+                } else if (_sb.Hw.Irq == 7) {
+                    ret = 0x04;
+                } else if (_sb.Hw.Irq == 10) {
+                    ret = 0x08;
+                }
+                break;
+
+            case (byte)MixerRegister.DmaSelect:
+                if (_sb.Hw.Dma8 == 0) {
+                    ret |= 0x01;
+                } else if (_sb.Hw.Dma8 == 1) {
+                    ret |= 0x02;
+                } else if (_sb.Hw.Dma8 == 3) {
+                    ret |= 0x08;
+                }
+
+                if (_sb.Hw.Dma16 == 5) {
+                    ret |= 0x20;
+                } else if (_sb.Hw.Dma16 == 6) {
+                    ret |= 0x40;
+                } else if (_sb.Hw.Dma16 == 7) {
+                    ret |= 0x80;
+                }
+                break;
+
+            default:
+                if (((_sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2) &&
+                     _sb.Mixer.Index == 0x0C) ||
+                    (_sb.Type == SbType.Sb16 && _sb.Mixer.Index >= 0x3B && _sb.Mixer.Index <= 0x47)) {
+                    ret = _sb.Mixer.Unhandled[_sb.Mixer.Index];
+                }
+                break;
+        }
+
+        return ret;
     }
 
 }
