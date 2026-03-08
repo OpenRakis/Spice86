@@ -390,6 +390,166 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         }
     }
 
+    private static byte DecodeAdpcmPortion(
+        int bitPortion,
+        ReadOnlySpan<byte> adjustMap,
+        ReadOnlySpan<sbyte> scaleMap,
+        int lastIndex,
+        ref byte sample,
+        ref ushort scale) {
+        int i = Math.Clamp(bitPortion + scale, 0, lastIndex);
+        scale = (ushort)((scale + adjustMap[i]) & 0xff);
+        sample = (byte)Math.Clamp(sample + scaleMap[i], 0, 255);
+        return sample;
+    }
+
+    private static byte[] DecodeAdpcm2Bit(byte data, ref byte reference, ref ushort stepsize) {
+        ReadOnlySpan<sbyte> scaleMap = [
+             0,  1,  0,  -1,  1,  3,  -1,  -3,
+             2,  6, -2,  -6,  4, 12,  -4, -12,
+             8, 24, -8, -24,  6, 48, -16, -48
+        ];
+        ReadOnlySpan<byte> adjustMap = [
+              0,   4,   0,   4,
+            252,   4, 252,   4, 252,   4, 252,   4,
+            252,   4, 252,   4, 252,   4, 252,   4,
+            252,   0, 252,   0
+        ];
+        const int lastIndex = 23;
+
+        byte[] samples =
+        [
+            DecodeAdpcmPortion((data >> 6) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion((data >> 4) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion((data >> 2) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion((data >> 0) & 0x3, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+        ];
+        return samples;
+    }
+
+    private static byte[] DecodeAdpcm3Bit(byte data, ref byte reference, ref ushort stepsize) {
+        ReadOnlySpan<sbyte> scaleMap = [
+             0,  1,  2,  3,  0,  -1,  -2,  -3,
+             1,  3,  5,  7, -1,  -3,  -5,  -7,
+             2,  6, 10, 14, -2,  -6, -10, -14,
+             4, 12, 20, 28, -4, -12, -20, -28,
+             5, 15, 25, 35, -5, -15, -25, -35
+        ];
+        ReadOnlySpan<byte> adjustMap = [
+              0, 0, 0,   8,   0, 0, 0,   8,
+            248, 0, 0,   8, 248, 0, 0,   8,
+            248, 0, 0,   8, 248, 0, 0,   8,
+            248, 0, 0,   8, 248, 0, 0,   8,
+            248, 0, 0,   0, 248, 0, 0,   0
+        ];
+        const int lastIndex = 39;
+
+        byte[] samples =
+        [
+            DecodeAdpcmPortion((data >> 5) & 0x7, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion((data >> 2) & 0x7, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion((data & 0x3) << 1, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+        ];
+        return samples;
+    }
+
+    private static byte[] DecodeAdpcm4Bit(byte data, ref byte reference, ref ushort stepsize) {
+        ReadOnlySpan<sbyte> scaleMap = [
+             0,  1,  2,  3,  4,  5,  6,  7,  0,  -1,  -2,  -3,  -4,  -5,  -6,  -7,
+             1,  3,  5,  7,  9, 11, 13, 15, -1,  -3,  -5,  -7,  -9, -11, -13, -15,
+             2,  6, 10, 14, 18, 22, 26, 30, -2,  -6, -10, -14, -18, -22, -26, -30,
+             4, 12, 20, 28, 36, 44, 52, 60, -4, -12, -20, -28, -36, -44, -52, -60
+        ];
+        ReadOnlySpan<byte> adjustMap = [
+              0, 0, 0, 0, 0, 16, 16, 16,
+              0, 0, 0, 0, 0, 16, 16, 16,
+            240, 0, 0, 0, 0, 16, 16, 16,
+            240, 0, 0, 0, 0, 16, 16, 16,
+            240, 0, 0, 0, 0, 16, 16, 16,
+            240, 0, 0, 0, 0, 16, 16, 16,
+            240, 0, 0, 0, 0,  0,  0,  0,
+            240, 0, 0, 0, 0,  0,  0,  0
+        ];
+        const int lastIndex = 63;
+
+        byte[] samples =
+        [
+            DecodeAdpcmPortion(data >> 4, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+            DecodeAdpcmPortion(data & 0xF, adjustMap, scaleMap, lastIndex, ref reference, ref stepsize),
+        ];
+        return samples;
+    }
+
+    private static (byte[], byte, ushort) DecodeAdpcm2Bit(byte data, byte reference, ushort stepsize) {
+        byte refCopy = reference;
+        ushort stepsizeCopy = stepsize;
+        byte[] samples = DecodeAdpcm2Bit(data, ref refCopy, ref stepsizeCopy);
+        return (samples, refCopy, stepsizeCopy);
+    }
+
+    private static (byte[], byte, ushort) DecodeAdpcm3Bit(byte data, byte reference, ushort stepsize) {
+        byte refCopy = reference;
+        ushort stepsizeCopy = stepsize;
+        byte[] samples = DecodeAdpcm3Bit(data, ref refCopy, ref stepsizeCopy);
+        return (samples, refCopy, stepsizeCopy);
+    }
+
+    private static (byte[], byte, ushort) DecodeAdpcm4Bit(byte data, byte reference, ushort stepsize) {
+        byte refCopy = reference;
+        ushort stepsizeCopy = stepsize;
+        byte[] samples = DecodeAdpcm4Bit(data, ref refCopy, ref stepsizeCopy);
+        return (samples, refCopy, stepsizeCopy);
+    }
+
+    private uint ReadDma8Bit(uint bytesToRead, uint bufferIndex = 0) {
+        if (bufferIndex >= DmaBufSize || _sb.Dma.Channel is null) {
+            // Should never happen as the code is currently written.
+            // Calling code has buffer_index either 0 or 1 to handle a
+            // dangling sample from the last read. This is to solve an edge
+            // case for stereo sound when the DMA buffer has an odd number
+            // of samples.
+            return 0;
+        }
+        uint bytesAvailable = DmaBufSize - bufferIndex;
+        uint clampedBytes = Math.Min(bytesToRead, bytesAvailable);
+
+        Span<byte> buffer = _sb.Dma.Buf8.AsSpan((int)bufferIndex, (int)clampedBytes);
+        uint bytesRead = (uint)_sb.Dma.Channel.Read((int)clampedBytes, buffer);
+        return bytesRead;
+    }
+
+    private uint ReadDma16Bit(uint wordsToRead, uint bufferIndex = 0) {
+        if (bufferIndex >= DmaBufSize || _sb.Dma.Channel is null) {
+            return 0;
+        }
+
+        // In DMA controller, if channel is 16-bit, we're dealing with 16-bit words.
+        // Otherwise, we're dealing with 8-bit words (bytes).
+        // Calling code handles this case and conditionally divides by two.
+        bool is16BitChannel = _sb.Dma.Channel.Is16Bit;
+        uint bytesRequested = wordsToRead;
+        if (is16BitChannel) {
+            bytesRequested *= 2;
+            if (_sb.Dma.Mode != DmaMode.Pcm16Bit) {
+                _loggerService.Warning("SOUNDBLASTER: Expected 16-bit mode but DMA mode is {Mode}", _sb.Dma.Mode);
+            }
+        } else {
+            if (_sb.Dma.Mode != DmaMode.Pcm16BitAliased) {
+                _loggerService.Warning("SOUNDBLASTER: Expected 16-bit aliased mode but DMA mode is {Mode}", _sb.Dma.Mode);
+            }
+        }
+
+        // Clamp words to read so we don't overflow our buffer
+        uint bytesAvailable = (DmaBufSize - bufferIndex) * 2;
+        uint clampedWords = Math.Min(bytesRequested, bytesAvailable);
+        if (is16BitChannel) {
+            clampedWords /= 2;
+        }
+        Span<byte> unsignedBuf = System.Runtime.InteropServices.MemoryMarshal.Cast<short, byte>(_sb.Dma.Buf16.AsSpan((int)bufferIndex));
+        uint wordsRead = (uint)_sb.Dma.Channel.Read((int)clampedWords, unsignedBuf);
+        return wordsRead;
+    }
+
     /// <summary>
     /// DMA callback for E2 identification write routine.
     /// </summary>
@@ -646,6 +806,21 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _enqueueBatchCount = 0;
     }
 
+    private void EnqueueFrames(ReadOnlySpan<AudioFrame> frames) {
+        if (frames.Length == 0) {
+            return;
+        }
+        _framesAddedThisTick += frames.Length;
+        _enqueueBatchCount = 0;
+        for (int i = 0; i < frames.Length; i++) {
+            _enqueueBatch[_enqueueBatchCount++] = frames[i];
+            if (_enqueueBatchCount == _enqueueBatch.Length) {
+                FlushEnqueueBatch();
+            }
+        }
+        FlushEnqueueBatch();
+    }
+
     internal void EnqueueFramesStereo(byte[] samples, uint numSamples, bool signed) {
         if (numSamples == 0) {
             return;
@@ -798,178 +973,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 _loggerService.Warning("SOUNDBLASTER: MPU-401 IRQ not yet implemented");
                 break;
         }
-    }
-
-    /// <summary>
-    /// Per-tick callback for audio generation.
-    /// This callback is run once per emulator tick (every 1ms), so it generates a
-    /// batch of frames covering each 1ms time period. For example, if the Sound
-    /// Blaster's running at 8 kHz, then that's 8 frames per call. Many rates aren't
-    /// evenly divisible by 1000 (For example, 22050 Hz is 22.05 frames/millisecond),
-    /// so this function keeps track of exact fractional frames and uses rounding to
-    /// ensure partial frames are accounted for and generated across N calls.
-    /// </summary>
-    private void PerTickCallback(uint _) {
-        // assert(sblaster);
-        // assert(sblaster->channel);
-
-        // if (!sblaster->channel->is_enabled) {
-        //     callback_type.SetNone();
-        //     return;
-        // }
-        if (!_dacChannel.IsEnabled) {
-            SetCallbackNone();
-            return;
-        }
-
-        int frames_needed_val = System.Threading.Interlocked.Exchange(ref _framesNeeded, 0);
-        float frames_per_tick = _dacChannel.FramesPerTick;
-        _frameCounter += Math.Max(frames_needed_val, frames_per_tick);
-
-        int total_frames = (int)Math.Floor(_frameCounter);
-        _frameCounter -= total_frames;
-
-        while (_framesAddedThisTick < total_frames) {
-            GenerateFrames(total_frames - _framesAddedThisTick);
-        }
-
-        _framesAddedThisTick -= total_frames;
-        AddPerTickCallback();
-    }
-
-    /// <summary>
-    /// Per-frame callback for fine-grained audio generation.
-    /// Used for very short DMA transfers where per-tick callbacks would be too infrequent.
-    /// </summary>
-    private void PerFrameCallback(uint _) {
-        if (!_dacChannel.IsEnabled) {
-            SetCallbackNone();
-            return;
-        }
-
-        int mixer_needs = Math.Max(System.Threading.Interlocked.Exchange(ref _framesNeeded, 0), 1);
-
-        _framesAddedThisTick = 0;
-        while (_framesAddedThisTick < mixer_needs) {
-            GenerateFrames(mixer_needs - _framesAddedThisTick);
-        }
-
-        AddNextFrameCallback();
-    }
-
-    /// <summary>
-    /// Schedules the next per-frame callback.
-    /// </summary>
-    private void AddNextFrameCallback() {
-        double millisPerFrame = _dacChannel.MillisPerFrame;
-        _scheduler.AddEvent(PerFrameCallback, millisPerFrame, 0);
-    }
-
-    /// <summary>
-    /// Stops the current callback type.
-    /// </summary>
-    private void SetCallbackNone() {
-        if (_timingType != TimingType.None) {
-            if (_timingType == TimingType.PerTick) {
-                _scheduler.RemoveEvents(PerTickCallback);
-            } else {
-                _scheduler.RemoveEvents(PerFrameCallback);
-            }
-
-            _timingType = TimingType.None;
-        }
-    }
-
-    /// <summary>
-    /// Switches to per-tick callback mode (every 1ms).
-    /// </summary>
-    private void SetCallbackPerTick() {
-        if (_timingType != TimingType.PerTick) {
-            SetCallbackNone();
-
-            _framesAddedThisTick = 0;
-            AddPerTickCallback();
-
-            _timingType = TimingType.PerTick;
-        }
-    }
-
-    private void AddPerTickCallback() {
-        _scheduler.AddEvent(PerTickCallback, 1);
-    }
-
-    /// <summary>
-    /// Switches to per-frame callback mode (at sample rate frequency).
-    /// Used for very short DMA transfers.
-    /// </summary>
-    private void SetCallbackPerFrame() {
-        if (_timingType != TimingType.PerFrame) {
-            SetCallbackNone();
-
-            AddNextFrameCallback();
-
-            _timingType = TimingType.PerFrame;
-        }
-    }
-
-    private void GenerateFrames(int frames_requested) {
-        switch (_sb.Mode) {
-            case DspMode.None:
-            case DspMode.DmaPause:
-            case DspMode.DmaMasked: {
-                    EnqueueSilentFrames((uint)frames_requested);
-                    break;
-                }
-
-            case DspMode.Dac:
-                // DAC mode typically renders one frame at a time because the
-                // DOS program will be writing to the DAC register at the
-                // playback rate. In a mixer underflow situation, we render the
-                // current frame multiple times.
-                _enqueueBatchCount = 0;
-                for (int i = 0; i < frames_requested; i++) {
-                    _enqueueBatch[_enqueueBatchCount++] = _sb.Dac.RenderFrame();
-                    if (_enqueueBatchCount == _enqueueBatch.Length) {
-                        FlushEnqueueBatch();
-                    }
-                }
-                FlushEnqueueBatch();
-                _framesAddedThisTick += frames_requested;
-                break;
-
-            case DspMode.Dma: {
-                    MaybeWakeUp();
-
-                    uint len = (uint)frames_requested;
-                    len *= _sb.Dma.Mul;
-                    if ((len & SbShiftMask) != 0) {
-                        len += 1 << SbShift;
-                    }
-                    len >>= SbShift;
-
-                    if (len > _sb.Dma.Left) {
-                        len = _sb.Dma.Left;
-                    }
-
-                    PlayDmaTransfer(len);
-                    break;
-                }
-        }
-    }
-
-    private void EnqueueFrames(ReadOnlySpan<AudioFrame> frames) {
-        if (frames.Length == 0) {
-            return;
-        }
-        _framesAddedThisTick += frames.Length;
-        _enqueueBatchCount = 0;
-        for (int i = 0; i < frames.Length; i++) {
-            _enqueueBatch[_enqueueBatchCount++] = frames[i];
-            if (_enqueueBatchCount == _enqueueBatch.Length) {
-                FlushEnqueueBatch();
-            }
-        }
-        FlushEnqueueBatch();
     }
 
     private void DspDoReset(byte value) {
@@ -1569,21 +1572,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Mode = mode;
     }
 
-    private void DspChangeStereo(bool stereo) {
-        if (!_sb.Dma.Stereo && stereo) {
-            SetChannelRateHz((int)(_sb.FreqHz / 2));
-            _sb.Dma.Mul *= 2;
-            _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
-            _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
-        } else if (_sb.Dma.Stereo && !stereo) {
-            SetChannelRateHz((int)_sb.FreqHz);
-            _sb.Dma.Mul /= 2;
-            _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
-            _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
-        }
-        _sb.Dma.Stereo = stereo;
-    }
-
     /// <summary>
     /// Updates the sample rate during playback.
     /// Reference: src/hardware/audio/soundblaster.cpp dsp_change_rate()
@@ -1750,6 +1738,171 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             _loggerService.Debug("SOUNDBLASTER: DMA Transfer - Mode={Mode}, Stereo={Stereo}, AutoInit={AutoInit}, FreqHz={FreqHz}, Rate={Rate}, Left={Left}",
                 mode, stereo, autoInit, freqHz, _sb.Dma.Rate, _sb.Dma.Left);
         }
+    }
+
+    /// <summary>
+    /// Per-tick callback for audio generation.
+    /// This callback is run once per emulator tick (every 1ms), so it generates a
+    /// batch of frames covering each 1ms time period. For example, if the Sound
+    /// Blaster's running at 8 kHz, then that's 8 frames per call. Many rates aren't
+    /// evenly divisible by 1000 (For example, 22050 Hz is 22.05 frames/millisecond),
+    /// so this function keeps track of exact fractional frames and uses rounding to
+    /// ensure partial frames are accounted for and generated across N calls.
+    /// </summary>
+    private void PerTickCallback(uint _) {
+        if (!_dacChannel.IsEnabled) {
+            SetCallbackNone();
+            return;
+        }
+
+        int frames_needed_val = System.Threading.Interlocked.Exchange(ref _framesNeeded, 0);
+        float frames_per_tick = _dacChannel.FramesPerTick;
+        _frameCounter += Math.Max(frames_needed_val, frames_per_tick);
+
+        int total_frames = (int)Math.Floor(_frameCounter);
+        _frameCounter -= total_frames;
+
+        while (_framesAddedThisTick < total_frames) {
+            GenerateFrames(total_frames - _framesAddedThisTick);
+        }
+
+        _framesAddedThisTick -= total_frames;
+        AddPerTickCallback();
+    }
+
+    /// <summary>
+    /// Per-frame callback for fine-grained audio generation.
+    /// Used for very short DMA transfers where per-tick callbacks would be too infrequent.
+    /// </summary>
+    private void PerFrameCallback(uint _) {
+        if (!_dacChannel.IsEnabled) {
+            SetCallbackNone();
+            return;
+        }
+
+        int mixer_needs = Math.Max(System.Threading.Interlocked.Exchange(ref _framesNeeded, 0), 1);
+
+        _framesAddedThisTick = 0;
+        while (_framesAddedThisTick < mixer_needs) {
+            GenerateFrames(mixer_needs - _framesAddedThisTick);
+        }
+
+        AddNextFrameCallback();
+    }
+
+    /// <summary>
+    /// Schedules the next per-frame callback.
+    /// </summary>
+    private void AddNextFrameCallback() {
+        double millisPerFrame = _dacChannel.MillisPerFrame;
+        _scheduler.AddEvent(PerFrameCallback, millisPerFrame, 0);
+    }
+
+    /// <summary>
+    /// Stops the current callback type.
+    /// </summary>
+    private void SetCallbackNone() {
+        if (_timingType != TimingType.None) {
+            if (_timingType == TimingType.PerTick) {
+                _scheduler.RemoveEvents(PerTickCallback);
+            } else {
+                _scheduler.RemoveEvents(PerFrameCallback);
+            }
+
+            _timingType = TimingType.None;
+        }
+    }
+
+    /// <summary>
+    /// Switches to per-tick callback mode (every 1ms).
+    /// </summary>
+    private void SetCallbackPerTick() {
+        if (_timingType != TimingType.PerTick) {
+            SetCallbackNone();
+
+            _framesAddedThisTick = 0;
+            AddPerTickCallback();
+
+            _timingType = TimingType.PerTick;
+        }
+    }
+
+    private void AddPerTickCallback() {
+        _scheduler.AddEvent(PerTickCallback, 1);
+    }
+
+    /// <summary>
+    /// Switches to per-frame callback mode (at sample rate frequency).
+    /// Used for very short DMA transfers.
+    /// </summary>
+    private void SetCallbackPerFrame() {
+        if (_timingType != TimingType.PerFrame) {
+            SetCallbackNone();
+
+            AddNextFrameCallback();
+
+            _timingType = TimingType.PerFrame;
+        }
+    }
+
+    private void GenerateFrames(int frames_requested) {
+        switch (_sb.Mode) {
+            case DspMode.None:
+            case DspMode.DmaPause:
+            case DspMode.DmaMasked: {
+                    EnqueueSilentFrames((uint)frames_requested);
+                    break;
+                }
+
+            case DspMode.Dac:
+                // DAC mode typically renders one frame at a time because the
+                // DOS program will be writing to the DAC register at the
+                // playback rate. In a mixer underflow situation, we render the
+                // current frame multiple times.
+                _enqueueBatchCount = 0;
+                for (int i = 0; i < frames_requested; i++) {
+                    _enqueueBatch[_enqueueBatchCount++] = _sb.Dac.RenderFrame();
+                    if (_enqueueBatchCount == _enqueueBatch.Length) {
+                        FlushEnqueueBatch();
+                    }
+                }
+                FlushEnqueueBatch();
+                _framesAddedThisTick += frames_requested;
+                break;
+
+            case DspMode.Dma: {
+                    MaybeWakeUp();
+
+                    uint len = (uint)frames_requested;
+                    len *= _sb.Dma.Mul;
+                    if ((len & SbShiftMask) != 0) {
+                        len += 1 << SbShift;
+                    }
+                    len >>= SbShift;
+
+                    if (len > _sb.Dma.Left) {
+                        len = _sb.Dma.Left;
+                    }
+
+                    PlayDmaTransfer(len);
+                    break;
+                }
+        }
+    }
+
+    private void DspChangeStereo(bool stereo) {
+        if (!_sb.Dma.Stereo && stereo) {
+            SetChannelRateHz((int)(_sb.FreqHz / 2));
+            _sb.Dma.Mul *= 2;
+            _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
+            _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
+        } else if (_sb.Dma.Stereo && !stereo) {
+            SetChannelRateHz((int)_sb.FreqHz);
+            _sb.Dma.Mul /= 2;
+            _sb.Dma.Rate = (_sb.FreqHz * _sb.Dma.Mul) >> SbShift;
+            _sb.Dma.Min = (_sb.Dma.Rate * 3) / 1000;
+        }
+        _sb.Dma.Stereo = stereo;
     }
 
     /// <summary>
