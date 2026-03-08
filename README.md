@@ -273,6 +273,9 @@ Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
 | Gravis Ultrasound | ❌ None | Not implemented yet |
 | General MIDI | ✅ Full | Supported |
 
+⚠️ In case of sound problem or weird crash, try `--SbType SB2` instead of the default `SbPro2`
+Some games prefer older cards (for example: Lands of Lore).
+
 ## Misc
 
 | Feature | Details |
@@ -445,7 +448,7 @@ Compatibility list available [here](COMPATIBILITY.md).
 or use this where Spice86.csproj is located:
 
 ```bash
-   dotnet run -e <path to executable>
+   dotnet run -- -e <path to executable>
 ```
 
 ### Ghidra plugin
