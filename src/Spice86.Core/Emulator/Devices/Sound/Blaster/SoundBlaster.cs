@@ -16,7 +16,7 @@ using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Emulates a Sound Blaster audio device, providing digital audio playback, mixing, and hardware-level DSP command
@@ -124,6 +124,11 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 "SoundBlaster: Initialized {SbType} on port {Port:X3}, IRQ {Irq}, DMA {LowDma}{HighDmaSegment}",
                 _sb.Type, _sb.Hw.Base, _sb.Hw.Irq, _sb.Hw.Dma8, highDmaSegment);
         }
+
+        _toFloatUnsigned8 = (s, i) => ToFloat(s[i]);
+        _toFloatSigned8 = (s, i) => ToFloat(s[i]);
+        _toFloatUnsigned16 = (s, i) => ToFloat(s[i]);
+        _toFloatSigned16 = (s, i) => ToFloat(s[i]);
 
         mixer.UnlockMixerThread();
     }
@@ -276,7 +281,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     public string BlasterString {
         get {
             string highChannelSegment = ShouldUseHighDmaChannel() ? $" H{_config.HighDma}" : string.Empty;
-            return $"A{_config.BaseAddress:X3} I{_config.Irq} D{_config.LowDma}{highChannelSegment} T{(int)_config.SbType}";
+            return $"A{_config.BaseAddress:X3} I{_config.Irq} D{_config.LowDma}{highChannelSegment} T{(int)_sb.Type}";
         }
     }
 
@@ -519,7 +524,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         if (is16BitChannel) {
             clampedWords /= 2;
         }
-        Span<byte> unsignedBuf = System.Runtime.InteropServices.MemoryMarshal.Cast<short, byte>(_sb.Dma.Buf16.AsSpan((int)bufferIndex));
+        Span<byte> unsignedBuf = MemoryMarshal.Cast<short, byte>(_sb.Dma.Buf16.AsSpan((int)bufferIndex));
         uint wordsRead = (uint)_sb.Dma.Channel.Read((int)clampedWords, unsignedBuf);
         return wordsRead;
     }
@@ -531,9 +536,9 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         if (dmaEvent == DmaChannel.DmaEvent.IsUnmasked) {
             byte val = (byte)(_sb.E2.Value & 0xff);
 
+            // Unregister callback and write the E2 value
             channel.RegisterCallback(null);
-            Span<byte> buffer = stackalloc byte[1];
-            buffer[0] = val;
+            Span<byte> buffer = [val];
             channel.Write(1, buffer);
         }
     }
@@ -546,12 +551,9 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             return;
         }
 
-        Span<byte> buffer = stackalloc byte[1];
-        buffer[0] = 128;
-
-        while (_sb.Dma.Left > 0) {
+        Span<byte> buffer = [128];
+        while (_sb.Dma.Left-- > 0) {
             channel.Write(1, buffer);
-            _sb.Dma.Left--;
         }
 
         RaiseIrq(SbIrq.Irq8);
@@ -743,11 +745,14 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             return;
         }
 
+        ReadOnlySpan<byte> unsignedSamples = samples;
+        ReadOnlySpan<sbyte> signedSamples = MemoryMarshal.Cast<byte, sbyte>(unsignedSamples);
+
         _enqueueBatchCount = 0;
         for (uint i = 0; i < numSamples; i++) {
             float value = signed
-                ? LookupTables.ToSigned8(unchecked((sbyte)samples[i]))
-                : LookupTables.ToUnsigned8(samples[i]);
+                ? _toFloatSigned8(signedSamples, (int)i)
+                : _toFloatUnsigned8(unsignedSamples, (int)i);
             _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(value, value);
         }
         FlushEnqueueBatch();
@@ -819,15 +824,20 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         // Note: SB Pro 1 and 2 swap left/right channels
         bool swapChannels = _sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2;
 
+        ReadOnlySpan<byte> unsignedSamples = samples;
+        ReadOnlySpan<sbyte> signedSamples = MemoryMarshal.Cast<byte, sbyte>(unsignedSamples);
+
         _enqueueBatchCount = 0;
         for (uint i = 0; i < numFrames; i++) {
+            int leftIndex = (int)(i * 2);
+            int rightIndex = leftIndex + 1;
             float left = signed
-                ? LookupTables.ToSigned8(unchecked((sbyte)samples[i * 2]))
-                : LookupTables.ToUnsigned8(samples[i * 2]);
+                ? _toFloatSigned8(signedSamples, leftIndex)
+                : _toFloatUnsigned8(unsignedSamples, leftIndex);
 
             float right = signed
-                ? LookupTables.ToSigned8(unchecked((sbyte)samples[i * 2 + 1]))
-                : LookupTables.ToUnsigned8(samples[i * 2 + 1]);
+                ? _toFloatSigned8(signedSamples, rightIndex)
+                : _toFloatUnsigned8(unsignedSamples, rightIndex);
 
             if (swapChannels) {
                 _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(right, left);
@@ -857,12 +867,15 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             return;
         }
 
+        ReadOnlySpan<short> signedSamples = samples;
+        ReadOnlySpan<ushort> unsignedSamples = MemoryMarshal.Cast<short, ushort>(signedSamples);
+
         // Batch process samples into AudioFrames
         _enqueueBatchCount = 0;
         for (uint i = 0; i < numSamples; i++) {
             float value = signed
-                ? LookupTables.ToSigned16(samples[i])
-                : LookupTables.ToUnsigned16((ushort)samples[i]);
+                ? _toFloatSigned16(signedSamples, (int)i)
+                : _toFloatUnsigned16(unsignedSamples, (int)i);
             _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(value, value);
         }
         FlushEnqueueBatch();
@@ -893,15 +906,20 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         // Note: SB Pro 1 and 2 swap left/right channels
         bool swapChannels = _sb.Type == SbType.SBPro1 || _sb.Type == SbType.SBPro2;
 
+        ReadOnlySpan<short> signedSamples = samples;
+        ReadOnlySpan<ushort> unsignedSamples = MemoryMarshal.Cast<short, ushort>(signedSamples);
+
         _enqueueBatchCount = 0;
         for (uint i = 0; i < numFrames; i++) {
+            int leftIndex = (int)(i * 2);
+            int rightIndex = leftIndex + 1;
             float left = signed
-                ? LookupTables.ToSigned16(samples[i * 2])
-                : LookupTables.ToUnsigned16((ushort)samples[i * 2]);
+                ? _toFloatSigned16(signedSamples, leftIndex)
+                : _toFloatUnsigned16(unsignedSamples, leftIndex);
 
             float right = signed
-                ? LookupTables.ToSigned16(samples[i * 2 + 1])
-                : LookupTables.ToUnsigned16((ushort)samples[i * 2 + 1]);
+                ? _toFloatSigned16(signedSamples, rightIndex)
+                : _toFloatUnsigned16(unsignedSamples, rightIndex);
 
             if (swapChannels) {
                 _enqueueBatch[_enqueueBatchCount++] = new AudioFrame(right, left);
@@ -911,6 +929,22 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         }
         FlushEnqueueBatch();
         _framesAddedThisTick += (int)numFrames;
+    }
+
+    private static float ToFloat(byte sample) {
+        return LookupTables.ToUnsigned8(sample);
+    }
+
+    private static float ToFloat(sbyte sample) {
+        return LookupTables.ToSigned8(sample);
+    }
+
+    private static float ToFloat(ushort sample) {
+        return LookupTables.ToUnsigned16(sample);
+    }
+
+    private static float ToFloat(short sample) {
+        return LookupTables.ToSigned16(sample);
     }
 
     /// <summary>
@@ -925,9 +959,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 _sb.Irq.Pending8Bit = true;
                 _dualPic.ActivateIrq(_sb.Hw.Irq);
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("SOUNDBLASTER: Raised 8-bit IRQ {Irq}", _sb.Hw.Irq);
-                }
                 break;
 
             case SbIrq.Irq16:
@@ -937,9 +968,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
                 }
                 _sb.Irq.Pending16Bit = true;
                 _dualPic.ActivateIrq(_sb.Hw.Irq);
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("SOUNDBLASTER: Raised 16-bit IRQ {Irq}", _sb.Hw.Irq);
-                }
                 break;
 
             case SbIrq.IrqMpu:
@@ -951,14 +979,16 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
     private void DspDoReset(byte value) {
         if (((value & 1) != 0) && (_sb.Dsp.State != DspState.Reset)) {
-            // TODO: Get out of highspeed mode
+            // TODO Get out of highspeed mode
             DspReset();
             _sb.Dsp.State = DspState.Reset;
         } else if (((value & 1) == 0) && (_sb.Dsp.State == DspState.Reset)) {
+            // reset off
             _sb.Dsp.State = DspState.ResetWait;
 
             _scheduler.RemoveEvents(DspFinishResetEvent);
-            _scheduler.AddEvent(DspFinishResetEvent, 20.0 / 1000.0, 0);
+            _scheduler.AddEvent(DspFinishResetEvent, 20.0 / 1000.0, 0);  // 20 microseconds = 0.020 ms
+            _loggerService.Information("Resetting SB DSP");
         }
     }
 
@@ -976,11 +1006,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     }
 
     private void DspReset() {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("SoundBlaster: DSP Reset");
-        }
-
-        _dualPic.DeactivateIrq(_config.Irq);
+        _dualPic.DeactivateIrq(_sb.Hw.Irq);
         DspChangeMode(DspMode.None);
         DspFlushData();
 
@@ -990,7 +1016,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
 
         _sb.Dsp.WriteStatusCounter = 0;
         _sb.Dsp.ResetTally++;
-
         _scheduler.RemoveEvents(DspFinishResetEvent);
 
         _sb.Dma.Left = 0;
@@ -1002,12 +1027,13 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Dma.FirstTransfer = true;
         _sb.Dma.Mode = DmaMode.None;
         _sb.Dma.RemainSize = 0;
-
         _sb.Dma.Channel?.ClearRequest();
 
+        _sb.Adpcm = new();
         _sb.Adpcm.Reference = 0;
         _sb.Adpcm.Stepsize = 0;
         _sb.Adpcm.HaveRef = false;
+        _sb.Dac = new(_sb, _clock);
 
         _sb.FreqHz = DefaultPlaybackRateHz;
         _sb.TimeConstant = 45;
@@ -1017,10 +1043,8 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _sb.Irq.Pending8Bit = false;
         _sb.Irq.Pending16Bit = false;
 
-        _dacChannel.SampleRate = (DefaultPlaybackRateHz);
-
+        SetChannelRateHz(DefaultPlaybackRateHz);
         InitSpeakerState();
-
         _scheduler.RemoveEvents(ProcessDmaTransferEvent);
     }
 
