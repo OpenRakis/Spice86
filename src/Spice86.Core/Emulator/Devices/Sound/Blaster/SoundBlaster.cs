@@ -145,6 +145,94 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     /// <inheritdoc />
     public SoundChannel Channel => _dacChannel;
 
+    public bool PendingIrq8Bit {
+        get => _sb.Irq.Pending8Bit;
+        set => _sb.Irq.Pending8Bit = value;
+    }
+
+    public bool PendingIrq16Bit {
+        get => _sb.Irq.Pending16Bit;
+        set => _sb.Irq.Pending16Bit = value;
+    }
+
+    public bool IsSpeakerEnabled => _sb.SpeakerEnabled;
+
+    public uint DspFrequencyHz => _sb.FreqHz;
+
+    public byte DspTestRegister => _sb.Dsp.TestRegister;
+
+    public SoundChannel DacChannel => _dacChannel;
+
+    public override byte ReadByte(ushort port) {
+        switch (port - _config.BaseAddress) {
+            case 0x0A:
+                // DSP Read Data Port - returns queued output data
+                if (_outputData.Count > 0) {
+                    return _outputData.Dequeue();
+                }
+                return 0;
+
+            case 0x0C:
+                // DSP Write Buffer Status Port (Write Command/Data)
+                // Bit 7: 0 = ready to accept commands, 1 = busy
+                // In emulation, we're always ready to accept writes immediately
+                return 0x7F;
+
+            case 0x0E:
+                bool hasDataOrIrq = _outputData.Count > 0 || _sb.Irq.Pending8Bit;
+                if (_sb.Irq.Pending8Bit) {
+                    _sb.Irq.Pending8Bit = false;
+                    _dualPic.DeactivateIrq(_config.Irq);
+                }
+                return (byte)(hasDataOrIrq ? 0x80 : 0x00);
+
+            case 0x0F:
+                _sb.Irq.Pending16Bit = false;
+                return 0xFF;
+
+            case 0x04:
+                return (byte)_hardwareMixer.CurrentAddress;
+
+            case 0x05:
+                return _hardwareMixer.ReadData();
+
+            case 0x06:
+                return 0xFF;
+
+            default:
+                return 0xFF;
+        }
+    }
+
+    public override void WriteByte(ushort port, byte value) {
+        switch (port - _config.BaseAddress) {
+            case 0x06:
+                DspDoReset(value);
+                break;
+
+            case 0x0C:
+                DspDoWrite(value);
+                break;
+
+            case 0x04:
+                _hardwareMixer.CurrentAddress = value;
+                break;
+
+            case 0x05:
+                _hardwareMixer.Write(value);
+                break;
+
+            case 0x07:
+                break;
+
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("SoundBlaster: Unhandled port write {Port:X4}", port);
+                }
+                break;
+        }
+    }
+
     /// <inheritdoc />
     public void NotifyLockMixer() {
         _outputQueue.Stop();
@@ -153,6 +241,49 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     /// <inheritdoc />
     public void NotifyUnlockMixer() {
         _outputQueue.Start();
+    }
+
+    private void DspRaiseIrqEvent(uint val) {
+        RaiseIrq(SbIrq.Irq8);
+    }
+
+    public void RaiseInterruptRequest() {
+        RaiseIrq(SbIrq.Irq8);
+    }
+
+    /// <summary>
+    /// Gets the configured Sound Blaster type.
+    /// </summary>
+    public SbType SbTypeProperty => _config.SbType;
+
+    /// <summary>
+    /// Gets the configured IRQ line.
+    /// </summary>
+    public byte IRQ => _config.Irq;
+
+    /// <summary>
+    /// Gets the configured base I/O address.
+    /// </summary>
+    public ushort BaseAddress => _config.BaseAddress;
+
+    /// <summary>
+    /// Gets the configured 8-bit DMA channel.
+    /// </summary>
+    public byte LowDma => _config.LowDma;
+
+    /// <summary>
+    /// Gets the configured 16-bit DMA channel.
+    /// </summary>
+    public byte HighDma => _config.HighDma;
+
+    /// <summary>
+    /// Gets the BLASTER environment variable string.
+    /// </summary>
+    public string BlasterString {
+        get {
+            string highChannelSegment = ShouldUseHighDmaChannel() ? $" H{_config.HighDma}" : string.Empty;
+            return $"A{_config.BaseAddress:X3} I{_config.Irq} D{_config.LowDma}{highChannelSegment} T{(int)_config.SbType}";
+        }
     }
 
     /// <summary>
@@ -829,95 +960,6 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
             }
         }
         FlushEnqueueBatch();
-    }
-
-    public bool PendingIrq8Bit {
-        get => _sb.Irq.Pending8Bit;
-        set => _sb.Irq.Pending8Bit = value;
-    }
-
-    public bool PendingIrq16Bit {
-        get => _sb.Irq.Pending16Bit;
-        set => _sb.Irq.Pending16Bit = value;
-    }
-
-    public bool IsSpeakerEnabled => _sb.SpeakerEnabled;
-
-    public uint DspFrequencyHz => _sb.FreqHz;
-
-    public byte DspTestRegister => _sb.Dsp.TestRegister;
-
-    public SoundChannel DacChannel => _dacChannel;
-
-    // ReadByte, WriteByte, Reset, and other existing methods...
-    public override byte ReadByte(ushort port) {
-        switch (port - _config.BaseAddress) {
-            case 0x0A:
-                // DSP Read Data Port - returns queued output data
-                if (_outputData.Count > 0) {
-                    return _outputData.Dequeue();
-                }
-                return 0;
-
-            case 0x0C:
-                // DSP Write Buffer Status Port (Write Command/Data)
-                // Bit 7: 0 = ready to accept commands, 1 = busy
-                // In emulation, we're always ready to accept writes immediately
-                return 0x7F;
-
-            case 0x0E:
-                bool hasDataOrIrq = _outputData.Count > 0 || _sb.Irq.Pending8Bit;
-                if (_sb.Irq.Pending8Bit) {
-                    _sb.Irq.Pending8Bit = false;
-                    _dualPic.DeactivateIrq(_config.Irq);
-                }
-                return (byte)(hasDataOrIrq ? 0x80 : 0x00);
-
-            case 0x0F:
-                _sb.Irq.Pending16Bit = false;
-                return 0xFF;
-
-            case 0x04:
-                return (byte)_hardwareMixer.CurrentAddress;
-
-            case 0x05:
-                return _hardwareMixer.ReadData();
-
-            case 0x06:
-                return 0xFF;
-
-            default:
-                return 0xFF;
-        }
-    }
-
-    public override void WriteByte(ushort port, byte value) {
-        switch (port - _config.BaseAddress) {
-            case 0x06:
-                DspDoReset(value);
-                break;
-
-            case 0x0C:
-                DspDoWrite(value);
-                break;
-
-            case 0x04:
-                _hardwareMixer.CurrentAddress = value;
-                break;
-
-            case 0x05:
-                _hardwareMixer.Write(value);
-                break;
-
-            case 0x07:
-                break;
-
-            default:
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("SoundBlaster: Unhandled port write {Port:X4}", port);
-                }
-                break;
-        }
     }
 
     private void DspDoReset(byte value) {
@@ -1810,49 +1852,4 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         _outputData.Enqueue(value);
     }
 
-    /// <summary>
-    /// Event callback for delayed IRQ raising.
-    /// </summary>
-    private void DspRaiseIrqEvent(uint val) {
-        RaiseIrq(SbIrq.Irq8);
-    }
-
-    public void RaiseInterruptRequest() {
-        RaiseIrq(SbIrq.Irq8);
-    }
-
-    /// <summary>
-    /// Gets the configured Sound Blaster type.
-    /// </summary>
-    public SbType SbTypeProperty => _config.SbType;
-
-    /// <summary>
-    /// Gets the configured IRQ line.
-    /// </summary>
-    public byte IRQ => _config.Irq;
-
-    /// <summary>
-    /// Gets the configured base I/O address.
-    /// </summary>
-    public ushort BaseAddress => _config.BaseAddress;
-
-    /// <summary>
-    /// Gets the configured 8-bit DMA channel.
-    /// </summary>
-    public byte LowDma => _config.LowDma;
-
-    /// <summary>
-    /// Gets the configured 16-bit DMA channel.
-    /// </summary>
-    public byte HighDma => _config.HighDma;
-
-    /// <summary>
-    /// Gets the BLASTER environment variable string.
-    /// </summary>
-    public string BlasterString {
-        get {
-            string highChannelSegment = ShouldUseHighDmaChannel() ? $" H{_config.HighDma}" : string.Empty;
-            return $"A{_config.BaseAddress:X3} I{_config.Irq} D{_config.LowDma}{highChannelSegment} T{(int)_config.SbType}";
-        }
-    }
 }
