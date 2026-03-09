@@ -1,45 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.Devices;
 
-using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 /// <summary>
 ///     Deterministic numeric helpers used by the Device Scheduler and PIT chip.
 /// </summary>
 internal static class NumericConverters {
-    /// <summary>
-    ///     Casts <paramref name="value" /> to the target integer type using checked semantics.
-    /// </summary>
-    /// <typeparam name="TTarget">Target integer type to cast to.</typeparam>
-    /// <typeparam name="TSource">Source integer type to cast from.</typeparam>
-    /// <param name="value">Source value to cast.</param>
-    /// <returns>The source value converted to the target type.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TTarget CheckCast<TTarget, TSource>(TSource value)
-        where TTarget : struct, IBinaryInteger<TTarget>
-        where TSource : struct, IBinaryInteger<TSource> {
-        try {
-            return TTarget.CreateChecked(value);
-        } catch (OverflowException) {
-            Debug.Assert(false, "CheckCast range assertion failed");
-            return TTarget.CreateTruncating(value);
-        }
-    }
-
-    /// <summary>
-    ///     Rounds the floating-point value to the nearest integer using away-from-zero semantics.
-    /// </summary>
-    /// <param name="x">Floating-point value to convert.</param>
-    /// <returns>The rounded 32-bit integer value.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int RoundToNearestInt(double x) {
-        Debug.Assert(double.IsFinite(x));
-        Debug.Assert(x >= int.MinValue);
-        Debug.Assert(x <= int.MaxValue);
-        return (int)Math.Round(x, MidpointRounding.AwayFromZero);
-    }
-
     /// <summary>
     ///     Converts a decimal <see cref="ushort" /> value to its packed BCD representation.
     /// </summary>

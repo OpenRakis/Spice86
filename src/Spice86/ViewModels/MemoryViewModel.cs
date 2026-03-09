@@ -57,7 +57,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
         CanCloseTab = canCloseTab;
         TryUpdateHeaderAndMemoryDocument();
     }
-    
+
     public State State => _state;
 
     [ObservableProperty]
@@ -178,7 +178,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
             AddressAndValueParser.TryParseAddressString(StartAddress, _state, out uint? address)) {
             ulong startAddress = address.Value + SelectionRange.Value.Start.ByteIndex;
             ulong length = SelectionRange.Value.ByteLength;
-            byte[] memoryBytes = _memory.ReadRam((uint)length,(uint)startAddress);
+            byte[] memoryBytes = _memory.ReadRam((uint)length, (uint)startAddress);
             string hexRepresentation = ConvertUtils.ByteArrayToHexString(memoryBytes);
             await _textClipboard.SetTextAsync($"{hexRepresentation}");
         }
@@ -271,7 +271,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
 
     private async Task<uint?> PerformMemorySearchAsync(uint searchStartAddress,
         int searchLength, byte[] searchBytes, CancellationToken token) {
-        if(token.IsCancellationRequested) {
+        if (token.IsCancellationRequested) {
             return null;
         }
         return await Task.Run(

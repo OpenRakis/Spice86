@@ -302,30 +302,30 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
         switch (node) {
             case CfgInstruction cfgInstruction: {
-                SegmentedAddress nextAddress = new SegmentedAddress(cfgInstruction.Address.Segment,
-                    (ushort)(cfgInstruction.Address.Offset + cfgInstruction.Length));
+                    SegmentedAddress nextAddress = new SegmentedAddress(cfgInstruction.Address.Segment,
+                        (ushort)(cfgInstruction.Address.Offset + cfgInstruction.Length));
 
-                if (successor.Address != nextAddress) {
-                    // Not direct successor - determine edge type
-                    if (node is IJumpInstruction) {
-                        label = "jump";
-                    } else if (node is ICallInstruction) {
-                        label = "call";
-                    } else if (node is IReturnInstruction) {
-                        label = "return";
-                    } else {
-                        label = "not contiguous";
+                    if (successor.Address != nextAddress) {
+                        // Not direct successor - determine edge type
+                        if (node is IJumpInstruction) {
+                            label = "jump";
+                        } else if (node is ICallInstruction) {
+                            label = "call";
+                        } else if (node is IReturnInstruction) {
+                            label = "return";
+                        } else {
+                            label = "not contiguous";
+                        }
                     }
-                }
 
-                break;
-            }
+                    break;
+                }
             case SelectorNode selectorNode: {
-                Signature? signature = selectorNode.SuccessorsPerSignature
-                    .FirstOrDefault(x => x.Value.Id == successor.Id).Key;
-                label = signature?.ToString() ?? "";
-                break;
-            }
+                    Signature? signature = selectorNode.SuccessorsPerSignature
+                        .FirstOrDefault(x => x.Value.Id == successor.Id).Key;
+                    label = signature?.ToString() ?? "";
+                    break;
+                }
         }
 
         return new Edge(nodeText, successorText, label);

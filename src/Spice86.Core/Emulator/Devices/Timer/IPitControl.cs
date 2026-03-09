@@ -14,5 +14,5 @@ public interface IPitControl {
     ///     Gets a value indicating whether the output signal of PIT channel 2 is high.
     /// </summary>
     /// <returns>True if the output is high; otherwise, false.</returns>
-    bool IsChannel2OutputHigh();
+    bool IsChannel2OutputHigh { get; }
 }

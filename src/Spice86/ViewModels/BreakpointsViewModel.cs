@@ -201,12 +201,12 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             if (!AddressAndValueParser.TryParseAddressString(ExecutionAddressValue, _state, out uint? executionAddress)) {
                 return;
             }
-            
+
             // Compile condition expression if present
             if (!TryCompileConditionWithErrorHandling(ExecutionConditionExpression, out Func<long, bool>? condition, out string? conditionExpression)) {
                 return;
             }
-            
+
             BreakpointViewModel executionVm = AddAddressBreakpoint(
                 executionAddress.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
@@ -510,7 +510,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             breakpointVm.Disable();
         }
     }
-    
+
     /// <summary>
     /// Attempts to compile a condition expression and shows error if compilation fails.
     /// Returns false if compilation fails, which can be used to abort the operation.
@@ -521,28 +521,28 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
     /// <returns>True if compilation succeeded or expression was empty, false if an error occurred.</returns>
     private bool TryCompileConditionWithErrorHandling(string? expression, out Func<long, bool>? condition, out string? validatedExpression) {
         BreakpointConditionService.ConditionCompilationResult result = _conditionService.TryCompile(expression);
-        
+
         condition = result.Condition;
         validatedExpression = result.ValidatedExpression;
-        
+
         if (!result.Success && result.Error is not null) {
             _uiDispatcher.Post(() => ShowError(result.Error));
             return false;
         }
-        
+
         return true;
     }
-    
+
     /// <summary>
     /// Attempts to compile a condition expression and displays error but doesn't abort.
     /// Used for restore operations where we want to continue even if one condition fails.
     /// </summary>
     private void TryCompileConditionWithErrorDisplay(string? expression, out Func<long, bool>? condition, out string? validatedExpression) {
         BreakpointConditionService.ConditionCompilationResult result = _conditionService.TryCompile(expression);
-        
+
         condition = result.Condition;
         validatedExpression = result.ValidatedExpression;
-        
+
         if (!result.Success && result.Error is not null) {
             _uiDispatcher.Post(() => ShowError(result.Error));
         }

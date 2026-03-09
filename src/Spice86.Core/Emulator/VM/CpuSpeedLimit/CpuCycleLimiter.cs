@@ -59,7 +59,7 @@ public class CpuCycleLimiter : ICyclesLimiter {
         long targetTicks = _lastTicks + TicksPerMs;
 
         while (_state.IsRunning && _stopwatch.ElapsedTicks < targetTicks) {
-            _spinner.SpinOnce();
+            _spinner.SpinOnce(-1);
         }
 
         _lastTicks = _stopwatch.ElapsedTicks;
