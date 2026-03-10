@@ -41,7 +41,7 @@ public class DosFileManager {
 
     private class FileSearchPrivateData {
         public FileSearchPrivateData(string fileSpec, int index, ushort searchAttributes) {
-            FileSpec =  fileSpec;
+            FileSpec = fileSpec;
             Index = index;
             SearchAttributes = searchAttributes;
         }
@@ -169,7 +169,7 @@ public class DosFileManager {
             }
             return OpenDevice(device);
         }
-        
+
         string newHostFilePath = _dosPathResolver.PrefixWithHostDirectory(fileName);
 
         FileStream? testFileStream = null;
@@ -184,7 +184,7 @@ public class DosFileManager {
             // in order to avoid an exception
             for (ushort i = 0; i < OpenFiles.Length; i++) {
                 VirtualFileBase? virtualFile = OpenFiles[i];
-                if(virtualFile is DosFile dosFile) {
+                if (virtualFile is DosFile dosFile) {
                     string? openHostFilePath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFile.Name);
                     if (string.Equals(openHostFilePath, newHostFilePath, StringComparison.OrdinalIgnoreCase)) {
                         CloseFileOrDevice(i);
@@ -451,6 +451,11 @@ public class DosFileManager {
     public ushort DiskTransferAreaAddressSegment => _diskTransferAreaAddressSegment;
 
     /// <summary>
+    /// Gets the current Disk Transfer Area structure.
+    /// </summary>
+    public DosDiskTransferArea DiskTransferArea => new(_memory, GetDiskTransferAreaPhysicalAddress());
+
+    /// <summary>
     /// Seeks to specified location in file.
     /// </summary>
     /// <param name="originOfMove">Can be one of those values: <br/>
@@ -532,6 +537,27 @@ public class DosFileManager {
         SetOpenFile(dosIndex, device);
 
         return DosFileOperationResult.Value16(dosIndex);
+    }
+
+    /// <summary>
+    /// Opens a device at a requested DOS handle if that handle is available.
+    /// This is used during initialization to ensure standard devices occupy fixed handles.
+    /// </summary>
+    /// <param name="device">The device to open.</param>
+    /// <param name="requestedHandle">The DOS handle to open the device at.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    public DosFileOperationResult OpenDeviceAtHandle(VirtualFileBase device, ushort requestedHandle) {
+        if (!IsHandleInRange(requestedHandle)) {
+            return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
+        }
+
+        if (OpenFiles[requestedHandle] != null) {
+            // Slot already used
+            return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
+        }
+
+        SetOpenFile(requestedHandle, device);
+        return DosFileOperationResult.Value16(requestedHandle);
     }
 
     /// <summary>
@@ -685,7 +711,11 @@ public class DosFileManager {
         return null;
     }
 
-    private uint GetDiskTransferAreaPhysicalAddress() => MemoryUtils.ToPhysicalAddress(
+    /// <summary>
+    /// Gets the physical address of the Disk Transfer Area (DTA).
+    /// </summary>
+    /// <returns>The physical address computed from DTA segment and offset.</returns>
+    public uint GetDiskTransferAreaPhysicalAddress() => MemoryUtils.ToPhysicalAddress(
         _diskTransferAreaAddressSegment, _diskTransferAreaAddressOffset);
 
     private VirtualFileBase? GetOpenFile(ushort fileHandle) {
@@ -695,7 +725,7 @@ public class DosFileManager {
         return OpenFiles[fileHandle];
     }
 
-    private bool IsHandleInRange(ushort fileHandle) => fileHandle <= OpenFiles.Length;
+    private bool IsHandleInRange(ushort fileHandle) => fileHandle < OpenFiles.Length;
 
     private DosFileOperationResult NoFreeHandleError() {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
@@ -707,14 +737,22 @@ public class DosFileManager {
     internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.
         GetFullHostPathFromDosOrDefault(dosPath);
 
-    private static ushort ToDosDate(DateTime localDate) {
+    /// <summary>
+    /// Converts a DateTime to DOS packed date format.
+    /// DOS date format: bits 15-9=year-1980, bits 8-5=month, bits 4-0=day.
+    /// </summary>
+    public static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
         int month = localDate.Month;
         int dosYear = localDate.Year - 1980;
         return (ushort)((day & 0b11111) | (month & 0b1111) << 5 | (dosYear & 0b1111111) << 9);
     }
 
-    private static ushort ToDosTime(DateTime localTime) {
+    /// <summary>
+    /// Converts a DateTime to DOS packed time format.
+    /// DOS time format: bits 15-11=hour, bits 10-5=minute, bits 4-0=seconds/2.
+    /// </summary>
+    public static ushort ToDosTime(DateTime localTime) {
         int dosSeconds = localTime.Second / 2;
         int minutes = localTime.Minute;
         int hours = localTime.Hour;
@@ -1160,7 +1198,7 @@ public class DosFileManager {
                     case 0x66:  // Get Volume Serial Number + Volume Label + FS Type
                         {
                             VirtualDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
-                            DosVolumeInfo dosVolumeInfo = new (_memory, parameterBlock.Linear);
+                            DosVolumeInfo dosVolumeInfo = new(_memory, parameterBlock.Linear);
                             dosVolumeInfo.SerialNumber = 0x1234;
                             dosVolumeInfo.VolumeLabel = vDrive.Label.ToUpperInvariant();
                             dosVolumeInfo.FileSystemType = drive < 2 ? "FAT12" : "FAT16";

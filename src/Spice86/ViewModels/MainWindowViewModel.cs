@@ -139,7 +139,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
-
     internal void OnKeyUp(KeyEventArgs e) {
         if (_pauseHandler.IsPaused) {
             return;

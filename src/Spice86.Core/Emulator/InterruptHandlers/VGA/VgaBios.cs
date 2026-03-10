@@ -32,12 +32,12 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack,  State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService)
+    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
         _logger = loggerService;
-        if(_logger.IsEnabled(LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Initializing VGA BIOS");
         }
         FillDispatchTable();
@@ -73,27 +73,27 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     public void GetSetDisplayCombinationCode() {
         switch (State.AL) {
             case 0x00: {
-                State.AL = 0x1A; // Function supported
-                State.BL = _biosDataArea.DisplayCombinationCode; // Primary display
-                State.BH = 0x00; // No secondary display
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 1A {MethodName} - Get: DCC 0x{Dcc:X2}",
-                        nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    State.AL = 0x1A; // Function supported
+                    State.BL = _biosDataArea.DisplayCombinationCode; // Primary display
+                    State.BH = 0x00; // No secondary display
+                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Get: DCC 0x{Dcc:X2}",
+                            nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    }
+                    break;
                 }
-                break;
-            }
             case 0x01: {
-                State.AL = 0x1A; // Function supported
-                _biosDataArea.DisplayCombinationCode = State.BL;
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 1A {MethodName} - Set: DCC 0x{Dcc:X2}",
-                        nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    State.AL = 0x1A; // Function supported
+                    _biosDataArea.DisplayCombinationCode = State.BL;
+                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Set: DCC 0x{Dcc:X2}",
+                            nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    }
+                    break;
                 }
-                break;
-            }
             default: {
-                throw new NotSupportedException($"AL=0x{State.AL:X2} is not a valid subFunction for INT 10 1A");
-            }
+                    throw new NotSupportedException($"AL=0x{State.AL:X2} is not a valid subFunction for INT 10 1A");
+                }
         }
     }
 
@@ -311,9 +311,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                 _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set border color {Color}",
                     nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
             }
-        }
-        else
-        {
+        } else {
             // Most interrupt manuals say that BH can only be 0 and 1. De facto, any nonzero
             // value in BH should be handled as 1, because this was the behaviour of the IBM
             // BIOS:
@@ -479,8 +477,23 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} running INT 10 operation 0x{Operation:X2}", nameof(VgaBios), operation);
         }
-        if (!HasRunnable(operation) && LoggerService.IsEnabled(LogEventLevel.Error)) {
-            LoggerService.Error("INT10H: Unrecognized VgaBios function number in AH register: {OperationNumber}", State.AH);
+
+        const byte MshercGetVideoAdapterTypeAndMode = 0xEF;
+        if (operation == MshercGetVideoAdapterTypeAndMode) {
+            // operation installed by Microsoft MSHERC.COM/QBHERC.COM-TSRs (Hercules compatibility)
+            // Ralph Browns interrupt list: https://mirror.math.princeton.edu/pub/oldlinux/Linux.old/docs/interrupts/int-html/rb-0549.htm
+            // Microsoft KB Archive/69537: https://www.betaarchive.com/wiki/index.php/Microsoft_KB_Archive/69537
+            // dosbox svn/staging just ignoring the interrupt
+            // operation is used by Microsoft Quick/PDS Basic library
+            // Gunboat ~1990 needs it
+            if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                _logger.Warning("INT10H: Ignored VgaBios function number in AH register: {OperationNumber}", State.AH);
+            }
+            return;
+        }
+
+        if (!HasRunnable(operation) && _logger.IsEnabled(LogEventLevel.Error)) {
+            _logger.Error("INT10H: Unrecognized VgaBios function number in AH register: {OperationNumber}", State.AH);
         }
         Run(operation);
     }
@@ -614,7 +627,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     }
 
     public void VesaFunctions() {
-        if(_logger.IsEnabled(LogEventLevel.Warning)) {
+        if (_logger.IsEnabled(LogEventLevel.Warning)) {
             // This can be valid, video cards came to the scene before VESA was a standard.
             // It seems some games can expect that (eg. Rules of Engagement 2)
             //TODO: Implement at least VESA 1.2
