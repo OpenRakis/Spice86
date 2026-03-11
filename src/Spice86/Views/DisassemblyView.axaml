@@ -217,7 +217,6 @@
                                                            Segments="{Binding JumpArcSegments}"
                                                            MaxLanes="{Binding MaxJumpLanes}"
                                                            LineBrush="{DynamicResource DisassemblyJumpLineBrush}"
-                                                           ArrowBrush="{DynamicResource DisassemblyJumpArrowBrush}"
                                                            VerticalAlignment="Stretch"
                                                            Margin="0,0,2,0" />
 

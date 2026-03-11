@@ -6,4 +6,5 @@ namespace Spice86.ViewModels;
 /// <param name="Lane">The lane index (0 = rightmost/closest to code, higher = further left).</param>
 /// <param name="Type">Whether this line is the top end, bottom end, or middle of the arc.</param>
 /// <param name="IsTarget">Whether the arrowhead points at this line (the jump destination).</param>
-public record JumpArcSegment(int Lane, JumpSegmentType Type, bool IsTarget);
+/// <param name="ColorIndex">Index into the color palette, used to visually distinguish overlapping arcs.</param>
+public record JumpArcSegment(int Lane, JumpSegmentType Type, bool IsTarget, int ColorIndex);

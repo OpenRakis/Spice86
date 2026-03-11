@@ -90,6 +90,7 @@ internal static class JumpLineCalculator {
         for (int arcIndex = 0; arcIndex < arcs.Count; arcIndex++) {
             (_, int targetIndex, int topIndex, int bottomIndex) = arcs[arcIndex];
             int lane = arcLanes[arcIndex];
+            int colorIndex = arcIndex;
 
             for (int lineIndex = topIndex; lineIndex <= bottomIndex; lineIndex++) {
                 JumpSegmentType type;
@@ -110,7 +111,7 @@ internal static class JumpLineCalculator {
                     segments = [];
                     lineSegments[lineIndex] = segments;
                 }
-                segments.Add(new JumpArcSegment(lane, type, isTarget));
+                segments.Add(new JumpArcSegment(lane, type, isTarget, colorIndex));
             }
         }
 

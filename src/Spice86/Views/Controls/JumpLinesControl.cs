@@ -3,6 +3,7 @@ namespace Spice86.Views.Controls;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Styling;
 
 using Spice86.ViewModels;
 
@@ -11,14 +12,19 @@ using System.Collections.Generic;
 /// <summary>
 /// Custom control that renders jump arc line segments for a single disassembly line.
 /// Draws vertical lines, corners, and arrowheads to show jump/branch connections.
+/// Each arc is colored from a palette of theme-aware brushes (DisassemblyJumpLine0Brush..7Brush).
 /// </summary>
 public class JumpLinesControl : Control {
     private const double LaneWidth = 8;
     private const double ArrowSize = 3;
     private const double PenThickness = 1;
+    private const int PaletteSize = 8;
+    private const string BrushKeyPrefix = "DisassemblyJumpLine";
+    private const string BrushKeySuffix = "Brush";
 
-    private Pen? _cachedPen;
-    private IBrush? _cachedLineBrush;
+    private readonly IBrush?[] _paletteBrushes = new IBrush?[PaletteSize];
+    private readonly Pen?[] _cachedPens = new Pen?[PaletteSize];
+    private bool _paletteResolved;
 
     private static readonly StreamGeometry ArrowGeometry = CreateArrowGeometry();
 
@@ -35,20 +41,15 @@ public class JumpLinesControl : Control {
         AvaloniaProperty.Register<JumpLinesControl, int>(nameof(MaxLanes));
 
     /// <summary>
-    /// The brush used to draw the jump lines.
+    /// Fallback brush used when no palette brush is found for a given color index.
     /// </summary>
     public static readonly StyledProperty<IBrush?> LineBrushProperty =
         AvaloniaProperty.Register<JumpLinesControl, IBrush?>(nameof(LineBrush));
 
-    /// <summary>
-    /// The brush used to draw arrowheads at jump targets.
-    /// </summary>
-    public static readonly StyledProperty<IBrush?> ArrowBrushProperty =
-        AvaloniaProperty.Register<JumpLinesControl, IBrush?>(nameof(ArrowBrush));
-
     static JumpLinesControl() {
-        AffectsRender<JumpLinesControl>(SegmentsProperty, MaxLanesProperty, LineBrushProperty, ArrowBrushProperty);
+        AffectsRender<JumpLinesControl>(SegmentsProperty, MaxLanesProperty, LineBrushProperty);
         AffectsMeasure<JumpLinesControl>(MaxLanesProperty);
+        LineBrushProperty.Changed.AddClassHandler<JumpLinesControl>((control, _) => control.InvalidatePaletteCache());
     }
 
     /// <summary>
@@ -68,19 +69,11 @@ public class JumpLinesControl : Control {
     }
 
     /// <summary>
-    /// Gets or sets the brush used to draw the jump lines.
+    /// Gets or sets the fallback brush used when no palette brush is found.
     /// </summary>
     public IBrush? LineBrush {
         get => GetValue(LineBrushProperty);
         set => SetValue(LineBrushProperty, value);
-    }
-
-    /// <summary>
-    /// Gets or sets the brush used to draw arrowheads at jump targets.
-    /// </summary>
-    public IBrush? ArrowBrush {
-        get => GetValue(ArrowBrushProperty);
-        set => SetValue(ArrowBrushProperty, value);
     }
 
     /// <inheritdoc />
@@ -89,13 +82,38 @@ public class JumpLinesControl : Control {
         return new Size(width, 0);
     }
 
-    private Pen GetOrCreatePen(IBrush brush) {
-        if (_cachedPen is not null && ReferenceEquals(_cachedLineBrush, brush)) {
-            return _cachedPen;
+    private void InvalidatePaletteCache() {
+        _paletteResolved = false;
+        Array.Clear(_paletteBrushes);
+        Array.Clear(_cachedPens);
+    }
+
+    private void ResolvePalette() {
+        if (_paletteResolved) {
+            return;
         }
-        _cachedLineBrush = brush;
-        _cachedPen = new Pen(brush, PenThickness);
-        return _cachedPen;
+        for (int i = 0; i < PaletteSize; i++) {
+            string key = $"{BrushKeyPrefix}{i}{BrushKeySuffix}";
+            if (this.TryFindResource(key, ActualThemeVariant, out object? resource) && resource is IBrush brush) {
+                _paletteBrushes[i] = brush;
+            }
+        }
+        _paletteResolved = true;
+    }
+
+    private IBrush GetBrushForSegment(JumpArcSegment segment, IBrush fallback) {
+        int slot = segment.ColorIndex % PaletteSize;
+        return _paletteBrushes[slot] ?? fallback;
+    }
+
+    private Pen GetOrCreatePen(int colorIndex, IBrush brush) {
+        int slot = colorIndex % PaletteSize;
+        if (_cachedPens[slot] is { } cached && ReferenceEquals(_paletteBrushes[slot], brush)) {
+            return cached;
+        }
+        Pen pen = new(brush, PenThickness);
+        _cachedPens[slot] = pen;
+        return pen;
     }
 
     /// <inheritdoc />
@@ -107,14 +125,15 @@ public class JumpLinesControl : Control {
             return;
         }
 
-        IBrush lineBrush = LineBrush ?? Brushes.Gray;
-        IBrush arrowBrush = ArrowBrush ?? lineBrush;
-        Pen pen = GetOrCreatePen(lineBrush);
+        ResolvePalette();
+        IBrush fallbackBrush = LineBrush ?? Brushes.Gray;
         double height = Bounds.Height;
         double width = Bounds.Width;
         double midY = height / 2;
 
         foreach (JumpArcSegment segment in segments) {
+            IBrush segmentBrush = GetBrushForSegment(segment, fallbackBrush);
+            Pen pen = GetOrCreatePen(segment.ColorIndex, segmentBrush);
             double laneX = width - (segment.Lane + 1) * LaneWidth;
 
             switch (segment.Type) {
@@ -122,7 +141,7 @@ public class JumpLinesControl : Control {
                     context.DrawLine(pen, new Point(width, midY), new Point(laneX, midY));
                     context.DrawLine(pen, new Point(laneX, midY), new Point(laneX, height));
                     if (segment.IsTarget) {
-                        DrawArrow(context, arrowBrush, width, midY);
+                        DrawArrow(context, segmentBrush, width, midY);
                     }
                     break;
 
@@ -130,7 +149,7 @@ public class JumpLinesControl : Control {
                     context.DrawLine(pen, new Point(width, midY), new Point(laneX, midY));
                     context.DrawLine(pen, new Point(laneX, 0), new Point(laneX, midY));
                     if (segment.IsTarget) {
-                        DrawArrow(context, arrowBrush, width, midY);
+                        DrawArrow(context, segmentBrush, width, midY);
                     }
                     break;
 
