@@ -87,7 +87,7 @@ internal static class JumpLineCalculator {
         Dictionary<int, List<JumpArcSegment>> lineSegments = new();
 
         for (int arcIndex = 0; arcIndex < arcs.Count; arcIndex++) {
-            (int sourceIndex, int targetIndex, int topIndex, int bottomIndex) = arcs[arcIndex];
+            (_, int targetIndex, int topIndex, int bottomIndex) = arcs[arcIndex];
             int lane = arcLanes[arcIndex];
 
             for (int lineIndex = topIndex; lineIndex <= bottomIndex; lineIndex++) {
