@@ -45,8 +45,9 @@ public partial class DebuggerLineViewModel : ViewModelBase {
         ByteString = string.Join(' ', instruction.Bytes.Select(b => b.ToString("X2")));
         Function = instruction.Function;
         SegmentedAddress = instruction.SegmentedAddress;
-        Address = SegmentedAddress.Linear;
-        NextAddress = (uint)(Address + _info.Length);
+        Address = MemoryUtils.ToPhysicalAddress(SegmentedAddress.Segment, SegmentedAddress.Offset);
+        ushort nextOffset = (ushort)(SegmentedAddress.Offset + _info.Length);
+        NextAddress = MemoryUtils.ToPhysicalAddress(SegmentedAddress.Segment, nextOffset);
         _customFormattedInstruction = instruction.InstructionFormatOverride;
 
         // We expect there to be at most 1 execution breakpoint per line, so we use SingleOrDefault.
