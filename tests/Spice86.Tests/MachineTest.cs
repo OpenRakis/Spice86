@@ -210,7 +210,7 @@ public class MachineTest
         expected[0x03] = 0xff;
         Machine machine = TestOneBin("selfmodifyvalue", expected);
         CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
-        CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x008));
+        CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x00A));
         Assert.NotNull(instruction);
         if (instruction is MovRegImm16 movAxModifiedImm) {
             InstructionField<ushort> immField = movAxModifiedImm.ValueField;
@@ -233,6 +233,12 @@ public class MachineTest
         expected[0x04] = 0x01;
         expected[0x05] = 0x00;
         TestOneBin("selfmodifyinstructions", expected);
+    }
+
+    [Fact]
+    public void TestSelfModifyCall()
+    {
+        TestOneBin("selfmodifycall", []);
     }
 
     [Fact]
@@ -433,6 +439,9 @@ public class MachineTest
     [AssertionMethod]
     private static void CompareMemoryWithExpected(IMemory memory, byte[] expected)
     {
+        if (expected.Length == 0) {
+            return;
+        }
         byte[] actual = memory.ReadRam((uint)expected.Length);
         Assert.Equal(expected, actual);
     }
