@@ -153,6 +153,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   }
   ```
   - **NEVER use generic `catch (Exception)`, `catch (Exception e)`, or empty `catch`**
+  - Never use SegmentedAddress.Linear for address computations. Segmented addresses can rollover and Linear doesn't handle this correctly.
   - Each exception type must be caught explicitly
   - This is non-negotiable - the .editorconfig enforces this rule
   

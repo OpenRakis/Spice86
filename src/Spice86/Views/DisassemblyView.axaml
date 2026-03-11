@@ -180,7 +180,7 @@
                                 </Style>
                             </ContentControl.Styles>
 
-                            <Grid ColumnDefinitions="Auto, Auto, *,4*,2*" Margin="0">
+                            <Grid ColumnDefinitions="Auto, Auto, *,4*,Auto,2*" Margin="0">
                                 <!-- Breakpoint indicator -->
                                 <Border Grid.Column="0"
                                         MinWidth="16"
@@ -227,8 +227,22 @@
                                                      Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
                                                      Margin="12,0,0,0" />
 
+                                <!-- Branch target indicator -->
+                                <TextBlock Grid.Column="4"
+                                           Text="{Binding BranchTargetText}"
+                                           Foreground="{DynamicResource DisassemblyBranchTargetBrush}"
+                                           FontSize="11"
+                                           IsVisible="{Binding BranchTargetText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                           Cursor="Hand"
+                                           Tapped="OnBranchTargetClicked"
+                                           Margin="8,0,0,0">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="{Binding BranchTarget, StringFormat='Go to {0}'}" />
+                                    </ToolTip.Tip>
+                                </TextBlock>
+
                                 <!-- Function Name -->
-                                <SelectableTextBlock Grid.Column="4"
+                                <SelectableTextBlock Grid.Column="5"
                                                      Text="{Binding Function.Name, FallbackValue=''}"
                                                      Foreground="{DynamicResource DisassemblyFunctionBrush}"
                                                      Margin="12,0,0,0" />
