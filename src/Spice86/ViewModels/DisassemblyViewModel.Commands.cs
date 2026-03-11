@@ -72,9 +72,11 @@ public partial class DisassemblyViewModel {
 
             if (debuggerLine.IsConditionalBranch) {
                 uint fallThroughAddress = debuggerLine.NextAddress;
-                _breakpointsViewModel.AddAddressBreakpoint(fallThroughAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
-                    Pause("Step into breakpoint was reached");
-                }, null, "Step into fall-through breakpoint", null);
+                if (fallThroughAddress != targetPhysical) {
+                    _breakpointsViewModel.AddAddressBreakpoint(fallThroughAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
+                        Pause("Step into breakpoint was reached");
+                    }, null, "Step into fall-through breakpoint", null);
+                }
             }
         } else if (debuggerLine.ContinuesToNextInstruction) {
             uint nextAddress = debuggerLine.NextAddress;
