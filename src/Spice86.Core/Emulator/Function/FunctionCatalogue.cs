@@ -1,10 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.Function;
 
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
 using System.Linq;
 
-public class FunctionCatalogue {
+public class FunctionCatalogue : IClearable {
     public FunctionCatalogue() : this(new List<FunctionInformation>()) {
     }
 
@@ -28,5 +29,9 @@ public class FunctionCatalogue {
         }
         return FunctionInformations.TryGetValue(functionCall.Value.EntryPointAddress, out FunctionInformation? value) ? value : null;
     }
-    
+
+    /// <inheritdoc />
+    public void Clear() {
+        FunctionInformations.Clear();
+    }
 }
