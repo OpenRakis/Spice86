@@ -59,10 +59,10 @@ public static class HighlightBehavior {
 
             if (e.NewValue.Value) {
                 // Immediately apply highlight
-                textBlock.Background = HighlightingConverter.GetHighlightBackgroundBrush();
+                textBlock.Background = HighlightingConverter.GetHighlightBackgroundBrush(textBlock);
 
                 if (highlightForeground) {
-                    textBlock.Foreground = HighlightingConverter.GetHighlightForegroundBrush();
+                    textBlock.Foreground = HighlightingConverter.GetHighlightForegroundBrush(textBlock);
                 }
 
                 // If we are explicitly setting highlight, ensure animating flag is cleared
@@ -77,15 +77,15 @@ public static class HighlightBehavior {
                 SetIsAnimating(textBlock, true);
 
                 // Create animation for background fade-out
-                Animation backgroundAnimation = CreateAnimation(TextBlock.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(), HighlightingConverter.GetDefaultBackgroundBrush());
+                Animation backgroundAnimation = CreateAnimation(TextBlock.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(textBlock), HighlightingConverter.GetDefaultBackgroundBrush(textBlock));
 
                 // Start background animation
                 Task backgroundTask = backgroundAnimation.RunAsync(textBlock);
 
                 // If foreground highlighting is enabled, animate it too
                 if (highlightForeground) {
-                    Animation foregroundAnimation = CreateAnimation(TextBlock.ForegroundProperty, HighlightingConverter.GetHighlightForegroundBrush(),
-                        HighlightingConverter.GetDefaultForegroundBrush());
+                    Animation foregroundAnimation = CreateAnimation(TextBlock.ForegroundProperty, HighlightingConverter.GetHighlightForegroundBrush(textBlock),
+                        HighlightingConverter.GetDefaultForegroundBrush(textBlock));
 
                     // Start foreground animation
                     Task foregroundTask = foregroundAnimation.RunAsync(textBlock);
@@ -128,10 +128,10 @@ public static class HighlightBehavior {
 
             if (e.NewValue.Value) {
                 // Immediately apply highlight
-                contentControl.Background = HighlightingConverter.GetHighlightBackgroundBrush();
+                contentControl.Background = HighlightingConverter.GetHighlightBackgroundBrush(contentControl);
 
                 if (highlightForeground) {
-                    contentControl.Foreground = HighlightingConverter.GetHighlightForegroundBrush();
+                    contentControl.Foreground = HighlightingConverter.GetHighlightForegroundBrush(contentControl);
                 }
 
                 // Clear animating flag when set directly
@@ -146,16 +146,16 @@ public static class HighlightBehavior {
                 SetIsAnimating(contentControl, true);
 
                 // Create animation for background fade-out
-                Animation backgroundAnimation = CreateAnimation(TemplatedControl.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(),
-                    HighlightingConverter.GetDefaultBackgroundBrush());
+                Animation backgroundAnimation = CreateAnimation(TemplatedControl.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(contentControl),
+                    HighlightingConverter.GetDefaultBackgroundBrush(contentControl));
 
                 // Start background animation
                 Task backgroundTask = backgroundAnimation.RunAsync(contentControl);
 
                 // If foreground highlighting is enabled, animate it too
                 if (highlightForeground) {
-                    Animation foregroundAnimation = CreateAnimation(TemplatedControl.ForegroundProperty, HighlightingConverter.GetHighlightForegroundBrush(),
-                        HighlightingConverter.GetDefaultForegroundBrush());
+                    Animation foregroundAnimation = CreateAnimation(TemplatedControl.ForegroundProperty, HighlightingConverter.GetHighlightForegroundBrush(contentControl),
+                        HighlightingConverter.GetDefaultForegroundBrush(contentControl));
 
                     // Start foreground animation
                     Task foregroundTask = foregroundAnimation.RunAsync(contentControl);
@@ -186,7 +186,7 @@ public static class HighlightBehavior {
         if (e.Sender is Panel panel) {
             if (e.NewValue.Value) {
                 // Immediately apply highlight
-                panel.Background = HighlightingConverter.GetHighlightBackgroundBrush();
+                panel.Background = HighlightingConverter.GetHighlightBackgroundBrush(panel);
 
                 // Clear animating flag when set directly
                 SetIsAnimating(panel, false);
@@ -200,7 +200,7 @@ public static class HighlightBehavior {
                 SetIsAnimating(panel, true);
 
                 // Create animation for background fade-out
-                Animation backgroundAnimation = CreateAnimation(Panel.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(), HighlightingConverter.GetDefaultBackgroundBrush());
+                Animation backgroundAnimation = CreateAnimation(Panel.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(panel), HighlightingConverter.GetDefaultBackgroundBrush(panel));
 
                 // Start background animation
                 Task backgroundTask = backgroundAnimation.RunAsync(panel);
