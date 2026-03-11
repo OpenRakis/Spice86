@@ -17,6 +17,11 @@ public class JumpLinesControl : Control {
     private const double ArrowSize = 3;
     private const double PenThickness = 1;
 
+    private Pen? _cachedPen;
+    private IBrush? _cachedLineBrush;
+
+    private static readonly StreamGeometry ArrowGeometry = CreateArrowGeometry();
+
     /// <summary>
     /// The list of jump arc segments passing through this line.
     /// </summary>
@@ -84,6 +89,15 @@ public class JumpLinesControl : Control {
         return new Size(width, 0);
     }
 
+    private Pen GetOrCreatePen(IBrush brush) {
+        if (_cachedPen is not null && ReferenceEquals(_cachedLineBrush, brush)) {
+            return _cachedPen;
+        }
+        _cachedLineBrush = brush;
+        _cachedPen = new Pen(brush, PenThickness);
+        return _cachedPen;
+    }
+
     /// <inheritdoc />
     public override void Render(DrawingContext context) {
         base.Render(context);
@@ -95,7 +109,7 @@ public class JumpLinesControl : Control {
 
         IBrush lineBrush = LineBrush ?? Brushes.Gray;
         IBrush arrowBrush = ArrowBrush ?? lineBrush;
-        Pen pen = new(lineBrush, PenThickness);
+        Pen pen = GetOrCreatePen(lineBrush);
         double height = Bounds.Height;
         double width = Bounds.Width;
         double midY = height / 2;
@@ -105,9 +119,7 @@ public class JumpLinesControl : Control {
 
             switch (segment.Type) {
                 case JumpSegmentType.TopEnd:
-                    // Horizontal line from right edge to lane position
                     context.DrawLine(pen, new Point(width, midY), new Point(laneX, midY));
-                    // Vertical line from midpoint down to bottom edge
                     context.DrawLine(pen, new Point(laneX, midY), new Point(laneX, height));
                     if (segment.IsTarget) {
                         DrawArrow(context, arrowBrush, width, midY);
@@ -115,9 +127,7 @@ public class JumpLinesControl : Control {
                     break;
 
                 case JumpSegmentType.BottomEnd:
-                    // Horizontal line from right edge to lane position
                     context.DrawLine(pen, new Point(width, midY), new Point(laneX, midY));
-                    // Vertical line from top edge down to midpoint
                     context.DrawLine(pen, new Point(laneX, 0), new Point(laneX, midY));
                     if (segment.IsTarget) {
                         DrawArrow(context, arrowBrush, width, midY);
@@ -125,7 +135,6 @@ public class JumpLinesControl : Control {
                     break;
 
                 case JumpSegmentType.Middle:
-                    // Vertical line spanning full height
                     context.DrawLine(pen, new Point(laneX, 0), new Point(laneX, height));
                     break;
             }
@@ -133,16 +142,24 @@ public class JumpLinesControl : Control {
     }
 
     /// <summary>
-    /// Draws a small right-pointing arrowhead at the specified position.
+    /// Creates an arrow geometry centered at origin, pointing right. Tip at (0,0).
+    /// </summary>
+    private static StreamGeometry CreateArrowGeometry() {
+        StreamGeometry geometry = new();
+        using (StreamGeometryContext ctx = geometry.Open()) {
+            ctx.BeginFigure(new Point(0, 0), true);
+            ctx.LineTo(new Point(-ArrowSize * 2, -ArrowSize));
+            ctx.LineTo(new Point(-ArrowSize * 2, ArrowSize));
+            ctx.EndFigure(true);
+        }
+        return geometry;
+    }
+
+    /// <summary>
+    /// Draws the cached right-pointing arrowhead translated to the specified tip position.
     /// </summary>
     private static void DrawArrow(DrawingContext context, IBrush brush, double tipX, double tipY) {
-        StreamGeometry arrow = new();
-        using (StreamGeometryContext arrowCtx = arrow.Open()) {
-            arrowCtx.BeginFigure(new Point(tipX, tipY), true);
-            arrowCtx.LineTo(new Point(tipX - ArrowSize * 2, tipY - ArrowSize));
-            arrowCtx.LineTo(new Point(tipX - ArrowSize * 2, tipY + ArrowSize));
-            arrowCtx.EndFigure(true);
-        }
-        context.DrawGeometry(brush, null, arrow);
+        using DrawingContext.PushedState _ = context.PushTransform(Matrix.CreateTranslation(tipX, tipY));
+        context.DrawGeometry(brush, null, ArrowGeometry);
     }
 }
