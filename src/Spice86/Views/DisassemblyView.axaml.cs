@@ -67,6 +67,19 @@ public partial class DisassemblyView : UserControl {
         e.Handled = true;
     }
 
+    private void OnBranchTargetClicked(object? sender, TappedEventArgs e) {
+        if (sender is Control control) {
+            if (control.DataContext is DebuggerLineViewModel debuggerLine &&
+                debuggerLine.BranchTarget != null && _viewModel != null) {
+                object branchTarget = debuggerLine.BranchTarget;
+                if (_viewModel.GoToAddressCommand.CanExecute(branchTarget)) {
+                    _viewModel.GoToAddressCommand.Execute(branchTarget);
+                    e.Handled = true;
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// Event handler for when the function selection AutoCompleteBox gets focus.
     /// </summary>

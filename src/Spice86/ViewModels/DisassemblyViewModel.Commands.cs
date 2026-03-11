@@ -9,6 +9,7 @@ using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
+using Spice86.Shared.Utils;
 
 public partial class DisassemblyViewModel {
     private DebuggerLineViewModel? _pendingBreakpointDebuggerLine;
@@ -60,21 +61,33 @@ public partial class DisassemblyViewModel {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void StepInto() {
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Setting unconditional breakpoint for step into");
-        }
+        SegmentedAddress currentAddress = State.IpSegmentedAddress;
+        DebuggerLineViewModel debuggerLine = EnsureAddressIsLoaded(currentAddress);
 
-        SegmentedAddress? currentAddress = State.IpSegmentedAddress;
+        if (debuggerLine.BranchTarget is { } branchTarget) {
+            uint targetPhysical = MemoryUtils.ToPhysicalAddress(branchTarget.Segment, branchTarget.Offset);
+            _breakpointsViewModel.AddAddressBreakpoint(targetPhysical, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
+                Pause("Step into breakpoint was reached");
+            }, null, "Step into breakpoint", null);
 
-        _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
-            Pause("Step into unconditional breakpoint was reached");
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("Step into breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
+            if (debuggerLine.IsConditionalBranch) {
+                uint fallThroughAddress = debuggerLine.NextAddress;
+                _breakpointsViewModel.AddAddressBreakpoint(fallThroughAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
+                    Pause("Step into breakpoint was reached");
+                }, null, "Step into fall-through breakpoint", null);
             }
-        }, true);
-
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Resuming execution for step into");
+        } else if (debuggerLine.ContinuesToNextInstruction) {
+            uint nextAddress = debuggerLine.NextAddress;
+            _breakpointsViewModel.AddAddressBreakpoint(nextAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
+                Pause("Step into breakpoint was reached");
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("Step into breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
+                }
+            }, null, "Step into breakpoint", null);
+        } else {
+            _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
+                Pause("Step into breakpoint was reached");
+            }, true);
         }
         _pauseHandler.Resume();
     }
