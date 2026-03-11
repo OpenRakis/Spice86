@@ -85,6 +85,11 @@
 
             <!-- View management-->
             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
+                <ToggleButton
+                    IsChecked="{Binding ShowJumpLines}"
+                    ToolTip.Tip="Toggle jump indicator lines">
+                    <fluent:SymbolIcon Symbol="BranchFork" Width="20" Height="20" />
+                </ToggleButton>
                 <Button
                     HotKey="Ctrl+F4"
                     ToolTip.Tip="Close view (Ctrl-F4)"
@@ -180,7 +185,7 @@
                                 </Style>
                             </ContentControl.Styles>
 
-                            <Grid ColumnDefinitions="Auto, Auto, *,4*,Auto,2*" Margin="0">
+                            <Grid ColumnDefinitions="Auto, Auto, Auto, *,4*,Auto,2*" Margin="0">
                                 <!-- Breakpoint indicator -->
                                 <Border Grid.Column="0"
                                         MinWidth="16"
@@ -206,15 +211,25 @@
                                         Margin="0,0,4,0" />
                                 </Border>
 
+                                <!-- Jump lines -->
+                                <controls:JumpLinesControl Grid.Column="1"
+                                                           IsVisible="{Binding #DisassemblyListBox.((viewModels:IDisassemblyViewModel)DataContext).ShowJumpLines}"
+                                                           Segments="{Binding JumpArcSegments}"
+                                                           MaxLanes="{Binding MaxJumpLanes}"
+                                                           LineBrush="{DynamicResource DisassemblyJumpLineBrush}"
+                                                           ArrowBrush="{DynamicResource DisassemblyJumpArrowBrush}"
+                                                           VerticalAlignment="Stretch"
+                                                           Margin="0,0,2,0" />
+
                                 <!-- Address -->
-                                <SelectableTextBlock Grid.Column="1"
+                                <SelectableTextBlock Grid.Column="2"
                                                      Text="{Binding SegmentedAddress}"
                                                      Foreground="{DynamicResource DisassemblyFunctionAddressBrush}"
                                                      FontWeight="SemiBold"
                                                      Margin="0,0,6,0" />
 
                                 <!-- Bytes -->
-                                <SelectableTextBlock Grid.Column="2"
+                                <SelectableTextBlock Grid.Column="3"
                                                      Text="{Binding ByteString}"
                                                      Foreground="{DynamicResource DisassemblyNumberBrush}"
                                                      FontFamily="Consolas,Menlo,Monaco,monospace"
@@ -223,12 +238,12 @@
                                                      Margin="6,0,0,0" />
 
                                 <!-- Instruction -->
-                                <SelectableTextBlock Grid.Column="3"
+                                <SelectableTextBlock Grid.Column="4"
                                                      Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
                                                      Margin="12,0,0,0" />
 
                                 <!-- Branch target indicator -->
-                                <TextBlock Grid.Column="4"
+                                <TextBlock Grid.Column="5"
                                            Text="{Binding BranchTargetText}"
                                            Foreground="{DynamicResource DisassemblyBranchTargetBrush}"
                                            FontSize="11"
@@ -242,7 +257,7 @@
                                 </TextBlock>
 
                                 <!-- Function Name -->
-                                <SelectableTextBlock Grid.Column="5"
+                                <SelectableTextBlock Grid.Column="6"
                                                      Text="{Binding Function.Name, FallbackValue=''}"
                                                      Foreground="{DynamicResource DisassemblyFunctionBrush}"
                                                      Margin="12,0,0,0" />
