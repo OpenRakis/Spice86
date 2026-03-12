@@ -1179,6 +1179,31 @@ public sealed class SoundChannel {
     }
 
     /// <summary>
+    /// Adds stereo 32-bit float samples that are normalized to [-1..1], scaling them to the mixer's
+    /// expected int16 amplitude range before mixing.
+    /// </summary>
+    /// <param name="numFrames">The number of stereo frames to add.</param>
+    /// <param name="data">
+    /// Interleaved stereo float samples normalized to [-1..1]. The values are scaled in-place
+    /// to int16 range before being submitted to the mixer.
+    /// </param>
+    /// <remarks>
+    /// The mixer pipeline normalizes samples by dividing by 32768 at the final output stage.
+    /// Synthesizers that produce normalized floats must therefore scale up to int16 range first.
+    /// This method performs that scaling in-place on the provided <paramref name="data"/> span.
+    /// </remarks>
+    public void AddSamplesNormalized(int numFrames, Span<float> data) {
+        if (numFrames <= 0) {
+            return;
+        }
+        int sampleCount = numFrames * 2;
+        for (int i = 0; i < sampleCount; i++) {
+            data[i] *= short.MaxValue;
+        }
+        AddSamplesFloatInternal(numFrames, data);
+    }
+
+    /// <summary>
     /// Applies fade-out or signal detection to a frame if sleep is enabled.
     /// Called by mixer during frame processing.
     /// </summary>

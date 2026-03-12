@@ -73,7 +73,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
     ~GeneralMidiDevice() => Dispose(false);
 
     private void RenderCallback(int framesRequested) {
-        if (_mixerChannel is null) {
+        if (_disposed || _mixerChannel is null) {
             return;
         }
 
@@ -83,16 +83,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
             Span<float> renderSpan = _buffer.AsSpan(0, framesToRender * 2);
             renderSpan.Clear();
             FillBuffer(_synthesizer, renderSpan);
-
-            // MeltySynth renders normalized floats (-1.0..1.0), but the mixer
-            // pipeline expects int16-scale values because the master output
-            // divides by 32768.  Scale up to match.
-            int sampleCount = framesToRender * 2;
-            for (int i = 0; i < sampleCount; i++) {
-                renderSpan[i] *= short.MaxValue;
-            }
-
-            _mixerChannel.AddSamplesFloat(framesToRender, renderSpan);
+            _mixerChannel.AddSamplesNormalized(framesToRender, renderSpan);
             framesRemaining -= framesToRender;
         }
     }
@@ -147,6 +138,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                _mixerChannel?.Enable(false);
                 if (OperatingSystem.IsWindows() &&
                     _configuration.AudioEngine != AudioEngine.Dummy &&
                     _midiOutHandle != IntPtr.Zero) {

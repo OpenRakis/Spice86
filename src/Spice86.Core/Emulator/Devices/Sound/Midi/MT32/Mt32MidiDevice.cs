@@ -14,7 +14,7 @@ using System.Linq;
 /// </summary>
 public sealed class Mt32MidiDevice : MidiDevice {
     private readonly Mt32Context _context;
-    private readonly SoundChannel _mixerChannel;
+    private SoundChannel? _mixerChannel;
 
     /// <summary>
     /// Indicates whether this object has been disposed.
@@ -31,13 +31,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <param name="loggerService">The logger service to use for logging messages.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
     public Mt32MidiDevice(SoftwareMixer mixer, string romsPath, ILoggerService loggerService) {
-        _mixerChannel = mixer.AddChannel(RenderCallback, 48000, nameof(Mt32MidiDevice), new HashSet<ChannelFeature> {
-            ChannelFeature.Sleep,
-            ChannelFeature.ReverbSend,
-            ChannelFeature.ChorusSend,
-            ChannelFeature.Stereo,
-            ChannelFeature.Synthesizer
-        });
         _context = new();
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
@@ -53,6 +46,13 @@ public sealed class Mt32MidiDevice : MidiDevice {
         _context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(48000);
         _context.SetSampleRate(48000);
         _context.OpenSynth();
+        _mixerChannel = mixer.AddChannel(RenderCallback, 48000, nameof(Mt32MidiDevice), new HashSet<ChannelFeature> {
+            ChannelFeature.Sleep,
+            ChannelFeature.ReverbSend,
+            ChannelFeature.ChorusSend,
+            ChannelFeature.Stereo,
+            ChannelFeature.Synthesizer
+        });
     }
 
     /// <inheritdoc/>
@@ -72,22 +72,16 @@ public sealed class Mt32MidiDevice : MidiDevice {
     }
 
     private void RenderCallback(int framesRequested) {
+        if (_disposed) {
+            return;
+        }
         int framesRemaining = framesRequested;
         while (framesRemaining > 0) {
             int framesToRender = Math.Min(framesRemaining, _buffer.Length / 2);
             Span<float> renderSpan = _buffer.AsSpan(0, framesToRender * 2);
             renderSpan.Clear();
             _context.Render(renderSpan);
-
-            // MUNT renders normalized floats (-1.0..1.0), but the mixer
-            // pipeline expects int16-scale values because the master output
-            // divides by 32768.  Scale up to match.
-            int sampleCount = framesToRender * 2;
-            for (int i = 0; i < sampleCount; i++) {
-                renderSpan[i] *= short.MaxValue;
-            }
-
-            _mixerChannel.AddSamplesFloat(framesToRender, renderSpan);
+            _mixerChannel?.AddSamplesNormalized(framesToRender, renderSpan);
             framesRemaining -= framesToRender;
         }
     }
@@ -124,6 +118,7 @@ public sealed class Mt32MidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                _mixerChannel?.Enable(false);
                 _context.Dispose();
             }
             _disposed = true;
