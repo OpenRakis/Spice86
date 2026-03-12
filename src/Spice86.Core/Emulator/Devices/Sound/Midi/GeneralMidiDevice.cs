@@ -54,7 +54,13 @@ public sealed class GeneralMidiDevice : MidiDevice {
             }
         }
         if (!OperatingSystem.IsWindows() && configuration.AudioEngine != AudioEngine.Dummy) {
-            _mixerChannel = mixer.AddChannel(RenderCallback, 48000, nameof(GeneralMidiDevice), new HashSet<ChannelFeature> { ChannelFeature.Stereo, ChannelFeature.Synthesizer });
+            _mixerChannel = mixer.AddChannel(RenderCallback, 48000, nameof(GeneralMidiDevice), new HashSet<ChannelFeature> {
+                ChannelFeature.Sleep,
+                ChannelFeature.ReverbSend,
+                ChannelFeature.ChorusSend,
+                ChannelFeature.Stereo,
+                ChannelFeature.Synthesizer
+            });
             // DON'T enable the channel here - it starts disabled and wakes up on first MIDI message
             // The channel will be enabled when MIDI messages are played (via WakeUp call)
         }
@@ -71,12 +77,23 @@ public sealed class GeneralMidiDevice : MidiDevice {
             return;
         }
 
-        ((Span<float>)_buffer).Clear();
-        FillBuffer(_synthesizer, _buffer);
+        int framesRemaining = framesRequested;
+        while (framesRemaining > 0) {
+            int framesToRender = Math.Min(framesRemaining, _buffer.Length / 2);
+            Span<float> renderSpan = _buffer.AsSpan(0, framesToRender * 2);
+            renderSpan.Clear();
+            FillBuffer(_synthesizer, renderSpan);
 
-        _mixerChannel.AudioFrames.Clear();
-        for (int i = 0; i < _buffer.Length && i < framesRequested * 2; i += 2) {
-            _mixerChannel.AudioFrames.Add(new AudioFrame(_buffer[i], _buffer[i + 1]));
+            // MeltySynth renders normalized floats (-1.0..1.0), but the mixer
+            // pipeline expects int16-scale values because the master output
+            // divides by 32768.  Scale up to match.
+            int sampleCount = framesToRender * 2;
+            for (int i = 0; i < sampleCount; i++) {
+                renderSpan[i] *= short.MaxValue;
+            }
+
+            _mixerChannel.AddSamplesFloat(framesToRender, renderSpan);
+            framesRemaining -= framesToRender;
         }
     }
 
