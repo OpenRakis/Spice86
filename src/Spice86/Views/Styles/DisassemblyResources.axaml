@@ -6,6 +6,7 @@
         <ResourceDictionary x:Key="Light">
             <SolidColorBrush x:Key="DisassemblyBreakpointDisabledBrush" Color="#F0F0F0" />
             <SolidColorBrush x:Key="DisassemblyBreakpointEnabledBrush" Color="#FF9696" />
+            <SolidColorBrush x:Key="DisassemblyBranchTargetBrush" Color="#808080" />
             <SolidColorBrush x:Key="DisassemblyDataBrush" Color="#009660" />
             <SolidColorBrush x:Key="DisassemblyDecoratorBrush" Color="#969660" />
             <SolidColorBrush x:Key="DisassemblyDirectiveBrush" Color="#0000FF" />
@@ -28,6 +29,7 @@
         <ResourceDictionary x:Key="Dark">
             <SolidColorBrush x:Key="DisassemblyBreakpointDisabledBrush" Color="#404040" />
             <SolidColorBrush x:Key="DisassemblyBreakpointEnabledBrush" Color="#800000" />
+            <SolidColorBrush x:Key="DisassemblyBranchTargetBrush" Color="#808080" />
             <SolidColorBrush x:Key="DisassemblyDataBrush" Color="#006030" />
             <SolidColorBrush x:Key="DisassemblyDecoratorBrush" Color="#464640" />
             <SolidColorBrush x:Key="DisassemblyDirectiveBrush" Color="#80AAFF" />

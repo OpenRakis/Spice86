@@ -17,7 +17,7 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-public class CfgCpu : IFunctionHandlerProvider {
+public class CfgCpu : IFunctionHandlerProvider, IClearable {
     private readonly ILoggerService _loggerService;
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly State _state;
@@ -56,9 +56,13 @@ public class CfgCpu : IFunctionHandlerProvider {
     public bool IsInitialExecutionContext => ExecutionContextManager.CurrentExecutionContext.Depth == 0;
     private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
     
+    public ICfgNode ToExecute() {
+        return CfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
+    }
+
     /// <inheritdoc />
     public void ExecuteNext() {
-        ICfgNode toExecute = CfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
+        ICfgNode toExecute = ToExecute();
 
         // Execute the node
         try {
@@ -106,7 +110,7 @@ public class CfgCpu : IFunctionHandlerProvider {
         // Before any external interrupt has a chance to execute, check if we landed in a place where context should be switched.
         if (toExecute.CanCauseContextRestore) {
             // We only attempt to restore contexts after IRET
-            // Otherwise, we may hit via regular flow an instruction that is at the return address of an existing IRET and that is waiting to be restored, and restore it. 
+            // Otherwise, we may hit via regular flow an instruction that is at the return address of an existing IRET and that is waiting to be restored, and restore it.
             _executionContextManager.RestoreExecutionContextIfNeeded(_state.IpSegmentedAddress);
         }
 
@@ -129,5 +133,11 @@ public class CfgCpu : IFunctionHandlerProvider {
 
         _executionContextManager.SignalNewExecutionContext(target, expectedReturn);
         _executionContextManager.CurrentExecutionContext.FunctionHandler.Call(CallType.EXTERNAL_INTERRUPT, _state.IpSegmentedAddress, expectedReturn, null);
+    }
+
+    /// <inheritdoc />
+    public void Clear() {
+        CfgNodeFeeder.InstructionsFeeder.Clear();
+        _executionContextManager.Clear();
     }
 }

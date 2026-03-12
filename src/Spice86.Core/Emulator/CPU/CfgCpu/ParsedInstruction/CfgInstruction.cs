@@ -36,6 +36,8 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
                 AddressSize32Prefix = addressSize32Prefix;
             } else if (prefix is RepPrefix repPrefix) {
                 RepPrefix = repPrefix;
+            } else if (prefix is LockPrefix lockPrefix) {
+                LockPrefix = lockPrefix;
             }
         }
 
@@ -92,6 +94,7 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     public AddressSize32Prefix? AddressSize32Prefix { get; }
     public RepPrefix? RepPrefix { get; }
 
+    public LockPrefix? LockPrefix { get; }
     public byte Length { get; private set; }
 
     public SegmentedAddress NextInMemoryAddress { get; private set; }
