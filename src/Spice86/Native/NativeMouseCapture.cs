@@ -47,6 +47,22 @@ namespace Spice86.Native {
         [DllImport("libX11.so.6")]
         private static extern IntPtr XDefaultRootWindow(IntPtr display);
 
+        [DllImport("libX11.so.6")]
+        private static extern int XSync(IntPtr display, bool discard);
+
+        [DllImport("libX11.so.6")]
+        private static extern IntPtr XCreateBitmapFromData(IntPtr display, IntPtr drawable, byte[] data, int width, int height);
+
+        [DllImport("libX11.so.6")]
+        private static extern IntPtr XCreatePixmapCursor(IntPtr display, IntPtr source, IntPtr mask,
+            ref XColor foreColor, ref XColor backColor, int x, int y);
+
+        [DllImport("libX11.so.6")]
+        private static extern int XFreeCursor(IntPtr display, IntPtr cursor);
+
+        [DllImport("libX11.so.6")]
+        private static extern int XFreePixmap(IntPtr display, IntPtr pixmap);
+
         [StructLayout(LayoutKind.Sequential)]
         private struct Rect {
             public int Left;
@@ -59,6 +75,16 @@ namespace Spice86.Native {
         private struct Point {
             public int X;
             public int Y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct XColor {
+            public ulong Pixel;
+            public ushort Red;
+            public ushort Green;
+            public ushort Blue;
+            public byte Flags;
+            public byte Pad;
         }
 
         private const int GrabSuccess = 0;
@@ -132,6 +158,7 @@ namespace Spice86.Native {
 
             if (IsLinux && _x11Display != IntPtr.Zero) {
                 int result = XUngrabPointer(_x11Display, 0);
+                XSync(_x11Display, false);
                 bool success = result == GrabSuccess;
                 if (success) {
                     _isCaptured = false;
@@ -166,6 +193,12 @@ namespace Spice86.Native {
             }
 
             int eventMask = PointerMotionMask | ButtonPressMask | ButtonReleaseMask;
+
+            // Clear a potential implicit button grab held by this client (common on ButtonPressed handlers).
+            XUngrabPointer(_x11Display, 0);
+
+            IntPtr blankCursor = CreateBlankCursor();
+
             int result = XGrabPointer(
                 _x11Display,
                 windowHandle,
@@ -174,10 +207,34 @@ namespace Spice86.Native {
                 GrabModeAsync,
                 GrabModeAsync,
                 windowHandle,
-                IntPtr.Zero,
+                blankCursor,
                 0);
 
+            if (blankCursor != IntPtr.Zero) {
+                XFreeCursor(_x11Display, blankCursor);
+            }
+
+            XSync(_x11Display, false);
+
             return result == GrabSuccess;
+        }
+
+        private static IntPtr CreateBlankCursor() {
+            IntPtr rootWindow = XDefaultRootWindow(_x11Display);
+            if (rootWindow == IntPtr.Zero) {
+                return IntPtr.Zero;
+            }
+
+            byte[] data = new byte[1];
+            IntPtr pixmap = XCreateBitmapFromData(_x11Display, rootWindow, data, 1, 1);
+            if (pixmap == IntPtr.Zero) {
+                return IntPtr.Zero;
+            }
+
+            XColor black = new XColor();
+            IntPtr cursor = XCreatePixmapCursor(_x11Display, pixmap, pixmap, ref black, ref black, 0, 0);
+            XFreePixmap(_x11Display, pixmap);
+            return cursor;
         }
     }
 }
