@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Threading;
 
 namespace Spice86.Native;
@@ -7,9 +6,6 @@ namespace Spice86.Native;
 internal static class X11MouseCaptureBackend {
     private const int GrabSuccess = 0;
     private const int AlreadyGrabbed = 1;
-    private const int GrabInvalidTime = 2;
-    private const int GrabNotViewable = 3;
-    private const int GrabFrozen = 4;
 
     private const int GrabModeAsync = 1;
     private const int PointerMotionMask = 1 << 6;
@@ -32,7 +28,6 @@ internal static class X11MouseCaptureBackend {
 
         if (_display == IntPtr.Zero) {
             _display = NativeMouseCaptureInterop.XOpenDisplay(IntPtr.Zero);
-            Debug.Assert(_display != IntPtr.Zero, "XOpenDisplay failed. DISPLAY might be unavailable.");
         }
 
         if (_display == IntPtr.Zero) {
@@ -41,7 +36,6 @@ internal static class X11MouseCaptureBackend {
 
         if (_emptyCursor == IntPtr.Zero) {
             _emptyCursor = CreateEmptyCursor();
-            Debug.Assert(_emptyCursor != IntPtr.Zero, "Failed to create empty X11 cursor.");
         }
 
         if (_emptyCursor == IntPtr.Zero) {
@@ -72,9 +66,7 @@ internal static class X11MouseCaptureBackend {
             Thread.Sleep(GrabAttemptDelayMilliseconds);
         }
 
-        int syncResult = NativeMouseCaptureInterop.XSync(_display, 0);
-        Debug.Assert(syncResult == 0, $"XSync failed after grab: {syncResult}.");
-        Debug.Assert(result == GrabSuccess, $"XGrabPointer failed: {GetGrabResultName(result)} ({result}).");
+        NativeMouseCaptureInterop.XSync(_display, 0);
 
         return result == GrabSuccess;
     }
@@ -85,14 +77,8 @@ internal static class X11MouseCaptureBackend {
         }
 
         int result = NativeMouseCaptureInterop.XUngrabPointer(_display, CurrentTime);
-        if (result != GrabSuccess) {
-            Debug.Assert(false, $"XUngrabPointer failed: {GetGrabResultName(result)} ({result}).");
-        }
 
-        int syncResult = NativeMouseCaptureInterop.XSync(_display, 0);
-        if (syncResult != 0) {
-            Debug.Assert(false, $"XSync failed after ungrab: {syncResult}.");
-        }
+        NativeMouseCaptureInterop.XSync(_display, 0);
 
         _isCaptured = false;
 
@@ -110,27 +96,23 @@ internal static class X11MouseCaptureBackend {
         }
 
         if (_emptyCursor != IntPtr.Zero) {
-            int freeCursorResult = NativeMouseCaptureInterop.XFreeCursor(_display, _emptyCursor);
-            Debug.Assert(freeCursorResult == 0, $"XFreeCursor failed: {freeCursorResult}.");
+            NativeMouseCaptureInterop.XFreeCursor(_display, _emptyCursor);
             _emptyCursor = IntPtr.Zero;
         }
 
-        int closeDisplayResult = NativeMouseCaptureInterop.XCloseDisplay(_display);
-        Debug.Assert(closeDisplayResult == 0, $"XCloseDisplay failed: {closeDisplayResult}.");
+        NativeMouseCaptureInterop.XCloseDisplay(_display);
         _display = IntPtr.Zero;
         _isCaptured = false;
     }
 
     private static IntPtr CreateEmptyCursor() {
         IntPtr rootWindow = NativeMouseCaptureInterop.XDefaultRootWindow(_display);
-        Debug.Assert(rootWindow != IntPtr.Zero, "XDefaultRootWindow failed.");
         if (rootWindow == IntPtr.Zero) {
             return IntPtr.Zero;
         }
 
         byte[] data = new byte[1];
         IntPtr pixmap = NativeMouseCaptureInterop.XCreateBitmapFromData(_display, rootWindow, data, 1, 1);
-        Debug.Assert(pixmap != IntPtr.Zero, "XCreateBitmapFromData failed for empty cursor pixmap.");
         if (pixmap == IntPtr.Zero) {
             return IntPtr.Zero;
         }
@@ -138,21 +120,8 @@ internal static class X11MouseCaptureBackend {
         NativeMouseCaptureInterop.XColor black = new NativeMouseCaptureInterop.XColor();
         IntPtr cursor = NativeMouseCaptureInterop.XCreatePixmapCursor(_display, pixmap, pixmap, ref black, ref black, 0, 0);
 
-        int freePixmapResult = NativeMouseCaptureInterop.XFreePixmap(_display, pixmap);
-        Debug.Assert(freePixmapResult == 0, $"XFreePixmap failed: {freePixmapResult}.");
-        Debug.Assert(cursor != IntPtr.Zero, "XCreatePixmapCursor failed.");
+        NativeMouseCaptureInterop.XFreePixmap(_display, pixmap);
 
         return cursor;
-    }
-
-    private static string GetGrabResultName(int grabResult) {
-        return grabResult switch {
-            GrabSuccess => nameof(GrabSuccess),
-            AlreadyGrabbed => nameof(AlreadyGrabbed),
-            GrabInvalidTime => nameof(GrabInvalidTime),
-            GrabNotViewable => nameof(GrabNotViewable),
-            GrabFrozen => nameof(GrabFrozen),
-            _ => $"Unknown({grabResult})"
-        };
     }
 }
