@@ -10,7 +10,6 @@ using Spice86.ViewModels;
 namespace Spice86.Views;
 
 internal partial class MainWindow : Window {
-    private bool _isMouseCaptured = false;
     private bool _restoreCaptureOnActivation = false;
     private IntPtr _windowHandle;
 
@@ -40,13 +39,11 @@ internal partial class MainWindow : Window {
                 Image.PointerMoved += OnMouseMoved;
                 Image.PointerPressed += OnPointerPressed;
                 Image.PointerReleased += OnMouseButtonUp;
-                
+
                 if (_windowHandle != IntPtr.Zero && Image.IsVisible) {
-                    if (NativeMouseCapture.EnableCapture(_windowHandle)) {
-                        _isMouseCaptured = true;
-                    }
+                    NativeMouseCapture.EnableCapture(_windowHandle);
                 }
-                
+
                 UpdateCaptureUiState();
                 mainVm.StartEmulator();
             }
@@ -99,22 +96,23 @@ internal partial class MainWindow : Window {
     }
 
     private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e) {
-        if (_isMouseCaptured) {
+        if (NativeMouseCapture.IsCaptured) {
             NativeMouseCapture.EnableCapture(_windowHandle);
+            UpdateCaptureUiState();
         }
     }
 
     private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e) {
-        if (_isMouseCaptured) {
+        if (NativeMouseCapture.IsCaptured) {
             NativeMouseCapture.EnableCapture(_windowHandle);
+            UpdateCaptureUiState();
         }
     }
 
     private void OnWindowDeactivated(object? sender, EventArgs e) {
-        if (_isMouseCaptured) {
+        if (NativeMouseCapture.IsCaptured) {
             _restoreCaptureOnActivation = true;
             NativeMouseCapture.DisableCapture();
-            _isMouseCaptured = false;
             UpdateCaptureUiState();
         }
     }
@@ -127,7 +125,7 @@ internal partial class MainWindow : Window {
     }
 
     private void ToggleMouseCapture() {
-        if (_isMouseCaptured) {
+        if (NativeMouseCapture.IsCaptured) {
             DisableMouseCapture();
         } else {
             AttemptCapture();
@@ -143,22 +141,19 @@ internal partial class MainWindow : Window {
             return;
         }
 
-        if (NativeMouseCapture.EnableCapture(_windowHandle)) {
-            _isMouseCaptured = true;
-            UpdateCaptureUiState();
-        }
+        NativeMouseCapture.EnableCapture(_windowHandle);
+        UpdateCaptureUiState();
     }
 
     private void DisableMouseCapture() {
         NativeMouseCapture.DisableCapture();
-        _isMouseCaptured = false;
         _restoreCaptureOnActivation = false;
         UpdateCaptureUiState();
     }
 
     private void UpdateCaptureUiState() {
         if (DataContext is MainWindowViewModel mainVm) {
-            mainVm.UpdateMouseCaptureHint(_isMouseCaptured);
+            mainVm.UpdateMouseCaptureHint(NativeMouseCapture.IsCaptured);
         }
     }
 
