@@ -9,32 +9,54 @@ internal static class MacOsMouseCaptureBackend {
 
     public static bool EnableCapture() {
         uint mainDisplay = NativeMouseCaptureInterop.CGMainDisplayID();
-        Debug.Assert(mainDisplay != 0, "CGMainDisplayID returned 0.");
+        if (mainDisplay == 0) {
+            Debug.Assert(false, "CGMainDisplayID returned 0.");
+            _isCaptured = false;
+            return false;
+        }
 
         int hideResult = NativeMouseCaptureInterop.CGDisplayHideCursor(mainDisplay);
-        Debug.Assert(hideResult == CgErrorSuccess, $"CGDisplayHideCursor failed: {hideResult}.");
+        if (hideResult != CgErrorSuccess) {
+            Debug.Assert(false, $"CGDisplayHideCursor failed: {hideResult}.");
+            _isCaptured = false;
+            return false;
+        }
 
         int associateResult = NativeMouseCaptureInterop.CGAssociateMouseAndMouseCursorPosition(false);
-        Debug.Assert(associateResult == CgErrorSuccess,
-            $"CGAssociateMouseAndMouseCursorPosition(false) failed: {associateResult}.");
+        if (associateResult != CgErrorSuccess) {
+            Debug.Assert(false, $"CGAssociateMouseAndMouseCursorPosition(false) failed: {associateResult}.");
+            _isCaptured = false;
+            return false;
+        }
 
-        _isCaptured = hideResult == CgErrorSuccess && associateResult == CgErrorSuccess;
-        return _isCaptured;
+        _isCaptured = true;
+        return true;
     }
 
     public static bool DisableCapture() {
         uint mainDisplay = NativeMouseCaptureInterop.CGMainDisplayID();
-        Debug.Assert(mainDisplay != 0, "CGMainDisplayID returned 0.");
+        if (mainDisplay == 0) {
+            Debug.Assert(false, "CGMainDisplayID returned 0.");
+            _isCaptured = false;
+            return false;
+        }
 
         int showResult = NativeMouseCaptureInterop.CGDisplayShowCursor(mainDisplay);
-        Debug.Assert(showResult == CgErrorSuccess, $"CGDisplayShowCursor failed: {showResult}.");
+        if (showResult != CgErrorSuccess) {
+            Debug.Assert(false, $"CGDisplayShowCursor failed: {showResult}.");
+            _isCaptured = false;
+            return false;
+        }
 
         int associateResult = NativeMouseCaptureInterop.CGAssociateMouseAndMouseCursorPosition(true);
-        Debug.Assert(associateResult == CgErrorSuccess,
-            $"CGAssociateMouseAndMouseCursorPosition(true) failed: {associateResult}.");
+        if (associateResult != CgErrorSuccess) {
+            Debug.Assert(false, $"CGAssociateMouseAndMouseCursorPosition(true) failed: {associateResult}.");
+            _isCaptured = false;
+            return false;
+        }
 
         _isCaptured = false;
-        return showResult == CgErrorSuccess && associateResult == CgErrorSuccess;
+        return true;
     }
 
     public static void Cleanup() {
