@@ -14,8 +14,9 @@ internal static class WindowsMouseCaptureBackend {
 
         Marshal.SetLastPInvokeError(0);
         bool gotClientRect = NativeMouseCaptureInterop.GetClientRect(windowHandle, out NativeMouseCaptureInterop.ClipRect clientRect);
-        Debug.Assert(gotClientRect, $"GetClientRect failed with error {Marshal.GetLastPInvokeError()}.");
         if (!gotClientRect) {
+            int getClientRectError = Marshal.GetLastPInvokeError();
+            Debug.Assert(false, $"GetClientRect failed with error {getClientRectError}.");
             return false;
         }
 
@@ -24,15 +25,17 @@ internal static class WindowsMouseCaptureBackend {
 
         Marshal.SetLastPInvokeError(0);
         bool topLeftConverted = NativeMouseCaptureInterop.ClientToScreen(windowHandle, ref topLeft);
-        Debug.Assert(topLeftConverted, $"ClientToScreen(top-left) failed with error {Marshal.GetLastPInvokeError()}.");
         if (!topLeftConverted) {
+            int topLeftError = Marshal.GetLastPInvokeError();
+            Debug.Assert(false, $"ClientToScreen(top-left) failed with error {topLeftError}.");
             return false;
         }
 
         Marshal.SetLastPInvokeError(0);
         bool bottomRightConverted = NativeMouseCaptureInterop.ClientToScreen(windowHandle, ref bottomRight);
-        Debug.Assert(bottomRightConverted, $"ClientToScreen(bottom-right) failed with error {Marshal.GetLastPInvokeError()}.");
         if (!bottomRightConverted) {
+            int bottomRightError = Marshal.GetLastPInvokeError();
+            Debug.Assert(false, $"ClientToScreen(bottom-right) failed with error {bottomRightError}.");
             return false;
         }
 
@@ -46,12 +49,16 @@ internal static class WindowsMouseCaptureBackend {
         Marshal.SetLastPInvokeError(0);
         IntPtr previousCaptureHandle = NativeMouseCaptureInterop.SetCapture(windowHandle);
         int setCaptureError = Marshal.GetLastPInvokeError();
-        Debug.Assert(previousCaptureHandle != IntPtr.Zero || setCaptureError == 0,
-            $"SetCapture failed with error {Marshal.GetLastPInvokeError()}.");
+        if (previousCaptureHandle == IntPtr.Zero && setCaptureError != 0) {
+            Debug.Assert(false, $"SetCapture failed with error {setCaptureError}.");
+        }
 
         Marshal.SetLastPInvokeError(0);
         bool clipResult = NativeMouseCaptureInterop.ClipCursor(ref screenRect);
-        Debug.Assert(clipResult, $"ClipCursor failed to confine cursor to window rect with error {Marshal.GetLastPInvokeError()}.");
+        if (!clipResult) {
+            int clipError = Marshal.GetLastPInvokeError();
+            Debug.Assert(false, $"ClipCursor failed to confine cursor to window rect with error {clipError}.");
+        }
 
         _isCaptured = clipResult;
         return _isCaptured;
@@ -61,12 +68,16 @@ internal static class WindowsMouseCaptureBackend {
         Marshal.SetLastPInvokeError(0);
         bool releaseResult = NativeMouseCaptureInterop.ReleaseCapture();
         int releaseError = Marshal.GetLastPInvokeError();
-        Debug.Assert(releaseResult || releaseError == 0,
-            $"ReleaseCapture failed with error {releaseError}.");
+        if (!releaseResult && releaseError != 0) {
+            Debug.Assert(false, $"ReleaseCapture failed with error {releaseError}.");
+        }
 
         Marshal.SetLastPInvokeError(0);
         bool clipResult = NativeMouseCaptureInterop.ClipCursor(IntPtr.Zero);
-        Debug.Assert(clipResult, $"ClipCursor failed to release cursor confinement with error {Marshal.GetLastPInvokeError()}.");
+        if (!clipResult) {
+            int clipError = Marshal.GetLastPInvokeError();
+            Debug.Assert(false, $"ClipCursor failed to release cursor confinement with error {clipError}.");
+        }
 
         _isCaptured = false;
         return clipResult;

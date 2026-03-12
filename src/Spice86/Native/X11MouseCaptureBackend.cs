@@ -85,17 +85,18 @@ internal static class X11MouseCaptureBackend {
         }
 
         int result = NativeMouseCaptureInterop.XUngrabPointer(_display, CurrentTime);
-        Debug.Assert(result == GrabSuccess, $"XUngrabPointer failed: {GetGrabResultName(result)} ({result}).");
-
-        int syncResult = NativeMouseCaptureInterop.XSync(_display, 0);
-        Debug.Assert(syncResult == 0, $"XSync failed after ungrab: {syncResult}.");
-
-        bool success = result == GrabSuccess;
-        if (success) {
-            _isCaptured = false;
+        if (result != GrabSuccess) {
+            Debug.Assert(false, $"XUngrabPointer failed: {GetGrabResultName(result)} ({result}).");
         }
 
-        return success;
+        int syncResult = NativeMouseCaptureInterop.XSync(_display, 0);
+        if (syncResult != 0) {
+            Debug.Assert(false, $"XSync failed after ungrab: {syncResult}.");
+        }
+
+        _isCaptured = false;
+
+        return result == GrabSuccess;
     }
 
     public static void Cleanup() {
