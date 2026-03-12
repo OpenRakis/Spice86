@@ -353,9 +353,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     [ObservableProperty] private string? _mainTitle;
 
+    [ObservableProperty] private bool _isMouseCaptured;
+
     [ObservableProperty] private string _mouseCaptureHint = string.Empty;
 
     internal void UpdateMouseCaptureHint(bool isCaptured) {
+        IsMouseCaptured = isCaptured;
         MouseCaptureHint = isCaptured
             ? " | Mouse captured (middle click to release)"
             : " | Mouse free (middle click to capture)";
