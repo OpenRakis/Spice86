@@ -11,7 +11,7 @@ namespace Spice86.Views;
 
 internal partial class MainWindow : Window {
     private bool _isMouseCaptured = false;
-    private bool _wantToCapture = true;
+    private bool _restoreCaptureOnActivation = false;
     private IntPtr _windowHandle;
 
     /// <summary>
@@ -23,7 +23,10 @@ internal partial class MainWindow : Window {
         this.Menu.KeyDown += OnMenuKeyUp;
         this.Menu.GotFocus += OnMenuGotFocus;
         this.Loaded += MainWindow_Loaded;
-        LayoutUpdated += OnLayoutUpdated;
+        SizeChanged += OnWindowSizeChanged;
+        PositionChanged += OnWindowPositionChanged;
+        Deactivated += OnWindowDeactivated;
+        Activated += OnWindowActivated;
     }
 
     private void MainWindow_Loaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e) {
@@ -41,7 +44,6 @@ internal partial class MainWindow : Window {
                 if (_windowHandle != IntPtr.Zero && Image.IsVisible) {
                     if (NativeMouseCapture.EnableCapture(_windowHandle)) {
                         _isMouseCaptured = true;
-                        _wantToCapture = false;
                     }
                 }
                 
@@ -96,14 +98,31 @@ internal partial class MainWindow : Window {
         }
     }
 
-    private void OnLayoutUpdated(object? sender, EventArgs e) {
+    private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e) {
         if (_isMouseCaptured) {
             NativeMouseCapture.EnableCapture(_windowHandle);
-            return;
         }
+    }
 
-        if (_wantToCapture) {
-            AttemptCaptureIfPointerInView();
+    private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e) {
+        if (_isMouseCaptured) {
+            NativeMouseCapture.EnableCapture(_windowHandle);
+        }
+    }
+
+    private void OnWindowDeactivated(object? sender, EventArgs e) {
+        if (_isMouseCaptured) {
+            _restoreCaptureOnActivation = true;
+            NativeMouseCapture.DisableCapture();
+            _isMouseCaptured = false;
+            UpdateCaptureUiState();
+        }
+    }
+
+    private void OnWindowActivated(object? sender, EventArgs e) {
+        if (_restoreCaptureOnActivation) {
+            _restoreCaptureOnActivation = false;
+            AttemptCapture();
         }
     }
 
@@ -111,12 +130,11 @@ internal partial class MainWindow : Window {
         if (_isMouseCaptured) {
             DisableMouseCapture();
         } else {
-            _wantToCapture = true;
-            AttemptCaptureIfPointerInView();
+            AttemptCapture();
         }
     }
 
-    private void AttemptCaptureIfPointerInView() {
+    private void AttemptCapture() {
         if (_windowHandle == IntPtr.Zero) {
             return;
         }
@@ -127,7 +145,6 @@ internal partial class MainWindow : Window {
 
         if (NativeMouseCapture.EnableCapture(_windowHandle)) {
             _isMouseCaptured = true;
-            _wantToCapture = false;
             UpdateCaptureUiState();
         }
     }
@@ -135,7 +152,7 @@ internal partial class MainWindow : Window {
     private void DisableMouseCapture() {
         NativeMouseCapture.DisableCapture();
         _isMouseCaptured = false;
-        _wantToCapture = false;
+        _restoreCaptureOnActivation = false;
         UpdateCaptureUiState();
     }
 
@@ -186,7 +203,10 @@ internal partial class MainWindow : Window {
     }
 
     protected override void OnClosed(EventArgs e) {
-        LayoutUpdated -= OnLayoutUpdated;
+        SizeChanged -= OnWindowSizeChanged;
+        PositionChanged -= OnWindowPositionChanged;
+        Deactivated -= OnWindowDeactivated;
+        Activated -= OnWindowActivated;
         (DataContext as IDisposable)?.Dispose();
         base.OnClosed(e);
     }
