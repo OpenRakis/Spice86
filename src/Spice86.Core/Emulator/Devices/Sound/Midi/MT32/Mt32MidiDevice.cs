@@ -14,7 +14,7 @@ using System.Linq;
 /// </summary>
 public sealed class Mt32MidiDevice : MidiDevice {
     private readonly Mt32Context _context;
-    private SoundChannel? _mixerChannel;
+    private readonly SoundChannel? _mixerChannel;
 
     /// <summary>
     /// Indicates whether this object has been disposed.
