@@ -19,16 +19,16 @@ namespace Spice86.Native {
         [DllImport("user32.dll")]
         private static extern bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
 
-        [DllImport("libSystem.dylib")]
+        [DllImport("CoreGraphics")]
         private static extern IntPtr CGMainDisplayID();
 
-        [DllImport("libSystem.dylib")]
+        [DllImport("CoreGraphics")]
         private static extern void CGDisplayHideCursor(IntPtr display);
 
-        [DllImport("libSystem.dylib")]
+        [DllImport("CoreGraphics")]
         private static extern void CGDisplayShowCursor(IntPtr display);
 
-        [DllImport("libSystem.dylib")]
+        [DllImport("CoreGraphics")]
         private static extern void CGAssociateMouseAndMouseCursorPosition(bool connected);
 
         [DllImport("libX11.so.6")]
@@ -67,8 +67,8 @@ namespace Spice86.Native {
         private const int ButtonPressMask = 1 << 2;
         private const int ButtonReleaseMask = 1 << 3;
 
-        private static IntPtr x11Display = IntPtr.Zero;
-        private static bool isCaptured;
+        private static IntPtr _x11Display = IntPtr.Zero;
+        private static bool _isCaptured;
 
         public static bool EnableCapture(IntPtr windowHandle) {
             if (windowHandle == IntPtr.Zero) {
@@ -92,79 +92,88 @@ namespace Spice86.Native {
                     Bottom = bottomRight.Y
                 };
 
-                isCaptured = ClipCursor(ref screenRect);
-                return isCaptured;
+                _isCaptured = ClipCursor(ref screenRect);
+                return _isCaptured;
             }
 
             if (IsMacOs) {
                 IntPtr mainDisplay = CGMainDisplayID();
                 CGDisplayHideCursor(mainDisplay);
                 CGAssociateMouseAndMouseCursorPosition(false);
-                isCaptured = true;
+                _isCaptured = true;
                 return true;
             }
 
             if (IsLinux) {
-                isCaptured = TryGrabPointer(windowHandle);
-                return isCaptured;
+                _isCaptured = TryGrabPointer(windowHandle);
+                return _isCaptured;
             }
 
             return false;
         }
 
         public static bool DisableCapture() {
-            isCaptured = false;
-
             if (IsWindows) {
-                return ClipCursor(IntPtr.Zero);
+                bool result = ClipCursor(IntPtr.Zero);
+                if (result) {
+                    _isCaptured = false;
+                }
+
+                return result;
             }
 
             if (IsMacOs) {
                 IntPtr mainDisplay = CGMainDisplayID();
                 CGDisplayShowCursor(mainDisplay);
                 CGAssociateMouseAndMouseCursorPosition(true);
+                _isCaptured = false;
                 return true;
             }
 
-            if (IsLinux && x11Display != IntPtr.Zero) {
-                int result = XUngrabPointer(x11Display, 0);
-                return result == GrabSuccess;
+            if (IsLinux && _x11Display != IntPtr.Zero) {
+                int result = XUngrabPointer(_x11Display, 0);
+                bool success = result == GrabSuccess;
+                if (success) {
+                    _isCaptured = false;
+                }
+
+                return success;
             }
 
             return false;
         }
 
         public static void Cleanup() {
-            if (isCaptured) {
+            if (_isCaptured) {
                 DisableCapture();
             }
 
-            if (IsLinux && x11Display != IntPtr.Zero) {
-                XCloseDisplay(x11Display);
-                x11Display = IntPtr.Zero;
+            if (IsLinux && _x11Display != IntPtr.Zero) {
+                XCloseDisplay(_x11Display);
+                _x11Display = IntPtr.Zero;
             }
         }
 
-        public static bool IsCaptured => isCaptured;
+        public static bool IsCaptured => _isCaptured;
 
         private static bool TryGrabPointer(IntPtr windowHandle) {
-            if (x11Display == IntPtr.Zero) {
-                x11Display = XOpenDisplay(null);
+            if (_x11Display == IntPtr.Zero) {
+                _x11Display = XOpenDisplay(null);
             }
 
-            if (x11Display == IntPtr.Zero) {
+            if (_x11Display == IntPtr.Zero) {
                 return false;
             }
 
             int eventMask = PointerMotionMask | ButtonPressMask | ButtonReleaseMask;
             int result = XGrabPointer(
-                x11Display,
+                _x11Display,
                 windowHandle,
                 false,
                 eventMask,
                 GrabModeAsync,
                 GrabModeAsync,
-                IntPtr.Zero,
+                windowHandle,
                 IntPtr.Zero,
                 0);
 
