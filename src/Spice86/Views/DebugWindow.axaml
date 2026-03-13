@@ -1,29 +1,29 @@
 <Window
-	x:Class="Spice86.Views.DebugWindow"
-	xmlns="https://github.com/avaloniaui"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	xmlns:vm="using:Spice86.ViewModels"
-	xmlns:local="clr-namespace:Spice86.Views"
-	xmlns:factory="clr-namespace:Spice86.Views.Factory"
-	xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
-	xmlns:views="clr-namespace:Spice86.Views"
-	xmlns:dock="clr-namespace:Dock.Avalonia.Controls;assembly=Dock.Avalonia"
-	xmlns:dockModel="clr-namespace:Dock.Model.Avalonia.Controls;assembly=Dock.Model.Avalonia"
-	xmlns:dockMvvm="clr-namespace:Dock.Model.Mvvm;assembly=Dock.Model.Mvvm"
-	x:CompileBindings="True"
-	x:DataType="vm:DebugWindowViewModel"
-	WindowStartupLocation="CenterOwner"
-	ShowInTaskbar="True"
-	CanResize="True"
-	Title="Spice86 Debug Window"
-	MinWidth="1700"
-	MinHeight="900"
-	Width="1700"
-	Height="900"
-	Icon="/Views/Assets/Debug.ico"
-	mc:Ignorable="d">
+x:Class="Spice86.Views.DebugWindow"
+xmlns="https://github.com/avaloniaui"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+xmlns:vm="using:Spice86.ViewModels"
+xmlns:local="clr-namespace:Spice86.Views"
+xmlns:factory="clr-namespace:Spice86.Views.Factory"
+xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+xmlns:views="clr-namespace:Spice86.Views"
+xmlns:dock="clr-namespace:Dock.Avalonia.Controls;assembly=Dock.Avalonia"
+xmlns:dockModel="clr-namespace:Dock.Model.Avalonia.Controls;assembly=Dock.Model.Avalonia"
+xmlns:dockMvvm="clr-namespace:Dock.Model.Mvvm;assembly=Dock.Model.Mvvm"
+x:CompileBindings="True"
+x:DataType="vm:DebugWindowViewModel"
+WindowStartupLocation="CenterOwner"
+ShowInTaskbar="True"
+CanResize="True"
+Title="Spice86 Debug Window"
+MinWidth="1700"
+MinHeight="900"
+Width="1700"
+Height="900"
+Icon="/Views/Assets/Debug.ico"
+mc:Ignorable="d">
 	<Window.Resources>
 		<FontFamily x:Key="RobotoMonoFont">avares://Spice86/Views/Assets#Roboto Mono</FontFamily>
 		<FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
@@ -44,21 +44,21 @@
 	<Grid RowDefinitions="Auto,*,Auto">
 		<StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
 			<Button
-				Margin="5,0,0,0"
-				ToolTip.Tip="Pause (Ctrl+Shift+F5)"
-				HotKey="Ctrl+Shift+F5"
-				Command="{Binding PauseCommand}"
-				IsVisible="{Binding !IsPaused}">
+			Margin="5,0,0,0"
+			ToolTip.Tip="Pause (Ctrl+Shift+F5)"
+			HotKey="Ctrl+Shift+F5"
+			Command="{Binding PauseCommand}"
+			IsVisible="{Binding !IsPaused}">
 				<Button.Content>
 					<fluent:SymbolIcon Symbol="Pause" />
 				</Button.Content>
 			</Button>
 			<Button
-				Margin="5,0,0,0"
-				ToolTip.Tip="Continue (F5)"
-				HotKey="F5"
-				Command="{Binding ContinueCommand}"
-				IsVisible="{Binding IsPaused}">
+			Margin="5,0,0,0"
+			ToolTip.Tip="Continue (F5)"
+			HotKey="F5"
+			Command="{Binding ContinueCommand}"
+			IsVisible="{Binding IsPaused}">
 				<Button.Content>
 					<fluent:SymbolIcon Symbol="Play" />
 				</Button.Content>
@@ -84,53 +84,53 @@
 							</TabControl.ContentTemplate>
 						</TabControl>
 					</dockModel:Document>
-					<dockModel:Document 
-						Id="CodeFlow" 
-						Title="Code Flow (Alt-F2)" 
-						HotKeyManager.HotKey="Alt+F2">
+					<dockModel:Document
+					Id="CodeFlow"
+					Title="Code Flow (Alt-F2)"
+					HotKeyManager.HotKey="Alt+F2">
 						<ContentPresenter
-							Content="{Binding $parent[Window].DataContext.CfgCpuViewModel}" />
+						Content="{Binding $parent[Window].DataContext.CfgCpuViewModel}" />
 					</dockModel:Document>
-					<dockModel:Document 
-						Id="Cpu" 
-						Title="CPU (Alt-F3)" 
-						HotKeyManager.HotKey="Alt+F3">
+					<dockModel:Document
+					Id="Cpu"
+					Title="CPU (Alt-F3)"
+					HotKeyManager.HotKey="Alt+F3">
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.CpuViewModel}" />
 					</dockModel:Document>
 					<dockModel:Document Id="Memory" Title="Memory (Alt-F4)" HotKeyManager.HotKey="Alt+F4">
 						<Grid RowDefinitions="Auto,*">
 							<TabStrip Grid.Row="0"
-								ItemsSource="{ReflectionBinding $parent[Window].DataContext.MemoryViews}"
-								SelectedItem="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}">
+									  ItemsSource="{ReflectionBinding $parent[Window].DataContext.MemoryViews}"
+									  SelectedItem="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}">
 								<TabStrip.ItemTemplate>
-									<DataTemplate>
+									<DataTemplate x:CompileBindings="False">
 										<TextBlock Text="{ReflectionBinding Header}" />
 									</DataTemplate>
 								</TabStrip.ItemTemplate>
 							</TabStrip>
 							<ContentControl Grid.Row="1"
-								Content="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}" />
+											Content="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}" />
 						</Grid>
 					</dockModel:Document>
 					<dockModel:Document Id="Devices" Title="Devices (Alt-F5)" HotKeyManager.HotKey="Alt+F5">
 						<Grid RowDefinitions="Auto,*">
 							<TabStrip Grid.Row="0"
-								ItemsSource="{ReflectionBinding $parent[Window].DataContext.DeviceSubTabs}"
-								SelectedItem="{ReflectionBinding $parent[Window].DataContext.SelectedDeviceSubTab}">
+									  ItemsSource="{ReflectionBinding $parent[Window].DataContext.DeviceSubTabs}"
+									  SelectedItem="{ReflectionBinding $parent[Window].DataContext.SelectedDeviceSubTab}">
 								<TabStrip.ItemTemplate>
-									<DataTemplate>
+									<DataTemplate x:CompileBindings="False">
 										<TextBlock Text="{ReflectionBinding Header}" />
 									</DataTemplate>
 								</TabStrip.ItemTemplate>
 							</TabStrip>
 							<ContentControl Grid.Row="1"
-								Content="{ReflectionBinding $parent[Window].DataContext.SelectedDeviceSubTab.ViewModel}" />
+											Content="{ReflectionBinding $parent[Window].DataContext.SelectedDeviceSubTab.ViewModel}" />
 						</Grid>
 					</dockModel:Document>
-					<dockModel:Document 
-						Id="Breakpoints" 
-						Title="Breakpoints (Alt-F6)" 
-						HotKeyManager.HotKey="Alt+F6">
+					<dockModel:Document
+					Id="Breakpoints"
+					Title="Breakpoints (Alt-F6)"
+					HotKeyManager.HotKey="Alt+F6">
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.BreakpointsViewModel}" />
 					</dockModel:Document>
 				</dockModel:DocumentDock>

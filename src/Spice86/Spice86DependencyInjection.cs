@@ -719,14 +719,14 @@ public class Spice86DependencyInjection : IDisposable {
             disassemblyTabPlugin.Register(debuggerTabRegistry);
 
             DevicesTabPlugin devicesTabPlugin = new(videoState.DacRegisters.ArgbPalette,
-                uiDispatcher, vgaRenderer, videoState, hostStorageProvider, midiDevice);
+                uiDispatcher, vgaRenderer, videoState, vgaTimingEngine, hostStorageProvider, midiDevice);
             devicesTabPlugin.Register(debuggerTabRegistry);
 
             CpuTabPlugin cpuTabPlugin = new(state, memory, pauseHandler, uiDispatcher);
             cpuTabPlugin.Register(debuggerTabRegistry);
 
             CfgCpuTabPlugin cfgCpuTabPlugin = new(uiDispatcher,
-                cfgCpu.ExecutionContextManager, pauseHandler, nodeToString);
+                cfgCpu.ExecutionContextManager, pauseHandler, nodeToString, asmRenderingConfig);
             cfgCpuTabPlugin.Register(debuggerTabRegistry);
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
@@ -734,7 +734,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             MemoryTabPlugin memoryTabPlugin = new(memory, memoryDataExporter, state, stack,
                 breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
-                textClipboard, hostStorageProvider, structureViewModelFactory, dos.Ems);
+                textClipboard, hostStorageProvider, structureViewModelFactory, dos.Ems, dos.Xms);
             memoryTabPlugin.Register(debuggerTabRegistry);
 
             DebugWindowViewModel debugWindowViewModel = new(

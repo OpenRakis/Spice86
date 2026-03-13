@@ -9,21 +9,23 @@ internal sealed class DevicesTabPlugin : IDebuggerTabPlugin {
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IVgaRenderer _vgaRenderer;
     private readonly IVideoState _videoState;
+    private readonly VgaTimingEngine _vgaTimingEngine;
     private readonly IHostStorageProvider _storageProvider;
     private readonly Midi _midi;
 
     public DevicesTabPlugin(ArgbPalette argbPalette, IUIDispatcher uiDispatcher, IVgaRenderer vgaRenderer,
-        IVideoState videoState, IHostStorageProvider storageProvider, Midi midi) {
+        IVideoState videoState, VgaTimingEngine vgaTimingEngine, IHostStorageProvider storageProvider, Midi midi) {
         _argbPalette = argbPalette;
         _uiDispatcher = uiDispatcher;
         _vgaRenderer = vgaRenderer;
         _videoState = videoState;
+        _vgaTimingEngine = vgaTimingEngine;
         _storageProvider = storageProvider;
         _midi = midi;
     }
 
     public void Register(IDebuggerTabRegistry registry) {
-        VideoCardViewModel videoCardViewModel = new(_vgaRenderer, _videoState, _storageProvider);
+        VideoCardViewModel videoCardViewModel = new(_vgaRenderer, _videoState, _vgaTimingEngine, _storageProvider);
         PaletteViewModel paletteViewModel = new(_argbPalette, _uiDispatcher);
         MidiViewModel midiViewModel = new(_midi);
 
