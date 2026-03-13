@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
@@ -22,12 +23,14 @@ internal sealed class MemoryTabPlugin : IDebuggerTabPlugin {
     private readonly IHostStorageProvider _storageProvider;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
     private readonly ExpandedMemoryManager? _expandedMemoryManager;
+    private readonly ExtendedMemoryManager? _extendedMemoryManager;
 
     public MemoryTabPlugin(IMemory memory, MemoryDataExporter memoryDataExporter,
         State state, Stack stack, BreakpointsViewModel breakpointsViewModel,
         IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider,
-        IStructureViewModelFactory structureViewModelFactory, ExpandedMemoryManager? expandedMemoryManager) {
+        IStructureViewModelFactory structureViewModelFactory, ExpandedMemoryManager? expandedMemoryManager,
+        ExtendedMemoryManager? extendedMemoryManager) {
         _memory = memory;
         _memoryDataExporter = memoryDataExporter;
         _state = state;
@@ -40,6 +43,7 @@ internal sealed class MemoryTabPlugin : IDebuggerTabPlugin {
         _storageProvider = storageProvider;
         _structureViewModelFactory = structureViewModelFactory;
         _expandedMemoryManager = expandedMemoryManager;
+        _extendedMemoryManager = extendedMemoryManager;
     }
 
     public void Register(IDebuggerTabRegistry registry) {
@@ -66,6 +70,10 @@ internal sealed class MemoryTabPlugin : IDebuggerTabPlugin {
 
         if (_expandedMemoryManager is not null) {
             memoryViews.Add(new EmsViewModel(_expandedMemoryManager));
+        }
+
+        if (_extendedMemoryManager is not null) {
+            memoryViews.Add(new XmsViewModel(_extendedMemoryManager));
         }
 
         registry.Add(DebuggerTabIds.MemoryViews, memoryViews);
