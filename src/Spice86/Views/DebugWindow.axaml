@@ -98,13 +98,19 @@
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.CpuViewModel}" />
 					</dockModel:Document>
 					<dockModel:Document Id="Memory" Title="Memory (Alt-F4)" HotKeyManager.HotKey="Alt+F4">
-						<TabControl ItemsSource="{Binding $parent[Window].DataContext.MemoryViewModels}">
-							<TabControl.ItemTemplate>
-								<DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-									<TextBlock Text="{Binding Header}" />
-								</DataTemplate>
-							</TabControl.ItemTemplate>
-						</TabControl>
+						<Grid RowDefinitions="Auto,*">
+							<TabStrip Grid.Row="0"
+								ItemsSource="{ReflectionBinding $parent[Window].DataContext.MemoryViews}"
+								SelectedItem="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}">
+								<TabStrip.ItemTemplate>
+									<DataTemplate>
+										<TextBlock Text="{ReflectionBinding Header}" />
+									</DataTemplate>
+								</TabStrip.ItemTemplate>
+							</TabStrip>
+							<ContentControl Grid.Row="1"
+								Content="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}" />
+						</Grid>
 					</dockModel:Document>
 					<dockModel:Document Id="Devices" Title="Devices (Alt-F5)" HotKeyManager.HotKey="Alt+F5">
 						<Grid RowDefinitions="Auto,*">

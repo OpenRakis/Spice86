@@ -5,7 +5,7 @@ internal static class DebuggerTabIds {
     public const string CfgCpu = "cfgCpu";
     public const string Cpu = "cpu";
     public const string Breakpoints = "breakpoints";
-    public const string MemoryTabs = "memoryTabs";
+    public const string MemoryViews = "memoryViews";
 
     public const string DevicesGroup = "devices";
     public const string DeviceVideoCard = "deviceVideoCard";

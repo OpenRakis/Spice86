@@ -28,7 +28,10 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private DebuggerSubTabViewModel? _selectedDeviceSubTab;
 
     [ObservableProperty]
-    private AvaloniaList<MemoryViewModel> _memoryViewModels = new();
+    private AvaloniaList<object> _memoryViews = new();
+
+    [ObservableProperty]
+    private object? _selectedMemoryView;
 
     [ObservableProperty]
     private CpuViewModel _cpuViewModel;
@@ -64,7 +67,8 @@ public partial class DebugWindowViewModel : ViewModelBase,
         DisassemblyViewModel disassemblyVm = tabRegistry.Get<DisassemblyViewModel>(DebuggerTabIds.Disassembly);
         DisassemblyViewModels.Add(disassemblyVm);
         CpuViewModel = tabRegistry.Get<CpuViewModel>(DebuggerTabIds.Cpu);
-        MemoryViewModels.AddRange(tabRegistry.Get<IReadOnlyList<MemoryViewModel>>(DebuggerTabIds.MemoryTabs));
+        MemoryViews.AddRange(tabRegistry.Get<IReadOnlyList<object>>(DebuggerTabIds.MemoryViews));
+        SelectedMemoryView = MemoryViews.FirstOrDefault();
         CfgCpuViewModel = tabRegistry.Get<CfgCpuViewModel>(DebuggerTabIds.CfgCpu);
         DeviceSubTabs.AddRange(tabRegistry.GetSubTabs(DebuggerTabIds.DevicesGroup));
         SelectedDeviceSubTab = DeviceSubTabs.FirstOrDefault();
@@ -79,7 +83,15 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private void Continue() => _uiDispatcher.Post(_pauseHandler.Resume);
 
     public void Receive(AddViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Add(message.ViewModel);
-    public void Receive(AddViewModelMessage<MemoryViewModel> message) => MemoryViewModels.Add(message.ViewModel);
+    public void Receive(AddViewModelMessage<MemoryViewModel> message) {
+        MemoryViews.Add(message.ViewModel);
+        SelectedMemoryView = message.ViewModel;
+    }
     public void Receive(RemoveViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Remove(message.ViewModel);
-    public void Receive(RemoveViewModelMessage<MemoryViewModel> message) => MemoryViewModels.Remove(message.ViewModel);
+    public void Receive(RemoveViewModelMessage<MemoryViewModel> message) {
+        MemoryViews.Remove(message.ViewModel);
+        if (ReferenceEquals(SelectedMemoryView, message.ViewModel)) {
+            SelectedMemoryView = MemoryViews.FirstOrDefault();
+        }
+    }
 }
