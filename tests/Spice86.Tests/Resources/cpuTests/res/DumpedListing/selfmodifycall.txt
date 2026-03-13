@@ -1,0 +1,18 @@
+F000:0000 mov AX,0
+F000:0003 mov SS,AX
+F000:0005 mov SP,0x0100
+F000:0008 mov byte ptr DS:[0x002B],0
+F000:000D call near 0x0017
+F000:0010 selector
+F000:0010 hlt
+F000:0010 nop
+F000:0011 inc byte ptr DS:[0x002B]
+F000:0015 jmp short 0x000D
+F000:0017 cmp byte ptr DS:[0x002B],0
+F000:001C je short 0x002A
+F000:001E mov AX,0xF000
+F000:0021 mov ES,AX
+F000:0023 mov byte ptr ES:[0x0010],0xF4
+F000:0029 ret near
+F000:002A ret near
+F000:FFF0 jmp short 0

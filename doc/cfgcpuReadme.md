@@ -1,91 +1,184 @@
-# CFG CPU - Control Flow Graph CPU Implementation
+# CFG CPU
 
 ## Overview
 
-The CFG CPU (Control Flow Graph CPU) is a CPU emulation implementation that builds and maintains a dynamic Control Flow Graph of executed instructions.
+The CFG CPU builds a Control Flow Graph of x86 instructions as it executes them. The primary goal is to produce execution traces suitable for code generation, with particular attention to self-modifying code and hardware interrupt isolation.
 
-Goal is to enable code generation from execution traces. CFG CPU helps by providing enhanced execution tracking, especially for self-modifying code detection, and somehow reliable context management for hardware interrupt handling.
+By recording execution as a graph, the system captures:
+- Actual program paths as they happen
+- All observed instruction variants at each address (self-modifying code becomes graph branches)
+- Clean separation between regular program flow and interrupt handlers
 
-The CFG CPU addresses these challenges by recording execution as a **Control Flow Graph** during emulation, enabling:
-- **Complete Execution Flow Recording**: Captures actual program execution paths as they happen
-- **Self-Modifying Code as Graph Branches**: Represents code variants as different nodes in the graph
-- **Instruction Variant Tracking**: Records all observed variants of instructions at each memory address
-- **Context-Aware Analysis**: Doesn't link hardware interrupt calls with regular program flow
+This also opens the door to JIT-compiling hot blocks in the future.
 
-With persistent knowledge of instruction relationships and execution patterns, oportunities to optimize (JIT) blocks of code are becoming possible
+## Node Types
 
-## Architecture Overview
-### Graph Management
+### CfgNode
 
-#### Node Types
+Base class for all graph nodes. Each node tracks its predecessors, successors, and whether it's still live (i.e. matches what's currently in memory). `MaxSuccessorsCount` caps the expected outgoing edges - 1 for sequential flow, 2 for conditional jumps, `null` for computed jumps with an unknown number of targets. Once the cap is reached, the linker stops trying to add edges. When `MaxSuccessorsCount` is 1, the sole outgoing edge is cached in `UniqueSuccessor` for a fast path.
 
-1. **CfgInstruction**: Regular assembly instructions parsed from memory
-2. **SelectorNode**: Special nodes that handle self-modifying code by selecting the correct instruction variant at runtime
+### CfgInstruction
 
-#### Graph Construction
+A parsed x86 instruction. Beyond the base node properties:
 
-The CFG is built dynamically during execution:
+| Property | Purpose |
+|---|---|
+| `FieldsInOrder` | Ordered `FieldWithValue` list covering every byte of the instruction |
+| `Signature` | Full byte signature (`null` entries are wildcards for variable fields) |
+| `SignatureFinal` | Signature restricted to final fields only - the instruction's structural identity |
+| `SuccessorsPerAddress` | Maps target `SegmentedAddress` to its successor node |
+| `SuccessorsPerType` | Maps `InstructionSuccessorType` to a set of successors |
+| `Length` / `NextInMemoryAddress` | Instruction size and fall-through address |
 
-1. **Initial Node Creation**: Instructions are parsed from memory and converted to CFG nodes
-2. **Dynamic Linking**: As instructions execute, successor relationships are established
-3. **Self-Modification Detection**: When memory content differs from graph nodes, selector nodes are injected
-4. **Context Separation**: Different execution contexts maintain separate graph segments
+### SelectorNode
 
-#### Graph Coherency
+When self-modifying code produces multiple variants at the same address and they can't be merged, a `SelectorNode` sits between predecessors and the variants. It holds a `Dictionary<Signature, CfgInstruction>` and picks the right one at runtime by reading memory.
 
-The system maintains coherency between the graph and memory through several mechanisms:
+```
+ Predecessor A ──→ SelectorNode(0x1000) ──→ Variant 1 (mov ax, bx)
+ Predecessor B ──→                      ──→ Variant 2 (add ax, cx)
+```
 
-##### Live Node Checking
-- Nodes are marked as "live" when they match the current memory state
-- Non-live nodes trigger memory re-parsing and potential graph updates
+A `SelectorNode` is always considered live - it can't go stale because it reads memory every time.
 
-##### Signature Reduction
-- When multiple instruction variants exist at the same address, the system attempts to reduce them to a single canonical form
-- If reduction fails, a selector node is created to handle runtime selection
+## Signatures and Fields
 
-##### Node Replacement
-- Instructions can be replaced in the graph while maintaining predecessor/successor relationships
-- Entry points are updated when instructions are replaced
+### Signature
 
-#### Instruction Management
+An `ImmutableList<byte?>`. Concrete bytes must match exactly; `null` bytes are wildcards. Two signatures are equal when every position is either both `null` or both the same value. `ListEquivalent(IList<byte>)` tests whether actual memory bytes match a signature.
 
-##### Instruction Creation
-Each instruction is represented as a node in the **Control Flow Graph** with the following characteristics:
+### FieldWithValue
 
-- **Unique Identity**: Each instruction has a numeric ID, a segmented address, and a signature
-- **Signature System**: The signature contains the final bytes of the instruction - bytes that, if changed by code, will require a new instruction to be inserted in the graph with a selector node
-- **Address Sensitivity**: Instructions are not considered equal if segment:offset differs. Even if the linear address is the same, if the segmented address changes, a new node will be created
+Every byte range of a parsed instruction is wrapped in a `FieldWithValue`:
 
-##### Instruction Linking
-Instructions maintain connectivity through predecessor and successor relationships:
+- `PhysicalAddress` - location in memory.
+- `Final` - if true, a change here means a structurally different instruction (e.g. opcode bytes). If false, the instruction is the same shape with different data (e.g. an immediate operand).
+- `UseValue` - when true, the cached parse-time value is used at execution. When false, the value is re-read from memory because self-modifying code has been observed changing it.
 
-- **Dynamic Linking**: When the CPU moves from one instruction to another in the same context, it creates a link
-- **Return Linking**: A link is also created when a function return is detected to link the corresponding call instruction to the return address
-- **Context Awareness**: Links are only created within the same execution context
+The final vs. non-final distinction is what makes variant merging possible.
 
-If hardware interrupt happen (timer, keyboard, DMA, ...), context is switched and graph is not threaded from the current instruction, but starts from the entry point of the interrupt handler instead. This means the CFG graph can be disconnected and have several islands.
+### InstructionParser
 
-#### Self-Modifying Code Detection and Handling
+Turns memory into instruction nodes. Each instruction variant is its own C# type, and many are generated from templates via [Morris.Moxy](https://github.com/mrpmorris/Morris.Moxy). An instruction is a list of fields where:
+- Final fields always use the parsed value.
+- Non-final fields use the parsed value initially, but switch to reading from memory once a post-parse modification is detected.
 
-##### Detection Mechanism
+## Graph Construction
 
-Self-modifying code is detected when:
-1. A graph node exists for an address
-2. The memory content at that address differs from the node's representation
-3. The differing node (marked as non live) is executed
+The graph grows at runtime:
 
-When instruction bytes are modified by the program, nothing happens initially. However, when this modified area is executed, the emulator detects that the nodes in the graph are not coherent with memory.
+1. Instructions are parsed from memory into `CfgInstruction` nodes.
+2. As execution proceeds, successor edges are added between nodes.
+3. When memory no longer matches a graph node, selector nodes are injected.
+4. Separate execution contexts (see below) keep their graph segments independent.
 
-##### Handling Strategy
+## Instruction Caching
 
-The system handles self-modifying code through different strategies based on what was modified:
+`InstructionsFeeder` maintains a two-tier cache:
 
-**Non-Final Byte Modifications:**
-- If modified bytes were part of a field that is considered as non-final, the instruction is marked as having this field read from memory instead of from the parsed instruction
-- For example, if the `1234` part of `MOV AX, 1234` is modified, we just record that the value should be read from memory
+```
+GetInstructionFromMemory(address)
+ │
+ ├── CurrentInstructions hit? → return it
+ │
+ └── miss → GetFromPreviousOrParse(address)
+              │
+              ├── PreviousInstructions has a variant matching current memory? → promote, return
+              │
+              └── miss → parse from memory
+                          │
+                          ├── SignatureReducer can merge with an existing variant? → return merged
+                          │
+                          └── store in both caches, return
+```
 
-**Final Byte Modifications:**
-- If final bytes are modified and an existing instruction is linking to the modified instruction, a new instruction is created and a selector node is inserted in the graph:
+`CurrentInstructions` is the authoritative "what's in memory right now" map - exactly one instruction per address, evicted by memory-write breakpoints.
+
+`PreviousInstructions` keeps every variant ever seen at an address (a `HashSet<CfgInstruction>` per address). When an instruction is evicted from current, it stays here. If the program later restores the original bytes, the same object is reused - preserving all its graph edges.
+
+## Node Linking
+
+### NodeLinker
+
+After picking the next node to execute, `CfgNodeFeeder` calls `NodeLinker.Link(type, lastExecuted, toExecute)` provided the last node can still accept successors. `Link` returns the resolved node, which may differ from `toExecute` when a `SelectorNode` gets injected to resolve a conflict.
+
+Link types:
+
+| Type | Meaning |
+|---|---|
+| `Normal` | Sequential or jump-target transition |
+| `CallToReturn` | Return from a call lands at the instruction after the call |
+| `CallToMisalignedReturn` | Return lands elsewhere (tail call, longjmp, etc.) |
+| `CpuFault` | Transition caused by an exception/interrupt |
+
+How linking resolves, depending on node types:
+
+- **CfgInstruction → CfgInstruction** - look up `SuccessorsPerAddress[next.Address]`. Missing? Create the link. Present but a different object? That's a successor conflict (see below).
+- **SelectorNode → CfgInstruction** - look up `SuccessorsPerSignature[next.Signature]`. Missing? Create the link. Present but a different object? Throw.
+- **IReturnInstruction** - also links the original call instruction to the return target (`CallToReturn` or `CallToMisalignedReturn`). Only the ret→next resolution is returned; the call→next link is bookkeeping.
+
+Links are only created within the same execution context. When a hardware interrupt fires (timer, keyboard, DMA, ...), a new context starts from the interrupt handler's entry point. The graph is never threaded across that boundary, so it can be disconnected - multiple islands are normal.
+
+### Successor Conflict Resolution
+
+When a `CfgInstruction` already has a successor at `next.Address` but it points to a different object:
+
+1. If the existing successor is already a `SelectorNode`, just add `next` to it.
+2. Otherwise, create a new `SelectorNode` between the two via `CreateSelectorNodeBetween`.
+
+This catches self-modifying code detected at link time - for instance, a CALL whose return target was rewritten between the call and the ret.
+
+### InsertIntermediatePredecessor
+
+Used when creating a `SelectorNode`. Rewires predecessors so they go through the selector:
+
+```
+Before:  PredA → Instruction1      PredB → Instruction2
+After:   PredA → SelectorNode → Instruction1
+         PredB → SelectorNode → Instruction2
+```
+
+## Self-Modifying Code Detection and Handling
+
+### Memory Write Breakpoints
+
+When an instruction becomes the current one at its address (`CurrentInstructions.SetAsCurrent`), a `MEMORY_WRITE` breakpoint is registered for every byte with a non-null signature value. Wildcard bytes don't get breakpoints - changes there are expected and don't invalidate anything.
+
+When the CPU writes to a monitored byte and the new value differs from the old, `ClearCurrentInstruction` fires: breakpoints are unregistered, the instruction is evicted from `CurrentInstructions`, and `IsLive` is set to false. The instruction stays in `PreviousInstructions`.
+
+### Graph Reconciliation at Execution Time
+
+When the CPU needs the next node (`CfgNodeFeeder.GetLinkedCfgNodeToExecute`):
+
+```
+DetermineToExecute(executionContext)
+ │
+ ├── nodeFromGraph == null          → fetch via GetInstructionFromMemoryAtIp()
+ ├── nodeFromGraph.IsLive == true   → use it directly
+ └── nodeFromGraph.IsLive == false  → ReconcileGraphWithMemory
+      │
+      ├── GetInstructionFromMemoryAtIp() (may trigger SignatureReducer as a side-effect)
+      │       │
+      │       └── If reducer merges the stale node into fromMemory, it fires
+      │           InstructionReplacerRegistry → ExecutionContextManager.ReplaceInstruction
+      │           → updates executionContext.NodeToExecuteNextAccordingToGraph to fromMemory
+      │
+      ├── After parsing, check executionContext.NodeToExecuteNextAccordingToGraph:
+      │     ├── Same reference as fromMemory? → reconciliation succeeded (merged), return it
+      │     └── Different reference? → genuinely different instructions, inject SelectorNode
+      │
+      └── SelectorNode creation delegates to NodeLinker.CreateSelectorNodeBetween
+```
+
+Note that `CfgNodeFeeder` never calls `SignatureReducer` directly. Reduction happens as a side-effect of `InstructionsFeeder.GetInstructionFromMemory` → `ParseEnsuringUnique` → `SignatureReducer.ReduceToOne`. When a reduction succeeds, it propagates through `InstructionReplacerRegistry`, which notifies `ExecutionContextManager` to update `NodeToExecuteNextAccordingToGraph` in the current context (and all stacked ones). `ReconcileGraphWithMemory` then just checks whether that propagation resolved the stale reference.
+
+### Handling Strategy
+
+What happens depends on which bytes were modified:
+
+**Non-final bytes changed:** The instruction survives. The modified field is marked "read from memory" instead of using its cached value. For example, if the `1234` in `MOV AX, 1234` is overwritten, we just switch that field to live reads.
+
+**Final bytes changed:** The instruction's identity is different now. If another node was already linked to it, a `SelectorNode` is inserted:
 
 **Before modification:**
 ```mermaid
@@ -93,7 +186,7 @@ flowchart LR
     P[predecessor] --> S1[successor1]
 ```
 
-**Modification occurs:** `successor1` is modified to `successor2` in memory (for example JA modified to JBE)
+**Modification occurs:** `successor1` is overwritten with a different instruction in memory (e.g. JA replaced by JBE)
 
 **After modification:**
 ```mermaid
@@ -111,81 +204,117 @@ flowchart LR
     class SEL selector
 ```
 
-**Selector Node Operation:**
-1. **Selector Node Creation**: A special selector node is created at the address
-2. **Runtime Selection**: The selector node chooses the correct instruction variant during execution by comparing signatures
-3. **Graph Preservation**: Both the original and modified instruction nodes are preserved
-4. **Predecessor Linking**: All predecessors are redirected to point to the selector node, but successors are not.
+### SelectorNode Creation and Execution
 
-Selector nodes map signatures to instructions - each time they are executed, they know which path to take in the graph by comparing the signatures of the instructions with what is in memory.
+`NodeLinker.CreateSelectorNodeBetween(instruction1, instruction2)` creates a `SelectorNode` at the shared address and calls `InsertIntermediatePredecessor` for both instructions, rewiring all their predecessors to go through the selector.
 
+At runtime, `SelectorNode.Execute()` is a no-op. `GetNextSuccessor()` iterates `SuccessorsPerSignature`, reads the corresponding bytes from memory, and returns the first matching variant - or `null` if nothing matches, triggering a fresh parse.
 
-### Execution Flow
+## Variant Merging (SignatureReducer)
 
-1. **Node Selection**: `CfgNodeFeeder` determines the next node to execute
-2. **Coherency Check**: Verifies the selected node matches memory content if needed
-3. **Linking**: Links the current node to the previously executed node if needed
-4. **Execution**: Executes the selected node
-5. **Graph Update**: Updates graph state based on execution results
-6. **Context Management**: Handles any context switches due to hardware interrupts
+When two `CfgInstruction` objects at the same address share the same `SignatureFinal` - same type, same opcodes, same structure, differing only in non-final fields - they can be merged into one node:
+
+1. Group instructions by C# type, then by `SignatureFinal`.
+2. Pick the first instruction in each group as the reference.
+3. Compare field values across all instructions in the group.
+4. Where a field differs: set `UseValue = false` and `NullifySignature()` on the reference's field, turning it into a wildcard that reads from memory at execution time.
+5. Discard the redundant instructions via `InstructionReplacerRegistry`, which updates all caches and graph edges to point at the reference.
+
+This is the key optimization. An instruction like `mov ax, <imm>` where the immediate keeps changing via self-modifying code stays as a single graph node with the immediate field marked "read from memory."
+
+## Instruction Replacement (Observer Pattern)
+
+When a `CfgInstruction` is merged or replaced (typically by `SignatureReducer`), every cache and graph structure must stay consistent. `InstructionReplacerRegistry` handles this - each component registers itself at construction time and gets notified on `ReplaceInstruction(old, new)`:
+
+- `CurrentInstructions` - evicts the old entry, installs the new one with fresh breakpoints.
+- `PreviousInstructions` - swaps old for new in the historical set.
+- `NodeLinker` - rewires predecessor/successor edges and merges `SuccessorsPerType`.
+- `ExecutionContextManager` - updates entry point tracking and `NodeToExecuteNextAccordingToGraph` in all execution contexts (current + stacked).
+
+### Stale Reference Propagation
+
+When `SignatureReducer` merges two variants, every execution context still referencing the old instruction must be patched. `ExecutionContextManager.ReplaceInstruction` walks the current context and all stacked ones (via `ExecutionContextReturns.GetAllContexts()`), updating `NodeToExecuteNextAccordingToGraph` everywhere. Without this, a stacked context - say,  a hardware interrupt that paused mid-CALL - could resume with a stale reference and silently miss the merge.
+
+## Execution Flow
+
+At each step:
+
+1. `CfgNodeFeeder` picks the next node to execute.
+2. If the node might be stale, it's checked against memory.
+3. The node is linked to the previously executed one (if the predecessor still has room).
+4. The node executes.
+5. Graph state is updated.
+6. If a hardware interrupt arrived, context is switched.
 
 ## Context Management
 
 ### Execution Contexts
 
-Each execution context represents a separate execution environment with:
-- **Entry Point**: Starting address for the context
-- **Depth**: Nesting level (0 for main execution, higher for interrupts)
+An `ExecutionContext` tracks graph state within a single flow of control:
 
-### Context Switching
+- `EntryPoint` - where the context started (e.g. an interrupt vector).
+- `LastExecuted` - the most recently executed node.
+- `NodeToExecuteNextAccordingToGraph` - what the graph thinks comes next (may be stale).
+- `CpuFault` - whether the last execution triggered a fault.
+- `Depth` - nesting level (0 for the main program, incremented for interrupts).
 
-Context switches occur during:
-- **External Interrupts**: Hardware interrupts create new contexts
-- **Context Restoration**: Returning from interrupts restores previous contexts
+`ExecutionContextManager` pushes a new context on hardware interrupts and pops it on return, keeping CFG tracking independent per nesting level. Each context records its expected return address; when execution reaches that address, the corresponding context is restored and depth decremented.
 
-### Context Restoration
+## End-to-End Example: Self-Modifying Code
 
-The system maintains a stack of contexts to restore:
-- Each new context records its expected return address
-- When execution reaches a return address, the corresponding context is restored
-- Context depth is properly maintained during restoration
+```
+1. INITIAL PARSE
+   Address 0x1000 contains: B8 05 00  (mov ax, 5)
+   → CfgInstruction parsed, stored in CurrentInstructions + PreviousInstructions
+   → Memory-write breakpoints installed on bytes at physical addresses for B8, 05, 00
+
+2. CODE MODIFIES ITSELF
+   CPU executes: mov [0x1001], 0x0A    (changes immediate from 05 to 0A)
+   → Write breakpoint at 0x1001 fires
+   → OnBreakPointReached: current byte (05) ≠ new byte (0A)
+   → ClearCurrentInstruction: breakpoints removed, evicted from cache, IsLive = false
+   → Instruction stays in PreviousInstructions
+
+3. NEXT EXECUTION AT 0x1000
+   CfgNodeFeeder.DetermineToExecute → ReconcileGraphWithMemory:
+     nodeFromGraph.IsLive == false → self-modifying code detected
+     GetInstructionFromMemoryAtIp() triggers InstructionsFeeder.GetInstructionFromMemory(0x1000):
+       → CurrentInstructions miss
+       → PreviousInstructions: old signature [B8, 05, 00] ≠ memory [B8, 0A, 00] → no match
+       → ParseEnsuringUnique: parse B8 0A 00 (mov ax, 10)
+       → SignatureReducer: old SignatureFinal = [B8, null, null], new = [B8, null, null] → SAME
+       → Merge: keep old node, mark immediate field UseValue=false, NullifySignature
+       → InstructionReplacerRegistry fires → ExecutionContextManager patches all contexts
+     Back in ReconcileGraphWithMemory:
+       → NodeToExecuteNextAccordingToGraph now == fromMemory → reconciliation succeeded
+       → Result: single node with signature [B8, null, null], reads immediate from memory
+
+4. GRAPH RESULT
+   One CfgInstruction at 0x1000 with a wildcard immediate field.
+   No SelectorNode needed - variant merging absorbed the change.
+
+5. ALTERNATIVE: DIFFERENT OPCODE
+   If 0x1000 changes from B8 05 00 (mov ax, 5) to 01 C8 (add ax, cx):
+   → SignatureFinal differs → cannot merge
+   → SelectorNode created at 0x1000, predecessors rewired
+   → At runtime, selector reads bytes and dispatches to the matching variant
+```
+
+## Design Decisions
+
+- **Breakpoint-based invalidation** over checking memory on every fetch - keeps the hot path fast when code isn't changing.
+- **Two-tier cache** (current + previous) so that restoring original bytes reuses the original node with all its edges intact, rather than creating duplicates.
+- **Variant merging** minimizes SelectorNode creation. Most self-modifying code only touches operands (non-final fields), not opcodes.
+- **Null wildcards in signatures** give a uniform matching mechanism that works for both merged instructions and SelectorNode dispatch.
+- **Observer-based replacement** (`InstructionReplacerRegistry`) keeps caches and graph consistent when nodes are merged, without coupling components.
 
 ## Core Classes
 
 #### `CfgCpu`
-The main CPU implementation that orchestrates the entire CFG system:
-- Implements `IInstructionExecutor` for instruction execution
-- Manages the discovery and execution of the nodes in the graph, and handles external interrupt handling
-- Coordinates between different subsystems (feeder, context manager, instruction executor)
-
-#### `ICfgNode` Interface
-Represents nodes in the control flow graph:
-- **Properties**:
-  - `Id`: Unique identifier for the node
-  - `Address`: Memory address of the instruction
-  - `Predecessors`/`Successors`: Graph connectivity
-- **Methods**:
-  - `Execute()`: Executes the node's instruction
-  - `ToInstructionAst()`: Converts to Abstract Syntax Tree representation
+The top-level CPU that orchestrates the CFG system. Implements `IInstructionExecutor`, drives node discovery and execution, handles external interrupts, and coordinates the feeder, context manager, and instruction executor.
 
 #### `ExecutionContextManager`
-Manages hierarchical execution contexts for hardware interrupt handling:
-- Maintains a stack of execution contexts
-- Handles context switching for external interrupts
-- Manages entry points for different execution contexts
-- Provides context restoration when returning from interrupts
+Manages the stack of execution contexts for hardware interrupts - pushing on entry, popping on return, tracking entry points, and ensuring context restoration.
 
 #### `CfgNodeFeeder`
-Ensures coherency between memory and the instruction graph:
-- Fetches instructions from memory when needed (may call the parser if node is new)
-- Detects discrepancies between graph and memory (self-modifying code)
-- Creates selector nodes for handling multiple instruction variants
-- Links nodes in the execution graph
-
-#### `InstructionParser`
-Parses memory into instruction nodes.
-Each variant of an instruction is a separate C# type.
-Part of the instructions are generated from templates via https://github.com/mrpmorris/Morris.Moxy
-Instructions are composed of a list of fields. Each field can be:
-- **Final** In that case value is always read from the parsing result
-- **Non Final** In that case value is initially read from parsing result unless the field has been detected as modified post parsing, in that case value is read from memory.
+The bridge between memory and the graph. Fetches instructions (parsing if needed), detects memory/graph discrepancies, injects selector nodes for multiple variants, and links nodes during execution.
