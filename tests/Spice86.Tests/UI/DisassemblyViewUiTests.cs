@@ -1,0 +1,100 @@
+namespace Spice86.Tests.UI;
+
+using Avalonia.Headless.XUnit;
+
+using CommunityToolkit.Mvvm.Messaging;
+
+using FluentAssertions;
+
+using NSubstitute;
+
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Logging;
+using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Interfaces;
+using Spice86.ViewModels;
+using Spice86.ViewModels.Services;
+using Spice86.Views;
+
+using System.Reflection;
+
+using Xunit;
+
+public class DisassemblyViewUiTests : BreakpointUiTestBase {
+    private (DisassemblyViewModel viewModel, PauseHandler pauseHandler) CreateDisassemblyViewModel() {
+        ILoggerService loggerService = CreateMockLoggerService();
+        PauseHandler pauseHandler = CreatePauseHandler(loggerService);
+        State state = CreateState();
+        state.CS = 0xF000;
+        state.IP = 0xFFF0;
+
+        (Memory memory, AddressReadWriteBreakpoints memoryBreakpoints, AddressReadWriteBreakpoints ioBreakpoints) = CreateMemory();
+        EmulatorBreakpointsManager emulatorBreakpointsManager =
+            CreateBreakpointsManager(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
+
+        UIDispatcher uiDispatcher = CreateUIDispatcher();
+        IMessenger messenger = CreateMessenger();
+        ITextClipboard textClipboard = Substitute.For<ITextClipboard>();
+
+        BreakpointsViewModel breakpointsViewModel = new(
+            state,
+            pauseHandler,
+            messenger,
+            emulatorBreakpointsManager,
+            uiDispatcher,
+            textClipboard,
+            memory);
+
+        IDictionary<SegmentedAddress, FunctionInformation> functionsInformation =
+            new Dictionary<SegmentedAddress, FunctionInformation>();
+
+        DisassemblyViewModel viewModel = new(
+            emulatorBreakpointsManager,
+            memory,
+            state,
+            functionsInformation,
+            breakpointsViewModel,
+            pauseHandler,
+            uiDispatcher,
+            messenger,
+            textClipboard,
+            loggerService);
+
+        return (viewModel, pauseHandler);
+    }
+
+    [AvaloniaFact]
+    public void DisassemblyView_DataContextAssignedAfterAttach_BreakpointPauseShouldUpdateUiState() {
+        (DisassemblyViewModel updatedViewModel, PauseHandler updatedPauseHandler) = CreateDisassemblyViewModel();
+
+        DisassemblyView view = new();
+        MethodInfo? attachedToVisualTreeMethod = typeof(DisassemblyView).GetMethod(
+            "DisassemblyView_AttachedToVisualTree",
+            BindingFlags.NonPublic | BindingFlags.Instance);
+
+        try {
+            attachedToVisualTreeMethod.Should().NotBeNull();
+
+            // Simulate attach before DataContext assignment.
+            // This is the lifecycle ordering that reproduces the stale paused state.
+            attachedToVisualTreeMethod!.Invoke(view, [null, null]);
+
+            view.DataContext = updatedViewModel;
+            ProcessUiEvents();
+
+            updatedPauseHandler.RequestPause("Execution breakpoint reached");
+            ProcessUiEvents();
+
+            updatedViewModel.IsPaused.Should().BeTrue("the disassembly view model should react to breakpoint pause events");
+        } finally {
+            if (updatedPauseHandler.IsPaused) {
+                updatedPauseHandler.Resume();
+                ProcessUiEvents();
+            }
+        }
+    }
+}
