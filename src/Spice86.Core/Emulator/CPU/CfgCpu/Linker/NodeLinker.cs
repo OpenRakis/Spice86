@@ -3,7 +3,6 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
@@ -13,60 +12,63 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 
 public class NodeLinker : InstructionReplacer {
-    private readonly NodeToString _nodeToString = new(AsmRenderingConfig.CreateSpice86Style());
-
     public NodeLinker(InstructionReplacerRegistry replacerRegistry) : base(replacerRegistry) {
     }
 
     /// <summary>
     /// Ensure current and next are linked together.
+    /// Returns the resolved node to execute (may differ from <paramref name="next"/> when a SelectorNode is injected).
     /// </summary>
     /// <param name="linkToNextType"></param>
     /// <param name="current"></param>
     /// <param name="next"></param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Link(InstructionSuccessorType linkToNextType, ICfgNode current, ICfgNode next) {
+    public ICfgNode Link(InstructionSuccessorType linkToNextType, ICfgNode current, ICfgNode next) {
         switch (current) {
             case IReturnInstruction retInstruction:
                 // Special cases for ret.
                 // We not only attach next but also the return target to the list of next for the corresponding call.
                 // This involves recording data via the Call Flow Handler and linking it in a special way here.
-                LinkRetInstruction(linkToNextType, retInstruction, next);
-                break;
+                return LinkRetInstruction(linkToNextType, retInstruction, next);
             case CfgInstruction currentCfgInstruction:
-                LinkCfgInstructionWithType(linkToNextType, currentCfgInstruction, next);
-                break;
+                return LinkCfgInstructionWithType(linkToNextType, currentCfgInstruction, next);
             case SelectorNode selectorNode:
                 LinkSelectorNode(selectorNode, next);
-                break;
+                return next;
+            default:
+                throw new UnhandledCfgDiscrepancyException(
+                    $"Unhandled ICfgNode type in Link: {current.GetType().Name}");
         }
     }
 
-    private void LinkRetInstruction(InstructionSuccessorType linkToNextType, IReturnInstruction returnInstruction, ICfgNode next) {
-        LinkCfgInstructionWithType(linkToNextType, returnInstruction, next);
+    private ICfgNode LinkRetInstruction(InstructionSuccessorType linkToNextType, IReturnInstruction returnInstruction, ICfgNode next) {
+        ICfgNode resolvedForRet = LinkCfgInstructionWithType(linkToNextType, returnInstruction, next);
         // Need to link the call instruction now that ret is known 
         CfgInstruction? callInstruction = returnInstruction.CurrentCorrespondingCallInstruction;
         returnInstruction.CurrentCorrespondingCallInstruction = null;
         if (callInstruction == null) {
             // No call associated with this ret. Nothing to do.
-            return;
+            return resolvedForRet;
         }
         InstructionSuccessorType type = ComputeSuccessorTypeForRet(callInstruction, next);
+        // call->next is bookkeeping only, do not return the resolved value
         LinkCfgInstructionWithType(type, callInstruction, next);
+        return resolvedForRet;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void LinkCfgInstructionWithType(InstructionSuccessorType linkToNextType, ICfgInstruction current, ICfgNode next) {
+    private ICfgNode LinkCfgInstructionWithType(InstructionSuccessorType linkToNextType, ICfgInstruction current, ICfgNode next) {
         Dictionary<SegmentedAddress, ICfgNode> successors = current.SuccessorsPerAddress;
         if (!successors.TryGetValue(next.Address, out ICfgNode? shouldBeNext)) {
             // New link found
             AttachNewLink(linkToNextType, current, next);
-            return;
+            return next;
         }
 
         if (!ReferenceEquals(shouldBeNext, next)) {
-            throw ThrowSuccessorConflictError(current, next, shouldBeNext);
+            return ResolveSuccessorConflict(current, next, shouldBeNext);
         }
+        return next;
     }
 
     private void AttachNewLink(InstructionSuccessorType linkToNextType, ICfgInstruction current, ICfgNode next) {
@@ -78,21 +80,22 @@ public class NodeLinker : InstructionReplacer {
         successorsForType.Add(next);
     }
 
-    private UnhandledCfgDiscrepancyException ThrowSuccessorConflictError(ICfgInstruction current, ICfgNode next, ICfgNode shouldBeNext) {
-        string nextToString = _nodeToString.ToString(next);
-        string shouldBeNextToString = _nodeToString.ToString(shouldBeNext);
-        string currentToString = _nodeToString.ToString(current);
-        string currentSuccessors = _nodeToString.SuccessorsToString(current);
-        return new UnhandledCfgDiscrepancyException(
-            $"""
-             Current node has already a successor at next node address but it is not the next node. This should never happen. 
-             Details:
-             Next {nextToString}
-             Found instead {shouldBeNextToString}
-             Current node {currentToString}
-             Current successors
-             {currentSuccessors}
-             """);
+    private ICfgNode ResolveSuccessorConflict(ICfgInstruction current, ICfgNode next, ICfgNode shouldBeNext) {
+        if (shouldBeNext is SelectorNode selectorNode) {
+            LinkSelectorNode(selectorNode, next);
+            return selectorNode;
+        }
+        return CreateSelectorNodeBetween((CfgInstruction)shouldBeNext, (CfgInstruction)next);
+    }
+
+    /// <summary>
+    /// Creates a SelectorNode at the address of the two instructions and inserts it as an intermediate predecessor of both.
+    /// </summary>
+    public SelectorNode CreateSelectorNodeBetween(CfgInstruction instruction1, CfgInstruction instruction2) {
+        SelectorNode selectorNode = new SelectorNode(instruction1.Address);
+        InsertIntermediatePredecessor(instruction1, selectorNode);
+        InsertIntermediatePredecessor(instruction2, selectorNode);
+        return selectorNode;
     }
 
     private InstructionSuccessorType ComputeSuccessorTypeForRet(CfgInstruction call, ICfgNode nextAfterRet) {
@@ -176,12 +179,12 @@ public class NodeLinker : InstructionReplacer {
 
     private void SwitchSuccessorsToNew(ICfgNode oldNode, ICfgNode newNode) {
         foreach (ICfgNode successor in oldNode.Successors) {
+            // Replace current with new in the successor's predecessors (:
             LinkToNext(newNode, successor);
-            // Only successors set touched are on new node and old node.
-            // Updating the cache should be taken care of by caller.
             successor.Predecessors.Remove(oldNode);
-            oldNode.Successors.Remove(successor);
+            // No cache update of newNode. Should be done at the end of the loop but caller already does it.
         }
+        oldNode.Successors.Clear();
     }
 
     private void SwitchPredecessorsToNew(ICfgNode oldNode, ICfgNode newNode) {
@@ -194,6 +197,7 @@ public class NodeLinker : InstructionReplacer {
                 ReplaceSuccessorOfCallInstruction(predecessorInstruction, oldNode, newNode);
             }
         }
+        oldNode.Predecessors.Clear();
     }
 
     private void ReplaceSuccessorOfCallInstruction(CfgInstruction instruction, ICfgNode currentSuccesor, ICfgNode newSuccesor) {
