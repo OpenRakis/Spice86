@@ -62,18 +62,18 @@ internal sealed class MemoryTabPlugin : IDebuggerTabPlugin {
             _textClipboard, _storageProvider, _structureViewModelFactory,
             canCloseTab: false);
 
-        List<object> memoryViews = new() {
+        List<IDebuggerTabContentViewModel> memoryViews = new() {
             memoryViewModel,
             stackMemoryViewModel,
             dataSegmentViewModel
         };
 
         if (_expandedMemoryManager is not null) {
-            memoryViews.Add(new EmsViewModel(_expandedMemoryManager));
+            memoryViews.Add(new EmsViewModel(_expandedMemoryManager, _pauseHandler));
         }
 
         if (_extendedMemoryManager is not null) {
-            memoryViews.Add(new XmsViewModel(_extendedMemoryManager));
+            memoryViews.Add(new XmsViewModel(_extendedMemoryManager, _pauseHandler));
         }
 
         registry.Add(DebuggerTabIds.MemoryViews, memoryViews);

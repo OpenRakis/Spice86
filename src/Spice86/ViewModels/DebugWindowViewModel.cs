@@ -28,10 +28,10 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private DebuggerSubTabViewModel? _selectedDeviceSubTab;
 
     [ObservableProperty]
-    private AvaloniaList<object> _memoryViews = new();
+    private AvaloniaList<IDebuggerTabContentViewModel> _memoryViews = new();
 
     [ObservableProperty]
-    private object? _selectedMemoryView;
+    private IDebuggerTabContentViewModel? _selectedMemoryView;
 
     [ObservableProperty]
     private CpuViewModel _cpuViewModel;
@@ -67,7 +67,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         DisassemblyViewModel disassemblyVm = tabRegistry.Get<DisassemblyViewModel>(DebuggerTabIds.Disassembly);
         DisassemblyViewModels.Add(disassemblyVm);
         CpuViewModel = tabRegistry.Get<CpuViewModel>(DebuggerTabIds.Cpu);
-        MemoryViews.AddRange(tabRegistry.Get<IReadOnlyList<object>>(DebuggerTabIds.MemoryViews));
+        MemoryViews.AddRange(tabRegistry.Get<IReadOnlyList<IDebuggerTabContentViewModel>>(DebuggerTabIds.MemoryViews));
         SelectedMemoryView = MemoryViews.FirstOrDefault();
         CfgCpuViewModel = tabRegistry.Get<CfgCpuViewModel>(DebuggerTabIds.CfgCpu);
         DeviceSubTabs.AddRange(tabRegistry.GetSubTabs(DebuggerTabIds.DevicesGroup));

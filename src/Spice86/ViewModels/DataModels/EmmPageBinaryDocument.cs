@@ -50,8 +50,9 @@ public sealed class EmmPageBinaryDocument : IBinaryDocument {
             return;
         }
         int readableLength = (int)Math.Min((ulong)buffer.Length, _emmPage.Size - startOffset);
+        IList<byte> pageSlice = _emmPage.GetSlice((int)startOffset, readableLength);
         for (int index = 0; index < readableLength; index++) {
-            buffer[index] = _emmPage.Read(startOffset + (uint)index);
+            buffer[index] = pageSlice[index];
         }
     }
 

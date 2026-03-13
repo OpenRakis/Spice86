@@ -86,14 +86,14 @@ mc:Ignorable="d">
 					</dockModel:Document>
 					<dockModel:Document
 					Id="CodeFlow"
-					Title="Code Flow"
+					Title="Code Flow (Alt-F2)"
 					HotKeyManager.HotKey="Alt+F2">
 						<ContentPresenter
 						Content="{Binding $parent[Window].DataContext.CfgCpuViewModel}" />
 					</dockModel:Document>
 					<dockModel:Document
 					Id="Cpu"
-					Title="CPU"
+					Title="CPU (Alt-F3)"
 					HotKeyManager.HotKey="Alt+F3">
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.CpuViewModel}" />
 					</dockModel:Document>
@@ -103,7 +103,7 @@ mc:Ignorable="d">
 									  ItemsSource="{ReflectionBinding $parent[Window].DataContext.MemoryViews}"
 									  SelectedItem="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}">
 								<TabStrip.ItemTemplate>
-									<DataTemplate>
+									<DataTemplate x:CompileBindings="False">
 										<TextBlock Text="{ReflectionBinding Header}" />
 									</DataTemplate>
 								</TabStrip.ItemTemplate>
@@ -112,24 +112,24 @@ mc:Ignorable="d">
 											Content="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}" />
 						</Grid>
 					</dockModel:Document>
-					<dockModel:Document Id="Devices" Title="Devices" HotKeyManager.HotKey="Alt+F5">
-						<TabControl ItemsSource="{Binding $parent[Window].DataContext.DeviceSubTabs}"
-									SelectedItem="{Binding $parent[Window].DataContext.SelectedDeviceSubTab}">
-							<TabControl.ItemTemplate>
-								<DataTemplate DataType="{x:Type vm:DebuggerSubTabViewModel}">
-									<TextBlock Text="{Binding Header}" />
-								</DataTemplate>
-							</TabControl.ItemTemplate>
-							<TabControl.ContentTemplate>
-								<DataTemplate DataType="{x:Type vm:DebuggerSubTabViewModel}">
-									<ContentPresenter Content="{Binding ViewModel}" />
-								</DataTemplate>
-							</TabControl.ContentTemplate>
-						</TabControl>
+					<dockModel:Document Id="Devices" Title="Devices (Alt-F5)" HotKeyManager.HotKey="Alt+F5">
+						<Grid RowDefinitions="Auto,*">
+							<TabStrip Grid.Row="0"
+									  ItemsSource="{ReflectionBinding $parent[Window].DataContext.DeviceSubTabs}"
+									  SelectedItem="{ReflectionBinding $parent[Window].DataContext.SelectedDeviceSubTab}">
+								<TabStrip.ItemTemplate>
+									<DataTemplate x:CompileBindings="False">
+										<TextBlock Text="{ReflectionBinding Header}" />
+									</DataTemplate>
+								</TabStrip.ItemTemplate>
+							</TabStrip>
+							<ContentControl Grid.Row="1"
+											Content="{ReflectionBinding $parent[Window].DataContext.SelectedDeviceSubTab.ViewModel}" />
+						</Grid>
 					</dockModel:Document>
 					<dockModel:Document
 					Id="Breakpoints"
-					Title="Breakpoints"
+					Title="Breakpoints (Alt-F6)"
 					HotKeyManager.HotKey="Alt+F6">
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.BreakpointsViewModel}" />
 					</dockModel:Document>

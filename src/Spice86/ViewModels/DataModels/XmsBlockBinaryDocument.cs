@@ -53,8 +53,9 @@ public sealed class XmsBlockBinaryDocument : IBinaryDocument {
             return;
         }
         int readableLength = (int)Math.Min((ulong)buffer.Length, _blockLength - startOffset);
+        IList<byte> blockSlice = _xmsRam.GetSlice((int)(_blockOffset + startOffset), readableLength);
         for (int index = 0; index < readableLength; index++) {
-            buffer[index] = _xmsRam.Read(_blockOffset + startOffset + (uint)index);
+            buffer[index] = blockSlice[index];
         }
     }
 
