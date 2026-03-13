@@ -5,13 +5,16 @@ start:
 mov ax,0
 mov ss,ax
 mov sp,4
+ ; single-successor predecessor: CanHaveMoreSuccessors becomes false after linking, ensuring DetermineToExecute handles stale successors without relying on the linker
+selmodifiedmovjmp:
+jmp selmodifiedmov
 selmodifiedmov:
 mov ax,0ffffh
 push ax
 mov word[cs:selmodifiedmov+1],0001h ; modify value to put in AX next time
 ; loop back to mov if AX is 0ffffh
 cmp ax,word 0ffffh
-je selmodifiedmov
+je selmodifiedmovjmp
 ;stack should be 0100ffff
 hlt
 

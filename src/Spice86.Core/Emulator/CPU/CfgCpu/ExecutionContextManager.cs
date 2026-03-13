@@ -99,7 +99,7 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
 
     private void RegisterCurrentInstructionAsEntryPoint(SegmentedAddress entryAddress) {
         // Register a new entry point
-        CfgInstruction toExecute = _cfgNodeFeeder.CurrentNodeFromInstructionFeeder;
+        CfgInstruction toExecute = _cfgNodeFeeder.GetInstructionFromMemoryAtIp();
         if (!ExecutionContextEntryPoints.TryGetValue(entryAddress, out ISet<CfgInstruction>? nodes)) {
             nodes = new HashSet<CfgInstruction>();
             ExecutionContextEntryPoints.Add(entryAddress, nodes);
@@ -111,6 +111,17 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         if (ExecutionContextEntryPoints.TryGetValue(newInstruction.Address, out ISet<CfgInstruction>? entriesAtAddress)
             && entriesAtAddress.Remove(oldInstruction)) {
             entriesAtAddress.Add(newInstruction);
+        }
+        UpdateNodeToExecuteIfStale(CurrentExecutionContext, oldInstruction, newInstruction);
+        foreach (ExecutionContext stacked in _executionContextReturns.GetAllContexts()) {
+            UpdateNodeToExecuteIfStale(stacked, oldInstruction, newInstruction);
+        }
+    }
+
+    private static void UpdateNodeToExecuteIfStale(ExecutionContext context,
+        CfgInstruction oldInstruction, CfgInstruction newInstruction) {
+        if (ReferenceEquals(context.NodeToExecuteNextAccordingToGraph, oldInstruction)) {
+            context.NodeToExecuteNextAccordingToGraph = newInstruction;
         }
     }
 
