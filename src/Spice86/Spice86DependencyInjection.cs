@@ -704,53 +704,41 @@ public class Spice86DependencyInjection : IDisposable {
         if (mainWindow != null && uiDispatcher != null &&
             hostStorageProvider != null && textClipboard != null) {
             IMessenger messenger = WeakReferenceMessenger.Default;
+            IDebuggerTabRegistry debuggerTabRegistry = new DebuggerTabRegistry();
 
-            BreakpointsViewModel breakpointsViewModel = new(
-                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);
+            BreakpointsTabPlugin breakpointsTabPlugin = new(state, pauseHandler, messenger,
+                emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);
+            breakpointsTabPlugin.Register(debuggerTabRegistry);
 
+            BreakpointsViewModel breakpointsViewModel = debuggerTabRegistry.Get<BreakpointsViewModel>(DebuggerTabIds.Breakpoints);
             breakpointsViewModel.RestoreBreakpoints(deserializedUserBreakpoints);
 
-            DisassemblyViewModel disassemblyViewModel = new(
-                emulatorBreakpointsManager, memory, state, functionCatalogue.FunctionInformations,
-                breakpointsViewModel, pauseHandler, uiDispatcher, messenger, textClipboard, loggerService,
-                canCloseTab: false);
+            DisassemblyTabPlugin disassemblyTabPlugin = new(emulatorBreakpointsManager, memory,
+                state, functionCatalogue.FunctionInformations, breakpointsViewModel, pauseHandler,
+                uiDispatcher, messenger, textClipboard, loggerService);
+            disassemblyTabPlugin.Register(debuggerTabRegistry);
 
-            PaletteViewModel paletteViewModel = new(videoState.DacRegisters.ArgbPalette,
-                uiDispatcher);
+            DevicesTabPlugin devicesTabPlugin = new(videoState.DacRegisters.ArgbPalette,
+                uiDispatcher, vgaRenderer, videoState, hostStorageProvider, midiDevice);
+            devicesTabPlugin.Register(debuggerTabRegistry);
 
-            VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState, vgaTimingEngine, hostStorageProvider);
+            CpuTabPlugin cpuTabPlugin = new(state, memory, pauseHandler, uiDispatcher);
+            cpuTabPlugin.Register(debuggerTabRegistry);
 
-            CpuViewModel cpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
-
-            MidiViewModel midiViewModel = new(midiDevice);
-
-            CfgCpuViewModel cfgCpuViewModel = new(uiDispatcher,
-                cfgCpu.ExecutionContextManager, pauseHandler, nodeToString, asmRenderingConfig);
+            CfgCpuTabPlugin cfgCpuTabPlugin = new(uiDispatcher,
+                cfgCpu.ExecutionContextManager, pauseHandler, nodeToString);
+            cfgCpuTabPlugin.Register(debuggerTabRegistry);
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
                 state, loggerService, pauseHandler);
 
-            MemoryViewModel memoryViewModel = new(memory, memoryDataExporter, state,
+            MemoryTabPlugin memoryTabPlugin = new(memory, memoryDataExporter, state, stack,
                 breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
-                textClipboard, hostStorageProvider, structureViewModelFactory,
-                canCloseTab: false);
-
-            StackMemoryViewModel stackMemoryViewModel = new(memory, memoryDataExporter, state, stack,
-                breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
-                textClipboard, hostStorageProvider, structureViewModelFactory,
-                canCloseTab: false);
-
-            DataSegmentMemoryViewModel dataSegmentViewModel = new(memory, memoryDataExporter, state,
-                breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
-                textClipboard, hostStorageProvider, structureViewModelFactory,
-                canCloseTab: false);
+                textClipboard, hostStorageProvider, structureViewModelFactory);
+            memoryTabPlugin.Register(debuggerTabRegistry);
 
             DebugWindowViewModel debugWindowViewModel = new(
-                WeakReferenceMessenger.Default, uiDispatcher, pauseHandler,
-                breakpointsViewModel, disassemblyViewModel,
-                paletteViewModel, videoCardViewModel,
-                cpuViewModel, midiViewModel, cfgCpuViewModel,
-                [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
+                WeakReferenceMessenger.Default, uiDispatcher, pauseHandler, debuggerTabRegistry);
 
             SoftwareMixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
 
