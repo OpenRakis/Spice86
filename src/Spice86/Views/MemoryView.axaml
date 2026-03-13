@@ -21,12 +21,12 @@
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</UserControl.Resources>
 	<ScrollViewer IsEnabled="{Binding IsPaused}">
-		<Grid RowDefinitions="Auto,*,Auto">
+		<Grid RowDefinitions="Auto,Auto,*">
 			<StackPanel Orientation="Horizontal" Grid.Row="0"
 				HorizontalAlignment="Left"
 				VerticalAlignment="Top"
 				ScrollViewer.HorizontalScrollBarVisibility="Hidden">
-				<Button VerticalAlignment="Top" HotKey="F3" ToolTip.Tip="F3" Command="{Binding StartMemorySearchCommand}" Content="Search..." />
+				<Button VerticalAlignment="Top" HotKey="Ctrl+F" ToolTip.Tip="Ctrl-F" Command="{Binding StartMemorySearchCommand}" Content="Search..." />
 				<Button VerticalAlignment="Top" Command="{Binding EditMemoryCommand}" Content="Edit..." />
 				<Button VerticalAlignment="Top" Command="{Binding DumpMemoryCommand}" Content="Dump..." />
 				<StackPanel Orientation="Vertical">
@@ -76,7 +76,8 @@
 					<Label  IsVisible="{Binding IsPaused}" Content="{Binding Title}" />
 				</StackPanel>
 			</StackPanel>
-			<Grid Grid.Row="1"
+			<userControls:MemorySearchBarUserControl Grid.Row="1" Margin="8,0,8,8" />
+			<Grid Grid.Row="2"
 				  RowDefinitions="*, Auto">
 				<avaloniaHex:HexEditor
 					x:Name="HexViewer"
@@ -116,86 +117,10 @@
 					</controls:StatusBarItem>
 				</controls:StatusBar>
 			</Grid>
-			<Rectangle
-				Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
-				IsVisible="{Binding IsSearchingMemory}"/>
-			<dialogHost:DialogHost
-				Grid.Row="0" Grid.RowSpan="2"
-				Background="{Binding $parent[Window].Background}"
-				CloseOnClickAway="True"
-				IsOpen="{Binding IsSearchingMemory}">
-				<dialogHost:DialogHost.DialogContent>
-					<Grid RowDefinitions="Auto,Auto,*,Auto"
-						ColumnDefinitions="Auto,*">
-						<Label
-							Grid.Row="0"
-							Grid.Column="0"
-							Grid.ColumnSpan="2"
-							HorizontalAlignment="Center"
-							Content="Search memory"
-							FontWeight="Bold" />
-						<Label Grid.Column="0" Grid.Row="1"
-							Content="Data type:" />
-						<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
-							<RadioButton GroupName="SearchDataType" Content="Binary"
-								IsChecked="{Binding SearchDataTypeIsBinary}"
-								Command="{Binding SetSearchDataTypeToBinaryCommand}" />
-							<RadioButton GroupName="SearchDataType" Content="ASCII"
-								IsChecked="{Binding SearchDataTypeIsAscii}"
-								Command="{Binding SetSearchDataTypeToAsciiCommand}" />
-						</StackPanel>
-						<Grid
-							Grid.Column="0"
-							Grid.ColumnSpan="2"
-							Grid.Row="2"
-							ColumnDefinitions="Auto,*"
-							RowDefinitions="Auto,Auto">
-							<Label
-								Grid.Row="0"
-								Grid.Column="0"
-								Content="Memory value" />
-							<AutoCompleteBox
-								Grid.Row="0"
-								Grid.Column="1"
-								FontFamily="RobotoMonoFont"
-								Text="{Binding MemorySearchValue}"
-								Watermark="bytes in hexadecimal format, or ASCII string" />
-							<Label
-								Grid.Row="1"
-								Grid.Column="0"
-								Content="Address of found occurence:" />
-							<TextBlock
-								Grid.Row="1"
-								Grid.Column="1"
-								FontFamily="RobotoMonoFont" HorizontalAlignment="Center"
-								Text="{Binding AddressOFoundOccurence}" />
-						</Grid>
-						<StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Grid.Row="3">
-							<Button Command="{Binding FirstOccurrenceCommand}"
-									IsEnabled="{Binding !IsBusy}"
-									Content="Find first"/>
-							<Button
-								Command="{Binding NextOccurrenceCommand}"
-								IsEnabled="{Binding !IsBusy}"
-								Content="Find next" />
-							<Button
-								Command="{Binding PreviousOccurrenceCommand}"
-								IsEnabled="{Binding !IsBusy}"
-								Content="Find previous" />
-							<Button
-								IsEnabled="{Binding IsAddressOfFoundOccurrenceValid}"
-								Command="{Binding GoToFoundOccurenceCommand}" Content="Open in new view" />
-							<Button IsVisible="{Binding IsBusy}"
-									Command="{Binding SearchMemoryCancelCommand}"
-									Content="Cancel current search" />
-						</StackPanel>
-					</Grid>
-				</dialogHost:DialogHost.DialogContent>
-			</dialogHost:DialogHost>
-			<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+			<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="3"
 					IsVisible="{Binding IsEditingMemory}"/>
 			<dialogHost:DialogHost
-				Grid.Row="0" Grid.RowSpan="2"
+				Grid.Row="0" Grid.RowSpan="3"
 				Background="{Binding $parent[Window].Background}"
 				CloseOnClickAway="False"
 				IsOpen="{Binding IsEditingMemory}">
@@ -249,10 +174,10 @@
 					</Grid>
 				</dialogHost:DialogHost.DialogContent>
 			</dialogHost:DialogHost>
-			<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+			<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="3"
 					IsVisible="{Binding CreatingMemoryBreakpoint}"/>
 			<dialogHost:DialogHost
-				Grid.Row="0" Grid.RowSpan="2"
+				Grid.Row="0" Grid.RowSpan="3"
 				Background="{Binding $parent[Window].Background}"
 				CloseOnClickAway="False"
 				IsOpen="{Binding CreatingMemoryBreakpoint}">
@@ -280,7 +205,7 @@
 					</Grid>
 				</dialogHost:DialogHost.DialogContent>
 			</dialogHost:DialogHost>
-			<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="2" />
+			<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="3" />
 		</Grid>
 	</ScrollViewer>
 </UserControl>
