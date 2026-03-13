@@ -294,6 +294,36 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         .Sum(static b => b.Length);
 
     /// <summary>
+    /// Gets a snapshot of current XMS blocks (free and allocated).
+    /// </summary>
+    public IReadOnlyList<XmsBlock> BlocksSnapshot => _xmsBlocksLinkedList.ToList();
+
+    /// <summary>
+    /// Gets a snapshot of allocated handles and their lock counts.
+    /// </summary>
+    public IReadOnlyList<KeyValuePair<int, byte>> HandlesSnapshot => _xmsHandles.ToList();
+
+    /// <summary>
+    /// Gets a value indicating whether the HMA is currently claimed by a DOS application.
+    /// </summary>
+    public bool IsHighMemoryAreaClaimed => _hmaClaimedByDosApp;
+
+    /// <summary>
+    /// Gets a value indicating whether A20 is physically enabled.
+    /// </summary>
+    public bool IsA20Enabled => _a20Gate.IsEnabled;
+
+    /// <summary>
+    /// Gets a value indicating whether A20 global-enable state is active.
+    /// </summary>
+    public bool IsA20GloballyEnabled => _a20State.IsGloballyEnabled;
+
+    /// <summary>
+    /// Gets the local A20 enable count.
+    /// </summary>
+    public uint A20LocalEnableCount => _a20State.NumTimesEnabled;
+
+    /// <summary>
     /// Dispatches XMS subfunctions based on the value in AH register.
     /// </summary>
     /// <remarks>
