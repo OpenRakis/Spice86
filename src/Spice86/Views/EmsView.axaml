@@ -1,0 +1,95 @@
+<UserControl
+	x:Class="Spice86.Views.EmsView"
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:avaloniaHex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
+	xmlns:rendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
+	xmlns:controls="clr-namespace:Spice86.Views.Controls;assembly=Spice86"
+	xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+	d:DesignHeight="700"
+	d:DesignWidth="1100"
+	x:CompileBindings="True"
+	x:DataType="viewModels:EmsViewModel"
+	mc:Ignorable="d">
+	<Grid RowDefinitions="Auto,Auto,220,*" ColumnDefinitions="*,*">
+		<WrapPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="8,8,8,0" Orientation="Horizontal">
+			<TextBlock Margin="0,0,16,0" Text="EMS logical pages:" FontWeight="Bold" />
+			<TextBlock Margin="0,0,16,0" Text="{Binding TotalPages}" />
+			<TextBlock Margin="0,0,16,0" Text="Free:" FontWeight="Bold" />
+			<TextBlock Margin="0,0,16,0" Text="{Binding FreePages}" />
+			<TextBlock Margin="0,0,16,0" Text="Page size:" FontWeight="Bold" />
+			<TextBlock Margin="0,0,16,0" Text="{Binding PageSize}" />
+			<TextBlock Margin="0,0,16,0" Text="Page frame segment:" FontWeight="Bold" />
+			<TextBlock Text="{Binding PageFrameSegment}" />
+		</WrapPanel>
+		<Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="8" ColumnDefinitions="*,16,*">
+			<Grid Grid.Column="0" ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+				<TextBlock Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="Handle search" />
+				<TextBox Grid.Column="1" Watermark="handle number or name" Text="{Binding HandleSearchText, Mode=TwoWay}" />
+			</Grid>
+			<Grid Grid.Column="2" ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+				<TextBlock Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="Logical page search" />
+				<TextBox Grid.Column="1" Watermark="page index or page number" Text="{Binding LogicalPageSearchText, Mode=TwoWay}" />
+			</Grid>
+		</Grid>
+		<controls:GroupBox Grid.Row="2" Grid.Column="0" Margin="8" Header="Handles">
+			<DataGrid
+				ItemsSource="{Binding Handles}"
+				SelectedItem="{Binding SelectedHandle}"
+				IsReadOnly="True"
+				AutoGenerateColumns="False"
+				GridLinesVisibility="All">
+				<DataGrid.Columns>
+					<DataGridTextColumn Header="Handle" Binding="{Binding HandleNumber}" />
+					<DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
+					<DataGridTextColumn Header="Pages" Binding="{Binding LogicalPageCount}" />
+					<DataGridCheckBoxColumn Header="Saved map" Binding="{Binding SavedPageMap}" />
+				</DataGrid.Columns>
+			</DataGrid>
+		</controls:GroupBox>
+		<controls:GroupBox Grid.Row="2" Grid.Column="1" Margin="8" Header="Page Frame Mappings">
+			<DataGrid
+				ItemsSource="{Binding PhysicalPages}"
+				IsReadOnly="True"
+				AutoGenerateColumns="False"
+				GridLinesVisibility="All">
+				<DataGrid.Columns>
+					<DataGridTextColumn Header="Physical" Binding="{Binding PhysicalPageNumber}" />
+					<DataGridTextColumn Header="Frame address" Binding="{Binding FrameAddress}" Width="*" />
+					<DataGridTextColumn Header="Handle" Binding="{Binding HandleNumber}" />
+					<DataGridTextColumn Header="Logical page" Binding="{Binding LogicalPageNumber}" />
+				</DataGrid.Columns>
+			</DataGrid>
+		</controls:GroupBox>
+		<Grid Grid.Row="3" Grid.ColumnSpan="2" ColumnDefinitions="320,8,*">
+			<controls:GroupBox Grid.Column="0" Margin="8" Header="Logical Pages Of Selected Handle">
+				<DataGrid
+					ItemsSource="{Binding LogicalPages}"
+					SelectedItem="{Binding SelectedLogicalPage}"
+					IsReadOnly="True"
+					AutoGenerateColumns="False"
+					GridLinesVisibility="All">
+					<DataGrid.Columns>
+						<DataGridTextColumn Header="Index" Binding="{Binding LogicalPageIndex}" />
+						<DataGridTextColumn Header="Page number" Binding="{Binding PageNumber}" Width="*" />
+					</DataGrid.Columns>
+				</DataGrid>
+			</controls:GroupBox>
+			<GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeDirection="Columns" />
+			<controls:GroupBox Grid.Column="2" Margin="8" Header="{Binding SelectedPageTitle}">
+				<avaloniaHex:HexEditor Document="{Binding SelectedPageDocument}">
+					<TextElement.FontFamily>
+						<OnPlatform Default="{StaticResource RobotoMonoFont}" />
+					</TextElement.FontFamily>
+					<avaloniaHex:HexEditor.Columns>
+						<rendering:OffsetColumn />
+						<rendering:HexColumn />
+						<rendering:AsciiColumn />
+					</avaloniaHex:HexEditor.Columns>
+				</avaloniaHex:HexEditor>
+			</controls:GroupBox>
+		</Grid>
+	</Grid>
+</UserControl>

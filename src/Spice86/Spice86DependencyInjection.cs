@@ -734,7 +734,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             MemoryTabPlugin memoryTabPlugin = new(memory, memoryDataExporter, state, stack,
                 breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
-                textClipboard, hostStorageProvider, structureViewModelFactory);
+                textClipboard, hostStorageProvider, structureViewModelFactory, dos.Ems);
             memoryTabPlugin.Register(debuggerTabRegistry);
 
             DebugWindowViewModel debugWindowViewModel = new(
