@@ -22,19 +22,16 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private bool _isPaused;
 
     [ObservableProperty]
-    private PaletteViewModel _paletteViewModel;
+    private AvaloniaList<DebuggerSubTabViewModel> _deviceSubTabs = new();
+
+    [ObservableProperty]
+    private DebuggerSubTabViewModel? _selectedDeviceSubTab;
 
     [ObservableProperty]
     private AvaloniaList<MemoryViewModel> _memoryViewModels = new();
 
     [ObservableProperty]
-    private VideoCardViewModel _videoCardViewModel;
-
-    [ObservableProperty]
     private CpuViewModel _cpuViewModel;
-
-    [ObservableProperty]
-    private MidiViewModel _midiViewModel;
 
     [ObservableProperty]
     private AvaloniaList<DisassemblyViewModel> _disassemblyViewModels = new();
@@ -51,31 +48,26 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private readonly IPauseHandler _pauseHandler;
 
     public DebugWindowViewModel(IMessenger messenger, IUIDispatcher uiDispatcher,
-        IPauseHandler pauseHandler, BreakpointsViewModel breakpointsViewModel,
-        DisassemblyViewModel disassemblyViewModel, PaletteViewModel paletteViewModel,
-        VideoCardViewModel videoCardViewModel,
-        CpuViewModel cpuViewModel, MidiViewModel midiViewModel, CfgCpuViewModel cfgCpuViewModel,
-        IList<MemoryViewModel> memoryViewModels) {
+        IPauseHandler pauseHandler, IDebuggerTabRegistry tabRegistry) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         _messenger = messenger;
         _uiDispatcher = uiDispatcher;
-        BreakpointsViewModel = breakpointsViewModel;
+        BreakpointsViewModel = tabRegistry.Get<BreakpointsViewModel>(DebuggerTabIds.Breakpoints);
         StatusMessageViewModel = new(_uiDispatcher, _messenger);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Paused += () => uiDispatcher.Post(() => IsPaused = _pauseHandler.IsPaused);
-        pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = _pauseHandler.IsPaused);
-        DisassemblyViewModel disassemblyVm = disassemblyViewModel;
+        pauseHandler.Paused += () => uiDispatcher.Post(() => IsPaused = true);
+        pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
+        DisassemblyViewModel disassemblyVm = tabRegistry.Get<DisassemblyViewModel>(DebuggerTabIds.Disassembly);
         DisassemblyViewModels.Add(disassemblyVm);
-        PaletteViewModel = paletteViewModel;
-        VideoCardViewModel = videoCardViewModel;
-        CpuViewModel = cpuViewModel;
-        MidiViewModel = midiViewModel;
-        MemoryViewModels.AddRange(memoryViewModels);
-        CfgCpuViewModel = cfgCpuViewModel;
+        CpuViewModel = tabRegistry.Get<CpuViewModel>(DebuggerTabIds.Cpu);
+        MemoryViewModels.AddRange(tabRegistry.Get<IReadOnlyList<MemoryViewModel>>(DebuggerTabIds.MemoryTabs));
+        CfgCpuViewModel = tabRegistry.Get<CfgCpuViewModel>(DebuggerTabIds.CfgCpu);
+        DeviceSubTabs.AddRange(tabRegistry.GetSubTabs(DebuggerTabIds.DevicesGroup));
+        SelectedDeviceSubTab = DeviceSubTabs.FirstOrDefault();
     }
 
     [RelayCommand]
