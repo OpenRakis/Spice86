@@ -25,34 +25,31 @@ public partial class DisassemblyViewModel {
         SegmentedAddress currentAddress = State.IpSegmentedAddress;
         DebuggerLineViewModel debuggerLine = EnsureAddressIsLoaded(currentAddress);
 
-        if (!debuggerLine.CanBeSteppedOver) {
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("Setting unconditional breakpoint for step over");
-            }
+        if (debuggerLine.CanBeSteppedOver) {
+            uint nextInstructionAddress = debuggerLine.NextAddress;
 
-            _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
-                Pause("Step over unconditional breakpoint was reached");
+            _breakpointsViewModel.AddAddressBreakpoint(nextInstructionAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
+                Pause("Step over execution breakpoint was reached");
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}", currentAddress, State.IpPhysicalAddress);
+                    _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
                 }
-            }, true);
+            }, null, "Step over breakpoint", null);
+        } else {
+            long targetCycles = State.Cycles + 1;
 
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("Resuming execution for step over");
-            }
-            _pauseHandler.Resume();
+            AddressBreakPoint stepOverBreakpoint = new(
+                BreakPointType.CPU_CYCLES,
+                targetCycles,
+                _ => {
+                    Pause("Step over breakpoint was reached");
+                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                        _logger.Debug("Step over breakpoint reached at cycle {TargetCycles}. Previous address: {CurrentAddress}, New address: {StateCsIp}", targetCycles, currentAddress, State.IpSegmentedAddress);
+                    }
+                },
+                true);
 
-            return;
+            _emulatorBreakpointsManager.ToggleBreakPoint(stepOverBreakpoint, on: true);
         }
-
-        uint nextInstructionAddress = debuggerLine.NextAddress;
-
-        _breakpointsViewModel.AddAddressBreakpoint(nextInstructionAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
-            Pause($"Step over execution breakpoint was reached");
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
-            }
-        }, null, "Step over breakpoint", null);
 
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Resuming execution for step over");

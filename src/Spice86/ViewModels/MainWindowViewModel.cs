@@ -100,6 +100,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _cyclesLimiter = cyclesLimiter;
         TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
         _pauseHandler = pauseHandler;
+        IsPaused = _pauseHandler.IsPaused;
         _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
