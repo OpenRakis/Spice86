@@ -4,7 +4,6 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
@@ -19,79 +18,78 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 public class CfgNodeFeeder {
     private readonly State _state;
     private readonly NodeLinker _nodeLinker;
-    private readonly SignatureReducer _signatureReducer;
 
     public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager,
         InstructionReplacerRegistry replacerRegistry) {
         _state = state;
         InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry);
         _nodeLinker = new(replacerRegistry);
-        _signatureReducer = new(replacerRegistry);
     }
 
     public InstructionsFeeder InstructionsFeeder { get; }
 
-    public CfgInstruction CurrentNodeFromInstructionFeeder =>
+    /// <summary>
+    /// Parses or retrieves from cache the instruction at the current IP from memory.
+    /// May trigger SignatureReducer and InstructionReplacerRegistry side effects.
+    /// </summary>
+    public CfgInstruction GetInstructionFromMemoryAtIp() =>
         InstructionsFeeder.GetInstructionFromMemory(_state.IpSegmentedAddress);
 
     public ICfgNode GetLinkedCfgNodeToExecute(ExecutionContext executionContext) {
-        // Determine actual node to execute. Graph may not represent what is actually in memory if graph is not complete or if self modifying code
-        ICfgNode toExecute = DetermineToExecute(executionContext.NodeToExecuteNextAccordingToGraph);
+        ICfgNode toExecute = DetermineToExecute(executionContext);
         ICfgNode? lastExecuted = executionContext.LastExecuted;
-        if (lastExecuted is { CanHaveMoreSuccessors: true }) {
-            InstructionSuccessorType type = executionContext.CpuFault
-                ? InstructionSuccessorType.CpuFault
-                : InstructionSuccessorType.Normal;
-            // Reset it
-            executionContext.CpuFault = false;
-            // Node can still have successors, try to register the link in the graph
-            _nodeLinker.Link(type,lastExecuted, toExecute);
+        if (lastExecuted is not { CanHaveMoreSuccessors: true }) {
+            return toExecute;
         }
 
-        return toExecute;
+        // Node can still have successors, try to register the link in the graph
+        InstructionSuccessorType type = executionContext.CpuFault
+            ? InstructionSuccessorType.CpuFault
+            : InstructionSuccessorType.Normal;
+        // Reset it
+        executionContext.CpuFault = false;
+
+        return _nodeLinker.Link(type, lastExecuted, toExecute);
     }
 
-    private ICfgNode DetermineToExecute(ICfgNode? currentFromGraph) {
+    private ICfgNode DetermineToExecute(ExecutionContext executionContext) {
+        ICfgNode? currentFromGraph = executionContext.NodeToExecuteNextAccordingToGraph;
         if (currentFromGraph == null) {
-            // Need to fetch from feeder
-            return CurrentNodeFromInstructionFeeder;
+            return GetInstructionFromMemoryAtIp();
         }
-
         if (currentFromGraph.IsLive) {
             // Instruction is up to date. No need to do anything.
             return currentFromGraph;
         }
-
-        CfgInstruction fromMemory = CurrentNodeFromInstructionFeeder;
-        if (ReferenceEquals(fromMemory, currentFromGraph)) {
-            // Instruction is assembly and Graph agrees with memory. Nominal case.
-            return currentFromGraph;
-        }
-
-        if (fromMemory.Address != currentFromGraph.Address) {
-            // should never happen
-            throw new UnhandledCfgDiscrepancyException("Nodes from memory and from graph don't have the same address. This should never happen. " +
-                                                       $"From memory: {fromMemory}" +
-                                                       $"From graph: {currentFromGraph}");
-        }
-
-        // Graph and memory are not aligned ... Need to inject Node with signature to select the right one from memory at exec time.
-        // If previous was Selector and current was not in its successors we would not be there because 
-        // currentFromGraph would have been null and the linker would then link it to SelectorNode
-        return CreateSelectorNode(fromMemory, (CfgInstruction)currentFromGraph);
+        return ReconcileGraphWithMemory(executionContext, currentFromGraph);
     }
 
-    private ICfgNode CreateSelectorNode(CfgInstruction instruction1, CfgInstruction instruction2) {
-        CfgInstruction? reduced = _signatureReducer.ReduceToOne(instruction1, instruction2);
-        if (reduced != null) {
-            return reduced;
+    /// <summary>
+    /// The graph node is stale (memory changed since it was parsed).
+    /// Parsing the current memory instruction may trigger SignatureReducer if it is reducible with
+    /// the stale graph node (same opcode, different non-final fields). The reduction propagates via
+    /// InstructionReplacerRegistry -> ExecutionContextManager, updating
+    /// executionContext.NodeToExecuteNextAccordingToGraph from staleGraphNode to the merged instruction.
+    /// If after that the graph still disagrees with memory, a SelectorNode is injected.
+    /// </summary>
+    private ICfgNode ReconcileGraphWithMemory(ExecutionContext executionContext, ICfgNode staleGraphNode) {
+        CfgInstruction fromMemory = GetInstructionFromMemoryAtIp();
+        ICfgNode? graphNodeAfterReconciliation = executionContext.NodeToExecuteNextAccordingToGraph;
+
+        // If the replacer merged the stale node into fromMemory, the graph reference
+        // now points to fromMemory. Reconciliation succeeded.
+        if (ReferenceEquals(fromMemory, graphNodeAfterReconciliation)) {
+            return fromMemory;
         }
 
-        SelectorNode res = new SelectorNode(instruction1.Address);
-        // Make predecessors of instructions point to res instead of instruction1/2
-        _nodeLinker.InsertIntermediatePredecessor(instruction1, res);
-        _nodeLinker.InsertIntermediatePredecessor(instruction2, res);
+        if (graphNodeAfterReconciliation == null || fromMemory.Address != graphNodeAfterReconciliation.Address) {
+            throw new UnhandledCfgDiscrepancyException(
+                "Nodes from memory and from graph don't have the same address. This should never happen. " +
+                $"From memory: {fromMemory} " +
+                $"From graph: {graphNodeAfterReconciliation}");
+        }
 
-        return res;
+        // Genuinely different instructions at the same address. Inject a SelectorNode
+        return _nodeLinker.CreateSelectorNodeBetween(fromMemory, (CfgInstruction)graphNodeAfterReconciliation);
     }
 }

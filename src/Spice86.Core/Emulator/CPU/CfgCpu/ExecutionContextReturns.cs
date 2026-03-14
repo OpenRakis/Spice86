@@ -34,6 +34,17 @@ public class ExecutionContextReturns : IClearable {
         return res;
     }
 
+    /// <summary>
+    /// Enumerates all stacked execution contexts across all return addresses.
+    /// </summary>
+    public IEnumerable<ExecutionContext> GetAllContexts() {
+        foreach (Stack<ExecutionContext> stack in _executionContextReturns.Values) {
+            foreach (ExecutionContext context in stack) {
+                yield return context;
+            }
+        }
+    }
+
     /// <inheritdoc />
     public void Clear() {
         _executionContextReturns.Clear();
