@@ -6,9 +6,9 @@ using CommunityToolkit.Mvvm.Messaging;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.ValueViewModels.Debugging;
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
@@ -24,8 +24,35 @@ public partial class DisassemblyViewModel {
     private void StepOver() {
         SegmentedAddress currentAddress = State.IpSegmentedAddress;
         DebuggerLineViewModel debuggerLine = EnsureAddressIsLoaded(currentAddress);
-        SegmentedAddress initialStackAddress = new(State.SS, State.SP);
-        AddStepOverBreakpoint(currentAddress, debuggerLine.CanBeSteppedOver, initialStackAddress);
+
+        if (!debuggerLine.CanBeSteppedOver) {
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("Setting unconditional breakpoint for step over");
+            }
+
+            _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
+                Pause("Step over unconditional breakpoint was reached");
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}", currentAddress, State.IpPhysicalAddress);
+                }
+            }, true);
+
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("Resuming execution for step over");
+            }
+            _pauseHandler.Resume();
+
+            return;
+        }
+
+        uint nextInstructionAddress = debuggerLine.NextAddress;
+
+        _breakpointsViewModel.AddAddressBreakpoint(nextInstructionAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
+            Pause($"Step over execution breakpoint was reached");
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
+            }
+        }, null, "Step over breakpoint", null);
 
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Resuming execution for step over");
@@ -36,59 +63,28 @@ public partial class DisassemblyViewModel {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void StepInto() {
         SegmentedAddress currentAddress = State.IpSegmentedAddress;
-        AddStepIntoBreakpoint(currentAddress);
+        bool shouldSkipCurrentCheckpoint = true;
 
-        _pauseHandler.Resume();
-    }
-
-    private void AddStepIntoBreakpoint(SegmentedAddress currentAddress) {
-        bool initialInstructionCheckpointPassed = false;
-        UnconditionalBreakPoint stepBreakpoint = new(
+        UnconditionalBreakPoint stepIntoBreakpoint = new(
             BreakPointType.CPU_EXECUTION_ADDRESS,
-            breakpoint => {
-                if (!initialInstructionCheckpointPassed) {
-                    initialInstructionCheckpointPassed = true;
+            breakPoint => {
+                if (shouldSkipCurrentCheckpoint) {
+                    shouldSkipCurrentCheckpoint = false;
                     return;
                 }
 
-                _emulatorBreakpointsManager.ToggleBreakPoint(breakpoint, on: false);
+                _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, on: false);
                 Pause("Step into breakpoint was reached");
+
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
                     _logger.Debug("Step into breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
                 }
             },
-            false);
+            removeOnTrigger: false) {
+        };
 
-        _emulatorBreakpointsManager.ToggleBreakPoint(stepBreakpoint, on: true);
-    }
-
-    private void AddStepOverBreakpoint(SegmentedAddress currentAddress, bool waitForCallReturn, SegmentedAddress initialStackAddress) {
-        bool initialInstructionCheckpointPassed = false;
-        UnconditionalBreakPoint stepBreakpoint = new(
-            BreakPointType.CPU_EXECUTION_ADDRESS,
-            breakpoint => {
-                if (!initialInstructionCheckpointPassed) {
-                    initialInstructionCheckpointPassed = true;
-                    return;
-                }
-
-                if (waitForCallReturn && !HasReachedCallerStackDepth(initialStackAddress)) {
-                    return;
-                }
-
-                _emulatorBreakpointsManager.ToggleBreakPoint(breakpoint, on: false);
-                Pause("Step over breakpoint was reached");
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
-                }
-            },
-            false);
-
-        _emulatorBreakpointsManager.ToggleBreakPoint(stepBreakpoint, on: true);
-    }
-
-    private bool HasReachedCallerStackDepth(SegmentedAddress initialStackAddress) {
-        return State.SS == initialStackAddress.Segment && State.SP >= initialStackAddress.Offset;
+        _emulatorBreakpointsManager.ToggleBreakPoint(stepIntoBreakpoint, on: true);
+        _pauseHandler.Resume();
     }
 
     [RelayCommand]
