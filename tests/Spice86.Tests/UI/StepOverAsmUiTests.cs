@@ -40,7 +40,7 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
     }
 
     private void RunStepOverCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress, bool installInterruptVectors) {
-        Spice86DependencyInjection dependencyInjection = new Spice86Creator(
+        using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
             binName,
             enablePit: false,
             maxCycles: 2_000_000,
@@ -131,7 +131,6 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
                 runTask.GetAwaiter().GetResult();
             }
 
-            dependencyInjection.Dispose();
             ProcessUiEvents();
         }
     }
