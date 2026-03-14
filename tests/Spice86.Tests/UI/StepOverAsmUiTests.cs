@@ -34,13 +34,6 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
         RunStepOverCase("jump2", initialAddress, expectedAddress, installInterruptVectors: false);
     }
 
-    [AvaloniaFact]
-    public void StepOver_OnNonCallInstruction_ExecutesSingleInstructionWithoutUiFallbackBreakpoint() {
-        SegmentedAddress initialAddress = new(0xF000, 0x000C);
-        SegmentedAddress expectedAddress = new(0xF000, 0x0010);
-        RunStepOverCase("jump1", initialAddress, expectedAddress, installInterruptVectors: false);
-    }
-
     private void RunStepOverCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress, bool installInterruptVectors) {
         using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
             binName,

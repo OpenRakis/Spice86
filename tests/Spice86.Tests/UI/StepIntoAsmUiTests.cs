@@ -28,6 +28,27 @@ using Xunit;
 
 public class StepIntoAsmUiTests : BreakpointUiTestBase {
     [AvaloniaFact]
+    public void StepInto_OnMov_AdvancesToImmediateNextInstruction() {
+        SegmentedAddress initialAddress = new(0xF000, 0x0000);
+        SegmentedAddress expectedAddress = new(0xF000, 0x0003);
+        RunStepIntoCase("jump1", initialAddress, expectedAddress, installInterruptVectors: false);
+    }
+
+    [AvaloniaFact]
+    public void StepInto_OnStc_AdvancesToImmediateNextInstruction() {
+        SegmentedAddress initialAddress = new(0xF000, 0x0010);
+        SegmentedAddress expectedAddress = new(0xF000, 0x0011);
+        RunStepIntoCase("jump1", initialAddress, expectedAddress, installInterruptVectors: false);
+    }
+
+    [AvaloniaFact]
+    public void StepInto_OnCmp_AdvancesToImmediateNextInstruction() {
+        SegmentedAddress initialAddress = new(0xF000, 0x0009);
+        SegmentedAddress expectedAddress = new(0xF000, 0x000B);
+        RunStepIntoCase("cmpneg", initialAddress, expectedAddress, installInterruptVectors: false);
+    }
+
+    [AvaloniaFact]
     public void StepInto_OnCall_EntersCallTarget() {
         SegmentedAddress initialAddress = new(0xF000, 0x000E);
         SegmentedAddress expectedAddress = new(0xF000, 0x1290);
@@ -143,6 +164,7 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
             disassemblyViewModel.StepIntoCommand.CanExecute(null).Should().BeTrue(
                 "step into should be available while paused");
 
+            long initialCycles = state.Cycles;
             disassemblyViewModel.StepIntoCommand.Execute(null);
 
             WaitUntil(
@@ -154,6 +176,9 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
                 () => disassemblyViewModel.IsPaused,
                 timeoutMilliseconds: 5000,
                 failureMessage: "The disassembly view model should be paused after step into completes");
+
+            state.Cycles.Should().Be(initialCycles + 1,
+                "step into should execute exactly one instruction and must not skip ASM lines");
 
             breakpointsViewModel.Breakpoints.Should().BeEmpty(
                 "step into must not create or leave temporary UI breakpoints");
