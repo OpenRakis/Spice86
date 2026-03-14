@@ -4,16 +4,17 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
 using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.ValueViewModels.Debugging;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
-using Spice86.Shared.Utils;
 
 public partial class DisassemblyViewModel {
     private DebuggerLineViewModel? _pendingBreakpointDebuggerLine;
-    
+
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
     private void CloseTab() {
         _messenger.Send(new RemoveViewModelMessage<DisassemblyViewModel>(this));
@@ -62,35 +63,21 @@ public partial class DisassemblyViewModel {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void StepInto() {
         SegmentedAddress currentAddress = State.IpSegmentedAddress;
-        DebuggerLineViewModel debuggerLine = EnsureAddressIsLoaded(currentAddress);
+        long targetCycles = State.Cycles + 1;
 
-        if (debuggerLine.BranchTarget is { } branchTarget) {
-            uint targetPhysical = MemoryUtils.ToPhysicalAddress(branchTarget.Segment, branchTarget.Offset);
-            _breakpointsViewModel.AddAddressBreakpoint(targetPhysical, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
-                Pause("Step into breakpoint was reached");
-            }, null, "Step into breakpoint", null);
-
-            if (debuggerLine.IsConditionalBranch) {
-                uint fallThroughAddress = debuggerLine.NextAddress;
-                if (fallThroughAddress != targetPhysical) {
-                    _breakpointsViewModel.AddAddressBreakpoint(fallThroughAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
-                        Pause("Step into breakpoint was reached");
-                    }, null, "Step into fall-through breakpoint", null);
-                }
-            }
-        } else if (debuggerLine.ContinuesToNextInstruction) {
-            uint nextAddress = debuggerLine.NextAddress;
-            _breakpointsViewModel.AddAddressBreakpoint(nextAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
+        AddressBreakPoint stepIntoBreakpoint = new(
+            BreakPointType.CPU_CYCLES,
+            targetCycles,
+            _ => {
                 Pause("Step into breakpoint was reached");
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("Step into breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
+                    _logger.Debug("Step into breakpoint reached at cycle {TargetCycles}. Previous address: {CurrentAddress}, New address: {StateCsIp}", targetCycles, currentAddress, State.IpSegmentedAddress);
                 }
-            }, null, "Step into breakpoint", null);
-        } else {
-            _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
-                Pause("Step into breakpoint was reached");
-            }, true);
-        }
+            },
+            true);
+
+        _emulatorBreakpointsManager.ToggleBreakPoint(stepIntoBreakpoint, on: true);
+
         _pauseHandler.Resume();
     }
 
@@ -129,7 +116,7 @@ public partial class DisassemblyViewModel {
 
     [RelayCommand]
     private void GoToFunction(FunctionInfo? functionInfo) {
-        if(functionInfo is null) {
+        if (functionInfo is null) {
             return;
         }
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -180,24 +167,24 @@ public partial class DisassemblyViewModel {
             IsCreatingBreakpoint = true;
         }
     }
-    
+
     [RelayCommand]
     private void ConfirmBreakpointCreation() {
         if (_pendingBreakpointDebuggerLine == null) {
             IsCreatingBreakpoint = false;
             return;
         }
-        
+
         // If editing an existing breakpoint, remove it first
         if (_pendingBreakpointDebuggerLine.Breakpoint != null) {
             _breakpointsViewModel.RemoveBreakpointInternal(_pendingBreakpointDebuggerLine.Breakpoint);
         }
-        
+
         CreateExecutionBreakpointWithCondition(_pendingBreakpointDebuggerLine, BreakpointCondition);
         _pendingBreakpointDebuggerLine = null;
         IsCreatingBreakpoint = false;
     }
-    
+
     [RelayCommand]
     private void CancelBreakpointCreation() {
         _pendingBreakpointDebuggerLine = null;
@@ -213,7 +200,7 @@ public partial class DisassemblyViewModel {
             IsCreatingBreakpoint = true;
         }
     }
-    
+
     [RelayCommand]
     private void RemoveExecutionBreakpointHere(DebuggerLineViewModel debuggerLine) {
         if (debuggerLine.Breakpoint != null) {
