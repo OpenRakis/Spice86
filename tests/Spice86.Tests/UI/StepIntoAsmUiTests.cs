@@ -3,8 +3,6 @@ namespace Spice86.Tests.UI;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 
-using System.Diagnostics;
-
 using CommunityToolkit.Mvvm.Messaging;
 
 using FluentAssertions;
@@ -16,7 +14,6 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
@@ -24,7 +21,7 @@ using Spice86.Shared.Utils;
 using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 
-using Xunit;
+using System.Diagnostics;
 
 public class StepIntoAsmUiTests : BreakpointUiTestBase {
     [AvaloniaFact]
@@ -196,7 +193,7 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
         }
     }
 
-    private static void WaitUntil(Func<bool> condition, int timeoutMilliseconds, string failureMessage) {
+    internal static void WaitUntil(Func<bool> condition, int timeoutMilliseconds, string failureMessage) {
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         while (stopwatch.ElapsedMilliseconds < timeoutMilliseconds) {
