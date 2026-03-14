@@ -31,10 +31,25 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
     public async Task StepOver_OnCall_PausesAtNextInstruction() {
         SegmentedAddress initialAddress = new(0xF000, 0x000E);
         SegmentedAddress expectedAddress = new(0xF000, 0x0010);
-        await RunStepOverCase("jump2", initialAddress, expectedAddress, installInterruptVectors: false);
+        await RunStepOverCase("jump2", initialAddress, expectedAddress, installInterruptVectors: false, assertSingleInstructionCycleDelta: false);
     }
 
-    private async Task RunStepOverCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress, bool installInterruptVectors) {
+    [AvaloniaFact]
+    public async Task StepOver_OnMov_AdvancesToImmediateNextInstruction() {
+        SegmentedAddress initialAddress = new(0xF000, 0x0000);
+        SegmentedAddress expectedAddress = new(0xF000, 0x0003);
+        await RunStepOverCase("jump1", initialAddress, expectedAddress, installInterruptVectors: false, assertSingleInstructionCycleDelta: true);
+    }
+
+    [AvaloniaFact]
+    public async Task StepOver_OnStc_AdvancesToImmediateNextInstruction() {
+        SegmentedAddress initialAddress = new(0xF000, 0x0010);
+        SegmentedAddress expectedAddress = new(0xF000, 0x0011);
+        await RunStepOverCase("jump1", initialAddress, expectedAddress, installInterruptVectors: false, assertSingleInstructionCycleDelta: true);
+    }
+
+    private async Task RunStepOverCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress,
+        bool installInterruptVectors, bool assertSingleInstructionCycleDelta) {
         using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
             binName,
             enablePit: false,
@@ -103,6 +118,7 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
             disassemblyViewModel.StepOverCommand.CanExecute(null).Should().BeTrue(
                 "step over should be available while paused");
 
+            long initialCycles = state.Cycles;
             disassemblyViewModel.StepOverCommand.Execute(null);
 
             StepIntoAsmUiTests.WaitUntil(
@@ -111,6 +127,11 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
                       && state.IpSegmentedAddress == expectedAddress,
                 timeoutMilliseconds: 5000,
                 failureMessage: "step over should pause at the expected destination");
+
+            if (assertSingleInstructionCycleDelta) {
+                state.Cycles.Should().Be(initialCycles + 1,
+                    "step over should execute exactly one instruction for non-call instructions");
+            }
 
             breakpointsViewModel.Breakpoints.Should().BeEmpty(
                 "step over must not create or leave temporary UI breakpoints");
