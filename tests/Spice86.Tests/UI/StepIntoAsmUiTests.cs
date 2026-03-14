@@ -3,6 +3,8 @@ namespace Spice86.Tests.UI;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 
+using System.Diagnostics;
+
 using CommunityToolkit.Mvvm.Messaging;
 
 using FluentAssertions;
@@ -164,10 +166,9 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
     }
 
     private static void WaitUntil(Func<bool> condition, int timeoutMilliseconds, string failureMessage) {
-        DateTime start = DateTime.UtcNow;
-        TimeSpan timeout = TimeSpan.FromMilliseconds(timeoutMilliseconds);
+        Stopwatch stopwatch = Stopwatch.StartNew();
 
-        while (DateTime.UtcNow - start < timeout) {
+        while (stopwatch.ElapsedMilliseconds < timeoutMilliseconds) {
             Dispatcher.UIThread.RunJobs();
             if (condition()) {
                 return;
