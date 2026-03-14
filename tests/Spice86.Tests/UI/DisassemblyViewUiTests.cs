@@ -78,10 +78,13 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
 
         try {
             attachedToVisualTreeMethod.Should().NotBeNull();
+            if (attachedToVisualTreeMethod == null) {
+                throw new InvalidOperationException("Could not find attach handler method on DisassemblyView");
+            }
 
             // Simulate attach before DataContext assignment.
             // This is the lifecycle ordering that reproduces the stale paused state.
-            attachedToVisualTreeMethod!.Invoke(view, [null, null]);
+            attachedToVisualTreeMethod.Invoke(view, [null, null]);
 
             view.DataContext = updatedViewModel;
             ProcessUiEvents();
@@ -93,6 +96,39 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
         } finally {
             if (updatedPauseHandler.IsPaused) {
                 updatedPauseHandler.Resume();
+                ProcessUiEvents();
+            }
+        }
+    }
+
+    [AvaloniaFact]
+    public void DisassemblyViewModel_ReactivatedAfterResume_RefreshesPausedState() {
+        (DisassemblyViewModel viewModel, PauseHandler pauseHandler) = CreateDisassemblyViewModel();
+
+        try {
+            viewModel.Activate();
+            ProcessUiEvents();
+
+            pauseHandler.RequestPause("Pause for stale state check");
+            ProcessUiEvents();
+
+            viewModel.IsPaused.Should().BeTrue("the view model should reflect pause while active");
+
+            viewModel.Deactivate();
+            ProcessUiEvents();
+
+            pauseHandler.Resume();
+            ProcessUiEvents();
+
+            viewModel.IsPaused.Should().BeTrue("while inactive it does not receive resumed events and can keep stale state");
+
+            viewModel.Activate();
+            ProcessUiEvents();
+
+            viewModel.IsPaused.Should().BeFalse("reactivating should resynchronize with the current pause handler state");
+        } finally {
+            if (pauseHandler.IsPaused) {
+                pauseHandler.Resume();
                 ProcessUiEvents();
             }
         }
