@@ -28,13 +28,13 @@ using Xunit;
 
 public class StepOverAsmUiTests : BreakpointUiTestBase {
     [AvaloniaFact]
-    public void StepOver_OnCall_PausesAtNextInstruction() {
+    public async Task StepOver_OnCall_PausesAtNextInstruction() {
         SegmentedAddress initialAddress = new(0xF000, 0x000E);
         SegmentedAddress expectedAddress = new(0xF000, 0x0010);
-        RunStepOverCase("jump2", initialAddress, expectedAddress, installInterruptVectors: false);
+        await RunStepOverCase("jump2", initialAddress, expectedAddress, installInterruptVectors: false);
     }
 
-    private void RunStepOverCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress, bool installInterruptVectors) {
+    private async Task RunStepOverCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress, bool installInterruptVectors) {
         using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
             binName,
             enablePit: false,
@@ -92,7 +92,7 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
         Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
 
         try {
-            WaitUntil(
+            StepIntoAsmUiTests.WaitUntil(
                 () => pauseHandler.IsPaused && disassemblyViewModel.IsPaused,
                 timeoutMilliseconds: 5000,
                 failureMessage: "The emulator should pause on the initial breakpoint before stepping");
@@ -105,7 +105,7 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
 
             disassemblyViewModel.StepOverCommand.Execute(null);
 
-            WaitUntil(
+            StepIntoAsmUiTests.WaitUntil(
                 () => pauseHandler.IsPaused
                       && disassemblyViewModel.IsPaused
                       && state.IpSegmentedAddress == expectedAddress,
@@ -117,30 +117,16 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
         } finally {
             state.IsRunning = false;
             pauseHandler.Resume();
-            WaitUntil(
+            StepIntoAsmUiTests.WaitUntil(
                 () => runTask.IsCompleted,
                 timeoutMilliseconds: 5000,
                 failureMessage: "The emulation task should complete during cleanup");
 
             if (runTask.IsFaulted) {
-                runTask.GetAwaiter().GetResult();
+                await runTask;
             }
 
             ProcessUiEvents();
         }
-    }
-
-    private static void WaitUntil(Func<bool> condition, int timeoutMilliseconds, string failureMessage) {
-        Stopwatch stopwatch = Stopwatch.StartNew();
-
-        while (stopwatch.ElapsedMilliseconds < timeoutMilliseconds) {
-            Dispatcher.UIThread.RunJobs();
-            if (condition()) {
-                return;
-            }
-            Thread.Sleep(1);
-        }
-
-        condition().Should().BeTrue(failureMessage);
     }
 }
