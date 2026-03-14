@@ -68,7 +68,7 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
     }
 
     private void RunStepIntoCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress, bool installInterruptVectors) {
-        Spice86DependencyInjection dependencyInjection = new Spice86Creator(
+        using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
             binName,
             enablePit: false,
             maxCycles: 2_000_000,
@@ -159,7 +159,6 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
                 runTask.GetAwaiter().GetResult();
             }
 
-            dependencyInjection.Dispose();
             ProcessUiEvents();
         }
     }
