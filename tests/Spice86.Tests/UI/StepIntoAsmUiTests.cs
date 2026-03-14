@@ -128,9 +128,14 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
 
         try {
             WaitUntil(
-                () => pauseHandler.IsPaused && disassemblyViewModel.IsPaused,
+                () => pauseHandler.IsPaused,
                 timeoutMilliseconds: 5000,
                 failureMessage: "The emulator should pause on the initial breakpoint before stepping");
+
+            WaitUntil(
+                () => disassemblyViewModel.IsPaused,
+                timeoutMilliseconds: 5000,
+                failureMessage: "The disassembly view model should reflect the paused state before stepping");
 
             state.IpSegmentedAddress.Should().Be(initialAddress,
                 "the initial breakpoint must pause exactly on the instruction under test");
@@ -141,11 +146,14 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
             disassemblyViewModel.StepIntoCommand.Execute(null);
 
             WaitUntil(
-                () => pauseHandler.IsPaused
-                      && disassemblyViewModel.IsPaused
-                      && state.IpSegmentedAddress == expectedAddress,
+                () => pauseHandler.IsPaused && state.IpSegmentedAddress == expectedAddress,
                 timeoutMilliseconds: 5000,
                 failureMessage: "step into should execute exactly one instruction and pause at the expected destination");
+
+            WaitUntil(
+                () => disassemblyViewModel.IsPaused,
+                timeoutMilliseconds: 5000,
+                failureMessage: "The disassembly view model should be paused after step into completes");
 
             breakpointsViewModel.Breakpoints.Should().BeEmpty(
                 "step into must not create or leave temporary UI breakpoints");
@@ -157,9 +165,7 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
                 timeoutMilliseconds: 5000,
                 failureMessage: "The emulation task should complete during cleanup");
 
-            if (runTask.IsFaulted) {
-                runTask.GetAwaiter().GetResult();
-            }
+            runTask.IsFaulted.Should().BeFalse("cleanup should not leave a faulted background run task");
 
             ProcessUiEvents();
         }
