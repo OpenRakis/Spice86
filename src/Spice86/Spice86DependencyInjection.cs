@@ -562,12 +562,16 @@ public class Spice86DependencyInjection : IDisposable {
         if (configuration.HttpApiPort != 0) {
             try {
                 _httpApiServer = new Spice86HttpApiServer(state, memory, pauseHandler, loggerService, configuration.HttpApiPort);
+                mainWindowViewModel?.SetHttpApiPort(_httpApiServer.Port);
             } catch (SocketException e) {
                 loggerService.Warning(e, "HTTP API server could not bind to {BaseUrl}. Continuing without HTTP API.", HttpApiEndpoint.BaseUrl(configuration.HttpApiPort));
+                mainWindowViewModel?.SetHttpApiPort(null);
             } catch (IOException e) {
                 loggerService.Error(e, "Could not start HTTP API server on {BaseUrl}", HttpApiEndpoint.BaseUrl(configuration.HttpApiPort));
+                mainWindowViewModel?.SetHttpApiPort(null);
             } catch (InvalidOperationException e) {
                 loggerService.Error(e, "Could not initialize HTTP API server");
+                mainWindowViewModel?.SetHttpApiPort(null);
             }
         }
 

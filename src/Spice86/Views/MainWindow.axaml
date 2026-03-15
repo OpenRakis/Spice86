@@ -167,6 +167,11 @@
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem>
+				<TextBlock Text="{Binding HttpApiPort, StringFormat='HTTP port: {0}'}"
+				           IsVisible="{Binding HttpApiPort, Converter={StaticResource NullableToBooleanConverter}}" />
+			</controls:StatusBarItem>
+			<Separator />
+			<controls:StatusBarItem>
 				<TextBlock Text="{Binding EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />	
 			</controls:StatusBarItem>
 			<Separator />
