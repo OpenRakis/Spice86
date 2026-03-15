@@ -13,70 +13,43 @@ public class SteppingOnExecutionBreakpointUiTests : BreakpointUiTestBase {
     [AvaloniaFact]
     public void StepInto_WhenMachineStartBreakpointWasDisabled_DoesNotTriggerMachineStartAgain() {
         //Arrange
-        SegmentedAddress initialAddress = new(0xF000, 0x0000);
-        SegmentedAddress expectedAddress = new(0xF000, 0x0003);
-
-        using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
-            "jump1",
-            enablePit: false,
-            maxCycles: 2_000_000,
-            installInterruptVectors: false).Create();
-
-        DisassemblySteppingContext context = CreateActiveDisassemblySteppingContext(dependencyInjection);
         int machineStartTriggerCount = 0;
 
-        UnconditionalBreakPoint machineStartBreakpoint = new(
-            BreakPointType.MACHINE_START,
-            _ => {
-                machineStartTriggerCount++;
-                context.PauseHandler.RequestPause("Machine start breakpoint was reached");
+        //Act
+        //Assert
+        RunSteppingScenario(
+            new SteppingScenario {
+                BinName = "jump1",
+                InstallInterruptVectors = false,
+                InitialAddress = new SegmentedAddress(0xF000, 0x0000),
+                ExpectedAddress = new SegmentedAddress(0xF000, 0x0003),
+                RemoveBreakpointOnTrigger = true,
+                UseStepInto = true,
+                AssertSingleInstructionCycleDelta = false,
+                AssertNoTemporaryUiBreakpoints = false,
+                PauseBeforeSteppingFailureMessage = "The emulator should pause on the execution breakpoint before stepping",
+                InitialAddressAssertionMessage = "the first pause should happen on the instruction under test",
+                StepAvailabilityAssertionMessage = "step into should be available while paused",
+                DestinationFailureMessage = "the first step should land on the next instruction without requiring a second step",
+                CycleAssertionMessage = string.Empty,
+                NoTemporaryUiBreakpointsAssertionMessage = string.Empty
             },
-            removeOnTrigger: false);
+            context => {
+                UnconditionalBreakPoint machineStartBreakpoint = new(
+                    BreakPointType.MACHINE_START,
+                    _ => {
+                        machineStartTriggerCount++;
+                        context.PauseHandler.RequestPause("Machine start breakpoint was reached");
+                    },
+                    removeOnTrigger: false);
 
-        AddressBreakPoint executionBreakpoint =
-            CreateExecutionPauseBreakpoint(initialAddress, context.PauseHandler, removeOnTrigger: true);
-
-        context.EmulatorBreakpointsManager.ToggleBreakPoint(machineStartBreakpoint, on: true);
-        context.EmulatorBreakpointsManager.ToggleBreakPoint(machineStartBreakpoint, on: false);
-        context.EmulatorBreakpointsManager.ToggleBreakPoint(executionBreakpoint, on: true);
-
-        Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
-
-        try {
-            //Act
-            WaitUntil(
-                () => context.PauseHandler.IsPaused && context.DisassemblyViewModel.IsPaused,
-                timeoutMilliseconds: 5000,
-                failureMessage: "The emulator should pause on the execution breakpoint before stepping");
-
-            context.State.IpSegmentedAddress.Should().Be(initialAddress,
-                "the first pause should happen on the instruction under test");
-
-            context.DisassemblyViewModel.StepIntoCommand.CanExecute(null).Should().BeTrue(
-                "step into should be available while paused");
-            context.DisassemblyViewModel.StepIntoCommand.Execute(null);
-
-            //Assert
-            WaitUntil(
-                () => context.PauseHandler.IsPaused
-                      && context.DisassemblyViewModel.IsPaused
-                      && context.State.IpSegmentedAddress == expectedAddress,
-                timeoutMilliseconds: 5000,
-                failureMessage: "the first step should land on the next instruction without requiring a second step");
-
-            machineStartTriggerCount.Should().Be(0,
-                "disabling MACHINE_START should clear the slot so the first step is not consumed by a stale machine-start pause");
-        } finally {
-            context.State.IsRunning = false;
-            context.PauseHandler.Resume();
-            WaitUntil(
-                () => runTask.IsCompleted,
-                timeoutMilliseconds: 5000,
-                failureMessage: "The emulation task should complete during cleanup");
-
-            runTask.IsFaulted.Should().BeFalse("cleanup should not leave a faulted background run task");
-            ProcessUiEvents();
-        }
+                context.EmulatorBreakpointsManager.ToggleBreakPoint(machineStartBreakpoint, on: true);
+                context.EmulatorBreakpointsManager.ToggleBreakPoint(machineStartBreakpoint, on: false);
+            },
+            _ => {
+                machineStartTriggerCount.Should().Be(0,
+                    "disabling MACHINE_START should clear the slot so the first step is not consumed by a stale machine-start pause");
+            });
     }
 
     [AvaloniaFact]

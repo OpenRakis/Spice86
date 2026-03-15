@@ -177,6 +177,15 @@ public abstract class BreakpointUiTestBase : IDisposable {
     }
 
     protected void RunSteppingScenario(SteppingScenario scenario) {
+        RunSteppingScenario(scenario, _ => {
+        }, _ => {
+        });
+    }
+
+    protected void RunSteppingScenario(
+        SteppingScenario scenario,
+        Action<DisassemblySteppingContext> additionalSetup,
+        Action<DisassemblySteppingContext> additionalAssert) {
         using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
             scenario.BinName,
             enablePit: false,
@@ -187,6 +196,8 @@ public abstract class BreakpointUiTestBase : IDisposable {
         AddressBreakPoint executionBreakpoint =
             CreateExecutionPauseBreakpoint(scenario.InitialAddress, context.PauseHandler, scenario.RemoveBreakpointOnTrigger);
         context.EmulatorBreakpointsManager.ToggleBreakPoint(executionBreakpoint, on: true);
+
+        additionalSetup(context);
 
         Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
 
@@ -218,6 +229,8 @@ public abstract class BreakpointUiTestBase : IDisposable {
                       && context.State.IpSegmentedAddress == scenario.ExpectedAddress,
                 timeoutMilliseconds: 5000,
                 failureMessage: scenario.DestinationFailureMessage);
+
+            additionalAssert(context);
 
             if (scenario.AssertSingleInstructionCycleDelta) {
                 context.State.Cycles.Should().Be(initialCycles + 1, scenario.CycleAssertionMessage);
