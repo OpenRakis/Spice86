@@ -32,11 +32,7 @@ using System.Text;
 /// </para>
 /// Each of these registers can be accessed as a whole (32 bits), or in parts as AX/BX/CX/DX (lower 16 bits), AH/BH/CH/DH (high 8 bits of the 16-bit register), and AL/BL/CL/DL (low 8 bits of the 16-bit register).
 /// </summary>
-public class State {
-    public State(CpuModel cpuModel) {
-        Flags = new(cpuModel);
-    }
-
+public class State(CpuModel cpuModel) {
     /// <summary>
     /// Gets or sets the second byte (high byte) in the general purpose EAX register
     /// <para>
@@ -225,7 +221,7 @@ public class State {
     /// <summary>
     /// Contains the flags of the CPU. This is the flags register.
     /// </summary>
-    public Flags Flags { get; }
+    public Flags Flags { get; } = new(cpuModel);
 
     /// <summary>
     /// Gets or sets the value of the Overflow Flag. Set if result is too large a positive number or too small a negative number (excluding sign-bit) to fit in destination operand; cleared otherwise.
@@ -310,7 +306,7 @@ public class State {
     /// <summary>
     /// The number of CPU cycles, incremented on each new instruction.
     /// </summary>
-    public long Cycles { get; private set; }
+    public long Cycles { get; set; }
 
     /// <summary>
     /// The physical address of the instruction pointer in memory
@@ -320,9 +316,7 @@ public class State {
     /// The segmented address representation of the instruction pointer in memory
     /// </summary>
     public SegmentedAddress IpSegmentedAddress {
-        get { 
-            return new SegmentedAddress(CS, IP);
-        }
+        get => new(CS, IP);
         set {
             IP = value.Offset;
             CS = value.Segment;

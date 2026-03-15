@@ -106,6 +106,7 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
             ModRmOffsetType.EBP => Register.Reg32(RegisterIndex.BpIndex),
             ModRmOffsetType.ESI => Register.Reg32(RegisterIndex.SiIndex),
             ModRmOffsetType.EDI => Register.Reg32(RegisterIndex.DiIndex),
+            ModRmOffsetType.ZERO => new ConstantNode(new DataType(modRmContext.AddressSize, false), 0),
             _ => throw new ArgumentOutOfRangeException(nameof(modRmContext.ModRmOffsetType),
                 modRmContext.ModRmOffsetType, "value not handled")
         };
