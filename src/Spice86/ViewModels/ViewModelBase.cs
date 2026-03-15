@@ -4,16 +4,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Utils;
+using Spice86.ViewModels.Services;
 
 using System.Collections;
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 
 public abstract partial class ViewModelBase : ObservableObject, INotifyDataErrorInfo {
     protected readonly Dictionary<string, List<string>> _validationErrors = new();

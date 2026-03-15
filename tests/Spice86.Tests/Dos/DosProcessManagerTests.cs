@@ -393,8 +393,8 @@ public class DosProcessManagerTests {
         Stack stack = new(memory, state);
 
         Configuration configuration = programEntryPointSegment.HasValue
-            ? new Configuration { ProgramEntryPointSegment = programEntryPointSegment.Value }
-            : new Configuration();
+            ? new Configuration { ProgramEntryPointSegment = programEntryPointSegment.Value, HttpApiPort = 0 }
+            : new Configuration { HttpApiPort = 0 };
 
         // Calculate initial PSP segment and set it in the SDA
         ushort initialPspSegment = (ushort)(configuration.ProgramEntryPointSegment - 0x10);

@@ -1,11 +1,11 @@
-﻿namespace Spice86.ViewModels;
+﻿namespace Spice86.ViewModels.Services;
 
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 
-/// <inheritdoc cref="Spice86.Shared.Interfaces.IGuiVideoPresentation" />
+/// <inheritdoc cref="IGuiVideoPresentation" />
 public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
     IGuiKeyboardEvents, IDisposable {
     private const double ScreenRefreshHz = 60;

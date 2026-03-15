@@ -2,6 +2,7 @@
     <PropertyGroup>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
     </PropertyGroup>
     <ItemGroup>
         <Using Remove="System.Linq" />
@@ -31,11 +32,15 @@
         <PackageReference Include="Serilog" />
         <PackageReference Include="Spectre.Console.Cli" />
         <PackageReference Include="MeltySynth" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+        <PackageReference Include="Swashbuckle.AspNetCore" />
         <PackageReference Include="Morris.Moxy" />
         <PackageReference Include="NukedOPL3Sharp" />
         <PackageReference Include="Spice86.Audio" />
         <!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
         <PackageReference Include="Mt32emu.net" />
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Serilog.Extensions.Hosting" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />

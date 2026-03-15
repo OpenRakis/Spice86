@@ -407,11 +407,27 @@ Exporting a new C header file from Ghidra or IDA will also update the structure 
 
 You can also enter the Structure view by selecting a range of bytes in the Memory tab and right-clicking on it.
 
+## HTTP server
+
+Spice86 includes a built-in HTTP server for quick runtime inspection and memory access.
+
+- The HTTP server is **disabled by default**. Enable it by specifying a port with `--HttpApiPort`.
+
+Available endpoints:
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api` | API metadata and endpoint list |
+| `GET` | `/api/status` | Current emulator status (pause state, CPU state, CS:IP, cycles, memory size) |
+| `GET` | `/api/memory/{address}/byte` | Read one byte at address |
+| `PUT` | `/api/memory/{address}/byte` | Write one byte at address |
+| `GET` | `/api/memory/{address}/range/{length}` | Read a memory range |
+
 ## Misc details
 
 ### C Drive
 
-It is possible to provide a C: Drive for emulated DOS functions with the option **--CDrive**. Default is current folder. For some games you may need to set the C drive to the game folder.
+It is possible to provide a C: Drive for emulated DOS functions with the option **--CDrive**. Default is executed program folder. For some games you may need to set the C drive to the parent folder.
 
 ### Emulated program arguments
 

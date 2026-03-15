@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Spice86.ViewModels"
+        x:Class="Spice86.Views.HttpApiWindow"
+        x:CompileBindings="True"
+        x:DataType="vm:HttpApiViewModel"
+        Width="700"
+        Height="380"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="True"
+        CanResize="True"
+        Title="Spice86 HTTP API"
+        Icon="/Views/Assets/Spice86.ico"
+        mc:Ignorable="d">
+    <StackPanel Margin="20" Spacing="14">
+        <TextBlock FontSize="18" FontWeight="SemiBold" Text="Spice86 HTTP API" />
+        <TextBlock Opacity="0.75" TextWrapping="Wrap"
+                   Text="Use Swagger UI in your browser to explore and test the API. Copy the OpenAPI document URLs below to generate typed clients with tools like Kiota or NSwag." />
+
+        <Border Padding="12" BorderThickness="1" CornerRadius="6">
+            <StackPanel Spacing="8">
+                <TextBlock FontWeight="SemiBold" Text="Swagger UI (interactive browser client)" />
+                <TextBox IsReadOnly="True" FontFamily="RobotoMonoFont" Text="{Binding SwaggerUiUrl}" />
+                <Button Content="Open Swagger UI in Browser"
+                        Click="OpenSwaggerUI"
+                        IsEnabled="{Binding IsEnabled}" />
+            </StackPanel>
+        </Border>
+
+        <Border Padding="12" BorderThickness="1" CornerRadius="6">
+            <StackPanel Spacing="8">
+                <TextBlock FontWeight="SemiBold" Text="OpenAPI documents (client generation)" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBox IsReadOnly="True" FontFamily="RobotoMonoFont" Text="{Binding OpenApiJsonUrl}" />
+                    <Button Grid.Column="1" Content="Copy JSON URL"
+                            Tag="{Binding OpenApiJsonUrl}" Click="CopyUrlToClipboard" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBox IsReadOnly="True" FontFamily="RobotoMonoFont" Text="{Binding OpenApiYamlUrl}" />
+                    <Button Grid.Column="1" Content="Copy YAML URL"
+                            Tag="{Binding OpenApiYamlUrl}" Click="CopyUrlToClipboard" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</Window>
