@@ -90,6 +90,12 @@ public sealed class Configuration {
     public int GdbPort { get; init; }
 
     /// <summary>
+    /// HTTP API port spice86 will listen to.
+    /// </summary>
+    [Option(nameof(HttpApiPort), Default = 10001, Required = false, HelpText = "HTTP API port. If 0, HTTP API server will be disabled.")]
+    public int HttpApiPort { get; init; }
+
+    /// <summary>
     /// Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to a sub directory named with the program SHA 256 signature.
     /// </summary>
     [Option('r', nameof(RecordedDataDirectory), Required = false, HelpText = "Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to a sub directory named with the program SHA 256 signature")]

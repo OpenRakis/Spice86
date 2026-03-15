@@ -18,30 +18,31 @@ public sealed class HttpApiMemoryController : ControllerBase {
 
     [HttpGet("{address:long}/byte")]
     public ActionResult<HttpApiMemoryByteResponse> GetByte(long address) {
-        if (!TryValidateAddress(address, out uint validatedAddress, out ActionResult? error)) {
-            if (error is not null) {
-                return error;
-            }
-
-            return BadRequest(new HttpApiErrorResponse("invalid address"));
+        ActionResult? error = ValidateAddress(address, out uint validatedAddress);
+        if (error is not null) {
+            return error;
         }
 
-        byte value = _httpApiState.Memory[validatedAddress];
+        byte value;
+        lock (_httpApiState.MemoryLock) {
+            value = _httpApiState.Memory[validatedAddress];
+        }
+
         HttpApiMemoryByteResponse response = new(validatedAddress, value);
         return Ok(response);
     }
 
     [HttpPut("{address:long}/byte")]
     public ActionResult<HttpApiMemoryByteResponse> PutByte(long address, [FromBody] HttpApiWriteByteRequest request) {
-        if (!TryValidateAddress(address, out uint validatedAddress, out ActionResult? error)) {
-            if (error is not null) {
-                return error;
-            }
-
-            return BadRequest(new HttpApiErrorResponse("invalid address"));
+        ActionResult? error = ValidateAddress(address, out uint validatedAddress);
+        if (error is not null) {
+            return error;
         }
 
-        _httpApiState.Memory[validatedAddress] = request.Value;
+        lock (_httpApiState.MemoryLock) {
+            _httpApiState.Memory[validatedAddress] = request.Value;
+        }
+
         HttpApiMemoryByteResponse response = new(validatedAddress, request.Value);
         return Ok(response);
     }
@@ -52,12 +53,9 @@ public sealed class HttpApiMemoryController : ControllerBase {
             return BadRequest(new HttpApiErrorResponse("length must be greater than 0"));
         }
 
-        if (!TryValidateAddress(address, out uint validatedAddress, out ActionResult? error)) {
-            if (error is not null) {
-                return error;
-            }
-
-            return BadRequest(new HttpApiErrorResponse("invalid address"));
+        ActionResult? error = ValidateAddress(address, out uint validatedAddress);
+        if (error is not null) {
+            return error;
         }
 
         long readableLength = _httpApiState.Memory.Length - validatedAddress;
@@ -67,29 +65,28 @@ public sealed class HttpApiMemoryController : ControllerBase {
 
         int boundedLength = (int)Math.Min(length, readableLength);
         byte[] values = new byte[boundedLength];
-        for (int i = 0; i < boundedLength; i++) {
-            values[i] = _httpApiState.Memory[validatedAddress + (uint)i];
+        lock (_httpApiState.MemoryLock) {
+            for (int i = 0; i < boundedLength; i++) {
+                values[i] = _httpApiState.Memory[validatedAddress + (uint)i];
+            }
         }
 
         HttpApiMemoryRangeResponse response = new(validatedAddress, boundedLength, values);
         return Ok(response);
     }
 
-    private bool TryValidateAddress(long address, out uint validatedAddress, out ActionResult? error) {
+    private ActionResult? ValidateAddress(long address, out uint validatedAddress) {
         validatedAddress = 0;
-        error = null;
 
         if (address < 0 || address > uint.MaxValue) {
-            error = BadRequest(new HttpApiErrorResponse("address must be between 0 and 4294967295"));
-            return false;
+            return BadRequest(new HttpApiErrorResponse("address must be between 0 and 4294967295"));
         }
 
         validatedAddress = (uint)address;
         if (validatedAddress >= _httpApiState.Memory.Length) {
-            error = NotFound(new HttpApiErrorResponse("address is outside of memory range"));
-            return false;
+            return NotFound(new HttpApiErrorResponse("address is outside of memory range"));
         }
 
-        return true;
+        return null;
     }
 }

@@ -18,6 +18,10 @@ public partial class MemoryView : UserControl {
             nameof(SelectedAddress),
             defaultBindingMode: BindingMode.TwoWay);
 
+    static MemoryView() {
+        SelectedAddressProperty.Changed.AddClassHandler<MemoryView>(OnSelectedAddressPropertyChanged);
+    }
+
     private bool _isUpdatingSelectedAddress;
     private MemoryViewModel? _trackedViewModel;
 
@@ -31,7 +35,6 @@ public partial class MemoryView : UserControl {
         // Subscribe to the DataContextChanged event to ensure that the ViewModel's event handler
         // is connected to the HexEditor's Selection.RangeChanged event after the DataContext is set.
         DataContextChanged += OnDataContextChanged;
-        SelectedAddressProperty.Changed.AddClassHandler<MemoryView>(OnSelectedAddressPropertyChanged);
 
         this.HexViewer.DoubleTapped += OnHexViewerDoubleTapped;
     }
@@ -104,7 +107,7 @@ public partial class MemoryView : UserControl {
         }
     }
 
-    private void OnSelectedAddressPropertyChanged(MemoryView sender, AvaloniaPropertyChangedEventArgs e) {
+    private static void OnSelectedAddressPropertyChanged(MemoryView sender, AvaloniaPropertyChangedEventArgs e) {
         string? address = e.NewValue as string;
         sender.OnSelectedAddressChanged(address);
     }
