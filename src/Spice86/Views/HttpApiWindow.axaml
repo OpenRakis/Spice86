@@ -32,26 +32,22 @@
         <Grid Grid.Row="1" ColumnDefinitions="380,*" ColumnSpacing="12">
             <StackPanel Grid.Column="0" Spacing="12">
                 <Border Padding="10" BorderThickness="1" CornerRadius="6">
-                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto" RowSpacing="8" ColumnSpacing="8">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" FontSize="16" FontWeight="SemiBold" Text="API Reference" />
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" RowSpacing="8" ColumnSpacing="8">
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" FontSize="16" FontWeight="SemiBold" Text="API Reference" />
 
                         <TextBlock Grid.Row="1" Grid.Column="0" FontWeight="Bold" Text="GET" />
                         <TextBlock Grid.Row="1" Grid.Column="1" FontFamily="RobotoMonoFont" Text="/api/status" />
-                        <Button Grid.Row="1" Grid.Column="2" Content="Send" Command="{Binding RefreshStatusCommand}" IsEnabled="{Binding !IsBusy}" />
 
                         <TextBlock Grid.Row="2" Grid.Column="0" FontWeight="Bold" Text="GET" />
                         <TextBlock Grid.Row="2" Grid.Column="1" FontFamily="RobotoMonoFont" Text="/api/memory/{address}/byte" />
-                        <Button Grid.Row="2" Grid.Column="2" Content="Send" Command="{Binding ReadByteCommand}" IsEnabled="{Binding !IsBusy}" />
 
                         <TextBlock Grid.Row="3" Grid.Column="0" FontWeight="Bold" Text="PUT" />
                         <TextBlock Grid.Row="3" Grid.Column="1" FontFamily="RobotoMonoFont" Text="/api/memory/{address}/byte" />
-                        <Button Grid.Row="3" Grid.Column="2" Content="Send" Command="{Binding WriteByteCommand}" IsEnabled="{Binding !IsBusy}" />
 
                         <TextBlock Grid.Row="4" Grid.Column="0" FontWeight="Bold" Text="GET" />
                         <TextBlock Grid.Row="4" Grid.Column="1" FontFamily="RobotoMonoFont" Text="/api/memory/{address}/range/{length}" />
-                        <Button Grid.Row="4" Grid.Column="2" Content="Send" Command="{Binding ReadRangeCommand}" IsEnabled="{Binding !IsBusy}" />
 
-                        <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Opacity="0.8" Text="Base URL is fixed to 127.0.0.1:10001" />
+                        <TextBlock Grid.Row="5" Grid.ColumnSpan="2" Opacity="0.8" Text="Base URL is fixed to 127.0.0.1:10001" />
                     </Grid>
                 </Border>
 
@@ -82,20 +78,23 @@
 
             <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
                 <Border Grid.Row="0" Padding="10" BorderThickness="1" CornerRadius="6">
-                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto" RowSpacing="8" ColumnSpacing="8">
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto" RowSpacing="8" ColumnSpacing="8">
                         <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" FontSize="16" FontWeight="SemiBold" Text="Try It Out" />
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Address" />
-                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MemoryAddressInput, Mode=TwoWay}" Watermark="0x40" FontFamily="RobotoMonoFont" />
-                        <Button Grid.Row="1" Grid.Column="2" Content="GET Byte" MinWidth="100" Command="{Binding ReadByteCommand}" IsEnabled="{Binding !IsBusy}" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Center" FontFamily="RobotoMonoFont" Text="GET /api/status" />
+                        <Button Grid.Row="1" Grid.Column="2" Content="Send" MinWidth="100" Command="{Binding RefreshStatusCommand}" IsEnabled="{Binding !IsBusy}" />
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Value" />
-                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding MemoryValueInput, Mode=TwoWay}" Watermark="0x00" FontFamily="RobotoMonoFont" />
-                        <Button Grid.Row="2" Grid.Column="2" Content="PUT Byte" MinWidth="100" Command="{Binding WriteByteCommand}" IsEnabled="{Binding !IsBusy}" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Address" />
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding MemoryAddressInput, Mode=TwoWay}" Watermark="0x40" FontFamily="RobotoMonoFont" />
+                        <Button Grid.Row="2" Grid.Column="2" Content="GET Byte" MinWidth="100" Command="{Binding ReadByteCommand}" IsEnabled="{Binding !IsBusy}" />
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="Range Length" />
-                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding MemoryRangeLengthInput, Mode=TwoWay}" Watermark="16" FontFamily="RobotoMonoFont" />
-                        <Button Grid.Row="3" Grid.Column="2" Content="GET Range" MinWidth="100" Command="{Binding ReadRangeCommand}" IsEnabled="{Binding !IsBusy}" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="Value" />
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding MemoryValueInput, Mode=TwoWay}" Watermark="0x00" FontFamily="RobotoMonoFont" />
+                        <Button Grid.Row="3" Grid.Column="2" Content="PUT Byte" MinWidth="100" Command="{Binding WriteByteCommand}" IsEnabled="{Binding !IsBusy}" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Length" />
+                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding MemoryRangeLengthInput, Mode=TwoWay}" Watermark="16" FontFamily="RobotoMonoFont" />
+                        <Button Grid.Row="4" Grid.Column="2" Content="GET Range" MinWidth="100" Command="{Binding ReadRangeCommand}" IsEnabled="{Binding !IsBusy}" />
                     </Grid>
                 </Border>
 
