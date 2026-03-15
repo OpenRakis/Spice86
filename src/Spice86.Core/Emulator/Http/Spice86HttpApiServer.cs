@@ -52,20 +52,36 @@ public sealed class Spice86HttpApiServer : IDisposable {
         _disposed = true;
 
         _cancellationTokenSource.Cancel();
-
-        try {
-            _webApplication.StopAsync().GetAwaiter().GetResult();
-        } catch (OperationCanceledException) {
-        } catch (ObjectDisposedException) {
-        }
-
-        try {
-            _webApplication.DisposeAsync().GetAwaiter().GetResult();
-        } catch (OperationCanceledException) {
-        } catch (ObjectDisposedException) {
-        }
+        StopWebApplicationBestEffort();
+        DisposeWebApplicationBestEffort();
 
         _cancellationTokenSource.Dispose();
+    }
+
+    private void StopWebApplicationBestEffort() {
+        ExecuteShutdownAction(
+            () => _webApplication.StopAsync().GetAwaiter().GetResult(),
+            "stop");
+    }
+
+    private void DisposeWebApplicationBestEffort() {
+        ExecuteShutdownAction(
+            () => _webApplication.DisposeAsync().GetAwaiter().GetResult(),
+            "dispose");
+    }
+
+    private void ExecuteShutdownAction(Action action, string operation) {
+        try {
+            action();
+        } catch (OperationCanceledException exception) {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug(exception, "HTTP API server {Operation} was canceled during disposal.", operation);
+            }
+        } catch (ObjectDisposedException exception) {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug(exception, "HTTP API server was already disposed while attempting to {Operation}.", operation);
+            }
+        }
     }
 
     private sealed class EmbeddedHostLifetime : IHostLifetime {
