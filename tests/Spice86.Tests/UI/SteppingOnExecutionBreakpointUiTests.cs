@@ -19,7 +19,6 @@ public class SteppingOnExecutionBreakpointUiTests : BreakpointUiTestBase {
     }
 
     private void RunStepCommandOnPersistentExecutionBreakpointCase(bool useStepInto) {
-        // Arrange
         SegmentedAddress initialAddress = new(0xF000, 0x0000);
         SegmentedAddress expectedAddress = new(0xF000, 0x0003);
 
@@ -37,7 +36,6 @@ public class SteppingOnExecutionBreakpointUiTests : BreakpointUiTestBase {
         Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
 
         try {
-            // Act
             WaitUntil(
                 () => context.PauseHandler.IsPaused && context.DisassemblyViewModel.IsPaused,
                 timeoutMilliseconds: 5000,
@@ -58,7 +56,6 @@ public class SteppingOnExecutionBreakpointUiTests : BreakpointUiTestBase {
                 context.DisassemblyViewModel.StepOverCommand.Execute(null);
             }
 
-            // Assert
             WaitUntil(
                 () => context.PauseHandler.IsPaused
                       && context.DisassemblyViewModel.IsPaused

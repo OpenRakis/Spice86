@@ -72,7 +72,6 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
     }
 
     private void RunStepIntoCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress, bool installInterruptVectors) {
-        // Arrange
         using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
             binName,
             enablePit: false,
@@ -87,7 +86,6 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
         Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
 
         try {
-            // Act
             WaitUntil(
                 () => context.PauseHandler.IsPaused,
                 timeoutMilliseconds: 5000,
@@ -107,7 +105,6 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
             long initialCycles = context.State.Cycles;
             context.DisassemblyViewModel.StepIntoCommand.Execute(null);
 
-            // Assert
             WaitUntil(
                 () => context.PauseHandler.IsPaused && context.State.IpSegmentedAddress == expectedAddress,
                 timeoutMilliseconds: 5000,

@@ -1,8 +1,5 @@
 namespace Spice86.Tests.UI;
 
-using Avalonia.Controls;
-using Avalonia.Headless;
-using Avalonia.Input;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
@@ -23,55 +20,35 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
-using Spice86.Views;
 
 using System.Diagnostics;
 
-/// <summary>
-/// Base class for UI breakpoint tests providing shared infrastructure.
-/// Only ILoggerService and ITextClipboard are mocked; all other components use real implementations.
-/// </summary>
 public abstract class BreakpointUiTestBase : IDisposable {
     private readonly List<PauseHandler> _pauseHandlers = new();
 
-    /// <summary>
-    /// Creates a mocked logger service. This is the only interface that should be mocked.
-    /// </summary>
     protected static ILoggerService CreateMockLoggerService() {
         return Substitute.For<ILoggerService>();
     }
 
-    /// <summary>
-    /// Creates a real pause handler with a mocked logger.
-    /// </summary>
     protected PauseHandler CreatePauseHandler(ILoggerService loggerService) {
         PauseHandler pauseHandler = new(loggerService);
         _pauseHandlers.Add(pauseHandler);
         return pauseHandler;
     }
 
-    /// <summary>
-    /// Creates a CPU State for testing.
-    /// </summary>
     protected static State CreateState() {
         return new State(CpuModel.INTEL_80286);
     }
 
-    /// <summary>
-    /// Creates Memory for testing.
-    /// </summary>
-    protected static (Memory memory, AddressReadWriteBreakpoints memoryBreakpoints, AddressReadWriteBreakpoints ioBreakpoints) CreateMemory() {
+    protected static MemoryContext CreateMemory() {
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
         Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
-        return (memory, memoryBreakpoints, ioBreakpoints);
+        return new MemoryContext(memory, memoryBreakpoints, ioBreakpoints);
     }
 
-    /// <summary>
-    /// Creates an EmulatorBreakpointsManager for testing.
-    /// </summary>
     protected static EmulatorBreakpointsManager CreateBreakpointsManager(
         IPauseHandler pauseHandler,
         State state,
@@ -81,67 +58,18 @@ public abstract class BreakpointUiTestBase : IDisposable {
         return new EmulatorBreakpointsManager(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
     }
 
-    /// <summary>
-    /// Creates a real UIDispatcher using Avalonia's UI thread dispatcher.
-    /// </summary>
     protected static UIDispatcher CreateUIDispatcher() {
         return new UIDispatcher(Dispatcher.UIThread);
     }
 
-    /// <summary>
-    /// Creates a real messenger instance.
-    /// </summary>
     protected static IMessenger CreateMessenger() {
         return WeakReferenceMessenger.Default;
     }
 
-    /// <summary>
-    /// Creates a BreakpointsViewModel for testing.
-    /// Uses real implementations where possible; only ILoggerService and ITextClipboard are mocked.
-    /// </summary>
-    protected BreakpointsViewModel CreateBreakpointsViewModel(
-        State state,
-        Memory memory,
-        EmulatorBreakpointsManager breakpointsManager,
-        ILoggerService loggerService) {
-        PauseHandler pauseHandler = CreatePauseHandler(loggerService);
-        UIDispatcher uiDispatcher = CreateUIDispatcher();
-        IMessenger messenger = CreateMessenger();
-
-        // ITextClipboard is mocked because it requires platform-specific clipboard access
-        ITextClipboard textClipboard = Substitute.For<ITextClipboard>();
-
-        return new BreakpointsViewModel(
-            state,
-            pauseHandler,
-            messenger,
-            breakpointsManager,
-            uiDispatcher,
-            textClipboard,
-            memory);
-    }
-
-    /// <summary>
-    /// Processes pending UI events.
-    /// </summary>
     protected static void ProcessUiEvents() {
         Dispatcher.UIThread.RunJobs();
     }
 
-    /// <summary>
-    /// Shows a window and waits for it to be ready.
-    /// </summary>
-    protected static void ShowWindowAndWait(Window window) {
-        window.Show();
-        ProcessUiEvents();
-    }
-
-    /// <summary>
-    /// Selects a breakpoint type tab by name and processes UI events.
-    /// </summary>
-    /// <param name="viewModel">The BreakpointsViewModel containing the tabs.</param>
-    /// <param name="tabName">The name of the tab to select (e.g., "Execution", "Memory", "Cycles").</param>
-    /// <returns>True if the tab was found and selected, false otherwise.</returns>
     protected static bool SelectBreakpointTab(BreakpointsViewModel viewModel, string tabName) {
         BreakpointTypeTabItemViewModel? tab = viewModel.BreakpointTabs.FirstOrDefault(t => t.Header == tabName);
         if (tab is null) {
@@ -152,26 +80,27 @@ public abstract class BreakpointUiTestBase : IDisposable {
         return true;
     }
 
-    /// <summary>
-    /// Creates a BreakpointsView with a properly configured ViewModel.
-    /// Uses real implementations where possible.
-    /// </summary>
-    protected (BreakpointsView view, BreakpointsViewModel viewModel) CreateBreakpointsViewWithViewModel() {
+    protected BreakpointsContext CreateBreakpointsContext() {
         State state = CreateState();
-        (Memory memory, AddressReadWriteBreakpoints memoryBreakpoints, AddressReadWriteBreakpoints ioBreakpoints) = CreateMemory();
+        MemoryContext memoryContext = CreateMemory();
         ILoggerService loggerService = CreateMockLoggerService();
         PauseHandler pauseHandler = CreatePauseHandler(loggerService);
         EmulatorBreakpointsManager breakpointsManager = CreateBreakpointsManager(
-            pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
+            pauseHandler, state, memoryContext.Memory, memoryContext.MemoryBreakpoints, memoryContext.IoBreakpoints);
+        IUIDispatcher uiDispatcher = CreateUIDispatcher();
+        IMessenger messenger = CreateMessenger();
+        ITextClipboard textClipboard = Substitute.For<ITextClipboard>();
 
-        BreakpointsViewModel viewModel = CreateBreakpointsViewModel(
-            state, memory, breakpointsManager, loggerService);
+        BreakpointsViewModel viewModel = new(
+            state,
+            pauseHandler,
+            messenger,
+            breakpointsManager,
+            uiDispatcher,
+            textClipboard,
+            memoryContext.Memory);
 
-        BreakpointsView view = new() {
-            DataContext = viewModel
-        };
-
-        return (view, viewModel);
+        return new BreakpointsContext(state, memoryContext, pauseHandler, breakpointsManager, viewModel);
     }
 
     protected DisassemblySteppingContext CreateActiveDisassemblySteppingContext(Spice86DependencyInjection dependencyInjection) {
@@ -273,9 +202,48 @@ public abstract class BreakpointUiTestBase : IDisposable {
         public DisassemblyViewModel DisassemblyViewModel { get; }
     }
 
-    /// <summary>
-    /// Disposes of test resources.
-    /// </summary>
+    protected sealed class MemoryContext {
+        public MemoryContext(
+            Memory memory,
+            AddressReadWriteBreakpoints memoryBreakpoints,
+            AddressReadWriteBreakpoints ioBreakpoints) {
+            Memory = memory;
+            MemoryBreakpoints = memoryBreakpoints;
+            IoBreakpoints = ioBreakpoints;
+        }
+
+        public Memory Memory { get; }
+
+        public AddressReadWriteBreakpoints MemoryBreakpoints { get; }
+
+        public AddressReadWriteBreakpoints IoBreakpoints { get; }
+    }
+
+    protected sealed class BreakpointsContext {
+        public BreakpointsContext(
+            State state,
+            MemoryContext memoryContext,
+            PauseHandler pauseHandler,
+            EmulatorBreakpointsManager breakpointsManager,
+            BreakpointsViewModel breakpointsViewModel) {
+            State = state;
+            MemoryContext = memoryContext;
+            PauseHandler = pauseHandler;
+            BreakpointsManager = breakpointsManager;
+            BreakpointsViewModel = breakpointsViewModel;
+        }
+
+        public State State { get; }
+
+        public MemoryContext MemoryContext { get; }
+
+        public PauseHandler PauseHandler { get; }
+
+        public EmulatorBreakpointsManager BreakpointsManager { get; }
+
+        public BreakpointsViewModel BreakpointsViewModel { get; }
+    }
+
     public void Dispose() {
         foreach (PauseHandler pauseHandler in _pauseHandlers) {
             pauseHandler.Dispose();

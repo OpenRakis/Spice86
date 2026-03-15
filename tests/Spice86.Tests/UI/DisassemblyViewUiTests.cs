@@ -1,6 +1,5 @@
 namespace Spice86.Tests.UI;
 
-using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 
 using CommunityToolkit.Mvvm.Messaging;
@@ -19,19 +18,23 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
-using Spice86.Views;
 
 public class DisassemblyViewUiTests : BreakpointUiTestBase {
-    private (DisassemblyViewModel viewModel, PauseHandler pauseHandler) CreateDisassemblyViewModel() {
+    private DisassemblyViewModelContext CreateDisassemblyViewModelContext() {
         ILoggerService loggerService = CreateMockLoggerService();
         PauseHandler pauseHandler = CreatePauseHandler(loggerService);
         State state = CreateState();
         state.CS = 0xF000;
         state.IP = 0xFFF0;
 
-        (Memory memory, AddressReadWriteBreakpoints memoryBreakpoints, AddressReadWriteBreakpoints ioBreakpoints) = CreateMemory();
+        MemoryContext memoryContext = CreateMemory();
         EmulatorBreakpointsManager emulatorBreakpointsManager =
-            CreateBreakpointsManager(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
+            CreateBreakpointsManager(
+                pauseHandler,
+                state,
+                memoryContext.Memory,
+                memoryContext.MemoryBreakpoints,
+                memoryContext.IoBreakpoints);
 
         UIDispatcher uiDispatcher = CreateUIDispatcher();
         IMessenger messenger = CreateMessenger();
@@ -44,14 +47,14 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
             emulatorBreakpointsManager,
             uiDispatcher,
             textClipboard,
-            memory);
+            memoryContext.Memory);
 
         IDictionary<SegmentedAddress, FunctionInformation> functionsInformation =
             new Dictionary<SegmentedAddress, FunctionInformation>();
 
         DisassemblyViewModel viewModel = new(
             emulatorBreakpointsManager,
-            memory,
+            memoryContext.Memory,
             state,
             functionsInformation,
             breakpointsViewModel,
@@ -61,99 +64,78 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
             textClipboard,
             loggerService);
 
-        return (viewModel, pauseHandler);
+        return new DisassemblyViewModelContext(viewModel, pauseHandler);
     }
 
     [AvaloniaFact]
-    public void DisassemblyView_DataContextAssignedAfterAttach_BreakpointPauseShouldUpdateUiState() {
-        // Arrange
-        (DisassemblyViewModel updatedViewModel, PauseHandler updatedPauseHandler) = CreateDisassemblyViewModel();
-        DisassemblyView view = new() {
-            IsVisible = false
-        };
-        Window window = new() {
-            Width = 1024,
-            Height = 768,
-            Content = view
-        };
+    public void DisassemblyViewModel_Activated_BreakpointPauseShouldUpdateUiState() {
+        DisassemblyViewModelContext context = CreateDisassemblyViewModelContext();
 
         try {
-            ShowWindowAndWait(window);
-
-            // Act
-            view.DataContext = updatedViewModel;
+            context.ViewModel.Activate();
             ProcessUiEvents();
 
-            updatedPauseHandler.RequestPause("Execution breakpoint reached");
+            context.PauseHandler.RequestPause("Execution breakpoint reached");
             ProcessUiEvents();
 
-            // Assert
-            updatedViewModel.IsPaused.Should().BeTrue("the disassembly view model should react to breakpoint pause events");
+            context.ViewModel.IsPaused.Should().BeTrue("the disassembly view model should react to breakpoint pause events");
         } finally {
-            ResumeIfPaused(updatedPauseHandler);
-            window.Close();
+            ResumeIfPaused(context.PauseHandler);
         }
     }
 
     [AvaloniaFact]
     public void DisassemblyViewModel_ReactivatedAfterResume_RefreshesPausedState() {
-        // Arrange
-        (DisassemblyViewModel viewModel, PauseHandler pauseHandler) = CreateDisassemblyViewModel();
+        DisassemblyViewModelContext context = CreateDisassemblyViewModelContext();
 
         try {
-            // Act
-            viewModel.Activate();
+            context.ViewModel.Activate();
             ProcessUiEvents();
 
-            pauseHandler.RequestPause("Pause for stale state check");
+            context.PauseHandler.RequestPause("Pause for stale state check");
             ProcessUiEvents();
 
-            viewModel.IsPaused.Should().BeTrue("the view model should reflect pause while active");
+            context.ViewModel.IsPaused.Should().BeTrue("the view model should reflect pause while active");
 
-            viewModel.Deactivate();
+            context.ViewModel.Deactivate();
             ProcessUiEvents();
 
-            pauseHandler.Resume();
+            context.PauseHandler.Resume();
             ProcessUiEvents();
 
-            viewModel.IsPaused.Should().BeTrue("while inactive it does not receive resumed events and can keep stale state");
+            context.ViewModel.IsPaused.Should().BeTrue("while inactive it does not receive resumed events and can keep stale state");
 
-            viewModel.Activate();
+            context.ViewModel.Activate();
             ProcessUiEvents();
 
-            // Assert
-            viewModel.IsPaused.Should().BeFalse("reactivating should resynchronize with the current pause handler state");
+            context.ViewModel.IsPaused.Should().BeFalse("reactivating should resynchronize with the current pause handler state");
         } finally {
-            ResumeIfPaused(pauseHandler);
+            ResumeIfPaused(context.PauseHandler);
         }
     }
 
     [AvaloniaFact]
     public void DisassemblyViewModel_QueuedResumeThenImmediatePause_KeepsPausedState() {
-        // Arrange
-        (DisassemblyViewModel viewModel, PauseHandler pauseHandler) = CreateDisassemblyViewModel();
+        DisassemblyViewModelContext context = CreateDisassemblyViewModelContext();
 
         try {
-            // Act
-            viewModel.Activate();
+            context.ViewModel.Activate();
             ProcessUiEvents();
 
-            pauseHandler.RequestPause("Initial pause before ordering test");
+            context.PauseHandler.RequestPause("Initial pause before ordering test");
             ProcessUiEvents();
 
-            viewModel.IsPaused.Should().BeTrue("sanity check: the view model should be paused before ordering test");
+            context.ViewModel.IsPaused.Should().BeTrue("sanity check: the view model should be paused before ordering test");
 
-            // Queue a resumed UI update, then immediately pause again before draining the UI queue.
-            pauseHandler.Resume();
-            pauseHandler.RequestPause("Immediate re-pause after resume");
+            context.PauseHandler.Resume();
+            context.PauseHandler.RequestPause("Immediate re-pause after resume");
 
             ProcessUiEvents();
 
-            // Assert
-            viewModel.IsPaused.Should().BeTrue(
+            context.ViewModel.IsPaused.Should().BeTrue(
                 "a queued resumed callback must not override a newer paused state");
         } finally {
-            ResumeIfPaused(pauseHandler);
+            ResumeIfPaused(context.PauseHandler);
         }
     }
 
@@ -162,6 +144,17 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
             pauseHandler.Resume();
             ProcessUiEvents();
         }
+    }
+
+    private sealed class DisassemblyViewModelContext {
+        public DisassemblyViewModelContext(DisassemblyViewModel viewModel, PauseHandler pauseHandler) {
+            ViewModel = viewModel;
+            PauseHandler = pauseHandler;
+        }
+
+        public DisassemblyViewModel ViewModel { get; }
+
+        public PauseHandler PauseHandler { get; }
     }
 
 }

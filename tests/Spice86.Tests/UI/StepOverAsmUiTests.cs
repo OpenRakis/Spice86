@@ -31,7 +31,6 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
 
     private void RunStepOverCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress,
         bool installInterruptVectors, bool assertSingleInstructionCycleDelta) {
-        // Arrange
         using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
             binName,
             enablePit: false,
@@ -46,7 +45,6 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
         Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
 
         try {
-            // Act
             WaitUntil(
                 () => context.PauseHandler.IsPaused && context.DisassemblyViewModel.IsPaused,
                 timeoutMilliseconds: 5000,
@@ -61,7 +59,6 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
             long initialCycles = context.State.Cycles;
             context.DisassemblyViewModel.StepOverCommand.Execute(null);
 
-            // Assert
             WaitUntil(
                 () => context.PauseHandler.IsPaused
                       && context.DisassemblyViewModel.IsPaused

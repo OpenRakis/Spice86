@@ -24,14 +24,13 @@ using Spice86.Shared.Utils;
 public class CpuAndMemoryViewUiTests : BreakpointUiTestBase {
     [AvaloniaFact]
     public void CpuViewModel_QueuedResumeThenImmediatePause_KeepsPausedEditingBehavior() {
-        // Arrange
         ILoggerService loggerService = CreateMockLoggerService();
         PauseHandler pauseHandler = CreatePauseHandler(loggerService);
         State state = CreateState();
-        (Memory memory, AddressReadWriteBreakpoints memoryBreakpoints, AddressReadWriteBreakpoints ioBreakpoints) = CreateMemory();
+        MemoryContext memoryContext = CreateMemory();
         ControlledDispatcher uiDispatcher = new();
 
-        CpuViewModel viewModel = new(state, memory, pauseHandler, uiDispatcher) {
+        CpuViewModel viewModel = new(state, memoryContext.Memory, pauseHandler, uiDispatcher) {
             IsVisible = true
         };
 
@@ -40,7 +39,6 @@ public class CpuAndMemoryViewUiTests : BreakpointUiTestBase {
 
         ushort editedAxValue = 0x1234;
 
-        // Act
         pauseHandler.Resume();
         pauseHandler.RequestPause("Immediate re-pause after resume");
         uiDispatcher.ExecuteLast();
@@ -49,39 +47,38 @@ public class CpuAndMemoryViewUiTests : BreakpointUiTestBase {
         viewModel.UpdateValues(null, EventArgs.Empty);
         viewModel.State.AX = editedAxValue;
 
-        // Assert
         state.AX.Should().Be(editedAxValue,
             "a queued resumed callback must not disable paused editing behavior after an immediate re-pause");
     }
 
     [AvaloniaFact]
     public void MemoryViewModel_QueuedResumeThenImmediatePause_KeepsPausedState() {
-        // Arrange
-        (MemoryViewModel viewModel, PauseHandler pauseHandler, ControlledDispatcher uiDispatcher) =
-            CreateMemoryViewModelWithControlledDispatcher();
+        MemoryViewModelContext context = CreateMemoryViewModelWithControlledDispatcher();
 
-        pauseHandler.RequestPause("Initial pause before ordering test");
-        uiDispatcher.ExecuteAll();
+        context.PauseHandler.RequestPause("Initial pause before ordering test");
+        context.Dispatcher.ExecuteAll();
 
-        // Act
-        pauseHandler.Resume();
-        pauseHandler.RequestPause("Immediate re-pause after resume");
-        uiDispatcher.ExecuteLast();
-        uiDispatcher.ExecuteFirst();
+        context.PauseHandler.Resume();
+        context.PauseHandler.RequestPause("Immediate re-pause after resume");
+        context.Dispatcher.ExecuteLast();
+        context.Dispatcher.ExecuteFirst();
 
-        // Assert
-        viewModel.IsPaused.Should().BeTrue(
+        context.ViewModel.IsPaused.Should().BeTrue(
             "a queued resumed callback must not override a newer paused state");
     }
 
-    private (MemoryViewModel ViewModel, PauseHandler PauseHandler, ControlledDispatcher Dispatcher)
-        CreateMemoryViewModelWithControlledDispatcher() {
+    private MemoryViewModelContext CreateMemoryViewModelWithControlledDispatcher() {
         ILoggerService loggerService = CreateMockLoggerService();
         PauseHandler pauseHandler = CreatePauseHandler(loggerService);
         State state = CreateState();
-        (Memory memory, AddressReadWriteBreakpoints memoryBreakpoints, AddressReadWriteBreakpoints ioBreakpoints) = CreateMemory();
+        MemoryContext memoryContext = CreateMemory();
         EmulatorBreakpointsManager breakpointsManager =
-            CreateBreakpointsManager(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
+            CreateBreakpointsManager(
+                pauseHandler,
+                state,
+                memoryContext.Memory,
+                memoryContext.MemoryBreakpoints,
+                memoryContext.IoBreakpoints);
 
         ControlledDispatcher uiDispatcher = new();
         IMessenger messenger = CreateMessenger();
@@ -94,19 +91,19 @@ public class CpuAndMemoryViewUiTests : BreakpointUiTestBase {
             breakpointsManager,
             uiDispatcher,
             textClipboard,
-            memory);
+            memoryContext.Memory);
 
         CallbackHandler callbackHandler = new(state, loggerService);
         Configuration configuration = new() {
             Exe = "test.exe"
         };
-        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, configuration, loggerService);
+        MemoryDataExporter memoryDataExporter = new(memoryContext.Memory, callbackHandler, configuration, loggerService);
 
         IHostStorageProvider storageProvider = Substitute.For<IHostStorageProvider>();
         IStructureViewModelFactory structureViewModelFactory = Substitute.For<IStructureViewModelFactory>();
 
         MemoryViewModel viewModel = new(
-            memory,
+            memoryContext.Memory,
             memoryDataExporter,
             state,
             breakpointsViewModel,
@@ -117,7 +114,24 @@ public class CpuAndMemoryViewUiTests : BreakpointUiTestBase {
             storageProvider,
             structureViewModelFactory);
 
-        return (viewModel, pauseHandler, uiDispatcher);
+        return new MemoryViewModelContext(viewModel, pauseHandler, uiDispatcher);
+    }
+
+    private sealed class MemoryViewModelContext {
+        public MemoryViewModelContext(
+            MemoryViewModel viewModel,
+            PauseHandler pauseHandler,
+            ControlledDispatcher dispatcher) {
+            ViewModel = viewModel;
+            PauseHandler = pauseHandler;
+            Dispatcher = dispatcher;
+        }
+
+        public MemoryViewModel ViewModel { get; }
+
+        public PauseHandler PauseHandler { get; }
+
+        public ControlledDispatcher Dispatcher { get; }
     }
 
     private sealed class ControlledDispatcher : IUIDispatcher {
