@@ -37,6 +37,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
+using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -57,6 +58,8 @@ using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
 
+using System.Net.Sockets;
+
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
 /// </summary>
@@ -65,6 +68,7 @@ public class Spice86DependencyInjection : IDisposable {
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
     private readonly IGuiVideoPresentation? _gui;
+    private readonly Spice86HttpApiServer? _httpApiServer;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -555,6 +559,22 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Machine created...");
         }
 
+        if (configuration.HttpApiPort != 0) {
+            try {
+                _httpApiServer = new Spice86HttpApiServer(state, memory, pauseHandler, loggerService, configuration.HttpApiPort);
+                mainWindowViewModel?.SetHttpApiPort(_httpApiServer.Port);
+            } catch (SocketException e) {
+                loggerService.Warning(e, "HTTP API server could not bind to {BaseUrl}. Continuing without HTTP API.", HttpApiEndpoint.BaseUrl(configuration.HttpApiPort));
+                mainWindowViewModel?.SetHttpApiPort(null);
+            } catch (IOException e) {
+                loggerService.Error(e, "Could not start HTTP API server on {BaseUrl}", HttpApiEndpoint.BaseUrl(configuration.HttpApiPort));
+                mainWindowViewModel?.SetHttpApiPort(null);
+            } catch (InvalidOperationException e) {
+                loggerService.Error(e, "Could not initialize HTTP API server");
+                mainWindowViewModel?.SetHttpApiPort(null);
+            }
+        }
+
         DictionaryUtils.AddAll(functionCatalogue.FunctionInformations,
             ReadFunctionOverrides(configuration, machine, loggerService));
 
@@ -639,11 +659,14 @@ public class Spice86DependencyInjection : IDisposable {
                 [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
 
             SoftwareMixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
+            HttpApiViewModel httpApiViewModel = new(_httpApiServer is not null, _httpApiServer?.Port ?? HttpApiEndpoint.DefaultPort);
 
             Application.Current!.Resources[nameof(DebugWindowViewModel)] =
                 debugWindowViewModel;
             Application.Current!.Resources[nameof(SoftwareMixerViewModel)] =
                 mixerViewModel;
+            Application.Current!.Resources[nameof(HttpApiViewModel)] =
+                httpApiViewModel;
             mainWindow.DataContext = mainWindowViewModel;
         }
     }
@@ -746,6 +769,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         _machineDisposedAfterRun = true;
+        _httpApiServer?.Dispose();
         Machine.Dispose();
     }
 }

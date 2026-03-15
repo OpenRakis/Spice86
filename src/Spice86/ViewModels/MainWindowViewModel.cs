@@ -209,6 +209,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     [ObservableProperty] private string _emulatorMouseCursorInfo = "?";
 
+    [ObservableProperty] private int? _httpApiPort;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
     [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
@@ -221,6 +223,10 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double MouseX { get; set; }
 
     public double MouseY { get; set; }
+
+    public void SetHttpApiPort(int? httpApiPort) {
+        HttpApiPort = httpApiPort;
+    }
 
     public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
         if (_pauseHandler.IsPaused) {

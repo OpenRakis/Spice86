@@ -4,6 +4,7 @@
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
     <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <Using Remove="System.Linq" />
         <Using Include="System.Buffers.Binary" />
         <Using Include="CommunityToolkit.HighPerformance" />
@@ -29,6 +30,7 @@
         <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="OptimizedPriorityQueue" />
         <PackageReference Include="Serilog" />
+        <PackageReference Include="Serilog.Extensions.Hosting" />
         <PackageReference Include="CommandLineParser" />
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Morris.Moxy" />
