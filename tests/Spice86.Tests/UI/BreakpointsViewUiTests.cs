@@ -10,9 +10,11 @@ using Spice86.ViewModels;
 public class BreakpointsViewUiTests : BreakpointUiTestBase {
     [AvaloniaFact]
     public void BreakpointsView_CanCreateExecutionBreakpoint() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
+        //Act
         BreakpointTypeTabItemViewModel? executionTab = viewModel.BreakpointTabs.FirstOrDefault(t => t.Header == "Execution");
         executionTab.Should().NotBeNull();
         viewModel.SelectedBreakpointTypeTab = executionTab;
@@ -21,15 +23,18 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         viewModel.BeginCreateBreakpointCommand.Execute(null);
         ProcessUiEvents();
 
+        //Assert
         viewModel.CreatingBreakpoint.Should().BeTrue();
         viewModel.IsExecutionBreakpointSelected.Should().BeTrue();
     }
 
     [AvaloniaFact]
     public void BreakpointsView_CanCreateExecutionBreakpointWithCondition() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
+        //Act
         viewModel.BeginCreateBreakpointCommand.Execute(null);
         ProcessUiEvents();
 
@@ -42,14 +47,17 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
             ProcessUiEvents();
         }
 
+        //Assert
         viewModel.CreatingBreakpoint.Should().BeFalse();
     }
 
     [AvaloniaFact]
     public void BreakpointsView_InvalidConditionExpression_ShowsError() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
+        //Act
         viewModel.BeginCreateBreakpointCommand.Execute(null);
         ProcessUiEvents();
 
@@ -57,6 +65,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         viewModel.ExecutionConditionExpression = "invalid expression !!!";
         ProcessUiEvents();
 
+        //Assert
         bool canConfirm = viewModel.ConfirmBreakpointCreationCommand.CanExecute(null);
         if (canConfirm) {
             viewModel.ConfirmBreakpointCreationCommand.Execute(null);
@@ -67,35 +76,46 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
 
     [AvaloniaFact]
     public void BreakpointsView_CancelCreation_ClearsCreatingState() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
+        //Act
         viewModel.BeginCreateBreakpointCommand.Execute(null);
         ProcessUiEvents();
 
+        //Assert
         viewModel.CreatingBreakpoint.Should().BeTrue();
 
+        //Act
         viewModel.CancelBreakpointCreationCommand.Execute(null);
         ProcessUiEvents();
 
+        //Assert
         viewModel.CreatingBreakpoint.Should().BeFalse();
     }
 
     [AvaloniaFact]
     public void BreakpointsView_ShowsBreakpointTypeTabs() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
+
+        //Act
         ProcessUiEvents();
 
+        //Assert
         viewModel.BreakpointTabs.Should().NotBeEmpty();
     }
 
     [AvaloniaFact]
     public void BreakpointsView_AcceptsComparisonOperatorConditions() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
         string[] conditions = { "ax == 0", "bx != 5", "cx > 100", "dx < 50", "eax >= 0", "ebx <= 0xFFFF" };
 
+        //Act
         foreach (string condition in conditions) {
             viewModel.BeginCreateBreakpointCommand.Execute(null);
             ProcessUiEvents();
@@ -104,6 +124,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
             viewModel.ExecutionConditionExpression = condition;
             ProcessUiEvents();
 
+            //Assert
             viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue(
                 $"Condition '{condition}' should be valid");
 
@@ -114,11 +135,13 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
 
     [AvaloniaFact]
     public void BreakpointsView_AcceptsLogicalOperatorConditions() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
         string[] conditions = { "ax == 0 && bx == 0", "cx == 0 || dx == 0", "!(ax == 0)" };
 
+        //Act
         foreach (string condition in conditions) {
             viewModel.BeginCreateBreakpointCommand.Execute(null);
             ProcessUiEvents();
@@ -127,6 +150,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
             viewModel.ExecutionConditionExpression = condition;
             ProcessUiEvents();
 
+            //Assert
             viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue(
                 $"Condition '{condition}' should be valid");
 
@@ -137,9 +161,11 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
 
     [AvaloniaFact]
     public void BreakpointsView_CanCreateMemoryBreakpoint() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
+        //Act
         viewModel.BeginCreateBreakpointCommand.Execute(null);
         ProcessUiEvents();
 
@@ -149,15 +175,18 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
             viewModel.SelectedBreakpointTypeTab = memoryTab;
             ProcessUiEvents();
 
+            //Assert
             viewModel.IsMemoryBreakpointSelected.Should().BeTrue();
         }
     }
 
     [AvaloniaFact]
     public void BreakpointsView_CanCreateCyclesBreakpoint() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
+        //Act
         viewModel.BeginCreateBreakpointCommand.Execute(null);
         ProcessUiEvents();
 
@@ -172,15 +201,18 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
             viewModel.CyclesValue = 1000;
             ProcessUiEvents();
 
+            //Assert
             viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
         }
     }
 
     [AvaloniaFact]
     public void BreakpointsView_CanCreateInterruptBreakpoint() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
+        //Act
         viewModel.BeginCreateBreakpointCommand.Execute(null);
         ProcessUiEvents();
 
@@ -195,15 +227,18 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
             viewModel.InterruptNumber = "0x21";
             ProcessUiEvents();
 
+            //Assert
             viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
         }
     }
 
     [AvaloniaFact]
     public void BreakpointsView_CanCreateIoPortBreakpoint() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
+        //Act
         viewModel.BeginCreateBreakpointCommand.Execute(null);
         ProcessUiEvents();
 
@@ -218,17 +253,20 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
             viewModel.IoPortNumber = "0x3C0";
             ProcessUiEvents();
 
+            //Assert
             viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
         }
     }
 
     [AvaloniaFact]
     public void BreakpointsView_AcceptsBitwiseOperatorConditions() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
         string[] conditions = { "(ax & 0xFF) == 0", "(bx | 0xF0) == 0xF0", "(cx ^ 0x55) == 0", "~ax == 0" };
 
+        //Act
         foreach (string condition in conditions) {
             viewModel.BeginCreateBreakpointCommand.Execute(null);
             ProcessUiEvents();
@@ -237,6 +275,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
             viewModel.ExecutionConditionExpression = condition;
             ProcessUiEvents();
 
+            //Assert
             viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue(
                 $"Condition '{condition}' should be valid");
 
@@ -247,11 +286,13 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
 
     [AvaloniaFact]
     public void BreakpointsView_AcceptsArithmeticOperatorConditions() {
+        //Arrange
         BreakpointsViewModel viewModel = CreateBreakpointsContext().BreakpointsViewModel;
         ProcessUiEvents();
 
         string[] conditions = { "(ax + 1) == 2", "(bx - 1) == 0", "(cx * 2) == 4", "(dx / 2) == 1", "(ax % 2) == 0" };
 
+        //Act
         foreach (string condition in conditions) {
             viewModel.BeginCreateBreakpointCommand.Execute(null);
             ProcessUiEvents();
@@ -260,6 +301,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
             viewModel.ExecutionConditionExpression = condition;
             ProcessUiEvents();
 
+            //Assert
             viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue(
                 $"Condition '{condition}' should be valid");
 

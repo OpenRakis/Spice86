@@ -24,6 +24,7 @@ using Spice86.Shared.Utils;
 public class CpuAndMemoryViewUiTests : BreakpointUiTestBase {
     [AvaloniaFact]
     public void CpuViewModel_QueuedResumeThenImmediatePause_KeepsPausedEditingBehavior() {
+        //Arrange
         ILoggerService loggerService = CreateMockLoggerService();
         PauseHandler pauseHandler = CreatePauseHandler(loggerService);
         State state = CreateState();
@@ -44,25 +45,30 @@ public class CpuAndMemoryViewUiTests : BreakpointUiTestBase {
         uiDispatcher.ExecuteLast();
         uiDispatcher.ExecuteFirst();
 
+        //Act
         viewModel.UpdateValues(null, EventArgs.Empty);
         viewModel.State.AX = editedAxValue;
 
+        //Assert
         state.AX.Should().Be(editedAxValue,
             "a queued resumed callback must not disable paused editing behavior after an immediate re-pause");
     }
 
     [AvaloniaFact]
     public void MemoryViewModel_QueuedResumeThenImmediatePause_KeepsPausedState() {
+        //Arrange
         MemoryViewModelContext context = CreateMemoryViewModelWithControlledDispatcher();
 
         context.PauseHandler.RequestPause("Initial pause before ordering test");
         context.Dispatcher.ExecuteAll();
 
+        //Act
         context.PauseHandler.Resume();
         context.PauseHandler.RequestPause("Immediate re-pause after resume");
         context.Dispatcher.ExecuteLast();
         context.Dispatcher.ExecuteFirst();
 
+        //Assert
         context.ViewModel.IsPaused.Should().BeTrue(
             "a queued resumed callback must not override a newer paused state");
     }

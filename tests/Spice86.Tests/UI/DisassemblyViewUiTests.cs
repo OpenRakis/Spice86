@@ -69,15 +69,18 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
 
     [AvaloniaFact]
     public void DisassemblyViewModel_Activated_BreakpointPauseShouldUpdateUiState() {
+        //Arrange
         DisassemblyViewModelContext context = CreateDisassemblyViewModelContext();
 
         try {
+            //Act
             context.ViewModel.Activate();
             ProcessUiEvents();
 
             context.PauseHandler.RequestPause("Execution breakpoint reached");
             ProcessUiEvents();
 
+            //Assert
             context.ViewModel.IsPaused.Should().BeTrue("the disassembly view model should react to breakpoint pause events");
         } finally {
             ResumeIfPaused(context.PauseHandler);
@@ -86,9 +89,11 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
 
     [AvaloniaFact]
     public void DisassemblyViewModel_ReactivatedAfterResume_RefreshesPausedState() {
+        //Arrange
         DisassemblyViewModelContext context = CreateDisassemblyViewModelContext();
 
         try {
+            //Act
             context.ViewModel.Activate();
             ProcessUiEvents();
 
@@ -108,6 +113,7 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
             context.ViewModel.Activate();
             ProcessUiEvents();
 
+            //Assert
             context.ViewModel.IsPaused.Should().BeFalse("reactivating should resynchronize with the current pause handler state");
         } finally {
             ResumeIfPaused(context.PauseHandler);
@@ -116,9 +122,11 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
 
     [AvaloniaFact]
     public void DisassemblyViewModel_QueuedResumeThenImmediatePause_KeepsPausedState() {
+        //Arrange
         DisassemblyViewModelContext context = CreateDisassemblyViewModelContext();
 
         try {
+            //Act
             context.ViewModel.Activate();
             ProcessUiEvents();
 
@@ -132,6 +140,7 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
 
             ProcessUiEvents();
 
+            //Assert
             context.ViewModel.IsPaused.Should().BeTrue(
                 "a queued resumed callback must not override a newer paused state");
         } finally {

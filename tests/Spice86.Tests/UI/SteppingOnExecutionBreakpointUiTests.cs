@@ -7,18 +7,31 @@ using Spice86.Shared.Emulator.Memory;
 public class SteppingOnExecutionBreakpointUiTests : BreakpointUiTestBase {
     [AvaloniaFact]
     public void StepInto_OnPersistentExecutionBreakpoint_AdvancesToNextInstruction() {
-        RunStepCommandOnPersistentExecutionBreakpointCase(useStepInto: true);
+        //Arrange
+        bool useStepInto = true;
+
+        //Act
+        //Assert
+        RunStepCommandOnPersistentExecutionBreakpointCase(useStepInto: useStepInto);
     }
 
     [AvaloniaFact]
     public void StepOver_OnPersistentExecutionBreakpoint_AdvancesToNextInstruction() {
-        RunStepCommandOnPersistentExecutionBreakpointCase(useStepInto: false);
+        //Arrange
+        bool useStepInto = false;
+
+        //Act
+        //Assert
+        RunStepCommandOnPersistentExecutionBreakpointCase(useStepInto: useStepInto);
     }
 
     private void RunStepCommandOnPersistentExecutionBreakpointCase(bool useStepInto) {
+        //Arrange
         SegmentedAddress initialAddress = new(0xF000, 0x0000);
         SegmentedAddress expectedAddress = new(0xF000, 0x0003);
 
+        //Act
+        //Assert
         RunSteppingScenario(new SteppingScenario {
             BinName = "jump1",
             InstallInterruptVectors = false,

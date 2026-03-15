@@ -10,68 +10,105 @@ using Spice86.Shared.Emulator.Memory;
 public class StepIntoAsmUiTests : BreakpointUiTestBase {
     [AvaloniaFact]
     public void StepInto_OnMov_AdvancesToImmediateNextInstruction() {
+        //Arrange
         SegmentedAddress initialAddress = new(0xF000, 0x0000);
         SegmentedAddress expectedAddress = new(0xF000, 0x0003);
+
+        //Act
+        //Assert
         RunStepIntoCase("jump1", initialAddress, expectedAddress, installInterruptVectors: false);
     }
 
     [AvaloniaFact]
     public void StepInto_OnStc_AdvancesToImmediateNextInstruction() {
+        //Arrange
         SegmentedAddress initialAddress = new(0xF000, 0x0010);
         SegmentedAddress expectedAddress = new(0xF000, 0x0011);
+
+        //Act
+        //Assert
         RunStepIntoCase("jump1", initialAddress, expectedAddress, installInterruptVectors: false);
     }
 
     [AvaloniaFact]
     public void StepInto_OnCmp_AdvancesToImmediateNextInstruction() {
+        //Arrange
         SegmentedAddress initialAddress = new(0xF000, 0x0009);
         SegmentedAddress expectedAddress = new(0xF000, 0x000B);
+
+        //Act
+        //Assert
         RunStepIntoCase("cmpneg", initialAddress, expectedAddress, installInterruptVectors: false);
     }
 
     [AvaloniaFact]
     public void StepInto_OnCall_EntersCallTarget() {
+        //Arrange
         SegmentedAddress initialAddress = new(0xF000, 0x000E);
         SegmentedAddress expectedAddress = new(0xF000, 0x1290);
+
+        //Act
+        //Assert
         RunStepIntoCase("jump2", initialAddress, expectedAddress, installInterruptVectors: false);
     }
 
     [AvaloniaFact]
     public void StepInto_OnNearRet_ReturnsToCaller() {
+        //Arrange
         SegmentedAddress initialAddress = new(0xF000, 0x12AA);
         SegmentedAddress expectedAddress = new(0xF000, 0x0010);
+
+        //Act
+        //Assert
         RunStepIntoCase("jump2", initialAddress, expectedAddress, installInterruptVectors: false);
     }
 
     [AvaloniaFact]
     public void StepInto_OnUnconditionalJump_GoesToJumpTarget() {
+        //Arrange
         SegmentedAddress initialAddress = new(0xF000, 0x000C);
         SegmentedAddress expectedAddress = new(0xF000, 0x0010);
+
+        //Act
+        //Assert
         RunStepIntoCase("jump1", initialAddress, expectedAddress, installInterruptVectors: false);
     }
 
     [AvaloniaFact]
     public void StepInto_OnConditionalJumpNotTaken_GoesToFallThroughWithoutTemporaryUiBreakpoint() {
+        //Arrange
         SegmentedAddress initialAddress = new(0xF000, 0x0011);
         SegmentedAddress expectedAddress = new(0xF000, 0x0013);
+
+        //Act
+        //Assert
         RunStepIntoCase("jump1", initialAddress, expectedAddress, installInterruptVectors: false);
     }
 
     [AvaloniaFact]
     public void StepInto_OnConditionalJumpTaken_GoesToTargetWithoutTemporaryUiBreakpoint() {
+        //Arrange
         SegmentedAddress initialAddress = new(0xF000, 0x001C);
         SegmentedAddress expectedAddress = new(0xF000, 0x0020);
+
+        //Act
+        //Assert
         RunStepIntoCase("jump1", initialAddress, expectedAddress, installInterruptVectors: false);
     }
 
     [AvaloniaFact]
     public void StepInto_OnInterrupt_EntersInterruptHandler() {
+        //Arrange
         SegmentedAddress initialAddress = new(0xF000, 0x0020);
         SegmentedAddress expectedAddress = new(0xE342, 0xEBE0);
+
+        //Act
+        //Assert
         RunStepIntoCase("interrupt", initialAddress, expectedAddress, installInterruptVectors: true);
     }
 
     private void RunStepIntoCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress, bool installInterruptVectors) {
+        //Arrange
         using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
             binName,
             enablePit: false,
@@ -86,6 +123,7 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
         Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
 
         try {
+            //Act
             WaitUntil(
                 () => context.PauseHandler.IsPaused,
                 timeoutMilliseconds: 5000,
@@ -115,6 +153,7 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
                 timeoutMilliseconds: 5000,
                 failureMessage: "The disassembly view model should be paused after step into completes");
 
+            //Assert
             context.State.Cycles.Should().Be(initialCycles + 1,
                 "step into should execute exactly one instruction and must not skip ASM lines");
 
