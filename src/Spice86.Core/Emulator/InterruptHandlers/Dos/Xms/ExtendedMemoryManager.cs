@@ -1757,7 +1757,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         return XmsErrorCodes.Ok;
     }
 
-    private bool TryGetBlock(int handle, [NotNullWhen(true)] out XmsBlock? block) {
+    /// <summary>
+    /// Attempts to get an allocated XMS block by handle.
+    /// </summary>
+    /// <param name="handle">The XMS handle to search for.</param>
+    /// <param name="block">The XMS block if found.</param>
+    /// <returns>True if the block was found, false otherwise.</returns>
+    public bool TryGetBlock(int handle, [NotNullWhen(true)] out XmsBlock? block) {
         if (_xmsBlocksLinkedList.Count == 0) {
             block = null;
             return false;

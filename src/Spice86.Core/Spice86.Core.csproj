@@ -26,6 +26,7 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance" />
+		<PackageReference Include="ModelContextProtocol.Core"/>
         <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="OptimizedPriorityQueue" />
         <PackageReference Include="Serilog" />

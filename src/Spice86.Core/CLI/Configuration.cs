@@ -253,4 +253,11 @@ public sealed class Configuration {
     [Option(nameof(AsmRenderingStyle), Default = AsmRenderingStyle.Spice86, Required = false,
         HelpText = "Style of the ASM rendering. Spice86 or DosBox.")]
     public AsmRenderingStyle AsmRenderingStyle { get; init; }
+
+    /// <summary>
+    /// Enables backward-compatible MCP HTTP endpoints (/sse and /messages) alongside /mcp.
+    /// </summary>
+    [Option("enable-legacy-mcp", Default = false, Required = false,
+        HelpText = "Enable legacy MCP HTTP endpoints (/sse and /messages) in addition to /mcp.")]
+    public bool EnableLegacyMcp { get; init; }
 }
