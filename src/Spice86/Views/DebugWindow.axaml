@@ -8,7 +8,6 @@
 	xmlns:local="clr-namespace:Spice86.Views"
 	xmlns:factory="clr-namespace:Spice86.Views.Factory"
 	xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
-	xmlns:controls="clr-namespace:Spice86.Views.Controls"
 	xmlns:views="clr-namespace:Spice86.Views"
 	xmlns:dock="clr-namespace:Dock.Avalonia.Controls;assembly=Dock.Avalonia"
 	xmlns:dockModel="clr-namespace:Dock.Model.Avalonia.Controls;assembly=Dock.Model.Avalonia"
@@ -99,21 +98,34 @@
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.CpuViewModel}" />
 					</dockModel:Document>
 					<dockModel:Document Id="Memory" Title="Memory (Alt-F4)" HotKeyManager.HotKey="Alt+F4">
-						<TabControl ItemsSource="{Binding $parent[Window].DataContext.MemoryViewModels}">
-							<TabControl.ItemTemplate>
-								<DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-									<TextBlock Text="{Binding Header}" />
-								</DataTemplate>
-							</TabControl.ItemTemplate>
-						</TabControl>
+						<Grid RowDefinitions="Auto,*">
+							<TabStrip Grid.Row="0"
+								ItemsSource="{ReflectionBinding $parent[Window].DataContext.MemoryViews}"
+								SelectedItem="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}">
+								<TabStrip.ItemTemplate>
+									<DataTemplate>
+										<TextBlock Text="{ReflectionBinding Header}" />
+									</DataTemplate>
+								</TabStrip.ItemTemplate>
+							</TabStrip>
+							<ContentControl Grid.Row="1"
+								Content="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}" />
+						</Grid>
 					</dockModel:Document>
 					<dockModel:Document Id="Devices" Title="Devices (Alt-F5)" HotKeyManager.HotKey="Alt+F5">
-						<TabControl DataContext="{Binding $parent[Window].DataContext}">
-							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F7" Header="Video Card" ToolTip.Tip="Alt-F7" Content="{Binding VideoCardViewModel}" />
-							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F8" Header="Color Palette" ToolTip.Tip="Alt-F8" Content="{Binding PaletteViewModel}" />
-							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F9" Header="General MIDI / MT-32" ToolTip.Tip="Alt-F9" Content="{Binding MidiViewModel}" />
-
-						</TabControl>
+						<Grid RowDefinitions="Auto,*">
+							<TabStrip Grid.Row="0"
+								ItemsSource="{ReflectionBinding $parent[Window].DataContext.DeviceSubTabs}"
+								SelectedItem="{ReflectionBinding $parent[Window].DataContext.SelectedDeviceSubTab}">
+								<TabStrip.ItemTemplate>
+									<DataTemplate>
+										<TextBlock Text="{ReflectionBinding Header}" />
+									</DataTemplate>
+								</TabStrip.ItemTemplate>
+							</TabStrip>
+							<ContentControl Grid.Row="1"
+								Content="{ReflectionBinding $parent[Window].DataContext.SelectedDeviceSubTab.ViewModel}" />
+						</Grid>
 					</dockModel:Document>
 					<dockModel:Document 
 						Id="Breakpoints" 
