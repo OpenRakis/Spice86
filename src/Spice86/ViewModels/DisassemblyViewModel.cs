@@ -99,6 +99,24 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     [ObservableProperty]
     private string? _breakpointCondition;
 
+    private bool _showJumpLines;
+
+    /// <summary>
+    /// Whether jump indicator lines are displayed in the disassembly view.
+    /// </summary>
+    public bool ShowJumpLines {
+        get => _showJumpLines;
+        set {
+            if (_showJumpLines == value) {
+                return;
+            }
+            _showJumpLines = value;
+            OnPropertyChanged();
+            _sortedViewNeedsUpdate = true;
+            OnPropertyChanged(nameof(SortedDebuggerLinesView));
+        }
+    }
+
     public DisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, ILoggerService loggerService,
         bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
@@ -177,6 +195,11 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
             // Add all items in sorted order
             foreach (KeyValuePair<uint, DebuggerLineViewModel> item in DebuggerLines.OrderBy(kvp => kvp.Key)) {
                 _sortedDebuggerLinesView.Add(item.Value);
+            }
+
+            // Compute jump arc segments for branch visualization when enabled
+            if (ShowJumpLines) {
+                JumpLineCalculator.ComputeJumpArcs(_sortedDebuggerLinesView);
             }
 
             _sortedViewNeedsUpdate = false;
