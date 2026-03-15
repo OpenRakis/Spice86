@@ -66,32 +66,17 @@ public sealed class Spice86HttpApiServer : IDisposable {
         }
     }
 
-    /// <summary>Stops and disposes the embedded web application.</summary>
+    /// <inheritdoc />
     public void Dispose() {
         if (_disposed) {
             return;
         }
 
         _disposed = true;
-        DisposeWebApp();
+        ((IHost)_webApplication).Dispose();
     }
 
-    private void DisposeWebApp() {
-        ExecuteShutdownAction(
-            () => ((IHost)_webApplication).Dispose(),
-            "dispose");
-    }
-
-    private void ExecuteShutdownAction(Action action, string operation) {
-        try {
-            action();
-        } catch (ObjectDisposedException exception) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug(exception, "HTTP API server was already disposed while attempting to {Operation}.", operation);
-            }
-        }
-    }
-
+    // custom IHostLifeTime so the HTTP server can close when the emulation loop exits.
     private sealed class EmbeddedHostLifetime : IHostLifetime {
         public Task WaitForStartAsync(CancellationToken cancellationToken) {
             return Task.CompletedTask;
