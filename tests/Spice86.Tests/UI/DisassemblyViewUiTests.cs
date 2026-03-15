@@ -133,4 +133,33 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
             }
         }
     }
+
+    [AvaloniaFact]
+    public void DisassemblyViewModel_QueuedResumeThenImmediatePause_KeepsPausedState() {
+        (DisassemblyViewModel viewModel, PauseHandler pauseHandler) = CreateDisassemblyViewModel();
+
+        try {
+            viewModel.Activate();
+            ProcessUiEvents();
+
+            pauseHandler.RequestPause("Initial pause before ordering test");
+            ProcessUiEvents();
+
+            viewModel.IsPaused.Should().BeTrue("sanity check: the view model should be paused before ordering test");
+
+            // Queue a resumed UI update, then immediately pause again before draining the UI queue.
+            pauseHandler.Resume();
+            pauseHandler.RequestPause("Immediate re-pause after resume");
+
+            ProcessUiEvents();
+
+            viewModel.IsPaused.Should().BeTrue(
+                "a queued resumed callback must not override a newer paused state");
+        } finally {
+            if (pauseHandler.IsPaused) {
+                pauseHandler.Resume();
+                ProcessUiEvents();
+            }
+        }
+    }
 }
