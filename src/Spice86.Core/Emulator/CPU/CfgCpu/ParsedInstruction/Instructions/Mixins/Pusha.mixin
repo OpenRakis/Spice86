@@ -6,8 +6,11 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -34,4 +37,31 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.PUSHA{{ if Size == 32 }}D{{ end }});
     }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // PUSHA/PUSHAD: Push all 8 registers in order: AX, CX, DX, BX, SP, BP, SI, DI
+        // The SP value pushed is the original SP before any pushes
+        DataType dataType = builder.UType({{Size}});
+        DataType addressType = builder.UType(16);
+        
+        List<IVisitableAstNode> statements = new();
+        
+        // Save original SP value before any pushes
+        ValueNode originalSp = builder.Register.StackPointer(addressType);
+        statements.Add(builder.DeclareVariable(addressType, "savedSp", originalSp));
+        ValueNode savedSp = builder.VariableReference(addressType, "savedSp");
+        
+        // Push registers in order: AX, CX, DX, BX, SP(original), BP, SI, DI
+        statements.Add(builder.Stack.Push(dataType, builder.Register.RegByName("{{RegisterPrefix}}AX")));
+        statements.Add(builder.Stack.Push(dataType, builder.Register.RegByName("{{RegisterPrefix}}CX")));
+        statements.Add(builder.Stack.Push(dataType, builder.Register.RegByName("{{RegisterPrefix}}DX")));
+        statements.Add(builder.Stack.Push(dataType, builder.Register.RegByName("{{RegisterPrefix}}BX")));
+        statements.Add(builder.Stack.Push(dataType, savedSp));
+        statements.Add(builder.Stack.Push(dataType, builder.Register.RegByName("{{RegisterPrefix}}BP")));
+        statements.Add(builder.Stack.Push(dataType, builder.Register.RegByName("{{RegisterPrefix}}SI")));
+        statements.Add(builder.Stack.Push(dataType, builder.Register.RegByName("{{RegisterPrefix}}DI")));
+        
+        return builder.WithIpAdvancement(this, statements.ToArray());
+    }
+
 }

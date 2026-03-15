@@ -5,8 +5,10 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -27,5 +29,14 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction {
         return new InstructionNode(InstructionOperation.OUT,
             builder.Register.Reg16(RegisterIndex.DxIndex),
             builder.Register.Accumulator(builder.UType({{Size}})));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // Out{{Size}}(DX, ACC)
+        DataType dataType = builder.UType({{Size}});
+        ValueNode dx = builder.Register.Reg16(RegisterIndex.DxIndex);
+        ValueNode accumulator = builder.Register.Accumulator(dataType);
+        MethodCallNode ioWrite = builder.Io.IoWrite(dataType, dx, accumulator);
+        return builder.WithIpAdvancement(this, ioWrite);
     }
 }

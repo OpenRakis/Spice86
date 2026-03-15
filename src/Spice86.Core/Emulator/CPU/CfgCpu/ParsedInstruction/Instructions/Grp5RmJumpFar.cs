@@ -3,6 +3,8 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
@@ -24,5 +26,11 @@ public class Grp5RmJumpFar : InstructionWithModRm, IJumpInstruction {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.JMP_FAR, builder.ModRm.ToMemoryAddressNode(DataType.UINT32, ModRmContext));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        ValueNode memoryAddress = builder.ModRm.ToMemoryAddressNode(DataType.UINT32, ModRmContext);
+        SegmentedAddressValueNode targetAddress = builder.SegmentedAddressBuilder.FromMemory(memoryAddress, 16);
+        return new JumpFarNode(this, targetAddress);
     }
 }

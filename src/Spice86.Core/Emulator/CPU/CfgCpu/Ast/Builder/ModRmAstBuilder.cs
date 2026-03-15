@@ -57,11 +57,12 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
                 $"MemoryOffsetType is {modRmContext.MemoryOffsetType} which should never happen when computing offsets.");
         }
 
+        DataType addressType = new DataType(modRmContext.AddressSize, false);
         ValueNode? displacement = ModRmDisplacementToNode(modRmContext);
         ValueNode? offset = ModRmOffsetToNode(modRmContext);
-        ValueNode? result = BiOperationWithResultNode(new DataType(modRmContext.AddressSize, false), offset, BinaryOperation.PLUS,
+        ValueNode? result = BiOperationWithResultNode(addressType, offset, BinaryOperation.PLUS,
             displacement);
-        return result ?? new ConstantNode(new DataType(modRmContext.AddressSize, false), 0);
+        return result ?? new ConstantNode(addressType, 0);
     }
 
     /// <summary>
@@ -115,7 +116,7 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
         ValueNode? baseNode = SibBaseToNode(sibContext);
         ValueNode? indexNode = SibIndexToNode(sibContext);
         // base + scale * index
-        ValueNode scaleNode = new ConstantNode(DataType.UINT8, sibContext.Scale);
+        ValueNode scaleNode = new ConstantNode(DataType.UINT32, sibContext.Scale);
         ValueNode? indexExpression =
             BiOperationWithResultNode(DataType.UINT32, scaleNode, BinaryOperation.MULTIPLY, indexNode);
         return BiOperationWithResultNode(DataType.UINT32, baseNode, BinaryOperation.PLUS, indexExpression);

@@ -5,11 +5,15 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
@@ -31,6 +35,32 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         return new InstructionNode(InstructionOperation.L{{SegmentRegister}},
             builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext),
             builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // LxS R, RM: R = Memory[address], SegReg = Memory[address + Size/8]
+        DataType dataType = builder.UType({{Size}});
+        DataType addrType = builder.AddressType(this);
+
+        // R = Memory[address]
+        ValueNode rNode = builder.ModRm.RToNode(dataType, ModRmContext);
+        ValueNode memValue = builder.ModRm.ToMemoryAddressNode(dataType, ModRmContext);
+        BinaryOperationNode assignR = builder.Assign(dataType, rNode, memValue);
+
+        // SegReg = Memory[address + Size/8] (always 16-bit segment value)
+        ValueNode sizeInBytes = addrType == DataType.UINT16
+            ? builder.Constant.ToNode((ushort)({{Size}} / 8))
+            : builder.Constant.ToNode((uint)({{Size}} / 8));
+        ValueNode segPointer = builder.ModRm.ToMemoryAddressNodeWithOffsetAdjustment(DataType.UINT16, ModRmContext, sizeInBytes);
+        ValueNode segRegNode = builder.Register.SRegByName("{{SegmentRegister}}");
+        BinaryOperationNode assignSeg = builder.Assign(DataType.UINT16, segRegNode, segPointer);
+
+        {{ if SegmentRegister == "SS" }}
+        MethodCallNode setInterruptShadowing = new MethodCallNode(null, "SetInterruptShadowing");
+        return builder.WithIpAdvancement(this, assignR, assignSeg, setInterruptShadowing);
+        {{ else }}
+        return builder.WithIpAdvancement(this, assignR, assignSeg);
+        {{ end }}
     }
 }
 

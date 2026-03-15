@@ -69,7 +69,8 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
             _loggerService.LoggerPropertyBag.CsIp = toExecute.Address;
             // Log instruction before execution if CPU heavy logging is enabled
             _cpuHeavyLogger?.LogInstruction(toExecute);
-            toExecute.Execute(_instructionExecutionHelper);
+            toExecute.CompiledExecution(_instructionExecutionHelper);
+            
         } catch (CpuException e) {
             if(toExecute is CfgInstruction cfgInstruction) {
                 _instructionExecutionHelper.HandleCpuException(cfgInstruction, e);

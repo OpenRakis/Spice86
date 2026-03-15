@@ -5,8 +5,13 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
@@ -40,5 +45,21 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction, StringInstruction {
             ),
             builder.Register.Accumulator(builder.UType({{Size}}))
         );
+    }
+
+    public override Spice86.Core.Emulator.CPU.CfgCpu.Ast.IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        return builder.StringOperation.GenerateExecutionAst(this, builder);
+    }
+
+    public BlockNode CreateStringOperationBlock(AstBuilder builder) {
+        DataType dataType = builder.UType({{Size}});
+        DataType addressType = builder.AddressType(this);
+        
+        ValueNode accumulator = builder.Register.Accumulator(dataType);
+        ValueNode destPointer = builder.StringOperation.DestPointerDi(dataType, addressType);
+        BinaryOperationNode storeOperation = builder.Assign(dataType, destPointer, accumulator);
+        BinaryOperationNode advanceDi = builder.StringOperation.AdvanceDi(addressType, {{Size}});
+        
+        return new BlockNode(storeOperation, advanceDi);
     }
 }

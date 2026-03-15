@@ -71,6 +71,10 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         };
     }
 
+    public string VisitFlagRegisterNode(FlagRegisterNode node) {
+        return node.DataType.BitWidth == BitWidth.WORD_16 ? "FLAGS" : "EFLAGS";
+    }
+
     public string VisitConstantNode(ConstantNode node) {
         if (node.IsNegative) {
             long valueSigned = node.SignedValue;
@@ -115,8 +119,15 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         return $"{addressString} (${deltaString})";
     }
 
-    public string VisitSegmentedAddressConstantNode(SegmentedAddressConstantNode node) {
-        return node.Value.ToString();
+    public string VisitSegmentedAddressValueNode(SegmentedAddressValueNode node) {
+        if (node.Segment is ConstantNode segmentConstant && node.Offset is ConstantNode offsetConstant) {
+            SegmentedAddress segmentedAddress = new((ushort)segmentConstant.Value, (ushort)offsetConstant.Value);
+            return segmentedAddress.ToString();
+        }
+
+        string segment = node.Segment.Accept(this);
+        string offset = node.Offset.Accept(this);
+        return $"{segment}:{offset}";
     }
 
     public string VisitBinaryOperationNode(BinaryOperationNode node) {
@@ -277,6 +288,10 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         throw new NotSupportedException("IfElseNode should not be rendered as assembly.");
     }
 
+    public string VisitWhileNode(WhileNode node) {
+        throw new NotSupportedException("WhileNode should not be rendered as assembly.");
+    }
+
     public string VisitMethodCallValueNode(MethodCallValueNode node) {
         throw new NotSupportedException("MethodCallValueNode should not be rendered as assembly.");
     }
@@ -291,6 +306,10 @@ public class AstInstructionRenderer : IAstVisitor<string> {
 
     public string VisitVariableDeclarationNode(VariableDeclarationNode node) {
         throw new NotSupportedException("VariableDeclarationNode should not be rendered as assembly.");
+    }
+
+    public string VisitThrowNode(ThrowNode node) {
+        throw new NotSupportedException("ThrowNode should not be rendered as assembly.");
     }
 
     public string VisitCallNearNode(CallNearNode node) {
@@ -317,11 +336,31 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         throw new NotSupportedException("JumpFarNode should not be rendered as assembly.");
     }
 
+    public string VisitHltNode(HltNode node) {
+        throw new NotSupportedException("HltNode should not be rendered as assembly.");
+    }
+
     public string VisitInterruptCallNode(InterruptCallNode node) {
         throw new NotSupportedException("InterruptCallNode should not be rendered as assembly.");
     }
 
     public string VisitReturnInterruptNode(ReturnInterruptNode node) {
         throw new NotSupportedException("ReturnInterruptNode should not be rendered as assembly.");
+    }
+
+    public string VisitCallbackNode(CallbackNode node) {
+        throw new NotSupportedException("CallbackNode should not be rendered as assembly.");
+    }
+
+    public string VisitSelectorNode(SelectorNode node) {
+        throw new NotSupportedException("SelectorNode should not be rendered as assembly.");
+    }
+
+    public string VisitInvalidInstructionNode(InvalidInstructionNode node) {
+        throw new NotSupportedException("InvalidInstructionNode should not be rendered as assembly.");
+    }
+
+    public string VisitCpuidNode(CpuidNode node) {
+        throw new NotSupportedException("CpuidNode should not be rendered as assembly.");
     }
 }

@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
@@ -186,6 +187,16 @@ public class InstructionParser : BaseInstructionParser {
         List<InstructionPrefix> prefixes = ParsePrefixes();
         InstructionField<ushort> opcodeField = ReadOpcode();
         ParsingContext context = new(address, opcodeField, prefixes);
+        CfgInstruction instruction = ParseInstructionCore(address, opcodeField, prefixes, context);
+        CfgNodeExecutionCompiler.Compile(instruction);
+        return instruction;
+    }
+
+    private CfgInstruction ParseInstructionCore(
+        SegmentedAddress address,
+        InstructionField<ushort> opcodeField,
+        List<InstructionPrefix> prefixes,
+        ParsingContext context) {
         try {
             return ParseCfgInstruction(context);
         } catch (CpuInvalidOpcodeException e) {

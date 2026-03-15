@@ -5,8 +5,11 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -27,5 +30,21 @@ public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
             builder.Register.Reg(builder.UType({{Size}}), RegisterIndex),
             builder.Register.Accumulator(builder.UType({{Size}}))
         );
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // XCHG R, ACC: swap register and accumulator using a temporary variable
+        DataType dataType = builder.UType({{Size}});
+        ValueNode regNode = builder.Register.Reg(dataType, RegisterIndex);
+        ValueNode accNode = builder.Register.Accumulator(dataType);
+
+        // temp = Reg
+        VariableDeclarationNode tempDecl = builder.DeclareVariable(dataType, "temp", regNode);
+        // Reg = ACC
+        BinaryOperationNode assignReg = builder.Assign(dataType, regNode, accNode);
+        // ACC = temp
+        BinaryOperationNode assignAcc = builder.Assign(dataType, accNode, tempDecl.Reference);
+
+        return builder.WithIpAdvancement(this, tempDecl, assignReg, assignAcc);
     }
 }

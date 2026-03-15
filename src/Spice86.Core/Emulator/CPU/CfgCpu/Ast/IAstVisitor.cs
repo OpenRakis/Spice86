@@ -11,7 +11,7 @@ public interface IAstVisitor<T> {
     public T VisitSegmentedPointer(SegmentedPointerNode node);
     public T VisitRegisterNode(RegisterNode node);
     public T VisitAbsolutePointerNode(AbsolutePointerNode node);
-    public T VisitSegmentedAddressConstantNode(SegmentedAddressConstantNode node);
+    public T VisitSegmentedAddressValueNode(SegmentedAddressValueNode node);
     public T VisitBinaryOperationNode(BinaryOperationNode node);
     public T VisitUnaryOperationNode(UnaryOperationNode node);
     public T VisitTypeConversionNode(TypeConversionNode node);
@@ -22,9 +22,12 @@ public interface IAstVisitor<T> {
     public T VisitMethodCallValueNode(MethodCallValueNode node);
     public T VisitBlockNode(BlockNode node);
     public T VisitIfElseNode(IfElseNode node);
+    public T VisitWhileNode(WhileNode node);
     public T VisitCpuFlagNode(CpuFlagNode node);
+    public T VisitFlagRegisterNode(FlagRegisterNode node);
     public T VisitVariableReferenceNode(VariableReferenceNode node);
     public T VisitVariableDeclarationNode(VariableDeclarationNode node);
+    public T VisitThrowNode(ThrowNode node);
 
     // Control Flow
     public T VisitMoveIpNextNode(MoveIpNextNode node);
@@ -34,6 +37,11 @@ public interface IAstVisitor<T> {
     public T VisitReturnFarNode(ReturnFarNode node);
     public T VisitJumpNearNode(JumpNearNode node);
     public T VisitJumpFarNode(JumpFarNode node);
+    public T VisitHltNode(HltNode node);
     public T VisitInterruptCallNode(InterruptCallNode node);
     public T VisitReturnInterruptNode(ReturnInterruptNode node);
+    public T VisitCallbackNode(CallbackNode node);
+    public T VisitSelectorNode(SelectorNode node);
+    public T VisitInvalidInstructionNode(InvalidInstructionNode node);
+    public T VisitCpuidNode(CpuidNode node);
 }

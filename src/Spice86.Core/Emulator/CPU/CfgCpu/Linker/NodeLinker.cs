@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
@@ -93,6 +94,7 @@ public class NodeLinker : InstructionReplacer {
     /// </summary>
     public SelectorNode CreateSelectorNodeBetween(CfgInstruction instruction1, CfgInstruction instruction2) {
         SelectorNode selectorNode = new SelectorNode(instruction1.Address);
+        CfgNodeExecutionCompiler.Compile(selectorNode);
         InsertIntermediatePredecessor(instruction1, selectorNode);
         InsertIntermediatePredecessor(instruction2, selectorNode);
         return selectorNode;
