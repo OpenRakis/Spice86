@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 using Serilog.Events;
 
@@ -39,6 +40,11 @@ public sealed class Spice86HttpApiServer : IDisposable {
         _loggerService = loggerService;
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        builder.Logging.ClearProviders();
+        Serilog.SerilogServiceCollectionExtensions.AddSerilog(
+            builder.Services,
+            loggerService,
+            dispose: false);
         builder.WebHost.UseKestrel();
         builder.WebHost.UseUrls($"http://{HttpApiEndpoint.Host}:{port}");
         builder.Services.AddSingleton<IHostLifetime, EmbeddedHostLifetime>();
