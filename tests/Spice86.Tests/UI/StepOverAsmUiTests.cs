@@ -2,9 +2,6 @@ namespace Spice86.Tests.UI;
 
 using Avalonia.Headless.XUnit;
 
-using FluentAssertions;
-
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 
 public class StepOverAsmUiTests : BreakpointUiTestBase {
@@ -31,59 +28,21 @@ public class StepOverAsmUiTests : BreakpointUiTestBase {
 
     private void RunStepOverCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress,
         bool installInterruptVectors, bool assertSingleInstructionCycleDelta) {
-        using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
-            binName,
-            enablePit: false,
-            maxCycles: 2_000_000,
-            installInterruptVectors: installInterruptVectors).Create();
-        DisassemblySteppingContext context = CreateActiveDisassemblySteppingContext(dependencyInjection);
-
-        AddressBreakPoint initialPauseBreakpoint =
-            CreateExecutionPauseBreakpoint(initialAddress, context.PauseHandler, removeOnTrigger: true);
-        context.EmulatorBreakpointsManager.ToggleBreakPoint(initialPauseBreakpoint, on: true);
-
-        Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
-
-        try {
-            WaitUntil(
-                () => context.PauseHandler.IsPaused && context.DisassemblyViewModel.IsPaused,
-                timeoutMilliseconds: 5000,
-                failureMessage: "The emulator should pause on the initial breakpoint before stepping");
-
-            context.State.IpSegmentedAddress.Should().Be(initialAddress,
-                "the initial breakpoint must pause exactly on the instruction under test");
-
-            context.DisassemblyViewModel.StepOverCommand.CanExecute(null).Should().BeTrue(
-                "step over should be available while paused");
-
-            long initialCycles = context.State.Cycles;
-            context.DisassemblyViewModel.StepOverCommand.Execute(null);
-
-            WaitUntil(
-                () => context.PauseHandler.IsPaused
-                      && context.DisassemblyViewModel.IsPaused
-                      && context.State.IpSegmentedAddress == expectedAddress,
-                timeoutMilliseconds: 5000,
-                failureMessage: "step over should pause at the expected destination");
-
-            if (assertSingleInstructionCycleDelta) {
-                context.State.Cycles.Should().Be(initialCycles + 1,
-                    "step over should execute exactly one instruction for non-call instructions");
-            }
-
-            context.BreakpointsViewModel.Breakpoints.Should().BeEmpty(
-                "step over must not create or leave temporary UI breakpoints");
-        } finally {
-            context.State.IsRunning = false;
-            context.PauseHandler.Resume();
-            WaitUntil(
-                () => runTask.IsCompleted,
-                timeoutMilliseconds: 5000,
-                failureMessage: "The emulation task should complete during cleanup");
-
-            runTask.IsFaulted.Should().BeFalse("cleanup should not leave a faulted background run task");
-
-            ProcessUiEvents();
-        }
+        RunSteppingScenario(new SteppingScenario {
+            BinName = binName,
+            InstallInterruptVectors = installInterruptVectors,
+            InitialAddress = initialAddress,
+            ExpectedAddress = expectedAddress,
+            RemoveBreakpointOnTrigger = true,
+            UseStepInto = false,
+            AssertSingleInstructionCycleDelta = assertSingleInstructionCycleDelta,
+            AssertNoTemporaryUiBreakpoints = true,
+            PauseBeforeSteppingFailureMessage = "The emulator should pause on the initial breakpoint before stepping",
+            InitialAddressAssertionMessage = "the initial breakpoint must pause exactly on the instruction under test",
+            StepAvailabilityAssertionMessage = "step over should be available while paused",
+            DestinationFailureMessage = "step over should pause at the expected destination",
+            CycleAssertionMessage = "step over should execute exactly one instruction for non-call instructions",
+            NoTemporaryUiBreakpointsAssertionMessage = "step over must not create or leave temporary UI breakpoints"
+        });
     }
 }

@@ -13,7 +13,6 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
@@ -177,6 +176,70 @@ public abstract class BreakpointUiTestBase : IDisposable {
         condition().Should().BeTrue(failureMessage);
     }
 
+    protected void RunSteppingScenario(SteppingScenario scenario) {
+        using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
+            scenario.BinName,
+            enablePit: false,
+            maxCycles: 2_000_000,
+            installInterruptVectors: scenario.InstallInterruptVectors).Create();
+        DisassemblySteppingContext context = CreateActiveDisassemblySteppingContext(dependencyInjection);
+
+        AddressBreakPoint executionBreakpoint =
+            CreateExecutionPauseBreakpoint(scenario.InitialAddress, context.PauseHandler, scenario.RemoveBreakpointOnTrigger);
+        context.EmulatorBreakpointsManager.ToggleBreakPoint(executionBreakpoint, on: true);
+
+        Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
+
+        try {
+            WaitUntil(
+                () => context.PauseHandler.IsPaused && context.DisassemblyViewModel.IsPaused,
+                timeoutMilliseconds: 5000,
+                failureMessage: scenario.PauseBeforeSteppingFailureMessage);
+
+            context.State.IpSegmentedAddress.Should().Be(
+                scenario.InitialAddress,
+                scenario.InitialAddressAssertionMessage);
+
+            long initialCycles = context.State.Cycles;
+
+            if (scenario.UseStepInto) {
+                context.DisassemblyViewModel.StepIntoCommand.CanExecute(null).Should().BeTrue(
+                    scenario.StepAvailabilityAssertionMessage);
+                context.DisassemblyViewModel.StepIntoCommand.Execute(null);
+            } else {
+                context.DisassemblyViewModel.StepOverCommand.CanExecute(null).Should().BeTrue(
+                    scenario.StepAvailabilityAssertionMessage);
+                context.DisassemblyViewModel.StepOverCommand.Execute(null);
+            }
+
+            WaitUntil(
+                () => context.PauseHandler.IsPaused
+                      && context.DisassemblyViewModel.IsPaused
+                      && context.State.IpSegmentedAddress == scenario.ExpectedAddress,
+                timeoutMilliseconds: 5000,
+                failureMessage: scenario.DestinationFailureMessage);
+
+            if (scenario.AssertSingleInstructionCycleDelta) {
+                context.State.Cycles.Should().Be(initialCycles + 1, scenario.CycleAssertionMessage);
+            }
+
+            if (scenario.AssertNoTemporaryUiBreakpoints) {
+                context.BreakpointsViewModel.Breakpoints.Should().BeEmpty(
+                    scenario.NoTemporaryUiBreakpointsAssertionMessage);
+            }
+        } finally {
+            context.State.IsRunning = false;
+            context.PauseHandler.Resume();
+            WaitUntil(
+                () => runTask.IsCompleted,
+                timeoutMilliseconds: 5000,
+                failureMessage: "The emulation task should complete during cleanup");
+
+            runTask.IsFaulted.Should().BeFalse("cleanup should not leave a faulted background run task");
+            ProcessUiEvents();
+        }
+    }
+
     protected sealed class DisassemblySteppingContext {
         public DisassemblySteppingContext(
             State state,
@@ -242,6 +305,36 @@ public abstract class BreakpointUiTestBase : IDisposable {
         public EmulatorBreakpointsManager BreakpointsManager { get; }
 
         public BreakpointsViewModel BreakpointsViewModel { get; }
+    }
+
+    protected sealed class SteppingScenario {
+        public string BinName { get; set; } = string.Empty;
+
+        public bool InstallInterruptVectors { get; set; }
+
+        public SegmentedAddress InitialAddress { get; set; } = new(0, 0);
+
+        public SegmentedAddress ExpectedAddress { get; set; } = new(0, 0);
+
+        public bool RemoveBreakpointOnTrigger { get; set; }
+
+        public bool UseStepInto { get; set; }
+
+        public bool AssertSingleInstructionCycleDelta { get; set; }
+
+        public bool AssertNoTemporaryUiBreakpoints { get; set; }
+
+        public string PauseBeforeSteppingFailureMessage { get; set; } = string.Empty;
+
+        public string InitialAddressAssertionMessage { get; set; } = string.Empty;
+
+        public string StepAvailabilityAssertionMessage { get; set; } = string.Empty;
+
+        public string DestinationFailureMessage { get; set; } = string.Empty;
+
+        public string CycleAssertionMessage { get; set; } = string.Empty;
+
+        public string NoTemporaryUiBreakpointsAssertionMessage { get; set; } = string.Empty;
     }
 
     public void Dispose() {

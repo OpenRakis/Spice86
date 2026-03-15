@@ -2,9 +2,6 @@ namespace Spice86.Tests.UI;
 
 using Avalonia.Headless.XUnit;
 
-using FluentAssertions;
-
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 
 public class SteppingOnExecutionBreakpointUiTests : BreakpointUiTestBase {
@@ -22,59 +19,23 @@ public class SteppingOnExecutionBreakpointUiTests : BreakpointUiTestBase {
         SegmentedAddress initialAddress = new(0xF000, 0x0000);
         SegmentedAddress expectedAddress = new(0xF000, 0x0003);
 
-        using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
-            "jump1",
-            enablePit: false,
-            maxCycles: 2_000_000,
-            installInterruptVectors: false).Create();
-        DisassemblySteppingContext context = CreateActiveDisassemblySteppingContext(dependencyInjection);
-
-        AddressBreakPoint persistentExecutionBreakpoint =
-            CreateExecutionPauseBreakpoint(initialAddress, context.PauseHandler, removeOnTrigger: false);
-        context.EmulatorBreakpointsManager.ToggleBreakPoint(persistentExecutionBreakpoint, on: true);
-
-        Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
-
-        try {
-            WaitUntil(
-                () => context.PauseHandler.IsPaused && context.DisassemblyViewModel.IsPaused,
-                timeoutMilliseconds: 5000,
-                failureMessage: "The emulator should pause on the persistent execution breakpoint before stepping");
-
-            context.State.IpSegmentedAddress.Should().Be(initialAddress,
-                "the persistent execution breakpoint should pause on the instruction under test");
-
-            long initialCycles = context.State.Cycles;
-
-            if (useStepInto) {
-                context.DisassemblyViewModel.StepIntoCommand.CanExecute(null).Should().BeTrue(
-                    "step into should be available while paused");
-                context.DisassemblyViewModel.StepIntoCommand.Execute(null);
-            } else {
-                context.DisassemblyViewModel.StepOverCommand.CanExecute(null).Should().BeTrue(
-                    "step over should be available while paused");
-                context.DisassemblyViewModel.StepOverCommand.Execute(null);
-            }
-
-            WaitUntil(
-                () => context.PauseHandler.IsPaused
-                      && context.DisassemblyViewModel.IsPaused
-                      && context.State.IpSegmentedAddress == expectedAddress,
-                timeoutMilliseconds: 5000,
-                failureMessage: "stepping should advance to the next instruction even with a persistent execution breakpoint at the current address");
-
-            context.State.Cycles.Should().Be(initialCycles + 1,
-                "stepping should execute exactly one instruction");
-        } finally {
-            context.State.IsRunning = false;
-            context.PauseHandler.Resume();
-            WaitUntil(
-                () => runTask.IsCompleted,
-                timeoutMilliseconds: 5000,
-                failureMessage: "The emulation task should complete during cleanup");
-
-            runTask.IsFaulted.Should().BeFalse("cleanup should not leave a faulted background run task");
-            ProcessUiEvents();
-        }
+        RunSteppingScenario(new SteppingScenario {
+            BinName = "jump1",
+            InstallInterruptVectors = false,
+            InitialAddress = initialAddress,
+            ExpectedAddress = expectedAddress,
+            RemoveBreakpointOnTrigger = false,
+            UseStepInto = useStepInto,
+            AssertSingleInstructionCycleDelta = true,
+            AssertNoTemporaryUiBreakpoints = false,
+            PauseBeforeSteppingFailureMessage = "The emulator should pause on the persistent execution breakpoint before stepping",
+            InitialAddressAssertionMessage = "the persistent execution breakpoint should pause on the instruction under test",
+            StepAvailabilityAssertionMessage = useStepInto
+                ? "step into should be available while paused"
+                : "step over should be available while paused",
+            DestinationFailureMessage = "stepping should advance to the next instruction even with a persistent execution breakpoint at the current address",
+            CycleAssertionMessage = "stepping should execute exactly one instruction",
+            NoTemporaryUiBreakpointsAssertionMessage = string.Empty
+        });
     }
 }
