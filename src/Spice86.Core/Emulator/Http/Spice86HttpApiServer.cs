@@ -18,7 +18,6 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public sealed class Spice86HttpApiServer : IDisposable {
     private readonly ILoggerService _loggerService;
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly WebApplication _webApplication;
     private bool _disposed;
 
@@ -37,7 +36,7 @@ public sealed class Spice86HttpApiServer : IDisposable {
 
         _webApplication = builder.Build();
         _webApplication.MapControllers();
-        _webApplication.StartAsync(_cancellationTokenSource.Token).GetAwaiter().GetResult();
+        _webApplication.Start();
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("HTTP API listening on {BaseUrl}", HttpApiEndpoint.BaseUrl);
@@ -50,33 +49,18 @@ public sealed class Spice86HttpApiServer : IDisposable {
         }
 
         _disposed = true;
-
-        _cancellationTokenSource.Cancel();
-        StopWebApplicationBestEffort();
-        DisposeWebApplicationBestEffort();
-
-        _cancellationTokenSource.Dispose();
+        DisposeWebApp();
     }
 
-    private void StopWebApplicationBestEffort() {
+    private void DisposeWebApp() {
         ExecuteShutdownAction(
-            () => _webApplication.StopAsync().GetAwaiter().GetResult(),
-            "stop");
-    }
-
-    private void DisposeWebApplicationBestEffort() {
-        ExecuteShutdownAction(
-            () => _webApplication.DisposeAsync().GetAwaiter().GetResult(),
+            () => ((IHost)_webApplication).Dispose(),
             "dispose");
     }
 
     private void ExecuteShutdownAction(Action action, string operation) {
         try {
             action();
-        } catch (OperationCanceledException exception) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug(exception, "HTTP API server {Operation} was canceled during disposal.", operation);
-            }
         } catch (ObjectDisposedException exception) {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug(exception, "HTTP API server was already disposed while attempting to {Operation}.", operation);
