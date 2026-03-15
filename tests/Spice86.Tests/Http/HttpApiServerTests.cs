@@ -31,9 +31,9 @@ public sealed class HttpApiServerTests {
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiInfoResponse? payload = await response.Content.ReadFromJsonAsync<HttpApiInfoResponse>();
-        payload.Should().NotBeNull();
-        payload!.Name.Should().Be("Spice86 HTTP API");
+        HttpApiInfoResponse payload = await response.Content.ReadFromJsonAsync<HttpApiInfoResponse>()
+            ?? throw new InvalidOperationException("Expected non-null payload");
+        payload.Name.Should().Be("Spice86 HTTP API");
         payload.Endpoints.Should().Contain("/api/status");
         payload.Endpoints.Should().Contain("/api/memory/{address}/byte");
         payload.Endpoints.Should().Contain("/api/memory/{address}/range/{length}");
@@ -46,9 +46,9 @@ public sealed class HttpApiServerTests {
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiStatusResponse? payload = await response.Content.ReadFromJsonAsync<HttpApiStatusResponse>();
-        payload.Should().NotBeNull();
-        payload!.IsPaused.Should().BeFalse();
+        HttpApiStatusResponse payload = await response.Content.ReadFromJsonAsync<HttpApiStatusResponse>()
+            ?? throw new InvalidOperationException("Expected non-null payload");
+        payload.IsPaused.Should().BeFalse();
         payload.IsCpuRunning.Should().BeTrue();
         payload.Cs.Should().Be(0x1234);
         payload.Ip.Should().Be(0x5678);
@@ -63,9 +63,9 @@ public sealed class HttpApiServerTests {
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiMemoryByteResponse? payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>();
-        payload.Should().NotBeNull();
-        payload!.Address.Should().Be(64);
+        HttpApiMemoryByteResponse payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>()
+            ?? throw new InvalidOperationException("Expected non-null payload");
+        payload.Address.Should().Be(64);
         payload.Value.Should().Be(0x12);
     }
 
@@ -79,14 +79,14 @@ public sealed class HttpApiServerTests {
         HttpResponseMessage putResponse = await _fixture.HttpClient.PutAsJsonAsync("/api/memory/64/byte", request);
         putResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiMemoryByteResponse? putPayload = await putResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>();
-        putPayload.Should().NotBeNull();
-        putPayload!.Value.Should().Be(0xAB);
+        HttpApiMemoryByteResponse putPayload = await putResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>()
+            ?? throw new InvalidOperationException("Expected non-null putPayload");
+        putPayload.Value.Should().Be(0xAB);
 
         HttpResponseMessage getResponse = await _fixture.HttpClient.GetAsync("/api/memory/64/byte");
-        HttpApiMemoryByteResponse? getPayload = await getResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>();
-        getPayload.Should().NotBeNull();
-        getPayload!.Value.Should().Be(0xAB);
+        HttpApiMemoryByteResponse getPayload = await getResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>()
+            ?? throw new InvalidOperationException("Expected non-null getPayload");
+        getPayload.Value.Should().Be(0xAB);
         _fixture.Memory[0x40].Should().Be(0xAB);
     }
 
@@ -97,9 +97,9 @@ public sealed class HttpApiServerTests {
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiMemoryRangeResponse? payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryRangeResponse>();
-        payload.Should().NotBeNull();
-        payload!.Address.Should().Be(64);
+        HttpApiMemoryRangeResponse payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryRangeResponse>()
+            ?? throw new InvalidOperationException("Expected non-null payload");
+        payload.Address.Should().Be(64);
         payload.Length.Should().Be(4);
         payload.Values.Should().Equal([0x12, 0x34, 0x56, 0x78]);
     }
@@ -115,9 +115,9 @@ public sealed class HttpApiServerTests {
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiMemoryRangeResponse? payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryRangeResponse>();
-        payload.Should().NotBeNull();
-        payload!.Length.Should().Be(2);
+        HttpApiMemoryRangeResponse payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryRangeResponse>()
+            ?? throw new InvalidOperationException("Expected non-null payload");
+        payload.Length.Should().Be(2);
         payload.Values.Should().Equal([0x9A, 0xBC]);
     }
 
@@ -128,9 +128,9 @@ public sealed class HttpApiServerTests {
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        HttpApiErrorResponse? payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>();
-        payload.Should().NotBeNull();
-        payload!.Message.Should().Contain("between 0 and 4294967295");
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+            ?? throw new InvalidOperationException("Expected non-null payload");
+        payload.Message.Should().Contain("between 0 and 4294967295");
     }
 
     [Fact]
@@ -140,9 +140,9 @@ public sealed class HttpApiServerTests {
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        HttpApiErrorResponse? payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>();
-        payload.Should().NotBeNull();
-        payload!.Message.Should().Contain("between 0 and 4294967295");
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+            ?? throw new InvalidOperationException("Expected non-null payload");
+        payload.Message.Should().Contain("between 0 and 4294967295");
     }
 
     [Fact]
@@ -152,9 +152,9 @@ public sealed class HttpApiServerTests {
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        HttpApiErrorResponse? payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>();
-        payload.Should().NotBeNull();
-        payload!.Message.Should().Be("address is outside of memory range");
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+            ?? throw new InvalidOperationException("Expected non-null payload");
+        payload.Message.Should().Be("address is outside of memory range");
     }
 
     [Fact]
@@ -164,9 +164,9 @@ public sealed class HttpApiServerTests {
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        HttpApiErrorResponse? payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>();
-        payload.Should().NotBeNull();
-        payload!.Message.Should().Be("length must be greater than 0");
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+            ?? throw new InvalidOperationException("Expected non-null payload");
+        payload.Message.Should().Be("length must be greater than 0");
     }
 
     [Fact]
@@ -180,8 +180,8 @@ public sealed class HttpApiServerTests {
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        HttpApiErrorResponse? payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>();
-        payload.Should().NotBeNull();
-        payload!.Message.Should().Be("address is outside of memory range");
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+            ?? throw new InvalidOperationException("Expected non-null payload");
+        payload.Message.Should().Be("address is outside of memory range");
     }
 }

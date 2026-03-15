@@ -1,5 +1,7 @@
 namespace Spice86.Views;
 
+using System;
+
 using Avalonia.Controls;
 
 using Spice86.ViewModels;

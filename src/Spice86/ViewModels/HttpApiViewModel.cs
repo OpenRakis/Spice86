@@ -21,7 +21,7 @@ public partial class HttpApiViewModel : ViewModelBase, IDisposable {
     private bool _isBusy;
 
     [ObservableProperty]
-    private string _baseUrl = HttpApiEndpoint.BaseUrl;
+    private string _baseUrl = HttpApiEndpoint.BaseUrl(HttpApiEndpoint.DefaultPort);
 
     [ObservableProperty]
     private string _memoryAddressInput = "0x40";
@@ -362,20 +362,20 @@ public partial class HttpApiViewModel : ViewModelBase, IDisposable {
         return true;
     }
 
-    private static string ConvertToHexPreview(byte[] values) {
-        if (values.Length == 0) {
+    private static string ConvertToHexPreview(IReadOnlyList<byte> values) {
+        if (values.Count == 0) {
             return "(empty)";
         }
 
-        int previewLength = Math.Min(values.Length, 32);
+        int previewLength = Math.Min(values.Count, 32);
         string[] chunks = new string[previewLength];
         for (int i = 0; i < previewLength; i++) {
             chunks[i] = $"{values[i]:X2}";
         }
 
         string preview = string.Join(' ', chunks);
-        if (values.Length > previewLength) {
-            return $"{preview} ... ({values.Length} bytes)";
+        if (values.Count > previewLength) {
+            return $"{preview} ... ({values.Count} bytes)";
         }
 
         return preview;

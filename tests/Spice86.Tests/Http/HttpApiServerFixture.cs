@@ -39,9 +39,10 @@ public sealed class HttpApiServerFixture : IDisposable {
 
         State = state;
         Memory = memory;
-        Server = new Spice86HttpApiServer(state, memory, pauseHandler, loggerService);
+        // Use port 0 to let the OS assign an available ephemeral port, avoiding conflicts with other tests.
+        Server = new Spice86HttpApiServer(state, memory, pauseHandler, loggerService, port: 0);
         HttpClient = new HttpClient {
-            BaseAddress = new Uri(HttpApiEndpoint.BaseUrl)
+            BaseAddress = new Uri($"http://{HttpApiEndpoint.Host}:{Server.Port}")
         };
     }
 
