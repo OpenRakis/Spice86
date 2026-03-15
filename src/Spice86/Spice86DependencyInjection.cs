@@ -649,7 +649,7 @@ public class Spice86DependencyInjection : IDisposable {
                 [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
 
             SoftwareMixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
-            HttpApiViewModel httpApiViewModel = new(_httpApiServer is not null);
+            HttpApiViewModel httpApiViewModel = new(_httpApiServer is not null, memoryViewModel);
 
             Application.Current!.Resources[nameof(DebugWindowViewModel)] =
                 debugWindowViewModel;

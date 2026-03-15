@@ -2,68 +2,157 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:Spice86.Views"
         xmlns:vm="using:Spice86.ViewModels"
         x:Class="Spice86.Views.HttpApiWindow"
         x:CompileBindings="True"
         x:DataType="vm:HttpApiViewModel"
-        Width="760"
-        Height="520"
-        MinWidth="700"
-        MinHeight="480"
+        Width="1300"
+        Height="860"
+        MinWidth="1160"
+        MinHeight="760"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="True"
         CanResize="True"
-        Title="Spice86 HTTP API"
+        Title="{Binding WindowTitleText}"
         Icon="/Views/Assets/Spice86.ico"
         mc:Ignorable="d">
+    <Window.Resources>
+        <LinearGradientBrush x:Key="ApiHeaderBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Offset="0.0" Color="#FF1F2A44" />
+            <GradientStop Offset="1.0" Color="#FF0A5862" />
+        </LinearGradientBrush>
+        <SolidColorBrush x:Key="ApiCardBrush" Color="#1800E5FF" />
+        <SolidColorBrush x:Key="ApiCardBorderBrush" Color="#4474D9FF" />
+        <SolidColorBrush x:Key="ApiPanelBrush" Color="#1800C4A3" />
+        <SolidColorBrush x:Key="ApiPanelBorderBrush" Color="#44FFD079" />
+        <SolidColorBrush x:Key="ApiRouteBrush" Color="#FF8EE4FF" />
+        <SolidColorBrush x:Key="ApiResponseBrush" Color="#FFF9E17A" />
+    </Window.Resources>
+    <Window.Styles>
+        <StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
+        <Style Selector="Border.badge">
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="14,6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#55FFFFFF" />
+        </Style>
+        <Style Selector="Border.badge.online">
+            <Setter Property="Background" Value="#2F38D37A" />
+        </Style>
+        <Style Selector="Border.badge.offline">
+            <Setter Property="Background" Value="#33FF6D6D" />
+        </Style>
+        <Style Selector="Border.badge.running">
+            <Setter Property="Background" Value="#2F43E97A" />
+        </Style>
+        <Style Selector="Border.badge.paused">
+            <Setter Property="Background" Value="#2FF7D774" />
+        </Style>
+        <Style Selector="Border.badge.unknown">
+            <Setter Property="Background" Value="#3389A4FF" />
+        </Style>
+    </Window.Styles>
     <Design.DataContext>
         <vm:HttpApiViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions="Auto,*,Auto" Margin="16" RowSpacing="12">
-        <Border Grid.Row="0" CornerRadius="10" Padding="14" BorderThickness="1">
-            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6">
-                <TextBlock FontSize="20" FontWeight="SemiBold" Text="HTTP API Console" />
-                <TextBlock Grid.Row="1" Text="{Binding BaseUrl, StringFormat='Endpoint: {0}'}" />
-                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding IsEnabled, StringFormat='Available: {0}'}" />
+    <Grid RowDefinitions="Auto,*" Margin="18" RowSpacing="14">
+        <Border Grid.Row="0" CornerRadius="16" Padding="18" Background="{StaticResource ApiHeaderBrush}" BorderThickness="1" BorderBrush="#44FFFFFF">
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                <TextBlock FontSize="30" FontWeight="SemiBold" Text="{Binding WindowTitleText}" />
+                <TextBlock Grid.Row="1" Opacity="0.9" FontSize="15" Text="{Binding WindowSubtitleText}" />
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10">
+                    <TextBlock FontWeight="SemiBold" Text="{Binding EndpointHeaderText}" />
+                    <TextBlock FontFamily="RobotoMonoFont" Text="{Binding BaseUrl}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Grid.Row="0" Grid.RowSpan="3" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="6">
+                    <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="{Binding AvailabilityHeaderText}" />
+                    <Border Classes="badge"
+                            Classes.online="{Binding IsEnabled}"
+                            Classes.offline="{Binding IsDisabled}">
+                        <TextBlock FontWeight="Bold" Text="{Binding AvailabilityText}" />
+                    </Border>
+                </StackPanel>
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="12">
-            <Border Grid.Column="0" CornerRadius="10" Padding="14" BorderThickness="1">
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" RowSpacing="8">
-                    <TextBlock FontWeight="SemiBold" FontSize="15" Text="Session" />
-                    <Button Grid.Row="1" Content="Refresh Status" Command="{Binding RefreshStatusCommand}" MinWidth="120" HorizontalAlignment="Left" />
-                    <TextBlock Grid.Row="2" Text="{Binding Status, StringFormat='State: {0}'}" />
-                    <TextBlock Grid.Row="3" Text="{Binding CpuPointer, StringFormat='CS:IP: {0}'}" />
-                    <TextBlock Grid.Row="4" Text="{Binding Cycles, StringFormat='Cycles: {0:N0}'}" />
-                    <TextBlock Grid.Row="5" Text="{Binding LastMessage}" TextWrapping="Wrap" />
-                </Grid>
-            </Border>
+        <Grid Grid.Row="1" ColumnDefinitions="470,*" ColumnSpacing="14">
+            <ScrollViewer Grid.Column="0">
+                <StackPanel Spacing="12">
+                    <Border CornerRadius="12" Padding="14" BorderThickness="1" Background="{StaticResource ApiCardBrush}" BorderBrush="{StaticResource ApiCardBorderBrush}">
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                            <Grid ColumnDefinitions="*,Auto" Grid.Row="0">
+                                <TextBlock VerticalAlignment="Center" FontSize="17" FontWeight="SemiBold" Text="{Binding SessionPanelTitleText}" />
+                                <Border Grid.Column="1"
+                                        Classes="badge"
+                                        Classes.running="{Binding IsStatusRunning}"
+                                        Classes.paused="{Binding IsStatusPaused}"
+                                        Classes.unknown="{Binding IsStatusUnknown}">
+                                    <TextBlock FontWeight="Bold" Text="{Binding Status}" />
+                                </Border>
+                            </Grid>
+                            <Button Grid.Row="1" Content="{Binding RefreshButtonText}" Command="{Binding RefreshStatusCommand}" MinWidth="140" HorizontalAlignment="Left" />
+                            <TextBlock Grid.Row="2" Text="{Binding StateDisplayText}" />
+                            <TextBlock Grid.Row="3" FontFamily="RobotoMonoFont" Text="{Binding CpuPointerDisplayText}" />
+                            <TextBlock Grid.Row="4" FontFamily="RobotoMonoFont" Text="{Binding CyclesDisplayText}" />
+                        </Grid>
+                    </Border>
 
-            <Border Grid.Column="1" CornerRadius="10" Padding="14" BorderThickness="1">
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" RowSpacing="8">
-                    <TextBlock FontWeight="SemiBold" FontSize="15" Text="Memory Probe" />
-                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Address" />
-                        <TextBox Grid.Column="1" Text="{Binding MemoryAddressInput}" Watermark="0x00000" />
+                    <Border CornerRadius="12" Padding="14" BorderThickness="1" Background="{StaticResource ApiPanelBrush}" BorderBrush="{StaticResource ApiPanelBorderBrush}">
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
+                            <TextBlock Grid.Row="0" FontSize="17" FontWeight="SemiBold" Text="{Binding RequestPanelTitleText}" />
+                            <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{Binding AddressLabelText}" />
+                                <TextBox Grid.Column="1" Text="{Binding MemoryAddressInput, Mode=TwoWay}" FontFamily="RobotoMonoFont" Watermark="{Binding AddressWatermarkText}" />
+                            </Grid>
+                            <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{Binding ByteValueLabelText}" />
+                                <TextBox Grid.Column="1" Text="{Binding MemoryValueInput, Mode=TwoWay}" FontFamily="RobotoMonoFont" Watermark="{Binding ByteValueWatermarkText}" />
+                            </Grid>
+                            <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="10">
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{Binding RangeLengthLabelText}" />
+                                <TextBox Grid.Column="1" Text="{Binding RangeLengthInput, Mode=TwoWay}" FontFamily="RobotoMonoFont" Watermark="{Binding RangeLengthWatermarkText}" />
+                                <Button Grid.Column="2" MinWidth="92" Content="{Binding ReadByteButtonText}" Command="{Binding ReadByteCommand}" />
+                                <Button Grid.Column="3" MinWidth="92" Content="{Binding WriteByteButtonText}" Command="{Binding WriteByteCommand}" />
+                                <Button Grid.Column="4" MinWidth="96" Content="{Binding ReadRangeButtonText}" Command="{Binding ReadRangeCommand}" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <Border CornerRadius="12" Padding="14" BorderThickness="1" Background="{StaticResource ApiCardBrush}" BorderBrush="{StaticResource ApiCardBorderBrush}">
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                            <TextBlock Grid.Row="0" FontSize="17" FontWeight="SemiBold" Text="{Binding ResponsePanelTitleText}" />
+                            <TextBlock Grid.Row="1" Text="{Binding LastByteDisplayText}" Foreground="{StaticResource ApiResponseBrush}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="2" Text="{Binding LastRangeDisplayText}" Foreground="{StaticResource ApiResponseBrush}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="3" Text="{Binding LastEventDisplayText}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="4" Margin="0,6,0,0" FontSize="15" FontWeight="SemiBold" Text="{Binding RoutesTitleText}" />
+                            <TextBlock Grid.Row="5" FontFamily="RobotoMonoFont" Foreground="{StaticResource ApiRouteBrush}" Text="{Binding StatusGetRouteText}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="6" FontFamily="RobotoMonoFont" Foreground="{StaticResource ApiRouteBrush}" Text="{Binding ReadByteRouteText}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="7" FontFamily="RobotoMonoFont" Foreground="{StaticResource ApiRouteBrush}" Text="{Binding PutByteRouteText}" TextWrapping="Wrap" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid Grid.Column="1" RowDefinitions="*,Auto" RowSpacing="10">
+                <Border Grid.Row="0" CornerRadius="12" Padding="8" BorderThickness="1" Background="{StaticResource ApiCardBrush}" BorderBrush="{StaticResource ApiCardBorderBrush}" IsVisible="{Binding HasMemoryView}">
+                    <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                        <TextBlock Grid.Row="0" Margin="8,6,8,2" FontSize="17" FontWeight="SemiBold" Text="{Binding MemoryPanelTitleText}" />
+                        <views:MemoryView Grid.Row="1"
+                                          DataContext="{Binding MemoryViewModel}"
+                                          SelectedAddress="{Binding $parent[Window].DataContext.MemoryAddressInput, Mode=TwoWay}" />
                     </Grid>
-                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Value" />
-                        <TextBox Grid.Column="1" Text="{Binding MemoryValueInput}" Watermark="0x00" />
-                    </Grid>
-                    <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
-                        <Button Grid.Column="0" Content="Read" Command="{Binding ReadByteCommand}" MinWidth="86" />
-                        <Button Grid.Column="1" Content="Write" Command="{Binding WriteByteCommand}" MinWidth="86" />
-                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{Binding LastReadValue, StringFormat='Read value: {0}'}" />
-                    </Grid>
-                    <TextBlock Grid.Row="4" Text="Supported: /api/status, /api/memory/{address}/byte, /api/memory/{address}/range/{length}" TextWrapping="Wrap" />
-                </Grid>
-            </Border>
+                </Border>
+
+                <Border Grid.Row="0" CornerRadius="12" Padding="14" BorderThickness="1" Background="{StaticResource ApiCardBrush}" BorderBrush="{StaticResource ApiCardBorderBrush}" IsVisible="{Binding IsMemoryViewUnavailable}">
+                    <TextBlock Text="{Binding MemoryUnavailableText}" TextWrapping="Wrap" />
+                </Border>
+
+                <Border Grid.Row="1" CornerRadius="10" Padding="10" BorderThickness="1" Background="{StaticResource ApiPanelBrush}" BorderBrush="{StaticResource ApiPanelBorderBrush}">
+                    <TextBlock FontFamily="RobotoMonoFont" Foreground="{StaticResource ApiRouteBrush}" Text="{Binding ReadRangeRouteText}" TextWrapping="Wrap" />
+                </Border>
+            </Grid>
         </Grid>
-
-        <Border Grid.Row="2" CornerRadius="10" Padding="12" BorderThickness="1">
-            <TextBlock Text="Fixed endpoint: 127.0.0.1:10001" />
-        </Border>
     </Grid>
 </Window>
