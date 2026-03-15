@@ -4,18 +4,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Http;
+using Spice86.Core.Emulator.Http.Contracts;
 
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
 
 public partial class HttpApiViewModel : ViewModelBase, IDisposable {
-    private const string AvailabilityOnlineText = "Online";
-    private const string AvailabilityOfflineText = "Offline";
-    private const string StatusRunningText = "Running";
-    private const string StatusPausedText = "Paused";
-    private const string StatusUnknownText = "Unknown";
-
     private readonly HttpClient _httpClient;
     private bool _disposed;
 
@@ -23,289 +18,305 @@ public partial class HttpApiViewModel : ViewModelBase, IDisposable {
     private bool _isEnabled;
 
     [ObservableProperty]
+    private bool _isBusy;
+
+    [ObservableProperty]
     private string _baseUrl = HttpApiEndpoint.BaseUrl;
 
     [ObservableProperty]
-    private string _status = StatusUnknownText;
-
-    [ObservableProperty]
-    private string _cpuPointer = "----:----";
-
-    [ObservableProperty]
-    private long _cycles;
-
-    [ObservableProperty]
-    private string _memoryAddressInput = "0x00000";
+    private string _memoryAddressInput = "0x40";
 
     [ObservableProperty]
     private string _memoryValueInput = "0x00";
 
     [ObservableProperty]
-    private string _rangeLengthInput = "16";
+    private string _memoryRangeLengthInput = "16";
 
     [ObservableProperty]
-    private string _lastReadValue = "n/a";
+    private string _status = "Unknown";
 
     [ObservableProperty]
-    private string _lastRangeValue = "n/a";
+    private string _cpuState = "Unknown";
 
     [ObservableProperty]
-    private string _lastMessage = "Ready";
+    private string _csIp = "----:----";
 
-    public MemoryViewModel? MemoryViewModel { get; private set; }
+    [ObservableProperty]
+    private string _ipPhysicalAddress = "0x00000000";
 
-    public bool HasMemoryView => MemoryViewModel is not null;
+    [ObservableProperty]
+    private string _memorySizeBytes = "0";
 
-    public bool IsMemoryViewUnavailable => !HasMemoryView;
+    [ObservableProperty]
+    private long _cycles;
 
-    public bool IsDisabled => !IsEnabled;
+    [ObservableProperty]
+    private string _lastHttpStatus = "n/a";
 
-    public string WindowTitleText => "Spice86 REST Console";
+    [ObservableProperty]
+    private string _lastRequestPath = "/api/status";
 
-    public string WindowSubtitleText => "Postman-style controls for Spice86 local REST API";
+    [ObservableProperty]
+    private string _lastResponseJson = "{}";
 
-    public string AvailabilityHeaderText => "Availability";
+    [ObservableProperty]
+    private string _lastErrorMessage = string.Empty;
 
-    public string AvailabilityText => IsEnabled ? AvailabilityOnlineText : AvailabilityOfflineText;
+    [ObservableProperty]
+    private string _lastReadByte = "n/a";
 
-    public string EndpointHeaderText => "Endpoint";
-
-    public string SessionPanelTitleText => "Session Snapshot";
-
-    public string RequestPanelTitleText => "Request Builder";
-
-    public string ResponsePanelTitleText => "Response";
-
-    public string MemoryPanelTitleText => "Live Memory";
-
-    public string MemoryUnavailableText => "Memory view is not available in this context.";
-
-    public string AddressLabelText => "Address";
-
-    public string ByteValueLabelText => "Byte Value";
-
-    public string RangeLengthLabelText => "Range Length";
-
-    public string AddressWatermarkText => "0x00000";
-
-    public string ByteValueWatermarkText => "0x00";
-
-    public string RangeLengthWatermarkText => "16";
-
-    public string StateLabelText => "State";
-
-    public string CpuPointerLabelText => "CS:IP";
-
-    public string CyclesLabelText => "Cycles";
-
-    public string LastEventLabelText => "Latest event";
-
-    public string LastByteLabelText => "Last byte";
-
-    public string LastRangeLabelText => "Last range";
-
-    public string RefreshButtonText => "GET Status";
-
-    public string ReadByteButtonText => "GET Byte";
-
-    public string WriteByteButtonText => "PUT Byte";
-
-    public string ReadRangeButtonText => "GET Range";
-
-    public string RoutesTitleText => "Route Catalog";
-
-    public string StateDisplayText => $"{StateLabelText}: {Status}";
-
-    public string CpuPointerDisplayText => $"{CpuPointerLabelText}: {CpuPointer}";
-
-    public string CyclesDisplayText => $"{CyclesLabelText}: {Cycles:N0}";
-
-    public string LastByteDisplayText => $"{LastByteLabelText}: {LastReadValue}";
-
-    public string LastRangeDisplayText => $"{LastRangeLabelText}: {LastRangeValue}";
-
-    public string LastEventDisplayText => $"{LastEventLabelText}: {LastMessage}";
-
-    public bool IsStatusRunning => string.Equals(Status, StatusRunningText, StringComparison.Ordinal);
-
-    public bool IsStatusPaused => string.Equals(Status, StatusPausedText, StringComparison.Ordinal);
-
-    public bool IsStatusUnknown => !IsStatusRunning && !IsStatusPaused;
-
-    public string StatusGetRouteText => $"GET {BaseUrl}/api/status";
-
-    public string ReadByteRouteText => $"GET {BaseUrl}/api/memory/{GetRouteAddressToken()}/byte";
-
-    public string PutByteRouteText => $"PUT {BaseUrl}/api/memory/{GetRouteAddressToken()}/byte";
-
-    public string ReadRangeRouteText =>
-        $"GET {BaseUrl}/api/memory/{GetRouteAddressToken()}/range/{GetRouteRangeToken()}";
+    [ObservableProperty]
+    private string _lastReadRange = "n/a";
 
     public HttpApiViewModel() {
         _httpClient = new HttpClient();
-        InitializeHttpApiState(false, null);
+        Initialize(false);
     }
 
     public HttpApiViewModel(bool isEnabled) {
         _httpClient = new HttpClient();
-        InitializeHttpApiState(isEnabled, null);
+        Initialize(isEnabled);
     }
 
-    public HttpApiViewModel(bool isEnabled, MemoryViewModel memoryViewModel) {
-        _httpClient = new HttpClient();
-        InitializeHttpApiState(isEnabled, memoryViewModel);
-    }
-
-    private void InitializeHttpApiState(bool isEnabled, MemoryViewModel? memoryViewModel) {
+    private void Initialize(bool isEnabled) {
         IsEnabled = isEnabled;
-        MemoryViewModel = memoryViewModel;
-        OnPropertyChanged(nameof(HasMemoryView));
-        OnPropertyChanged(nameof(IsMemoryViewUnavailable));
         _httpClient.Timeout = TimeSpan.FromSeconds(2);
-        if (MemoryViewModel is not null && !string.IsNullOrWhiteSpace(MemoryViewModel.StartAddress)) {
-            MemoryAddressInput = MemoryViewModel.StartAddress;
-        }
     }
 
     [RelayCommand]
     private async Task RefreshStatus() {
-        if (!IsEnabled) {
-            Status = StatusUnknownText;
-            LastMessage = "HTTP API unavailable";
-            return;
-        }
-
-        try {
-            HttpApiStatusResponse? response = await _httpClient.GetFromJsonAsync<HttpApiStatusResponse>(
-                $"{BaseUrl}/api/status");
-            if (response is null) {
-                LastMessage = "No status response";
-                return;
-            }
-
-            Status = response.IsPaused ? StatusPausedText : StatusRunningText;
-            CpuPointer = $"{response.Cs:X4}:{response.Ip:X4}";
-            Cycles = response.Cycles;
-            LastMessage = $"Status updated at {DateTime.Now:HH:mm:ss}";
-        } catch (HttpRequestException e) {
-            Status = StatusUnknownText;
-            LastMessage = $"HTTP error: {e.Message}";
-        } catch (TaskCanceledException) {
-            Status = StatusUnknownText;
-            LastMessage = "HTTP timeout";
-        } catch (JsonException e) {
-            Status = StatusUnknownText;
-            LastMessage = $"Invalid JSON: {e.Message}";
-        } catch (InvalidOperationException e) {
-            Status = StatusUnknownText;
-            LastMessage = $"Request error: {e.Message}";
-        }
+        await ExecuteGetStatus();
     }
 
     [RelayCommand]
     private async Task ReadByte() {
         if (!TryParseUInt32(MemoryAddressInput, out uint address)) {
-            LastMessage = "Invalid address";
+            LastErrorMessage = "Invalid address";
             return;
         }
 
-        if (!IsEnabled) {
-            LastMessage = "HTTP API unavailable";
-            return;
-        }
-
-        try {
-            HttpApiMemoryByteResponse? response = await _httpClient.GetFromJsonAsync<HttpApiMemoryByteResponse>(
-                $"{BaseUrl}/api/memory/{address}/byte");
-            if (response is null) {
-                LastMessage = "No memory response";
-                return;
-            }
-
-            LastReadValue = $"0x{response.Value:X2}";
-            LastMessage = "Memory read succeeded";
-        } catch (HttpRequestException e) {
-            LastMessage = $"HTTP error: {e.Message}";
-        } catch (TaskCanceledException) {
-            LastMessage = "HTTP timeout";
-        } catch (JsonException e) {
-            LastMessage = $"Invalid JSON: {e.Message}";
-        } catch (InvalidOperationException e) {
-            LastMessage = $"Request error: {e.Message}";
-        }
-    }
-
-    [RelayCommand]
-    private async Task ReadRange() {
-        if (!TryParseUInt32(MemoryAddressInput, out uint address)) {
-            LastMessage = "Invalid address";
-            return;
-        }
-
-        if (!TryParsePositiveInt(RangeLengthInput, out int rangeLength)) {
-            LastMessage = "Invalid range length";
-            return;
-        }
-
-        if (!IsEnabled) {
-            LastMessage = "HTTP API unavailable";
-            return;
-        }
-
-        try {
-            HttpApiMemoryRangeResponse? response = await _httpClient.GetFromJsonAsync<HttpApiMemoryRangeResponse>(
-                $"{BaseUrl}/api/memory/{address}/range/{rangeLength}");
-            if (response is null) {
-                LastMessage = "No memory range response";
-                return;
-            }
-
-            LastRangeValue = ConvertToHexPreview(response.Values);
-            LastMessage = $"Memory range read succeeded ({response.Length} bytes)";
-        } catch (HttpRequestException e) {
-            LastMessage = $"HTTP error: {e.Message}";
-        } catch (TaskCanceledException) {
-            LastMessage = "HTTP timeout";
-        } catch (JsonException e) {
-            LastMessage = $"Invalid JSON: {e.Message}";
-        } catch (InvalidOperationException e) {
-            LastMessage = $"Request error: {e.Message}";
-        }
+        await ExecuteGetByte(address);
     }
 
     [RelayCommand]
     private async Task WriteByte() {
         if (!TryParseUInt32(MemoryAddressInput, out uint address)) {
-            LastMessage = "Invalid address";
+            LastErrorMessage = "Invalid address";
             return;
         }
 
         if (!TryParseByte(MemoryValueInput, out byte value)) {
-            LastMessage = "Invalid byte value";
+            LastErrorMessage = "Invalid byte value";
             return;
         }
 
-        if (!IsEnabled) {
-            LastMessage = "HTTP API unavailable";
+        await ExecutePutByte(address, value);
+    }
+
+    [RelayCommand]
+    private async Task ReadRange() {
+        if (!TryParseUInt32(MemoryAddressInput, out uint address)) {
+            LastErrorMessage = "Invalid address";
             return;
+        }
+
+        if (!TryParsePositiveInt(MemoryRangeLengthInput, out int length)) {
+            LastErrorMessage = "Invalid range length";
+            return;
+        }
+
+        await ExecuteGetRange(address, length);
+    }
+
+    private async Task ExecuteGetStatus() {
+        const string requestPath = "/api/status";
+        HttpResponseMessage? response = await SendGet(requestPath);
+        if (response is null) {
+            return;
+        }
+
+        if (!response.IsSuccessStatusCode) {
+            return;
+        }
+
+        HttpApiStatusResponse? payload = await ReadJson<HttpApiStatusResponse>(response);
+        if (payload is null) {
+            return;
+        }
+
+        Status = payload.IsPaused ? "Paused" : "Running";
+        CpuState = payload.IsCpuRunning ? "CPU running" : "CPU stopped";
+        CsIp = $"{payload.Cs:X4}:{payload.Ip:X4}";
+        IpPhysicalAddress = $"0x{payload.IpPhysicalAddress:X8}";
+        MemorySizeBytes = payload.MemorySizeBytes.ToString(CultureInfo.InvariantCulture);
+        Cycles = payload.Cycles;
+    }
+
+    private async Task ExecuteGetByte(uint address) {
+        string requestPath = $"/api/memory/{address}/byte";
+        HttpResponseMessage? response = await SendGet(requestPath);
+        if (response is null) {
+            return;
+        }
+
+        if (!response.IsSuccessStatusCode) {
+            return;
+        }
+
+        HttpApiMemoryByteResponse? payload = await ReadJson<HttpApiMemoryByteResponse>(response);
+        if (payload is null) {
+            return;
+        }
+
+        LastReadByte = $"0x{payload.Value:X2}";
+    }
+
+    private async Task ExecutePutByte(uint address, byte value) {
+        string requestPath = $"/api/memory/{address}/byte";
+        HttpApiWriteByteRequest request = new() {
+            Value = value
+        };
+        HttpResponseMessage? response = await SendPut(requestPath, request);
+        if (response is null) {
+            return;
+        }
+
+        if (!response.IsSuccessStatusCode) {
+            return;
+        }
+
+        HttpApiMemoryByteResponse? payload = await ReadJson<HttpApiMemoryByteResponse>(response);
+        if (payload is null) {
+            return;
+        }
+
+        LastReadByte = $"0x{payload.Value:X2}";
+    }
+
+    private async Task ExecuteGetRange(uint address, int length) {
+        string requestPath = $"/api/memory/{address}/range/{length}";
+        HttpResponseMessage? response = await SendGet(requestPath);
+        if (response is null) {
+            return;
+        }
+
+        if (!response.IsSuccessStatusCode) {
+            return;
+        }
+
+        HttpApiMemoryRangeResponse? payload = await ReadJson<HttpApiMemoryRangeResponse>(response);
+        if (payload is null) {
+            return;
+        }
+
+        LastReadRange = ConvertToHexPreview(payload.Values);
+    }
+
+    private async Task<HttpResponseMessage?> SendGet(string requestPath) {
+        if (!IsEnabled) {
+            LastErrorMessage = "HTTP API unavailable";
+            return null;
+        }
+
+        IsBusy = true;
+        try {
+            LastRequestPath = requestPath;
+            LastErrorMessage = string.Empty;
+
+            HttpResponseMessage response = await _httpClient.GetAsync($"{BaseUrl}{requestPath}");
+            await UpdateResponseState(response);
+            return response;
+        } catch (HttpRequestException e) {
+            LastErrorMessage = $"HTTP error: {e.Message}";
+        } catch (TaskCanceledException) {
+            LastErrorMessage = "HTTP timeout";
+        } catch (InvalidOperationException e) {
+            LastErrorMessage = $"Request error: {e.Message}";
+        } finally {
+            IsBusy = false;
+        }
+
+        return null;
+    }
+
+    private async Task<HttpResponseMessage?> SendPut(string requestPath, HttpApiWriteByteRequest request) {
+        if (!IsEnabled) {
+            LastErrorMessage = "HTTP API unavailable";
+            return null;
+        }
+
+        IsBusy = true;
+        try {
+            LastRequestPath = requestPath;
+            LastErrorMessage = string.Empty;
+
+            HttpResponseMessage response = await _httpClient.PutAsJsonAsync($"{BaseUrl}{requestPath}", request);
+            await UpdateResponseState(response);
+            return response;
+        } catch (HttpRequestException e) {
+            LastErrorMessage = $"HTTP error: {e.Message}";
+        } catch (TaskCanceledException) {
+            LastErrorMessage = "HTTP timeout";
+        } catch (InvalidOperationException e) {
+            LastErrorMessage = $"Request error: {e.Message}";
+        } finally {
+            IsBusy = false;
+        }
+
+        return null;
+    }
+
+    private async Task UpdateResponseState(HttpResponseMessage response) {
+        LastHttpStatus = $"{(int)response.StatusCode} {response.ReasonPhrase}";
+
+        string body = await response.Content.ReadAsStringAsync();
+        LastResponseJson = PrettyPrintJson(body);
+
+        if (response.IsSuccessStatusCode) {
+            return;
+        }
+
+        HttpApiErrorResponse? error = TryDeserialize<HttpApiErrorResponse>(body);
+        if (error is not null && !string.IsNullOrWhiteSpace(error.Message)) {
+            LastErrorMessage = error.Message;
+            return;
+        }
+
+        LastErrorMessage = "HTTP request failed";
+    }
+
+    private async Task<T?> ReadJson<T>(HttpResponseMessage response) where T : class {
+        try {
+            return await response.Content.ReadFromJsonAsync<T>();
+        } catch (JsonException e) {
+            LastErrorMessage = $"Invalid JSON: {e.Message}";
+        } catch (NotSupportedException e) {
+            LastErrorMessage = $"Unsupported content: {e.Message}";
+        }
+
+        return null;
+    }
+
+    private static T? TryDeserialize<T>(string body) where T : class {
+        try {
+            return JsonSerializer.Deserialize<T>(body);
+        } catch (JsonException) {
+            return null;
+        }
+    }
+
+    private static string PrettyPrintJson(string body) {
+        if (string.IsNullOrWhiteSpace(body)) {
+            return "{}";
         }
 
         try {
-            HttpResponseMessage response = await _httpClient.PutAsJsonAsync(
-                $"{BaseUrl}/api/memory/{address}/byte",
-                new HttpApiWriteByteRequest(value));
-            if (!response.IsSuccessStatusCode) {
-                LastMessage = $"Write failed: {(int)response.StatusCode} {response.ReasonPhrase}";
-                return;
-            }
-
-            LastMessage = "Memory write succeeded";
-        } catch (HttpRequestException e) {
-            LastMessage = $"HTTP error: {e.Message}";
-        } catch (TaskCanceledException) {
-            LastMessage = "HTTP timeout";
-        } catch (InvalidOperationException e) {
-            LastMessage = $"Request error: {e.Message}";
+            using JsonDocument document = JsonDocument.Parse(body);
+            return JsonSerializer.Serialize(document, new JsonSerializerOptions {
+                WriteIndented = true
+            });
+        } catch (JsonException) {
+            return body;
         }
     }
 
@@ -370,71 +381,6 @@ public partial class HttpApiViewModel : ViewModelBase, IDisposable {
         return preview;
     }
 
-    private string GetRouteAddressToken() {
-        if (string.IsNullOrWhiteSpace(MemoryAddressInput)) {
-            return "{address}";
-        }
-
-        return MemoryAddressInput.Trim();
-    }
-
-    private string GetRouteRangeToken() {
-        if (string.IsNullOrWhiteSpace(RangeLengthInput)) {
-            return "{length}";
-        }
-
-        return RangeLengthInput.Trim();
-    }
-
-    partial void OnIsEnabledChanged(bool value) {
-        OnPropertyChanged(nameof(AvailabilityText));
-        OnPropertyChanged(nameof(IsDisabled));
-    }
-
-    partial void OnStatusChanged(string value) {
-        OnPropertyChanged(nameof(IsStatusRunning));
-        OnPropertyChanged(nameof(IsStatusPaused));
-        OnPropertyChanged(nameof(IsStatusUnknown));
-        OnPropertyChanged(nameof(StateDisplayText));
-    }
-
-    partial void OnBaseUrlChanged(string value) {
-        OnPropertyChanged(nameof(StatusGetRouteText));
-        OnPropertyChanged(nameof(ReadByteRouteText));
-        OnPropertyChanged(nameof(PutByteRouteText));
-        OnPropertyChanged(nameof(ReadRangeRouteText));
-    }
-
-    partial void OnMemoryAddressInputChanged(string value) {
-        OnPropertyChanged(nameof(ReadByteRouteText));
-        OnPropertyChanged(nameof(PutByteRouteText));
-        OnPropertyChanged(nameof(ReadRangeRouteText));
-    }
-
-    partial void OnRangeLengthInputChanged(string value) {
-        OnPropertyChanged(nameof(ReadRangeRouteText));
-    }
-
-    partial void OnCpuPointerChanged(string value) {
-        OnPropertyChanged(nameof(CpuPointerDisplayText));
-    }
-
-    partial void OnCyclesChanged(long value) {
-        OnPropertyChanged(nameof(CyclesDisplayText));
-    }
-
-    partial void OnLastReadValueChanged(string value) {
-        OnPropertyChanged(nameof(LastByteDisplayText));
-    }
-
-    partial void OnLastRangeValueChanged(string value) {
-        OnPropertyChanged(nameof(LastRangeDisplayText));
-    }
-
-    partial void OnLastMessageChanged(string value) {
-        OnPropertyChanged(nameof(LastEventDisplayText));
-    }
-
     public void Dispose() {
         if (_disposed) {
             return;
@@ -443,12 +389,4 @@ public partial class HttpApiViewModel : ViewModelBase, IDisposable {
         _disposed = true;
         _httpClient.Dispose();
     }
-
-    private sealed record HttpApiWriteByteRequest(byte Value);
-
-    private sealed record HttpApiStatusResponse(bool IsPaused, bool IsCpuRunning, long Cycles, ushort Cs, ushort Ip);
-
-    private sealed record HttpApiMemoryByteResponse(uint Address, byte Value);
-
-    private sealed record HttpApiMemoryRangeResponse(uint Address, int Length, byte[] Values);
 }

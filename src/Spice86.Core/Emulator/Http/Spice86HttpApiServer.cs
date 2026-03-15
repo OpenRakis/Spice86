@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 using Serilog.Events;
 
@@ -28,6 +29,7 @@ public sealed class Spice86HttpApiServer : IDisposable {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseKestrel();
         builder.WebHost.UseUrls(HttpApiEndpoint.BaseUrl);
+        builder.Services.AddSingleton<IHostLifetime, EmbeddedHostLifetime>();
         builder.Services
             .AddControllers()
             .AddApplicationPart(typeof(HttpApiController).Assembly);
@@ -64,5 +66,15 @@ public sealed class Spice86HttpApiServer : IDisposable {
         }
 
         _cancellationTokenSource.Dispose();
+    }
+
+    private sealed class EmbeddedHostLifetime : IHostLifetime {
+        public Task WaitForStartAsync(CancellationToken cancellationToken) {
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken) {
+            return Task.CompletedTask;
+        }
     }
 }
