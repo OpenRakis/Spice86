@@ -66,8 +66,8 @@ public partial class DebugWindowViewModel : ViewModelBase,
         StatusMessageViewModel = new(_uiDispatcher, _messenger);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Paused += () => uiDispatcher.Post(() => IsPaused = true);
-        pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
+        pauseHandler.Paused += () => uiDispatcher.Post(() => IsPaused = _pauseHandler.IsPaused);
+        pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = _pauseHandler.IsPaused);
         DisassemblyViewModel disassemblyVm = disassemblyViewModel;
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = paletteViewModel;

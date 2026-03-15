@@ -300,6 +300,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
     private void OnResumed() {
         _uiDispatcher.Post(() => {
+            if (_pauseHandler.IsPaused) {
+                return;
+            }
             IsPaused = false;
         });
     }
