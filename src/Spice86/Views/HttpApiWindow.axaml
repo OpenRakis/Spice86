@@ -47,7 +47,7 @@
                         <TextBlock Grid.Row="4" Grid.Column="0" FontWeight="Bold" Text="GET" />
                         <TextBlock Grid.Row="4" Grid.Column="1" FontFamily="RobotoMonoFont" Text="/api/memory/{address}/range/{length}" />
 
-                        <TextBlock Grid.Row="5" Grid.ColumnSpan="2" Opacity="0.8" Text="Base URL is fixed to 127.0.0.1:10001" />
+                        <TextBlock Grid.Row="5" Grid.ColumnSpan="2" Opacity="0.8" Text="{Binding BaseUrl, StringFormat=Base URL: {0}}" />
                     </Grid>
                 </Border>
 

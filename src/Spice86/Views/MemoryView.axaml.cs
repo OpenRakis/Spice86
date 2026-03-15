@@ -55,16 +55,16 @@ public partial class MemoryView : UserControl {
     /// <param name="sender">The source of the event, typically the MemoryView itself.</param>
     /// <param name="e">Event arguments, not used in this method.</param>
     private void OnDataContextChanged(object? sender, EventArgs e) {
+        HexEditor? hexEditor = this.FindControl<HexEditor>("HexViewer");
+
         if (_trackedViewModel is not null) {
             _trackedViewModel.PropertyChanged -= OnTrackedViewModelPropertyChanged;
+            if (hexEditor is not null) {
+                hexEditor.Selection.RangeChanged -= _trackedViewModel.OnSelectionRangeChanged;
+            }
         }
 
-        // Attempt to find the HexEditor control within the view.
-        HexEditor? hexEditor = this.FindControl<HexEditor>("HexViewer");
-        // If the HexEditor is found and the DataContext is of type MemoryViewModel,
-        // unsubscribe to the Selection.RangeChanged event to avoid multiple subscriptions and subscribe.
         if (hexEditor != null && DataContext is MemoryViewModel viewModel) {
-            hexEditor.Selection.RangeChanged -= viewModel.OnSelectionRangeChanged;
             hexEditor.Selection.RangeChanged += viewModel.OnSelectionRangeChanged;
             _trackedViewModel = viewModel;
             _trackedViewModel.PropertyChanged += OnTrackedViewModelPropertyChanged;

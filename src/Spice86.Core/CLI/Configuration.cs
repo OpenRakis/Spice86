@@ -92,7 +92,7 @@ public sealed class Configuration {
     /// <summary>
     /// HTTP API port spice86 will listen to.
     /// </summary>
-    [Option(nameof(HttpApiPort), Default = 10001, Required = false, HelpText = "HTTP API port. If 0, HTTP API server will be disabled.")]
+    [Option(nameof(HttpApiPort), Default = 0, Required = false, HelpText = "HTTP API port. If 0, HTTP API server will be disabled.")]
     public int HttpApiPort { get; init; }
 
     /// <summary>

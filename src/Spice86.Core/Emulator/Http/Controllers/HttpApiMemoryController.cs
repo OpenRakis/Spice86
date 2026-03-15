@@ -10,6 +10,9 @@ using Spice86.Core.Emulator.Http.Contracts;
 [ApiController]
 [Route("api/memory")]
 public sealed class HttpApiMemoryController : ControllerBase {
+    /// <summary>Maximum number of bytes that can be returned in a single range request.</summary>
+    public const int MaxRangeLength = 65536;
+
     private readonly HttpApiState _httpApiState;
 
     /// <summary>Initializes a new instance of <see cref="HttpApiMemoryController"/>.</summary>
@@ -19,7 +22,7 @@ public sealed class HttpApiMemoryController : ControllerBase {
     }
 
     /// <summary>Reads a single byte from emulator memory at the given physical address.</summary>
-    /// <param name="address">Physical memory address (0 – 4294967295).</param>
+    /// <param name="address">Physical memory address (0 – <see cref="uint.MaxValue"/>).</param>
     /// <returns>200 OK with <see cref="HttpApiMemoryByteResponse"/>, 400 if the address is out of range, or 404 if it exceeds memory size.</returns>
     [HttpGet("{address:long}/byte")]
     public ActionResult<HttpApiMemoryByteResponse> GetByte(long address) {
@@ -28,17 +31,14 @@ public sealed class HttpApiMemoryController : ControllerBase {
             return error;
         }
 
-        byte value;
-        lock (_httpApiState.MemoryLock) {
-            value = _httpApiState.Memory[validatedAddress];
-        }
-
+        byte value = _httpApiState.Memory.SneakilyRead(
+            _httpApiState.Memory.A20Gate.TransformAddress(validatedAddress));
         HttpApiMemoryByteResponse response = new(validatedAddress, value);
         return Ok(response);
     }
 
     /// <summary>Writes a single byte to emulator memory at the given physical address.</summary>
-    /// <param name="address">Physical memory address (0 – 4294967295).</param>
+    /// <param name="address">Physical memory address (0 – <see cref="uint.MaxValue"/>).</param>
     /// <param name="request">Request body carrying the byte value to write.</param>
     /// <returns>200 OK with the updated <see cref="HttpApiMemoryByteResponse"/>, 400 if the address is out of range, or 404 if it exceeds memory size.</returns>
     [HttpPut("{address:long}/byte")]
@@ -48,22 +48,24 @@ public sealed class HttpApiMemoryController : ControllerBase {
             return error;
         }
 
-        lock (_httpApiState.MemoryLock) {
-            _httpApiState.Memory[validatedAddress] = request.Value;
-        }
-
+        _httpApiState.Memory.SneakilyWrite(
+            _httpApiState.Memory.A20Gate.TransformAddress(validatedAddress), request.Value);
         HttpApiMemoryByteResponse response = new(validatedAddress, request.Value);
         return Ok(response);
     }
 
     /// <summary>Reads a contiguous range of bytes from emulator memory.</summary>
-    /// <param name="address">Physical start address (0 – 4294967295).</param>
-    /// <param name="length">Number of bytes to read; must be greater than 0.</param>
+    /// <param name="address">Physical start address (0 – <see cref="uint.MaxValue"/>).</param>
+    /// <param name="length">Number of bytes to read; must be between 1 and <see cref="MaxRangeLength"/>.</param>
     /// <returns>200 OK with <see cref="HttpApiMemoryRangeResponse"/> (length may be clamped to memory boundary), 400 for invalid arguments, or 404 if the address exceeds memory size.</returns>
     [HttpGet("{address:long}/range/{length:int}")]
     public ActionResult<HttpApiMemoryRangeResponse> GetRange(long address, int length) {
         if (length <= 0) {
             return BadRequest(new HttpApiErrorResponse("length must be greater than 0"));
+        }
+
+        if (length > MaxRangeLength) {
+            return BadRequest(new HttpApiErrorResponse($"length must not exceed {MaxRangeLength}"));
         }
 
         ActionResult? error = ValidateAddress(address, out uint validatedAddress);
@@ -78,10 +80,10 @@ public sealed class HttpApiMemoryController : ControllerBase {
 
         int boundedLength = (int)Math.Min(length, readableLength);
         byte[] values = new byte[boundedLength];
-        lock (_httpApiState.MemoryLock) {
-            for (int i = 0; i < boundedLength; i++) {
-                values[i] = _httpApiState.Memory[validatedAddress + (uint)i];
-            }
+        for (int i = 0; i < boundedLength; i++) {
+            uint physicalAddress = validatedAddress + (uint)i;
+            values[i] = _httpApiState.Memory.SneakilyRead(
+                _httpApiState.Memory.A20Gate.TransformAddress(physicalAddress));
         }
 
         HttpApiMemoryRangeResponse response = new(validatedAddress, boundedLength, values);
@@ -92,7 +94,7 @@ public sealed class HttpApiMemoryController : ControllerBase {
         validatedAddress = 0;
 
         if (address < 0 || address > uint.MaxValue) {
-            return BadRequest(new HttpApiErrorResponse("address must be between 0 and 4294967295"));
+            return BadRequest(new HttpApiErrorResponse($"address must be between 0 and {uint.MaxValue}"));
         }
 
         validatedAddress = (uint)address;

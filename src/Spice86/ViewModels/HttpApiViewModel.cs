@@ -70,16 +70,17 @@ public partial class HttpApiViewModel : ViewModelBase, IDisposable {
 
     public HttpApiViewModel() {
         _httpClient = new HttpClient();
-        Initialize(false);
+        Initialize(false, HttpApiEndpoint.DefaultPort);
     }
 
-    public HttpApiViewModel(bool isEnabled) {
+    public HttpApiViewModel(bool isEnabled, int port) {
         _httpClient = new HttpClient();
-        Initialize(isEnabled);
+        Initialize(isEnabled, port);
     }
 
-    private void Initialize(bool isEnabled) {
+    private void Initialize(bool isEnabled, int port) {
         IsEnabled = isEnabled;
+        BaseUrl = HttpApiEndpoint.BaseUrl(port);
         _httpClient.Timeout = TimeSpan.FromSeconds(2);
     }
 
