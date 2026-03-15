@@ -1,5 +1,6 @@
 namespace Spice86.Tests.UI;
 
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 
 using CommunityToolkit.Mvvm.Messaging;
@@ -19,10 +20,6 @@ using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
-
-using System.Reflection;
-
-using Xunit;
 
 public class DisassemblyViewUiTests : BreakpointUiTestBase {
     private (DisassemblyViewModel viewModel, PauseHandler pauseHandler) CreateDisassemblyViewModel() {
@@ -69,43 +66,42 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
 
     [AvaloniaFact]
     public void DisassemblyView_DataContextAssignedAfterAttach_BreakpointPauseShouldUpdateUiState() {
+        // Arrange
         (DisassemblyViewModel updatedViewModel, PauseHandler updatedPauseHandler) = CreateDisassemblyViewModel();
-
-        DisassemblyView view = new();
-        MethodInfo? attachedToVisualTreeMethod = typeof(DisassemblyView).GetMethod(
-            "DisassemblyView_AttachedToVisualTree",
-            BindingFlags.NonPublic | BindingFlags.Instance);
+        DisassemblyView view = new() {
+            IsVisible = false
+        };
+        Window window = new() {
+            Width = 1024,
+            Height = 768,
+            Content = view
+        };
 
         try {
-            attachedToVisualTreeMethod.Should().NotBeNull();
-            if (attachedToVisualTreeMethod == null) {
-                throw new InvalidOperationException("Could not find attach handler method on DisassemblyView");
-            }
+            ShowWindowAndWait(window);
 
-            // Simulate attach before DataContext assignment.
-            // This is the lifecycle ordering that reproduces the stale paused state.
-            attachedToVisualTreeMethod.Invoke(view, [null, null]);
-
+            // Act
             view.DataContext = updatedViewModel;
             ProcessUiEvents();
 
             updatedPauseHandler.RequestPause("Execution breakpoint reached");
             ProcessUiEvents();
 
+            // Assert
             updatedViewModel.IsPaused.Should().BeTrue("the disassembly view model should react to breakpoint pause events");
         } finally {
-            if (updatedPauseHandler.IsPaused) {
-                updatedPauseHandler.Resume();
-                ProcessUiEvents();
-            }
+            ResumeIfPaused(updatedPauseHandler);
+            window.Close();
         }
     }
 
     [AvaloniaFact]
     public void DisassemblyViewModel_ReactivatedAfterResume_RefreshesPausedState() {
+        // Arrange
         (DisassemblyViewModel viewModel, PauseHandler pauseHandler) = CreateDisassemblyViewModel();
 
         try {
+            // Act
             viewModel.Activate();
             ProcessUiEvents();
 
@@ -125,20 +121,20 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
             viewModel.Activate();
             ProcessUiEvents();
 
+            // Assert
             viewModel.IsPaused.Should().BeFalse("reactivating should resynchronize with the current pause handler state");
         } finally {
-            if (pauseHandler.IsPaused) {
-                pauseHandler.Resume();
-                ProcessUiEvents();
-            }
+            ResumeIfPaused(pauseHandler);
         }
     }
 
     [AvaloniaFact]
     public void DisassemblyViewModel_QueuedResumeThenImmediatePause_KeepsPausedState() {
+        // Arrange
         (DisassemblyViewModel viewModel, PauseHandler pauseHandler) = CreateDisassemblyViewModel();
 
         try {
+            // Act
             viewModel.Activate();
             ProcessUiEvents();
 
@@ -153,13 +149,19 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
 
             ProcessUiEvents();
 
+            // Assert
             viewModel.IsPaused.Should().BeTrue(
                 "a queued resumed callback must not override a newer paused state");
         } finally {
-            if (pauseHandler.IsPaused) {
-                pauseHandler.Resume();
-                ProcessUiEvents();
-            }
+            ResumeIfPaused(pauseHandler);
         }
     }
+
+    private static void ResumeIfPaused(PauseHandler pauseHandler) {
+        if (pauseHandler.IsPaused) {
+            pauseHandler.Resume();
+            ProcessUiEvents();
+        }
+    }
+
 }

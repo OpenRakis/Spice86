@@ -1,27 +1,11 @@
 namespace Spice86.Tests.UI;
 
 using Avalonia.Headless.XUnit;
-using Avalonia.Threading;
-
-using CommunityToolkit.Mvvm.Messaging;
 
 using FluentAssertions;
 
-using NSubstitute;
-
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
-using Spice86.ViewModels;
-using Spice86.ViewModels.Services;
-
-using System.Diagnostics;
 
 public class StepIntoAsmUiTests : BreakpointUiTestBase {
     [AvaloniaFact]
@@ -88,100 +72,60 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
     }
 
     private void RunStepIntoCase(string binName, SegmentedAddress initialAddress, SegmentedAddress expectedAddress, bool installInterruptVectors) {
+        // Arrange
         using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
             binName,
             enablePit: false,
             maxCycles: 2_000_000,
             installInterruptVectors: installInterruptVectors).Create();
+        DisassemblySteppingContext context = CreateActiveDisassemblySteppingContext(dependencyInjection);
 
-        State state = dependencyInjection.Machine.CpuState;
-        IPauseHandler pauseHandler = dependencyInjection.Machine.PauseHandler;
-        EmulatorBreakpointsManager emulatorBreakpointsManager = dependencyInjection.Machine.EmulatorBreakpointsManager;
-        IMemory memory = dependencyInjection.Machine.Memory;
-
-        ILoggerService loggerService = CreateMockLoggerService();
-        IUIDispatcher uiDispatcher = CreateUIDispatcher();
-        IMessenger messenger = CreateMessenger();
-        ITextClipboard textClipboard = Substitute.For<ITextClipboard>();
-
-        BreakpointsViewModel breakpointsViewModel = new(
-            state,
-            pauseHandler,
-            messenger,
-            emulatorBreakpointsManager,
-            uiDispatcher,
-            textClipboard,
-            memory);
-
-        IDictionary<SegmentedAddress, FunctionInformation> functionsInformation =
-            new Dictionary<SegmentedAddress, FunctionInformation>();
-
-        DisassemblyViewModel disassemblyViewModel = new(
-            emulatorBreakpointsManager,
-            memory,
-            state,
-            functionsInformation,
-            breakpointsViewModel,
-            pauseHandler,
-            uiDispatcher,
-            messenger,
-            textClipboard,
-            loggerService);
-
-        disassemblyViewModel.Activate();
-
-        long initialLinearAddress = MemoryUtils.ToPhysicalAddress(initialAddress.Segment, initialAddress.Offset);
-        AddressBreakPoint initialPauseBreakpoint = new(
-            BreakPointType.CPU_EXECUTION_ADDRESS,
-            initialLinearAddress,
-            _ => {
-                pauseHandler.RequestPause($"Initial pause reached at {initialAddress}");
-                pauseHandler.WaitIfPaused();
-            },
-            true);
-
-        emulatorBreakpointsManager.ToggleBreakPoint(initialPauseBreakpoint, on: true);
+        AddressBreakPoint initialPauseBreakpoint =
+            CreateExecutionPauseBreakpoint(initialAddress, context.PauseHandler, removeOnTrigger: true);
+        context.EmulatorBreakpointsManager.ToggleBreakPoint(initialPauseBreakpoint, on: true);
 
         Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
 
         try {
+            // Act
             WaitUntil(
-                () => pauseHandler.IsPaused,
+                () => context.PauseHandler.IsPaused,
                 timeoutMilliseconds: 5000,
                 failureMessage: "The emulator should pause on the initial breakpoint before stepping");
 
             WaitUntil(
-                () => disassemblyViewModel.IsPaused,
+                () => context.DisassemblyViewModel.IsPaused,
                 timeoutMilliseconds: 5000,
                 failureMessage: "The disassembly view model should reflect the paused state before stepping");
 
-            state.IpSegmentedAddress.Should().Be(initialAddress,
+            context.State.IpSegmentedAddress.Should().Be(initialAddress,
                 "the initial breakpoint must pause exactly on the instruction under test");
 
-            disassemblyViewModel.StepIntoCommand.CanExecute(null).Should().BeTrue(
+            context.DisassemblyViewModel.StepIntoCommand.CanExecute(null).Should().BeTrue(
                 "step into should be available while paused");
 
-            long initialCycles = state.Cycles;
-            disassemblyViewModel.StepIntoCommand.Execute(null);
+            long initialCycles = context.State.Cycles;
+            context.DisassemblyViewModel.StepIntoCommand.Execute(null);
 
+            // Assert
             WaitUntil(
-                () => pauseHandler.IsPaused && state.IpSegmentedAddress == expectedAddress,
+                () => context.PauseHandler.IsPaused && context.State.IpSegmentedAddress == expectedAddress,
                 timeoutMilliseconds: 5000,
                 failureMessage: "step into should execute exactly one instruction and pause at the expected destination");
 
             WaitUntil(
-                () => disassemblyViewModel.IsPaused,
+                () => context.DisassemblyViewModel.IsPaused,
                 timeoutMilliseconds: 5000,
                 failureMessage: "The disassembly view model should be paused after step into completes");
 
-            state.Cycles.Should().Be(initialCycles + 1,
+            context.State.Cycles.Should().Be(initialCycles + 1,
                 "step into should execute exactly one instruction and must not skip ASM lines");
 
-            breakpointsViewModel.Breakpoints.Should().BeEmpty(
+            context.BreakpointsViewModel.Breakpoints.Should().BeEmpty(
                 "step into must not create or leave temporary UI breakpoints");
         } finally {
-            state.IsRunning = false;
-            pauseHandler.Resume();
+            context.State.IsRunning = false;
+            context.PauseHandler.Resume();
             WaitUntil(
                 () => runTask.IsCompleted,
                 timeoutMilliseconds: 5000,
@@ -191,19 +135,5 @@ public class StepIntoAsmUiTests : BreakpointUiTestBase {
 
             ProcessUiEvents();
         }
-    }
-
-    internal static void WaitUntil(Func<bool> condition, int timeoutMilliseconds, string failureMessage) {
-        Stopwatch stopwatch = Stopwatch.StartNew();
-
-        while (stopwatch.ElapsedMilliseconds < timeoutMilliseconds) {
-            Dispatcher.UIThread.RunJobs();
-            if (condition()) {
-                return;
-            }
-            Thread.Sleep(1);
-        }
-
-        condition().Should().BeTrue(failureMessage);
     }
 }

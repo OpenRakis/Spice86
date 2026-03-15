@@ -19,6 +19,7 @@ using Spice86.ViewModels.Services;
 public class MainWindowViewModelUiTests : BreakpointUiTestBase {
     [AvaloniaFact]
     public void MainWindowViewModel_CreatedWhilePaused_InitializesPausedStateFromPauseHandler() {
+        // Arrange
         ILoggerService loggerService = CreateMockLoggerService();
         PauseHandler pauseHandler = CreatePauseHandler(loggerService);
         pauseHandler.RequestPause("Pause before creating main window view model");
@@ -52,8 +53,10 @@ public class MainWindowViewModelUiTests : BreakpointUiTestBase {
             exceptionHandler,
             cyclesLimiter);
 
+        // Act
         ProcessUiEvents();
 
+        // Assert
         viewModel.IsPaused.Should().BeTrue("the main window pause/play state must be correct even if it is created while already paused");
     }
 }

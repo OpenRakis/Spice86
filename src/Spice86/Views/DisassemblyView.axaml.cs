@@ -53,13 +53,11 @@ public partial class DisassemblyView : UserControl {
 
     private void DisassemblyView_AttachedToVisualTree(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
         _isAttachedToVisualTree = true;
-        // Activate the view model when the view is attached to the visual tree
         _viewModel?.Activate();
     }
 
     private void DisassemblyView_DetachedFromVisualTree(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
         _isAttachedToVisualTree = false;
-        // Deactivate the view model when the view is detached from the visual tree
         _viewModel?.Deactivate();
     }
 
