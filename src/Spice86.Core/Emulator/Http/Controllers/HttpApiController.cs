@@ -10,6 +10,8 @@ using Spice86.Core.Emulator.Http.Contracts;
 [ApiController]
 [Route("api")]
 public sealed class HttpApiController : ControllerBase {
+    /// <summary>Returns API metadata and the list of available endpoints.</summary>
+    /// <returns>200 OK with <see cref="HttpApiInfoResponse"/>.</returns>
     [HttpGet]
     public ActionResult<HttpApiInfoResponse> GetInfo() {
         HttpApiInfoResponse response = new(

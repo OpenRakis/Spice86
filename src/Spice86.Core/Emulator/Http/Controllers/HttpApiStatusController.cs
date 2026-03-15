@@ -12,10 +12,14 @@ using Spice86.Core.Emulator.Http.Contracts;
 public sealed class HttpApiStatusController : ControllerBase {
     private readonly HttpApiState _httpApiState;
 
+    /// <summary>Initializes a new instance of <see cref="HttpApiStatusController"/>.</summary>
+    /// <param name="httpApiState">Shared emulator state injected by the DI container.</param>
     public HttpApiStatusController(HttpApiState httpApiState) {
         _httpApiState = httpApiState;
     }
 
+    /// <summary>Returns a snapshot of the current CPU and emulator state.</summary>
+    /// <returns>200 OK with <see cref="HttpApiStatusResponse"/>.</returns>
     [HttpGet]
     public ActionResult<HttpApiStatusResponse> GetStatus() {
         HttpApiStatusResponse response = new(

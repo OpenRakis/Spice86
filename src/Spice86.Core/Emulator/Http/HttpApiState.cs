@@ -14,15 +14,22 @@ public sealed class HttpApiState {
     /// </summary>
     public readonly object MemoryLock = new();
 
+    /// <summary>Initializes a new instance of <see cref="HttpApiState"/>.</summary>
+    /// <param name="state">CPU register and flag state of the emulator.</param>
+    /// <param name="memory">Emulator memory bus.</param>
+    /// <param name="pauseHandler">Handler used to query and change the emulator pause state.</param>
     public HttpApiState(State state, IMemory memory, IPauseHandler pauseHandler) {
         State = state;
         Memory = memory;
         PauseHandler = pauseHandler;
     }
 
+    /// <summary>CPU register and flag state of the emulator.</summary>
     public State State { get; }
 
+    /// <summary>Emulator memory bus.</summary>
     public IMemory Memory { get; }
 
+    /// <summary>Handler used to query and change the emulator pause state.</summary>
     public IPauseHandler PauseHandler { get; }
 }

@@ -25,11 +25,15 @@ public sealed class Spice86HttpApiServer : IDisposable {
     private readonly WebApplication _webApplication;
     private bool _disposed;
 
-    /// <summary>
-    /// Gets the actual port the server is listening on after startup.
-    /// </summary>
+    /// <summary>Gets the actual TCP port the server is listening on after startup.</summary>
     public int Port { get; private set; }
 
+    /// <summary>Builds and starts the embedded Kestrel HTTP API server.</summary>
+    /// <param name="state">CPU register and flag state of the emulator.</param>
+    /// <param name="memory">Emulator memory bus.</param>
+    /// <param name="pauseHandler">Handler used to query and change the emulator pause state.</param>
+    /// <param name="loggerService">Logger service.</param>
+    /// <param name="port">TCP port to listen on.</param>
     public Spice86HttpApiServer(State state, IMemory memory,
         IPauseHandler pauseHandler, ILoggerService loggerService, int port) {
         _loggerService = loggerService;
@@ -62,6 +66,7 @@ public sealed class Spice86HttpApiServer : IDisposable {
         }
     }
 
+    /// <summary>Stops and disposes the embedded web application.</summary>
     public void Dispose() {
         if (_disposed) {
             return;
