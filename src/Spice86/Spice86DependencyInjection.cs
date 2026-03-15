@@ -37,6 +37,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
+using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -65,6 +66,7 @@ public class Spice86DependencyInjection : IDisposable {
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
     private readonly IGuiVideoPresentation? _gui;
+    private readonly Spice86HttpApiServer? _httpApiServer;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -555,6 +557,14 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Machine created...");
         }
 
+        try {
+            _httpApiServer = new Spice86HttpApiServer(state, memory, pauseHandler, loggerService);
+        } catch (IOException e) {
+            loggerService.Error(e, "Could not start HTTP API server on {BaseUrl}", HttpApiEndpoint.BaseUrl);
+        } catch (InvalidOperationException e) {
+            loggerService.Error(e, "Could not initialize HTTP API server");
+        }
+
         DictionaryUtils.AddAll(functionCatalogue.FunctionInformations,
             ReadFunctionOverrides(configuration, machine, loggerService));
 
@@ -639,11 +649,14 @@ public class Spice86DependencyInjection : IDisposable {
                 [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
 
             SoftwareMixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
+            HttpApiViewModel httpApiViewModel = new(_httpApiServer is not null);
 
             Application.Current!.Resources[nameof(DebugWindowViewModel)] =
                 debugWindowViewModel;
             Application.Current!.Resources[nameof(SoftwareMixerViewModel)] =
                 mixerViewModel;
+            Application.Current!.Resources[nameof(HttpApiViewModel)] =
+                httpApiViewModel;
             mainWindow.DataContext = mainWindowViewModel;
         }
     }
@@ -746,6 +759,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         _machineDisposedAfterRun = true;
+        _httpApiServer?.Dispose();
         Machine.Dispose();
     }
 }

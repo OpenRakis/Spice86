@@ -54,7 +54,7 @@ internal class ShowAdditionnalWindowBehavior : Behavior<Control> {
     internal void ShowAudioMixer() {
         ShowRegisteredWindow<MixerView>(ref _audioMixerDataContext, nameof(SoftwareMixerViewModel));
     }
-    
+
     private object? _debugWindowDataContext;
 
     /// <summary>
@@ -63,6 +63,12 @@ internal class ShowAdditionnalWindowBehavior : Behavior<Control> {
     /// <exception cref="PlatformNotSupportedException">The platform is not <see cref="IClassicDesktopStyleApplicationLifetime"/></exception>
     internal void ShowInternalDebugger() {
         ShowRegisteredWindow<DebugWindow>(ref _debugWindowDataContext, nameof(DebugWindowViewModel));
+    }
+
+    private object? _httpApiDataContext;
+
+    internal void ShowHttpApi() {
+        ShowRegisteredWindow<HttpApiWindow>(ref _httpApiDataContext, nameof(HttpApiViewModel));
     }
 
     private void OnPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e) {

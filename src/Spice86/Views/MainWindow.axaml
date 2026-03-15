@@ -72,6 +72,16 @@
 						</MenuItem.Header>
 					</MenuItem>
 				</MenuItem>
+				<MenuItem Header="HTTP API">
+					<MenuItem Command="{Binding ShowHttpApiCommand}" CommandParameter="{StaticResource ShowAdditionnalWindowBehavior}">
+						<MenuItem.Header>
+							<StackPanel Orientation="Horizontal">
+								<fluent:SymbolIcon Symbol="Info" />
+								<Label Content="Status et test API" />
+							</StackPanel>
+						</MenuItem.Header>
+					</MenuItem>
+				</MenuItem>
 				<MenuItem Header="Audio" IsEnabled="{Binding IsEmulatorRunning}">
 					<MenuItem Command="{Binding ShowAudioMixerCommand}" CommandParameter="{StaticResource ShowAdditionnalWindowBehavior}">
 						<MenuItem.Header>
