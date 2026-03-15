@@ -58,6 +58,8 @@ using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
 
+using System.Net.Sockets;
+
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
 /// </summary>
@@ -559,6 +561,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         try {
             _httpApiServer = new Spice86HttpApiServer(state, memory, pauseHandler, loggerService);
+        } catch (SocketException e) {
+            loggerService.Warning(e, "HTTP API server could not bind to {BaseUrl}. Continuing without HTTP API.", HttpApiEndpoint.BaseUrl);
         } catch (IOException e) {
             loggerService.Error(e, "Could not start HTTP API server on {BaseUrl}", HttpApiEndpoint.BaseUrl);
         } catch (InvalidOperationException e) {
