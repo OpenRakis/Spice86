@@ -92,10 +92,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
     [ObservableProperty]
     private State _state;
-    
+
     [ObservableProperty]
     private bool _isCreatingBreakpoint;
-    
+
     [ObservableProperty]
     private string? _breakpointCondition;
 
@@ -137,16 +137,18 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
                 return;
             }
             _isActive = value;
-            
+
             if (_isActive) {
                 // Subscribe to pause events when the view becomes active
                 _pauseHandler.Paused += OnPaused;
                 _pauseHandler.Resumed += OnResumed;
-                
+
                 // If already paused, update the view
                 if (_pauseHandler.IsPaused) {
                     OnPaused();
                 } else {
+                    // Ensure paused state is synchronized even if resume happened while inactive.
+                    IsPaused = false;
                     // If not paused, still set the current instruction address to show something
                     // but only when the view becomes active
                     CurrentInstructionAddress = State.IpSegmentedAddress;
@@ -195,7 +197,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
                 _currentInstructionAddress = value;
                 OnPropertyChanged();
                 UpdateHeader(value);
-                
+
                 if (_isActive) {
                     UpdateCpuInstructionHighlighting();
                 }
@@ -217,7 +219,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     ///     Defines a filter for the autocomplete functionality, filtering functions based on the search text
     /// </summary>
     public AutoCompleteFilterPredicate<object?> FunctionFilter => (search, item) =>
-        string.IsNullOrWhiteSpace(search) || item is FunctionInfo {Name: not null} functionInformation && functionInformation.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+        string.IsNullOrWhiteSpace(search) || item is FunctionInfo { Name: not null } functionInformation && functionInformation.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     ///     Create the text that is displayed in the textbox when a function is selected.
@@ -298,6 +300,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
     private void OnResumed() {
         _uiDispatcher.Post(() => {
+            if (_pauseHandler.IsPaused) {
+                return;
+            }
             IsPaused = false;
         });
     }
@@ -307,14 +312,18 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         if (!_isActive) {
             return;
         }
-        
+
         // Ensure we're on the UI thread
         if (!_uiDispatcher.CheckAccess()) {
             _uiDispatcher.Post(OnPaused);
 
             return;
         }
-    
+
+        if (!_pauseHandler.IsPaused) {
+            return;
+        }
+
         // Capture the current CPU instruction pointer at the moment of pausing
         SegmentedAddress currentInstructionAddress = State.IpSegmentedAddress;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -436,23 +445,23 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         }
 
         string message = $"Execution breakpoint was reached at address {debuggerLine.SegmentedAddress}.";
-        
+
         // Compile condition expression if present
         Func<long, bool>? condition = TryCompileCondition(conditionExpression, out string? validatedExpression);
         conditionExpression = validatedExpression;
 
         _breakpointsViewModel.AddAddressBreakpoint(
-            debuggerLine.Address, 
-            Shared.Emulator.VM.Breakpoint.BreakPointType.CPU_EXECUTION_ADDRESS, 
-            false, 
+            debuggerLine.Address,
+            Shared.Emulator.VM.Breakpoint.BreakPointType.CPU_EXECUTION_ADDRESS,
+            false,
             () => {
                 Pause(message);
-            }, 
-            condition, 
-            message, 
+            },
+            condition,
+            message,
             conditionExpression);
     }
-    
+
     /// <summary>
     /// Attempts to compile a condition expression for breakpoint evaluation.
     /// </summary>
@@ -461,16 +470,16 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// <returns>The compiled condition function, or null if the expression is empty or compilation failed.</returns>
     private Func<long, bool>? TryCompileCondition(string? conditionExpression, out string? validatedExpression) {
         BreakpointConditionService.ConditionCompilationResult result = _conditionService.TryCompile(conditionExpression);
-        
+
         validatedExpression = result.ValidatedExpression;
-        
+
         if (!result.Success && result.Error is not null) {
             LogConditionCompilationWarning(result.Error, conditionExpression);
         }
-        
+
         return result.Condition;
     }
-    
+
     private void LogConditionCompilationWarning(Exception ex, string? conditionExpression) {
         if (_logger.IsEnabled(LogEventLevel.Warning)) {
             _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);

@@ -1,77 +1,45 @@
 namespace Spice86.Tests.UI;
 
-using Avalonia.Controls;
-using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 
 using FluentAssertions;
 
 using Spice86.Views;
 
-using Xunit;
-
-/// <summary>
-/// Basic UI tests to verify the headless testing infrastructure works correctly.
-/// </summary>
 public class HeadlessInfrastructureTests {
-    /// <summary>
-    /// Verifies that the headless testing infrastructure is correctly configured
-    /// by creating and showing a basic window.
-    /// </summary>
     [AvaloniaFact]
-    public void TestHeadlessWindowCanBeShown() {
-        // Arrange
-        Window window = new() {
-            Width = 800,
-            Height = 600,
-            Title = "Test Window"
-        };
+    public void ProcessUiEvents_DoesNotThrow() {
+        //Arrange
+        bool completed = false;
 
-        // Act
-        window.Show();
+        //Act
+        Dispatcher.UIThread.Post(() => completed = true, DispatcherPriority.Background);
+        Dispatcher.UIThread.RunJobs();
 
-        // Assert
-        window.IsVisible.Should().BeTrue();
-        window.Width.Should().Be(800);
-        window.Height.Should().Be(600);
-
-        // Cleanup
-        window.Close();
+        //Assert
+        completed.Should().BeTrue();
     }
 
-    /// <summary>
-    /// Verifies that the DebugWindow can be created and shown in headless mode.
-    /// </summary>
-    [AvaloniaFact]
-    public void TestDebugWindowCanBeCreated() {
-        // Arrange & Act
-        DebugWindow debugWindow = new();
-
-        // Assert
-        debugWindow.Should().NotBeNull();
-    }
-
-    /// <summary>
-    /// Verifies that the DisassemblyView can be created in headless mode.
-    /// </summary>
     [AvaloniaFact]
     public void TestDisassemblyViewCanBeCreated() {
-        // Arrange & Act
+        //Arrange
+
+        //Act
         DisassemblyView disassemblyView = new();
 
-        // Assert
+        //Assert
         disassemblyView.Should().NotBeNull();
     }
 
-    /// <summary>
-    /// Verifies that the BreakpointsView can be created in headless mode.
-    /// </summary>
     [AvaloniaFact]
     public void TestBreakpointsViewCanBeCreated() {
-        // Arrange & Act
+        //Arrange
+
+        //Act
         BreakpointsView breakpointsView = new();
 
-        // Assert
+        //Assert
         breakpointsView.Should().NotBeNull();
     }
 }

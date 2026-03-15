@@ -40,7 +40,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
         _breakpointsViewModel = breakpointsViewModel;
         _pauseHandler.Paused += OnPaused;
         IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
+        pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = pauseHandler.IsPaused);
         _messenger = messenger;
         _storageProvider = storageProvider;
         _structureViewModelFactory = structureViewModelFactory;
@@ -352,8 +352,10 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
 
     private void OnPaused() {
         _uiDispatcher.Post(() => {
-            IsPaused = true;
-            UpdateBinaryDocument();
+            IsPaused = _pauseHandler.IsPaused;
+            if (IsPaused) {
+                UpdateBinaryDocument();
+            }
         });
     }
 

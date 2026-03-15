@@ -1,69 +1,53 @@
 namespace Spice86.Tests.UI;
 
-using Avalonia.Controls;
-using Avalonia.Headless;
-using Avalonia.Input;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
 
+using FluentAssertions;
+
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Logging;
+using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
-using Spice86.Views;
 
-/// <summary>
-/// Base class for UI breakpoint tests providing shared infrastructure.
-/// Only ILoggerService and ITextClipboard are mocked; all other components use real implementations.
-/// </summary>
+using System.Diagnostics;
+
 public abstract class BreakpointUiTestBase : IDisposable {
     private readonly List<PauseHandler> _pauseHandlers = new();
-    
-    /// <summary>
-    /// Creates a mocked logger service. This is the only interface that should be mocked.
-    /// </summary>
+
     protected static ILoggerService CreateMockLoggerService() {
         return Substitute.For<ILoggerService>();
     }
 
-    /// <summary>
-    /// Creates a real pause handler with a mocked logger.
-    /// </summary>
     protected PauseHandler CreatePauseHandler(ILoggerService loggerService) {
         PauseHandler pauseHandler = new(loggerService);
         _pauseHandlers.Add(pauseHandler);
         return pauseHandler;
     }
 
-    /// <summary>
-    /// Creates a CPU State for testing.
-    /// </summary>
     protected static State CreateState() {
         return new State(CpuModel.INTEL_80286);
     }
 
-    /// <summary>
-    /// Creates Memory for testing.
-    /// </summary>
-    protected static (Memory memory, AddressReadWriteBreakpoints memoryBreakpoints, AddressReadWriteBreakpoints ioBreakpoints) CreateMemory() {
+    protected static MemoryContext CreateMemory() {
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
         Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
-        return (memory, memoryBreakpoints, ioBreakpoints);
+        return new MemoryContext(memory, memoryBreakpoints, ioBreakpoints);
     }
 
-    /// <summary>
-    /// Creates an EmulatorBreakpointsManager for testing.
-    /// </summary>
     protected static EmulatorBreakpointsManager CreateBreakpointsManager(
         IPauseHandler pauseHandler,
         State state,
@@ -73,67 +57,18 @@ public abstract class BreakpointUiTestBase : IDisposable {
         return new EmulatorBreakpointsManager(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
     }
 
-    /// <summary>
-    /// Creates a real UIDispatcher using Avalonia's UI thread dispatcher.
-    /// </summary>
     protected static UIDispatcher CreateUIDispatcher() {
         return new UIDispatcher(Dispatcher.UIThread);
     }
 
-    /// <summary>
-    /// Creates a real messenger instance.
-    /// </summary>
     protected static IMessenger CreateMessenger() {
         return WeakReferenceMessenger.Default;
     }
 
-    /// <summary>
-    /// Creates a BreakpointsViewModel for testing.
-    /// Uses real implementations where possible; only ILoggerService and ITextClipboard are mocked.
-    /// </summary>
-    protected BreakpointsViewModel CreateBreakpointsViewModel(
-        State state,
-        Memory memory,
-        EmulatorBreakpointsManager breakpointsManager,
-        ILoggerService loggerService) {
-        PauseHandler pauseHandler = CreatePauseHandler(loggerService);
-        UIDispatcher uiDispatcher = CreateUIDispatcher();
-        IMessenger messenger = CreateMessenger();
-        
-        // ITextClipboard is mocked because it requires platform-specific clipboard access
-        ITextClipboard textClipboard = Substitute.For<ITextClipboard>();
-
-        return new BreakpointsViewModel(
-            state,
-            pauseHandler,
-            messenger,
-            breakpointsManager,
-            uiDispatcher,
-            textClipboard,
-            memory);
-    }
-
-    /// <summary>
-    /// Processes pending UI events.
-    /// </summary>
     protected static void ProcessUiEvents() {
         Dispatcher.UIThread.RunJobs();
     }
 
-    /// <summary>
-    /// Shows a window and waits for it to be ready.
-    /// </summary>
-    protected static void ShowWindowAndWait(Window window) {
-        window.Show();
-        ProcessUiEvents();
-    }
-
-    /// <summary>
-    /// Selects a breakpoint type tab by name and processes UI events.
-    /// </summary>
-    /// <param name="viewModel">The BreakpointsViewModel containing the tabs.</param>
-    /// <param name="tabName">The name of the tab to select (e.g., "Execution", "Memory", "Cycles").</param>
-    /// <returns>True if the tab was found and selected, false otherwise.</returns>
     protected static bool SelectBreakpointTab(BreakpointsViewModel viewModel, string tabName) {
         BreakpointTypeTabItemViewModel? tab = viewModel.BreakpointTabs.FirstOrDefault(t => t.Header == tabName);
         if (tab is null) {
@@ -144,31 +79,277 @@ public abstract class BreakpointUiTestBase : IDisposable {
         return true;
     }
 
-    /// <summary>
-    /// Creates a BreakpointsView with a properly configured ViewModel.
-    /// Uses real implementations where possible.
-    /// </summary>
-    protected (BreakpointsView view, BreakpointsViewModel viewModel) CreateBreakpointsViewWithViewModel() {
+    protected BreakpointsContext CreateBreakpointsContext() {
         State state = CreateState();
-        (Memory memory, AddressReadWriteBreakpoints memoryBreakpoints, AddressReadWriteBreakpoints ioBreakpoints) = CreateMemory();
+        MemoryContext memoryContext = CreateMemory();
         ILoggerService loggerService = CreateMockLoggerService();
         PauseHandler pauseHandler = CreatePauseHandler(loggerService);
         EmulatorBreakpointsManager breakpointsManager = CreateBreakpointsManager(
-            pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
+            pauseHandler, state, memoryContext.Memory, memoryContext.MemoryBreakpoints, memoryContext.IoBreakpoints);
+        IUIDispatcher uiDispatcher = CreateUIDispatcher();
+        IMessenger messenger = CreateMessenger();
+        ITextClipboard textClipboard = Substitute.For<ITextClipboard>();
 
-        BreakpointsViewModel viewModel = CreateBreakpointsViewModel(
-            state, memory, breakpointsManager, loggerService);
+        BreakpointsViewModel viewModel = new(
+            state,
+            pauseHandler,
+            messenger,
+            breakpointsManager,
+            uiDispatcher,
+            textClipboard,
+            memoryContext.Memory);
 
-        BreakpointsView view = new() {
-            DataContext = viewModel
-        };
-
-        return (view, viewModel);
+        return new BreakpointsContext(state, memoryContext, pauseHandler, breakpointsManager, viewModel);
     }
-    
-    /// <summary>
-    /// Disposes of test resources.
-    /// </summary>
+
+    protected DisassemblySteppingContext CreateActiveDisassemblySteppingContext(Spice86DependencyInjection dependencyInjection) {
+        State state = dependencyInjection.Machine.CpuState;
+        IPauseHandler pauseHandler = dependencyInjection.Machine.PauseHandler;
+        EmulatorBreakpointsManager emulatorBreakpointsManager = dependencyInjection.Machine.EmulatorBreakpointsManager;
+        IMemory memory = dependencyInjection.Machine.Memory;
+
+        ILoggerService loggerService = CreateMockLoggerService();
+        IUIDispatcher uiDispatcher = CreateUIDispatcher();
+        IMessenger messenger = CreateMessenger();
+        ITextClipboard textClipboard = Substitute.For<ITextClipboard>();
+
+        BreakpointsViewModel breakpointsViewModel = new(
+            state,
+            pauseHandler,
+            messenger,
+            emulatorBreakpointsManager,
+            uiDispatcher,
+            textClipboard,
+            memory);
+
+        IDictionary<SegmentedAddress, FunctionInformation> functionsInformation =
+            new Dictionary<SegmentedAddress, FunctionInformation>();
+
+        DisassemblyViewModel disassemblyViewModel = new(
+            emulatorBreakpointsManager,
+            memory,
+            state,
+            functionsInformation,
+            breakpointsViewModel,
+            pauseHandler,
+            uiDispatcher,
+            messenger,
+            textClipboard,
+            loggerService);
+
+        disassemblyViewModel.Activate();
+
+        return new DisassemblySteppingContext(
+            state,
+            pauseHandler,
+            emulatorBreakpointsManager,
+            breakpointsViewModel,
+            disassemblyViewModel);
+    }
+
+    protected static AddressBreakPoint CreateExecutionPauseBreakpoint(
+        SegmentedAddress address,
+        IPauseHandler pauseHandler,
+        bool removeOnTrigger) {
+        long linearAddress = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset);
+        return new AddressBreakPoint(
+            BreakPointType.CPU_EXECUTION_ADDRESS,
+            linearAddress,
+            _ => {
+                pauseHandler.RequestPause($"Execution breakpoint reached at {address}");
+                pauseHandler.WaitIfPaused();
+            },
+            removeOnTrigger);
+    }
+
+    protected static void WaitUntil(Func<bool> condition, int timeoutMilliseconds, string failureMessage) {
+        Stopwatch stopwatch = Stopwatch.StartNew();
+
+        while (stopwatch.ElapsedMilliseconds < timeoutMilliseconds) {
+            Dispatcher.UIThread.RunJobs();
+            if (condition()) {
+                return;
+            }
+            Thread.Sleep(1);
+        }
+
+        condition().Should().BeTrue(failureMessage);
+    }
+
+    protected void RunSteppingScenario(SteppingScenario scenario) {
+        RunSteppingScenario(scenario, _ => {
+        }, _ => {
+        });
+    }
+
+    protected void RunSteppingScenario(
+        SteppingScenario scenario,
+        Action<DisassemblySteppingContext> additionalSetup,
+        Action<DisassemblySteppingContext> additionalAssert) {
+        using Spice86DependencyInjection dependencyInjection = new Spice86Creator(
+            scenario.BinName,
+            enablePit: false,
+            maxCycles: 2_000_000,
+            installInterruptVectors: scenario.InstallInterruptVectors).Create();
+        DisassemblySteppingContext context = CreateActiveDisassemblySteppingContext(dependencyInjection);
+
+        AddressBreakPoint executionBreakpoint =
+            CreateExecutionPauseBreakpoint(scenario.InitialAddress, context.PauseHandler, scenario.RemoveBreakpointOnTrigger);
+        context.EmulatorBreakpointsManager.ToggleBreakPoint(executionBreakpoint, on: true);
+
+        additionalSetup(context);
+
+        Task runTask = Task.Run(() => dependencyInjection.ProgramExecutor.Run());
+
+        try {
+            WaitUntil(
+                () => context.PauseHandler.IsPaused && context.DisassemblyViewModel.IsPaused,
+                timeoutMilliseconds: 5000,
+                failureMessage: scenario.PauseBeforeSteppingFailureMessage);
+
+            context.State.IpSegmentedAddress.Should().Be(
+                scenario.InitialAddress,
+                scenario.InitialAddressAssertionMessage);
+
+            long initialCycles = context.State.Cycles;
+
+            if (scenario.UseStepInto) {
+                context.DisassemblyViewModel.StepIntoCommand.CanExecute(null).Should().BeTrue(
+                    scenario.StepAvailabilityAssertionMessage);
+                context.DisassemblyViewModel.StepIntoCommand.Execute(null);
+            } else {
+                context.DisassemblyViewModel.StepOverCommand.CanExecute(null).Should().BeTrue(
+                    scenario.StepAvailabilityAssertionMessage);
+                context.DisassemblyViewModel.StepOverCommand.Execute(null);
+            }
+
+            WaitUntil(
+                () => context.PauseHandler.IsPaused
+                      && context.DisassemblyViewModel.IsPaused
+                      && context.State.IpSegmentedAddress == scenario.ExpectedAddress,
+                timeoutMilliseconds: 5000,
+                failureMessage: scenario.DestinationFailureMessage);
+
+            additionalAssert(context);
+
+            if (scenario.AssertSingleInstructionCycleDelta) {
+                context.State.Cycles.Should().Be(initialCycles + 1, scenario.CycleAssertionMessage);
+            }
+
+            if (scenario.AssertNoTemporaryUiBreakpoints) {
+                context.BreakpointsViewModel.Breakpoints.Should().BeEmpty(
+                    scenario.NoTemporaryUiBreakpointsAssertionMessage);
+            }
+        } finally {
+            context.State.IsRunning = false;
+            context.PauseHandler.Resume();
+            WaitUntil(
+                () => runTask.IsCompleted,
+                timeoutMilliseconds: 5000,
+                failureMessage: "The emulation task should complete during cleanup");
+
+            runTask.IsFaulted.Should().BeFalse("cleanup should not leave a faulted background run task");
+            ProcessUiEvents();
+        }
+    }
+
+    protected sealed class DisassemblySteppingContext {
+        public DisassemblySteppingContext(
+            State state,
+            IPauseHandler pauseHandler,
+            EmulatorBreakpointsManager emulatorBreakpointsManager,
+            BreakpointsViewModel breakpointsViewModel,
+            DisassemblyViewModel disassemblyViewModel) {
+            State = state;
+            PauseHandler = pauseHandler;
+            EmulatorBreakpointsManager = emulatorBreakpointsManager;
+            BreakpointsViewModel = breakpointsViewModel;
+            DisassemblyViewModel = disassemblyViewModel;
+        }
+
+        public State State { get; }
+
+        public IPauseHandler PauseHandler { get; }
+
+        public EmulatorBreakpointsManager EmulatorBreakpointsManager { get; }
+
+        public BreakpointsViewModel BreakpointsViewModel { get; }
+
+        public DisassemblyViewModel DisassemblyViewModel { get; }
+    }
+
+    protected sealed class MemoryContext {
+        public MemoryContext(
+            Memory memory,
+            AddressReadWriteBreakpoints memoryBreakpoints,
+            AddressReadWriteBreakpoints ioBreakpoints) {
+            Memory = memory;
+            MemoryBreakpoints = memoryBreakpoints;
+            IoBreakpoints = ioBreakpoints;
+        }
+
+        public Memory Memory { get; }
+
+        public AddressReadWriteBreakpoints MemoryBreakpoints { get; }
+
+        public AddressReadWriteBreakpoints IoBreakpoints { get; }
+    }
+
+    protected sealed class BreakpointsContext {
+        public BreakpointsContext(
+            State state,
+            MemoryContext memoryContext,
+            PauseHandler pauseHandler,
+            EmulatorBreakpointsManager breakpointsManager,
+            BreakpointsViewModel breakpointsViewModel) {
+            State = state;
+            MemoryContext = memoryContext;
+            PauseHandler = pauseHandler;
+            BreakpointsManager = breakpointsManager;
+            BreakpointsViewModel = breakpointsViewModel;
+        }
+
+        public State State { get; }
+
+        public MemoryContext MemoryContext { get; }
+
+        public PauseHandler PauseHandler { get; }
+
+        public EmulatorBreakpointsManager BreakpointsManager { get; }
+
+        public BreakpointsViewModel BreakpointsViewModel { get; }
+    }
+
+    protected sealed class SteppingScenario {
+        public string BinName { get; set; } = string.Empty;
+
+        public bool InstallInterruptVectors { get; set; }
+
+        public SegmentedAddress InitialAddress { get; set; } = new(0, 0);
+
+        public SegmentedAddress ExpectedAddress { get; set; } = new(0, 0);
+
+        public bool RemoveBreakpointOnTrigger { get; set; }
+
+        public bool UseStepInto { get; set; }
+
+        public bool AssertSingleInstructionCycleDelta { get; set; }
+
+        public bool AssertNoTemporaryUiBreakpoints { get; set; }
+
+        public string PauseBeforeSteppingFailureMessage { get; set; } = string.Empty;
+
+        public string InitialAddressAssertionMessage { get; set; } = string.Empty;
+
+        public string StepAvailabilityAssertionMessage { get; set; } = string.Empty;
+
+        public string DestinationFailureMessage { get; set; } = string.Empty;
+
+        public string CycleAssertionMessage { get; set; } = string.Empty;
+
+        public string NoTemporaryUiBreakpointsAssertionMessage { get; set; } = string.Empty;
+    }
+
     public void Dispose() {
         foreach (PauseHandler pauseHandler in _pauseHandlers) {
             pauseHandler.Dispose();

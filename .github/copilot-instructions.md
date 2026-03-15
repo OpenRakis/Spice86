@@ -177,6 +177,8 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   - **Do NOT let async "infect" the `Spice86.Core` assembly**
   - Keep async code in the UI layer (`Spice86` project) only
   - For the UI, use Dispatcher-based timer updates (mainly used on pause)
+  - **Never use sync-over-async patterns** (`Task.Result`, `Task.Wait()`, `GetAwaiter().GetResult()`) in production code or tests
+  - Propagate async flow end-to-end when needed instead of blocking threads
   - This separation maintains clean architecture boundaries
 - **Brace style**: Java-style (opening brace on same line)
   ```csharp

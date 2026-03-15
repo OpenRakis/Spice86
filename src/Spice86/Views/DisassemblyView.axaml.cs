@@ -13,6 +13,7 @@ using Spice86.ViewModels;
 /// </summary>
 public partial class DisassemblyView : UserControl {
     private IDisassemblyViewModel? _viewModel;
+    private bool _isAttachedToVisualTree;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DisassemblyView"/> class.
@@ -20,7 +21,7 @@ public partial class DisassemblyView : UserControl {
     public DisassemblyView() {
         InitializeComponent();
         DataContextChanged += DisassemblyView_DataContextChanged;
-        
+
         // Subscribe to attached/detached events
         AttachedToVisualTree += DisassemblyView_AttachedToVisualTree;
         DetachedFromVisualTree += DisassemblyView_DetachedFromVisualTree;
@@ -33,24 +34,30 @@ public partial class DisassemblyView : UserControl {
     private void DisassemblyView_DataContextChanged(object? sender, EventArgs e) {
         // Unsubscribe from the old view model if it exists
         if (_viewModel != null) {
+            if (_isAttachedToVisualTree) {
+                _viewModel.Deactivate();
+            }
             _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
         }
 
         // Subscribe to the new view model
         _viewModel = DataContext as IDisassemblyViewModel;
-        
+
         if (_viewModel != null) {
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+            if (_isAttachedToVisualTree) {
+                _viewModel.Activate();
+            }
         }
     }
-    
+
     private void DisassemblyView_AttachedToVisualTree(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
-        // Activate the view model when the view is attached to the visual tree
+        _isAttachedToVisualTree = true;
         _viewModel?.Activate();
     }
 
     private void DisassemblyView_DetachedFromVisualTree(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
-        // Deactivate the view model when the view is detached from the visual tree
+        _isAttachedToVisualTree = false;
         _viewModel?.Deactivate();
     }
 
@@ -58,7 +65,7 @@ public partial class DisassemblyView : UserControl {
     }
 
     private void OnBreakpointClicked(object? sender, TappedEventArgs e) {
-        if (sender is not Control {DataContext: DebuggerLineViewModel debuggerLine}
+        if (sender is not Control { DataContext: DebuggerLineViewModel debuggerLine }
             || _viewModel == null
             || !_viewModel.ToggleBreakpointCommand.CanExecute(debuggerLine)) {
             return;
