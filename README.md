@@ -44,6 +44,39 @@ General process:
 | `Spice86 -e file.com` | Run a COM file |
 | `Spice86 -e file.bin` | Run a BIOS file |
 
+## HTTP server
+
+Spice86 includes a built-in HTTP server for quick runtime inspection and memory access.
+
+- Base URL: `http://127.0.0.1:10001`
+- The server is started with Spice86 and runs independently from the UI.
+
+Available endpoints:
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api` | API metadata and endpoint list |
+| `GET` | `/api/status` | Current emulator status (pause state, CPU state, CS:IP, cycles, memory size) |
+| `GET` | `/api/memory/{address}/byte` | Read one byte at address |
+| `PUT` | `/api/memory/{address}/byte` | Write one byte at address |
+| `GET` | `/api/memory/{address}/range/{length}` | Read a memory range |
+
+Notes:
+
+- `address` must be between `0` and `4294967295`.
+- `length` must be greater than `0`.
+
+Quick examples:
+
+```bash
+curl http://127.0.0.1:10001/api/status
+curl http://127.0.0.1:10001/api/memory/64/byte
+curl http://127.0.0.1:10001/api/memory/64/range/16
+curl -X PUT http://127.0.0.1:10001/api/memory/64/byte \
+  -H "Content-Type: application/json" \
+  -d '{"value":171}'
+```
+
 ## Dumping data
 
 | Setting | Description |
