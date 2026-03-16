@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Http;
 using Spice86.Logging;
 
 public sealed class HttpApiServerFixture : IDisposable {

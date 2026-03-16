@@ -38,6 +38,7 @@ using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.Http;
+using Spice86.Http;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -661,12 +662,14 @@ public class Spice86DependencyInjection : IDisposable {
             SoftwareMixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
             HttpApiViewModel httpApiViewModel = new(_httpApiServer is not null, _httpApiServer?.Port ?? HttpApiEndpoint.DefaultPort);
 
-            Application.Current!.Resources[nameof(DebugWindowViewModel)] =
-                debugWindowViewModel;
-            Application.Current!.Resources[nameof(SoftwareMixerViewModel)] =
-                mixerViewModel;
-            Application.Current!.Resources[nameof(HttpApiViewModel)] =
-                httpApiViewModel;
+            if (Application.Current is not null) {
+                Application.Current.Resources[nameof(DebugWindowViewModel)] =
+                    debugWindowViewModel;
+                Application.Current.Resources[nameof(SoftwareMixerViewModel)] =
+                    mixerViewModel;
+                Application.Current.Resources[nameof(HttpApiViewModel)] =
+                    httpApiViewModel;
+            }
             mainWindow.DataContext = mainWindowViewModel;
         }
     }

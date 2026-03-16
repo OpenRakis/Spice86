@@ -1,7 +1,8 @@
-namespace Spice86.Core.Emulator.Http.Controllers;
+namespace Spice86.Http.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 
+using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.Http.Contracts;
 
 /// <summary>
@@ -10,9 +11,6 @@ using Spice86.Core.Emulator.Http.Contracts;
 [ApiController]
 [Route("api/memory")]
 public sealed class HttpApiMemoryController : ControllerBase {
-    /// <summary>Maximum number of bytes that can be returned in a single range request.</summary>
-    public const int MaxRangeLength = 65536;
-
     private readonly HttpApiState _httpApiState;
 
     /// <summary>Initializes a new instance of <see cref="HttpApiMemoryController"/>.</summary>
@@ -56,7 +54,7 @@ public sealed class HttpApiMemoryController : ControllerBase {
 
     /// <summary>Reads a contiguous range of bytes from emulator memory.</summary>
     /// <param name="address">Physical start address (0 – <see cref="uint.MaxValue"/>).</param>
-    /// <param name="length">Number of bytes to read; must be between 1 and <see cref="MaxRangeLength"/>.</param>
+    /// <param name="length">Number of bytes to read; must be between 1 and <see cref="HttpApiEndpoint.MaxRangeLength"/>.</param>
     /// <returns>200 OK with <see cref="HttpApiMemoryRangeResponse"/> (length may be clamped to memory boundary), 400 for invalid arguments, or 404 if the address exceeds memory size.</returns>
     [HttpGet("{address:long}/range/{length:int}")]
     public ActionResult<HttpApiMemoryRangeResponse> GetRange(long address, int length) {
@@ -64,8 +62,8 @@ public sealed class HttpApiMemoryController : ControllerBase {
             return BadRequest(new HttpApiErrorResponse("length must be greater than 0"));
         }
 
-        if (length > MaxRangeLength) {
-            return BadRequest(new HttpApiErrorResponse($"length must not exceed {MaxRangeLength}"));
+        if (length > HttpApiEndpoint.MaxRangeLength) {
+            return BadRequest(new HttpApiErrorResponse($"length must not exceed {HttpApiEndpoint.MaxRangeLength}"));
         }
 
         ActionResult? error = ValidateAddress(address, out uint validatedAddress);

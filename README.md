@@ -48,9 +48,10 @@ General process:
 
 Spice86 includes a built-in HTTP server for quick runtime inspection and memory access.
 
-- Default base URL: `http://127.0.0.1:10001`
-- The port is configurable with `--HttpApiPort` (default: `10001`, use `0` to disable).
-- The server is started with Spice86 and runs independently from the UI.
+- The HTTP server is **disabled by default**. Enable it by specifying a port with `--HttpApiPort`.
+- Example: `--HttpApiPort 10001` starts the server at `http://127.0.0.1:10001`.
+- Use `--HttpApiPort 0` (or omit it) to disable the server.
+- The server runs independently from the UI once started.
 
 Available endpoints:
 

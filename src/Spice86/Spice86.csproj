@@ -47,6 +47,9 @@
         <PackageReference Include="Xaml.Behaviors.Avalonia" />
     </ItemGroup>
     <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+    <ItemGroup>
         <AvaloniaResource Include="Views\Assets\**" />
     </ItemGroup>
     <ItemGroup>
