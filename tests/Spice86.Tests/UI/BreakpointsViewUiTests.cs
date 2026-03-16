@@ -61,17 +61,25 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         viewModel.BeginCreateBreakpointCommand.Execute(null);
         ProcessUiEvents();
 
-        viewModel.ExecutionAddressValue = "0x1000:0x0100";
+        BreakpointTypeTabItemViewModel? executionTab = viewModel.BreakpointTabs.FirstOrDefault(t => t.Header == "Execution");
+        executionTab.Should().NotBeNull();
+        viewModel.SelectedBreakpointTypeTab = executionTab;
+        ProcessUiEvents();
+
+        viewModel.ExecutionAddressValue = "1000:0100";
         viewModel.ExecutionConditionExpression = "invalid expression !!!";
         ProcessUiEvents();
 
-        //Assert
-        bool canConfirm = viewModel.ConfirmBreakpointCreationCommand.CanExecute(null);
-        if (canConfirm) {
-            viewModel.ConfirmBreakpointCreationCommand.Execute(null);
-            ProcessUiEvents();
-        }
+        viewModel.IsExecutionBreakpointSelected.Should().BeTrue("the Execution tab should be selected");
+        viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue(
+            "confirm should be available when address is valid, even with an invalid condition expression");
+        viewModel.ConfirmBreakpointCreationCommand.Execute(null);
+        ProcessUiEvents();
 
+        //Assert
+        viewModel.CreatingBreakpoint.Should().BeTrue("creation dialog should remain open when condition expression is invalid");
+        viewModel.IsDialogVisible.Should().BeTrue("error dialog should be visible when condition expression is invalid");
+        viewModel.Breakpoints.Should().BeEmpty("no breakpoint should be added when condition expression is invalid");
     }
 
     [AvaloniaFact]
