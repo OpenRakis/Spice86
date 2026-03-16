@@ -255,6 +255,21 @@ public sealed class Configuration {
     public AsmRenderingStyle AsmRenderingStyle { get; init; }
 
     /// <summary>
+    /// Enables the MCP (Model Context Protocol) server for in-process emulator inspection.
+    /// When enabled, starts stdio and HTTP transports on <see cref="McpHttpPort"/>.
+    /// </summary>
+    [Option("enable-mcp", Default = false, Required = false,
+        HelpText = "Enable the MCP server (stdio + HTTP transports). Disabled by default.")]
+    public bool EnableMcp { get; init; }
+
+    /// <summary>
+    /// Port for the MCP HTTP server. Only used when <see cref="EnableMcp"/> is true.
+    /// </summary>
+    [Option("mcp-http-port", Default = 8081, Required = false,
+        HelpText = "Port for the MCP HTTP server (default 8081). Only used when --enable-mcp is set.")]
+    public int McpHttpPort { get; init; }
+
+    /// <summary>
     /// Enables backward-compatible MCP HTTP endpoints (/sse and /messages) alongside /mcp.
     /// </summary>
     [Option("enable-legacy-mcp", Default = false, Required = false,
