@@ -20,6 +20,9 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel, IDi
     private readonly State _cpuState;
     private readonly IMemory _memory;
     private readonly DispatcherTimer _updateTimer;
+    private readonly IPauseHandler _pauseHandler;
+    private readonly Action _onPaused;
+    private readonly Action _onResumed;
     private bool _disposed;
 
     [ObservableProperty]
@@ -34,10 +37,13 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel, IDi
     public CpuViewModel(State state, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
         _cpuState = state;
         _memory = memory;
+        _pauseHandler = pauseHandler;
         _registers = new RegistersViewModel(state);
-        pauseHandler.Paused += () => uiDispatcher.Post(() => _isPaused = pauseHandler.IsPaused);
+        _onPaused = () => uiDispatcher.Post(() => _isPaused = pauseHandler.IsPaused);
+        _onResumed = () => uiDispatcher.Post(() => _isPaused = pauseHandler.IsPaused);
+        _pauseHandler.Paused += _onPaused;
         _isPaused = pauseHandler.IsPaused;
-        pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = pauseHandler.IsPaused);
+        _pauseHandler.Resumed += _onResumed;
         _updateTimer = DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
 
@@ -110,6 +116,8 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel, IDi
         if (_disposed) {
             return;
         }
+        _pauseHandler.Paused -= _onPaused;
+        _pauseHandler.Resumed -= _onResumed;
         _updateTimer.Stop();
         _disposed = true;
         GC.SuppressFinalize(this);

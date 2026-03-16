@@ -19,6 +19,12 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable {
 
     private readonly DispatcherTimer _updateTimer;
 
+    private readonly IPauseHandler _pauseHandler;
+
+    private readonly Action _onPaused;
+
+    private readonly Action _onResumed;
+
     private bool _disposed;
 
     [ObservableProperty] private double _averageInstructionsPerSecond;
@@ -30,15 +36,18 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable {
     public PerformanceViewModel(State state, IPauseHandler pauseHandler,
         IUIDispatcher uiDispatcher, PerformanceTracker performanceTracker) {
         _performanceTracker = performanceTracker;
-        pauseHandler.Paused += () => uiDispatcher.Post(() => {
+        _pauseHandler = pauseHandler;
+        _onPaused = () => uiDispatcher.Post(() => {
             _performanceTracker.OnPause();
             AverageInstructionsPerSecond = 0;
             InstructionsPerMillisecond = 0;
         });
-        pauseHandler.Resumed += () => uiDispatcher.Post(() => {
+        _onResumed = () => uiDispatcher.Post(() => {
             _performanceTracker.OnResume();
             UpdatePerformanceInfo();
         });
+        _pauseHandler.Paused += _onPaused;
+        _pauseHandler.Resumed += _onResumed;
         _state = state;
 
         _updateTimer = DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1),
@@ -57,6 +66,8 @@ public partial class PerformanceViewModel : ViewModelBase, IDisposable {
         if (_disposed) {
             return;
         }
+        _pauseHandler.Paused -= _onPaused;
+        _pauseHandler.Resumed -= _onResumed;
         _updateTimer.Stop();
         _disposed = true;
         GC.SuppressFinalize(this);

@@ -302,6 +302,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
     private bool _isPaused;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CopySelectionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BeginCreateMemoryBreakpointCommand))]
     private BitRange? _selectionRange;
 
     public bool IsStructureInfoPresent => _structureViewModelFactory.IsInitialized;
