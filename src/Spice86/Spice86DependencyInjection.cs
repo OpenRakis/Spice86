@@ -649,7 +649,11 @@ public class Spice86DependencyInjection : IDisposable {
             hostStorageProvider != null && textClipboard != null) {
             IMessenger messenger = WeakReferenceMessenger.Default;
 
-            mainWindowViewModel?.McpStatusViewModel = new McpStatusViewModel(mcpServer);
+            mainWindowViewModel?.McpStatusViewModel = configuration.EnableMcp
+                ? configuration.EnableLegacyMcp
+                    ? new McpStatusViewModel(mcpServer, configuration.McpHttpPort)
+                    : new McpStatusViewModel(McpStatusViewModel.DiscoverModernTools(new[] { typeof(EmulatorMcpTools).Assembly }), configuration.McpHttpPort)
+                : new McpStatusViewModel();
 
             BreakpointsViewModel breakpointsViewModel = new(
                 state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);

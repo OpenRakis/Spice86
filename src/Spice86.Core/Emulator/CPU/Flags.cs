@@ -14,7 +14,7 @@ public class Flags {
         [CpuModel.INTEL_8086] = new(bitsAlwaysOn: [1, 12, 13, 14, 15], bitsAlwaysOff: [3, 5]),
         // Since we dont handle IO privilege (12 / 13) and nested task (14), let's put them as always off
         [CpuModel.INTEL_80286] = new(bitsAlwaysOn: [1], bitsAlwaysOff: [3, 5, 12, 13, 14, 15]),
-        [CpuModel.INTEL_80386] = new(bitsAlwaysOn: [1, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31], bitsAlwaysOff: [3, 5, 12, 13, 14, 15])
+        [CpuModel.INTEL_80386] = new(bitsAlwaysOn: [1], bitsAlwaysOff: [3, 5, 12, 13, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
     }.ToFrozenDictionary();
     
     private record BitsOnOff {

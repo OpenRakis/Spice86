@@ -69,7 +69,7 @@ public sealed class EmulatorMcpTools {
     }
 
     [McpServerTool(Name = "search_memory"), Description("Search RAM for a hex-encoded byte sequence. Returns absolute addresses of matches.")]
-    public MemorySearchResponse SearchMemory(string pattern, uint startAddress = 0, int length = 0, int limit = 100) {
+    public MemorySearchResponse SearchMemory(string pattern, uint startAddress, int length, int limit) {
         lock (_lock) {
             if (string.IsNullOrWhiteSpace(pattern)) {
                 throw new ArgumentException("Pattern must not be empty", nameof(pattern));
@@ -159,7 +159,7 @@ public sealed class EmulatorMcpTools {
     }
 
     [McpServerTool(Name = "list_functions"), Description("List functions ordered by call count")]
-    public FunctionListResponse ListFunctions(int limit = 100) {
+    public FunctionListResponse ListFunctions(int limit) {
         lock (_lock) {
             FunctionInfo[] functions = _services.FunctionCatalogue.FunctionInformations.Values
                 .OrderByDescending(f => f.CalledCount)

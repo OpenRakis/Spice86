@@ -16,10 +16,12 @@ public class SingleStepTest {
     private readonly CpuTestRunner _testRunner;
 
     /// <summary>
-    /// Set to true to generate a revocation list file instead of failing tests.
+    /// Set the SPICE86_GENERATE_REVOCATION_LIST environment variable to "1" to generate a
+    /// revocation list file instead of failing tests.
     /// The file will contain hashes of failing tests and statistics.
     /// </summary>
-    private const bool GenerateRevocationList = false;
+    private static readonly bool GenerateRevocationList =
+        Environment.GetEnvironmentVariable("SPICE86_GENERATE_REVOCATION_LIST") == "1";
 
     /// <summary>
     /// Fix mode: When set to a specific opcode (e.g., "00", "66", "67.00"), the revocation list
@@ -58,11 +60,9 @@ public class SingleStepTest {
         TestStatistics stats = new TestStatistics();
         RunAllTests(archive, revocationList, cpuModel, maxCycles, stats);
 
-#pragma warning disable CS0162 // Unreachable code detected
         if (GenerateRevocationList) {
             _revocationListHelper.WriteRevocationList(stats, cpuModelString, range);
         }
-#pragma warning restore CS0162 // Unreachable code detected
     }
 
     private void RunAllTests(ZipArchive archive, ISet<string> revocationList, CpuModel cpuModel, int maxCycles, TestStatistics stats) {
@@ -81,9 +81,9 @@ public class SingleStepTest {
 
             int index = 0;
             foreach (CpuTest cpuTest in cpuTests) {
-                // In fix mode, ignore the revocation list for the opcode being fixed
-                // In normal mode, skip tests in the revocation list
-                bool shouldSkipRevokedTest = OpcodeToFix == null && revocationList.Contains(cpuTest.Hash);
+                // When generating revocation lists, run all tests (including previously revoked ones)
+                // to capture current state. In normal/fix mode, skip tests in the revocation list.
+                bool shouldSkipRevokedTest = !GenerateRevocationList && OpcodeToFix == null && revocationList.Contains(cpuTest.Hash);
 
                 if (shouldSkipRevokedTest) {
                     stats.RecordFailingTest(opcode, cpuTest.Hash);
@@ -93,15 +93,16 @@ public class SingleStepTest {
                 bool testPassed = true;
                 try {
                     _testRunner.RunTest(cpuTest, index++, entry.Name, _singleStepTestMinimalMachine, maxCycles);
-                } catch (Exception ex) {
+                } catch (InvalidOperationException) {
                     testPassed = false;
                     if (!GenerateRevocationList) {
                         throw;
                     }
-#pragma warning disable CS0162 // Unreachable code detected
-                    // Exception is intentionally swallowed when generating revocation list
-                    _ = ex;
-#pragma warning restore CS0162 // Unreachable code detected
+                } catch (Xunit.Sdk.XunitException) {
+                    testPassed = false;
+                    if (!GenerateRevocationList) {
+                        throw;
+                    }
                 }
 
                 if (testPassed) {
@@ -131,7 +132,7 @@ public class SingleStepTest {
         string jsonContent = reader.ReadToEnd();
 
         // Deserialize directly to list of CpuTest - logic is encapsulated
-        var tests = JsonSerializer.Deserialize<List<JsonElement>>(jsonContent);
+        List<JsonElement>? tests = JsonSerializer.Deserialize<List<JsonElement>>(jsonContent);
         if (tests == null) {
             return null;
         }
