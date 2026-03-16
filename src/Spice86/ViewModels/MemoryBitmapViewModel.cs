@@ -27,9 +27,6 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
     private MemoryBitmapDisplayMode _displayMode = MemoryBitmapDisplayMode.Vga8Bpp;
 
     [ObservableProperty]
-    private bool _showOverlay;
-
-    [ObservableProperty]
     private uint _startAddress;
 
     public int WidthPixels { get; set;  }
@@ -47,8 +44,6 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
     partial void OnDataChanged(byte[]? value) => RenderBitmap();
 
     partial void OnDisplayModeChanged(MemoryBitmapDisplayMode value) => RenderBitmap();
-
-    partial void OnShowOverlayChanged(bool value) => RenderBitmap();
 
     [RelayCommand]
     private async Task Save() {
@@ -119,10 +114,6 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
         var oldBitmap = Bitmap;
         Bitmap = writeableBitmap;
         oldBitmap?.Dispose();
-        
-        if (ShowOverlay) {
-            ApplyOverlay();
-        }
     }
 
     private void BuildAsCgaFourColorImage() {
@@ -140,7 +131,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
         unsafe {
             byte* dstBase = (byte*)uiFrameBuffer.Address;
             int dstStride = uiFrameBuffer.RowBytes;
-            uint* rowPtr = stackalloc uint[width];
+            uint[] rowBuf = new uint[width];
 
             int pixelIndex = 0;
             for (int y = 0; y < height; y++) {
@@ -149,14 +140,14 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
                     if (byteIndex < Data.Length) {
                         int bitPos = 6 - (pixelIndex % pixelsPerByte) * 2;
                         byte colorIndex = (byte)((Data[byteIndex] >> bitPos) & 0x03);
-                        rowPtr[x] = palette[colorIndex];
+                        rowBuf[x] = palette[colorIndex];
                     } else {
-                        rowPtr[x] = 0xFF000000;
+                        rowBuf[x] = 0xFF000000;
                     }
                     pixelIndex++;
                 }
                 
-                Span<byte> srcBytes = new Span<byte>(rowPtr, width * sizeof(uint));
+                Span<byte> srcBytes = MemoryMarshal.AsBytes(rowBuf.AsSpan());
                 var dst = new Span<byte>(dstBase + y * dstStride, Math.Min(srcBytes.Length, dstStride));
                 srcBytes[..dst.Length].CopyTo(dst);
             }
@@ -165,10 +156,6 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
         var oldBitmap = Bitmap;
         Bitmap = writeableBitmap;
         oldBitmap?.Dispose();
-        
-        if (ShowOverlay) {
-            ApplyOverlay();
-        }
     }
 
     private void BuildAsEgaSixteenColorImage() {
@@ -186,7 +173,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
         unsafe {
             byte* dstBase = (byte*)uiFrameBuffer.Address;
             int dstStride = uiFrameBuffer.RowBytes;
-            uint* rowPtr = stackalloc uint[width];
+            uint[] rowBuf = new uint[width];
 
             int pixelIndex = 0;
             for (int y = 0; y < height; y++) {
@@ -195,14 +182,14 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
                     if (byteIndex < Data.Length) {
                         int bitPos = (1 - (pixelIndex % pixelsPerByte)) * 4;
                         byte colorIndex = (byte)((Data[byteIndex] >> bitPos) & 0x0F);
-                        rowPtr[x] = palette[colorIndex];
+                        rowBuf[x] = palette[colorIndex];
                     } else {
-                        rowPtr[x] = 0xFF000000;
+                        rowBuf[x] = 0xFF000000;
                     }
                     pixelIndex++;
                 }
                 
-                Span<byte> srcBytes = new Span<byte>(rowPtr, width * sizeof(uint));
+                Span<byte> srcBytes = MemoryMarshal.AsBytes(rowBuf.AsSpan());
                 var dst = new Span<byte>(dstBase + y * dstStride, Math.Min(srcBytes.Length, dstStride));
                 srcBytes[..dst.Length].CopyTo(dst);
             }
@@ -211,10 +198,6 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
         var oldBitmap = Bitmap;
         Bitmap = writeableBitmap;
         oldBitmap?.Dispose();
-        
-        if (ShowOverlay) {
-            ApplyOverlay();
-        }
     }
 
     private void BuildAsTextModeImage() {
@@ -283,10 +266,6 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
         var oldBitmap = Bitmap;
         Bitmap = writeableBitmap;
         oldBitmap?.Dispose();
-        
-        if (ShowOverlay) {
-            ApplyOverlay();
-        }
     }
 
     private void BuildAsHerculesMonochromeImage() {
@@ -306,7 +285,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
         unsafe {
             byte* dstBase = (byte*)uiFrameBuffer.Address;
             int dstStride = uiFrameBuffer.RowBytes;
-            uint* rowPtr = stackalloc uint[width];
+            uint[] rowBuf = new uint[width];
 
             int pixelIndex = 0;
             for (int y = 0; y < height; y++) {
@@ -315,14 +294,14 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
                     if (byteIndex < Data.Length) {
                         int bitPos = 7 - (pixelIndex % pixelsPerByte);
                         bool isSet = (Data[byteIndex] & (1 << bitPos)) != 0;
-                        rowPtr[x] = isSet ? white : black;
+                        rowBuf[x] = isSet ? white : black;
                     } else {
-                        rowPtr[x] = black;
+                        rowBuf[x] = black;
                     }
                     pixelIndex++;
                 }
                 
-                Span<byte> srcBytes = new Span<byte>(rowPtr, width * sizeof(uint));
+                Span<byte> srcBytes = MemoryMarshal.AsBytes(rowBuf.AsSpan());
                 var dst = new Span<byte>(dstBase + y * dstStride, Math.Min(srcBytes.Length, dstStride));
                 srcBytes[..dst.Length].CopyTo(dst);
             }
@@ -331,19 +310,5 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
         var oldBitmap = Bitmap;
         Bitmap = writeableBitmap;
         oldBitmap?.Dispose();
-        
-        if (ShowOverlay) {
-            ApplyOverlay();
-        }
-    }
-
-    private void ApplyOverlay() {
-        if (Bitmap is null || Data is null) {
-            return;
-        }
-
-        // TODO: Implement overlay grid showing memory addresses and values
-        // This would require rendering text/lines on top of the bitmap
-        // For now, this is a placeholder for future implementation
     }
 }

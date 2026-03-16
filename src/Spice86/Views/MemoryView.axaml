@@ -349,7 +349,7 @@
 				<dialogHost:DialogHost.DialogContent>
 					<Grid RowDefinitions="Auto,*">
 						<Grid Grid.Row="0">
-							<TextBlock Text="Bitmap preview as VGA 8 BPP" FontWeight="Bold" HorizontalAlignment="Left"/>
+							<TextBlock Text="Memory Bitmap Preview" FontWeight="Bold" HorizontalAlignment="Left"/>
 							<Button Content="Close" Command="{Binding CloseMemoryBitmapViewerCommand}" HorizontalAlignment="Right" />
 						</Grid>
 						<views:MemoryBitmapView Grid.Row="1" DataContext="{Binding MemoryBitmap}" />

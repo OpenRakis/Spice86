@@ -590,7 +590,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
         }
         _memBitmapUpdateOnPause = () => {
             bytes = _memory.ReadRam(startAddress.Value, bytesToRead);
-            vm.Data = bytes;
+            _uiDispatcher.Post(() => vm.Data = bytes);
         };
         _pauseHandler.Paused += _memBitmapUpdateOnPause;
 
