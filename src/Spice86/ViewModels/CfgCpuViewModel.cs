@@ -18,8 +18,6 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels.Services;
 
-using System.Diagnostics;
-
 public partial class CfgCpuViewModel : ViewModelBase {
     private readonly List<NodeTableEntry> _tableNodesList = new();
     private readonly IUIDispatcher _uiDispatcher;
@@ -27,7 +25,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private readonly NodeToString _nodeToString;
 
     // Collection of searchable nodes for AutoCompleteBox
-    private readonly Dictionary<string, ICfgNode> _searchableNodes = new();
+    private Dictionary<string, ICfgNode> _searchableNodes = new();
 
     [ObservableProperty] private int _maxNodesToDisplay = 200;
 
@@ -182,9 +180,6 @@ public partial class CfgCpuViewModel : ViewModelBase {
             IsLoading = true;
             StatusMessage = "Generating graph...";
 
-            _searchableNodes.Clear();
-            _tableNodesList.Clear();
-
             await Task.Run(async () => {
                 long localNumberOfNodes = 0;
                 Graph currentGraph = new();
@@ -192,7 +187,8 @@ public partial class CfgCpuViewModel : ViewModelBase {
                 queue.Enqueue(startNode);
                 HashSet<ICfgNode> visitedNodes = new();
                 HashSet<(int, int)> existingEdges = new();
-                Stopwatch stopwatch = new();
+                Dictionary<string, ICfgNode> localSearchableNodes = new();
+                List<NodeTableEntry> localTableNodesList = new();
 
                 while (queue.Count > 0 && localNumberOfNodes < MaxNodesToDisplay) {
                     ICfgNode node = queue.Dequeue();
@@ -201,16 +197,12 @@ public partial class CfgCpuViewModel : ViewModelBase {
                     }
 
                     visitedNodes.Add(node);
-                    stopwatch.Restart();
-
-                    string nodeText = FormatNodeText(node,
-                        node.Id == _executionContextManager.CurrentExecutionContext?.LastExecuted?.Id);
 
                     string searchableText =
                         $"{_nodeToString.ToHeaderString(node)} - {_nodeToString.ToAssemblyString(node)}";
-                    _searchableNodes[searchableText] = node;
+                    localSearchableNodes[searchableText] = node;
 
-                    _tableNodesList.Add(CreateTableEntry(node));
+                    localTableNodesList.Add(CreateTableEntry(node));
 
                     foreach (ICfgNode successor in node.Successors) {
                         (int, int) edgeKey = GenerateEdgeKey(node, successor);
@@ -236,19 +228,21 @@ public partial class CfgCpuViewModel : ViewModelBase {
                         }
                     }
 
-                    stopwatch.Stop();
                     localNumberOfNodes++;
                 }
 
-
                 await _uiDispatcher.InvokeAsync(() => {
+                    _searchableNodes = localSearchableNodes;
+                    _tableNodesList.Clear();
+                    _tableNodesList.AddRange(localTableNodesList);
+
                     Graph = currentGraph;
                     IsLoading = false;
                     NumberOfNodes = localNumberOfNodes;
                     StatusMessage = $"Graph generated with {localNumberOfNodes} nodes";
 
                     NodeEntries.Clear();
-                    NodeEntries.AddRange(_searchableNodes.Keys.OrderBy(k => k));
+                    NodeEntries.AddRange(localSearchableNodes.Keys.OrderBy(k => k));
 
                     FilterTableNodes();
                 });
