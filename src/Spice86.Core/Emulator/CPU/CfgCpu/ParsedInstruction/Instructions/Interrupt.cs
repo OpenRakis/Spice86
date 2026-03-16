@@ -1,7 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
@@ -18,5 +21,11 @@ public class Interrupt : InstructionWithValueField<byte>, ICallInstruction {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.INT, builder.InstructionField.ToNode(ValueField)!);
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        ValueNode vectorNumber = builder.InstructionField.ToNode(ValueField)
+            ?? throw new InvalidOperationException("INT vector value field cannot be null.");
+        return new InterruptCallNode(this, vectorNumber);
     }
 }

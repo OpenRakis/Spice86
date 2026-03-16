@@ -1,7 +1,11 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Shared.Emulator.Memory;
 
@@ -11,11 +15,14 @@ public class Hlt : CfgInstruction {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
-        helper.State.IsRunning = false;
-        helper.MoveIpToEndOfInstruction(this);
+        helper.ExecuteHlt(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.HLT);
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        return new HltNode(this);
     }
 }

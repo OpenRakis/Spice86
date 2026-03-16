@@ -1,6 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
@@ -31,5 +33,16 @@ public class MovSregRm16 : InstructionWithModRm {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.MOV, builder.Register.SReg(ModRmContext.RegisterIndex), builder.ModRm.RmToNode(DataType.UINT16, ModRmContext));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        ValueNode sregNode = builder.Register.SReg(ModRmContext.RegisterIndex);
+        ValueNode rmNode = builder.ModRm.RmToNode(DataType.UINT16, ModRmContext);
+        BinaryOperationNode assignment = builder.Assign(DataType.UINT16, sregNode, rmNode);
+        if (ModRmContext.RegisterIndex == (uint)SegmentRegisterIndex.SsIndex) {
+            MethodCallNode setInterruptShadowing = new MethodCallNode(null, nameof(InstructionExecutionHelper.SetInterruptShadowing));
+            return builder.WithIpAdvancement(this, assignment, setInterruptShadowing);
+        }
+        return builder.WithIpAdvancement(this, assignment);
     }
 }

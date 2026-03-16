@@ -7,8 +7,11 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -51,5 +54,151 @@ public partial class {{ moxy.Class.Name }} : EnterInstruction {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.ENTER{{ if Size == 32 }}W{{ end }}, builder.InstructionField.ToNode(StorageField), builder.InstructionField.ToNode(LevelField));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        DataType stackIndexType = builder.ParseCSharpType("{{StackPointerType}}");
+        DataType stackValueType = builder.UType({{Size}});
+
+        ValueNode storageNode = builder.InstructionField.ToNode(StorageField) ??
+            throw new InvalidOperationException("Storage field cannot be null for ENTER instruction.");
+
+        ValueNode levelNodeRaw = builder.InstructionField.ToNode(LevelField) ??
+            throw new InvalidOperationException("Level field cannot be null for ENTER instruction.");
+
+        ValueNode maskedLevelValue = new BinaryOperationNode(
+            DataType.UINT8,
+            levelNodeRaw,
+            BinaryOperation.BITWISE_AND,
+            builder.Constant.ToNode((byte)0x1F));
+
+        VariableDeclarationNode levelDeclaration = builder.DeclareVariable(DataType.UINT8, "level", maskedLevelValue);
+        VariableReferenceNode levelReference = levelDeclaration.Reference;
+
+        ValueNode pointerSize = builder.Constant.ToNode(stackIndexType, (ulong)({{Size}} / 8));
+
+        VariableDeclarationNode oldBasePointerDeclaration = builder.DeclareVariable(
+            stackIndexType,
+            "oldBasePointer",
+            builder.Register.RegByName("{{BasePointerRegister}}"));
+        VariableReferenceNode oldBasePointerReference = oldBasePointerDeclaration.Reference;
+
+        VariableDeclarationNode oldStackPointerDeclaration = builder.DeclareVariable(
+            stackIndexType,
+            "oldStackPointer",
+            builder.Register.RegByName("{{StackPointerRegister}}"));
+        VariableReferenceNode oldStackPointerReference = oldStackPointerDeclaration.Reference;
+
+        ValueNode initialSpIndexValue = new BinaryOperationNode(
+            stackIndexType,
+            oldStackPointerReference,
+            BinaryOperation.MINUS,
+            pointerSize);
+        VariableDeclarationNode spIndexDeclaration = builder.DeclareVariable(stackIndexType, "spIndex", initialSpIndexValue);
+        VariableReferenceNode spIndexReference = spIndexDeclaration.Reference;
+
+        ValueNode ssRegister = builder.Register.SRegByName("SS");
+        ValueNode spIndexAsWord = builder.TypeConversion.Convert(DataType.UINT16, spIndexReference);
+        ValueNode stackAtSp = builder.Pointer.ToSegmentedPointer(stackValueType, ssRegister, spIndexAsWord);
+        BinaryOperationNode pushOldBasePointer = builder.Assign(stackValueType, stackAtSp, oldBasePointerReference);
+
+        VariableDeclarationNode framePointerDeclaration = builder.DeclareVariable(stackIndexType, "framePtr", spIndexReference);
+        VariableReferenceNode framePointerReference = framePointerDeclaration.Reference;
+
+        VariableDeclarationNode bpIndexDeclaration = builder.DeclareVariable(stackIndexType, "bpIndex", oldBasePointerReference);
+        VariableReferenceNode bpIndexReference = bpIndexDeclaration.Reference;
+
+        VariableDeclarationNode loopIndexDeclaration = builder.DeclareVariable(DataType.INT32, "i", builder.Constant.ToNode(1));
+        VariableReferenceNode loopIndexReference = loopIndexDeclaration.Reference;
+
+        ValueNode levelAsInt = builder.TypeConversion.Convert(DataType.INT32, levelReference);
+        ValueNode loopCondition = new BinaryOperationNode(
+            DataType.BOOL,
+            loopIndexReference,
+            BinaryOperation.LESS_THAN,
+            levelAsInt);
+
+        BinaryOperationNode decrementBpIndex = builder.Assign(
+            stackIndexType,
+            bpIndexReference,
+            new BinaryOperationNode(stackIndexType, bpIndexReference, BinaryOperation.MINUS, pointerSize));
+
+        BinaryOperationNode decrementSpIndex = builder.Assign(
+            stackIndexType,
+            spIndexReference,
+            new BinaryOperationNode(stackIndexType, spIndexReference, BinaryOperation.MINUS, pointerSize));
+
+        ValueNode bpIndexAsWord = builder.TypeConversion.Convert(DataType.UINT16, bpIndexReference);
+        ValueNode spLoopIndexAsWord = builder.TypeConversion.Convert(DataType.UINT16, spIndexReference);
+        ValueNode sourcePointer = builder.Pointer.ToSegmentedPointer(stackValueType, ssRegister, bpIndexAsWord);
+        ValueNode destinationPointer = builder.Pointer.ToSegmentedPointer(stackValueType, ssRegister, spLoopIndexAsWord);
+        BinaryOperationNode copyFrameValue = builder.Assign(stackValueType, destinationPointer, sourcePointer);
+
+        BlockNode loopBody = new BlockNode(
+            decrementBpIndex,
+            decrementSpIndex,
+            copyFrameValue);
+
+        BinaryOperationNode incrementLoopIndex = builder.Assign(
+            DataType.INT32,
+            loopIndexReference,
+            builder.Constant.AddConstant(DataType.INT32, loopIndexReference, 1));
+
+        BlockNode forLoop = builder.ControlFlow.For(loopIndexDeclaration, loopCondition, incrementLoopIndex, loopBody);
+
+        BinaryOperationNode decrementSpForFramePointer = builder.Assign(
+            stackIndexType,
+            spIndexReference,
+            new BinaryOperationNode(stackIndexType, spIndexReference, BinaryOperation.MINUS, pointerSize));
+        ValueNode spAfterLoopAsWord = builder.TypeConversion.Convert(DataType.UINT16, spIndexReference);
+        ValueNode destinationFramePointer = builder.Pointer.ToSegmentedPointer(stackValueType, ssRegister, spAfterLoopAsWord);
+        BinaryOperationNode pushFramePointer = builder.Assign(stackValueType, destinationFramePointer, framePointerReference);
+
+        BlockNode levelNotZeroBlock = new BlockNode(
+            bpIndexDeclaration,
+            forLoop,
+            decrementSpForFramePointer,
+            pushFramePointer);
+
+        ValueNode levelNotZeroCondition = new BinaryOperationNode(
+            DataType.BOOL,
+            levelReference,
+            BinaryOperation.NOT_EQUAL,
+            builder.Constant.ToNode((byte)0));
+
+        IfElseNode handleNestingLevel = new IfElseNode(
+            levelNotZeroCondition,
+            levelNotZeroBlock,
+            new BlockNode());
+
+        BinaryOperationNode setBasePointerToFrame = builder.Assign(
+            stackIndexType,
+            builder.Register.RegByName("{{BasePointerRegister}}"),
+            framePointerReference);
+
+        ValueNode storageAsStackIndexType = builder.TypeConversion.Convert(stackIndexType, storageNode);
+        BinaryOperationNode subtractStorage = builder.Assign(
+            stackIndexType,
+            spIndexReference,
+            new BinaryOperationNode(stackIndexType, spIndexReference, BinaryOperation.MINUS, storageAsStackIndexType));
+
+        BinaryOperationNode setStackPointer = builder.Assign(
+            stackIndexType,
+            builder.Register.RegByName("{{StackPointerRegister}}"),
+            spIndexReference);
+
+        List<IVisitableAstNode> statements = new();
+        statements.Add(levelDeclaration);
+        statements.Add(oldBasePointerDeclaration);
+        statements.Add(oldStackPointerDeclaration);
+        statements.Add(spIndexDeclaration);
+        statements.Add(pushOldBasePointer);
+        statements.Add(framePointerDeclaration);
+        statements.Add(handleNestingLevel);
+        statements.Add(setBasePointerToFrame);
+        statements.Add(subtractStorage);
+        statements.Add(setStackPointer);
+
+        return builder.WithIpAdvancement(this, statements.ToArray());
     }
 }

@@ -9,6 +9,7 @@ namespace {{ moxy.Class.Namespace }};
 
 using System;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
@@ -23,14 +24,13 @@ using Spice86.Shared.Emulator.Memory;
 public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, ModRmContext modRmContext) :
         base(address, opcodeField, prefixes, modRmContext, 1) {
+        if (ModRmContext.MemoryAddressType == MemoryAddressType.NONE) {
+            throw new CpuInvalidOpcodeException("BOUND requires a memory operand.");
+        }
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
-        if (ModRmContext.MemoryAddressType == MemoryAddressType.NONE) {
-            throw new CpuInvalidOpcodeException("BOUND requires a memory operand.");
-        }
-
         uint address = helper.ModRm.MandatoryMemoryAddress;
         {{SignedType}} lowerBound = helper.Memory.{{MemoryIndexer}}[address];
         uint upperAddress = address + (uint){{ElementSize}};
@@ -52,8 +52,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         }
 
         ValueNode offset = builder.ModRm.MemoryOffsetToNode(ModRmContext);
-        ValueNode increment = builder.Constant.ToNode({{ if Size == 16 }}(ushort){{ElementSize}}{{ else }}(uint){{ElementSize}}{{ end }});
-        ValueNode upperOffset = new BinaryOperationNode(builder.AddressType(this), offset, BinaryOperation.PLUS, increment);
+        ValueNode upperOffset = builder.Constant.AddConstant(builder.AddressType(this), offset, {{ElementSize}});
         ValueNode upperPointer = builder.Pointer.ToSegmentedPointer(builder.SType({{Size}}), (SegmentRegisterIndex)ModRmContext.SegmentIndex.Value, upperOffset);
 
         return new InstructionNode(
@@ -61,5 +60,29 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
             indexNode,
             lowerPointer,
             upperPointer);
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // BOUND index, [lower, upper]: throw CpuBoundRangeExceededException if index not in [lower, upper]
+        DataType signedType = builder.SType({{Size}});
+        DataType addrType = builder.AddressType(this);
+
+        // index = (signed)R
+        ValueNode indexNode = builder.TypeConversion.Convert(signedType,
+            builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext));
+
+        // lower = signed memory read at address
+        ValueNode lowerPtr = builder.ModRm.ToMemoryAddressNode(signedType, ModRmContext);
+
+        // upper = signed memory read at address + ElementSize
+        ValueNode sizeNode = addrType == DataType.UINT16
+            ? builder.Constant.ToNode((ushort){{ElementSize}})
+            : builder.Constant.ToNode((uint){{ElementSize}});
+        ValueNode upperPtr = builder.ModRm.ToMemoryAddressNodeWithOffsetAdjustment(signedType, ModRmContext, sizeNode);
+
+        // CheckBound(index, lower, upper) - throws if out of range
+        MethodCallNode checkBound = new MethodCallNode(null, "CheckBound", indexNode, lowerPtr, upperPtr);
+
+        return builder.WithIpAdvancement(this, checkBound);
     }
 }

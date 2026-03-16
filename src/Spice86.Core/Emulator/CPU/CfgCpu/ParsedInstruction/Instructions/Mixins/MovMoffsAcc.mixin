@@ -5,8 +5,11 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -31,5 +34,13 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
                 builder.InstructionField.ToNode(OffsetField)
             ),
             builder.Register.Accumulator(builder.UType({{Size}})));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // [SREG:OFFSET] = ACC
+        ValueNode accNode = builder.Register.Accumulator(builder.UType({{Size}}));
+        ValueNode offsetNode = builder.InstructionField.ToNode(OffsetField);
+        ValueNode memoryPointer = builder.Pointer.ToSegmentedPointer(builder.UType({{Size}}), SegmentRegisterIndex, offsetNode);
+        return builder.WithIpAdvancement(this, builder.Assign(builder.UType({{Size}}), memoryPointer, accNode));
     }
 }

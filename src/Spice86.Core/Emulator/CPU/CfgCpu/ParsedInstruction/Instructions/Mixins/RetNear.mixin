@@ -4,8 +4,10 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
@@ -29,5 +31,9 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction, IReturnInstruction 
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.RET_NEAR);
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        return new ReturnNearNode(this, builder.Constant.ToNode((ushort)0), {{OperandSize}});
     }
 }

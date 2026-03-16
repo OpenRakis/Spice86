@@ -1,7 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
@@ -26,5 +28,9 @@ public class JmpFarImm : InstructionWithSegmentedAddressField, IJumpInstruction 
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.JMP_FAR, builder.Constant.ToNode(_targetAddress));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        return new JumpFarNode(this, builder.Constant.ToNode(_targetAddress));
     }
 }

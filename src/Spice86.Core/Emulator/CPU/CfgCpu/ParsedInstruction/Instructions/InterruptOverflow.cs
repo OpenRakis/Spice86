@@ -1,6 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
@@ -20,5 +23,11 @@ public class InterruptOverflow : CfgInstruction, ICallInstruction {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.INTO);
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        ValueNode overflowFlag = builder.Flag.Overflow();
+        ValueNode vectorNumber = builder.Constant.ToNode((byte)4);
+        return builder.ControlFlow.ConditionalInterrupt(this, overflowFlag, vectorNumber);
     }
 }

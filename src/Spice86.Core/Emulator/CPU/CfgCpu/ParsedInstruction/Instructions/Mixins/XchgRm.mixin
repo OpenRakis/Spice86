@@ -4,8 +4,11 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -27,5 +30,21 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
             builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext),
             builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext)
         );
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        // XCHG RM, R: swap R and RM using a temporary variable
+        DataType dataType = builder.UType({{Size}});
+        ValueNode rNode = builder.ModRm.RToNode(dataType, ModRmContext);
+        ValueNode rmNode = builder.ModRm.RmToNode(dataType, ModRmContext);
+
+        // temp = R
+        VariableDeclarationNode tempDecl = builder.DeclareVariable(dataType, "temp", rNode);
+        // R = RM
+        BinaryOperationNode assignR = builder.Assign(dataType, rNode, rmNode);
+        // RM = temp
+        BinaryOperationNode assignRm = builder.Assign(dataType, rmNode, tempDecl.Reference);
+
+        return builder.WithIpAdvancement(this, tempDecl, assignR, assignRm);
     }
 }

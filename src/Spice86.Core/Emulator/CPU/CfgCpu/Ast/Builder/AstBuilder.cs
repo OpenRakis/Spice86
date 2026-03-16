@@ -10,9 +10,14 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 
 public class AstBuilder {
     public AstBuilder() {
-        InstructionField = new(Constant, Pointer);
+        SegmentedAddressBuilder = new(Constant, TypeConversion);
+        InstructionField = new(Constant, Pointer, SegmentedAddressBuilder);
         ModRm = new(Register, InstructionField, Pointer);
         Bitwise = new(Constant);
+        ControlFlow = new(this);
+        Stack = new();
+        StringOperation = new(this);
+        Io = new(TypeConversion);
     }
 
     public RegisterAstBuilder Register { get; } = new();
@@ -20,9 +25,14 @@ public class AstBuilder {
     public ConstantAstBuilder Constant { get; } = new();
     public FlagAstBuilder Flag { get; } = new();
     public TypeConversionAstBuilder TypeConversion { get; } = new();
+    public SegmentedAddressAstBuilder SegmentedAddressBuilder { get; }
     public InstructionFieldAstBuilder InstructionField { get; }
     public ModRmAstBuilder ModRm { get; }
     public BitwiseAstBuilder Bitwise { get; }
+    public ControlFlowAstBuilder ControlFlow { get; }
+    public StackAstBuilder Stack { get; }
+    public StringOperationAstBuilder StringOperation { get; }
+    public IoAstBuilder Io { get; }
 
     public DataType SType(int size) {
         return Type(size, true);

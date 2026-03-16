@@ -4,8 +4,10 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
@@ -32,5 +34,9 @@ public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{Signed
     
     protected ValueNode TargetIpToNode(AstBuilder builder) {
         return builder.Constant.ToNearAddressNode(_targetIp, NextInMemoryAddress);
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        return new JumpNearNode(this, TargetIpToNode(builder));
     }
 }

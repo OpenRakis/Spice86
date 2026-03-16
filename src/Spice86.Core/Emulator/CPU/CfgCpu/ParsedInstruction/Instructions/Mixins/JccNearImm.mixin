@@ -6,8 +6,11 @@
 @moxy
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -31,5 +34,20 @@ public partial class {{ moxy.Class.Name }} : JmpNearImm{{Size}} {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.{{Mnemonic | string.upcase}}_{{ if Size == 8 }}SHORT{{else}}NEAR{{ end }}, TargetIpToNode(builder));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+{{ if Mnemonic == "jcxz" }}
+        ValueNode counter = builder.Register.RegByName("{{ if JumpCondition == "state.ECX == 0" }}ECX{{ else }}CX{{ end }}");
+        ValueNode condition = new BinaryOperationNode(
+            DataType.BOOL,
+            counter,
+            BinaryOperation.EQUAL,
+            builder.Constant.ToNode(counter.DataType, 0UL));
+{{ else }}
+        int conditionCode = (int)(OpcodeField.Value & 0x0F);
+        ValueNode condition = builder.Flag.BuildSetCondition(conditionCode);
+{{ end }}
+        return builder.ControlFlow.ConditionalNearJump(this, condition, TargetIpToNode(builder));
     }
 }

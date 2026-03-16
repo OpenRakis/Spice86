@@ -6,8 +6,11 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -30,5 +33,35 @@ public partial class {{ moxy.Class.Name }} : JmpNearImm8 {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.{{Mnemonic | string.upcase}}, TargetIpToNode(builder));
+    }
+
+    public override IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
+        ValueNode counter = builder.Register.RegByName("{{CounterRegister}}");
+
+        BinaryOperationNode decrementCounter = builder.Assign(
+            counter.DataType,
+            counter,
+            builder.Constant.AddConstant(counter, -1));
+
+        ValueNode counterNotZero = new BinaryOperationNode(
+            DataType.BOOL,
+            counter,
+            BinaryOperation.NOT_EQUAL,
+            builder.Constant.ToNode(counter.DataType, 0UL));
+
+{{ if Mnemonic == "loope" }}
+        ValueNode condition = new BinaryOperationNode(DataType.BOOL, counterNotZero, BinaryOperation.LOGICAL_AND, builder.Flag.Zero());
+{{ else if Mnemonic == "loopne" }}
+        ValueNode condition = new BinaryOperationNode(
+            DataType.BOOL,
+            counterNotZero,
+            BinaryOperation.LOGICAL_AND,
+            new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, builder.Flag.Zero()));
+{{ else }}
+        ValueNode condition = counterNotZero;
+{{ end }}
+
+        IfElseNode conditionalJump = builder.ControlFlow.ConditionalNearJump(this, condition, TargetIpToNode(builder));
+        return new BlockNode(decrementCounter, conditionalJump);
     }
 }
