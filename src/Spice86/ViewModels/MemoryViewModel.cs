@@ -142,6 +142,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
 
     private bool IsSelectionRangeValid() => SelectionRange is not null && StartAddress is not null;
 
+    private bool CanCopySelection() => IsSelectionRangeValid() && IsPaused;
+
     [RelayCommand(CanExecute = nameof(IsSelectionRangeValid))]
     private void BeginCreateMemoryBreakpoint() {
         CreatingMemoryBreakpoint = true;
@@ -172,7 +174,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
     [RelayCommand]
     private void CancelCreateMemoryBreakpoint() => CreatingMemoryBreakpoint = false;
 
-    [RelayCommand(CanExecute = nameof(IsSelectionRangeValid))]
+    [RelayCommand(CanExecute = nameof(CanCopySelection))]
     public async Task CopySelection() {
         if (SelectionRange is not null &&
             AddressAndValueParser.TryParseAddressString(StartAddress, _state, out uint? address)) {

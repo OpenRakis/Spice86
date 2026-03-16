@@ -88,6 +88,9 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
         // Update the registers view model
         Registers.Update();
 
+        if (!_isPaused) {
+            return;
+        }
         EsDiString = _memory.GetZeroTerminatedString(
             MemoryUtils.ToPhysicalAddress(State.ES, State.DI),
             32);
