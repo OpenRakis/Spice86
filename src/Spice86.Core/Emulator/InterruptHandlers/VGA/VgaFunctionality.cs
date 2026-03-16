@@ -230,6 +230,13 @@ public class VgaFunctionality : IVgaFunctionality {
         VideoMode videoMode = GetVideoMode(modeId);
         VgaMode vgaMode = videoMode.VgaMode;
 
+        // Calculate aspect ratio correction factor based on the mode
+        double aspectRatioCorrectionFactor = AspectRatioCorrectionHelper
+            .GetAspectRatioCorrectionFactor(vgaMode.Width, vgaMode.Height, vgaMode.MemoryModel);
+
+        // Create a new VgaMode with the calculated aspect ratio correction factor
+        vgaMode = vgaMode with { AspectRatioCorrectionFactor = aspectRatioCorrectionFactor };
+
         // if palette loading (bit 3 of modeSet ctl = 0)
         if (!flags.HasFlag(ModeFlags.NoPalette)) {
             LoadPalette(videoMode, flags);
@@ -576,6 +583,11 @@ public class VgaFunctionality : IVgaFunctionality {
     /// <inheritdoc />
     public void SetFontBlockSpecifier(byte fontBlock) {
         WriteToSequencer(0x03, fontBlock);
+    }
+
+    /// <inheritdoc />
+    public byte GetCharacterMapSelectRegister() {
+        return ReadSequencer(0x03);
     }
 
     /// <inheritdoc />
@@ -1222,6 +1234,11 @@ public class VgaFunctionality : IVgaFunctionality {
 
     private void WriteToSequencer(byte index, byte value) {
         WriteWordToIoPort((ushort)(value << 8 | index), VgaPort.SequencerAddress);
+    }
+
+    private byte ReadSequencer(byte index) {
+        WriteByteToIoPort(index, VgaPort.SequencerAddress);
+        return _ioPortDispatcher.ReadByte((ushort)VgaPort.SequencerAddress + 1);
     }
 
     private void WriteWordToIoPort(ushort value, VgaPort port) {

@@ -3,13 +3,14 @@
 using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels.Services;
 
 namespace Spice86.ViewModels;
+
+using Spice86.Core.Emulator.StateSerialization;
 
 public partial class StackMemoryViewModel : MemoryViewModel {
     public StackMemoryViewModel(IMemory memory, MemoryDataExporter memoryDataExporter, State state, Stack stack,

@@ -4,9 +4,14 @@ using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Reactive;
 using Avalonia.Styling;
+using Avalonia.Threading;
 
 using Spice86.Views.Converters;
+
+using System;
+using System.Threading.Tasks;
 
 /// <summary>
 /// Provides highlight behaviors for different control types with fade-out animations.
@@ -21,10 +26,13 @@ public static class HighlightBehavior {
     public static readonly AttachedProperty<bool> HighlightForegroundProperty =
         AvaloniaProperty.RegisterAttached<TextBlock, bool>("HighlightForeground", typeof(HighlightBehavior), defaultValue: true);
 
+    // Internal flag to prevent starting the same animation multiple times concurrently
+    private static readonly AttachedProperty<bool> IsAnimatingProperty = AvaloniaProperty.RegisterAttached<AvaloniaObject, bool>("IsAnimating", typeof(HighlightBehavior), defaultValue: false);
+
     static HighlightBehavior() {
-        IsHighlightedProperty.Changed.Subscribe(OnIsHighlightedChanged);
-        IsContentHighlightedProperty.Changed.Subscribe(OnIsContentHighlightedChanged);
-        IsPanelHighlightedProperty.Changed.Subscribe(OnIsPanelHighlightedChanged);
+        IsHighlightedProperty.Changed.Subscribe(new AnonymousObserver<AvaloniaPropertyChangedEventArgs<bool>>(OnIsHighlightedChanged));
+        IsContentHighlightedProperty.Changed.Subscribe(new AnonymousObserver<AvaloniaPropertyChangedEventArgs<bool>>(OnIsContentHighlightedChanged));
+        IsPanelHighlightedProperty.Changed.Subscribe(new AnonymousObserver<AvaloniaPropertyChangedEventArgs<bool>>(OnIsPanelHighlightedChanged));
     }
 
     public static void SetIsHighlighted(TextBlock element, bool value) =>
@@ -39,6 +47,12 @@ public static class HighlightBehavior {
     public static bool GetHighlightForeground(TextBlock element) =>
         element.GetValue(HighlightForegroundProperty);
 
+    private static void SetIsAnimating(AvaloniaObject element, bool value) =>
+        element.SetValue(IsAnimatingProperty, value);
+
+    private static bool GetIsAnimating(AvaloniaObject element) =>
+        element.GetValue(IsAnimatingProperty);
+
     private static void OnIsHighlightedChanged(AvaloniaPropertyChangedEventArgs<bool> e) {
         if (e.Sender is TextBlock textBlock) {
             bool highlightForeground = GetHighlightForeground(textBlock);
@@ -50,12 +64,23 @@ public static class HighlightBehavior {
                 if (highlightForeground) {
                     textBlock.Foreground = HighlightingConverter.GetHighlightForegroundBrush();
                 }
+
+                // If we are explicitly setting highlight, ensure animating flag is cleared
+                SetIsAnimating(textBlock, false);
             } else if (e.OldValue.Value) {
+                // If already animating, do not start another animation
+                if (GetIsAnimating(textBlock)) {
+                    return;
+                }
+
+                // Mark as animating
+                SetIsAnimating(textBlock, true);
+
                 // Create animation for background fade-out
                 Animation backgroundAnimation = CreateAnimation(TextBlock.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(), HighlightingConverter.GetDefaultBackgroundBrush());
 
                 // Start background animation
-                _ = backgroundAnimation.RunAsync(textBlock);
+                Task backgroundTask = backgroundAnimation.RunAsync(textBlock);
 
                 // If foreground highlighting is enabled, animate it too
                 if (highlightForeground) {
@@ -63,7 +88,17 @@ public static class HighlightBehavior {
                         HighlightingConverter.GetDefaultForegroundBrush());
 
                     // Start foreground animation
-                    _ = foregroundAnimation.RunAsync(textBlock);
+                    Task foregroundTask = foregroundAnimation.RunAsync(textBlock);
+
+                    // When both complete, clear animating flag on UI thread
+                    Task.WhenAll(new Task[] { backgroundTask, foregroundTask }).ContinueWith(_ => {
+                        Dispatcher.UIThread.Post(() => SetIsAnimating(textBlock, false));
+                    });
+                } else {
+                    // Only background animation running
+                    backgroundTask.ContinueWith(_ => {
+                        Dispatcher.UIThread.Post(() => SetIsAnimating(textBlock, false));
+                    });
                 }
             }
         }
@@ -98,13 +133,24 @@ public static class HighlightBehavior {
                 if (highlightForeground) {
                     contentControl.Foreground = HighlightingConverter.GetHighlightForegroundBrush();
                 }
+
+                // Clear animating flag when set directly
+                SetIsAnimating(contentControl, false);
             } else if (e.OldValue.Value) {
+                // If already animating, do not start another animation
+                if (GetIsAnimating(contentControl)) {
+                    return;
+                }
+
+                // Mark as animating
+                SetIsAnimating(contentControl, true);
+
                 // Create animation for background fade-out
                 Animation backgroundAnimation = CreateAnimation(TemplatedControl.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(),
                     HighlightingConverter.GetDefaultBackgroundBrush());
 
                 // Start background animation
-                _ = backgroundAnimation.RunAsync(contentControl);
+                Task backgroundTask = backgroundAnimation.RunAsync(contentControl);
 
                 // If foreground highlighting is enabled, animate it too
                 if (highlightForeground) {
@@ -112,7 +158,17 @@ public static class HighlightBehavior {
                         HighlightingConverter.GetDefaultForegroundBrush());
 
                     // Start foreground animation
-                    _ = foregroundAnimation.RunAsync(contentControl);
+                    Task foregroundTask = foregroundAnimation.RunAsync(contentControl);
+
+                    // When both complete, clear animating flag on UI thread
+                    Task.WhenAll(new Task[] { backgroundTask, foregroundTask }).ContinueWith(_ => {
+                        Dispatcher.UIThread.Post(() => SetIsAnimating(contentControl, false));
+                    });
+                } else {
+                    // Only background animation running
+                    backgroundTask.ContinueWith(_ => {
+                        Dispatcher.UIThread.Post(() => SetIsAnimating(contentControl, false));
+                    });
                 }
             }
         }
@@ -131,12 +187,28 @@ public static class HighlightBehavior {
             if (e.NewValue.Value) {
                 // Immediately apply highlight
                 panel.Background = HighlightingConverter.GetHighlightBackgroundBrush();
+
+                // Clear animating flag when set directly
+                SetIsAnimating(panel, false);
             } else if (e.OldValue.Value) {
+                // If already animating, do not start another animation
+                if (GetIsAnimating(panel)) {
+                    return;
+                }
+
+                // Mark as animating
+                SetIsAnimating(panel, true);
+
                 // Create animation for background fade-out
                 Animation backgroundAnimation = CreateAnimation(Panel.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(), HighlightingConverter.GetDefaultBackgroundBrush());
 
                 // Start background animation
-                _ = backgroundAnimation.RunAsync(panel);
+                Task backgroundTask = backgroundAnimation.RunAsync(panel);
+
+                // When complete, clear animating flag on UI thread
+                backgroundTask.ContinueWith(_ => {
+                    Dispatcher.UIThread.Post(() => SetIsAnimating(panel, false));
+                });
             }
         }
     }

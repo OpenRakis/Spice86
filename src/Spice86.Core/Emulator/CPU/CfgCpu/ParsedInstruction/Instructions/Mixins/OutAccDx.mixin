@@ -20,7 +20,7 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction {
     
     public override void Execute(InstructionExecutionHelper helper) {
         helper.Out{{Size}}(helper.State.DX, helper.State.{{Accumulator}});
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

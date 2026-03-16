@@ -1,5 +1,4 @@
-﻿
-namespace Spice86.Core.Emulator.OperatingSystem;
+﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
@@ -9,6 +8,7 @@ using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -22,6 +22,7 @@ using System.Text;
 /// </summary>
 public class DosFileManager {
     private const int ExtDeviceBit = 0x0200;
+    public const ushort MaxOpenFilesPerProcess = 0x14;
     private static readonly char[] _directoryChars = {
         DosPathResolver.DirectorySeparatorChar,
         DosPathResolver.AltDirectorySeparatorChar };
@@ -40,7 +41,7 @@ public class DosFileManager {
 
     private class FileSearchPrivateData {
         public FileSearchPrivateData(string fileSpec, int index, ushort searchAttributes) {
-            FileSpec =  fileSpec;
+            FileSpec = fileSpec;
             Index = index;
             SearchAttributes = searchAttributes;
         }
@@ -131,8 +132,9 @@ public class DosFileManager {
         }
 
         SetOpenFile(fileHandle, null);
+        byte refCount = (byte)CountHandles(file);
         try {
-            if (CountHandles(file) == 0) {
+            if (refCount == 0) {
                 // Only close the file if no other handle to it exist.
                 file.Close();
             }
@@ -140,8 +142,16 @@ public class DosFileManager {
             throw new UnrecoverableException("IOException while closing file", e);
         }
 
-        return DosFileOperationResult.NoValue();
+        return DosFileOperationResult.NoValueWithRefCount(refCount);
     }
+
+    /// <summary>
+    /// Attempts to duplicate an existing file handle for inheritance without exposing the new handle to callers.
+    /// Increments the underlying system file table reference count when successful.
+    /// </summary>
+    /// <param name="fileHandle">The original DOS handle.</param>
+    /// <returns>The new DOS handle or an error if duplication is not possible.</returns>
+    public DosFileOperationResult DuplicateHandleForChild(byte fileHandle) => DuplicateFileHandle(fileHandle);
 
     /// <summary>
     /// Creates a file and returns the handle to the file.
@@ -159,7 +169,7 @@ public class DosFileManager {
             }
             return OpenDevice(device);
         }
-        
+
         string newHostFilePath = _dosPathResolver.PrefixWithHostDirectory(fileName);
 
         FileStream? testFileStream = null;
@@ -174,7 +184,7 @@ public class DosFileManager {
             // in order to avoid an exception
             for (ushort i = 0; i < OpenFiles.Length; i++) {
                 VirtualFileBase? virtualFile = OpenFiles[i];
-                if(virtualFile is DosFile dosFile) {
+                if (virtualFile is DosFile dosFile) {
                     string? openHostFilePath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFile.Name);
                     if (string.Equals(openHostFilePath, newHostFilePath, StringComparison.OrdinalIgnoreCase)) {
                         CloseFileOrDevice(i);
@@ -441,6 +451,11 @@ public class DosFileManager {
     public ushort DiskTransferAreaAddressSegment => _diskTransferAreaAddressSegment;
 
     /// <summary>
+    /// Gets the current Disk Transfer Area structure.
+    /// </summary>
+    public DosDiskTransferArea DiskTransferArea => new(_memory, GetDiskTransferAreaPhysicalAddress());
+
+    /// <summary>
     /// Seeks to specified location in file.
     /// </summary>
     /// <param name="originOfMove">Can be one of those values: <br/>
@@ -460,7 +475,13 @@ public class DosFileManager {
             _loggerService.Verbose("Moving in file {FileMove}", file.Name);
         }
         try {
+            long currentPosition = file.Position;
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("DOS Seek handle {Handle} {Origin} offset=0x{Offset:X8} before=0x{Before:X8}",
+                    fileHandle, originOfMove, offset, currentPosition);
+            }
             long newOffset = file.Seek(offset, originOfMove);
+            _loggerService.Debug("DOS Seek handle {Handle} after=0x{After:X8}", fileHandle, newOffset);
             return DosFileOperationResult.Value32((uint)newOffset);
         } catch (IOException e) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -516,6 +537,27 @@ public class DosFileManager {
         SetOpenFile(dosIndex, device);
 
         return DosFileOperationResult.Value16(dosIndex);
+    }
+
+    /// <summary>
+    /// Opens a device at a requested DOS handle if that handle is available.
+    /// This is used during initialization to ensure standard devices occupy fixed handles.
+    /// </summary>
+    /// <param name="device">The device to open.</param>
+    /// <param name="requestedHandle">The DOS handle to open the device at.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    public DosFileOperationResult OpenDeviceAtHandle(VirtualFileBase device, ushort requestedHandle) {
+        if (!IsHandleInRange(requestedHandle)) {
+            return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
+        }
+
+        if (OpenFiles[requestedHandle] != null) {
+            // Slot already used
+            return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
+        }
+
+        SetOpenFile(requestedHandle, device);
+        return DosFileOperationResult.Value16(requestedHandle);
     }
 
     /// <summary>
@@ -669,7 +711,11 @@ public class DosFileManager {
         return null;
     }
 
-    private uint GetDiskTransferAreaPhysicalAddress() => MemoryUtils.ToPhysicalAddress(
+    /// <summary>
+    /// Gets the physical address of the Disk Transfer Area (DTA).
+    /// </summary>
+    /// <returns>The physical address computed from DTA segment and offset.</returns>
+    public uint GetDiskTransferAreaPhysicalAddress() => MemoryUtils.ToPhysicalAddress(
         _diskTransferAreaAddressSegment, _diskTransferAreaAddressOffset);
 
     private VirtualFileBase? GetOpenFile(ushort fileHandle) {
@@ -679,7 +725,7 @@ public class DosFileManager {
         return OpenFiles[fileHandle];
     }
 
-    private bool IsHandleInRange(ushort fileHandle) => fileHandle <= OpenFiles.Length;
+    private bool IsHandleInRange(ushort fileHandle) => fileHandle < OpenFiles.Length;
 
     private DosFileOperationResult NoFreeHandleError() {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
@@ -691,18 +737,48 @@ public class DosFileManager {
     internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.
         GetFullHostPathFromDosOrDefault(dosPath);
 
-    private static ushort ToDosDate(DateTime localDate) {
+    /// <summary>
+    /// Converts a DateTime to DOS packed date format.
+    /// DOS date format: bits 15-9=year-1980, bits 8-5=month, bits 4-0=day.
+    /// </summary>
+    public static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
         int month = localDate.Month;
         int dosYear = localDate.Year - 1980;
         return (ushort)((day & 0b11111) | (month & 0b1111) << 5 | (dosYear & 0b1111111) << 9);
     }
 
-    private static ushort ToDosTime(DateTime localTime) {
+    /// <summary>
+    /// Converts a DateTime to DOS packed time format.
+    /// DOS time format: bits 15-11=hour, bits 10-5=minute, bits 4-0=seconds/2.
+    /// </summary>
+    public static ushort ToDosTime(DateTime localTime) {
         int dosSeconds = localTime.Second / 2;
         int minutes = localTime.Minute;
         int hours = localTime.Hour;
         return (ushort)((dosSeconds & 0b11111) | (minutes & 0b111111) << 5 | (hours & 0b11111) << 11);
+    }
+
+    private ushort ComputeDefaultDeviceInformation(DosFile dosFile) {
+        byte driveIndex = dosFile.Drive == 0xff ? _dosDriveManager.CurrentDriveIndex : dosFile.Drive;
+        bool isRemovable = driveIndex <= 1;
+        bool isRemote = false;
+        if (_dosDriveManager.ElementAtOrDefault(driveIndex).Value is { } drive) {
+            isRemovable = drive.IsRemovable;
+            isRemote = drive.IsRemote;
+        }
+
+        ushort info = (ushort)(driveIndex & 0x3F);
+        if (!isRemovable) {
+            info |= 0x0800;
+        }
+
+        if (isRemote) {
+            info |= 0x1000;
+            info |= 0x8000;
+        }
+
+        return info;
     }
 
     private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, FileAccessMode openMode) {
@@ -746,9 +822,12 @@ public class DosFileManager {
             }
 
             if (randomAccessFile != null) {
-                SetOpenFile(dosIndex, new DosFile(dosFileName, dosIndex, randomAccessFile) {
-                    Drive = _dosDriveManager.CurrentDriveIndex
-                });
+                byte driveIndex = _dosDriveManager.CurrentDriveIndex;
+                DosFile dosFile = new(dosFileName, dosIndex, randomAccessFile) {
+                    Drive = driveIndex
+                };
+                dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
+                SetOpenFile(dosIndex, dosFile);
             }
         } catch (FileNotFoundException) {
             return FileNotFoundError(dosFileName);
@@ -937,16 +1016,18 @@ public class DosFileManager {
                 if (fileOrDevice is IVirtualDevice virtualDevice) {
                     state.DX = (ushort)(virtualDevice.Information & ~ExtDeviceBit);
                 } else if (fileOrDevice is DosFile dosFile) {
-                    byte sourceDrive = dosFile.Drive;
-                    if (sourceDrive == 0xff) {
-                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                            _loggerService.Warning("IOCTL: No drive set for file handle {FileHandle}, defaulting to C:", handle);
-                        }
-                        sourceDrive = 0x2; // defaulting to C:
+                    if (dosFile.Drive == 0xff) {
+                        _loggerService.Warning("IOCTL: No drive set for file handle {FileHandle}, defaulting to C:",
+                            handle);
+                        dosFile.Drive = 0x2;
                     }
-                    ushort dosFileInfo = (ushort)(0xffe0 | sourceDrive);
-                    state.DX = dosFileInfo;
-                    return DosFileOperationResult.Value16(dosFileInfo);
+
+                    if (dosFile.DeviceInformation == 0) {
+                        dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
+                    }
+
+                    state.DX = dosFile.DeviceInformation;
+                    return DosFileOperationResult.Value16(dosFile.DeviceInformation);
                 }
                 return DosFileOperationResult.Value16(state.DX);
 
@@ -1095,15 +1176,16 @@ public class DosFileManager {
                     return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                 }
 
-                uint dosStringBuffer = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
+                SegmentedAddress parameterBlock = new(state.DS, state.DX);
 
                 switch (state.CL) {
                     case 0x60:  // Get Device Parameters
-                        _memory.UInt8[dosStringBuffer + 1] = (byte)(drive >= 2 ? 0x05 : 0x07);  // type
-                        _memory.UInt16[dosStringBuffer + 2] = (ushort)(drive >= 2 ? 0x01 : 0x00); // attributes
-                        _memory.UInt16[dosStringBuffer + 4] = 0x0000;                            // cylinders
-                        _memory.UInt8[dosStringBuffer + 6] = 0x00;                              // media type
-                        _memory.UInt16[dosStringBuffer + 7] = 0x0200; // bytes per sector (Win3 File Mgr. uses it)
+                        DosDeviceParameterBlock dosDeviceParameterBlock = new(_memory, parameterBlock.Linear);
+                        dosDeviceParameterBlock.DeviceType = (byte)(drive >= 2 ? 0x05 : 0x07);
+                        dosDeviceParameterBlock.DeviceAttributes = (ushort)(drive >= 2 ? 0x01 : 0x00);
+                        dosDeviceParameterBlock.Cylinders = 0;
+                        dosDeviceParameterBlock.MediaType = 0;
+                        dosDeviceParameterBlock.BiosParameterBlock.BytesPerSector = 0x0200; // (Win3 File Mgr. uses it)
                         break;
 
                     case 0x46:  // Set Volume Serial Number (not yet implemented)
@@ -1115,22 +1197,11 @@ public class DosFileManager {
 
                     case 0x66:  // Get Volume Serial Number + Volume Label + FS Type
                         {
-                            // 1) Build the 11-byte volume label (padded with spaces)
-                            // 1) pull the raw label (or default), split name/ext
                             VirtualDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
-                            string driveLabel = vDrive.Label.ToUpperInvariant();
-                            
-
-                            // 3) build the 8-byte FS ID (FAT16 or FAT12 for floppies)
-                            var sbFs = new StringBuilder(8);
-                            sbFs.Append(drive < 2 ? "FAT12" : "FAT16");
-                            if (sbFs.Length < 8)
-                                sbFs.Append(' ', 8 - sbFs.Length);
-
-                            // 4) write serial, label, fs-id into emulated memory
-                            _memory.UInt32[dosStringBuffer + 2] = 0x1234; // serial
-                            _memory.SetZeroTerminatedString(dosStringBuffer + 6, driveLabel, driveLabel.Length + 1);
-                            _memory.SetZeroTerminatedString(dosStringBuffer + 0x11, sbFs.ToString(), sbFs.Length + 1);
+                            DosVolumeInfo dosVolumeInfo = new(_memory, parameterBlock.Linear);
+                            dosVolumeInfo.SerialNumber = 0x1234;
+                            dosVolumeInfo.VolumeLabel = vDrive.Label.ToUpperInvariant();
+                            dosVolumeInfo.FileSystemType = drive < 2 ? "FAT12" : "FAT16";
                             break;
                         }
 

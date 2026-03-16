@@ -21,7 +21,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         var sum = helper.Alu{{Size}}.Add(helper.ModRm.R{{Size}}, helper.ModRm.RM{{Size}});
         helper.ModRm.R{{Size}} = helper.ModRm.RM{{Size}};
         helper.ModRm.RM{{Size}} = sum;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

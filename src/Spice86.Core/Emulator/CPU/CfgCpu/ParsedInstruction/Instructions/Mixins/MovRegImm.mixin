@@ -24,7 +24,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueFieldAndRegiste
     public override void Execute(InstructionExecutionHelper helper) {
         {{Type}} value = helper.InstructionFieldValueRetriever.GetFieldValue(ValueField);
         helper.State.GeneralRegisters.UInt{{RegisterIndexer}}[RegisterIndex] = value;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

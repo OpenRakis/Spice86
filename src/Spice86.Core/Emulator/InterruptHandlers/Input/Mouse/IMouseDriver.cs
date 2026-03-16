@@ -57,7 +57,7 @@ public interface IMouseDriver : IAssemblyRoutineWriter {
     /// <summary>
     ///     Get the x, y position of the mouse as well as the button flags.
     /// </summary>
-    MouseStatus GetCurrentMouseStatus();
+    MouseStatusRecord CurrentMouseStatus { get; }
 
     /// <summary>
     ///     Process the mouse input.
@@ -154,6 +154,11 @@ public interface IMouseDriver : IAssemblyRoutineWriter {
     /// <returns>The number of times the specified mouse button was released. Returns 0 if the button has not been released or if
     /// no data is available.</returns>
     int GetButtonsReleaseCount(MouseButton button);
+
+    /// <summary>
+    ///     Resets the accumulated mickey counters. Should be called after reading mickeys via GetDeltaXMickeys/GetDeltaYMickeys.
+    /// </summary>
+    void ResetDeltaMickeys();
 
     /// <summary>
     ///     Resets the mouse driver to default values.

@@ -13,6 +13,8 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.Keyboard;
@@ -21,17 +23,16 @@ using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
 
-using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
 
-/// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui,
-    IScreenPresenter, IDisposable {
+/// <inheritdoc cref="Spice86.Shared.Interfaces.IGuiVideoPresentation" />
+public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGuiVideoPresentation,
+    IGuiMouseEvents, IGuiKeyboardEvents, IDisposable {
+    private readonly SharedMouseData _sharedMouseData;
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
-    private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
     private readonly ICyclesLimiter _cyclesLimiter;
@@ -49,6 +50,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
+    [ObservableProperty] private bool _showCyclesLimitingUI;
+
     [RelayCommand]
     private void IncreaseTargetCycles() {
         _cyclesLimiter.IncreaseCycles();
@@ -61,8 +64,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
     }
 
-    [ObservableProperty]
-    private Configuration _configuration;
+    [ObservableProperty] private Configuration _configuration;
 
     private bool _disposed;
     private bool _renderingTimerInitialized;
@@ -81,17 +83,17 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
     internal event EventHandler? CloseMainWindow;
 
-    public MainWindowViewModel(
+    public MainWindowViewModel(SharedMouseData sharedMouseData,
         ITimeMultiplier pit, IUIDispatcher uiDispatcher,
         IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
         Configuration configuration, ILoggerService loggerService,
         IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel,
         IExceptionHandler exceptionHandler, ICyclesLimiter cyclesLimiter)
         : base(uiDispatcher, textClipboard) {
+        _sharedMouseData = sharedMouseData;
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _exceptionHandler = exceptionHandler;
-        _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
         Configuration = configuration;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
@@ -102,15 +104,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
         _targetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0),
+        ShowCyclesLimitingUI = _cyclesLimiter.TargetCpuCyclesPerMs is not 0;
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1),
             DispatcherPriority.Background,
             (_, _) => RefreshMainTitleWithInstructionsPerMs());
     }
 
     private void RefreshMainTitleWithInstructionsPerMs() {
-        if (IsPaused) {
-            return;
-        }
         SetMainTitle(_performanceViewModel.InstructionsPerMillisecond);
     }
 
@@ -141,12 +141,10 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         if (_pauseHandler.IsPaused) {
             return;
         }
+
+        // Use PhysicalKey from Avalonia which represents the physical keyboard location
         KeyUp?.Invoke(this,
-            new KeyboardEventArgs((Key)e.Key,
-                false,
-                _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
+            new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: false));
     }
 
     [RelayCommand]
@@ -182,11 +180,16 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
+    /// <summary>
+    /// The aspect ratio correction factor for the current video mode.
+    /// Controls vertical scaling: 1.0 = square pixels, 1.2 = DOS VGA correction.
+    /// </summary>
     [ObservableProperty]
-    private Cursor? _cursor = Cursor.Default;
+    private double _aspectRatioCorrectionFactor = 1.0;
 
-    [ObservableProperty]
-    private WriteableBitmap? _bitmap;
+    [ObservableProperty] private Cursor? _cursor = Cursor.Default;
+
+    [ObservableProperty] private WriteableBitmap? _bitmap;
 
     internal event Action? InvalidateBitmap;
 
@@ -194,19 +197,17 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         if (_pauseHandler.IsPaused) {
             return;
         }
+
+        // Use PhysicalKey from Avalonia which represents the physical keyboard location
         KeyDown?.Invoke(this,
-            new KeyboardEventArgs((Key)e.Key,
-                true,
-                _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
+            new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: true));
     }
 
-    [ObservableProperty]
-    private string _statusMessage = "Emulator: not started.";
+    [ObservableProperty] private string _statusMessage = "Emulator: not started.";
 
-    [ObservableProperty]
-    private string _asmOverrideStatus = "ASM Overrides: not used.";
+    [ObservableProperty] private string _asmOverrideStatus = "ASM Overrides: not used.";
+
+    [ObservableProperty] private string _emulatorMouseCursorInfo = "?";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
@@ -220,20 +221,24 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double MouseX { get; set; }
 
     public double MouseY { get; set; }
-    
+
     public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
         if (_pauseHandler.IsPaused) {
             return;
         }
-        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
+
+        Avalonia.Input.MouseButton mouseButton =
+            @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
         MouseButtonDown?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, true));
     }
 
     public void OnMouseButtonUp(PointerReleasedEventArgs @event, Image image) {
-        if(_pauseHandler.IsPaused) {
+        if (_pauseHandler.IsPaused) {
             return;
         }
-        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
+
+        Avalonia.Input.MouseButton mouseButton =
+            @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
         MouseButtonUp?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, false));
     }
 
@@ -241,11 +246,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         if (image.Source is null || _pauseHandler.IsPaused) {
             return;
         }
+
         MouseX = @event.GetPosition(image).X / image.Source.Size.Width;
         MouseY = @event.GetPosition(image).Y / image.Source.Size.Height;
         MouseMoved?.Invoke(this, new MouseMoveEventArgs(MouseX, MouseY));
+        UpdateShownEmulatorMouseCursorPosition();
     }
-    
+
     public void SetResolution(int width, int height) {
         _uiDispatcher.Post(() => {
             _isSettingResolution = true;
@@ -256,19 +263,41 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 if (_disposed) {
                     return;
                 }
+
                 _drawingSemaphoreSlim?.Wait();
                 try {
                     Bitmap?.Dispose();
-                    Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
+                    Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888,
+                        AlphaFormat.Opaque);
                 } finally {
                     if (!_disposed) {
                         _drawingSemaphoreSlim?.Release();
                     }
                 }
             }
+
             _isSettingResolution = false;
+            UpdateShownEmulatorMouseCursorPosition();
             InitializeRenderingTimer();
         }, DispatcherPriority.Background);
+    }
+
+    /// <summary>
+    /// Called when the emulated video mode changes.
+    /// Updates the aspect ratio correction factor for proper display scaling.
+    /// </summary>
+    public void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
+        _uiDispatcher.Post(() => {
+            AspectRatioCorrectionFactor = e.AspectRatioCorrectionFactor;
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug(
+                    "Video mode changed to {Width}x{Height}, aspect ratio correction factor: {Factor}",
+                    e.NewMode.Width,
+                    e.NewMode.Height,
+                    e.AspectRatioCorrectionFactor);
+            }
+        });
     }
 
     public void HideMouseCursor() => _uiDispatcher.Post(() => ShowCursor = false);
@@ -293,8 +322,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}";
     }
 
-    [ObservableProperty]
-    private string? _mainTitle;
+    [ObservableProperty] private string? _mainTitle;
 
     private double? _timeMultiplier = 1;
 
@@ -323,6 +351,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         if (_renderingTimerInitialized) {
             return;
         }
+
         _renderingTimerInitialized = true;
         _drawTimer.Elapsed += (_, _) => DrawScreen();
         _drawTimer.Start();
@@ -333,6 +362,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             _isAppClosing || Bitmap is null || RenderScreen is null) {
             return;
         }
+
         _drawingSemaphoreSlim?.Wait();
         try {
             using ILockedFramebuffer pixels = Bitmap.Lock();
@@ -351,10 +381,11 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             string.IsNullOrWhiteSpace(Configuration.CDrive)) {
             return;
         }
+
         StatusMessage = "Emulator starting...";
         AsmOverrideStatus = Configuration switch {
-            {UseCodeOverrideOption: true, OverrideSupplier: not null} => "ASM code overrides: enabled.",
-            {UseCodeOverride: false, OverrideSupplier: not null} =>
+            { UseCodeOverrideOption: true, OverrideSupplier: not null } => "ASM code overrides: enabled.",
+            { UseCodeOverride: false, OverrideSupplier: not null } =>
                 "ASM code overrides: only functions names will be referenced.",
             _ => "ASM code overrides: none."
         };
@@ -370,7 +401,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     internal event Action? Disposing;
-    
+
     private void Dispose(bool disposing) {
         if (!_disposed) {
             _disposed = true;
@@ -402,13 +433,18 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
-    private void OnResumed() => _uiDispatcher.Post(() => IsPaused = false, DispatcherPriority.Background);
+    private void OnResumed() => _uiDispatcher.Post(() => {
+        IsPaused = false;
+        RefreshMainTitleWithInstructionsPerMs();
+    }, DispatcherPriority.Background);
 
-    private void OnPaused() => _uiDispatcher.Post(() => IsPaused = true, DispatcherPriority.Background);
+    private void OnPaused() => _uiDispatcher.Post(() => {
+        IsPaused = true;
+        RefreshMainTitleWithInstructionsPerMs();
+    }, DispatcherPriority.Background);
 
-    [ObservableProperty]
-    private string _currentLogLevel = "";
-    
+    [ObservableProperty] private string _currentLogLevel = "";
+
     private void SetLogLevel(string logLevel) {
         if (logLevel == "Silent") {
             CurrentLogLevel = logLevel;
@@ -446,16 +482,23 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Emulation exited. Closing main window...");
             }
+
             _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
         } catch (Exception e) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "An error occurred during execution");
             }
+
             OnEmulatorErrorOccured(e);
         } finally {
             _uiDispatcher.Post(() => IsEmulatorRunning = false);
             _uiDispatcher.Post(() => StatusMessage = "Emulator: stopped.");
             _uiDispatcher.Post(() => AsmOverrideStatus = "");
         }
+    }
+
+    private void UpdateShownEmulatorMouseCursorPosition() {
+        MouseStatusRecord mouseDeviceStatus = _sharedMouseData.CurrentMouseStatus;
+        EmulatorMouseCursorInfo = $"X: {mouseDeviceStatus.X} Y: {mouseDeviceStatus.Y}";
     }
 }

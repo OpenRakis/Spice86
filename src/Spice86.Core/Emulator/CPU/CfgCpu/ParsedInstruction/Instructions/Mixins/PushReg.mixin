@@ -19,7 +19,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
 
     public override void Execute(InstructionExecutionHelper helper) {
         helper.Stack.Push{{Size}}(helper.{{ if IsSegment }}SegmentRegisters{{ else }}UInt{{Size}}Registers{{ end }}[RegisterIndex]);
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

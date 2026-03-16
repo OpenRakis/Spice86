@@ -20,7 +20,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<{{ImmType
     
     public override void Execute(InstructionExecutionHelper helper) {
         helper.Stack.Push{{Size}}(helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

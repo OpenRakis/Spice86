@@ -1,7 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 
 /// <summary>
-/// Represents the 8 bit Overflow register.
+/// Represents the 8 bit Overflow register, which is used to store additional bits that wouldn't fit
+/// into other CRT Controller registers.
 /// </summary>
 public class OverflowRegister : Register8 {
     public int VerticalTotal89 => (GetBit(0) ? 1 << 8 : 0) | (GetBit(5) ? 1 << 9 : 0);

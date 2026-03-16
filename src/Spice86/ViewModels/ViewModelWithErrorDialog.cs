@@ -24,8 +24,15 @@ public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
 
     [RelayCommand]
     public void ShowInternalDebugger(object? commandParameter) {
-        if (commandParameter is ShowInternalDebuggerBehavior showInternalDebuggerBehavior) {
-            showInternalDebuggerBehavior.ShowInternalDebugger();
+        if (commandParameter is ShowAdditionnalWindowBehavior showAdditionnalWindowBehavior) {
+            showAdditionnalWindowBehavior.ShowInternalDebugger();
+        }
+    }
+
+    [RelayCommand]
+    public void ShowAudioMixer(object? commandParameter) {
+        if (commandParameter is ShowAdditionnalWindowBehavior showAdditionnalWindowBehavior) {
+            showAdditionnalWindowBehavior.ShowAudioMixer();
         }
     }
 

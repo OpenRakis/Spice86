@@ -30,7 +30,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
             helper.State.InterruptShadowing = true;
         }
 {{ end }}        
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

@@ -172,6 +172,12 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     // Padding at 0x6B
 
     /// <summary>
+    ///     Mirrors BIOS data area offset 0x6B (BIOS_LAST_UNEXPECTED_IRQ).
+    ///     Stores the bitmask of the last unexpected IRQ serviced by the BIOS.
+    /// </summary>
+    public byte LastUnexpectedIrq { get => UInt8[0x6B]; set => UInt8[0x6B] = value; }
+
+    /// <summary>
     /// Gets or sets the current value of the Int1A counter.
     /// </summary>
     public uint TimerCounter { get => UInt32[0x6C]; set => UInt32[0x6C] = value; }

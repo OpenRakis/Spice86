@@ -24,7 +24,7 @@ public class Aam : InstructionWithValueField<byte> {
         helper.State.AH = (byte)(v1 / v2);
         helper.State.AL = result;
         helper.Alu8.UpdateFlags(result);
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

@@ -2,9 +2,6 @@
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 
-public abstract class ValueNode(DataType dataType) : IVisitableAstNode {
-
-    public DataType DataType { get; } = dataType;
-    
+public abstract record ValueNode(DataType DataType) : IVisitableAstNode {
     public abstract T Accept<T>(IAstVisitor<T> astVisitor);
 }

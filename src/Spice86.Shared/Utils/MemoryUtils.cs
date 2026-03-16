@@ -3,6 +3,7 @@ using Spice86.Shared.Emulator.Memory;
 
 
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Utils to get and set values in an array. Words and DWords are considered to be stored
@@ -15,6 +16,7 @@ public static class MemoryUtils {
     /// <param name="segment">The segment value.</param>
     /// <param name="offset">The offset value.</param>
     /// <returns>The physical address that corresponds to the specified segment and offset.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint ToPhysicalAddress(ushort segment, ushort offset) {
         return (uint)(segment << 4) + offset;
     }
@@ -24,6 +26,7 @@ public static class MemoryUtils {
     /// </summary>
     /// <param name="physicalAddress">The physical address to convert.</param>
     /// <returns>The segment corresponding to the physical address.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort ToSegment(uint physicalAddress) {
         return (ushort)(physicalAddress >> 4);
     }
@@ -33,6 +36,7 @@ public static class MemoryUtils {
     /// </summary>
     /// <param name="address">The 32-bit address.</param>
     /// <returns>The high 16 bits of the address.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort GetHighWord(uint address) {
         return (ushort)(address >> 16);
     }
@@ -42,6 +46,7 @@ public static class MemoryUtils {
     /// </summary>
     /// <param name="address">The 32-bit address.</param>
     /// <returns>The low 16 bits of the address.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort GetLowWord(uint address) {
         return (ushort)(address & 0xFFFF);
     }

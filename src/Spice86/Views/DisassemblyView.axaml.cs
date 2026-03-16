@@ -38,6 +38,7 @@ public partial class DisassemblyView : UserControl {
 
         // Subscribe to the new view model
         _viewModel = DataContext as IDisassemblyViewModel;
+        
         if (_viewModel != null) {
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
@@ -64,6 +65,19 @@ public partial class DisassemblyView : UserControl {
         }
         _viewModel.ToggleBreakpointCommand.Execute(debuggerLine);
         e.Handled = true;
+    }
+
+    private void OnBranchTargetClicked(object? sender, TappedEventArgs e) {
+        if (sender is Control control &&
+            control.DataContext is DebuggerLineViewModel debuggerLine &&
+            debuggerLine.BranchTarget != null &&
+            _viewModel != null) {
+            object branchTarget = debuggerLine.BranchTarget;
+            if (_viewModel.GoToAddressCommand.CanExecute(branchTarget)) {
+                _viewModel.GoToAddressCommand.Execute(branchTarget);
+                e.Handled = true;
+            }
+        }
     }
 
     /// <summary>

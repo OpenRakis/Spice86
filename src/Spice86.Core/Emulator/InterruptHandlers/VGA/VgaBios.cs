@@ -32,12 +32,12 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack,  State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService)
+    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
         _logger = loggerService;
-        if(_logger.IsEnabled(LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Initializing VGA BIOS");
         }
         FillDispatchTable();
@@ -73,27 +73,27 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     public void GetSetDisplayCombinationCode() {
         switch (State.AL) {
             case 0x00: {
-                State.AL = 0x1A; // Function supported
-                State.BL = _biosDataArea.DisplayCombinationCode; // Primary display
-                State.BH = 0x00; // No secondary display
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 1A {MethodName} - Get: DCC 0x{Dcc:X2}",
-                        nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    State.AL = 0x1A; // Function supported
+                    State.BL = _biosDataArea.DisplayCombinationCode; // Primary display
+                    State.BH = 0x00; // No secondary display
+                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Get: DCC 0x{Dcc:X2}",
+                            nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    }
+                    break;
                 }
-                break;
-            }
             case 0x01: {
-                State.AL = 0x1A; // Function supported
-                _biosDataArea.DisplayCombinationCode = State.BL;
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 1A {MethodName} - Set: DCC 0x{Dcc:X2}",
-                        nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    State.AL = 0x1A; // Function supported
+                    _biosDataArea.DisplayCombinationCode = State.BL;
+                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Set: DCC 0x{Dcc:X2}",
+                            nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    }
+                    break;
                 }
-                break;
-            }
             default: {
-                throw new NotSupportedException($"AL=0x{State.AL:X2} is not a valid subFunction for INT 10 1A");
-            }
+                    throw new NotSupportedException($"AL=0x{State.AL:X2} is not a valid subFunction for INT 10 1A");
+                }
         }
     }
 
@@ -305,23 +305,23 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <inheritdoc />
     public void SetColorPaletteOrBackGroundColor() {
-        switch (State.BH) {
-            case 0x00:
-                _vgaFunctions.SetBorderColor(State.BL);
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set border color {Color}",
-                        nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
-                }
-                break;
-            case 0x01:
-                _vgaFunctions.SetPalette(State.BL);
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set palette id {PaletteId}",
-                        nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
-                }
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(State.BH), State.BH, $"INT 10: {nameof(SetColorPaletteOrBackGroundColor)} Invalid subFunction 0x{State.BH:X2}");
+        if (State.BH == 0x00) {
+            _vgaFunctions.SetBorderColor(State.BL);
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set border color {Color}",
+                    nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
+            }
+        } else {
+            // Most interrupt manuals say that BH can only be 0 and 1. De facto, any nonzero
+            // value in BH should be handled as 1, because this was the behaviour of the IBM
+            // BIOS:
+            // https://github.com/gawlas/IBM-PC-BIOS/blob/master/IBM%20PC/PCBIOSV3.ASM#L3814
+
+            _vgaFunctions.SetPalette(State.BL);
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set palette id {PaletteId}",
+                    nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
+            }
         }
     }
 
@@ -477,8 +477,23 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} running INT 10 operation 0x{Operation:X2}", nameof(VgaBios), operation);
         }
-        if (!HasRunnable(operation) && LoggerService.IsEnabled(LogEventLevel.Error)) {
-            LoggerService.Error("INT10H: Unrecognized VgaBios function number in AH register: {OperationNumber}", State.AH);
+
+        const byte MshercGetVideoAdapterTypeAndMode = 0xEF;
+        if (operation == MshercGetVideoAdapterTypeAndMode) {
+            // operation installed by Microsoft MSHERC.COM/QBHERC.COM-TSRs (Hercules compatibility)
+            // Ralph Browns interrupt list: https://mirror.math.princeton.edu/pub/oldlinux/Linux.old/docs/interrupts/int-html/rb-0549.htm
+            // Microsoft KB Archive/69537: https://www.betaarchive.com/wiki/index.php/Microsoft_KB_Archive/69537
+            // dosbox svn/staging just ignoring the interrupt
+            // operation is used by Microsoft Quick/PDS Basic library
+            // Gunboat ~1990 needs it
+            if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                _logger.Warning("INT10H: Ignored VgaBios function number in AH register: {OperationNumber}", State.AH);
+            }
+            return;
+        }
+
+        if (!HasRunnable(operation) && _logger.IsEnabled(LogEventLevel.Error)) {
+            _logger.Error("INT10H: Unrecognized VgaBios function number in AH register: {OperationNumber}", State.AH);
         }
         Run(operation);
     }
@@ -612,7 +627,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     }
 
     public void VesaFunctions() {
-        if(_logger.IsEnabled(LogEventLevel.Warning)) {
+        if (_logger.IsEnabled(LogEventLevel.Warning)) {
             // This can be valid, video cards came to the scene before VESA was a standard.
             // It seems some games can expect that (eg. Rules of Engagement 2)
             //TODO: Implement at least VESA 1.2
@@ -625,56 +640,59 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         ushort segment = State.ES;
         ushort offset = State.DI;
 
-        switch(State.BX) {
+        switch (State.BX) {
             case 0x0:
-                // Indicate success.
                 State.AL = 0x1B;
                 break;
             default:
                 if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning("{ClassName} INT 10 1B: {MethodName} - Unsopprted subFunction 0x{SubFunction:X2}",
+                    _logger.Warning("{ClassName} INT 10 1B: {MethodName} - Unsupported subFunction 0x{SubFunction:X2}",
                         nameof(VgaBios), nameof(GetFunctionalityInfo), State.BX);
                 }
                 State.AL = 0;
                 break;
-
         }
+
+        VgaMode currentMode = _vgaFunctions.GetCurrentMode();
+        ushort cursorType = _biosDataArea.CursorType;
+        byte characterMapRegister = _vgaFunctions.GetCharacterMapSelectRegister();
+        (byte primaryCharacterTable, byte secondaryCharacterTable) = DecodeCharacterMapSelections(characterMapRegister);
 
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
         var info = new VideoFunctionalityInfo(Memory, address) {
             SftAddress = MemoryMap.StaticFunctionalityTableSegment << 16,
             VideoMode = _biosDataArea.VideoMode,
             ScreenColumns = _biosDataArea.ScreenColumns,
-            VideoBufferLength = MemoryMap.VideoBiosSegment - MemoryMap.GraphicVideoMemorySegment, // TODO: real value
-            VideoBufferAddress = MemoryMap.GraphicVideoMemorySegment, // TODO: real value
-            CursorEndLine = 0, // TODO: figure out what this is
-            CursorStartLine = 0, // TODO: figure out what this is
-            ActiveDisplayPage = (byte)0, // TODO: figure out what this is
+            VideoBufferLength = _biosDataArea.VideoPageSize,
+            VideoBufferAddress = _biosDataArea.VideoPageStart,
+            CursorEndLine = ExtractCursorEndLine(cursorType),
+            CursorStartLine = ExtractCursorStartLine(cursorType),
+            ActiveDisplayPage = _biosDataArea.CurrentVideoPage,
             CrtControllerBaseAddress = _biosDataArea.CrtControllerBaseAddress,
-            CurrentRegister3X8Value = 0, // Unused in VGA
-            CurrentRegister3X9Value = 0, // Unused in VGA
+            CurrentRegister3X8Value = 0,
+            CurrentRegister3X9Value = 0,
             ScreenRows = _biosDataArea.ScreenRows,
-            CharacterMatrixHeight = (ushort)_vgaFunctions.GetCurrentMode().CharacterHeight,
+            CharacterMatrixHeight = _biosDataArea.CharacterHeight,
             ActiveDisplayCombinationCode = _biosDataArea.DisplayCombinationCode,
-            AlternateDisplayCombinationCode = 0x00, // No secondary display
-            NumberOfColorsSupported = (ushort)(_vgaFunctions.GetColorMode() ? 256 : 1), //TODO: Expand on this
-            NumberOfPages = 4,// TODO: figure out what this is
-            NumberOfActiveScanLines = 0, // TODO: figure out what this is
-            TextCharacterTableUsed = 0, // TODO: figure out what this is
-            TextCharacterTableUsed2 = 0, // TODO: figure out what this is
-            OtherStateInformation = 0b00000001,
-            VideoRamAvailable = 3, // 0=64K, 1=128K, 2=192K, 3=256K
-            SaveAreaStatus = 0b00000000
+            AlternateDisplayCombinationCode = 0x00,
+            NumberOfColorsSupported = CalculateColorCount(currentMode),
+            NumberOfPages = CalculatePageCount(currentMode),
+            NumberOfActiveScanLines = CalculateScanLineCode(currentMode),
+            TextCharacterTableUsed = primaryCharacterTable,
+            TextCharacterTableUsed2 = secondaryCharacterTable,
+            OtherStateInformation = GetOtherStateInformation(currentMode),
+            VideoRamAvailable = 3,
+            SaveAreaStatus = 0
         };
+
         for (byte i = 0; i < 8; i++) {
-            // TODO: fix
             CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(i);
             info.SetCursorPosition(i, (byte)cursorPosition.X, (byte)cursorPosition.Y);
         }
 
         if (_logger.IsEnabled(LogEventLevel.Warning)) {
-            _logger.Warning("{ClassName} INT 10 1B: {MethodName} - experimental! {@0}", 
-                nameof(VgaBios), nameof(GetFunctionalityInfo), info);
+            _logger.Warning("{ClassName} INT 10 1B: {MethodName} - experimental! {@Summary}",
+                nameof(VgaBios), nameof(GetFunctionalityInfo), info.CreateFunctionalityInfoLogSnapshot());
         }
         return info;
     }
@@ -685,5 +703,106 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     private void InitializeStaticFunctionalityTable() {
         Memory.UInt32[MemoryMap.StaticFunctionalityTableSegment, 0] = 0x000FFFFF; // supports all video modes
         Memory.UInt8[MemoryMap.StaticFunctionalityTableSegment, 0x07] = 0x07; // supports all scanLines
+    }
+
+    private static byte ExtractCursorStartLine(ushort cursorType) {
+        return (byte)((cursorType >> 8) & 0x3F);
+    }
+
+    private static byte ExtractCursorEndLine(ushort cursorType) {
+        return (byte)(cursorType & 0x1F);
+    }
+
+    private static (byte Primary, byte Secondary) DecodeCharacterMapSelections(byte registerValue) {
+        byte primary = (byte)((((registerValue >> 5) & 0x01) << 2) | (registerValue & 0x03));
+        byte secondary = (byte)((((registerValue >> 4) & 0x01) << 2) | ((registerValue >> 2) & 0x03));
+        return (primary, secondary);
+    }
+
+    private static byte GetOtherStateInformation(VgaMode mode) {
+        return mode.MemoryModel == MemoryModel.Text ? (byte)0x21 : (byte)0x01;
+    }
+
+    private static ushort CalculateColorCount(VgaMode mode) {
+        return mode.MemoryModel switch {
+            MemoryModel.Text => (ushort)(mode.StartSegment == VgaConstants.MonochromeTextSegment ? 1 : 16),
+            MemoryModel.Cga => CalculateColorCountFromBits(mode.BitsPerPixel),
+            MemoryModel.Planar => mode.BitsPerPixel switch {
+                4 => 16,
+                1 => 2,
+                _ => CalculateColorCountFromBits(mode.BitsPerPixel)
+            },
+            _ => CalculateColorCountFromBits(mode.BitsPerPixel)
+        };
+    }
+
+    private static ushort CalculateColorCountFromBits(byte bitsPerPixel) {
+        int bits = bitsPerPixel <= 0 ? 1 : bitsPerPixel;
+        return (ushort)(1 << bits);
+    }
+
+    private byte CalculatePageCount(VgaMode mode) {
+        return mode.MemoryModel switch {
+            MemoryModel.Text => CalculateTextPageCount(),
+            MemoryModel.Cga => CalculateGraphicsPageCount(16 * 1024, CalculatePackedPageSize(mode)),
+            MemoryModel.Planar => CalculateGraphicsPageCount(64 * 1024, CalculatePlanarPageSize(mode)),
+            _ => CalculateGraphicsPageCount(64 * 1024, CalculatePackedPageSize(mode))
+        };
+    }
+
+    private byte CalculateTextPageCount() {
+        int pageSize = _biosDataArea.VideoPageSize;
+        if (pageSize <= 0) {
+            return 1;
+        }
+
+        int count = 32 * 1024 / pageSize;
+        count = count switch {
+            0 => 1,
+            > 8 => 8,
+            _ => count
+        };
+        return (byte)count;
+    }
+
+    private static byte CalculateGraphicsPageCount(int windowSize, int pageSize) {
+        if (pageSize <= 0) {
+            pageSize = 1;
+        }
+
+        int count = windowSize / pageSize;
+        if (count == 0) {
+            count = 1;
+        }
+
+        return (byte)count;
+    }
+
+    private static int CalculatePlanarPageSize(VgaMode mode) {
+        int bytesPerPlane = mode.Width * mode.Height / 8;
+        return bytesPerPlane <= 0 ? 1 : bytesPerPlane;
+    }
+
+    private static int CalculatePackedPageSize(VgaMode mode) {
+        int bitsPerPixel = mode.BitsPerPixel <= 0 ? 1 : mode.BitsPerPixel;
+        int bytes = mode.Width * mode.Height * bitsPerPixel / 8;
+        return bytes <= 0 ? 1 : bytes;
+    }
+
+    private byte CalculateScanLineCode(VgaMode mode) {
+        int scanLines;
+        if (mode.MemoryModel == MemoryModel.Text) {
+            int rows = _biosDataArea.ScreenRows + 1;
+            scanLines = rows * _biosDataArea.CharacterHeight;
+        } else {
+            scanLines = mode.Height;
+        }
+
+        return scanLines switch {
+            >= 480 => 3,
+            >= 400 => 2,
+            >= 350 => 1,
+            _ => 0
+        };
     }
 }

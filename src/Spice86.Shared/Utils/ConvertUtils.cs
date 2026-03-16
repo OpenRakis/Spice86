@@ -59,6 +59,29 @@ public static partial class ConvertUtils {
         return (byte)(value & 0xFF);
     }
     
+    
+    /// <summary>
+    /// Sign‑extends an unsigned integer where the sign bit is at the given index.
+    /// 
+    /// Example: if signBit = 5, bit 5 is treated as the sign.
+    /// </summary>
+    public static ulong SignExtend(ulong value, int signBit) {
+        // Create a mask with a 1 at the sign-bit position.
+        // Example: signBit = 5 → mask = 0b100000
+        ulong mask = 1UL << signBit;
+
+        // Two's‑complement sign‑extension trick:
+        //
+        // (value ^ mask) flips the sign bit.
+        // Subtracting mask then:
+        //   - leaves the value unchanged if the sign bit was 0
+        //   - propagates 1s upward if the sign bit was 1 (sign extension)
+        //
+        // This works because subtracting a power of two from a number
+        // where that bit is set causes a borrow that fills all higher bits with 1.
+        return (value ^ mask) - mask;
+    }
+    
     /// <summary>
     /// Returns the least significant byte of a 32-bit unsigned integer.
     /// </summary>

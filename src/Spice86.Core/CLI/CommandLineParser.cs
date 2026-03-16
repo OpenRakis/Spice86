@@ -10,6 +10,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 /// <summary>
 /// Parses the command line options to create a <see cref="Configuration"/>.
@@ -32,10 +33,13 @@ public class CommandLineParser {
             initialConfig.Exe = ParseExePath(initialConfig.Exe);
             initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
-            initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
+            initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClassName);
             initialConfig.ExeArgs = exeArgs;
             if (initialConfig.Cycles != null) {
                 initialConfig.InstructionsPerSecond = null;
+            }
+            if (initialConfig.CpuHeavyLogDumpFile != null) {
+                initialConfig.CpuHeavyLog = true;
             }
             return initialConfig;
         }, error => null);
@@ -72,13 +76,12 @@ public class CommandLineParser {
         return ($"-{attribute[0].ShortName}", $"--{attribute[0].LongName}");
     }
 
-    private static string? ParseExePath(string? exePath) {
-        string? unixPathValue = exePath?.Replace('\\', '/');
+    private static string ParseExePath(string exePath) {
+        string unixPathValue = exePath.Replace('\\', '/');
         return File.Exists(exePath) ? new FileInfo(exePath).FullName : unixPathValue;
     }
 
-    private static IOverrideSupplier? ParseFunctionInformationSupplierClassName(Configuration configuration) {
-        string? supplierClassName = configuration.OverrideSupplierClassName;
+    public static IOverrideSupplier? ParseFunctionInformationSupplierClassName(string? supplierClassName) {
         if (supplierClassName == null) {
             return null;
         }
@@ -105,4 +108,50 @@ public class CommandLineParser {
             throw new UnrecoverableException($"Could not instantiate provided class {supplierClassName}", exception);
         }
     }
+
+    public static long ParseHexDecBinInt64(string input) {
+        if (input is null)
+            throw new ArgumentNullException(nameof(input));
+
+        // Local regex: validates overall shape, no whitespace allowed
+        Regex numberRegex = new Regex(
+            @"^(0[xX][0-9a-fA-F]+|0[bB][01]+|[-+]?[0-9]+)$",
+            RegexOptions.CultureInvariant);
+
+        if (!numberRegex.IsMatch(input))
+            throw new FormatException("Invalid number format.");
+
+        int pos = 0;
+
+        // Optional sign
+        if (input[0] == '+' || input[0] == '-') {
+            pos = 1;
+        }
+
+        ReadOnlySpan<char> s = input.AsSpan(pos);
+
+        // Hexadecimal: 0x...
+        if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) {
+            return Convert.ToInt64(s.ToString(), 16);
+        }
+
+        // Binary: 0b...
+        if (s.StartsWith("0b", StringComparison.OrdinalIgnoreCase)) {
+            return Convert.ToInt64(input[2..], 2);
+        }
+
+        // Decimal
+        return Convert.ToInt64(input, 10);
+    }
+
+    public static ushort ParseHexDecBinUInt16(string input) {
+        long value = ParseHexDecBinInt64(input);
+
+        if ((value < UInt16.MinValue) || (value > UInt16.MaxValue)) {
+            throw new FormatException("value does not fit in UInt16");
+        }
+
+        return (ushort)value;
+    }
+
 }

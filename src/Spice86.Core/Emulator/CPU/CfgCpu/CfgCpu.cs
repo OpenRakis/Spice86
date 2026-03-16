@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
+using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -11,28 +12,32 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
+public class CfgCpu : IFunctionHandlerProvider, IClearable {
     private readonly ILoggerService _loggerService;
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly State _state;
     private readonly DualPic _dualPic;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly InstructionReplacerRegistry _replacerRegistry = new();
+    private readonly CpuHeavyLogger? _cpuHeavyLogger;
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
-        DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager, FunctionCatalogue functionCatalogue, 
-        bool useCodeOverride, ILoggerService loggerService) {
+        DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
+        FunctionCatalogue functionCatalogue,
+        bool useCodeOverride, bool failOnInvalidOpcode, ILoggerService loggerService, CpuHeavyLogger? cpuHeavyLogger = null) {
         _loggerService = loggerService;
         _state = state;
         _dualPic = dualPic;
-        
+        _cpuHeavyLogger = cpuHeavyLogger;
+
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService);
-        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager.InterruptBreakPoints, _executionContextManager, loggerService);
+        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, loggerService);
     }
     
     /// <summary>
@@ -51,13 +56,19 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     public bool IsInitialExecutionContext => ExecutionContextManager.CurrentExecutionContext.Depth == 0;
     private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
     
+    public ICfgNode ToExecute() {
+        return CfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
+    }
+
     /// <inheritdoc />
     public void ExecuteNext() {
-        ICfgNode toExecute = CfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
+        ICfgNode toExecute = ToExecute();
 
         // Execute the node
         try {
             _loggerService.LoggerPropertyBag.CsIp = toExecute.Address;
+            // Log instruction before execution if CPU heavy logging is enabled
+            _cpuHeavyLogger?.LogInstruction(toExecute);
             toExecute.Execute(_instructionExecutionHelper);
         } catch (CpuException e) {
             if(toExecute is CfgInstruction cfgInstruction) {
@@ -65,7 +76,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
             }
         }
 
-        ICfgNode? nextToExecute = _instructionExecutionHelper.NextNode;
+        ICfgNode? nextToExecute = toExecute.GetNextSuccessor(_instructionExecutionHelper);
         
         _state.IncCycles();
 
@@ -99,7 +110,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         // Before any external interrupt has a chance to execute, check if we landed in a place where context should be switched.
         if (toExecute.CanCauseContextRestore) {
             // We only attempt to restore contexts after IRET
-            // Otherwise, we may hit via regular flow an instruction that is at the return address of an existing IRET and that is waiting to be restored, and restore it. 
+            // Otherwise, we may hit via regular flow an instruction that is at the return address of an existing IRET and that is waiting to be restored, and restore it.
             _executionContextManager.RestoreExecutionContextIfNeeded(_state.IpSegmentedAddress);
         }
 
@@ -122,5 +133,11 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
 
         _executionContextManager.SignalNewExecutionContext(target, expectedReturn);
         _executionContextManager.CurrentExecutionContext.FunctionHandler.Call(CallType.EXTERNAL_INTERRUPT, _state.IpSegmentedAddress, expectedReturn, null);
+    }
+
+    /// <inheritdoc />
+    public void Clear() {
+        CfgNodeFeeder.InstructionsFeeder.Clear();
+        _executionContextManager.Clear();
     }
 }

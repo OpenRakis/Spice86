@@ -10,13 +10,16 @@ public abstract class InstructionWithSegmentRegisterIndexAndOffsetField<T>: CfgI
         InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes,
         int segmentRegisterIndex,
+        int defaultSegmentRegisterIndex,
         InstructionField<T> offsetField,
         int? maxSuccessorsCount) : base(address, opcodeField, prefixes, maxSuccessorsCount) {
         SegmentRegisterIndex = segmentRegisterIndex;
+        DefaultSegmentRegisterIndex = defaultSegmentRegisterIndex;
         OffsetField = offsetField;
         AddField(offsetField);
     }
     
     public int SegmentRegisterIndex { get; }
+    public int DefaultSegmentRegisterIndex { get; }
     public InstructionField<T> OffsetField { get; }
 }

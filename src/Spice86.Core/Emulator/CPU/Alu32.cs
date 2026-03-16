@@ -5,14 +5,11 @@ using Spice86.Core.Emulator.CPU.Exceptions;
 /// <summary>
 /// Arithmetic Logic Unit code for 32bits operations.
 /// </summary>
-public class Alu32 : Alu<uint, int, ulong, long>  {
+public class Alu32(State state) : Alu<uint, int, ulong, long>(state) {
 
     private const uint BeforeMsbMask = 0x40000000;
 
     private const uint MsbMask = 0x80000000;
-
-    public Alu32(State state) : base(state) {
-    }
 
     public override uint Add(uint value1, uint value2, bool useCarry) {
         int carry = useCarry && _state.CarryFlag ? 1 : 0;
@@ -75,9 +72,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         bool upperHalfNonZero = (res & 0xFFFFFFFF00000000) != 0;
         _state.OverflowFlag = upperHalfNonZero;
         _state.CarryFlag = upperHalfNonZero;
-        SetZeroFlag(res);
-        SetParityFlag(res);
-        SetSignFlag((uint)res);
+        _state.ZeroFlag = (res & 0xFFFFFFFF) == 0;
         return res;
     }
 
@@ -97,17 +92,18 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
             return value;
         }
 
+        bool oldCarry = _state.CarryFlag;
         uint carry = (value >> (32 - count)) & 0x1;
         uint res = value << count;
         uint mask = (1u << (count - 1)) - 1u;
         res |= (value >> (33 - count)) & mask;
-        if (_state.CarryFlag) {
+        if (oldCarry) {
             res |= 1u << (count - 1);
         }
 
         _state.CarryFlag = carry != 0;
         bool msb = (res & MsbMask) != 0;
-        _state.OverflowFlag = msb ^ _state.CarryFlag;
+        _state.OverflowFlag = _state.CarryFlag ^ msb;
         return res;
     }
 
@@ -117,11 +113,12 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
             return value;
         }
 
+        bool oldCarry = _state.CarryFlag;
         uint carry = (value >> (count - 1)) & 0x1;
         uint mask = (1u << (32 - count)) - 1u;
         uint res = (value >> count) & mask;
         res |= value << (33 - count);
-        if (_state.CarryFlag) {
+        if (oldCarry) {
             res |= 1u << (32 - count);
         }
 
@@ -141,12 +138,13 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         res |= value >> 32 - count;
         _state.CarryFlag = carry != 0;
         bool msb = (res & MsbMask) != 0;
-        _state.OverflowFlag = msb ^ _state.CarryFlag;
+        bool lsb = (res & 0x01) != 0;
+        _state.OverflowFlag = msb ^ lsb;
         return res;
     }
 
     public override uint Ror(uint value, int count) {
-        count = (count & ShiftCountMask) % 16;
+        count = (count & ShiftCountMask) % 32;
         if (count == 0) {
             return value;
         }
@@ -184,8 +182,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         _state.CarryFlag = msbBefore != 0;
         uint res = value << count;
         UpdateFlags(res);
-        uint msb = res & MsbMask;
-        _state.OverflowFlag = (msb ^ msbBefore) != 0;
+        _state.OverflowFlag = ((res ^ value) & MsbMask) != 0;
         return res;
     }
 
@@ -225,11 +222,11 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
             return value;
         }
 
-        uint msb = value & MsbMask;
-        _state.OverflowFlag = msb != 0;
+        bool msb = (value & MsbMask) != 0;
         SetCarryFlagForRightShifts(value, count);
         uint res = value >> count;
         UpdateFlags(res);
+        _state.OverflowFlag = count == 1 && msb;
         return res;
     }
 

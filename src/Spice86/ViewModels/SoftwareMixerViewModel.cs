@@ -1,69 +1,79 @@
 namespace Spice86.ViewModels;
 
-using Avalonia.Collections;
+using Avalonia.Threading;
 
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.ViewModels.ValueViewModels.Debugging;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
+using Spice86.ViewModels.Services;
 
-using System.ComponentModel;
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
 
-public partial class SoftwareMixerViewModel : ViewModelBase, IEmulatorObjectViewModel {
-    private readonly Dictionary<SoundChannel, SoundChannelInfo> _channelInfos = new();
-    private readonly SoftwareMixer _softwareMixer;
-    
-    [ObservableProperty]
-    private AvaloniaList<SoundChannelInfo> _channels = new();
-    
-    public SoftwareMixerViewModel(SoftwareMixer softwareMixer) {
-        _softwareMixer = softwareMixer;
+/// <summary>
+/// View model for the mixer window, displaying and controlling mixer channels.
+/// </summary>
+public partial class SoftwareMixerViewModel : ViewModelBase {
+    private readonly SoftwareMixer _mixer;
+
+    /// <summary>
+    /// Collection of mixer channel view models.
+    /// </summary>
+    public ObservableCollection<MixerChannelViewModel> Channels { get; } = new();
+
+    /// <summary>
+    /// Gets the audio settings sub-viewmodel.
+    /// </summary>
+    public AudioSettingsViewModel AudioSettings { get; }
+
+    public SoftwareMixerViewModel(SoftwareMixer mixer, SoundBlaster soundBlaster, Opl3Fm opl) {
+        _mixer = mixer;
+        AudioSettings = new AudioSettingsViewModel(soundBlaster, opl);
+
+        // Start dispatcher timer to update channel state
+        // Use 50ms for near real-time VU meter feedback
+        DispatcherTimerStarter.StartNewDispatcherTimer(
+            TimeSpan.FromMilliseconds(50),
+            DispatcherPriority.Background,
+            OnTimerTick);
+
+        RefreshChannels();
     }
 
-    public bool IsVisible { get; set; }
-
-    public void UpdateValues(object? sender, EventArgs e) {
-        if (!IsVisible) {
-            return;
-        }
-        UpdateChannels(_softwareMixer);
+    private void OnTimerTick(object? sender, EventArgs e) {
+        RefreshChannels();
     }
 
     [RelayCommand]
-    private void ResetStereoSeparation(object? parameter) {
-        if(parameter is SoundChannelInfo info && _channelInfos.FirstOrDefault(x => x.Value == info).Key is { } channel) {
-            channel.StereoSeparation = info.StereoSeparation = 50;
-        }
+    private void ToggleChannel(MixerChannelViewModel channel) {
+        channel?.IsEnabled = !channel.IsEnabled;
     }
-    
-    private void UpdateChannels(SoftwareMixer mixer) {
-        foreach (SoundChannel channel in mixer.Channels.Keys) {
-            if (!_channelInfos.TryGetValue(channel, out SoundChannelInfo? info)) {
-                info = new SoundChannelInfo() {
-                    Name = channel.Name
-                };
-                _channelInfos.Add(channel, info);
-                Channels.Add(info);
-                info.PropertyChanged += OnChannelPropertyChanged;
-            } else {
-                info.PropertyChanged -= OnChannelPropertyChanged;
-                info.IsMuted = channel.IsMuted;
-                info.Volume = channel.Volume;
-                info.StereoSeparation = channel.StereoSeparation;
-                info.PropertyChanged += OnChannelPropertyChanged;
+
+    [RelayCommand]
+    private void ToggleMute(MixerChannelViewModel channel) {
+        channel?.IsMuted = !channel.IsMuted;
+    }
+
+    private void RefreshChannels() {
+        List<SoundChannel> currentChannels = [.. _mixer.AllChannels];
+
+        // Remove channels that no longer exist
+        for (int i = Channels.Count - 1; i >= 0; i--) {
+            if (!currentChannels.Contains(Channels[i].Channel)) {
+                Channels.RemoveAt(i);
             }
         }
-    }
 
-    private void OnChannelPropertyChanged(object? sender, PropertyChangedEventArgs e) {
-        if (sender is not SoundChannelInfo info ||
-            _channelInfos.FirstOrDefault(x => x.Value == info).Key is not { } channel) {
-            return;
+        // Add new channels and update existing ones
+        foreach (SoundChannel channel in currentChannels) {
+            MixerChannelViewModel? existingVm = Channels.FirstOrDefault(vm => vm.Channel == channel);
+            if (existingVm != null) {
+                existingVm.UpdateFromChannel();
+            } else {
+                Channels.Add(new MixerChannelViewModel(channel));
+            }
         }
-
-        channel.IsMuted = info.IsMuted;
-        channel.Volume = info.Volume;
-        channel.StereoSeparation = info.StereoSeparation;
     }
 }

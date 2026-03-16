@@ -25,7 +25,9 @@ public class MouseInt33Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger</param>
     /// <param name="mouseDriver">The mouse driver to handle the actual functionality.</param>
-    public MouseInt33Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService, IMouseDriver mouseDriver)
+    public MouseInt33Handler(IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        ILoggerService loggerService, IMouseDriver mouseDriver)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _mouseDriver = mouseDriver;
         FillDispatchTable();
@@ -36,6 +38,47 @@ public class MouseInt33Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
+        //some games issue mouse commands that can be safely ignored
+        //Examples include Lands of Lore (0x53c1), and Knights of Xentar (0xa1)
+        switch (State.AX) {
+            case 0xa1: // ??? (ignore - game issues this once, and then boots!)
+                LoggerService.Warning("MOUSE INT33: 0xA1 command ignored!");
+                return;
+            case 0x70:
+                // Mouse Systems - installation check
+                LoggerService.Warning("MOUSE INT33: 0x70 command ignored!");
+                return;
+            case 0x72:
+                // Mouse Systems 7.01+ - unknown functionality
+                // Genius Mouse 9.06+  - unknown functionality
+                LoggerService.Warning("MOUSE INT33: 0x72 command ignored!");
+                return;
+            case 0x73:
+                // Mouse Systems 7.01+ - get button assignments
+                // VBADOS driver       - get driver info
+                LoggerService.Warning("MOUSE INT33: 0x73 command ignored!");
+                return;
+            case 0x5301:
+                // Logitech CyberMan - get 3D position, orientation, and button status
+                LoggerService.Warning("MOUSE INT33: 0x5301 command ignored!");
+                return;
+            case 0x5330:
+                // Logitech CyberMan - generate tactile feedback
+                LoggerService.Warning("MOUSE INT33: 0x5330 command ignored!");
+                return;
+            case 0x53c0:
+                // Logitech CyberMan - exchange event handlers
+                LoggerService.Warning("MOUSE INT33: 0x53c0 command ignored!");
+                return;
+            case 0x53c1:
+                // Logitech CyberMan - get static device data and driver support status
+                LoggerService.Warning("MOUSE INT33: 0x53c1 command ignored!");
+                return;
+            case 0x53c2:
+                // Logitech CyberMan - get dynamic device data
+                LoggerService.Warning("MOUSE INT33: 0x53c2 command ignored!");
+                return;
+        }
         byte operation = State.AL;
         Run(operation);
     }
@@ -130,7 +173,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///        you must divide each value by 8 to get a character column,row. <br/>
     /// </summary>
     public void GetMousePositionAndStatus() {
-        MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
+        MouseStatusRecord status = _mouseDriver.CurrentMouseStatus;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("{ClassName} INT {Int:X2} 03 {MethodName}: {MouseStatus}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(GetMousePositionAndStatus), status);
@@ -160,11 +203,11 @@ public class MouseInt33Handler : InterruptHandler {
     ///        you must divide each value by 8 to get a character column,row. <br/>
     /// </summary>
     public void QueryButtonReleasedCounter() {
-        if(!TryGetMouseButtonIndex(State.BX, out MouseButton button)) {
+        if (!TryGetMouseButtonIndex(State.BX, out MouseButton button)) {
             ReturnNothingInCpuRegisters();
             return;
         }
-        MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
+        MouseStatusRecord status = _mouseDriver.CurrentMouseStatus;
         State.AX = (ushort)status.ButtonFlags;
         State.BX = (ushort)_mouseDriver.GetButtonsReleaseCount(button);
         State.CX = (ushort)_mouseDriver.GetLastReleasedX(button);
@@ -209,7 +252,7 @@ public class MouseInt33Handler : InterruptHandler {
             return;
         }
 
-        MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
+        MouseStatusRecord status = _mouseDriver.CurrentMouseStatus;
         State.AX = (ushort)status.ButtonFlags;
         State.BX = (ushort)_mouseDriver.GetButtonPressCount(button);
         State.CX = (ushort)_mouseDriver.GetLastPressedX(button);
@@ -392,7 +435,7 @@ public class MouseInt33Handler : InterruptHandler {
         if (horizontal == 0 || vertical == 0) {
             return;
         }
-        
+
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("{ClassName} INT {Int:X2} 0F {MethodName}: horizontal = {XRatio} mickeys per 8 pixels, vertical = {YRatio} mickeys per 8 pixels",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseMickeyPixelRatio), horizontal, vertical);
@@ -568,7 +611,7 @@ public class MouseInt33Handler : InterruptHandler {
         AddAction(0x21, Reset);
         AddAction(0x24, GetSoftwareVersionAndMouseType);
     }
-    
+
     private void Reset() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("{ClassName} INT {Int:X2} 21 {MethodName}: Resetting mouse", nameof(MouseInt33Handler), VectorNumber, nameof(Reset));
@@ -587,5 +630,10 @@ public class MouseInt33Handler : InterruptHandler {
         }
         State.CX = (ushort)x;
         State.DX = (ushort)y;
+        
+        // Reset mickey counters after reading, similar to CuteMouse driver.
+        // This prevents mouse drift when games repeatedly call INT 33h function 0x0B.
+        // Games that were affected (for example): Day of the Tentacle, Cruise for a Corpse, Monkey Island 2, ...
+        _mouseDriver.ResetDeltaMickeys();
     }
 }

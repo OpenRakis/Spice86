@@ -32,6 +32,6 @@ public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{Signed
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.CALL_NEAR, builder.Constant.ToNode(_targetIp));
+        return new InstructionNode(InstructionOperation.CALL_NEAR, builder.Constant.ToNearAddressNode(_targetIp, NextInMemoryAddress));
     }
 }

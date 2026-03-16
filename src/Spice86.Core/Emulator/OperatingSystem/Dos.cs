@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
@@ -18,14 +19,13 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Linq;
 using System.Text;
 
 /// <summary>
 /// Represents the DOS kernel.
 /// </summary>
 public sealed class Dos {
-    //in DOSBox, this is the 'DOS_INFOBLOCK_SEG'
-    private const int DosSysVarSegment = 0x80;
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
@@ -43,9 +43,29 @@ public sealed class Dos {
     public DosInt21Handler DosInt21Handler { get; }
 
     /// <summary>
+    /// Gets the INT 22h DOS terminate address handler.
+    /// </summary>
+    public DosInt22Handler DosInt22Handler { get; }
+
+    /// <summary>
+    /// Gets the INT 23h DOS Control-Break handler.
+    /// </summary>
+    public DosInt23Handler DosInt23Handler { get; }
+
+    /// <summary>
+    /// Gets the INT 24h DOS Critical Error handler.
+    /// </summary>
+    public DosInt24Handler DosInt24Handler { get; }
+
+    /// <summary>
     /// Gets the INT 2Fh DOS services.
     /// </summary>
     public DosInt2fHandler DosInt2FHandler { get; }
+
+    /// <summary>
+    /// Gets the INT 2Ah DOS services (minimal stub).
+    /// </summary>
+    public DosInt2aHandler DosInt2aHandler { get; }
 
     /// <summary>
     /// Gets the INT 25H DOS Disk services.
@@ -66,6 +86,11 @@ public sealed class Dos {
     /// The class that handles DOS drives, as a sorted dictionnary.
     /// </summary>
     public DosDriveManager DosDriveManager { get; }
+
+    /// <summary>
+    /// The class that handles DOS FCB (File Control Block) operations.
+    /// </summary>
+    public DosFcbManager FcbManager { get; }
 
     /// <summary>
     /// Gets the list of virtual devices.
@@ -116,6 +141,11 @@ public sealed class Dos {
     public DosSysVars DosSysVars { get; }
 
     /// <summary>
+    /// The DOS tables including CDS and DBCS structures.
+    /// </summary>
+    public DosTables DosTables { get; }
+
+    /// <summary>
     /// The EMS device driver.
     /// </summary>
     public ExpandedMemoryManager? Ems { get; private set; }
@@ -135,14 +165,14 @@ public sealed class Dos {
     /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="envVars">The DOS environment variables.</param>
-    /// <param name="clock">Monotonic clock used by DOS timers.</param>
+    /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="xms">Optional XMS manager to expose through DOS.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        IDictionary<string, string> envVars, Clock clock, ILoggerService loggerService,
+        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
         ExtendedMemoryManager? xms = null) {
         _loggerService = loggerService;
         Xms = xms;
@@ -155,30 +185,54 @@ public sealed class Dos {
 
         VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
         DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory,
-            MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
+            MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0x0));
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
 
+        DosTables = new DosTables();
+        DosTables.Initialize(memory);
+
+        DosSysVars.CurrentDirectoryStructureListPointer = DosTables.CurrentDirectoryStructure.BaseAddress;
+        DosSysVars.CurrentDirectoryStructureCount = 26;
+
         DosSwappableDataArea = new(_memory,
-            MemoryUtils.ToPhysicalAddress(0xb2, 0));
+            MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
 
         DosStringDecoder dosStringDecoder = new(memory, state);
 
         CountryInfo = new();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, Devices);
-        DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, loggerService);
-        MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
-        ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, loggerService);
-        DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
+
+        // Calculate initial PSP segment from configuration (PSP is 16 paragraphs before entry point)
+        ushort initialPspSegment = (ushort)(configuration.ProgramEntryPointSegment - 0x10);
+
+        // Initialize the SDA with the initial PSP segment
+        DosSwappableDataArea.CurrentProgramSegmentPrefix = initialPspSegment;
+
+        // Initialize memory manager first - it must know about the root COMMAND.COM reserved space
+        // Root PSP is at 0x60, environment at 0x68, so MCB chain starts after 0x6F
+        // This matches FreeDOS where DOS_PSP + 16 paragraphs is reserved
+        MemoryManager = new DosMemoryManager(_memory, initialPspSegment, loggerService);
+
+        FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
+        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, envVars, _loggerService);
+        DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
+        DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
-            MemoryManager, FileManager, DosDriveManager, clock, _loggerService);
+            MemoryManager, FileManager, DosDriveManager, ProcessManager, ioPortDispatcher, DosTables, _loggerService, FcbManager);
+        DosInt23Handler = new DosInt23Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
+        DosInt24Handler = new DosInt24Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
+        DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
+        DosInt2aHandler = new DosInt2aHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
             functionHandlerProvider, stack, state, _loggerService, xms);
-        DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
-        DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
-        DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
+        DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
+            functionHandlerProvider, stack, state, _loggerService);
+        DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager,
+            functionHandlerProvider, stack, state, _loggerService);
+        DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider,
+            stack, state, _loggerService);
 
         if (configuration.InitializeDOS is false) {
             return;
@@ -200,7 +254,48 @@ public sealed class Dos {
     }
 
     private void OpenDefaultFileHandles(VirtualFileBase[] fileDevices) {
+        // Ensure DOS standard handles map to fixed indices:
+        // 0 -> STDIN (console)
+        // 1 -> STDOUT (console)
+        // 2 -> STDERR (console)
+        // 3 -> STDAUX (aux)
+        // 4 -> STDPRN (printer)
+
+        // Find devices by name from the Devices list (which contains all added devices)
+        VirtualFileBase? console = Devices.OfType<VirtualFileBase>().FirstOrDefault(d => string.Equals(d.Name, "CON", StringComparison.OrdinalIgnoreCase));
+        VirtualFileBase? aux = Devices.OfType<VirtualFileBase>().FirstOrDefault(d => string.Equals(d.Name, "AUX", StringComparison.OrdinalIgnoreCase));
+        VirtualFileBase? prn = Devices.OfType<VirtualFileBase>().FirstOrDefault(d => string.Equals(d.Name, "LPT1", StringComparison.OrdinalIgnoreCase));
+
+        var opened = new HashSet<VirtualFileBase>();
+
+        // Open console for stdin/stdout/stderr (three handles)
+        if (console != null) {
+            FileManager.OpenDevice(console); // handle 0
+            opened.Add(console);
+            FileManager.OpenDevice(console); // handle 1
+            FileManager.OpenDevice(console); // handle 2
+        }
+
+        // STDAUX -> AUX device (handle 3)
+        if (aux != null) {
+            FileManager.OpenDevice(aux);
+            opened.Add(aux);
+        }
+
+        // STDPRN -> LPT1 (handle 4)
+        if (prn != null) {
+            FileManager.OpenDevice(prn);
+            opened.Add(prn);
+        }
+
+        // Finally open any remaining devices passed in fileDevices that haven't been opened yet
         foreach (VirtualFileBase fileDevice in fileDevices) {
+            if (fileDevice == null) {
+                continue;
+            }
+            if (opened.Contains(fileDevice)) {
+                continue;
+            }
             FileManager.OpenDevice(fileDevice);
         }
     }
@@ -242,12 +337,12 @@ public sealed class Dos {
         ushort index = (ushort)(offset.Value + 10); //10 bytes in our DosDeviceHeader structure.
         if (header.Attributes.HasFlag(DeviceAttributes.Character)) {
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
-                Encoding.ASCII.GetBytes( $"{device.Name,-8}"));
-        } else if(device is BlockDevice blockDevice) {
+                Encoding.ASCII.GetBytes($"{device.Name,-8}"));
+        } else if (device is BlockDevice blockDevice) {
             _memory.UInt8[segment.Value, index] = blockDevice.UnitCount;
             index++;
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
-                Encoding.ASCII.GetBytes($"{blockDevice.Signature, -7}"));
+                Encoding.ASCII.GetBytes($"{blockDevice.Signature,-7}"));
         }
 
         // Make the previous device point to this one

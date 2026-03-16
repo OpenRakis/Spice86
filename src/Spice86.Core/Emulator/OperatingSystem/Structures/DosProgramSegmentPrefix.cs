@@ -11,9 +11,22 @@ using System.Diagnostics;
 /// </summary>
 [DebuggerDisplay("BaseAddress={BaseAddress}, Parent={ParentProgramSegmentPrefix}, EnvSegment={EnvironmentTableSegment}, NextSegment={NextSegment}, StackPointer={StackPointer}, Cmd={DosCommandTail.Command}")]
 public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
-    public const ushort MaxLength = 0x80 + 128;
+    /// <summary>
+    /// Full PSP size in bytes, including the command tail: 0x100 (256) bytes total, where
+    /// 0x00-0x7F contain PSP structures and 0x80-0xFF are the 128-byte command tail buffer (count + data).
+    /// </summary>
+    public const ushort MaxLength = 0x100;
+    /// <summary>
+    /// The size of the PSP struct. Important for program loading.
+    /// </summary>
+    public const ushort PspSize = 0x100;
+    /// <summary>
+    /// Specifies the size, in DOS paragraphs, of a Program Segment Prefix (PSP).
+    /// </summary>
+    public const ushort PspSizeInParagraphs = 0x10;
 
     public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
+        CurrentSize = DosMemoryManager.LastFreeSegment;
     }
 
     /// <summary>
@@ -22,9 +35,12 @@ public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     public UInt8Array Exit => GetUInt8Array(0x0, 2);
 
     /// <summary>
-    /// Segment of first byte beyond the end of the program image. Reserved.
+    /// Size of the Program. This is used to guess the size of conventional memory (Dune does this).
     /// </summary>
-    public ushort NextSegment { get => UInt16[0x2]; set => UInt16[0x2] = value; }
+    /// <remarks>
+    /// Specified in paragraphs. Create Child PSP has it as a parameter in BX register.
+    /// </remarks>
+    public ushort CurrentSize { get => UInt16[0x2]; set => UInt16[0x2] = value; }
 
     /// <summary>
     /// Reserved

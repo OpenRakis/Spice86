@@ -153,4 +153,39 @@ public class VideoFunctionalityInfo : MemoryBasedDataStructure {
         UInt8[0x0B + offset] = x;
         UInt8[0x0C + offset] = y;
     }
+
+    public object CreateFunctionalityInfoLogSnapshot() {
+        object[] cursorPositions = new object[8];
+        for (int page = 0; page < cursorPositions.Length; page++) {
+            (byte x, byte y) = GetCursorPosition(page);
+            cursorPositions[page] = new { Page = page, X = x, Y = y };
+        }
+
+        return new {
+            SftAddress,
+            VideoMode,
+            ScreenColumns,
+            VideoBufferLength,
+            VideoBufferAddress,
+            CursorEndLine,
+            CursorStartLine,
+            ActiveDisplayPage,
+            CrtControllerBaseAddress,
+            CurrentRegister3X8Value,
+            CurrentRegister3X9Value,
+            ScreenRows,
+            CharacterMatrixHeight,
+            ActiveDisplayCombinationCode,
+            AlternateDisplayCombinationCode,
+            NumberOfColorsSupported,
+            NumberOfPages,
+            NumberOfActiveScanLines,
+            TextCharacterTableUsed,
+            TextCharacterTableUsed2,
+            OtherStateInformation,
+            VideoRamAvailable,
+            SaveAreaStatus,
+            CursorPositions = cursorPositions
+        };
+    }
 }

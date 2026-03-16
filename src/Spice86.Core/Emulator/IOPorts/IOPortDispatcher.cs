@@ -35,7 +35,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     public void AddIOPortHandler(int port, IIOPortHandler ioPortHandler) {
         _ioPortHandlers.Add(port, ioPortHandler);
     }
-    
+
     /// <inheritdoc/>
     public override byte ReadByte(ushort port) {
         UpdateLastPortRead(port);

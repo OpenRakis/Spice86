@@ -10,9 +10,12 @@ public abstract class InstructionWithSegmentRegisterIndex: CfgInstruction, IInst
         InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes,
         int segmentRegisterIndex,
+        int defaultSegmentRegisterIndex,
         int? maxSuccessorsCount) : base(address, opcodeField, prefixes, maxSuccessorsCount) {
         SegmentRegisterIndex = segmentRegisterIndex;
+        DefaultSegmentRegisterIndex = defaultSegmentRegisterIndex;
     }
     
     public int SegmentRegisterIndex { get; }
+    public int DefaultSegmentRegisterIndex { get; }
 }

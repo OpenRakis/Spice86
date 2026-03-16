@@ -114,8 +114,11 @@ public abstract class Indexable : IIndexable {
     /// <param name="value">The string to write</param>
     /// <param name="maxLength">The maximum length to write</param>
     /// <exception cref="UnrecoverableException"></exception>
-    public virtual void SetZeroTerminatedString(uint address, string value, int maxLength) {
-        if (value.Length + 1 > maxLength && !string.IsNullOrEmpty(value)) {
+    public virtual void SetZeroTerminatedString(uint address, string value, int maxLength = 0) {
+        if(maxLength == 0) {
+            maxLength = value.Length + 1;
+        }
+        if (value.Length + 1 > maxLength) {
             throw new UnrecoverableException(
                 $"String {value} is more than {maxLength} cannot write it at offset {address}");
         }
@@ -128,6 +131,34 @@ public abstract class Indexable : IIndexable {
         }
 
         UInt8[(uint)(address + i)] = 0;
+    }
+
+    /// <summary>
+    /// Read a space-padded string from memory.
+    /// </summary>
+    /// <param name="address">The address in memory from where to read</param>
+    /// <param name="length">The fixed length of the string field</param>
+    /// <returns>The space-padded string retrieved from memory, including trailing spaces.</returns>
+    public virtual string GetSpacePaddedString(uint address, int length) {
+        StringBuilder result = new();
+        for (int i = 0; i < length; i++) {
+            byte b = UInt8[address + (uint)i];
+            result.Append((char)b);
+        }
+        return result.ToString();
+    }
+
+    /// <summary>
+    /// Write a space-padded string to memory.
+    /// </summary>
+    /// <param name="address">The address at which to write the string</param>
+    /// <param name="value">The string value to write</param>
+    /// <param name="length">The fixed length of the string field</param>
+    public virtual void SetSpacePaddedString(uint address, string value, int length) {
+        byte[] bytes = Encoding.ASCII.GetBytes(value.PadRight(length));
+        for (int i = 0; i < length; i++) {
+            UInt8[address + (uint)i] = bytes[i];
+        }
     }
 
     /// <summary>

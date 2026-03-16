@@ -15,7 +15,7 @@ public class Fnstsw : InstructionWithModRm {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         // Set non zero, means no FPU installed when called after FNINIT.
         helper.ModRm.RM16 = 0xFF;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

@@ -21,8 +21,8 @@
 	<UserControl.Resources>
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</UserControl.Resources>
-	<ScrollViewer>
-		<Grid RowDefinitions="Auto,*">
+	<ScrollViewer IsEnabled="{Binding IsPaused}">
+		<Grid RowDefinitions="Auto,*,Auto">
 			<StackPanel Orientation="Horizontal" Grid.Row="0"
 				HorizontalAlignment="Left"
 				VerticalAlignment="Top"
@@ -72,20 +72,20 @@
 					</TextBox>
 				</Grid>
 				<StackPanel Orientation="Vertical">
-					<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
+					<Button IsEnabled="{Binding IsPaused}"
 							Command="{Binding UpdateBinaryDocumentCommand}"
 							HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Content="Refresh" />
 					<Label  IsVisible="{Binding IsPaused}" Content="{Binding Title}" />
 				</StackPanel>
 			</StackPanel>
-			<Grid Grid.Row="1" RowDefinitions="*, Auto">
-				<TextBlock Grid.Row="0" IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
+		<Grid Grid.Row="1"
+			  RowDefinitions="*, Auto">
 				<avaloniaHex:HexEditor
 					x:Name="HexViewer"
 					Width="800"
 					Grid.Row="0"
 					Document="{Binding DataMemoryDocument}"
-					IsVisible="{Binding IsPaused}">
+					IsEnabled="{Binding IsPaused}">
 					<TextElement.FontFamily>
 						<OnPlatform Default="{StaticResource RobotoMonoFont}" />
 					</TextElement.FontFamily>
@@ -265,69 +265,7 @@
 							HorizontalAlignment="Center"
 							Content="Creating memory breakpoint on hex, decimal, or segmented address"
 							FontWeight="Bold" />
-						<Grid
-							Grid.Row="1"
-							ColumnDefinitions="Auto,*"
-							RowDefinitions="Auto,Auto">
-							<Grid Grid.Column="0"
-								Grid.ColumnSpan="2"
-								Grid.Row="0"
-								RowDefinitions="Auto,Auto,Auto"
-								ColumnDefinitions="Auto,*">
-								<Label
-									Grid.Row="0"
-									Grid.Column="0"
-									Content="Breakpoint Range Start:" />
-								<Label
-									Grid.Row="1"
-									Grid.Column="0"
-									Content="Breakpoint Range End:" />
-								<Label
-									Grid.Row="2"
-									Grid.Column="0"
-									Content="Breakpoint Value condition:" />
-								<TextBox
-								    Grid.Row="0"
-									Grid.Column="1"
-									FontFamily="RobotoMonoFont"
-									Text="{Binding MemoryBreakpointStartAddress}">
-									<Interaction.Behaviors>
-										<behaviors:UpdateBindingOnEnterBehavior />
-									</Interaction.Behaviors>
-								</TextBox>
-								<TextBox
-								    Grid.Row="1"
-									Grid.Column="1"
-									FontFamily="RobotoMonoFont"
-									Watermark="optional"
-									Text="{Binding MemoryBreakpointEndAddress}">
-									<Interaction.Behaviors>
-										<behaviors:UpdateBindingOnEnterBehavior />
-									</Interaction.Behaviors>
-								</TextBox>
-								<TextBox
-									Grid.Row="2"
-									Grid.Column="1"
-									FontFamily="RobotoMonoFont"
-									Watermark="optional"
-									Text="{Binding MemoryBreakpointValueCondition}">
-									<Interaction.Behaviors>
-										<behaviors:UpdateBindingOnEnterBehavior />
-									</Interaction.Behaviors>
-								</TextBox>
-							</Grid>
-							<Label
-								Grid.Row="1"
-								Grid.Column="0"
-								VerticalContentAlignment="Center"
-								HorizontalContentAlignment="Left"
-								Content="Access type:" />
-							<ComboBox
-								Grid.Row="1"
-								Grid.Column="1"
-								SelectedItem="{Binding SelectedBreakpointType}"
-								ItemsSource="{Binding BreakpointTypes, Mode=OneTime}" />
-						</Grid>
+					<userControls:MemoryBreakpointUserControl Grid.Row="1" />
 						<StackPanel
 							Grid.Row="2"
 							HorizontalAlignment="Right"

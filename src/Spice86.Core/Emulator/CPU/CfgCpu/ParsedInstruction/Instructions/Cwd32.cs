@@ -18,7 +18,7 @@ public class Cwd32 : CfgInstruction {
         } else {
             helper.State.EDX = 0;
         }
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

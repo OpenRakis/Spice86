@@ -23,7 +23,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<sbyte> {
         sbyte value = helper.InstructionFieldValueRetriever.GetFieldValue(ValueField);
         {{ImmExtendedUnsignedType}} valueExtended = ({{ImmExtendedUnsignedType}})({{ImmExtendedSignedType}})value;
         helper.Stack.Push{{Size}}(valueExtended);
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

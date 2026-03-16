@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.OperatingSystem;
+namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
@@ -9,40 +9,58 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Linq;
+
 /// <summary>
 /// Implements DOS memory operations, such as allocating and releasing MCBs.
 /// </summary>
 public class DosMemoryManager {
     internal const ushort LastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
+    private const ushort FakeMcbSize = 0xFFFF;
+    private const byte FitTypeMask = 0x03;
+    private const byte MaxValidFitType = 0x02;
+    private const byte ReservedBitsMask = 0x3C;
+    private const byte HighMemMask = 0xC0;
+    private const byte HighMemFirstThenLow = 0x40;
+    private const byte HighMemOnlyNoFallback = 0x80;
     private readonly ILoggerService _loggerService;
     private readonly IMemory _memory;
-    private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryControlBlock _start;
+
+    private readonly DosSwappableDataArea _sda;
+
+    /// <summary>
+    /// The current memory allocation strategy used for INT 21h/48h (allocate memory).
+    /// </summary>
+    /// <remarks>
+    /// The default strategy is <see cref="DosMemoryAllocationStrategy.FirstFit"/> to match MS-DOS behavior.
+    /// This can be changed via INT 21h/58h (Get/Set Memory Allocation Strategy).
+    /// </remarks>
+    private DosMemoryAllocationStrategy _allocationStrategy = DosMemoryAllocationStrategy.FirstFit;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="pspTracker">The class responsible for DOS program loader configuration.</param>
+    /// <param name="initialPspSegment">The initial PSP segment for MCB chain setup.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosMemoryManager(IMemory memory,
-        DosProgramSegmentPrefixTracker pspTracker, ILoggerService loggerService) {
+    public DosMemoryManager(IMemory memory, ushort initialPspSegment, ILoggerService loggerService) {
         _loggerService = loggerService;
-        _pspTracker = pspTracker;
         _memory = memory;
+        _sda = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
 
-        ushort pspSegment = _pspTracker.InitialPspSegment;
+        ushort pspSegment = initialPspSegment;
         // The MCB starts 1 paragraph (16 bytes) before the 16 paragraph (256 bytes) PSP. Since
         // we're the memory manager, we're the one who needs to read the MCB, so we need to start
         // with its address by subtracting 1 paragraph from the PSP.
-        ushort startSegment = (ushort)(pspSegment - 1);
-        _start = GetDosMemoryControlBlockFromSegment(startSegment);
-        // LastFreeSegment and startSegment are both valid segments that may be allocated, so we
+        ushort loadSegment = (ushort)(pspSegment - 1);
+        _start = GetDosMemoryControlBlockFromSegment(loadSegment);
+        // LastFreeSegment and loadSegment are both valid segments that may be allocated, so we
         // need to add 1 paragraph to the result to ensure that our calculated size doesn't exclude
         // LastFreeSegment from being allocated. Some games do their own math to calculate the
         // maximum free conventional memory from the last block that was allocated rather than
         // asking the memory manager, and if we were off by one, allocation would fail.
-        ushort size = (ushort)((LastFreeSegment - startSegment) + 1);
+        ushort size = (ushort)((LastFreeSegment - loadSegment) + 1);
         // We adjusted the start address above so that it starts with the MCB, but the MCB itself
         // isn't actually useable space. We need it here in the DOS memory manager for accounting.
         // Therefore subtract the size of the MCB (1 paragraph, which is 16 bytes) from the total
@@ -58,6 +76,31 @@ public class DosMemoryManager {
     }
 
     /// <summary>
+    /// Gets or sets the current memory allocation strategy (INT 21h/58h).
+    /// </summary>
+    public DosMemoryAllocationStrategy AllocationStrategy {
+        get => _allocationStrategy;
+        set {
+            // Validate the strategy - only allow valid combinations
+            byte fitType = (byte)((byte)value & FitTypeMask);
+            if (fitType > MaxValidFitType) {
+                // Invalid fit type, ignore
+                return;
+            }
+            // Validate bits 2-5 must be zero per DOS specification
+            if (((byte)value & ReservedBitsMask) != 0) {
+                return;
+            }
+            byte highMemBits = (byte)((byte)value & HighMemMask);
+            if (highMemBits is not 0x00 and not HighMemFirstThenLow and not HighMemOnlyNoFallback) {
+                // Invalid high memory bits, ignore
+                return;
+            }
+            _allocationStrategy = value;
+        }
+    }
+
+    /// <summary>
     /// Allocates a memory block of the specified size. Returns <c>null</c> if no memory block could be found to fit the requested size.
     /// </summary>
     /// <param name="requestedSizeInParagraphs">The requested size in paragraphs of the memory block.</param>
@@ -65,13 +108,8 @@ public class DosMemoryManager {
     public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSizeInParagraphs) {
         IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSizeInParagraphs);
 
-        // take the smallest
-        DosMemoryControlBlock? blockOptional = null;
-        foreach (DosMemoryControlBlock currentElement in candidates) {
-            if (blockOptional is null || currentElement.Size < blockOptional.Size) {
-                blockOptional = currentElement;
-            }
-        }
+        // Select block based on allocation strategy
+        DosMemoryControlBlock? blockOptional = SelectBlockByStrategy(candidates);
         if (blockOptional is null) {
             // Nothing found
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -84,12 +122,12 @@ public class DosMemoryManager {
         if (!SplitBlock(block, requestedSizeInParagraphs)) {
             // An issue occurred while splitting the block
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Could not spit block {Block}", block);
+                _loggerService.Error("Could not split block {Block}", block);
             }
             return null;
         }
 
-        block.PspSegment = _pspTracker.GetCurrentPspSegment();
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix;
         return block;
     }
 
@@ -98,28 +136,19 @@ public class DosMemoryManager {
     /// </summary>
     /// <returns>The largest free <see cref="DosMemoryControlBlock"/></returns>
     public DosMemoryControlBlock FindLargestFree() {
+        return EnumerateBlocks()
+            .Where(block => block.IsFree)
+            .MaxBy(block => block.Size) ?? _start;
+    }
+
+    private IEnumerable<DosMemoryControlBlock> EnumerateBlocks() {
         DosMemoryControlBlock? current = _start;
-        DosMemoryControlBlock? largest = null;
-        while (true) {
-            if (current != null && current.IsFree && (largest == null || current.Size > largest.Size)) {
-                largest = current;
+        while (current != null) {
+            yield return current;
+            if (current.IsLast) {
+                break;
             }
-
-            if (current != null && current.IsLast && largest != null) {
-                return largest;
-            }
-
-            if (current == null) {
-                continue;
-            }
-
-            DosMemoryControlBlock? next = current.GetNextOrDefault();
-
-            if (next is null) {
-                return current;
-            }
-
-            current = next;
+            current = current.GetNextOrDefault();
         }
     }
 
@@ -143,7 +172,7 @@ public class DosMemoryManager {
         }
 
         block.SetFree();
-        return JoinBlocks(block, true);
+        return true;
     }
 
     /// <summary>
@@ -156,48 +185,42 @@ public class DosMemoryManager {
     public DosErrorCode TryModifyBlock(in ushort blockSegment, in ushort requestedSizeInParagraphs,
         out DosMemoryControlBlock block) {
         block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
+        ushort newSizeInParagraphs = requestedSizeInParagraphs;
+
         if (!CheckValidOrLogError(block)) {
-            block = this.FindLargestFree();
             return DosErrorCode.MemoryControlBlockDestroyed;
         }
 
-        // Since the first thing we do is enlarge the block, we need to know the original size so
-        // that we can restore it if we encounter an error later. We need to make sure that the
-        // block doesn't grow to the maximum supported size on error.
-        ushort initialBlockSizeInParagraphs = block.Size;
+        //AlphaWaves loader starts a TSR for adlib-sound that wrongly sets the block-size in DX leaving BX = 0
+        if (newSizeInParagraphs == 0 && blockSegment == _sda.CurrentProgramSegmentPrefix) {
+            newSizeInParagraphs = DosProgramSegmentPrefix.PspSizeInParagraphs;
+        }
 
         // Make the block the biggest it can get
         if (!JoinBlocks(block, false)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("Could not join MCB {Block}", block);
             }
-            block = this.FindLargestFree();
             return DosErrorCode.InsufficientMemory;
         }
 
-        if (block.Size < requestedSizeInParagraphs) {
-            // Restore the original size of the block.
-            if (block.Size != initialBlockSizeInParagraphs) {
-                SplitBlock(block, initialBlockSizeInParagraphs);
-            }
-
+        if (block.Size < newSizeInParagraphs) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}",
-                    block, requestedSizeInParagraphs);
+                    block, newSizeInParagraphs);
 
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose) && !block.IsLast) {
                     DosMemoryControlBlock? nextBlock = block.GetNextOrDefault();
                     _loggerService.Verbose("Next MCB is {Block}", nextBlock);
                 }
             }
-            block = this.FindLargestFree();
             return DosErrorCode.InsufficientMemory;
         }
 
-        if (block.Size > requestedSizeInParagraphs) {
-            SplitBlock(block, requestedSizeInParagraphs);
+        if (block.Size > newSizeInParagraphs) {
+            SplitBlock(block, newSizeInParagraphs);
         }
-        block.PspSegment = _pspTracker.GetCurrentPspSegment();
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix;
         return DosErrorCode.NoError;
     }
 
@@ -287,7 +310,7 @@ public class DosMemoryManager {
     /// EXE files to allow the calculated values to be easily passed around together and to make it
     /// easier to identify where min/max allocation is requested inernally in the code.
     /// </remarks>
-    private struct AllocRange {
+    private readonly record struct AllocRange {
         public AllocRange(ushort minSize, ushort maxSize) {
             MinSizeInParagraphs = minSize;
             MaxSizeInParagraphs = minSize > maxSize ? minSize : maxSize;
@@ -324,6 +347,8 @@ public class DosMemoryManager {
 
         ushort minSizeInParagraphs = (ushort)(baseSizeInParagraphs + exeFile.MinAlloc);
         ushort maxSizeInParagraphs = (ushort)(baseSizeInParagraphs + exeFile.MaxAlloc);
+        // Also calculate maxSizeInParagraphs with overflow detection like FreeDOS
+        uint maxSizeWithOverflow = (uint)baseSizeInParagraphs + exeFile.MaxAlloc;
 
         // If both the minimum and maximum allocation fields in the EXE header are cleared, DOS will
         // allocate the largest available block for it, and it will load the program image as high
@@ -332,7 +357,7 @@ public class DosMemoryManager {
         // block correct in this case, and that it still meets the minimum required size for the PSP
         // and program image (our baseSizeInParagraphs). See the osdev wiki entry on the DOS EXE
         // format (wiki.osdev.org/MZ) for more information.
-        if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
+        if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0 || maxSizeWithOverflow > maxSizeInParagraphs) {
             ushort freeSizeInParagraphs = 0;
             if (pspSegment == 0) {
                 // This is what real DOS does. It always finds the largest free block that it can
@@ -389,7 +414,7 @@ public class DosMemoryManager {
             return null;
         }
 
-        block.PspSegment = _pspTracker.GetCurrentPspSegment(); // Marks the block as allocated.
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix; // Marks the block as allocated.
         return block;
     }
 
@@ -425,7 +450,7 @@ public class DosMemoryManager {
         if (block.Size > size.MaxSizeInParagraphs) {
             SplitBlock(block, size.MaxSizeInParagraphs);
         }
-        block.PspSegment = _pspTracker.GetCurrentPspSegment(); // Marks the block as allocated.
+        block.PspSegment = _sda.CurrentProgramSegmentPrefix; // Marks the block as allocated.
         return block;
     }
 
@@ -498,6 +523,9 @@ public class DosMemoryManager {
 
         // +1 because next block metadata is going to free space
         destination.Size = (ushort)(destination.Size + next.Size + 1);
+
+        // Mark the now unlinked MCB as "fake"
+        next.Size = FakeMcbSize;
     }
 
     /// <summary>
@@ -543,6 +571,147 @@ public class DosMemoryManager {
         // next is free
         next.SetFree();
         next.Size = (ushort)nextBlockSize;
+        return true;
+    }
+
+    /// <summary>
+    /// Selects a memory block based on the current allocation strategy.
+    /// </summary>
+    /// <param name="candidates">List of candidate blocks that fit the requested size.</param>
+    /// <returns>The selected block or null if none found.</returns>
+    /// <remarks>
+    /// Note: High memory bits (bits 6-7) of the allocation strategy are currently not handled.
+    /// This method only implements low memory allocation strategies. UMB (Upper Memory Block)
+    /// support would need to be added to handle strategies like FirstFitHighThenLow (0x40) or
+    /// FirstFitHighOnlyNoFallback (0x80).
+    /// </remarks>
+    private DosMemoryControlBlock? SelectBlockByStrategy(IEnumerable<DosMemoryControlBlock> candidates) {
+        // Get the fit type from the lower 2 bits of the strategy
+        byte fitType = (byte)((byte)_allocationStrategy & FitTypeMask);
+
+        DosMemoryControlBlock? selectedBlock = null;
+
+        foreach (DosMemoryControlBlock current in candidates) {
+            if (selectedBlock is null) {
+                selectedBlock = current;
+                // For first fit, we can return immediately
+                if (fitType == (byte)DosMemoryAllocationStrategy.FirstFit) {
+                    return selectedBlock;
+                }
+                continue;
+            }
+
+            switch (fitType) {
+                case (byte)DosMemoryAllocationStrategy.FirstFit: // First fit - already returned above
+                    break;
+
+                case (byte)DosMemoryAllocationStrategy.BestFit: // Best fit - take the smallest
+                    if (current.Size < selectedBlock.Size) {
+                        selectedBlock = current;
+                    }
+                    break;
+
+                case (byte)DosMemoryAllocationStrategy.LastFit: // Last fit - take the last one (highest address)
+                    // Since we iterate from low to high addresses, always update to the current
+                    selectedBlock = current;
+                    break;
+            }
+        }
+
+        return selectedBlock;
+    }
+
+    /// <summary>
+    /// Checks the integrity of the MCB chain.
+    /// </summary>
+    /// <returns><c>true</c> if the MCB chain is valid, <c>false</c> if corruption is detected.</returns>
+    public bool CheckMcbChain() {
+        DosMemoryControlBlock? current = _start;
+
+        while (current is not null) {
+            if (!current.IsValid) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("MCB chain corrupted at segment {Segment}",
+                        ConvertUtils.ToHex16(MemoryUtils.ToSegment(current.BaseAddress)));
+                }
+                return false;
+            }
+
+            if (current.IsLast) {
+                return true;
+            }
+
+            current = current.GetNextOrDefault();
+        }
+
+        // If we get here, we reached the end of memory without finding MCB_LAST
+        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+            _loggerService.Error("MCB chain ended unexpectedly without MCB_LAST marker");
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Frees all memory blocks owned by a specific PSP segment.
+    /// </summary>
+    /// <param name="pspSegment">The PSP segment whose memory should be freed.</param>
+    /// <returns><c>true</c> if all blocks were freed successfully, <c>false</c> if an error occurred.</returns>
+    public bool FreeProcessMemory(ushort pspSegment) {
+        DosMemoryControlBlock? current = _start;
+
+        while (current is not null) {
+            if (!current.IsValid) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("MCB chain corrupted while freeing process memory");
+                }
+                return false;
+            }
+
+            // Free blocks owned by this PSP
+            if (current.PspSegment == pspSegment) {
+                current.SetFree();
+                // Coalesce adjacent free blocks
+                JoinBlocks(current, true);
+            }
+
+            if (current.IsLast) {
+                break;
+            }
+
+            current = current.GetNextOrDefault();
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Frees an environment block when the owning PSP terminates but stays resident.
+    /// </summary>
+    /// <param name="environmentSegment">Segment of the environment data block (PSP field).</param>
+    /// <param name="ownerPspSegment">Segment of the PSP that owns the environment.</param>
+    /// <returns><c>true</c> if the block was freed or no action was required.</returns>
+    public bool FreeEnvironmentBlock(ushort environmentSegment, ushort ownerPspSegment) {
+        if (environmentSegment == 0) {
+            return true;
+        }
+
+        ushort mcbSegment = (ushort)(environmentSegment - 1);
+        DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(mcbSegment);
+        if (!CheckValidOrLogError(block)) {
+            return false;
+        }
+
+        if (block.PspSegment != ownerPspSegment) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose(
+                    "Environment block at {EnvSegment:X4} not owned by PSP {Owner:X4}, skipping free",
+                    environmentSegment, ownerPspSegment);
+            }
+            return true;
+        }
+
+        block.SetFree();
+        JoinBlocks(_start, true);
         return true;
     }
 }

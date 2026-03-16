@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -35,6 +36,8 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
                 AddressSize32Prefix = addressSize32Prefix;
             } else if (prefix is RepPrefix repPrefix) {
                 RepPrefix = repPrefix;
+            } else if (prefix is LockPrefix lockPrefix) {
+                LockPrefix = lockPrefix;
             }
         }
 
@@ -48,6 +51,7 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     /// </summary>
     private void UpdateLength() {
         Length = (byte)FieldsInOrder.Sum(field => field.Length);
+        NextInMemoryAddress = new(Address.Segment, (ushort)(Address.Offset + Length));
     }
 
     /// <summary>
@@ -62,6 +66,14 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
 
     public override void UpdateSuccessorCache() {
         SuccessorsPerAddress = Successors.ToDictionary(node => node.Address);
+    }
+
+    public override ICfgNode? GetNextSuccessor(InstructionExecutionHelper helper) {
+        if (UniqueSuccessor is not null) {
+            return UniqueSuccessor;
+        }
+        SuccessorsPerAddress.TryGetValue(helper.State.IpSegmentedAddress, out ICfgNode? res);
+        return res;
     }
 
     public override bool IsLive => _isLive;
@@ -82,9 +94,10 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     public AddressSize32Prefix? AddressSize32Prefix { get; }
     public RepPrefix? RepPrefix { get; }
 
+    public LockPrefix? LockPrefix { get; }
     public byte Length { get; private set; }
 
-    public SegmentedAddress NextInMemoryAddress => new(Address.Segment, (ushort)(Address.Offset + Length));
+    public SegmentedAddress NextInMemoryAddress { get; private set; }
 
     public List<InstructionPrefix> InstructionPrefixes { get; }
 
@@ -115,7 +128,7 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     public Signature SignatureFinal {
         get {
             ImmutableList<byte?> signatureBytes = ComputeSignatureBytes(FieldsInOrder
-                .Where(field => field.Final));
+                .Where(x => x.Final));
             return new Signature(signatureBytes);
         }
     }

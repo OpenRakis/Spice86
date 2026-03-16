@@ -36,16 +36,11 @@ public sealed class TimerInt8Handler : IInterruptHandler {
         return interruptHandlerAddress;
     }
 
-    /// <summary>
-    /// Gets or set the value of the real time clock, in ticks.
-    /// </summary>
-    public uint TickCounterValue {
-        get => _biosDataArea.TimerCounter;
-        set => _biosDataArea.TimerCounter = value;
-    }
-
     private void IncTickCounterValue() {
-        TickCounterValue++;
+        _biosDataArea.TimerCounter++;
+        if (_biosDataArea.FloppyMotorCounter > 0) {
+            _biosDataArea.FloppyMotorCounter--;
+        }
     }
 
     private void AfterInt8Execution() {

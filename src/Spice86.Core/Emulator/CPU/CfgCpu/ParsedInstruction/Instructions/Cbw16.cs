@@ -15,7 +15,7 @@ public class Cbw16 : CfgInstruction {
         // CBW, Convert byte to word
         short shortValue = (sbyte)helper.State.AL;
         helper.State.AX = (ushort)shortValue;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

@@ -25,16 +25,20 @@ public class SelectorNode(SegmentedAddress address) : CfgNode(address, null) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
+        // SelectorNode doesn't execute any instruction semantics
+        // It only determines which successor to use based on memory
+    }
+
+    public override ICfgNode? GetNextSuccessor(InstructionExecutionHelper helper) {
         foreach (Signature signature in SuccessorsPerSignature.Keys) {
             int length = signature.SignatureValue.Count;
             IList<byte> bytes = helper.Memory.GetSlice((int)Address.Linear, length);
             if (signature.ListEquivalent(bytes)) {
-                helper.NextNode = SuccessorsPerSignature[signature];
-                return;
+                return SuccessorsPerSignature[signature];
             }
         }
 
-        helper.NextNode = null;
+        return null;
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

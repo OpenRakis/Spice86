@@ -7,6 +7,8 @@ using AvaloniaHex;
 
 using Spice86.ViewModels;
 
+using System;
+
 public partial class MemoryView : UserControl {
     public MemoryView() {
         InitializeComponent();

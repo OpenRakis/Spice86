@@ -28,7 +28,7 @@ public class ModRmParser {
             // value at reg[memoryRegisterIndex] to be used instead of memoryAddress
             memoryOffsetType = MemoryOffsetType.NONE;
             memoryAddressType = MemoryAddressType.NONE;
-            return new(modRmByteField, mode, registerIndex, registerMemoryIndex, context.AddressWidthFromPrefixes, memoryOffsetType, memoryAddressType, null, null, null, null, null, null);
+            return new(modRmByteField, mode, registerIndex, registerMemoryIndex, context.AddressWidthFromPrefixes, memoryOffsetType, memoryAddressType, null, null, null, null, null, null, null);
         }
         memoryOffsetType = MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT;
         memoryAddressType = MemoryAddressType.SEGMENT_OFFSET;
@@ -37,7 +37,7 @@ public class ModRmParser {
         FieldWithValue? displacementField;
         ModRmOffsetType modRmOffsetType;
         InstructionField<ushort>? modRmOffsetField = null;
-
+        int defaultSegmentIndex;
         if (context.AddressWidthFromPrefixes == BitWidth.WORD_16) {
             // No SIB in 16bit addressing mode
             sibContext = null;
@@ -49,17 +49,21 @@ public class ModRmParser {
             if (modRmOffsetType == ModRmOffsetType.OFFSET_FIELD_16) {
                 modRmOffsetField = _instructionReader.UInt16.NextField(false);
             }
+            defaultSegmentIndex = ComputeDefaultSegmentIndex16(mode, registerMemoryIndex);
         } else {
             modRmOffsetType = ComputeOffset32(mode, registerMemoryIndex);
             // Parse SIB
             sibContext = modRmOffsetType == ModRmOffsetType.SIB ? ParseSibContext(mode) : null;
             // Parse displacement
-            displacementType = ComputeDisplacementType32(mode);
+            displacementType = ComputeDisplacementType32(mode, registerMemoryIndex);
             displacementField = ReadDisplacementField(displacementType);
+            defaultSegmentIndex = ComputeDefaultSegmentIndex32(mode, registerMemoryIndex, sibContext);
         }
-        int segmentIndex = context.SegmentOverrideFromPrefixes ?? ComputeDefaultSegmentIndex(mode, registerMemoryIndex);
+
+        
+        int segmentIndex = context.SegmentOverrideFromPrefixes ?? defaultSegmentIndex;
         return new(modRmByteField, mode, registerIndex, registerMemoryIndex, context.AddressWidthFromPrefixes, memoryOffsetType, memoryAddressType, sibContext,
-            displacementType, displacementField, modRmOffsetType, modRmOffsetField, segmentIndex);
+            displacementType, displacementField, modRmOffsetType, modRmOffsetField, segmentIndex, defaultSegmentIndex);
     }
 
     private SibContext ParseSibContext(uint mode) {
@@ -84,7 +88,12 @@ public class ModRmParser {
             _ => DisplacementType.ZERO
         };
     }
-    private DisplacementType ComputeDisplacementType32(uint mode) {
+    private DisplacementType ComputeDisplacementType32(uint mode, int registerMemoryIndex) {
+        // Special case: mod = 0, r/m = 5: no offset, only the displacement in 32bits
+        if (mode == 0 && registerMemoryIndex == 5) {
+            return DisplacementType.INT32;
+        }
+
         return mode switch {
             1 => DisplacementType.INT8,
             2 => DisplacementType.INT32,
@@ -102,7 +111,7 @@ public class ModRmParser {
         };
     }
 
-    private int ComputeDefaultSegmentIndex(uint mode, int registerMemoryIndex) {
+    private int ComputeDefaultSegmentIndex16(uint mode, int registerMemoryIndex) {
         // The default segment register is SS for the effective addresses containing a
         // BP index, DS for other effective addresses
         return registerMemoryIndex switch {
@@ -115,6 +124,40 @@ public class ModRmParser {
             6 => mode == 0 ? (int)SegmentRegisterIndex.DsIndex : (int)SegmentRegisterIndex.SsIndex,
             7 => (int)SegmentRegisterIndex.DsIndex,
             _ => throw new InvalidRegisterMemoryIndexException(_state, registerMemoryIndex)
+        };
+    }
+    
+    private int ComputeDefaultSegmentIndex32(uint mode, int registerMemoryIndex, SibContext? sibContext) {
+        return registerMemoryIndex switch {
+            0 => (int)SegmentRegisterIndex.DsIndex,
+            1 => (int)SegmentRegisterIndex.DsIndex,
+            2 => (int)SegmentRegisterIndex.DsIndex,
+            3 => (int)SegmentRegisterIndex.DsIndex,
+            4 => ComputeDefaultSegmentForSibBase(mode, sibContext),
+            5 => mode == 0 ? (int)SegmentRegisterIndex.DsIndex : (int)SegmentRegisterIndex.SsIndex,
+            6 => (int)SegmentRegisterIndex.DsIndex,
+            7 => (int)SegmentRegisterIndex.DsIndex,
+            _ => throw new InvalidRegisterMemoryIndexException(_state, registerMemoryIndex)
+        };
+    }
+    
+    private int ComputeDefaultSegmentForSibBase(uint mode, SibContext? sibContext) {
+        if (sibContext == null) {
+            throw new ArgumentNullException(nameof(sibContext), "SibContext cannot be null here");
+        }
+        int sibBaseRegister = sibContext.BaseRegister;
+        return sibBaseRegister switch {
+            0 => (int)SegmentRegisterIndex.DsIndex,  // EAX
+            1 => (int)SegmentRegisterIndex.DsIndex,  // ECX
+            2 => (int)SegmentRegisterIndex.DsIndex,  // EDX
+            3 => (int)SegmentRegisterIndex.DsIndex,  // EBX
+            4 => (int)SegmentRegisterIndex.SsIndex,  // ESP
+            5 => mode == 0
+                ? (int)SegmentRegisterIndex.DsIndex  // [disp32]
+                : (int)SegmentRegisterIndex.SsIndex, // [EBP + disp]
+            6 => (int)SegmentRegisterIndex.DsIndex,  // ESI
+            7 => (int)SegmentRegisterIndex.DsIndex,  // EDI
+            _ => throw new InvalidRegisterMemoryIndexException(_state, sibBaseRegister)
         };
     }
 
@@ -139,7 +182,8 @@ public class ModRmParser {
             2 => ModRmOffsetType.EDX,
             3 => ModRmOffsetType.EBX,
             4 => ModRmOffsetType.SIB,
-            5 => ModRmOffsetType.EBP,
+            // Special case: mod = 0, r/m = 5: no offset, only the displacement in 32bits (computed later)
+            5 => mode == 0 ? ModRmOffsetType.ZERO : ModRmOffsetType.EBP,
             6 => ModRmOffsetType.ESI,
             7 => ModRmOffsetType.EDI,
             _ => throw new InvalidRegisterMemoryIndexException(_state, registerMemoryIndex)
