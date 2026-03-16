@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Http;
+namespace Spice86.Http;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -11,9 +11,10 @@ using Microsoft.Extensions.Logging;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Http.Controllers;
+using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Http.Controllers;
 using Spice86.Shared.Interfaces;
 
 using System.Linq;

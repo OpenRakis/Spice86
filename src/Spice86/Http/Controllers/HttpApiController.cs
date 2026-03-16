@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Http.Controllers;
+namespace Spice86.Http.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 

@@ -4,7 +4,6 @@
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
     <ItemGroup>
-        <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <Using Remove="System.Linq" />
         <Using Include="System.Buffers.Binary" />
         <Using Include="CommunityToolkit.HighPerformance" />

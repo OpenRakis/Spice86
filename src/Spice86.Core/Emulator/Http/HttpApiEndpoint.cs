@@ -10,6 +10,9 @@ public static class HttpApiEndpoint {
     /// <summary>Default TCP port used by the HTTP API server.</summary>
     public const int DefaultPort = 10001;
 
+    /// <summary>Maximum number of bytes that can be returned in a single range request.</summary>
+    public const int MaxRangeLength = 65536;
+
     /// <summary>Returns the full base URL for the given port.</summary>
     /// <param name="port">TCP port number.</param>
     /// <returns>Base URL string, e.g. <c>http://127.0.0.1:10001</c>.</returns>

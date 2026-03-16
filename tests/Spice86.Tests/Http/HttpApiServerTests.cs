@@ -5,8 +5,8 @@ using System.Net.Http.Json;
 
 using FluentAssertions;
 
+using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.Http.Contracts;
-using Spice86.Core.Emulator.Http.Controllers;
 
 using Xunit;
 
@@ -161,14 +161,14 @@ public sealed class HttpApiServerTests {
     [Fact]
     public async Task GetRange_WithExcessiveLength_ReturnsBadRequest() {
         SeedMemory();
-        int excessiveLength = HttpApiMemoryController.MaxRangeLength + 1;
+        int excessiveLength = HttpApiEndpoint.MaxRangeLength + 1;
         HttpResponseMessage response = await _fixture.HttpClient.GetAsync($"/api/memory/64/range/{excessiveLength}");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
             ?? throw new InvalidOperationException("Expected non-null payload");
-        payload.Message.Should().Contain($"{HttpApiMemoryController.MaxRangeLength}");
+        payload.Message.Should().Contain($"{HttpApiEndpoint.MaxRangeLength}");
     }
 
     [Fact]

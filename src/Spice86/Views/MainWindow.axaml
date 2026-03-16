@@ -77,7 +77,7 @@
 						<MenuItem.Header>
 							<StackPanel Orientation="Horizontal">
 								<fluent:SymbolIcon Symbol="Info" />
-								<Label Content="Status et test API" />
+								<Label Content="Status and API Test" />
 							</StackPanel>
 						</MenuItem.Header>
 					</MenuItem>
