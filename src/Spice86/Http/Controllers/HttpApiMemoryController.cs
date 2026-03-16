@@ -37,9 +37,17 @@ public sealed class HttpApiMemoryController : ControllerBase {
     /// <summary>Writes a single byte to emulator memory at the given physical address.</summary>
     /// <param name="address">Post-A20 physical memory address (0 – <see cref="uint.MaxValue"/>). No A20 wrapping is applied; callers must supply the already-transformed address.</param>
     /// <param name="request">Request body carrying the byte value to write.</param>
-    /// <returns>200 OK with the updated <see cref="HttpApiMemoryByteResponse"/>, 400 if the address is out of range, or 404 if it exceeds memory size.</returns>
+    /// <returns>200 OK with the updated <see cref="HttpApiMemoryByteResponse"/>, 400 if the address is out of range or the request body is missing, 404 if address exceeds memory size, or 409 if the emulator is not paused.</returns>
     [HttpPut("{address:long}/byte")]
-    public ActionResult<HttpApiMemoryByteResponse> PutByte(long address, [FromBody] HttpApiWriteByteRequest request) {
+    public ActionResult<HttpApiMemoryByteResponse> PutByte(long address, [FromBody] HttpApiWriteByteRequest? request) {
+        if (request is null) {
+            return BadRequest(new HttpApiErrorResponse("request body is required"));
+        }
+
+        if (!_httpApiState.PauseHandler.IsPaused) {
+            return Conflict(new HttpApiErrorResponse("emulator must be paused to write memory"));
+        }
+
         ActionResult? error = ValidateAddress(address, out uint validatedAddress);
         if (error is not null) {
             return error;
