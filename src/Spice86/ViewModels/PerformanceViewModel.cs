@@ -12,10 +12,14 @@ using Spice86.Shared.Diagnostics;
 
 using System;
 
-public partial class PerformanceViewModel : ViewModelBase {
+public partial class PerformanceViewModel : ViewModelBase, IDisposable {
     private readonly State _state;
 
     private readonly PerformanceTracker _performanceTracker;
+
+    private readonly DispatcherTimer _updateTimer;
+
+    private bool _disposed;
 
     [ObservableProperty] private double _averageInstructionsPerSecond;
 
@@ -37,7 +41,7 @@ public partial class PerformanceViewModel : ViewModelBase {
         });
         _state = state;
 
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1),
+        _updateTimer = DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1),
             DispatcherPriority.Background, (_, _) => UpdatePerformanceInfo());
     }
 
@@ -46,5 +50,15 @@ public partial class PerformanceViewModel : ViewModelBase {
         _performanceTracker.Update(_state.Cycles);
         AverageInstructionsPerSecond = _performanceTracker.InstructionsPerSecond;
         InstructionsPerMillisecond = _performanceTracker.InstructionsPerSecond / 1000;
+    }
+
+    /// <inheritdoc />
+    public void Dispose() {
+        if (_disposed) {
+            return;
+        }
+        _updateTimer.Stop();
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 }

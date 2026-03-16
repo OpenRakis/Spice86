@@ -34,13 +34,13 @@ public class MainWindowViewModelUiTests : BreakpointUiTestBase {
 
         State state = new(CpuModel.INTEL_80286);
         PerformanceTracker performanceTracker = new(new SystemTimeProvider());
-        PerformanceViewModel performanceViewModel = new(state, pauseHandler, uiDispatcher, performanceTracker);
+        using PerformanceViewModel performanceViewModel = new(state, pauseHandler, uiDispatcher, performanceTracker);
 
         Configuration configuration = new() {
             Exe = "test.exe"
         };
 
-        MainWindowViewModel viewModel = new(
+        using MainWindowViewModel viewModel = new(
             new SharedMouseData(),
             timeMultiplier,
             uiDispatcher,
