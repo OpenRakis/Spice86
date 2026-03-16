@@ -84,7 +84,7 @@ public sealed class Spice86HttpApiServer : IDisposable {
         ((IHost)_webApplication).Dispose();
     }
 
-    // custom IHostLifeTime so the HTTP server can close when the emulation loop exits.
+    // custom IHostLifetime so the HTTP server can close when the emulation loop exits.
     private sealed class EmbeddedHostLifetime : IHostLifetime {
         public Task WaitForStartAsync(CancellationToken cancellationToken) {
             return Task.CompletedTask;

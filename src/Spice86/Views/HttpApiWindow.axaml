@@ -24,7 +24,7 @@
         <Border Grid.Row="0" Padding="14" BorderThickness="1" CornerRadius="8">
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="4">
                 <TextBlock FontSize="26" FontWeight="SemiBold" Text="Spice86 REST API" />
-                <TextBlock Grid.Row="1" FontSize="14" Text="OpenAPI-style console for local emulator endpoints" />
+                <TextBlock Grid.Row="1" FontSize="14" Text="Built-in HTTP API test console for local emulator endpoints" />
                 <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding LastHttpStatus}" />
             </Grid>
         </Border>
