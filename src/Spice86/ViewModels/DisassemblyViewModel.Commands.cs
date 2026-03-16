@@ -32,7 +32,7 @@ public partial class DisassemblyViewModel {
 
             StepOneInstruction(
                 "Step over breakpoint was reached",
-                "Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}",
+                "Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateIpPhysicalAddress:X8}",
                 currentAddress,
                 usePhysicalAddressLogging: true);
 
