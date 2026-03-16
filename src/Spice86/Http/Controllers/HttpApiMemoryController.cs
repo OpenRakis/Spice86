@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.Http.Contracts;
+using Spice86.Core.Emulator.Memory;
 
 /// <summary>
 /// Memory read and write endpoints.
@@ -20,7 +21,7 @@ public sealed class HttpApiMemoryController : ControllerBase {
     }
 
     /// <summary>Reads a single byte from emulator memory at the given physical address.</summary>
-    /// <param name="address">Post-A20 physical memory address (0 – <see cref="uint.MaxValue"/>). No A20 wrapping is applied; callers must supply the already-transformed address.</param>
+    /// <param name="address">Physical memory address (0 – <see cref="uint.MaxValue"/>). <see cref="A20Gate"/> masking is applied before access, matching CPU-visible memory semantics.</param>
     /// <returns>200 OK with <see cref="HttpApiMemoryByteResponse"/>, 400 if the address is out of range, or 404 if it exceeds memory size.</returns>
     [HttpGet("{address:long}/byte")]
     public ActionResult<HttpApiMemoryByteResponse> GetByte(long address) {
@@ -29,13 +30,14 @@ public sealed class HttpApiMemoryController : ControllerBase {
             return error;
         }
 
-        byte value = _httpApiState.Memory.SneakilyRead(validatedAddress);
-        HttpApiMemoryByteResponse response = new(validatedAddress, value);
+        uint transformedAddress = _httpApiState.A20Gate.TransformAddress(validatedAddress);
+        byte value = _httpApiState.Memory.SneakilyRead(transformedAddress);
+        HttpApiMemoryByteResponse response = new(transformedAddress, value);
         return Ok(response);
     }
 
     /// <summary>Writes a single byte to emulator memory at the given physical address.</summary>
-    /// <param name="address">Post-A20 physical memory address (0 – <see cref="uint.MaxValue"/>). No A20 wrapping is applied; callers must supply the already-transformed address.</param>
+    /// <param name="address">Physical memory address (0 – <see cref="uint.MaxValue"/>). <see cref="A20Gate"/> masking is applied before access, matching CPU-visible memory semantics.</param>
     /// <param name="request">Request body carrying the byte value to write.</param>
     /// <returns>200 OK with the updated <see cref="HttpApiMemoryByteResponse"/>, 400 if the address is out of range or the request body is missing, 404 if address exceeds memory size, or 409 if the emulator is not paused.</returns>
     [HttpPut("{address:long}/byte")]
@@ -53,13 +55,14 @@ public sealed class HttpApiMemoryController : ControllerBase {
             return Conflict(new HttpApiErrorResponse("emulator must be paused to write memory"));
         }
 
-        _httpApiState.Memory.SneakilyWrite(validatedAddress, request.Value);
-        HttpApiMemoryByteResponse response = new(validatedAddress, request.Value);
+        uint transformedAddress = _httpApiState.A20Gate.TransformAddress(validatedAddress);
+        _httpApiState.Memory.SneakilyWrite(transformedAddress, request.Value);
+        HttpApiMemoryByteResponse response = new(transformedAddress, request.Value);
         return Ok(response);
     }
 
     /// <summary>Reads a contiguous range of bytes from emulator memory.</summary>
-    /// <param name="address">Post-A20 physical start address (0 – <see cref="uint.MaxValue"/>). No A20 wrapping is applied; callers must supply the already-transformed address.</param>
+    /// <param name="address">Physical start address (0 – <see cref="uint.MaxValue"/>). <see cref="A20Gate"/> masking is applied before access, matching CPU-visible memory semantics.</param>
     /// <param name="length">Number of bytes to read; must be between 1 and <see cref="HttpApiEndpoint.MaxRangeLength"/>.</param>
     /// <returns>200 OK with <see cref="HttpApiMemoryRangeResponse"/> (length may be clamped to memory boundary), 400 for invalid arguments, or 404 if the address exceeds memory size.</returns>
     [HttpGet("{address:long}/range/{length:int}")]
@@ -77,11 +80,12 @@ public sealed class HttpApiMemoryController : ControllerBase {
             return error;
         }
 
-        long readableLength = (long)_httpApiState.Memory.Length - validatedAddress;
+        uint transformedAddress = _httpApiState.A20Gate.TransformAddress(validatedAddress);
+        long readableLength = (long)_httpApiState.Memory.Length - transformedAddress;
         int boundedLength = (int)Math.Min(length, readableLength);
-        byte[] values = _httpApiState.Memory.ReadRam((uint)boundedLength, validatedAddress);
+        byte[] values = _httpApiState.Memory.ReadRam((uint)boundedLength, transformedAddress);
 
-        HttpApiMemoryRangeResponse response = new(validatedAddress, boundedLength, values);
+        HttpApiMemoryRangeResponse response = new(transformedAddress, boundedLength, values);
         return Ok(response);
     }
 
