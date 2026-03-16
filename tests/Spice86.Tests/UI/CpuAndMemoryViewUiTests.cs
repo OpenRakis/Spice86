@@ -31,7 +31,7 @@ public class CpuAndMemoryViewUiTests : BreakpointUiTestBase {
         MemoryContext memoryContext = CreateMemory();
         ControlledDispatcher uiDispatcher = new();
 
-        CpuViewModel viewModel = new(state, memoryContext.Memory, pauseHandler, uiDispatcher) {
+        using CpuViewModel viewModel = new(state, memoryContext.Memory, pauseHandler, uiDispatcher) {
             IsVisible = true
         };
 

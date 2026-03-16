@@ -10,14 +10,17 @@ using Spice86.Core.Emulator.VM;
 using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.Shared.Utils;
 
+using System;
 using System.ComponentModel;
 using System.Reflection;
 using Spice86.ViewModels.PropertiesMappers;
 using Spice86.ViewModels.Services;
 
-public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
+public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel, IDisposable {
     private readonly State _cpuState;
     private readonly IMemory _memory;
+    private readonly DispatcherTimer _updateTimer;
+    private bool _disposed;
 
     [ObservableProperty]
     private StateInfo _state = new();
@@ -35,7 +38,7 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
         pauseHandler.Paused += () => uiDispatcher.Post(() => _isPaused = pauseHandler.IsPaused);
         _isPaused = pauseHandler.IsPaused;
         pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = pauseHandler.IsPaused);
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+        _updateTimer = DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
 
     public bool IsVisible { get; set; }
@@ -100,5 +103,15 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
         DsDxString = _memory.GetZeroTerminatedString(
             MemoryUtils.ToPhysicalAddress(State.DS, State.DX),
             32);
+    }
+
+    /// <inheritdoc />
+    public void Dispose() {
+        if (_disposed) {
+            return;
+        }
+        _updateTimer.Stop();
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 }
