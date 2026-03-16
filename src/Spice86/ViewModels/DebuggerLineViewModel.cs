@@ -37,6 +37,12 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     private bool _isSelected;
 
     [ObservableProperty]
+    private List<JumpArcSegment> _jumpArcSegments = [];
+
+    [ObservableProperty]
+    private int _maxJumpLanes;
+
+    [ObservableProperty]
     private bool? _willJump;
 
     public DebuggerLineViewModel(EnrichedInstruction instruction, BreakpointsViewModel? breakpointsViewModel = null) {
@@ -73,6 +79,7 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     public bool ContinuesToNextInstruction => _info.FlowControl == FlowControl.Next;
     public bool CanBeSteppedOver => _info.FlowControl is FlowControl.Call or FlowControl.IndirectCall or FlowControl.Interrupt;
     public bool IsConditionalBranch => _info.FlowControl == FlowControl.ConditionalBranch;
+    public bool IsUnconditionalBranch => _info.FlowControl == FlowControl.UnconditionalBranch;
     public uint NextAddress { get; private set; }
 
     /// <summary>

@@ -39,30 +39,58 @@ public static class HighlightingConverter {
     public static readonly IValueConverter TrueToBold = new FuncValueConverter<bool, FontWeight>(value => value ? FontWeight.Bold : FontWeight.Normal);
 
     /// <summary>
-    /// Gets the highlight background brush used by the converters.
+    /// Gets the highlight background brush from application-level resources.
     /// </summary>
     public static IBrush GetHighlightBackgroundBrush() {
         return ConverterUtilities.GetResourceBrush(HighlightBackgroundKey, FallbackHighlightBackground);
     }
 
     /// <summary>
-    /// Gets the default background brush used by the converters.
+    /// Gets the highlight background brush by searching the element's resource tree.
+    /// </summary>
+    public static IBrush GetHighlightBackgroundBrush(StyledElement element) {
+        return ConverterUtilities.GetResourceBrush(HighlightBackgroundKey, FallbackHighlightBackground, element);
+    }
+
+    /// <summary>
+    /// Gets the default background brush from application-level resources.
     /// </summary>
     public static IBrush GetDefaultBackgroundBrush() {
         return ConverterUtilities.GetResourceBrush(DefaultBackgroundKey, FallbackDefaultBackground);
     }
 
     /// <summary>
-    /// Gets the highlight foreground brush used by the converters.
+    /// Gets the default background brush by searching the element's resource tree.
+    /// </summary>
+    public static IBrush GetDefaultBackgroundBrush(StyledElement element) {
+        return ConverterUtilities.GetResourceBrush(DefaultBackgroundKey, FallbackDefaultBackground, element);
+    }
+
+    /// <summary>
+    /// Gets the highlight foreground brush from application-level resources.
     /// </summary>
     public static IBrush GetHighlightForegroundBrush() {
         return ConverterUtilities.GetResourceBrush(HighlightForegroundKey, FallbackHighlightForeground);
     }
 
     /// <summary>
-    /// Gets the default foreground brush used by the converters.
+    /// Gets the highlight foreground brush by searching the element's resource tree.
+    /// </summary>
+    public static IBrush GetHighlightForegroundBrush(StyledElement element) {
+        return ConverterUtilities.GetResourceBrush(HighlightForegroundKey, FallbackHighlightForeground, element);
+    }
+
+    /// <summary>
+    /// Gets the default foreground brush from application-level resources.
     /// </summary>
     public static IBrush GetDefaultForegroundBrush() {
         return ConverterUtilities.GetResourceBrush(DefaultForegroundKey, FallbackDefaultForeground);
+    }
+
+    /// <summary>
+    /// Gets the default foreground brush by searching the element's resource tree.
+    /// </summary>
+    public static IBrush GetDefaultForegroundBrush(StyledElement element) {
+        return ConverterUtilities.GetResourceBrush(DefaultForegroundKey, FallbackDefaultForeground, element);
     }
 }
