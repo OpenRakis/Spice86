@@ -59,8 +59,6 @@ using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
 
-using System.Diagnostics;
-
 using IMcpServer = Core.Emulator.Mcp.IMcpServer;
 using McpServer = Core.Emulator.Mcp.McpServer;
 
@@ -83,8 +81,8 @@ public class Spice86DependencyInjection : IDisposable {
     /// </summary>
     public FunctionCatalogue FunctionCatalogue { get; }
 
-    private readonly McpStdioTransport _mcpStdioTransport;
-    private readonly McpHttpHost _mcpHttpTransport;
+    private readonly McpStdioTransport? _mcpStdioTransport;
+    private readonly McpHttpHost? _mcpHttpTransport;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -608,18 +606,32 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("MCP server created...");
         }
 
-        EmulatorMcpServices emulatorMcpServices = new(memory, state, functionCatalogue, cfgCpu,
-            ioPortDispatcher, vgaRenderer, pauseHandler, dos.Ems, xms,
-            emulatorBreakpointsManager, loggerService);
+        McpStdioTransport? mcpStdioTransport = null;
+        McpHttpHost? mcpHttpTransport = null;
 
-        McpStdioTransport mcpStdioTransport = new(mcpServer, loggerService);
-        mcpStdioTransport.Start();
+        if (configuration.EnableMcp) {
+            EmulatorMcpServices emulatorMcpServices = new(memory, state, functionCatalogue, cfgCpu,
+                ioPortDispatcher, vgaRenderer, pauseHandler, dos.Ems, xms,
+                emulatorBreakpointsManager, loggerService);
 
-        McpHttpHost mcpHttpTransport = new(loggerService);
-        mcpHttpTransport.Start(emulatorMcpServices, 8081, null, null, configuration.EnableLegacyMcp, mcpServer);
+            mcpStdioTransport = new McpStdioTransport(mcpServer, loggerService);
+            mcpStdioTransport.Start();
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("MCP transports started (Stdio and HTTP)");
+            mcpHttpTransport = new McpHttpHost(loggerService);
+            try {
+                mcpHttpTransport.Start(emulatorMcpServices, configuration.McpHttpPort, null, null, configuration.EnableLegacyMcp, mcpServer);
+                if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                    loggerService.Information("MCP transports started (Stdio and HTTP on port {Port})", configuration.McpHttpPort);
+                }
+            } catch (InvalidOperationException ex) {
+                loggerService.Warning(ex, "Failed to configure MCP HTTP transport on port {Port}; MCP HTTP will be unavailable", configuration.McpHttpPort);
+                mcpHttpTransport.Dispose();
+                mcpHttpTransport = null;
+            }
+        } else {
+            if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                loggerService.Information("MCP server not started (use --enable-mcp to enable)");
+            }
         }
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -769,8 +781,8 @@ public class Spice86DependencyInjection : IDisposable {
             if (disposing) {
                 ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
 
-                _mcpStdioTransport.Stop();
-                _mcpHttpTransport.Dispose();
+                _mcpStdioTransport?.Stop();
+                _mcpHttpTransport?.Dispose();
 
                 ProgramExecutor.Dispose();
 

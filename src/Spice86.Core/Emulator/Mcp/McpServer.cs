@@ -335,18 +335,15 @@ public sealed class McpServer : IMcpServer {
             } catch (InvalidOperationException ex) {
                 _loggerService.Error("Invalid operation for tool {ToolName}: {Error}", toolName, ex.Message);
                 return CreateErrorResponse(id, (int)JsonRpcErrorCode.InternalError, ex.Message);
-            } catch (Exception ex) when (!IsFatalException(ex)) {
-                _loggerService.Error(ex, "Unexpected error executing tool {ToolName}", toolName);
-                return CreateErrorResponse(id, -32603, $"Internal error: {ex.Message}");
+            } catch (JsonException ex) {
+                _loggerService.Error(ex, "JSON error executing tool {ToolName}", toolName);
+                return CreateErrorResponse(id, (int)JsonRpcErrorCode.InternalError, $"Internal error: {ex.Message}");
+            } catch (FormatException ex) {
+                _loggerService.Error(ex, "Formatting error executing tool {ToolName}", toolName);
+                return CreateErrorResponse(id, (int)JsonRpcErrorCode.InternalError, $"Internal error: {ex.Message}");
             }
         }
     }
-
-    private static bool IsFatalException(Exception ex) =>
-        ex is OutOfMemoryException ||
-        ex is StackOverflowException ||
-        ex is ThreadAbortException ||
-        ex is AccessViolationException;
 
     private CpuRegistersResponse ReadCpuRegisters() {
         return new CpuRegistersResponse {
@@ -425,9 +422,14 @@ public sealed class McpServer : IMcpServer {
             }
         }
 
-        FunctionInfo[] functions = _functionCatalogue.FunctionInformations.Values
-            .OrderByDescending(f => f.CalledCount)
-            .Take(limit)
+        IEnumerable<FunctionInformation> orderedFunctions = _functionCatalogue.FunctionInformations.Values
+            .OrderByDescending(f => f.CalledCount);
+
+        if (limit > 0) {
+            orderedFunctions = orderedFunctions.Take(limit);
+        }
+
+        FunctionInfo[] functions = orderedFunctions
             .Select(f => new FunctionInfo {
                 Address = f.Address.ToString(),
                 Name = f.Name,

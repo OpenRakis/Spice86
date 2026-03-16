@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -139,7 +140,9 @@ public sealed class McpHttpHost : IDisposable {
                 }
             } catch (OperationCanceledException) {
                 // Client disconnected.
-            } catch (Exception ex) {
+            } catch (IOException ex) {
+                _loggerService.Warning(ex, "MCP SSE client disconnected abruptly: {ClientId}", clientId);
+            } catch (InvalidOperationException ex) {
                 _loggerService.Warning(ex, "MCP SSE client disconnected abruptly: {ClientId}", clientId);
             } finally {
                 _legacyClients.TryRemove(clientId, out _);
@@ -155,7 +158,19 @@ public sealed class McpHttpHost : IDisposable {
             string? responseJson;
             try {
                 responseJson = _legacyMcpServer!.HandleRequest(requestJson);
-            } catch (Exception ex) {
+            } catch (JsonException ex) {
+                _loggerService.Error(ex, "JSON error processing MCP request in legacy HTTP transport");
+                responseJson = $$"""
+                {
+                  "jsonrpc": "2.0",
+                  "error": {
+                    "code": -32603,
+                    "message": "Internal error: {{EscapeJsonString(ex.Message)}}"
+                  },
+                  "id": null
+                }
+                """;
+            } catch (InvalidOperationException ex) {
                 _loggerService.Error(ex, "Error processing MCP request in legacy HTTP transport");
                 responseJson = $$"""
                 {
@@ -217,8 +232,10 @@ public sealed class McpHttpHost : IDisposable {
             try {
                 _app.StopAsync().GetAwaiter().GetResult();
                 _app.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            } catch (Exception ex) {
-                _loggerService.Warning(ex, "Error stopping MCP HTTP host");
+            } catch (OperationCanceledException ex) {
+                _loggerService.Warning(ex, "MCP HTTP host shutdown was cancelled");
+            } catch (ObjectDisposedException ex) {
+                _loggerService.Warning(ex, "MCP HTTP host was already disposed during shutdown");
             }
             _app = null;
         }
