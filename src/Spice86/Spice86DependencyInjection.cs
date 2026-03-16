@@ -4,7 +4,6 @@ using Avalonia;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
-using Spice86.ViewModels.Messages;
 
 using Serilog.Events;
 

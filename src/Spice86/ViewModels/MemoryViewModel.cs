@@ -669,7 +669,6 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         }
 
         uint bytesToRead = (uint)(BitmapViewWidth * BitmapViewHeight);
-        uint endAddress;
         if (TryParseAddressString(BitmapViewEndAddress, _state, out uint? endAddressParsed)) {
             // Respect the provided end address and clamp the read length accordingly
             if (!GetIsMemoryRangeValid(startAddress, endAddressParsed, 0)) {
@@ -678,10 +677,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             }
             uint available = endAddressParsed.Value - startAddress.Value + 1;
             bytesToRead = Math.Min(bytesToRead, available);
-            endAddress = endAddressParsed.Value;
         } else {
             // Else, compute end from length
-            endAddress = startAddress.Value + bytesToRead - 1;
+            uint endAddress = startAddress.Value + bytesToRead - 1;
             if (!GetIsMemoryRangeValid(startAddress, endAddress, 0)) {
                 ShowError(new ArgumentOutOfRangeException(nameof(BitmapViewStartAddress), $"Computed address range out of bounds:" +
                     $" {ConvertUtils.ToHex32(startAddress.Value)} - {ConvertUtils.ToHex32(endAddress)}"));
@@ -696,6 +694,11 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         vm.StartAddress = startAddress.Value;
         vm.Data = bytes;
         MemoryBitmap = vm;
+
+        // Remove any existing handler before adding a new one to prevent duplicates
+        if (_memBitmapUpdateOnPause != null) {
+            _pauseHandler.Paused -= _memBitmapUpdateOnPause;
+        }
         _memBitmapUpdateOnPause = () => {
             bytes = _memory.ReadRam(startAddress.Value, bytesToRead);
             vm.Data = bytes;

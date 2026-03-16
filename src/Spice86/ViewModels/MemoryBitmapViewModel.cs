@@ -39,6 +39,11 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
         _storage = storage;
     }
 
+    /// <summary>
+    /// All available display modes for the ComboBox.
+    /// </summary>
+    public MemoryBitmapDisplayMode[] AvailableDisplayModes { get; } = Enum.GetValues<MemoryBitmapDisplayMode>();
+
     partial void OnDataChanged(byte[]? value) => RenderBitmap();
 
     partial void OnDisplayModeChanged(MemoryBitmapDisplayMode value) => RenderBitmap();
@@ -111,7 +116,9 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
             }
         }
 
+        var oldBitmap = Bitmap;
         Bitmap = writeableBitmap;
+        oldBitmap?.Dispose();
         
         if (ShowOverlay) {
             ApplyOverlay();
@@ -155,7 +162,9 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
             }
         }
 
+        var oldBitmap = Bitmap;
         Bitmap = writeableBitmap;
+        oldBitmap?.Dispose();
         
         if (ShowOverlay) {
             ApplyOverlay();
@@ -199,7 +208,9 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
             }
         }
 
+        var oldBitmap = Bitmap;
         Bitmap = writeableBitmap;
+        oldBitmap?.Dispose();
         
         if (ShowOverlay) {
             ApplyOverlay();
@@ -269,7 +280,9 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
             }
         }
 
+        var oldBitmap = Bitmap;
         Bitmap = writeableBitmap;
+        oldBitmap?.Dispose();
         
         if (ShowOverlay) {
             ApplyOverlay();
@@ -315,7 +328,9 @@ public partial class MemoryBitmapViewModel : ViewModelBase {
             }
         }
 
+        var oldBitmap = Bitmap;
         Bitmap = writeableBitmap;
+        oldBitmap?.Dispose();
         
         if (ShowOverlay) {
             ApplyOverlay();
