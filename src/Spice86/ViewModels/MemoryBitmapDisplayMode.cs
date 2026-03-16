@@ -20,7 +20,7 @@ public enum MemoryBitmapDisplayMode {
     Ega16Color,
 
     /// <summary>
-    /// Text mode with IBM PC fonts.
+    /// Text mode rendering (character code + attribute bytes, 8×16 character cells).
     /// </summary>
     TextMode,
 
