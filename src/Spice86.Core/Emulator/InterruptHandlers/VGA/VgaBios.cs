@@ -115,10 +115,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// </summary>
     private static class VbeConstants {
         /// <summary>
-        /// "The current VESA version number is 1.2."
-        /// VBE 1.0 version number in BCD format (major.minor = 0x0100 = 1.0).
+        /// VBE 1.2 version number in BCD format (major.minor = 0x0102 = 1.2).
         /// </summary>
-        public const ushort Version10 = 0x0100;
+        public const ushort Version12 = 0x0102;
 
         /// <summary>
         /// "D0 = DAC is switchable (0 = DAC is fixed width, with 6-bits per primary color,
@@ -157,12 +156,100 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         public const ushort ModeListTerminator = 0xFFFF;
 
         /// <summary>
+        /// VESA mode 100h: 640x400, 256 colors.
+        /// </summary>
+        public const ushort VesaMode640x400x256 = 0x100;
+        /// <summary>
+        /// VESA mode 101h: 640x480, 256 colors.
+        /// </summary>
+        public const ushort VesaMode640x480x256 = 0x101;
+        /// <summary>
         /// "To date, VESA has defined a 7-bit video mode number, 6Ah, for the 800x600,
         /// 16-color, 4-plane graphics mode. The corresponding 15-bit mode number for this
         /// mode is 102h."
         /// VESA mode 102h: 800x600, 16 colors (4-plane planar).
         /// </summary>
         public const ushort VesaMode800x600x16 = 0x102;
+        /// <summary>
+        /// VESA mode 103h: 800x600, 256 colors.
+        /// </summary>
+        public const ushort VesaMode800x600x256 = 0x103;
+        /// <summary>
+        /// VESA mode 104h: 1024x768, 16 colors (4-plane planar).
+        /// </summary>
+        public const ushort VesaMode1024x768x16 = 0x104;
+        /// <summary>
+        /// VESA mode 105h: 1024x768, 256 colors.
+        /// </summary>
+        public const ushort VesaMode1024x768x256 = 0x105;
+        /// <summary>
+        /// VESA mode 106h: 1280x1024, 16 colors (4-plane planar).
+        /// </summary>
+        public const ushort VesaMode1280x1024x16 = 0x106;
+        /// <summary>
+        /// VESA mode 107h: 1280x1024, 256 colors.
+        /// </summary>
+        public const ushort VesaMode1280x1024x256 = 0x107;
+        /// <summary>
+        /// VESA mode 10Dh: 320x200, 15-bit (RGB 5:5:5).
+        /// </summary>
+        public const ushort VesaMode320x200x15 = 0x10D;
+        /// <summary>
+        /// VESA mode 10Eh: 320x200, 16-bit (RGB 5:6:5).
+        /// </summary>
+        public const ushort VesaMode320x200x16 = 0x10E;
+        /// <summary>
+        /// VESA mode 10Fh: 320x200, 24-bit.
+        /// </summary>
+        public const ushort VesaMode320x200x24 = 0x10F;
+        /// <summary>
+        /// VESA mode 110h: 640x480, 15-bit (RGB 5:5:5).
+        /// </summary>
+        public const ushort VesaMode640x480x15 = 0x110;
+        /// <summary>
+        /// VESA mode 111h: 640x480, 16-bit (RGB 5:6:5).
+        /// </summary>
+        public const ushort VesaMode640x480x16 = 0x111;
+        /// <summary>
+        /// VESA mode 112h: 640x480, 24-bit.
+        /// </summary>
+        public const ushort VesaMode640x480x24 = 0x112;
+        /// <summary>
+        /// VESA mode 113h: 800x600, 15-bit (RGB 5:5:5).
+        /// </summary>
+        public const ushort VesaMode800x600x15 = 0x113;
+        /// <summary>
+        /// VESA mode 114h: 800x600, 16-bit (RGB 5:6:5).
+        /// </summary>
+        public const ushort VesaMode800x600x16Bit = 0x114;
+        /// <summary>
+        /// VESA mode 115h: 800x600, 24-bit.
+        /// </summary>
+        public const ushort VesaMode800x600x24 = 0x115;
+        /// <summary>
+        /// VESA mode 116h: 1024x768, 15-bit (RGB 5:5:5).
+        /// </summary>
+        public const ushort VesaMode1024x768x15 = 0x116;
+        /// <summary>
+        /// VESA mode 117h: 1024x768, 16-bit (RGB 5:6:5).
+        /// </summary>
+        public const ushort VesaMode1024x768x16Bit = 0x117;
+        /// <summary>
+        /// VESA mode 118h: 1024x768, 24-bit.
+        /// </summary>
+        public const ushort VesaMode1024x768x24 = 0x118;
+        /// <summary>
+        /// VESA mode 119h: 1280x1024, 15-bit (RGB 5:5:5).
+        /// </summary>
+        public const ushort VesaMode1280x1024x15 = 0x119;
+        /// <summary>
+        /// VESA mode 11Ah: 1280x1024, 16-bit (RGB 5:6:5).
+        /// </summary>
+        public const ushort VesaMode1280x1024x16Bit = 0x11A;
+        /// <summary>
+        /// VESA mode 11Bh: 1280x1024, 24-bit.
+        /// </summary>
+        public const ushort VesaMode1280x1024x24 = 0x11B;
 
         /// <summary>
         /// Internal VGA mode 6Ah corresponding to VESA mode 102h (800x600x16).
@@ -201,7 +288,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         /// </summary>
         public const byte CharWidth = 8;
         /// <summary>
-        /// "The YCharSellSize...size of the character cell in pixels" = 16
+        /// "The YCharCellSize...size of the character cell in pixels" = 16
         /// </summary>
         public const byte CharHeight = 16;
         /// <summary>
@@ -238,6 +325,74 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         /// "the MaskSize values for a Direct Color 5:6:5 mode would be 5, 6, 5" - green=6
         /// </summary>
         public const byte GreenMaskSize6Bit = 6;
+        /// <summary>
+        /// Number of planes for 4-plane planar modes (e.g. EGA/VGA 16-color).
+        /// </summary>
+        public const byte PlanarModePlanes = 4;
+        /// <summary>
+        /// Number of bits per byte, used for scanline width calculations in planar modes.
+        /// </summary>
+        public const byte BitsPerByte = 8;
+        /// <summary>
+        /// Bits per pixel for 4-color planar modes (EGA/VGA 16-color).
+        /// </summary>
+        public const byte BitsPerPixelPlanar4Bit = 4;
+        /// <summary>
+        /// Bits per pixel for 256-color packed pixel modes.
+        /// </summary>
+        public const byte BitsPerPixel8Bit = 8;
+        /// <summary>
+        /// Bits per pixel for 15-bit (RGB 5:5:5) direct color modes.
+        /// </summary>
+        public const byte BitsPerPixel15Bit = 15;
+        /// <summary>
+        /// Bits per pixel for 16-bit (RGB 5:6:5) direct color modes.
+        /// </summary>
+        public const byte BitsPerPixel16Bit = 16;
+        /// <summary>
+        /// Bits per pixel for 24-bit direct color modes.
+        /// </summary>
+        public const byte BitsPerPixel24Bit = 24;
+        /// <summary>
+        /// Bits per pixel for 32-bit direct color modes.
+        /// </summary>
+        public const byte BitsPerPixel32Bit = 32;
+        /// <summary>
+        /// Bytes per pixel for 15-bit and 16-bit direct color modes.
+        /// </summary>
+        public const byte BytesPerPixel16Bit = 2;
+        /// <summary>
+        /// Bytes per pixel for 24-bit direct color modes.
+        /// </summary>
+        public const byte BytesPerPixel24Bit = 3;
+        /// <summary>
+        /// Bytes per pixel for 32-bit direct color modes.
+        /// </summary>
+        public const byte BytesPerPixel32Bit = 4;
+        /// <summary>
+        /// Red field bit position for RGB 5:5:5 (15-bit) modes.
+        /// </summary>
+        public const byte RedFieldPositionRgb555 = 10;
+        /// <summary>
+        /// Red field bit position for RGB 5:6:5 (16-bit) modes.
+        /// </summary>
+        public const byte RedFieldPositionRgb565 = 11;
+        /// <summary>
+        /// Green field bit position for RGB 5:5:5 and RGB 5:6:5 modes.
+        /// </summary>
+        public const byte GreenFieldPositionRgb16 = 5;
+        /// <summary>
+        /// Blue field bit position for all direct color modes.
+        /// </summary>
+        public const byte BlueFieldPosition = 0;
+        /// <summary>
+        /// Red field bit position for 24-bit and 32-bit direct color modes.
+        /// </summary>
+        public const byte RedFieldPositionRgb24 = 16;
+        /// <summary>
+        /// Green field bit position for 24-bit and 32-bit direct color modes.
+        /// </summary>
+        public const byte GreenFieldPositionRgb24 = 8;
     }
 
     /// <summary>
@@ -601,7 +756,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         }
 
         /// <summary>
-        /// "The XCharCellSize and YCharSellSize specify the size of the character cell in
+        /// "The XCharCellSize and YCharCellSize specify the size of the character cell in
         /// pixels."
         /// Character cell width in pixels. Offset: 0x16, Size: 1 byte.
         /// </summary>
@@ -611,7 +766,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         }
 
         /// <summary>
-        /// "The XCharCellSize and YCharSellSize specify the size of the character cell in
+        /// "The XCharCellSize and YCharCellSize specify the size of the character cell in
         /// pixels."
         /// Character cell height in pixels. Offset: 0x17, Size: 1 byte.
         /// </summary>
@@ -1417,9 +1572,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
         var vbeInfo = new VbeInfoBlock(Memory, address);
 
-        // Fill VBE Info Block (VBE 1.0)
+        // Fill VBE Info Block (VBE 1.2)
         vbeInfo.Signature = "VESA";
-        vbeInfo.Version = VbeConstants.Version10;
+        vbeInfo.Version = VbeConstants.Version12;
 
         // OEM String pointer - point to a location beyond the main structure
         vbeInfo.OemStringOffset = (ushort)(offset + VbeConstants.OemStringOffset);
@@ -1443,7 +1598,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         vbeInfo.WriteModeList(vesaModes, VbeConstants.ModeListOffset);
 
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 4F00 VbeGetControllerInfo - Returning VBE 1.0 info at {Segment:X4}:{Offset:X4}",
+            _logger.Debug("{ClassName} INT 10 4F00 VbeGetControllerInfo - Returning VBE 1.2 info at {Segment:X4}:{Offset:X4}",
                 nameof(VgaBios), segment, offset);
         }
 
@@ -1488,16 +1643,14 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
         // Calculate bytes per scan line
         ushort bytesPerLine;
-        if (bpp == 4) {
-            bytesPerLine = (ushort)(width / 8); // 4-bit planar
-        } else if (bpp == 1) {
-            bytesPerLine = (ushort)(width / 8);
-        } else if (bpp == 15 || bpp == 16) {
-            bytesPerLine = (ushort)(width * 2);
-        } else if (bpp == 24) {
-            bytesPerLine = (ushort)(width * 3);
-        } else if (bpp == 32) {
-            bytesPerLine = (ushort)(width * 4);
+        if (bpp == VbeModeInfoConstants.BitsPerPixelPlanar4Bit || bpp == 1) {
+            bytesPerLine = (ushort)(width / VbeModeInfoConstants.BitsPerByte);
+        } else if (bpp == VbeModeInfoConstants.BitsPerPixel15Bit || bpp == VbeModeInfoConstants.BitsPerPixel16Bit) {
+            bytesPerLine = (ushort)(width * VbeModeInfoConstants.BytesPerPixel16Bit);
+        } else if (bpp == VbeModeInfoConstants.BitsPerPixel24Bit) {
+            bytesPerLine = (ushort)(width * VbeModeInfoConstants.BytesPerPixel24Bit);
+        } else if (bpp == VbeModeInfoConstants.BitsPerPixel32Bit) {
+            bytesPerLine = (ushort)(width * VbeModeInfoConstants.BytesPerPixel32Bit);
         } else {
             bytesPerLine = width; // 8-bit packed pixel
         }
@@ -1508,18 +1661,18 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         modeInfo.YResolution = height;
         modeInfo.XCharSize = VbeModeInfoConstants.CharWidth;
         modeInfo.YCharSize = VbeModeInfoConstants.CharHeight;
-        modeInfo.NumberOfPlanes = (byte)(bpp == 4 ? 4 : 1);
+        modeInfo.NumberOfPlanes = (byte)(bpp == VbeModeInfoConstants.BitsPerPixelPlanar4Bit ? VbeModeInfoConstants.PlanarModePlanes : 1);
         modeInfo.BitsPerPixel = bpp;
         modeInfo.NumberOfBanks = VbeModeInfoConstants.SingleBank;
 
         // Memory model
         byte memoryModel = bpp switch {
-            4 => VbeModeInfoConstants.MemoryModelPlanar,
-            8 => VbeModeInfoConstants.MemoryModelPackedPixel,
-            15 => VbeModeInfoConstants.MemoryModelDirectColor,
-            16 => VbeModeInfoConstants.MemoryModelDirectColor,
-            24 => VbeModeInfoConstants.MemoryModelDirectColor,
-            32 => VbeModeInfoConstants.MemoryModelDirectColor,
+            VbeModeInfoConstants.BitsPerPixelPlanar4Bit => VbeModeInfoConstants.MemoryModelPlanar,
+            VbeModeInfoConstants.BitsPerPixel8Bit => VbeModeInfoConstants.MemoryModelPackedPixel,
+            VbeModeInfoConstants.BitsPerPixel15Bit => VbeModeInfoConstants.MemoryModelDirectColor,
+            VbeModeInfoConstants.BitsPerPixel16Bit => VbeModeInfoConstants.MemoryModelDirectColor,
+            VbeModeInfoConstants.BitsPerPixel24Bit => VbeModeInfoConstants.MemoryModelDirectColor,
+            VbeModeInfoConstants.BitsPerPixel32Bit => VbeModeInfoConstants.MemoryModelDirectColor,
             _ => VbeModeInfoConstants.MemoryModelPackedPixel
         };
         modeInfo.MemoryModel = memoryModel;
@@ -1528,21 +1681,21 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         modeInfo.Reserved1 = VbeModeInfoConstants.Reserved;
 
         // Direct color fields for high-color/true-color modes
-        if (bpp >= 15) {
-            if (bpp == 15 || bpp == 16) {
+        if (bpp >= VbeModeInfoConstants.BitsPerPixel15Bit) {
+            if (bpp == VbeModeInfoConstants.BitsPerPixel15Bit || bpp == VbeModeInfoConstants.BitsPerPixel16Bit) {
                 modeInfo.RedMaskSize = VbeModeInfoConstants.RedGreenBlueMaskSize;
-                modeInfo.RedFieldPosition = (byte)(bpp == 16 ? 11 : 10);
-                modeInfo.GreenMaskSize = (byte)(bpp == 16 ? VbeModeInfoConstants.GreenMaskSize6Bit : VbeModeInfoConstants.RedGreenBlueMaskSize);
-                modeInfo.GreenFieldPosition = 5;
+                modeInfo.RedFieldPosition = (byte)(bpp == VbeModeInfoConstants.BitsPerPixel16Bit ? VbeModeInfoConstants.RedFieldPositionRgb565 : VbeModeInfoConstants.RedFieldPositionRgb555);
+                modeInfo.GreenMaskSize = (byte)(bpp == VbeModeInfoConstants.BitsPerPixel16Bit ? VbeModeInfoConstants.GreenMaskSize6Bit : VbeModeInfoConstants.RedGreenBlueMaskSize);
+                modeInfo.GreenFieldPosition = VbeModeInfoConstants.GreenFieldPositionRgb16;
                 modeInfo.BlueMaskSize = VbeModeInfoConstants.RedGreenBlueMaskSize;
-                modeInfo.BlueFieldPosition = 0;
-            } else if (bpp == 24 || bpp == 32) {
+                modeInfo.BlueFieldPosition = VbeModeInfoConstants.BlueFieldPosition;
+            } else if (bpp == VbeModeInfoConstants.BitsPerPixel24Bit || bpp == VbeModeInfoConstants.BitsPerPixel32Bit) {
                 modeInfo.RedMaskSize = VbeModeInfoConstants.RedGreenBlueMaskSize8;
-                modeInfo.RedFieldPosition = 16;
+                modeInfo.RedFieldPosition = VbeModeInfoConstants.RedFieldPositionRgb24;
                 modeInfo.GreenMaskSize = VbeModeInfoConstants.RedGreenBlueMaskSize8;
-                modeInfo.GreenFieldPosition = 8;
+                modeInfo.GreenFieldPosition = VbeModeInfoConstants.GreenFieldPositionRgb24;
                 modeInfo.BlueMaskSize = VbeModeInfoConstants.RedGreenBlueMaskSize8;
-                modeInfo.BlueFieldPosition = 0;
+                modeInfo.BlueFieldPosition = VbeModeInfoConstants.BlueFieldPosition;
             }
         }
 
@@ -1552,7 +1705,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         }
 
         // Return success
-        State.AX = 0x004F;
+        State.AX = (ushort)VbeStatus.Success;
     }
 
     /// <inheritdoc cref="IVesaBiosExtension.VbeSetMode"/>
@@ -1601,29 +1754,29 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         return mode switch {
             // VBE 1.2 standard modes - return info for queries
             // Note: Only mode 0x102 can actually be SET (has internal VGA mode support)
-            0x100 => (640, 400, 8, true),    // 640x400x256
-            0x101 => (640, 480, 8, true),    // 640x480x256
-            0x102 => (800, 600, 4, true),    // 800x600x16 (planar) - CAN BE SET via mode 0x6A
-            0x103 => (800, 600, 8, true),    // 800x600x256
-            0x104 => (1024, 768, 4, true),   // 1024x768x16 (planar)
-            0x105 => (1024, 768, 8, true),   // 1024x768x256
-            0x106 => (1280, 1024, 4, true),  // 1280x1024x16 (planar)
-            0x107 => (1280, 1024, 8, true),  // 1280x1024x256
-            0x10D => (320, 200, 15, true),   // 320x200x15-bit
-            0x10E => (320, 200, 16, true),   // 320x200x16-bit
-            0x10F => (320, 200, 24, true),   // 320x200x24-bit
-            0x110 => (640, 480, 15, true),   // 640x480x15-bit (S3 mode 0x70)
-            0x111 => (640, 480, 16, true),   // 640x480x16-bit
-            0x112 => (640, 480, 24, true),   // 640x480x24-bit
-            0x113 => (800, 600, 15, true),   // 800x600x15-bit
-            0x114 => (800, 600, 16, true),   // 800x600x16-bit
-            0x115 => (800, 600, 24, true),   // 800x600x24-bit
-            0x116 => (1024, 768, 15, true),  // 1024x768x15-bit
-            0x117 => (1024, 768, 16, true),  // 1024x768x16-bit
-            0x118 => (1024, 768, 24, true),  // 1024x768x24-bit
-            0x119 => (1280, 1024, 15, true), // 1280x1024x15-bit
-            0x11A => (1280, 1024, 16, true), // 1280x1024x16-bit
-            0x11B => (1280, 1024, 24, true), // 1280x1024x24-bit
+            VbeConstants.VesaMode640x400x256 => (640, 400, VbeModeInfoConstants.BitsPerPixel8Bit, true),
+            VbeConstants.VesaMode640x480x256 => (640, 480, VbeModeInfoConstants.BitsPerPixel8Bit, true),
+            VbeConstants.VesaMode800x600x16 => (800, 600, VbeModeInfoConstants.BitsPerPixelPlanar4Bit, true),    // CAN BE SET via mode 0x6A
+            VbeConstants.VesaMode800x600x256 => (800, 600, VbeModeInfoConstants.BitsPerPixel8Bit, true),
+            VbeConstants.VesaMode1024x768x16 => (1024, 768, VbeModeInfoConstants.BitsPerPixelPlanar4Bit, true),
+            VbeConstants.VesaMode1024x768x256 => (1024, 768, VbeModeInfoConstants.BitsPerPixel8Bit, true),
+            VbeConstants.VesaMode1280x1024x16 => (1280, 1024, VbeModeInfoConstants.BitsPerPixelPlanar4Bit, true),
+            VbeConstants.VesaMode1280x1024x256 => (1280, 1024, VbeModeInfoConstants.BitsPerPixel8Bit, true),
+            VbeConstants.VesaMode320x200x15 => (320, 200, VbeModeInfoConstants.BitsPerPixel15Bit, true),
+            VbeConstants.VesaMode320x200x16 => (320, 200, VbeModeInfoConstants.BitsPerPixel16Bit, true),
+            VbeConstants.VesaMode320x200x24 => (320, 200, VbeModeInfoConstants.BitsPerPixel24Bit, true),
+            VbeConstants.VesaMode640x480x15 => (640, 480, VbeModeInfoConstants.BitsPerPixel15Bit, true),
+            VbeConstants.VesaMode640x480x16 => (640, 480, VbeModeInfoConstants.BitsPerPixel16Bit, true),
+            VbeConstants.VesaMode640x480x24 => (640, 480, VbeModeInfoConstants.BitsPerPixel24Bit, true),
+            VbeConstants.VesaMode800x600x15 => (800, 600, VbeModeInfoConstants.BitsPerPixel15Bit, true),
+            VbeConstants.VesaMode800x600x16Bit => (800, 600, VbeModeInfoConstants.BitsPerPixel16Bit, true),
+            VbeConstants.VesaMode800x600x24 => (800, 600, VbeModeInfoConstants.BitsPerPixel24Bit, true),
+            VbeConstants.VesaMode1024x768x15 => (1024, 768, VbeModeInfoConstants.BitsPerPixel15Bit, true),
+            VbeConstants.VesaMode1024x768x16Bit => (1024, 768, VbeModeInfoConstants.BitsPerPixel16Bit, true),
+            VbeConstants.VesaMode1024x768x24 => (1024, 768, VbeModeInfoConstants.BitsPerPixel24Bit, true),
+            VbeConstants.VesaMode1280x1024x15 => (1280, 1024, VbeModeInfoConstants.BitsPerPixel15Bit, true),
+            VbeConstants.VesaMode1280x1024x16Bit => (1280, 1024, VbeModeInfoConstants.BitsPerPixel16Bit, true),
+            VbeConstants.VesaMode1280x1024x24 => (1280, 1024, VbeModeInfoConstants.BitsPerPixel24Bit, true),
             _ => (0, 0, 0, false)
         };
     }
