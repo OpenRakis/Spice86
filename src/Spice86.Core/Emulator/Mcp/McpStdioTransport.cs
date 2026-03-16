@@ -10,17 +10,21 @@ using System.Threading;
 /// <summary>
 /// Stdio transport for MCP server using synchronous I/O.
 /// Runs on background thread for independent operation.
+/// Logs are redirected to stderr so that stdout remains a clean MCP protocol channel.
 /// </summary>
 public sealed class McpStdioTransport {
     private readonly IMcpServer _mcpServer;
     private readonly ILoggerService _loggerService;
     private readonly TextReader _inputReader;
     private readonly TextWriter _outputWriter;
-    private readonly CancellationTokenSource _cancellationTokenSource;
+    private readonly object _writeLock = new();
+    private CancellationTokenSource _cancellationTokenSource;
     private Thread? _readerThread;
+    private bool _stopped;
 
     public McpStdioTransport(IMcpServer mcpServer, ILoggerService loggerService)
         : this(mcpServer, loggerService, Console.In, Console.Out) {
+        loggerService.UseStderrForConsoleOutput();
     }
 
     internal McpStdioTransport(IMcpServer mcpServer, ILoggerService loggerService, TextReader inputReader, TextWriter outputWriter) {
@@ -33,11 +37,16 @@ public sealed class McpStdioTransport {
     }
 
     private void HandleNotification(object? sender, string json) {
-        _outputWriter.WriteLine(json);
-        _outputWriter.Flush();
+        lock (_writeLock) {
+            _outputWriter.WriteLine(json);
+            _outputWriter.Flush();
+        }
     }
 
     public void Start() {
+        if (_stopped) {
+            throw new InvalidOperationException("MCP stdio transport has been stopped and cannot be restarted");
+        }
         if (_readerThread != null) {
             throw new InvalidOperationException("MCP stdio transport is already started");
         }
@@ -61,8 +70,8 @@ public sealed class McpStdioTransport {
         }
 
         _cancellationTokenSource.Dispose();
-
         _readerThread = null;
+        _stopped = true;
     }
 
     private void Run() {
@@ -94,26 +103,34 @@ public sealed class McpStdioTransport {
                         continue;
                     }
 
-                    _outputWriter.WriteLine(responseJson);
-                    _outputWriter.Flush();
+                    lock (_writeLock) {
+                        _outputWriter.WriteLine(responseJson);
+                        _outputWriter.Flush();
+                    }
                 } catch (InvalidOperationException ex) {
                     _loggerService.Error(ex, "Error processing MCP request: {Request}", requestJson);
 
                     string errorResponse = CreateErrorResponse($"Internal error: {ex.Message}");
-                    _outputWriter.WriteLine(errorResponse);
-                    _outputWriter.Flush();
+                    lock (_writeLock) {
+                        _outputWriter.WriteLine(errorResponse);
+                        _outputWriter.Flush();
+                    }
                 } catch (ArgumentException ex) {
                     _loggerService.Error(ex, "Invalid MCP request: {Request}", requestJson);
 
                     string errorResponse = CreateErrorResponse($"Invalid request: {ex.Message}");
-                    _outputWriter.WriteLine(errorResponse);
-                    _outputWriter.Flush();
+                    lock (_writeLock) {
+                        _outputWriter.WriteLine(errorResponse);
+                        _outputWriter.Flush();
+                    }
                 } catch (IOException ex) {
                     _loggerService.Error(ex, "I/O error processing MCP request: {Request}", requestJson);
 
                     string errorResponse = CreateErrorResponse($"I/O error: {ex.Message}");
-                    _outputWriter.WriteLine(errorResponse);
-                    _outputWriter.Flush();
+                    lock (_writeLock) {
+                        _outputWriter.WriteLine(errorResponse);
+                        _outputWriter.Flush();
+                    }
                 }
             }
         } catch (OperationCanceledException) {

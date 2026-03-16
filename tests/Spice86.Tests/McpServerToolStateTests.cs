@@ -2,6 +2,8 @@ namespace Spice86.Tests;
 
 using FluentAssertions;
 
+using ModelContextProtocol.Protocol;
+
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Mcp;
 using Spice86.Logging;
@@ -24,11 +26,11 @@ public class McpServerToolStateTests {
     public void TestDefaultToolState() {
         (Spice86DependencyInjection spice86, McpServer server) = CreateMcpServerForTest();
         using (spice86) {
-            var tools = server.GetAvailableTools();
+            Tool[] tools = server.GetAvailableTools();
             tools.Should().NotBeEmpty();
             tools.Length.Should().Be(server.GetAllTools().Length);
             
-            foreach(var tool in tools) {
+            foreach (Tool tool in tools) {
                 // By default all tools should be enabled
                 server.GetAllTools().Should().Contain(t => t.Name == tool.Name);
             }

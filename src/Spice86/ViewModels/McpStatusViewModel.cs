@@ -87,7 +87,14 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
         HashSet<string> seenNames = new(StringComparer.Ordinal);
 
         foreach (Assembly assembly in assemblies) {
-            foreach (Type type in assembly.GetTypes()) {
+            Type[] types;
+            try {
+                types = assembly.GetTypes();
+            } catch (ReflectionTypeLoadException ex) {
+                types = ex.Types.Where(t => t != null).Cast<Type>().ToArray();
+            }
+
+            foreach (Type type in types) {
                 if (type.GetCustomAttribute<McpServerToolTypeAttribute>() == null) {
                     continue;
                 }
