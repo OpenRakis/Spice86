@@ -25,12 +25,11 @@ public sealed class HttpApiMemoryController : ControllerBase {
     /// <returns>200 OK with <see cref="HttpApiMemoryByteResponse"/>, 400 if the address is out of range, or 404 if it exceeds memory size.</returns>
     [HttpGet("{address:long}/byte")]
     public ActionResult<HttpApiMemoryByteResponse> GetByte(long address) {
-        ActionResult? error = ValidateAddress(address, out uint validatedAddress);
+        ActionResult? error = ValidateAddress(address, out uint transformedAddress);
         if (error is not null) {
             return error;
         }
 
-        uint transformedAddress = _httpApiState.A20Gate.TransformAddress(validatedAddress);
         byte value = _httpApiState.Memory.SneakilyRead(transformedAddress);
         HttpApiMemoryByteResponse response = new(transformedAddress, value);
         return Ok(response);
@@ -46,7 +45,7 @@ public sealed class HttpApiMemoryController : ControllerBase {
             return BadRequest(new HttpApiErrorResponse("request body is required"));
         }
 
-        ActionResult? error = ValidateAddress(address, out uint validatedAddress);
+        ActionResult? error = ValidateAddress(address, out uint transformedAddress);
         if (error is not null) {
             return error;
         }
@@ -55,7 +54,6 @@ public sealed class HttpApiMemoryController : ControllerBase {
             return Conflict(new HttpApiErrorResponse("emulator must be paused to write memory"));
         }
 
-        uint transformedAddress = _httpApiState.A20Gate.TransformAddress(validatedAddress);
         _httpApiState.Memory.SneakilyWrite(transformedAddress, request.Value);
         HttpApiMemoryByteResponse response = new(transformedAddress, request.Value);
         return Ok(response);
@@ -75,12 +73,11 @@ public sealed class HttpApiMemoryController : ControllerBase {
             return BadRequest(new HttpApiErrorResponse($"length must not exceed {HttpApiEndpoint.MaxRangeLength}"));
         }
 
-        ActionResult? error = ValidateAddress(address, out uint validatedAddress);
+        ActionResult? error = ValidateAddress(address, out uint transformedAddress);
         if (error is not null) {
             return error;
         }
 
-        uint transformedAddress = _httpApiState.A20Gate.TransformAddress(validatedAddress);
         long readableLength = (long)_httpApiState.Memory.Length - transformedAddress;
         int boundedLength = (int)Math.Min(length, readableLength);
         byte[] values = _httpApiState.Memory.ReadRam((uint)boundedLength, transformedAddress);
@@ -89,15 +86,17 @@ public sealed class HttpApiMemoryController : ControllerBase {
         return Ok(response);
     }
 
-    private ActionResult? ValidateAddress(long address, out uint validatedAddress) {
-        validatedAddress = 0;
+    private ActionResult? ValidateAddress(long address, out uint transformedAddress) {
+        transformedAddress = 0;
 
         if (address < 0 || address > uint.MaxValue) {
             return BadRequest(new HttpApiErrorResponse($"address must be between 0 and {uint.MaxValue}"));
         }
 
-        validatedAddress = (uint)address;
-        if ((long)validatedAddress >= _httpApiState.Memory.Length) {
+        uint validatedAddress = (uint)address;
+        transformedAddress = _httpApiState.A20Gate.TransformAddress(validatedAddress);
+
+        if ((long)transformedAddress >= _httpApiState.Memory.Length) {
             return NotFound(new HttpApiErrorResponse("address is outside of memory range"));
         }
 
