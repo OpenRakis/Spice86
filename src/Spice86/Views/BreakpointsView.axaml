@@ -68,44 +68,25 @@
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Memory"
                                  IsVisible="{Binding IsMemoryBreakpointSelected}">
-							<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
-								<Label Grid.Row="0" Grid.Column="0" Content="Memory access type" />
-								<ComboBox Grid.Column="0" Grid.Row="1"
-									SelectedItem="{Binding SelectedMemoryBreakpointType}"
-                                    ItemsSource="{Binding MemoryBreakpointTypes}" />
-								<controls:GroupBox Margin="5" Grid.Row="1" Grid.Column="1"
-									Header="Memory start address">
-									<TextBox
-										Text="{Binding MemoryBreakpointStartAddress,
-											Mode=TwoWay}"
-										Watermark="1000:FFFF (example) or like 'cs:ip'">
-										<Interaction.Behaviors>
-											<behaviors:UpdateBindingOnEnterBehavior />
-										</Interaction.Behaviors>
-									</TextBox>
-								</controls:GroupBox>
-								<controls:GroupBox Margin="5" Grid.Row="2" Grid.Column="1"
-									Header="Memory end address">
-									<TextBox
-										Text="{Binding MemoryBreakpointEndAddress,
-											Mode=TwoWay}"
-										Watermark="1000:FFFF (example) or like 'cs:ip'">
-										<Interaction.Behaviors>
-											<behaviors:UpdateBindingOnEnterBehavior />
-										</Interaction.Behaviors>
-									</TextBox>
-								</controls:GroupBox>
-							</Grid>
+							<userControls:MemoryBreakpointUserControl />
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Execution"
                                 IsVisible="{Binding IsExecutionBreakpointSelected}">
-							<controls:GroupBox Header="Execution address">
-								<TextBox
-                                    Text="{Binding ExecutionAddressValue,
-										Mode=TwoWay}"
-									Watermark="1000:FFFF (example) or like 'cs:ip'"
-									Margin="5,0,0,0" />
-							</controls:GroupBox>
+							<StackPanel>
+								<controls:GroupBox Header="Execution address">
+									<TextBox
+	                                    Text="{Binding ExecutionAddressValue,
+											Mode=TwoWay}"
+										Watermark="1000:FFFF (example) or like 'cs:ip'"
+										Margin="5,0,0,0" />
+								</controls:GroupBox>
+								<controls:GroupBox Header="Condition (optional)">
+									<TextBox
+										Text="{Binding ExecutionConditionExpression, Mode=TwoWay}"
+										Watermark="e.g., ax == 0x1234"
+										Margin="5,0,0,0" />
+								</controls:GroupBox>
+							</StackPanel>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Interrupt"
                                 IsVisible="{Binding IsInterruptBreakpointSelected}">
@@ -144,5 +125,6 @@
 				</Grid>
 			</dialogHost:DialogHost.DialogContent>
 		</dialogHost:DialogHost>
+		<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="2" />
 	</Grid>
 </UserControl>

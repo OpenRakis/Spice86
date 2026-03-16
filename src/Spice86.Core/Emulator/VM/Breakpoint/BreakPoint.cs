@@ -2,7 +2,6 @@
 
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
-
 /// <summary>
 /// Base class for all breakpoints.
 /// </summary>
@@ -19,10 +18,28 @@ public abstract class BreakPoint {
         IsRemovedOnTrigger = isRemovedOnTrigger;
     }
 
+    private bool _isEnabled = true;
+
     /// <summary>
     /// Gets or sets a value indicating whether this breakpoint can be matched and triggered.
+    /// Setting this property raises <see cref="IsEnabledChanged"/> when the value changes.
     /// </summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled {
+        get => _isEnabled;
+        set {
+            if (_isEnabled == value) {
+                return;
+            }
+
+            _isEnabled = value;
+            IsEnabledChanged?.Invoke(this, value);
+        }
+    }
+
+    /// <summary>
+    /// Occurs when <see cref="IsEnabled"/> changes.
+    /// </summary>
+    internal event Action<BreakPoint, bool>? IsEnabledChanged;
 
     /// <summary>
     /// The action to take when the breakpoint is reached.
@@ -49,7 +66,9 @@ public abstract class BreakPoint {
     /// </summary>
     /// <param name="address">The address to check.</param>
     /// <returns>True if the breakpoint matches the address, false otherwise.</returns>
-    public abstract bool Matches(long address);
+    public virtual bool Matches(long address) {
+        return IsEnabled;
+    }
 
     /// <summary>
     /// Triggers the breakpoint, calling the OnReached action.

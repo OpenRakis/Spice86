@@ -30,7 +30,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         // Upper part of the result goes in {{AdditionalReg}}
         helper.State.{{AdditionalReg}} = ({{Type}})(result >> {{Size}});
         helper.State.{{SourceReg}} = ({{Type}})result;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

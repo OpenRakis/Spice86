@@ -16,12 +16,13 @@ public class ArgumentFetcher {
     /// <summary>
     /// Instantiates a new instance.
     /// </summary>
-    /// <param name="cpu"></param>
-    /// <param name="memory"></param>
-    public ArgumentFetcher(Cpu cpu, IMemory memory) {
-        _stack = cpu.Stack;
+    /// <param name="stack">The CPU stack</param>
+    /// <param name="state">The CPU state</param>
+    /// <param name="memory">The memory bus</param>
+    public ArgumentFetcher(Stack stack, State state, IMemory memory) {
+        _stack = stack;
         _memory = memory;
-        _state = cpu.State;
+        _state = state;
     }
 
     public void Get(out ushort arg1, out uint arg2, out ushort arg3) {

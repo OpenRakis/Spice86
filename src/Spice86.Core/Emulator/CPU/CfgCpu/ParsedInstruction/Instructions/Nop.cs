@@ -11,7 +11,7 @@ public class Nop : CfgInstruction {
 
     public override void Execute(InstructionExecutionHelper helper) {
         // Well nothing to do :)
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

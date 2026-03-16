@@ -50,27 +50,27 @@ public partial class RegistersViewModel : ObservableObject, IRegistersViewModel 
     [MemberNotNull(nameof(EFlagRegister))]
     private void InitializeRegisters() {
         // General purpose registers (32-bit versions as they were in DOS era)
-        GeneralRegisters.Add(new RegisterViewModel("EAX", _state, s => s.EAX));
-        GeneralRegisters.Add(new RegisterViewModel("EBX", _state, s => s.EBX));
-        GeneralRegisters.Add(new RegisterViewModel("ECX", _state, s => s.ECX));
-        GeneralRegisters.Add(new RegisterViewModel("EDX", _state, s => s.EDX));
+        GeneralRegisters.Add(new RegisterViewModel("EAX", _state, s => s.EAX, 32));
+        GeneralRegisters.Add(new RegisterViewModel("EBX", _state, s => s.EBX, 32));
+        GeneralRegisters.Add(new RegisterViewModel("ECX", _state, s => s.ECX, 32));
+        GeneralRegisters.Add(new RegisterViewModel("EDX", _state, s => s.EDX, 32));
 
         // Segment registers
-        SegmentRegisters.Add(new RegisterViewModel("CS", _state, s => s.CS));
-        SegmentRegisters.Add(new RegisterViewModel("DS", _state, s => s.DS));
-        SegmentRegisters.Add(new RegisterViewModel("ES", _state, s => s.ES));
-        SegmentRegisters.Add(new RegisterViewModel("SS", _state, s => s.SS));
-        SegmentRegisters.Add(new RegisterViewModel("FS", _state, s => s.FS));
-        SegmentRegisters.Add(new RegisterViewModel("GS", _state, s => s.GS));
+        SegmentRegisters.Add(new RegisterViewModel("CS", _state, s => s.CS, 16));
+        SegmentRegisters.Add(new RegisterViewModel("DS", _state, s => s.DS, 16));
+        SegmentRegisters.Add(new RegisterViewModel("ES", _state, s => s.ES, 16));
+        SegmentRegisters.Add(new RegisterViewModel("SS", _state, s => s.SS, 16));
+        SegmentRegisters.Add(new RegisterViewModel("FS", _state, s => s.FS, 16));
+        SegmentRegisters.Add(new RegisterViewModel("GS", _state, s => s.GS, 16));
 
         // Pointer registers
-        PointerRegisters.Add(new RegisterViewModel("EIP", _state, s => s.IP));
-        PointerRegisters.Add(new RegisterViewModel("ESP", _state, s => s.ESP));
-        PointerRegisters.Add(new RegisterViewModel("EBP", _state, s => s.EBP));
-        PointerRegisters.Add(new RegisterViewModel("ESI", _state, s => s.ESI));
-        PointerRegisters.Add(new RegisterViewModel("EDI", _state, s => s.EDI));
+        PointerRegisters.Add(new RegisterViewModel("IP", _state, s => s.IP, 16));
+        PointerRegisters.Add(new RegisterViewModel("ESP", _state, s => s.ESP, 32));
+        PointerRegisters.Add(new RegisterViewModel("EBP", _state, s => s.EBP, 32));
+        PointerRegisters.Add(new RegisterViewModel("ESI", _state, s => s.ESI, 32));
+        PointerRegisters.Add(new RegisterViewModel("EDI", _state, s => s.EDI, 32));
 
-        EFlagRegister = new RegisterViewModel("FLAG", _state, s => s.Flags.FlagRegister);
+        EFlagRegister = new RegisterViewModel("FLAG", _state, s => s.Flags.FlagRegister, 32);
 
         // Flags
         Flags.Add(new FlagViewModel("CF", _state, s => s.CarryFlag));

@@ -20,7 +20,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         helper.ModRm.R{{DestSize}} = helper.ModRm.RM{{SourceSize}};
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

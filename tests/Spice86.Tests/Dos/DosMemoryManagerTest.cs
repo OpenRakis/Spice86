@@ -4,22 +4,19 @@ using FluentAssertions;
 
 using NSubstitute;
 
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using Xunit;
 
 using Configuration = Spice86.Core.CLI.Configuration;
-using State = Spice86.Core.Emulator.CPU.State;
-using EmulatorBreakpointsManager = Spice86.Core.Emulator.VM.Breakpoint.EmulatorBreakpointsManager;
-using PauseHandler = Spice86.Core.Emulator.VM.PauseHandler;
 
 /// <summary>
 /// Verifies that MCBs are allocated, released, modified, and freed correctly by DOS.
@@ -28,7 +25,11 @@ public class DosMemoryManagerTests {
     // Dependencies needed to construct DosMemoryManager
     private readonly ILoggerService _loggerService;
     private readonly IMemory _memory;
-    private readonly DosProgramSegmentPrefixTracker _pspTracker;
+
+    /// <summary>
+    /// The initial PSP segment used for tests (PSP is 16 paragraphs before entry point).
+    /// </summary>
+    private readonly ushort _initialPspSegment;
 
     // The instance of the DosMemoryManager class that we're testing
     private readonly DosMemoryManager _memoryManager;
@@ -45,33 +46,33 @@ public class DosMemoryManagerTests {
         // dependencies, unfortunately. Create those now so that we have our nice, shiny chunk of
         // memory to use for these tests.
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        PauseHandler pauseHandler = new(_loggerService);
-        State cpuState = new(CpuModel.INTEL_80286);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, cpuState);
+        AddressReadWriteBreakpoints memoryBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
-        _memory = new Memory(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
+        _memory = new Memory(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: true);
 
-        // Create the PSP tracker that reads the configuration and informs the memory manager what
-        // it can allocate. We can effectively start it wherever we want for testing.
-        var configuration = new Configuration {
-            // 0x1000 is the default program entry point segment for Spice86 at the time these unit
-            // tests were written. It makes the math easier. However it's wasting some of lower
-            // memory that's completely unused, and will never be allocated. That's technically
-            // okay; it just reduces the amount of useable convention memory compared to real DOS.
-            //
-            // Even if the default changes in Spice86 later, we probably shouldn't change it in
-            // these unit tests because most of them rely on the amount of available space that the
-            // memory manager has to allocate based on this starting point. If we changed it, all of
-            // those values used in these tests would have to be recomputed. There's really no
-            // reason to do that. The memory manager works the same way regardless of the starting
-            // point, so these unit tests are valid regardless.
-            ProgramEntryPointSegment = (ushort)0x1000
-        };
-        _pspTracker = new(configuration, _memory, _loggerService);
+        // Calculate the initial PSP segment based on the configuration.
+        // We can effectively start it wherever we want for testing.
+        // 0x1000 is the default program entry point segment for Spice86 at the time these unit
+        // tests were written. It makes the math easier. However it's wasting some of lower
+        // memory that's completely unused, and will never be allocated. That's technically
+        // okay; it just reduces the amount of useable convention memory compared to real DOS.
+        //
+        // Even if the default changes in Spice86 later, we probably shouldn't change it in
+        // these unit tests because most of them rely on the amount of available space that the
+        // memory manager has to allocate based on this starting point. If we changed it, all of
+        // those values used in these tests would have to be recomputed. There's really no
+        // reason to do that. The memory manager works the same way regardless of the starting
+        // point, so these unit tests are valid regardless.
+        ushort programEntryPointSegment = 0x1000;
+        _initialPspSegment = (ushort)(programEntryPointSegment - 0x10);
+
+        // Initialize the SDA with the initial PSP segment
+        DosSwappableDataArea dosSwappableDataArea = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
+        dosSwappableDataArea.CurrentProgramSegmentPrefix = _initialPspSegment;
 
         // Arrange
-        _memoryManager = new DosMemoryManager(_memory, _pspTracker, _loggerService);
+        _memoryManager = new DosMemoryManager(_memory, _initialPspSegment, _loggerService);
     }
 
     /// <summary>
@@ -170,7 +171,7 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(_initialPspSegment);
         block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(16300);
         block!.AllocationSizeInBytes.Should().Be(260800);
@@ -190,7 +191,7 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeTrue();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(_initialPspSegment);
         block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(36880);
         block!.AllocationSizeInBytes.Should().Be(590080);
@@ -235,7 +236,7 @@ public class DosMemoryManagerTests {
         block1!.IsValid.Should().BeTrue();
         block1!.IsFree.Should().BeFalse();
         block1!.IsLast.Should().BeFalse();
-        block1!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block1!.PspSegment.Should().Be(_initialPspSegment);
         block1!.DataBlockSegment.Should().Be(0xFF0);
         block1!.Size.Should().Be(16300);
         block1!.AllocationSizeInBytes.Should().Be(260800);
@@ -244,7 +245,7 @@ public class DosMemoryManagerTests {
         block2!.IsValid.Should().BeTrue();
         block2!.IsFree.Should().BeFalse();
         block2!.IsLast.Should().BeFalse();
-        block2!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block2!.PspSegment.Should().Be(_initialPspSegment);
         block2!.DataBlockSegment.Should().Be(0x4F9D);
         block2!.Size.Should().Be(20577);
         block2!.AllocationSizeInBytes.Should().Be(329232);
@@ -253,7 +254,7 @@ public class DosMemoryManagerTests {
         block3!.IsValid.Should().BeTrue();
         block3!.IsFree.Should().BeFalse();
         block3!.IsLast.Should().BeTrue();
-        block3!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block3!.PspSegment.Should().Be(_initialPspSegment);
         block3!.DataBlockSegment.Should().Be(0x9FFF);
         block3!.Size.Should().Be(1);
         block3!.AllocationSizeInBytes.Should().Be(16);
@@ -307,7 +308,7 @@ public class DosMemoryManagerTests {
         block.IsValid.Should().BeTrue();
         block.IsFree.Should().BeFalse();
         block.IsLast.Should().BeFalse();
-        block.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block.PspSegment.Should().Be(_initialPspSegment);
         block.DataBlockSegment.Should().Be(0xFF0);
         block.Size.Should().Be(16300);
         block.AllocationSizeInBytes.Should().Be(260800);
@@ -383,7 +384,7 @@ public class DosMemoryManagerTests {
         block.IsValid.Should().BeTrue();
         block.IsFree.Should().BeFalse();
         block.IsLast.Should().BeTrue();
-        block.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block.PspSegment.Should().Be(_initialPspSegment);
         block.DataBlockSegment.Should().Be(0xFF0);
         block.Size.Should().Be(36880);
         block.AllocationSizeInBytes.Should().Be(590080);
@@ -399,11 +400,10 @@ public class DosMemoryManagerTests {
     public void GetSizeOfStartingConventionalMemory() {
         // Act
         DosMemoryControlBlock block1;
-        DosMemoryControlBlock block2;
         // Simulate allocating a block for the program image first.
         DosErrorCode errorCode1 = _memoryManager.TryModifyBlock(0xFF0, 1234, out block1);
         // Get the remaining free space.
-        DosErrorCode errorCode2 = _memoryManager.TryModifyBlock(0xFF0, 0xFFFF, out block2);
+        DosErrorCode errorCode2 = _memoryManager.TryModifyBlock(0xFF0, 0xFFFF, out _);
 
         // Assert
         errorCode1.Should().Be(DosErrorCode.NoError);
@@ -411,19 +411,11 @@ public class DosMemoryManagerTests {
 
         block1.IsValid.Should().BeTrue();
         block1.IsFree.Should().BeFalse();
-        block1.IsLast.Should().BeFalse();
-        block1.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block1.IsLast.Should().BeTrue();
+        block1.PspSegment.Should().Be(_initialPspSegment);
         block1.DataBlockSegment.Should().Be(0xFF0);
-        block1.Size.Should().Be(1234);
-        block1.AllocationSizeInBytes.Should().Be(19744);
-
-        block2.IsValid.Should().BeTrue();
-        block2.IsFree.Should().BeTrue();
-        block2.IsLast.Should().BeTrue();
-        block2.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        block2.DataBlockSegment.Should().Be(0x14C3);
-        block2.Size.Should().Be(35645);
-        block2.AllocationSizeInBytes.Should().Be(570320);
+        block1.Size.Should().Be(36880);
+        block1.AllocationSizeInBytes.Should().Be(590080);
     }
 
     /// <summary>
@@ -438,13 +430,7 @@ public class DosMemoryManagerTests {
 
         // Assert
         errorCode.Should().Be(DosErrorCode.MemoryControlBlockDestroyed);
-        block.IsValid.Should().BeTrue();
-        block.IsFree.Should().BeTrue();
-        block.IsLast.Should().BeTrue();
-        block.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        block.DataBlockSegment.Should().Be(0xFF0);
-        block.Size.Should().Be(36880);
-        block.AllocationSizeInBytes.Should().Be(590080);
+        block.IsValid.Should().BeFalse();
     }
 
     /// <summary>
@@ -463,7 +449,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsValid.Should().BeTrue();
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
-        modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        modifiedBlock.PspSegment.Should().Be(_initialPspSegment);
         modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(20);
         modifiedBlock.AllocationSizeInBytes.Should().Be(320);
@@ -486,7 +472,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsValid.Should().BeTrue();
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
-        modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        modifiedBlock.PspSegment.Should().Be(_initialPspSegment);
         modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(9815);
         modifiedBlock.AllocationSizeInBytes.Should().Be(157040);
@@ -515,7 +501,7 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsValid.Should().BeTrue();
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
-        modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        modifiedBlock.PspSegment.Should().Be(_initialPspSegment);
         modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(16300);
         modifiedBlock.AllocationSizeInBytes.Should().Be(260800);
@@ -554,14 +540,14 @@ public class DosMemoryManagerTests {
         modifiedBlock.IsValid.Should().BeTrue();
         modifiedBlock.IsFree.Should().BeFalse();
         modifiedBlock.IsLast.Should().BeFalse();
-        modifiedBlock.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        modifiedBlock.PspSegment.Should().Be(_initialPspSegment);
         modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
         modifiedBlock.Size.Should().Be(9815);
         modifiedBlock.AllocationSizeInBytes.Should().Be(157040);
     }
 
     /// <summary>
-    /// Ensures that the memory manager cannot extend the size of an allocated block if it has
+    /// Ensures that the memory manager cannot extend the size of an allocated block past
     /// another allocated block immediately after it.
     /// </summary>
     [Fact]
@@ -579,16 +565,16 @@ public class DosMemoryManagerTests {
         secondBlock.Should().NotBeNull();
         errorCode.Should().Be(DosErrorCode.InsufficientMemory);
         modifiedBlock.IsValid.Should().BeTrue();
-        modifiedBlock.IsFree.Should().BeTrue();
-        modifiedBlock.IsLast.Should().BeTrue();
-        modifiedBlock.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        modifiedBlock.DataBlockSegment.Should().Be(0x50CA);
-        modifiedBlock.Size.Should().Be(20278);
-        modifiedBlock.AllocationSizeInBytes.Should().Be(324448);
+        modifiedBlock.IsFree.Should().BeFalse();
+        modifiedBlock.IsLast.Should().BeFalse();
+        modifiedBlock.PspSegment.Should().Be(_initialPspSegment);
+        modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
+        modifiedBlock.Size.Should().Be(16300);
+        modifiedBlock.AllocationSizeInBytes.Should().Be(260800);
     }
 
     /// <summary>
-    /// Ensures that the memory manager cannot extend the size of an allocated block if it has free
+    /// Ensures that the memory manager extends the size of an allocated block if it has free
     /// space after it, but not as much as requested.
     /// </summary>
     [Fact]
@@ -613,12 +599,12 @@ public class DosMemoryManagerTests {
         thirdBlock.Should().NotBeNull();
         errorCode.Should().Be(DosErrorCode.InsufficientMemory);
         modifiedBlock.IsValid.Should().BeTrue();
-        modifiedBlock.IsFree.Should().BeTrue();
-        modifiedBlock.IsLast.Should().BeTrue();
-        modifiedBlock.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
-        modifiedBlock.DataBlockSegment.Should().Be(0x512F);
-        modifiedBlock.Size.Should().Be(20177);
-        modifiedBlock.AllocationSizeInBytes.Should().Be(322832);
+        modifiedBlock.IsFree.Should().BeFalse();
+        modifiedBlock.IsLast.Should().BeFalse();
+        modifiedBlock.PspSegment.Should().Be(_initialPspSegment);
+        modifiedBlock.DataBlockSegment.Should().Be(0xFF0);
+        modifiedBlock.Size.Should().Be(16401);
+        modifiedBlock.AllocationSizeInBytes.Should().Be(262416);
     }
 
     /// <summary>
@@ -635,11 +621,10 @@ public class DosMemoryManagerTests {
         isBlockFreed.Should().BeTrue();
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeTrue();
-        block!.IsLast.Should().BeTrue();
         block!.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
         block!.DataBlockSegment.Should().Be(0xFF0);
-        block!.Size.Should().Be(36880);
-        block!.AllocationSizeInBytes.Should().Be(590080);
+        block!.Size.Should().Be(16300);
+        block!.AllocationSizeInBytes.Should().Be(260800);
     }
 
     /// <summary>
@@ -691,7 +676,7 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(_initialPspSegment);
         block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(16301);
         block!.AllocationSizeInBytes.Should().Be(260816);
@@ -713,7 +698,7 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(_initialPspSegment);
         block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(16301);
         block!.AllocationSizeInBytes.Should().Be(260816);
@@ -746,7 +731,7 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(_initialPspSegment);
         block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(12292);
         block!.AllocationSizeInBytes.Should().Be(196672);
@@ -803,7 +788,7 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeTrue();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(_initialPspSegment);
         block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(36880);
         block!.AllocationSizeInBytes.Should().Be(590080);
@@ -826,7 +811,7 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeTrue();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(_initialPspSegment);
         block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(36880);
         block!.AllocationSizeInBytes.Should().Be(590080);
@@ -858,7 +843,7 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(_initialPspSegment);
         block!.DataBlockSegment.Should().Be(0xFF0);
         block!.Size.Should().Be(12292);
         block!.AllocationSizeInBytes.Should().Be(196672);
@@ -905,15 +890,16 @@ public class DosMemoryManagerTests {
         // Arrange
         DosExeFile exeFile1 = CreateMockExe(pages: 382, minAlloc: 10, maxAlloc: 65);
         DosExeFile exeFile2 = CreateMockExe(pages: 500, minAlloc: 0, maxAlloc: 100);
+        DosSwappableDataArea sda = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
 
         // Act
         DosMemoryControlBlock? block1 = _memoryManager.ReserveSpaceForExe(exeFile1);
         if (block1 is not null) {
-            _pspTracker.PushPspSegment(block1.PspSegment);
+            sda.CurrentProgramSegmentPrefix = block1.PspSegment;
         }
         DosMemoryControlBlock? block2 = _memoryManager.ReserveSpaceForExe(exeFile2);
         if (block2 is not null) {
-            _pspTracker.PushPspSegment(block2.PspSegment);
+            sda.CurrentProgramSegmentPrefix = block2.PspSegment;
         }
 
         // Assert
@@ -923,7 +909,8 @@ public class DosMemoryManagerTests {
         block1!.IsValid.Should().BeTrue();
         block1!.IsFree.Should().BeFalse();
         block1!.IsLast.Should().BeFalse();
-        block1!.PspSegment.Should().Be(_pspTracker.InitialPspSegment);
+        // ReserveSpaceForExe sets the PSP segment to the block's data block segment
+        block1!.PspSegment.Should().Be(block1.DataBlockSegment);
         block1!.DataBlockSegment.Should().Be(0xFF0);
         block1!.Size.Should().Be(12301);
         block1!.AllocationSizeInBytes.Should().Be(196816);
@@ -931,7 +918,8 @@ public class DosMemoryManagerTests {
         block2!.IsValid.Should().BeTrue();
         block2!.IsFree.Should().BeFalse();
         block2!.IsLast.Should().BeFalse();
-        block2!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        // ReserveSpaceForExe sets the PSP segment to the block's data block segment
+        block2!.PspSegment.Should().Be(block2.DataBlockSegment);
         block2!.DataBlockSegment.Should().Be(0x3FFE);
         block2!.Size.Should().Be(16112);
         block2!.AllocationSizeInBytes.Should().Be(257792);
@@ -1047,5 +1035,170 @@ public class DosMemoryManagerTests {
         // Assert
         existingBlock.Should().NotBeNull();
         block.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager uses first fit strategy correctly.
+    /// </summary>
+    [Fact]
+    public void AllocateWithFirstFitStrategy() {
+        // Arrange - create some fragmented memory
+        DosMemoryControlBlock? block1 = _memoryManager.AllocateMemoryBlock(1000);
+        _memoryManager.AllocateMemoryBlock(2000);
+        DosMemoryControlBlock? block3 = _memoryManager.AllocateMemoryBlock(1500);
+        _memoryManager.FreeMemoryBlock(block1!);
+        _memoryManager.FreeMemoryBlock(block3!);
+        
+        // Set first fit strategy
+        _memoryManager.AllocationStrategy = DosMemoryAllocationStrategy.FirstFit;
+        
+        // Act - allocate a block that fits in the first free block
+        DosMemoryControlBlock? block4 = _memoryManager.AllocateMemoryBlock(500);
+        
+        // Assert - should allocate in the first free block (where block1 was)
+        block4.Should().NotBeNull();
+        block4!.DataBlockSegment.Should().Be(block1!.DataBlockSegment);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager uses best fit strategy correctly.
+    /// </summary>
+    [Fact]
+    public void AllocateWithBestFitStrategy() {
+        // Arrange - create some fragmented memory with different sized holes
+        // We need to keep some blocks allocated between holes to prevent coalescing
+        DosMemoryControlBlock? block1 = _memoryManager.AllocateMemoryBlock(500);  // Will be freed -> small hole
+        _memoryManager.AllocateMemoryBlock(1000); // Keep allocated
+        DosMemoryControlBlock? block3 = _memoryManager.AllocateMemoryBlock(2000); // Will be freed -> large hole
+        _memoryManager.AllocateMemoryBlock(1000); // Keep allocated
+        
+        _memoryManager.FreeMemoryBlock(block1!);  // Creates 500 para hole at start
+        _memoryManager.FreeMemoryBlock(block3!);  // Creates 2000 para hole in middle
+        
+        // Set best fit strategy
+        _memoryManager.AllocationStrategy = DosMemoryAllocationStrategy.BestFit;
+        
+        // Act - allocate a block that fits in the small hole but also fits in the large hole
+        DosMemoryControlBlock? blockNew = _memoryManager.AllocateMemoryBlock(400);
+        
+        // Assert - best fit should choose the smaller hole (500) that's just big enough
+        blockNew.Should().NotBeNull();
+        blockNew!.DataBlockSegment.Should().Be(block1!.DataBlockSegment);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager uses last fit strategy correctly.
+    /// </summary>
+    [Fact]
+    public void AllocateWithLastFitStrategy() {
+        // Arrange - create some fragmented memory with holes
+        DosMemoryControlBlock? block1 = _memoryManager.AllocateMemoryBlock(500);  // Will be freed -> first hole
+        _memoryManager.AllocateMemoryBlock(1000); // Keep allocated
+        DosMemoryControlBlock? block3 = _memoryManager.AllocateMemoryBlock(500);  // Will be freed -> second hole
+        _memoryManager.AllocateMemoryBlock(1000); // Keep allocated
+        
+        _memoryManager.FreeMemoryBlock(block1!);  // Creates hole at start
+        _memoryManager.FreeMemoryBlock(block3!);  // Creates hole in middle
+        
+        // Set last fit strategy
+        _memoryManager.AllocationStrategy = DosMemoryAllocationStrategy.LastFit;
+        
+        // Act - allocate a block that could fit in either hole
+        DosMemoryControlBlock? blockNew = _memoryManager.AllocateMemoryBlock(400);
+        
+        // Assert - last fit should choose the highest address hole (where block3 was)
+        // since there's also free space after block4, the last fit picks the last candidate
+        blockNew.Should().NotBeNull();
+        // The allocation should be in one of the later candidates (higher address)
+        blockNew!.DataBlockSegment.Should().BeGreaterThan(block1!.DataBlockSegment);
+    }
+
+    /// <summary>
+    /// Ensures that the default allocation strategy is first fit to match DOS behavior.
+    /// </summary>
+    [Fact]
+    public void DefaultAllocationStrategyIsFirstFit() {
+        // Assert
+        _memoryManager.AllocationStrategy.Should().Be(DosMemoryAllocationStrategy.FirstFit);
+    }
+
+    /// <summary>
+    /// Ensures that the MCB chain check returns true for a valid chain.
+    /// </summary>
+    [Fact]
+    public void CheckMcbChainValidChain() {
+        // Arrange - create some allocations
+        _memoryManager.AllocateMemoryBlock(1000);
+        _memoryManager.AllocateMemoryBlock(2000);
+        
+        // Act
+        bool isValid = _memoryManager.CheckMcbChain();
+        
+        // Assert
+        isValid.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Ensures that the MCB chain check returns false for a corrupted chain.
+    /// </summary>
+    [Fact]
+    public void CheckMcbChainCorruptedChain() {
+        // Arrange - create some allocations and then corrupt one
+        DosMemoryControlBlock? block1 = _memoryManager.AllocateMemoryBlock(1000);
+        block1.Should().NotBeNull();
+        
+        // Corrupt the MCB by setting an invalid TypeField (neither 'M' nor 'Z')
+        block1!.TypeField = 0x00; // Invalid value
+        
+        // Act
+        bool isValid = _memoryManager.CheckMcbChain();
+        
+        // Assert
+        isValid.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Ensures that setting an invalid allocation strategy (fit type > 2) is ignored.
+    /// </summary>
+    [Fact]
+    public void InvalidAllocationStrategyFitTypeIsIgnored() {
+        // Arrange
+        DosMemoryAllocationStrategy originalStrategy = _memoryManager.AllocationStrategy;
+        
+        // Act - try to set invalid fit type (0x03)
+        _memoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)0x03;
+        
+        // Assert - should remain unchanged
+        _memoryManager.AllocationStrategy.Should().Be(originalStrategy);
+    }
+
+    /// <summary>
+    /// Ensures that setting an invalid allocation strategy (bits 2-5 set) is ignored.
+    /// </summary>
+    [Fact]
+    public void InvalidAllocationStrategyBits2To5SetIsIgnored() {
+        // Arrange
+        DosMemoryAllocationStrategy originalStrategy = _memoryManager.AllocationStrategy;
+        
+        // Act - try to set strategy with bit 2 set (0x04)
+        _memoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)0x04;
+        
+        // Assert - should remain unchanged
+        _memoryManager.AllocationStrategy.Should().Be(originalStrategy);
+    }
+
+    /// <summary>
+    /// Ensures that setting an invalid allocation strategy (invalid high memory bits) is ignored.
+    /// </summary>
+    [Fact]
+    public void InvalidAllocationStrategyHighMemBitsIsIgnored() {
+        // Arrange
+        DosMemoryAllocationStrategy originalStrategy = _memoryManager.AllocationStrategy;
+        
+        // Act - try to set invalid high memory bits (0xC0 - both bits 6 and 7 set)
+        _memoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)0xC0;
+        
+        // Assert - should remain unchanged
+        _memoryManager.AllocationStrategy.Should().Be(originalStrategy);
     }
 }

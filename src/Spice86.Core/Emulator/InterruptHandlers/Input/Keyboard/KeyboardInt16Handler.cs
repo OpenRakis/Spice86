@@ -3,10 +3,12 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -19,26 +21,95 @@ using System.Diagnostics.CodeAnalysis;
 public class KeyboardInt16Handler : InterruptHandler {
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly BiosDataArea _biosDataArea;
+    private readonly IOPortDispatcher _ioPortDispatcher;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="ioPortDispatcher">The I/O port dispatcher.</param>
     /// <param name="biosDataArea">The BIOS data structure holding state information.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
-    public KeyboardInt16Handler(IMemory memory, BiosDataArea biosDataArea,
+    public KeyboardInt16Handler(IMemory memory, IOPortDispatcher ioPortDispatcher, BiosDataArea biosDataArea,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
+        _ioPortDispatcher = ioPortDispatcher;
         _biosKeyboardBuffer = biosKeyboardBuffer;
+        FillDispatchTable();
+    }
+
+    private void FillDispatchTable() {
         AddAction(0x01, () => GetKeystrokeStatus(true));
         AddAction(0x02, GetShiftFlags);
+        AddAction(0x03, SetTypematicRateAndDelay);
         AddAction(0x1D, () => Unsupported(0x1D));
+    }
+
+    /// <summary>
+    /// Sets the typematic rate and delay for keyboard repeat.
+    /// <para>AH = 03h, AL = 05h</para>
+    /// <para>BL = Typematic rate (bits 5-7 must be 0):</para>
+    /// <code>
+    /// ; REGISTER	   RATE      REGISTER	  RATE
+    /// ;   VALUE	 SELECTED     VALUE	    SELECTED
+    /// ;-----------------------------------------------
+    /// ;00H	   	   30.0       10H	   	   7.5
+    /// ;01H	   	   26.7       11H	   	   6.7
+    /// ;02H	   	   24.0       12H	   	   6.0
+    /// ;03H	   	   21.8       13H	   	   5.5
+    /// ;04H	   	   20.0       14H	   	   5.0
+    /// ;05H	   	   18.5       15H	   	   4.6
+    /// ;06H	   	   17.1       16H	   	   4.3
+    /// ;07H	   	   16.0       17H	   	   4.0
+    /// ;08H	   	   15.0       18H	   	   3.7
+    /// ;09H	   	   13.3       19H	   	   3.3
+    /// ;0AH	   	   12.0       1AH	   	   3.0
+    /// ;0BH	   	   10.9       1BH	   	   2.7
+    /// ;0CH	   	   10.0       1CH	   	   2.5
+    /// ;0DH	   	   9.2        1DH	   	   2.3
+    /// ;0EH	   	   8.6        1EH	   	   2.1
+    /// ;0FH	   	   8.0        1FH	   	   2.0
+    /// </code>
+    /// <para>BH = Typematic delay (bits 2-7 must be 0):</para>
+    /// <list type="table">
+    /// <listheader><term>Value</term><description>Delay</description></listheader>
+    /// <item><term>00h</term><description>250ms</description></item>
+    /// <item><term>01h</term><description>500ms</description></item>
+    /// <item><term>02h</term><description>750ms</description></item>
+    /// <item><term>03h</term><description>1000ms</description></item>
+    /// </list>
+    /// </summary>
+    /// <remarks>
+    /// source: <a href="https://github.com/gawlas/IBM-PC-BIOS" /> <br/>
+    /// Used by (for example): <a href="https://www.the8bitguy.com/product/planet-x3-for-ms-dos-computers/">Planet X3</a>
+    /// </remarks>
+    public void SetTypematicRateAndDelay() {
+        switch (State.AL) {
+            case TypematicFunctionConsts.SetDefaultFunction:
+                _ioPortDispatcher.WriteByte(KeyboardPorts.Data, (byte)KeyboardCommand.SetTypeRate);
+                _ioPortDispatcher.WriteByte(KeyboardPorts.Data, TypematicFunctionConsts.DefaultRateAndDelayValue);
+                break;
+            case TypematicFunctionConsts.SetRateAndDelayFunction:
+                if ((State.BL & TypematicFunctionConsts.RateMask) == 0 && (State.BH & TypematicFunctionConsts.DelayMask) == 0) {
+                    _ioPortDispatcher.WriteByte(KeyboardPorts.Data, (byte)KeyboardCommand.SetTypeRate);
+                    byte rateAndDelay = (byte)(State.BH << TypematicFunctionConsts.DelayShiftCount | State.BL);
+                    _ioPortDispatcher.WriteByte(KeyboardPorts.Data, rateAndDelay);
+                }
+                break;
+            default:
+                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                    LoggerService.Warning(
+                        "{ClassName} INT {Int:X2} {operation}: Unhandled {MethodName} command.",
+                        nameof(KeyboardInt16Handler), VectorNumber, State.AL, nameof(SetTypematicRateAndDelay));
+                }
+                break;
+        }
     }
 
     private void Unsupported(int operation) {
@@ -221,4 +292,40 @@ public class KeyboardInt16Handler : InterruptHandler {
         byte operation = State.AH;
         Run(operation);
     }
+
+    /// <summary>
+    /// Constants values used for Keyboard Typematic Rate and Delay operations (INT 16h AH=03h).
+    /// </summary>
+    public static class TypematicFunctionConsts {
+        /// <summary>
+        /// Function code to set default typematic rate and delay (AL=00h).
+        /// </summary>
+        public const byte SetDefaultFunction = 0x00;
+
+        /// <summary>
+        /// Function code to set custom typematic rate and delay (AL=05h).
+        /// </summary>
+        public const byte SetRateAndDelayFunction = 0x05;
+
+        /// <summary>
+        /// Bit shift count to position the delay value (5 bits).
+        /// </summary>
+        public const byte DelayShiftCount = 0x05;
+
+        /// <summary>
+        /// Default typematic value combining 500ms delay and 30 chars/sec rate (0x20).
+        /// </summary>
+        public const byte DefaultRateAndDelayValue = 0x20;
+
+        /// <summary>
+        /// Mask to validate that reserved bits 5-7 in the rate value are zero.
+        /// </summary>
+        public const byte RateMask = 0xE0;
+
+        /// <summary>
+        /// Mask to validate that reserved bits 2-7 in the delay value are zero.
+        /// </summary>
+        public const byte DelayMask = 0xFC;
+    }
+
 }

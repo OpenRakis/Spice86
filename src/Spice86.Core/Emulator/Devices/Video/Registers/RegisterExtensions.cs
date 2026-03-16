@@ -101,7 +101,14 @@ public static class RegisterExtensions {
             case CrtControllerRegister.VerticalTotal:
                 break;
             case CrtControllerRegister.Overflow:
-                break;
+                return string.Format(
+                    "[0,5]Vertical total upper: {0}, [1,6]Vertical display end upper: {1}, [2,7]Vertical sync start upper: {2}, [3]Vertical blanking start upper: {3}, [4]Line compare upper: {4}",
+                    (byte)(((value & 0x01) << 1) | ((value >> 5) & 0x01)),
+                    (byte)((((value >> 1) & 0x01) << 1) | ((value >> 6) & 0x01)),
+                    (byte)((((value >> 2) & 0x01) << 1) | ((value >> 7) & 0x01)),
+                    (byte)((value >> 3) & 0x01),
+                    (byte)((value >> 4) & 0x01)
+                );
             case CrtControllerRegister.PresetRowScan:
                 break;
             case CrtControllerRegister.CharacterCellHeight:
@@ -129,7 +136,14 @@ public static class RegisterExtensions {
             case CrtControllerRegister.VerticalRetraceEnd:
                 break;
             case CrtControllerRegister.VerticalDisplayEnd:
-                break;
+                return string.Format(
+                    "[0-3]Vertical Sync End: {0}, [4]Clear Vertical Interrupt: {1}, [5]Disable Vertical Interrupt: {2}, [6]Refresh Cycle: {3}, [7]Write Protect: {4}",
+                    value & 0x0F,
+                    (value & 0x10) == 0x10 ? "Enabled" : "Disabled",
+                    (value & 0x20) == 0x20 ? "Enabled" : "Disabled",
+                    (value & 0x40) == 0x40 ? "5" : "3",
+                    (value & 0x80) == 0x80 ? "Enabled" : "Disabled"
+                );
             case CrtControllerRegister.Offset:
                 break;
             case CrtControllerRegister.UnderlineLocation:

@@ -21,7 +21,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<byte> {
     public override void Execute(InstructionExecutionHelper helper) {
         byte port = helper.InstructionFieldValueRetriever.GetFieldValue(ValueField);
         helper.Out{{Size}}(port, helper.State.{{Accumulator}});
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

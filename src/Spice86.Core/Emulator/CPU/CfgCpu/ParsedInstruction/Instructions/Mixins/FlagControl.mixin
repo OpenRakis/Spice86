@@ -24,7 +24,7 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction {
         }
 {{ end }}    
         helper.State.{{FlagName}} = {{FlagValue}};
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

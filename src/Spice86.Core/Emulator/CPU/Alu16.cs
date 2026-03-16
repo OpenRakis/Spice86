@@ -79,9 +79,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         bool upperHalfNonZero = (res & 0xFFFF0000) != 0;
         _state.OverflowFlag = upperHalfNonZero;
         _state.CarryFlag = upperHalfNonZero;
-        SetZeroFlag(res);
-        SetParityFlag(res);
-        SetSignFlag((ushort)res);
+        _state.ZeroFlag = (res & 0xFFFF) == 0;
         return res;
     }
 
@@ -101,17 +99,18 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
             return value;
         }
 
+        bool oldCarry = _state.CarryFlag;
         int carry = value >> 16 - count & 0x1;
         ushort res = (ushort)(value << count);
         int mask = (1 << count - 1) - 1;
         res = (ushort)(res | (value >> 17 - count & mask));
-        if (_state.CarryFlag) {
+        if (oldCarry) {
             res = (ushort)(res | 1 << count - 1);
         }
 
         _state.CarryFlag = carry != 0;
         bool msb = (res & MsbMask) != 0;
-        _state.OverflowFlag = msb ^ _state.CarryFlag;
+        _state.OverflowFlag = _state.CarryFlag ^ msb;
         return res;
     }
 
@@ -121,11 +120,12 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
             return value;
         }
 
+        bool oldCarry = _state.CarryFlag;
         int carry = value >> count - 1 & 0x1;
         int mask = (1 << 16 - count) - 1;
         ushort res = (ushort)(value >> count & mask);
         res = (ushort)(res | value << 17 - count);
-        if (_state.CarryFlag) {
+        if (oldCarry) {
             res = (ushort)(res | 1 << 16 - count);
         }
 
@@ -145,7 +145,8 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         res = (ushort)(res | value >> 16 - count);
         _state.CarryFlag = carry != 0;
         bool msb = (res & MsbMask) != 0;
-        _state.OverflowFlag = msb ^ _state.CarryFlag;
+        bool lsb = (res & 0x01) != 0;
+        _state.OverflowFlag = msb ^ lsb;
         return res;
     }
     public override ushort Ror(ushort value, int count) {
@@ -187,20 +188,18 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.CarryFlag = msbBefore != 0;
         ushort res = (ushort)(value << count);
         UpdateFlags(res);
-        ushort msb = (ushort) (res & MsbMask);
-        _state.OverflowFlag = (msb ^ msbBefore) != 0;
+        _state.OverflowFlag = ((res ^ value) & MsbMask) != 0;
         return res;
     }
 
     public override ushort Shld(ushort destination, ushort source, byte count) {
         count &= ShiftCountMask;
-        if (count == 0) {
-            return destination;
-        }
-
-        if (count > 16) {
-            // Undefined. We shift the source in again.
-            return (ushort)(source << (count - 16));
+        switch (count) {
+            case 0:
+                return destination;
+            case > 16:
+                // Undefined. We shift the source in again.
+                return (ushort)(source << (count - 16));
         }
 
         ushort msbBefore = (ushort)(destination & MsbMask);
@@ -246,11 +245,11 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
             return value;
         }
 
-        ushort msb = (ushort)(value & MsbMask);
-        _state.OverflowFlag = msb != 0;
+        bool msb = (value & MsbMask) != 0;
         SetCarryFlagForRightShifts(value, count);
         ushort res = (ushort)(value >> count);
         UpdateFlags(res);
+        _state.OverflowFlag = count == 1 && msb;
         return res;
     }
 

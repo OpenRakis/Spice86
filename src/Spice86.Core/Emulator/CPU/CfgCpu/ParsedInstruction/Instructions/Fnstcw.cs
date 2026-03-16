@@ -15,7 +15,7 @@ public class Fnstcw : InstructionWithModRm {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         // Set the control word to the value expected after init since FPU is not supported.
         helper.ModRm.RM16 = 0x37F;
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

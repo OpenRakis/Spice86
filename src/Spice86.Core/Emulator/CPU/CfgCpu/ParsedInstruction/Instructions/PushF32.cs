@@ -13,7 +13,7 @@ public class PushF32 : CfgInstruction {
 
     public override void Execute(InstructionExecutionHelper helper) {
         helper.Stack.Push32(helper.State.Flags.FlagRegister & 0x00FCFFFF);
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

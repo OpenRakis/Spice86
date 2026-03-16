@@ -17,17 +17,18 @@ Spice86 is a .NET 8 cross-platform emulator for reverse engineering real-mode DO
 The entire emulator is assembled in `Spice86DependencyInjection.cs` (~600 lines):
 - Constructor creates the full object graph with explicit dependencies (no IoC container)
 - Order matters: components are constructed in dependency order
-- Machine parts are wired together with event handlers and shared state
+- Components are wired together with event handlers and shared state
 - Entry point is `Program.cs` which instantiates `Spice86DependencyInjection`
+- **`Spice86DependencyInjection` is the central composition root** - understand its structure when working with dependencies
+- The `Machine` class aggregates emulator components (CPU, memory, devices) - access via properties like `CfgCpu`, `Memory`, `Stack`
+- `InterruptVectorTable` and `Stack` are now passed directly to `Machine` constructor
 
-### CPU Execution Models
-Two CPU implementations coexist via `IInstructionExecutor`:
-- **`Cpu`**: Traditional interpreter with instruction-by-instruction execution
-- **`CfgCpu`**: Control Flow Graph-based executor that builds dynamic CFG for analysis and future JIT
-  - Tracks instruction variants for self-modifying code via selector nodes
-  - Maintains execution context hierarchy for hardware interrupts
-  - See `doc/cfgcpuReadme.md` for CFG architecture details
-- Toggle via `--CfgCpu` flag; CfgCpu is the future direction
+### CPU Execution Model
+**`CfgCpu`** is the sole CPU implementation (Control Flow Graph-based executor):
+- Builds dynamic CFG for analysis and future JIT compilation
+- Tracks instruction variants for self-modifying code via selector nodes
+- Maintains execution context hierarchy for hardware interrupts
+- See `doc/cfgcpuReadme.md` for detailed CFG architecture
 
 ## Critical Workflows
 
@@ -51,7 +52,7 @@ dotnet test tests/Spice86.Tests
 - **Internal Debugger**: UI-based debugger with disassembly, memory, CPU state views
 
 ### Reverse Engineering Process
-1. Run DOS program in Spice86 with `--DumpDataOnExit true`
+1. Run DOS program in Spice86
 2. Emulator dumps `spice86dumpMemoryDump.bin` and `spice86dumpExecutionFlow.json` to `--RecordedDataDirectory`
 3. Load dumps in Ghidra via [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin)
 4. Generate C# override classes from decompiled functions
@@ -107,7 +108,76 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 
 ## Project-Specific Conventions
 
+### Critical AI Agent Guidelines
+- **This is a C# project** - never suggest Python solutions
+- **Avoid complexity** - keep cyclomatic complexity low, prefer simple, linear code over nested conditionals
+- **No optional parameters** - avoid nullable or optional parameters in new code
+- **Minimal comments** - write self-documenting code with clear names; avoid obvious comments
+- **Test before submit** - always run tests after code changes to verify functionality
+- **Concise documentation** - XML docs should be precise and complete but not verbose; avoid excessive remarks
+- **Ignore Machine class** - this is a legacy aggregator class; work directly with specific components (`CfgCpu`, `Memory`, `Stack`, etc.) instead
+
+### Avalonia Telemetry
+- **Avalonia telemetry must be disabled** when working on the codebase.
+- The repository already has telemetry disabled in code, but it may still cause issues for AI agents.
+- Be aware of this configuration to avoid telemetry-related blocking issues.
+
 ### Code Style (enforced by `.editorconfig`)
+- **No `var` keyword**: Use explicit types instead (enforced by `.editorconfig`)
+  ```csharp
+  // Wrong
+  var count = 10;
+  
+  // Correct
+  int count = 10;
+  ```
+- **One top-level type per file**: Do not place multiple classes/structs/enums in the same file
+  - Exception: private nested/inner types declared inside a class are allowed
+  - Group related types via namespaces, not by co-locating multiple top-level types
+- **No generic catch clauses**: Catch specific exceptions only - **this is strictly enforced**
+  ```csharp
+  // WRONG - NEVER DO THIS
+  try {
+      // code
+  } catch (Exception ex) {
+      // handling
+  }
+  
+  // CORRECT - Catch specific exceptions
+  try {
+      // code
+  } catch (IOException ex) {
+      // handling
+  } catch (ArgumentException ex) {
+      // handling
+  }
+  ```
+  - **NEVER use generic `catch (Exception)`, `catch (Exception e)`, or empty `catch`**
+  - Never use SegmentedAddress.Linear for address computations. Segmented addresses can rollover and Linear doesn't handle this correctly.
+  - Each exception type must be caught explicitly
+  - This is non-negotiable - the .editorconfig enforces this rule
+  
+- **No null-forgiving operator (!)**: The null-forgiving operator is **BANNED**
+  ```csharp
+  // Wrong - NEVER use !
+  string value = nullable!.ToString();
+  
+  // Correct
+  if (nullable != null) {
+      string value = nullable.ToString();
+  }
+  // Or
+  string value = nullable?.ToString() ?? "default";
+  ```
+  - Properly handle null cases with null checks, null-coalescing, or null-conditional operators
+  - Don't ignore nullable warnings - fix the underlying issue
+- **Do not use `#region`**: Avoid `#region`/`#endregion` blocks; keep code organized via clear structure and namespaces
+- **Do not suppress warnings with pragmas**: Never disable warnings using preprocessor directives (e.g., `#pragma warning disable`). Fix the underlying issue instead.
+- **Async usage restrictions**:
+  - **Do NOT let async "infect" the `Spice86.Core` assembly**
+  - Keep async code in the UI layer (`Spice86` project) only
+  - For the UI, use Dispatcher-based timer updates (mainly used on pause)
+  - This separation maintains clean architecture boundaries
 - **Brace style**: Java-style (opening brace on same line)
   ```csharp
   if (condition) {
@@ -120,11 +190,16 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   ```
 - **Nullable**: Enabled project-wide with `<WarningsAsErrors>nullable</WarningsAsErrors>`
 - **Documentation**: XML comments required (`<GenerateDocumentationFile>true</GenerateDocumentationFile>`)
+- **No stub implementations**: Create proper real implementations
+  - Stubs that return hardcoded values or do nothing are not allowed
+  - Magic values are not allowed, define enums or consts with clear names
 
 ### Testing Patterns
+- **Prefer ASM-based tests over unit tests** for testing the emulator
+  - Unit tests are acceptable for interrupt handlers that don't override `WriteAssemblyInRam` and deal with few dependencies
+  - Use assembly-based integration tests for comprehensive emulator validation
 - Use FluentAssertions for assertions: `result.Should().Be(expected)`
 - Mock with NSubstitute: `Substitute.For<IInterface>()`
-- Theory tests for CPU configurations: `[Theory] [MemberData(nameof(GetCfgCpuConfigurations))]`
 - CPU tests in `tests/Spice86.Tests/CpuTests/` use SingleStepTests NuGet packages for validation
 
 ### Logging

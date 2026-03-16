@@ -2,4 +2,5 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interf
 
 public interface IInstructionWithSegmentRegisterIndex {
     public int SegmentRegisterIndex { get; }
+    public int DefaultSegmentRegisterIndex { get; }
 }

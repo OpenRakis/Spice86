@@ -1,9 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
@@ -22,11 +23,9 @@ public sealed class GdbServer : IDisposable {
     private readonly IPauseHandler _pauseHandler;
     private readonly IMemory _memory;
     private readonly State _state;
-    private readonly IExecutionDumpFactory _executionDumpFactory;
-    private readonly FunctionCatalogue _functionCatalogue;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
 
-    private readonly MemoryDataExporter _memoryDataExporter;
+    private readonly EmulatorStateSerializer _emulatorStateSerializer;
 
     /// <summary>
     /// Creates a new instance of the GdbServer class with the specified parameters.
@@ -34,29 +33,27 @@ public sealed class GdbServer : IDisposable {
     /// <param name="configuration">The Configuration object that contains the settings for the GDB server.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
-    /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="functionCatalogue">List of all functions.</param>
-    /// <param name="executionDumpFactory">The class that dumps machine code execution flow.</param>
-    /// <param name="emulatorBreakpointsManager">The class that handles breakpoints.</param>
-    /// <param name="pauseHandler">The class used to support pausing/resuming the emulation via GDB commands.</param>
+    /// <param name="pauseHandler">The class that enables us to pause the emulator.</param>
+    /// <param name="emulatorBreakpointsManager">The class used to store and retrieve breakpoints.</param>
+    /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
     /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
-    public GdbServer(Configuration configuration, IMemory memory,
+    public GdbServer(Configuration configuration,
+        IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, 
-        State state, MemoryDataExporter memoryDataExporter, FunctionCatalogue functionCatalogue, 
-        IExecutionDumpFactory executionDumpFactory,
-        EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler,
+        State state,
+        IPauseHandler pauseHandler,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        EmulatorStateSerializer emulatorStateSerializer,
         ILoggerService loggerService) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
-        _memoryDataExporter = memoryDataExporter;
-        _functionCatalogue = functionCatalogue;
         _state = state;
         _memory = memory;
-        _executionDumpFactory = executionDumpFactory;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _configuration = configuration;
         _functionHandlerProvider = functionHandlerProvider;
+        _emulatorStateSerializer = emulatorStateSerializer;
     }
 
     /// <inheritdoc />
@@ -89,11 +86,14 @@ public sealed class GdbServer : IDisposable {
     private void AcceptOneConnection(GdbIo gdbIo) {
         gdbIo.WaitForConnection();
         GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(
-            _memory, _functionHandlerProvider, _state, _memoryDataExporter, _pauseHandler,
-            _emulatorBreakpointsManager, _executionDumpFactory, _functionCatalogue,
+            _memory,
+            _functionHandlerProvider,
+            _state,
+            _pauseHandler,
+            _emulatorBreakpointsManager,
+            _emulatorStateSerializer,
             gdbIo,
-            _loggerService,
-            _configuration);
+            _loggerService);
         gdbCommandHandler.PauseEmulator();
         while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected()) {
             string command = gdbIo.ReadCommand();

@@ -22,9 +22,11 @@ public class SingleStepTestMinimalMachine {
         State = state;
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         PauseHandler pauseHandler = new PauseHandler(loggerService);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
-        Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, new Ram(/*0x10FFEF*/1024 * 1024), new A20Gate(false));
+        AddressReadWriteBreakpoints memoryBreakpoints = new();
+        AddressReadWriteBreakpoints ioBreakpoints = new();
+        Memory memory = new(memoryBreakpoints, new Ram(/*0x10FFEF*/1024 * 1024), new A20Gate(false));
         Memory = memory;
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
         for (uint address = 0; address < memory.Length; address++) {
             // monitor what is written in ram so that we can restore it to 0 after
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.MEMORY_WRITE, address, 
@@ -35,10 +37,10 @@ public class SingleStepTestMinimalMachine {
         IOPortDispatcher ioPortDispatcher =
             new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, false);
         CallbackHandler callbackHandler = new(state, loggerService);
-        DualPic dualPic = new DualPic(state, ioPortDispatcher, false, true, loggerService);
+        DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
         FunctionCatalogue functionCatalogue = new();
         Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic,
-            emulatorBreakpointsManager, functionCatalogue, false, loggerService);
+            emulatorBreakpointsManager, functionCatalogue, false, false, loggerService);
     }
 
     public void RestoreMemoryAfterTest() {

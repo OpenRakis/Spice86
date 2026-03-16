@@ -1,4 +1,5 @@
-﻿namespace Spice86.ViewModels;
+﻿
+namespace Spice86.ViewModels;
 
 using Avalonia.Threading;
 
@@ -6,44 +7,44 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
+using Spice86.Shared.Diagnostics;
 
 using System;
 
 public partial class PerformanceViewModel : ViewModelBase {
-    private readonly IPerformanceMeasureReader _cpuPerformanceReader;
     private readonly State _state;
 
-    [ObservableProperty]
-    private double _averageInstructionsPerSecond;
+    private readonly PerformanceTracker _performanceTracker;
 
-    private bool _isPaused;
-    
+    [ObservableProperty] private double _averageInstructionsPerSecond;
+
+    [ObservableProperty] private double _instructionsPerMillisecond;
+
+    [ObservableProperty] private double _instructionsExecuted;
+
     public PerformanceViewModel(State state, IPauseHandler pauseHandler,
-        IUIDispatcher uiDispatcher, IPerformanceMeasureReader cpuPerfReader) {
-        _cpuPerformanceReader = cpuPerfReader;
-        pauseHandler.Paused += () => uiDispatcher.Post(() => _isPaused = true);
-        pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = false);
+        IUIDispatcher uiDispatcher, PerformanceTracker performanceTracker) {
+        _performanceTracker = performanceTracker;
+        pauseHandler.Paused += () => uiDispatcher.Post(() => {
+            _performanceTracker.OnPause();
+            AverageInstructionsPerSecond = 0;
+            InstructionsPerMillisecond = 0;
+        });
+        pauseHandler.Resumed += () => uiDispatcher.Post(() => {
+            _performanceTracker.OnResume();
+            UpdatePerformanceInfo();
+        });
         _state = state;
-        _isPaused = pauseHandler.IsPaused;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(0.4),
-            DispatcherPriority.Background, UpdatePerformanceInfo);
+
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1),
+            DispatcherPriority.Background, (_, _) => UpdatePerformanceInfo());
     }
 
-    private void UpdatePerformanceInfo(object? sender, EventArgs e) {
-        if (_isPaused) {
-            return;
-        }
-
+    private void UpdatePerformanceInfo() {
         InstructionsExecuted = _state.Cycles;
-        AverageInstructionsPerSecond = _cpuPerformanceReader.AverageValuePerSecond;
-        InstructionsPerMillisecond = _cpuPerformanceReader.ValuePerMillisecond;
+        _performanceTracker.Update(_state.Cycles);
+        AverageInstructionsPerSecond = _performanceTracker.InstructionsPerSecond;
+        InstructionsPerMillisecond = _performanceTracker.InstructionsPerSecond / 1000;
     }
-
-    [ObservableProperty]
-    private double _instructionsPerMillisecond;
-
-    [ObservableProperty]
-    private double _instructionsExecuted;
 }

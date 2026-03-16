@@ -1,9 +1,9 @@
-﻿namespace Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
+namespace Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 
 using Mt32emu;
 
+using Spice86.Audio.Common;
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System.IO.Compression;
@@ -14,8 +14,7 @@ using System.Linq;
 /// </summary>
 public sealed class Mt32MidiDevice : MidiDevice {
     private readonly Mt32Context _context;
-    private readonly SoundChannel _soundChannel;
-    private readonly DeviceThread _deviceThread;
+    private readonly SoundChannel? _mixerChannel;
 
     /// <summary>
     /// Indicates whether this object has been disposed.
@@ -27,19 +26,16 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <summary>
     /// Constructs an instance of <see cref="Mt32MidiDevice"/>.
     /// </summary>
-    /// <param name="softwareMixer">The software mixer for sund channels.</param>
+    /// <param name="mixer">The software mixer for sound channels.</param>
     /// <param name="romsPath">The path to the MT-32 ROM files.</param>
-    /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
     /// <param name="loggerService">The logger service to use for logging messages.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
-    public Mt32MidiDevice(SoftwareMixer softwareMixer, string romsPath, IPauseHandler pauseHandler, ILoggerService loggerService) {
-        _soundChannel = softwareMixer.CreateChannel(nameof(Mt32MidiDevice));
+    public Mt32MidiDevice(SoftwareMixer mixer, string romsPath, ILoggerService loggerService) {
         _context = new();
-        _deviceThread = new DeviceThread(nameof(Mt32MidiDevice), PlaybackLoopBody, pauseHandler, loggerService);
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
-        
+
         if (!LoadRoms(romsPath)) {
             if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 loggerService.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created",
@@ -50,12 +46,19 @@ public sealed class Mt32MidiDevice : MidiDevice {
         _context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(48000);
         _context.SetSampleRate(48000);
         _context.OpenSynth();
+        _mixerChannel = mixer.AddChannel(RenderCallback, 48000, nameof(Mt32MidiDevice), new HashSet<ChannelFeature> {
+            ChannelFeature.Sleep,
+            ChannelFeature.ReverbSend,
+            ChannelFeature.ChorusSend,
+            ChannelFeature.Stereo,
+            ChannelFeature.Synthesizer
+        });
     }
 
     /// <inheritdoc/>
     protected override void PlayShortMessage(uint message) {
         if (!_disposed) {
-            _deviceThread.StartThreadIfNeeded();
+            _mixerChannel?.WakeUp();
             _context.PlayMessage(message);
         }
     }
@@ -63,15 +66,24 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <inheritdoc/>
     protected override void PlaySysex(ReadOnlySpan<byte> data) {
         if (!_disposed) {
-            _deviceThread.StartThreadIfNeeded();
+            _mixerChannel?.WakeUp();
             _context.PlaySysex(data);
         }
     }
 
-    private void PlaybackLoopBody() {
-        ((Span<float>)_buffer).Clear();
-        _context.Render(_buffer);
-        _soundChannel.Render(_buffer);
+    private void RenderCallback(int framesRequested) {
+        if (_disposed) {
+            return;
+        }
+        int framesRemaining = framesRequested;
+        while (framesRemaining > 0) {
+            int framesToRender = Math.Min(framesRemaining, _buffer.Length / 2);
+            Span<float> renderSpan = _buffer.AsSpan(0, framesToRender * 2);
+            renderSpan.Clear();
+            _context.Render(renderSpan);
+            _mixerChannel?.AddSamplesNormalized(framesToRender, renderSpan);
+            framesRemaining -= framesToRender;
+        }
     }
 
     private bool LoadRoms(string path) {
@@ -106,7 +118,7 @@ public sealed class Mt32MidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _deviceThread.Dispose();
+                _mixerChannel?.Enable(false);
                 _context.Dispose();
             }
             _disposed = true;

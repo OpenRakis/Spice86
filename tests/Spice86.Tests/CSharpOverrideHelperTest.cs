@@ -17,25 +17,19 @@ using Xunit;
 
 public class CSharpOverrideHelperTest {
     private readonly ILoggerService _loggerServiceMock = Substitute.For<ILoggerService>();
-
-    public static IEnumerable<object[]> GetCfgCpuConfigurations() {
-        yield return new object[] { false };
-        yield return new object[] { true };
-    }
     
-    private Spice86DependencyInjection CreateDummyProgramExecutor(bool enableCfgCpu, string? overrideSupplierClassName=null) {
+    private Spice86DependencyInjection CreateDummyProgramExecutor(string? overrideSupplierClassName=null) {
         Spice86DependencyInjection res =
-            new Spice86Creator("jump2", enableCfgCpu, overrideSupplierClassName: overrideSupplierClassName).Create();
+            new Spice86Creator(binName: "jump2", overrideSupplierClassName: overrideSupplierClassName).Create();
         // Setup stack
         res.Machine.CpuState.SS = 0x3000;
         res.Machine.CpuState.SP = 0x100;
         return res;
     }
 
-    [Theory]
-    [MemberData(nameof(GetCfgCpuConfigurations))]
-    public void TestJumpReturns(bool enableCfgCpu) {
-        using Spice86DependencyInjection res = CreateDummyProgramExecutor(enableCfgCpu);
+    [Fact]
+    public void TestJumpReturns() {
+        using Spice86DependencyInjection res = CreateDummyProgramExecutor();
         Machine machine = res.Machine;
         RecursiveJumps recursiveJumps =
             new RecursiveJumps(new Dictionary<SegmentedAddress, FunctionInformation>(),
@@ -46,11 +40,10 @@ public class CSharpOverrideHelperTest {
         Assert.Equal(RecursiveJumps.MaxNumberOfJumps, recursiveJumps.NumberOfCallsTo2);
     }
 
-    [Theory]
-    [MemberData(nameof(GetCfgCpuConfigurations))]
-    public void TestSimpleCallsJumps(bool enableCfgCpu) {
+    [Fact]
+    public void TestSimpleCallsJumps() {
         using Spice86DependencyInjection spice86DependencyInjection =
-            CreateDummyProgramExecutor(enableCfgCpu, typeof(SimpleCallsJumpsOverrideSupplier).AssemblyQualifiedName);
+            CreateDummyProgramExecutor(typeof(SimpleCallsJumpsOverrideSupplier).AssemblyQualifiedName);
         // Get the instance spice86 created. No elegant way of doing this from outside...
         SimpleCallsJumps? callsJumps = SimpleCallsJumps.CurrentInstance;
         // Reset it right away
@@ -64,11 +57,10 @@ public class CSharpOverrideHelperTest {
         Assert.Equal(1, callsJumps.FarCalled2FromStack);
     }
 
-    [Theory]
-    [MemberData(nameof(GetCfgCpuConfigurations))]
-    public void TestActualInCodeOverrides(bool enableCfgCpu) {
+    [Fact]
+    public void TestActualInCodeOverrides() {
         using Spice86DependencyInjection spice86DependencyInjection =
-            CreateDummyProgramExecutor(enableCfgCpu, typeof(VariousOverrideSupplier).AssemblyQualifiedName);
+            CreateDummyProgramExecutor(typeof(VariousOverrideSupplier).AssemblyQualifiedName);
         // Get the instance spice86 created. No elegant way of doing this from outside...
         VariousOverrides? overrides = VariousOverrides.CurrentInstance;
         // Reset it right away

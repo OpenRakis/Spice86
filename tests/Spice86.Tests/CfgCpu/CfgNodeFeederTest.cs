@@ -16,6 +16,7 @@ using Xunit;
 
 namespace Spice86.Tests.CfgCpu;
 
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Function;
@@ -36,12 +37,15 @@ public class CfgNodeFeederTest {
 
     private (CfgNodeFeeder, ExecutionContext) CreateCfgNodeFeeder() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(new PauseHandler(loggerService), _state);
-        _memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, new Ram(64), new A20Gate());
+        AddressReadWriteBreakpoints memoryBreakpoints = new();
+        AddressReadWriteBreakpoints ioBreakpoints = new();
+        _memory = new(memoryBreakpoints, new Ram(64), new A20Gate());
         _state = new State(CpuModel.INTEL_80286);
-        FunctionHandler functionHandler = new(_memory, _state, null, new(), false, loggerService);
-        CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, new());
-        ExecutionContext executionContext = new ExecutionContext(SegmentedAddress.ZERO, 0, functionHandler);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(new PauseHandler(loggerService), _state, _memory, memoryBreakpoints, ioBreakpoints);
+        InstructionReplacerRegistry replacerRegistry = new();
+        CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, replacerRegistry);
+        ExecutionContextManager executionContextManager = new(_memory, _state, cfgNodeFeeder, replacerRegistry, new(), false, loggerService);
+        ExecutionContext executionContext = executionContextManager.CurrentExecutionContext;
         return (cfgNodeFeeder, executionContext);
     }
 

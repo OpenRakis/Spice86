@@ -28,7 +28,7 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction {
         helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}BP);
         helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}SI);
         helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}DI);
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

@@ -7,6 +7,12 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Shared.Emulator.Memory;
 
+/// <summary>
+/// An instruction that throws a CPU exception when executed.
+/// Used to defer parser exceptions to execution time, allowing
+/// to determine whether to crash or handle as CPU fault.
+/// If handled as fault, node will be in the graph for future execution
+/// </summary>
 public class InvalidInstruction : CfgInstruction {
     private readonly CpuException _cpuException;
     public InvalidInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField,

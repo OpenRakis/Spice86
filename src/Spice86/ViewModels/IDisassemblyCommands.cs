@@ -50,6 +50,16 @@ public interface IDisassemblyCommands {
     IRelayCommand<DebuggerLineViewModel> CreateExecutionBreakpointHereCommand { get; }
 
     /// <summary>
+    ///     Command to create an execution breakpoint with a dialog for specifying conditions.
+    /// </summary>
+    IRelayCommand<DebuggerLineViewModel> CreateExecutionBreakpointWithDialogCommand { get; }
+
+    /// <summary>
+    ///     Command to edit an existing execution breakpoint.
+    /// </summary>
+    IRelayCommand<DebuggerLineViewModel> EditExecutionBreakpointCommand { get; }
+
+    /// <summary>
     ///     Command to remove an execution breakpoint at the current instruction.
     /// </summary>
     IRelayCommand<DebuggerLineViewModel> RemoveExecutionBreakpointHereCommand { get; }
@@ -73,4 +83,14 @@ public interface IDisassemblyCommands {
     ///     Command to move the CS:IP to the current instruction.
     /// </summary>
     IRelayCommand MoveCsIpHereCommand { get; }
+    
+    /// <summary>
+    ///     Command to confirm breakpoint creation from the dialog.
+    /// </summary>
+    IRelayCommand ConfirmBreakpointCreationCommand { get; }
+    
+    /// <summary>
+    ///     Command to cancel breakpoint creation from the dialog.
+    /// </summary>
+    IRelayCommand CancelBreakpointCreationCommand { get; }
 }

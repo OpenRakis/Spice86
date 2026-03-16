@@ -24,7 +24,7 @@ public partial class {{ moxy.Class.Name }} : JmpNearImm8 {
         if(--helper.State.{{CounterRegister}} != 0{{if Condition}} && {{Condition}}{{end}}) {
             base.Execute(helper);
         } else {
-            helper.MoveIpAndSetNextNode(this);
+            helper.MoveIpToEndOfInstruction(this);
         }
     }
 

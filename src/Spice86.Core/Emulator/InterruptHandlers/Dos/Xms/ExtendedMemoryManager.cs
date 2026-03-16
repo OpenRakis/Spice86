@@ -246,7 +246,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _loggerService = loggerService;
         // Place hookable callback in writable memory area
         var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables
-            .GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
+            .ReserveDosPrivateSegment(0x1) - 1), 0x10);
         CallbackAddress = hookableCodeAddress;
         SegmentedAddress savedAddress = memoryAsmWriter.CurrentAddress;
         memoryAsmWriter.CurrentAddress = hookableCodeAddress;

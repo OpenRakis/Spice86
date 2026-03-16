@@ -2,9 +2,10 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 public class Grp4Callback : InstructionWithModRm {
@@ -19,11 +20,17 @@ public class Grp4Callback : InstructionWithModRm {
 
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
+
         helper.CallbackHandler.Run(helper.InstructionFieldValueRetriever.GetFieldValue(CallbackNumber));
-        helper.MoveIpAndSetNextNode(this);
+
+        // Check if IP changed during callback execution, if so it means callback code did a jump.
+        // If IP didn't change, move it to end of instruction to go to next instruction.
+        if (helper.State.IpSegmentedAddress == Address) {
+            helper.MoveIpToEndOfInstruction(this);
+        }
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.CALLBACK);
+        return new InstructionNode(InstructionOperation.CALLBACK, builder.InstructionField.ToNode(CallbackNumber)!);
     }
 }

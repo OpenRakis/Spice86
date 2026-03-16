@@ -3,6 +3,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Reactive;
 using Avalonia.VisualTree;
 
 using AvaloniaGraphControl;
@@ -24,7 +25,7 @@ public class GraphNodeBehavior {
 
     // Called when the property is attached to a control
     static GraphNodeBehavior() {
-        NodeClickCommandProperty.Changed.Subscribe(OnNodeClickCommandChanged);
+        NodeClickCommandProperty.Changed.Subscribe(new AnonymousObserver<AvaloniaPropertyChangedEventArgs<ICommand>>(OnNodeClickCommandChanged));
     }
 
     // Add/remove event handler when the property changes

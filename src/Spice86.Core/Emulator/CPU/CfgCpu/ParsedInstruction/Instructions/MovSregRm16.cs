@@ -26,7 +26,7 @@ public class MovSregRm16 : InstructionWithModRm {
         if (ModRmContext.RegisterIndex == (uint)SegmentRegisterIndex.SsIndex) {
             helper.State.InterruptShadowing = true;
         }
-        helper.MoveIpAndSetNextNode(this);
+        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {

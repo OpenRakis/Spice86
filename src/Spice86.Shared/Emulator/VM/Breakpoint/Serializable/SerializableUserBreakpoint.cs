@@ -26,4 +26,10 @@ public record SerializableUserBreakpoint {
     /// Gets a value indicating whether the breakpoint is enabled.
     /// </summary>
     public bool IsEnabled { get; init; }
+    
+    /// <summary>
+    /// Gets the condition expression string for conditional breakpoints.
+    /// </summary>
+    /// <remarks>When null or empty, the breakpoint is unconditional.</remarks>
+    public string? ConditionExpression { get; init; }
 }
