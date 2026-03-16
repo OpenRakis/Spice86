@@ -35,9 +35,10 @@ public sealed class Spice86HttpApiServer : IDisposable {
     /// <param name="memory">Emulator memory bus.</param>
     /// <param name="pauseHandler">Handler used to query and change the emulator pause state.</param>
     /// <param name="loggerService">Logger service.</param>
+    /// <param name="a20Gate">A20 gate used to transform physical addresses before memory access.</param>
     /// <param name="port">TCP port to listen on.</param>
     public Spice86HttpApiServer(State state, IMemory memory,
-        IPauseHandler pauseHandler, ILoggerService loggerService, int port) {
+        IPauseHandler pauseHandler, ILoggerService loggerService, A20Gate a20Gate, int port) {
         _loggerService = loggerService;
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -52,7 +53,7 @@ public sealed class Spice86HttpApiServer : IDisposable {
         builder.Services
             .AddControllers()
             .AddApplicationPart(typeof(HttpApiController).Assembly);
-        builder.Services.AddSingleton(new HttpApiState(state, memory, pauseHandler));
+        builder.Services.AddSingleton(new HttpApiState(state, memory, pauseHandler, a20Gate));
 
         _webApplication = builder.Build();
         _webApplication.MapControllers();

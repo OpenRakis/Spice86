@@ -80,7 +80,7 @@ public partial class HttpApiViewModel : ViewModelBase, IDisposable {
 
     private void Initialize(bool isEnabled, int port) {
         IsEnabled = isEnabled;
-        BaseUrl = HttpApiEndpoint.BaseUrl(port);
+        BaseUrl = isEnabled && port > 0 ? HttpApiEndpoint.BaseUrl(port) : string.Empty;
         _httpClient.Timeout = TimeSpan.FromSeconds(2);
     }
 

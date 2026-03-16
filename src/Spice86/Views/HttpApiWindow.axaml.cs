@@ -13,7 +13,8 @@ public sealed partial class HttpApiWindow : Window {
 
     protected override void OnOpened(EventArgs e) {
         base.OnOpened(e);
-        if (DataContext is HttpApiViewModel viewModel && viewModel.RefreshStatusCommand.CanExecute(null)) {
+        if (DataContext is HttpApiViewModel viewModel && viewModel.IsEnabled
+            && viewModel.RefreshStatusCommand.CanExecute(null)) {
             viewModel.RefreshStatusCommand.Execute(null);
         }
     }

@@ -12,10 +12,12 @@ public sealed class HttpApiState {
     /// <param name="state">CPU register and flag state of the emulator.</param>
     /// <param name="memory">Emulator memory bus.</param>
     /// <param name="pauseHandler">Handler used to query and change the emulator pause state.</param>
-    public HttpApiState(State state, IMemory memory, IPauseHandler pauseHandler) {
+    /// <param name="a20Gate">A20 gate used to transform physical addresses before memory access.</param>
+    public HttpApiState(State state, IMemory memory, IPauseHandler pauseHandler, A20Gate a20Gate) {
         State = state;
         Memory = memory;
         PauseHandler = pauseHandler;
+        A20Gate = a20Gate;
     }
 
     /// <summary>CPU register and flag state of the emulator.</summary>
@@ -31,4 +33,7 @@ public sealed class HttpApiState {
 
     /// <summary>Handler used to query and change the emulator pause state.</summary>
     public IPauseHandler PauseHandler { get; }
+
+    /// <summary>A20 gate used to transform physical addresses before memory access, matching CPU behaviour.</summary>
+    public A20Gate A20Gate { get; }
 }

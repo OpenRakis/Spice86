@@ -76,23 +76,26 @@ public sealed class HttpApiServerTests {
     public async Task PutByte_WritesAndReadsBackValue() {
         SeedMemory();
         _fixture.PauseHandler.IsPaused.Returns(true);
-        HttpApiWriteByteRequest request = new() {
-            Value = 0xAB
-        };
+        try {
+            HttpApiWriteByteRequest request = new() {
+                Value = 0xAB
+            };
 
-        HttpResponseMessage putResponse = await _fixture.HttpClient.PutAsJsonAsync("/api/memory/64/byte", request);
-        putResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            HttpResponseMessage putResponse = await _fixture.HttpClient.PutAsJsonAsync("/api/memory/64/byte", request);
+            putResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiMemoryByteResponse putPayload = await putResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>()
-            ?? throw new InvalidOperationException("Expected non-null putPayload");
-        putPayload.Value.Should().Be(0xAB);
+            HttpApiMemoryByteResponse putPayload = await putResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>()
+                ?? throw new InvalidOperationException("Expected non-null putPayload");
+            putPayload.Value.Should().Be(0xAB);
 
-        HttpResponseMessage getResponse = await _fixture.HttpClient.GetAsync("/api/memory/64/byte");
-        HttpApiMemoryByteResponse getPayload = await getResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>()
-            ?? throw new InvalidOperationException("Expected non-null getPayload");
-        getPayload.Value.Should().Be(0xAB);
-        _fixture.Memory[0x40].Should().Be(0xAB);
-        _fixture.PauseHandler.IsPaused.Returns(false);
+            HttpResponseMessage getResponse = await _fixture.HttpClient.GetAsync("/api/memory/64/byte");
+            HttpApiMemoryByteResponse getPayload = await getResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>()
+                ?? throw new InvalidOperationException("Expected non-null getPayload");
+            getPayload.Value.Should().Be(0xAB);
+            _fixture.Memory[0x40].Should().Be(0xAB);
+        } finally {
+            _fixture.PauseHandler.IsPaused.Returns(false);
+        }
     }
 
     [Fact]
@@ -191,18 +194,21 @@ public sealed class HttpApiServerTests {
     public async Task PutByte_WithOutOfRangeAddress_ReturnsNotFound() {
         SeedMemory();
         _fixture.PauseHandler.IsPaused.Returns(true);
-        HttpApiWriteByteRequest request = new() {
-            Value = 0xEF
-        };
+        try {
+            HttpApiWriteByteRequest request = new() {
+                Value = 0xEF
+            };
 
-        HttpResponseMessage response = await _fixture.HttpClient.PutAsJsonAsync($"/api/memory/{_fixture.Memory.Length}/byte", request);
+            HttpResponseMessage response = await _fixture.HttpClient.PutAsJsonAsync($"/api/memory/{_fixture.Memory.Length}/byte", request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
-            ?? throw new InvalidOperationException("Expected non-null payload");
-        payload.Message.Should().Be("address is outside of memory range");
-        _fixture.PauseHandler.IsPaused.Returns(false);
+            HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+                ?? throw new InvalidOperationException("Expected non-null payload");
+            payload.Message.Should().Be("address is outside of memory range");
+        } finally {
+            _fixture.PauseHandler.IsPaused.Returns(false);
+        }
     }
 
     [Fact]
