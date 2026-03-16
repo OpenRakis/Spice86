@@ -19,13 +19,20 @@ public class CpuTest {
     /// Deserialize from JSON using DTO approach
     /// </summary>
     public static CpuTest FromJson(string json) {
-        var dto = JsonSerializer.Deserialize<CpuTestDto>(json)
-            ?? throw new JsonException("Failed to deserialize CpuTest");
-        
-        var test = new CpuTest {
+        CpuTestDto dto;
+        try {
+            dto = JsonSerializer.Deserialize<CpuTestDto>(json)
+                ?? throw new InvalidTestException("Failed to deserialize CpuTest: result was null");
+        } catch (JsonException ex) {
+            throw new InvalidTestException($"Failed to deserialize CpuTest: {ex.Message}");
+        } catch (NotSupportedException ex) {
+            throw new InvalidTestException($"Failed to deserialize CpuTest: {ex.Message}");
+        }
+
+        CpuTest test = new CpuTest {
             Index = dto.Index,
             Name = dto.Name,
-            Bytes = dto.Bytes.Select(i => (byte)i).ToArray(),
+            Bytes = ValidateBytes(dto.Bytes),
             Initial = ToInitialModel(dto.Initial),
             Hash = dto.Hash
         };
@@ -92,10 +99,21 @@ public class CpuTest {
         };
     }
 
+    private static byte[] ValidateBytes(uint[] bytes) {
+        byte[] result = new byte[bytes.Length];
+        for (int i = 0; i < bytes.Length; i++) {
+            if (bytes[i] > 0xFF) {
+                throw new InvalidTestException($"Byte value {bytes[i]} at index {i} exceeds byte range (0-255)");
+            }
+            result[i] = (byte)bytes[i];
+        }
+        return result;
+    }
+
     private static RamEntry[] ValidateRam(uint[][] ram) {
-        var ramEntries = new RamEntry[ram.Length];
+        RamEntry[] ramEntries = new RamEntry[ram.Length];
         for (int i = 0; i < ram.Length; i++) {
-            var entry = ram[i];
+            uint[] entry = ram[i];
             if (entry.Length != 2) {
                 throw new InvalidTestException($"RAM entry must have exactly 2 elements (address, value), got {entry.Length}");
             }

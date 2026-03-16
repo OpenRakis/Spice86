@@ -25,13 +25,12 @@ using System.Linq;
 [McpServerToolType]
 public sealed class EmulatorMcpTools {
     private readonly EmulatorMcpServices _services;
-    private readonly object _lock = new();
 
     public EmulatorMcpTools(EmulatorMcpServices services) => _services = services;
 
     [McpServerTool(Name = "read_cpu_registers"), Description("Read CPU registers")]
     public CpuRegistersResponse ReadCpuRegisters() {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             State state = _services.State;
             return new CpuRegistersResponse {
                 GeneralPurpose = new GeneralPurposeRegisters {
@@ -55,7 +54,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "read_memory"), Description("Read memory range (max 4096 bytes). Returns hex-encoded data.")]
     public MemoryReadResponse ReadMemory(uint address, int length) {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             if (length <= 0 || length > 4096) {
                 throw new InvalidOperationException("Length must be between 1 and 4096");
             }
@@ -70,7 +69,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "search_memory"), Description("Search RAM for a hex-encoded byte sequence. Returns absolute addresses of matches.")]
     public MemorySearchResponse SearchMemory(string pattern, uint startAddress, int length, int limit) {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             if (string.IsNullOrWhiteSpace(pattern)) {
                 throw new ArgumentException("Pattern must not be empty", nameof(pattern));
             }
@@ -160,7 +159,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "list_functions"), Description("List functions ordered by call count")]
     public FunctionListResponse ListFunctions(int limit) {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             FunctionInfo[] functions = _services.FunctionCatalogue.FunctionInformations.Values
                 .OrderByDescending(f => f.CalledCount)
                 .Take(limit)
@@ -181,7 +180,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "read_cfg_cpu_graph"), Description("Read CFG CPU statistics")]
     public CfgCpuGraphResponse ReadCfgCpuGraph() {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             ExecutionContextManager contextManager = _services.CfgCpu.ExecutionContextManager;
             ExecutionContext currentContext = contextManager.CurrentExecutionContext;
 
@@ -204,7 +203,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "read_io_port"), Description("Read from IO port")]
     public IoPortReadResponse ReadIoPort(int port) {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             if (_services.PauseHandler.IsPaused) {
                 throw new InvalidOperationException("Emulator is paused. Resume to read IO ports.");
             }
@@ -218,7 +217,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "write_io_port"), Description("Write to IO port")]
     public IoPortWriteResponse WriteIoPort(int port, int value) {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             if (_services.PauseHandler.IsPaused) {
                 throw new InvalidOperationException("Emulator is paused. Resume to write IO ports.");
             }
@@ -235,7 +234,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "get_video_state"), Description("Get video card state")]
     public VideoStateResponse GetVideoState() {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             return new VideoStateResponse {
                 Width = _services.VgaRenderer.Width,
                 Height = _services.VgaRenderer.Height,
@@ -246,7 +245,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "screenshot"), Description("Capture screenshot as base64-encoded BGRA32 raw data")]
     public ScreenshotResponse TakeScreenshot() {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             int width = _services.VgaRenderer.Width;
             int height = _services.VgaRenderer.Height;
             uint[] buffer = new uint[width * height];
@@ -262,7 +261,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "pause_emulator"), Description("Immediately stop the emulation. Use this to inspect state at an arbitrary point.")]
     public EmulatorControlResponse PauseEmulator() {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             if (_services.PauseHandler.IsPaused) {
                 return new EmulatorControlResponse { Success = true, Message = "Already paused" };
             }
@@ -273,7 +272,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "resume_emulator"), Description("Resume continuous execution of the emulator. Also known as 'go'.")]
     public EmulatorControlResponse ResumeEmulator() {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             if (!_services.PauseHandler.IsPaused) {
                 return new EmulatorControlResponse { Success = true, Message = "Already running" };
             }
@@ -289,12 +288,11 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "step"), Description("Execute exactly one CPU instruction and then pause again. Useful for trace analysis.")]
     public EmulatorControlResponse Step() {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             if (!_services.PauseHandler.IsPaused) {
                 _services.PauseHandler.RequestPause("Step requested while running");
             }
 
-            string id = "step-" + _services.GetNextBreakpointId();
             Action<BreakPoint> onReached = _ => {
                 _services.PauseHandler.RequestPause("Single step hit");
             };
@@ -308,8 +306,8 @@ public sealed class EmulatorMcpTools {
     }
 
     [McpServerTool(Name = "read_stack"), Description("Read the top values of the stack (SS:SP). Returns addresses and 16-bit values.")]
-    public StackResponse ReadStack(int count = 10) {
-        lock (_lock) {
+    public StackResponse ReadStack(int count) {
+        lock (_services.ToolsLock) {
             if (count <= 0 || count > 100) {
                 throw new ArgumentException("Count must be between 1 and 100");
             }
@@ -332,7 +330,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "query_ems"), Description("Query EMS (Expanded Memory Manager) state")]
     public EmsStateResponse QueryEms() {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             if (_services.EmsManager == null) {
                 throw new InvalidOperationException("EMS is not enabled");
             }
@@ -363,7 +361,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "read_ems_memory"), Description("Read EMS (Expanded Memory) from a specific handle and page")]
     public EmsMemoryReadResponse ReadEmsMemory(int handle, int logicalPage, int offset, int length) {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             if (_services.EmsManager == null) {
                 throw new InvalidOperationException("EMS is not enabled");
             }
@@ -398,7 +396,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "query_xms"), Description("Query XMS (Extended Memory Manager) state")]
     public XmsStateResponse QueryXms() {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             if (_services.XmsManager == null) {
                 throw new InvalidOperationException("XMS is not enabled");
             }
@@ -421,7 +419,7 @@ public sealed class EmulatorMcpTools {
 
     [McpServerTool(Name = "read_xms_memory"), Description("Read XMS (Extended Memory) from a specific handle")]
     public XmsMemoryReadResponse ReadXmsMemory(int handle, uint offset, int length) {
-        lock (_lock) {
+        lock (_services.ToolsLock) {
             if (_services.XmsManager == null) {
                 throw new InvalidOperationException("XMS is not enabled");
             }
@@ -449,8 +447,8 @@ public sealed class EmulatorMcpTools {
         }
     }
 
-    [McpServerTool(Name = "add_breakpoint"), Description("Add a breakpoint (execution, memory, or IO). Valid types: CPU_EXECUTION_ADDRESS, MEMORY_ACCESS, MEMORY_WRITE, MEMORY_READ, IO_ACCESS, IO_WRITE, IO_READ (case-insensitive).")]
-    public BreakpointInfo AddBreakpoint(long address, string type, string? condition = null) {
+    [McpServerTool(Name = "add_breakpoint"), Description("Add a breakpoint (execution, memory, or IO). Valid types: CPU_EXECUTION_ADDRESS, MEMORY_ACCESS, MEMORY_WRITE, MEMORY_READ, IO_ACCESS, IO_WRITE, IO_READ (case-insensitive). Pass null for condition to add an unconditional breakpoint.")]
+    public BreakpointInfo AddBreakpoint(long address, string type, string? condition) {
         lock (_services.McpBreakpointsLock) {
             if (!Enum.TryParse(type, true, out BreakPointType bpType)) {
                 string validTypes = string.Join(", ", Enum.GetNames<BreakPointType>());

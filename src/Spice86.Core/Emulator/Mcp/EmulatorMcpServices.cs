@@ -42,10 +42,12 @@ public sealed class EmulatorMcpServices(
 
     // Shared MCP breakpoint tracking state (survives transient tool instances)
     private readonly object _mcpBreakpointsLock = new();
+    private readonly object _toolsLock = new();
     private readonly Dictionary<string, BreakPoint> _mcpBreakpoints = new();
     private int _nextBreakpointId = 1;
 
     public object McpBreakpointsLock => _mcpBreakpointsLock;
+    public object ToolsLock => _toolsLock;
     public Dictionary<string, BreakPoint> McpBreakpoints => _mcpBreakpoints;
     public int GetNextBreakpointId() => _nextBreakpointId++;
 }

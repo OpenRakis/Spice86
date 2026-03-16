@@ -26,7 +26,6 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
     private bool _disposed;
     private readonly ConcurrentDictionary<Guid, Channel<string>> _legacyClients = new();
     private IMcpServer? _legacyMcpServer;
-    private int _legacyPort;
 
     public McpHttpHost(ILoggerService loggerService) {
         _loggerService = loggerService;
@@ -93,23 +92,22 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
 
     private void ConfigureLegacyEndpoints(WebApplication app, int port, IMcpServer legacyMcpServer) {
         _legacyMcpServer = legacyMcpServer;
-        _legacyPort = port;
         _legacyMcpServer.OnNotification += HandleLegacyNotification;
 
         app.MapMethods("/sse", ["OPTIONS"], context => {
-            AppendCorsHeaders(context.Response);
+            AppendCorsHeaders(context.Response, port);
             context.Response.StatusCode = StatusCodes.Status204NoContent;
             return Task.CompletedTask;
         });
 
         app.MapMethods("/messages", ["OPTIONS"], context => {
-            AppendCorsHeaders(context.Response);
+            AppendCorsHeaders(context.Response, port);
             context.Response.StatusCode = StatusCodes.Status204NoContent;
             return Task.CompletedTask;
         });
 
         app.MapGet("/sse", async context => {
-            AppendCorsHeaders(context.Response);
+            AppendCorsHeaders(context.Response, port);
             context.Response.ContentType = "text/event-stream";
             context.Response.Headers.CacheControl = "no-cache";
             context.Response.Headers.Connection = "keep-alive";
@@ -120,7 +118,7 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
             _loggerService.Information("New MCP SSE client connected: {ClientId}", clientId);
 
             try {
-                await context.Response.WriteAsync($"event: endpoint\ndata: http://localhost:{_legacyPort}/messages\n\n", context.RequestAborted);
+                await context.Response.WriteAsync($"event: endpoint\ndata: http://localhost:{port}/messages\n\n", context.RequestAborted);
                 await context.Response.Body.FlushAsync(context.RequestAborted);
 
                 while (!context.RequestAborted.IsCancellationRequested) {
@@ -151,13 +149,13 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
         });
 
         app.MapPost("/messages", async context => {
-            AppendCorsHeaders(context.Response);
+            AppendCorsHeaders(context.Response, port);
             using StreamReader reader = new(context.Request.Body);
             string requestJson = await reader.ReadToEndAsync();
 
             string? responseJson;
             try {
-                responseJson = _legacyMcpServer!.HandleRequest(requestJson);
+                responseJson = legacyMcpServer.HandleRequest(requestJson);
             } catch (JsonException ex) {
                 _loggerService.Error(ex, "JSON error processing MCP request in legacy HTTP transport");
                 responseJson = $$"""
@@ -194,8 +192,8 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
         });
     }
 
-    private static void AppendCorsHeaders(HttpResponse response) {
-        response.Headers["Access-Control-Allow-Origin"] = "*";
+    private static void AppendCorsHeaders(HttpResponse response, int port) {
+        response.Headers["Access-Control-Allow-Origin"] = $"http://localhost:{port}";
         response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
         response.Headers["Access-Control-Allow-Headers"] = "Content-Type";
     }
@@ -213,7 +211,7 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
     }
 
     public void Dispose() {
-        DisposeAsync().AsTask().GetAwaiter().GetResult();
+        Task.Run(async () => await DisposeAsync()).GetAwaiter().GetResult();
         GC.SuppressFinalize(this);
     }
 
