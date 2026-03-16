@@ -28,7 +28,7 @@ public class ParsingContext : ModRmParsingContext {
 
     private static int? ComputeSegmentOverrideIndex(List<InstructionPrefix> prefixes) {
         SegmentOverrideInstructionPrefix? overridePrefix =
-            prefixes.OfType<SegmentOverrideInstructionPrefix>().FirstOrDefault();
+            prefixes.OfType<SegmentOverrideInstructionPrefix>().LastOrDefault();
         return overridePrefix?.SegmentRegisterIndexValue;
     }
 

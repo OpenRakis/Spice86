@@ -105,6 +105,7 @@ public class ModRmComputer {
             ModRmOffsetType.EBP => _state.EBP,
             ModRmOffsetType.ESI => _state.ESI,
             ModRmOffsetType.EDI => _state.EDI,
+            ModRmOffsetType.ZERO => 0,
             _ => throw new ArgumentOutOfRangeException(nameof(ModRmContext.ModRmOffsetType), ModRmContext.ModRmOffsetType, "value not handled")
         };
     }
