@@ -4,6 +4,8 @@ using Spice86.Shared.Utils;
 
 using System.Collections.Generic;
 
+internal readonly record struct JumpArc(int SourceIndex, int TargetIndex, int TopIndex, int BottomIndex);
+
 /// <summary>
 /// Computes jump arc segments for disassembly lines, assigning lanes to avoid overlapping lines.
 /// </summary>
@@ -16,8 +18,8 @@ internal static class JumpLineCalculator {
         return addressToIndex;
     }
 
-    private static List<(int SourceIndex, int TargetIndex, int TopIndex, int BottomIndex)> CollectArcs(IReadOnlyList<DebuggerLineViewModel> sortedLines, Dictionary<uint, int> addressToIndex) {
-        List<(int SourceIndex, int TargetIndex, int TopIndex, int BottomIndex)> arcs = [];
+    private static List<JumpArc> CollectArcs(IReadOnlyList<DebuggerLineViewModel> sortedLines, Dictionary<uint, int> addressToIndex) {
+        List<JumpArc> arcs = [];
         for (int i = 0; i < sortedLines.Count; i++) {
             DebuggerLineViewModel line = sortedLines[i];
             if (line.BranchTarget is not { } target) {
@@ -41,7 +43,7 @@ internal static class JumpLineCalculator {
 
             int topIndex = Math.Min(i, targetIndex);
             int bottomIndex = Math.Max(i, targetIndex);
-            arcs.Add((i, targetIndex, topIndex, bottomIndex));
+            arcs.Add(new(i, targetIndex, topIndex, bottomIndex));
         }
 
         // Sort arcs by span (smallest first) so inner arcs get inner lanes
@@ -49,7 +51,7 @@ internal static class JumpLineCalculator {
         return arcs;
     }
 
-    private static int[] AssignLanes(List<(int SourceIndex, int TargetIndex, int TopIndex, int BottomIndex)> arcs, out int maxLanes) {
+    private static int[] AssignLanes(List<JumpArc> arcs, out int maxLanes) {
         List<List<(int Top, int Bottom)>> lanes = [];
         int[] arcLanes = new int[arcs.Count];
 
@@ -84,7 +86,7 @@ internal static class JumpLineCalculator {
         return arcLanes;
     }
 
-    private static Dictionary<int, List<JumpArcSegment>> BuildLineSegments(List<(int SourceIndex, int TargetIndex, int TopIndex, int BottomIndex)> arcs, int[] arcLanes) {
+    private static Dictionary<int, List<JumpArcSegment>> BuildLineSegments(List<JumpArc> arcs, int[] arcLanes) {
         Dictionary<int, List<JumpArcSegment>> lineSegments = new();
 
         for (int arcIndex = 0; arcIndex < arcs.Count; arcIndex++) {
@@ -124,7 +126,7 @@ internal static class JumpLineCalculator {
     /// <param name="sortedLines">The lines sorted by address.</param>
     public static void ComputeJumpArcs(IReadOnlyList<DebuggerLineViewModel> sortedLines) {
         Dictionary<uint, int> addressToIndex = BuildAddressIndex(sortedLines);
-        List<(int SourceIndex, int TargetIndex, int TopIndex, int BottomIndex)> arcs = CollectArcs(sortedLines, addressToIndex);
+        List<JumpArc> arcs = CollectArcs(sortedLines, addressToIndex);
         int[] arcLanes = AssignLanes(arcs, out int maxLanes);
         Dictionary<int, List<JumpArcSegment>> lineSegments = BuildLineSegments(arcs, arcLanes);
 
