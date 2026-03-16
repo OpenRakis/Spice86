@@ -1,8 +1,6 @@
 namespace Spice86.Views;
 
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Data;
 using Avalonia.Input;
 
 using AvaloniaHex;
@@ -13,22 +11,7 @@ using System;
 using System.ComponentModel;
 
 public partial class MemoryView : UserControl {
-    public static readonly StyledProperty<string?> SelectedAddressProperty =
-        AvaloniaProperty.Register<MemoryView, string?>(
-            nameof(SelectedAddress),
-            defaultBindingMode: BindingMode.TwoWay);
-
-    static MemoryView() {
-        SelectedAddressProperty.Changed.AddClassHandler<MemoryView>(OnSelectedAddressPropertyChanged);
-    }
-
-    private bool _isUpdatingSelectedAddress;
     private MemoryViewModel? _trackedViewModel;
-
-    public string? SelectedAddress {
-        get => GetValue(SelectedAddressProperty);
-        set => SetValue(SelectedAddressProperty, value);
-    }
 
     public MemoryView() {
         InitializeComponent();
@@ -68,7 +51,6 @@ public partial class MemoryView : UserControl {
             hexEditor.Selection.RangeChanged += viewModel.OnSelectionRangeChanged;
             _trackedViewModel = viewModel;
             _trackedViewModel.PropertyChanged += OnTrackedViewModelPropertyChanged;
-            UpdateSelectedAddressFromViewModel(viewModel.SelectionRangeStartAddress);
         } else {
             _trackedViewModel = null;
         }
@@ -79,36 +61,10 @@ public partial class MemoryView : UserControl {
             return;
         }
 
-        if (e.PropertyName == nameof(MemoryViewModel.SelectionRangeStartAddress)) {
-            UpdateSelectedAddressFromViewModel(viewModel.SelectionRangeStartAddress);
+        if (e.PropertyName == nameof(MemoryViewModel.SelectionRangeStartAddress) &&
+            !string.IsNullOrWhiteSpace(viewModel.SelectionRangeStartAddress) &&
+            !string.Equals(viewModel.StartAddress, viewModel.SelectionRangeStartAddress, StringComparison.OrdinalIgnoreCase)) {
+            viewModel.StartAddress = viewModel.SelectionRangeStartAddress;
         }
-    }
-
-    private void UpdateSelectedAddressFromViewModel(string? address) {
-        _isUpdatingSelectedAddress = true;
-        try {
-            SelectedAddress = address;
-        } finally {
-            _isUpdatingSelectedAddress = false;
-        }
-    }
-
-    private void OnSelectedAddressChanged(string? address) {
-        if (_isUpdatingSelectedAddress) {
-            return;
-        }
-
-        if (_trackedViewModel is null || string.IsNullOrWhiteSpace(address)) {
-            return;
-        }
-
-        if (!string.Equals(_trackedViewModel.StartAddress, address, StringComparison.OrdinalIgnoreCase)) {
-            _trackedViewModel.StartAddress = address;
-        }
-    }
-
-    private static void OnSelectedAddressPropertyChanged(MemoryView sender, AvaloniaPropertyChangedEventArgs e) {
-        string? address = e.NewValue as string;
-        sender.OnSelectedAddressChanged(address);
     }
 }

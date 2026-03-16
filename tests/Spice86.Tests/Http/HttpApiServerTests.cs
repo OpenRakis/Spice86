@@ -5,6 +5,8 @@ using System.Net.Http.Json;
 
 using FluentAssertions;
 
+using NSubstitute;
+
 using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.Http.Contracts;
 
@@ -73,6 +75,7 @@ public sealed class HttpApiServerTests {
     [Fact]
     public async Task PutByte_WritesAndReadsBackValue() {
         SeedMemory();
+        _fixture.PauseHandler.IsPaused.Returns(true);
         HttpApiWriteByteRequest request = new() {
             Value = 0xAB
         };
@@ -89,6 +92,7 @@ public sealed class HttpApiServerTests {
             ?? throw new InvalidOperationException("Expected non-null getPayload");
         getPayload.Value.Should().Be(0xAB);
         _fixture.Memory[0x40].Should().Be(0xAB);
+        _fixture.PauseHandler.IsPaused.Returns(false);
     }
 
     [Fact]
@@ -186,6 +190,7 @@ public sealed class HttpApiServerTests {
     [Fact]
     public async Task PutByte_WithOutOfRangeAddress_ReturnsNotFound() {
         SeedMemory();
+        _fixture.PauseHandler.IsPaused.Returns(true);
         HttpApiWriteByteRequest request = new() {
             Value = 0xEF
         };
@@ -197,5 +202,23 @@ public sealed class HttpApiServerTests {
         HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
             ?? throw new InvalidOperationException("Expected non-null payload");
         payload.Message.Should().Be("address is outside of memory range");
+        _fixture.PauseHandler.IsPaused.Returns(false);
+    }
+
+    [Fact]
+    public async Task PutByte_WhenEmulatorNotPaused_ReturnsConflict() {
+        SeedMemory();
+        _fixture.PauseHandler.IsPaused.Returns(false);
+        HttpApiWriteByteRequest request = new() {
+            Value = 0xAB
+        };
+
+        HttpResponseMessage response = await _fixture.HttpClient.PutAsJsonAsync("/api/memory/64/byte", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+            ?? throw new InvalidOperationException("Expected non-null payload");
+        payload.Message.Should().Contain("paused");
     }
 }
