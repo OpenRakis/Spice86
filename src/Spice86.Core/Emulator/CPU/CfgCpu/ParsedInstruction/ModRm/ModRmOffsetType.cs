@@ -19,5 +19,6 @@ public enum ModRmOffsetType {
     SIB,
     EBP,
     ESI,
-    EDI
+    EDI,
+    ZERO
 }
