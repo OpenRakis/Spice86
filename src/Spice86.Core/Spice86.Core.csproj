@@ -29,7 +29,6 @@
         <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="OptimizedPriorityQueue" />
         <PackageReference Include="Serilog" />
-        <PackageReference Include="Serilog.Extensions.Hosting" />
         <PackageReference Include="CommandLineParser" />
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Morris.Moxy" />

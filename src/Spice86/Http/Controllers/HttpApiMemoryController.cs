@@ -72,10 +72,6 @@ public sealed class HttpApiMemoryController : ControllerBase {
         }
 
         long readableLength = _httpApiState.Memory.Length - validatedAddress;
-        if (readableLength <= 0) {
-            return NotFound(new HttpApiErrorResponse("address is outside of memory range"));
-        }
-
         int boundedLength = (int)Math.Min(length, readableLength);
         byte[] values = new byte[boundedLength];
         for (int i = 0; i < boundedLength; i++) {

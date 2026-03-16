@@ -48,6 +48,7 @@
     </ItemGroup>
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Serilog.Extensions.Hosting" />
     </ItemGroup>
     <ItemGroup>
         <AvaloniaResource Include="Views\Assets\**" />

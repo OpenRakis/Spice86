@@ -90,7 +90,7 @@ public sealed class Configuration {
     public int GdbPort { get; init; }
 
     /// <summary>
-    /// HTTP API port spice86 will listen on.
+    /// HTTP API port Spice86 will listen on.
     /// </summary>
     [Option(nameof(HttpApiPort), Default = 0, Required = false, HelpText = "HTTP API port. If 0, HTTP API server will be disabled.")]
     public int HttpApiPort { get; init; }
