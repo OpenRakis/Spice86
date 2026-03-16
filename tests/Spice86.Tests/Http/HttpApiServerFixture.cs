@@ -28,7 +28,7 @@ public sealed class HttpApiServerFixture : IDisposable {
 
         AddressReadWriteBreakpoints breakpoints = new();
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
-        A20Gate a20Gate = new(false);
+        A20Gate a20Gate = new(true);
         Memory memory = new(breakpoints, ram, a20Gate);
         memory[0x40] = 0x12;
         memory[0x41] = 0x34;

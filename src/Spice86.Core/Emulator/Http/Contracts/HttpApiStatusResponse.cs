@@ -8,7 +8,7 @@ namespace Spice86.Core.Emulator.Http.Contracts;
 /// <param name="Cycles">Total number of CPU cycles executed so far.</param>
 /// <param name="Cs">Current value of the CS (code segment) register.</param>
 /// <param name="Ip">Current value of the IP (instruction pointer) register.</param>
-/// <param name="IpPhysicalAddress">Physical address of the current instruction (CS*16 + IP with A20 wrapping).</param>
+/// <param name="IpPhysicalAddress">Physical address of the current instruction (CS*16 + IP), without A20 wrapping.</param>
 /// <param name="MemorySizeBytes">Total size of emulated memory in bytes.</param>
 public sealed record HttpApiStatusResponse(
     bool IsPaused,
