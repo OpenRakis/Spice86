@@ -7,6 +7,16 @@
             <SolidColorBrush x:Key="DisassemblyBreakpointDisabledBrush" Color="#F0F0F0" />
             <SolidColorBrush x:Key="DisassemblyBreakpointEnabledBrush" Color="#FF9696" />
             <SolidColorBrush x:Key="DisassemblyBranchTargetBrush" Color="#808080" />
+            <SolidColorBrush x:Key="DisassemblyJumpLineBrush" Color="#909090" />
+            <SolidColorBrush x:Key="DisassemblyJumpArrowBrush" Color="#606060" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine0Brush" Color="#2E86C1" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine1Brush" Color="#28B463" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine2Brush" Color="#CB4335" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine3Brush" Color="#8E44AD" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine4Brush" Color="#D68910" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine5Brush" Color="#1ABC9C" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine6Brush" Color="#A04000" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine7Brush" Color="#7D3C98" />
             <SolidColorBrush x:Key="DisassemblyDataBrush" Color="#009660" />
             <SolidColorBrush x:Key="DisassemblyDecoratorBrush" Color="#969660" />
             <SolidColorBrush x:Key="DisassemblyDirectiveBrush" Color="#0000FF" />
@@ -30,6 +40,16 @@
             <SolidColorBrush x:Key="DisassemblyBreakpointDisabledBrush" Color="#404040" />
             <SolidColorBrush x:Key="DisassemblyBreakpointEnabledBrush" Color="#800000" />
             <SolidColorBrush x:Key="DisassemblyBranchTargetBrush" Color="#808080" />
+            <SolidColorBrush x:Key="DisassemblyJumpLineBrush" Color="#707070" />
+            <SolidColorBrush x:Key="DisassemblyJumpArrowBrush" Color="#A0A0A0" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine0Brush" Color="#5DADE2" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine1Brush" Color="#58D68D" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine2Brush" Color="#EC7063" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine3Brush" Color="#BB8FCE" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine4Brush" Color="#F0B27A" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine5Brush" Color="#48C9B0" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine6Brush" Color="#DC7633" />
+            <SolidColorBrush x:Key="DisassemblyJumpLine7Brush" Color="#AF7AC5" />
             <SolidColorBrush x:Key="DisassemblyDataBrush" Color="#006030" />
             <SolidColorBrush x:Key="DisassemblyDecoratorBrush" Color="#464640" />
             <SolidColorBrush x:Key="DisassemblyDirectiveBrush" Color="#80AAFF" />

@@ -1,6 +1,7 @@
 namespace Spice86.Views.Converters;
 
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
 
@@ -27,5 +28,20 @@ public static class ConverterUtilities {
         }
 
         return fallbackBrush;
+    }
+
+    /// <summary>
+    /// Gets a brush by walking the visual tree from the given element, falling back to application resources.
+    /// </summary>
+    /// <param name="resourceKey">The resource key to look up.</param>
+    /// <param name="fallbackBrush">The fallback brush to use if the resource is not found.</param>
+    /// <param name="element">The element whose resource tree to search.</param>
+    /// <returns>The brush from resources or the fallback brush.</returns>
+    public static IBrush GetResourceBrush(string resourceKey, IBrush fallbackBrush, StyledElement element) {
+        if (element.TryFindResource(resourceKey, element.ActualThemeVariant, out object? resource) && resource is IBrush brush) {
+            return brush;
+        }
+
+        return GetResourceBrush(resourceKey, fallbackBrush);
     }
 }

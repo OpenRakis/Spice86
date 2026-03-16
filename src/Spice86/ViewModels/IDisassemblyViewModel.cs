@@ -123,4 +123,9 @@ public interface IDisassemblyViewModel : INotifyPropertyChanged, IDisassemblyCom
     /// The condition expression for the breakpoint being created.
     /// </summary>
     string? BreakpointCondition { get; set; }
+
+    /// <summary>
+    /// Whether jump indicator lines are displayed in the disassembly view.
+    /// </summary>
+    bool ShowJumpLines { get; set; }
 }
