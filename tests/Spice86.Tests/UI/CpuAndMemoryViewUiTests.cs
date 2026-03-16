@@ -35,23 +35,28 @@ public class CpuAndMemoryViewUiTests : BreakpointUiTestBase {
             IsVisible = true
         };
 
-        pauseHandler.RequestPause("Initial pause before ordering test");
-        uiDispatcher.ExecuteAll();
+        try {
+            pauseHandler.RequestPause("Initial pause before ordering test");
+            uiDispatcher.ExecuteAll();
 
-        ushort editedAxValue = 0x1234;
+            ushort editedAxValue = 0x1234;
 
-        pauseHandler.Resume();
-        pauseHandler.RequestPause("Immediate re-pause after resume");
-        uiDispatcher.ExecuteLast();
-        uiDispatcher.ExecuteFirst();
+            pauseHandler.Resume();
+            pauseHandler.RequestPause("Immediate re-pause after resume");
+            uiDispatcher.ExecuteLast();
+            uiDispatcher.ExecuteFirst();
 
-        //Act
-        viewModel.UpdateValues(null, EventArgs.Empty);
-        viewModel.State.AX = editedAxValue;
+            //Act
+            viewModel.UpdateValues(null, EventArgs.Empty);
+            viewModel.State.AX = editedAxValue;
 
-        //Assert
-        state.AX.Should().Be(editedAxValue,
-            "a queued resumed callback must not disable paused editing behavior after an immediate re-pause");
+            //Assert
+            state.AX.Should().Be(editedAxValue,
+                "a queued resumed callback must not disable paused editing behavior after an immediate re-pause");
+        } finally {
+            viewModel.IsVisible = false;
+            uiDispatcher.ExecuteAll();
+        }
     }
 
     [AvaloniaFact]
