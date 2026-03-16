@@ -105,7 +105,11 @@ public class RevocationListHelper {
     /// <param name="range">The opcode range (e.g., "00-65")</param>
     public void WriteRevocationList(TestStatistics stats, string cpuModelString, string range) {
         string outputPath = GetRevocationListPath(cpuModelString, range);
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        string? outputDirectory = Path.GetDirectoryName(outputPath);
+        if (outputDirectory == null) {
+            throw new InvalidOperationException($"Could not determine directory for output path: {outputPath}");
+        }
+        Directory.CreateDirectory(outputDirectory);
 
         using StreamWriter writer = new StreamWriter(outputPath);
 
@@ -129,9 +133,6 @@ public class RevocationListHelper {
         writer.WriteLine("#");
         writer.WriteLine("# Failing test hashes:");
         foreach (string hash in stats.FailingTestHashes) {
-            if (hash == "aa20aeb777b083eb0bd9e87bbde3ee8c9e4d2b3e") {
-                writer.WriteLine("# found it");
-            }
             writer.WriteLine(hash);
         }
     }

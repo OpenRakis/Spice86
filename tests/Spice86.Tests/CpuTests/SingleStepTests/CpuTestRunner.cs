@@ -1,12 +1,11 @@
 namespace Spice86.Tests.CpuTests.SingleStepTests;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Utils;
-using Spice86.Tests.CpuTests.SingleStepTests;
+
+using Xunit;
 
 /// <summary>
 /// Executes individual CPU tests and validates results.
@@ -26,7 +25,7 @@ public class CpuTestRunner {
     /// <param name="fileName">The test file name</param>
     /// <param name="machine">The minimal machine to run the test on</param>
     /// <param name="maxCycles">Maximum number of instruction cycles to execute</param>
-    /// <exception cref="Exception">Thrown when the test fails with detailed error information</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the test fails with detailed error information</exception>
     public void RunTest(CpuTest cpuTest, int index, string fileName, SingleStepTestMinimalMachine machine, int maxCycles) {
         try {
             InitializeMemory(cpuTest.Initial.Ram, machine.Memory);
@@ -40,8 +39,12 @@ public class CpuTestRunner {
 
             _testAsserter.AssertRegistersMatch(cpuTest.Final.Registers, machine.State);
             _testAsserter.AssertMemoryMatches(cpuTest.Final.Ram, machine.Memory);
-        } catch (Exception e) {
-            throw new Exception(GenerateErrorMessage(cpuTest, index, fileName, machine, e.Message), e);
+        } catch (InvalidOperationException e) {
+            throw new InvalidOperationException(GenerateErrorMessage(cpuTest, index, fileName, machine, e.Message), e);
+        } catch (ArgumentOutOfRangeException e) {
+            throw new InvalidOperationException(GenerateErrorMessage(cpuTest, index, fileName, machine, e.Message), e);
+        } catch (Xunit.Sdk.XunitException e) {
+            throw new Xunit.Sdk.XunitException(GenerateErrorMessage(cpuTest, index, fileName, machine, e.Message));
         } finally {
             machine.RestoreMemoryAfterTest();
             machine.Cpu.Clear();

@@ -20,7 +20,7 @@ using Spice86.Shared.Interfaces;
 /// Hosts an embedded Kestrel web server that exposes the MCP Streamable HTTP transport.
 /// Runs alongside the Avalonia UI on a separate port.
 /// </summary>
-public sealed class McpHttpHost : IDisposable {
+public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
     private WebApplication? _app;
     private readonly ILoggerService _loggerService;
     private bool _disposed;
@@ -213,6 +213,11 @@ public sealed class McpHttpHost : IDisposable {
     }
 
     public void Dispose() {
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
+        GC.SuppressFinalize(this);
+    }
+
+    public async ValueTask DisposeAsync() {
         if (_disposed) {
             return;
         }
@@ -230,8 +235,8 @@ public sealed class McpHttpHost : IDisposable {
 
         if (_app != null) {
             try {
-                _app.StopAsync().GetAwaiter().GetResult();
-                _app.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                await _app.StopAsync();
+                await _app.DisposeAsync();
             } catch (OperationCanceledException ex) {
                 _loggerService.Warning(ex, "MCP HTTP host shutdown was cancelled");
             } catch (ObjectDisposedException ex) {

@@ -31,10 +31,19 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
 
     public ObservableCollection<McpToolViewModel> Tools { get; } = new();
 
-    public McpStatusViewModel(IMcpServer mcpServer, int port = 8081) {
+    /// <summary>Creates a ViewModel for when MCP is disabled.</summary>
+    public McpStatusViewModel() {
+        _getAvailableToolsCount = () => 0;
+        _port = 0;
+        _statusText = "MCP Server Inactive";
+        _isServerRunning = false;
+        UpdateAvailableToolsCount();
+    }
+
+    public McpStatusViewModel(IMcpServer mcpServer, int port) {
         _getAvailableToolsCount = () => mcpServer.GetAvailableTools().Length;
         _port = port;
-        _statusText = "MCP Server Active (Legacy)";
+        _statusText = string.Empty;
         _isServerRunning = true;
 
         foreach (Tool tool in mcpServer.GetAllTools()) {
@@ -45,10 +54,10 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
         UpdateAvailableToolsCount();
     }
 
-    public McpStatusViewModel(IEnumerable<ModernMcpToolDescriptor> tools, int port = 8081) {
+    public McpStatusViewModel(IEnumerable<ModernMcpToolDescriptor> tools, int port) {
         _getAvailableToolsCount = () => Tools.Count(t => t.IsEnabled);
         _port = port;
-        _statusText = "MCP Server Active (Modern)";
+        _statusText = string.Empty;
         _isServerRunning = true;
 
         foreach (ModernMcpToolDescriptor tool in tools) {
@@ -64,11 +73,13 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
     public void UpdateStatus() {
         IsServerRunning = true;
         UpdateAvailableToolsCount();
-        StatusText = $"MCP Server Active - {AvailableToolsCount} tools available";
     }
 
     private void UpdateAvailableToolsCount() {
         AvailableToolsCount = _getAvailableToolsCount();
+        StatusText = IsServerRunning
+            ? $"MCP Server Active - {AvailableToolsCount} tools available"
+            : "MCP Server Inactive";
     }
 
     public static IReadOnlyList<ModernMcpToolDescriptor> DiscoverModernTools(IEnumerable<Assembly> assemblies) {
