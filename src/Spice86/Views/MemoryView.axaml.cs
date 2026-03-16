@@ -18,8 +18,22 @@ public partial class MemoryView : UserControl {
         // Subscribe to the DataContextChanged event to ensure that the ViewModel's event handler
         // is connected to the HexEditor's Selection.RangeChanged event after the DataContext is set.
         DataContextChanged += OnDataContextChanged;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
 
         this.HexViewer.DoubleTapped += OnHexViewerDoubleTapped;
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
+        HexEditor? hexEditor = this.FindControl<HexEditor>("HexViewer");
+
+        if (_trackedViewModel is not null) {
+            _trackedViewModel.PropertyChanged -= OnTrackedViewModelPropertyChanged;
+            if (hexEditor is not null) {
+                hexEditor.Selection.RangeChanged -= _trackedViewModel.OnSelectionRangeChanged;
+            }
+
+            _trackedViewModel = null;
+        }
     }
 
     private void OnHexViewerDoubleTapped(object? sender, TappedEventArgs e) {

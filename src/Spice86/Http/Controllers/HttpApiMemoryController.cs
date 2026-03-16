@@ -44,13 +44,13 @@ public sealed class HttpApiMemoryController : ControllerBase {
             return BadRequest(new HttpApiErrorResponse("request body is required"));
         }
 
-        if (!_httpApiState.PauseHandler.IsPaused) {
-            return Conflict(new HttpApiErrorResponse("emulator must be paused to write memory"));
-        }
-
         ActionResult? error = ValidateAddress(address, out uint validatedAddress);
         if (error is not null) {
             return error;
+        }
+
+        if (!_httpApiState.PauseHandler.IsPaused) {
+            return Conflict(new HttpApiErrorResponse("emulator must be paused to write memory"));
         }
 
         _httpApiState.Memory.SneakilyWrite(validatedAddress, request.Value);
@@ -79,11 +79,7 @@ public sealed class HttpApiMemoryController : ControllerBase {
 
         long readableLength = (long)_httpApiState.Memory.Length - validatedAddress;
         int boundedLength = (int)Math.Min(length, readableLength);
-        byte[] values = new byte[boundedLength];
-        for (int i = 0; i < boundedLength; i++) {
-            uint physicalAddress = validatedAddress + (uint)i;
-            values[i] = _httpApiState.Memory.SneakilyRead(physicalAddress);
-        }
+        byte[] values = _httpApiState.Memory.ReadRam((uint)boundedLength, validatedAddress);
 
         HttpApiMemoryRangeResponse response = new(validatedAddress, boundedLength, values);
         return Ok(response);
