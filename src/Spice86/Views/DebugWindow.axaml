@@ -19,10 +19,10 @@
 	ShowInTaskbar="True"
 	CanResize="True"
 	Title="Spice86 Debug Window"
-	MinWidth="1024"
-	MinHeight="768"
-	Width="1024"
-	Height="768"
+	MinWidth="1700"
+	MinHeight="900"
+	Width="1700"
+	Height="900"
 	Icon="/Views/Assets/Debug.ico"
 	mc:Ignorable="d">
 	<Window.Resources>
