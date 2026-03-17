@@ -31,17 +31,17 @@ public class DosPathResolverIntegrationTests {
             File.WriteAllBytes(comPath, [0xC3]);
             File.WriteAllBytes(exePath, [0x4D, 0x5A]);
 
-            string? resolvedWithAllExtensions = dosPathResolver.GetFullHostPathFromDosOrDefault("TOOL");
+            string? resolvedWithAllExtensions = dosPathResolver.GetFullHostExecutablePathFromDosOrDefault("TOOL");
             resolvedWithAllExtensions.Should().NotBeNull();
             Path.GetFileName(resolvedWithAllExtensions!).Should().Be("TOOL.BAT");
 
             File.Delete(batPath);
-            string? resolvedWithoutBat = dosPathResolver.GetFullHostPathFromDosOrDefault("TOOL");
+            string? resolvedWithoutBat = dosPathResolver.GetFullHostExecutablePathFromDosOrDefault("TOOL");
             resolvedWithoutBat.Should().NotBeNull();
             Path.GetFileName(resolvedWithoutBat!).Should().Be("TOOL.COM");
 
             File.Delete(comPath);
-            string? resolvedOnlyExe = dosPathResolver.GetFullHostPathFromDosOrDefault("TOOL");
+            string? resolvedOnlyExe = dosPathResolver.GetFullHostExecutablePathFromDosOrDefault("TOOL");
             resolvedOnlyExe.Should().NotBeNull();
             Path.GetFileName(resolvedOnlyExe!).Should().Be("TOOL.EXE");
         } finally {

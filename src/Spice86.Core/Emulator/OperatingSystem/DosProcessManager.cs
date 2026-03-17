@@ -316,7 +316,7 @@ public class DosProcessManager {
                 parentPspSegment);
         }
 
-        string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
+        string? hostPath = _fileManager.TryGetFullHostExecutablePathFromDos(programName) ?? programName;
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
         }
@@ -524,7 +524,7 @@ public class DosProcessManager {
     /// <param name="relocationFactor">Relocation adjustment applied to each relocation entry.</param>
     /// <returns>A result indicating success or the DOS error encountered.</returns>
     public DosExecResult LoadOverlay(string programName, ushort loadSegment, ushort relocationFactor) {
-        string? hostPath = _fileManager.TryGetFullHostPathFromDos(programName) ?? programName;
+        string? hostPath = _fileManager.TryGetFullHostExecutablePathFromDos(programName) ?? programName;
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
         }

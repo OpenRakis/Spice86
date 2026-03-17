@@ -13,6 +13,7 @@ using System.IO;
 internal class DosProgramLoader : DosFileLoader {
     private readonly Configuration _configuration;
     private readonly DosProcessManager _processManager;
+    private readonly DosFileManager _fileManager;
 
     public DosProgramLoader(Configuration configuration, IMemory memory,
         State state, DosInt21Handler int21Handler,
@@ -20,6 +21,7 @@ internal class DosProgramLoader : DosFileLoader {
         : base(memory, state, loggerService) {
         _configuration = configuration;
         _processManager = int21Handler.ProcessManager;
+        _fileManager = int21Handler.FileManager;
     }
 
     public override byte[] LoadFile(string file, string? arguments) {
@@ -58,6 +60,12 @@ internal class DosProgramLoader : DosFileLoader {
             if (!result.Success) {
                 _processManager.BatchExecutionEngine.RestoreStandardHandlesAfterLaunch();
                 _state.IsRunning = false;
+                return File.ReadAllBytes(file);
+            }
+
+            string? launchedHostPath = _fileManager.TryGetFullHostExecutablePathFromDos(launchRequest.ProgramName);
+            if (!string.IsNullOrWhiteSpace(launchedHostPath) && File.Exists(launchedHostPath)) {
+                return File.ReadAllBytes(launchedHostPath);
             }
         } else {
             _state.IsRunning = false;

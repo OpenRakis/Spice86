@@ -212,6 +212,14 @@ internal sealed class DosBatchExecutionEngine {
                 () => TryHandleEcho(argumentPart));
         }
 
+        // Handle ECHO.TEXT shorthand: "ECHO.TEXT" is equivalent to "ECHO TEXT" in DOS batch.
+        // Preserve all content after "ECHO" from the original preprocessed line to keep embedded spaces.
+        if (resolvedCommandToken.StartsWith("ECHO.", StringComparison.OrdinalIgnoreCase)) {
+            string echoArgs = preprocessedLine.TrimStart()[4..];
+            return TryExecuteInternalCommandWithRedirection(parsedCommandLine.Redirection,
+                () => TryHandleEcho(echoArgs));
+        }
+
         if (TryResolveBatchCommandPath(resolvedCommandToken, out string batchCommandPath)) {
             if (TryPushBatchFile(batchCommandPath, Array.Empty<string>())) {
                 return TryPump(out launchRequest);
@@ -435,6 +443,7 @@ internal sealed class DosBatchExecutionEngine {
 
         if (TryResolveBatchCommandPath(resolvedTargetToken, out string batchTargetPath)) {
             if (!TryPushBatchFile(batchTargetPath, callArguments)) {
+                _lastExitCode = 1;
                 return false;
             }
 
@@ -630,7 +639,7 @@ internal sealed class DosBatchExecutionEngine {
             return true;
         }
 
-        string? hostPath = _dosFileManager.TryGetFullHostPathFromDos(normalizedPath);
+        string? hostPath = _dosFileManager.TryGetFullHostExecutablePathFromDos(normalizedPath);
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("BATCH: could not open file {DosPath}", normalizedPath);
@@ -686,7 +695,7 @@ internal sealed class DosBatchExecutionEngine {
             return false;
         }
 
-        string? hostPath = _dosFileManager.TryGetFullHostPathFromDos(commandToken);
+        string? hostPath = _dosFileManager.TryGetFullHostExecutablePathFromDos(commandToken);
         if (string.IsNullOrWhiteSpace(hostPath)) {
             return false;
         }
@@ -710,7 +719,7 @@ internal sealed class DosBatchExecutionEngine {
         }
 
         string candidate = NormalizeDosPath($"{directoryPath}\\{commandToken}");
-        string? hostPath = _dosFileManager.TryGetFullHostPathFromDos(candidate);
+        string? hostPath = _dosFileManager.TryGetFullHostExecutablePathFromDos(candidate);
         return string.IsNullOrWhiteSpace(hostPath) ? commandToken : candidate;
     }
 
@@ -793,27 +802,14 @@ internal sealed class DosBatchExecutionEngine {
             return !string.IsNullOrWhiteSpace(token);
         }
 
-        int separatorIndex = -1;
-        for (int i = 0; i < trimmed.Length; i++) {
-            char c = trimmed[i];
-            if (char.IsWhiteSpace(c) || c == '.' || c == '\\') {
-                separatorIndex = i;
-                break;
-            }
-        }
-
+        int separatorIndex = trimmed.IndexOfAny(new[] { ' ', '\t' });
         if (separatorIndex < 0) {
             token = trimmed;
             return true;
         }
 
         token = trimmed[..separatorIndex];
-        char delimiterChar = trimmed[separatorIndex];
-        if (delimiterChar == '.' || delimiterChar == '\\') {
-            remaining = trimmed[separatorIndex..];
-        } else {
-            remaining = trimmed[separatorIndex..].TrimStart();
-        }
+        remaining = trimmed[separatorIndex..].TrimStart();
 
         return true;
     }

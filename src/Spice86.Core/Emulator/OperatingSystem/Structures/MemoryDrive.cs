@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 /// <summary>
