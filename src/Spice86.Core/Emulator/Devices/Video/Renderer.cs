@@ -3,9 +3,8 @@ namespace Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Logging;
-
-using System.Diagnostics;
 
 using ClockSelect = Registers.General.MiscellaneousOutput.ClockSelectValue;
 
@@ -14,15 +13,18 @@ public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
     private readonly VideoMemory _memory;
     private readonly IVideoState _state;
+    private readonly IEmulatedClock _clock;
 
     /// <summary>
     ///     Create a new VGA renderer.
     /// </summary>
     /// <param name="memory">The video memory implementation.</param>
     /// <param name="state">The video state implementation.</param>
+    /// <param name="clock">The emulated clock used to schedule rendering timing.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Renderer(IMemory memory, IVideoState state, LoggerService loggerService) {
+    public Renderer(IMemory memory, IVideoState state, IEmulatedClock clock, LoggerService loggerService) {
         _state = state;
+        _clock = clock;
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         _memory = new VideoMemory(_state, loggerService);
         memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
@@ -60,9 +62,9 @@ public class Renderer : IVgaRenderer {
             }
 
             // Some timing helpers.
-            long horizontalTickTarget = Stopwatch.Frequency / 31469L; // Number of ticks per horizontal line.
-            var waitSpinner = new SpinWait();
-            var stopwatch = Stopwatch.StartNew();
+            double horizontalLineDurationMs = 1000.0 / 31469.0; // Duration of one horizontal line in ms.
+            SpinWait waitSpinner = new SpinWait();
+            double frameStartMs = _clock.ElapsedTimeMs;
 
             // I _think_ changes to these are ignored during the frame, so we latch them here.
             int verticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
@@ -107,7 +109,7 @@ public class Renderer : IVgaRenderer {
                         int memoryAddressCounter = rowMemoryAddressCounter;
                         destinationAddress = destinationAddressLatch;
 
-                        long ticksAtStartOfRow = stopwatch.ElapsedTicks;
+                        double msAtStartOfRow = _clock.ElapsedTimeMs;
                         bool horizontalBlanking = true;
 
                         ///////////////////////////
@@ -159,7 +161,7 @@ public class Renderer : IVgaRenderer {
 
                         // We wait at the end of each line to create the correct horizontal timing of 31.46875 kHz
                         // This allows programs running in the CPU thread to detect the horizontal retrace.
-                        while (stopwatch.ElapsedTicks - ticksAtStartOfRow < horizontalTickTarget) {
+                        while (!_clock.IsPaused && _clock.ElapsedTimeMs - msAtStartOfRow < horizontalLineDurationMs) {
                             waitSpinner.SpinOnce(-1);
                         }
                         // If the VerticalTiming is halved, we only increase the line counter every other scanline.
@@ -175,7 +177,7 @@ public class Renderer : IVgaRenderer {
                 rowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
             } // End of vertical loop
 
-            LastFrameRenderTime = stopwatch.Elapsed;
+            LastFrameRenderTime = TimeSpan.FromMilliseconds(_clock.ElapsedTimeMs - frameStartMs);
         } catch (IndexOutOfRangeException) {
             // Resolution changed during rendering, discard the rest of this frame.
         } finally {
@@ -250,12 +252,15 @@ public class Renderer : IVgaRenderer {
         }
         uint foreGroundColor = GetDacPaletteColor(index);
         if (_state.AttributeControllerRegisters.AttributeControllerModeRegister.BlinkingEnabled
-            && (plane1 & 0x80) != 0
-            && DateTime.UtcNow.Millisecond % 1000 < 500) {
-            // Blinking is enabled and the blink bit is set and the current time is in the first half of the second.
-            // Swap the foreground and background colors.
-            (foreGroundColor, backGroundColor) = (backGroundColor & 0x7, foreGroundColor);
+            && (plane1 & 0x80) != 0) {
+            double blinkPhaseMs = _clock.ElapsedTimeMs % 1000.0;
+            if (blinkPhaseMs < 500.0) {
+                // Blinking is enabled and the blink bit is set and the current time is in the first half of the second.
+                // Swap the foreground and background colors.
+                (foreGroundColor, backGroundColor) = (backGroundColor & 0x7, foreGroundColor);
+            }
         }
+             
         // The 8 pixels to render this line come from the font which is stored in plane 2.
         byte fontByte = _memory.Planes[2, fontAddress + scanline];
         for (int x = 0; x < _state.SequencerRegisters.ClockingModeRegister.DotsPerClock; x++) {
