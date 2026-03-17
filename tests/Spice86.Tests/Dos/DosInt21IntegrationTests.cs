@@ -4,10 +4,17 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.Keyboard;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+using Spice86.ViewModels.Services;
 
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using Xunit;
 
@@ -926,22 +933,684 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
-    /// Runs the DOS test program and returns a test handler with results
+    /// Tests INT 21h AH=0Eh (Select Default Drive).
+    /// Bug 1: DL=2 (C:) should return AL=26 (total drive count), not the mounted count (3).
+    /// Bug 2: DL >= 26 is invalid but the comparison used > instead of >=, so DL=26 was accepted.
+    /// Bug 3: ElementAtOrDefault on DriveLetters with an out-of-range index could silently pass
+    ///         a default '\0' key to TryGetValue instead of rejecting the drive index.
     /// </summary>
+    [Fact]
+    public void SelectDefaultDrive_WithValidDrive_ReturnsMaxDriveCountAndSwitchesDrive() {
+        // Test plan:
+        //   1. Select C: (DL=2) via AH=0Eh → AL must be 26
+        //   2. Read current drive via AH=19h → AL must be 2 (C:)
+        //   3. Select invalid drive (DL=26) via AH=0Eh → drive must remain C:
+        //   4. Read current drive again via AH=19h → AL must still be 2
+        byte[] program = new byte[] {
+            // --- Part 1: Select C: drive (DL=2) ---
+            0xB4, 0x0E,             // mov ah, 0Eh  - Select Default Drive
+            0xB2, 0x02,             // mov dl, 02h  - C: drive index
+            0xCD, 0x21,             // int 21h      - AL = number of drives
+
+            // Write AL to details port so we can inspect the value
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort (0x998)
+            0xEE,                   // out dx, al
+
+            // Check AL == 26 (0x1A)
+            0x3C, 0x1A,             // cmp al, 1Ah
+            0x75, 0x22,             // jne failed   (offset 14 -> 48 = +34)
+
+            // --- Part 2: Verify current drive is C: ---
+            0xB4, 0x19,             // mov ah, 19h  - Get Current Drive
+            0xCD, 0x21,             // int 21h      - AL = current drive (0=A, 1=B, 2=C)
+
+            // Write AL to details port
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+            0xEE,                   // out dx, al
+
+            // Check AL == 2 (C:)
+            0x3C, 0x02,             // cmp al, 02h
+            0x75, 0x16,             // jne failed   (offset 26 -> 48 = +22)
+
+            // --- Part 3: Select invalid drive (DL=26, out of range) ---
+            0xB4, 0x0E,             // mov ah, 0Eh
+            0xB2, 0x1A,             // mov dl, 1Ah  - index 26 (invalid)
+            0xCD, 0x21,             // int 21h
+
+            // --- Part 4: Verify current drive is still C: ---
+            0xB4, 0x19,             // mov ah, 19h  - Get Current Drive
+            0xCD, 0x21,             // int 21h
+
+            // Write AL to details port
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+            0xEE,                   // out dx, al
+
+            // Check AL == 2 (C: unchanged)
+            0x3C, 0x02,             // cmp al, 02h
+            0x75, 0x04,             // jne failed
+
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests INT 21h AH=43h AL=0 (Get File Attributes).
+    /// A file with ReadOnly attribute must return CX with the ReadOnly bit (0x01) set.
+    /// On Windows, the Archive bit (0x20) is also expected since the FAT Archive attribute persists;
+    /// on Linux/macOS the Archive attribute is not supported by the filesystem and is ignored.
+    /// </summary>
+    [Fact]
+    public void GetFileAttributes_ForReadOnlyFile_ReturnsDosAttributeBits() {
+        // Arrange: create a test file with ReadOnly attribute in the working directory
+        string testFileName = "TESTATTR.TXT";
+        string testFilePath = Path.GetFullPath(testFileName);
+        File.WriteAllText(testFilePath, "test");
+        File.SetAttributes(testFilePath, FileAttributes.ReadOnly | FileAttributes.Archive);
+
+        // On Linux/macOS, FileAttributes.Archive is not persisted by the host filesystem because
+        // the FAT Archive attribute has no POSIX equivalent. Setting it via File.SetAttributes is a
+        // no-op on Unix, so File.GetAttributes will never return the Archive bit (0x20) on those platforms.
+        bool archiveBitSupported = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+        try {
+            // The filename string "TESTATTR.TXT\0" will be placed at the end of the program.
+            // In a .COM file, code starts at CS:0100h, so the string address = 0x100 + code_length.
+            byte[] fileNameBytes = System.Text.Encoding.ASCII.GetBytes(testFileName + "\0");
+
+            // Code bytes (before the filename string).
+            // When archiveBitSupported is false the Archive-bit check (test cl,20h / jz) is replaced
+            // with five NOPs so the program only validates the ReadOnly bit.
+            // ArchivePatchStart/End mark the byte range to NOP out when Archive is unsupported.
+            const int ArchivePatchStart = 16; // index of: test cl, 20h (0xF6 0xC1 0x20)
+            const int ArchivePatchEnd = 20; // index of last byte of: jz failed (0x74 0x09)
+            byte[] code = new byte[] {
+                // Set up DS:DX to point to the filename string
+                // DX = 0x100 + length_of_this_code_array (patched below)
+                0xBA, 0x00, 0x00,       // mov dx, <string_offset> (patched below)
+
+                // Call INT 21h AH=43h AL=0 (Get File Attributes)
+                0xB8, 0x00, 0x43,       // mov ax, 4300h
+                0xCD, 0x21,             // int 21h
+
+                // If carry set, file not found → fail
+                0x72, 0x14,             // jc failed (offset: 10 -> 30 = +20)
+
+                // Write CL to details port for debugging
+                0x88, 0xC8,             // mov al, cl
+                0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+                0xEE,                   // out dx, al
+
+                // Check that Archive bit (0x20) is set in CL (replaced with NOPs when unsupported)
+                0xF6, 0xC1, 0x20,       // test cl, 20h   (bytes 20-22)
+                0x74, 0x09,             // jz failed       (bytes 23-24)
+
+                // Check that ReadOnly bit (0x01) is set in CL
+                0xF6, 0xC1, 0x01,       // test cl, 01h
+                0x74, 0x04,             // jz failed (offset: 26 -> 30 = +4)
+
+                // Success
+                0xB0, 0x00,             // mov al, TestResult.Success
+                0xEB, 0x02,             // jmp writeResult
+
+                // failed: (offset 30)
+                0xB0, 0xFF,             // mov al, TestResult.Failure
+
+                // writeResult: (offset 32)
+                0xBA, 0x99, 0x09,       // mov dx, ResultPort
+                0xEE,                   // out dx, al
+                0xF4                    // hlt
+            };
+
+            if (!archiveBitSupported) {
+                // Replace "test cl,20h / jz failed" (indices ArchivePatchStart..ArchivePatchEnd) with NOPs
+                // so only the ReadOnly bit is checked on platforms that don't persist FileAttributes.Archive.
+                for (int i = ArchivePatchStart; i <= ArchivePatchEnd; i++) {
+                    code[i] = 0x90; // nop
+                }
+            }
+
+            // Patch the MOV DX immediate with the actual string offset (0x100 + code.Length)
+            ushort stringOffset = (ushort)(0x100 + code.Length);
+            code[1] = (byte)(stringOffset & 0xFF);
+            code[2] = (byte)(stringOffset >> 8);
+
+            // Combine code + filename into the final program
+            byte[] program = new byte[code.Length + fileNameBytes.Length];
+            Array.Copy(code, 0, program, 0, code.Length);
+            Array.Copy(fileNameBytes, 0, program, code.Length, fileNameBytes.Length);
+
+            DosTestHandler testHandler = RunDosTest(program);
+
+            testHandler.Results.Should().Contain((byte)TestResult.Success);
+            testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+        } finally {
+            // Clean up: remove ReadOnly so the file can be deleted
+            if (File.Exists(testFilePath)) {
+                File.SetAttributes(testFilePath, FileAttributes.Normal);
+                File.Delete(testFilePath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests INT 21h AH=43h AL=1 (Set File Attributes) followed by AL=0 (Get) to verify round-trip.
+    /// Creates a normal file, sets ReadOnly via AH=43h, then reads back attributes to verify.
+    /// The current buggy implementation is a no-op for Set — it logs but doesn't apply the attribute.
+    /// </summary>
+    [Fact]
+    public void SetFileAttributes_ThenGet_RoundTrips() {
+        // Arrange: create a normal (non-readonly) test file
+        string testFileName = "SETATR.TXT";
+        string testFilePath = Path.GetFullPath(testFileName);
+        File.WriteAllText(testFilePath, "test");
+        File.SetAttributes(testFilePath, FileAttributes.Archive);
+
+        try {
+            byte[] fileNameBytes = System.Text.Encoding.ASCII.GetBytes(testFileName + "\0");
+
+            byte[] code = new byte[] {
+                // DX = address of filename string (patched below)
+                0xBA, 0x00, 0x00,       // mov dx, <string_offset>
+
+                // --- Set attributes: AH=43h AL=1, CX=0x21 (ReadOnly + Archive) ---
+                0xB9, 0x21, 0x00,       // mov cx, 0021h (ReadOnly + Archive)
+                0xB8, 0x01, 0x43,       // mov ax, 4301h
+                0xCD, 0x21,             // int 21h
+
+                // If carry → fail
+                0x72, 0x19,             // jc failed (offset: 13 -> 38 = +25)
+
+                // --- Read back attributes: AH=43h AL=0 ---
+                // Reload DX (clobbered by details port writes later, but not yet)
+                0xBA, 0x00, 0x00,       // mov dx, <string_offset> (patched below)
+                0xB8, 0x00, 0x43,       // mov ax, 4300h
+                0xCD, 0x21,             // int 21h
+
+                // If carry → fail
+                0x72, 0x0F,             // jc failed (offset: 23 -> 38 = +15)
+
+                // Write CL to details port
+                0x88, 0xC8,             // mov al, cl
+                0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+                0xEE,                   // out dx, al
+
+                // Check ReadOnly bit (0x01) is set
+                0xF6, 0xC1, 0x01,       // test cl, 01h
+                0x74, 0x04,             // jz failed (offset: 34 -> 38 = +4)
+
+                // Actually need to recount. Let me be precise.
+                // Success
+                0xB0, 0x00,             // mov al, TestResult.Success
+                0xEB, 0x02,             // jmp writeResult
+
+                // failed: (offset 38)
+                0xB0, 0xFF,             // mov al, TestResult.Failure
+
+                // writeResult: (offset 40)
+                0xBA, 0x99, 0x09,       // mov dx, ResultPort
+                0xEE,                   // out dx, al
+                0xF4                    // hlt
+            };
+
+            // Patch string offsets
+            ushort stringOffset = (ushort)(0x100 + code.Length);
+            code[1] = (byte)(stringOffset & 0xFF);
+            code[2] = (byte)(stringOffset >> 8);
+            code[14] = (byte)(stringOffset & 0xFF);
+            code[15] = (byte)(stringOffset >> 8);
+
+            byte[] program = new byte[code.Length + fileNameBytes.Length];
+            Array.Copy(code, 0, program, 0, code.Length);
+            Array.Copy(fileNameBytes, 0, program, code.Length, fileNameBytes.Length);
+
+            DosTestHandler testHandler = RunDosTest(program);
+
+            testHandler.Results.Should().Contain((byte)TestResult.Success);
+            testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+        } finally {
+            if (File.Exists(testFilePath)) {
+                File.SetAttributes(testFilePath, FileAttributes.Normal);
+                File.Delete(testFilePath);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tests INT 21h AH=33h (Get/Set Control-Break Flag).
+    /// Sets the break flag on, reads it back, verifies DL=1.
+    /// Then sets it off, reads back, verifies DL=0.
+    /// </summary>
+    [Fact]
+    public void GetSetControlBreak_RoundTrips() {
+        byte[] program = new byte[] {
+            // --- Set break flag ON: AH=33h, AL=1, DL=1 ---
+            0xB4, 0x33,             // mov ah, 33h
+            0xB0, 0x01,             // mov al, 01h  (Set)
+            0xB2, 0x01,             // mov dl, 01h  (ON)
+            0xCD, 0x21,             // int 21h
+
+            // --- Read break flag: AH=33h, AL=0 ---
+            0xB4, 0x33,             // mov ah, 33h
+            0xB0, 0x00,             // mov al, 00h  (Get)
+            0xCD, 0x21,             // int 21h
+
+            // DL should be 1
+            0x80, 0xFA, 0x01,       // cmp dl, 01h
+            0x75, 0x17,             // jne failed (offset 19 -> 42 = +23)
+
+            // --- Set break flag OFF: AH=33h, AL=1, DL=0 ---
+            0xB4, 0x33,             // mov ah, 33h
+            0xB0, 0x01,             // mov al, 01h
+            0xB2, 0x00,             // mov dl, 00h  (OFF)
+            0xCD, 0x21,             // int 21h
+
+            // --- Read break flag: AH=33h, AL=0 ---
+            0xB4, 0x33,             // mov ah, 33h
+            0xB0, 0x00,             // mov al, 00h
+            0xCD, 0x21,             // int 21h
+
+            // DL should be 0
+            0x80, 0xFA, 0x00,       // cmp dl, 00h
+            0x75, 0x04,             // jne failed (offset 38 -> 42 = +4)
+
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+
+            // failed: (offset 42)
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+
+            // writeResult: (offset 44)
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests that AH=0Bh (Check Standard Input Status) detects Ctrl-C in the keyboard buffer
+    /// when break checking is enabled, and invokes INT 23h which terminates the process.
+    /// Ctrl-C is injected through the hardware keyboard stack: PS2Keyboard → Intel8042Controller
+    /// → IRQ1 → BiosKeyboardInt9Handler → BiosKeyboardBuffer.
+    /// </summary>
+    [Fact]
+    public void CheckStandardInputStatus_WithBreakEnabled_DetectsCtrlCAndInvokesInt23h() {
+        // Arrange
+        byte[] program = new byte[] {
+            // --- Enable break checking: AH=33h, AL=1, DL=1 ---
+            0xB4, 0x33,             // mov ah, 33h
+            0xB0, 0x01,             // mov al, 01h  (Set)
+            0xB2, 0x01,             // mov dl, 01h  (ON)
+            0xCD, 0x21,             // int 21h
+
+            // --- Write Success BEFORE calling AH=0Bh ---
+            // If INT 23h fires, the process terminates and Failure is never written.
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+
+            // --- Burn cycles so IRQ1 fires and BiosKeyboardInt9Handler populates the buffer ---
+            0xB9, 0xE8, 0x03,       // mov cx, 1000
+            0xE2, 0xFE,             // loop $ (spin for 1000 iterations)
+
+            // --- Call AH=0Bh (Check Standard Input Status) ---
+            // With break ON and Ctrl-C in buffer, this should invoke INT 23h.
+            0xB4, 0x0B,             // mov ah, 0Bh
+            0xCD, 0x21,             // int 21h
+
+            // If we get here, Ctrl-C was NOT detected.
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        // Act — inject Ctrl-C through the hardware keyboard stack via a cycle breakpoint
+        DosTestHandler testHandler = RunDosTest(program, keyInjectionAction: SimulateCtrlC);
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests that AH=0Bh also detects Ctrl-Break (Ctrl+Pause) from the keyboard pipeline,
+    /// and invokes the same INT 23h termination path as Ctrl-C.
+    /// </summary>
+    [Fact]
+    public void CheckStandardInputStatus_WithBreakEnabled_DetectsCtrlBreakAndInvokesInt23h() {
+        byte[] program = new byte[] {
+            0xB4, 0x33,
+            0xB0, 0x01,
+            0xB2, 0x01,
+            0xCD, 0x21,
+
+            0xB0, 0x00,
+            0xBA, 0x99, 0x09,
+            0xEE,
+
+            0xB9, 0xE8, 0x03,
+            0xE2, 0xFE,
+
+            0xB4, 0x0B,
+            0xCD, 0x21,
+
+            0xB0, 0xFF,
+            0xBA, 0x99, 0x09,
+            0xEE,
+            0xF4
+        };
+
+        DosTestHandler testHandler = RunDosTest(program, keyInjectionAction: SimulateCtrlBreak);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Phase 0 — STDIN/STDOUT handle routing tests
+    // These tests redirect STDIN (handle 0) to a file stream and verify that
+    // INT 21h AH=07h/08h/0Ah read from the handle, not from INT 16h.
+    // AH=01h is excluded: it uses ConsoleDevice.Read → INT 16h (MS-DOS 1.x
+    // behavior) and does not go through IOCTL-based handle routing.
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Redirects STDIN to a file containing 'A' (0x41) and replaces OpenFiles[0].
+    /// </summary>
+    private static void RedirectStdinToByteA(Spice86DependencyInjection di) {
+        MemoryStream stream = new(new byte[] { 0x41 });
+        DosFile stdinFile = new("STDIN", 0, stream);
+        di.Machine.Dos.FileManager.OpenFiles[0] = stdinFile;
+    }
+
+    /// <summary>
+    /// Redirects STDIN to a file containing "Hello\r" and replaces OpenFiles[0].
+    /// </summary>
+    private static void RedirectStdinToHelloCr(Spice86DependencyInjection di) {
+        byte[] data = new byte[] { 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x0D }; // "Hello\r"
+        MemoryStream stream = new(data);
+        DosFile stdinFile = new("STDIN", 0, stream);
+        di.Machine.Dos.FileManager.OpenFiles[0] = stdinFile;
+    }
+
+    /// <summary>
+    /// AH=07h reads from STDIN handle, not directly from INT 16h.
+    /// Redirects STDIN to a file containing 'A'. Calls INT 21h AH=07h.
+    /// Expects AL=0x41.
+    /// </summary>
+    [Fact]
+    public void AH07h_ReadsFromStdinHandle_NotDirectlyFromInt16h() {
+        // Arrange: program calls AH=07h then writes AL to details port, checks AL==0x41
+        byte[] program = new byte[] {
+            0xB4, 0x07,             // mov ah, 07h
+            0xCD, 0x21,             // int 21h
+
+            // Write AL to details port for diagnostics
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort (0x998)
+            0xEE,                   // out dx, al
+
+            // Check AL == 0x41 ('A')
+            0x3C, 0x41,             // cmp al, 41h
+            0x75, 0x04,             // jne failed
+
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        // Act
+        DosTestHandler testHandler = RunDosTest(program, preRunSetup: RedirectStdinToByteA);
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success,
+            "AH=07h should read 0x41 from the redirected STDIN handle");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// AH=08h reads from STDIN handle, not directly from INT 16h.
+    /// Redirects STDIN to a file containing 'A'. Calls INT 21h AH=08h.
+    /// Expects AL=0x41.
+    /// </summary>
+    [Fact]
+    public void AH08h_ReadsFromStdinHandle_NotDirectlyFromInt16h() {
+        byte[] program = new byte[] {
+            0xB4, 0x08,             // mov ah, 08h
+            0xCD, 0x21,             // int 21h
+
+            // Write AL to details port for diagnostics
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort (0x998)
+            0xEE,                   // out dx, al
+
+            // Check AL == 0x41 ('A')
+            0x3C, 0x41,             // cmp al, 41h
+            0x75, 0x04,             // jne failed
+
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        // Act
+        DosTestHandler testHandler = RunDosTest(program, preRunSetup: RedirectStdinToByteA);
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success,
+            "AH=08h should read 0x41 from the redirected STDIN handle");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// AH=01h reads from STDIN handle, not directly from INT 16h.
+    /// Redirects STDIN to a file containing 'A'. Calls INT 21h AH=01h.
+    /// Expects AL=0x41.
+    /// </summary>
+    [Fact]
+    public void AH01h_ReadsFromStdinHandle_NotDirectlyFromInt16h() {
+        byte[] program = new byte[] {
+            0xB4, 0x01,             // mov ah, 01h
+            0xCD, 0x21,             // int 21h
+
+            // Write AL to details port for diagnostics
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort (0x998)
+            0xEE,                   // out dx, al
+
+            // Check AL == 0x41 ('A')
+            0x3C, 0x41,             // cmp al, 41h
+            0x75, 0x04,             // jne failed
+
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        // Act
+        DosTestHandler testHandler = RunDosTest(program, preRunSetup: RedirectStdinToByteA);
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success,
+            "AH=01h should read 0x41 from the redirected STDIN handle");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// AH=0Ah reads from STDIN handle, not directly from INT 16h.
+    /// Redirects STDIN to a file containing "Hello\r". Calls INT 21h AH=0Ah.
+    /// Expects ReadCount == 5 ("Hello" only) — CR is excluded from ReadCount
+    /// per FreeDOS read_line: kp->kb_count = count - 1.
+    /// </summary>
+    [Fact]
+    public void AH0Ah_ReadsFromStdinHandle_NotDirectlyFromInt16h() {
+        // The buffer for AH=0Ah is at DS:DX. We place it at offset 0x80 in the COM segment.
+        // Buffer layout: byte 0 = max length, byte 1 = read count (output), byte 2+ = chars
+        // We set max length = 20 at offset 0x80 using a MOV instruction before the INT call.
+        byte[] program = new byte[] {
+            // Set up buffer at DS:0x80
+            0xC6, 0x06, 0x80, 0x00, 0x14, // mov byte [0x80], 20  (max length)
+            0xC6, 0x06, 0x81, 0x00, 0x00, // mov byte [0x81], 0   (read count = 0)
+
+            // Set DX = 0x80 (buffer address)
+            0xBA, 0x80, 0x00,       // mov dx, 0080h
+            0xB4, 0x0A,             // mov ah, 0Ah
+            0xCD, 0x21,             // int 21h
+
+            // Read the read count from [0x81]
+            0xA0, 0x81, 0x00,       // mov al, [0x81]
+
+            // Write read count to details port for diagnostics
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+            0xEE,                   // out dx, al
+
+            // Check read count == 5 ("Hello" only — FreeDOS kb_count = count-1, CR not included)
+            0x3C, 0x05,             // cmp al, 5
+            0x75, 0x0D,             // jne failed
+
+            // Check first char is 'H' (0x48) at [0x82]
+            0xA0, 0x82, 0x00,       // mov al, [0x82]
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+            0xEE,                   // out dx, al
+            0x3C, 0x48,             // cmp al, 48h
+            0x75, 0x04,             // jne failed
+
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        // Act
+        DosTestHandler testHandler = RunDosTest(program, preRunSetup: RedirectStdinToHelloCr);
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success,
+            "AH=0Ah should read from the redirected STDIN handle");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Simulates a Ctrl-C keypress through the full UI → hardware keyboard stack:
+    /// HeadlessGui → InputEventHub → PS2Keyboard → Intel8042Controller → IRQ1
+    /// → BiosKeyboardInt9Handler → BiosKeyboardBuffer.
+    /// </summary>
+    private static void SimulateCtrlC(HeadlessGui gui) {
+        gui.SimulateKeyPress(PhysicalKey.ControlLeft);
+        gui.SimulateKeyPress(PhysicalKey.C);
+        gui.SimulateKeyRelease(PhysicalKey.C);
+        gui.SimulateKeyRelease(PhysicalKey.ControlLeft);
+    }
+
+    private static void SimulateCtrlBreak(HeadlessGui gui) {
+        gui.SimulateKeyPress(PhysicalKey.ControlLeft);
+        gui.SimulateKeyPress(PhysicalKey.Pause);
+        gui.SimulateKeyRelease(PhysicalKey.ControlLeft);
+    }
+
+    /// <summary>
+    /// Cycle count at which keyboard events are injected via the breakpoint callback.
+    /// Must be early enough that the full pipeline (InputEventHub → PS2Keyboard →
+    /// Intel8042Controller → IRQ1 → BiosKeyboardInt9Handler) completes before the
+    /// ASM program reads the keyboard buffer.
+    /// </summary>
+    private const long KeyInjectionCycleCount = 50;
+
+    /// <summary>
+    /// Fixed instructions-per-second used for keyboard injection tests.
+    /// Makes the EmulationLoopScheduler deterministic: InputEventsHandler fires
+    /// every 100 emulated ms = 100 instructions at this rate.
+    /// </summary>
+    private const long KeyboardTestInstructionsPerSecond = 1000;
+
     private DosTestHandler RunDosTest(byte[] program,
+        Action<HeadlessGui>? keyInjectionAction = null,
+        Action<Spice86DependencyInjection>? preRunSetup = null,
         [CallerMemberName] string unitTestName = "test") {
         // Write program to a .com file
         string filePath = Path.GetFullPath($"{unitTestName}.com");
         File.WriteAllBytes(filePath, program);
+
+        // When keyboard injection is needed, use CyclesClock so the
+        // EmulationLoopScheduler fires InputEventsHandler deterministically.
+        long? instructionsPerSecond = keyInjectionAction is not null
+            ? KeyboardTestInstructionsPerSecond
+            : null;
 
         // Setup emulator with DOS initialized
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
             enablePit: false,
             maxCycles: 100000L,
-            installInterruptVectors: true,  // Enable DOS
-            enableA20Gate: true
+            installInterruptVectors: true,
+            enableA20Gate: true,
+            instructionTimeScale: instructionsPerSecond
         ).Create();
+
+        // Register a cycle breakpoint to inject keyboard events mid-execution
+        // through the full UI stack: HeadlessGui → InputEventHub → PS2Keyboard
+        // → Intel8042Controller → IRQ1 → BiosKeyboardInt9Handler → BiosKeyboardBuffer
+        if (keyInjectionAction is not null) {
+            HeadlessGui? headlessGui = spice86DependencyInjection.HeadlessGui;
+            if (headlessGui is null) {
+                throw new InvalidOperationException(
+                    "HeadlessGui is not available — keyboard injection requires HeadlessType.Minimal");
+            }
+            spice86DependencyInjection.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(
+                new AddressBreakPoint(BreakPointType.CPU_CYCLES, KeyInjectionCycleCount,
+                    _ => keyInjectionAction(headlessGui), isRemovedOnTrigger: true), true);
+        }
+
+        preRunSetup?.Invoke(spice86DependencyInjection);
 
         DosTestHandler testHandler = new(
             spice86DependencyInjection.Machine.CpuState,

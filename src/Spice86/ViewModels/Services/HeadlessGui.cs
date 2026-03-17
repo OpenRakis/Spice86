@@ -36,15 +36,31 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
     public void HideMouseCursor() {
     }
 
-#pragma warning disable CS0067 // Headless GUI never raises these events
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
+#pragma warning disable CS0067 // Headless GUI never raises these events
     public event EventHandler<MouseMoveEventArgs>? MouseMoved;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
     public event Action? UserInterfaceInitialized;
 #pragma warning restore CS0067
+
+    /// <summary>
+    /// Simulates a key press event, firing <see cref="KeyDown"/> into the full input pipeline.
+    /// </summary>
+    /// <param name="key">The physical key to press.</param>
+    public void SimulateKeyPress(PhysicalKey key) {
+        KeyDown?.Invoke(this, new KeyboardEventArgs(key, IsPressed: true));
+    }
+
+    /// <summary>
+    /// Simulates a key release event, firing <see cref="KeyUp"/> into the full input pipeline.
+    /// </summary>
+    /// <param name="key">The physical key to release.</param>
+    public void SimulateKeyRelease(PhysicalKey key) {
+        KeyUp?.Invoke(this, new KeyboardEventArgs(key, IsPressed: false));
+    }
 
     public int Width { get; private set; }
 

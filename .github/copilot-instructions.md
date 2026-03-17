@@ -117,6 +117,8 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Rebuild and verify** - For any task that changes code or tests, rebuild the project and run the full test suite; do not stop until all tests are green.
 - **Concise documentation** - XML docs should be precise and complete but not verbose; avoid excessive remarks
 - **Ignore Machine class** - this is a legacy aggregator class; work directly with specific components (`CfgCpu`, `Memory`, `Stack`, etc.) instead
+- **Enforce TDD** - ensure integration tests are present and not passing at first, then make them pass by updating the implementation.
+- **Clear test code style** use explicit Arrange/Act/Assert structure, avoid long setup blocks, and reduce duplication with small helpers.
 
 ### Avalonia Telemetry
 - **Avalonia telemetry must be disabled** when working on the codebase.

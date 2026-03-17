@@ -7,6 +7,7 @@ using NSubstitute;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
@@ -14,6 +15,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
@@ -50,7 +52,7 @@ public class DosInt21HandlerTests {
         var countryInfo = new CountryInfo();
         var dosMemoryManager = new DosMemoryManager(memory, 0x170, logger);
         var envVars = new Dictionary<string, string> { { "PATH", "C:\\" } };
-        var dosProcessManager = new DosProcessManager(memory, stack, state, dosMemoryManager, dosFileManager, driveManager, envVars, logger);
+        var dosProcessManager = new DosProcessManager(memory, stack, state, dosMemoryManager, dosFileManager, driveManager, Substitute.For<IBatchDisplayCommandHandler>(), envVars, logger);
 
         var handler = new DosInt21Handler(
             memory,

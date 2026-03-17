@@ -22,7 +22,8 @@ public class Spice86Creator {
         bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, string? cDrive = null,
         ushort programEntryPointSegment = 0x170,
         SbType sbType = SbType.None, OplMode oplMode = OplMode.None,
-        ushort sbBase = 0x220, byte sbIrq = 7, byte sbDma = 1, byte sbHdma = 5) {
+        ushort sbBase = 0x220, byte sbIrq = 7, byte sbDma = 1, byte sbHdma = 5,
+        string? exeArgs = null, long? instructionTimeScale = null) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
@@ -59,9 +60,11 @@ public class Spice86Creator {
             Xms = enableXms,
             Ems = enableEms,
             CDrive = cDrive,
+            ExeArgs = exeArgs,
             RecordedDataDirectory = exportFolder,
             SilencedLogs = true,
             HttpApiPort = 0,
+            InstructionTimeScale = instructionTimeScale,
         };
 
         _maxCycles = maxCycles;

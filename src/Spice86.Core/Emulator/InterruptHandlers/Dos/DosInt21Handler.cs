@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -39,8 +40,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosTables _dosTables;
     private readonly DosSwappableDataArea _sda;
     private readonly DosFcbManager _dosFcbManager;
-
-    private byte _lastDisplayOutputCharacter = 0x0;
+    private uint _stdinReadyFlagLinearAddress;
     private bool _isCtrlCFlag;
 
     private const ushort OffsetMask = 0x0F;
@@ -93,6 +93,11 @@ public class DosInt21Handler : InterruptHandler {
     internal DosProcessManager ProcessManager => _dosProcessManager;
 
     /// <summary>
+    /// Gets the DOS file manager for the <see cref="DosProgramLoader"/>
+    /// </summary>
+    internal DosFileManager FileManager => _dosFileManager;
+
+    /// <summary>
     /// Register the handlers for the DOS INT21H services that we support.
     /// </summary>
     private void FillDispatchTable() {
@@ -104,7 +109,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x05, PrinterOutput);
         AddAction(0x06, () => DirectConsoleIo(true));
         AddAction(0x07, DirectStandardInputWithoutEcho);
-        AddAction(0x08, DirectStandardInputWithoutEcho);
+        AddAction(0x08, DirectStandardInputWithoutEchoWithBreakCheck);
         AddAction(0x09, PrintString);
         AddAction(0x0A, BufferedInput);
         AddAction(0x0B, CheckStandardInputStatus);
@@ -180,6 +185,119 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    ///     Emits an INT 21h handler stub into guest RAM that dispatches all AH values to the
+    ///     C# handler via <c>callback(Run)</c>. For AH=07h, 08h, and 0Ah the stub first
+    ///     polls STDIN readiness with INT 28h idle calls before dispatching.
+    ///     AH=01h is NOT polled here — it goes through L_DEFAULT to the C# handler which
+    ///     reads via ConsoleDevice → INT 16h (which has its own INT 09h-based keyboard polling).
+    /// </summary>
+    /// <remarks><![CDATA[
+    ///     A flag byte is reserved in the handler segment, before the entry point.
+    ///     The CheckStdinReady callback writes to this byte (1 = ready, 0 = not ready).
+    ///     ASM reads it with CMP byte CS:[flagOffset], 0 — no CPU state is modified by the
+    ///     readiness callback.
+    ///
+    ///     Assembled control flow (labels for readability):
+    ///
+    ///     stdin_ready_flag: DB 0            ; private flag byte in handler segment
+    ///
+    ///     L_HANDLER:
+    ///       CMP AH, 07h
+    ///       JZ  L_WAIT_FOR_STDIN
+    ///       CMP AH, 08h
+    ///       JZ  L_WAIT_FOR_STDIN
+    ///       CMP AH, 0Ah
+    ///       JZ  L_WAIT_FOR_STDIN
+    ///
+    ///     L_DEFAULT:
+    ///       callback(Run)                    ; dispatch to C# for all AH values
+    ///       IRET
+    ///
+    ///     L_WAIT_FOR_STDIN:
+    ///       callback(CheckStdinReady)        ; writes flag byte
+    ///       CMP byte CS:[stdin_ready_flag], 0
+    ///       JNZ L_DISPATCH
+    ///       INT 28h                          ; DOS idle
+    ///       JMP short L_WAIT_FOR_STDIN
+    ///
+    ///     L_DISPATCH:
+    ///       callback(Run)                    ; dispatch to C# handler for this AH value
+    ///       IRET
+    /// ]]></remarks>
+    public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
+        // Reserve a flag byte in the handler segment for callback→ASM communication.
+        // The CheckStdinReady callback writes to this byte; ASM reads with CS:[flagOffset].
+        SegmentedAddress flagAddress = memoryAsmWriter.CurrentAddress;
+        _stdinReadyFlagLinearAddress = MemoryUtils.ToPhysicalAddress(flagAddress.Segment, flagAddress.Offset);
+        ushort flagOffset = flagAddress.Offset;
+        memoryAsmWriter.WriteUInt8(0x00);
+
+        // Block sizes for jump offset calculation:
+        // L_DEFAULT:          callback(4) + IRET(1) = 5 bytes
+        // L_WAIT_FOR_STDIN:   STI(1) + callback(4) + CMP(6) + JNZ(2) + INT(2) + JMP(2) = 17 bytes
+        // L_DISPATCH:         callback(4) + IRET(1) = 5 bytes
+
+        SegmentedAddress handlerAddress = memoryAsmWriter.CurrentAddress;
+
+        // CMP AH, 07h → JZ L_WAIT_FOR_STDIN
+        memoryAsmWriter.WriteCmpAh(0x07);
+        // skip: CMP 08h(5) + CMP 0Ah(5) + L_DEFAULT(5) = 15
+        memoryAsmWriter.WriteJz(15);
+
+        // CMP AH, 08h → JZ L_WAIT_FOR_STDIN
+        memoryAsmWriter.WriteCmpAh(0x08);
+        // skip: CMP 0Ah(5) + L_DEFAULT(5) = 10
+        memoryAsmWriter.WriteJz(10);
+
+        // CMP AH, 0Ah → JZ L_WAIT_FOR_STDIN
+        memoryAsmWriter.WriteCmpAh(0x0A);
+        // skip: L_DEFAULT(5) = 5
+        memoryAsmWriter.WriteJz(5);
+
+        // L_DEFAULT: callback to C# Run() then IRET
+        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
+        memoryAsmWriter.WriteIret();
+
+        // L_WAIT_FOR_STDIN: poll STDIN readiness in a loop with INT 28h idle
+        // STI — re-enable hardware interrupts so IRQ1 (keyboard) can fire.
+        // INT 21h clears IF per x86 spec; without STI the polling loop would
+        // spin forever because keyboard scancodes never reach BiosKeyboardBuffer.
+        // This matches FreeDOS (INT 21h starts with STI) and DOSBox (idle uses STI+HLT).
+        memoryAsmWriter.WriteSti();
+        // callback(CheckStdinReady) — writes flag byte, 4 bytes
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackCheckStdinReady);
+        // CMP byte CS:[flagOffset], 0 — 6 bytes
+        memoryAsmWriter.WriteUInt8(0x2E); // CS: segment override
+        memoryAsmWriter.WriteUInt8(0x80); // CMP Eb, Ib
+        memoryAsmWriter.WriteUInt8(0x3E); // ModR/M: [disp16], /7 (CMP)
+        memoryAsmWriter.WriteUInt16(flagOffset);
+        memoryAsmWriter.WriteUInt8(0x00); // imm8 = 0
+        // JNZ L_DISPATCH — skip INT 28h(2) + JMP(2) = 4
+        memoryAsmWriter.WriteJnz(4);
+        // INT 28h (DOS idle)
+        memoryAsmWriter.WriteInt(0x28);
+        // JMP short back to STI: -(4+6+2+2+2+1) = -17
+        memoryAsmWriter.WriteJumpShort(-17);
+
+        // L_DISPATCH: dispatch to C# handler for AH=07h/08h/0Ah
+        memoryAsmWriter.RegisterAndWriteCallback(Run);
+        memoryAsmWriter.WriteIret();
+
+        return handlerAddress;
+    }
+
+    // --- Callback used by the in-memory INT 21h stub ---
+
+    /// <summary>
+    /// Writes 1 to the handler's flag byte if stdin has data, 0 if empty.
+    /// No CPU registers or flags are modified.
+    /// Used by the ASM wait loop for AH=07h/08h/0Ah.
+    /// </summary>
+    public void CallbackCheckStdinReady() {
+        Memory[_stdinReadyFlagLinearAddress] = _dosFileManager.IsStdinInputAvailable() ? (byte)1 : (byte)0;
+    }
+
+    /// <summary>
     /// INT 21h, AH=01h - Character Input with Echo.
     /// <para>
     /// Reads a single character from standard input and echoes it to standard output.
@@ -195,12 +313,15 @@ public class DosInt21Handler : InterruptHandler {
     /// Used by (for example): Civilization.
     /// </remarks>
     public void CharacterInputWithEcho() {
+        if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
+            return;
+        }
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("CHARACTER INPUT WITH ECHO");
         }
-        if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) &&
-            stdIn.CanRead) {
-            ConsoleDevice? consoleDevice = stdIn as ConsoleDevice;
+        VirtualFileBase? stdin = _dosFileManager.Stdin;
+        if (stdin != null && stdin.CanRead) {
+            ConsoleDevice? consoleDevice = stdin as ConsoleDevice;
             bool previousEchoState = false;
             if (consoleDevice != null) {
                 previousEchoState = consoleDevice.Echo;
@@ -208,7 +329,7 @@ public class DosInt21Handler : InterruptHandler {
             }
 
             byte[] bytes = new byte[1];
-            int readCount = stdIn.Read(bytes, 0, 1);
+            int readCount = stdin.Read(bytes, 0, 1);
 
             if (consoleDevice != null) {
                 consoleDevice.Echo = previousEchoState;
@@ -364,9 +485,12 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     /// <remarks>
     /// Standard AUX is usually the first serial port (COM1). <br/>
-    /// TODO: Check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens. <br/>
+    /// Checks for Ctrl-C/Ctrl-Break in STDIN before reading. <br/>
     /// </remarks>
     public void ReadCharacterFromStdAux() {
+        if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
+            return;
+        }
         if (_dosFileManager.TryGetOpenDeviceWithAttributes(DeviceAttributes.Character,
             out AuxDevice? aux) && aux.CanRead is true) {
             State.AL = (byte)aux.ReadByte();
@@ -379,9 +503,12 @@ public class DosInt21Handler : InterruptHandler {
     /// Writes a character from the AL register to the standard auxiliary device.
     /// </summary>
     /// <remarks>
-    /// TODO: Check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens. <br/>
+    /// Checks for Ctrl-C/Ctrl-Break in STDIN before writing. <br/>
     /// </remarks>
     public void WriteCharacterToStdAux() {
+        if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
+            return;
+        }
         if (_dosFileManager.TryGetOpenDeviceWithAttributes(DeviceAttributes.Character,
             out AuxDevice? aux) && aux.CanWrite is true) {
             aux.WriteByte(State.AL);
@@ -393,10 +520,13 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     /// <remarks>
     /// Standard printer is usually the first parallel port (LPT1), but may be redirected, as usual with any device in DOS 2+. <br/>
-    /// TODO: Check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens. <br/>
+    /// Checks for Ctrl-C/Ctrl-Break in STDIN before writing. <br/>
     /// TODO: If the printer is busy, this function will wait. <br/>
     /// </remarks>
     public void PrinterOutput() {
+        if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
+            return;
+        }
         if (_dosFileManager.TryGetOpenDeviceWithAttributes(DeviceAttributes.Character,
             out PrinterDevice? prn) && prn.CanWrite is true) {
             prn.Write(State.AL);
@@ -407,24 +537,30 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// Returns 0xFF in AL if input character is available in the standard input, 0 otherwise.
+    /// When the break flag is set, also checks for Ctrl-C in the keyboard buffer.
     /// </summary>
     public void CheckStandardInputStatus() {
-        if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) &&
-            stdIn.Information == ConsoleDevice.InputAvailable) {
-            State.AL = 0xFF;
-        } else {
-            State.AL = 0x0;
+        if (_isCtrlCFlag && CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
+            return;
         }
+        State.AL = _dosFileManager.IsStdinInputAvailable() ? (byte)0xFF : (byte)0x0;
     }
 
     /// <summary>
-    /// Copies a character from the standard input to _state.AL, without echo on the standard output.
+    /// INT 21h, AH=07h - Direct Standard Input Without Echo.
+    /// <para>
+    /// Reads a single character from the STDIN handle into AL, without echo.
+    /// </para>
     /// </summary>
+    /// <remarks>
+    /// The in-RAM ASM stub waits for STDIN readiness with INT 28h idle calls,
+    /// then dispatches here via <c>callback(Run)</c>.
+    /// </remarks>
     public void DirectStandardInputWithoutEcho() {
-        if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) &&
-            stdIn.CanRead) {
+        VirtualFileBase? stdin = _dosFileManager.Stdin;
+        if (stdin != null && stdin.CanRead) {
             byte[] bytes = new byte[1];
-            var readCount = stdIn.Read(bytes, 0, 1);
+            int readCount = stdin.Read(bytes, 0, 1);
             if (readCount < 1) {
                 State.AL = 0;
             } else {
@@ -433,6 +569,24 @@ public class DosInt21Handler : InterruptHandler {
         } else {
             State.AL = 0;
         }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=08h - Direct Standard Input Without Echo With Break Check.
+    /// <para>
+    /// Reads a single character from the STDIN handle into AL, without echo.
+    /// Checks for Ctrl-C in the keyboard buffer first.
+    /// </para>
+    /// </summary>
+    /// <remarks>
+    /// The in-RAM ASM stub waits for STDIN readiness with INT 28h idle calls,
+    /// then dispatches here via <c>callback(Run)</c>.
+    /// </remarks>
+    public void DirectStandardInputWithoutEchoWithBreakCheck() {
+        if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
+            return;
+        }
+        DirectStandardInputWithoutEcho();
     }
 
     /// <summary>
@@ -570,8 +724,8 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
             LoggerService.Debug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", operation);
         }
+        _keyboardInt16Handler.FlushKeyboardBuffer();
         if (operation is not 0x0 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
-            _keyboardInt16Handler.FlushKeyboardBuffer();
             return;
         }
         Run(operation);
@@ -583,7 +737,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <returns>
     /// CF is cleared on success. <br/>
     /// CF is set on error.
-    /// </returns> 
+    /// </returns>
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void CloseFileOrDevice(bool calledFromVm) {
         ushort fileHandle = State.BX;
@@ -618,27 +772,36 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Implements the INT21H function 0x3D, which reads standard input DOS Device and outputs it to the standard output DOS Device. <br/>
+    /// INT 21h, AH=0Ah - Buffered Input.
+    /// <para>
+    /// Reads characters from STDIN into a buffer at DS:DX until CR is received (or buffer is full).
+    /// Echoes each character to STDOUT. Supports backspace editing.
+    /// </para>
     /// </summary>
     /// <remarks>
-    /// TODO: Add check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens.
+    /// The in-RAM ASM stub waits for STDIN readiness with INT 28h idle calls,
+    /// then dispatches here via <c>callback(Run)</c>.
     /// </remarks>
-    /// TODO: bugged! inline ASM maybe..does not WAIT for the keyboard...
     public void BufferedInput() {
+        if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
+            return;
+        }
         uint address = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
         DosInputBuffer dosInputBuffer = new DosInputBuffer(Memory, address);
-        int readCount = 0;
-        if (!_dosFileManager.TryGetStandardInput(out CharacterDevice? standardInput) ||
-            !_dosFileManager.TryGetStandardOutput(out CharacterDevice? standardOutput)) {
+        int charCount = 0;
+        bool endedWithCr = false;
+        VirtualFileBase? stdin = _dosFileManager.Stdin;
+        VirtualFileBase? stdout = _dosFileManager.Stdout;
+        if (stdin == null || stdout == null) {
             return;
         }
         dosInputBuffer.Characters = string.Empty;
 
         while (State.IsRunning) {
             byte[] inputBuffer = new byte[1];
-            readCount = standardInput.Read(inputBuffer, 0, 1);
-            if (readCount < 1) {
-                break; // No further input available, exit the loop.
+            int bytesRead = stdin.Read(inputBuffer, 0, 1);
+            if (bytesRead < 1) {
+                break;
             }
             byte c = inputBuffer[0];
             if (c == (byte)AsciiControlCodes.LineFeed) {
@@ -646,31 +809,32 @@ public class DosInt21Handler : InterruptHandler {
             }
 
             if (c == (byte)AsciiControlCodes.Backspace) {
-                if (readCount != 0) { //Something to backspace.
-                    // STDOUT treats backspace as non-destructive.
-                    standardOutput.Write(c);
-                    c = Encoding.ASCII.GetBytes(" ")[0];
-                    standardOutput.Write(c);
-                    c = (byte)AsciiControlCodes.Backspace;
-                    standardOutput.Write(c);
-                    --readCount;
+                if (charCount > 0) {
+                    stdout.WriteByte(c);
+                    stdout.WriteByte((byte)' ');
+                    stdout.WriteByte((byte)AsciiControlCodes.Backspace);
+                    string chars = dosInputBuffer.Characters;
+                    if (chars.Length > 0) {
+                        dosInputBuffer.Characters = chars[..^1];
+                    }
+                    charCount--;
                 }
                 continue;
             }
-            if (readCount >= dosInputBuffer.Length && c != (byte)AsciiControlCodes.CarriageReturn) { //input buffer full and not CR
-                const byte bell = 7;
-                standardOutput.Write(bell);
+            if (charCount >= dosInputBuffer.Length && c != (byte)AsciiControlCodes.CarriageReturn) {
+                stdout.WriteByte(7); // bell
                 continue;
             }
-            if (standardOutput.CanWrite) {
-                standardOutput.Write(c);
-            }
-            dosInputBuffer.Characters += c;
+            stdout.WriteByte(c);
+            dosInputBuffer.Characters += (char)c;
+            charCount++;
             if (c == (byte)AsciiControlCodes.CarriageReturn) {
+                endedWithCr = true;
                 break;
             }
         }
-        dosInputBuffer.ReadCount = (byte)(readCount < 0 ? 0 : (byte)readCount);
+        // FreeDOS read_line: kp->kb_count = count - 1 — kb_count never includes the trailing CR.
+        dosInputBuffer.ReadCount = (byte)(endedWithCr ? charCount - 1 : charCount);
     }
 
     /// <summary>
@@ -692,12 +856,11 @@ public class DosInt21Handler : InterruptHandler {
             if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("DOS INT21H DirectConsoleIo, INPUT REQUESTED");
             }
-            if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn)
-                && stdIn.Information == ConsoleDevice.InputAvailable) {
+            VirtualFileBase? stdin = _dosFileManager.Stdin;
+            if (stdin != null && _dosFileManager.IsStdinInputAvailable()) {
                 byte[] bytes = new byte[1];
-                var readCount = stdIn.Read(bytes, 0, 1);
+                int readCount = stdin.Read(bytes, 0, 1);
                 if (readCount < 1) {
-                    // No input available, set AL to 0 and ZF to 1.
                     SetZeroFlag(true, calledFromVm);
                     State.AL = 0;
                     return;
@@ -714,20 +877,20 @@ public class DosInt21Handler : InterruptHandler {
                 LoggerService.Verbose("DOS INT21H DirectConsoleIo, OUTPUT REQUESTED: {Character}, {Ascii}",
                     character, ConvertUtils.ToChar(character));
             }
-            if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)
-                && stdOut.CanWrite) {
-                if (stdOut is ConsoleDevice consoleDeviceBefore) {
-                    consoleDeviceBefore.DirectOutput = true;
+            VirtualFileBase? stdout = _dosFileManager.Stdout;
+            if (stdout != null) {
+                ConsoleDevice? console = stdout as ConsoleDevice;
+                if (console != null) {
+                    console.DirectOutput = true;
                 }
-                stdOut.Write(character);
-                if (stdOut is ConsoleDevice consoleDeviceAfter) {
-                    consoleDeviceAfter.DirectOutput = false;
+                stdout.WriteByte(character);
+                if (console != null) {
+                    console.DirectOutput = false;
                 }
                 State.AL = character;
             } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
                 LoggerService.Warning("DOS INT21H DirectConsoleIo: Cannot write to standard output device.");
             }
-
         }
     }
 
@@ -744,27 +907,35 @@ public class DosInt21Handler : InterruptHandler {
     /// Writes the character from the DL register to the standard output device. <br/>
     /// </summary>
     /// <returns>
-    /// The last character output in the AL register, despite the docs saying that nothing is returned. <br/>
+    /// AL = DL (the character being written), as per FreeDOS. <br/>
     /// </returns>
     /// <remarks>
-    /// TODO: Add check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens.
+    /// FreeDOS equivalent: lr.AL = lr.DL; write_char_stdout(lr.AL); <br/>
+    /// Checks for Ctrl-C/Ctrl-Break in STDIN before writing, like FreeDOS check_handle_break.
     /// </remarks>
     public void DisplayOutput() {
+        if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
+            return;
+        }
         byte characterByte = State.DL;
-        string character = _dosStringDecoder.ConvertSingleDosChar(characterByte);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            string character = _dosStringDecoder.ConvertSingleDosChar(characterByte);
             LoggerService.Verbose("PRINT CHR: {CharacterByte} ({Character})",
                 ConvertUtils.ToHex8(characterByte), character);
         }
-        if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut) &&
-            stdOut.CanWrite) {
-            // Write to the standard output device
-            stdOut.Write(characterByte);
-        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning("DOS INT21H DisplayOutput: Cannot write to standard output device.");
+        State.AL = characterByte;
+        WriteCharToStdout(characterByte);
+    }
+
+    /// <summary>
+    /// Writes one character to the standard output handle. <br/>
+    /// FreeDOS equivalent of write_char_stdout: routes through the stdout SFT entry.
+    /// </summary>
+    private void WriteCharToStdout(byte character) {
+        VirtualFileBase? stdout = _dosFileManager.Stdout;
+        if (stdout != null && stdout.CanWrite) {
+            stdout.WriteByte(character);
         }
-        State.AL = _lastDisplayOutputCharacter;
-        _lastDisplayOutputCharacter = characterByte;
     }
 
     /// <summary>
@@ -1107,6 +1278,22 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Peeks the keyboard buffer for a pending Ctrl-C (ASCII 0x03) or Ctrl-Break (AX=0).
+    /// If found, flushes the buffer and terminates the current process via
+    /// <see cref="DosTerminationType.CtrlC"/>.
+    /// </summary>
+    /// <returns><c>true</c> if Ctrl-C/Ctrl-Break was detected and the process was terminated; otherwise <c>false</c>.</returns>
+    private bool CheckCtrlCOrCtrlBreakInKeyboardBuffer() {
+        if (_keyboardInt16Handler.TryGetPendingKeyCode(out ushort? keyCode) &&
+            ((keyCode.Value & 0xFF) == 0x03 || keyCode.Value == 0x0000)) {
+            _keyboardInt16Handler.FlushKeyboardBuffer();
+            _dosProcessManager.TerminateProcess(0xFF, DosTerminationType.CtrlC);
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Gets or sets the Ctrl-C flag. AL: 0 = get, 1 or 2 = set it from DL.
     /// </summary>
     /// <returns>
@@ -1348,6 +1535,9 @@ public class DosInt21Handler : InterruptHandler {
     /// Prints a dollar terminated string pointed by DS:DX to the standard output.
     /// </summary>
     public void PrintString() {
+        if (CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
+            return;
+        }
         ushort segment = State.DS;
         ushort offset = State.DX;
         string str = _dosStringDecoder.GetDosString(segment, offset, '$');
@@ -1355,10 +1545,10 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("PRINT STRING: {String}", str);
         }
-        if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)
-            && stdOut.CanWrite) {
-            // Write to the standard output device
-            stdOut.Write(Encoding.ASCII.GetBytes(str));
+        VirtualFileBase? stdout = _dosFileManager.Stdout;
+        if (stdout != null) {
+            byte[] bytes = Encoding.ASCII.GetBytes(str);
+            stdout.Write(bytes, 0, bytes.Length);
         } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
             LoggerService.Warning("DOS INT21H PrintString: Cannot write to standard output device.");
         }
@@ -1532,16 +1722,19 @@ public class DosInt21Handler : InterruptHandler {
     /// The number of potentially valid drive letters in AL.
     /// </returns>
     public void SelectDefaultDrive() {
-        if (_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAtOrDefault(State.DL).Key, out VirtualDrive? mountedDrive)) {
-            _dosDriveManager.CurrentDrive = mountedDrive;
-        }
-        if (State.DL > DosDriveManager.MaxDriveCount && LoggerService.IsEnabled(LogEventLevel.Error)) {
-            LoggerService.Error("DOS INT21H: Could not set default drive! Unrecognized index in State.DL: {DriveIndex}", State.DL);
+        byte driveIndex = State.DL;
+        if (driveIndex < DosDriveManager.MaxDriveCount) {
+            char driveLetter = (char)('A' + driveIndex);
+            if (_dosDriveManager.TryGetValue(driveLetter, out VirtualDrive? mountedDrive)) {
+                _dosDriveManager.CurrentDrive = mountedDrive;
+            }
+        } else if (LoggerService.IsEnabled(LogEventLevel.Error)) {
+            LoggerService.Error("DOS INT21H: Could not set default drive! Unrecognized index in State.DL: {DriveIndex}", driveIndex);
         }
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("SELECT DEFAULT DRIVE {@DefaultDrive}", _dosDriveManager.CurrentDrive);
         }
-        State.AL = _dosDriveManager.NumberOfPotentiallyValidDriveLetters;
+        State.AL = DosDriveManager.MaxDriveCount;
     }
 
     /// <summary>
@@ -1671,17 +1864,23 @@ public class DosInt21Handler : InterruptHandler {
                         LoggerService.Verbose("GET FILE ATTRIBUTE {FileName}", fileName);
                     }
                     FileAttributes attributes = File.GetAttributes(fileName);
-                    // let's always return the file is read / write
-                    bool canWrite = (attributes & FileAttributes.ReadOnly) != FileAttributes.ReadOnly;
-                    State.CX = canWrite ? (byte)0 : (byte)1;
+                    // .NET FileAttributes bits match DOS FAT bits for ReadOnly(0x01), Hidden(0x02),
+                    // System(0x04), Directory(0x10), Archive(0x20). Mask to valid DOS range.
+                    State.CX = (ushort)((int)attributes & 0x37);
                     break;
                 }
             case 1: {
-                    ushort attribute = State.CX;
+                    ushort dosAttribute = State.CX;
                     if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                         LoggerService.Verbose("SET FILE ATTRIBUTE {FileName}, {Attribute}",
-                            fileName, attribute);
+                            fileName, dosAttribute);
                     }
+                    // Preserve Directory bit from current attributes (cannot be changed via this call).
+                    FileAttributes current = File.GetAttributes(fileName);
+                    FileAttributes preserved = current & FileAttributes.Directory;
+                    // Map DOS bits to .NET FileAttributes (same numeric values for the shared flags).
+                    FileAttributes newAttrs = (FileAttributes)(dosAttribute & 0x27) | preserved;
+                    File.SetAttributes(fileName, newAttrs);
                     break;
                 }
             default: throw new UnhandledOperationException(State, "getSetFileAttribute operation unhandled: " + op);

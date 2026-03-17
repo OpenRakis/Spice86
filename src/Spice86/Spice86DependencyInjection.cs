@@ -28,9 +28,9 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
@@ -54,6 +54,7 @@ using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
+using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels;
@@ -70,6 +71,12 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly LoggerService _loggerService;
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
+
+    /// <summary>
+    /// Gets the headless GUI instance when running in headless mode, or <c>null</c> in UI mode.
+    /// </summary>
+    public HeadlessGui? HeadlessGui => _gui as HeadlessGui;
+
     private readonly IGuiVideoPresentation? _gui;
     private readonly IEmulatedClock _emulatedClock;
     private readonly Spice86HttpApiServer? _httpApiServer;
@@ -502,7 +509,7 @@ public class Spice86DependencyInjection : IDisposable {
         vgaCard.SubscribeToEvents();
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("VGA card created...");
+            loggerService.Information("VGA renderer connected to GUI...");
         }
 
         Intel8042Controller intel8042Controller = new(
@@ -618,7 +625,7 @@ public class Spice86DependencyInjection : IDisposable {
             systemBiosInt15Handler, systemClockInt1AHandler, realTimeClock,
             pitTimer,
             timerInt8Handler,
-            vgaCard, videoState, vgaIoPortHandler,
+            videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
             dmaSystem, opl, mixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
@@ -750,6 +757,43 @@ public class Spice86DependencyInjection : IDisposable {
             }
             mainWindow.DataContext = mainWindowViewModel;
         }
+    }
+
+    private static void SubscribeGuiToRenderer(IGuiVideoPresentation gui, IVgaRenderer renderer,
+        ILoggerService loggerService) {
+        gui.SetResolution(renderer.Width, renderer.Height);
+        gui.RenderScreen += (_, e) => RenderFrame(gui, renderer, loggerService, e);
+    }
+
+    private static bool EnsureGuiResolutionMatchesRenderer(IGuiVideoPresentation gui,
+        IVgaRenderer renderer) {
+        if (renderer.Width == gui.Width && renderer.Height == gui.Height) {
+            return true;
+        }
+
+        gui.SetResolution(renderer.Width, renderer.Height);
+        while (renderer.Width != gui.Width || renderer.Height != gui.Height) {
+        }
+
+        return false;
+    }
+
+    private static unsafe void RenderFrame(IGuiVideoPresentation gui, IVgaRenderer renderer,
+        ILoggerService loggerService, UIRenderEventArgs uiRenderEventArgs) {
+        if (!EnsureGuiResolutionMatchesRenderer(gui, renderer)) {
+            return;
+        }
+
+        var buffer = new Span<uint>((void*)uiRenderEventArgs.Address, uiRenderEventArgs.Length);
+        int requiredBufferSize = renderer.Width * renderer.Height;
+        if (buffer.Length < requiredBufferSize && loggerService.IsEnabled(LogEventLevel.Warning)) {
+            loggerService.Warning(
+                "Buffer size {BufferLength} is too small for the required buffer size {RequiredBufferSize} for render resolution {RenderWidth} x {RenderHeight}",
+                buffer.Length, requiredBufferSize, renderer.Width, renderer.Height);
+            return;
+        }
+
+        renderer.Render(buffer);
     }
 
     private readonly byte[] _defaultIrqs = [3, 4, 5, 7, 10, 11];

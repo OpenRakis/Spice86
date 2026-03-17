@@ -43,6 +43,19 @@ public class TsrIntegrationTests {
         RunTsrTest("tsr_interrupt_vector.com", expectedExitCode: 0);
     }
 
+    [Fact]
+    public void TerminateAndStayResident_BatchContinuesAfterTsr_NextCommandExecutes() {
+        BatchTestHelpers.WithTempDirectory("tsr_batch", tempDir => {
+            // Arrange: copy a TSR COM from resources and create a video writer COM
+            string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosTsrTests");
+            File.Copy(Path.Join(resourceDir, "tsr_basic.com"), Path.Join(tempDir, "TSR_BASIC.COM"));
+            BatchTestHelpers.CreateBinaryFile(tempDir, "WRITER.COM", BatchTestHelpers.BuildVideoWriterCom('Z', 0));
+
+            // Act & Assert: batch should continue to WRITER.COM after TSR terminates
+            BatchTestHelpers.RunAndAssertVideoCellFromScript(tempDir, "TSR_BASIC.COM\r\nWRITER.COM\r\n", 'Z');
+        });
+    }
+
     private static void RunTsrTest(string testFileName, byte expectedExitCode) {
         string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosTsrTests");
         string tempDir = Path.Join(Path.GetTempPath(), $"dos_tsr_{Guid.NewGuid()}");

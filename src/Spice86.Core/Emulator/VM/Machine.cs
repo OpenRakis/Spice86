@@ -162,11 +162,6 @@ public sealed class Machine : IDisposable {
     public TimerInt8Handler TimerInt8Handler { get; }
 
     /// <summary>
-    /// The VGA Card.
-    /// </summary>
-    public VgaCard VgaCard { get; }
-
-    /// <summary>
     /// The VGA Registers
     /// </summary>
     public IVideoState VgaRegisters { get; set; }
@@ -260,7 +255,6 @@ public sealed class Machine : IDisposable {
         RealTimeClock realTimeClock,
         PitTimer timer,
         TimerInt8Handler timerInt8Handler,
-        VgaCard vgaCard,
         IVideoState vgaRegisters,
         IIOPortHandler vgaIoPortHandler,
         IVgaRenderer vgaRenderer,
@@ -299,7 +293,6 @@ public sealed class Machine : IDisposable {
         RealTimeClock = realTimeClock;
         Timer = timer;
         TimerInt8Handler = timerInt8Handler;
-        VgaCard = vgaCard;
         VgaRegisters = vgaRegisters;
         VgaIoPortHandler = vgaIoPortHandler;
         VgaRenderer = vgaRenderer;
