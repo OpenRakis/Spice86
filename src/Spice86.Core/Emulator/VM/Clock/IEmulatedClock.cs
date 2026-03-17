@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents a source of time within the emulation, abstracting away the underlying mechanism.
 /// </summary>
-public interface IEmulatedClock {
+public interface IEmulatedClock : IDisposable {
     /// <summary>
     /// Gets the elapsed time in milliseconds since the clock started.
     /// </summary>
@@ -19,6 +19,13 @@ public interface IEmulatedClock {
     /// Gets the current date and time, calculated as StartTime + TimeSpan.FromMilliseconds(ElapsedTimeMs).
     /// </summary>
     DateTime CurrentDateTime { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the clock is currently paused or has been disposed.
+    /// Once <see cref="IDisposable.Dispose"/> is called this returns <see langword="true"/> permanently,
+    /// even if <see cref="OnResume"/> is subsequently called.
+    /// </summary>
+    bool IsPaused { get; }
 
     /// <summary>
     /// Called when the emulator is paused.
