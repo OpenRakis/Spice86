@@ -137,7 +137,7 @@ public sealed class ProgramExecutor : IDisposable {
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
         string upperCaseExtension = Path.GetExtension(executableFileName.ToUpperInvariant());
-        bool isDosProgram = upperCaseExtension is ".EXE" or ".COM";
+        bool isDosProgram = upperCaseExtension is ".EXE" or ".COM" or ".BAT";
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Preparing initial load for {FileName} (DOS program: {IsDosProgram})", executableFileName, isDosProgram);

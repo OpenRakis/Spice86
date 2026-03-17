@@ -18,6 +18,7 @@ internal class DosPathResolver {
     private const int DosMfnlength = 8;
     private const int DosExtlength = 3;
     private const int LfnNamelength = 255; // for the sanity check only
+    private static readonly string[] ExecutableExtensionLookupOrder = [".BAT", ".COM", ".EXE"];
 
     private readonly DosDriveManager _dosDriveManager;
 
@@ -105,7 +106,7 @@ internal class DosPathResolver {
     }
 
     private string GetFullDosPathIncludingRoot(string absoluteOrRelativeDosPath) {
-        if(string.IsNullOrWhiteSpace(absoluteOrRelativeDosPath)) {
+        if (string.IsNullOrWhiteSpace(absoluteOrRelativeDosPath)) {
             return absoluteOrRelativeDosPath;
         }
         StringBuilder normalizedDosPath = new();
@@ -115,10 +116,9 @@ internal class DosPathResolver {
         string driveRoot = $"{GetDosDrivePathFromDosPath(backslashedDosPath)}{DirectorySeparatorChar}";
         normalizedDosPath.Append(driveRoot);
 
-        if(backslashedDosPath.StartsWith(driveRoot)) {
+        if (backslashedDosPath.StartsWith(driveRoot)) {
             backslashedDosPath = backslashedDosPath[3..];
-        }
-        else if (backslashedDosPath.StartsWith(driveRoot[..2])) {
+        } else if (backslashedDosPath.StartsWith(driveRoot[..2])) {
             backslashedDosPath = backslashedDosPath[2..];
         }
 
@@ -128,17 +128,16 @@ internal class DosPathResolver {
         bool appendedFolder = false;
         bool mustPrependDirectorySeparator = false;
         foreach (string pathElement in pathElements) {
-            if(pathElement == ".." && appendedFolder) {
+            if (pathElement == ".." && appendedFolder) {
                 moveNext = true;
-            }
-            else {
-                if(moveNext) {
+            } else {
+                if (moveNext) {
                     moveNext = false;
                     continue;
                 }
-                if(pathElement != "." && pathElement != ".." && !pathElement.Contains(VolumeSeparatorChar)) {
+                if (pathElement != "." && pathElement != ".." && !pathElement.Contains(VolumeSeparatorChar)) {
                     appendedFolder = true;
-                    if(mustPrependDirectorySeparator) {
+                    if (mustPrependDirectorySeparator) {
                         normalizedDosPath.Append(DirectorySeparatorChar);
                     }
                     normalizedDosPath.Append(pathElement.ToUpperInvariant());
@@ -157,7 +156,7 @@ internal class DosPathResolver {
     /// <returns>A string containing the full path to the parent directory in the host file system, or <c>null</c> if nothing was found.</returns>
     public string? GetFullHostParentPathFromDosOrDefault(string dosPath) {
         string? parentPath = Path.GetDirectoryName(dosPath);
-        if(string.IsNullOrWhiteSpace(parentPath)) {
+        if (string.IsNullOrWhiteSpace(parentPath)) {
             parentPath = GetFullCurrentDosPathOnDrive(_dosDriveManager.CurrentDrive);
         }
         string? fullHostPath = GetFullHostPathFromDosOrDefault(parentPath);
@@ -219,7 +218,32 @@ internal class DosPathResolver {
         };
 
         string? firstMatch = FindFilesUsingWildCmp(resolvedHostDir, lastSegment, options).FirstOrDefault();
-        return string.IsNullOrWhiteSpace(firstMatch) ? null : ConvertUtils.ToSlashPath(firstMatch);
+        if (!string.IsNullOrWhiteSpace(firstMatch)) {
+            return ConvertUtils.ToSlashPath(firstMatch);
+        }
+
+        string? extensionProbeMatch = TryResolveExecutableWithoutExtension(resolvedHostDir, lastSegment, options);
+        return string.IsNullOrWhiteSpace(extensionProbeMatch) ? null : ConvertUtils.ToSlashPath(extensionProbeMatch);
+    }
+
+    private string? TryResolveExecutableWithoutExtension(string resolvedHostDir, string lastSegment, EnumerationOptions options) {
+        if (string.IsNullOrWhiteSpace(lastSegment)) {
+            return null;
+        }
+
+        if (lastSegment.Contains('*') || lastSegment.Contains('?') || Path.HasExtension(lastSegment)) {
+            return null;
+        }
+
+        foreach (string extension in ExecutableExtensionLookupOrder) {
+            string candidate = $"{lastSegment}{extension}";
+            string? match = FindFilesUsingWildCmp(resolvedHostDir, candidate, options).FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(match)) {
+                return match;
+            }
+        }
+
+        return null;
     }
 
     private static string? ResolveCaseInsensitiveDirectory(string hostPrefix, string dirPart) {
@@ -247,7 +271,7 @@ internal class DosPathResolver {
 
         return current;
     }
-    
+
     internal static string GetShortFileName(string hostFileName, string hostDir) {
         string fileName = Path.GetFileNameWithoutExtension(hostFileName);
         string extension = Path.GetExtension(hostFileName);
@@ -283,7 +307,7 @@ internal class DosPathResolver {
         }
         return shortName.ToString().ToUpperInvariant();
     }
-    
+
     /// <summary>
     /// Prefixes the given DOS path by either the mapped drive folder or the current host folder depending on whether there is a root in the path.<br/>
     /// Does not convert to a case sensitive path. <br/>
@@ -379,7 +403,7 @@ internal class DosPathResolver {
                 return false;
             }
         }
-        
+
         // ---- EXT compare (early '*' accept) ----
         return CompareSegment(fileExt, wildExt, DosExtlength) switch {
             true => true,

@@ -42,6 +42,7 @@ public class DosProcessManager {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly ILoggerService _loggerService;
+    private readonly DosBatchExecutionEngine _batchExecutionEngine;
 
     private readonly Stack<ResidentBlockInfo> _pendingResidentBlocks = new();
 
@@ -113,6 +114,12 @@ public class DosProcessManager {
         _driveManager = dosDriveManager;
         _state = state;
         _loggerService = loggerService;
+        _batchExecutionEngine = new DosBatchExecutionEngine(_fileManager,
+            TryGetEnvironmentVariable,
+            GetEnvironmentVariablesSnapshot,
+            TrySetEnvironmentVariable,
+            _loggerService,
+            _driveManager);
         _environmentVariables = new();
         _interruptVectorTable = new(memory);
 
@@ -141,6 +148,72 @@ public class DosProcessManager {
     /// the termination type. See <see cref="DosTerminationType"/> for termination types.
     /// </remarks>
     public ushort LastChildReturnCode { get; set; }
+
+    internal DosBatchExecutionEngine BatchExecutionEngine => _batchExecutionEngine;
+
+    internal string? TryGetEnvironmentVariable(string variableName) {
+        if (string.IsNullOrWhiteSpace(variableName)) {
+            return null;
+        }
+
+        List<KeyValuePair<string, string>> entries = ReadEnvironmentEntries(GetCurrentEnvironmentSegment());
+        for (int i = 0; i < entries.Count; i++) {
+            KeyValuePair<string, string> entry = entries[i];
+            if (string.Equals(entry.Key, variableName, StringComparison.OrdinalIgnoreCase)) {
+                return entry.Value;
+            }
+        }
+
+        return null;
+    }
+
+    internal IReadOnlyList<KeyValuePair<string, string>> GetEnvironmentVariablesSnapshot() {
+        List<KeyValuePair<string, string>> entries = ReadEnvironmentEntries(GetCurrentEnvironmentSegment());
+        return entries;
+    }
+
+    internal bool TrySetEnvironmentVariable(string variableName, string value) {
+        if (string.IsNullOrWhiteSpace(variableName)) {
+            return false;
+        }
+
+        string normalizedName = variableName.Trim();
+        if (normalizedName.Length == 0 || normalizedName.Contains('=')) {
+            return false;
+        }
+
+        ushort environmentSegment = GetCurrentEnvironmentSegment();
+        List<KeyValuePair<string, string>> entries = ReadEnvironmentEntries(environmentSegment);
+
+        bool found = false;
+        for (int i = entries.Count - 1; i >= 0; i--) {
+            if (string.Equals(entries[i].Key, normalizedName, StringComparison.OrdinalIgnoreCase)) {
+                entries.RemoveAt(i);
+                found = true;
+            }
+        }
+
+        if (value.Length > 0) {
+            entries.Add(new KeyValuePair<string, string>(normalizedName, value));
+        }
+
+        string programPath = ReadEnvironmentProgramPath(environmentSegment);
+        if (!TryWriteEnvironmentEntries(environmentSegment, entries, programPath)) {
+            return false;
+        }
+
+        if (_sda.CurrentProgramSegmentPrefix == CommandComSegment) {
+            if (value.Length == 0) {
+                if (found) {
+                    _environmentVariables.Remove(normalizedName);
+                }
+            } else {
+                _environmentVariables[normalizedName] = value;
+            }
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Creates the root COMMAND.COM PSP that acts as the parent for all programs.
@@ -553,10 +626,38 @@ public class DosProcessManager {
         _state.ES = parentPspSegment;
 
         if (parentIsRootCommandCom) {
+            if (terminationType != DosTerminationType.TSR) {
+                _batchExecutionEngine.RestoreStandardHandlesAfterLaunch();
+            }
+
+            if (terminationType != DosTerminationType.TSR && TryResumeBatchExecutionFromRoot()) {
+                return;
+            }
+
             // Halt emulation; COMMAND.COM has no execution context.
             _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
             _state.IsRunning = false;
         }
+    }
+
+    private bool TryResumeBatchExecutionFromRoot() {
+        while (_batchExecutionEngine.TryContinue(LastChildReturnCode, out DosBatchExecutionEngine.LaunchRequest launchRequest)) {
+            if (!_batchExecutionEngine.TryApplyRedirectionForLaunch(launchRequest)) {
+                LastChildReturnCode = (ushort)(((ushort)DosTerminationType.CriticalError << 8) | (byte)DosErrorCode.PathNotFound);
+                continue;
+            }
+
+            DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
+            DosExecResult result = LoadInitialProgram(launchRequest.ProgramName, paramBlock, launchRequest.CommandTail, paramBlock.EnvironmentSegment);
+            if (result.Success) {
+                return true;
+            }
+
+            _batchExecutionEngine.RestoreStandardHandlesAfterLaunch();
+            LastChildReturnCode = (ushort)(((ushort)DosTerminationType.CriticalError << 8) | (byte)result.ErrorCode);
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -927,6 +1028,160 @@ public class DosProcessManager {
         // This is the correct DOS format
         ms.WriteByte(1); // Low byte of WORD
         ms.WriteByte(0);   // High byte of WORD
+    }
+
+    private ushort GetCurrentEnvironmentSegment() {
+        DosProgramSegmentPrefix currentPsp = GetCurrentPsp();
+        return currentPsp.EnvironmentTableSegment;
+    }
+
+    private List<KeyValuePair<string, string>> ReadEnvironmentEntries(ushort environmentSegment) {
+        List<KeyValuePair<string, string>> entries = new();
+        if (environmentSegment == 0) {
+            return entries;
+        }
+
+        uint baseAddress = MemoryUtils.ToPhysicalAddress(environmentSegment, 0);
+        int capacity = GetEnvironmentCapacityBytes(environmentSegment);
+        int index = 0;
+        while (index + 1 < capacity) {
+            byte current = _memory.UInt8[baseAddress + (uint)index];
+            if (current == 0) {
+                byte next = _memory.UInt8[baseAddress + (uint)(index + 1)];
+                if (next == 0) {
+                    break;
+                }
+
+                index++;
+                continue;
+            }
+
+            int end = index;
+            while (end < capacity && _memory.UInt8[baseAddress + (uint)end] != 0) {
+                end++;
+            }
+
+            if (end >= capacity) {
+                break;
+            }
+
+            byte[] data = _memory.ReadRam((uint)(end - index), baseAddress + (uint)index);
+            string entry = Encoding.ASCII.GetString(data);
+            int separator = entry.IndexOf('=');
+            if (separator > 0) {
+                string key = entry[..separator];
+                string value = entry[(separator + 1)..];
+
+                bool replaced = false;
+                for (int i = 0; i < entries.Count; i++) {
+                    if (string.Equals(entries[i].Key, key, StringComparison.OrdinalIgnoreCase)) {
+                        entries[i] = new KeyValuePair<string, string>(key, value);
+                        replaced = true;
+                        break;
+                    }
+                }
+
+                if (!replaced) {
+                    entries.Add(new KeyValuePair<string, string>(key, value));
+                }
+            }
+
+            index = end + 1;
+        }
+
+        return entries;
+    }
+
+    private string ReadEnvironmentProgramPath(ushort environmentSegment) {
+        if (environmentSegment == 0) {
+            return string.Empty;
+        }
+
+        uint baseAddress = MemoryUtils.ToPhysicalAddress(environmentSegment, 0);
+        int capacity = GetEnvironmentCapacityBytes(environmentSegment);
+
+        int index = 0;
+        while (index + 1 < capacity) {
+            byte current = _memory.UInt8[baseAddress + (uint)index];
+            byte next = _memory.UInt8[baseAddress + (uint)(index + 1)];
+            if (current == 0 && next == 0) {
+                index += 2;
+                break;
+            }
+
+            index++;
+        }
+
+        if (index + 2 > capacity) {
+            return string.Empty;
+        }
+
+        index += 2;
+        if (index >= capacity) {
+            return string.Empty;
+        }
+
+        int start = index;
+        while (index < capacity && _memory.UInt8[baseAddress + (uint)index] != 0) {
+            index++;
+        }
+
+        if (index <= start || index > capacity) {
+            return string.Empty;
+        }
+
+        byte[] bytes = _memory.ReadRam((uint)(index - start), baseAddress + (uint)start);
+        return Encoding.ASCII.GetString(bytes);
+    }
+
+    private bool TryWriteEnvironmentEntries(ushort environmentSegment,
+        IReadOnlyList<KeyValuePair<string, string>> entries,
+        string programPath) {
+        if (environmentSegment == 0) {
+            return false;
+        }
+
+        using MemoryStream memoryStream = new();
+        for (int i = 0; i < entries.Count; i++) {
+            KeyValuePair<string, string> entry = entries[i];
+            string line = $"{entry.Key}={entry.Value}";
+            byte[] lineBytes = Encoding.ASCII.GetBytes(line);
+            memoryStream.Write(lineBytes, 0, lineBytes.Length);
+            memoryStream.WriteByte(0);
+        }
+
+        memoryStream.WriteByte(0);
+        WriteAdditionalStringCountWord(memoryStream);
+        if (!string.IsNullOrWhiteSpace(programPath)) {
+            byte[] pathBytes = Encoding.ASCII.GetBytes(programPath);
+            memoryStream.Write(pathBytes, 0, pathBytes.Length);
+        }
+        memoryStream.WriteByte(0);
+
+        int capacity = GetEnvironmentCapacityBytes(environmentSegment);
+        byte[] data = memoryStream.ToArray();
+        if (data.Length > capacity) {
+            return false;
+        }
+
+        uint baseAddress = MemoryUtils.ToPhysicalAddress(environmentSegment, 0);
+        _memory.LoadData(baseAddress, new byte[capacity]);
+        _memory.LoadData(baseAddress, data, data.Length);
+        return true;
+    }
+
+    private int GetEnvironmentCapacityBytes(ushort environmentSegment) {
+        if (environmentSegment == CommandComSegment + RootEnvironmentParagraphOffset) {
+            return (DosProgramSegmentPrefix.PspSizeInParagraphs - RootEnvironmentParagraphOffset) * ParagraphSizeBytes;
+        }
+
+        ushort mcbSegment = (ushort)(environmentSegment - 1);
+        DosMemoryControlBlock memoryControlBlock = new(_memory, MemoryUtils.ToPhysicalAddress(mcbSegment, 0));
+        if (memoryControlBlock.IsValid && memoryControlBlock.DataBlockSegment == environmentSegment) {
+            return memoryControlBlock.Size * ParagraphSizeBytes;
+        }
+
+        return MaximumEnvironmentScanLength;
     }
 
     private byte[] CreateEnvironmentBlockFromParent(ushort environmentSegment, string programPath) {

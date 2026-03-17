@@ -234,6 +234,8 @@ public sealed class Dos {
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider,
             stack, state, _loggerService);
 
+        InitializeBootstrapZDrive();
+
         if (configuration.InitializeDOS is false) {
             return;
         }
@@ -361,5 +363,14 @@ public sealed class Dos {
             CurrentClockDevice = (CharacterDevice)device;
         }
         Devices.Add(device);
+    }
+
+    private void InitializeBootstrapZDrive() {
+        MemoryDrive zDrive = new MemoryDrive {
+            DriveLetter = 'Z',
+            Label = "MEMORY",
+            IsReadOnlyMedium = true,
+        };
+        DosDriveManager.MountMemoryDrive(zDrive);
     }
 }
