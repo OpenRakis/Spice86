@@ -65,6 +65,7 @@ public class Spice86DependencyInjection : IDisposable {
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
     private readonly IGuiVideoPresentation? _gui;
+    private readonly IEmulatedClock _emulatedClock;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -172,15 +173,14 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS data area created...");
         }
 
-        IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null
+        _emulatedClock = configuration.InstructionsPerSecond != null
             ? new CyclesClock(state, configuration.InstructionsPerSecond.Value)
             : new EmulatedClock();
-
         // Register clock and limiter to pause/resume events
-        pauseHandler.Pausing += () => emulatedClock.OnPause();
-        pauseHandler.Resumed += () => emulatedClock.OnResume();
+        pauseHandler.Pausing += () => _emulatedClock.OnPause();
+        pauseHandler.Resumed += () => _emulatedClock.OnResume();
 
-        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
+        EmulationLoopScheduler emulationLoopScheduler = new(_emulatedClock, loggerService);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
 
@@ -196,7 +196,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         RealTimeClock realTimeClock = new(state, ioPortDispatcher, dualPic,
-            emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort, loggerService);
+            emulationLoopScheduler, _emulatedClock, configuration.FailOnUnhandledPort, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("RTC/CMOS created...");
@@ -279,7 +279,7 @@ public class Spice86DependencyInjection : IDisposable {
         VideoState videoState = new();
         VgaIoPortHandler vgaIoPortHandler = new(state, ioPortDispatcher,
             loggerService, videoState, configuration.FailOnUnhandledPort);
-        Renderer vgaRenderer = new(memory, videoState, loggerService);
+        Renderer vgaRenderer = new(memory, videoState, _emulatedClock, loggerService);
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory,
             interruptVectorTable, ioPortDispatcher,
@@ -340,9 +340,9 @@ public class Spice86DependencyInjection : IDisposable {
             ioPortDispatcher, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher,
-            loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
+            loggerService, emulationLoopScheduler, _emulatedClock, configuration.FailOnUnhandledPort);
 
-        PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock,
+        PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, _emulatedClock,
             loggerService, configuration.FailOnUnhandledPort);
 
         pcSpeaker.AttachPitControl(pitTimer);
@@ -358,12 +358,12 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.SbBase);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
 
-        Opl3Fm opl = new(oplConfig, mixer, state, emulatedClock, ioPortDispatcher,
+        Opl3Fm opl = new(oplConfig, mixer, state, _emulatedClock, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
         SoundBlaster soundBlaster = new(ioPortDispatcher,
             state, dmaSystem, dualPic, mixer, opl, loggerService,
-            emulationLoopScheduler, emulatedClock,
+            emulationLoopScheduler, _emulatedClock,
             soundBlasterHardwareConfig);
         GravisUltraSound gravisUltraSound = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
@@ -746,6 +746,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         _machineDisposedAfterRun = true;
+        _emulatedClock.Dispose();
         Machine.Dispose();
     }
 }

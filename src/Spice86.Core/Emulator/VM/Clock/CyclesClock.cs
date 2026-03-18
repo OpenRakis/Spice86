@@ -2,7 +2,10 @@
 
 using Spice86.Core.Emulator.CPU;
 
-public class CyclesClock : IEmulatedClock {
+/// <summary>
+/// A clock based on CPU cycle count, advancing in proportion to a configured cycles-per-second rate.
+/// </summary>
+public class CyclesClock : ClockBase {
     private readonly State _cpuState;
 
     public CyclesClock(State cpuState, long cyclesPerSecond, DateTime? startTime = null) {
@@ -11,19 +14,9 @@ public class CyclesClock : IEmulatedClock {
         StartTime = startTime ?? DateTime.UtcNow;
     }
 
+    /// <summary>Gets or sets the number of CPU cycles per second used to calculate elapsed time.</summary>
     public long CyclesPerSecond { get; set; }
 
-    public double ElapsedTimeMs => (double)_cpuState.Cycles * 1000 / CyclesPerSecond;
-
-    public DateTime StartTime { get; set; }
-
-    public DateTime CurrentDateTime => StartTime.AddMilliseconds(ElapsedTimeMs);
-
-    public void OnPause() {
-        // No-op: when CPU is paused, cycles don't advance, so time naturally stops
-    }
-
-    public void OnResume() {
-        // No-op: when CPU is paused, cycles don't advance, so time naturally stops
-    }
+    /// <inheritdoc/>
+    public override double ElapsedTimeMs => (double)_cpuState.Cycles * 1000 / CyclesPerSecond;
 }
