@@ -10,7 +10,7 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -46,7 +46,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         SoftwareMixer mixer,
         Opl3Fm opl,
         ILoggerService loggerService,
-        EmulationLoopScheduler scheduler,
+        DeviceScheduler scheduler,
         IEmulatedClock clock,
         SoundBlasterHardwareConfig soundBlasterHardwareConfig)
         : base(state, false, loggerService) {

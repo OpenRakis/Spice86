@@ -30,7 +30,7 @@ using Timer = System.Timers.Timer;
 public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGuiVideoPresentation,
     IGuiMouseEvents, IGuiKeyboardEvents, IDisposable {
     private readonly SharedMouseData _sharedMouseData;
-    private const double ScreenRefreshHz = 60;
+    private const double ScreenRefreshHz = 75;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IPauseHandler _pauseHandler;

@@ -6,23 +6,23 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
 
-public sealed class EmulationLoopSchedulerTests {
+public sealed class DeviceSchedulerTests {
     private readonly ILoggerService _logger;
     private readonly State _state;
     private readonly CyclesClock _cyclesClock;
-    private readonly EmulationLoopScheduler _scheduler;
+    private readonly DeviceScheduler _scheduler;
 
-    public EmulationLoopSchedulerTests() {
+    public DeviceSchedulerTests() {
         _logger = Substitute.For<ILoggerService>();
         _state = new State(CpuModel.INTEL_8086);
         // 1000 cycles = 1 second for simplicity in tests
         _cyclesClock = new CyclesClock(_state, 1000);
-        _scheduler = new EmulationLoopScheduler(_cyclesClock, _logger);
+        _scheduler = new DeviceScheduler(_cyclesClock, _logger, "Emulation loop");
     }
 
     [Fact]
@@ -157,7 +157,7 @@ public sealed class EmulationLoopSchedulerTests {
 
     [Fact]
     public void AddEvent_WhenQueueFull_ShouldIgnoreEventButExecuteExisting() {
-        int maxQueueSize = 8192; // Assuming this is the constant in EmulationLoopScheduler
+        int maxQueueSize = 8192; // Assuming this is the constant in DeviceScheduler
         int eventsCount = maxQueueSize + 10;
         var executedEvents = new List<int>();
 

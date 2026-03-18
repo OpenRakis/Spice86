@@ -27,7 +27,7 @@ using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Interfaces;
 using Spice86.Tests.Utility;
 

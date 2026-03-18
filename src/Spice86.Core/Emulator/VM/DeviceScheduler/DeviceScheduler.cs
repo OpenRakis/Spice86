@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+namespace Spice86.Core.Emulator.VM.DeviceScheduler;
 
 using Serilog.Events;
 
@@ -18,7 +18,7 @@ public delegate void EventHandler(uint value);
 /// <summary>
 ///     Manages deterministic scheduling of emulation events using an emulated clock.
 /// </summary>
-public class EmulationLoopScheduler {
+public class DeviceScheduler {
     public const int MaxQueueSize = 8192;
 
     private readonly IEmulatedClock _clock;
@@ -27,20 +27,26 @@ public class EmulationLoopScheduler {
     private readonly FastPriorityQueue<ScheduledEntry> _queue = new(MaxQueueSize);
     private readonly Stack<ScheduledEntry> _entryPool = new(MaxQueueSize);
     private readonly Dictionary<EventHandler, List<ScheduledEntry>> _activeEventsByHandler = new();
-    private readonly EmulationLoopSchedulerMonitor _monitor;
+    private readonly DeviceSchedulerMonitor _monitor;
 
     private bool _isServicingEvents;
     private double _activeEventScheduledTime;
 
     /// <summary>
-    ///     Initializes a new scheduler.
+    ///     Gets the scheduled time of the next queued event, or <see cref="double.MaxValue"/> if the queue is empty.
+    /// </summary>
+    public double NextEventTime => _queue.Count > 0 ? _queue.First.ScheduledTime : double.MaxValue;
+
+    /// <summary>
+    ///     Initializes a new scheduler with a descriptive instance name.
     /// </summary>
     /// <param name="clock">The emulated clock that provides the master time source.</param>
     /// <param name="logger">Logger used for diagnostic reporting.</param>
-    public EmulationLoopScheduler(IEmulatedClock clock, ILoggerService logger) {
+    /// <param name="instanceName">The name used to identify this scheduler in logs.</param>
+    public DeviceScheduler(IEmulatedClock clock, ILoggerService logger, string instanceName) {
         _clock = clock;
         _logger = logger;
-        _monitor = new EmulationLoopSchedulerMonitor(logger);
+        _monitor = new DeviceSchedulerMonitor(logger, instanceName);
     }
 
     /// <summary>

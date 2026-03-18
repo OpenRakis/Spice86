@@ -3,28 +3,57 @@ namespace Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Logging;
 
 using ClockSelect = Registers.General.MiscellaneousOutput.ClockSelectValue;
 
 /// <inheritdoc cref="IVgaRenderer" />
 public class Renderer : IVgaRenderer {
-    private static readonly object RenderLock = new();
     private readonly VideoMemory _memory;
     private readonly IVideoState _state;
-    private readonly IEmulatedClock _clock;
+    private readonly VgaBlinkState _blinkState;
+
+    private uint[] _frontBuffer = Array.Empty<uint>();
+    private uint[] _backBuffer = Array.Empty<uint>();
+    private uint[] _renderBuffer = Array.Empty<uint>();
+    private int _hasPendingFrame;
+
+    // Per-frame latched state (set in BeginFrame, constant for the frame).
+    private int _frameSkew;
+    private int _frameCharacterClockMask;
+    private MemoryWidth _frameMemoryWidthMode;
+    private bool _frameScanLineBit0ForAddressBit13;
+    private bool _frameScanLineBit0ForAddressBit14;
+    private int _frameVerticalDisplayEnd;
+    private int _frameTotalHeight;
+    private bool _frameActive;
+
+    // Mutable state (advances per scanline via RenderScanline).
+    private int _frameRowMemoryAddressCounter;
+    private int _frameDestinationAddress;
+    private bool _frameVerticalBlanking;
+    private int _frameLineCounter;
+    private int _frameCharRowScanline;
+    private int _frameDoubleScanIndex;
+    private int _frameDestinationAddressLatch;
+
+    // Per-character-row state (re-read from registers at each row boundary).
+    private int _frameHorizontalDisplayEnd;
+    private int _frameTotalWidth;
+    private bool[] _framePlanesEnabled = Array.Empty<bool>();
+    private byte _frameMaximumScanline;
+    private int _frameDrawLinesPerScanLine;
 
     /// <summary>
     ///     Create a new VGA renderer.
     /// </summary>
     /// <param name="memory">The video memory implementation.</param>
     /// <param name="state">The video state implementation.</param>
-    /// <param name="clock">The emulated clock used to schedule rendering timing.</param>
+    /// <param name="blinkState">Shared blink state for text-mode attribute blinking.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Renderer(IMemory memory, IVideoState state, IEmulatedClock clock, LoggerService loggerService) {
+    public Renderer(IMemory memory, IVideoState state, VgaBlinkState blinkState, LoggerService loggerService) {
         _state = state;
-        _clock = clock;
+        _blinkState = blinkState;
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         _memory = new VideoMemory(_state, loggerService);
         memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
@@ -45,144 +74,155 @@ public class Renderer : IVgaRenderer {
     /// <inheritdoc />
     public int BufferSize { get; private set; }
 
-    /// <inheritdoc />
-    public TimeSpan LastFrameRenderTime { get; private set; }
+    /// <summary>
+    ///     Called by <see cref="VgaTimingEngine"/> at frame start on the emulation thread.
+    ///     Latches per-frame register values and prepares the back buffer for scanline rendering.
+    /// </summary>
+    public void BeginFrame() {
+        int width = Width;
+        int height = Height;
+        int requiredSize = width * height;
+        if (requiredSize <= 0) {
+            _frameActive = false;
+            return;
+        }
+        if (_backBuffer.Length != requiredSize) {
+            _backBuffer = new uint[requiredSize];
+        }
+        BufferSize = requiredSize;
+        _frameActive = true;
+
+        _frameVerticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
+        _frameTotalHeight = _state.CrtControllerRegisters.VerticalTotalValue + 2;
+        _frameSkew = _state.CrtControllerRegisters.HorizontalBlankingEndRegister.DisplayEnableSkew;
+        _frameCharacterClockMask = _state.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour
+            ? 3
+            : _state.CrtControllerRegisters.CrtModeControlRegister.CountByTwo
+                ? 1
+                : 0;
+        _frameRowMemoryAddressCounter = _state.CrtControllerRegisters.ScreenStartAddress
+            + _state.CrtControllerRegisters.PresetRowScanRegister.BytePanning;
+        _frameMemoryWidthMode = DetermineMemoryWidthMode();
+        _frameScanLineBit0ForAddressBit13 = !_state.CrtControllerRegisters.CrtModeControlRegister.CompatibilityModeSupport;
+        _frameScanLineBit0ForAddressBit14 = !_state.CrtControllerRegisters.CrtModeControlRegister.SelectRowScanCounter;
+
+        _frameDestinationAddress = 0;
+        _frameVerticalBlanking = false;
+        _frameLineCounter = _state.CrtControllerRegisters.PresetRowScanRegister.PresetRowScan;
+        _frameCharRowScanline = 0;
+        _frameDoubleScanIndex = 0;
+        _frameDestinationAddressLatch = 0;
+
+        InitCharRow();
+    }
+
+    /// <summary>
+    ///     Called by <see cref="VgaTimingEngine"/> for each physical scanline on the emulation thread.
+    ///     Renders one horizontal line of pixels from VRAM into the back buffer and advances state.
+    /// </summary>
+    public void RenderScanline() {
+        if (!_frameActive || _frameLineCounter >= _frameTotalHeight) {
+            return;
+        }
+
+        Span<uint> frameBuffer = _backBuffer.AsSpan();
+
+        if (_frameDoubleScanIndex == 0) {
+            _frameDestinationAddressLatch = _frameDestinationAddress;
+        }
+
+        int memoryAddressCounter = _frameRowMemoryAddressCounter;
+        _frameDestinationAddress = _frameDestinationAddressLatch;
+
+        bool horizontalBlanking = true;
+
+        for (int characterCounter = 0; characterCounter < _frameTotalWidth; characterCounter++) {
+            if (characterCounter == _frameSkew) {
+                horizontalBlanking = false;
+            }
+            if (characterCounter == _frameHorizontalDisplayEnd) {
+                horizontalBlanking = true;
+            }
+            if (horizontalBlanking || _frameVerticalBlanking) {
+                continue;
+            }
+
+            if (_frameDestinationAddress + 9 > frameBuffer.Length) {
+                break;
+            }
+
+            (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(
+                _frameMemoryWidthMode, memoryAddressCounter,
+                _frameScanLineBit0ForAddressBit13, _frameCharRowScanline,
+                _frameScanLineBit0ForAddressBit14, _framePlanesEnabled);
+
+            if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
+                Draw256ColorMode(frameBuffer, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
+            } else if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
+                DrawGraphicsMode(frameBuffer, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
+            } else {
+                DrawTextMode(frameBuffer, ref _frameDestinationAddress, plane0, plane1, _frameCharRowScanline);
+            }
+            memoryAddressCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
+        }
+
+        if (_frameLineCounter == _state.CrtControllerRegisters.LineCompareValue) {
+            _frameRowMemoryAddressCounter = 0;
+        }
+        if (_frameLineCounter == _frameVerticalDisplayEnd) {
+            _frameVerticalBlanking = true;
+        }
+
+        if (!(_state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved
+              && (_frameCharRowScanline & 1) != 1)) {
+            _frameLineCounter++;
+        }
+
+        _frameDoubleScanIndex++;
+        if (_frameDoubleScanIndex >= _frameDrawLinesPerScanLine) {
+            _frameDoubleScanIndex = 0;
+            _frameCharRowScanline++;
+            if (_frameCharRowScanline > _frameMaximumScanline) {
+                _frameCharRowScanline = 0;
+                _frameRowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
+                if (_frameLineCounter < _frameTotalHeight) {
+                    InitCharRow();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Called by <see cref="VgaTimingEngine"/> at vertical retrace on the emulation thread.
+    ///     Publishes the completed back buffer by swapping it with the front buffer.
+    /// </summary>
+    public void CompleteFrame() {
+        if (!_frameActive) {
+            return;
+        }
+        _backBuffer = Interlocked.Exchange(ref _frontBuffer, _backBuffer);
+        Volatile.Write(ref _hasPendingFrame, 1);
+        _frameActive = false;
+    }
 
     /// <inheritdoc />
     public void Render(Span<uint> frameBuffer) {
-        if (!Monitor.TryEnter(RenderLock)) {
-            // We're already rendering. Get out of here.
-            return;
+        if (Interlocked.Exchange(ref _hasPendingFrame, 0) == 1) {
+            _renderBuffer = Interlocked.Exchange(ref _frontBuffer, _renderBuffer);
         }
-        try {
-            BufferSize = frameBuffer.Length;
-            if (Width * Height > BufferSize) {
-                // Resolution change hasn't caught up yet. Skip a frame.
-                return;
-            }
 
-            // Some timing helpers.
-            double horizontalLineDurationMs = 1000.0 / 31469.0; // Duration of one horizontal line in ms.
-            SpinWait waitSpinner = new SpinWait();
-            double frameStartMs = _clock.ElapsedTimeMs;
-
-            // I _think_ changes to these are ignored during the frame, so we latch them here.
-            int verticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
-            int totalHeight = _state.CrtControllerRegisters.VerticalTotalValue + 2;
-            int skew = _state.CrtControllerRegisters.HorizontalBlankingEndRegister.DisplayEnableSkew; // Skew controls the delay of enabling the display at the start of the line.
-            int characterClockMask = _state.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour
-                ? 3
-                : _state.CrtControllerRegisters.CrtModeControlRegister.CountByTwo
-                    ? 1
-                    : 0;
-            int rowMemoryAddressCounter = _state.CrtControllerRegisters.ScreenStartAddress + _state.CrtControllerRegisters.PresetRowScanRegister.BytePanning;
-
-            // Memory reading parameters.
-            MemoryWidth memoryWidthMode = DetermineMemoryWidthMode();
-            bool scanLineBit0ForAddressBit13 = !_state.CrtControllerRegisters.CrtModeControlRegister.CompatibilityModeSupport;
-            bool scanLineBit0ForAddressBit14 = !_state.CrtControllerRegisters.CrtModeControlRegister.SelectRowScanCounter;
-
-            _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = false;
-            _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
-            int destinationAddress = 0;
-            bool verticalBlanking = false;
-
-            /////////////////////////
-            // Start Vertical loop //
-            /////////////////////////
-            int lineCounter = _state.CrtControllerRegisters.PresetRowScanRegister.PresetRowScan;
-            while (lineCounter < totalHeight) {
-                // These registers can change mid-frame, so we need to check them every scanline.
-                // I _think_ changes to these are ignored during a scanline, so we latch them here. 
-                int horizontalDisplayEnd = _state.CrtControllerRegisters.HorizontalDisplayEnd + 1 + skew;
-                int totalWidth = _state.CrtControllerRegisters.HorizontalTotal + 3;
-                bool[] planesEnabled = _state.AttributeControllerRegisters.ColorPlaneEnableRegister.PlanesEnabled;
-                byte maximumScanline = _state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline;
-                int drawLinesPerScanLine = _state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1;
-
-                // For every row we can have multiple lines. In text-modes this is used for character height, and in graphics
-                // modes this is used for double-scanning.
-                for (int scanline = 0; scanline <= maximumScanline; scanline++) {
-                    // We latch the destination address here, so that the double-scan lines are drawn on top of each other.
-                    int destinationAddressLatch = destinationAddress;
-                    for (int doubleScan = 0; doubleScan < drawLinesPerScanLine; doubleScan++) {
-                        int memoryAddressCounter = rowMemoryAddressCounter;
-                        destinationAddress = destinationAddressLatch;
-
-                        double msAtStartOfRow = _clock.ElapsedTimeMs;
-                        bool horizontalBlanking = true;
-
-                        ///////////////////////////
-                        // Start Horizontal loop //
-                        ///////////////////////////
-                        // We loop through the entire horizontal line, even if we're in blanking. This allows programs
-                        // to detect the brief disabling and enabling of the display during horizontal blanking.
-                        for (int characterCounter = 0; characterCounter < totalWidth; characterCounter++) {
-                            // Skew controls the delay of enabling the display at the start of the line.
-                            if (characterCounter == skew) {
-                                horizontalBlanking = false;
-                            }
-                            // For simplicity we ignore horizontal blanking registers and use the display end register.
-                            if (characterCounter == horizontalDisplayEnd) {
-                                horizontalBlanking = true;
-                            }
-                            if (horizontalBlanking || verticalBlanking) {
-                                _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
-                                // No need to read memory or render pixels.
-                                continue;
-                            }
-
-                            // No blanking, so we're rendering pixels.
-                            _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = false;
-
-                            (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryWidthMode, memoryAddressCounter, scanLineBit0ForAddressBit13, scanline, scanLineBit0ForAddressBit14, planesEnabled);
-
-                            // Convert the 4 bytes into 8 pixels.
-                            if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
-                                Draw256ColorMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
-                            } else if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
-                                DrawGraphicsMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
-                            } else {
-                                DrawTextMode(frameBuffer, ref destinationAddress, plane0, plane1, scanline);
-                            }
-                            // This increases the memory address counter after each character, taking count-by-two and count-by-four into account.
-                            memoryAddressCounter += (characterCounter & characterClockMask) == 0 ? 1 : 0;
-                        } // End of horizontal loop
-
-                        // When the LineCompare register value is reached, the video memory address is reset to 0. This allows a split-screen effect.
-                        if (lineCounter == _state.CrtControllerRegisters.LineCompareValue) {
-                            rowMemoryAddressCounter = 0;
-                        }
-                        // To maximize the time spent in vertical retrace, we start it at the end of display.
-                        if (lineCounter == verticalDisplayEnd) {
-                            _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = true;
-                            verticalBlanking = true;
-                        }
-
-                        // We wait at the end of each line to create the correct horizontal timing of 31.46875 kHz
-                        // This allows programs running in the CPU thread to detect the horizontal retrace.
-                        while (!_clock.IsPaused && _clock.ElapsedTimeMs - msAtStartOfRow < horizontalLineDurationMs) {
-                            waitSpinner.SpinOnce(-1);
-                        }
-                        // If the VerticalTiming is halved, we only increase the line counter every other scanline.
-                        if (_state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved && (scanline & 1) != 1) {
-                            continue;
-                        }
-                        lineCounter++;
-                    } // End of doubleScan
-                } // end of scanline loop
-
-                // Rather than simply continuing increasing memory addresses, an offset is added at the end of each line.
-                // This allows creating a "virtual screen" that is larger than the displayed area.
-                rowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
-            } // End of vertical loop
-
-            LastFrameRenderTime = TimeSpan.FromMilliseconds(_clock.ElapsedTimeMs - frameStartMs);
-        } catch (IndexOutOfRangeException) {
-            // Resolution changed during rendering, discard the rest of this frame.
-        } finally {
-            Monitor.Exit(RenderLock);
+        uint[] render = Volatile.Read(ref _renderBuffer);
+        if (render.Length > 0 && render.Length <= frameBuffer.Length) {
+            render.AsSpan().CopyTo(frameBuffer);
         }
+    }
+
+    private void InitCharRow() {
+        _frameHorizontalDisplayEnd = _state.CrtControllerRegisters.HorizontalDisplayEnd + 1 + _frameSkew;
+        _frameTotalWidth = _state.CrtControllerRegisters.HorizontalTotal + 3;
+        _framePlanesEnabled = _state.AttributeControllerRegisters.ColorPlaneEnableRegister.PlanesEnabled;
+        _frameMaximumScanline = _state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline;
+        _frameDrawLinesPerScanLine = _state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1;
     }
 
     private MemoryWidth DetermineMemoryWidthMode() {
@@ -252,13 +292,9 @@ public class Renderer : IVgaRenderer {
         }
         uint foreGroundColor = GetDacPaletteColor(index);
         if (_state.AttributeControllerRegisters.AttributeControllerModeRegister.BlinkingEnabled
-            && (plane1 & 0x80) != 0) {
-            double blinkPhaseMs = _clock.ElapsedTimeMs % 1000.0;
-            if (blinkPhaseMs < 500.0) {
-                // Blinking is enabled and the blink bit is set and the current time is in the first half of the second.
-                // Swap the foreground and background colors.
-                (foreGroundColor, backGroundColor) = (backGroundColor & 0x7, foreGroundColor);
-            }
+            && (plane1 & 0x80) != 0
+            && !_blinkState.IsBlinkPhaseHigh) {
+            (foreGroundColor, backGroundColor) = (backGroundColor & 0x7, foreGroundColor);
         }
              
         // The 8 pixels to render this line come from the font which is stored in plane 2.

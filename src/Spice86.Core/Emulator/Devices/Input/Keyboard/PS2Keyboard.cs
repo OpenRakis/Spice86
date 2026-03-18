@@ -2,7 +2,7 @@ namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
@@ -18,7 +18,7 @@ public partial class PS2Keyboard {
     private readonly Intel8042Controller _controller;
     private readonly ILoggerService _loggerService;
     private readonly KeyboardScancodeConverter _scancodeConverter = new();
-    private readonly EmulationLoopScheduler _scheduler;
+    private readonly DeviceScheduler _scheduler;
     private readonly IGuiKeyboardEvents? _gui;
     private readonly EventHandler _typematicTickHandler;
     private readonly EventHandler _ledsAllOnExpireHandler;
@@ -64,7 +64,7 @@ public partial class PS2Keyboard {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="gui">Optional GUI interface for keyboard events.</param>
     public PS2Keyboard(Intel8042Controller controller,
-        EmulationLoopScheduler scheduler, ILoggerService loggerService,
+        DeviceScheduler scheduler, ILoggerService loggerService,
         IGuiKeyboardEvents? gui = null) {
         _controller = controller;
         _loggerService = loggerService;
