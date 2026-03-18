@@ -10,7 +10,7 @@ public class AutoexecBatGenerator {
     /// Generates AUTOEXEC.BAT content for a given program.
     /// </summary>
     /// <param name="programPath">The path to the program to execute (e.g., "C:\\PROGRAM.EXE").</param>
-    /// <returns>AUTOEXEC.BAT content as UTF-8 encoded bytes.</returns>
+    /// <returns>AUTOEXEC.BAT content as ASCII encoded bytes.</returns>
     public byte[] Generate(string programPath) {
         StringBuilder sb = new StringBuilder();
 

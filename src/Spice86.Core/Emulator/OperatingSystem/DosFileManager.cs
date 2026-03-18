@@ -737,6 +737,9 @@ public class DosFileManager {
     internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.
         GetFullHostPathFromDosOrDefault(dosPath);
 
+    internal string? TryGetFullHostExecutablePathFromDos(string dosPath) => _dosPathResolver.
+        GetFullHostExecutablePathFromDosOrDefault(dosPath);
+
     /// <summary>
     /// Converts a DateTime to DOS packed date format.
     /// DOS date format: bits 15-9=year-1980, bits 8-5=month, bits 4-0=day.

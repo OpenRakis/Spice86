@@ -2,8 +2,11 @@ namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
+using NSubstitute;
+
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Interfaces;
 
 using Xunit;
 
@@ -135,16 +138,30 @@ public class DriveAbstractionTests {
     }
 
     /// <summary>
-    /// RED TEST: Memory drive Z: can be mounted in DOS drive manager.
+    /// Memory drive Z: can be mounted in DOS drive manager and retrieved by letter.
     /// </summary>
     [Fact]
     public void DosDriveManager_MountMemoryDrive_AddsZDrive() {
         // Arrange
-        // This requires modifying DosDriveManager to accept both VirtualDrive and MemoryDrive
-        // Placeholder: assumes new constructor or method signature
+        ILoggerService logger = Substitute.For<ILoggerService>();
+        string tempCDir = System.IO.Path.GetTempPath();
+        DosDriveManager manager = new DosDriveManager(logger, tempCDir, null);
 
-        // Act & Assert
-        Assert.True(true, "Placeholder: Requires DosDriveManager refactor for polymorphic drives");
+        MemoryDrive zDrive = new MemoryDrive {
+            DriveLetter = 'Z',
+            Label = "MEMORY",
+            IsReadOnlyMedium = true,
+        };
+
+        // Act
+        manager.MountMemoryDrive(zDrive);
+
+        // Assert
+        manager.TryGetMemoryDrive('Z', out MemoryDrive? retrieved).Should().BeTrue();
+        retrieved.Should().Be(zDrive);
+        retrieved!.DriveLetter.Should().Be('Z');
+        retrieved.IsReadOnlyMedium.Should().BeTrue();
+        manager['C'].MountedHostDirectory.Should().NotBeEmpty("C: drive must remain unaffected");
     }
 
     /// <summary>

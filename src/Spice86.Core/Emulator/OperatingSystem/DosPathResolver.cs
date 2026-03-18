@@ -211,7 +211,49 @@ internal class DosPathResolver {
             return ConvertUtils.ToSlashPath(resolvedHostDir);
         }
 
-        var options = new EnumerationOptions {
+        EnumerationOptions options = new EnumerationOptions {
+            RecurseSubdirectories = false,
+            MatchCasing = MatchCasing.CaseInsensitive,
+            ReturnSpecialDirectories = false
+        };
+
+        string? firstMatch = FindFilesUsingWildCmp(resolvedHostDir, lastSegment, options).FirstOrDefault();
+        return string.IsNullOrWhiteSpace(firstMatch) ? null : ConvertUtils.ToSlashPath(firstMatch);
+    }
+
+    /// <summary>
+    /// Converts the DOS path to a full host path, probing for executable extensions (.BAT, .COM, .EXE)
+    /// when the path has no extension. Use this only for execution-related path resolution.
+    /// </summary>
+    /// <param name="dosPath">The DOS path to convert.</param>
+    /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
+    public string? GetFullHostExecutablePathFromDosOrDefault(string dosPath) {
+        if (string.IsNullOrWhiteSpace(dosPath)) {
+            return null;
+        }
+        dosPath = GetFullDosPathIncludingRoot(dosPath);
+
+        (string hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
+
+        if (string.IsNullOrWhiteSpace(dosRelativePath)) {
+            return ConvertUtils.ToSlashPath(hostPrefix);
+        }
+
+        string slashedRelative = ConvertUtils.ToSlashPath(dosRelativePath);
+        int lastSlash = slashedRelative.LastIndexOf('/');
+        string dirPart = lastSlash >= 0 ? slashedRelative[..lastSlash] : string.Empty;
+        string lastSegment = lastSlash >= 0 ? slashedRelative[(lastSlash + 1)..] : slashedRelative;
+
+        string? resolvedHostDir = ResolveCaseInsensitiveDirectory(hostPrefix, dirPart);
+        if (string.IsNullOrWhiteSpace(resolvedHostDir)) {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(lastSegment)) {
+            return ConvertUtils.ToSlashPath(resolvedHostDir);
+        }
+
+        EnumerationOptions options = new EnumerationOptions {
             RecurseSubdirectories = false,
             MatchCasing = MatchCasing.CaseInsensitive,
             ReturnSpecialDirectories = false
