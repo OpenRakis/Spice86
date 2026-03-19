@@ -351,7 +351,12 @@ public partial class HttpApiViewModel : ViewModelBase, IDisposable {
 
     private static bool TryParsePositiveInt(string input, out int result) {
         result = 0;
-        if (!int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)) {
+        if (string.IsNullOrWhiteSpace(input)) {
+            return false;
+        }
+
+        string trimmed = input.Trim();
+        if (!int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)) {
             return false;
         }
 
