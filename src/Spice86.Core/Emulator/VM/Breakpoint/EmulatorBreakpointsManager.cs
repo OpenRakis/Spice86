@@ -89,7 +89,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
                 _machineStartBreakPoint = on ? breakPoint : null;
                 break;
             case BreakPointType.MACHINE_STOP:
-                _machineStopBreakPoint = breakPoint;
+                _machineStopBreakPoint = on ? breakPoint : null;
                 break;
             case BreakPointType.MEMORY_READ:
                 MemoryReadWriteBreakpoints.ToggleBreakPoint(breakPoint, AddressOperation.READ, on);
