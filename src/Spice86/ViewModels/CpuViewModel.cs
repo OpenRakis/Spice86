@@ -32,9 +32,9 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
         _cpuState = state;
         _memory = memory;
         _registers = new RegistersViewModel(state);
-        pauseHandler.Paused += () => uiDispatcher.Post(() => _isPaused = true);
+        pauseHandler.Paused += () => uiDispatcher.Post(() => _isPaused = pauseHandler.IsPaused);
         _isPaused = pauseHandler.IsPaused;
-        pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = false);
+        pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = pauseHandler.IsPaused);
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
 

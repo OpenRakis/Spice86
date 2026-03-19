@@ -165,6 +165,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
                 if (_pauseHandler.IsPaused) {
                     OnPaused();
                 } else {
+                    // Ensure paused state is synchronized even if resume happened while inactive.
+                    IsPaused = false;
                     // If not paused, still set the current instruction address to show something
                     // but only when the view becomes active
                     CurrentInstructionAddress = State.IpSegmentedAddress;
@@ -321,6 +323,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
     private void OnResumed() {
         _uiDispatcher.Post(() => {
+            if (_pauseHandler.IsPaused) {
+                return;
+            }
             IsPaused = false;
         });
     }
@@ -335,6 +340,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         if (!_uiDispatcher.CheckAccess()) {
             _uiDispatcher.Post(OnPaused);
 
+            return;
+        }
+
+        if (!_pauseHandler.IsPaused) {
             return;
         }
 
