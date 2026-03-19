@@ -33,8 +33,7 @@ public partial class DisassemblyViewModel {
             StepOneInstruction(
                 "Step over breakpoint was reached",
                 "Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}",
-                currentAddress,
-                usePhysicalAddressLogging: true);
+                currentAddress);
 
             if (_logger.IsEnabled(LogEventLevel.Debug)) {
                 _logger.Debug("Resuming execution for step over");
@@ -66,13 +65,12 @@ public partial class DisassemblyViewModel {
         StepOneInstruction(
             "Step into breakpoint was reached",
             "Step into breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}",
-            currentAddress,
-            usePhysicalAddressLogging: false);
+            currentAddress);
 
         _pauseHandler.Resume();
     }
 
-    private void StepOneInstruction(string pauseReason, string debugMessageTemplate, SegmentedAddress currentAddress, bool usePhysicalAddressLogging) {
+    private void StepOneInstruction(string pauseReason, string debugMessageTemplate, SegmentedAddress currentAddress) {
         long triggerCycle = State.Cycles + 1;
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_CYCLES,
@@ -81,11 +79,7 @@ public partial class DisassemblyViewModel {
                 Pause(pauseReason);
 
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    if (usePhysicalAddressLogging) {
-                        _logger.Debug(debugMessageTemplate, currentAddress, State.IpPhysicalAddress);
-                    } else {
-                        _logger.Debug(debugMessageTemplate, currentAddress, State.IpSegmentedAddress);
-                    }
+                    _logger.Debug(debugMessageTemplate, currentAddress, State.IpSegmentedAddress);
                 }
             },
             true);
