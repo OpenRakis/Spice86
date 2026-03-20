@@ -99,7 +99,11 @@ public class VideoMemory : IVideoMemory {
             return;
         }
         (byte planes, uint offset) = DecodeWriteAddress(address);
-        bool[] writePlane = planes.ToBits();
+        Span<bool> writePlaneBuffer = stackalloc bool[4];
+        for (int plane = 0; plane < 4; plane++) {
+            writePlaneBuffer[plane] = (planes & (1 << plane)) != 0;
+        }
+        ReadOnlySpan<bool> writePlane = writePlaneBuffer;
         Register8 planeEnable = _state.SequencerRegisters.PlaneMaskRegister;
         Register8 setReset = _state.GraphicsControllerRegisters.SetReset;
         Register8 setResetEnable = _state.GraphicsControllerRegisters.EnableSetReset;
@@ -134,7 +138,7 @@ public class VideoMemory : IVideoMemory {
     /// <inheritdoc />
     public byte[,] Planes { get; }
 
-    private void HandleWriteMode3(byte value, Register8 planeEnable, bool[] writePlane, Register8 setReset, uint offset) {
+    private void HandleWriteMode3(byte value, Register8 planeEnable, ReadOnlySpan<bool> writePlane, Register8 setReset, uint offset) {
         value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
         byte bitMask = (byte)(value & _state.GraphicsControllerRegisters.BitMask);
         for (int plane = 0; plane < 4; plane++) {
@@ -152,8 +156,12 @@ public class VideoMemory : IVideoMemory {
         }
     }
 
-    private void HandleWriteMode2(byte value, Register8 planeEnable, bool[] writePlane, uint offset) {
-        bool[] unpacked = value.ToBits();
+    private void HandleWriteMode2(byte value, Register8 planeEnable, ReadOnlySpan<bool> writePlane, uint offset) {
+        Span<bool> unpackedBuffer = stackalloc bool[4];
+        for (int plane = 0; plane < 4; plane++) {
+            unpackedBuffer[plane] = (value & (1 << plane)) != 0;
+        }
+        ReadOnlySpan<bool> unpacked = unpackedBuffer;
         for (int plane = 0; plane < 4; plane++) {
             // Skip if plane is disabled or we're not writing to it.
             if (!planeEnable[plane] || !writePlane[plane]) {
