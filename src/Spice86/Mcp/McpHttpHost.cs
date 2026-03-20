@@ -126,7 +126,12 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
                     Task heartbeatDelay = Task.Delay(TimeSpan.FromSeconds(15), context.RequestAborted);
                     Task completed = await Task.WhenAny(waitForMessage, heartbeatDelay);
 
-                    if (completed == waitForMessage && await waitForMessage) {
+                    if (completed == waitForMessage) {
+                        bool channelHasData = await waitForMessage;
+                        if (!channelHasData) {
+                            // Channel writer was completed (server shutting down) — stop the SSE loop.
+                            break;
+                        }
                         while (channel.Reader.TryRead(out string? message)) {
                             await context.Response.WriteAsync($"data: {message}\n\n", context.RequestAborted);
                             await context.Response.Body.FlushAsync(context.RequestAborted);
@@ -215,26 +220,10 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
             return;
         }
         _disposed = true;
-
         DisposeSynchronousResources();
-
-        if (_app != null) {
-            WebApplication appToStop = _app;
-            _app = null;
-            // Fire-and-forget async Kestrel shutdown to avoid sync-over-async deadlock.
-            // Callers that need to await full shutdown should call DisposeAsync instead.
-            _ = Task.Run(async () => {
-                try {
-                    await appToStop.StopAsync();
-                    await appToStop.DisposeAsync();
-                } catch (OperationCanceledException ex) {
-                    _loggerService.Warning(ex, "MCP HTTP host shutdown was cancelled");
-                } catch (ObjectDisposedException ex) {
-                    _loggerService.Warning(ex, "MCP HTTP host was already disposed during shutdown");
-                }
-            });
-        }
-
+        // Kestrel (_app) intentionally left running: stopping it requires async operations
+        // that cannot be performed safely in a synchronous Dispose() without sync-over-async.
+        // Callers that need graceful Kestrel shutdown must use DisposeAsync() instead.
         GC.SuppressFinalize(this);
     }
 
