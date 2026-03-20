@@ -126,7 +126,12 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
                     Task heartbeatDelay = Task.Delay(TimeSpan.FromSeconds(15), context.RequestAborted);
                     Task completed = await Task.WhenAny(waitForMessage, heartbeatDelay);
 
-                    if (completed == waitForMessage && await waitForMessage) {
+                    if (completed == waitForMessage) {
+                        bool channelHasData = await waitForMessage;
+                        if (!channelHasData) {
+                            // Channel writer was completed (server shutting down) — stop the SSE loop.
+                            break;
+                        }
                         while (channel.Reader.TryRead(out string? message)) {
                             await context.Response.WriteAsync($"data: {message}\n\n", context.RequestAborted);
                             await context.Response.Body.FlushAsync(context.RequestAborted);
@@ -211,7 +216,14 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
     }
 
     public void Dispose() {
-        Task.Run(async () => await DisposeAsync()).GetAwaiter().GetResult();
+        if (_disposed) {
+            return;
+        }
+        _disposed = true;
+        DisposeSynchronousResources();
+        // Kestrel (_app) intentionally left running: stopping it requires async operations
+        // that cannot be performed safely in a synchronous Dispose() without sync-over-async.
+        // Callers that need graceful Kestrel shutdown must use DisposeAsync() instead.
         GC.SuppressFinalize(this);
     }
 
@@ -221,15 +233,7 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
         }
         _disposed = true;
 
-        if (_legacyMcpServer != null) {
-            _legacyMcpServer.OnNotification -= HandleLegacyNotification;
-            _legacyMcpServer = null;
-        }
-
-        foreach (Channel<string> client in _legacyClients.Values) {
-            client.Writer.TryComplete();
-        }
-        _legacyClients.Clear();
+        DisposeSynchronousResources();
 
         if (_app != null) {
             try {
@@ -242,5 +246,17 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
             }
             _app = null;
         }
+    }
+
+    private void DisposeSynchronousResources() {
+        if (_legacyMcpServer != null) {
+            _legacyMcpServer.OnNotification -= HandleLegacyNotification;
+            _legacyMcpServer = null;
+        }
+
+        foreach (Channel<string> client in _legacyClients.Values) {
+            client.Writer.TryComplete();
+        }
+        _legacyClients.Clear();
     }
 }
