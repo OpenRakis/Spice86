@@ -65,6 +65,15 @@ public sealed class McpStdioTransport {
         _loggerService.Information("MCP server stopping");
         _cancellationTokenSource.Cancel();
 
+        // Close the input reader to unblock the thread that is blocked on ReadLine().
+        // ReadLine() does not observe CancellationToken, so closing the stream
+        // is the only way to interrupt it deterministically.
+        try {
+            _inputReader.Close();
+        } catch (ObjectDisposedException) {
+            // Ignore - stream may already be closed
+        }
+
         if (!_readerThread.Join(TimeSpan.FromSeconds(5))) {
             _loggerService.Warning("MCP server thread did not stop within timeout");
         }
@@ -136,9 +145,14 @@ public sealed class McpStdioTransport {
         } catch (OperationCanceledException) {
             _loggerService.Information("MCP server shutdown requested");
         } catch (IOException ex) {
-            _loggerService.Error(ex, "Fatal I/O error in MCP stdio transport");
-        } catch (ObjectDisposedException ex) {
-            _loggerService.Error(ex, "Stream disposed in MCP stdio transport");
+            if (_cancellationTokenSource.IsCancellationRequested) {
+                _loggerService.Information("MCP server I/O stream closed during shutdown");
+            } else {
+                _loggerService.Error(ex, "Fatal I/O error in MCP stdio transport");
+            }
+        } catch (ObjectDisposedException) {
+            // Expected when Stop() closes the input reader to unblock ReadLine()
+            _loggerService.Information("MCP server input stream closed, shutting down");
         }
     }
 
