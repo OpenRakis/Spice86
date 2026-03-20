@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using System.Collections.Concurrent;
@@ -87,7 +88,12 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
         _ = runTask.ContinueWith(task => {
             _loggerService.Error(task.Exception, "MCP HTTP server stopped unexpectedly");
         }, TaskContinuationOptions.OnlyOnFaulted);
-        _loggerService.Information("MCP HTTP server started on http://localhost:{Port}/mcp", port);
+
+        if (enableLegacyMcp && legacyMcpServer != null) {
+            _loggerService.Information("MCP HTTP server started on http://localhost:{Port} (legacy transport: /sse, /messages)", port);
+        } else if (!enableLegacyMcp) {
+            _loggerService.Information("MCP HTTP server started on http://localhost:{Port}/mcp", port);
+        }
     }
 
     private void ConfigureLegacyEndpoints(WebApplication app, int port, IMcpServer legacyMcpServer) {
@@ -163,28 +169,10 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
                 responseJson = legacyMcpServer.HandleRequest(requestJson);
             } catch (JsonException ex) {
                 _loggerService.Error(ex, "JSON error processing MCP request in legacy HTTP transport");
-                responseJson = $$"""
-                {
-                  "jsonrpc": "2.0",
-                  "error": {
-                    "code": -32603,
-                    "message": "Internal error: {{EscapeJsonString(ex.Message)}}"
-                  },
-                  "id": null
-                }
-                """;
+                responseJson = BuildErrorResponse($"Internal error: {ex.Message}");
             } catch (InvalidOperationException ex) {
                 _loggerService.Error(ex, "Error processing MCP request in legacy HTTP transport");
-                responseJson = $$"""
-                {
-                  "jsonrpc": "2.0",
-                  "error": {
-                    "code": -32603,
-                    "message": "Internal error: {{EscapeJsonString(ex.Message)}}"
-                  },
-                  "id": null
-                }
-                """;
+                responseJson = BuildErrorResponse($"Internal error: {ex.Message}");
             }
 
             if (responseJson == null) {
@@ -203,10 +191,18 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
         response.Headers["Access-Control-Allow-Headers"] = "Content-Type";
     }
 
-    private static string EscapeJsonString(string value) {
-        return value
-            .Replace("\\", @"\\")
-            .Replace("\"", "\\\"");
+    private static string BuildErrorResponse(string message) {
+        string jsonMessage = JsonSerializer.Serialize(message);
+        return $$"""
+        {
+          "jsonrpc": "2.0",
+          "error": {
+            "code": -32603,
+            "message": {{jsonMessage}}
+          },
+          "id": null
+        }
+        """;
     }
 
     private void HandleLegacyNotification(object? sender, string json) {
@@ -221,9 +217,16 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
         }
         _disposed = true;
         DisposeSynchronousResources();
-        // Kestrel (_app) intentionally left running: stopping it requires async operations
-        // that cannot be performed safely in a synchronous Dispose() without sync-over-async.
-        // Callers that need graceful Kestrel shutdown must use DisposeAsync() instead.
+        // Signal Kestrel to stop. StopApplication() is synchronous (sets a cancellation token),
+        // so the actual Kestrel shutdown completes asynchronously in the background.
+        // Callers that need fully graceful Kestrel shutdown must use DisposeAsync() instead.
+        if (_app != null) {
+            try {
+                _app.Services.GetRequiredService<IHostApplicationLifetime>().StopApplication();
+            } catch (ObjectDisposedException) {
+                // Host already disposed
+            }
+        }
         GC.SuppressFinalize(this);
     }
 

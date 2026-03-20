@@ -64,13 +64,13 @@ public class RevocationListHelper {
     /// <summary>
     /// Reads the revocation list from a file.
     /// Skips comments (lines starting with #) and empty lines.
+    /// Returns an empty set if the file does not exist (e.g., first run in generate mode).
     /// </summary>
     /// <param name="filePath">The path to the revocation list file</param>
-    /// <returns>A set of test hashes that should be skipped</returns>
-    /// <exception cref="FileNotFoundException">Thrown when the revocation list file does not exist</exception>
+    /// <returns>A set of test hashes that should be skipped, or empty if the file does not exist</returns>
     public ISet<string> ReadRevocationListFromFile(string filePath) {
         if (!File.Exists(filePath)) {
-            throw new FileNotFoundException($"Revocation list file not found: {filePath}");
+            return new HashSet<string>();
         }
         using FileStream fileStream = File.OpenRead(filePath);
         return ReadRevocationListFromStream(fileStream);

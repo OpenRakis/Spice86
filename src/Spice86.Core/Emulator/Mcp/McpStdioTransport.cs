@@ -5,6 +5,7 @@ using Spice86.Shared.Interfaces;
 using System;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 
 /// <summary>
@@ -157,12 +158,13 @@ public sealed class McpStdioTransport {
     }
 
     private static string CreateErrorResponse(string message) {
+        string jsonMessage = JsonSerializer.Serialize(message);
         return $$"""
         {
           "jsonrpc": "2.0",
           "error": {
             "code": -32603,
-            "message": "{{message.Replace("\"", "\\\"")}}"
+            "message": {{jsonMessage}}
           },
           "id": null
         }

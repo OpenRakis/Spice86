@@ -260,9 +260,11 @@ public class Renderer : IVgaRenderer {
         byte fontByte = _memory.Planes[2, fontAddress + scanline];
         for (int x = 0; x < _state.SequencerRegisters.ClockingModeRegister.DotsPerClock; x++) {
             uint pixel = (fontByte & 0x80 >> x) != 0 ? foreGroundColor : backGroundColor;
-            if (destinationAddress < frameBuffer.Length) {
-                frameBuffer[destinationAddress++] = pixel;
+            if (destinationAddress >= frameBuffer.Length) {
+                break;
             }
+            frameBuffer[destinationAddress] = pixel;
+            destinationAddress++;
         }
     }
 
