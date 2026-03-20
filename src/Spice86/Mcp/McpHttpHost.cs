@@ -211,7 +211,30 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
     }
 
     public void Dispose() {
-        Task.Run(async () => await DisposeAsync()).GetAwaiter().GetResult();
+        if (_disposed) {
+            return;
+        }
+        _disposed = true;
+
+        DisposeSynchronousResources();
+
+        if (_app != null) {
+            WebApplication appToStop = _app;
+            _app = null;
+            // Fire-and-forget async Kestrel shutdown to avoid sync-over-async deadlock.
+            // Callers that need to await full shutdown should call DisposeAsync instead.
+            _ = Task.Run(async () => {
+                try {
+                    await appToStop.StopAsync();
+                    await appToStop.DisposeAsync();
+                } catch (OperationCanceledException ex) {
+                    _loggerService.Warning(ex, "MCP HTTP host shutdown was cancelled");
+                } catch (ObjectDisposedException ex) {
+                    _loggerService.Warning(ex, "MCP HTTP host was already disposed during shutdown");
+                }
+            });
+        }
+
         GC.SuppressFinalize(this);
     }
 
@@ -221,15 +244,7 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
         }
         _disposed = true;
 
-        if (_legacyMcpServer != null) {
-            _legacyMcpServer.OnNotification -= HandleLegacyNotification;
-            _legacyMcpServer = null;
-        }
-
-        foreach (Channel<string> client in _legacyClients.Values) {
-            client.Writer.TryComplete();
-        }
-        _legacyClients.Clear();
+        DisposeSynchronousResources();
 
         if (_app != null) {
             try {
@@ -242,5 +257,17 @@ public sealed class McpHttpHost : IDisposable, IAsyncDisposable {
             }
             _app = null;
         }
+    }
+
+    private void DisposeSynchronousResources() {
+        if (_legacyMcpServer != null) {
+            _legacyMcpServer.OnNotification -= HandleLegacyNotification;
+            _legacyMcpServer = null;
+        }
+
+        foreach (Channel<string> client in _legacyClients.Values) {
+            client.Writer.TryComplete();
+        }
+        _legacyClients.Clear();
     }
 }
