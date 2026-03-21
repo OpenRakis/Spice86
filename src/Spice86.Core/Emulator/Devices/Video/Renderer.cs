@@ -136,6 +136,13 @@ public class Renderer : IVgaRenderer {
 
         bool horizontalBlanking = true;
 
+        // Hoist per-scanline constants out of the per-character loop to avoid
+        // repeated interface dispatch and property-chain traversals.
+        uint[] paletteMap = _state.DacRegisters.PaletteMap;
+        uint[] attrMap = _state.DacRegisters.AttributeMap;
+        bool in256ColorMode = _state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode;
+        bool inGraphicsMode = _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode;
+
         for (int characterCounter = 0; characterCounter < _frameTotalWidth; characterCounter++) {
             if (characterCounter == _frameSkew) {
                 horizontalBlanking = false;
@@ -156,12 +163,12 @@ public class Renderer : IVgaRenderer {
                 _frameScanLineBit0ForAddressBit13, _frameCharRowScanline,
                 _frameScanLineBit0ForAddressBit14, _framePlanesEnabled);
 
-            if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
-                Draw256ColorMode(frameBuffer, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
-            } else if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
-                DrawGraphicsMode(frameBuffer, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
+            if (in256ColorMode) {
+                Draw256ColorMode(frameBuffer, paletteMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
+            } else if (inGraphicsMode) {
+                DrawGraphicsMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
             } else {
-                DrawTextMode(frameBuffer, ref _frameDestinationAddress, plane0, plane1, _frameCharRowScanline);
+                DrawTextMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, _frameCharRowScanline);
             }
             memoryAddressCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
         }
@@ -271,12 +278,12 @@ public class Renderer : IVgaRenderer {
         return (plane0, plane1, plane2, plane3);
     }
 
-    private void DrawTextMode(Span<uint> frameBuffer, ref int destinationAddress, byte plane0, byte plane1, int scanline) {
+    private void DrawTextMode(Span<uint> frameBuffer, uint[] attrMap, ref int destinationAddress, byte plane0, byte plane1, int scanline) {
         // Text mode
         // Plane 0 contains the character codes.
         int fontAddress = 32 * plane0; // No idea why this seems to work for all character heights. It shouldn't.
         // The byte in plane 1 contains the foreground and background colors.
-        uint backGroundColor = GetDacPaletteColor(plane1 >> 4 & 0b1111);
+        uint backGroundColor = attrMap[(plane1 >> 4) & 0xF];
         int index;
         if (_state.SequencerRegisters.MemoryModeRegister.ExtendedMemory) {
             // Bit 3 controls which font is used.
@@ -290,7 +297,7 @@ public class Renderer : IVgaRenderer {
             // Bit 3 controls color intensity.
             index = plane1 & 0xF;
         }
-        uint foreGroundColor = GetDacPaletteColor(index);
+        uint foreGroundColor = attrMap[index];
         if (_state.AttributeControllerRegisters.AttributeControllerModeRegister.BlinkingEnabled
             && (plane1 & 0x80) != 0
             && !_blinkState.IsBlinkPhaseHigh) {
@@ -305,45 +312,45 @@ public class Renderer : IVgaRenderer {
         }
     }
 
-    private void DrawGraphicsMode(Span<uint> frameBuffer, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
+    private void DrawGraphicsMode(Span<uint> frameBuffer, uint[] attrMap, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
         // There are 2 graphics modes, Ega compatible and Cga compatible.
         if (_state.GraphicsControllerRegisters.GraphicsModeRegister.ShiftRegisterMode == ShiftRegisterMode.Ega) {
-            DrawEgaModeGraphics(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
+            DrawEgaModeGraphics(frameBuffer, attrMap, ref destinationAddress, plane0, plane1, plane2, plane3);
         } else {
-            DrawCgaModeGraphics(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
+            DrawCgaModeGraphics(frameBuffer, attrMap, ref destinationAddress, plane0, plane1, plane2, plane3);
         }
     }
 
-    private void DrawCgaModeGraphics(Span<uint> frameBuffer, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
+    private void DrawCgaModeGraphics(Span<uint> frameBuffer, uint[] attrMap, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
         // Cga mode has a different shift register mode, where the bits are interleaved.
         // First 4 pixels are created from planes 0 and 2.
         for (int bitNr = 6; bitNr >= 0; bitNr -= 2) {
             int index = (plane2 >> bitNr & 3) << 2 | plane0 >> bitNr & 3;
-            frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
+            frameBuffer[destinationAddress++] = attrMap[index];
         }
         // Then 4 pixels are created from planes 1 and 3.
         for (int bitNr = 6; bitNr >= 0; bitNr -= 2) {
             int index = (plane3 >> bitNr & 3) << 2 | plane1 >> bitNr & 3;
-            frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
+            frameBuffer[destinationAddress++] = attrMap[index];
         }
     }
 
-    private void DrawEgaModeGraphics(Span<uint> frameBuffer, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
+    private void DrawEgaModeGraphics(Span<uint> frameBuffer, uint[] attrMap, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
         // Loop through those bytes and create an index from the 4 planes for each bit,
         // outputting 8 pixels.
         for (int bitNr = 7; bitNr >= 0; bitNr--) {
             int index = (plane3 >> bitNr & 1) << 3 | (plane2 >> bitNr & 1) << 2 | (plane1 >> bitNr & 1) << 1 | plane0 >> bitNr & 1;
-            frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
+            frameBuffer[destinationAddress++] = attrMap[index];
         }
     }
 
-    private void Draw256ColorMode(Span<uint> frameBuffer, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
+    private void Draw256ColorMode(Span<uint> frameBuffer, uint[] paletteMap, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
         // 256-color mode is simply using the video memory bytes directly.
         // Output 8 pixels by drawing each of the 4 pixels twice.
-        uint pixel12Color = GetDacPaletteColor(plane0);
-        uint pixel34Color = GetDacPaletteColor(plane1);
-        uint pixel56Color = GetDacPaletteColor(plane2);
-        uint pixel78Color = GetDacPaletteColor(plane3);
+        uint pixel12Color = paletteMap[plane0];
+        uint pixel34Color = paletteMap[plane1];
+        uint pixel56Color = paletteMap[plane2];
+        uint pixel78Color = paletteMap[plane3];
         frameBuffer[destinationAddress++] = pixel12Color;
         frameBuffer[destinationAddress++] = pixel12Color;
         frameBuffer[destinationAddress++] = pixel34Color;
@@ -354,23 +361,7 @@ public class Renderer : IVgaRenderer {
         frameBuffer[destinationAddress++] = pixel78Color;
     }
 
-    private uint GetDacPaletteColor(int index) {
-        switch (_state.AttributeControllerRegisters.AttributeControllerModeRegister.PixelWidth8) {
-            case true:
-                return _state.DacRegisters.ArgbPalette[index];
-            default: {
-                int fromPaletteRam6Bits = _state.AttributeControllerRegisters.InternalPalette[index & 0x0F];
-                int bits0To3 = fromPaletteRam6Bits & 0b00001111;
-                int bits4And5 = _state.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select
-                    ? _state.AttributeControllerRegisters.ColorSelectRegister.Bits45 << 4
-                    : fromPaletteRam6Bits & 0b00110000;
-                int bits6And7 = _state.AttributeControllerRegisters.ColorSelectRegister.Bits67 << 6;
-                int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
-                int paletteIndex = dacIndex8Bits & _state.DacRegisters.PixelMask;
-                return _state.DacRegisters.ArgbPalette[paletteIndex];
-            }
-        }
-    }
+
 }
 
 internal enum MemoryWidth {
