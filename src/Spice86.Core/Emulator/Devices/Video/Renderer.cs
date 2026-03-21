@@ -144,6 +144,12 @@ public class Renderer : IVgaRenderer {
         bool in256ColorMode = _state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode;
         bool inGraphicsMode = _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode;
 
+        VgaAddressMapper addressMapper = new VgaAddressMapper(
+            _frameMemoryWidthMode,
+            _frameScanLineBit0ForAddressBit13,
+            _frameScanLineBit0ForAddressBit14,
+            _frameCharRowScanline & 1);
+
         for (int characterCounter = 0; characterCounter < _frameTotalWidth; characterCounter++) {
             if (characterCounter == _frameSkew) {
                 horizontalBlanking = false;
@@ -159,7 +165,7 @@ public class Renderer : IVgaRenderer {
                 break;
             }
 
-            (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryAddressCounter);
+            (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryAddressCounter, addressMapper);
 
             if (in256ColorMode) {
                 Draw256ColorMode(frameBuffer, paletteMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
@@ -244,33 +250,44 @@ public class Renderer : IVgaRenderer {
         return memoryWidthMode;
     }
 
-    private (byte plane0, byte plane1, byte plane2, byte plane3) ReadVideoMemory(int memoryAddressCounter) {
-        // Convert logical address to physical address.
-        ushort physicalAddress = _frameMemoryWidthMode switch {
-            MemoryWidth.Byte => (ushort)memoryAddressCounter,
-            MemoryWidth.Word13 => (ushort)(memoryAddressCounter << 1 | memoryAddressCounter >> 13 & 1),
-            MemoryWidth.Word15 => (ushort)(memoryAddressCounter << 1 | memoryAddressCounter >> 15 & 1),
-            MemoryWidth.DoubleWord => (ushort)((memoryAddressCounter << 2) | ((memoryAddressCounter >> 14) & 3)),
-            _ => throw new InvalidOperationException($"Unsupported memory width: {_frameMemoryWidthMode}")
-        };
-        if (_frameScanLineBit0ForAddressBit13) {
-            // Use the scan line counter rather than the memory address counter for bit 13.
-            // In effect this causes all odd scanline reads to be read from memory address + 0x2000.
-            physicalAddress = (ushort)(physicalAddress & ~0x2000 | ((_frameCharRowScanline & 1) != 0 ? 0x2000 : 0));
-        }
-        if (_frameScanLineBit0ForAddressBit14) {
-            // Use the scan line counter rather than the memory address counter for bit 14.
-            // In effect this causes all odd scanline reads to be read from memory address + 0x4000.
-            physicalAddress = (ushort)(physicalAddress & ~0x4000 | ((_frameCharRowScanline & 1) != 0 ? 0x4000 : 0));
-        }
+    private (byte plane0, byte plane1, byte plane2, byte plane3) ReadVideoMemory(int memoryAddressCounter, VgaAddressMapper addressMapper) {
+        ushort physicalAddress = addressMapper.ComputeAddress(memoryAddressCounter);
 
-        // Read 4 bytes from the 4 planes.
         byte plane0 = (byte)(_framePlanesEnabled[0] ? _memory.Planes[0, physicalAddress] : 0);
         byte plane1 = (byte)(_framePlanesEnabled[1] ? _memory.Planes[1, physicalAddress] : 0);
         byte plane2 = (byte)(_framePlanesEnabled[2] ? _memory.Planes[2, physicalAddress] : 0);
         byte plane3 = (byte)(_framePlanesEnabled[3] ? _memory.Planes[3, physicalAddress] : 0);
 
         return (plane0, plane1, plane2, plane3);
+    }
+
+    private readonly struct VgaAddressMapper {
+        private readonly MemoryWidth _mode;
+        private readonly ushort _andMask13;
+        private readonly ushort _orMask13;
+        private readonly ushort _andMask14;
+        private readonly ushort _orMask14;
+
+        public VgaAddressMapper(MemoryWidth mode, bool scanLineBit0ForAddressBit13, bool scanLineBit0ForAddressBit14, int scanlineBit0) {
+            _mode = mode;
+            _andMask13 = scanLineBit0ForAddressBit13 ? (ushort)(~0x2000 & 0xFFFF) : (ushort)0xFFFF;
+            _orMask13 = (scanLineBit0ForAddressBit13 && scanlineBit0 != 0) ? (ushort)0x2000 : (ushort)0;
+            _andMask14 = scanLineBit0ForAddressBit14 ? (ushort)(~0x4000 & 0xFFFF) : (ushort)0xFFFF;
+            _orMask14 = (scanLineBit0ForAddressBit14 && scanlineBit0 != 0) ? (ushort)0x4000 : (ushort)0;
+        }
+
+        public ushort ComputeAddress(int counter) {
+            ushort p = _mode switch {
+                MemoryWidth.Byte => (ushort)counter,
+                MemoryWidth.Word13 => (ushort)((counter << 1) | ((counter >> 13) & 1)),
+                MemoryWidth.Word15 => (ushort)((counter << 1) | ((counter >> 15) & 1)),
+                MemoryWidth.DoubleWord => (ushort)((counter << 2) | ((counter >> 14) & 3)),
+                _ => throw new InvalidOperationException($"Unsupported memory width: {_mode}")
+            };
+            p = (ushort)((p & _andMask13) | _orMask13);
+            p = (ushort)((p & _andMask14) | _orMask14);
+            return p;
+        }
     }
 
     private void DrawTextMode(Span<uint> frameBuffer, uint[] attrMap, ref int destinationAddress, byte plane0, byte plane1, int scanline) {
