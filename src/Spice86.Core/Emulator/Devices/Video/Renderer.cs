@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
+using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Logging;
@@ -158,10 +159,7 @@ public class Renderer : IVgaRenderer {
                 break;
             }
 
-            (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(
-                _frameMemoryWidthMode, memoryAddressCounter,
-                _frameScanLineBit0ForAddressBit13, _frameCharRowScanline,
-                _frameScanLineBit0ForAddressBit14, _framePlanesEnabled);
+            (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryAddressCounter);
 
             if (in256ColorMode) {
                 Draw256ColorMode(frameBuffer, paletteMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
@@ -246,34 +244,31 @@ public class Renderer : IVgaRenderer {
         return memoryWidthMode;
     }
 
-    private (byte plane0, byte plane1, byte plane2, byte plane3) ReadVideoMemory(
-        MemoryWidth memoryWidthMode, int memoryAddressCounter,
-        bool scanLineBit0ForAddressBit13, int scanline,
-        bool scanLineBit0ForAddressBit14, ReadOnlySpan<bool> planesEnabled) {
+    private (byte plane0, byte plane1, byte plane2, byte plane3) ReadVideoMemory(int memoryAddressCounter) {
         // Convert logical address to physical address.
-        ushort physicalAddress = memoryWidthMode switch {
+        ushort physicalAddress = _frameMemoryWidthMode switch {
             MemoryWidth.Byte => (ushort)memoryAddressCounter,
             MemoryWidth.Word13 => (ushort)(memoryAddressCounter << 1 | memoryAddressCounter >> 13 & 1),
             MemoryWidth.Word15 => (ushort)(memoryAddressCounter << 1 | memoryAddressCounter >> 15 & 1),
             MemoryWidth.DoubleWord => (ushort)((memoryAddressCounter << 2) | ((memoryAddressCounter >> 14) & 3)),
-            _ => throw new InvalidOperationException($"Unsupported memory width: {memoryWidthMode}")
+            _ => throw new InvalidOperationException($"Unsupported memory width: {_frameMemoryWidthMode}")
         };
-        if (scanLineBit0ForAddressBit13) {
+        if (_frameScanLineBit0ForAddressBit13) {
             // Use the scan line counter rather than the memory address counter for bit 13.
             // In effect this causes all odd scanline reads to be read from memory address + 0x2000.
-            physicalAddress = (ushort)(physicalAddress & ~0x2000 | ((scanline & 1) != 0 ? 0x2000 : 0));
+            physicalAddress = (ushort)(physicalAddress & ~0x2000 | ((_frameCharRowScanline & 1) != 0 ? 0x2000 : 0));
         }
-        if (scanLineBit0ForAddressBit14) {
+        if (_frameScanLineBit0ForAddressBit14) {
             // Use the scan line counter rather than the memory address counter for bit 14.
             // In effect this causes all odd scanline reads to be read from memory address + 0x4000.
-            physicalAddress = (ushort)(physicalAddress & ~0x4000 | ((scanline & 1) != 0 ? 0x4000 : 0));
+            physicalAddress = (ushort)(physicalAddress & ~0x4000 | ((_frameCharRowScanline & 1) != 0 ? 0x4000 : 0));
         }
 
         // Read 4 bytes from the 4 planes.
-        byte plane0 = (byte)(planesEnabled[0] ? _memory.Planes[0, physicalAddress] : 0);
-        byte plane1 = (byte)(planesEnabled[1] ? _memory.Planes[1, physicalAddress] : 0);
-        byte plane2 = (byte)(planesEnabled[2] ? _memory.Planes[2, physicalAddress] : 0);
-        byte plane3 = (byte)(planesEnabled[3] ? _memory.Planes[3, physicalAddress] : 0);
+        byte plane0 = (byte)(_framePlanesEnabled[0] ? _memory.Planes[0, physicalAddress] : 0);
+        byte plane1 = (byte)(_framePlanesEnabled[1] ? _memory.Planes[1, physicalAddress] : 0);
+        byte plane2 = (byte)(_framePlanesEnabled[2] ? _memory.Planes[2, physicalAddress] : 0);
+        byte plane3 = (byte)(_framePlanesEnabled[3] ? _memory.Planes[3, physicalAddress] : 0);
 
         return (plane0, plane1, plane2, plane3);
     }
@@ -285,12 +280,13 @@ public class Renderer : IVgaRenderer {
         // The byte in plane 1 contains the foreground and background colors.
         uint backGroundColor = attrMap[(plane1 >> 4) & 0xF];
         int index;
-        if (_state.SequencerRegisters.MemoryModeRegister.ExtendedMemory) {
+        SequencerRegisters sequencer = _state.SequencerRegisters;
+        if (sequencer.MemoryModeRegister.ExtendedMemory) {
             // Bit 3 controls which font is used.
             if ((plane1 & 0x8) != 0) {
-                fontAddress += _state.SequencerRegisters.CharacterMapSelectRegister.CharacterMapA;
+                fontAddress += sequencer.CharacterMapSelectRegister.CharacterMapA;
             } else {
-                fontAddress += _state.SequencerRegisters.CharacterMapSelectRegister.CharacterMapB;
+                fontAddress += sequencer.CharacterMapSelectRegister.CharacterMapB;
             }
             index = plane1 & 0x7;
         } else {
@@ -303,11 +299,13 @@ public class Renderer : IVgaRenderer {
             && !_blinkState.IsBlinkPhaseHigh) {
             (foreGroundColor, backGroundColor) = (backGroundColor & 0x7, foreGroundColor);
         }
-             
+
+        int dotsPerClock = sequencer.ClockingModeRegister.DotsPerClock;
         // The 8 pixels to render this line come from the font which is stored in plane 2.
         byte fontByte = _memory.Planes[2, fontAddress + scanline];
-        for (int x = 0; x < _state.SequencerRegisters.ClockingModeRegister.DotsPerClock; x++) {
-            uint pixel = (fontByte & 0x80 >> x) != 0 ? foreGroundColor : backGroundColor;
+        byte mask = 0x80;
+        for (int x = 0; x < dotsPerClock; x++, mask >>= 1) {
+            uint pixel = (fontByte & mask) != 0 ? foreGroundColor : backGroundColor;
             frameBuffer[destinationAddress++] = pixel;
         }
     }
