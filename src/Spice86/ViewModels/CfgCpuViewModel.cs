@@ -8,15 +8,22 @@ using AvaloniaGraphControl;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Iced.Intel;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels.Services;
+using Spice86.ViewModels.TextPresentation;
 
 using System.Diagnostics;
 
@@ -25,6 +32,8 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private readonly IUIDispatcher _uiDispatcher;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly NodeToString _nodeToString;
+    private readonly AstFormattedSegmentsRenderer _segmentsRenderer;
+    private readonly AstBuilder _astBuilder = new();
 
     // Collection of searchable nodes for AutoCompleteBox
     private readonly Dictionary<string, ICfgNode> _searchableNodes = new();
@@ -58,8 +67,10 @@ public partial class CfgCpuViewModel : ViewModelBase {
     public CfgCpuViewModel(IUIDispatcher uiDispatcher,
         ExecutionContextManager executionContextManager,
         IPauseHandler pauseHandler,
-        NodeToString nodeToString) {
+        NodeToString nodeToString,
+        AsmRenderingConfig asmRenderingConfig) {
         _nodeToString = nodeToString;
+        _segmentsRenderer = new AstFormattedSegmentsRenderer(asmRenderingConfig);
         _uiDispatcher = uiDispatcher;
         _executionContextManager = executionContextManager;
         AutoFollow = true;
@@ -192,7 +203,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
                 queue.Enqueue(startNode);
                 HashSet<ICfgNode> visitedNodes = new();
                 HashSet<(int, int)> existingEdges = new();
-                Stopwatch stopwatch = new();
+                Dictionary<int, CfgGraphNode> graphNodeCache = new();
 
                 while (queue.Count > 0 && localNumberOfNodes < MaxNodesToDisplay) {
                     ICfgNode node = queue.Dequeue();
@@ -201,10 +212,10 @@ public partial class CfgCpuViewModel : ViewModelBase {
                     }
 
                     visitedNodes.Add(node);
-                    stopwatch.Restart();
 
-                    string nodeText = FormatNodeText(node,
-                        node.Id == _executionContextManager.CurrentExecutionContext?.LastExecuted?.Id);
+                    bool isLastExecuted =
+                        node.Id == _executionContextManager.CurrentExecutionContext?.LastExecuted?.Id;
+                    GetOrCreateGraphNode(node, isLastExecuted, graphNodeCache);
 
                     string searchableText =
                         $"{_nodeToString.ToHeaderString(node)} - {_nodeToString.ToAssemblyString(node)}";
@@ -215,7 +226,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
                     foreach (ICfgNode successor in node.Successors) {
                         (int, int) edgeKey = GenerateEdgeKey(node, successor);
                         if (!existingEdges.Contains(edgeKey)) {
-                            currentGraph.Edges.Add(CreateEdge(node, successor));
+                            currentGraph.Edges.Add(CreateEdge(node, successor, graphNodeCache));
                             existingEdges.Add(edgeKey);
                         }
 
@@ -227,7 +238,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
                     foreach (ICfgNode predecessor in node.Predecessors) {
                         (int, int) edgeKey = GenerateEdgeKey(predecessor, node);
                         if (!existingEdges.Contains(edgeKey)) {
-                            currentGraph.Edges.Add(CreateEdge(predecessor, node));
+                            currentGraph.Edges.Add(CreateEdge(predecessor, node, graphNodeCache));
                             existingEdges.Add(edgeKey);
                         }
 
@@ -236,7 +247,6 @@ public partial class CfgCpuViewModel : ViewModelBase {
                         }
                     }
 
-                    stopwatch.Stop();
                     localNumberOfNodes++;
                 }
 
@@ -290,15 +300,16 @@ public partial class CfgCpuViewModel : ViewModelBase {
         await RegenerateGraphFromNodeAsync(nodeRoot);
     }
 
-    private Edge CreateEdge(ICfgNode node, ICfgNode successor) {
-        string label = string.Empty;
+    private Edge CreateEdge(ICfgNode node, ICfgNode successor, Dictionary<int, CfgGraphNode> graphNodeCache) {
+        string labelText = string.Empty;
+        CfgEdgeType edgeType = DetermineEdgeType(node);
 
         ICfgNode? lastExecutedNode = _executionContextManager.CurrentExecutionContext?.LastExecuted;
         bool isNodeLastExecuted = node.Id == lastExecutedNode?.Id;
         bool isSuccessorLastExecuted = successor.Id == lastExecutedNode?.Id;
 
-        string nodeText = FormatNodeText(node, isNodeLastExecuted);
-        string successorText = FormatNodeText(successor, isSuccessorLastExecuted);
+        CfgGraphNode nodeGraphNode = GetOrCreateGraphNode(node, isNodeLastExecuted, graphNodeCache);
+        CfgGraphNode successorGraphNode = GetOrCreateGraphNode(successor, isSuccessorLastExecuted, graphNodeCache);
 
         switch (node) {
             case CfgInstruction cfgInstruction: 
@@ -307,17 +318,88 @@ public partial class CfgCpuViewModel : ViewModelBase {
                     .Where(kvp => kvp.Value.Contains(successor))
                     .Select(kvp => kvp.Key)
                     .ToList();
-                label = string.Join(", ", keys);
+                labelText = string.Join(", ", keys);
+                // Refine edge type based on successor relationship
+                if (keys.Contains(InstructionSuccessorType.CallToReturn) ||
+                    keys.Contains(InstructionSuccessorType.CallToMisalignedReturn)) {
+                    edgeType = CfgEdgeType.CallToReturn;
+                } else if (keys.Contains(InstructionSuccessorType.CpuFault)) {
+                    edgeType = CfgEdgeType.CpuFault;
+                }
                 break;
             case SelectorNode selectorNode: {
                     Signature? signature = selectorNode.SuccessorsPerSignature
                         .FirstOrDefault(x => x.Value.Id == successor.Id).Key;
-                    label = signature?.ToString() ?? "";
+                    labelText = signature?.ToString() ?? "";
+                    edgeType = CfgEdgeType.Selector;
                     break;
                 }
         }
 
-        return new Edge(nodeText, successorText, label);
+        CfgGraphEdgeLabel edgeLabel = new() { Text = labelText, EdgeType = edgeType };
+        return new Edge(nodeGraphNode, successorGraphNode, edgeLabel);
+    }
+
+    private static CfgEdgeType DetermineEdgeType(ICfgNode node) {
+        return node switch {
+            IJumpInstruction => CfgEdgeType.Jump,
+            ICallInstruction => CfgEdgeType.Call,
+            IReturnInstruction => CfgEdgeType.Return,
+            SelectorNode => CfgEdgeType.Selector,
+            _ => CfgEdgeType.Normal
+        };
+    }
+
+    private CfgGraphNode GetOrCreateGraphNode(ICfgNode node, bool isLastExecuted,
+        Dictionary<int, CfgGraphNode> cache) {
+        if (cache.TryGetValue(node.Id, out CfgGraphNode? existing)) {
+            return existing;
+        }
+
+        CfgGraphNode graphNode = CreateGraphNode(node, isLastExecuted);
+        cache[node.Id] = graphNode;
+        return graphNode;
+    }
+
+    private CfgGraphNode CreateGraphNode(ICfgNode node, bool isLastExecuted) {
+        List<FormattedTextSegment> segments = [];
+
+        // Prefix line
+        if (isLastExecuted) {
+            segments.Add(new() { Text = "🔴 last run ", Kind = FormatterTextKind.Text });
+        }
+
+        CfgNodeType nodeType = CfgNodeType.Instruction;
+        if (node is IJumpInstruction) {
+            segments.Add(new() { Text = "→ jump ", Kind = FormatterTextKind.Mnemonic });
+            nodeType = CfgNodeType.Jump;
+        } else if (node is ICallInstruction) {
+            segments.Add(new() { Text = "⟱ call ", Kind = FormatterTextKind.Mnemonic });
+            nodeType = CfgNodeType.Call;
+        } else if (node is IReturnInstruction) {
+            segments.Add(new() { Text = "⟰ return ", Kind = FormatterTextKind.Mnemonic });
+            nodeType = CfgNodeType.Return;
+        } else if (node is SelectorNode) {
+            segments.Add(new() { Text = "☰ selector ", Kind = FormatterTextKind.Keyword });
+            nodeType = CfgNodeType.Selector;
+        }
+
+        // Header: address / id
+        segments.Add(new() { Text = node.Address.ToString(), Kind = FormatterTextKind.FunctionAddress });
+        segments.Add(new() { Text = " / ", Kind = FormatterTextKind.Punctuation });
+        segments.Add(new() { Text = node.Id.ToString(), Kind = FormatterTextKind.Number });
+        segments.Add(new() { Text = Environment.NewLine, Kind = FormatterTextKind.Text });
+
+        // Assembly instruction (syntax-highlighted via AST renderer)
+        InstructionNode ast = node.ToInstructionAst(_astBuilder);
+        segments.AddRange(ast.Accept(_segmentsRenderer));
+
+        return new CfgGraphNode {
+            NodeId = node.Id,
+            Segments = segments,
+            IsLastExecuted = isLastExecuted,
+            NodeType = nodeType
+        };
     }
 
     private string FormatNodeText(ICfgNode node, bool isLastExecuted) {
