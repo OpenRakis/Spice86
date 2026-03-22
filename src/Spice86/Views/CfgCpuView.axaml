@@ -1,46 +1,55 @@
 <UserControl
-    x:Class="Spice86.Views.CfgCpuView"
-    xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-    xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
-    xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
-    x:CompileBindings="True"
-    x:DataType="viewModels:CfgCpuViewModel"
-    mc:Ignorable="d">
+	x:Class="Spice86.Views.CfgCpuView"
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+	xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+	xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
+	d:DesignHeight="450"
+	d:DesignWidth="800"
+	x:CompileBindings="True"
+	x:DataType="viewModels:CfgCpuViewModel"
+	mc:Ignorable="d">
+	<UserControl.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceInclude Source="avares://Spice86/Views/Styles/DisassemblyResources.axaml" />
+				<ResourceInclude Source="avares://Spice86/Views/Styles/CfgCpuResources.axaml" />
+			</ResourceDictionary.MergedDictionaries>
+		</ResourceDictionary>
+	</UserControl.Resources>
 	<Design.DataContext>
 		<viewModels:CfgCpuViewModel />
 	</Design.DataContext>
-	
-    <UserControl.Styles>
-	    <StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
-		
-	    <!-- Node boxes styling - static properties only, theme handled by behavior -->
-	    <Style Selector="agc|TextSticker">
-	        <Setter Property="FontSize" Value="14" />
-	        <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Courier New, monospace" />
-	        <Setter Property="Padding" Value="10,6" />
-	        <Setter Property="BorderThickness" Value="1.5" />
-	        <Setter Property="BorderRadius" Value="4" />
-	        <Setter Property="behaviors:TextStickerThemeBehavior.EnableTheming" Value="True" />
-	    </Style>
-		
-	    <Style Selector="agc|Connection">
-	    <Setter Property="Brush" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
-	    </Style>
-		
-	    <!-- Edge labels (TextBlock children of GraphPanel) -->
-	    <Style Selector="agc|GraphPanel > TextBlock">
-	        <Setter Property="FontSize" Value="14" />
-	        <Setter Property="Foreground" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
-	        <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltMediumHighBrush}" />
-	        <Setter Property="Padding" Value="4,2" />
-	    </Style>
+
+	<UserControl.Styles>
+		<StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+
+		<!-- Fallback node boxes styling for any string nodes -->
+		<Style Selector="agc|TextSticker">
+			<Setter Property="FontSize" Value="14" />
+			<Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Courier New, monospace" />
+			<Setter Property="Padding" Value="10,6" />
+			<Setter Property="BorderThickness" Value="1.5" />
+			<Setter Property="BorderRadius" Value="4" />
+			<Setter Property="behaviors:TextStickerThemeBehavior.EnableTheming" Value="True" />
+		</Style>
+
+		<!-- Connection coloring via behavior -->
+		<Style Selector="agc|Connection">
+			<Setter Property="behaviors:ConnectionThemeBehavior.EnableTheming" Value="True" />
+		</Style>
+
+		<!-- Edge labels (TextBlock children of GraphPanel) -->
+		<Style Selector="agc|GraphPanel > TextBlock">
+			<Setter Property="FontSize" Value="14" />
+			<Setter Property="Foreground" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
+			<Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltMediumHighBrush}" />
+			<Setter Property="Padding" Value="4,2" />
+		</Style>
 	</UserControl.Styles>
 	
 	<Grid RowDefinitions="Auto,Auto,*,Auto">
@@ -120,7 +129,30 @@
                                 EnableConstrains="True"
                                 ClipToBounds="True" Focusable="True"
                                 VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
-                                <agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme" />
+                                <agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme">
+                                    <agc:GraphPanel.DataTemplates>
+                                        <!-- Syntax-highlighted CFG graph node -->
+                                        <DataTemplate DataType="{x:Type viewModels:CfgGraphNode}">
+                                            <Border
+                                                CornerRadius="4"
+                                                Padding="10,6"
+                                                behaviors:CfgNodeThemeBehavior.EnableTheming="True">
+                                                <TextBlock
+                                                    FontSize="14"
+                                                    FontFamily="Cascadia Mono, Consolas, Courier New, monospace" />
+                                            </Border>
+                                        </DataTemplate>
+                                        <!-- Colored edge label -->
+                                        <DataTemplate DataType="{x:Type viewModels:CfgGraphEdgeLabel}">
+                                            <TextBlock
+                                                Text="{Binding Text}"
+                                                FontSize="14"
+                                                Background="{DynamicResource SystemControlBackgroundAltMediumHighBrush}"
+                                                Padding="4,2"
+                                                behaviors:EdgeLabelThemeBehavior.EnableTheming="True" />
+                                        </DataTemplate>
+                                    </agc:GraphPanel.DataTemplates>
+                                </agc:GraphPanel>
                             </ZoomBorder>
                         </Border>
                     </ScrollViewer>
@@ -236,10 +268,10 @@
 			Margin="0,5,5,5">
 				<StackPanel Orientation="Horizontal" Spacing="8">
 					<TextBlock Text="🔴 Last run" />
-					<TextBlock Text="→ Jump" />
-					<TextBlock Text="⟱ Call" />
-					<TextBlock Text="⟰ Return" />
-					<TextBlock Text="☰ Selector" />
+					<TextBlock Text="→ Jump" Foreground="{DynamicResource CfgEdgeJumpBrush}" />
+					<TextBlock Text="⟱ Call" Foreground="{DynamicResource CfgEdgeCallBrush}" />
+					<TextBlock Text="⟰ Return" Foreground="{DynamicResource CfgEdgeReturnBrush}" />
+					<TextBlock Text="☰ Selector" Foreground="{DynamicResource CfgEdgeSelectorBrush}" />
 				</StackPanel>
 			</Border>
 		</Grid>

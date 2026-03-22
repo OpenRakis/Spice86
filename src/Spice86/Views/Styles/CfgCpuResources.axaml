@@ -1,0 +1,35 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ResourceDictionary.ThemeDictionaries>
+        <!-- Light theme -->
+        <ResourceDictionary x:Key="Light">
+            <!-- Edge colors -->
+            <SolidColorBrush x:Key="CfgEdgeNormalBrush" Color="#909090" />
+            <SolidColorBrush x:Key="CfgEdgeJumpBrush" Color="#D68910" />
+            <SolidColorBrush x:Key="CfgEdgeCallBrush" Color="#2E86C1" />
+            <SolidColorBrush x:Key="CfgEdgeReturnBrush" Color="#8E44AD" />
+            <SolidColorBrush x:Key="CfgEdgeSelectorBrush" Color="#28B463" />
+            <SolidColorBrush x:Key="CfgEdgeCallToReturnBrush" Color="#1ABC9C" />
+            <SolidColorBrush x:Key="CfgEdgeCpuFaultBrush" Color="#CB4335" />
+
+            <!-- Node border for last-executed -->
+            <SolidColorBrush x:Key="CfgNodeLastExecutedBorderBrush" Color="#CB4335" />
+        </ResourceDictionary>
+
+        <!-- Dark theme -->
+        <ResourceDictionary x:Key="Dark">
+            <!-- Edge colors -->
+            <SolidColorBrush x:Key="CfgEdgeNormalBrush" Color="#808080" />
+            <SolidColorBrush x:Key="CfgEdgeJumpBrush" Color="#F0B27A" />
+            <SolidColorBrush x:Key="CfgEdgeCallBrush" Color="#5DADE2" />
+            <SolidColorBrush x:Key="CfgEdgeReturnBrush" Color="#BB8FCE" />
+            <SolidColorBrush x:Key="CfgEdgeSelectorBrush" Color="#58D68D" />
+            <SolidColorBrush x:Key="CfgEdgeCallToReturnBrush" Color="#48C9B0" />
+            <SolidColorBrush x:Key="CfgEdgeCpuFaultBrush" Color="#EC7063" />
+
+            <!-- Node border for last-executed -->
+            <SolidColorBrush x:Key="CfgNodeLastExecutedBorderBrush" Color="#EC7063" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>
