@@ -32,14 +32,3 @@ public sealed class CfgGraphNode : IEquatable<CfgGraphNode> {
     public override int GetHashCode() => NodeId;
     public override string ToString() => string.Join("", Segments.ConvertAll(s => s.Text));
 }
-
-/// <summary>
-/// Classifies CFG graph nodes by instruction type for visual styling.
-/// </summary>
-public enum CfgNodeType {
-    Instruction,
-    Jump,
-    Call,
-    Return,
-    Selector
-}

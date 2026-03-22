@@ -85,9 +85,9 @@ public static class CfgNodeThemeBehavior {
 
     private static void ApplyFormattedSegments(TextBlock textBlock, List<FormattedTextSegment> segments) {
         textBlock.Inlines?.Clear();
-        var inlines = new InlineCollection();
+        InlineCollection inlines = new InlineCollection();
         foreach (FormattedTextSegment segment in segments) {
-            var run = new Run { Text = segment.Text };
+            Run run = new Run { Text = segment.Text };
             run.Bind(TextElement.ForegroundProperty,
                 FormatterTextKindToBrushConverter.GetDynamicResourceExtension(segment.Kind));
             inlines.Add(run);
