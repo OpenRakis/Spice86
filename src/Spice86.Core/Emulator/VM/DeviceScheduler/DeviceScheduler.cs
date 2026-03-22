@@ -26,7 +26,7 @@ public class DeviceScheduler {
 
     private readonly FastPriorityQueue<ScheduledEntry> _queue = new(MaxQueueSize);
     private readonly Stack<ScheduledEntry> _entryPool = new(MaxQueueSize);
-    private readonly Dictionary<EventHandler, List<ScheduledEntry>> _activeEventsByHandler = new();
+    
     private readonly DeviceSchedulerMonitor _monitor;
 
     private bool _isServicingEvents;
@@ -85,36 +85,35 @@ public class DeviceScheduler {
         ScheduledEntry entry = GetEntry(handler, absoluteScheduledTime, val);
 
         _queue.Enqueue(entry, (float)absoluteScheduledTime);
-
-        if (!_activeEventsByHandler.TryGetValue(handler, out List<ScheduledEntry>? events)) {
-            events = new List<ScheduledEntry>();
-            _activeEventsByHandler[handler] = events;
-        }
-
-        events.Add(entry);
     }
 
     /// <summary>
     ///     Removes all queued events matching the provided handler.
     /// </summary>
     public void RemoveEvents(EventHandler handler) {
-        if (!_activeEventsByHandler.TryGetValue(handler, out List<ScheduledEntry>? events)) {
+        if (_queue.Count == 0) {
             return;
         }
 
-        foreach (ScheduledEntry entry in events) {
-            if (_queue.Contains(entry)) {
-                _queue.Remove(entry);
+        int removedCount = 0;
+        List<ScheduledEntry> remaining = new(_queue.Count);
+
+        while (_queue.Count > 0) {
+            ScheduledEntry entry = _queue.Dequeue();
+            if (entry.Handler == handler) {
                 ReturnEntry(entry);
+                removedCount++;
+            } else {
+                remaining.Add(entry);
             }
         }
 
-        int count = events.Count;
-        events.Clear();
-        _activeEventsByHandler.Remove(handler);
+        foreach (ScheduledEntry e in remaining) {
+            _queue.Enqueue(e, (float)e.ScheduledTime);
+        }
 
-        if (count > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Cancelled all {EventCount} events for handler {Handler}", count, GetHandlerName(handler));
+        if (removedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("Cancelled all {EventCount} events for handler {Handler}", removedCount, GetHandlerName(handler));
         }
     }
 
@@ -133,14 +132,6 @@ public class DeviceScheduler {
         while (_queue.Count > 0 && _queue.First.ScheduledTime <= currentTime) {
             ScheduledEntry entry = _queue.Dequeue();
             _monitor.OnEventExecuted(entry.ScheduledTime, currentTime, _queue.Count);
-
-            // Remove from active handler tracking
-            if (_activeEventsByHandler.TryGetValue(entry.Handler, out List<ScheduledEntry>? events)) {
-                events.Remove(entry);
-                if (events.Count == 0) {
-                    _activeEventsByHandler.Remove(entry.Handler);
-                }
-            }
 
             // Important for events that re-schedules another event, to ensure it will fire at the correct time not taking into account lag
             _activeEventScheduledTime = entry.ScheduledTime;
