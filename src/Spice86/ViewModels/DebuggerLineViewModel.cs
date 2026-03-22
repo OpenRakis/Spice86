@@ -25,7 +25,7 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     });
 
     private readonly Instruction _info;
-    private readonly List<FormattedTextSegment>? _customFormattedInstruction;
+    private readonly List<FormattedToken>? _customFormattedInstruction;
 
     [ObservableProperty]
     private BreakpointViewModel? _breakpoint;
@@ -97,7 +97,7 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     /// <summary>
     ///     Gets a collection of formatted text segments for the disassembly with syntax highlighting.
     /// </summary>
-    public List<FormattedTextSegment> DisassemblySegments { get; private set; } = [];
+    public List<FormattedToken> DisassemblySegments { get; private set; } = [];
 
     /// <summary>
     ///     Generates a formatted representation of the disassembly with syntax highlighting.
@@ -108,9 +108,9 @@ public partial class DebuggerLineViewModel : ViewModelBase {
             DisassemblySegments = _customFormattedInstruction;
         } else {
             // Use standard Iced formatting for normal instructions
-            var output = new FormattedTextSegmentsOutput();
+            FormattedTokensOutput output = new FormattedTokensOutput();
             _formatter.Format(_info, output);
-            DisassemblySegments = output.Segments;
+            DisassemblySegments = output.Tokens;
         }
     }
 

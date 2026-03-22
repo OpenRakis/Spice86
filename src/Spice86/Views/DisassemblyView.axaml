@@ -21,7 +21,7 @@
                 <ResourceInclude Source="avares://Spice86/Views/Styles/DisassemblyResources.axaml" />
             </ResourceDictionary.MergedDictionaries>
             <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
-            <converters:FormattedTextSegmentsConverter x:Key="FormattedTextSegmentsConverter" />
+            <converters:FormattedTokensConverter x:Key="FormattedTokensConverter" />
             <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
         </ResourceDictionary>
     </UserControl.Resources>
@@ -238,7 +238,7 @@
 
                                 <!-- Instruction -->
                                 <SelectableTextBlock Grid.Column="4"
-                                                     Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
+                                                     Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTokensConverter}}"
                                                      Margin="12,0,0,0" />
 
                                 <!-- Branch target indicator -->
