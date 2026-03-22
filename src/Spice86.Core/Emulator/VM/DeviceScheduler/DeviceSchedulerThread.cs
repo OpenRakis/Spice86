@@ -47,8 +47,6 @@ public sealed class DeviceSchedulerThread : IDisposable {
     }
 
     private void ThreadLoop() {
-        SpinWait spinner = new();
-
         while (!_shouldStop) {
             _pauseHandler.WaitIfPaused();
 
@@ -62,17 +60,13 @@ public sealed class DeviceSchedulerThread : IDisposable {
             if(nextEventTime is not null) {
                 double currentTime = _clock.ElapsedTimeMs;
                 double waitMs = nextEventTime.Value - currentTime;
-                if (waitMs > SpinThresholdMs) {
-                    Thread.Sleep(1);
-                } else if (waitMs > 0) {
-                    spinner.SpinOnce(-1);
+                if(waitMs > 0) {
+                    Thread.Sleep((int)waitMs);
                 }
             } else {
-                // No events or event already due — brief yield to avoid busy-wait
+                // No events
                 Thread.Sleep(1);
             }
-
-            spinner.Reset();
         }
     }
 
