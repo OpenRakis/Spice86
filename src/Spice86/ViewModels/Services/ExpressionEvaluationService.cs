@@ -3,6 +3,7 @@ namespace Spice86.ViewModels.Services;
 using Iced.Intel;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.ViewModels.TextPresentation;
@@ -32,7 +33,7 @@ public class ExpressionEvaluationService {
             return null;
         }
 
-        var segments = new List<FormattedTextSegment>();
+        List<FormattedTextSegment> segments = new();
 
         for (int i = 0; i < instruction.OpCount; i++) {
             OpKind kind = instruction.GetOpKind(i);
@@ -105,11 +106,20 @@ public class ExpressionEvaluationService {
         }
 
         uint disp = instruction.MemoryDisplacement32;
-        if (disp != 0 || firstPart) {
+        int dispSize = instruction.MemoryDisplSize;
+        long signedDisp = dispSize switch {
+            1 => (sbyte)(byte)disp,
+            2 => (short)(ushort)disp,
+            4 => (int)disp,
+            _ => 0L
+        };
+        if (signedDisp != 0 || firstPart) {
             if (!firstPart) {
-                segments.Add(new FormattedTextSegment { Text = "+", Kind = FormatterTextKind.Operator });
+                string dispOp = signedDisp < 0 ? "-" : "+";
+                segments.Add(new FormattedTextSegment { Text = dispOp, Kind = FormatterTextKind.Operator });
             }
-            segments.Add(new FormattedTextSegment { Text = $"0x{disp:X}", Kind = FormatterTextKind.Number });
+            long absDisp = signedDisp < 0 ? -signedDisp : signedDisp;
+            segments.Add(new FormattedTextSegment { Text = $"0x{absDisp:X}", Kind = FormatterTextKind.Number });
         }
 
         segments.Add(new FormattedTextSegment { Text = "]", Kind = FormatterTextKind.Punctuation });
@@ -167,24 +177,41 @@ public class ExpressionEvaluationService {
 
         string? segment = RegisterToExpression(instruction.MemorySegment);
 
-        var addressParts = new List<string>();
+        List<string> registerParts = new();
 
         string? baseReg = instruction.MemoryBase != Register.None ? RegisterToExpression(instruction.MemoryBase) : null;
         if (baseReg != null) {
-            addressParts.Add(baseReg);
+            registerParts.Add(baseReg);
         }
 
         string? indexReg = instruction.MemoryIndex != Register.None ? RegisterToExpression(instruction.MemoryIndex) : null;
         if (indexReg != null) {
-            addressParts.Add(indexReg);
+            registerParts.Add(indexReg);
         }
 
-        uint disp = instruction.MemoryDisplacement32;
-        if (disp != 0 || addressParts.Count == 0) {
-            addressParts.Add($"0x{disp:X}");
-        }
+        uint rawDisp = instruction.MemoryDisplacement32;
+        int dispSize = instruction.MemoryDisplSize;
+        long signedDisp = dispSize switch {
+            1 => (sbyte)(byte)rawDisp,
+            2 => (short)(ushort)rawDisp,
+            4 => (int)rawDisp,
+            _ => 0L
+        };
 
-        string addressExpr = string.Join(" + ", addressParts);
+        string addressExpr;
+        if (registerParts.Count > 0) {
+            addressExpr = string.Join(" + ", registerParts);
+            if (signedDisp > 0) {
+                addressExpr += $" + 0x{signedDisp:X}";
+            } else if (signedDisp < 0) {
+                long absDisp = -signedDisp;
+                addressExpr += $" - 0x{absDisp:X}";
+            }
+        } else {
+            long mask = dispSize == 4 ? 0xFFFFFFFFL : 0xFFFFL;
+            long maskedDisp = signedDisp & mask;
+            addressExpr = $"0x{maskedDisp:X}";
+        }
 
         return segment != null
             ? $"{sizePrefix} ptr {segment}:[{addressExpr}]"
@@ -208,7 +235,11 @@ public class ExpressionEvaluationService {
             Func<long> func = _compiler.Compile(expression);
             _cache[expression] = func;
             return func;
-        } catch {
+        } catch (ExpressionParseException) {
+            return null;
+        } catch (ArgumentException) {
+            return null;
+        } catch (InvalidOperationException) {
             return null;
         }
     }

@@ -80,14 +80,15 @@ public class ExpressionEvaluatorUiTests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextSegment> nonNullEvaluated = evaluated ?? throw new InvalidOperationException("Operand formatting returned null after assertion.");
+        string text = SegmentsToText(nonNullEvaluated);
         text.Should().Contain("AX=0x1234");
         text.Should().Contain("BX=0x5678");
 
         // Verify syntax coloring: register names get Register kind, values get Number kind
-        evaluated.Should().Contain(s => s.Text == "AX" && s.Kind == FormatterTextKind.Register);
-        evaluated.Should().Contain(s => s.Text == "0x1234" && s.Kind == FormatterTextKind.Number);
-        evaluated.Should().Contain(s => s.Text == "=" && s.Kind == FormatterTextKind.Punctuation);
+        nonNullEvaluated.Should().Contain(s => s.Text == "AX" && s.Kind == FormatterTextKind.Register);
+        nonNullEvaluated.Should().Contain(s => s.Text == "0x1234" && s.Kind == FormatterTextKind.Number);
+        nonNullEvaluated.Should().Contain(s => s.Text == "=" && s.Kind == FormatterTextKind.Punctuation);
     }
 
     /// <summary>
@@ -119,13 +120,14 @@ public class ExpressionEvaluatorUiTests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextSegment> nonNullEvaluated = evaluated ?? throw new InvalidOperationException("Operand formatting returned null after assertion.");
+        string text = SegmentsToText(nonNullEvaluated);
         text.Should().Contain("AX=0x0000");
         text.Should().Contain("0xABCD");
 
         // Verify memory brackets are punctuation-colored
-        evaluated.Should().Contain(s => s.Text == "[" && s.Kind == FormatterTextKind.Punctuation);
-        evaluated.Should().Contain(s => s.Text == "]" && s.Kind == FormatterTextKind.Punctuation);
+        nonNullEvaluated.Should().Contain(s => s.Text == "[" && s.Kind == FormatterTextKind.Punctuation);
+        nonNullEvaluated.Should().Contain(s => s.Text == "]" && s.Kind == FormatterTextKind.Punctuation);
     }
 
     /// <summary>
@@ -152,7 +154,8 @@ public class ExpressionEvaluatorUiTests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextSegment> nonNullEvaluated = evaluated ?? throw new InvalidOperationException("Operand formatting returned null after assertion.");
+        string text = SegmentsToText(nonNullEvaluated);
         text.Should().Contain("AX=0x5555");
         // The immediate value 0x1234 should NOT appear in evaluation
         text.Should().NotContain("=0x1234");
@@ -187,11 +190,12 @@ public class ExpressionEvaluatorUiTests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextSegment> nonNullEvaluated = evaluated ?? throw new InvalidOperationException("Operand formatting returned null after assertion.");
+        string text = SegmentsToText(nonNullEvaluated);
         text.Should().Contain("AX=0x0000");
         text.Should().Contain("0xBEEF");
 
         // Verify displacement operator is syntax-colored
-        evaluated.Should().Contain(s => s.Text == "+" && s.Kind == FormatterTextKind.Operator);
+        nonNullEvaluated.Should().Contain(s => s.Text == "+" && s.Kind == FormatterTextKind.Operator);
     }
 }
