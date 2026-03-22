@@ -32,7 +32,8 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private readonly IUIDispatcher _uiDispatcher;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly NodeToString _nodeToString;
-    private readonly AstFormattedSegmentsRenderer _segmentsRenderer;
+    private readonly AstFormattedTokenRenderer _tokenVisitor;
+    private readonly TokensRenderer _tokensRenderer = new();
     private readonly AstBuilder _astBuilder = new();
 
     // Collection of searchable nodes for AutoCompleteBox
@@ -70,7 +71,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
         NodeToString nodeToString,
         AsmRenderingConfig asmRenderingConfig) {
         _nodeToString = nodeToString;
-        _segmentsRenderer = new AstFormattedSegmentsRenderer(asmRenderingConfig);
+        _tokenVisitor = new AstFormattedTokenRenderer(asmRenderingConfig, _tokensRenderer);
         _uiDispatcher = uiDispatcher;
         _executionContextManager = executionContextManager;
         AutoFollow = true;
@@ -362,41 +363,43 @@ public partial class CfgCpuViewModel : ViewModelBase {
     }
 
     private CfgGraphNode CreateGraphNode(ICfgNode node, bool isLastExecuted) {
-        List<FormattedTextSegment> segments = [];
+        List<FormattedToken> tokens = [];
 
         // Prefix line
         if (isLastExecuted) {
-            segments.Add(new() { Text = "🔴 last run ", Kind = FormatterTextKind.Text });
+            tokens.Add(new FormattedToken { Text = "🔴 last run ", Kind = FormatterTextKind.Text });
         }
 
         CfgNodeType nodeType = CfgNodeType.Instruction;
         if (node is IJumpInstruction) {
-            segments.Add(new() { Text = "→ jump ", Kind = FormatterTextKind.Mnemonic });
+            tokens.Add(new FormattedToken { Text = "→ jump ", Kind = FormatterTextKind.Mnemonic });
             nodeType = CfgNodeType.Jump;
         } else if (node is ICallInstruction) {
-            segments.Add(new() { Text = "⟱ call ", Kind = FormatterTextKind.Mnemonic });
+            tokens.Add(new FormattedToken { Text = "⟱ call ", Kind = FormatterTextKind.Mnemonic });
             nodeType = CfgNodeType.Call;
         } else if (node is IReturnInstruction) {
-            segments.Add(new() { Text = "⟰ return ", Kind = FormatterTextKind.Mnemonic });
+            tokens.Add(new FormattedToken { Text = "⟰ return ", Kind = FormatterTextKind.Mnemonic });
             nodeType = CfgNodeType.Return;
         } else if (node is SelectorNode) {
-            segments.Add(new() { Text = "☰ selector ", Kind = FormatterTextKind.Keyword });
+            tokens.Add(new FormattedToken { Text = "☰ selector ", Kind = FormatterTextKind.Keyword });
             nodeType = CfgNodeType.Selector;
         }
 
         // Header: address / id
-        segments.Add(new() { Text = node.Address.ToString(), Kind = FormatterTextKind.FunctionAddress });
-        segments.Add(new() { Text = " / ", Kind = FormatterTextKind.Punctuation });
-        segments.Add(new() { Text = node.Id.ToString(), Kind = FormatterTextKind.Number });
-        segments.Add(new() { Text = Environment.NewLine, Kind = FormatterTextKind.Text });
+        tokens.Add(new FormattedToken { Text = node.Address.ToString(), Kind = FormatterTextKind.FunctionAddress });
+        tokens.Add(new FormattedToken { Text = " / ", Kind = FormatterTextKind.Punctuation });
+        tokens.Add(new FormattedToken { Text = node.Id.ToString(), Kind = FormatterTextKind.Number });
+        tokens.Add(new FormattedToken { Text = Environment.NewLine, Kind = FormatterTextKind.Text });
 
         // Assembly instruction (syntax-highlighted via AST renderer)
         InstructionNode ast = node.ToInstructionAst(_astBuilder);
-        segments.AddRange(ast.Accept(_segmentsRenderer));
+        _tokensRenderer.Reset();
+        ast.Accept(_tokenVisitor);
+        tokens.AddRange(_tokensRenderer.GetTokens());
 
         return new CfgGraphNode {
             NodeId = node.Id,
-            Segments = segments,
+            Tokens = tokens,
             IsLastExecuted = isLastExecuted,
             NodeType = nodeType
         };

@@ -94,11 +94,11 @@ internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress,
             SegmentedAddress = address,
             Breakpoints = breakpointsViewModel.GetExecutionBreakPointsAtAddress(address.Linear).ToImmutableList(),
             InstructionFormatOverride = [
-                new FormattedTextSegment {
+                new FormattedToken {
                     Text = "Spice86 callback ",
                     Kind = FormatterTextKind.Directive
                 },
-                new FormattedTextSegment {
+                new FormattedToken {
                     Text = callbackIndex.ToString().PadLeft(3),
                     Kind = FormatterTextKind.Function
                 }

@@ -3,21 +3,22 @@ namespace Spice86.ViewModels.TextPresentation;
 using Iced.Intel;
 
 /// <summary>
-/// Thread-safe formatter output that doesn't create UI elements.
+/// Thread-safe <see cref="FormatterOutput"/> that collects Iced disassembler output
+/// as a list of <see cref="FormattedToken"/> objects without creating any UI elements.
 /// </summary>
-public class FormattedTextSegmentsOutput : FormatterOutput {
+public class FormattedTokensOutput : FormatterOutput {
     /// <summary>
-    /// Gets the list of formatted text segments.
+    /// Gets the list of formatted tokens.
     /// </summary>
-    public List<FormattedTextSegment> Segments { get; } = [];
+    public List<FormattedToken> Tokens { get; } = [];
 
     /// <summary>
-    /// Writes a segment of text with the specified kind.
+    /// Writes a token with the specified kind.
     /// </summary>
     /// <param name="text">The text to write.</param>
     /// <param name="kind">The kind of text.</param>
     public override void Write(string text, FormatterTextKind kind) {
-        Segments.Add(new FormattedTextSegment {
+        Tokens.Add(new FormattedToken {
             Text = text,
             Kind = kind
         });

@@ -12,19 +12,19 @@ using System.Collections.Generic;
 using System.Globalization;
 
 /// <summary>
-/// Converts a list of FormattedTextSegment to an InlineCollection for display in a TextBlock.
+/// Converts a list of <see cref="FormattedToken"/> to an <see cref="InlineCollection"/> for display in a TextBlock.
 /// </summary>
-public class FormattedTextSegmentsConverter : IValueConverter {
+public class FormattedTokensConverter : IValueConverter {
     /// <summary>
-    /// Converts a list of FormattedTextSegment to an InlineCollection.
+    /// Converts a list of <see cref="FormattedToken"/> to an <see cref="InlineCollection"/>.
     /// </summary>
     /// <param name="value">The value to convert.</param>
     /// <param name="targetType">The type of the target.</param>
     /// <param name="parameter">The converter parameter.</param>
     /// <param name="culture">The culture to use.</param>
-    /// <returns>An InlineCollection containing Run objects for each segment.</returns>
+    /// <returns>An InlineCollection containing Run objects for each token.</returns>
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
-        if (value is not List<FormattedTextSegment> segments) {
+        if (value is not List<FormattedToken> tokens) {
             return null;
         }
 
@@ -35,13 +35,13 @@ public class FormattedTextSegmentsConverter : IValueConverter {
             return new InlineCollection();
         }
 
-        var inlines = new InlineCollection();
+        InlineCollection inlines = new InlineCollection();
 
-        foreach (FormattedTextSegment segment in segments) {
-            var run = new Run {
-                Text = segment.Text,
+        foreach (FormattedToken token in tokens) {
+            Run run = new Run {
+                Text = token.Text,
             };
-            run.Bind(TextElement.ForegroundProperty, FormatterTextKindToBrushConverter.GetDynamicResourceExtension(segment.Kind));
+            run.Bind(TextElement.ForegroundProperty, FormatterTextKindToBrushConverter.GetDynamicResourceExtension(token.Kind));
             inlines.Add(run);
         }
 
