@@ -58,14 +58,15 @@ public sealed class DeviceSchedulerThread : IDisposable {
 
             _scheduler.ProcessEvents();
 
-            double nextEventTime = _scheduler.NextEventTime;
-            double currentTime = _clock.ElapsedTimeMs;
-            double waitMs = nextEventTime - currentTime;
-
-            if (waitMs > SpinThresholdMs) {
-                Thread.Sleep(1);
-            } else if (waitMs > 0) {
-                spinner.SpinOnce(-1);
+            double? nextEventTime = _scheduler.NextEventTime;
+            if(nextEventTime is not null) {
+                double currentTime = _clock.ElapsedTimeMs;
+                double waitMs = nextEventTime.Value - currentTime;
+                if (waitMs > SpinThresholdMs) {
+                    Thread.Sleep(1);
+                } else if (waitMs > 0) {
+                    spinner.SpinOnce(-1);
+                }
             } else {
                 // No events or event already due — brief yield to avoid busy-wait
                 Thread.Sleep(1);

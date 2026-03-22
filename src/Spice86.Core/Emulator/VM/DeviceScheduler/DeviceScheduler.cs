@@ -31,11 +31,12 @@ public class DeviceScheduler {
 
     private bool _isServicingEvents;
     private double _activeEventScheduledTime;
+    private double _loopEntryTime;
 
     /// <summary>
     ///     Gets the scheduled time of the next queued event, or <see cref="double.MaxValue"/> if the queue is empty.
     /// </summary>
-    public double NextEventTime => _queue.Count > 0 ? _queue.First.ScheduledTime : double.MaxValue;
+    public double? NextEventTime => _queue.Count > 0 ? _queue.First.ScheduledTime : null;
 
     /// <summary>
     ///     Initializes a new scheduler with a descriptive instance name.
@@ -64,8 +65,22 @@ public class DeviceScheduler {
             return;
         }
 
-        double baseTime = _isServicingEvents ? _activeEventScheduledTime : _clock.ElapsedTimeMs;
-        double absoluteScheduledTime = baseTime + delay;
+        // Compute absolute scheduled time taking into account we're currently servicing events.
+        // Use the active event's scheduled time + delay when that yields a time in the future
+        // relative to the loop entry. Otherwise schedule just after the loop entry to avoid
+        // putting events in the past (prevents infinite re-queuing on slow machines).
+        const double MinFutureOffsetMs = 0.0001;
+        double absoluteScheduledTime;
+        if (!_isServicingEvents) {
+            absoluteScheduledTime = _clock.ElapsedTimeMs + delay;
+        } else {
+            double candidate = _activeEventScheduledTime + delay;
+            if (candidate >= _loopEntryTime) {
+                absoluteScheduledTime = candidate;
+            } else {
+                absoluteScheduledTime = _loopEntryTime + MinFutureOffsetMs;
+            }
+        }
 
         ScheduledEntry entry = GetEntry(handler, absoluteScheduledTime, val);
 
@@ -113,6 +128,7 @@ public class DeviceScheduler {
 
         _isServicingEvents = true;
         double currentTime = _clock.ElapsedTimeMs;
+        _loopEntryTime = currentTime;
 
         while (_queue.Count > 0 && _queue.First.ScheduledTime <= currentTime) {
             ScheduledEntry entry = _queue.Dequeue();
