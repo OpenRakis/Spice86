@@ -209,6 +209,15 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     public Expression VisitSegmentedPointer(SegmentedPointerNode node) {
         Expression segmentExpression = node.Segment.Accept(this);
         Expression offsetExpression = node.Offset.Accept(this);
+        // The dual-parameter indexer expects (ushort segment, ushort offset).
+        // Arithmetic in the offset (e.g., bx + 0x10) produces uint, so convert to ushort
+        // which also correctly wraps at 16 bits for real-mode segmented addressing.
+        if (segmentExpression.Type != typeof(ushort)) {
+            segmentExpression = Expression.Convert(segmentExpression, typeof(ushort));
+        }
+        if (offsetExpression.Type != typeof(ushort)) {
+            offsetExpression = Expression.Convert(offsetExpression, typeof(ushort));
+        }
         return ToMemoryIndexer(node.DataType, segmentExpression, offsetExpression);
     }
 
@@ -310,6 +319,13 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     
     public Expression<Func<State, Memory, bool>> ToFuncBool(Expression expression) {
         return Expression.Lambda<Func<State, Memory, bool>>(expression, _allParameters);
+    }
+
+    public Expression<Func<State, Memory, long>> ToFuncLong(Expression expression) {
+        if (expression.Type != typeof(long)) {
+            expression = Expression.Convert(expression, typeof(long));
+        }
+        return Expression.Lambda<Func<State, Memory, long>>(expression, _allParameters);
     }
 
     public Expression<Action<InstructionExecutionHelper, State, Memory>> ToActionWithHelper(Expression expression) {

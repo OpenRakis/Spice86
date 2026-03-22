@@ -32,6 +32,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly BreakpointConditionService _conditionService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+    private readonly ExpressionEvaluationService _evaluationService;
     private readonly IDictionary<SegmentedAddress, FunctionInformation> _functionsInformation;
     private readonly InstructionsDecoder _instructionsDecoder;
     private readonly ILoggerService _logger;
@@ -134,6 +135,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         _state = state;
         _pauseHandler = pauseHandler;
         _conditionService = new BreakpointConditionService(state, memory);
+        _evaluationService = new ExpressionEvaluationService(state, memory);
         _instructionsDecoder = new InstructionsDecoder(memory, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
         _canCloseTab = canCloseTab;
@@ -326,6 +328,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
             if (_pauseHandler.IsPaused) {
                 return;
             }
+            ClearEvaluatedOperands();
             IsPaused = false;
         });
     }
@@ -361,8 +364,23 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         // Update the registers view model
         Registers.Update();
 
+        // Evaluate operands for all visible lines
+        EvaluateOperands();
+
         // Set the paused state last to ensure all updates are complete
         IsPaused = true;
+    }
+
+    private void EvaluateOperands() {
+        foreach (DebuggerLineViewModel line in DebuggerLines.Values) {
+            line.EvaluatedOperands = _evaluationService.FormatOperandValues(line.InstructionInfo);
+        }
+    }
+
+    private void ClearEvaluatedOperands() {
+        foreach (DebuggerLineViewModel line in DebuggerLines.Values) {
+            line.EvaluatedOperands = null;
+        }
     }
 
     private DebuggerLineViewModel EnsureAddressIsLoaded(SegmentedAddress address) {

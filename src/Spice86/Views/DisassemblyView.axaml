@@ -129,6 +129,7 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
                      ScrollViewer.VerticalScrollBarVisibility="Visible"
                      SelectedItem="{Binding SelectedDebuggerLine}"
+                     Grid.IsSharedSizeScope="True"
                      behaviors:DisassemblyScrollBehavior.IsEnabled="True"
                      behaviors:DisassemblyScrollBehavior.TargetAddress="{Binding CurrentInstructionAddress}">
                 <ListBox.ContextMenu>
@@ -185,7 +186,17 @@
                                 </Style>
                             </ContentControl.Styles>
 
-                            <Grid ColumnDefinitions="Auto, Auto, Auto, *,4*,Auto,2*" Margin="0">
+                            <Grid Margin="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Breakpoint" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="JumpLines" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Address" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Bytes" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="EvalOperands" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="BranchTarget" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Function" />
+                                </Grid.ColumnDefinitions>
                                 <!-- Breakpoint indicator -->
                                 <Border Grid.Column="0"
                                         MinWidth="16"
@@ -233,7 +244,6 @@
                                                      Foreground="{DynamicResource DisassemblyNumberBrush}"
                                                      FontFamily="Consolas,Menlo,Monaco,monospace"
                                                      FontSize="11"
-                                                     MinWidth="110"
                                                      Margin="6,0,0,0" />
 
                                 <!-- Instruction -->
@@ -241,8 +251,15 @@
                                                      Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
                                                      Margin="12,0,0,0" />
 
+                                <!-- Evaluated operands (live values when paused) -->
+                                <SelectableTextBlock Grid.Column="5"
+                                                     Inlines="{Binding EvaluatedOperands, Converter={StaticResource FormattedTextSegmentsConverter}}"
+                                                     FontSize="11"
+                                                     IsVisible="{Binding EvaluatedOperands, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                     Margin="8,0,0,0" />
+
                                 <!-- Branch target indicator -->
-                                <TextBlock Grid.Column="5"
+                                <TextBlock Grid.Column="6"
                                            Text="{Binding BranchTargetText}"
                                            Foreground="{DynamicResource DisassemblyBranchTargetBrush}"
                                            FontSize="11"
@@ -256,7 +273,7 @@
                                 </TextBlock>
 
                                 <!-- Function Name -->
-                                <SelectableTextBlock Grid.Column="6"
+                                <SelectableTextBlock Grid.Column="7"
                                                      Text="{Binding Function.Name, FallbackValue=''}"
                                                      Foreground="{DynamicResource DisassemblyFunctionBrush}"
                                                      Margin="12,0,0,0" />
