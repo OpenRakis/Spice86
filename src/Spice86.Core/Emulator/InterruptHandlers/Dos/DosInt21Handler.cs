@@ -1097,7 +1097,7 @@ public class DosInt21Handler : InterruptHandler {
         // Return pointer to the List of Lists (SYSVARS)
         // ES:BX points to offset 0 of the SYSVARS structure
         State.ES = DosSysVars.Segment;
-        State.BX = 0;
+        State.BX = DosSysVars.OfficialOffset;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose(
                 "GET LIST OF LISTS ES:BX={Es}:{Bx}",
