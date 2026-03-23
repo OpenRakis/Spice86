@@ -138,6 +138,16 @@ public class VideoMemory : IVideoMemory {
     /// <inheritdoc />
     public byte[,] Planes { get; }
 
+    /// <summary>
+    ///     Whether any plane byte has been modified since the last call to <see cref="ResetChanged"/>.
+    /// </summary>
+    public bool HasChanged { get; private set; }
+
+    /// <summary>
+    ///     Resets the <see cref="HasChanged"/> flag to <c>false</c>.
+    /// </summary>
+    public void ResetChanged() => HasChanged = false;
+
     private void HandleWriteMode3(byte value, Register8 planeEnable, ReadOnlySpan<bool> writePlane, Register8 setReset, uint offset) {
         value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
         byte bitMask = (byte)(value & _state.GraphicsControllerRegisters.BitMask);
@@ -152,7 +162,7 @@ public class VideoMemory : IVideoMemory {
             tempValue &= bitMask;
             tempValue |= (byte)(_latches[plane] & ~bitMask);
             // write the data
-            Planes[plane, offset] = tempValue;
+            WriteValue(plane, offset, tempValue);
         }
     }
 
@@ -174,7 +184,7 @@ public class VideoMemory : IVideoMemory {
             tempValue &= _state.GraphicsControllerRegisters.BitMask;
             tempValue |= (byte)(_latches[plane] & ~_state.GraphicsControllerRegisters.BitMask);
             // write the data
-            Planes[plane, offset] = tempValue;
+            WriteValue(plane, offset, tempValue);
         }
     }
 
@@ -182,7 +192,8 @@ public class VideoMemory : IVideoMemory {
         // Foreach plane
         for (int plane = 0; plane < 4; plane++) {
             if (planeEnable[plane] && writePlane[plane]) {
-                Planes[plane, offset] = _latches[plane];
+                byte tempValue = _latches[plane];
+                WriteValue(plane, offset, tempValue);
             }
         }
     }
@@ -209,7 +220,7 @@ public class VideoMemory : IVideoMemory {
             tempValue &= _state.GraphicsControllerRegisters.BitMask;
             tempValue |= (byte)(_latches[plane] & ~_state.GraphicsControllerRegisters.BitMask);
             // write the data
-            Planes[plane, offset] = tempValue;
+            WriteValue(plane, offset, tempValue);
         }
     }
 
@@ -236,6 +247,14 @@ public class VideoMemory : IVideoMemory {
         }
 
         return tempValue;
+    }
+
+    private void WriteValue(int plane, uint offset, byte value) {
+        int idx = (int)offset;
+        if (Planes[plane, idx] != value) {
+            Planes[plane, idx] = value;
+            HasChanged = true;
+        }
     }
 
     private (byte plane, uint offset) DecodeReadAddress(uint address) {

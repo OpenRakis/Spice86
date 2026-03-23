@@ -18,6 +18,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     private readonly GeneralRegisters _generalRegisters;
     private readonly GraphicsControllerRegisters _graphicsRegisters;
     private readonly SequencerRegisters _sequencerRegisters;
+    private readonly IVideoState _videoState;
     private bool _attributeDataMode;
 
     /// <summary>
@@ -38,6 +39,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         _crtRegisters = videoState.CrtControllerRegisters;
         _generalRegisters = videoState.GeneralRegisters;
         _dacRegisters = videoState.DacRegisters;
+        _videoState = videoState;
         InitPortHandlers(ioPortDispatcher);
     }
 
@@ -219,6 +221,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
+        _videoState.IsRenderingDirty = true;
         switch (port) {
             case Ports.DacAddressReadIndex:
                 if (_loggerService.IsEnabled(LogEventLevel.Debug)) {

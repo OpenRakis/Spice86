@@ -17,7 +17,15 @@ public class Renderer : IVgaRenderer {
     private uint[] _frontBuffer = Array.Empty<uint>();
     private uint[] _backBuffer = Array.Empty<uint>();
     private uint[] _renderBuffer = Array.Empty<uint>();
+    // Holds the most recently completed frame. Written only by the renderer
+    // CompleteFrame(), read only by the renderer in InitBackBufferFromFront().
+    // Never touched by the UI-thread buffer rotation, so it is always exactly one frame old.
+    private uint[] _lastPublishedFrame = Array.Empty<uint>();
     private int _hasPendingFrame;
+
+    // Dirty-skip state: true if all scanlines should skip pixel drawing this frame.
+    private bool _skipThisFrame;
+    private int _frameOutputRows;
 
     // Per-frame latched state (set in BeginFrame, constant for the frame).
     private int _frameSkew;
@@ -80,6 +88,14 @@ public class Renderer : IVgaRenderer {
     ///     Latches per-frame register values and prepares the back buffer for scanline rendering.
     /// </summary>
     public void BeginFrame() {
+        bool isDirty = _memory.HasChanged || _state.IsRenderingDirty || _blinkState.HasChanged;
+        _memory.ResetChanged();
+        _state.IsRenderingDirty = false;
+        _blinkState.ResetChanged();
+
+        _skipThisFrame = !isDirty;
+        _frameOutputRows = 0;
+
         int width = Width;
         int height = Height;
         int requiredSize = width * height;
@@ -126,6 +142,13 @@ public class Renderer : IVgaRenderer {
             return;
         }
 
+        if (_skipThisFrame && (_memory.HasChanged || _state.IsRenderingDirty)) {
+            _skipThisFrame = false;
+            InitBackBufferFromFront();
+            _frameDestinationAddressLatch = _frameOutputRows * Width;
+            _frameDestinationAddress = _frameDestinationAddressLatch;
+        }
+
         Span<uint> frameBuffer = _backBuffer.AsSpan();
 
         if (_frameDoubleScanIndex == 0) {
@@ -137,44 +160,46 @@ public class Renderer : IVgaRenderer {
 
         bool horizontalBlanking = true;
 
-        // Hoist per-scanline constants out of the per-character loop to avoid
-        // repeated interface dispatch and property-chain traversals.
-        uint[] paletteMap = _state.DacRegisters.PaletteMap;
-        uint[] attrMap = _state.DacRegisters.AttributeMap;
-        bool in256ColorMode = _state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode;
-        bool inGraphicsMode = _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode;
+        if (!_skipThisFrame) {
+            // Hoist per-scanline constants out of the per-character loop to avoid
+            // repeated interface dispatch and property-chain traversals.
+            uint[] paletteMap = _state.DacRegisters.PaletteMap;
+            uint[] attrMap = _state.DacRegisters.AttributeMap;
+            bool in256ColorMode = _state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode;
+            bool inGraphicsMode = _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode;
 
-        VgaAddressMapper addressMapper = new VgaAddressMapper(
-            _frameMemoryWidthMode,
-            _frameScanLineBit0ForAddressBit13,
-            _frameScanLineBit0ForAddressBit14,
-            _frameCharRowScanline & 1);
+            VgaAddressMapper addressMapper = new VgaAddressMapper(
+                _frameMemoryWidthMode,
+                _frameScanLineBit0ForAddressBit13,
+                _frameScanLineBit0ForAddressBit14,
+                _frameCharRowScanline & 1);
 
-        for (int characterCounter = 0; characterCounter < _frameTotalWidth; characterCounter++) {
-            if (characterCounter == _frameSkew) {
-                horizontalBlanking = false;
-            }
-            if (characterCounter == _frameHorizontalDisplayEnd) {
-                horizontalBlanking = true;
-            }
-            if (horizontalBlanking || _frameVerticalBlanking) {
-                continue;
-            }
+            for (int characterCounter = 0; characterCounter < _frameTotalWidth; characterCounter++) {
+                if (characterCounter == _frameSkew) {
+                    horizontalBlanking = false;
+                }
+                if (characterCounter == _frameHorizontalDisplayEnd) {
+                    horizontalBlanking = true;
+                }
+                if (horizontalBlanking || _frameVerticalBlanking) {
+                    continue;
+                }
 
-            if (_frameDestinationAddress + 9 > frameBuffer.Length) {
-                break;
-            }
+                if (_frameDestinationAddress + 9 > frameBuffer.Length) {
+                    break;
+                }
 
-            (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryAddressCounter, addressMapper);
+                (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryAddressCounter, addressMapper);
 
-            if (in256ColorMode) {
-                Draw256ColorMode(frameBuffer, paletteMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
-            } else if (inGraphicsMode) {
-                DrawGraphicsMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
-            } else {
-                DrawTextMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, _frameCharRowScanline);
+                if (in256ColorMode) {
+                    Draw256ColorMode(frameBuffer, paletteMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
+                } else if (inGraphicsMode) {
+                    DrawGraphicsMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
+                } else {
+                    DrawTextMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, _frameCharRowScanline);
+                }
+                memoryAddressCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
             }
-            memoryAddressCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
         }
 
         if (_frameLineCounter == _state.CrtControllerRegisters.LineCompareValue) {
@@ -192,6 +217,9 @@ public class Renderer : IVgaRenderer {
         _frameDoubleScanIndex++;
         if (_frameDoubleScanIndex >= _frameDrawLinesPerScanLine) {
             _frameDoubleScanIndex = 0;
+            if (!_frameVerticalBlanking) {
+                _frameOutputRows++;
+            }
             _frameCharRowScanline++;
             if (_frameCharRowScanline > _frameMaximumScanline) {
                 _frameCharRowScanline = 0;
@@ -211,16 +239,22 @@ public class Renderer : IVgaRenderer {
         if (!_frameActive) {
             return;
         }
+        if (_skipThisFrame) {
+            _frameActive = false;
+            return;
+        }
         _backBuffer = Interlocked.Exchange(ref _frontBuffer, _backBuffer);
+        _lastPublishedFrame = Volatile.Read(ref _frontBuffer);
         Volatile.Write(ref _hasPendingFrame, 1);
         _frameActive = false;
     }
 
     /// <inheritdoc />
     public void Render(Span<uint> frameBuffer) {
-        if (Interlocked.Exchange(ref _hasPendingFrame, 0) == 1) {
-            _renderBuffer = Interlocked.Exchange(ref _frontBuffer, _renderBuffer);
+        if (Interlocked.Exchange(ref _hasPendingFrame, 0) == 0) {
+            return;
         }
+        _renderBuffer = Interlocked.Exchange(ref _frontBuffer, _renderBuffer);
 
         uint[] render = Volatile.Read(ref _renderBuffer);
         if (render.Length > 0 && render.Length <= frameBuffer.Length) {
@@ -234,6 +268,13 @@ public class Renderer : IVgaRenderer {
         _framePlanesEnabled = _state.AttributeControllerRegisters.ColorPlaneEnableRegister.PlanesEnabled;
         _frameMaximumScanline = _state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline;
         _frameDrawLinesPerScanLine = _state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1;
+    }
+
+    private void InitBackBufferFromFront() {
+        uint[] last = _lastPublishedFrame;
+        if (last.Length == _backBuffer.Length) {
+            last.AsSpan().CopyTo(_backBuffer.AsSpan());
+        }
     }
 
     private MemoryWidth DetermineMemoryWidthMode() {

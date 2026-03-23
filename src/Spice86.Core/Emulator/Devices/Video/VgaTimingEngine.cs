@@ -115,6 +115,7 @@ public class VgaTimingEngine {
 
     private void OnBlinkToggle(uint value) {
         _blinkState.IsBlinkPhaseHigh = !_blinkState.IsBlinkPhaseHigh;
+        _blinkState.MarkChanged();
         _scheduler.AddEvent(OnBlinkToggle, BlinkPeriodMs);
     }
 }
