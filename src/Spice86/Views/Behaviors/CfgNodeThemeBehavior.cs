@@ -79,17 +79,17 @@ public static class CfgNodeThemeBehavior {
 
         // Apply syntax-highlighted inlines to the child TextBlock
         if (border.Child is TextBlock textBlock && border.DataContext is CfgGraphNode node) {
-            ApplyFormattedSegments(textBlock, node.Segments);
+            ApplyFormattedTextOffsets(textBlock, node.TextOffsets);
         }
     }
 
-    private static void ApplyFormattedSegments(TextBlock textBlock, List<FormattedTextSegment> segments) {
+    private static void ApplyFormattedTextOffsets(TextBlock textBlock, List<FormattedTextOffset> textOffsets) {
         textBlock.Inlines?.Clear();
         InlineCollection inlines = new InlineCollection();
-        foreach (FormattedTextSegment segment in segments) {
-            Run run = new Run { Text = segment.Text };
+        foreach (FormattedTextOffset textOffset in textOffsets) {
+            Run run = new Run { Text = textOffset.Text };
             run.Bind(TextElement.ForegroundProperty,
-                FormatterTextKindToBrushConverter.GetDynamicResourceExtension(segment.Kind));
+                FormatterTextKindToBrushConverter.GetDynamicResourceExtension(textOffset.Kind));
             inlines.Add(run);
         }
         textBlock.Inlines = inlines;

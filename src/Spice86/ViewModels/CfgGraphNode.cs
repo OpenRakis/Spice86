@@ -13,9 +13,9 @@ public sealed class CfgGraphNode : IEquatable<CfgGraphNode> {
     public int NodeId { get; init; }
 
     /// <summary>
-    /// Syntax-highlighted segments for rendering the full node text (header + assembly).
+    /// Syntax-highlighted text offsets for rendering the full node text (header + assembly).
     /// </summary>
-    public List<FormattedTextSegment> Segments { get; init; } = [];
+    public List<FormattedTextOffset> TextOffsets { get; init; } = [];
 
     /// <summary>
     /// Whether this node is the last executed instruction.
@@ -30,5 +30,5 @@ public sealed class CfgGraphNode : IEquatable<CfgGraphNode> {
     public override bool Equals(object? obj) => obj is CfgGraphNode other && NodeId == other.NodeId;
     public bool Equals(CfgGraphNode? other) => other is not null && NodeId == other.NodeId;
     public override int GetHashCode() => NodeId;
-    public override string ToString() => string.Join("", Segments.ConvertAll(s => s.Text));
+    public override string ToString() => string.Join("", TextOffsets.ConvertAll(s => s.Text));
 }
