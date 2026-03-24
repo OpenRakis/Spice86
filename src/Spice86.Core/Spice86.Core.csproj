@@ -29,11 +29,11 @@
         <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="OptimizedPriorityQueue" />
         <PackageReference Include="Serilog" />
-        <PackageReference Include="CommandLineParser" />
+        <PackageReference Include="Spectre.Console.Cli" />
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Morris.Moxy" />
-		<PackageReference Include="NukedOPL3Sharp" />
-		<PackageReference Include="Spice86.Audio" />
+        <PackageReference Include="NukedOPL3Sharp" />
+        <PackageReference Include="Spice86.Audio" />
         <!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
         <PackageReference Include="Mt32emu.net" />
     </ItemGroup>
