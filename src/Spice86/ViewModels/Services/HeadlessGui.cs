@@ -116,10 +116,6 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
 
         _drawingSemaphoreSlim?.Wait();
         try {
-            if (_disposed) {
-                return;
-            }
-
             fixed (byte* bufferPtr = pixelBuffer) {
                 int rowBytes = Width * 4; // 4 bytes per pixel (BGRA)
                 int length = rowBytes * Height / 4;
