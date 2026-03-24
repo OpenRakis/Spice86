@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spice86 – Real-Mode DOS Reverse Engineering Emulator</title>
+  <meta name="description" content="Spice86 is a .NET cross-platform PC emulator for executing, analysing, and incrementally rewriting real-mode DOS programs without source code.">
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --border:      #30363d;
+      --accent:      #58a6ff;
+      --accent2:     #3fb950;
+      --text:        #e6edf3;
+      --muted:       #8b949e;
+      --code-bg:     #1a2236;
+      --warn:        #d29922;
+      --danger:      #f85149;
+      --nav-width:   240px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 15px;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: var(--nav-width);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 24px 0;
+      z-index: 100;
+    }
+
+    nav .logo {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    nav .logo h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    nav .logo p {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    nav ul { list-style: none; padding: 0 8px; }
+    nav ul li { margin: 1px 0; }
+    nav ul li a {
+      display: block;
+      padding: 6px 12px;
+      color: var(--muted);
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 13px;
+      transition: background 0.15s, color 0.15s;
+    }
+    nav ul li a:hover,
+    nav ul li a.active {
+      background: rgba(88, 166, 255, 0.1);
+      color: var(--text);
+    }
+    nav .section-label {
+      padding: 14px 20px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    /* ── Main content ── */
+    main {
+      margin-left: var(--nav-width);
+      padding: 48px 56px;
+      max-width: 1000px;
+      flex: 1;
+    }
+
+    /* ── Sections ── */
+    section { margin-bottom: 64px; }
+    section:last-child { margin-bottom: 0; }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 24px 0 10px;
+    }
+
+    p { margin-bottom: 12px; color: var(--text); }
+    p:last-child { margin-bottom: 0; }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Hero ── */
+    .hero {
+      margin-bottom: 56px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero h1 {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -1px;
+      margin-bottom: 10px;
+    }
+    .hero .tagline {
+      font-size: 17px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      max-width: 620px;
+    }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+    .badges img { height: 20px; }
+    .hero-links { display: flex; flex-wrap: wrap; gap: 10px; }
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #0d1117; }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* ── Cards ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+    }
+    .card h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .card p { font-size: 13px; color: var(--muted); }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; margin: 16px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    thead th {
+      background: var(--surface);
+      color: var(--muted);
+      font-weight: 600;
+      text-align: left;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td {
+      padding: 8px 14px;
+      vertical-align: top;
+      color: var(--text);
+    }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    td code, th code { font-size: 12px; }
+
+    /* ── Code ── */
+    pre, code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+    code {
+      background: var(--code-bg);
+      color: #79c0ff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12.5px;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+      margin: 16px 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: #c9d1d9;
+      font-size: inherit;
+    }
+
+    /* ── Badges / status markers ── */
+    .status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+    .status-full    { background: rgba(63,185,80,.15); color: var(--accent2); }
+    .status-partial { background: rgba(210,153,34,.15); color: var(--warn); }
+    .status-none    { background: rgba(248,81,73,.15);  color: var(--danger); }
+    .status-ok      { color: var(--accent2); }
+    .status-crash   { color: var(--danger); }
+    .status-partial-game { color: var(--warn); }
+
+    /* ── Screenshots ── */
+    .screenshot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .screenshot-grid figure {
+      margin: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .screenshot-grid img {
+      width: 100%;
+      display: block;
+    }
+    .screenshot-grid figcaption {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 8px 12px;
+    }
+
+    /* ── Flow steps ── */
+    ol.steps { list-style: none; counter-reset: step; padding: 0; margin: 16px 0; }
+    ol.steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 14px;
+      margin-bottom: 14px;
+      align-items: flex-start;
+    }
+    ol.steps li::before {
+      content: counter(step);
+      min-width: 28px; height: 28px;
+      background: var(--accent);
+      color: #0d1117;
+      font-weight: 700;
+      font-size: 13px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    ol.steps li .step-body { flex: 1; }
+    ol.steps li .step-body strong { display: block; margin-bottom: 2px; }
+    ol.steps li .step-body p { font-size: 13.5px; color: var(--muted); }
+
+    /* ── Callout ── */
+    .callout {
+      border-left: 3px solid var(--warn);
+      background: rgba(210,153,34,.08);
+      border-radius: 0 6px 6px 0;
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 13.5px;
+      color: var(--text);
+    }
+    .callout strong { color: var(--warn); }
+
+    /* ── Mobile ── */
+    @media (max-width: 720px) {
+      nav { display: none; }
+      main { margin-left: 0; padding: 24px 20px; }
+      .hero h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════ SIDEBAR ══════════════════════════ -->
+<nav>
+  <div class="logo">
+    <h1>Spice86</h1>
+    <p>DOS Reverse Engineering Emulator</p>
+  </div>
+
+  <div class="section-label">Overview</div>
+  <ul>
+    <li><a href="#what-is-it">What is Spice86?</a></li>
+    <li><a href="#approach">Reverse Engineering Approach</a></li>
+    <li><a href="#getting-started">Getting Started</a></li>
+  </ul>
+
+  <div class="section-label">Reference</div>
+  <ul>
+    <li><a href="#cli">CLI Options</a></li>
+    <li><a href="#gdb">GDB Integration</a></li>
+    <li><a href="#debugger">Built-in Debugger</a></li>
+    <li><a href="#overrides">Code Overrides</a></li>
+  </ul>
+
+  <div class="section-label">Emulator</div>
+  <ul>
+    <li><a href="#hardware">Hardware Support</a></li>
+    <li><a href="#sound">Sound Support</a></li>
+    <li><a href="#compatibility">Compatibility</a></li>
+  </ul>
+
+  <div class="section-label">About</div>
+  <ul>
+    <li><a href="#architecture">CFG CPU Architecture</a></li>
+    <li><a href="#screenshots">Screenshots</a></li>
+    <li><a href="#credits">Credits</a></li>
+  </ul>
+</nav>
+
+<!-- ══════════════════════════ MAIN ══════════════════════════ -->
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Spice86</h1>
+    <p class="tagline">
+      A cross-platform PC emulator for executing, analysing, and incrementally
+      rewriting real-mode DOS programs for which no source code is available.
+    </p>
+
+    <div class="badges">
+      <img src="https://img.shields.io/badge/-Linux-grey?logo=linux" alt="Linux">
+      <img src="https://img.shields.io/badge/-OSX-black?logo=apple" alt="macOS">
+      <img src="https://img.shields.io/badge/-Windows-red?logo=windows" alt="Windows">
+      <img src="https://github.com/OpenRakis/Spice86/actions/workflows/prerelease.yml/badge.svg" alt=".NET Build">
+      <img src="https://img.shields.io/nuget/v/Spice86.svg" alt="NuGet">
+      <img src="https://img.shields.io/badge/License-Apache_2.0-44cc11.svg" alt="Apache 2.0">
+      <img src="https://img.shields.io/nuget/dt/Spice86" alt="downloads">
+    </div>
+
+    <div class="hero-links">
+      <a class="btn btn-primary" href="https://github.com/OpenRakis/Spice86">GitHub</a>
+      <a class="btn btn-secondary" href="https://www.nuget.org/packages/Spice86">NuGet</a>
+      <a class="btn btn-secondary" href="https://github.com/OpenRakis/Spice86/releases/tag/latest">Pre-release</a>
+      <a class="btn btn-secondary" href="https://github.com/OpenRakis/Spice86/wiki/Spice86-internal-debugger">Debugger Wiki</a>
+      <a class="btn btn-secondary" href="https://github.com/OpenRakis/Cryogenic">Example project: Cryogenic</a>
+    </div>
+  </div>
+
+  <!-- ── What is Spice86? ── -->
+  <section id="what-is-it">
+    <h2>What is Spice86?</h2>
+    <p>
+      Spice86 is a tool and emulator targeting real-mode (16-bit) DOS programs.
+      Its primary use case is <strong>reverse engineering without source code</strong>:
+      you run a DOS binary inside Spice86, let it gather runtime data (memory snapshots
+      and execution-flow traces), then use those data to incrementally replace assembly
+      functions with equivalent C# code — all while keeping the program fully runnable
+      at every stage.
+    </p>
+    <p>
+      It is implemented in <strong>C# / .NET 10</strong> and runs on Windows, macOS, and Linux.
+      Releases are published on <a href="https://www.nuget.org/packages/Spice86">NuGet</a>;
+      pre-releases are available on the
+      <a href="https://github.com/OpenRakis/Spice86/releases/tag/latest">GitHub Releases</a> page.
+    </p>
+    <p>
+      Spice86 is a continuation of the
+      <a href="https://github.com/kevinferrare/spice86">original Java Spice86</a>
+      by Kevin Ferrare.
+    </p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4>Emulation accuracy</h4>
+        <p>8086 through 80386 real-mode, VGA/EGA/CGA, SoundBlaster, OPL, MT-32, PC Speaker, DOS int 21h (partial), EMS 3.2 / XMS 4.0 / HMA.</p>
+      </div>
+      <div class="card">
+        <h4>CFG CPU</h4>
+        <p>Control-flow graph built at runtime. Tracks every executed path, handles self-modifying code via signature-based variant merging, and lays the foundation for future JIT compilation.</p>
+      </div>
+      <div class="card">
+        <h4>GDB remote protocol</h4>
+        <p>Full GDB server on port 10000. Use vanilla GDB or the SeerGDB GUI to set breakpoints, watch memory, and run custom dump commands.</p>
+      </div>
+      <div class="card">
+        <h4>Incremental rewriting</h4>
+        <p>Replace individual DOS functions one-by-one with C# methods while keeping the rest of the program running in the emulator. The Ghidra plugin auto-generates the C# scaffolding.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Approach ── -->
+  <section id="approach">
+    <h2>Reverse Engineering Approach</h2>
+    <p>
+      Rewriting a binary-only program is a divide-and-conquer task. Spice86 structures
+      that process so every step produces a working, testable program:
+    </p>
+
+    <ol class="steps">
+      <li>
+        <div class="step-body">
+          <strong>Run the program in Spice86</strong>
+          <p>Verify it runs correctly. Identify unimplemented hardware if it crashes.</p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Dump runtime data</strong>
+          <p>
+            On exit (or via <code>monitor dumpall</code> in GDB) Spice86 writes
+            <code>spice86dumpMemoryDump.bin</code> (RAM snapshot) and
+            <code>spice86dumpExecutionFlow.json</code> (function addresses, labels, executed
+            instructions) to a per-executable subdirectory named by SHA-256 hash.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Load into Ghidra via the plugin</strong>
+          <p>
+            The <a href="https://github.com/OpenRakis/spice86-ghidra-plugin">spice86-ghidra-plugin</a>
+            imports the dumps and decompiles functions as C# code ready for use as overrides.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Scaffold a .NET project</strong>
+          <p>
+            Use <a href="https://github.com/OpenRakis/spice86-dotnet-templates">spice86-dotnet-templates</a>
+            (<code>dotnet new spice86.project</code>) and import the generated C# files.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Override functions one at a time</strong>
+          <p>
+            Implement <code>IOverrideSupplier</code>, register C# methods at segmented
+            addresses via <code>DefineFunction</code>, and run with
+            <code>--UseCodeOverride true</code>. Each replacement is immediately testable.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <strong>Iterate</strong>
+          <p>
+            As more functions are rewritten, the emulated code path shrinks. Ultimately
+            the entire program runs natively in C# with no assembly left.
+          </p>
+        </div>
+      </li>
+    </ol>
+
+    <p>
+      A concrete, fully worked example is the
+      <a href="https://github.com/OpenRakis/Cryogenic">Cryogenic project</a>
+      (Cryo Dune rewrite).
+    </p>
+  </section>
+
+  <!-- ── Getting Started ── -->
+  <section id="getting-started">
+    <h2>Getting Started</h2>
+
+    <h3>Prerequisites</h3>
+    <p>
+      Install the <a href="https://dotnet.microsoft.com/en-us/download/dotnet/10.0">.NET 10 SDK</a>.
+      No additional runtime dependencies are required on Windows.
+      On Linux, ALSA is used for audio. On macOS, CoreAudio is used.
+    </p>
+
+    <h3>Install from NuGet (recommended)</h3>
+    <pre><code>dotnet tool install -g Spice86</code></pre>
+
+    <h3>Build from source</h3>
+    <pre><code>git clone https://github.com/OpenRakis/Spice86.git
+cd Spice86/src
+dotnet build</code></pre>
+
+    <h3>Run a DOS executable</h3>
+    <pre><code># Run an EXE
+Spice86 -e path/to/program.exe
+
+# Run a COM file
+Spice86 -e path/to/program.com
+
+# Run a BIOS image
+Spice86 -e path/to/bios.bin
+
+# Set the C: drive to the directory containing the game files
+Spice86 -e game.exe --CDrive /path/to/game/
+
+# Pass arguments to the DOS program
+Spice86 -e game.exe --ExeArgs "arg1 arg2"</code></pre>
+
+    <h3>Dump execution data for reverse engineering</h3>
+    <pre><code># Dumps go to a subdirectory named with the program's SHA-256 hash
+Spice86 -e game.exe --RecordedDataDirectory /path/to/dumps/
+
+# Or set the environment variable
+export SPICE86_DUMPS_FOLDER=/path/to/dumps
+Spice86 -e game.exe</code></pre>
+  </section>
+
+  <!-- ── CLI ── -->
+  <section id="cli">
+    <h2>CLI Options</h2>
+
+    <h3>Core options</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>-e, --Exe</code></td><td><em>required</em></td><td>Path to the executable (EXE, COM, or BIN)</td></tr>
+          <tr><td><code>-a, --ExeArgs</code></td><td>—</td><td>Arguments passed to the emulated program (max 127 chars)</td></tr>
+          <tr><td><code>-c, --CDrive</code></td><td>exe parent folder</td><td>Path to the emulated C: drive</td></tr>
+          <tr><td><code>-r, --RecordedDataDirectory</code></td><td><code>SPICE86_DUMPS_FOLDER</code> or cwd</td><td>Directory for memory and execution-flow dumps</td></tr>
+          <tr><td><code>-x, --ExpectedChecksum</code></td><td>—</td><td>Hex SHA-256 of the expected executable; fails if mismatch</td></tr>
+          <tr><td><code>-p, --ProgramEntryPointSegment</code></td><td>4096</td><td>Segment where the program is loaded</td></tr>
+          <tr><td><code>-i, --InitializeDOS</code></td><td>true</td><td>Install DOS interrupt vectors</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Performance</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>--Cycles</code></td><td>3000</td><td>Target CPU cycles per ms. Overrides <code>--InstructionsPerSecond</code>.</td></tr>
+          <tr><td><code>-i, --InstructionsPerSecond</code></td><td>—</td><td>Instruction-based timer; blank = real-time timer</td></tr>
+          <tr><td><code>-t, --TimeMultiplier</code></td><td>1</td><td>Real-time speed multiplier (&gt;1 faster, &lt;1 slower)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Debugging</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>--Debug</code></td><td>false</td><td>Pause at startup (and on stop) to allow attaching a debugger</td></tr>
+          <tr><td><code>-g, --GdbPort</code></td><td>10000</td><td>GDB remote port; 0 disables the GDB server</td></tr>
+          <tr><td><code>--CpuHeavyLog</code></td><td>false</td><td>Log every executed instruction to a file (significant perf impact)</td></tr>
+          <tr><td><code>--CpuHeavyLogDumpFile</code></td><td><code>{DumpDirectory}/cpu_heavy.log</code></td><td>Override the CPU log file path</td></tr>
+          <tr><td><code>--AsmRenderingStyle</code></td><td>Spice86</td><td>Assembly syntax: <code>Spice86</code> or <code>DosBox</code></td></tr>
+          <tr><td><code>--StructureFile</code></td><td>—</td><td>C header file describing memory structures (IDA/Ghidra export)</td></tr>
+          <tr><td><code>-f, --FailOnUnhandledPort</code></td><td>false</td><td>Fail on unimplemented I/O port access</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Overrides</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>-o, --OverrideSupplierClassName</code></td><td>—</td><td>Class name implementing <code>IOverrideSupplier</code></td></tr>
+          <tr><td><code>-u, --UseCodeOverride</code></td><td>true</td><td>Execute C# override code; false uses names only</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Memory</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>--Xms</code></td><td>true</td><td>Enable 15 MB XMS (extended memory)</td></tr>
+          <tr><td><code>--Ems</code></td><td>true</td><td>Enable EMS memory (8 MB via EMM Page Frame)</td></tr>
+          <tr><td><code>--A20Gate</code></td><td>false</td><td>Disable A20 line for programs relying on HMA wrap-around</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Display &amp; UI</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>-h, --HeadlessMode</code></td><td>false</td><td><code>Minimal</code> (no UI) or <code>Avalonia</code> (full UI, more memory)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Sound</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>--SbType</code></td><td>Sb16</td><td><code>None</code> | <code>SB1</code> | <code>SB2</code> | <code>SBPro1</code> | <code>SBPro2</code> | <code>Sb16</code> | <code>GameBlaster</code> | <code>AdlibGold</code></td></tr>
+          <tr><td><code>--SbIrq</code></td><td>7</td><td>Sound Blaster IRQ (common: 5, 7, 9, 10)</td></tr>
+          <tr><td><code>--SbDma</code></td><td>1</td><td>8-bit DMA channel (common: 0, 1, 3)</td></tr>
+          <tr><td><code>--SbHdma</code></td><td>5</td><td>16-bit DMA channel (common: 5, 6, 7)</td></tr>
+          <tr><td><code>--SbBase</code></td><td>0x220</td><td>Base I/O address (hex; common: 0x220, 0x240)</td></tr>
+          <tr><td><code>--OplMode</code></td><td>Opl3</td><td><code>None</code> | <code>Opl2</code> | <code>DualOpl2</code> | <code>Opl3</code> | <code>Opl3Gold</code></td></tr>
+          <tr><td><code>--SbMixer</code></td><td>true</td><td>Enable Sound Blaster mixer control of OPL voices</td></tr>
+          <tr><td><code>-m, --Mt32RomsPath</code></td><td>—</td><td>ZIP or directory containing MT-32 ROM files</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Logging</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>-l, --VerboseLogs</code></td><td>Enable verbose log level</td></tr>
+          <tr><td><code>-w, --WarningLogs</code></td><td>Enable warning log level</td></tr>
+          <tr><td><code>-s, --SilencedLogs</code></td><td>Disable all logs</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── GDB ── -->
+  <section id="gdb">
+    <h2>GDB Integration</h2>
+    <p>
+      Spice86 speaks the GDB remote serial protocol. The GDB server starts automatically
+      on port <code>10000</code> (disabled with <code>--GdbPort 0</code>).
+      Use <code>--Debug</code> to pause execution at startup.
+    </p>
+
+    <h3>Connecting</h3>
+    <pre><code>(gdb) target remote localhost:10000
+(gdb) set architecture i8086</code></pre>
+
+    <p>
+      GDB uses physical (linear) addresses. Segmented address <code>A000:0000</code>
+      maps to physical <code>0xA0000</code>. The <code>$pc</code> variable reflects the
+      physical address of CS:IP.
+    </p>
+
+    <h3>Common GDB commands</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Command</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>watch *0xA0000</code></td><td>Break on VRAM write</td></tr>
+          <tr><td><code>layout asm</code></td><td>Assembly view</td></tr>
+          <tr><td><code>find /b 0x0, 0xF0000, 0x53, ...</code></td><td>Search memory for byte sequence</td></tr>
+          <tr><td><code>x/16xb 0x1000</code></td><td>Examine 16 bytes at physical address</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Custom monitor commands</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Command</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>monitor help</code></td><td>List all custom commands</td></tr>
+          <tr><td><code>monitor dumpall</code></td><td>Dump memory snapshot + execution-flow JSON to the dump folder</td></tr>
+          <tr><td><code>monitor breakCycles 1000</code></td><td>Break after 1000 emulated CPU cycles</td></tr>
+          <tr><td><code>monitor breakStop</code></td><td>Break when the emulated program exits</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>SeerGDB</h3>
+    <p>
+      The <a href="https://github.com/epasveer/seer">SeerGDB</a> GUI client works well with Spice86.
+      A pre-configured project file is provided at <code>doc/spice86.seer</code>.
+      Launch with:
+    </p>
+    <pre><code>seergdb --project doc/spice86.seer</code></pre>
+    <p>
+      In Seer, set <em>Settings → Configuration → Assembly → Disassembly Mode</em>
+      to <strong>Length</strong> for the assembly view to work correctly.
+    </p>
+  </section>
+
+  <!-- ── Debugger ── -->
+  <section id="debugger">
+    <h2>Built-in Debugger</h2>
+    <p>
+      Spice86 includes a UI debugger (documented on the
+      <a href="https://github.com/OpenRakis/Spice86/wiki/Spice86-internal-debugger">wiki</a>)
+      with the following views:
+    </p>
+    <div class="card-grid">
+      <div class="card">
+        <h4>CPU / Registers</h4>
+        <p>Live view of all CPU registers and flags.</p>
+      </div>
+      <div class="card">
+        <h4>Disassembly</h4>
+        <p>Real-time disassembly of the emulated code at CS:IP.</p>
+      </div>
+      <div class="card">
+        <h4>Memory</h4>
+        <p>Hex view of the full 1 MB address space, with byte-range selection and right-click context for the structure viewer.</p>
+      </div>
+      <div class="card">
+        <h4>Structure Viewer</h4>
+        <p>
+          Supply a C header file (<code>--StructureFile</code>) to view memory as typed
+          structures (DOS PSP, VGA registers, custom game structs). Updates live on pause.
+          Export from IDA or Ghidra to reload structures without restarting.
+        </p>
+      </div>
+      <div class="card">
+        <h4>Stack</h4>
+        <p>Current stack frame with segmented addresses.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Overrides ── -->
+  <section id="overrides">
+    <h2>Code Override System</h2>
+    <p>
+      The override system lets you replace individual DOS assembly functions with C# methods.
+      The emulator calls the C# method when execution reaches the registered address, and then
+      returns to the emulated program using the appropriate return instruction.
+    </p>
+
+    <h3>Implementing an override supplier</h3>
+    <pre><code>// Register one C# implementation per assembly function
+public class MyProgramOverrideSupplier : IOverrideSupplier {
+    public IDictionary&lt;SegmentedAddress, FunctionInformation&gt; GenerateFunctionInformations(
+        ILoggerService loggerService, Configuration configuration,
+        ushort programStartSegment, Machine machine) {
+        Dictionary&lt;SegmentedAddress, FunctionInformation&gt; res = new();
+        new MyOverrides(res, machine, loggerService, configuration);
+        return res;
+    }
+}</code></pre>
+
+    <h3>Implementing overrides</h3>
+    <pre><code>public class MyOverrides : CSharpOverrideHelper {
+    private GlobalsOnDs _globals;
+
+    public MyOverrides(
+        IDictionary&lt;SegmentedAddress, FunctionInformation&gt; functionInformations,
+        Machine machine, ILoggerService loggerService, Configuration configuration)
+        : base(functionInformations, machine, loggerService, configuration) {
+        _globals = new GlobalsOnDs(machine.Memory, machine.Cpu.State.SegmentRegisters);
+        DefineFunction(0x1ED, 0xA1E8, IncDialogueCount47A8);
+        DefineFunction(0x1ED, 0x0100, AddOneToAX);
+    }
+
+    private Action IncDialogueCount47A8() {
+        _globals.SetDialogueCount47A8(_globals.GetDialogueCount47A8() + 1);
+        return NearRet();
+    }
+
+    private Action AddOneToAX() {
+        State.AX++;
+        return FarRet();
+    }
+}</code></pre>
+
+    <h3>Memory-mapped data structures</h3>
+    <pre><code>public class GlobalsOnDs : MemoryBasedDataStructureWithDsBaseAddress {
+    public GlobalsOnDs(IByteReaderWriter memory, SegmentRegisters regs)
+        : base(memory, regs) { }
+
+    public int GetDialogueCount47A8() =&gt; UInt16[0x47A8];
+    public void SetDialogueCount47A8(int value) =&gt; UInt16[0x47A8] = (ushort)value;
+}</code></pre>
+
+    <div class="callout">
+      <strong>Remember:</strong> Pass <code>--UseCodeOverride true</code> and
+      <code>--OverrideSupplierClassName YourNamespace.MyProgramOverrideSupplier</code>
+      when running with overrides active.
+    </div>
+
+    <h3>Control-flow return types</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Equivalent</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>NearRet()</code></td><td><code>RETN</code></td></tr>
+          <tr><td><code>FarRet()</code></td><td><code>RETF</code></td></tr>
+          <tr><td><code>NearCall(seg, off)</code></td><td>Near call then return</td></tr>
+          <tr><td><code>FarCall(seg, off)</code></td><td>Far call then return</td></tr>
+          <tr><td><code>FarJump(seg, off)</code></td><td>Unconditional far jump</td></tr>
+          <tr><td><code>Hlt()</code></td><td><code>HLT</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Hardware Support ── -->
+  <section id="hardware">
+    <h2>Hardware Support</h2>
+
+    <h3>CPU</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>CPU Family</th><th>Status</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>8086 / 8088</td><td><span class="status status-full">Full</span></td><td>Fully implemented and tested</td></tr>
+          <tr><td>80186</td><td><span class="status status-partial">Partial</span></td><td>BOUND instruction not implemented</td></tr>
+          <tr><td>80286</td><td><span class="status status-partial">Partial</span></td><td>Protected mode not implemented</td></tr>
+          <tr><td>80386</td><td><span class="status status-partial">Partial</span></td><td>Partial support; protected mode not implemented</td></tr>
+          <tr><td>16-bit instructions</td><td><span class="status status-full">Full</span></td><td>Complete</td></tr>
+          <tr><td>32-bit instructions</td><td><span class="status status-partial">Partial</span></td><td>Most implemented, not fully tested</td></tr>
+          <tr><td>FPU</td><td><span class="status status-none">None</span></td><td>Detection instructions only</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Memory</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1 MB real-mode address space with segmented addressing</td><td><span class="status status-full">Full</span></td></tr>
+          <tr><td>A20 Gate</td><td><span class="status status-full">Full</span></td></tr>
+          <tr><td>EMS 3.2 (8 MB via EMM Page Frame)</td><td><span class="status status-full">Full</span></td></tr>
+          <tr><td>XMS 4.0 (15 MB extended memory)</td><td><span class="status status-full">Full</span></td></tr>
+          <tr><td>HMA (High Memory Area)</td><td><span class="status status-full">Full</span></td></tr>
+          <tr><td>Paging</td><td><span class="status status-none">None</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Graphics</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Text modes</td><td><span class="status status-full">Full</span></td></tr>
+          <tr><td>VGA</td><td><span class="status status-full">Full</span></td></tr>
+          <tr><td>EGA</td><td><span class="status status-partial">Partial</span></td><td>Best effort; some bugs possible</td></tr>
+          <tr><td>CGA</td><td><span class="status status-partial">Partial</span></td><td>Best effort; some bugs possible</td></tr>
+          <tr><td>VESA (SVGA)</td><td><span class="status status-none">None</span></td></tr>
+          <tr><td>Screen refresh</td><td><span class="status status-full">Full</span></td><td>30 FPS, VGA retrace detection</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Input / Peripherals</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Keyboard</td><td><span class="status status-full">Full</span></td></tr>
+          <tr><td>Mouse</td><td><span class="status status-full">Full</span></td></tr>
+          <tr><td>Joystick</td><td><span class="status status-none">None</span></td></tr>
+          <tr><td>CD-ROM (MSCDEX)</td><td><span class="status status-none">None</span></td></tr>
+          <tr><td>Floppy disk</td><td><span class="status status-none">None</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>DOS (Int 21h)</h3>
+    <p>Partial DOS 5.0 interrupt implementation. Covers the subset of calls used by most real-mode games.</p>
+  </section>
+
+  <!-- ── Sound ── -->
+  <section id="sound">
+    <h2>Sound Support</h2>
+    <p>
+      Audio playback uses the native platform audio subsystem: WASAPI on Windows,
+      ALSA on Linux, and CoreAudio on macOS. No external audio libraries are required.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Sound Type</th><th>Status</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>PC Speaker</td><td><span class="status status-full">Full</span></td><td></td></tr>
+          <tr><td>Adlib / OPL2 / OPL3</td><td><span class="status status-full">Full</span></td><td>Ported from DOSBox Staging</td></tr>
+          <tr><td>Sound Blaster (all variants)</td><td><span class="status status-full">Full</span></td><td>Ported from DOSBox Staging; PCM + OPL accuracy improvements</td></tr>
+          <tr><td>Adlib Gold</td><td><span class="status status-full">Full</span></td><td>Ported from DOSBox Staging</td></tr>
+          <tr><td>General MIDI</td><td><span class="status status-full">Full</span></td><td></td></tr>
+          <tr><td>MT-32</td><td><span class="status status-partial">Partial</span></td><td>Supported on Windows and Linux; not available on macOS</td></tr>
+          <tr><td>Gravis Ultrasound</td><td><span class="status status-none">None</span></td><td>Not implemented</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Compatibility ── -->
+  <section id="compatibility">
+    <h2>Game Compatibility</h2>
+    <p>
+      This list reflects the state as of early 2026. A program crashing usually indicates
+      an unimplemented BIOS/DOS interrupt or a video mode that has not been implemented.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Program</th><th>Status</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Alpha Waves</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Alley Cat</td><td><span class="status status-crash">✗ Crashes</span></td><td>CGA not implemented</td></tr>
+          <tr><td>Alone in the Dark</td><td><span class="status status-crash">✗ Crashes</span></td><td>Complains about 386 CPU</td></tr>
+          <tr><td>Another World</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Betrayal at Krondor</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Bio Menace</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Blake Stone: Aliens of Gold</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Cadaver</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Cruise for a Corpse</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Cryo Dune</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Day of the Tentacle</td><td><span class="status status-ok">✓ Fully playable</span></td><td>Use <code>-s</code> (silent logs) to avoid delays from Adlib timing</td></tr>
+          <tr><td>Doom8088</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Dune 2</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Duke Nukem</td><td><span class="status status-ok">✓ Fully playable</span></td><td>No PC Speaker sound effects</td></tr>
+          <tr><td>Duke Nukem II</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Enviro-Kids</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Hero Quest</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Indiana Jones and The Fate of Atlantis</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Jill of the Jungle</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>KGB</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Knights of Xentar</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Lands of Lore (floppy)</td><td><span class="status status-ok">✓ Fully playable</span></td><td>Use <code>--SbType SB2</code> to avoid crash</td></tr>
+          <tr><td>Legends of Kyrandia</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Lost Eden</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Monkey Island</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Monkey Island 2</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Oh No! More Lemmings</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Planet X3</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Populous</td><td><span class="status status-ok">✓ Fully playable</span></td><td>No music or sound</td></tr>
+          <tr><td>Prince of Persia</td><td><span class="status status-ok">✓ Fully playable</span></td><td>No OPL music</td></tr>
+          <tr><td>Prince of Persia 2</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Rules of Engagement 2</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Stunts</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Ultima V</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Where in Space is Carmen Sandiego</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Wizardry 7</td><td><span class="status status-ok">✓ Fully playable</span></td><td></td></tr>
+          <tr><td>Plan 9 From Outer Space</td><td><span class="status status-partial-game">~ Not playable</span></td><td>Black screen</td></tr>
+          <tr><td>Space Quest I</td><td><span class="status status-partial-game">~ Not playable</span></td><td>Program exits with code 1</td></tr>
+          <tr><td>Space Quest IV</td><td><span class="status status-partial-game">~ Not playable</span></td><td>Program exits with code 1</td></tr>
+          <tr><td>Ultima IV</td><td><span class="status status-partial-game">~ Not playable</span></td><td>Black screen</td></tr>
+          <tr><td>Double Dragon 3</td><td><span class="status status-crash">✗ Crashes</span></td><td>Int 10.3 (text mode) not implemented</td></tr>
+          <tr><td>Dragon's Lair</td><td><span class="status status-crash">✗ Crashes</span></td><td>Exits without error</td></tr>
+          <tr><td>F-15 Strike Eagle II</td><td><span class="status status-crash">✗ Crashes</span></td><td>Invalid opcode</td></tr>
+          <tr><td>Flight Simulator 5</td><td><span class="status status-crash">✗ Crashes</span></td><td>Invalid opcode</td></tr>
+          <tr><td>SimCity</td><td><span class="status status-crash">✗ Crashes</span></td><td>Int 10.11 ROM pointer not implemented</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      A full and up-to-date list is maintained in
+      <a href="https://github.com/OpenRakis/Spice86/blob/master/COMPATIBILITY.md">COMPATIBILITY.md</a>.
+    </p>
+  </section>
+
+  <!-- ── CFG CPU Architecture ── -->
+  <section id="architecture">
+    <h2>CFG CPU Architecture</h2>
+    <p>
+      Spice86 uses a Control Flow Graph CPU (<code>CfgCpu</code>) rather than a traditional
+      interpreter loop. The graph grows at runtime as the program executes, recording every
+      path taken and every instruction variant observed. Detailed documentation is in
+      <a href="https://github.com/OpenRakis/Spice86/blob/master/doc/cfgcpuReadme.md">doc/cfgcpuReadme.md</a>.
+    </p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4>Runtime graph construction</h4>
+        <p>Instructions are parsed into typed <code>CfgInstruction</code> nodes as they execute. Successor edges are added to build the complete CFG over time.</p>
+      </div>
+      <div class="card">
+        <h4>Self-modifying code</h4>
+        <p>
+          Memory-write breakpoints detect code changes instantly. Non-final byte changes
+          (e.g., an immediate operand) are merged into the existing node via wildcard
+          fields. Structural changes (e.g., opcode bytes) produce a
+          <code>SelectorNode</code> that dispatches to the matching variant at runtime.
+        </p>
+      </div>
+      <div class="card">
+        <h4>Two-tier instruction cache</h4>
+        <p><code>CurrentInstructions</code> holds the authoritative live instruction per address. <code>PreviousInstructions</code> retains all previously seen variants; if code is restored, the original node (with its graph edges intact) is reused.</p>
+      </div>
+      <div class="card">
+        <h4>Interrupt isolation</h4>
+        <p>Each hardware interrupt creates a new <code>ExecutionContext</code>. CFG edges are never threaded across context boundaries, keeping interrupt handler graphs independent.</p>
+      </div>
+      <div class="card">
+        <h4>Variant merging</h4>
+        <p>When two instruction variants share the same final signature (same opcodes, different operands), they are merged into one node with operand fields marked "read from memory at runtime", avoiding <code>SelectorNode</code> proliferation.</p>
+      </div>
+      <div class="card">
+        <h4>JIT-ready</h4>
+        <p>The CFG is designed so that hot blocks can be compiled ahead of time in future versions, as all path information and variant data are already present in the graph.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Screenshots ── -->
+  <section id="screenshots">
+    <h2>Screenshots</h2>
+    <div class="screenshot-grid">
+      <figure>
+        <img src="https://raw.githubusercontent.com/OpenRakis/Spice86/master/doc/cryodune_duke.png" alt="Cryo Dune – Duke Atreides">
+        <figcaption>Cryo Dune – Duke Atreides</figcaption>
+      </figure>
+      <figure>
+        <img src="https://raw.githubusercontent.com/OpenRakis/Spice86/master/doc/cryodune_worm.png" alt="Cryo Dune – Sandworm">
+        <figcaption>Cryo Dune – Sandworm</figcaption>
+      </figure>
+      <figure>
+        <img src="https://raw.githubusercontent.com/OpenRakis/Spice86/master/doc/cryodune_orni.png" alt="Cryo Dune – Ornithopter">
+        <figcaption>Cryo Dune – Ornithopter</figcaption>
+      </figure>
+      <figure>
+        <img src="https://raw.githubusercontent.com/OpenRakis/Spice86/master/doc/prince_of_persia.PNG" alt="Prince of Persia">
+        <figcaption>Prince of Persia</figcaption>
+      </figure>
+      <figure>
+        <img src="https://raw.githubusercontent.com/OpenRakis/Spice86/master/doc/stunts_menu.PNG" alt="Stunts – Main menu">
+        <figcaption>Stunts – Main menu</figcaption>
+      </figure>
+      <figure>
+        <img src="https://raw.githubusercontent.com/OpenRakis/Spice86/master/doc/stunts_loop.png" alt="Stunts – Loop">
+        <figcaption>Stunts – Loop</figcaption>
+      </figure>
+      <figure>
+        <img src="https://raw.githubusercontent.com/OpenRakis/Spice86/master/doc/BaK.png" alt="Betrayal at Krondor">
+        <figcaption>Betrayal at Krondor</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ── Credits ── -->
+  <section id="credits">
+    <h2>Credits</h2>
+
+    <h3>Core contributors</h3>
+    <p>
+      Spice86 is developed by
+      <a href="https://github.com/OpenRakis">OpenRakis</a>.
+      It is a port and continuation of the
+      <a href="https://github.com/kevinferrare/spice86">original Java Spice86</a>
+      by Kevin Ferrare.
+    </p>
+
+    <h3>Third-party components</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Component</th><th>Source</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>SoundBlaster / OPL / Adlib Gold emulation</td>
+            <td><a href="https://github.com/dosbox-staging/dosbox-staging">DOSBox Staging</a></td>
+            <td>Fully ported to C#. Includes PCM/OPL accuracy improvements and complete audio re-architecture.</td>
+          </tr>
+          <tr>
+            <td>UI framework</td>
+            <td><a href="https://avaloniaui.net/">Avalonia UI</a></td>
+            <td>Cross-platform MVVM framework</td>
+          </tr>
+          <tr>
+            <td>IDE support</td>
+            <td><a href="https://www.jetbrains.com/rider/">JetBrains Rider</a></td>
+            <td>Supported via <a href="https://www.jetbrains.com/community/opensource/#support">JetBrains Open Source Community Support</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Related projects</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Project</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="https://github.com/OpenRakis/spice86-ghidra-plugin">spice86-ghidra-plugin</a></td>
+            <td>Ghidra plugin that imports Spice86 dumps and generates C# override scaffolding</td>
+          </tr>
+          <tr>
+            <td><a href="https://github.com/OpenRakis/spice86-dotnet-templates">spice86-dotnet-templates</a></td>
+            <td><code>dotnet new spice86.project</code> — project template for override-based rewrites</td>
+          </tr>
+          <tr>
+            <td><a href="https://github.com/OpenRakis/Cryogenic">Cryogenic</a></td>
+            <td>Ongoing rewrite of Cryo Dune using Spice86; reference implementation of the override system</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>License</h3>
+    <p>
+      Spice86 is released under the
+      <a href="https://github.com/OpenRakis/Spice86/blob/master/LICENSE">Apache 2.0 license</a>.
+      See <a href="https://github.com/OpenRakis/Spice86/blob/master/NOTICE">NOTICE</a>
+      for third-party attribution.
+    </p>
+  </section>
+
+</main>
+
+<script>
+  // Highlight active nav link based on scroll position
+  (function () {
+    var links = document.querySelectorAll('nav a[href^="#"]');
+    var sections = [];
+    links.forEach(function (link) {
+      var id = link.getAttribute('href').slice(1);
+      var el = document.getElementById(id);
+      if (el) sections.push({ id: id, el: el, link: link });
+    });
+
+    function onScroll() {
+      var scrollY = window.scrollY + 80;
+      var active = null;
+      sections.forEach(function (s) {
+        if (s.el.offsetTop <= scrollY) active = s;
+      });
+      links.forEach(function (l) { l.classList.remove('active'); });
+      if (active) active.link.classList.add('active');
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>
+
+</body>
+</html>
