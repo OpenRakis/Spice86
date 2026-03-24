@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
+using FluentAssertions;
 
 public class VideoMemoryTests {
     [Fact]
@@ -69,4 +70,36 @@ public class VideoMemoryTests {
         ILoggerService logger = Substitute.For<ILoggerService>();
         return new VideoMemory(state, logger);
     }
+
+        [Fact]
+        public void GetLinearSpan_ReturnsContiguousPixelData() {
+            VideoState state = new();
+            ILoggerService logger = Substitute.For<ILoggerService>();
+            VideoMemory mem = new VideoMemory(state, logger);
+
+            for (int i = 0; i < 16; i++) {
+                mem.VRam[i] = (byte)(i + 1);
+            }
+
+            System.ReadOnlySpan<byte> span = mem.GetLinearSpan(0, 16);
+
+            for (int i = 0; i < 16; i++) {
+                span[i].Should().Be((byte)(i + 1));
+            }
+        }
+
+        [Fact]
+        public void GetLinearSpan_WithOffset_ReturnsCorrectData() {
+            VideoState state = new();
+            ILoggerService logger = Substitute.For<ILoggerService>();
+            VideoMemory mem = new VideoMemory(state, logger);
+
+            mem.VRam[100] = 0xAA;
+            mem.VRam[101] = 0xBB;
+
+            System.ReadOnlySpan<byte> span = mem.GetLinearSpan(100, 2);
+
+            span[0].Should().Be(0xAA);
+            span[1].Should().Be(0xBB);
+        }
 }

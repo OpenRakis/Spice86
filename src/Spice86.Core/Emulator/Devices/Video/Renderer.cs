@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using System;
+
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
@@ -13,6 +15,7 @@ public class Renderer : IVgaRenderer {
     private readonly VideoMemory _memory;
     private readonly IVideoState _state;
     private readonly VgaBlinkState _blinkState;
+    private readonly IVgaRenderer256Color _renderer256Color;
 
     private uint[] _frontBuffer = Array.Empty<uint>();
     private uint[] _backBuffer = Array.Empty<uint>();
@@ -60,9 +63,11 @@ public class Renderer : IVgaRenderer {
     /// <param name="state">The video state implementation.</param>
     /// <param name="blinkState">Shared blink state for text-mode attribute blinking.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Renderer(IMemory memory, IVideoState state, VgaBlinkState blinkState, LoggerService loggerService) {
+    /// <param name="renderer256Color">The 256-color scanline renderer selected for the current CPU.</param>
+    public Renderer(IMemory memory, IVideoState state, VgaBlinkState blinkState, LoggerService loggerService, IVgaRenderer256Color renderer256Color) {
         _state = state;
         _blinkState = blinkState;
+        _renderer256Color = renderer256Color;
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         _memory = new VideoMemory(_state, loggerService);
         memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
@@ -174,31 +179,33 @@ public class Renderer : IVgaRenderer {
                 _frameScanLineBit0ForAddressBit14,
                 _frameCharRowScanline & 1);
 
-            for (int characterCounter = 0; characterCounter < _frameTotalWidth; characterCounter++) {
-                if (characterCounter == _frameSkew) {
-                    horizontalBlanking = false;
-                }
-                if (characterCounter == _frameHorizontalDisplayEnd) {
-                    horizontalBlanking = true;
-                }
-                if (horizontalBlanking || _frameVerticalBlanking) {
-                    continue;
-                }
+            if (in256ColorMode && !_frameVerticalBlanking) {
+                Render256ColorScanline(frameBuffer, paletteMap, addressMapper, memoryAddressCounter);
+            } else {
+                for (int characterCounter = 0; characterCounter < _frameTotalWidth; characterCounter++) {
+                    if (characterCounter == _frameSkew) {
+                        horizontalBlanking = false;
+                    }
+                    if (characterCounter == _frameHorizontalDisplayEnd) {
+                        horizontalBlanking = true;
+                    }
+                    if (horizontalBlanking || _frameVerticalBlanking) {
+                        continue;
+                    }
 
-                if (_frameDestinationAddress + 9 > frameBuffer.Length) {
-                    break;
-                }
+                    if (_frameDestinationAddress + 9 > frameBuffer.Length) {
+                        break;
+                    }
 
-                (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryAddressCounter, addressMapper);
+                    (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryAddressCounter, addressMapper);
 
-                if (in256ColorMode) {
-                    Draw256ColorMode(frameBuffer, paletteMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
-                } else if (inGraphicsMode) {
-                    DrawGraphicsMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
-                } else {
-                    DrawTextMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, _frameCharRowScanline);
+                    if (inGraphicsMode) {
+                        DrawGraphicsMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
+                    } else {
+                        DrawTextMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, _frameCharRowScanline);
+                    }
+                    memoryAddressCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
                 }
-                memoryAddressCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
             }
         }
 
@@ -291,13 +298,54 @@ public class Renderer : IVgaRenderer {
         return memoryWidthMode;
     }
 
+    private void Render256ColorScanline(Span<uint> frameBuffer, uint[] paletteMap,
+        VgaAddressMapper addressMapper, int memoryAddressCounter) {
+        int visibleChars = _frameHorizontalDisplayEnd - _frameSkew;
+        if (visibleChars <= 0) {
+            return;
+        }
+
+        // Compute the starting VGA address for the first visible character.
+        // Account for character clock mask: advance memoryAddressCounter past blanked chars.
+        int startCounter = memoryAddressCounter;
+        for (int c = 0; c < _frameSkew; c++) {
+            startCounter += (c & _frameCharacterClockMask) == 0 ? 1 : 0;
+        }
+        ushort startPhysical = addressMapper.ComputeAddress(startCounter);
+        int vramLinearStart = startPhysical * 4;
+        int vramByteCount = visibleChars * 4;
+
+        // Clamp to VRam bounds.
+        if (vramLinearStart + vramByteCount > _memory.VRam.Length) {
+            vramByteCount = _memory.VRam.Length - vramLinearStart;
+        }
+        if (vramByteCount <= 0) {
+            return;
+        }
+
+        ReadOnlySpan<byte> vram = _memory.GetLinearSpan(vramLinearStart, vramByteCount);
+
+        // In 256-color mode each VRAM byte produces 2 identical pixels on screen.
+        int pixelCount = vramByteCount * 2;
+        if (_frameDestinationAddress + pixelCount > frameBuffer.Length) {
+            pixelCount = frameBuffer.Length - _frameDestinationAddress;
+        }
+        if (pixelCount <= 0) {
+            return;
+        }
+        int byteCount = pixelCount / 2;
+
+        _renderer256Color.RenderDoubledScanline(frameBuffer, vram, paletteMap, byteCount, ref _frameDestinationAddress);
+    }
+
     private (byte plane0, byte plane1, byte plane2, byte plane3) ReadVideoMemory(int memoryAddressCounter, VgaAddressMapper addressMapper) {
         ushort physicalAddress = addressMapper.ComputeAddress(memoryAddressCounter);
+        int baseIdx = physicalAddress * 4;
 
-        byte plane0 = (byte)(_framePlanesEnabled[0] ? _memory.Planes[0, physicalAddress] : 0);
-        byte plane1 = (byte)(_framePlanesEnabled[1] ? _memory.Planes[1, physicalAddress] : 0);
-        byte plane2 = (byte)(_framePlanesEnabled[2] ? _memory.Planes[2, physicalAddress] : 0);
-        byte plane3 = (byte)(_framePlanesEnabled[3] ? _memory.Planes[3, physicalAddress] : 0);
+        byte plane0 = (byte)(_framePlanesEnabled[0] ? _memory.VRam[baseIdx] : 0);
+        byte plane1 = (byte)(_framePlanesEnabled[1] ? _memory.VRam[baseIdx + 1] : 0);
+        byte plane2 = (byte)(_framePlanesEnabled[2] ? _memory.VRam[baseIdx + 2] : 0);
+        byte plane3 = (byte)(_framePlanesEnabled[3] ? _memory.VRam[baseIdx + 3] : 0);
 
         return (plane0, plane1, plane2, plane3);
     }
@@ -360,7 +408,7 @@ public class Renderer : IVgaRenderer {
 
         int dotsPerClock = sequencer.ClockingModeRegister.DotsPerClock;
         // The 8 pixels to render this line come from the font which is stored in plane 2.
-        byte fontByte = _memory.Planes[2, fontAddress + scanline];
+        byte fontByte = _memory.VRam[(fontAddress + scanline) * 4 + 2];
         byte mask = 0x80;
         for (int x = 0; x < dotsPerClock; x++, mask >>= 1) {
             uint pixel = (fontByte & mask) != 0 ? foreGroundColor : backGroundColor;

@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using System;
+using System.Runtime.InteropServices;
+
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Shared.Interfaces;
@@ -20,7 +23,8 @@ public class VideoMemory : IVideoMemory {
     public VideoMemory(IVideoState state, ILoggerService logger) {
         _state = state;
         Size = 128 * 1024; // This covers the 128kb of video memory address space from 0xA0000 to 0xBFFFF
-        Planes = new byte[4, 64 * 1024]; // VRAM consists of 4 planes of 64kb
+        VRam = new byte[4 * 64 * 1024];
+        Planes = new PlaneAccessor(VRam);
         _latches = new byte[4];
         _logger = logger;
     }
@@ -36,10 +40,12 @@ public class VideoMemory : IVideoMemory {
             return 0;
         }
         (byte plane, uint offset) = DecodeReadAddress(address);
-        _latches[0] = Planes[0, offset];
-        _latches[1] = Planes[1, offset];
-        _latches[2] = Planes[2, offset];
-        _latches[3] = Planes[3, offset];
+        // Load all 4 plane latches from the interleaved buffer.
+        int baseIdx = (int)offset * 4;
+        _latches[0] = VRam[baseIdx];
+        _latches[1] = VRam[baseIdx + 1];
+        _latches[2] = VRam[baseIdx + 2];
+        _latches[3] = VRam[baseIdx + 3];
         byte result = 0;
         switch (_state.GraphicsControllerRegisters.GraphicsModeRegister.ReadMode) {
             case ReadMode.ReadMode0:
@@ -136,7 +142,15 @@ public class VideoMemory : IVideoMemory {
     }
 
     /// <inheritdoc />
-    public byte[,] Planes { get; }
+    public byte[] VRam { get; }
+
+    /// <inheritdoc />
+    public PlaneAccessor Planes { get; }
+
+    /// <inheritdoc />
+    public ReadOnlySpan<byte> GetLinearSpan(int linearByteOffset, int length) {
+        return VRam.AsSpan(linearByteOffset, length);
+    }
 
     /// <summary>
     ///     Whether any plane byte has been modified since the last call to <see cref="ResetChanged"/>.
@@ -250,9 +264,9 @@ public class VideoMemory : IVideoMemory {
     }
 
     private void WriteValue(int plane, uint offset, byte value) {
-        int idx = (int)offset;
-        if (Planes[plane, idx] != value) {
-            Planes[plane, idx] = value;
+        int idx = (int)offset * 4 + plane;
+        if (VRam[idx] != value) {
+            VRam[idx] = value;
             HasChanged = true;
         }
     }

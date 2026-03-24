@@ -285,7 +285,8 @@ public class Spice86DependencyInjection : IDisposable {
         VgaIoPortHandler vgaIoPortHandler = new(state, ioPortDispatcher,
             loggerService, videoState, configuration.FailOnUnhandledPort);
         VgaBlinkState vgaBlinkState = new();
-        Renderer vgaRenderer = new(memory, videoState, vgaBlinkState, loggerService);
+        IVgaRenderer256Color renderer256Color = VgaRenderer256ColorSimd.CreateBestRenderer();
+        Renderer vgaRenderer = new(memory, videoState, vgaBlinkState, loggerService, renderer256Color);
 
         bool isSyncRendering = configuration.RenderingMode == RenderingMode.Sync;
 
