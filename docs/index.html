@@ -314,15 +314,71 @@
     }
     .callout strong { color: var(--warn); }
 
+    /* ── Mobile nav toggle ── */
+    .mobile-header { display: none; }
+    .mobile-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 119;
+      background: rgba(0,0,0,0.45);
+    }
+    body.nav-open .mobile-overlay { display: block; }
+
     /* ── Mobile ── */
     @media (max-width: 720px) {
-      nav { display: none; }
-      main { margin-left: 0; padding: 24px 20px; }
+      .mobile-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 18px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 110;
+      }
+      .mobile-header-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .mobile-menu-btn {
+        font-size: 13px;
+        padding: 5px 12px;
+        border-radius: 5px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      nav {
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        transform: translateX(-100%);
+        transition: transform 0.22s ease-out;
+        z-index: 120;
+        box-shadow: none;
+      }
+      body.nav-open nav {
+        transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.55);
+      }
+
+      main { margin-left: 0; padding: 24px 18px; }
+      body { flex-direction: column; }
       .hero h1 { font-size: 26px; }
     }
   </style>
 </head>
 <body>
+
+<header class="mobile-header">
+  <span class="mobile-header-title">Spice86</span>
+  <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open navigation">☰ Menu</button>
+</header>
+<div class="mobile-overlay" id="mobile-overlay"></div>
 
 <!-- ══════════════════════════ SIDEBAR ══════════════════════════ -->
 <nav>
@@ -566,8 +622,8 @@ Spice86 -e game.exe</code></pre>
           <tr><td><code>-c, --CDrive</code></td><td>exe parent folder</td><td>Path to the emulated C: drive</td></tr>
           <tr><td><code>-r, --RecordedDataDirectory</code></td><td><code>SPICE86_DUMPS_FOLDER</code> or cwd</td><td>Directory for memory and execution-flow dumps</td></tr>
           <tr><td><code>-x, --ExpectedChecksum</code></td><td>—</td><td>Hex SHA-256 of the expected executable; fails if mismatch</td></tr>
-          <tr><td><code>-p, --ProgramEntryPointSegment</code></td><td>4096</td><td>Segment where the program is loaded</td></tr>
-          <tr><td><code>-i, --InitializeDOS</code></td><td>true</td><td>Install DOS interrupt vectors</td></tr>
+          <tr><td><code>-p, --ProgramEntryPointSegment</code></td><td><code>0x170</code></td><td>Segment where the program is loaded</td></tr>
+          <tr><td><code>-v, --InitializeDOS</code></td><td>auto (guessed at runtime)</td><td>Install DOS interrupt vectors</td></tr>
         </tbody>
       </table>
     </div>
@@ -579,7 +635,7 @@ Spice86 -e game.exe</code></pre>
           <tr><th>Option</th><th>Default</th><th>Description</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>--Cycles</code></td><td>3000</td><td>Target CPU cycles per ms. Overrides <code>--InstructionsPerSecond</code>.</td></tr>
+          <tr><td><code>--Cycles</code></td><td>—</td><td>Target CPU cycles per ms (unset = no limit). Overrides <code>--InstructionsPerSecond</code> when set.</td></tr>
           <tr><td><code>-i, --InstructionsPerSecond</code></td><td>—</td><td>Instruction-based timer; blank = real-time timer</td></tr>
           <tr><td><code>-t, --TimeMultiplier</code></td><td>1</td><td>Real-time speed multiplier (&gt;1 faster, &lt;1 slower)</td></tr>
         </tbody>
@@ -650,7 +706,7 @@ Spice86 -e game.exe</code></pre>
           <tr><th>Option</th><th>Default</th><th>Description</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>--SbType</code></td><td>Sb16</td><td><code>None</code> | <code>SB1</code> | <code>SB2</code> | <code>SBPro1</code> | <code>SBPro2</code> | <code>Sb16</code> | <code>GameBlaster</code> | <code>AdlibGold</code></td></tr>
+          <tr><td><code>--SbType</code></td><td>SBPro2</td><td><code>None</code> | <code>SB1</code> | <code>SB2</code> | <code>SBPro1</code> | <code>SBPro2</code> | <code>Sb16</code> | <code>GameBlaster</code></td></tr>
           <tr><td><code>--SbIrq</code></td><td>7</td><td>Sound Blaster IRQ (common: 5, 7, 9, 10)</td></tr>
           <tr><td><code>--SbDma</code></td><td>1</td><td>8-bit DMA channel (common: 0, 1, 3)</td></tr>
           <tr><td><code>--SbHdma</code></td><td>5</td><td>16-bit DMA channel (common: 5, 6, 7)</td></tr>
@@ -804,17 +860,17 @@ public class MyProgramOverrideSupplier : IOverrideSupplier {
         IDictionary&lt;SegmentedAddress, FunctionInformation&gt; functionInformations,
         Machine machine, ILoggerService loggerService, Configuration configuration)
         : base(functionInformations, machine, loggerService, configuration) {
-        _globals = new GlobalsOnDs(machine.Memory, machine.Cpu.State.SegmentRegisters);
+        _globals = new GlobalsOnDs(machine.Memory, machine.CfgCpu.State.SegmentRegisters);
         DefineFunction(0x1ED, 0xA1E8, IncDialogueCount47A8);
         DefineFunction(0x1ED, 0x0100, AddOneToAX);
     }
 
-    private Action IncDialogueCount47A8() {
+    private Action IncDialogueCount47A8(int loadOffset) {
         _globals.SetDialogueCount47A8(_globals.GetDialogueCount47A8() + 1);
         return NearRet();
     }
 
-    private Action AddOneToAX() {
+    private Action AddOneToAX(int loadOffset) {
         State.AX++;
         return FarRet();
     }
@@ -844,8 +900,8 @@ public class MyProgramOverrideSupplier : IOverrideSupplier {
         <tbody>
           <tr><td><code>NearRet()</code></td><td><code>RETN</code></td></tr>
           <tr><td><code>FarRet()</code></td><td><code>RETF</code></td></tr>
-          <tr><td><code>NearCall(seg, off)</code></td><td>Near call then return</td></tr>
-          <tr><td><code>FarCall(seg, off)</code></td><td>Far call then return</td></tr>
+          <tr><td><code>NearCall(expectedReturnCs, expectedReturnIp, Func&lt;int, Action&gt; function)</code></td><td>Invoke function as a near call and return</td></tr>
+          <tr><td><code>FarCall(expectedReturnCs, expectedReturnIp, Func&lt;int, Action&gt; function)</code></td><td>Invoke function as a far call and return</td></tr>
           <tr><td><code>FarJump(seg, off)</code></td><td>Unconditional far jump</td></tr>
           <tr><td><code>Hlt()</code></td><td><code>HLT</code></td></tr>
         </tbody>
@@ -1173,9 +1229,24 @@ public class MyProgramOverrideSupplier : IOverrideSupplier {
 </main>
 
 <script>
-  // Highlight active nav link based on scroll position
   (function () {
+    var body = document.body;
+    var menuBtn = document.getElementById('mobile-menu-btn');
+    var overlay = document.getElementById('mobile-overlay');
+
+    function openNav() { body.classList.add('nav-open'); }
+    function closeNav() { body.classList.remove('nav-open'); }
+
+    if (menuBtn) menuBtn.addEventListener('click', openNav);
+    if (overlay) overlay.addEventListener('click', closeNav);
+
+    // Close mobile nav when a nav link is clicked
     var links = document.querySelectorAll('nav a[href^="#"]');
+    links.forEach(function (link) {
+      link.addEventListener('click', closeNav);
+    });
+
+    // Scroll-spy: highlight active nav link
     var sections = [];
     links.forEach(function (link) {
       var id = link.getAttribute('href').slice(1);
