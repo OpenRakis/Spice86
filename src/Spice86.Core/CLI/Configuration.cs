@@ -92,6 +92,13 @@ public sealed class Configuration : CommandSettings {
     public int GdbPort { get; init; }
 
     /// <summary>
+    /// HTTP API port Spice86 will listen on.
+    /// </summary>
+    [CommandOption("--HttpApiPort|--http-api-port <HTTPAPIPORT>")]
+    [DefaultValue(20000)]
+    public int HttpApiPort { get; init; } = 20000;
+
+    /// <summary>
     /// Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to a sub directory named with the program SHA 256 signature.
     /// </summary>
     [CommandOption("-r|--RecordedDataDirectory <RECORDEDDATADIRECTORY>")]

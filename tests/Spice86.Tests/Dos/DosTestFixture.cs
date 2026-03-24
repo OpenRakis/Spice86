@@ -41,9 +41,10 @@ public class DosTestFixture {
         Configuration configuration = new Configuration() {
             AudioEngine = AudioEngine.Dummy,
             CDrive = mountPoint,
-            RecordedDataDirectory = Path.GetTempPath()
+            RecordedDataDirectory = Path.GetTempPath(),
+            HttpApiPort = 0,
         };
-        
+
         Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
         LoggerService = new LoggerService();
         IPauseHandler pauseHandler = new PauseHandler(LoggerService);
@@ -58,7 +59,7 @@ public class DosTestFixture {
         IEmulatedClock emulatedClock = new EmulatedClock();
         EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, LoggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, Memory, memoryBreakpoints, ioBreakpoints);
-        
+
         BiosDataArea biosDataArea =
             new BiosDataArea(Memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
 

@@ -37,6 +37,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
+using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -57,6 +58,8 @@ using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
 
+using System.Net.Sockets;
+
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
 /// </summary>
@@ -66,6 +69,7 @@ public class Spice86DependencyInjection : IDisposable {
     public ProgramExecutor ProgramExecutor { get; }
     private readonly IGuiVideoPresentation? _gui;
     private readonly IEmulatedClock _emulatedClock;
+    private readonly Spice86HttpApiServer? _httpApiServer;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -555,6 +559,10 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Machine created...");
         }
 
+        if (configuration.HttpApiPort != 0) {
+            _httpApiServer = new Spice86HttpApiServer(state, memory, pauseHandler, loggerService, configuration.HttpApiPort);
+        }
+
         DictionaryUtils.AddAll(functionCatalogue.FunctionInformations,
             ReadFunctionOverrides(configuration, machine, loggerService));
 
@@ -640,10 +648,12 @@ public class Spice86DependencyInjection : IDisposable {
 
             SoftwareMixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
 
-            Application.Current!.Resources[nameof(DebugWindowViewModel)] =
-                debugWindowViewModel;
-            Application.Current!.Resources[nameof(SoftwareMixerViewModel)] =
-                mixerViewModel;
+            if (Application.Current is not null) {
+                Application.Current.Resources[nameof(DebugWindowViewModel)] =
+                    debugWindowViewModel;
+                Application.Current.Resources[nameof(SoftwareMixerViewModel)] =
+                    mixerViewModel;
+            }
             mainWindow.DataContext = mainWindowViewModel;
         }
     }
@@ -747,6 +757,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         _machineDisposedAfterRun = true;
         _emulatedClock.Dispose();
+        _httpApiServer?.Dispose();
         Machine.Dispose();
     }
 }

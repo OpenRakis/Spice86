@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using Spice86.ViewModels.Services;
 using Spice86.ViewModels.ValueViewModels.Debugging;
+using Spice86.Views;
 using Spice86.Views.Behaviors;
 
 using System.Text.Json;
@@ -36,6 +37,14 @@ public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
         }
     }
 
+    [RelayCommand]
+    public void ShowHttpApi(object? commandParameter) {
+        if (commandParameter is int port) {
+            HttpApiWindow window = new() { Port = port };
+            window.Show();
+        }
+    }
+
     protected void ShowError(Exception e) {
         Exception = e.GetBaseException();
         IsDialogVisible = true;
@@ -45,10 +54,10 @@ public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
 
     [ObservableProperty]
     private Exception? _exception;
-    
+
     [RelayCommand]
     public async Task CopyExceptionToClipboard() {
-        if(Exception is not null) {
+        if (Exception is not null) {
             await _textClipboard.SetTextAsync(
                 JsonSerializer.Serialize(
                     new ExceptionInfo(Exception.TargetSite?.ToString(), Exception.Message, Exception.StackTrace)));

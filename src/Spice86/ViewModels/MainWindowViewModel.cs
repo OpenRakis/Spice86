@@ -52,6 +52,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     [ObservableProperty] private bool _showCyclesLimitingUI;
 
+    [ObservableProperty]
+    private bool _showHttp;
+
     [RelayCommand]
     private void IncreaseTargetCycles() {
         _cyclesLimiter.IncreaseCycles();
@@ -105,6 +108,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
         _targetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
+        ShowHttp = Configuration.HttpApiPort is not 0;
+        HttpApiPort = Configuration.HttpApiPort;
         ShowCyclesLimitingUI = _cyclesLimiter.TargetCpuCyclesPerMs is not 0;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1),
             DispatcherPriority.Background,
@@ -209,6 +214,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     [ObservableProperty] private string _asmOverrideStatus = "ASM Overrides: not used.";
 
     [ObservableProperty] private string _emulatorMouseCursorInfo = "?";
+
+    [ObservableProperty] private int? _httpApiPort;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PauseCommand))]

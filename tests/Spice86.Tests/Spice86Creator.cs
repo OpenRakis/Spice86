@@ -61,6 +61,7 @@ public class Spice86Creator {
             CDrive = cDrive,
             RecordedDataDirectory = exportFolder,
             SilencedLogs = true,
+            HttpApiPort = 0,
         };
 
         _maxCycles = maxCycles;

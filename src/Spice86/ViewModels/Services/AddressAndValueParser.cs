@@ -1,4 +1,4 @@
-namespace Spice86.ViewModels;
+namespace Spice86.ViewModels.Services;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Emulator.Memory;
