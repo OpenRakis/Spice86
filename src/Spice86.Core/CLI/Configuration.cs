@@ -73,7 +73,7 @@ public sealed class Configuration : CommandSettings {
     public bool UseCodeOverrideOption => UseCodeOverride ?? true;
 
     /// <summary>
-    /// Flag indicating if headless mode is enabled. Using this option without a value sets it to Default.
+    /// Flag indicating if headless mode is enabled. When this option is not specified, the normal UI is used.
     /// </summary>
     [CommandOption("-h|--HeadlessMode <HEADLESSMODE>")]
     public HeadlessType? HeadlessMode { get; init; }
