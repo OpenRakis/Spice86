@@ -312,6 +312,132 @@ public abstract class VgaRenderer256ColorTestsBase {
         f2[0].Should().Be(state.DacRegisters.PaletteMap[200]);
     }
 
+    // ─────────── DoubleWord / Word addressing modes ───────────
+
+    [SkippableFact]
+    public void Render256Color_DoubleWordMode_ReadsCorrectPhysicalAddresses() {
+        EnsureSupported();
+        VideoState state = ConfigureGraphics256Color(1);
+        // Enable DoubleWord addressing: physical = counter << 2.
+        // Counter 0 → physical 0, counter 1 → physical 4, counter 2 → physical 8.
+        // VRam layout: physical P → VRam[P*4 .. P*4+3].
+        state.CrtControllerRegisters.UnderlineRowScanlineRegister.DoubleWordMode = true;
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityPaletteMap(state);
+
+        // Char 0 reads counter=0 → physical=0 → VRam[0..3]
+        vram.Planes[0, 0] = 10;
+        vram.Planes[1, 0] = 20;
+        vram.Planes[2, 0] = 30;
+        vram.Planes[3, 0] = 40;
+
+        // Char 1 reads counter=1 → physical=4 → VRam[16..19]
+        vram.Planes[0, 4] = 50;
+        vram.Planes[1, 4] = 60;
+        vram.Planes[2, 4] = 70;
+        vram.Planes[3, 4] = 80;
+
+        // Poison the contiguous location that would be read by
+        // a buggy implementation assuming stride-1 physical addressing.
+        // Physical address 1 → VRam[4..7] (wrong for char 1).
+        vram.Planes[0, 1] = 0xAA;
+        vram.Planes[1, 1] = 0xBB;
+
+        state.IsRenderingDirty = true;
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        // Char 0 pixels
+        frame[0].Should().Be(state.DacRegisters.PaletteMap[10], "char 0, plane 0");
+        frame[2].Should().Be(state.DacRegisters.PaletteMap[20], "char 0, plane 1");
+        frame[4].Should().Be(state.DacRegisters.PaletteMap[30], "char 0, plane 2");
+        frame[6].Should().Be(state.DacRegisters.PaletteMap[40], "char 0, plane 3");
+
+        // Char 1 pixels — must use physical address 4, NOT physical address 1
+        frame[8].Should().Be(state.DacRegisters.PaletteMap[50], "char 1, plane 0 — DoubleWord addressing");
+        frame[10].Should().Be(state.DacRegisters.PaletteMap[60], "char 1, plane 1 — DoubleWord addressing");
+        frame[12].Should().Be(state.DacRegisters.PaletteMap[70], "char 1, plane 2 — DoubleWord addressing");
+        frame[14].Should().Be(state.DacRegisters.PaletteMap[80], "char 1, plane 3 — DoubleWord addressing");
+    }
+
+    [SkippableFact]
+    public void Render256Color_Word13Mode_ReadsCorrectPhysicalAddresses() {
+        EnsureSupported();
+        VideoState state = ConfigureGraphics256Color(1);
+        // Word13 mode: physical = (counter << 1) | (counter >> 13 & 1).
+        // Counter 0 → physical 0, counter 1 → physical 2, counter 2 → physical 4.
+        state.CrtControllerRegisters.CrtModeControlRegister.ByteWordMode = ByteWordMode.Word;
+        state.CrtControllerRegisters.CrtModeControlRegister.AddressWrap = false;
+        state.CrtControllerRegisters.UnderlineRowScanlineRegister.DoubleWordMode = false;
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityPaletteMap(state);
+
+        // Char 0 reads counter=0 → physical=0 → VRam[0..3]
+        vram.Planes[0, 0] = 11;
+        vram.Planes[1, 0] = 22;
+        vram.Planes[2, 0] = 33;
+        vram.Planes[3, 0] = 44;
+
+        // Char 1 reads counter=1 → physical=2 → VRam[8..11]
+        vram.Planes[0, 2] = 55;
+        vram.Planes[1, 2] = 66;
+        vram.Planes[2, 2] = 77;
+        vram.Planes[3, 2] = 88;
+
+        // Poison location that a contiguous reader would pick up:
+        // physical 1 → VRam[4..7]
+        vram.Planes[0, 1] = 0xCC;
+        vram.Planes[1, 1] = 0xDD;
+
+        state.IsRenderingDirty = true;
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        frame[0].Should().Be(state.DacRegisters.PaletteMap[11], "char 0, plane 0");
+        frame[2].Should().Be(state.DacRegisters.PaletteMap[22], "char 0, plane 1");
+
+        frame[8].Should().Be(state.DacRegisters.PaletteMap[55], "char 1, plane 0 — Word13 addressing");
+        frame[10].Should().Be(state.DacRegisters.PaletteMap[66], "char 1, plane 1 — Word13 addressing");
+        frame[12].Should().Be(state.DacRegisters.PaletteMap[77], "char 1, plane 2 — Word13 addressing");
+        frame[14].Should().Be(state.DacRegisters.PaletteMap[88], "char 1, plane 3 — Word13 addressing");
+    }
+
+    [SkippableFact]
+    public void Render256Color_CountByFour_RepeatsAddressForGroupedCharacters() {
+        EnsureSupported();
+        // With CountByFour (mask=3), the memory address counter advances only
+        // every 4th character clock.  Groups of characters share the same
+        // VRAM address and must produce identical pixel data.
+        VideoState state = ConfigureGraphics256Color(1);
+        state.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour = true;
+        state.CrtControllerRegisters.HorizontalDisplayEnd = 7;
+        state.CrtControllerRegisters.HorizontalTotal = 10;
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityPaletteMap(state);
+
+        // Counter advances: char 0 reads C=0, advance → C=1.
+        // Chars 1-3 read C=1 (no advance). Char 4 reads C=1, advance → C=2.
+        // Chars 5-7 read C=2 (no advance).
+        vram.Planes[0, 0] = 10;  // read by char 0
+        vram.Planes[0, 1] = 50;  // read by chars 1–4
+        vram.Planes[0, 2] = 90;  // read by chars 5–7
+
+        state.IsRenderingDirty = true;
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        // Char 0: unique address (counter=0)
+        frame[0].Should().Be(state.DacRegisters.PaletteMap[10], "char 0 uses counter 0");
+
+        // Chars 1–4: all share counter=1
+        frame[8].Should().Be(state.DacRegisters.PaletteMap[50], "char 1 uses counter 1");
+        frame[16].Should().Be(state.DacRegisters.PaletteMap[50], "char 2 uses counter 1");
+        frame[24].Should().Be(state.DacRegisters.PaletteMap[50], "char 3 uses counter 1");
+        frame[32].Should().Be(state.DacRegisters.PaletteMap[50], "char 4 uses counter 1");
+
+        // Chars 5–7: all share counter=2
+        frame[40].Should().Be(state.DacRegisters.PaletteMap[90], "char 5 uses counter 2");
+        frame[48].Should().Be(state.DacRegisters.PaletteMap[90], "char 6 uses counter 2");
+        frame[56].Should().Be(state.DacRegisters.PaletteMap[90], "char 7 uses counter 2");
+    }
+
     // ─────────── Helpers ───────────
 
     protected static void RenderFullFrame(Renderer renderer, VideoState state) {

@@ -305,17 +305,33 @@ public class Renderer : IVgaRenderer {
             return;
         }
 
-        // Compute the starting VGA address for the first visible character.
-        // Account for character clock mask: advance memoryAddressCounter past blanked chars.
-        int startCounter = memoryAddressCounter;
-        for (int c = 0; c < _frameSkew; c++) {
-            startCounter += (c & _frameCharacterClockMask) == 0 ? 1 : 0;
+        // Fast path: when addresses are contiguous (Byte mode, mask == 0),
+        // hand a single VRAM span to the SIMD renderer (zero-copy).
+        if (_frameCharacterClockMask == 0) {
+            ushort startPhysical = addressMapper.ComputeAddress(memoryAddressCounter);
+            bool isContiguous;
+            if (visibleChars <= 1) {
+                isContiguous = true;
+            } else {
+                ushort endPhysical = addressMapper.ComputeAddress(memoryAddressCounter + visibleChars - 1);
+                isContiguous = endPhysical - startPhysical == visibleChars - 1;
+            }
+            if (isContiguous) {
+                RenderContiguous256(frameBuffer, paletteMap, startPhysical, visibleChars);
+                return;
+            }
         }
-        ushort startPhysical = addressMapper.ComputeAddress(startCounter);
+
+        // Non-contiguous path: read each character's VRAM data and write
+        // pixels directly to the frame buffer in a single pass.
+        RenderDirect256(frameBuffer, paletteMap, addressMapper, memoryAddressCounter, visibleChars);
+    }
+
+    private void RenderContiguous256(Span<uint> frameBuffer, uint[] paletteMap,
+        ushort startPhysical, int visibleChars) {
         int vramLinearStart = startPhysical * 4;
         int vramByteCount = visibleChars * 4;
 
-        // Clamp to VRam bounds.
         if (vramLinearStart + vramByteCount > _memory.VRam.Length) {
             vramByteCount = _memory.VRam.Length - vramLinearStart;
         }
@@ -325,7 +341,6 @@ public class Renderer : IVgaRenderer {
 
         ReadOnlySpan<byte> vram = _memory.GetLinearSpan(vramLinearStart, vramByteCount);
 
-        // In 256-color mode each VRAM byte produces 2 identical pixels on screen.
         int pixelCount = vramByteCount * 2;
         if (_frameDestinationAddress + pixelCount > frameBuffer.Length) {
             pixelCount = frameBuffer.Length - _frameDestinationAddress;
@@ -333,9 +348,38 @@ public class Renderer : IVgaRenderer {
         if (pixelCount <= 0) {
             return;
         }
-        int byteCount = pixelCount / 2;
 
-        _renderer256Color.RenderDoubledScanline(frameBuffer, vram, paletteMap, byteCount, ref _frameDestinationAddress);
+        _renderer256Color.RenderDoubledScanline(frameBuffer, vram, paletteMap, pixelCount / 2, ref _frameDestinationAddress);
+    }
+
+    private void RenderDirect256(Span<uint> frameBuffer, uint[] paletteMap,
+        VgaAddressMapper addressMapper, int memoryAddressCounter, int visibleChars) {
+        int dest = _frameDestinationAddress;
+        byte[] vram = _memory.VRam;
+        int currCounter = memoryAddressCounter;
+        for (int i = 0; i < visibleChars; i++) {
+            ushort physical = addressMapper.ComputeAddress(currCounter);
+            int baseIdx = physical * 4;
+            if (baseIdx + 4 > vram.Length || dest + 8 > frameBuffer.Length) {
+                break;
+            }
+            uint c0 = paletteMap[vram[baseIdx]];
+            uint c1 = paletteMap[vram[baseIdx + 1]];
+            uint c2 = paletteMap[vram[baseIdx + 2]];
+            uint c3 = paletteMap[vram[baseIdx + 3]];
+            frameBuffer[dest] = c0;
+            frameBuffer[dest + 1] = c0;
+            frameBuffer[dest + 2] = c1;
+            frameBuffer[dest + 3] = c1;
+            frameBuffer[dest + 4] = c2;
+            frameBuffer[dest + 5] = c2;
+            frameBuffer[dest + 6] = c3;
+            frameBuffer[dest + 7] = c3;
+            dest += 8;
+            int characterCounter = _frameSkew + i;
+            currCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
+        }
+        _frameDestinationAddress = dest;
     }
 
     private (byte plane0, byte plane1, byte plane2, byte plane3) ReadVideoMemory(int memoryAddressCounter, VgaAddressMapper addressMapper) {
