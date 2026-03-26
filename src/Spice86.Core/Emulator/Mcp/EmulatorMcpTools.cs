@@ -167,6 +167,46 @@ internal sealed class EmulatorMcpTools {
         return (false, null, null);
     }
 
+    [McpServerTool(Name = "mcp_about", UseStructuredContent = true), Description("Describe the MCP server purpose, capability scope, version, and discovery guidance for AI clients")]
+    public CallToolResult McpAbout() {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                return new McpAboutResponse {
+                    Name = "Spice86 MCP Server",
+                    Version = "2.0.0",
+                    Purpose = "Reverse-engineering and emulator automation for DOS workloads in Spice86.",
+                    Stateless = true,
+                    McpEndpoint = "/mcp",
+                    HealthEndpoint = "/health",
+                    CapabilityScopes = [
+                        "cpu_registers",
+                        "memory_read_write_search",
+                        "io_ports",
+                        "breakpoints",
+                        "execution_control_pause_resume_step_step_over",
+                        "function_listing",
+                        "video_and_screenshot",
+                        "sound_devices",
+                        "dos_and_bios",
+                        "ems_and_xms"
+                    ],
+                    ExtensionModel = "Spice86-based projects can register extra MCP tool assemblies and injectable services.",
+                    ExtensionPoints = [
+                        "IMcpToolSupplier.GetMcpToolAssemblies",
+                        "IMcpToolSupplier.GetMcpServices",
+                        "McpHttpHost.Start(additionalToolAssemblies, additionalServices)"
+                    ],
+                    Discovery = [
+                        "initialize",
+                        "tools/list",
+                        "mcp_about"
+                    ],
+                    ToolCount = _services.GetAllToolNames().Count
+                };
+            }
+        });
+    }
+
     [McpServerTool(Name = "read_cpu_registers", UseStructuredContent = true), Description("Read CPU registers")]
     public CallToolResult ReadCpuRegisters() {
         return ExecuteTool(() => {

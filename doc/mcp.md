@@ -43,6 +43,15 @@ The built-in toolset covers emulator-oriented operations such as:
 - EMS and XMS inspection helpers
 - Input automation helpers
 
+For AI/client discoverability, the built-in `mcp_about` tool returns concise structured metadata:
+
+- server purpose and version
+- capability scopes
+- stateless transport flag
+- endpoint paths
+- extension points for project-specific tools
+- recommended discovery sequence (`initialize`, `tools/list`, `mcp_about`)
+
 ## Extending MCP from user projects
 
 Spice86 supports external MCP tool registration.

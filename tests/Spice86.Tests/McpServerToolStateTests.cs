@@ -20,6 +20,29 @@ public class McpServerToolStateTests {
     private const string TestProgramName = "add";
 
     [Fact]
+    public async Task McpAbout_ShouldExposeDiscoverabilityMetadataAsync() {
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        JsonDocument response = await context.CallToolAsync("mcp_about", new Dictionary<string, object?>());
+
+        JsonElement structuredContent = McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(response));
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "name", out JsonElement name).Should().BeTrue();
+        name.GetString().Should().Be("Spice86 MCP Server");
+
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "stateless", out JsonElement stateless).Should().BeTrue();
+        stateless.GetBoolean().Should().BeTrue();
+
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "capabilityScopes", out JsonElement scopes).Should().BeTrue();
+        scopes.ValueKind.Should().Be(JsonValueKind.Array);
+        scopes.GetArrayLength().Should().BeGreaterThan(0);
+
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "toolCount", out JsonElement toolCount).Should().BeTrue();
+        toolCount.GetInt32().Should().BeGreaterThan(0);
+        AssertSuccessfulToolResponseContainsCpuStatus(response);
+    }
+
+    [Fact]
     public async Task InitializeAndToolsList_ShouldReturnServerInfoAndToolsAsync() {
         // Arrange
         await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
