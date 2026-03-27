@@ -8,7 +8,7 @@ using Spice86.Shared.Interfaces;
 /// <inheritdoc cref="IGuiVideoPresentation" />
 public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
     IGuiKeyboardEvents, IDisposable {
-    private const double ScreenRefreshHz = 75;
+    private const double ScreenRefreshHz = 60;
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMilliseconds(1000.0 / ScreenRefreshHz);
     private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
 
