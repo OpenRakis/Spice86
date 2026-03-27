@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record VideoCharacterResponse : McpToolResponse {
+internal record VideoCharacterResponse : McpToolResponse {
     public required int Page { get; init; }
 
     public required int X { get; init; }
