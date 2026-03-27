@@ -43,9 +43,13 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 
 [McpServerToolType]
 internal sealed class EmulatorMcpTools {
+    private static readonly JsonSerializerOptions SerializerOptions = new() {
+        Converters = { new JsonStringEnumConverter() }
+    };
     private static readonly string ScreenshotDirectory = Path.Join(Path.GetTempPath(), "spice86-mcp-screenshots");
     private static readonly TimeSpan StepCompletionTimeout = TimeSpan.FromSeconds(2);
     private readonly EmulatorMcpServices _services;
@@ -53,7 +57,7 @@ internal sealed class EmulatorMcpTools {
     public EmulatorMcpTools(EmulatorMcpServices services) => _services = services;
 
     private CallToolResult Success(object response) {
-        JsonNode? responseNode = JsonSerializer.SerializeToNode(response, response.GetType());
+        JsonNode? responseNode = JsonSerializer.SerializeToNode(response, response.GetType(), SerializerOptions);
         JsonObject structuredContent;
         if (responseNode is JsonObject responseObject) {
             structuredContent = responseObject;
@@ -63,7 +67,7 @@ internal sealed class EmulatorMcpTools {
             };
         }
 
-        structuredContent["cpuStatus"] = JsonSerializer.SerializeToNode(BuildCpuStatus(_services.State));
+        structuredContent["cpuStatus"] = JsonSerializer.SerializeToNode(CpuStateSnapshot.FromState(_services.State), SerializerOptions);
         return new CallToolResult {
             StructuredContent = structuredContent
         };
@@ -73,7 +77,7 @@ internal sealed class EmulatorMcpTools {
         JsonObject structuredContent = new JsonObject {
             ["success"] = false,
             ["message"] = message,
-            ["cpuStatus"] = JsonSerializer.SerializeToNode(BuildCpuStatus(_services.State))
+            ["cpuStatus"] = JsonSerializer.SerializeToNode(CpuStateSnapshot.FromState(_services.State), SerializerOptions)
         };
 
         return new CallToolResult {
@@ -208,7 +212,7 @@ internal sealed class EmulatorMcpTools {
     public CallToolResult ReadCpuRegisters() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
-                return BuildCpuRegistersResponse(_services.State);
+                return CpuStateSnapshot.FromState(_services.State);
             }
         });
     }
@@ -538,7 +542,7 @@ internal sealed class EmulatorMcpTools {
             lock (_services.ToolsLock) {
                 SoundBlaster soundBlaster = GetSoundBlaster();
                 return new SoundBlasterStateResponse {
-                    SbType = soundBlaster.SbTypeProperty.ToString(),
+                    SbType = soundBlaster.SbTypeProperty,
                     BaseAddress = soundBlaster.BaseAddress,
                     Irq = soundBlaster.IRQ,
                     LowDma = soundBlaster.LowDma,
@@ -789,18 +793,10 @@ internal sealed class EmulatorMcpTools {
                 CursorPosition cursorPosition = vgaFunctionality.GetCursorPosition(biosDataArea.CurrentVideoPage);
                 return new VideoDetailedStateResponse {
                     BiosVideoMode = biosDataArea.VideoMode,
-                    MemoryModel = currentMode.MemoryModel.ToString(),
-                    Width = currentMode.Width,
-                    Height = currentMode.Height,
-                    BitsPerPixel = currentMode.BitsPerPixel,
-                    CharacterWidth = currentMode.CharacterWidth,
-                    CharacterHeight = currentMode.CharacterHeight,
-                    StartSegment = currentMode.StartSegment,
+                    Mode = currentMode,
+                    Cursor = cursorPosition,
                     ScreenColumns = biosDataArea.ScreenColumns,
                     ScreenRows = biosDataArea.ScreenRows,
-                    ActivePage = biosDataArea.CurrentVideoPage,
-                    CursorX = cursorPosition.X,
-                    CursorY = cursorPosition.Y,
                     RendererWidth = _services.VgaRenderer.Width,
                     RendererHeight = _services.VgaRenderer.Height,
                     BufferSize = _services.VgaRenderer.BufferSize
@@ -880,12 +876,8 @@ internal sealed class EmulatorMcpTools {
                 CursorPosition cursorPosition = new(x, y, page);
                 CharacterPlusAttribute character = vgaFunctionality.ReadChar(cursorPosition);
                 return new VideoCharacterResponse {
-                    Page = page,
-                    X = x,
-                    Y = y,
-                    Character = character.Character.ToString(),
-                    Attribute = character.Attribute,
-                    UseAttribute = character.UseAttribute
+                    Position = cursorPosition,
+                    Character = character
                 };
             }
         });
@@ -1207,37 +1199,13 @@ internal sealed class EmulatorMcpTools {
 
                 _services.CfgCpu.ExecuteNext();
 
-                CpuRegistersResponse registers = BuildCpuRegistersResponse(_services.State);
                 return new StepResponse {
                     Success = true,
                     Message = "Step completed",
-                    GeneralPurpose = registers.GeneralPurpose,
-                    Segments = registers.Segments,
-                    InstructionPointer = registers.InstructionPointer,
-                    Flags = registers.Flags
+                    CpuState = CpuStateSnapshot.FromState(_services.State)
                 };
             }
         });
-    }
-
-    private static CpuRegistersResponse BuildCpuRegistersResponse(State state) {
-        return new CpuRegistersResponse {
-            GeneralPurpose = new GeneralPurposeRegisters {
-                EAX = state.EAX, EBX = state.EBX, ECX = state.ECX, EDX = state.EDX,
-                ESI = state.ESI, EDI = state.EDI, ESP = state.ESP, EBP = state.EBP
-            },
-            Segments = new SegmentRegisters {
-                CS = state.CS, DS = state.DS, ES = state.ES,
-                FS = state.FS, GS = state.GS, SS = state.SS
-            },
-            InstructionPointer = new InstructionPointer { IP = state.IP },
-            Flags = new CpuFlags {
-                CarryFlag = state.CarryFlag, ParityFlag = state.ParityFlag,
-                AuxiliaryFlag = state.AuxiliaryFlag, ZeroFlag = state.ZeroFlag,
-                SignFlag = state.SignFlag, DirectionFlag = state.DirectionFlag,
-                OverflowFlag = state.OverflowFlag, InterruptFlag = state.InterruptFlag
-            }
-        };
     }
 
     private SoundBlaster GetSoundBlaster() {
@@ -1309,14 +1277,10 @@ internal sealed class EmulatorMcpTools {
         soundBlaster.WriteByte(mixerDataPort, value);
     }
 
-    private static VideoCursorStateResponse BuildVideoCursorResponse(CursorPosition cursorPosition, CharacterPlusAttribute character) {
-        return new VideoCursorStateResponse {
-            Page = cursorPosition.Page,
-            X = cursorPosition.X,
-            Y = cursorPosition.Y,
-            Character = character.Character.ToString(),
-            Attribute = character.Attribute,
-            UseAttribute = character.UseAttribute
+    private static VideoCharacterResponse BuildVideoCursorResponse(CursorPosition cursorPosition, CharacterPlusAttribute character) {
+        return new VideoCharacterResponse {
+            Position = cursorPosition,
+            Character = character
         };
     }
 
@@ -1376,27 +1340,6 @@ internal sealed class EmulatorMcpTools {
 
         DosErrorCode errorCode = (DosErrorCode)(result.Value ?? 0);
         throw new InvalidOperationException($"{context}: {errorCode}");
-    }
-
-    private static CpuStatusResponse BuildCpuStatus(State state) {
-        return new CpuStatusResponse {
-            GeneralPurpose = new GeneralPurposeRegisters {
-                EAX = state.EAX, EBX = state.EBX, ECX = state.ECX, EDX = state.EDX,
-                ESI = state.ESI, EDI = state.EDI, ESP = state.ESP, EBP = state.EBP
-            },
-            Segments = new SegmentRegisters {
-                CS = state.CS, DS = state.DS, ES = state.ES,
-                FS = state.FS, GS = state.GS, SS = state.SS
-            },
-            InstructionPointer = new InstructionPointer { IP = state.IP },
-            Flags = new CpuFlags {
-                CarryFlag = state.CarryFlag, ParityFlag = state.ParityFlag,
-                AuxiliaryFlag = state.AuxiliaryFlag, ZeroFlag = state.ZeroFlag,
-                SignFlag = state.SignFlag, DirectionFlag = state.DirectionFlag,
-                OverflowFlag = state.OverflowFlag, InterruptFlag = state.InterruptFlag
-            },
-            Cycles = state.Cycles
-        };
     }
 
     private bool WaitUntilPaused(TimeSpan timeout) {

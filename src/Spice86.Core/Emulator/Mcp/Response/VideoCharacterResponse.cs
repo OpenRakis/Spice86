@@ -1,15 +1,9 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal record VideoCharacterResponse {
-    public required int Page { get; init; }
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 
-    public required int X { get; init; }
+internal sealed record VideoCharacterResponse {
+    public required CursorPosition Position { get; init; }
 
-    public required int Y { get; init; }
-
-    public required string Character { get; init; }
-
-    public required int Attribute { get; init; }
-
-    public required bool UseAttribute { get; init; }
+    public required CharacterPlusAttribute Character { get; init; }
 }

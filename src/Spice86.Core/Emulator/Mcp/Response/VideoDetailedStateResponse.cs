@@ -1,31 +1,17 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
+using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
+
 internal sealed record VideoDetailedStateResponse {
     public required int BiosVideoMode { get; init; }
 
-    public required string MemoryModel { get; init; }
+    public required VgaMode Mode { get; init; }
 
-    public required int Width { get; init; }
-
-    public required int Height { get; init; }
-
-    public required int BitsPerPixel { get; init; }
-
-    public required int CharacterWidth { get; init; }
-
-    public required int CharacterHeight { get; init; }
-
-    public required int StartSegment { get; init; }
+    public required CursorPosition Cursor { get; init; }
 
     public required int ScreenColumns { get; init; }
 
     public required int ScreenRows { get; init; }
-
-    public required int ActivePage { get; init; }
-
-    public required int CursorX { get; init; }
-
-    public required int CursorY { get; init; }
 
     public required int RendererWidth { get; init; }
 

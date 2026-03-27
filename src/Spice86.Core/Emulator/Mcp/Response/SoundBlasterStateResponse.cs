@@ -1,7 +1,9 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
+
 internal sealed record SoundBlasterStateResponse {
-    public required string SbType { get; init; }
+    public required SbType SbType { get; init; }
 
     public required int BaseAddress { get; init; }
 

@@ -103,7 +103,7 @@ public class McpServerToolStateTests {
         JsonElement enabledResult = McpJsonRpcAssertions.GetJsonRpcResult(enabledResponse);
         enabledResult.TryGetProperty("isError", out JsonElement isEnabledError).Should().BeFalse();
         JsonElement structuredContent = McpJsonRpcAssertions.GetStructuredContent(enabledResult);
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "generalPurpose", out JsonElement _).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "eax", out JsonElement _).Should().BeTrue();
         AssertSuccessfulToolResponseContainsCpuStatus(enabledResponse);
     }
 
@@ -266,8 +266,8 @@ public class McpServerToolStateTests {
         JsonElement structuredContent = McpJsonRpcAssertions.GetStructuredContent(stepResult);
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "success", out JsonElement success).Should().BeTrue();
         success.GetBoolean().Should().BeTrue();
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "instructionPointer", out JsonElement instructionPointer).Should().BeTrue();
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(instructionPointer, "ip", out JsonElement steppedIp).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "cpuState", out JsonElement cpuState).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(cpuState, "ip", out JsonElement steppedIp).Should().BeTrue();
         steppedIp.GetInt32().Should().NotBe(initialIp);
         context.Services.PauseHandler.IsPaused.Should().BeTrue();
         AssertSuccessfulToolResponseContainsCpuStatus(stepResponse);
@@ -614,7 +614,8 @@ public class McpServerToolStateTests {
 
         // Assert
         JsonElement videoStructured = GetSuccessfulStructuredContent(video);
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(videoStructured, "memoryModel", out JsonElement memoryModel).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(videoStructured, "mode", out JsonElement mode).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(mode, "memoryModel", out JsonElement memoryModel).Should().BeTrue();
         memoryModel.GetString().Should().NotBeNullOrWhiteSpace();
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(videoStructured, "rendererWidth", out JsonElement rendererWidth).Should().BeTrue();
         rendererWidth.GetInt32().Should().BeGreaterThan(0);
@@ -644,9 +645,10 @@ public class McpServerToolStateTests {
         // Assert
         AssertToolSucceeded(setCursor);
         JsonElement structured = GetSuccessfulStructuredContent(queryCursor);
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "x", out JsonElement x).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "position", out JsonElement position).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(position, "x", out JsonElement x).Should().BeTrue();
         x.GetInt32().Should().Be(0);
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "y", out JsonElement y).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(position, "y", out JsonElement y).Should().BeTrue();
         y.GetInt32().Should().Be(0);
     }
 
@@ -680,7 +682,8 @@ public class McpServerToolStateTests {
         // Assert
         AssertToolSucceeded(writeText);
         JsonElement structured = GetSuccessfulStructuredContent(readCharacter);
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "character", out JsonElement character).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "character", out JsonElement characterObj).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(characterObj, "character", out JsonElement character).Should().BeTrue();
         string? characterValue = character.GetString();
         characterValue.Should().NotBeNullOrEmpty();
         if (characterValue != null) {
@@ -729,7 +732,8 @@ public class McpServerToolStateTests {
         // Assert
         AssertToolSucceeded(setActivePage);
         JsonElement structured = GetSuccessfulStructuredContent(videoState);
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "activePage", out JsonElement activePage).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "cursor", out JsonElement cursor).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(cursor, "page", out JsonElement activePage).Should().BeTrue();
         activePage.GetInt32().Should().Be(1);
     }
 
@@ -1028,7 +1032,7 @@ public class McpServerToolStateTests {
         JsonDocument video = await context.CallToolAsync("get_video_state", new Dictionary<string, object?>());
         JsonDocument screenshot = await context.CallToolAsync("screenshot", new Dictionary<string, object?>());
 
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(readCpu)), "generalPurpose", out JsonElement _).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(readCpu)), "eax", out JsonElement _).Should().BeTrue();
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(readCfg)), "currentContextDepth", out JsonElement _).Should().BeTrue();
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(listFuncs)), "functions", out JsonElement _).Should().BeTrue();
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(video)), "width", out JsonElement _).Should().BeTrue();
@@ -1134,8 +1138,8 @@ public class McpServerToolStateTests {
         JsonElement structuredContent = McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(result));
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "success", out JsonElement success).Should().BeTrue();
         success.GetBoolean().Should().BeTrue();
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "instructionPointer", out JsonElement instructionPointer).Should().BeTrue();
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(instructionPointer, "ip", out JsonElement instructionIp).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "cpuState", out JsonElement cpuState).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(cpuState, "ip", out JsonElement instructionIp).Should().BeTrue();
         instructionIp.GetInt32().Should().BeGreaterThanOrEqualTo(0);
         AssertSuccessfulToolResponseContainsCpuStatus(result);
     }
