@@ -182,14 +182,14 @@ internal sealed class EmulatorMcpTools {
                     McpEndpoint = "/mcp",
                     HealthEndpoint = "/health",
                     CapabilityScopes = [
-                        "cpu_registers",
+                        "cpu_state_and_registers",
                         "memory_read_write_search",
                         "io_ports",
                         "breakpoints",
                         "execution_control_pause_resume_step_step_over",
-                        "function_listing",
+                        "function_listing_and_cfg_graph",
                         "video_and_screenshot",
-                        "sound_devices",
+                        "sound_devices_sb_opl_midi_speaker",
                         "dos_and_bios",
                         "ems_and_xms"
                     ],
@@ -210,7 +210,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_cpu_registers", UseStructuredContent = true), Description("Read CPU registers")]
+    [McpServerTool(Name = "read_cpu_state", UseStructuredContent = true), Description("Read full CPU state: general-purpose registers (EAX, EBX, ECX, EDX, ESI, EDI, ESP, EBP), segment registers (CS, DS, ES, FS, GS, SS), instruction pointer (IP), flags (carry, parity, auxiliary, zero, sign, direction, overflow, interrupt), and cycle count. CS:IP gives the address of the next instruction to execute.")]
     public CallToolResult ReadCpuRegisters() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -219,7 +219,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_memory", UseStructuredContent = true), Description("Read memory range (max 4096 bytes) from segmented address (segment:offset). Returns hex-encoded data.")]
+    [McpServerTool(Name = "read_memory", UseStructuredContent = true), Description("Read a memory range (max 4096 bytes) at a segmented address (segment:offset). Returns the address, length, and hex-encoded byte string. Use to inspect code, data, or stack regions.")]
     public CallToolResult ReadMemory(ushort segment, ushort offset, int length) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -238,7 +238,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "write_memory", UseStructuredContent = true), Description("Write hex-encoded bytes to segmented memory address (segment:offset). Maximum 4096 bytes.")]
+    [McpServerTool(Name = "write_memory", UseStructuredContent = true), Description("Write hex-encoded bytes to a segmented memory address (segment:offset). Maximum 4096 bytes per call.")]
     public CallToolResult WriteMemory(ushort segment, ushort offset, [StringSyntax("Hexadecimal")] string data) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -259,7 +259,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "search_memory", UseStructuredContent = true), Description("Search RAM for a hex-encoded byte sequence from segmented address (segment:offset). Returns segmented addresses of matches.")]
+    [McpServerTool(Name = "search_memory", UseStructuredContent = true), Description("Search conventional RAM for a hex-encoded byte pattern starting at segment:offset. Returns matching segmented addresses. Useful for finding strings, code sequences, or data patterns in memory.")]
     public CallToolResult SearchMemory([StringSyntax("Hexadecimal")] string pattern, ushort startSegment, ushort startOffset, int length, int limit) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -395,7 +395,7 @@ internal sealed class EmulatorMcpTools {
         return (matches.ToArray(), truncated);
     }
 
-    [McpServerTool(Name = "list_functions", UseStructuredContent = true), Description("List functions ordered by call count")]
+    [McpServerTool(Name = "list_functions", UseStructuredContent = true), Description("List discovered functions ordered by call count. Returns address, name, call count, and override status for each function. Use limit to cap the result size.")]
     public CallToolResult ListFunctions(int? limit) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -423,7 +423,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_cfg_cpu_graph", UseStructuredContent = true), Description("Read the CFG CPU graph. Returns entry point metadata and graph nodes with successor/predecessor edges. Use nodeLimit to cap the number of nodes returned (BFS from entry points); omit or pass null for the full graph.")]
+    [McpServerTool(Name = "read_cfg_cpu_graph", UseStructuredContent = true), Description("Read the Control Flow Graph built by the CPU. Returns execution context depth, entry point addresses, last executed address, and graph nodes with successor/predecessor edges for each instruction. Use nodeLimit to cap BFS traversal; omit or pass null for the full graph.")]
     public CallToolResult ReadCfgCpuGraph(int? nodeLimit) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -500,7 +500,7 @@ internal sealed class EmulatorMcpTools {
         return (result.ToArray(), false);
     }
 
-    [McpServerTool(Name = "read_io_port", UseStructuredContent = true), Description("Read from IO port")]
+    [McpServerTool(Name = "read_io_port", UseStructuredContent = true), Description("Read a byte from an x86 IO port (0-65535). Returns the port number and byte value.")]
     public CallToolResult ReadIoPort(int port) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -513,7 +513,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "write_io_port", UseStructuredContent = true), Description("Write to IO port")]
+    [McpServerTool(Name = "write_io_port", UseStructuredContent = true), Description("Write a byte to an x86 IO port (0-65535). Triggers the emulated device handler for that port.")]
     public CallToolResult WriteIoPort(int port, int value) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -529,7 +529,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "send_keyboard_key", UseStructuredContent = true), Description("Send a keyboard key press/release through the PS/2 controller. Key must be a PcKeyboardKey name, for example Escape, Enter, A, Up.")]
+    [McpServerTool(Name = "send_keyboard_key", UseStructuredContent = true), Description("Send a keyboard key press/release through the PS/2 controller. Use PcKeyboardKey enum names: Escape, Enter, A-Z, Up, Down, Left, Right, F1-F12, etc.")]
     public CallToolResult SendKeyboardKey(string key, bool isPressed) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -551,7 +551,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "send_mouse_packet", UseStructuredContent = true), Description("Send raw PS/2 mouse packet bytes (hex) through the controller AUX port. Example: 080000 (no movement, no button).")]
+    [McpServerTool(Name = "send_mouse_packet", UseStructuredContent = true), Description("Send a raw PS/2 mouse packet (3 hex bytes) through the controller AUX port. Format: SSXXYY where SS=status, XX=X delta, YY=Y delta. Example: 080000 (no movement, no button).")]
     public CallToolResult SendMousePacket([StringSyntax("Hexadecimal")] string packetData) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -577,7 +577,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "get_video_state", UseStructuredContent = true), Description("Get video card state")]
+    [McpServerTool(Name = "read_video_state", UseStructuredContent = true), Description("Read basic VGA renderer state: current width, height, and framebuffer size in pixels.")]
     public CallToolResult GetVideoState() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -590,7 +590,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_sound_blaster_state", UseStructuredContent = true), Description("Query Sound Blaster configuration and DSP state")]
+    [McpServerTool(Name = "read_sound_blaster_state", UseStructuredContent = true), Description("Read Sound Blaster configuration: SB type, base address, IRQ, DMA channels, BLASTER environment string, speaker enable state, DSP sample rate, and test register.")]
     public CallToolResult QuerySoundBlasterState() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -610,7 +610,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "sound_blaster_set_speaker", UseStructuredContent = true), Description("Enable or disable the Sound Blaster DSP speaker using the device command interface")]
+    [McpServerTool(Name = "sound_blaster_set_speaker", UseStructuredContent = true), Description("Enable or disable the Sound Blaster DSP speaker output.")]
     public CallToolResult SoundBlasterSetSpeaker(bool enabled) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -626,7 +626,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_sound_blaster_dsp_version", UseStructuredContent = true), Description("Query the Sound Blaster DSP version using the DSP command interface")]
+    [McpServerTool(Name = "read_sound_blaster_dsp_version", UseStructuredContent = true), Description("Read the Sound Blaster DSP version by issuing the GetVersion DSP command. Returns major and minor version numbers.")]
     public CallToolResult QuerySoundBlasterDspVersion() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -636,7 +636,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_sound_blaster_mixer_state", UseStructuredContent = true), Description("Query commonly used Sound Blaster mixer registers and stereo/filter state")]
+    [McpServerTool(Name = "read_sound_blaster_mixer_state", UseStructuredContent = true), Description("Read Sound Blaster mixer volume levels (master, DAC, FM, CD, line-in, microphone) and stereo/filter enable state.")]
     public CallToolResult QuerySoundBlasterMixerState() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -661,7 +661,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "sound_blaster_write_mixer_register", UseStructuredContent = true), Description("Write a Sound Blaster mixer register using semantic mixer access instead of raw port writes")]
+    [McpServerTool(Name = "sound_blaster_write_mixer_register", UseStructuredContent = true), Description("Write a Sound Blaster mixer register (0x00-0xFF) with a byte value. Controls volume levels, stereo, and filter settings.")]
     public CallToolResult SoundBlasterWriteMixerRegister(int register, int value) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -682,7 +682,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_opl_state", UseStructuredContent = true), Description("Query OPL/AdLib synthesis mode and mixer channel state")]
+    [McpServerTool(Name = "read_opl_state", UseStructuredContent = true), Description("Read OPL/AdLib FM synthesis state: OPL mode (OPL2/OPL3/DualOPL2), AdLib Gold enable, and mixer channel name, sample rate, and enable state.")]
     public CallToolResult QueryOplState() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -699,7 +699,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_pc_speaker_state", UseStructuredContent = true), Description("Query PC speaker control port state and mixer channel information")]
+    [McpServerTool(Name = "read_pc_speaker_state", UseStructuredContent = true), Description("Read PC speaker state: port 0x61 control value, timer-2 gate enable, speaker output enable, timer-2 output level, and mixer channel info.")]
     public CallToolResult QueryPcSpeakerState() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -719,7 +719,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "pc_speaker_set_control", UseStructuredContent = true), Description("Set PC speaker timer gate and speaker output bits through port 0x61 semantics")]
+    [McpServerTool(Name = "pc_speaker_set_control", UseStructuredContent = true), Description("Set PC speaker timer-2 gate and speaker output bits via port 0x61 semantics.")]
     public CallToolResult PcSpeakerSetControl(bool timer2GateEnabled, bool speakerOutputEnabled) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -738,7 +738,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_midi_state", UseStructuredContent = true), Description("Query MPU-401 MIDI mode, backend selection, and status port flags")]
+    [McpServerTool(Name = "read_midi_state", UseStructuredContent = true), Description("Read MPU-401 MIDI state: device kind (GeneralMidi/MT32), MT-32 ROM path, operational state, status flags, and data/status port addresses.")]
     public CallToolResult QueryMidiState() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -757,7 +757,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "midi_reset", UseStructuredContent = true), Description("Reset the MPU-401 MIDI interface and enqueue an acknowledge byte")]
+    [McpServerTool(Name = "midi_reset", UseStructuredContent = true), Description("Reset the MPU-401 MIDI interface to intelligent mode and enqueue an ACK byte.")]
     public CallToolResult MidiReset() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -771,7 +771,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "midi_enter_uart_mode", UseStructuredContent = true), Description("Put the MPU-401 MIDI interface into UART mode")]
+    [McpServerTool(Name = "midi_enter_uart_mode", UseStructuredContent = true), Description("Switch the MPU-401 MIDI interface to UART (pass-through) mode.")]
     public CallToolResult MidiEnterUartMode() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -785,7 +785,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "midi_send_bytes", UseStructuredContent = true), Description("Send raw MIDI bytes as hex through the MPU-401 data port. Supports short messages and SysEx streams.")]
+    [McpServerTool(Name = "midi_send_bytes", UseStructuredContent = true), Description("Send raw MIDI bytes (hex string, 1-1024 bytes) through the MPU-401 data port.")]
     public CallToolResult MidiSendBytes([StringSyntax("Hexadecimal")] string data) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -807,7 +807,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "opl_write_register", UseStructuredContent = true), Description("Write an OPL register using register/value semantics instead of raw port writes")]
+    [McpServerTool(Name = "opl_write_register", UseStructuredContent = true), Description("Write an OPL register (0x000-0x1FF) with a byte value. Controls FM synthesis operators, channels, and global settings.")]
     public CallToolResult OplWriteRegister(int register, int value) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -835,7 +835,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_video_state_detailed", UseStructuredContent = true), Description("Query VGA mode, BIOS video state, and cursor position using semantic video APIs")]
+    [McpServerTool(Name = "read_video_state_detailed", UseStructuredContent = true), Description("Read detailed VGA state: BIOS video mode, VGA mode object, cursor position, screen columns/rows, and renderer dimensions. More complete than read_video_state.")]
     public CallToolResult QueryVideoStateDetailed() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -857,7 +857,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "video_set_mode", UseStructuredContent = true), Description("Set a VGA video mode using the high-level video subsystem")]
+    [McpServerTool(Name = "video_set_mode", UseStructuredContent = true), Description("Set a VGA/EGA/CGA video mode by mode ID. Optionally clears video memory.")]
     public CallToolResult VideoSetMode(int modeId, bool clearVideoMemory) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -872,7 +872,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "video_write_text", UseStructuredContent = true), Description("Write a text string using the VGA text output abstraction")]
+    [McpServerTool(Name = "video_write_text", UseStructuredContent = true), Description("Write a text string at the current cursor position in the active text page.")]
     public CallToolResult VideoWriteText(string text) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -886,7 +886,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_video_cursor", UseStructuredContent = true), Description("Query the cursor position for a text page and the character currently stored at that location")]
+    [McpServerTool(Name = "read_video_cursor", UseStructuredContent = true), Description("Read the text-mode cursor position (x, y, page) and the character plus attribute stored at that location.")]
     public CallToolResult QueryVideoCursor(int page) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -900,7 +900,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "video_set_cursor_position", UseStructuredContent = true), Description("Set the cursor position on a text page")]
+    [McpServerTool(Name = "video_set_cursor_position", UseStructuredContent = true), Description("Set the cursor position (x, y) on a given text page.")]
     public CallToolResult VideoSetCursorPosition(int page, int x, int y) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -917,7 +917,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "video_read_character", UseStructuredContent = true), Description("Read the character and attribute stored at a text position")]
+    [McpServerTool(Name = "video_read_character", UseStructuredContent = true), Description("Read the character and color attribute stored at a specific text-mode position (page, x, y).")]
     public CallToolResult VideoReadCharacter(int page, int x, int y) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -935,7 +935,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "video_set_active_page", UseStructuredContent = true), Description("Set the active VGA text page")]
+    [McpServerTool(Name = "video_set_active_page", UseStructuredContent = true), Description("Set the active VGA text page (0-7).")]
     public CallToolResult VideoSetActivePage(int page) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -951,7 +951,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_video_palette", UseStructuredContent = true), Description("Query the EGA/VGA palette registers, overscan color, and pixel mask")]
+    [McpServerTool(Name = "read_video_palette", UseStructuredContent = true), Description("Read EGA/VGA palette registers, overscan border color, pixel mask, and color page state.")]
     public CallToolResult QueryVideoPalette() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -967,7 +967,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "video_write_pixel", UseStructuredContent = true), Description("Write a pixel in the current graphics mode")]
+    [McpServerTool(Name = "video_write_pixel", UseStructuredContent = true), Description("Write a pixel at (x, y) with a color index in the current graphics mode.")]
     public CallToolResult VideoWritePixel(int x, int y, int color) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -987,7 +987,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "video_read_pixel", UseStructuredContent = true), Description("Read a pixel from the current graphics mode")]
+    [McpServerTool(Name = "video_read_pixel", UseStructuredContent = true), Description("Read the color index of a pixel at (x, y) in the current graphics mode.")]
     public CallToolResult VideoReadPixel(int x, int y) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1005,7 +1005,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_bios_data_area", UseStructuredContent = true), Description("Read key BIOS Data Area fields relevant to machine and video state")]
+    [McpServerTool(Name = "read_bios_data_area", UseStructuredContent = true), Description("Read key BIOS Data Area fields: conventional memory size, equipment flags, video mode, screen dimensions, active page, character height, CRT base address, timer counter, and last unexpected IRQ.")]
     public CallToolResult QueryBiosDataArea() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1026,7 +1026,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_interrupt_vector", UseStructuredContent = true), Description("Read an interrupt vector from the interrupt vector table using vector number semantics")]
+    [McpServerTool(Name = "read_interrupt_vector", UseStructuredContent = true), Description("Read an interrupt vector (0x00-0xFF) from the IVT. Returns the segmented address (segment:offset) the vector points to.")]
     public CallToolResult QueryInterruptVector(int vectorNumber) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1044,7 +1044,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_dos_state", UseStructuredContent = true), Description("Query DOS drive selection, mounted drives, and DOS kernel state")]
+    [McpServerTool(Name = "read_dos_state", UseStructuredContent = true), Description("Read DOS kernel state: current drive, drive index, mounted drives with host directories, PSP segment, device count, and EMS/XMS availability.")]
     public CallToolResult QueryDosState() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1071,7 +1071,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_dos_current_directory", UseStructuredContent = true), Description("Query the current DOS directory for the current drive or for an explicit drive letter")]
+    [McpServerTool(Name = "read_dos_current_directory", UseStructuredContent = true), Description("Read the current DOS directory for the current drive or for an explicit drive letter.")]
     public CallToolResult QueryDosCurrentDirectory(string driveLetter) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1088,7 +1088,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "dos_set_current_directory", UseStructuredContent = true), Description("Set the DOS current directory using DOS path semantics")]
+    [McpServerTool(Name = "dos_set_current_directory", UseStructuredContent = true), Description("Set the DOS current directory using a DOS path (e.g. C:\\GAMES\\DUNE).")]
     public CallToolResult DosSetCurrentDirectory(string path) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1104,7 +1104,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_dos_program_state", UseStructuredContent = true), Description("Query the current DOS PSP and related process state")]
+    [McpServerTool(Name = "read_dos_program_state", UseStructuredContent = true), Description("Read current DOS process state: PSP segment, parent PSP, environment segment, max open files, allocated paragraphs, and command tail length.")]
     public CallToolResult QueryDosProgramState() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1124,7 +1124,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "dos_set_default_drive", UseStructuredContent = true), Description("Set the DOS default drive by letter without issuing raw INT 21h calls")]
+    [McpServerTool(Name = "dos_set_default_drive", UseStructuredContent = true), Description("Set the DOS default drive by letter (A-Z). Does not issue INT 21h.")]
     public CallToolResult DosSetDefaultDrive(string driveLetter) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1148,7 +1148,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "screenshot", UseStructuredContent = true), Description("Capture screenshot as PNG image file and return path metadata")]
+    [McpServerTool(Name = "screenshot", UseStructuredContent = true), Description("Capture a screenshot as a PNG file. Returns width, height, file path, URI, and file size.")]
     public CallToolResult TakeScreenshot() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1196,7 +1196,7 @@ internal sealed class EmulatorMcpTools {
     }
 
     [McpManualControl]
-    [McpServerTool(Name = "pause_emulator", UseStructuredContent = true), Description("Immediately stop the emulation. Use this to inspect state at an arbitrary point.")]
+    [McpServerTool(Name = "pause_emulator", UseStructuredContent = true), Description("Pause the emulator immediately. Use this before inspecting CPU state, memory, or any device registers.")]
     public CallToolResult PauseEmulator() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1210,7 +1210,7 @@ internal sealed class EmulatorMcpTools {
     }
 
     [McpManualControl]
-    [McpServerTool(Name = "resume_emulator", UseStructuredContent = true), Description("Resume continuous execution of the emulator. Also known as 'go'.")]
+    [McpServerTool(Name = "resume_emulator", UseStructuredContent = true), Description("Resume continuous execution of the emulator.")]
     public CallToolResult ResumeEmulator() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1224,7 +1224,7 @@ internal sealed class EmulatorMcpTools {
     }
 
     [McpManualControl]
-    [McpServerTool(Name = "go", UseStructuredContent = true), Description("Alias for resume_emulator. Resumes continuous execution.")]
+    [McpServerTool(Name = "go", UseStructuredContent = true), Description("Alias for resume_emulator.")]
     public CallToolResult Go() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1238,7 +1238,7 @@ internal sealed class EmulatorMcpTools {
     }
 
     [McpManualControl]
-    [McpServerTool(Name = "step", UseStructuredContent = true), Description("Execute exactly one CPU instruction and then pause again. Useful for trace analysis.")]
+    [McpServerTool(Name = "step", UseStructuredContent = true), Description("Execute exactly one CPU instruction and then pause. Returns the updated CPU state (registers, IP, flags, cycles) after the step.")]
     public CallToolResult Step() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1407,7 +1407,7 @@ internal sealed class EmulatorMcpTools {
     }
 
     [McpManualControl]
-    [McpServerTool(Name = "step_over", UseStructuredContent = true), Description("Step over one instruction. For CALL or INT, runs until the return address; otherwise behaves like step. Caller must supply nextAddress (CS*16+IP + instruction length) and isCallOrInterrupt.")]
+    [McpServerTool(Name = "step_over", UseStructuredContent = true), Description("Step over one instruction. For CALL or INT, runs until the return address; otherwise single-steps. Requires nextAddress (physical = CS*16+IP + instruction length) and isCallOrInterrupt.")]
     public CallToolResult StepOver(uint nextAddress, bool isCallOrInterrupt) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1427,7 +1427,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_stack", UseStructuredContent = true), Description("Read the top values of the stack (SS:SP). Returns addresses and 16-bit values.")]
+    [McpServerTool(Name = "read_stack", UseStructuredContent = true), Description("Read the top N 16-bit values from the stack at SS:SP. Returns each address and word value.")]
     public CallToolResult ReadStack(int count) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1452,7 +1452,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_ems", UseStructuredContent = true), Description("Query EMS (Expanded Memory Manager) state")]
+    [McpServerTool(Name = "read_ems_state", UseStructuredContent = true), Description("Read EMS (Expanded Memory) state: page frame segment, total/allocated/free pages, active handles with names and page counts, and physical-to-logical page mappings.")]
     public CallToolResult QueryEms() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1499,7 +1499,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_ems_page_frame", UseStructuredContent = true), Description("Read mapped bytes from EMS page frame by physical page index (read-only).")]
+    [McpServerTool(Name = "read_ems_page_frame", UseStructuredContent = true), Description("Read mapped bytes from an EMS page frame physical page (0-3). Returns hex-encoded data.")]
     public CallToolResult ReadEmsPageFrame(int physicalPage, int offset, int length) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1535,7 +1535,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_ems_memory", UseStructuredContent = true), Description("Read EMS (Expanded Memory) from a specific handle and page")]
+    [McpServerTool(Name = "read_ems_memory", UseStructuredContent = true), Description("Read bytes from a specific EMS handle and logical page. Returns hex-encoded data.")]
     public CallToolResult ReadEmsMemory(int handle, int logicalPage, int offset, int length) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1572,7 +1572,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "query_xms", UseStructuredContent = true), Description("Query XMS (Extended Memory Manager) state")]
+    [McpServerTool(Name = "read_xms_state", UseStructuredContent = true), Description("Read XMS (Extended Memory) state: total/free/largest-block memory in KB, HMA availability, allocated block handles with sizes and lock counts.")]
     public CallToolResult QueryXms() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1643,7 +1643,7 @@ internal sealed class EmulatorMcpTools {
         }
     }
 
-    [McpServerTool(Name = "read_xms_memory", UseStructuredContent = true), Description("Read XMS (Extended Memory) from a specific handle")]
+    [McpServerTool(Name = "read_xms_memory", UseStructuredContent = true), Description("Read bytes from a specific XMS handle at a given offset. Returns hex-encoded data.")]
     public CallToolResult ReadXmsMemory(int handle, uint offset, int length) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1675,7 +1675,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "search_ems_memory", UseStructuredContent = true), Description("Search a hex pattern in one EMS logical page (read-only).")]
+    [McpServerTool(Name = "search_ems_memory", UseStructuredContent = true), Description("Search for a hex byte pattern within one EMS logical page. Returns matching offsets within the page.")]
     public CallToolResult SearchEmsMemory(int handle, int logicalPage, [StringSyntax("Hexadecimal")] string pattern, int startOffset, int length, int limit) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1697,7 +1697,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "search_xms_memory", UseStructuredContent = true), Description("Search a hex pattern in one XMS block (read-only).")]
+    [McpServerTool(Name = "search_xms_memory", UseStructuredContent = true), Description("Search for a hex byte pattern within one XMS block. Returns matching offsets within the block.")]
     public CallToolResult SearchXmsMemory(int handle, [StringSyntax("Hexadecimal")] string pattern, uint startOffset, int length, int limit) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1779,7 +1779,7 @@ internal sealed class EmulatorMcpTools {
         return matches.ToArray();
     }
 
-    [McpServerTool(Name = "add_breakpoint", UseStructuredContent = true), Description("Add a breakpoint (execution, memory, or IO). Valid types: CPU_EXECUTION_ADDRESS, MEMORY_ACCESS, MEMORY_WRITE, MEMORY_READ, IO_ACCESS, IO_WRITE, IO_READ (case-insensitive). Pass null for condition to add an unconditional breakpoint.")]
+    [McpServerTool(Name = "add_breakpoint", UseStructuredContent = true), Description("Add a breakpoint. Types: CPU_EXECUTION_ADDRESS, MEMORY_ACCESS, MEMORY_WRITE, MEMORY_READ, IO_ACCESS, IO_WRITE, IO_READ. Pass null for condition to add an unconditional breakpoint; otherwise provide a condition expression.")]
     public CallToolResult AddBreakpoint(long address, string type, [StringSyntax("Spice86BreakpointCondition")] string? condition) {
         return ExecuteTool(() => {
             lock (_services.McpBreakpointsLock) {
@@ -1815,7 +1815,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "list_breakpoints", UseStructuredContent = true), Description("List all MCP-managed breakpoints")]
+    [McpServerTool(Name = "list_breakpoints", UseStructuredContent = true), Description("List all breakpoints managed by this MCP session, with their IDs, addresses, types, conditions, and enable state.")]
     public CallToolResult ListBreakpoints() {
         return ExecuteTool(() => {
             lock (_services.McpBreakpointsLock) {
@@ -1832,7 +1832,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "remove_breakpoint", UseStructuredContent = true), Description("Remove an MCP-managed breakpoint by ID")]
+    [McpServerTool(Name = "remove_breakpoint", UseStructuredContent = true), Description("Remove a single MCP-managed breakpoint by its ID.")]
     public CallToolResult RemoveBreakpoint(string id) {
         return ExecuteTool(() => {
             lock (_services.McpBreakpointsLock) {
@@ -1845,7 +1845,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "clear_breakpoints", UseStructuredContent = true), Description("Remove ALL breakpoints currently managed by the MCP server.")]
+    [McpServerTool(Name = "clear_breakpoints", UseStructuredContent = true), Description("Remove all breakpoints managed by this MCP session.")]
     public CallToolResult ClearBreakpoints() {
         return ExecuteTool(() => {
             lock (_services.McpBreakpointsLock) {

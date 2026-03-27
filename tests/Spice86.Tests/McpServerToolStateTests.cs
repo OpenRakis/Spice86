@@ -82,10 +82,10 @@ public class McpServerToolStateTests {
         // Arrange
         await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
         await context.InitializeAsync();
-        context.Services.SetToolEnabled("read_cpu_registers", false);
+        context.Services.SetToolEnabled("read_cpu_state", false);
 
         // Act
-        JsonDocument disabledResponse = await context.CallToolAsync("read_cpu_registers", new Dictionary<string, object?>());
+        JsonDocument disabledResponse = await context.CallToolAsync("read_cpu_state", new Dictionary<string, object?>());
 
         // Assert
         JsonElement disabledResult = McpJsonRpcAssertions.GetJsonRpcResult(disabledResponse);
@@ -94,10 +94,10 @@ public class McpServerToolStateTests {
         McpJsonRpcAssertions.GetToolErrorMessage(disabledResult).Should().Contain("disabled");
 
         // Arrange
-        context.Services.SetToolEnabled("read_cpu_registers", true);
+        context.Services.SetToolEnabled("read_cpu_state", true);
 
         // Act
-        JsonDocument enabledResponse = await context.CallToolAsync("read_cpu_registers", new Dictionary<string, object?>());
+        JsonDocument enabledResponse = await context.CallToolAsync("read_cpu_state", new Dictionary<string, object?>());
 
         // Assert
         JsonElement enabledResult = McpJsonRpcAssertions.GetJsonRpcResult(enabledResponse);
@@ -217,7 +217,7 @@ public class McpServerToolStateTests {
         context.Services.PauseHandler.IsPaused.Should().BeFalse();
 
         // Act
-        JsonDocument okResponse = await context.CallToolAsync("read_cpu_registers", new Dictionary<string, object?>());
+        JsonDocument okResponse = await context.CallToolAsync("read_cpu_state", new Dictionary<string, object?>());
         JsonDocument errorResponse = await context.CallToolAsync("read_memory", new Dictionary<string, object?> {
             ["segment"] = 0,
             ["offset"] = 0,
@@ -301,7 +301,7 @@ public class McpServerToolStateTests {
         int handle = PrepareXmsBlockWithPattern(context);
 
         // Act
-        JsonDocument queryXmsResponse = await context.CallToolAsync("query_xms", new Dictionary<string, object?>());
+        JsonDocument queryXmsResponse = await context.CallToolAsync("read_xms_state", new Dictionary<string, object?>());
         JsonDocument readXmsMemoryResponse = await context.CallToolAsync("read_xms_memory", new Dictionary<string, object?> {
             ["handle"] = handle,
             ["offset"] = 0,
@@ -345,7 +345,7 @@ public class McpServerToolStateTests {
         mapResult.Should().Be(EmmStatus.EmmNoError);
 
         // Act
-        JsonDocument queryEmsResponse = await context.CallToolAsync("query_ems", new Dictionary<string, object?>());
+        JsonDocument queryEmsResponse = await context.CallToolAsync("read_ems_state", new Dictionary<string, object?>());
         JsonDocument readEmsPageFrameResponse = await context.CallToolAsync("read_ems_page_frame", new Dictionary<string, object?> {
             ["physicalPage"] = 0,
             ["offset"] = 0,
@@ -405,7 +405,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument soundBlaster = await context.CallToolAsync("query_sound_blaster_state", new Dictionary<string, object?>());
+        JsonDocument soundBlaster = await context.CallToolAsync("read_sound_blaster_state", new Dictionary<string, object?>());
 
         // Assert
         JsonElement soundStructured = GetSuccessfulStructuredContent(soundBlaster);
@@ -425,7 +425,7 @@ public class McpServerToolStateTests {
         JsonDocument setSpeaker = await context.CallToolAsync("sound_blaster_set_speaker", new Dictionary<string, object?> {
             ["enabled"] = true
         });
-        JsonDocument soundState = await context.CallToolAsync("query_sound_blaster_state", new Dictionary<string, object?>());
+        JsonDocument soundState = await context.CallToolAsync("read_sound_blaster_state", new Dictionary<string, object?>());
 
         // Assert
         AssertToolSucceeded(setSpeaker);
@@ -441,7 +441,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument response = await context.CallToolAsync("query_sound_blaster_dsp_version", new Dictionary<string, object?>());
+        JsonDocument response = await context.CallToolAsync("read_sound_blaster_dsp_version", new Dictionary<string, object?>());
 
         // Assert
         JsonElement structured = GetSuccessfulStructuredContent(response);
@@ -462,7 +462,7 @@ public class McpServerToolStateTests {
             ["register"] = 0x30,
             ["value"] = 0x78
         });
-        JsonDocument queryMixerState = await context.CallToolAsync("query_sound_blaster_mixer_state", new Dictionary<string, object?>());
+        JsonDocument queryMixerState = await context.CallToolAsync("read_sound_blaster_mixer_state", new Dictionary<string, object?>());
 
         // Assert
         AssertToolSucceeded(writeMixerRegister);
@@ -478,7 +478,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument opl = await context.CallToolAsync("query_opl_state", new Dictionary<string, object?>());
+        JsonDocument opl = await context.CallToolAsync("read_opl_state", new Dictionary<string, object?>());
 
         // Assert
         JsonElement oplStructured = GetSuccessfulStructuredContent(opl);
@@ -511,7 +511,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument response = await context.CallToolAsync("query_pc_speaker_state", new Dictionary<string, object?>());
+        JsonDocument response = await context.CallToolAsync("read_pc_speaker_state", new Dictionary<string, object?>());
 
         // Assert
         JsonElement structured = GetSuccessfulStructuredContent(response);
@@ -534,7 +534,7 @@ public class McpServerToolStateTests {
             ["timer2GateEnabled"] = true,
             ["speakerOutputEnabled"] = true
         });
-        JsonDocument queryState = await context.CallToolAsync("query_pc_speaker_state", new Dictionary<string, object?>());
+        JsonDocument queryState = await context.CallToolAsync("read_pc_speaker_state", new Dictionary<string, object?>());
 
         // Assert
         AssertToolSucceeded(setControl);
@@ -552,7 +552,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument response = await context.CallToolAsync("query_midi_state", new Dictionary<string, object?>());
+        JsonDocument response = await context.CallToolAsync("read_midi_state", new Dictionary<string, object?>());
 
         // Assert
         JsonElement structured = GetSuccessfulStructuredContent(response);
@@ -572,9 +572,9 @@ public class McpServerToolStateTests {
 
         // Act
         JsonDocument resetResponse = await context.CallToolAsync("midi_reset", new Dictionary<string, object?>());
-        JsonDocument resetState = await context.CallToolAsync("query_midi_state", new Dictionary<string, object?>());
+        JsonDocument resetState = await context.CallToolAsync("read_midi_state", new Dictionary<string, object?>());
         JsonDocument uartResponse = await context.CallToolAsync("midi_enter_uart_mode", new Dictionary<string, object?>());
-        JsonDocument uartState = await context.CallToolAsync("query_midi_state", new Dictionary<string, object?>());
+        JsonDocument uartState = await context.CallToolAsync("read_midi_state", new Dictionary<string, object?>());
 
         // Assert
         AssertToolSucceeded(resetResponse);
@@ -610,7 +610,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument video = await context.CallToolAsync("query_video_state_detailed", new Dictionary<string, object?>());
+        JsonDocument video = await context.CallToolAsync("read_video_state_detailed", new Dictionary<string, object?>());
 
         // Assert
         JsonElement videoStructured = GetSuccessfulStructuredContent(video);
@@ -638,7 +638,7 @@ public class McpServerToolStateTests {
             ["x"] = 0,
             ["y"] = 0
         });
-        JsonDocument queryCursor = await context.CallToolAsync("query_video_cursor", new Dictionary<string, object?> {
+        JsonDocument queryCursor = await context.CallToolAsync("read_video_cursor", new Dictionary<string, object?> {
             ["page"] = 0
         });
 
@@ -704,8 +704,8 @@ public class McpServerToolStateTests {
             ["modeId"] = 0x13,
             ["clearVideoMemory"] = true
         });
-        JsonDocument videoState13 = await context.CallToolAsync("query_video_state_detailed", new Dictionary<string, object?>());
-        JsonDocument biosState13 = await context.CallToolAsync("query_bios_data_area", new Dictionary<string, object?>());
+        JsonDocument videoState13 = await context.CallToolAsync("read_video_state_detailed", new Dictionary<string, object?>());
+        JsonDocument biosState13 = await context.CallToolAsync("read_bios_data_area", new Dictionary<string, object?>());
 
         // Assert
         AssertToolSucceeded(setMode13);
@@ -727,7 +727,7 @@ public class McpServerToolStateTests {
         JsonDocument setActivePage = await context.CallToolAsync("video_set_active_page", new Dictionary<string, object?> {
             ["page"] = 1
         });
-        JsonDocument videoState = await context.CallToolAsync("query_video_state_detailed", new Dictionary<string, object?>());
+        JsonDocument videoState = await context.CallToolAsync("read_video_state_detailed", new Dictionary<string, object?>());
 
         // Assert
         AssertToolSucceeded(setActivePage);
@@ -744,7 +744,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument palette = await context.CallToolAsync("query_video_palette", new Dictionary<string, object?>());
+        JsonDocument palette = await context.CallToolAsync("read_video_palette", new Dictionary<string, object?>());
 
         // Assert
         JsonElement structured = GetSuccessfulStructuredContent(palette);
@@ -792,7 +792,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument bios = await context.CallToolAsync("query_bios_data_area", new Dictionary<string, object?>());
+        JsonDocument bios = await context.CallToolAsync("read_bios_data_area", new Dictionary<string, object?>());
 
         // Assert
         JsonElement biosStructured = GetSuccessfulStructuredContent(bios);
@@ -807,7 +807,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument response = await context.CallToolAsync("query_interrupt_vector", new Dictionary<string, object?> {
+        JsonDocument response = await context.CallToolAsync("read_interrupt_vector", new Dictionary<string, object?> {
             ["vectorNumber"] = 0x21
         });
 
@@ -826,7 +826,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument dos = await context.CallToolAsync("query_dos_state", new Dictionary<string, object?>());
+        JsonDocument dos = await context.CallToolAsync("read_dos_state", new Dictionary<string, object?>());
 
         // Assert
         JsonElement dosStructured = GetSuccessfulStructuredContent(dos);
@@ -847,7 +847,7 @@ public class McpServerToolStateTests {
         JsonDocument setDrive = await context.CallToolAsync("dos_set_default_drive", new Dictionary<string, object?> {
             ["driveLetter"] = "A"
         });
-        JsonDocument dosState = await context.CallToolAsync("query_dos_state", new Dictionary<string, object?>());
+        JsonDocument dosState = await context.CallToolAsync("read_dos_state", new Dictionary<string, object?>());
 
         // Assert
         AssertToolSucceeded(setDrive);
@@ -865,7 +865,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument response = await context.CallToolAsync("query_dos_current_directory", new Dictionary<string, object?> {
+        JsonDocument response = await context.CallToolAsync("read_dos_current_directory", new Dictionary<string, object?> {
             ["driveLetter"] = ""
         });
 
@@ -887,7 +887,7 @@ public class McpServerToolStateTests {
         JsonDocument setCurrentDirectory = await context.CallToolAsync("dos_set_current_directory", new Dictionary<string, object?> {
             ["path"] = "res"
         });
-        JsonDocument queryCurrentDirectory = await context.CallToolAsync("query_dos_current_directory", new Dictionary<string, object?> {
+        JsonDocument queryCurrentDirectory = await context.CallToolAsync("read_dos_current_directory", new Dictionary<string, object?> {
             ["driveLetter"] = "C"
         });
 
@@ -907,7 +907,7 @@ public class McpServerToolStateTests {
         await context.InitializeAsync();
 
         // Act
-        JsonDocument response = await context.CallToolAsync("query_dos_program_state", new Dictionary<string, object?>());
+        JsonDocument response = await context.CallToolAsync("read_dos_program_state", new Dictionary<string, object?>());
 
         // Assert
         JsonElement structured = GetSuccessfulStructuredContent(response);
@@ -1026,10 +1026,10 @@ public class McpServerToolStateTests {
     }
 
     private static async Task AssertCoreReadToolsAsync(McpIntegrationContext context) {
-        JsonDocument readCpu = await context.CallToolAsync("read_cpu_registers", new Dictionary<string, object?>());
+        JsonDocument readCpu = await context.CallToolAsync("read_cpu_state", new Dictionary<string, object?>());
         JsonDocument readCfg = await context.CallToolAsync("read_cfg_cpu_graph", new Dictionary<string, object?> { ["nodeLimit"] = null });
         JsonDocument listFuncs = await context.CallToolAsync("list_functions", new Dictionary<string, object?> { ["limit"] = 10 });
-        JsonDocument video = await context.CallToolAsync("get_video_state", new Dictionary<string, object?>());
+        JsonDocument video = await context.CallToolAsync("read_video_state", new Dictionary<string, object?>());
         JsonDocument screenshot = await context.CallToolAsync("screenshot", new Dictionary<string, object?>());
 
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(readCpu)), "eax", out JsonElement _).Should().BeTrue();
@@ -1080,9 +1080,9 @@ public class McpServerToolStateTests {
     }
 
     private static async Task AssertMemoryManagerErrorPathsAsync(McpIntegrationContext context) {
-        JsonDocument queryEms = await context.CallToolAsync("query_ems", new Dictionary<string, object?>());
+        JsonDocument queryEms = await context.CallToolAsync("read_ems_state", new Dictionary<string, object?>());
         JsonDocument readEms = await context.CallToolAsync("read_ems_memory", new Dictionary<string, object?> { ["handle"] = 9999, ["logicalPage"] = 0, ["offset"] = 0, ["length"] = 16 });
-        JsonDocument queryXms = await context.CallToolAsync("query_xms", new Dictionary<string, object?>());
+        JsonDocument queryXms = await context.CallToolAsync("read_xms_state", new Dictionary<string, object?>());
         JsonDocument readXms = await context.CallToolAsync("read_xms_memory", new Dictionary<string, object?> { ["handle"] = 9999, ["offset"] = 0, ["length"] = 16 });
 
         JsonElement queryEmsResult = McpJsonRpcAssertions.GetJsonRpcResult(queryEms);
