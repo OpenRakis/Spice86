@@ -12,36 +12,29 @@ using System.Collections.Generic;
 using System.Globalization;
 
 /// <summary>
-/// Converts a list of FormattedTextSegment to an InlineCollection for display in a TextBlock.
+/// Converts a list of <see cref="FormattedTextToken"/> to an <see cref="InlineCollection"/>.
 /// </summary>
-public class FormattedTextSegmentsConverter : IValueConverter {
+public class FormattedTextOffsetsConverter : IValueConverter {
     /// <summary>
-    /// Converts a list of FormattedTextSegment to an InlineCollection.
+    /// Converts a list of <see cref="FormattedTextToken"/> to an <see cref="InlineCollection"/>.
     /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <param name="targetType">The type of the target.</param>
-    /// <param name="parameter">The converter parameter.</param>
-    /// <param name="culture">The culture to use.</param>
-    /// <returns>An InlineCollection containing Run objects for each segment.</returns>
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
-        if (value is not List<FormattedTextSegment> segments) {
+        if (value is not List<FormattedTextToken> textOffsets) {
             return null;
         }
 
-        // Create the InlineCollection on the UI thread
         if (!Dispatcher.UIThread.CheckAccess()) {
-            // If we're not on the UI thread, return a new empty collection
-            // The actual conversion will happen when the UI thread processes the binding
             return new InlineCollection();
         }
 
-        var inlines = new InlineCollection();
+        InlineCollection inlines = new();
 
-        foreach (FormattedTextSegment segment in segments) {
-            var run = new Run {
-                Text = segment.Text,
+        foreach (FormattedTextToken textOffset in textOffsets) {
+            Run run = new() {
+                Text = textOffset.Text,
             };
-            run.Bind(TextElement.ForegroundProperty, FormatterTextKindToBrushConverter.GetDynamicResourceExtension(segment.Kind));
+            run.Bind(TextElement.ForegroundProperty,
+                FormatterTextKindToBrushConverter.GetDynamicResourceExtension(textOffset.Kind));
             inlines.Add(run);
         }
 

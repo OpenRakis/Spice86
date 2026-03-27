@@ -5,19 +5,19 @@ using Iced.Intel;
 /// <summary>
 /// Thread-safe formatter output that doesn't create UI elements.
 /// </summary>
-public class FormattedTextSegmentsOutput : FormatterOutput {
+public class FormattedTextTokensOutput : FormatterOutput {
     /// <summary>
-    /// Gets the list of formatted text segments.
+    /// Gets the list of formatted text offsets.
     /// </summary>
-    public List<FormattedTextSegment> Segments { get; } = [];
+    public List<FormattedTextToken> TextOffsets { get; } = [];
 
     /// <summary>
-    /// Writes a segment of text with the specified kind.
+    /// Writes a text offset with the specified kind.
     /// </summary>
     /// <param name="text">The text to write.</param>
     /// <param name="kind">The kind of text.</param>
     public override void Write(string text, FormatterTextKind kind) {
-        Segments.Add(new FormattedTextSegment {
+        TextOffsets.Add(new FormattedTextToken {
             Text = text,
             Kind = kind
         });

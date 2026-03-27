@@ -619,7 +619,7 @@ public class Spice86DependencyInjection : IDisposable {
             MidiViewModel midiViewModel = new(midiDevice);
 
             CfgCpuViewModel cfgCpuViewModel = new(uiDispatcher,
-                cfgCpu.ExecutionContextManager, pauseHandler, nodeToString);
+                cfgCpu.ExecutionContextManager, pauseHandler, nodeToString, asmRenderingConfig);
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
                 state, loggerService, pauseHandler);

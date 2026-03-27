@@ -25,7 +25,7 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     });
 
     private readonly Instruction _info;
-    private readonly List<FormattedTextSegment>? _customFormattedInstruction;
+    private readonly List<FormattedTextToken>? _customFormattedInstruction;
 
     [ObservableProperty]
     private BreakpointViewModel? _breakpoint;
@@ -92,12 +92,14 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     /// </summary>
     public string? BranchTargetText { get; }
 
-    public string Disassembly => _customFormattedInstruction != null ? string.Join(' ', _customFormattedInstruction.Select(segment => segment.Text)) : _info.ToString();
+    public string Disassembly => _customFormattedInstruction != null
+        ? string.Join(' ', _customFormattedInstruction.Select(textOffset => textOffset.Text))
+        : _info.ToString();
 
     /// <summary>
-    ///     Gets a collection of formatted text segments for the disassembly with syntax highlighting.
+    ///     Gets a collection of formatted text offsets for the disassembly with syntax highlighting.
     /// </summary>
-    public List<FormattedTextSegment> DisassemblySegments { get; private set; } = [];
+    public List<FormattedTextToken> DisassemblyTextOffsets { get; private set; } = [];
 
     /// <summary>
     ///     Generates a formatted representation of the disassembly with syntax highlighting.
@@ -105,12 +107,12 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     private void GenerateFormattedDisassembly() {
         if (_customFormattedInstruction != null) {
             // Use custom formatting for special opcodes
-            DisassemblySegments = _customFormattedInstruction;
+            DisassemblyTextOffsets = _customFormattedInstruction;
         } else {
             // Use standard Iced formatting for normal instructions
-            var output = new FormattedTextSegmentsOutput();
+            var output = new FormattedTextTokensOutput();
             _formatter.Format(_info, output);
-            DisassemblySegments = output.Segments;
+            DisassemblyTextOffsets = output.TextOffsets;
         }
     }
 

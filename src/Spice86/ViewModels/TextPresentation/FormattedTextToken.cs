@@ -3,9 +3,9 @@ namespace Spice86.ViewModels.TextPresentation;
 using Iced.Intel;
 
 /// <summary>
-/// Represents a segment of formatted text with its kind.
+/// Represents a formatted text token with its kind.
 /// </summary>
-public class FormattedTextSegment {
+public class FormattedTextToken {
     /// <summary>
     /// Gets or sets the text content.
     /// </summary>
