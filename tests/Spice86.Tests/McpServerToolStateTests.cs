@@ -1227,6 +1227,47 @@ public class McpServerToolStateTests {
         serviceTools.Should().BeEquivalentTo(discoveredTools);
     }
 
+    [Fact]
+    public async Task ReadCfgCpuGraph_ShouldExposeSegmentedAddressesAndCorrectEntryPointCountAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act
+        JsonDocument response = await context.CallToolAsync("read_cfg_cpu_graph", new Dictionary<string, object?>());
+
+        // Assert
+        JsonElement structured = GetSuccessfulStructuredContent(response);
+
+        // CurrentContextEntryPoint should be a SegmentedAddress object, not a string
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "currentContextEntryPoint", out JsonElement entryPoint).Should().BeTrue();
+        entryPoint.ValueKind.Should().Be(JsonValueKind.Object);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(entryPoint, "segment", out JsonElement _).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(entryPoint, "offset", out JsonElement _).Should().BeTrue();
+
+        // EntryPointAddresses should be an array of SegmentedAddress objects
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "entryPointAddresses", out JsonElement entryPoints).Should().BeTrue();
+        entryPoints.ValueKind.Should().Be(JsonValueKind.Array);
+        if (entryPoints.GetArrayLength() > 0) {
+            JsonElement firstEntry = entryPoints[0];
+            firstEntry.ValueKind.Should().Be(JsonValueKind.Object);
+            McpJsonRpcAssertions.TryGetPropertyIgnoreCase(firstEntry, "segment", out JsonElement _).Should().BeTrue();
+        }
+
+        // TotalEntryPoints should match the array length (distinct addresses, not instruction variants)
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "totalEntryPoints", out JsonElement total).Should().BeTrue();
+        total.GetInt32().Should().Be(entryPoints.GetArrayLength());
+
+        // LastExecutedAddress should be null or a SegmentedAddress object, never a "None" string
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "lastExecutedAddress", out JsonElement lastExec).Should().BeTrue();
+        if (lastExec.ValueKind != JsonValueKind.Null) {
+            lastExec.ValueKind.Should().Be(JsonValueKind.Object);
+            McpJsonRpcAssertions.TryGetPropertyIgnoreCase(lastExec, "segment", out JsonElement _).Should().BeTrue();
+        }
+
+        AssertSuccessfulToolResponseContainsCpuStatus(response);
+    }
+
     private static void AssertSuccessfulToolResponseContainsCpuStatus(JsonDocument response) {
         JsonElement result = McpJsonRpcAssertions.GetJsonRpcResult(response);
         result.TryGetProperty("isError", out JsonElement isError).Should().BeFalse();

@@ -428,19 +428,16 @@ internal sealed class EmulatorMcpTools {
                 ExecutionContextManager contextManager = _services.CfgCpu.ExecutionContextManager;
                 ExecutionContext currentContext = contextManager.CurrentExecutionContext;
 
-                int totalEntryPoints = contextManager.ExecutionContextEntryPoints
-                    .Sum(kvp => kvp.Value.Count);
-
-                string[] entryPointAddresses = contextManager.ExecutionContextEntryPoints
-                    .Select(kvp => kvp.Key.ToString())
+                SegmentedAddress[] entryPointAddresses = contextManager.ExecutionContextEntryPoints
+                    .Select(kvp => kvp.Key)
                     .ToArray();
 
                 return new CfgCpuGraphResponse {
                     CurrentContextDepth = currentContext.Depth,
-                    CurrentContextEntryPoint = currentContext.EntryPoint.ToString(),
-                    TotalEntryPoints = totalEntryPoints,
+                    CurrentContextEntryPoint = currentContext.EntryPoint,
+                    TotalEntryPoints = entryPointAddresses.Length,
                     EntryPointAddresses = entryPointAddresses,
-                    LastExecutedAddress = currentContext.LastExecuted?.Address.ToString() ?? "None"
+                    LastExecutedAddress = currentContext.LastExecuted?.Address
                 };
             }
         });
