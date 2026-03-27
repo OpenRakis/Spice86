@@ -264,4 +264,12 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--AsmRenderingStyle <ASMRENDERINGSTYLE>")]
     [DefaultValue(AsmRenderingStyle.Spice86)]
     public AsmRenderingStyle AsmRenderingStyle { get; init; }
+
+    /// <summary>
+    /// The number of CPU cycles after which the emulator will automatically stop. When greater than 0, a cycle
+    /// breakpoint is registered before the emulation starts and triggers a clean shutdown. Set to 0 (default)
+    /// to leave the emulator running until explicitly stopped.
+    /// </summary>
+    [CommandOption("--StopAfterCycles <STOPAFTERCYCLES>")]
+    public long StopAfterCycles { get; init; }
 }
