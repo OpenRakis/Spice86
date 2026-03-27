@@ -1292,4 +1292,99 @@ public class McpServerToolStateTests {
             McpJsonRpcAssertions.TryGetPropertyIgnoreCase(node, "isLive", out JsonElement _).Should().BeTrue();
         }
     }
+
+    [Fact]
+    public async Task ReadDisassembly_ShouldDisassembleMemoryAtAddressAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Write known x86 instructions: mov ax,0x1234 (B8 34 12) ; mov bx,ax (89 C3)
+        await context.CallToolAsync("write_memory", new Dictionary<string, object?> {
+            ["segment"] = 0,
+            ["offset"] = 0x500,
+            ["data"] = "B83412" + "89C3"
+        });
+
+        // Act
+        JsonDocument response = await context.CallToolAsync("read_disassembly", new Dictionary<string, object?> {
+            ["segment"] = 0,
+            ["offset"] = 0x500,
+            ["instructionCount"] = 2
+        });
+
+        // Assert
+        JsonElement structured = McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(response));
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "instructions", out JsonElement instructions).Should().BeTrue();
+        instructions.ValueKind.Should().Be(JsonValueKind.Array);
+        instructions.GetArrayLength().Should().Be(2);
+
+        // First instruction: mov ax, 0x1234
+        JsonElement first = instructions[0];
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(first, "address", out JsonElement firstAddr).Should().BeTrue();
+        firstAddr.ValueKind.Should().Be(JsonValueKind.Object);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(firstAddr, "segment", out JsonElement firstSeg).Should().BeTrue();
+        firstSeg.GetInt32().Should().Be(0);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(firstAddr, "offset", out JsonElement firstOff).Should().BeTrue();
+        firstOff.GetInt32().Should().Be(0x500);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(first, "bytes", out JsonElement firstBytes).Should().BeTrue();
+        firstBytes.GetString().Should().Be("B83412");
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(first, "assembly", out JsonElement firstAsm).Should().BeTrue();
+        firstAsm.GetString().Should().NotBeNullOrWhiteSpace();
+
+        // Second instruction: mov bx, ax
+        JsonElement second = instructions[1];
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(second, "address", out JsonElement secondAddr).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(secondAddr, "offset", out JsonElement secondOff).Should().BeTrue();
+        secondOff.GetInt32().Should().Be(0x503);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(second, "bytes", out JsonElement secondBytes).Should().BeTrue();
+        secondBytes.GetString().Should().Be("89C3");
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(second, "assembly", out JsonElement secondAsm).Should().BeTrue();
+        secondAsm.GetString().Should().NotBeNullOrWhiteSpace();
+
+        // Truncated should be false for normal disassembly
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "truncated", out JsonElement truncated).Should().BeTrue();
+        truncated.GetBoolean().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ReadDisassembly_ShouldTruncateNearMemoryBoundaryAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act — disassemble at the very end of addressable memory (FFFF:FFFF physical = 0x10FFEF)
+        // Requesting 100 instructions when only a handful can fit before we exceed memory
+        JsonDocument response = await context.CallToolAsync("read_disassembly", new Dictionary<string, object?> {
+            ["segment"] = 0xFFFF,
+            ["offset"] = 0xFFF0,
+            ["instructionCount"] = 100
+        });
+
+        // Assert — should succeed but return fewer than requested with truncated = true
+        JsonElement structured = McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(response));
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "instructions", out JsonElement instructions).Should().BeTrue();
+        instructions.GetArrayLength().Should().BeLessThan(100);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "truncated", out JsonElement truncatedElem).Should().BeTrue();
+        truncatedElem.GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ReadDisassembly_ShouldRejectInvalidCountAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act — request too many instructions
+        JsonDocument response = await context.CallToolAsync("read_disassembly", new Dictionary<string, object?> {
+            ["segment"] = 0,
+            ["offset"] = 0x500,
+            ["instructionCount"] = 501
+        });
+
+        // Assert
+        JsonElement result = McpJsonRpcAssertions.GetJsonRpcResult(response);
+        result.TryGetProperty("isError", out JsonElement isError).Should().BeTrue();
+        isError.GetBoolean().Should().BeTrue();
+    }
 }

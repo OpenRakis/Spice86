@@ -7,9 +7,13 @@ using SkiaSharp;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -181,7 +185,7 @@ internal sealed class EmulatorMcpTools {
                     HealthEndpoint = "/health",
                     CapabilityScopes = [
                         "cpu_state_and_registers",
-                        "memory_read_write_search",
+                        "memory_read_write_search_disassembly",
                         "io_ports",
                         "breakpoints",
                         "execution_control_pause_resume_step_step_over",
@@ -232,6 +236,52 @@ internal sealed class EmulatorMcpTools {
                     Length = length,
                     Data = Convert.ToHexString(data)
                 };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "read_disassembly", UseStructuredContent = true), Description("Disassemble memory as x86 real-mode instructions starting at segment:offset. Returns an array of instructions with address, raw bytes, and assembly text. Stops early near memory boundaries. Use to examine code at any memory location.")]
+    public CallToolResult ReadDisassembly(ushort segment, ushort offset, int instructionCount) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                if (instructionCount <= 0 || instructionCount > 500) {
+                    throw new InvalidOperationException("instructionCount must be between 1 and 500");
+                }
+
+                InstructionParser parser = new(_services.Memory, _services.State);
+                AstBuilder astBuilder = new();
+                AstInstructionRenderer renderer = new(AsmRenderingConfig.CreateSpice86Style());
+                List<DisassemblyLine> lines = new();
+                SegmentedAddress current = new(segment, offset);
+                uint memoryLength = (uint)_services.Memory.Length;
+                bool truncated = false;
+
+                for (int i = 0; i < instructionCount; i++) {
+                    uint physicalAddress = MemoryUtils.ToPhysicalAddress(current.Segment, current.Offset);
+                    if (physicalAddress >= memoryLength) {
+                        truncated = true;
+                        break;
+                    }
+
+                    CfgInstruction instruction = parser.ParseInstructionAt(current);
+                    uint endAddress = physicalAddress + instruction.Length;
+                    if (endAddress > memoryLength) {
+                        truncated = true;
+                        break;
+                    }
+
+                    InstructionNode ast = instruction.ToInstructionAst(astBuilder);
+                    string assembly = ast.Accept(renderer);
+                    byte[] bytes = _services.Memory.ReadRam(instruction.Length, physicalAddress);
+                    lines.Add(new DisassemblyLine {
+                        Address = current,
+                        Bytes = Convert.ToHexString(bytes),
+                        Assembly = assembly
+                    });
+                    current = instruction.NextInMemoryAddress;
+                }
+
+                return new { Instructions = lines, Truncated = truncated };
             }
         });
     }
