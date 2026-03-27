@@ -24,7 +24,6 @@ using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
 
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
-using Timer = System.Timers.Timer;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGuiVideoPresentation" />
 public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGuiVideoPresentation,
@@ -75,8 +74,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private bool _isSettingResolution;
     private bool _isAppClosing;
 
-    private readonly Timer _drawTimer = new(1000.0 / ScreenRefreshHz);
-    private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
+    private DispatcherTimer? _drawTimer;
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
@@ -272,16 +270,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                     return;
                 }
 
-                _drawingSemaphoreSlim?.Wait();
-                try {
-                    Bitmap?.Dispose();
-                    Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888,
-                        AlphaFormat.Opaque);
-                } finally {
-                    if (!_disposed) {
-                        _drawingSemaphoreSlim?.Release();
-                    }
-                }
+                Bitmap?.Dispose();
+                Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888,
+                    AlphaFormat.Opaque);
             }
 
             _isSettingResolution = false;
@@ -361,7 +352,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
 
         _renderingTimerInitialized = true;
-        _drawTimer.Elapsed += (_, _) => DrawScreen();
+        _drawTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(1000.0 / ScreenRefreshHz),
+            DispatcherPriority.Render, (_, _) => DrawScreen());
         _drawTimer.Start();
     }
 
@@ -371,17 +363,10 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             return;
         }
 
-        _drawingSemaphoreSlim?.Wait();
-        try {
-            using ILockedFramebuffer pixels = Bitmap.Lock();
-            var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-            RenderScreen.Invoke(this, uiRenderEventArgs);
-            _uiDispatcher.Post(() => InvalidateBitmap?.Invoke(), DispatcherPriority.Background);
-        } finally {
-            if (!_disposed) {
-                _drawingSemaphoreSlim?.Release();
-            }
-        }
+        using ILockedFramebuffer pixels = Bitmap.Lock();
+        UIRenderEventArgs uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+        RenderScreen.Invoke(this, uiRenderEventArgs);
+        InvalidateBitmap?.Invoke();
     }
 
     internal void StartEmulator() {
@@ -419,16 +404,14 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 _pauseHandler.Resumed -= OnResumed;
                 _pauseHandler.Dispose();
 
-                _drawTimer.Stop();
-                _drawTimer.Dispose();
+                _drawTimer?.Stop();
+                _drawTimer = null;
 
                 // Dispose of UI-related resources in the UI thread
                 _uiDispatcher.Post(() => {
                     Bitmap?.Dispose();
                     Cursor?.Dispose();
                 }, DispatcherPriority.MaxValue);
-
-                _drawingSemaphoreSlim?.Dispose();
 
                 PlayCommand.Execute(null);
                 IsEmulatorRunning = false;
