@@ -227,7 +227,7 @@ internal sealed class EmulatorMcpTools {
 
                 uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
                 byte[] data = _services.Memory.ReadRam((uint)length, address);
-                return new MemoryReadResponse {
+                return new {
                     Address = new SegmentedAddress(segment, offset),
                     Length = length,
                     Data = Convert.ToHexString(data)
@@ -248,7 +248,7 @@ internal sealed class EmulatorMcpTools {
                 uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
                 ValidateMemoryWriteRange(address, bytesToWrite.Length);
                 _services.Memory.WriteRam(bytesToWrite, address);
-                return new MemoryWriteResponse {
+                return new {
                     Address = new SegmentedAddress(segment, offset),
                     Length = bytesToWrite.Length,
                     Success = true
@@ -271,7 +271,7 @@ internal sealed class EmulatorMcpTools {
                 }
 
                 (uint[] matches, bool truncated) = SearchRamMatches(startAddress, searchLength, needle, limit);
-                return new MemorySearchResponse {
+                return new {
                     Pattern = Convert.ToHexString(needle),
                     StartAddress = new SegmentedAddress(startSegment, startOffset),
                     Length = searchLength,
@@ -359,8 +359,8 @@ internal sealed class EmulatorMcpTools {
         return Math.Min(requestedLength, maxLength);
     }
 
-    private static MemorySearchResponse EmptyMemorySearchResponse(byte[] needle, ushort startSegment, ushort startOffset) {
-        return new MemorySearchResponse {
+    private static object EmptyMemorySearchResponse(byte[] needle, ushort startSegment, ushort startOffset) {
+        return new {
             Pattern = Convert.ToHexString(needle),
             StartAddress = new SegmentedAddress(startSegment, startOffset),
             Length = 0,
@@ -413,7 +413,7 @@ internal sealed class EmulatorMcpTools {
                 })
                 .ToArray();
 
-                return new FunctionListResponse {
+                return new {
                     Functions = functions,
                     TotalCount = _services.FunctionCatalogue.FunctionInformations.Count
                 };
@@ -454,7 +454,7 @@ internal sealed class EmulatorMcpTools {
                     throw new ArgumentException("Port must be 0-65535");
                 }
                 byte value = _services.IoPortDispatcher.ReadByte((ushort)port);
-                return new IoPortReadResponse { Port = port, Value = value };
+                return new { Port = port, Value = value };
             }
         });
     }
@@ -470,7 +470,7 @@ internal sealed class EmulatorMcpTools {
                     throw new ArgumentException("Value must be 0-255");
                 }
                 _services.IoPortDispatcher.WriteByte((ushort)port, (byte)value);
-                return new IoPortWriteResponse { Port = port, Value = value, Success = true };
+                return new { Port = port, Value = value, Success = true };
             }
         });
     }
@@ -527,7 +527,7 @@ internal sealed class EmulatorMcpTools {
     public CallToolResult GetVideoState() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
-                return new VideoStateResponse {
+                return new {
                     Width = _services.VgaRenderer.Width,
                     Height = _services.VgaRenderer.Height,
                     BufferSize = _services.VgaRenderer.BufferSize
@@ -905,7 +905,7 @@ internal sealed class EmulatorMcpTools {
             lock (_services.ToolsLock) {
                 IVgaFunctionality vgaFunctionality = GetVgaFunctionality();
                 byte[] registers = vgaFunctionality.GetAllPaletteRegisters();
-                return new VideoPaletteStateResponse {
+                return new {
                     Registers = registers.Select(static x => (int)x).ToArray(),
                     OverscanBorderColor = vgaFunctionality.GetOverscanBorderColor(),
                     PixelMask = vgaFunctionality.ReadPixelMask(),
@@ -944,10 +944,10 @@ internal sealed class EmulatorMcpTools {
                 ValidatePixelCoordinates(x, y, currentMode);
 
                 byte color = vgaFunctionality.ReadPixel((ushort)x, (ushort)y);
-                return new VideoPixelResponse {
+                return new {
                     X = x,
                     Y = y,
-                    Color = color
+                    Color = (int)color
                 };
             }
         });
@@ -984,7 +984,7 @@ internal sealed class EmulatorMcpTools {
 
                 InterruptVectorTable interruptVectorTable = GetInterruptVectorTable();
                 SegmentedAddress address = interruptVectorTable[vectorNumber];
-                return new InterruptVectorResponse {
+                return new {
                     VectorNumber = vectorNumber,
                     Address = new SegmentedAddress(address.Segment, address.Offset)
                 };
@@ -1028,7 +1028,7 @@ internal sealed class EmulatorMcpTools {
                 DosFileOperationResult result = dos.FileManager.GetCurrentDir(driveNumber, out string currentDirectory);
                 EnsureDosFileOperationSucceeded(result, $"Could not query current directory for {resolvedDrive}");
 
-                return new DosCurrentDirectoryResponse {
+                return new {
                     Drive = resolvedDrive,
                     CurrentDirectory = currentDirectory
                 };
@@ -1044,7 +1044,7 @@ internal sealed class EmulatorMcpTools {
                 DosFileOperationResult result = dos.FileManager.SetCurrentDir(path);
                 EnsureDosFileOperationSucceeded(result, $"Could not set current directory to '{path}'");
 
-                return new DosCurrentDirectoryResponse {
+                return new {
                     Drive = dos.DosDriveManager.CurrentDrive.DosVolume,
                     CurrentDirectory = dos.DosDriveManager.CurrentDrive.CurrentDosDirectory
                 };
@@ -1240,9 +1240,9 @@ internal sealed class EmulatorMcpTools {
         return _services.Dos ?? throw new InvalidOperationException("DOS is not available");
     }
 
-    private static SoundBlasterDspVersionResponse ReadSoundBlasterDspVersion(SoundBlaster soundBlaster) {
+    private static object ReadSoundBlasterDspVersion(SoundBlaster soundBlaster) {
         if (soundBlaster.SbTypeProperty == SbType.None) {
-            return new SoundBlasterDspVersionResponse {
+            return new {
                 MajorVersion = 0,
                 MinorVersion = 0
             };
@@ -1253,9 +1253,9 @@ internal sealed class EmulatorMcpTools {
         soundBlaster.WriteByte(dspWritePort, (byte)SoundBlaster.DspCommand.GetDspVersion);
         byte majorVersion = soundBlaster.ReadByte(dspReadPort);
         byte minorVersion = soundBlaster.ReadByte(dspReadPort);
-        return new SoundBlasterDspVersionResponse {
-            MajorVersion = majorVersion,
-            MinorVersion = minorVersion
+        return new {
+            MajorVersion = (int)majorVersion,
+            MinorVersion = (int)minorVersion
         };
     }
 
@@ -1387,15 +1387,15 @@ internal sealed class EmulatorMcpTools {
                 ushort sp = _services.State.SP;
                 uint baseAddress = (uint)(ss << 4) + sp;
 
-                List<StackValue> values = new();
+                List<object> values = new();
                 for (int i = 0; i < count; i++) {
                     uint addr = baseAddress + (uint)(i * 2);
                     if (addr + 1 >= _services.Memory.Length) break;
                     ushort val = _services.Memory.UInt16[addr];
-                    values.Add(new StackValue { Address = addr, Value = val });
+                    values.Add(new { Address = addr, Value = val });
                 }
 
-                return new StackResponse { Ss = ss, Sp = sp, Values = values };
+                return new { Ss = ss, Sp = sp, Values = values };
             }
         });
     }
@@ -1408,30 +1408,32 @@ internal sealed class EmulatorMcpTools {
                     throw new InvalidOperationException("EMS is not enabled");
                 }
 
-                EmsHandleInfo[] handles = _services.EmsManager.EmmHandles
+                object[] handles = _services.EmsManager.EmmHandles
                     .Where(kvp => kvp.Key != ExpandedMemoryManager.EmmNullHandle && kvp.Value != null)
-                    .Select(kvp => new EmsHandleInfo {
+                    .Select(kvp => (object)new {
                         HandleId = kvp.Key,
                         AllocatedPages = kvp.Value.LogicalPages.Count,
                         Name = kvp.Value.Name
                     })
                     .ToArray();
 
-                int allocatedPages = handles.Sum(h => h.AllocatedPages);
+                int allocatedPages = _services.EmsManager.EmmHandles
+                    .Where(kvp => kvp.Key != ExpandedMemoryManager.EmmNullHandle && kvp.Value != null)
+                    .Sum(kvp => kvp.Value.LogicalPages.Count);
                 ushort freePages = _services.EmsManager.GetFreePageCount();
 
-                return new EmsStateResponse {
+                return new {
                     IsEnabled = true,
-                    PageFrameSegment = ExpandedMemoryManager.EmmPageFrameSegment,
-                    TotalPages = allocatedPages + freePages,
+                    PageFrameSegment = (int)ExpandedMemoryManager.EmmPageFrameSegment,
+                    TotalPages = allocatedPages + (int)freePages,
                     AllocatedPages = allocatedPages,
-                    FreePages = freePages,
-                    PageSize = ExpandedMemoryManager.EmmPageSize,
+                    FreePages = (int)freePages,
+                    PageSize = (int)ExpandedMemoryManager.EmmPageSize,
                     Handles = handles,
                     PageMappings = Enumerable.Range(0, ExpandedMemoryManager.EmmMaxPhysicalPages)
                         .Select(physicalPage => {
                             (bool isMapped, int? handleId, int? logicalPage) = ResolveEmsMappingForPhysicalPage((ushort)physicalPage);
-                            return new EmsPageMappingInfo {
+                            return (object)new {
                                 PhysicalPage = physicalPage,
                                 Segment = ToPageSegment(physicalPage),
                                 IsMapped = isMapped,
@@ -1471,7 +1473,7 @@ internal sealed class EmulatorMcpTools {
                 byte[] dataArray = new byte[data.Count];
                 data.CopyTo(dataArray, 0);
 
-                return new EmsPageFrameReadResponse {
+                return new {
                     PhysicalPage = physicalPage,
                     Offset = offset,
                     Length = length,
@@ -1509,7 +1511,7 @@ internal sealed class EmulatorMcpTools {
                 byte[] dataArray = new byte[data.Count];
                 data.CopyTo(dataArray, 0);
 
-                return new EmsMemoryReadResponse {
+                return new {
                     Handle = handle, LogicalPage = logicalPage,
                     Offset = offset, Length = length,
                     Data = Convert.ToHexString(dataArray)
@@ -1526,7 +1528,7 @@ internal sealed class EmulatorMcpTools {
                     throw new InvalidOperationException("XMS is not enabled");
                 }
 
-                List<XmsHandleInfo> handles = new();
+                List<object> handles = new();
                 for (int handleId = 1; handleId <= 512; handleId++) {
                     if (!_services.XmsManager.TryGetBlock(handleId, out XmsBlock? block)) {
                         continue;
@@ -1537,7 +1539,7 @@ internal sealed class EmulatorMcpTools {
                     }
 
                     byte lockCount = GetXmsLockCount(handleId);
-                    handles.Add(new XmsHandleInfo {
+                    handles.Add(new {
                         HandleId = handleId,
                         SizeKB = (int)(block.Value.Length / 1024),
                         IsLocked = lockCount > 0
@@ -1548,7 +1550,7 @@ internal sealed class EmulatorMcpTools {
                 long largestBlockKB = _services.XmsManager.LargestFreeBlockLength / 1024;
                 int totalMemoryKB = ExtendedMemoryManager.XmsMemorySize;
 
-                return new XmsStateResponse {
+                return new {
                     IsEnabled = true,
                     TotalMemoryKB = totalMemoryKB,
                     FreeMemoryKB = (int)freeMemoryKB,
@@ -1556,7 +1558,7 @@ internal sealed class EmulatorMcpTools {
                     HmaAvailable = true,
                     HmaAllocated = false,
                     AllocatedBlocks = handles.Count,
-                    Handles = handles.ToArray()
+                    Handles = handles
                 };
             }
         });
@@ -1613,7 +1615,7 @@ internal sealed class EmulatorMcpTools {
                 byte[] dataArray = new byte[data.Count];
                 data.CopyTo(dataArray, 0);
 
-                return new XmsMemoryReadResponse {
+                return new {
                     Handle = handle, Offset = offset,
                     Length = length, Data = Convert.ToHexString(dataArray)
                 };
@@ -1630,7 +1632,7 @@ internal sealed class EmulatorMcpTools {
                 ValidateLimit(limit);
                 int searchLength = ComputeSearchWindowLength(startOffset, length, (int)page.Size);
                 uint[] matches = SearchArray(page.GetSlice(startOffset, searchLength), needle, (uint)startOffset, limit);
-                return new EmsMemorySearchResponse {
+                return new {
                     Handle = handle,
                     LogicalPage = logicalPage,
                     Pattern = Convert.ToHexString(needle),
@@ -1656,7 +1658,7 @@ internal sealed class EmulatorMcpTools {
                 }
                 IList<byte> data = _services.XmsManager.XmsRam.GetSlice((int)(block.Offset + startOffset), searchLength);
                 uint[] matches = SearchArray(data, needle, startOffset, limit);
-                return new XmsMemorySearchResponse {
+                return new {
                     Handle = handle,
                     Pattern = Convert.ToHexString(needle),
                     StartOffset = startOffset,
@@ -1773,7 +1775,7 @@ internal sealed class EmulatorMcpTools {
                     IsEnabled = kvp.Value.IsEnabled
                 }).ToList();
 
-                return new BreakpointListResponse { Breakpoints = list };
+                return new { Breakpoints = list };
             }
         });
     }

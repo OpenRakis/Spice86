@@ -1,9 +1,0 @@
-namespace Spice86.Core.Emulator.Mcp.Response;
-
-internal sealed record StackResponse {
-    public required List<StackValue> Values { get; init; }
-
-    public required uint Ss { get; init; }
-
-    public required uint Sp { get; init; }
-}
