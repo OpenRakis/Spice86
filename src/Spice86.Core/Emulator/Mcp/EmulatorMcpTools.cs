@@ -69,7 +69,6 @@ internal sealed class EmulatorMcpTools {
             };
         }
 
-        structuredContent["cpuStatus"] = JsonSerializer.SerializeToNode(CpuStateSnapshot.FromState(_services.State), SerializerOptions);
         return new CallToolResult {
             StructuredContent = structuredContent
         };
@@ -78,8 +77,7 @@ internal sealed class EmulatorMcpTools {
     private CallToolResult Error(string message) {
         JsonObject structuredContent = new JsonObject {
             ["success"] = false,
-            ["message"] = message,
-            ["cpuStatus"] = JsonSerializer.SerializeToNode(CpuStateSnapshot.FromState(_services.State), SerializerOptions)
+            ["message"] = message
         };
 
         return new CallToolResult {
@@ -210,7 +208,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_cpu_state", UseStructuredContent = true), Description("Read full CPU state: general-purpose registers (EAX, EBX, ECX, EDX, ESI, EDI, ESP, EBP), segment registers (CS, DS, ES, FS, GS, SS), instruction pointer (IP), flags (carry, parity, auxiliary, zero, sign, direction, overflow, interrupt), and cycle count. CS:IP gives the address of the next instruction to execute.")]
+    [McpServerTool(Name = "read_cpu_state", UseStructuredContent = true), Description("Read full CPU state: general-purpose registers (EAX-EBP), segment registers (CS, DS, ES, FS, GS, SS), instruction pointer (IP), flags, and cycle count. CS:IP gives the address of the next instruction to execute. This is the only tool that returns CPU registers — call it whenever you need register values.")]
     public CallToolResult ReadCpuRegisters() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {

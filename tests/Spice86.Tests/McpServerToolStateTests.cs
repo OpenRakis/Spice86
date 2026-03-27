@@ -39,7 +39,6 @@ public class McpServerToolStateTests {
 
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "toolCount", out JsonElement toolCount).Should().BeTrue();
         toolCount.GetInt32().Should().BeGreaterThan(0);
-        AssertSuccessfulToolResponseContainsCpuStatus(response);
     }
 
     [Fact]
@@ -104,7 +103,6 @@ public class McpServerToolStateTests {
         enabledResult.TryGetProperty("isError", out JsonElement isEnabledError).Should().BeFalse();
         JsonElement structuredContent = McpJsonRpcAssertions.GetStructuredContent(enabledResult);
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "eax", out JsonElement _).Should().BeTrue();
-        AssertSuccessfulToolResponseContainsCpuStatus(enabledResponse);
     }
 
     [Fact]
@@ -144,8 +142,6 @@ public class McpServerToolStateTests {
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(startAddress, "offset", out JsonElement startOffset).Should().BeTrue();
         startSegment.GetInt32().Should().Be(0);
         startOffset.GetInt32().Should().Be(0);
-        AssertSuccessfulToolResponseContainsCpuStatus(readResponse);
-        AssertSuccessfulToolResponseContainsCpuStatus(searchResponse);
     }
 
     [Fact]
@@ -173,8 +169,6 @@ public class McpServerToolStateTests {
         JsonElement readStructuredContent = McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(readResponse));
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(readStructuredContent, "data", out JsonElement readData).Should().BeTrue();
         readData.GetString().Should().Be("B16B00B5");
-        AssertSuccessfulToolResponseContainsCpuStatus(writeResponse);
-        AssertSuccessfulToolResponseContainsCpuStatus(readResponse);
     }
 
     [Fact]
@@ -230,7 +224,6 @@ public class McpServerToolStateTests {
         errorResult.TryGetProperty("isError", out JsonElement isError).Should().BeTrue();
         isError.GetBoolean().Should().BeTrue();
         context.Services.PauseHandler.IsPaused.Should().BeFalse();
-        AssertSuccessfulToolResponseContainsCpuStatus(okResponse);
     }
 
     [Fact]
@@ -246,7 +239,6 @@ public class McpServerToolStateTests {
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(pauseResponse)), "success", out JsonElement success).Should().BeTrue();
         success.GetBoolean().Should().BeTrue();
         context.Services.PauseHandler.IsPaused.Should().BeTrue();
-        AssertSuccessfulToolResponseContainsCpuStatus(pauseResponse);
     }
 
     [Fact]
@@ -270,7 +262,6 @@ public class McpServerToolStateTests {
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(cpuState, "ip", out JsonElement steppedIp).Should().BeTrue();
         steppedIp.GetInt32().Should().NotBe(initialIp);
         context.Services.PauseHandler.IsPaused.Should().BeTrue();
-        AssertSuccessfulToolResponseContainsCpuStatus(stepResponse);
     }
 
     [Fact]
@@ -290,7 +281,6 @@ public class McpServerToolStateTests {
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "success", out JsonElement success).Should().BeTrue();
         success.GetBoolean().Should().BeTrue();
         context.Services.PauseHandler.IsPaused.Should().BeFalse();
-        AssertSuccessfulToolResponseContainsCpuStatus(resumeResponse);
     }
 
     [Fact]
@@ -319,9 +309,6 @@ public class McpServerToolStateTests {
         AssertXmsQueryShowsAllocations(queryXmsResponse);
         AssertHexData(readXmsMemoryResponse, "DEADBEEF");
         AssertHasMatches(searchXmsMemoryResponse);
-        AssertSuccessfulToolResponseContainsCpuStatus(queryXmsResponse);
-        AssertSuccessfulToolResponseContainsCpuStatus(readXmsMemoryResponse);
-        AssertSuccessfulToolResponseContainsCpuStatus(searchXmsMemoryResponse);
     }
 
     [Fact]
@@ -361,8 +348,6 @@ public class McpServerToolStateTests {
         JsonElement readEmsPageFrameStructuredContent = McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(readEmsPageFrameResponse));
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(readEmsPageFrameStructuredContent, "data", out JsonElement pageFrameData).Should().BeTrue();
         pageFrameData.GetString().Should().Be("CAFEBABE");
-        AssertSuccessfulToolResponseContainsCpuStatus(queryEmsResponse);
-        AssertSuccessfulToolResponseContainsCpuStatus(readEmsPageFrameResponse);
     }
 
     [Fact]
@@ -395,7 +380,6 @@ public class McpServerToolStateTests {
 
         // Assert
         AssertHasMatches(searchEmsMemoryResponse);
-        AssertSuccessfulToolResponseContainsCpuStatus(searchEmsMemoryResponse);
     }
 
     [Fact]
@@ -961,9 +945,6 @@ public class McpServerToolStateTests {
             "success",
             out JsonElement mousePacketSuccess).Should().BeTrue();
         mousePacketSuccess.GetBoolean().Should().BeTrue();
-        AssertSuccessfulToolResponseContainsCpuStatus(keyDown);
-        AssertSuccessfulToolResponseContainsCpuStatus(keyUp);
-        AssertSuccessfulToolResponseContainsCpuStatus(mousePacket);
     }
 
     private static int PrepareXmsBlockWithPattern(McpIntegrationContext context) {
@@ -1016,7 +997,6 @@ public class McpServerToolStateTests {
     private static void AssertToolSucceeded(JsonDocument response) {
         JsonElement result = McpJsonRpcAssertions.GetJsonRpcResult(response);
         result.TryGetProperty("isError", out JsonElement isError).Should().BeFalse();
-        AssertSuccessfulToolResponseContainsCpuStatus(response);
     }
 
     private static JsonElement GetSuccessfulStructuredContent(JsonDocument response) {
@@ -1039,11 +1019,6 @@ public class McpServerToolStateTests {
         JsonElement shot = McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(screenshot));
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(shot, "format", out JsonElement format).Should().BeTrue();
         format.GetString().Should().Be("png");
-        AssertSuccessfulToolResponseContainsCpuStatus(readCpu);
-        AssertSuccessfulToolResponseContainsCpuStatus(readCfg);
-        AssertSuccessfulToolResponseContainsCpuStatus(listFuncs);
-        AssertSuccessfulToolResponseContainsCpuStatus(video);
-        AssertSuccessfulToolResponseContainsCpuStatus(screenshot);
     }
 
     private static async Task AssertPauseResumeIoToolsAsync(McpIntegrationContext context) {
@@ -1069,14 +1044,6 @@ public class McpServerToolStateTests {
         writeSuccess.GetBoolean().Should().BeTrue();
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(go)), "success", out JsonElement goSuccess).Should().BeTrue();
         goSuccess.GetBoolean().Should().BeTrue();
-        AssertSuccessfulToolResponseContainsCpuStatus(pause);
-        AssertSuccessfulToolResponseContainsCpuStatus(readPaused);
-        AssertSuccessfulToolResponseContainsCpuStatus(writePaused);
-        AssertSuccessfulToolResponseContainsCpuStatus(stack);
-        AssertSuccessfulToolResponseContainsCpuStatus(resume);
-        AssertSuccessfulToolResponseContainsCpuStatus(readIo);
-        AssertSuccessfulToolResponseContainsCpuStatus(writeIo);
-        AssertSuccessfulToolResponseContainsCpuStatus(go);
     }
 
     private static async Task AssertMemoryManagerErrorPathsAsync(McpIntegrationContext context) {
@@ -1120,9 +1087,6 @@ public class McpServerToolStateTests {
         clearSuccess.GetBoolean().Should().BeTrue();
         McpJsonRpcAssertions.GetJsonRpcResult(invalid).TryGetProperty("isError", out JsonElement invalidError).Should().BeTrue();
         invalidError.GetBoolean().Should().BeTrue();
-        AssertSuccessfulToolResponseContainsCpuStatus(add);
-        AssertSuccessfulToolResponseContainsCpuStatus(list);
-        AssertSuccessfulToolResponseContainsCpuStatus(clear);
     }
 
     [Fact]
@@ -1141,7 +1105,6 @@ public class McpServerToolStateTests {
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "cpuState", out JsonElement cpuState).Should().BeTrue();
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(cpuState, "ip", out JsonElement instructionIp).Should().BeTrue();
         instructionIp.GetInt32().Should().BeGreaterThanOrEqualTo(0);
-        AssertSuccessfulToolResponseContainsCpuStatus(result);
     }
 
     [Fact]
@@ -1209,7 +1172,6 @@ public class McpServerToolStateTests {
         // Assert
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(result)), "success", out JsonElement success).Should().BeTrue();
         success.GetBoolean().Should().BeTrue();
-        AssertSuccessfulToolResponseContainsCpuStatus(result);
     }
 
     [Fact]
@@ -1274,7 +1236,6 @@ public class McpServerToolStateTests {
 
         // Nodes array must be present and contain graph nodes
         AssertGraphNodesPresent(structured);
-        AssertSuccessfulToolResponseContainsCpuStatus(response);
     }
 
     [Fact]
@@ -1312,7 +1273,6 @@ public class McpServerToolStateTests {
         if (fullCount > requestedLimit) {
             truncated.GetBoolean().Should().BeTrue();
         }
-        AssertSuccessfulToolResponseContainsCpuStatus(limitedResponse);
     }
 
     private static void AssertGraphNodesPresent(JsonElement structured) {
@@ -1331,15 +1291,5 @@ public class McpServerToolStateTests {
             preds.ValueKind.Should().Be(JsonValueKind.Array);
             McpJsonRpcAssertions.TryGetPropertyIgnoreCase(node, "isLive", out JsonElement _).Should().BeTrue();
         }
-    }
-
-    private static void AssertSuccessfulToolResponseContainsCpuStatus(JsonDocument response) {
-        JsonElement result = McpJsonRpcAssertions.GetJsonRpcResult(response);
-        result.TryGetProperty("isError", out JsonElement isError).Should().BeFalse();
-
-        JsonElement structuredContent = McpJsonRpcAssertions.GetStructuredContent(result);
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "cpuStatus", out JsonElement cpuStatus).Should().BeTrue();
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(cpuStatus, "cycles", out JsonElement cycles).Should().BeTrue();
-        cycles.ValueKind.Should().BeOneOf(JsonValueKind.Number, JsonValueKind.String);
     }
 }
