@@ -405,6 +405,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 _pauseHandler.Dispose();
 
                 _drawTimer?.Stop();
+                _drawTimer = null;
 
                 // Dispose of UI-related resources in the UI thread
                 _uiDispatcher.Post(() => {

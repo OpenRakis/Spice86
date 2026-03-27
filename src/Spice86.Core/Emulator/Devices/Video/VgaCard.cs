@@ -46,7 +46,9 @@ public class VgaCard {
             return true;
         }
         _gui?.SetResolution(_renderer.Width, _renderer.Height);
-        // Resolution change is asynchronous; skip this frame and let the next tick render.
+        // Resolution change is asynchronous via Dispatcher.Post; skip this frame
+        // to avoid blocking the UI thread (the previous busy-wait would deadlock
+        // now that DrawScreen runs on the UI thread via DispatcherTimer).
         return false;
     }
     
