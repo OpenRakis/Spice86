@@ -1,7 +1,9 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
+using Spice86.Core.Emulator.Devices.Sound;
+
 internal sealed record OplStateResponse {
-    public required string Mode { get; init; }
+    public required OplMode Mode { get; init; }
 
     public required bool AdlibGoldEnabled { get; init; }
 

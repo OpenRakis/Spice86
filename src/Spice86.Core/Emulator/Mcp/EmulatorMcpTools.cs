@@ -635,7 +635,7 @@ internal sealed class EmulatorMcpTools {
                 Opl3Fm opl3Fm = GetOpl3Fm();
                 SoundChannel mixerChannel = opl3Fm.MixerChannel;
                 return new OplStateResponse {
-                    Mode = opl3Fm.Mode.ToString(),
+                    Mode = opl3Fm.Mode,
                     AdlibGoldEnabled = opl3Fm.IsAdlibGoldEnabled,
                     MixerChannelName = mixerChannel.Name,
                     MixerChannelSampleRate = mixerChannel.SampleRate,
@@ -694,10 +694,8 @@ internal sealed class EmulatorMcpTools {
                     DeviceKind = midi.UseMT32 ? "MT32" : "GeneralMidi",
                     UseMt32 = midi.UseMT32,
                     Mt32RomsPath = midi.Mt32RomsPath,
-                    State = midi.State.ToString(),
-                    StatusValue = (byte)status,
-                    InputReady = (status & GeneralMidiStatus.InputReady) != 0,
-                    OutputReady = (status & GeneralMidiStatus.OutputReady) != 0,
+                    State = midi.State,
+                    Status = status,
                     DataPort = Midi.DataPort,
                     StatusPort = Midi.StatusPort
                 };

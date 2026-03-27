@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
+using Spice86.Core.Emulator.Devices.Sound.Midi;
+
 internal sealed record MidiStateResponse {
     public required string DeviceKind { get; init; }
 
@@ -7,13 +9,9 @@ internal sealed record MidiStateResponse {
 
     public string? Mt32RomsPath { get; init; }
 
-    public required string State { get; init; }
+    public required GeneralMidiState State { get; init; }
 
-    public required int StatusValue { get; init; }
-
-    public required bool InputReady { get; init; }
-
-    public required bool OutputReady { get; init; }
+    public required GeneralMidiStatus Status { get; init; }
 
     public required int DataPort { get; init; }
 
