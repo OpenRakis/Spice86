@@ -103,12 +103,27 @@ public sealed class ProgramExecutor : IDisposable {
             }
 
             _gdbServer?.StartServer();
+
+            RegisterStopAfterCyclesBreakpoint(_configuration.StopAfterCycles);
+
             _emulationLoop.Run();
 
             _emulatorStateSerializer.EmulationStateDataWriter.Write();
         } finally {
             EmulationStopped?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    private void RegisterStopAfterCyclesBreakpoint(long cycles) {
+        // Emulation loop checks breakpoints just after entering the loop, so will always execute the next instruction.
+        long targetCycles = cycles - 1;
+        if (targetCycles <= 0) {
+            return;
+        }
+
+        AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CPU_CYCLES, targetCycles,
+            _ => _emulationLoop.Exit(), isRemovedOnTrigger: true);
+        _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
 
     private void ToggleStartOrStopBreakpoint(BreakPointType type, string reason) {
