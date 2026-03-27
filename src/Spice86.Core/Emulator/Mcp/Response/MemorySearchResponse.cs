@@ -1,6 +1,8 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record MemorySearchResponse : PatternSearchResponse<McpSegmentedAddress> {
+using Spice86.Shared.Emulator.Memory;
 
-    public required McpSegmentedAddress StartAddress { get; init; }
+internal sealed record MemorySearchResponse : PatternSearchResponse<SegmentedAddress> {
+
+    public required SegmentedAddress StartAddress { get; init; }
 }

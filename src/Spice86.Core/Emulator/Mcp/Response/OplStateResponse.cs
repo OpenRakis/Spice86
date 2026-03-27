@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record OplStateResponse : McpToolResponse {
+internal sealed record OplStateResponse {
     public required string Mode { get; init; }
 
     public required bool AdlibGoldEnabled { get; init; }

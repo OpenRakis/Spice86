@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record XmsStateResponse : McpToolResponse {
+internal sealed record XmsStateResponse {
     public required bool IsEnabled { get; init; }
 
     public required int TotalMemoryKB { get; init; }

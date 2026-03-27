@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal record CpuRegistersResponse : McpToolResponse {
+internal record CpuRegistersResponse {
     public required GeneralPurposeRegisters GeneralPurpose { get; init; }
 
     public required SegmentRegisters Segments { get; init; }

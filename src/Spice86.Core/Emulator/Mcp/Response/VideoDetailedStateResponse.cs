@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record VideoDetailedStateResponse : McpToolResponse {
+internal sealed record VideoDetailedStateResponse {
     public required int BiosVideoMode { get; init; }
 
     public required string MemoryModel { get; init; }

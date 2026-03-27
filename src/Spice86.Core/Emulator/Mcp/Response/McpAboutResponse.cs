@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record McpAboutResponse : McpToolResponse {
+internal sealed record McpAboutResponse {
     public required string Name { get; init; }
 
     public required string Version { get; init; }

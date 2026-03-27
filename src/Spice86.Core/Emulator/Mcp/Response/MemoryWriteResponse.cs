@@ -1,8 +1,9 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record MemoryWriteResponse : McpToolResponse
-{
-    public required McpSegmentedAddress Address { get; init; }
+using Spice86.Shared.Emulator.Memory;
+
+internal sealed record MemoryWriteResponse {
+    public required SegmentedAddress Address { get; init; }
 
     public required int Length { get; init; }
 

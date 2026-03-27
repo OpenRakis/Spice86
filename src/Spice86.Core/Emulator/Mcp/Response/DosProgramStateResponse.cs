@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record DosProgramStateResponse : McpToolResponse {
+internal sealed record DosProgramStateResponse {
     public required int CurrentProgramSegmentPrefix { get; init; }
 
     public required int ParentProgramSegmentPrefix { get; init; }

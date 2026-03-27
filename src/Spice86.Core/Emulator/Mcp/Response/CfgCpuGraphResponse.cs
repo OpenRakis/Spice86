@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record CfgCpuGraphResponse : McpToolResponse {
+internal sealed record CfgCpuGraphResponse {
     public required int CurrentContextDepth { get; init; }
 
     public required string CurrentContextEntryPoint { get; init; }

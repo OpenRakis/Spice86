@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record SoundBlasterMixerStateResponse : McpToolResponse {
+internal sealed record SoundBlasterMixerStateResponse {
     public required int MasterLeft { get; init; }
 
     public required int MasterRight { get; init; }

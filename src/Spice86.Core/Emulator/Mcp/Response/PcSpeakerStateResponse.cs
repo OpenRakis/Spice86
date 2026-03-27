@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record PcSpeakerStateResponse : McpToolResponse {
+internal sealed record PcSpeakerStateResponse {
     public required int ControlPort { get; init; }
 
     public required int ControlValue { get; init; }

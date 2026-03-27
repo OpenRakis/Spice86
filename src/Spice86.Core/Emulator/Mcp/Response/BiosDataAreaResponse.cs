@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record BiosDataAreaResponse : McpToolResponse {
+internal sealed record BiosDataAreaResponse {
     public required int ConventionalMemorySizeKb { get; init; }
 
     public required int EquipmentListFlags { get; init; }

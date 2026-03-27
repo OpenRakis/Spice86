@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record MidiStateResponse : McpToolResponse {
+internal sealed record MidiStateResponse {
     public required string DeviceKind { get; init; }
 
     public required bool UseMt32 { get; init; }

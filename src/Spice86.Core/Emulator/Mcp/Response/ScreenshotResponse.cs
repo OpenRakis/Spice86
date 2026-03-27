@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record ScreenshotResponse : McpToolResponse {
+internal sealed record ScreenshotResponse {
     public required int Width { get; init; }
 
     public required int Height { get; init; }

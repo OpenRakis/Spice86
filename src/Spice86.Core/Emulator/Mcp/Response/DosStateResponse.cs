@@ -2,7 +2,7 @@ namespace Spice86.Core.Emulator.Mcp.Response;
 
 using System.Collections.Generic;
 
-internal sealed record DosStateResponse : McpToolResponse {
+internal sealed record DosStateResponse {
     public required string CurrentDrive { get; init; }
 
     public required int CurrentDriveIndex { get; init; }

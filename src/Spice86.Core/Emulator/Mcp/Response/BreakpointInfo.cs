@@ -1,11 +1,16 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record BreakpointInfo : McpToolResponse {
+using Spice86.Shared.Emulator.VM.Breakpoint;
+
+using System.Text.Json.Serialization;
+
+internal sealed record BreakpointInfo {
     public required string Id { get; init; }
 
     public required long Address { get; init; }
 
-    public required string Type { get; init; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public required BreakPointType Type { get; init; }
 
     public string? Condition { get; init; }
 

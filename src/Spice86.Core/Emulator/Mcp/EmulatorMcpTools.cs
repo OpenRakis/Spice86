@@ -52,7 +52,7 @@ internal sealed class EmulatorMcpTools {
 
     public EmulatorMcpTools(EmulatorMcpServices services) => _services = services;
 
-    private CallToolResult Success(McpToolResponse response) {
+    private CallToolResult Success(object response) {
         JsonNode? responseNode = JsonSerializer.SerializeToNode(response, response.GetType());
         JsonObject structuredContent;
         if (responseNode is JsonObject responseObject) {
@@ -87,7 +87,7 @@ internal sealed class EmulatorMcpTools {
         };
     }
 
-    private CallToolResult ExecuteTool(Func<McpToolResponse> action, [CallerMemberName] string methodName = "") {
+    private CallToolResult ExecuteTool(Func<object> action, [CallerMemberName] string methodName = "") {
         MethodInfo? method = typeof(EmulatorMcpTools).GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
         if (method == null) {
             return Error($"Unknown MCP tool method: {methodName}");
@@ -134,13 +134,10 @@ internal sealed class EmulatorMcpTools {
         }
     }
 
-    private static McpSegmentedAddress ToMcpSegmentedAddress(uint physicalAddress) {
+    private static SegmentedAddress ToSegmentedAddress(uint physicalAddress) {
         ushort segment = MemoryUtils.ToSegment(physicalAddress);
         ushort offset = (ushort)(physicalAddress & 0xF);
-        return new McpSegmentedAddress {
-            Segment = segment,
-            Offset = offset
-        };
+        return new SegmentedAddress(segment, offset);
     }
 
     private static int ToPageSegment(int physicalPage) {
@@ -227,10 +224,7 @@ internal sealed class EmulatorMcpTools {
                 uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
                 byte[] data = _services.Memory.ReadRam((uint)length, address);
                 return new MemoryReadResponse {
-                    Address = new McpSegmentedAddress {
-                        Segment = segment,
-                        Offset = offset
-                    },
+                    Address = new SegmentedAddress(segment, offset),
                     Length = length,
                     Data = Convert.ToHexString(data)
                 };
@@ -251,10 +245,7 @@ internal sealed class EmulatorMcpTools {
                 ValidateMemoryWriteRange(address, bytesToWrite.Length);
                 _services.Memory.WriteRam(bytesToWrite, address);
                 return new MemoryWriteResponse {
-                    Address = new McpSegmentedAddress {
-                        Segment = segment,
-                        Offset = offset
-                    },
+                    Address = new SegmentedAddress(segment, offset),
                     Length = bytesToWrite.Length,
                     Success = true
                 };
@@ -278,9 +269,9 @@ internal sealed class EmulatorMcpTools {
                 (uint[] matches, bool truncated) = SearchRamMatches(startAddress, searchLength, needle, limit);
                 return new MemorySearchResponse {
                     Pattern = Convert.ToHexString(needle),
-                    StartAddress = new McpSegmentedAddress { Segment = startSegment, Offset = startOffset },
+                    StartAddress = new SegmentedAddress(startSegment, startOffset),
                     Length = searchLength,
-                    Matches = matches.Select(ToMcpSegmentedAddress).ToArray(),
+                    Matches = matches.Select(ToSegmentedAddress).ToArray(),
                     Truncated = truncated
                 };
             }
@@ -367,9 +358,9 @@ internal sealed class EmulatorMcpTools {
     private static MemorySearchResponse EmptyMemorySearchResponse(byte[] needle, ushort startSegment, ushort startOffset) {
         return new MemorySearchResponse {
             Pattern = Convert.ToHexString(needle),
-            StartAddress = new McpSegmentedAddress { Segment = startSegment, Offset = startOffset },
+            StartAddress = new SegmentedAddress(startSegment, startOffset),
             Length = 0,
-            Matches = Array.Empty<McpSegmentedAddress>(),
+            Matches = Array.Empty<SegmentedAddress>(),
             Truncated = false
         };
     }
@@ -411,7 +402,7 @@ internal sealed class EmulatorMcpTools {
                 .OrderByDescending(f => f.CalledCount)
                 .Take(effectiveLimit)
                 .Select(f => new FunctionInfo {
-                    Address = f.Address.ToString(),
+                    Address = f.Address,
                     Name = f.Name,
                     CalledCount = f.CalledCount,
                     HasOverride = f.HasOverride
@@ -1003,10 +994,7 @@ internal sealed class EmulatorMcpTools {
                 SegmentedAddress address = interruptVectorTable[vectorNumber];
                 return new InterruptVectorResponse {
                     VectorNumber = vectorNumber,
-                    Address = new McpSegmentedAddress {
-                        Segment = address.Segment,
-                        Offset = address.Offset
-                    }
+                    Address = new SegmentedAddress(address.Segment, address.Offset)
                 };
             }
         });
@@ -1391,12 +1379,22 @@ internal sealed class EmulatorMcpTools {
     }
 
     private static CpuStatusResponse BuildCpuStatus(State state) {
-        CpuRegistersResponse registers = BuildCpuRegistersResponse(state);
         return new CpuStatusResponse {
-            GeneralPurpose = registers.GeneralPurpose,
-            Segments = registers.Segments,
-            InstructionPointer = registers.InstructionPointer,
-            Flags = registers.Flags,
+            GeneralPurpose = new GeneralPurposeRegisters {
+                EAX = state.EAX, EBX = state.EBX, ECX = state.ECX, EDX = state.EDX,
+                ESI = state.ESI, EDI = state.EDI, ESP = state.ESP, EBP = state.EBP
+            },
+            Segments = new SegmentRegisters {
+                CS = state.CS, DS = state.DS, ES = state.ES,
+                FS = state.FS, GS = state.GS, SS = state.SS
+            },
+            InstructionPointer = new InstructionPointer { IP = state.IP },
+            Flags = new CpuFlags {
+                CarryFlag = state.CarryFlag, ParityFlag = state.ParityFlag,
+                AuxiliaryFlag = state.AuxiliaryFlag, ZeroFlag = state.ZeroFlag,
+                SignFlag = state.SignFlag, DirectionFlag = state.DirectionFlag,
+                OverflowFlag = state.OverflowFlag, InterruptFlag = state.InterruptFlag
+            },
             Cycles = state.Cycles
         };
     }
@@ -1813,7 +1811,7 @@ internal sealed class EmulatorMcpTools {
 
                 return new BreakpointInfo {
                     Id = id, Address = address,
-                    Type = bpType.ToString(), Condition = condition,
+                    Type = bpType, Condition = condition,
                     IsEnabled = true
                 };
             }
@@ -1827,7 +1825,7 @@ internal sealed class EmulatorMcpTools {
                 List<BreakpointInfo> list = _services.McpBreakpoints.Select(kvp => new BreakpointInfo {
                     Id = kvp.Key,
                     Address = (kvp.Value as AddressBreakPoint)?.Address ?? 0,
-                    Type = kvp.Value.BreakPointType.ToString(),
+                    Type = kvp.Value.BreakPointType,
                     Condition = (kvp.Value as AddressBreakPoint)?.ConditionExpression,
                     IsEnabled = kvp.Value.IsEnabled
                 }).ToList();

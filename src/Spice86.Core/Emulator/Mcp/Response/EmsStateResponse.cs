@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record EmsStateResponse : McpToolResponse {
+internal sealed record EmsStateResponse {
     public required bool IsEnabled { get; init; }
 
     public required int PageFrameSegment { get; init; }

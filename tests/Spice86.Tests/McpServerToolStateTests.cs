@@ -144,7 +144,6 @@ public class McpServerToolStateTests {
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(startAddress, "offset", out JsonElement startOffset).Should().BeTrue();
         startSegment.GetInt32().Should().Be(0);
         startOffset.GetInt32().Should().Be(0);
-        searchStructuredContent.ToString().Should().NotContain("Linear");
         AssertSuccessfulToolResponseContainsCpuStatus(readResponse);
         AssertSuccessfulToolResponseContainsCpuStatus(searchResponse);
     }

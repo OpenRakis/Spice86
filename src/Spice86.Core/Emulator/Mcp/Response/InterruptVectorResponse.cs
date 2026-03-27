@@ -1,7 +1,9 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-internal sealed record InterruptVectorResponse : McpToolResponse {
+using Spice86.Shared.Emulator.Memory;
+
+internal sealed record InterruptVectorResponse {
     public required int VectorNumber { get; init; }
 
-    public required McpSegmentedAddress Address { get; init; }
+    public required SegmentedAddress Address { get; init; }
 }
