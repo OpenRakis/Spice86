@@ -12,4 +12,8 @@ internal sealed record CfgCpuGraphResponse {
     public required SegmentedAddress[] EntryPointAddresses { get; init; }
 
     public required SegmentedAddress? LastExecutedAddress { get; init; }
+
+    public required CfgNodeInfo[] Nodes { get; init; }
+
+    public required bool Truncated { get; init; }
 }

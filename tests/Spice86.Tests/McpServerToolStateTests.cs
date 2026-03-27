@@ -1027,7 +1027,7 @@ public class McpServerToolStateTests {
 
     private static async Task AssertCoreReadToolsAsync(McpIntegrationContext context) {
         JsonDocument readCpu = await context.CallToolAsync("read_cpu_registers", new Dictionary<string, object?>());
-        JsonDocument readCfg = await context.CallToolAsync("read_cfg_cpu_graph", new Dictionary<string, object?>());
+        JsonDocument readCfg = await context.CallToolAsync("read_cfg_cpu_graph", new Dictionary<string, object?> { ["nodeLimit"] = null });
         JsonDocument listFuncs = await context.CallToolAsync("list_functions", new Dictionary<string, object?> { ["limit"] = 10 });
         JsonDocument video = await context.CallToolAsync("get_video_state", new Dictionary<string, object?>());
         JsonDocument screenshot = await context.CallToolAsync("screenshot", new Dictionary<string, object?>());
@@ -1233,8 +1233,15 @@ public class McpServerToolStateTests {
         await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
         await context.InitializeAsync();
 
+        // Step to build up graph nodes
+        for (int i = 0; i < 5; i++) {
+            await context.CallToolAsync("step", new Dictionary<string, object?>());
+        }
+
         // Act
-        JsonDocument response = await context.CallToolAsync("read_cfg_cpu_graph", new Dictionary<string, object?>());
+        JsonDocument response = await context.CallToolAsync("read_cfg_cpu_graph", new Dictionary<string, object?> {
+            ["nodeLimit"] = null
+        });
 
         // Assert
         JsonElement structured = GetSuccessfulStructuredContent(response);
@@ -1265,7 +1272,65 @@ public class McpServerToolStateTests {
             McpJsonRpcAssertions.TryGetPropertyIgnoreCase(lastExec, "segment", out JsonElement _).Should().BeTrue();
         }
 
+        // Nodes array must be present and contain graph nodes
+        AssertGraphNodesPresent(structured);
         AssertSuccessfulToolResponseContainsCpuStatus(response);
+    }
+
+    [Fact]
+    public async Task ReadCfgCpuGraph_WithNodeLimit_ShouldRespectLimitAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Step a few times to build up graph nodes
+        for (int i = 0; i < 5; i++) {
+            await context.CallToolAsync("step", new Dictionary<string, object?>());
+        }
+
+        // First get full graph to know its size
+        JsonDocument fullResponse = await context.CallToolAsync("read_cfg_cpu_graph", new Dictionary<string, object?> {
+            ["nodeLimit"] = null
+        });
+        JsonElement fullStructured = GetSuccessfulStructuredContent(fullResponse);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(fullStructured, "nodes", out JsonElement fullNodes).Should().BeTrue();
+        int fullCount = fullNodes.GetArrayLength();
+        fullCount.Should().BeGreaterThan(0, "stepping should produce graph nodes");
+
+        // Act — request with a limit smaller than the full graph
+        int requestedLimit = 2;
+        JsonDocument limitedResponse = await context.CallToolAsync("read_cfg_cpu_graph", new Dictionary<string, object?> {
+            ["nodeLimit"] = requestedLimit
+        });
+
+        // Assert
+        JsonElement limitedStructured = GetSuccessfulStructuredContent(limitedResponse);
+        AssertGraphNodesPresent(limitedStructured);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(limitedStructured, "nodes", out JsonElement limitedNodes).Should().BeTrue();
+        limitedNodes.GetArrayLength().Should().BeLessThanOrEqualTo(requestedLimit);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(limitedStructured, "truncated", out JsonElement truncated).Should().BeTrue();
+        if (fullCount > requestedLimit) {
+            truncated.GetBoolean().Should().BeTrue();
+        }
+        AssertSuccessfulToolResponseContainsCpuStatus(limitedResponse);
+    }
+
+    private static void AssertGraphNodesPresent(JsonElement structured) {
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "nodes", out JsonElement nodes).Should().BeTrue();
+        nodes.ValueKind.Should().Be(JsonValueKind.Array);
+        if (nodes.GetArrayLength() > 0) {
+            JsonElement node = nodes[0];
+            node.ValueKind.Should().Be(JsonValueKind.Object);
+            McpJsonRpcAssertions.TryGetPropertyIgnoreCase(node, "id", out JsonElement _).Should().BeTrue();
+            McpJsonRpcAssertions.TryGetPropertyIgnoreCase(node, "address", out JsonElement addr).Should().BeTrue();
+            addr.ValueKind.Should().Be(JsonValueKind.Object);
+            McpJsonRpcAssertions.TryGetPropertyIgnoreCase(addr, "segment", out JsonElement _).Should().BeTrue();
+            McpJsonRpcAssertions.TryGetPropertyIgnoreCase(node, "successorIds", out JsonElement succs).Should().BeTrue();
+            succs.ValueKind.Should().Be(JsonValueKind.Array);
+            McpJsonRpcAssertions.TryGetPropertyIgnoreCase(node, "predecessorIds", out JsonElement preds).Should().BeTrue();
+            preds.ValueKind.Should().Be(JsonValueKind.Array);
+            McpJsonRpcAssertions.TryGetPropertyIgnoreCase(node, "isLive", out JsonElement _).Should().BeTrue();
+        }
     }
 
     private static void AssertSuccessfulToolResponseContainsCpuStatus(JsonDocument response) {

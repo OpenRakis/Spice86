@@ -7,7 +7,9 @@ using SkiaSharp;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -421,8 +423,8 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_cfg_cpu_graph", UseStructuredContent = true), Description("Read CFG CPU statistics")]
-    public CallToolResult ReadCfgCpuGraph() {
+    [McpServerTool(Name = "read_cfg_cpu_graph", UseStructuredContent = true), Description("Read the CFG CPU graph. Returns entry point metadata and graph nodes with successor/predecessor edges. Use nodeLimit to cap the number of nodes returned (BFS from entry points); omit or pass null for the full graph.")]
+    public CallToolResult ReadCfgCpuGraph(int? nodeLimit) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
                 ExecutionContextManager contextManager = _services.CfgCpu.ExecutionContextManager;
@@ -432,15 +434,70 @@ internal sealed class EmulatorMcpTools {
                     .Select(kvp => kvp.Key)
                     .ToArray();
 
+                ISet<ICfgNode> entryNodes = new HashSet<ICfgNode>();
+                foreach (ISet<CfgInstruction> instructions in contextManager.ExecutionContextEntryPoints.Values) {
+                    foreach (ICfgNode node in instructions) {
+                        entryNodes.Add(node);
+                    }
+                }
+                if (currentContext.LastExecuted != null) {
+                    entryNodes.Add(currentContext.LastExecuted);
+                }
+
+                int? effectiveLimit = nodeLimit.HasValue && nodeLimit.Value > 0 ? nodeLimit.Value : null;
+                (CfgNodeInfo[] nodes, bool truncated) = CollectGraphNodes(entryNodes, effectiveLimit);
+
                 return new CfgCpuGraphResponse {
                     CurrentContextDepth = currentContext.Depth,
                     CurrentContextEntryPoint = currentContext.EntryPoint,
                     TotalEntryPoints = entryPointAddresses.Length,
                     EntryPointAddresses = entryPointAddresses,
-                    LastExecutedAddress = currentContext.LastExecuted?.Address
+                    LastExecutedAddress = currentContext.LastExecuted?.Address,
+                    Nodes = nodes,
+                    Truncated = truncated
                 };
             }
         });
+    }
+
+    private static (CfgNodeInfo[] Nodes, bool Truncated) CollectGraphNodes(ISet<ICfgNode> seeds, int? limit) {
+        HashSet<int> visited = new();
+        Queue<ICfgNode> queue = new();
+        List<CfgNodeInfo> result = new();
+
+        foreach (ICfgNode seed in seeds) {
+            if (visited.Add(seed.Id)) {
+                queue.Enqueue(seed);
+            }
+        }
+
+        while (queue.Count > 0) {
+            if (limit.HasValue && result.Count >= limit.Value) {
+                return (result.ToArray(), true);
+            }
+
+            ICfgNode current = queue.Dequeue();
+            result.Add(new CfgNodeInfo {
+                Id = current.Id,
+                Address = current.Address,
+                SuccessorIds = current.Successors.Select(s => s.Id).ToArray(),
+                PredecessorIds = current.Predecessors.Select(p => p.Id).ToArray(),
+                IsLive = current.IsLive
+            });
+
+            foreach (ICfgNode successor in current.Successors) {
+                if (visited.Add(successor.Id)) {
+                    queue.Enqueue(successor);
+                }
+            }
+            foreach (ICfgNode predecessor in current.Predecessors) {
+                if (visited.Add(predecessor.Id)) {
+                    queue.Enqueue(predecessor);
+                }
+            }
+        }
+
+        return (result.ToArray(), false);
     }
 
     [McpServerTool(Name = "read_io_port", UseStructuredContent = true), Description("Read from IO port")]
