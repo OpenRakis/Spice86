@@ -65,6 +65,26 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     /// <inheritdoc />
     public SoundChannel Channel => _mixerChannel;
 
+    /// <summary>
+    /// Gets the current raw value written to port 0x61 without applying read-side effects.
+    /// </summary>
+    public byte ControlPortValue => _portB.Data;
+
+    /// <summary>
+    /// Gets whether PIT timer 2 gating is currently enabled for the speaker path.
+    /// </summary>
+    public bool IsTimer2GateEnabled => _portB.Timer2Gating;
+
+    /// <summary>
+    /// Gets whether the speaker data/output bit is currently enabled.
+    /// </summary>
+    public bool IsSpeakerOutputEnabled => _portB.SpeakerOutput;
+
+    /// <summary>
+    /// Gets whether PIT channel 2 is currently high.
+    /// </summary>
+    public bool IsTimer2OutputHigh => _pitControl?.IsChannel2OutputHigh == true;
+
     /// <inheritdoc />
     public void NotifyLockMixer() {
         _outputQueue.Stop();
@@ -116,7 +136,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         _mixerChannel = mixer.AddChannel(
             framesRequested => SoftwareMixer.PullFromQueueCallback<PcSpeaker, float>(framesRequested, this),
             SampleRateHz, nameof(PcSpeaker), features);
-        _mixerChannel.        AppVolume = new AudioFrame(1.0f, 1.0f);
+        _mixerChannel.AppVolume = new AudioFrame(1.0f, 1.0f);
         _mixerChannel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Left });
         _mixerChannel.SetPeakAmplitude((int)PositiveAmplitude);
 

@@ -1,0 +1,245 @@
+<Window
+    x:Class="Spice86.Views.McpToolsView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Spice86.ViewModels"
+    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+    x:CompileBindings="True"
+    x:DataType="vm:McpStatusViewModel"
+    WindowStartupLocation="CenterOwner"
+    ShowInTaskbar="True"
+    CanResize="True"
+    MinWidth="980"
+    MinHeight="660"
+    Width="1160"
+    Height="760"
+    Title="MCP Control Center"
+    Icon="/Views/Assets/Spice86.ico"
+    mc:Ignorable="d">
+    <Grid RowDefinitions="Auto,*" RowSpacing="12" Margin="14" ClipToBounds="True">
+        <Border CornerRadius="2"
+                Padding="18"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="1"
+                ClipToBounds="True">
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="8">
+                <StackPanel>
+                    <TextBlock Text="MCP Control Center" FontSize="28" FontWeight="Bold" />
+                    <TextBlock Text="Manual JSON-RPC playground, live tool catalogue, and runtime transport diagnostics."
+                               Opacity="0.78"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+
+                <Border Grid.Column="1"
+                        Padding="12,8"
+                    CornerRadius="2"
+                        Background="{DynamicResource SystemControlBackgroundAltMediumHighBrush}"
+                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                        BorderThickness="1"
+                        VerticalAlignment="Top">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Ellipse Width="12" Height="12" VerticalAlignment="Center" Fill="{Binding NetworkStatusColor}" />
+                        <StackPanel Spacing="1">
+                            <TextBlock Text="{Binding NetworkStatusText}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding ServerEndpoint}" FontSize="11" Opacity="0.75" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Grid.Row="1"
+                           Text="{Binding ManualStatus}"
+                           Opacity="0.76"
+                           TextWrapping="Wrap" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="360,12,*" ColumnSpacing="0" ClipToBounds="True">
+            <Border Grid.Column="0"
+                CornerRadius="2"
+                    Padding="14"
+                    Background="{DynamicResource SystemControlBackgroundAltMediumHighBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="1"
+                ClipToBounds="True">
+                <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <StackPanel>
+                            <TextBlock Text="Tool Catalogue" FontSize="22" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding BuiltInGroupStatus, StringFormat='Enabled tools: {0}'}" Opacity="0.72" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Padding="12,8"
+                                Command="{Binding ListAdvertisedToolsCommand}"
+                                HorizontalAlignment="Right">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <fluent:SymbolIcon Symbol="ArrowClockwise" />
+                                <TextBlock Text="List" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <TextBox Grid.Row="1"
+                             Watermark="Filter by tool name or description"
+                             Text="{Binding ToolFilter, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Command="{Binding EnableAllToolsCommand}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                                <fluent:SymbolIcon Symbol="CheckmarkCircle" />
+                                <TextBlock Text="Enable all" />
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="1" Command="{Binding DisableAllToolsCommand}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                                <fluent:SymbolIcon Symbol="DismissCircle" />
+                                <TextBlock Text="Disable all" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <ListBox Grid.Row="3"
+                             ItemsSource="{Binding FilteredTools}"
+                             SelectedItem="{Binding SelectedTool}"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             ClipToBounds="True"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:McpToolViewModel">
+                                <Border Margin="0,0,0,10"
+                                        Padding="12"
+                                        CornerRadius="2"
+                                        Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                                        BorderThickness="1">
+                                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="6" ColumnSpacing="10">
+                                        <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        <CheckBox Grid.Column="1"
+                                                  IsChecked="{Binding IsEnabled}"
+                                                  IsEnabled="{Binding CanToggle}"
+                                                  VerticalAlignment="Top" />
+                                        <TextBlock Grid.Row="1"
+                                                   Grid.ColumnSpan="2"
+                                                   Text="{Binding Description}"
+                                                   TextWrapping="Wrap"
+                                                   MaxLines="3"
+                                                   Opacity="0.82" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="12" Background="Transparent" />
+
+            <Grid Grid.Column="2" RowDefinitions="Auto,Auto,1*,1*" RowSpacing="12">
+                <Border CornerRadius="2"
+                        Padding="16"
+                        Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1"
+                    ClipToBounds="True">
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="8">
+                        <StackPanel>
+                            <TextBlock Text="{Binding SelectedTool.Name, FallbackValue='Manual Tool Runner'}" FontSize="24" FontWeight="Bold" />
+                            <TextBlock Text="{Binding SelectedToolDescription}" TextWrapping="Wrap" Opacity="0.82" />
+                        </StackPanel>
+
+                        <Button Grid.Column="1" Padding="12,8" Command="{Binding PingServerCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <fluent:SymbolIcon Symbol="Pulse" />
+                                <TextBlock Text="Ping" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="2" Padding="12,8" Command="{Binding ResetArgumentsToTemplateCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <fluent:SymbolIcon Symbol="ArrowReset" />
+                                <TextBlock Text="Template" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="3"
+                                Padding="14,8"
+                                Command="{Binding InvokeSelectedToolCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <fluent:SymbolIcon Symbol="Play" />
+                                <TextBlock Text="Invoke" />
+                            </StackPanel>
+                        </Button>
+
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1"
+                    CornerRadius="2"
+                        Padding="16"
+                        Background="{DynamicResource SystemControlBackgroundAltMediumHighBrush}"
+                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    BorderThickness="1"
+                    ClipToBounds="True">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                        <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding NetworkStatusColor}" />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding NetworkStatusTooltip}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding ServerEndpoint}" FontSize="11" Opacity="0.72" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2"
+                    CornerRadius="2"
+                        Padding="14"
+                        Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                        BorderThickness="1"
+                        ClipToBounds="True">
+                    <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                        <TextBlock Text="Arguments JSON" FontSize="18" FontWeight="SemiBold" />
+                        <TextBox Grid.Row="1"
+                                 Text="{Binding ManualArgumentsJson, UpdateSourceTrigger=PropertyChanged}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="NoWrap"
+                                 FontFamily="Courier New"
+                                 MinHeight="0"
+                                 HorizontalAlignment="Stretch"
+                                 VerticalAlignment="Stretch"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ClipToBounds="True" />
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="3"
+                        CornerRadius="2"
+                        Padding="14"
+                        Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                        BorderThickness="1"
+                        ClipToBounds="True">
+                    <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                        <TextBlock Text="Response" FontSize="18" FontWeight="SemiBold" />
+                        <TextBox Grid.Row="1"
+                                 Text="{Binding ManualResponseJson}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 TextWrapping="NoWrap"
+                                 FontFamily="Courier New"
+                                 MinHeight="0"
+                                 HorizontalAlignment="Stretch"
+                                 VerticalAlignment="Stretch"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ClipToBounds="True" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

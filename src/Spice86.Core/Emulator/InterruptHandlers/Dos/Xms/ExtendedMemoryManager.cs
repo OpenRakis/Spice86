@@ -1757,7 +1757,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         return XmsErrorCodes.Ok;
     }
 
-    private bool TryGetBlock(int handle, [NotNullWhen(true)] out XmsBlock? block) {
+    public bool TryGetBlock(int handle, [NotNullWhen(true)] out XmsBlock? block) {
         if (_xmsBlocksLinkedList.Count == 0) {
             block = null;
             return false;

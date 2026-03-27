@@ -45,6 +45,13 @@ public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
         }
     }
 
+    [RelayCommand]
+    public void ShowMcpTools(object? commandParameter) {
+        if (commandParameter is ShowAdditionnalWindowBehavior showAdditionnalWindowBehavior) {
+            showAdditionnalWindowBehavior.ShowMcpTools();
+        }
+    }
+
     protected void ShowError(Exception e) {
         Exception = e.GetBaseException();
         IsDialogVisible = true;

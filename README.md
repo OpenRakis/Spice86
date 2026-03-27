@@ -122,6 +122,7 @@ Spice86 -e program.exe --CpuHeavyLog --CpuHeavyLogDumpFile "C:\logs\cpu.log"
   --CpuHeavyLogDumpFile              Custom file path for CPU heavy log output. If not specified, defaults to {DumpDirectory}/cpu_heavy.log
   --AsmRenderingStyle                Style of the ASM rendering. Spice86 or DosBox.
   --StructureFile                    Path to a C header file that describes the structures in the application. Works best with exports from IDA or Ghidra
+  --mcp-http-port                    (Default: 8081) Port for the MCP HTTP server
   --help                             Display this help screen.
   --version                          Display version information.
 ```
@@ -486,6 +487,10 @@ Also, if you have any weird behaviour, make sure you have Java 17 and ONLY Java 
 ### Cfg Cpu
 
 Doc [here](doc/cfgcpuReadme.md)
+
+### MCP
+
+MCP server documentation is available in [doc/mcp.md](doc/mcp.md).
 
 ### Some screenshots
 

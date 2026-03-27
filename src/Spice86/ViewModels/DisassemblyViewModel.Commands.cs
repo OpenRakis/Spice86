@@ -6,7 +6,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
-using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.Debugger;
 using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.Shared.Emulator.Memory;
@@ -45,12 +45,12 @@ public partial class DisassemblyViewModel {
 
         uint nextInstructionAddress = debuggerLine.NextAddress;
 
-        _breakpointsViewModel.AddAddressBreakpoint(nextInstructionAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
-            Pause($"Step over execution breakpoint was reached");
+        DebuggerStepHelper.SetupStepOverBreakpoint(_emulatorBreakpointsManager, nextInstructionAddress, () => {
+            Pause("Step over execution breakpoint was reached");
             if (_logger.IsEnabled(LogEventLevel.Debug)) {
                 _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
             }
-        }, null, "Step over breakpoint", null);
+        });
 
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Resuming execution for step over");
@@ -71,20 +71,13 @@ public partial class DisassemblyViewModel {
     }
 
     private void StepOneInstruction(string pauseReason, string debugMessageTemplate, SegmentedAddress currentAddress) {
-        long triggerCycle = State.Cycles + 1;
-        AddressBreakPoint breakpoint = new(
-            BreakPointType.CPU_CYCLES,
-            triggerCycle,
-            _ => {
-                Pause(pauseReason);
+        DebuggerStepHelper.SetupStepIntoBreakpoint(_emulatorBreakpointsManager, State, () => {
+            Pause(pauseReason);
 
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug(debugMessageTemplate, currentAddress, State.IpSegmentedAddress);
-                }
-            },
-            true);
-
-        _emulatorBreakpointsManager.ToggleBreakPoint(breakpoint, on: true);
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug(debugMessageTemplate, currentAddress, State.IpSegmentedAddress);
+            }
+        });
     }
 
     [RelayCommand]

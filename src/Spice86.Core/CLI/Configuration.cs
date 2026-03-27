@@ -272,4 +272,11 @@ public sealed class Configuration : CommandSettings {
     /// </summary>
     [CommandOption("--StopAfterCycles <STOPAFTERCYCLES>")]
     public long StopAfterCycles { get; init; }
+
+    /// <summary>
+    /// Port for the MCP HTTP server.
+    /// </summary>
+    [CommandOption("--McpHttpPort <MCPHTTPPORT>")]
+    [DefaultValue(8081)]
+    public int McpHttpPort { get; init; }
 }

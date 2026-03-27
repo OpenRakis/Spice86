@@ -14,7 +14,7 @@ public class LoggerService : ILoggerService {
 
     private static readonly object?[] EmptyProperties = [];
 
-    private readonly LoggerConfiguration _loggerConfiguration;
+    private LoggerConfiguration _loggerConfiguration;
     private Logger? _logger;
     private LoggingLevelSwitch _logLevelSwitch;
 
@@ -54,6 +54,20 @@ public class LoggerService : ILoggerService {
             .WriteTo.Async(conf3 =>
                 conf3.File("logs/log-.txt", outputTemplate: LogFormat, rollingInterval: RollingInterval.Day));
         return configuration;
+    }
+
+    /// <inheritdoc />
+    public void UseStderrForConsoleOutput() {
+        _logger?.Dispose();
+        _logger = null;
+        _loggerConfiguration = new LoggerConfiguration()
+            .Enrich.FromLogContext()
+            .Enrich.With(new LoggerPropertyBagEnricher(LoggerPropertyBag))
+            .WriteTo.Async(conf => conf.Console(outputTemplate: LogFormat, standardErrorFromLevel: Serilog.Events.LogEventLevel.Verbose))
+            .WriteTo.Async(conf2 => conf2.Debug(outputTemplate: LogFormat))
+            .WriteTo.Async(conf3 =>
+                conf3.File("logs/log-.txt", outputTemplate: LogFormat, rollingInterval: RollingInterval.Day));
+        _loggerConfiguration.MinimumLevel.ControlledBy(_logLevelSwitch);
     }
 
     /// <inheritdoc />

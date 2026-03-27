@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Mcp;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
@@ -38,6 +39,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly PerformanceViewModel _performanceViewModel;
     private readonly IExceptionHandler _exceptionHandler;
+
+    private McpStatusViewModel? _mcpStatusViewModel;
+
+    public McpStatusViewModel? McpStatusViewModel {
+        get => _mcpStatusViewModel;
+        set => SetProperty(ref _mcpStatusViewModel, value);
+    }
 
     private int? _targetCyclesPerMs;
 
@@ -86,23 +94,34 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
     internal event EventHandler? CloseMainWindow;
 
-    public MainWindowViewModel(SharedMouseData sharedMouseData,
-        ITimeMultiplier pit, IUIDispatcher uiDispatcher,
-        IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
-        Configuration configuration, ILoggerService loggerService,
-        IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel,
-        IExceptionHandler exceptionHandler, ICyclesLimiter cyclesLimiter)
-        : base(uiDispatcher, textClipboard) {
-        _sharedMouseData = sharedMouseData;
-        _pit = pit;
-        _performanceViewModel = performanceViewModel;
-        _exceptionHandler = exceptionHandler;
-        Configuration = configuration;
-        _loggerService = loggerService;
-        _hostStorageProvider = hostStorageProvider;
-        _cyclesLimiter = cyclesLimiter;
+    public sealed class MainWindowViewModelDependencies {
+        public required SharedMouseData SharedMouseData { get; init; }
+        public required ITimeMultiplier Pit { get; init; }
+        public required IUIDispatcher UiDispatcher { get; init; }
+        public required IHostStorageProvider HostStorageProvider { get; init; }
+        public required ITextClipboard TextClipboard { get; init; }
+        public required Configuration Configuration { get; init; }
+        public required ILoggerService LoggerService { get; init; }
+        public required IPauseHandler PauseHandler { get; init; }
+        public required PerformanceViewModel PerformanceViewModel { get; init; }
+        public required IExceptionHandler ExceptionHandler { get; init; }
+        public required ICyclesLimiter CyclesLimiter { get; init; }
+        public required EmulatorMcpServices McpServices { get; init; }
+        public required int McpPort { get; init; }
+    }
+
+    public MainWindowViewModel(MainWindowViewModelDependencies dependencies)
+        : base(dependencies.UiDispatcher, dependencies.TextClipboard) {
+        _sharedMouseData = dependencies.SharedMouseData;
+        _pit = dependencies.Pit;
+        _performanceViewModel = dependencies.PerformanceViewModel;
+        _exceptionHandler = dependencies.ExceptionHandler;
+        Configuration = dependencies.Configuration;
+        _loggerService = dependencies.LoggerService;
+        _hostStorageProvider = dependencies.HostStorageProvider;
+        _cyclesLimiter = dependencies.CyclesLimiter;
         TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
-        _pauseHandler = pauseHandler;
+        _pauseHandler = dependencies.PauseHandler;
         IsPaused = _pauseHandler.IsPaused;
         _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;
@@ -111,6 +130,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         ShowHttp = Configuration.HttpApiPort is not 0;
         HttpApiPort = Configuration.HttpApiPort;
         ShowCyclesLimitingUI = _cyclesLimiter.TargetCpuCyclesPerMs is not 0;
+        McpStatusViewModel = new McpStatusViewModel(dependencies.McpServices, dependencies.McpPort);
+        McpStatusViewModel.StartNetworkMonitoring();
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1),
             DispatcherPriority.Background,
             (_, _) => RefreshMainTitleWithInstructionsPerMs());
