@@ -15,7 +15,7 @@ public sealed class CfgGraphNode : IEquatable<CfgGraphNode> {
     /// <summary>
     /// Syntax-highlighted text offsets for rendering the full node text (header + assembly).
     /// </summary>
-    public List<FormattedTextOffset> TextOffsets { get; init; } = [];
+    public List<FormattedTextToken> TextOffsets { get; init; } = [];
 
     /// <summary>
     /// Whether this node is the last executed instruction.

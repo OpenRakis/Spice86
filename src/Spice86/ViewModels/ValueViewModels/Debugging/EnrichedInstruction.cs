@@ -23,5 +23,5 @@ public record EnrichedInstruction(Instruction Instruction) {
     /// Gets or sets a custom formatted representation of the instruction.
     /// If null, the default formatting from Iced will be used.
     /// </summary>
-    public List<FormattedTextOffset>? InstructionFormatOverride { get; init; }
+    public List<FormattedTextToken>? InstructionFormatOverride { get; init; }
 }

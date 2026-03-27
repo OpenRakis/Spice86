@@ -3,9 +3,9 @@ namespace Spice86.ViewModels.TextPresentation;
 using Iced.Intel;
 
 /// <summary>
-/// Represents a formatted text offset with its kind.
+/// Represents a formatted text token with its kind.
 /// </summary>
-public class FormattedTextOffset {
+public class FormattedTextToken {
     /// <summary>
     /// Gets or sets the text content.
     /// </summary>

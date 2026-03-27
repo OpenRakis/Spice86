@@ -12,14 +12,14 @@ using System.Collections.Generic;
 using System.Globalization;
 
 /// <summary>
-/// Converts a list of <see cref="FormattedTextOffset"/> to an <see cref="InlineCollection"/>.
+/// Converts a list of <see cref="FormattedTextToken"/> to an <see cref="InlineCollection"/>.
 /// </summary>
 public class FormattedTextOffsetsConverter : IValueConverter {
     /// <summary>
-    /// Converts a list of <see cref="FormattedTextOffset"/> to an <see cref="InlineCollection"/>.
+    /// Converts a list of <see cref="FormattedTextToken"/> to an <see cref="InlineCollection"/>.
     /// </summary>
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
-        if (value is not List<FormattedTextOffset> textOffsets) {
+        if (value is not List<FormattedTextToken> textOffsets) {
             return null;
         }
 
@@ -29,7 +29,7 @@ public class FormattedTextOffsetsConverter : IValueConverter {
 
         InlineCollection inlines = new();
 
-        foreach (FormattedTextOffset textOffset in textOffsets) {
+        foreach (FormattedTextToken textOffset in textOffsets) {
             Run run = new() {
                 Text = textOffset.Text,
             };

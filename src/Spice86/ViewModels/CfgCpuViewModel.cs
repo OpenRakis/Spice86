@@ -32,7 +32,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private readonly IUIDispatcher _uiDispatcher;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly NodeToString _nodeToString;
-    private readonly AstFormattedTextOffsetsRenderer _textOffsetsRenderer;
+    private readonly AstFormattedTextTokensRenderer _textOffsetsRenderer;
     private readonly AstBuilder _astBuilder = new();
 
     // Collection of searchable nodes for AutoCompleteBox
@@ -70,7 +70,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
         NodeToString nodeToString,
         AsmRenderingConfig asmRenderingConfig) {
         _nodeToString = nodeToString;
-        _textOffsetsRenderer = new AstFormattedTextOffsetsRenderer(asmRenderingConfig);
+        _textOffsetsRenderer = new AstFormattedTextTokensRenderer(asmRenderingConfig);
         _uiDispatcher = uiDispatcher;
         _executionContextManager = executionContextManager;
         AutoFollow = true;
@@ -312,7 +312,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
         CfgGraphNode successorGraphNode = GetOrCreateGraphNode(successor, isSuccessorLastExecuted, graphNodeCache);
 
         switch (node) {
-            case CfgInstruction cfgInstruction: 
+            case CfgInstruction cfgInstruction:
                 List<InstructionSuccessorType> keys = cfgInstruction
                     .SuccessorsPerType
                     .Where(kvp => kvp.Value.Contains(successor))
@@ -362,7 +362,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
     }
 
     private CfgGraphNode CreateGraphNode(ICfgNode node, bool isLastExecuted) {
-        List<FormattedTextOffset> textOffsets = [];
+        List<FormattedTextToken> textOffsets = [];
 
         // Prefix line
         if (isLastExecuted) {

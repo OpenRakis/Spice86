@@ -83,10 +83,10 @@ public static class CfgNodeThemeBehavior {
         }
     }
 
-    private static void ApplyFormattedTextOffsets(TextBlock textBlock, List<FormattedTextOffset> textOffsets) {
+    private static void ApplyFormattedTextOffsets(TextBlock textBlock, List<FormattedTextToken> textOffsets) {
         textBlock.Inlines?.Clear();
         InlineCollection inlines = new InlineCollection();
-        foreach (FormattedTextOffset textOffset in textOffsets) {
+        foreach (FormattedTextToken textOffset in textOffsets) {
             Run run = new Run { Text = textOffset.Text };
             run.Bind(TextElement.ForegroundProperty,
                 FormatterTextKindToBrushConverter.GetDynamicResourceExtension(textOffset.Kind));
