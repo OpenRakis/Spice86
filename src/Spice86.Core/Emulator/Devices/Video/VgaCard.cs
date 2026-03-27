@@ -46,9 +46,7 @@ public class VgaCard {
             return true;
         }
         _gui?.SetResolution(_renderer.Width, _renderer.Height);
-        // Wait for it to be applied
-        while (_renderer.Width != _gui?.Width || _renderer.Height != _gui?.Height);
-        // Report that resolution did not match
+        // Resolution change is asynchronous; skip this frame and let the next tick render.
         return false;
     }
     
