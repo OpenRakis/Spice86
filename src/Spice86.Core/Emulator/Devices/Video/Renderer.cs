@@ -77,6 +77,19 @@ public class Renderer : IVgaRenderer {
                     : 0;
             int rowMemoryAddressCounter = _state.CrtControllerRegisters.ScreenStartAddress + _state.CrtControllerRegisters.PresetRowScanRegister.BytePanning;
 
+            // Horizontal pixel panning (AR13) - provides sub-character smooth scrolling.
+            int pixelShift;
+            if (_state.AttributeControllerRegisters.AttributeControllerModeRegister.PixelWidth8) {
+                // 256-color mode: only bits 0-1 are used, effective shift is doubled.
+                pixelShift = (_state.AttributeControllerRegisters.HorizontalPixelPanning & 0x3) * 2;
+            } else {
+                pixelShift = _state.AttributeControllerRegisters.HorizontalPixelPanning & 0xF;
+                int maxShift = _state.SequencerRegisters.ClockingModeRegister.DotsPerClock - 1;
+                if (pixelShift > maxShift) {
+                    pixelShift = 0;
+                }
+            }
+
             // Memory reading parameters.
             MemoryWidth memoryWidthMode = DetermineMemoryWidthMode();
             bool scanLineBit0ForAddressBit13 = !_state.CrtControllerRegisters.CrtModeControlRegister.CompatibilityModeSupport;
@@ -86,6 +99,7 @@ public class Renderer : IVgaRenderer {
             _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
             int destinationAddress = 0;
             bool verticalBlanking = false;
+            Span<uint> extraPixels = stackalloc uint[9];
 
             /////////////////////////
             // Start Vertical loop //
@@ -149,9 +163,43 @@ public class Renderer : IVgaRenderer {
                             memoryAddressCounter += (characterCounter & characterClockMask) == 0 ? 1 : 0;
                         } // End of horizontal loop
 
+                        // Apply horizontal pixel panning by shifting the rendered line left.
+                        if (pixelShift > 0 && !verticalBlanking && destinationAddress > destinationAddressLatch) {
+                            int lineStart = destinationAddressLatch;
+                            int lineWidth = destinationAddress - lineStart;
+
+                            // Read one extra character to fill the gap at the right edge.
+                            int tempDest = 0;
+                            (byte ep0, byte ep1, byte ep2, byte ep3) = ReadVideoMemory(
+                                memoryWidthMode, memoryAddressCounter,
+                                scanLineBit0ForAddressBit13, scanline,
+                                scanLineBit0ForAddressBit14, planesEnabled);
+                            if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
+                                Draw256ColorMode(extraPixels, ref tempDest, ep0, ep1, ep2, ep3);
+                            } else if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
+                                DrawGraphicsMode(extraPixels, ref tempDest, ep0, ep1, ep2, ep3);
+                            } else {
+                                DrawTextMode(extraPixels, ref tempDest, ep0, ep1, scanline);
+                            }
+
+                            // Shift the line left by pixelShift pixels.
+                            frameBuffer.Slice(lineStart + pixelShift, lineWidth - pixelShift)
+                                .CopyTo(frameBuffer.Slice(lineStart, lineWidth - pixelShift));
+
+                            // Fill the gap at the right edge with the first pixelShift pixels from the extra character.
+                            int gapStart = lineStart + lineWidth - pixelShift;
+                            for (int i = 0; i < pixelShift; i++) {
+                                frameBuffer[gapStart + i] = extraPixels[i];
+                            }
+                        }
+
                         // When the LineCompare register value is reached, the video memory address is reset to 0. This allows a split-screen effect.
                         if (lineCounter == _state.CrtControllerRegisters.LineCompareValue) {
                             rowMemoryAddressCounter = 0;
+                            // When PixelPanningCompatibility is set, pixel panning is disabled below the split screen line.
+                            if (_state.AttributeControllerRegisters.AttributeControllerModeRegister.PixelPanningCompatibility) {
+                                pixelShift = 0;
+                            }
                         }
                         // To maximize the time spent in vertical retrace, we start it at the end of display.
                         if (lineCounter == verticalDisplayEnd) {
