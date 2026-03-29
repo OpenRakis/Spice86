@@ -1,0 +1,213 @@
+<Window
+	x:Class="Spice86.Views.JoystickPanelView"
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:vm="using:Spice86.ViewModels"
+	xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+	x:CompileBindings="True"
+	x:DataType="vm:JoystickPanelViewModel"
+	WindowStartupLocation="CenterOwner"
+	ShowInTaskbar="True"
+	CanResize="True"
+	MinWidth="520"
+	MinHeight="580"
+	Width="520"
+	Height="580"
+	Title="Gameport Joystick — Port 0x201"
+	Icon="/Views/Assets/Spice86.ico"
+	mc:Ignorable="d">
+	<Design.DataContext>
+		<vm:JoystickPanelViewModel />
+	</Design.DataContext>
+
+	<Grid RowDefinitions="Auto,*,Auto" Margin="12">
+
+		<!-- Header -->
+		<StackPanel Grid.Row="0" Margin="0,0,0,8">
+			<TextBlock Text="IBM PC Game Adapter — 2-Button Joystick"
+					   FontWeight="Bold" FontSize="16"
+					   HorizontalAlignment="Center" />
+			<TextBlock Text="Classic analog joystick with 2 axes and 2 fire buttons"
+					   FontSize="11" Opacity="0.7"
+					   HorizontalAlignment="Center" />
+		</StackPanel>
+
+		<!-- Main content -->
+		<Grid Grid.Row="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+
+			<!-- Stick area: visual representation of the joystick position -->
+			<Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+					BorderBrush="{DynamicResource SemiColorBorder}"
+					BorderThickness="2" CornerRadius="8"
+					Background="#1A808080"
+					HorizontalAlignment="Center"
+					Margin="0,0,0,12"
+					Width="220" Height="220"
+					ClipToBounds="True">
+
+				<!-- Stick area with crosshairs -->
+				<Panel Width="200" Height="200" Margin="10">
+					<!-- Grid lines -->
+					<Line StartPoint="100,0" EndPoint="100,200"
+						  Stroke="{DynamicResource SemiColorBorder}" StrokeThickness="1"
+						  StrokeDashArray="4,4" Opacity="0.5" />
+					<Line StartPoint="0,100" EndPoint="200,100"
+						  Stroke="{DynamicResource SemiColorBorder}" StrokeThickness="1"
+						  StrokeDashArray="4,4" Opacity="0.5" />
+
+					<!-- Corner labels -->
+					<TextBlock Text="←" FontSize="10" Opacity="0.4"
+							   HorizontalAlignment="Left" VerticalAlignment="Center" />
+					<TextBlock Text="→" FontSize="10" Opacity="0.4"
+							   HorizontalAlignment="Right" VerticalAlignment="Center" />
+					<TextBlock Text="↑" FontSize="10" Opacity="0.4"
+							   HorizontalAlignment="Center" VerticalAlignment="Top" />
+					<TextBlock Text="↓" FontSize="10" Opacity="0.4"
+							   HorizontalAlignment="Center" VerticalAlignment="Bottom" />
+
+					<!-- Crosshair / Joystick position indicator -->
+					<Canvas>
+						<Ellipse Width="16" Height="16"
+								 Fill="#CC3366FF"
+								 Stroke="White" StrokeThickness="2"
+								 Canvas.Left="{Binding CrosshairX}"
+								 Canvas.Top="{Binding CrosshairY}" />
+					</Canvas>
+				</Panel>
+			</Border>
+
+			<!-- Axis sliders -->
+			<Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+				  ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto"
+				  HorizontalAlignment="Stretch" Margin="8,0,8,12">
+
+				<!-- X Axis -->
+				<TextBlock Grid.Row="0" Grid.Column="0"
+						   Text="X Axis:" VerticalAlignment="Center" Margin="0,0,8,0" />
+				<Slider Grid.Row="0" Grid.Column="1"
+						Minimum="0" Maximum="1"
+						Value="{Binding AxisAX}"
+						TickFrequency="0.1" IsSnapToTickEnabled="False"
+						HorizontalAlignment="Stretch" />
+				<TextBlock Grid.Row="0" Grid.Column="2"
+						   Text="{Binding AxisAX, StringFormat='{}{0:F2}'}"
+						   VerticalAlignment="Center" Margin="8,0,0,0"
+						   MinWidth="35" />
+
+				<!-- Y Axis -->
+				<TextBlock Grid.Row="1" Grid.Column="0"
+						   Text="Y Axis:" VerticalAlignment="Center" Margin="0,0,8,0" />
+				<Slider Grid.Row="1" Grid.Column="1"
+						Minimum="0" Maximum="1"
+						Value="{Binding AxisAY}"
+						TickFrequency="0.1" IsSnapToTickEnabled="False"
+						HorizontalAlignment="Stretch" />
+				<TextBlock Grid.Row="1" Grid.Column="2"
+						   Text="{Binding AxisAY, StringFormat='{}{0:F2}'}"
+						   VerticalAlignment="Center" Margin="8,0,0,0"
+						   MinWidth="35" />
+			</Grid>
+
+			<!-- Buttons area: classic 2-button joystick representation -->
+			<Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+				  ColumnDefinitions="*,Auto,*"
+				  HorizontalAlignment="Center" Margin="0,0,0,8">
+
+				<!-- Button 1 (Fire) -->
+				<Border Grid.Column="0" Margin="8"
+						CornerRadius="20"
+						BorderThickness="2"
+						Width="100" Height="60"
+						BorderBrush="{DynamicResource SemiColorBorder}"
+						HorizontalAlignment="Center">
+					<ToggleButton IsChecked="{Binding ButtonA1Pressed}"
+								  HorizontalAlignment="Stretch"
+								  VerticalAlignment="Stretch"
+								  HorizontalContentAlignment="Center"
+								  VerticalContentAlignment="Center"
+								  CornerRadius="18">
+						<StackPanel HorizontalAlignment="Center">
+							<TextBlock Text="FIRE 1"
+									   FontWeight="Bold" FontSize="13"
+									   HorizontalAlignment="Center" />
+							<TextBlock Text="{Binding ButtonA1Pressed, StringFormat='({0})'}"
+									   FontSize="10" Opacity="0.7"
+									   HorizontalAlignment="Center" />
+						</StackPanel>
+					</ToggleButton>
+				</Border>
+
+				<!-- Center button -->
+				<Button Grid.Column="1" Margin="8"
+						Command="{Binding CenterStickCommand}"
+						ToolTip.Tip="Center the stick (0.5, 0.5)"
+						Padding="12,8">
+					<StackPanel Orientation="Horizontal" Spacing="4">
+						<fluent:SymbolIcon Symbol="ArrowReset" FontSize="14" />
+						<TextBlock Text="Center" VerticalAlignment="Center" />
+					</StackPanel>
+				</Button>
+
+				<!-- Button 2 (Fire) -->
+				<Border Grid.Column="2" Margin="8"
+						CornerRadius="20"
+						BorderThickness="2"
+						Width="100" Height="60"
+						BorderBrush="{DynamicResource SemiColorBorder}"
+						HorizontalAlignment="Center">
+					<ToggleButton IsChecked="{Binding ButtonA2Pressed}"
+								  HorizontalAlignment="Stretch"
+								  VerticalAlignment="Stretch"
+								  HorizontalContentAlignment="Center"
+								  VerticalContentAlignment="Center"
+								  CornerRadius="18">
+						<StackPanel HorizontalAlignment="Center">
+							<TextBlock Text="FIRE 2"
+									   FontWeight="Bold" FontSize="13"
+									   HorizontalAlignment="Center" />
+							<TextBlock Text="{Binding ButtonA2Pressed, StringFormat='({0})'}"
+									   FontSize="10" Opacity="0.7"
+									   HorizontalAlignment="Center" />
+						</StackPanel>
+					</ToggleButton>
+				</Border>
+			</Grid>
+		</Grid>
+
+		<!-- Status footer -->
+		<Border Grid.Row="2"
+				BorderBrush="{DynamicResource SemiColorBorder}"
+				BorderThickness="1" CornerRadius="4"
+				Padding="12,8" Margin="0,4,0,0">
+			<Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto">
+				<!-- Enable toggle -->
+				<CheckBox Grid.Row="0" Grid.Column="0"
+						  Content="Joystick A Connected"
+						  IsChecked="{Binding JoystickAEnabled}"
+						  VerticalAlignment="Center" />
+
+				<!-- Port read value -->
+				<StackPanel Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2"
+							Orientation="Horizontal" Spacing="8"
+							VerticalAlignment="Center" HorizontalAlignment="Right">
+					<TextBlock Text="Port 0x201:" Opacity="0.7" VerticalAlignment="Center" />
+					<TextBlock Text="{Binding LastPortReadValue}"
+							   FontFamily="Consolas" FontWeight="Bold"
+							   VerticalAlignment="Center" />
+				</StackPanel>
+
+				<!-- Bit status display -->
+				<StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+							Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
+					<TextBlock Text="Gameport bits:" Opacity="0.5" FontSize="11" VerticalAlignment="Center" />
+					<TextBlock Text="[0-3] Axis timers" Opacity="0.5" FontSize="11" VerticalAlignment="Center" />
+					<TextBlock Text="[4-5] Btn A" Opacity="0.5" FontSize="11" VerticalAlignment="Center" />
+					<TextBlock Text="[6-7] Btn B" Opacity="0.5" FontSize="11" VerticalAlignment="Center" />
+					<TextBlock Text="(active low)" Opacity="0.4" FontSize="10" VerticalAlignment="Center" />
+				</StackPanel>
+			</Grid>
+		</Border>
+	</Grid>
+</Window>
