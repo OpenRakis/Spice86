@@ -494,13 +494,13 @@ public class Spice86DependencyInjection : IDisposable {
             // Subscribe to video mode changes for dynamic aspect ratio correction
             vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
 
-            inputEventHub = new(mainWindowViewModel, mainWindowViewModel);
+            inputEventHub = new(mainWindowViewModel, mainWindowViewModel, mainWindowViewModel);
 
             _gui = mainWindowViewModel;
         } else {
             HeadlessGui headlessGui = new HeadlessGui();
             _gui = headlessGui;
-            inputEventHub = new InputEventHub(headlessGui, headlessGui);
+            inputEventHub = new InputEventHub(headlessGui, headlessGui, headlessGui);
         }
 
         EmulationLoop emulationLoop = new(
@@ -539,8 +539,8 @@ public class Spice86DependencyInjection : IDisposable {
             memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
-        Joystick joystick = new(state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService);
+        Joystick joystick = new(state, ioPortDispatcher, _emulatedClock,
+            configuration.FailOnUnhandledPort, loggerService, inputEventHub);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Input devices created...");

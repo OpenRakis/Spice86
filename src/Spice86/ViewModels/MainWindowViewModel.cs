@@ -18,6 +18,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
+using Spice86.Shared.Emulator.Joystick;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
@@ -28,7 +29,7 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGuiVideoPresentation" />
 public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGuiVideoPresentation,
-    IGuiMouseEvents, IGuiKeyboardEvents, IDisposable {
+    IGuiMouseEvents, IGuiKeyboardEvents, IGuiJoystickEvents, IDisposable {
     private readonly SharedMouseData _sharedMouseData;
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
@@ -89,6 +90,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public event EventHandler<MouseMoveEventArgs>? MouseMoved;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
+    public event EventHandler<JoystickStateEventArgs>? JoystickAStateChanged;
+    public event EventHandler<JoystickStateEventArgs>? JoystickBStateChanged;
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
     internal event EventHandler? CloseMainWindow;
 
@@ -161,6 +164,30 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public void SetLogLevelToFatal() => SetLogLevel("Fatal");
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
+
+    /// <summary>
+    /// Raises the <see cref="JoystickAStateChanged"/> event with the given joystick state.
+    /// Called by the UI layer when host gamepad state changes for joystick A.
+    /// </summary>
+    /// <param name="state">The current joystick state.</param>
+    internal void OnJoystickAStateChanged(JoystickStateEventArgs state) {
+        if (_pauseHandler.IsPaused) {
+            return;
+        }
+        JoystickAStateChanged?.Invoke(this, state);
+    }
+
+    /// <summary>
+    /// Raises the <see cref="JoystickBStateChanged"/> event with the given joystick state.
+    /// Called by the UI layer when host gamepad state changes for joystick B.
+    /// </summary>
+    /// <param name="state">The current joystick state.</param>
+    internal void OnJoystickBStateChanged(JoystickStateEventArgs state) {
+        if (_pauseHandler.IsPaused) {
+            return;
+        }
+        JoystickBStateChanged?.Invoke(this, state);
+    }
 
     internal void OnKeyUp(KeyEventArgs e) {
         if (_pauseHandler.IsPaused) {
