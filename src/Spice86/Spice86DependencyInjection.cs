@@ -754,6 +754,12 @@ public class Spice86DependencyInjection : IDisposable {
 
             SoftwareMixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
 
+            JoystickPanelViewModel joystickPanelViewModel = new(
+                mainWindowViewModel is not null
+                    ? mainWindowViewModel.OnJoystickAStateChanged
+                    : _ => { },
+                joystick);
+
             if (Application.Current is not null) {
                 Application.Current.Resources[nameof(DebugWindowViewModel)] =
                     debugWindowViewModel;
@@ -761,6 +767,8 @@ public class Spice86DependencyInjection : IDisposable {
                     mixerViewModel;
                 Application.Current.Resources[nameof(McpStatusViewModel)] =
                     mainWindowViewModel?.McpStatusViewModel;
+                Application.Current.Resources[nameof(JoystickPanelViewModel)] =
+                    joystickPanelViewModel;
             }
             mainWindow.DataContext = mainWindowViewModel;
         }
