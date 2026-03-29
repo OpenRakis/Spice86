@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -31,7 +31,7 @@ using System;
 public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private readonly DualPic _dualPic;
     private readonly CmosRegisters _cmosRegisters = new();
-    private readonly EmulationLoopScheduler _scheduler;
+    private readonly DeviceScheduler _scheduler;
     private readonly IEmulatedClock _clock;
 
     private bool _disposed;
@@ -45,7 +45,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Initializes the RTC/CMOS device with default register values.
     /// </summary>
     public RealTimeClock(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
-        EmulationLoopScheduler scheduler, IEmulatedClock clock, bool failOnUnhandledPort, ILoggerService loggerService)
+        DeviceScheduler scheduler, IEmulatedClock clock, bool failOnUnhandledPort, ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         _scheduler = scheduler;
@@ -334,7 +334,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
-    /// Schedules the next periodic interrupt event using EmulationLoopScheduler.
+    /// Schedules the next periodic interrupt event using DeviceScheduler.
     /// </summary>
     private void ScheduleNextPeriodicInterrupt() {
         if (_cmosRegisters.Timer.Delay <= 0) {
@@ -357,7 +357,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     }
     
     /// <summary>
-    /// Callback invoked by EmulationLoopScheduler when periodic interrupt should fire.
+    /// Callback invoked by DeviceScheduler when periodic interrupt should fire.
     /// Triggers the interrupt and schedules the next one.
     /// </summary>
     /// <param name="value">Controller-supplied value (unused for RTC).</param>

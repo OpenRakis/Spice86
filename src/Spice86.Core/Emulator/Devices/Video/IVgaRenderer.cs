@@ -20,12 +20,7 @@ public interface IVgaRenderer {
     int BufferSize { get; }
 
     /// <summary>
-    /// Gets the time it took to render the last frame.
-    /// </summary>
-    TimeSpan LastFrameRenderTime { get; }
-
-    /// <summary>
-    ///     Render the current video memory to a buffer.
+    ///     Copy the latest completed frame to the provided buffer.
     /// </summary>
     /// <param name="buffer">The framebuffer used by the VGA card to draw the image on screen.</param>
     void Render(Span<uint> buffer);

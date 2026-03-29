@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
@@ -40,7 +40,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     private const float MsPerPitTick = 1000.0f / PitTimer.PitTickRate;
     private static readonly int MinimumCounter = Math.Max(1, 2 * PitTimer.PitTickRate / SampleRateHz);
     private IPitControl? _pitControl;
-    private readonly EmulationLoopScheduler _scheduler;
+    private readonly DeviceScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly float[] _impulseLookup = new float[SincFilterWidth];
     private readonly ILoggerService _logger;
@@ -110,7 +110,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         State state,
         IOPortDispatcher ioPortDispatcher,
         ILoggerService loggerService,
-        EmulationLoopScheduler scheduler,
+        DeviceScheduler scheduler,
         IEmulatedClock clock,
         bool failOnUnhandledPort)
         : base(state, failOnUnhandledPort, loggerService) {

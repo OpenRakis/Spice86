@@ -1,13 +1,12 @@
-﻿namespace Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+namespace Spice86.Core.Emulator.VM.DeviceScheduler;
 
 using Serilog.Events;
 
 using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Shared.Collections;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
-
-using Priority_Queue;
 
 /// <summary>
 ///     Represents the callback signature invoked when a queued event fires.
@@ -18,29 +17,36 @@ public delegate void EventHandler(uint value);
 /// <summary>
 ///     Manages deterministic scheduling of emulation events using an emulated clock.
 /// </summary>
-public class EmulationLoopScheduler {
+public class DeviceScheduler {
     public const int MaxQueueSize = 8192;
 
     private readonly IEmulatedClock _clock;
     private readonly ILoggerService _logger;
 
-    private readonly FastPriorityQueue<ScheduledEntry> _queue = new(MaxQueueSize);
+    private readonly TimePriorityQueue<ScheduledEntry> _queue = new(MaxQueueSize);
     private readonly Stack<ScheduledEntry> _entryPool = new(MaxQueueSize);
-    private readonly Dictionary<EventHandler, List<ScheduledEntry>> _activeEventsByHandler = new();
-    private readonly EmulationLoopSchedulerMonitor _monitor;
+    
+    private readonly DeviceSchedulerMonitor? _monitor;
 
     private bool _isServicingEvents;
     private double _activeEventScheduledTime;
+    private double _loopEntryTime;
 
     /// <summary>
-    ///     Initializes a new scheduler.
+    ///     Gets the scheduled time of the next queued event, or <see cref="double.MaxValue"/> if the queue is empty.
+    /// </summary>
+    public double? NextEventTime => _queue.Count > 0 ? _queue.First.Priority : null;
+
+    /// <summary>
+    ///     Initializes a new scheduler with a descriptive instance name.
     /// </summary>
     /// <param name="clock">The emulated clock that provides the master time source.</param>
     /// <param name="logger">Logger used for diagnostic reporting.</param>
-    public EmulationLoopScheduler(IEmulatedClock clock, ILoggerService logger) {
+    /// <param name="instanceName">The name used to identify this scheduler in logs.</param>
+    public DeviceScheduler(IEmulatedClock clock, ILoggerService logger, string instanceName) {
         _clock = clock;
         _logger = logger;
-        _monitor = new EmulationLoopSchedulerMonitor(logger);
+        _monitor = _logger.IsEnabled(LogEventLevel.Debug) ? new DeviceSchedulerMonitor(logger, instanceName) : null;
     }
 
     /// <summary>
@@ -58,42 +64,52 @@ public class EmulationLoopScheduler {
             return;
         }
 
-        double baseTime = _isServicingEvents ? _activeEventScheduledTime : _clock.ElapsedTimeMs;
-        double absoluteScheduledTime = baseTime + delay;
-
-        ScheduledEntry entry = GetEntry(handler, absoluteScheduledTime, val);
-
-        _queue.Enqueue(entry, (float)absoluteScheduledTime);
-
-        if (!_activeEventsByHandler.TryGetValue(handler, out List<ScheduledEntry>? events)) {
-            events = new List<ScheduledEntry>();
-            _activeEventsByHandler[handler] = events;
+        // Compute absolute scheduled time taking into account we're currently servicing events.
+        // Use the active event's scheduled time + delay when that yields a time in the future
+        // relative to the loop entry. Otherwise schedule just after the loop entry to avoid
+        // putting events in the past (prevents infinite re-queuing on slow machines).
+        const double MinFutureOffsetMs = 0.0001;
+        double absoluteScheduledTime;
+        if (!_isServicingEvents) {
+            absoluteScheduledTime = _clock.ElapsedTimeMs + delay;
+        } else {
+            double candidate = _activeEventScheduledTime + delay;
+            absoluteScheduledTime = candidate >= _loopEntryTime
+                ? candidate
+                : _loopEntryTime + MinFutureOffsetMs;
         }
 
-        events.Add(entry);
+        ScheduledEntry entry = GetEntry(handler, val);
+
+        _queue.Enqueue(entry, absoluteScheduledTime);
     }
 
     /// <summary>
     ///     Removes all queued events matching the provided handler.
     /// </summary>
     public void RemoveEvents(EventHandler handler) {
-        if (!_activeEventsByHandler.TryGetValue(handler, out List<ScheduledEntry>? events)) {
+        if (_queue.Count == 0) {
             return;
         }
 
-        foreach (ScheduledEntry entry in events) {
-            if (_queue.Contains(entry)) {
-                _queue.Remove(entry);
-                ReturnEntry(entry);
+        int removedCount = 0;
+        List<ScheduledEntry> toRemove = new();
+
+        for (int i = 1; i <= _queue.Count; i++) {
+            ScheduledEntry entry = _queue.NodeAt(i);
+            if (entry.Handler == handler) {
+                toRemove.Add(entry);
             }
         }
 
-        int count = events.Count;
-        events.Clear();
-        _activeEventsByHandler.Remove(handler);
+        foreach (ScheduledEntry entry in toRemove) {
+            _queue.Remove(entry);
+            ReturnEntry(entry);
+            removedCount++;
+        }
 
-        if (count > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Cancelled all {EventCount} events for handler {Handler}", count, GetHandlerName(handler));
+        if (removedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("Cancelled all {EventCount} events for handler {Handler}", removedCount, GetHandlerName(handler));
         }
     }
 
@@ -107,21 +123,14 @@ public class EmulationLoopScheduler {
 
         _isServicingEvents = true;
         double currentTime = _clock.ElapsedTimeMs;
+        _loopEntryTime = currentTime;
 
-        while (_queue.Count > 0 && _queue.First.ScheduledTime <= currentTime) {
+        while (_queue.Count > 0 && _queue.First.Priority <= currentTime) {
             ScheduledEntry entry = _queue.Dequeue();
-            _monitor.OnEventExecuted(entry.ScheduledTime, currentTime, _queue.Count);
-
-            // Remove from active handler tracking
-            if (_activeEventsByHandler.TryGetValue(entry.Handler, out List<ScheduledEntry>? events)) {
-                events.Remove(entry);
-                if (events.Count == 0) {
-                    _activeEventsByHandler.Remove(entry.Handler);
-                }
-            }
+            _monitor?.OnEventExecuted(entry.Priority, currentTime, _queue.Count);
 
             // Important for events that re-schedules another event, to ensure it will fire at the correct time not taking into account lag
-            _activeEventScheduledTime = entry.ScheduledTime;
+            _activeEventScheduledTime = entry.Priority;
             try {
                 entry.Handler.Invoke(entry.Value);
             } finally {
@@ -132,15 +141,14 @@ public class EmulationLoopScheduler {
         _isServicingEvents = false;
     }
 
-    private ScheduledEntry GetEntry(EventHandler handler, double scheduledTime, uint value) {
+    private ScheduledEntry GetEntry(EventHandler handler, uint value) {
         if (_entryPool.TryPop(out ScheduledEntry? entry)) {
             entry.Handler = handler;
-            entry.ScheduledTime = scheduledTime;
             entry.Value = value;
             return entry;
         }
 
-        return new ScheduledEntry(handler, scheduledTime, value);
+        return new ScheduledEntry(handler, value);
     }
 
     private void ReturnEntry(ScheduledEntry entry) {
@@ -153,14 +161,12 @@ public class EmulationLoopScheduler {
         return string.IsNullOrEmpty(name) ? "<anonymous>" : name;
     }
 
-    private sealed class ScheduledEntry : FastPriorityQueueNode {
+    private sealed class ScheduledEntry : TimePriorityQueueNode {
         public EventHandler Handler { get; set; }
-        public double ScheduledTime { get; set; }
         public uint Value { get; set; }
 
-        public ScheduledEntry(EventHandler handler, double scheduledTime, uint value) {
+        public ScheduledEntry(EventHandler handler, uint value) {
             Handler = handler;
-            ScheduledTime = scheduledTime;
             Value = value;
         }
     }

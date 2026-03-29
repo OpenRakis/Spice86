@@ -6,11 +6,11 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 
 using System;
 
-using EventHandler = VM.EmulationLoopScheduler.EventHandler;
+using EventHandler = Spice86.Core.Emulator.VM.DeviceScheduler.EventHandler;
 
 /// <summary>
 /// Constants, enums, nested types, static data, and instance field declarations
@@ -993,7 +993,7 @@ public partial class SoundBlaster {
     private readonly SoftwareMixer _mixer;
     private readonly SoundChannel _dacChannel;
     private readonly Opl3Fm _opl;
-    private readonly EmulationLoopScheduler _scheduler;
+    private readonly DeviceScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly DmaBus _dmaBus;
     private readonly RWQueue<AudioFrame> _outputQueue = new(4096);

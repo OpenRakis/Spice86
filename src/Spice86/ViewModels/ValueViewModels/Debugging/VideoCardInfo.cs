@@ -392,5 +392,5 @@ public partial class VideoCardInfo : ObservableObject {
     private int _rendererBufferSize;
 
     [ObservableProperty]
-    private TimeSpan _lastFrameRenderTime;
+    private TimeSpan _lastFrameDuration;
 }

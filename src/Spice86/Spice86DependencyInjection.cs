@@ -49,7 +49,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
@@ -84,6 +84,7 @@ public class Spice86DependencyInjection : IDisposable {
     public FunctionCatalogue FunctionCatalogue { get; }
 
     private readonly McpHttpHost? _mcpHttpTransport;
+    private readonly DeviceSchedulerThread? _vgaTimingThread;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -198,7 +199,7 @@ public class Spice86DependencyInjection : IDisposable {
         pauseHandler.Pausing += () => _emulatedClock.OnPause();
         pauseHandler.Resumed += () => _emulatedClock.OnResume();
 
-        EmulationLoopScheduler emulationLoopScheduler = new(_emulatedClock, loggerService);
+        DeviceScheduler emulationLoopScheduler = new(_emulatedClock, loggerService, "Emulation loop");
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
 
@@ -298,7 +299,20 @@ public class Spice86DependencyInjection : IDisposable {
         VideoState videoState = new();
         VgaIoPortHandler vgaIoPortHandler = new(state, ioPortDispatcher,
             loggerService, videoState, configuration.FailOnUnhandledPort);
-        Renderer vgaRenderer = new(memory, videoState, _emulatedClock, loggerService);
+        VgaBlinkState vgaBlinkState = new();
+        IVgaRenderer256Color renderer256Color = VgaRenderer256ColorSimd.CreateBestRenderer();
+        Renderer vgaRenderer = new(memory, videoState, vgaBlinkState, loggerService, renderer256Color);
+
+        bool isSyncRendering = configuration.RenderingMode == RenderingMode.Sync;
+
+        // In sync mode, VGA events go on the emulation loop's scheduler.
+        // In async mode, a separate scheduler is created for the UI thread.
+        DeviceScheduler vgaScheduler = isSyncRendering
+            ? emulationLoopScheduler
+            : new DeviceScheduler(_emulatedClock, loggerService, "VGA");
+
+        VgaTimingEngine vgaTimingEngine = new(videoState, vgaScheduler,
+            _emulatedClock, vgaRenderer, vgaBlinkState);
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory,
             interruptVectorTable, ioPortDispatcher,
@@ -478,6 +492,10 @@ public class Spice86DependencyInjection : IDisposable {
             state, emulationLoopScheduler, emulatorBreakpointsManager,
             pauseHandler, inputEventHub, cyclesLimiter, loggerService);
 
+        // In async mode, a dedicated thread pumps VGA timing events.
+        _vgaTimingThread = isSyncRendering
+            ? null
+            : new DeviceSchedulerThread(vgaScheduler, _emulatedClock, pauseHandler, "VGA Timing");
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
         vgaCard.SubscribeToEvents();
 
@@ -676,7 +694,7 @@ public class Spice86DependencyInjection : IDisposable {
             PaletteViewModel paletteViewModel = new(videoState.DacRegisters.ArgbPalette,
                 uiDispatcher);
 
-            VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState, hostStorageProvider);
+            VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState, vgaTimingEngine, hostStorageProvider);
 
             CpuViewModel cpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
 
@@ -824,6 +842,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         _machineDisposedAfterRun = true;
+        _vgaTimingThread?.Dispose();
         _emulatedClock.Dispose();
         _httpApiServer?.Dispose();
         Machine.Dispose();

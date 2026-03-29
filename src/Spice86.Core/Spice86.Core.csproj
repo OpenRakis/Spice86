@@ -28,7 +28,6 @@
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance" />
         <PackageReference Include="JetBrains.Annotations" />
-        <PackageReference Include="OptimizedPriorityQueue" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.Sinks.File" />
 		<PackageReference Include="Spectre.Console.Cli" />

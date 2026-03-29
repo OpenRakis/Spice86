@@ -22,7 +22,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
@@ -57,7 +57,7 @@ public class DosTestFixture {
         Memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
         IEmulatedClock emulatedClock = new EmulatedClock();
-        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, LoggerService);
+        DeviceScheduler emulationLoopScheduler = new(emulatedClock, LoggerService, "Emulation loop");
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, Memory, memoryBreakpoints, ioBreakpoints);
 
         BiosDataArea biosDataArea =

@@ -1,12 +1,17 @@
-namespace Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+namespace Spice86.Core.Emulator.VM.DeviceScheduler;
 
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Monitors the behavior of the <see cref="EmulationLoopScheduler"/>, tracking lag and queue size.
+/// Monitors the behavior of the <see cref="DeviceScheduler"/>, tracking lag and queue size.
 /// </summary>
-public class EmulationLoopSchedulerMonitor {
+public class DeviceSchedulerMonitor {
+    private const long DefaultLogInterval = 5000;
+    private const int DefaultMaxQueueSizeThreshold = 10;
+    private const double DefaultMaxLagThreshold = 10;
+
     private readonly ILoggerService _logger;
+    private readonly string _instanceName;
     private readonly long _logInterval;
     private readonly int _maxQueueSizeThreshold;
     private readonly double _maxLagThreshold;
@@ -21,14 +26,24 @@ public class EmulationLoopSchedulerMonitor {
     private int _currentWindowMinQueueSize = int.MaxValue;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EmulationLoopSchedulerMonitor"/> class.
+    /// Initializes a new instance of the <see cref="DeviceSchedulerMonitor"/> class.
     /// </summary>
     /// <param name="logger">The logger service.</param>
+    /// <param name="instanceName">The name of the scheduler instance being monitored.</param>
+    public DeviceSchedulerMonitor(ILoggerService logger, string instanceName)
+        : this(logger, instanceName, DefaultLogInterval, DefaultMaxQueueSizeThreshold, DefaultMaxLagThreshold) {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DeviceSchedulerMonitor"/> class.</summary>
+    /// <param name="logger">The logger service.</param>
+    /// <param name="instanceName">The name of the scheduler instance being monitored.</param>
     /// <param name="logInterval">The number of events to process before logging statistics.</param>
     /// <param name="maxQueueSizeThreshold">The maximum queue size before a warning is logged.</param>
     /// <param name="maxLagThreshold">The maximum lag in milliseconds before a warning is logged.</param>
-    public EmulationLoopSchedulerMonitor(ILoggerService logger, long logInterval = 5000, int maxQueueSizeThreshold = 10, double maxLagThreshold = 10) {
+    public DeviceSchedulerMonitor(ILoggerService logger, string instanceName, long logInterval, int maxQueueSizeThreshold, double maxLagThreshold) {
         _logger = logger;
+        _instanceName = instanceName;
         _logInterval = logInterval;
         _maxQueueSizeThreshold = maxQueueSizeThreshold;
         _maxLagThreshold = maxLagThreshold;
@@ -66,8 +81,8 @@ public class EmulationLoopSchedulerMonitor {
                 double avgLag = _currentWindowTotalLag / _currentWindowCount;
                 double avgQueueSize = (double)_currentWindowTotalQueueSize / _currentWindowCount;
 
-                _logger.Warning("Scheduler Monitor: Lag between event scheduled and execution time [Min={MinLag:F4}ms Avg={AvgLag:F4}ms Max={MaxLag:F4}ms] Queue state [Min={MinQueue} Avg={AvgQueue:F2} Max={MaxQueue}]", 
-                    _currentWindowMinLag, avgLag, _currentWindowMaxLag, 
+                _logger.Warning("Scheduler Monitor [{InstanceName}]: Lag between event scheduled and execution time [Min={MinLag:F4}ms Avg={AvgLag:F4}ms Max={MaxLag:F4}ms] Queue state [Min={MinQueue} Avg={AvgQueue:F2} Max={MaxQueue}]", 
+                    _instanceName, _currentWindowMinLag, avgLag, _currentWindowMaxLag,
                     _currentWindowMinQueueSize, avgQueueSize, _currentWindowMaxQueueSize);
             }
             

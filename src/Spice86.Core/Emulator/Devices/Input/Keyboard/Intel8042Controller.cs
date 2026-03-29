@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -32,7 +32,7 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
     private int _waitingBytesFromKbd = 0;
 
     /// <summary>
-    /// Sub-ms delay state driven by EmulationLoopScheduler event system
+    /// Sub-ms delay state driven by DeviceScheduler event system
     /// </summary>
     private bool _isDelayRunning = false;
 
@@ -78,7 +78,7 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
 
     // Handler reference for delay timer
     private readonly EventHandler _delayHandler;
-    private readonly EmulationLoopScheduler _scheduler;
+    private readonly DeviceScheduler _scheduler;
 
     public PS2Keyboard KeyboardDevice { get; }
 
@@ -86,7 +86,7 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
     /// Initializes a new instance of the <see cref="Intel8042Controller"/> class.
     /// </summary>
     public Intel8042Controller(State state, IOPortDispatcher ioPortDispatcher,
-        A20Gate a20Gate, DualPic dualPic, EmulationLoopScheduler scheduler, bool failOnUnhandledPort,
+        A20Gate a20Gate, DualPic dualPic, DeviceScheduler scheduler, bool failOnUnhandledPort,
         ILoggerService loggerService,
         IGuiKeyboardEvents? gui = null)
         : base(state, failOnUnhandledPort, loggerService) {

@@ -1,5 +1,9 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using System;
+using System.Runtime.InteropServices;
+using System.Threading;
+
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Shared.Interfaces;
@@ -11,6 +15,8 @@ public class VideoMemory : IVideoMemory {
     private readonly byte[] _latches;
     private readonly IVideoState _state;
     private readonly ILoggerService _logger;
+    // 0 = not changed, 1 = changed. Use int so we can use Interlocked/Volatile APIs.
+    private int _hasChanged;
 
     /// <summary>
     ///     Create a new instance of the video memory.
@@ -20,7 +26,8 @@ public class VideoMemory : IVideoMemory {
     public VideoMemory(IVideoState state, ILoggerService logger) {
         _state = state;
         Size = 128 * 1024; // This covers the 128kb of video memory address space from 0xA0000 to 0xBFFFF
-        Planes = new byte[4, 64 * 1024]; // VRAM consists of 4 planes of 64kb
+        VRam = new byte[4 * 64 * 1024];
+        Planes = new PlaneAccessor(VRam);
         _latches = new byte[4];
         _logger = logger;
     }
@@ -36,10 +43,12 @@ public class VideoMemory : IVideoMemory {
             return 0;
         }
         (byte plane, uint offset) = DecodeReadAddress(address);
-        _latches[0] = Planes[0, offset];
-        _latches[1] = Planes[1, offset];
-        _latches[2] = Planes[2, offset];
-        _latches[3] = Planes[3, offset];
+        // Load all 4 plane latches from the interleaved buffer.
+        int baseIdx = (int)offset * 4;
+        _latches[0] = VRam[baseIdx];
+        _latches[1] = VRam[baseIdx + 1];
+        _latches[2] = VRam[baseIdx + 2];
+        _latches[3] = VRam[baseIdx + 3];
         byte result = 0;
         switch (_state.GraphicsControllerRegisters.GraphicsModeRegister.ReadMode) {
             case ReadMode.ReadMode0:
@@ -136,7 +145,25 @@ public class VideoMemory : IVideoMemory {
     }
 
     /// <inheritdoc />
-    public byte[,] Planes { get; }
+    public byte[] VRam { get; }
+
+    /// <inheritdoc />
+    public PlaneAccessor Planes { get; }
+
+    /// <inheritdoc />
+    public ReadOnlySpan<byte> GetLinearSpan(int linearByteOffset, int length) {
+        return VRam.AsSpan(linearByteOffset, length);
+    }
+
+    /// <summary>
+    ///     Whether any plane byte has been modified since the last call to <see cref="ResetChanged"/>.
+    /// </summary>
+    public bool HasChanged => Volatile.Read(ref _hasChanged) != 0;
+
+    /// <summary>
+    ///     Resets the <see cref="HasChanged"/> flag to <c>false</c>.
+    /// </summary>
+    public void ResetChanged() => System.Threading.Interlocked.Exchange(ref _hasChanged, 0);
 
     private void HandleWriteMode3(byte value, Register8 planeEnable, ReadOnlySpan<bool> writePlane, Register8 setReset, uint offset) {
         value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
@@ -152,7 +179,7 @@ public class VideoMemory : IVideoMemory {
             tempValue &= bitMask;
             tempValue |= (byte)(_latches[plane] & ~bitMask);
             // write the data
-            Planes[plane, offset] = tempValue;
+            WriteValue(plane, offset, tempValue);
         }
     }
 
@@ -174,7 +201,7 @@ public class VideoMemory : IVideoMemory {
             tempValue &= _state.GraphicsControllerRegisters.BitMask;
             tempValue |= (byte)(_latches[plane] & ~_state.GraphicsControllerRegisters.BitMask);
             // write the data
-            Planes[plane, offset] = tempValue;
+            WriteValue(plane, offset, tempValue);
         }
     }
 
@@ -182,7 +209,8 @@ public class VideoMemory : IVideoMemory {
         // Foreach plane
         for (int plane = 0; plane < 4; plane++) {
             if (planeEnable[plane] && writePlane[plane]) {
-                Planes[plane, offset] = _latches[plane];
+                byte tempValue = _latches[plane];
+                WriteValue(plane, offset, tempValue);
             }
         }
     }
@@ -209,7 +237,7 @@ public class VideoMemory : IVideoMemory {
             tempValue &= _state.GraphicsControllerRegisters.BitMask;
             tempValue |= (byte)(_latches[plane] & ~_state.GraphicsControllerRegisters.BitMask);
             // write the data
-            Planes[plane, offset] = tempValue;
+            WriteValue(plane, offset, tempValue);
         }
     }
 
@@ -236,6 +264,16 @@ public class VideoMemory : IVideoMemory {
         }
 
         return tempValue;
+    }
+
+    private void WriteValue(int plane, uint offset, byte value) {
+        int idx = (int)offset * 4 + plane;
+        if (VRam[idx] != value) {
+            VRam[idx] = value;
+            // Publish the change after the VRAM write so readers observing the flag
+            // will also see the updated VRAM contents. Volatile.Write provides release semantics.
+            Volatile.Write(ref _hasChanged, 1);
+        }
     }
 
     private (byte plane, uint offset) DecodeReadAddress(uint address) {

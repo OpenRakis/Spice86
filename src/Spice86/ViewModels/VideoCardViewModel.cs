@@ -15,12 +15,14 @@ public partial class VideoCardViewModel  : ViewModelBase, IEmulatorObjectViewMod
     private VideoCardInfo _videoCard = new();
     private readonly IVgaRenderer _vgaRenderer;
     private readonly IVideoState _videoState;
+    private readonly VgaTimingEngine _vgaTimingEngine;
     private readonly IHostStorageProvider _storageProvider;
 
     public VideoCardViewModel(IVgaRenderer vgaRenderer, IVideoState videoState,
-        IHostStorageProvider storageProvider) {
+        VgaTimingEngine vgaTimingEngine, IHostStorageProvider storageProvider) {
         _vgaRenderer = vgaRenderer;
         _videoState = videoState;
+        _vgaTimingEngine = vgaTimingEngine;
         _storageProvider = storageProvider;
     }
 
@@ -37,6 +39,7 @@ public partial class VideoCardViewModel  : ViewModelBase, IEmulatorObjectViewMod
         }
         VisitVgaRenderer(_vgaRenderer);
         VisitVideoState(_videoState);
+        VideoCard.LastFrameDuration = _vgaTimingEngine.LastFrameDuration;
     }
 
     private void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
