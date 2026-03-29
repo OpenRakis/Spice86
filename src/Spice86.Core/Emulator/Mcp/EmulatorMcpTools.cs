@@ -659,6 +659,13 @@ internal sealed class EmulatorMcpTools {
                 Joystick joystickDevice = _services.Joystick
                     ?? throw new InvalidOperationException("Joystick device is not available");
 
+                if (axisX < 0.0 || axisX > 1.0) {
+                    throw new ArgumentException($"axisX must be between 0.0 and 1.0, got {axisX}");
+                }
+                if (axisY < 0.0 || axisY > 1.0) {
+                    throw new ArgumentException($"axisY must be between 0.0 and 1.0, got {axisY}");
+                }
+
                 string joystickId = joystick.Trim().ToUpperInvariant();
                 switch (joystickId) {
                     case "A":
@@ -725,6 +732,10 @@ internal sealed class EmulatorMcpTools {
             lock (_services.ToolsLock) {
                 Joystick joystickDevice = _services.Joystick
                     ?? throw new InvalidOperationException("Joystick device is not available");
+
+                if (position < 0.0 || position > 1.0) {
+                    throw new ArgumentException($"position must be between 0.0 and 1.0, got {position}");
+                }
 
                 string joystickId = joystick.Trim().ToUpperInvariant();
                 string axisId = axis.Trim().ToUpperInvariant();
