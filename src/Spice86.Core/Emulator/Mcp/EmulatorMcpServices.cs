@@ -4,6 +4,7 @@ using ModelContextProtocol.Server;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
@@ -104,6 +105,11 @@ public sealed class EmulatorMcpServices(
     /// Gets or sets the DOS kernel used by DOS MCP tools.
     /// </summary>
     public Dos? Dos { get; set; }
+
+    /// <summary>
+    /// Gets or sets the gameport joystick device used by joystick MCP tools.
+    /// </summary>
+    public Joystick? Joystick { get; set; }
 
     // Shared MCP breakpoint tracking state (survives transient tool instances)
     private readonly object _mcpBreakpointsLock = new();

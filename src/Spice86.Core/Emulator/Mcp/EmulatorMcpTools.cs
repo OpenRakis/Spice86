@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
@@ -618,6 +619,143 @@ internal sealed class EmulatorMcpTools {
                 return new EmulatorControlResponse {
                     Success = true,
                     Message = $"Mouse packet sent ({bytes.Length} byte(s))"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "read_joystick_state", UseStructuredContent = true), Description("Read the state of both gameport joysticks: connection status, axis positions (0.0-1.0), button states, and the raw I/O port 0x201 byte value.")]
+    public CallToolResult ReadJoystickState() {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                Joystick joystick = _services.Joystick
+                    ?? throw new InvalidOperationException("Joystick device is not available");
+
+                JoystickSnapshot stateA = joystick.GetJoystickAState();
+                JoystickSnapshot stateB = joystick.GetJoystickBState();
+                byte portValue = joystick.ReadByte(0x201);
+
+                return new JoystickStateResponse {
+                    JoystickAConnected = stateA.Connected,
+                    JoystickBConnected = stateB.Connected,
+                    AxisAX = stateA.AxisX,
+                    AxisAY = stateA.AxisY,
+                    AxisBX = stateB.AxisX,
+                    AxisBY = stateB.AxisY,
+                    ButtonA1Pressed = stateA.Button1Pressed,
+                    ButtonA2Pressed = stateA.Button2Pressed,
+                    ButtonB1Pressed = stateB.Button1Pressed,
+                    ButtonB2Pressed = stateB.Button2Pressed,
+                    PortValue = $"0x{portValue:X2}"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "set_joystick_state", UseStructuredContent = true), Description("Set the state of a gameport joystick. Parameters: joystick ('A' or 'B'), axisX (0.0-1.0), axisY (0.0-1.0), button1 (pressed), button2 (pressed). Marks the joystick as connected.")]
+    public CallToolResult SetJoystickState(string joystick, double axisX, double axisY, bool button1, bool button2) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                Joystick joystickDevice = _services.Joystick
+                    ?? throw new InvalidOperationException("Joystick device is not available");
+
+                string joystickId = joystick.Trim().ToUpperInvariant();
+                switch (joystickId) {
+                    case "A":
+                        joystickDevice.SetJoystickAState(axisX, axisY, button1, button2);
+                        break;
+                    case "B":
+                        joystickDevice.SetJoystickBState(axisX, axisY, button1, button2);
+                        break;
+                    default:
+                        throw new ArgumentException($"Invalid joystick identifier: '{joystick}'. Use 'A' or 'B'.");
+                }
+
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Joystick {joystickId} state set: X={axisX:F2}, Y={axisY:F2}, Btn1={button1}, Btn2={button2}"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "set_joystick_button", UseStructuredContent = true), Description("Press or release a single joystick button without changing axis positions. Parameters: joystick ('A' or 'B'), button (1 or 2), pressed (true/false).")]
+    public CallToolResult SetJoystickButton(string joystick, int button, bool pressed) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                Joystick joystickDevice = _services.Joystick
+                    ?? throw new InvalidOperationException("Joystick device is not available");
+
+                string joystickId = joystick.Trim().ToUpperInvariant();
+                if (button is not (1 or 2)) {
+                    throw new ArgumentException($"Invalid button number: {button}. Use 1 or 2.");
+                }
+
+                JoystickSnapshot current;
+                switch (joystickId) {
+                    case "A":
+                        current = joystickDevice.GetJoystickAState();
+                        joystickDevice.SetJoystickAState(
+                            current.AxisX, current.AxisY,
+                            button == 1 ? pressed : current.Button1Pressed,
+                            button == 2 ? pressed : current.Button2Pressed);
+                        break;
+                    case "B":
+                        current = joystickDevice.GetJoystickBState();
+                        joystickDevice.SetJoystickBState(
+                            current.AxisX, current.AxisY,
+                            button == 1 ? pressed : current.Button1Pressed,
+                            button == 2 ? pressed : current.Button2Pressed);
+                        break;
+                    default:
+                        throw new ArgumentException($"Invalid joystick identifier: '{joystick}'. Use 'A' or 'B'.");
+                }
+
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Joystick {joystickId} button {button} {(pressed ? "pressed" : "released")}"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "set_joystick_axis", UseStructuredContent = true), Description("Set a single joystick axis position without changing buttons. Parameters: joystick ('A' or 'B'), axis ('X' or 'Y'), position (0.0-1.0).")]
+    public CallToolResult SetJoystickAxis(string joystick, string axis, double position) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                Joystick joystickDevice = _services.Joystick
+                    ?? throw new InvalidOperationException("Joystick device is not available");
+
+                string joystickId = joystick.Trim().ToUpperInvariant();
+                string axisId = axis.Trim().ToUpperInvariant();
+
+                if (axisId is not ("X" or "Y")) {
+                    throw new ArgumentException($"Invalid axis: '{axis}'. Use 'X' or 'Y'.");
+                }
+
+                JoystickSnapshot current;
+                switch (joystickId) {
+                    case "A":
+                        current = joystickDevice.GetJoystickAState();
+                        joystickDevice.SetJoystickAState(
+                            axisId == "X" ? position : current.AxisX,
+                            axisId == "Y" ? position : current.AxisY,
+                            current.Button1Pressed, current.Button2Pressed);
+                        break;
+                    case "B":
+                        current = joystickDevice.GetJoystickBState();
+                        joystickDevice.SetJoystickBState(
+                            axisId == "X" ? position : current.AxisX,
+                            axisId == "Y" ? position : current.AxisY,
+                            current.Button1Pressed, current.Button2Pressed);
+                        break;
+                    default:
+                        throw new ArgumentException($"Invalid joystick identifier: '{joystick}'. Use 'A' or 'B'.");
+                }
+
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Joystick {joystickId} {axisId} axis set to {position:F2}"
                 };
             }
         });
