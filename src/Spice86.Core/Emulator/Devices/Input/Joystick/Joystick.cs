@@ -103,6 +103,44 @@ public class Joystick : DefaultIOPortHandler {
         _joystickBConnected = true;
     }
 
+    /// <summary>
+    /// Gets the current state of joystick A.
+    /// </summary>
+    public JoystickSnapshot GetJoystickAState() {
+        return new JoystickSnapshot(_joystickAConnected, _axisAX, _axisAY, _buttonA1Pressed, _buttonA2Pressed);
+    }
+
+    /// <summary>
+    /// Gets the current state of joystick B.
+    /// </summary>
+    public JoystickSnapshot GetJoystickBState() {
+        return new JoystickSnapshot(_joystickBConnected, _axisBX, _axisBY, _buttonB1Pressed, _buttonB2Pressed);
+    }
+
+    /// <summary>
+    /// Sets the state of joystick A directly (bypassing events).
+    /// Marks joystick A as connected.
+    /// </summary>
+    public void SetJoystickAState(double axisX, double axisY, bool button1, bool button2) {
+        _axisAX = Math.Clamp(axisX, 0.0, 1.0);
+        _axisAY = Math.Clamp(axisY, 0.0, 1.0);
+        _buttonA1Pressed = button1;
+        _buttonA2Pressed = button2;
+        _joystickAConnected = true;
+    }
+
+    /// <summary>
+    /// Sets the state of joystick B directly (bypassing events).
+    /// Marks joystick B as connected.
+    /// </summary>
+    public void SetJoystickBState(double axisX, double axisY, bool button1, bool button2) {
+        _axisBX = Math.Clamp(axisX, 0.0, 1.0);
+        _axisBY = Math.Clamp(axisY, 0.0, 1.0);
+        _buttonB1Pressed = button1;
+        _buttonB2Pressed = button2;
+        _joystickBConnected = true;
+    }
+
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(JoystickPositionAndStatus, this);
     }

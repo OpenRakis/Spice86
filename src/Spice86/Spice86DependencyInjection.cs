@@ -558,6 +558,7 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.BiosDataArea = biosDataArea;
         emulatorMcpServices.InterruptVectorTable = interruptVectorTable;
         emulatorMcpServices.Dos = dos;
+        emulatorMcpServices.Joystick = joystick;
 
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers
