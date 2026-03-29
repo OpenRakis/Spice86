@@ -1,33 +1,57 @@
 namespace Spice86.Views;
 
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Threading;
 
 using Spice86.ViewModels;
+using Spice86.ViewModels.Services;
 
 /// <summary>
 /// Window displaying a visual representation of a classic PC gameport joystick
 /// for manual testing and feedback. Supports mouse drag in the stick area and
 /// keyboard shortcuts (arrow keys for stick, Z/X for fire buttons).
+/// Manages the DispatcherTimer lifecycle for gameport diagnostics polling.
 /// </summary>
 public partial class JoystickPanelView : Window {
     private bool _isDragging;
+    private readonly Panel? _stickArea;
+    private DispatcherTimer? _timer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JoystickPanelView"/> class.
     /// </summary>
     public JoystickPanelView() {
         InitializeComponent();
+        _stickArea = this.FindControl<Panel>("StickArea");
+        if (_stickArea is not null) {
+            _stickArea.PointerPressed += OnStickAreaPointerPressed;
+            _stickArea.PointerMoved += OnStickAreaPointerMoved;
+            _stickArea.PointerReleased += OnStickAreaPointerReleased;
+        }
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
     }
 
     /// <inheritdoc />
-    protected override void OnLoaded(global::Avalonia.Interactivity.RoutedEventArgs e) {
-        base.OnLoaded(e);
-        Panel? stickArea = this.FindControl<Panel>("StickArea");
-        if (stickArea is not null) {
-            stickArea.PointerPressed += OnStickAreaPointerPressed;
-            stickArea.PointerMoved += OnStickAreaPointerMoved;
-            stickArea.PointerReleased += OnStickAreaPointerReleased;
+    protected override void OnDataContextChanged(EventArgs e) {
+        base.OnDataContextChanged(e);
+        if (DataContext is JoystickPanelViewModel vm) {
+            _timer = DispatcherTimerStarter.StartNewDispatcherTimer(
+                TimeSpan.FromMilliseconds(50),
+                DispatcherPriority.Background,
+                vm.UpdateValues);
+        }
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e) {
+        _timer?.Stop();
+        _timer = null;
+
+        if (_stickArea is not null) {
+            _stickArea.PointerPressed -= OnStickAreaPointerPressed;
+            _stickArea.PointerMoved -= OnStickAreaPointerMoved;
+            _stickArea.PointerReleased -= OnStickAreaPointerReleased;
         }
     }
 
@@ -56,7 +80,7 @@ public partial class JoystickPanelView : Window {
         if (DataContext is not JoystickPanelViewModel vm) {
             return;
         }
-        global::Avalonia.Point pos = e.GetPosition(panel);
+        Point pos = e.GetPosition(panel);
         vm.SetStickPositionFromMouse(pos.X, pos.Y);
     }
 
@@ -85,11 +109,11 @@ public partial class JoystickPanelView : Window {
                 e.Handled = true;
                 break;
             case Key.Z:
-                vm.ButtonA1Pressed = !vm.ButtonA1Pressed;
+                vm.ButtonA1Pressed = true;
                 e.Handled = true;
                 break;
             case Key.X:
-                vm.ButtonA2Pressed = !vm.ButtonA2Pressed;
+                vm.ButtonA2Pressed = true;
                 e.Handled = true;
                 break;
             case Key.C:
@@ -98,6 +122,28 @@ public partial class JoystickPanelView : Window {
                 break;
             default:
                 base.OnKeyDown(e);
+                break;
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnKeyUp(KeyEventArgs e) {
+        if (DataContext is not JoystickPanelViewModel vm) {
+            base.OnKeyUp(e);
+            return;
+        }
+
+        switch (e.Key) {
+            case Key.Z:
+                vm.ButtonA1Pressed = false;
+                e.Handled = true;
+                break;
+            case Key.X:
+                vm.ButtonA2Pressed = false;
+                e.Handled = true;
+                break;
+            default:
+                base.OnKeyUp(e);
                 break;
         }
     }

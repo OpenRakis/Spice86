@@ -717,6 +717,7 @@ public class Spice86DependencyInjection : IDisposable {
                 mainWindowViewModel is not null
                     ? mainWindowViewModel.OnJoystickAStateChanged
                     : _ => { },
+                joystick.DisconnectJoystickA,
                 joystick);
 
             if (Application.Current is not null) {

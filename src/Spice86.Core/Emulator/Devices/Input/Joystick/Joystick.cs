@@ -141,6 +141,39 @@ public class Joystick : DefaultIOPortHandler {
         _joystickBConnected = true;
     }
 
+    /// <summary>
+    /// Disconnects joystick A. Axis timers will never expire (bits stay high) and buttons read as not pressed.
+    /// </summary>
+    public void DisconnectJoystickA() {
+        _joystickAConnected = false;
+        _axisAX = 0.5;
+        _axisAY = 0.5;
+        _buttonA1Pressed = false;
+        _buttonA2Pressed = false;
+    }
+
+    /// <summary>
+    /// Disconnects joystick B. Axis timers will never expire (bits stay high) and buttons read as not pressed.
+    /// </summary>
+    public void DisconnectJoystickB() {
+        _joystickBConnected = false;
+        _axisBX = 0.5;
+        _axisBY = 0.5;
+        _buttonB1Pressed = false;
+        _buttonB2Pressed = false;
+    }
+
+    /// <summary>
+    /// Returns a thread-safe snapshot of the current port 0x201 byte value plus both joystick states,
+    /// for use by UI diagnostics without racing the emulation thread.
+    /// </summary>
+    public JoystickPortSnapshot GetPortSnapshot() {
+        byte portValue = ReadByte(JoystickPositionAndStatus);
+        JoystickSnapshot stateA = GetJoystickAState();
+        JoystickSnapshot stateB = GetJoystickBState();
+        return new JoystickPortSnapshot(portValue, stateA, stateB);
+    }
+
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(JoystickPositionAndStatus, this);
     }

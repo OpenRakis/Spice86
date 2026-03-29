@@ -1,13 +1,10 @@
 namespace Spice86.ViewModels;
 
-using Avalonia.Threading;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Shared.Emulator.Joystick;
-using Spice86.ViewModels.Services;
 
 using System;
 
@@ -19,6 +16,7 @@ using System;
 /// </summary>
 public partial class JoystickPanelViewModel : ViewModelBase {
     private readonly Action<JoystickStateEventArgs> _sendJoystickAState;
+    private readonly Action _disconnectJoystickA;
     private readonly Joystick _joystick;
 
     /// <summary>
@@ -136,25 +134,24 @@ public partial class JoystickPanelViewModel : ViewModelBase {
     /// Initializes a new instance of the <see cref="JoystickPanelViewModel"/> class.
     /// </summary>
     /// <param name="sendJoystickAState">Action to send joystick A state changes to the emulator.</param>
+    /// <param name="disconnectJoystickA">Action to disconnect joystick A in the emulated device.</param>
     /// <param name="joystick">The emulated joystick device for reading port state.</param>
-    public JoystickPanelViewModel(Action<JoystickStateEventArgs> sendJoystickAState, Joystick joystick) {
+    public JoystickPanelViewModel(Action<JoystickStateEventArgs> sendJoystickAState,
+        Action disconnectJoystickA, Joystick joystick) {
         _sendJoystickAState = sendJoystickAState;
+        _disconnectJoystickA = disconnectJoystickA;
         _joystick = joystick;
 
         UpdateCrosshairPosition();
-
-        DispatcherTimerStarter.StartNewDispatcherTimer(
-            TimeSpan.FromMilliseconds(50),
-            DispatcherPriority.Background,
-            OnTimerTick);
     }
 
-    private void OnTimerTick(object? sender, EventArgs e) {
-        UpdatePortReadDisplay();
-    }
-
-    private void UpdatePortReadDisplay() {
-        byte portValue = _joystick.ReadByte(0x201);
+    /// <summary>
+    /// Called by the view's DispatcherTimer to update the gameport diagnostics display.
+    /// Uses a thread-safe snapshot to avoid racing the emulation thread.
+    /// </summary>
+    public void UpdateValues(object? sender, EventArgs e) {
+        JoystickPortSnapshot snapshot = _joystick.GetPortSnapshot();
+        byte portValue = snapshot.PortValue;
         LastPortReadValue = $"0x{portValue:X2}";
 
         AxisBit0Status = (portValue & 0x01) != 0 ? "1 (running)" : "0 (expired)";
@@ -195,6 +192,8 @@ public partial class JoystickPanelViewModel : ViewModelBase {
     partial void OnJoystickAEnabledChanged(bool value) {
         if (value) {
             SendJoystickState();
+        } else {
+            _disconnectJoystickA();
         }
     }
 
