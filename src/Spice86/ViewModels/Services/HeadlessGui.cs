@@ -1,5 +1,6 @@
 ﻿namespace Spice86.ViewModels.Services;
 
+using Spice86.Shared.Emulator.Joystick;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
@@ -7,7 +8,7 @@ using Spice86.Shared.Interfaces;
 
 /// <inheritdoc cref="IGuiVideoPresentation" />
 public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
-    IGuiKeyboardEvents, IDisposable {
+    IGuiKeyboardEvents, IGuiJoystickEvents, IDisposable {
     private const double ScreenRefreshHz = 60;
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMilliseconds(1000.0 / ScreenRefreshHz);
     private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
@@ -45,6 +46,8 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
     public event Action? UserInterfaceInitialized;
+    public event EventHandler<JoystickStateEventArgs>? JoystickAStateChanged;
+    public event EventHandler<JoystickStateEventArgs>? JoystickBStateChanged;
 #pragma warning restore CS0067
 
     public int Width { get; private set; }
