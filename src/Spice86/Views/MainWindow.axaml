@@ -129,7 +129,7 @@
 					<MenuItem Command="{Binding ShowJoystickPanelCommand}" CommandParameter="{StaticResource ShowAdditionnalWindowBehavior}">
 						<MenuItem.Header>
 							<StackPanel Orientation="Horizontal">
-								<fluent:SymbolIcon Symbol="XboxController" />
+								<fluent:SymbolIcon Symbol="Joystick" />
 								<Label Content="Joystick" />
 							</StackPanel>
 						</MenuItem.Header>
