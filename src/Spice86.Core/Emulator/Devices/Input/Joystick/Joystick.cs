@@ -84,7 +84,6 @@ public class Joystick : DefaultIOPortHandler {
         if (joystickEvents is not null) {
             joystickEvents.JoystickAStateChanged += OnJoystickAStateChanged;
             joystickEvents.JoystickBStateChanged += OnJoystickBStateChanged;
-            _joystickAConnected = true;
         }
     }
 
