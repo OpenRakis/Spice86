@@ -35,7 +35,7 @@ public class VgaFunctionality : IVgaFunctionality {
         _biosDataArea = biosDataArea;
         _vgaRom = vgaRom;
         _interruptVectorTable = interruptVectorTable;
-        if(bootUpInTextMode) {
+        if (bootUpInTextMode) {
             VgaSetMode(0x03, ModeFlags.Legacy);
         }
     }
@@ -528,7 +528,7 @@ public class VgaFunctionality : IVgaFunctionality {
         for (byte i = 0; i < 16; i++) {
             result[i] = ReadAttributeController(i);
         }
-        result[0]  = ReadAttributeController(0x11);
+        result[0] = ReadAttributeController(0x11);
 
         return result;
     }
@@ -1407,7 +1407,6 @@ public class VgaFunctionality : IVgaFunctionality {
     }
 
     private void MemSet16(ushort segment, ushort offset, ushort value, int amount) {
-        amount /= 2;
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
         _memory.Memset16(address, value, (uint)amount);
     }
