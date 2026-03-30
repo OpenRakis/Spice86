@@ -1467,24 +1467,26 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     /// <inheritdoc cref="IVesaBiosExtension.VbeGetModeInfo"/>
     public void VbeGetModeInfo() {
-        ushort modeNumber = State.CX;
+        ushort requestedModeNumber = State.CX;
+        const ushort SupportedVbeMode = 0x0102;
+        ushort modeNumber = (ushort)(requestedModeNumber & 0x3FFF);
         ushort segment = State.ES;
         ushort offset = State.DI;
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
 
-        // Get mode parameters based on VESA mode number
+        // Get mode parameters based on VESA base mode number (without high flag bits)
         (ushort width, ushort height, byte bpp, bool supported) = GetVesaModeParams(modeNumber);
 
-        if (!supported) {
+        if (!supported || modeNumber != SupportedVbeMode) {
             if (_logger.IsEnabled(LogEventLevel.Warning)) {
                 _logger.Warning("{ClassName} INT 10 4F01 VbeGetModeInfo - Unsupported mode 0x{Mode:X4}",
-                    nameof(VgaBios), modeNumber);
+                    nameof(VgaBios), requestedModeNumber);
             }
             State.AX = (ushort)VbeStatus.Failed;
             return;
         }
 
-        var modeInfo = new VbeModeInfoBlock(Memory, address);
+        VbeModeInfoBlock modeInfo = new VbeModeInfoBlock(Memory, address);
         modeInfo.Clear();
 
         // Mode Attributes
