@@ -1428,7 +1428,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         ushort offset = State.DI;
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
 
-        var vbeInfo = new VbeInfoBlock(Memory, address);
+        VbeInfoBlock vbeInfo = new VbeInfoBlock(Memory, address);
+        vbeInfo.Clear();
 
         // Fill VBE Info Block (VBE 1.0)
         vbeInfo.Signature = "VESA";
