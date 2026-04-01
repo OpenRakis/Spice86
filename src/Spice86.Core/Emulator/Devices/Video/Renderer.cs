@@ -52,6 +52,13 @@ public class Renderer : IVgaRenderer {
     private int _frameDoubleScanIndex;
     private int _frameDestinationAddressLatch;
 
+    // Per-frame latched pixel panning state.
+    private byte _framePanShift;
+    private bool _framePixelPanningCompatibility;
+    private bool _frameAboveLineCompare;
+    // Scratch row buffer used when horizontal pixel panning is active.
+    private uint[] _rowScratch = Array.Empty<uint>();
+
     // Per-character-row state (re-read from registers at each row boundary).
     private int _frameHorizontalDisplayEnd;
     private int _frameTotalWidth;
@@ -138,6 +145,18 @@ public class Renderer : IVgaRenderer {
         _frameDoubleScanIndex = 0;
         _frameDestinationAddressLatch = 0;
 
+        _framePanShift = _state.AttributeControllerRegisters.HorizontalPixelPanning;
+        _framePixelPanningCompatibility = _state.AttributeControllerRegisters.AttributeControllerModeRegister.PixelPanningCompatibility;
+        _frameAboveLineCompare = true;
+        // Reserve space for up to 2 extra rendered characters (max 9 pixels each in 9-dot text
+        // mode) so the panning copy (scratch[panShift..panShift+Width]) always stays in bounds
+        // for all valid AR13 values: 0-8 in 8/9-dot modes, 0-6 in 256-color (×2 pixel units).
+        const int panningOverhead = 18;
+        int scratchSize = width + panningOverhead;
+        if (_rowScratch.Length < scratchSize) {
+            _rowScratch = new uint[scratchSize];
+        }
+
         InitCharRow();
     }
 
@@ -166,8 +185,6 @@ public class Renderer : IVgaRenderer {
         int memoryAddressCounter = _frameRowMemoryAddressCounter;
         _frameDestinationAddress = _frameDestinationAddressLatch;
 
-        bool horizontalBlanking = true;
-
         if (!_skipThisFrame) {
             // Hoist per-scanline constants out of the per-character loop to avoid
             // repeated interface dispatch and property-chain traversals.
@@ -183,38 +200,31 @@ public class Renderer : IVgaRenderer {
                 _frameScanLineBit0ForAddressBit14,
                 _frameCharRowScanline & 1);
 
+            int effectivePanShift = ComputeEffectivePanShift(in256ColorMode);
+            int visibleChars = _frameHorizontalDisplayEnd - _frameSkew;
+
             if (in256ColorMode && !_frameVerticalBlanking) {
-                Render256ColorScanline(frameBuffer, paletteMap, addressMapper, memoryAddressCounter);
+                if (effectivePanShift > 0) {
+                    int scratchDest = 0;
+                    Render256ColorScanline(_rowScratch.AsSpan(), ref scratchDest, paletteMap, addressMapper, memoryAddressCounter, visibleChars + 2);
+                    ApplyPannedRow(frameBuffer, effectivePanShift, scratchDest);
+                } else {
+                    Render256ColorScanline(frameBuffer, ref _frameDestinationAddress, paletteMap, addressMapper, memoryAddressCounter, visibleChars);
+                }
             } else {
-                for (int characterCounter = 0; characterCounter < _frameTotalWidth; characterCounter++) {
-                    if (characterCounter == _frameSkew) {
-                        horizontalBlanking = false;
-                    }
-                    if (characterCounter == _frameHorizontalDisplayEnd) {
-                        horizontalBlanking = true;
-                    }
-                    if (horizontalBlanking || _frameVerticalBlanking) {
-                        continue;
-                    }
-
-                    if (_frameDestinationAddress + pixelsPerChar > frameBuffer.Length) {
-                        break;
-                    }
-
-                    (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryAddressCounter, addressMapper);
-
-                    if (inGraphicsMode) {
-                        DrawGraphicsMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, plane2, plane3);
-                    } else {
-                        DrawTextMode(frameBuffer, attrMap, ref _frameDestinationAddress, plane0, plane1, _frameCharRowScanline);
-                    }
-                    memoryAddressCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
+                if (effectivePanShift > 0 && !_frameVerticalBlanking) {
+                    int scratchDest = 0;
+                    DrawNonSimdScanline(_rowScratch.AsSpan(), ref scratchDest, attrMap, inGraphicsMode, pixelsPerChar, addressMapper, memoryAddressCounter, _frameHorizontalDisplayEnd + 2);
+                    ApplyPannedRow(frameBuffer, effectivePanShift, scratchDest);
+                } else {
+                    DrawNonSimdScanline(frameBuffer, ref _frameDestinationAddress, attrMap, inGraphicsMode, pixelsPerChar, addressMapper, memoryAddressCounter, _frameHorizontalDisplayEnd);
                 }
             }
         }
 
         if (_frameLineCounter == _state.CrtControllerRegisters.LineCompareValue) {
             _frameRowMemoryAddressCounter = 0;
+            _frameAboveLineCompare = false;
         }
         if (_frameLineCounter == _frameVerticalDisplayEnd) {
             _frameVerticalBlanking = true;
@@ -317,9 +327,8 @@ public class Renderer : IVgaRenderer {
         return memoryWidthMode;
     }
 
-    private void Render256ColorScanline(Span<uint> frameBuffer, uint[] paletteMap,
-        VgaAddressMapper addressMapper, int memoryAddressCounter) {
-        int visibleChars = _frameHorizontalDisplayEnd - _frameSkew;
+    private void Render256ColorScanline(Span<uint> target, ref int destAddr, uint[] paletteMap,
+        VgaAddressMapper addressMapper, int memoryAddressCounter, int visibleChars) {
         if (visibleChars <= 0) {
             return;
         }
@@ -336,17 +345,17 @@ public class Renderer : IVgaRenderer {
                 isContiguous = endPhysical - startPhysical == visibleChars - 1;
             }
             if (isContiguous) {
-                RenderContiguous256(frameBuffer, paletteMap, startPhysical, visibleChars);
+                RenderContiguous256(target, ref destAddr, paletteMap, startPhysical, visibleChars);
                 return;
             }
         }
 
         // Non-contiguous path: read each character's VRAM data and write
         // pixels directly to the frame buffer in a single pass.
-        RenderDirect256(frameBuffer, paletteMap, addressMapper, memoryAddressCounter, visibleChars);
+        RenderDirect256(target, ref destAddr, paletteMap, addressMapper, memoryAddressCounter, visibleChars);
     }
 
-    private void RenderContiguous256(Span<uint> frameBuffer, uint[] paletteMap,
+    private void RenderContiguous256(Span<uint> target, ref int destAddr, uint[] paletteMap,
         ushort startPhysical, int visibleChars) {
         int vramLinearStart = startPhysical * 4;
         int vramByteCount = visibleChars * 4;
@@ -361,44 +370,106 @@ public class Renderer : IVgaRenderer {
         ReadOnlySpan<byte> vram = _memory.GetLinearSpan(vramLinearStart, vramByteCount);
 
         int pixelCount = vramByteCount * 2;
-        if (_frameDestinationAddress + pixelCount > frameBuffer.Length) {
-            pixelCount = frameBuffer.Length - _frameDestinationAddress;
+        if (destAddr + pixelCount > target.Length) {
+            pixelCount = target.Length - destAddr;
         }
         if (pixelCount <= 0) {
             return;
         }
 
-        _renderer256Color.RenderDoubledScanline(frameBuffer, vram, paletteMap, pixelCount / 2, ref _frameDestinationAddress);
+        _renderer256Color.RenderDoubledScanline(target, vram, paletteMap, pixelCount / 2, ref destAddr);
     }
 
-    private void RenderDirect256(Span<uint> frameBuffer, uint[] paletteMap,
+    private void RenderDirect256(Span<uint> target, ref int destAddr, uint[] paletteMap,
         VgaAddressMapper addressMapper, int memoryAddressCounter, int visibleChars) {
-        int dest = _frameDestinationAddress;
+        int dest = destAddr;
         byte[] vram = _memory.VRam;
         int currCounter = memoryAddressCounter;
         for (int i = 0; i < visibleChars; i++) {
             ushort physical = addressMapper.ComputeAddress(currCounter);
             int baseIdx = physical * 4;
-            if (baseIdx + 4 > vram.Length || dest + 8 > frameBuffer.Length) {
+            if (baseIdx + 4 > vram.Length || dest + 8 > target.Length) {
                 break;
             }
             uint c0 = paletteMap[vram[baseIdx]];
             uint c1 = paletteMap[vram[baseIdx + 1]];
             uint c2 = paletteMap[vram[baseIdx + 2]];
             uint c3 = paletteMap[vram[baseIdx + 3]];
-            frameBuffer[dest] = c0;
-            frameBuffer[dest + 1] = c0;
-            frameBuffer[dest + 2] = c1;
-            frameBuffer[dest + 3] = c1;
-            frameBuffer[dest + 4] = c2;
-            frameBuffer[dest + 5] = c2;
-            frameBuffer[dest + 6] = c3;
-            frameBuffer[dest + 7] = c3;
+            target[dest] = c0;
+            target[dest + 1] = c0;
+            target[dest + 2] = c1;
+            target[dest + 3] = c1;
+            target[dest + 4] = c2;
+            target[dest + 5] = c2;
+            target[dest + 6] = c3;
+            target[dest + 7] = c3;
             dest += 8;
             int characterCounter = _frameSkew + i;
             currCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
         }
-        _frameDestinationAddress = dest;
+        destAddr = dest;
+    }
+
+    /// <summary>
+    ///     Computes the effective pixel-panning shift for the current scanline.
+    ///     In 256-color mode, each AR13 unit represents 2 displayed pixels (pixel-doubling
+    ///     granularity). In all other modes, one unit equals one pixel.
+    ///     Returns 0 when below the line-compare boundary and PixelPanningCompatibility is set.
+    /// </summary>
+    private int ComputeEffectivePanShift(bool in256ColorMode) {
+        if (_framePanShift == 0) {
+            return 0;
+        }
+        if (_framePixelPanningCompatibility && !_frameAboveLineCompare) {
+            return 0;
+        }
+        return in256ColorMode ? _framePanShift * 2 : _framePanShift;
+    }
+
+    /// <summary>
+    ///     Copies the panned row from <see cref="_rowScratch"/> into <paramref name="frameBuffer"/>,
+    ///     skipping the first <paramref name="panShift"/> pixels, and advances
+    ///     <see cref="_frameDestinationAddress"/> by exactly <see cref="Width"/> pixels.
+    /// </summary>
+    private void ApplyPannedRow(Span<uint> frameBuffer, int panShift, int scratchLength) {
+        int destStart = _frameDestinationAddressLatch;
+        int available = Math.Min(Width, scratchLength - panShift);
+        if (available > 0) {
+            _rowScratch.AsSpan(panShift, available).CopyTo(frameBuffer.Slice(destStart, available));
+        }
+        _frameDestinationAddress = destStart + Width;
+    }
+
+    /// <summary>
+    ///     Renders one scanline of non-256-color pixels (EGA planar, CGA, or text mode)
+    ///     into <paramref name="target"/> starting at <paramref name="destAddr"/>.
+    ///     Processes characters from <see cref="_frameSkew"/> up to <paramref name="visibleEnd"/>.
+    /// </summary>
+    private void DrawNonSimdScanline(Span<uint> target, ref int destAddr, uint[] attrMap,
+        bool inGraphicsMode, int pixelsPerChar, VgaAddressMapper addressMapper,
+        int memoryAddressCounter, int visibleEnd) {
+        bool horizontalBlanking = true;
+        for (int characterCounter = 0; characterCounter < _frameTotalWidth; characterCounter++) {
+            if (characterCounter == _frameSkew) {
+                horizontalBlanking = false;
+            }
+            if (characterCounter == visibleEnd) {
+                horizontalBlanking = true;
+            }
+            if (horizontalBlanking || _frameVerticalBlanking) {
+                continue;
+            }
+            if (destAddr + pixelsPerChar > target.Length) {
+                break;
+            }
+            (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryAddressCounter, addressMapper);
+            if (inGraphicsMode) {
+                DrawGraphicsMode(target, attrMap, ref destAddr, plane0, plane1, plane2, plane3);
+            } else {
+                DrawTextMode(target, attrMap, ref destAddr, plane0, plane1, _frameCharRowScanline);
+            }
+            memoryAddressCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
+        }
     }
 
     private (byte plane0, byte plane1, byte plane2, byte plane3) ReadVideoMemory(int memoryAddressCounter, VgaAddressMapper addressMapper) {

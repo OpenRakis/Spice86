@@ -1218,6 +1218,131 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.AttributeMap[1], "skew=1 means first visible char reads address 1");
     }
 
+    // -------------------------------------------------- Horizontal Pixel Panning (AR13) --------------------------------------------------
+
+    [SkippableFact]
+    public void HorizontalPixelPanning_EgaMode_ShiftsPixelsLeft() {
+        EnsureSupported();
+        VideoState state = ConfigureGraphicsEga(1);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityAttributeMap(state);
+
+        // Fill first two characters: char 0 all index-1 (bit 7 set), char 1 all index-0
+        vram.Planes[0, 0] = 0x80; // char 0: bit 7 set → index 1 for pixel 0
+        vram.Planes[0, 1] = 0x00; // char 1: all zeros → index 0
+
+        // Pan by 1 pixel: first visible pixel should come from bit 6 of char 0
+        state.AttributeControllerRegisters.HorizontalPixelPanning = 1;
+        state.IsRenderingDirty = true;
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        // Without panning: pixel 0 = index 1 (bit 7 of addr 0), pixel 1 = index 0
+        // With panning=1: pixel 0 = index 0 (bit 6 of addr 0, which is 0)
+        frame[0].Should().Be(state.DacRegisters.AttributeMap[0],
+            "panning=1 skips the first pixel so bit 6 (=0) becomes pixel 0");
+    }
+
+    [SkippableFact]
+    public void HorizontalPixelPanning_EgaMode_Pan4_ShowsFifthPixel() {
+        EnsureSupported();
+        VideoState state = ConfigureGraphicsEga(1);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityAttributeMap(state);
+
+        // Char 0: 0x08 → bits 7..4=0, bit 3=1, bits 2..0=0 → pixel 4 = index 1
+        vram.Planes[0, 0] = 0x08;
+        vram.Planes[0, 1] = 0x00;
+
+        state.AttributeControllerRegisters.HorizontalPixelPanning = 4;
+        state.IsRenderingDirty = true;
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        // After panning 4 pixels, screen pixel 0 corresponds to bit 3 of addr 0
+        frame[0].Should().Be(state.DacRegisters.AttributeMap[1],
+            "panning=4 exposes bit 3 of the first VRAM byte as pixel 0");
+    }
+
+    [SkippableFact]
+    public void HorizontalPixelPanning_256ColorMode_ShiftsBy2PixelsPerUnit() {
+        EnsureSupported();
+        VideoState state = ConfigureGraphics256Color(1);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityPaletteMap(state);
+
+        // Set two distinct palette entries in the first VRAM character (4 bytes = 8 pixels)
+        vram.Planes[0, 0] = 10; // planes 0..3 at char 0
+        vram.Planes[1, 0] = 20;
+        vram.Planes[2, 0] = 30;
+        vram.Planes[3, 0] = 40;
+
+        // No panning: first 2 pixels should map to palette[10]
+        state.AttributeControllerRegisters.HorizontalPixelPanning = 0;
+        state.IsRenderingDirty = true;
+        uint[] frameNoPan = RenderAndCapture(renderer, state);
+        frameNoPan[0].Should().Be(state.DacRegisters.PaletteMap[10], "no panning: pixel 0 = plane0 index");
+        frameNoPan[1].Should().Be(state.DacRegisters.PaletteMap[10], "no panning: pixel 1 = plane0 index doubled");
+
+        // AR13=2 in 256-color mode shifts by 4 displayed pixels (2 VRAM bytes × 2 pixels each)
+        state.AttributeControllerRegisters.HorizontalPixelPanning = 2;
+        state.IsRenderingDirty = true;
+        uint[] framePan2 = RenderAndCapture(renderer, state);
+        // After 4-pixel shift, pixel 0 corresponds to VRAM byte 2 (plane 2) → palette[30]
+        framePan2[0].Should().Be(state.DacRegisters.PaletteMap[30],
+            "AR13=2 in 256-color mode shifts by 4 pixels; pixel 0 = plane2 index");
+        framePan2[1].Should().Be(state.DacRegisters.PaletteMap[30],
+            "AR13=2 pixel 1 = plane2 index doubled");
+    }
+
+    [SkippableFact]
+    public void HorizontalPixelPanning_PixelPanningCompatibility_DisablesPanningBelowLineCompare() {
+        EnsureSupported();
+        // 4-line frame with split screen at line 2
+        VideoState state = ConfigureGraphicsEga(4);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityAttributeMap(state);
+
+        state.CrtControllerRegisters.LineCompare = 2;
+        // PixelPanningCompatibility=true: panning resets to 0 at/below LineCompare
+        state.AttributeControllerRegisters.AttributeControllerModeRegister.PixelPanningCompatibility = true;
+        state.AttributeControllerRegisters.HorizontalPixelPanning = 1;
+
+        int offset = state.CrtControllerRegisters.Offset;
+        // Address 0 for lines 0-2 (above LineCompare, panning active)
+        vram.Planes[0, 0] = 0x80; // bit 7 set → with pan=1, pixel 0 shows bit 6 (=0)
+        // After LineCompare=2, address resets to 0 then advances by Offset*2 = 80 for line 3
+        // Line 3 reads from address Offset*2 = 80
+        vram.Planes[0, offset * 2] = 0x80; // bit 7 set at address 80 for line 3
+
+        state.IsRenderingDirty = true;
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        int width = renderer.Width;
+        // Line 0 (above LineCompare): panning=1 active → pixel 0 = bit 6 of addr 0 = 0
+        frame[0].Should().Be(state.DacRegisters.AttributeMap[0],
+            "above LineCompare: panning active, bit 6 of addr 0 is 0");
+        // Line 3 (first line after LineCompare reset + PixelPanningCompatibility): panning=0
+        // → pixel 0 = bit 7 of addr (offset*2) = 1 → index 1
+        frame[3 * width].Should().Be(state.DacRegisters.AttributeMap[1],
+            "line after LineCompare with PixelPanningCompatibility: panning disabled, bit 7=1");
+    }
+
+    [SkippableFact]
+    public void HorizontalPixelPanning_ZeroPanning_NoShift() {
+        EnsureSupported();
+        VideoState state = ConfigureGraphicsEga(1);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityAttributeMap(state);
+
+        vram.Planes[0, 0] = 0x80; // bit 7 set → index 1
+
+        state.AttributeControllerRegisters.HorizontalPixelPanning = 0;
+        state.IsRenderingDirty = true;
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        frame[0].Should().Be(state.DacRegisters.AttributeMap[1],
+            "panning=0: pixel 0 shows bit 7 of addr 0 normally");
+    }
+
     // -------------------------------------------------- Helper Methods --------------------------------------------------
 
     /// <summary>
