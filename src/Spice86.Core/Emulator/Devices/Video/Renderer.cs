@@ -215,10 +215,10 @@ public class Renderer : IVgaRenderer {
             } else {
                 if (effectivePanShift > 0 && !_frameVerticalBlanking) {
                     int scratchDest = 0;
-                    DrawNonSimdScanline(_rowScratch.AsSpan(), ref scratchDest, attrMap, inGraphicsMode, pixelsPerChar, addressMapper, memoryAddressCounter, _frameHorizontalDisplayEnd + 2);
+                    DrawScanline(_rowScratch.AsSpan(), ref scratchDest, attrMap, inGraphicsMode, pixelsPerChar, addressMapper, memoryAddressCounter, _frameHorizontalDisplayEnd + 2);
                     ApplyPannedRow(frameBuffer, effectivePanShift, scratchDest);
                 } else {
-                    DrawNonSimdScanline(frameBuffer, ref _frameDestinationAddress, attrMap, inGraphicsMode, pixelsPerChar, addressMapper, memoryAddressCounter, _frameHorizontalDisplayEnd);
+                    DrawScanline(frameBuffer, ref _frameDestinationAddress, attrMap, inGraphicsMode, pixelsPerChar, addressMapper, memoryAddressCounter, _frameHorizontalDisplayEnd);
                 }
             }
         }
@@ -450,7 +450,7 @@ public class Renderer : IVgaRenderer {
     ///     into <paramref name="target"/> starting at <paramref name="destAddr"/>.
     ///     Processes characters from <see cref="_frameSkew"/> up to <paramref name="visibleEnd"/>.
     /// </summary>
-    private void DrawNonSimdScanline(Span<uint> target, ref int destAddr, uint[] attrMap,
+    private void DrawScanline(Span<uint> target, ref int destAddr, uint[] attrMap,
         bool inGraphicsMode, int pixelsPerChar, VgaAddressMapper addressMapper,
         int memoryAddressCounter, int visibleEnd) {
         bool horizontalBlanking = true;
