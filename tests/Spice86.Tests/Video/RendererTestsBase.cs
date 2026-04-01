@@ -1227,9 +1227,9 @@ public abstract class RendererTestsBase {
         (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
         SetIdentityAttributeMap(state);
 
-        // Fill first two characters: char 0 all index-1 (bit 7 set), char 1 all index-0
-        vram.Planes[0, 0] = 0x80; // char 0: bit 7 set → index 1 for pixel 0
-        vram.Planes[0, 1] = 0x00; // char 1: all zeros → index 0
+        // Fill first two characters: char 0 has only bit 7 set (pixel 0 = index 1, pixels 1-7 = index 0); char 1 is all index 0
+        vram.Planes[0, 0] = 0x80; // char 0: bit 7 set, other bits clear
+        vram.Planes[0, 1] = 0x00; // char 1: all zeros
 
         // Pan by 1 pixel: first visible pixel should come from bit 6 of char 0
         state.AttributeControllerRegisters.HorizontalPixelPanning = 1;

@@ -417,13 +417,14 @@ public class Renderer : IVgaRenderer {
     ///     Returns 0 when below the line-compare boundary and PixelPanningCompatibility is set.
     /// </summary>
     private int ComputeEffectivePanShift(bool in256ColorMode) {
-        if (_framePanShift == 0) {
+        int panUnits = _framePanShift & 0x0F;
+        if (panUnits == 0) {
             return 0;
         }
         if (_framePixelPanningCompatibility && !_frameAboveLineCompare) {
             return 0;
         }
-        return in256ColorMode ? _framePanShift * 2 : _framePanShift;
+        return in256ColorMode ? panUnits * 2 : panUnits;
     }
 
     /// <summary>
