@@ -65,7 +65,6 @@ public static class MapperExtensions {
         videoCardInfo.RendererWidth = vgaRenderer.Width;
         videoCardInfo.RendererHeight = vgaRenderer.Height;
         videoCardInfo.RendererBufferSize = vgaRenderer.BufferSize;
-        videoCardInfo.LastFrameRenderTime = vgaRenderer.LastFrameRenderTime;
     }
 
     public static void CopyToVideoCardInfo(this IVideoState videoState, VideoCardInfo videoCardInfo) {

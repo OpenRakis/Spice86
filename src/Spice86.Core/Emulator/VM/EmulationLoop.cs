@@ -26,8 +26,8 @@ public class EmulationLoop {
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly InputEventHub _inputEventQueue;
-    private readonly EmulationLoopScheduler.EmulationLoopScheduler _emulationLoopScheduler;
-    private readonly EmulationLoopScheduler.EventHandler _inputEventsHandler;
+    private readonly DeviceScheduler.DeviceScheduler _emulationLoopScheduler;
+    private readonly DeviceScheduler.EventHandler _inputEventsHandler;
 
     /// <summary>
     /// Gets or sets whether the emulation is paused.
@@ -55,7 +55,7 @@ public class EmulationLoop {
     /// <param name="cyclesLimiter">Limits the number of executed instructions per slice</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public EmulationLoop(FunctionHandler functionHandler, CfgCpu cpu, State cpuState,
-        EmulationLoopScheduler.EmulationLoopScheduler emulationLoopScheduler,
+        DeviceScheduler.DeviceScheduler emulationLoopScheduler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, InputEventHub inputEventQueue,
         ICyclesLimiter cyclesLimiter, ILoggerService loggerService) {
@@ -68,7 +68,7 @@ public class EmulationLoop {
         _pauseHandler = pauseHandler;
         _inputEventQueue = inputEventQueue;
         _cyclesLimiter = cyclesLimiter;
-        _inputEventsHandler = new EmulationLoopScheduler.EventHandler(InputEventsHandler);
+        _inputEventsHandler = new DeviceScheduler.EventHandler(InputEventsHandler);
         _emulationLoopScheduler.AddEvent(_inputEventsHandler, 100);
     }
 

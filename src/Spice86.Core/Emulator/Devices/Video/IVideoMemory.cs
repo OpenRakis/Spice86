@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using System;
+
 using Spice86.Core.Emulator.Memory;
 
 /// <summary>
@@ -7,7 +9,21 @@ using Spice86.Core.Emulator.Memory;
 /// </summary>
 public interface IVideoMemory : IMemoryDevice {
     /// <summary>
-    ///     Provides access to the 4 planes of video memory.
+    ///     Raw interleaved VRAM buffer. Plane p at VGA address a = VRam[a * 4 + p].
+    ///     Mode 13h chain-4 pixel N = VRam[N].
     /// </summary>
-    byte[,] Planes { get; }
+    byte[] VRam { get; }
+
+    /// <summary>
+    ///     Accessor that preserves the <c>Planes[plane, address]</c> syntax while forwarding
+    ///     to the interleaved <see cref="VRam"/> buffer.
+    /// </summary>
+    PlaneAccessor Planes { get; }
+
+    /// <summary>
+    ///     Returns a read-only span over the interleaved VRAM starting at the given linear byte offset.
+    /// </summary>
+    /// <param name="linearByteOffset">The byte offset into VRam.</param>
+    /// <param name="length">The number of bytes to return.</param>
+    ReadOnlySpan<byte> GetLinearSpan(int linearByteOffset, int length);
 }

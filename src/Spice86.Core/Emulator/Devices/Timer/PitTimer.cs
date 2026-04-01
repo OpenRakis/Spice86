@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
@@ -37,7 +37,7 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly IPitSpeaker _pcSpeaker;
     private readonly DualPic _pic;
-    private readonly EmulationLoopScheduler _scheduler;
+    private readonly DeviceScheduler _scheduler;
     private readonly IEmulatedClock _clock;
 
     // Three PIT channels are supported. Each uses the same state machine while addressing distinct peripherals.
@@ -67,7 +67,7 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     /// <param name="loggerService">Logger for trace output.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
     public PitTimer(IOPortDispatcher ioPortDispatcher, State state, DualPic pic, IPitSpeaker pcSpeaker, 
-        EmulationLoopScheduler scheduler, IEmulatedClock clock, ILoggerService loggerService, bool failOnUnhandledPort)
+        DeviceScheduler scheduler, IEmulatedClock clock, ILoggerService loggerService, bool failOnUnhandledPort)
         : base(state, failOnUnhandledPort, loggerService) {
         _ioPortDispatcher = ioPortDispatcher;
         _pic = pic;

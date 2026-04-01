@@ -35,6 +35,7 @@
 		<PackageReference Include="SingleStepTests.Intel80386.67.80-67.FF"/>
 		<PackageReference Include="SingleStepTests.Intel80386.68-FF"/>
 		<PackageReference Include="xunit"/>
+		<PackageReference Include="Xunit.SkippableFact"/>
 		<PackageReference Include="xunit.runner.visualstudio">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>

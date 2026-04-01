@@ -46,9 +46,9 @@ public class VgaCard {
             return true;
         }
         _gui?.SetResolution(_renderer.Width, _renderer.Height);
-        // Wait for it to be applied
-        while (_renderer.Width != _gui?.Width || _renderer.Height != _gui?.Height);
-        // Report that resolution did not match
+        // Resolution change is asynchronous via Dispatcher.Post; skip this frame
+        // to avoid blocking the UI thread (the previous busy-wait would deadlock
+        // now that DrawScreen runs on the UI thread via DispatcherTimer).
         return false;
     }
     

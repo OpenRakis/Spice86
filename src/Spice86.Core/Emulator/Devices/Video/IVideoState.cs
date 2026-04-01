@@ -35,4 +35,10 @@ public interface IVideoState {
     ///     Contains the attribute controller registers.
     /// </summary>
     public AttributeControllerRegisters AttributeControllerRegisters { get; }
+
+    /// <summary>
+    ///     Whether any VGA register write has occurred since the last reset.
+    ///     Set by <see cref="VgaIoPortHandler"/> on port writes; cleared by <see cref="Renderer"/> at frame start.
+    /// </summary>
+    public bool IsRenderingDirty { get; set; }
 }

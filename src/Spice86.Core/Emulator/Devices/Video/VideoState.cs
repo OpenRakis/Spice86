@@ -33,4 +33,7 @@ public class VideoState : IVideoState {
 
     /// <inheritdoc />
     public AttributeControllerRegisters AttributeControllerRegisters { get; }
+
+    /// <inheritdoc />
+    public bool IsRenderingDirty { get; set; }
 }
