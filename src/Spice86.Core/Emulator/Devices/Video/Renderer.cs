@@ -150,7 +150,7 @@ public class Renderer : IVgaRenderer {
         _frameAboveLineCompare = true;
         // Reserve space for up to 2 extra rendered characters (max 9 pixels each in 9-dot text
         // mode) so the panning copy (scratch[panShift..panShift+Width]) always stays in bounds
-        // for all valid AR13 values: 0-8 in 8/9-dot modes, 0-6 in 256-color (×2 pixel units).
+        // for all valid AR13 values: 0-8 in 8/9-dot modes, 0-7 in 256-color (×2 pixel units, max 14).
         const int panningOverhead = 18;
         int scratchSize = width + panningOverhead;
         if (_rowScratch.Length < scratchSize) {
@@ -413,11 +413,14 @@ public class Renderer : IVgaRenderer {
     /// <summary>
     ///     Computes the effective pixel-panning shift for the current scanline.
     ///     In 256-color mode, each AR13 unit represents 2 displayed pixels (pixel-doubling
-    ///     granularity). In all other modes, one unit equals one pixel.
+    ///     granularity) and the hardware-valid range is 0–7 (3 bits), giving a max of 14 pixels.
+    ///     In all other modes the valid range is 0–15 (4 bits), one unit = one pixel.
     ///     Returns 0 when below the line-compare boundary and PixelPanningCompatibility is set.
     /// </summary>
     private int ComputeEffectivePanShift(bool in256ColorMode) {
-        int panUnits = _framePanShift & 0x0F;
+        // In 256-color mode the hardware only honours bits 0-2 of AR13 (matches DOSBox-staging).
+        // In planar/text modes all 4 bits are valid.
+        int panUnits = in256ColorMode ? _framePanShift & 0x07 : _framePanShift & 0x0F;
         if (panUnits == 0) {
             return 0;
         }
