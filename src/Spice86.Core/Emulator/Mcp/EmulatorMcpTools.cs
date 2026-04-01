@@ -212,7 +212,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_cpu_state", UseStructuredContent = true), Description("Read full CPU state: general-purpose registers (EAX-EBP), segment registers (CS, DS, ES, FS, GS, SS), instruction pointer (IP), flags, and cycle count. CS:IP gives the address of the next instruction to execute. This is the only tool that returns CPU registers — call it whenever you need register values.")]
+    [McpServerTool(Name = "read_cpu_state", UseStructuredContent = true), Description("Read full CPU state (also known as 'read registers' or 'read_cpu_registers'). Returns general-purpose registers (EAX-EBP), segment registers (CS, DS, ES, FS, GS, SS), instruction pointer (IP), flags, and cycle count. CS:IP gives the address of the next instruction to execute. No parameters required.")]
     public CallToolResult ReadCpuState() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -221,7 +221,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_memory", UseStructuredContent = true), Description("Read a memory range (max 4096 bytes) at a segmented address (segment:offset). Returns the address, length, and hex-encoded byte string. Use to inspect code, data, or stack regions.")]
+    [McpServerTool(Name = "read_memory", UseStructuredContent = true), Description("Read a memory range. Parameters: segment (ushort), offset (ushort), length (int, 1-4096). Address is two separate integers, not a combined string. Returns the address, length, and hex-encoded byte string.")]
     public CallToolResult ReadMemory(ushort segment, ushort offset, int length) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -240,7 +240,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_disassembly", UseStructuredContent = true), Description("Disassemble memory as x86 real-mode instructions starting at segment:offset. Returns an array of instructions with address, raw bytes, and assembly text. Stops early near memory boundaries. Use to examine code at any memory location.")]
+    [McpServerTool(Name = "read_disassembly", UseStructuredContent = true), Description("Disassemble x86 real-mode instructions. Parameters: segment (ushort), offset (ushort), instructionCount (int, 1-500). Address is two separate integers, not a combined string. Returns array of instructions with address, raw bytes, and assembly text.")]
     public CallToolResult ReadDisassembly(ushort segment, ushort offset, int instructionCount) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -286,7 +286,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "write_memory", UseStructuredContent = true), Description("Write hex-encoded bytes to a segmented memory address (segment:offset). Maximum 4096 bytes per call.")]
+    [McpServerTool(Name = "write_memory", UseStructuredContent = true), Description("Write hex-encoded bytes to memory. Parameters: segment (ushort), offset (ushort), data (hex string like 'B80200'). Address is two separate integers, not a combined string. Max 4096 bytes.")]
     public CallToolResult WriteMemory(ushort segment, ushort offset, [StringSyntax("Hexadecimal")] string data) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -577,7 +577,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "send_keyboard_key", UseStructuredContent = true), Description("Send a keyboard key press/release through the PS/2 controller. Use PcKeyboardKey enum names: Escape, Enter, A-Z, Up, Down, Left, Right, F1-F12, etc.")]
+    [McpServerTool(Name = "send_keyboard_key", UseStructuredContent = true), Description("Send a single keyboard key event. Parameters: key (string, PcKeyboardKey enum name like 'Enter' or 'Escape'), isPressed (bool, true=key down, false=key up). For a full keypress, call twice: once with isPressed=true, then with isPressed=false. Use PcKeyboardKey enum names: Escape, Enter, A-Z, Up, Down, Left, Right, F1-F12, Space, Tab, etc.")]
     public CallToolResult SendKeyboardKey(string key, bool isPressed) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -1196,9 +1196,23 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "screenshot", UseStructuredContent = true), Description("Capture a screenshot as a PNG file. Returns width, height, file path, URI, and file size.")]
+    [McpServerTool(Name = "screenshot", UseStructuredContent = true), Description("Capture a screenshot as PNG. No parameters. Returns base64 image data inline plus metadata (width, height, file path). MCP clients that support images will display it directly.")]
     public CallToolResult TakeScreenshot() {
-        return ExecuteTool(() => {
+        return ExecuteScreenshot();
+    }
+
+    private CallToolResult ExecuteScreenshot() {
+        bool shouldResume = false;
+        try {
+            EnsureToolEnabled("screenshot");
+            if (!_services.PauseHandler.IsPaused) {
+                _services.PauseHandler.RequestPause("to process MCP tool 'screenshot'");
+                if (!WaitUntilPaused(StepCompletionTimeout)) {
+                    return Error("Timed out waiting to pause before taking screenshot");
+                }
+                shouldResume = true;
+            }
+
             lock (_services.ToolsLock) {
                 int width = _services.VgaRenderer.Width;
                 int height = _services.VgaRenderer.Height;
@@ -1220,17 +1234,19 @@ internal sealed class EmulatorMcpTools {
                 using SKImage image = SKImage.FromBitmap(bitmap);
                 using SKData pngData = image.Encode(SKEncodedImageFormat.Png, 100);
                 if (pngData == null) {
-                    throw new InvalidOperationException("Failed to encode screenshot as PNG.");
+                    return Error("Failed to encode screenshot as PNG.");
                 }
 
+                byte[] pngBytes = pngData.ToArray();
+
                 using (FileStream fileStream = File.Open(filePath, FileMode.Create, FileAccess.Write, FileShare.Read)) {
-                    pngData.SaveTo(fileStream);
+                    fileStream.Write(pngBytes, 0, pngBytes.Length);
                 }
 
                 FileInfo fileInfo = new(filePath);
                 Uri fileUri = new(filePath);
 
-                return new ScreenshotResponse {
+                ScreenshotResponse metadata = new() {
                     Width = width,
                     Height = height,
                     Format = "png",
@@ -1239,8 +1255,26 @@ internal sealed class EmulatorMcpTools {
                     FileUri = fileUri.AbsoluteUri,
                     FileSizeBytes = fileInfo.Length
                 };
+
+                JsonNode? metadataNode = JsonSerializer.SerializeToNode(metadata, typeof(ScreenshotResponse), SerializerOptions);
+
+                return new CallToolResult {
+                    Content = [
+                        new ImageContentBlock {
+                            Data = Convert.ToBase64String(pngBytes),
+                            MimeType = "image/png"
+                        }
+                    ],
+                    StructuredContent = metadataNode as JsonObject
+                };
             }
-        });
+        } catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException) {
+            return Error(ex.Message);
+        } finally {
+            if (shouldResume) {
+                _services.PauseHandler.Resume();
+            }
+        }
     }
 
     [McpManualControl]
@@ -1827,7 +1861,7 @@ internal sealed class EmulatorMcpTools {
         return matches.ToArray();
     }
 
-    [McpServerTool(Name = "add_breakpoint", UseStructuredContent = true), Description("Add a breakpoint. Types: CPU_EXECUTION_ADDRESS, MEMORY_ACCESS, MEMORY_WRITE, MEMORY_READ, IO_ACCESS, IO_WRITE, IO_READ. Pass null for condition to add an unconditional breakpoint; otherwise provide a condition expression.")]
+    [McpServerTool(Name = "add_breakpoint", UseStructuredContent = true), Description("Add a breakpoint. Parameters: address (long, physical linear address), type (string: CPU_EXECUTION_ADDRESS, MEMORY_ACCESS, MEMORY_WRITE, MEMORY_READ, IO_ACCESS, IO_WRITE, IO_READ), condition (string or null for unconditional).")]
     public CallToolResult AddBreakpoint(long address, string type, [StringSyntax("Spice86BreakpointCondition")] string? condition) {
         return ExecuteTool(() => {
             lock (_services.McpBreakpointsLock) {
