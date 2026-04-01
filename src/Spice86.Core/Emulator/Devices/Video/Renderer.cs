@@ -150,7 +150,8 @@ public class Renderer : IVgaRenderer {
         _frameAboveLineCompare = true;
         // Reserve space for up to 2 extra rendered characters (max 9 pixels each in 9-dot text
         // mode) so the panning copy (scratch[panShift..panShift+Width]) always stays in bounds
-        // for all valid AR13 values: 0-8 in 8/9-dot modes, 0-7 in 256-color (×2 pixel units, max 14).
+        // for all effective AR13 values: 0-15 in 8/9-dot modes (clamped with & 0x0F), 0-7 in
+        // 256-color modes (×2 pixel units, max horizontal shift 14).
         const int panningOverhead = 18;
         int scratchSize = width + panningOverhead;
         if (_rowScratch.Length < scratchSize) {
