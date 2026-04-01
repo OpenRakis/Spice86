@@ -61,6 +61,7 @@ using Spice86.ViewModels.Services;
 using Spice86.Views;
 
 using System.Net.Sockets;
+using System.Reflection;
 
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
@@ -637,9 +638,17 @@ public class Spice86DependencyInjection : IDisposable {
 
         McpHttpHost? mcpHttpTransport = null;
 
+        // Collect additional MCP tool assemblies and services from override supplier
+        IEnumerable<Assembly>? additionalToolAssemblies = null;
+        IEnumerable<object>? additionalMcpServices = null;
+        if (configuration.OverrideSupplier is IMcpToolSupplier mcpToolSupplier) {
+            additionalToolAssemblies = mcpToolSupplier.GetMcpToolAssemblies();
+            additionalMcpServices = mcpToolSupplier.GetMcpServices();
+        }
+
         mcpHttpTransport = new McpHttpHost(loggerService);
         try {
-            mcpHttpTransport.Start(emulatorMcpServices, configuration.McpHttpPort, null, null);
+            mcpHttpTransport.Start(emulatorMcpServices, configuration.McpHttpPort, additionalToolAssemblies, additionalMcpServices);
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
                 loggerService.Information("MCP HTTP transport started on port {Port}", configuration.McpHttpPort);
             }
