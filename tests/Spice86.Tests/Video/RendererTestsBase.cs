@@ -1307,11 +1307,11 @@ public abstract class RendererTestsBase {
         state.AttributeControllerRegisters.HorizontalPixelPanning = 1;
 
         int offset = state.CrtControllerRegisters.Offset;
-        // Address 0 for lines 0-2 (above LineCompare, panning active)
+        // Line 0 uses address 0 (above LineCompare, panning active)
         vram.Planes[0, 0] = 0x80; // bit 7 set → with pan=1, pixel 0 shows bit 6 (=0)
-        // After LineCompare=2, address resets to 0 then advances by Offset*2 = 80 for line 3
-        // Line 3 reads from address Offset*2 = 80
-        vram.Planes[0, offset * 2] = 0x80; // bit 7 set at address 80 for line 3
+        // Configure memory so that line 3 uses address offset*2
+        // Line 3 reads from address offset*2
+        vram.Planes[0, offset * 2] = 0x80; // bit 7 set at address offset*2 for line 3
 
         state.IsRenderingDirty = true;
         uint[] frame = RenderAndCapture(renderer, state);
