@@ -6,7 +6,7 @@
 		<EnablePackageValidation>true</EnablePackageValidation>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
-		<NoWarn>$(NoWarn);1591;NU1507</NoWarn>
+		<NoWarn>$(NoWarn);1591;NU1507;NU1504</NoWarn>
 	</PropertyGroup>
 	<!-- Source Link configuration -->
 	<PropertyGroup>
@@ -16,10 +16,10 @@
 	</PropertyGroup>
 	<!-- Nuget package info-->
 	<PropertyGroup>
-		<Version>11.1.0</Version>
+		<Version>12.0</Version>
 		<PackageReleaseNotes>
             <![CDATA[
-            # Release Notes - https://github.com/OpenRakis/Spice86/wiki/Spice86-v11.1-release-notes
+            # Release Notes - https://github.com/OpenRakis/Spice86/wiki/Spice86-v12-release-notes
             ]]>
 		</PackageReleaseNotes>
 		<Authors>Alberto Marnetto, Ales Teska, Artjom Vejsel, Edu Garcia, Ivan Kuzmenko, John Källén, Joris van Eijden, Karl Lenz, Kevin Ferrare, LowLevelMahn, Maximilien Noal, Stefan Hueg</Authors>
