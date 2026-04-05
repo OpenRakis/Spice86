@@ -5,7 +5,8 @@
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:vm="using:Spice86.ViewModels"
-	xmlns:rendering="clr-namespace:Spice86.ViewModels.Services.Rendering"
+	xmlns:avaloniaHex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
+	xmlns:hexRendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
 	xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
 	x:CompileBindings="True"
 	x:DataType="vm:MemoryBitmapViewModel"
@@ -13,55 +14,79 @@
 	<Grid RowDefinitions="Auto,*,Auto">
 		<!-- Configuration Panel -->
 		<Border Grid.Row="0" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8">
-			<StackPanel Spacing="8">
-				<Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto">
-					<!-- Row 0: Mode, Address -->
-					<TextBlock Grid.Row="0" Grid.Column="0" Text="Mode:" VerticalAlignment="Center" Margin="0,0,4,0" />
-					<ComboBox Grid.Row="0" Grid.Column="1"
-							  ItemsSource="{Binding AvailableVideoModes}"
-							  SelectedItem="{Binding SelectedVideoMode}"
-							  Margin="0,0,8,4"
-							  HorizontalAlignment="Stretch" />
-					<TextBlock Grid.Row="0" Grid.Column="2" Text="Address:" VerticalAlignment="Center" Margin="0,0,4,0" />
-					<TextBox Grid.Row="0" Grid.Column="3" Text="{Binding StartAddress, Mode=TwoWay}"
-							 MinWidth="100" Margin="0,0,8,4" />
-					<CheckBox Grid.Row="0" Grid.Column="4" Content="Use current palette"
-							  IsChecked="{Binding UseCurrentPalette}" Margin="0,0,8,4"
-							  VerticalAlignment="Center" />
-					<CheckBox Grid.Row="0" Grid.Column="5" Content="Auto refresh"
-							  IsChecked="{Binding AutoRefresh}" Margin="0,0,0,4"
-							  VerticalAlignment="Center" />
+			<Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto">
+				<!-- Row 0: Mode, Dimensions -->
+				<TextBlock Grid.Row="0" Grid.Column="0" Text="Mode:" VerticalAlignment="Center" Margin="0,0,4,0" />
+				<ComboBox Grid.Row="0" Grid.Column="1"
+						  ItemsSource="{Binding AvailableVideoModes}"
+						  SelectedItem="{Binding SelectedVideoMode}"
+						  Margin="0,0,8,4"
+						  HorizontalAlignment="Stretch" />
+				<TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding WidthLabel}" VerticalAlignment="Center" Margin="0,0,4,0" />
+				<NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding BitmapWidth}" Minimum="1" Maximum="4096"
+							   MinWidth="100" Margin="0,0,8,4" />
+				<TextBlock Grid.Row="0" Grid.Column="4" Text="{Binding HeightLabel}" VerticalAlignment="Center" Margin="0,0,4,0" />
+				<NumericUpDown Grid.Row="0" Grid.Column="5" Value="{Binding BitmapHeight}" Minimum="1" Maximum="4096"
+							   MinWidth="100" Margin="0,0,8,4" />
+				<CheckBox Grid.Row="0" Grid.Column="6" Content="Use current palette"
+						  IsChecked="{Binding UseCurrentPalette}" Margin="0,0,8,4"
+						  VerticalAlignment="Center" />
+				<CheckBox Grid.Row="0" Grid.Column="7" Content="Auto refresh"
+						  IsChecked="{Binding AutoRefresh}" Margin="0,0,0,4"
+						  VerticalAlignment="Center" />
 
-					<!-- Row 1: Dimensions, Buttons -->
-					<TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding WidthLabel}" VerticalAlignment="Center" Margin="0,0,4,0" />
-					<NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding BitmapWidth}" Minimum="1" Maximum="4096"
-								   Margin="0,0,8,0" />
-					<TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding HeightLabel}" VerticalAlignment="Center" Margin="0,0,4,0" />
-					<NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding BitmapHeight}" Minimum="1" Maximum="4096"
-								   Margin="0,0,8,0" />
-					<Button Grid.Row="1" Grid.Column="4" Command="{Binding RenderBitmapCommand}"
-							ToolTip.Tip="Render memory region as bitmap" Margin="0,0,4,0">
-						<StackPanel Orientation="Horizontal" Spacing="4">
-							<fluent:SymbolIcon Symbol="Image" FontSize="16" />
-							<TextBlock Text="Render" VerticalAlignment="Center" />
-						</StackPanel>
-					</Button>
-					<Button Grid.Row="1" Grid.Column="5" Command="{Binding SaveBitmapCommand}"
-							ToolTip.Tip="Save bitmap to disk">
-						<StackPanel Orientation="Horizontal" Spacing="4">
-							<fluent:SymbolIcon Symbol="Save" FontSize="16" />
-							<TextBlock Text="Save" VerticalAlignment="Center" />
-						</StackPanel>
-					</Button>
-				</Grid>
-			</StackPanel>
+				<!-- Row 1: Address info, Render/Save -->
+				<TextBlock Grid.Row="1" Grid.Column="0" Text="Address:" VerticalAlignment="Center" Margin="0,0,4,0" />
+				<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AddressRangeDisplay}" VerticalAlignment="Center"
+						   FontFamily="Consolas,Monospace" Opacity="0.8" Margin="0,0,8,0" />
+				<TextBlock Grid.Row="1" Grid.Column="2" Text="Bytes:" VerticalAlignment="Center" Margin="0,0,4,0" />
+				<TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding EstimatedBytesDisplay}" VerticalAlignment="Center"
+						   FontFamily="Consolas,Monospace" Opacity="0.8" Margin="0,0,8,0" />
+				<TextBlock Grid.Row="1" Grid.Column="4" Text="Pixels:" VerticalAlignment="Center" Margin="0,0,4,0" />
+				<TextBlock Grid.Row="1" Grid.Column="5" Text="{Binding OutputDimensionsDisplay}" VerticalAlignment="Center"
+						   FontFamily="Consolas,Monospace" Opacity="0.8" Margin="0,0,8,0" />
+				<Button Grid.Row="1" Grid.Column="6" Command="{Binding RenderBitmapCommand}"
+						ToolTip.Tip="Render memory region as bitmap" Margin="0,0,4,0">
+					<StackPanel Orientation="Horizontal" Spacing="4">
+						<fluent:SymbolIcon Symbol="Image" FontSize="16" />
+						<TextBlock Text="Render" VerticalAlignment="Center" />
+					</StackPanel>
+				</Button>
+				<Button Grid.Row="1" Grid.Column="7" Command="{Binding SaveBitmapCommand}"
+						ToolTip.Tip="Save bitmap to disk">
+					<StackPanel Orientation="Horizontal" Spacing="4">
+						<fluent:SymbolIcon Symbol="Save" FontSize="16" />
+						<TextBlock Text="Save" VerticalAlignment="Center" />
+					</StackPanel>
+				</Button>
+			</Grid>
 		</Border>
 
-		<!-- Bitmap Display -->
-		<Viewbox Grid.Row="1" Stretch="Uniform" StretchDirection="Both">
-			<Image Source="{Binding RenderedBitmap}"
-				   RenderOptions.BitmapInterpolationMode="None" />
-		</Viewbox>
+		<!-- Main content: HexEditor + GridSplitter + Bitmap -->
+		<Grid Grid.Row="1" ColumnDefinitions="*,12,2*">
+			<!-- Left: Embedded HexEditor showing raw memory -->
+			<avaloniaHex:HexEditor
+				Grid.Column="0"
+				x:Name="HexViewer"
+				Document="{Binding HexDocument}"
+				BorderThickness="0,0,1,0"
+				BorderBrush="Gray"
+				FontSize="12">
+				<TextElement.FontFamily>Consolas,Monospace</TextElement.FontFamily>
+				<avaloniaHex:HexEditor.Columns>
+					<hexRendering:OffsetColumn />
+					<hexRendering:HexColumn />
+				</avaloniaHex:HexEditor.Columns>
+			</avaloniaHex:HexEditor>
+
+			<GridSplitter Grid.Column="1" Width="12" Background="Transparent" />
+
+			<!-- Right: Bitmap display -->
+			<Viewbox Grid.Column="2" Stretch="Uniform" StretchDirection="Both">
+				<Image Source="{Binding RenderedBitmap}"
+					   RenderOptions.BitmapInterpolationMode="None" />
+			</Viewbox>
+		</Grid>
 
 		<!-- Status Bar -->
 		<Border Grid.Row="2" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="8,4">

@@ -4,27 +4,41 @@ using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
+using AvaloniaHex.Document;
+using AvaloniaHex.Editing;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Memory;
+using Spice86.ViewModels.DataModels;
 using Spice86.ViewModels.Services;
 using Spice86.ViewModels.Services.Rendering;
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 /// <summary>
 ///     ViewModel for rendering an arbitrary memory region as a bitmap using legacy video modes.
+///     Embeds a HexEditor for memory browsing with a GridSplitter, keeping per-mode state.
 ///     For VGA 256-color mode, delegates to the Core VGA renderer for correct output.
 ///     For other modes (CGA, EGA, raw, text, etc.), uses the custom MemoryBitmapRenderer.
 /// </summary>
 public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewModel {
+    private sealed class VideoModeSettings {
+        public string StartAddress { get; set; } = "A0000";
+        public int Width { get; set; } = 320;
+        public int Height { get; set; } = 200;
+    }
+
     private readonly IMemory _memory;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IVgaRenderer _vgaRenderer;
+    private readonly uint[]? _dacPaletteMap;
+    private readonly Dictionary<MemoryBitmapVideoMode, VideoModeSettings> _perModeSettings = new();
 
     [ObservableProperty]
     private string _startAddress = "A0000";
@@ -50,7 +64,11 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
     [ObservableProperty]
     private bool _autoRefresh = true;
 
-    private readonly uint[]? _dacPaletteMap;
+    [ObservableProperty]
+    private DataMemoryDocument? _hexDocument;
+
+    [ObservableProperty]
+    private string _hexSelectionInfo = "";
 
     /// <summary>
     ///     Available video modes for selection in the UI.
@@ -68,6 +86,41 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
     public string HeightLabel => SelectedVideoMode == MemoryBitmapVideoMode.Text ? "Rows" : "Height (px)";
 
     /// <summary>
+    ///     The address range currently being rendered.
+    /// </summary>
+    public string AddressRangeDisplay {
+        get {
+            if (!TryParseHexAddress(StartAddress, out uint address)) {
+                return "Invalid";
+            }
+            int estimatedBytes = MemoryBitmapRenderer.EstimateRequiredBytes(SelectedVideoMode, BitmapWidth, BitmapHeight);
+            uint endAddress = address + (uint)estimatedBytes;
+            return $"{address:X5}–{endAddress:X5}";
+        }
+    }
+
+    /// <summary>
+    ///     Estimated bytes needed for the current mode/dimensions.
+    /// </summary>
+    public string EstimatedBytesDisplay {
+        get {
+            int bytes = MemoryBitmapRenderer.EstimateRequiredBytes(SelectedVideoMode, BitmapWidth, BitmapHeight);
+            return $"{bytes:N0}";
+        }
+    }
+
+    /// <summary>
+    ///     Output pixel dimensions for the current mode.
+    /// </summary>
+    public string OutputDimensionsDisplay {
+        get {
+            int w = MemoryBitmapRenderer.GetOutputPixelWidth(SelectedVideoMode, BitmapWidth);
+            int h = MemoryBitmapRenderer.GetOutputPixelHeight(SelectedVideoMode, BitmapHeight);
+            return $"{w}×{h}";
+        }
+    }
+
+    /// <summary>
     ///     Creates a new MemoryBitmapViewModel.
     /// </summary>
     /// <param name="memory">The emulator memory to read from.</param>
@@ -82,6 +135,8 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
         _uiDispatcher = uiDispatcher;
         _vgaRenderer = vgaRenderer;
         _dacPaletteMap = dacPaletteMap;
+        InitializePerModeDefaults();
+        UpdateHexDocument();
     }
 
     /// <inheritdoc />
@@ -95,63 +150,110 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
         RenderBitmap();
     }
 
-    partial void OnSelectedVideoModeChanged(MemoryBitmapVideoMode value) {
-        OnPropertyChanged(nameof(WidthLabel));
-        OnPropertyChanged(nameof(HeightLabel));
-        ApplyPresetForMode(value);
+    /// <summary>
+    ///     Handles hex editor selection changes — updates selection info display.
+    /// </summary>
+    public void OnHexSelectionRangeChanged(object? sender, EventArgs e) {
+        if (sender is Selection selection && TryParseHexAddress(StartAddress, out uint baseAddr)) {
+            ulong selStart = (ulong)selection.Range.Start.ByteIndex;
+            ulong selEnd = (ulong)selection.Range.End.ByteIndex;
+            ulong length = selEnd > selStart ? selEnd - selStart : 0;
+            HexSelectionInfo = length > 0
+                ? $"Selected: {baseAddr + selStart:X5}–{baseAddr + selEnd:X5} ({length:N0} bytes)"
+                : "";
+        }
     }
 
-    /// <summary>
-    ///     Applies sensible default dimensions when switching video modes.
-    /// </summary>
-    private void ApplyPresetForMode(MemoryBitmapVideoMode mode) {
-        switch (mode) {
-            case MemoryBitmapVideoMode.Vga256Color:
-                BitmapWidth = _vgaRenderer.Width;
-                BitmapHeight = _vgaRenderer.Height;
-                StartAddress = "A0000";
-                break;
-            case MemoryBitmapVideoMode.VgaModeX:
-                BitmapWidth = 320;
-                BitmapHeight = 240;
-                StartAddress = "A0000";
-                break;
-            case MemoryBitmapVideoMode.Ega16Color:
-                BitmapWidth = 640;
-                BitmapHeight = 350;
-                StartAddress = "A0000";
-                break;
-            case MemoryBitmapVideoMode.Packed4Bpp:
-                BitmapWidth = 320;
-                BitmapHeight = 200;
-                StartAddress = "A0000";
-                break;
-            case MemoryBitmapVideoMode.Cga4Color:
-                BitmapWidth = 320;
-                BitmapHeight = 200;
-                StartAddress = "B8000";
-                break;
-            case MemoryBitmapVideoMode.Cga2Color:
-                BitmapWidth = 640;
-                BitmapHeight = 200;
-                StartAddress = "B8000";
-                break;
-            case MemoryBitmapVideoMode.Linear1Bpp:
-                BitmapWidth = 640;
-                BitmapHeight = 480;
-                StartAddress = "A0000";
-                break;
-            case MemoryBitmapVideoMode.Text:
-                BitmapWidth = 80;
-                BitmapHeight = 25;
-                StartAddress = "B8000";
-                break;
-            case MemoryBitmapVideoMode.Raw8Bpp:
-                BitmapWidth = 320;
-                BitmapHeight = 200;
-                StartAddress = "A0000";
-                break;
+    partial void OnSelectedVideoModeChanged(MemoryBitmapVideoMode oldValue, MemoryBitmapVideoMode newValue) {
+        SaveModeSettings(oldValue);
+        RestoreModeSettings(newValue);
+        OnPropertyChanged(nameof(WidthLabel));
+        OnPropertyChanged(nameof(HeightLabel));
+        RefreshInfoDisplays();
+        UpdateHexDocument();
+    }
+
+    partial void OnStartAddressChanged(string value) {
+        RefreshInfoDisplays();
+        UpdateHexDocument();
+    }
+
+    partial void OnBitmapWidthChanged(int value) {
+        RefreshInfoDisplays();
+        UpdateHexDocument();
+    }
+
+    partial void OnBitmapHeightChanged(int value) {
+        RefreshInfoDisplays();
+        UpdateHexDocument();
+    }
+
+    private void RefreshInfoDisplays() {
+        OnPropertyChanged(nameof(AddressRangeDisplay));
+        OnPropertyChanged(nameof(EstimatedBytesDisplay));
+        OnPropertyChanged(nameof(OutputDimensionsDisplay));
+    }
+
+    private void InitializePerModeDefaults() {
+        _perModeSettings[MemoryBitmapVideoMode.Vga256Color] = new VideoModeSettings { StartAddress = "A0000", Width = 320, Height = 200 };
+        _perModeSettings[MemoryBitmapVideoMode.VgaModeX] = new VideoModeSettings { StartAddress = "A0000", Width = 320, Height = 240 };
+        _perModeSettings[MemoryBitmapVideoMode.Ega16Color] = new VideoModeSettings { StartAddress = "A0000", Width = 640, Height = 350 };
+        _perModeSettings[MemoryBitmapVideoMode.Packed4Bpp] = new VideoModeSettings { StartAddress = "A0000", Width = 320, Height = 200 };
+        _perModeSettings[MemoryBitmapVideoMode.Cga4Color] = new VideoModeSettings { StartAddress = "B8000", Width = 320, Height = 200 };
+        _perModeSettings[MemoryBitmapVideoMode.Cga2Color] = new VideoModeSettings { StartAddress = "B8000", Width = 640, Height = 200 };
+        _perModeSettings[MemoryBitmapVideoMode.Linear1Bpp] = new VideoModeSettings { StartAddress = "A0000", Width = 640, Height = 480 };
+        _perModeSettings[MemoryBitmapVideoMode.Text] = new VideoModeSettings { StartAddress = "B8000", Width = 80, Height = 25 };
+        _perModeSettings[MemoryBitmapVideoMode.Raw8Bpp] = new VideoModeSettings { StartAddress = "A0000", Width = 320, Height = 200 };
+    }
+
+    private void SaveModeSettings(MemoryBitmapVideoMode mode) {
+        if (!_perModeSettings.TryGetValue(mode, out VideoModeSettings? settings)) {
+            settings = new VideoModeSettings();
+            _perModeSettings[mode] = settings;
         }
+        settings.StartAddress = StartAddress;
+        settings.Width = BitmapWidth;
+        settings.Height = BitmapHeight;
+    }
+
+    private void RestoreModeSettings(MemoryBitmapVideoMode mode) {
+        if (mode == MemoryBitmapVideoMode.Vga256Color) {
+            StartAddress = "A0000";
+            BitmapWidth = _vgaRenderer.Width > 0 ? _vgaRenderer.Width : 320;
+            BitmapHeight = _vgaRenderer.Height > 0 ? _vgaRenderer.Height : 200;
+            return;
+        }
+        if (_perModeSettings.TryGetValue(mode, out VideoModeSettings? settings)) {
+            StartAddress = settings.StartAddress;
+            BitmapWidth = settings.Width;
+            BitmapHeight = settings.Height;
+        }
+    }
+
+    private void UpdateHexDocument() {
+        if (SelectedVideoMode == MemoryBitmapVideoMode.Vga256Color) {
+            HexDocument = null;
+            return;
+        }
+        if (!TryParseHexAddress(StartAddress, out uint address)) {
+            HexDocument = null;
+            return;
+        }
+        int estimatedBytes = MemoryBitmapRenderer.EstimateRequiredBytes(SelectedVideoMode, BitmapWidth, BitmapHeight);
+        if (estimatedBytes <= 0) {
+            HexDocument = null;
+            return;
+        }
+        uint endAddress = address + (uint)estimatedBytes;
+        uint memLength = (uint)_memory.Length;
+        if (address >= memLength) {
+            HexDocument = null;
+            return;
+        }
+        if (endAddress > memLength) {
+            endAddress = memLength;
+        }
+        HexDocument = new DataMemoryDocument(_memory, address, endAddress);
     }
 
     /// <summary>
@@ -185,7 +287,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
         _vgaRenderer.Render(frameBuffer.AsSpan());
 
         WritePixelsToBitmap(frameBuffer, width, height);
-        StatusText = $"Rendered {width}x{height} ({SelectedVideoMode}) — live VGA output";
+        StatusText = $"Rendered {width}×{height} ({SelectedVideoMode}) — live VGA output";
     }
 
     /// <summary>
@@ -222,7 +324,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
         }
 
         WritePixelsToBitmap(pixels, outputPixelWidth, outputPixelHeight);
-        StatusText = $"Rendered {outputPixelWidth}x{outputPixelHeight} ({SelectedVideoMode})";
+        StatusText = $"Rendered {outputPixelWidth}×{outputPixelHeight} ({SelectedVideoMode}) @ {address:X5}";
     }
 
     /// <summary>

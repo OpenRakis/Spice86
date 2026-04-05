@@ -21,6 +21,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     private readonly BiosDataArea _biosDataArea;
     private readonly ILoggerService _logger;
     private readonly IVgaFunctionality _vgaFunctions;
+    private byte _secondaryDisplayCombinationCode;
 
     /// <summary>
     ///     VGA BIOS constructor.
@@ -75,19 +76,20 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             case 0x00: {
                     State.AL = 0x1A; // Function supported
                     State.BL = _biosDataArea.DisplayCombinationCode; // Primary display
-                    State.BH = 0x00; // No secondary display
+                    State.BH = _secondaryDisplayCombinationCode; // Secondary display
                     if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Get: DCC 0x{Dcc:X2}",
-                            nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Get: Primary DCC 0x{Dcc:X2}, Secondary DCC 0x{SecondaryDcc:X2}",
+                            nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL, State.BH);
                     }
                     break;
                 }
             case 0x01: {
                     State.AL = 0x1A; // Function supported
                     _biosDataArea.DisplayCombinationCode = State.BL;
+                    _secondaryDisplayCombinationCode = State.BH;
                     if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Set: DCC 0x{Dcc:X2}",
-                            nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Set: Primary DCC 0x{Dcc:X2}, Secondary DCC 0x{SecondaryDcc:X2}",
+                            nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL, State.BH);
                     }
                     break;
                 }
@@ -674,7 +676,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             ScreenRows = _biosDataArea.ScreenRows,
             CharacterMatrixHeight = _biosDataArea.CharacterHeight,
             ActiveDisplayCombinationCode = _biosDataArea.DisplayCombinationCode,
-            AlternateDisplayCombinationCode = 0x00,
+            AlternateDisplayCombinationCode = _secondaryDisplayCombinationCode,
             NumberOfColorsSupported = CalculateColorCount(currentMode),
             NumberOfPages = CalculatePageCount(currentMode),
             NumberOfActiveScanLines = CalculateScanLineCode(currentMode),

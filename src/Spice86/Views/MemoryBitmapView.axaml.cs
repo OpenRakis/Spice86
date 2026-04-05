@@ -4,12 +4,14 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 
+using AvaloniaHex;
+
 using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 
 /// <summary>
 ///     Code-behind for the MemoryBitmapView, managing the DispatcherTimer lifecycle
-///     for periodic bitmap refresh.
+///     for periodic bitmap refresh and wiring the embedded HexEditor selection.
 /// </summary>
 public partial class MemoryBitmapView : UserControl {
     private DispatcherTimer? _timer;
@@ -23,7 +25,7 @@ public partial class MemoryBitmapView : UserControl {
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e) {
-        if (DataContext is IEmulatorObjectViewModel vm) {
+        if (DataContext is MemoryBitmapViewModel vm) {
             vm.IsVisible = false;
             _timer?.Stop();
             _timer = null;
@@ -33,12 +35,17 @@ public partial class MemoryBitmapView : UserControl {
     /// <inheritdoc />
     protected override void OnDataContextChanged(EventArgs e) {
         base.OnDataContextChanged(e);
-        if (DataContext is IEmulatorObjectViewModel vm) {
+        if (DataContext is MemoryBitmapViewModel vm) {
             vm.IsVisible = this.IsVisible;
             _timer = DispatcherTimerStarter.StartNewDispatcherTimer(
                 TimeSpan.FromMilliseconds(500),
                 DispatcherPriority.Background,
                 vm.UpdateValues);
+            HexEditor? hexEditor = this.FindControl<HexEditor>("HexViewer");
+            if (hexEditor is not null) {
+                hexEditor.Selection.RangeChanged -= vm.OnHexSelectionRangeChanged;
+                hexEditor.Selection.RangeChanged += vm.OnHexSelectionRangeChanged;
+            }
         }
     }
 }
