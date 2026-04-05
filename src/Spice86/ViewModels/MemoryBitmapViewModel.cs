@@ -95,7 +95,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
             }
             int estimatedBytes = MemoryBitmapRenderer.EstimateRequiredBytes(SelectedVideoMode, BitmapWidth, BitmapHeight);
             uint endAddress = address + (uint)estimatedBytes;
-            return $"{address:X5}–{endAddress:X5}";
+            return $"{address:X5}-{endAddress:X5}";
         }
     }
 
@@ -116,7 +116,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
         get {
             int w = MemoryBitmapRenderer.GetOutputPixelWidth(SelectedVideoMode, BitmapWidth);
             int h = MemoryBitmapRenderer.GetOutputPixelHeight(SelectedVideoMode, BitmapHeight);
-            return $"{w}×{h}";
+            return $"{w}x{h}";
         }
     }
 
@@ -151,7 +151,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
     }
 
     /// <summary>
-    ///     Handles hex editor selection changes — updates selection info display.
+    ///     Handles hex editor selection changes - updates selection info display.
     /// </summary>
     public void OnHexSelectionRangeChanged(object? sender, EventArgs e) {
         if (sender is Selection selection && TryParseHexAddress(StartAddress, out uint baseAddr)) {
@@ -159,7 +159,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
             ulong selEnd = (ulong)selection.Range.End.ByteIndex;
             ulong length = selEnd > selStart ? selEnd - selStart : 0;
             HexSelectionInfo = length > 0
-                ? $"Selected: {baseAddr + selStart:X5}–{baseAddr + selEnd:X5} ({length:N0} bytes)"
+                ? $"Selected: {baseAddr + selStart:X5}-{baseAddr + selEnd:X5} ({length:N0} bytes)"
                 : "";
         }
     }
@@ -287,7 +287,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
         _vgaRenderer.Render(frameBuffer.AsSpan());
 
         WritePixelsToBitmap(frameBuffer, width, height);
-        StatusText = $"Rendered {width}×{height} ({SelectedVideoMode}) — live VGA output";
+        StatusText = $"Rendered {width}x{height} ({SelectedVideoMode}) -- live VGA output";
     }
 
     /// <summary>
@@ -324,7 +324,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
         }
 
         WritePixelsToBitmap(pixels, outputPixelWidth, outputPixelHeight);
-        StatusText = $"Rendered {outputPixelWidth}×{outputPixelHeight} ({SelectedVideoMode}) @ {address:X5}";
+        StatusText = $"Rendered {outputPixelWidth}x{outputPixelHeight} ({SelectedVideoMode}) @ {address:X5}";
     }
 
     /// <summary>

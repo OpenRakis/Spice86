@@ -11,14 +11,14 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 /// </summary>
 public static class MemoryBitmapRenderer {
     /// <summary>
-    ///     Minimal 8×16 bitmap font for text-mode rendering (256 characters × 16 scanlines).
-    ///     Covers printable ASCII (0x20–0x7E) with simplified glyphs.
+    ///     Minimal 8x16 bitmap font for text-mode rendering (256 characters x 16 scanlines).
+    ///     Covers printable ASCII (0x20-0x7E) with simplified glyphs.
     ///     Non-printable characters are rendered as stippled blocks.
     /// </summary>
     private static readonly byte[] VgaFont8X16 = GenerateBasicFont();
 
     /// <summary>
-    ///     Builds a minimal 8×16 bitmap font covering printable ASCII (0x20–0x7E).
+    ///     Builds a minimal 8x16 bitmap font covering printable ASCII (0x20-0x7E).
     ///     Non-printable characters are rendered as filled blocks.
     /// </summary>
     private static byte[] GenerateBasicFont() {
