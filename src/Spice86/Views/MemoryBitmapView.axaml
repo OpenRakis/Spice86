@@ -58,13 +58,10 @@
 		</Border>
 
 		<!-- Bitmap Display -->
-		<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+		<Viewbox Grid.Row="1" Stretch="Uniform" StretchDirection="Both">
 			<Image Source="{Binding RenderedBitmap}"
-				   Stretch="None"
-				   HorizontalAlignment="Left"
-				   VerticalAlignment="Top"
 				   RenderOptions.BitmapInterpolationMode="None" />
-		</ScrollViewer>
+		</Viewbox>
 
 		<!-- Status Bar -->
 		<Border Grid.Row="2" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="8,4">

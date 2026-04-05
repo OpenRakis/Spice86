@@ -7,6 +7,7 @@ using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Memory;
 using Spice86.ViewModels.Services;
 using Spice86.ViewModels.Services.Rendering;
@@ -16,13 +17,14 @@ using System.Runtime.InteropServices;
 
 /// <summary>
 ///     ViewModel for rendering an arbitrary memory region as a bitmap using legacy video modes.
-///     Supports VGA, EGA, CGA, text mode, and raw 8bpp rendering with configurable
-///     address, dimensions, video mode, and palette source.
+///     For VGA 256-color mode, delegates to the Core VGA renderer for correct output.
+///     For other modes (CGA, EGA, raw, text, etc.), uses the custom MemoryBitmapRenderer.
 /// </summary>
 public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewModel {
     private readonly IMemory _memory;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IUIDispatcher _uiDispatcher;
+    private readonly IVgaRenderer _vgaRenderer;
 
     [ObservableProperty]
     private string _startAddress = "A0000";
@@ -71,12 +73,14 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
     /// <param name="memory">The emulator memory to read from.</param>
     /// <param name="hostStorageProvider">The storage provider for file save operations.</param>
     /// <param name="uiDispatcher">The UI dispatcher for thread-safe operations.</param>
+    /// <param name="vgaRenderer">The Core VGA renderer for capturing live VGA output.</param>
     /// <param name="dacPaletteMap">The current VGA DAC palette map (256 ARGB entries), or null to use defaults.</param>
     public MemoryBitmapViewModel(IMemory memory, IHostStorageProvider hostStorageProvider,
-        IUIDispatcher uiDispatcher, uint[]? dacPaletteMap) {
+        IUIDispatcher uiDispatcher, IVgaRenderer vgaRenderer, uint[]? dacPaletteMap) {
         _memory = memory;
         _hostStorageProvider = hostStorageProvider;
         _uiDispatcher = uiDispatcher;
+        _vgaRenderer = vgaRenderer;
         _dacPaletteMap = dacPaletteMap;
     }
 
@@ -103,8 +107,8 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
     private void ApplyPresetForMode(MemoryBitmapVideoMode mode) {
         switch (mode) {
             case MemoryBitmapVideoMode.Vga256Color:
-                BitmapWidth = 320;
-                BitmapHeight = 200;
+                BitmapWidth = _vgaRenderer.Width;
+                BitmapHeight = _vgaRenderer.Height;
                 StartAddress = "A0000";
                 break;
             case MemoryBitmapVideoMode.VgaModeX:
@@ -152,9 +156,42 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
 
     /// <summary>
     ///     Renders the current memory region to the bitmap.
+    ///     For VGA 256-color mode, captures the frame from the Core VGA renderer.
+    ///     For other modes, reads raw memory and interprets using the custom renderer.
     /// </summary>
     [RelayCommand]
     public void RenderBitmap() {
+        if (SelectedVideoMode == MemoryBitmapVideoMode.Vga256Color) {
+            RenderFromCoreVga();
+            return;
+        }
+        RenderFromRawMemory();
+    }
+
+    /// <summary>
+    ///     Captures the current frame from the Core VGA renderer.
+    ///     This correctly handles all VGA register state including planes, panning, and start address.
+    /// </summary>
+    private void RenderFromCoreVga() {
+        int width = _vgaRenderer.Width;
+        int height = _vgaRenderer.Height;
+        if (width <= 0 || height <= 0) {
+            StatusText = "VGA renderer has no active display";
+            return;
+        }
+
+        int bufferSize = width * height;
+        uint[] frameBuffer = new uint[bufferSize];
+        _vgaRenderer.Render(frameBuffer.AsSpan());
+
+        WritePixelsToBitmap(frameBuffer, width, height);
+        StatusText = $"Rendered {width}x{height} ({SelectedVideoMode}) — live VGA output";
+    }
+
+    /// <summary>
+    ///     Renders a memory region using the custom MemoryBitmapRenderer for non-VGA modes.
+    /// </summary>
+    private void RenderFromRawMemory() {
         if (!TryParseHexAddress(StartAddress, out uint address)) {
             StatusText = "Invalid start address";
             return;
@@ -211,8 +248,11 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
         }
 
         using ILockedFramebuffer framebuffer = RenderedBitmap.Lock();
-        int bytesToCopy = Math.Min(pixels.Length * 4, framebuffer.RowBytes * framebuffer.Size.Height);
-        Marshal.Copy(MemoryMarshal.AsBytes(pixels.AsSpan()).ToArray(), 0, framebuffer.Address, bytesToCopy);
+        ReadOnlySpan<byte> sourceBytes = MemoryMarshal.AsBytes(pixels.AsSpan());
+        int bytesToCopy = Math.Min(sourceBytes.Length, framebuffer.RowBytes * framebuffer.Size.Height);
+        unsafe {
+            sourceBytes[..bytesToCopy].CopyTo(new Span<byte>((void*)framebuffer.Address, bytesToCopy));
+        }
         OnPropertyChanged(nameof(RenderedBitmap));
     }
 

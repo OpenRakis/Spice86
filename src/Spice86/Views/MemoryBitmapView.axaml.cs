@@ -34,7 +34,7 @@ public partial class MemoryBitmapView : UserControl {
     protected override void OnDataContextChanged(EventArgs e) {
         base.OnDataContextChanged(e);
         if (DataContext is IEmulatorObjectViewModel vm) {
-            vm.IsVisible = true;
+            vm.IsVisible = this.IsVisible;
             _timer = DispatcherTimerStarter.StartNewDispatcherTimer(
                 TimeSpan.FromMilliseconds(500),
                 DispatcherPriority.Background,

@@ -11,7 +11,9 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 /// </summary>
 public static class MemoryBitmapRenderer {
     /// <summary>
-    ///     Standard 8×16 VGA ROM font for text-mode rendering (256 characters × 16 scanlines).
+    ///     Minimal 8×16 bitmap font for text-mode rendering (256 characters × 16 scanlines).
+    ///     Covers printable ASCII (0x20–0x7E) with simplified glyphs.
+    ///     Non-printable characters are rendered as stippled blocks.
     /// </summary>
     private static readonly byte[] VgaFont8X16 = GenerateBasicFont();
 
@@ -267,23 +269,27 @@ public static class MemoryBitmapRenderer {
 
     /// <summary>
     ///     Gets the standard VGA 256-color default palette as a 256-entry ARGB array.
+    ///     Cached to avoid repeated allocation during auto-refresh.
     /// </summary>
-    public static uint[] DefaultVga256Palette => BuildArgbPalette(Palettes.Vga, 256);
+    public static uint[] DefaultVga256Palette { get; } = BuildArgbPalette(Palettes.Vga, 256);
 
     /// <summary>
     ///     Gets the standard CGA 16-color palette as a 16-entry ARGB array.
+    ///     Cached to avoid repeated allocation during auto-refresh.
     /// </summary>
-    public static uint[] DefaultCga16Palette => BuildArgbPalette(Palettes.Cga, 16);
+    public static uint[] DefaultCga16Palette { get; } = BuildArgbPalette(Palettes.Cga, 16);
 
     /// <summary>
     ///     Gets the standard EGA 16-color palette as a 16-entry ARGB array.
+    ///     Cached to avoid repeated allocation during auto-refresh.
     /// </summary>
-    public static uint[] DefaultEga16Palette => BuildArgbPalette(Palettes.Ega, 16);
+    public static uint[] DefaultEga16Palette { get; } = BuildArgbPalette(Palettes.Ega, 16);
 
     /// <summary>
     ///     Gets a monochrome 2-color palette (black and white).
+    ///     Cached to avoid repeated allocation during auto-refresh.
     /// </summary>
-    public static uint[] MonochromePalette => [0xFF000000, 0xFFFFFFFF];
+    public static uint[] MonochromePalette { get; } = [0xFF000000, 0xFFFFFFFF];
 
     /// <summary>
     ///     Renders a memory region as a bitmap using the specified video mode.
@@ -299,17 +305,27 @@ public static class MemoryBitmapRenderer {
             return [];
         }
         return mode switch {
-            MemoryBitmapVideoMode.Raw8Bpp => RenderRaw8Bpp(data, width, height, palette ?? DefaultVga256Palette),
-            MemoryBitmapVideoMode.Vga256Color => RenderVga256(data, width, height, palette ?? DefaultVga256Palette),
-            MemoryBitmapVideoMode.VgaModeX => RenderVgaModeX(data, width, height, palette ?? DefaultVga256Palette),
-            MemoryBitmapVideoMode.Ega16Color => RenderEga16(data, width, height, palette ?? DefaultEga16Palette),
-            MemoryBitmapVideoMode.Packed4Bpp => RenderPacked4Bpp(data, width, height, palette ?? DefaultEga16Palette),
-            MemoryBitmapVideoMode.Cga4Color => RenderCga4(data, width, height, palette ?? DefaultCga16Palette),
-            MemoryBitmapVideoMode.Cga2Color => RenderCga2(data, width, height, palette ?? MonochromePalette),
-            MemoryBitmapVideoMode.Linear1Bpp => RenderLinear1Bpp(data, width, height, palette ?? MonochromePalette),
-            MemoryBitmapVideoMode.Text => RenderText(data, width, height, palette ?? DefaultCga16Palette),
+            MemoryBitmapVideoMode.Raw8Bpp => RenderRaw8Bpp(data, width, height, GetPaletteOrDefault(palette, DefaultVga256Palette)),
+            MemoryBitmapVideoMode.Vga256Color => RenderVga256(data, width, height, GetPaletteOrDefault(palette, DefaultVga256Palette)),
+            MemoryBitmapVideoMode.VgaModeX => RenderVgaModeX(data, width, height, GetPaletteOrDefault(palette, DefaultVga256Palette)),
+            MemoryBitmapVideoMode.Ega16Color => RenderEga16(data, width, height, GetPaletteOrDefault(palette, DefaultEga16Palette)),
+            MemoryBitmapVideoMode.Packed4Bpp => RenderPacked4Bpp(data, width, height, GetPaletteOrDefault(palette, DefaultEga16Palette)),
+            MemoryBitmapVideoMode.Cga4Color => RenderCga4(data, width, height, GetPaletteOrDefault(palette, DefaultCga16Palette)),
+            MemoryBitmapVideoMode.Cga2Color => RenderCga2(data, width, height, GetPaletteOrDefault(palette, MonochromePalette)),
+            MemoryBitmapVideoMode.Linear1Bpp => RenderLinear1Bpp(data, width, height, GetPaletteOrDefault(palette, MonochromePalette)),
+            MemoryBitmapVideoMode.Text => RenderText(data, width, height, GetPaletteOrDefault(palette, DefaultCga16Palette)),
             _ => []
         };
+    }
+
+    /// <summary>
+    ///     Returns the provided palette if it is non-null and non-empty, otherwise the default palette.
+    /// </summary>
+    private static uint[] GetPaletteOrDefault(uint[]? palette, uint[] defaultPalette) {
+        if (palette is null || palette.Length == 0) {
+            return defaultPalette;
+        }
+        return palette;
     }
 
     /// <summary>
@@ -347,7 +363,7 @@ public static class MemoryBitmapRenderer {
     private static uint[] RenderVgaModeX(ReadOnlySpan<byte> data, int width, int height, uint[] palette) {
         int pixelCount = width * height;
         uint[] pixels = new uint[pixelCount];
-        int planeWidth = width / 4;
+        int planeWidth = (width + 3) / 4;
         int planeSize = planeWidth * height;
 
         for (int y = 0; y < height; y++) {
@@ -442,10 +458,13 @@ public static class MemoryBitmapRenderer {
         int pixelCount = width * height;
         uint[] pixels = new uint[pixelCount];
         int bytesPerRow = (width + 3) / 4;
-        int bankSize = data.Length / 2;
+        int evenBankRows = (height + 1) / 2;
+        int oddBankRows = height / 2;
+        int evenBankBytes = bytesPerRow * evenBankRows;
 
         for (int y = 0; y < height; y++) {
-            int bankOffset = (y & 1) == 0 ? 0 : bankSize;
+            bool isOddRow = (y & 1) != 0;
+            int bankOffset = isOddRow ? evenBankBytes : 0;
             int rowInBank = y / 2;
 
             for (int xByte = 0; xByte < bytesPerRow; xByte++) {
@@ -476,10 +495,12 @@ public static class MemoryBitmapRenderer {
         int pixelCount = width * height;
         uint[] pixels = new uint[pixelCount];
         int bytesPerRow = (width + 7) / 8;
-        int bankSize = data.Length / 2;
+        int evenBankRows = (height + 1) / 2;
+        int evenBankBytes = bytesPerRow * evenBankRows;
 
         for (int y = 0; y < height; y++) {
-            int bankOffset = (y & 1) == 0 ? 0 : bankSize;
+            bool isOddRow = (y & 1) != 0;
+            int bankOffset = isOddRow ? evenBankBytes : 0;
             int rowInBank = y / 2;
 
             for (int xByte = 0; xByte < bytesPerRow; xByte++) {
