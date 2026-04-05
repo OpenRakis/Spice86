@@ -231,10 +231,6 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
     }
 
     private void UpdateHexDocument() {
-        if (SelectedVideoMode == MemoryBitmapVideoMode.Vga256Color) {
-            HexDocument = null;
-            return;
-        }
         if (!TryParseHexAddress(StartAddress, out uint address)) {
             HexDocument = null;
             return;

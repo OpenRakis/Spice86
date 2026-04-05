@@ -495,15 +495,15 @@ public class MemoryBitmapViewUiTests : BreakpointUiTestBase {
     }
 
     [AvaloniaFact]
-    public void MemoryBitmapViewModel_HexDocument_NullForVga256ColorMode() {
+    public void MemoryBitmapViewModel_HexDocument_AlwaysCreatedForVga256ColorMode() {
         // Arrange
         (MemoryBitmapViewModel viewModel, Memory _, TestVgaRenderer _) = CreateMemoryBitmapViewModel();
 
         // Act
         viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Vga256Color;
 
-        // Assert - VGA 256-color uses Core renderer, not raw memory, so no hex document
-        viewModel.HexDocument.Should().BeNull();
+        // Assert - hex editor is always visible, even for VGA 256-color mode
+        viewModel.HexDocument.Should().NotBeNull();
     }
 
     [AvaloniaFact]
