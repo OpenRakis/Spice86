@@ -363,6 +363,7 @@ public static class MemoryBitmapRenderer {
     private static uint[] RenderVgaModeX(ReadOnlySpan<byte> data, int width, int height, uint[] palette) {
         int pixelCount = width * height;
         uint[] pixels = new uint[pixelCount];
+        // Ceiling division to handle widths not divisible by 4 (partial planes).
         int planeWidth = (width + 3) / 4;
         int planeSize = planeWidth * height;
 
