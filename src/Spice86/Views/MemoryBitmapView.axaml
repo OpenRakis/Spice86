@@ -5,7 +5,7 @@
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:vm="using:Spice86.ViewModels"
-	xmlns:video="using:Spice86.Core.Emulator.Devices.Video"
+	xmlns:rendering="clr-namespace:Spice86.ViewModels.Services.Rendering"
 	xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
 	x:CompileBindings="True"
 	x:DataType="vm:MemoryBitmapViewModel"

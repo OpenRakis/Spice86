@@ -2,7 +2,7 @@ namespace Spice86.Tests.Video;
 
 using FluentAssertions;
 
-using Spice86.Core.Emulator.Devices.Video;
+using Spice86.ViewModels.Services.Rendering;
 
 using Xunit;
 
@@ -226,5 +226,106 @@ public class MemoryBitmapRendererTests {
         pixels[1].Should().Be(palette[0]); // bit 6 clear
         pixels[2].Should().Be(palette[1]); // bit 5 set
         pixels[3].Should().Be(palette[0]); // bit 4 clear
+    }
+
+    [Fact]
+    public void Render_VgaModeX_ProducesCorrectPixelCount() {
+        // 4x1 image: plane 0 gets pixel 0, plane 1 gets pixel 1, etc.
+        byte[] data = new byte[4];
+        data[0] = 1; // plane 0 (pixel 0)
+        data[1] = 2; // plane 1 (pixel 1)
+        data[2] = 3; // plane 2 (pixel 2)
+        data[3] = 4; // plane 3 (pixel 3)
+
+        uint[] palette = MemoryBitmapRenderer.DefaultVga256Palette;
+        uint[] pixels = MemoryBitmapRenderer.Render(data, 4, 1, MemoryBitmapVideoMode.VgaModeX, palette);
+
+        pixels.Length.Should().Be(4);
+        pixels[0].Should().Be(palette[1]);
+        pixels[1].Should().Be(palette[2]);
+        pixels[2].Should().Be(palette[3]);
+        pixels[3].Should().Be(palette[4]);
+    }
+
+    [Fact]
+    public void Render_VgaModeX_ProducesCorrectDimensionForTypicalMode() {
+        byte[] data = new byte[320 * 240];
+        uint[] pixels = MemoryBitmapRenderer.Render(data, 320, 240, MemoryBitmapVideoMode.VgaModeX, null);
+
+        pixels.Length.Should().Be(320 * 240);
+    }
+
+    [Fact]
+    public void Render_Packed4Bpp_TwoPixelsPerByte() {
+        uint[] palette = [0xFF000000, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF,
+            0xFFFFFF00, 0xFFFF00FF, 0xFF00FFFF, 0xFFFFFFFF,
+            0xFF808080, 0xFF800000, 0xFF008000, 0xFF000080,
+            0xFF808000, 0xFF800080, 0xFF008080, 0xFFC0C0C0];
+
+        // Byte 0xA5 = high nibble 0xA (10), low nibble 0x5 (5)
+        byte[] data = [0xA5];
+
+        uint[] pixels = MemoryBitmapRenderer.Render(data, 2, 1, MemoryBitmapVideoMode.Packed4Bpp, palette);
+
+        pixels.Length.Should().Be(2);
+        pixels[0].Should().Be(palette[0x0A]); // high nibble
+        pixels[1].Should().Be(palette[0x05]); // low nibble
+    }
+
+    [Fact]
+    public void Render_Packed4Bpp_ProducesCorrectPixelCount() {
+        byte[] data = new byte[160 * 200]; // 320x200 at 4bpp = 160 bytes per row
+        uint[] pixels = MemoryBitmapRenderer.Render(data, 320, 200, MemoryBitmapVideoMode.Packed4Bpp, null);
+
+        pixels.Length.Should().Be(320 * 200);
+    }
+
+    [Fact]
+    public void Render_Linear1Bpp_NoInterleaving() {
+        uint[] palette = [0xFF000000, 0xFFFFFFFF];
+        // 8x2 image: 1 byte per row, linear (no CGA bank interleaving)
+        byte[] data = [0xFF, 0x00]; // Row 0: all white, Row 1: all black
+
+        uint[] pixels = MemoryBitmapRenderer.Render(data, 8, 2, MemoryBitmapVideoMode.Linear1Bpp, palette);
+
+        pixels.Length.Should().Be(16);
+        // Row 0: all white
+        for (int i = 0; i < 8; i++) {
+            pixels[i].Should().Be(palette[1], $"row 0, pixel {i} should be white");
+        }
+        // Row 1: all black
+        for (int i = 8; i < 16; i++) {
+            pixels[i].Should().Be(palette[0], $"row 1, pixel {i - 8} should be black");
+        }
+    }
+
+    [Fact]
+    public void Render_Linear1Bpp_DiffersFromCga2Color() {
+        // Linear1Bpp should NOT use CGA bank interleaving.
+        // With 4 rows and 8-wide pixels, CGA splits data into 2 banks:
+        // bank 0 (rows 0,2) = bytes 0-1, bank 1 (rows 1,3) = bytes 2-3.
+        // Linear reads sequentially: row 0 = byte 0, row 1 = byte 1, etc.
+        uint[] palette = [0xFF000000, 0xFFFFFFFF];
+        byte[] data = [0xFF, 0x00, 0xAA, 0x55]; // 4 bytes
+
+        uint[] linearPixels = MemoryBitmapRenderer.Render(data, 8, 4, MemoryBitmapVideoMode.Linear1Bpp, palette);
+        uint[] cgaPixels = MemoryBitmapRenderer.Render(data, 8, 4, MemoryBitmapVideoMode.Cga2Color, palette);
+
+        // Linear row 1 reads byte 1 (0x00 = all black).
+        // CGA row 1 reads from bank 1 byte 0 which is byte 2 (0xAA = alternating).
+        linearPixels.Should().NotEqual(cgaPixels);
+    }
+
+    [Fact]
+    public void EstimateRequiredBytes_CorrectForAllModes() {
+        MemoryBitmapRenderer.EstimateRequiredBytes(MemoryBitmapVideoMode.Raw8Bpp, 320, 200).Should().Be(64000);
+        MemoryBitmapRenderer.EstimateRequiredBytes(MemoryBitmapVideoMode.Vga256Color, 320, 200).Should().Be(64000);
+        MemoryBitmapRenderer.EstimateRequiredBytes(MemoryBitmapVideoMode.VgaModeX, 320, 240).Should().Be(76800);
+        MemoryBitmapRenderer.EstimateRequiredBytes(MemoryBitmapVideoMode.Ega16Color, 640, 350).Should().Be(112000);
+        MemoryBitmapRenderer.EstimateRequiredBytes(MemoryBitmapVideoMode.Packed4Bpp, 320, 200).Should().Be(32000);
+        MemoryBitmapRenderer.EstimateRequiredBytes(MemoryBitmapVideoMode.Cga4Color, 320, 200).Should().Be(16000);
+        MemoryBitmapRenderer.EstimateRequiredBytes(MemoryBitmapVideoMode.Cga2Color, 640, 200).Should().Be(16000);
+        MemoryBitmapRenderer.EstimateRequiredBytes(MemoryBitmapVideoMode.Linear1Bpp, 640, 480).Should().Be(38400);
+        MemoryBitmapRenderer.EstimateRequiredBytes(MemoryBitmapVideoMode.Text, 80, 25).Should().Be(4000);
     }
 }

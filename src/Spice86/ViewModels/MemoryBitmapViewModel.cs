@@ -7,9 +7,9 @@ using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Memory;
 using Spice86.ViewModels.Services;
+using Spice86.ViewModels.Services.Rendering;
 
 using System;
 using System.Runtime.InteropServices;
@@ -107,9 +107,19 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
                 BitmapHeight = 200;
                 StartAddress = "A0000";
                 break;
+            case MemoryBitmapVideoMode.VgaModeX:
+                BitmapWidth = 320;
+                BitmapHeight = 240;
+                StartAddress = "A0000";
+                break;
             case MemoryBitmapVideoMode.Ega16Color:
                 BitmapWidth = 640;
                 BitmapHeight = 350;
+                StartAddress = "A0000";
+                break;
+            case MemoryBitmapVideoMode.Packed4Bpp:
+                BitmapWidth = 320;
+                BitmapHeight = 200;
                 StartAddress = "A0000";
                 break;
             case MemoryBitmapVideoMode.Cga4Color:
@@ -121,6 +131,11 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
                 BitmapWidth = 640;
                 BitmapHeight = 200;
                 StartAddress = "B8000";
+                break;
+            case MemoryBitmapVideoMode.Linear1Bpp:
+                BitmapWidth = 640;
+                BitmapHeight = 480;
+                StartAddress = "A0000";
                 break;
             case MemoryBitmapVideoMode.Text:
                 BitmapWidth = 80;
@@ -158,7 +173,7 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
             return;
         }
 
-        int estimatedBytes = EstimateRequiredBytes(SelectedVideoMode, BitmapWidth, BitmapHeight);
+        int estimatedBytes = MemoryBitmapRenderer.EstimateRequiredBytes(SelectedVideoMode, BitmapWidth, BitmapHeight);
         byte[] data = ReadMemoryRegion(address, estimatedBytes);
         uint[]? palette = ResolvePalette();
 
@@ -220,18 +235,6 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
             return copy;
         }
         return null;
-    }
-
-    private static int EstimateRequiredBytes(MemoryBitmapVideoMode mode, int width, int height) {
-        return mode switch {
-            MemoryBitmapVideoMode.Raw8Bpp => width * height,
-            MemoryBitmapVideoMode.Vga256Color => width * height,
-            MemoryBitmapVideoMode.Ega16Color => ((width + 7) / 8) * height * 4,
-            MemoryBitmapVideoMode.Cga4Color => ((width + 3) / 4) * height,
-            MemoryBitmapVideoMode.Cga2Color => ((width + 7) / 8) * height,
-            MemoryBitmapVideoMode.Text => width * height * 2,
-            _ => width * height
-        };
     }
 
     private static bool TryParseHexAddress(string? hex, out uint address) {

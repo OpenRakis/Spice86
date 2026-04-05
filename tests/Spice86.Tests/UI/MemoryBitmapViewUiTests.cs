@@ -8,7 +8,7 @@ using FluentAssertions;
 
 using NSubstitute;
 
-using Spice86.Core.Emulator.Devices.Video;
+using Spice86.ViewModels.Services.Rendering;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.ViewModels;
@@ -260,5 +260,72 @@ public class MemoryBitmapViewUiTests : BreakpointUiTestBase {
         ProcessUiEvents();
 
         viewModel.RenderedBitmap.Should().BeNull();
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_SwitchToVgaModeX() {
+        (MemoryBitmapViewModel viewModel, Memory _) = CreateMemoryBitmapViewModel();
+
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.VgaModeX;
+
+        viewModel.BitmapWidth.Should().Be(320);
+        viewModel.BitmapHeight.Should().Be(240);
+        viewModel.StartAddress.Should().Be("A0000");
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_SwitchToPacked4Bpp() {
+        (MemoryBitmapViewModel viewModel, Memory _) = CreateMemoryBitmapViewModel();
+
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Packed4Bpp;
+
+        viewModel.BitmapWidth.Should().Be(320);
+        viewModel.BitmapHeight.Should().Be(200);
+        viewModel.StartAddress.Should().Be("A0000");
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_SwitchToLinear1Bpp() {
+        (MemoryBitmapViewModel viewModel, Memory _) = CreateMemoryBitmapViewModel();
+
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Linear1Bpp;
+
+        viewModel.BitmapWidth.Should().Be(640);
+        viewModel.BitmapHeight.Should().Be(480);
+        viewModel.StartAddress.Should().Be("A0000");
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_RenderVgaModeX() {
+        (MemoryBitmapViewModel viewModel, Memory memory) = CreateMemoryBitmapViewModel();
+        viewModel.IsVisible = true;
+
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.VgaModeX;
+        byte[] testData = new byte[320 * 240];
+        memory.WriteRam(testData, 0xA0000);
+
+        viewModel.RenderBitmapCommand.Execute(null);
+        ProcessUiEvents();
+
+        viewModel.RenderedBitmap.Should().NotBeNull();
+        viewModel.RenderedBitmap?.PixelSize.Width.Should().Be(320);
+        viewModel.RenderedBitmap?.PixelSize.Height.Should().Be(240);
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_RenderLinear1Bpp() {
+        (MemoryBitmapViewModel viewModel, Memory memory) = CreateMemoryBitmapViewModel();
+        viewModel.IsVisible = true;
+
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Linear1Bpp;
+        byte[] testData = new byte[80 * 480]; // 640x480 at 1bpp
+        memory.WriteRam(testData, 0xA0000);
+
+        viewModel.RenderBitmapCommand.Execute(null);
+        ProcessUiEvents();
+
+        viewModel.RenderedBitmap.Should().NotBeNull();
+        viewModel.RenderedBitmap?.PixelSize.Width.Should().Be(640);
+        viewModel.RenderedBitmap?.PixelSize.Height.Should().Be(480);
     }
 }
