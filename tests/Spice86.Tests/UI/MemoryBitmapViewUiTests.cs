@@ -520,4 +520,199 @@ public class MemoryBitmapViewUiTests : BreakpointUiTestBase {
         // Assert - Text mode 80x25 produces 640x400 pixel output
         viewModel.OutputDimensionsDisplay.Should().Contain("640");
     }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_ShowGridOverlay_DefaultIsFalse() {
+        // Arrange & Act
+        (MemoryBitmapViewModel viewModel, Memory _) = CreateMemoryBitmapViewModel();
+
+        // Assert
+        viewModel.ShowGridOverlay.Should().BeFalse();
+        viewModel.GridPixels.Should().BeEmpty();
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_ShowGridOverlay_PopulatesPixels() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory memory) = CreateMemoryBitmapViewModel();
+        viewModel.IsVisible = true;
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Raw8Bpp;
+        viewModel.BitmapWidth = 4;
+        viewModel.BitmapHeight = 4;
+        byte[] testData = new byte[16];
+        for (int i = 0; i < 16; i++) {
+            testData[i] = (byte)(i * 16);
+        }
+        memory.WriteRam(testData, 0xA0000);
+        viewModel.RenderBitmapCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Act
+        viewModel.ShowGridOverlay = true;
+
+        // Assert
+        viewModel.GridPixels.Should().HaveCount(16);
+        viewModel.GridPixelWidth.Should().Be(4);
+        viewModel.GridPixelHeight.Should().Be(4);
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_ShowGridOverlay_PixelInfoHasCorrectValues() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory memory) = CreateMemoryBitmapViewModel();
+        viewModel.IsVisible = true;
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Raw8Bpp;
+        viewModel.BitmapWidth = 2;
+        viewModel.BitmapHeight = 2;
+        byte[] testData = [0x00, 0x3F, 0x80, 0xFF];
+        memory.WriteRam(testData, 0xA0000);
+        viewModel.RenderBitmapCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Act
+        viewModel.ShowGridOverlay = true;
+
+        // Assert
+        viewModel.GridPixels.Should().HaveCount(4);
+        PixelInfo first = viewModel.GridPixels[0];
+        first.X.Should().Be(0);
+        first.Y.Should().Be(0);
+        first.RawByte.Should().Be(0x00);
+        first.HexValue.Should().Be("00");
+        first.MemoryAddress.Should().Be(0xA0000);
+
+        PixelInfo second = viewModel.GridPixels[1];
+        second.X.Should().Be(1);
+        second.Y.Should().Be(0);
+        second.RawByte.Should().Be(0x3F);
+        second.HexValue.Should().Be("3F");
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_ShowGridOverlay_PixelInfoHasTooltip() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory memory) = CreateMemoryBitmapViewModel();
+        viewModel.IsVisible = true;
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Raw8Bpp;
+        viewModel.BitmapWidth = 2;
+        viewModel.BitmapHeight = 2;
+        byte[] testData = [0x00, 0x3F, 0x80, 0xFF];
+        memory.WriteRam(testData, 0xA0000);
+        viewModel.RenderBitmapCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Act
+        viewModel.ShowGridOverlay = true;
+
+        // Assert
+        PixelInfo pixel = viewModel.GridPixels[1];
+        pixel.TooltipText.Should().Contain("Pixel (1, 0)");
+        pixel.TooltipText.Should().Contain("Address:");
+        pixel.TooltipText.Should().Contain("Byte: 0x3F");
+        pixel.TooltipText.Should().Contain("Color:");
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_ShowGridOverlay_DisablingClearsPixels() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory memory) = CreateMemoryBitmapViewModel();
+        viewModel.IsVisible = true;
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Raw8Bpp;
+        viewModel.BitmapWidth = 4;
+        viewModel.BitmapHeight = 4;
+        byte[] testData = new byte[16];
+        memory.WriteRam(testData, 0xA0000);
+        viewModel.RenderBitmapCommand.Execute(null);
+        ProcessUiEvents();
+        viewModel.ShowGridOverlay = true;
+
+        // Act
+        viewModel.ShowGridOverlay = false;
+
+        // Assert
+        viewModel.GridPixels.Should().BeEmpty();
+        viewModel.GridPixelWidth.Should().Be(0);
+        viewModel.GridPixelHeight.Should().Be(0);
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_ShowGridOverlay_RenderUpdatesGridPixels() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory memory) = CreateMemoryBitmapViewModel();
+        viewModel.IsVisible = true;
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Raw8Bpp;
+        viewModel.BitmapWidth = 2;
+        viewModel.BitmapHeight = 2;
+        byte[] testData = [0x00, 0x00, 0x00, 0x00];
+        memory.WriteRam(testData, 0xA0000);
+        viewModel.RenderBitmapCommand.Execute(null);
+        ProcessUiEvents();
+        viewModel.ShowGridOverlay = true;
+        viewModel.GridPixels.Should().HaveCount(4);
+
+        // Act - re-render with different data
+        byte[] newData = [0xFF, 0xAA, 0x55, 0x11];
+        memory.WriteRam(newData, 0xA0000);
+        viewModel.RenderBitmapCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Assert - grid should reflect new data
+        viewModel.GridPixels.Should().HaveCount(4);
+        viewModel.GridPixels[0].RawByte.Should().Be(0xFF);
+        viewModel.GridPixels[1].RawByte.Should().Be(0xAA);
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_UpdateHoverInfo_ValidCoordinates() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory memory) = CreateMemoryBitmapViewModel();
+        viewModel.IsVisible = true;
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Raw8Bpp;
+        viewModel.BitmapWidth = 4;
+        viewModel.BitmapHeight = 4;
+        byte[] testData = new byte[16];
+        testData[5] = 0x42;
+        memory.WriteRam(testData, 0xA0000);
+        viewModel.RenderBitmapCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Act
+        viewModel.UpdateHoverInfo(1, 1);
+
+        // Assert
+        viewModel.HoverPixelInfo.Should().Contain("(1,1)");
+        viewModel.HoverPixelInfo.Should().Contain("0x42");
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_UpdateHoverInfo_OutOfBoundsClearsInfo() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory memory) = CreateMemoryBitmapViewModel();
+        viewModel.IsVisible = true;
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Raw8Bpp;
+        viewModel.BitmapWidth = 4;
+        viewModel.BitmapHeight = 4;
+        byte[] testData = new byte[16];
+        memory.WriteRam(testData, 0xA0000);
+        viewModel.RenderBitmapCommand.Execute(null);
+        ProcessUiEvents();
+        viewModel.UpdateHoverInfo(1, 1);
+
+        // Act
+        viewModel.UpdateHoverInfo(-1, -1);
+
+        // Assert
+        viewModel.HoverPixelInfo.Should().BeEmpty();
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_PixelInfo_ContrastingForeground() {
+        // Arrange & Act
+        PixelInfo darkPixel = new(0, 0, 0, 0, 0, 0xFF000000);
+        PixelInfo lightPixel = new(0, 0, 0, 255, 255, 0xFFFFFFFF);
+
+        // Assert - dark background should get white text, light background should get black text
+        darkPixel.Foreground.Color.R.Should().Be(255);
+        lightPixel.Foreground.Color.R.Should().Be(0);
+    }
 }

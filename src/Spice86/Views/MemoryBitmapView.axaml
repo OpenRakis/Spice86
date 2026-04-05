@@ -14,7 +14,7 @@
 	<Grid RowDefinitions="Auto,*,Auto">
 		<!-- Configuration Panel -->
 		<Border Grid.Row="0" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8">
-			<Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto">
+			<Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto">
 				<!-- Row 0: Mode, Dimensions -->
 				<TextBlock Grid.Row="0" Grid.Column="0" Text="Mode:" VerticalAlignment="Center" Margin="0,0,4,0" />
 				<ComboBox Grid.Row="0" Grid.Column="1"
@@ -35,7 +35,7 @@
 						  IsChecked="{Binding AutoRefresh}" Margin="0,0,0,4"
 						  VerticalAlignment="Center" />
 
-				<!-- Row 1: Address info, Render/Save -->
+				<!-- Row 1: Address info, Render/Grid/Save -->
 				<TextBlock Grid.Row="1" Grid.Column="0" Text="Address:" VerticalAlignment="Center" Margin="0,0,4,0" />
 				<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AddressRangeDisplay}" VerticalAlignment="Center"
 						   FontFamily="Consolas,Monospace" Opacity="0.8" Margin="0,0,8,0" />
@@ -52,7 +52,15 @@
 						<TextBlock Text="Render" VerticalAlignment="Center" />
 					</StackPanel>
 				</Button>
-				<Button Grid.Row="1" Grid.Column="7" Command="{Binding SaveBitmapCommand}"
+				<ToggleButton Grid.Row="1" Grid.Column="7"
+							  IsChecked="{Binding ShowGridOverlay}" Margin="0,0,4,0"
+							  ToolTip.Tip="Pixel grid overlay: shows hex values on each pixel with tooltips for address/color details">
+					<StackPanel Orientation="Horizontal" Spacing="4">
+						<fluent:SymbolIcon Symbol="Grid" FontSize="16" />
+						<TextBlock Text="Grid" VerticalAlignment="Center" />
+					</StackPanel>
+				</ToggleButton>
+				<Button Grid.Row="1" Grid.Column="8" Command="{Binding SaveBitmapCommand}"
 						ToolTip.Tip="Save bitmap to disk">
 					<StackPanel Orientation="Horizontal" Spacing="4">
 						<fluent:SymbolIcon Symbol="Save" FontSize="16" />
@@ -81,16 +89,54 @@
 
 			<GridSplitter Grid.Column="1" Width="12" Background="Transparent" />
 
-			<!-- Right: Bitmap display -->
-			<Viewbox Grid.Column="2" Stretch="Uniform" StretchDirection="Both">
-				<Image Source="{Binding RenderedBitmap}"
-					   RenderOptions.BitmapInterpolationMode="None" />
-			</Viewbox>
+			<!-- Right: Bitmap display or Grid overlay -->
+			<Panel Grid.Column="2">
+				<!-- Normal bitmap view (when grid overlay is off) -->
+				<Viewbox Stretch="Uniform" StretchDirection="Both"
+						 IsVisible="{Binding !ShowGridOverlay}">
+					<Image x:Name="BitmapImage" Source="{Binding RenderedBitmap}"
+						   RenderOptions.BitmapInterpolationMode="None" />
+				</Viewbox>
+
+				<!-- Grid overlay view: scrollable pixel grid with hex values and tooltips -->
+				<ScrollViewer IsVisible="{Binding ShowGridOverlay}"
+							  HorizontalScrollBarVisibility="Auto"
+							  VerticalScrollBarVisibility="Auto">
+					<ItemsControl ItemsSource="{Binding GridPixels}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<UniformGrid Columns="{Binding GridPixelWidth}" />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate x:DataType="vm:PixelInfo">
+								<Border Background="{Binding Background}"
+										BorderBrush="#40808080" BorderThickness="0.5"
+										MinWidth="28" MinHeight="16"
+										ToolTip.Tip="{Binding TooltipText}"
+										Padding="1,0">
+									<TextBlock Text="{Binding HexValue}"
+											   Foreground="{Binding Foreground}"
+											   FontSize="9"
+											   FontFamily="Consolas,Monospace"
+											   HorizontalAlignment="Center"
+											   VerticalAlignment="Center" />
+								</Border>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</ScrollViewer>
+			</Panel>
 		</Grid>
 
 		<!-- Status Bar -->
 		<Border Grid.Row="2" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="8,4">
-			<TextBlock Text="{Binding StatusText}" FontSize="11" Opacity="0.7" />
+			<StackPanel Orientation="Horizontal" Spacing="12">
+				<TextBlock Text="{Binding StatusText}" FontSize="11" Opacity="0.7" />
+				<TextBlock Text="{Binding HoverPixelInfo}" FontSize="11" Opacity="0.8"
+						   FontFamily="Consolas,Monospace"
+						   IsVisible="{Binding HoverPixelInfo, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+			</StackPanel>
 		</Border>
 	</Grid>
 </UserControl>

@@ -17,6 +17,7 @@ using Spice86.ViewModels.Services.Rendering;
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 
 /// <summary>
@@ -36,6 +37,12 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
     private readonly IUIDispatcher _uiDispatcher;
     private readonly uint[]? _dacPaletteMap;
     private readonly Dictionary<MemoryBitmapVideoMode, VideoModeSettings> _perModeSettings = new();
+
+    private uint[] _lastPixels = [];
+    private byte[] _lastData = [];
+    private uint _lastRenderAddress;
+    private int _lastRenderWidth;
+    private int _lastRenderHeight;
 
     [ObservableProperty]
     private string _startAddress = "A0000";
@@ -66,6 +73,24 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
 
     [ObservableProperty]
     private string _hexSelectionInfo = "";
+
+    [ObservableProperty]
+    private bool _showGridOverlay;
+
+    [ObservableProperty]
+    private string _hoverPixelInfo = "";
+
+    [ObservableProperty]
+    private int _gridPixelWidth;
+
+    [ObservableProperty]
+    private int _gridPixelHeight;
+
+    /// <summary>
+    ///     Pixel data for the grid overlay mode. Each item represents one pixel with its
+    ///     hex value, color, address, and tooltip information.
+    /// </summary>
+    public ObservableCollection<PixelInfo> GridPixels { get; } = new();
 
     /// <summary>
     ///     Available video modes for selection in the UI.
@@ -285,6 +310,16 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
 
         WritePixelsToBitmap(pixels, outputPixelWidth, outputPixelHeight);
         StatusText = $"Rendered {outputPixelWidth}x{outputPixelHeight} ({SelectedVideoMode}) @ {address:X5}";
+
+        _lastPixels = pixels;
+        _lastData = data;
+        _lastRenderAddress = address;
+        _lastRenderWidth = outputPixelWidth;
+        _lastRenderHeight = outputPixelHeight;
+
+        if (ShowGridOverlay) {
+            RebuildGridPixels();
+        }
     }
 
     /// <summary>
@@ -316,6 +351,66 @@ public partial class MemoryBitmapViewModel : ViewModelBase, IEmulatorObjectViewM
             sourceBytes[..bytesToCopy].CopyTo(new Span<byte>((void*)framebuffer.Address, bytesToCopy));
         }
         OnPropertyChanged(nameof(RenderedBitmap));
+    }
+
+    partial void OnShowGridOverlayChanged(bool value) {
+        if (value && _lastPixels.Length > 0) {
+            RebuildGridPixels();
+        } else if (!value) {
+            GridPixels.Clear();
+            GridPixelWidth = 0;
+            GridPixelHeight = 0;
+        }
+    }
+
+    private void RebuildGridPixels() {
+        GridPixels.Clear();
+        int width = _lastRenderWidth;
+        int height = _lastRenderHeight;
+        if (width <= 0 || height <= 0 || _lastPixels.Length == 0) {
+            GridPixelWidth = 0;
+            GridPixelHeight = 0;
+            return;
+        }
+
+        GridPixelWidth = width;
+        GridPixelHeight = height;
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int pixelIndex = y * width + x;
+                uint argb = pixelIndex < _lastPixels.Length ? _lastPixels[pixelIndex] : 0;
+                byte rawByte = pixelIndex < _lastData.Length ? _lastData[pixelIndex] : (byte)0;
+                uint addr = _lastRenderAddress + (uint)pixelIndex;
+                int paletteIndex = rawByte;
+
+                PixelInfo pixelInfo = new(x, y, addr, rawByte, paletteIndex, argb);
+                GridPixels.Add(pixelInfo);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Returns pixel information for the pixel at the given coordinates in the rendered image.
+    ///     Called from the view on pointer move to update the status bar.
+    /// </summary>
+    /// <param name="x">X coordinate in the rendered image.</param>
+    /// <param name="y">Y coordinate in the rendered image.</param>
+    public void UpdateHoverInfo(int x, int y) {
+        int width = _lastRenderWidth;
+        int height = _lastRenderHeight;
+        if (width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height) {
+            HoverPixelInfo = "";
+            return;
+        }
+        int pixelIndex = y * width + x;
+        uint argb = pixelIndex < _lastPixels.Length ? _lastPixels[pixelIndex] : 0;
+        byte rawByte = pixelIndex < _lastData.Length ? _lastData[pixelIndex] : (byte)0;
+        uint addr = _lastRenderAddress + (uint)pixelIndex;
+        byte r = (byte)((argb >> 16) & 0xFF);
+        byte g = (byte)((argb >> 8) & 0xFF);
+        byte b = (byte)(argb & 0xFF);
+        HoverPixelInfo = $"({x},{y}) Addr:{addr:X5} Byte:0x{rawByte:X2} RGB:({r},{g},{b})";
     }
 
     private byte[] ReadMemoryRegion(uint address, int length) {
