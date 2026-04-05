@@ -456,8 +456,8 @@ public static class MemoryBitmapRenderer {
                 byte charCode = SafeRead(data, dataOffset);
                 byte attribute = SafeRead(data, dataOffset + 1);
 
-                uint fgColor = palette[attribute & 0x0F % palette.Length];
-                uint bgColor = palette[(attribute >> 4) & 0x0F % palette.Length];
+                uint fgColor = palette[(attribute & 0x0F) % palette.Length];
+                uint bgColor = palette[((attribute >> 4) & 0x0F) % palette.Length];
 
                 int fontOffset = charCode * 16;
                 for (int row = 0; row < 16; row++) {
