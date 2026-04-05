@@ -705,6 +705,9 @@ public class Spice86DependencyInjection : IDisposable {
 
             VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState, vgaTimingEngine, hostStorageProvider);
 
+            MemoryBitmapViewModel memoryBitmapViewModel = new(memory, hostStorageProvider,
+                uiDispatcher, videoState.DacRegisters.PaletteMap);
+
             CpuViewModel cpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
 
             MidiViewModel midiViewModel = new(midiDevice);
@@ -733,7 +736,7 @@ public class Spice86DependencyInjection : IDisposable {
             DebugWindowViewModel debugWindowViewModel = new(
                 WeakReferenceMessenger.Default, uiDispatcher, pauseHandler,
                 breakpointsViewModel, disassemblyViewModel,
-                paletteViewModel, videoCardViewModel,
+                paletteViewModel, videoCardViewModel, memoryBitmapViewModel,
                 cpuViewModel, midiViewModel, cfgCpuViewModel,
                 [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
 

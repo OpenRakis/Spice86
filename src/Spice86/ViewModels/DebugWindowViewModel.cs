@@ -31,6 +31,9 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private VideoCardViewModel _videoCardViewModel;
 
     [ObservableProperty]
+    private MemoryBitmapViewModel _memoryBitmapViewModel;
+
+    [ObservableProperty]
     private CpuViewModel _cpuViewModel;
 
     [ObservableProperty]
@@ -53,7 +56,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
     public DebugWindowViewModel(IMessenger messenger, IUIDispatcher uiDispatcher,
         IPauseHandler pauseHandler, BreakpointsViewModel breakpointsViewModel,
         DisassemblyViewModel disassemblyViewModel, PaletteViewModel paletteViewModel,
-        VideoCardViewModel videoCardViewModel,
+        VideoCardViewModel videoCardViewModel, MemoryBitmapViewModel memoryBitmapViewModel,
         CpuViewModel cpuViewModel, MidiViewModel midiViewModel, CfgCpuViewModel cfgCpuViewModel,
         IList<MemoryViewModel> memoryViewModels) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
@@ -72,6 +75,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = paletteViewModel;
         VideoCardViewModel = videoCardViewModel;
+        MemoryBitmapViewModel = memoryBitmapViewModel;
         CpuViewModel = cpuViewModel;
         MidiViewModel = midiViewModel;
         MemoryViewModels.AddRange(memoryViewModels);
