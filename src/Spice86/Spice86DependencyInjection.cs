@@ -706,10 +706,10 @@ public class Spice86DependencyInjection : IDisposable {
             VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState, vgaTimingEngine, hostStorageProvider);
 
             MemoryBitmapViewModel memoryBitmapViewModel = new(memory, hostStorageProvider,
-                uiDispatcher, vgaRenderer, videoState.DacRegisters.PaletteMap);
+                uiDispatcher, videoState.DacRegisters.PaletteMap);
 
             MemoryBitmapViewModel secondaryScreenViewModel = new(memory, hostStorageProvider,
-                uiDispatcher, vgaRenderer, videoState.DacRegisters.PaletteMap);
+                uiDispatcher, videoState.DacRegisters.PaletteMap);
 
             CpuViewModel cpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
 
