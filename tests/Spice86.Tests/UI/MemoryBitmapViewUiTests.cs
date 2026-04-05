@@ -443,4 +443,103 @@ public class MemoryBitmapViewUiTests : BreakpointUiTestBase {
         viewModel.RenderedBitmap?.PixelSize.Width.Should().Be(640);
         viewModel.RenderedBitmap?.PixelSize.Height.Should().Be(480);
     }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_PerModeState_PreservesSettingsWhenSwitchingModes() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory _, TestVgaRenderer _) = CreateMemoryBitmapViewModel();
+
+        // Act - switch to CGA, modify settings, switch away and back
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Cga4Color;
+        viewModel.BitmapWidth = 160;
+        viewModel.BitmapHeight = 100;
+        viewModel.StartAddress = "B8100";
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Raw8Bpp;
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Cga4Color;
+
+        // Assert - CGA settings should be restored
+        viewModel.BitmapWidth.Should().Be(160);
+        viewModel.BitmapHeight.Should().Be(100);
+        viewModel.StartAddress.Should().Be("B8100");
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_PerModeState_DifferentModesHaveIndependentSettings() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory _, TestVgaRenderer _) = CreateMemoryBitmapViewModel();
+
+        // Act - set custom settings for two different modes
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Text;
+        viewModel.BitmapWidth = 40;
+        viewModel.BitmapHeight = 12;
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Ega16Color;
+        viewModel.BitmapWidth = 320;
+        viewModel.BitmapHeight = 200;
+
+        // Assert - switching back to Text restores its settings
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Text;
+        viewModel.BitmapWidth.Should().Be(40);
+        viewModel.BitmapHeight.Should().Be(12);
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_HexDocument_CreatedForNonVgaMode() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory _, TestVgaRenderer _) = CreateMemoryBitmapViewModel();
+
+        // Act
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Raw8Bpp;
+
+        // Assert
+        viewModel.HexDocument.Should().NotBeNull();
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_HexDocument_NullForVga256ColorMode() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory _, TestVgaRenderer _) = CreateMemoryBitmapViewModel();
+
+        // Act
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Vga256Color;
+
+        // Assert - VGA 256-color uses Core renderer, not raw memory, so no hex document
+        viewModel.HexDocument.Should().BeNull();
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_AddressRangeDisplay_ShowsValidRange() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory _, TestVgaRenderer _) = CreateMemoryBitmapViewModel();
+
+        // Act
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Raw8Bpp;
+
+        // Assert
+        viewModel.AddressRangeDisplay.Should().NotBe("Invalid");
+        viewModel.AddressRangeDisplay.Should().Contain("A0000");
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_EstimatedBytesDisplay_ShowsNonZero() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory _, TestVgaRenderer _) = CreateMemoryBitmapViewModel();
+
+        // Act
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Raw8Bpp;
+
+        // Assert
+        viewModel.EstimatedBytesDisplay.Should().NotBe("0");
+    }
+
+    [AvaloniaFact]
+    public void MemoryBitmapViewModel_OutputDimensionsDisplay_ShowsDimensions() {
+        // Arrange
+        (MemoryBitmapViewModel viewModel, Memory _, TestVgaRenderer _) = CreateMemoryBitmapViewModel();
+
+        // Act
+        viewModel.SelectedVideoMode = MemoryBitmapVideoMode.Text;
+
+        // Assert - Text mode 80x25 produces 640x400 pixel output
+        viewModel.OutputDimensionsDisplay.Should().Contain("640");
+    }
 }

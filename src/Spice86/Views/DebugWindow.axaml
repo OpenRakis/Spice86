@@ -113,6 +113,7 @@
 							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F8" Header="Color Palette" ToolTip.Tip="Alt-F8" Content="{Binding PaletteViewModel}" />
 							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F9" Header="General MIDI / MT-32" ToolTip.Tip="Alt-F9" Content="{Binding MidiViewModel}" />
 							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F10" Header="Memory Bitmap" ToolTip.Tip="Alt-F10" Content="{Binding MemoryBitmapViewModel}" />
+							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F11" Header="Secondary Screen" ToolTip.Tip="Alt-F11" Content="{Binding SecondaryScreenViewModel}" />
 						</TabControl>
 					</dockModel:Document>
 					<dockModel:Document 
