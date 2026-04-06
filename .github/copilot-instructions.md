@@ -114,6 +114,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **No optional parameters** - avoid nullable or optional parameters in new code
 - **Minimal comments** - write self-documenting code with clear names; avoid obvious comments
 - **Test before submit** - always run tests after code changes to verify functionality
+- **Rebuild and verify** - For any task that changes code or tests, rebuild the project and run the full test suite; do not stop until all tests are green.
 - **Concise documentation** - XML docs should be precise and complete but not verbose; avoid excessive remarks
 - **Ignore Machine class** - this is a legacy aggregator class; work directly with specific components (`CfgCpu`, `Memory`, `Stack`, etc.) instead
 
@@ -171,6 +172,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   ```
   - Properly handle null cases with null checks, null-coalescing, or null-conditional operators
   - Don't ignore nullable warnings - fix the underlying issue
+  - **Avoid non-ASCII Unicode characters**: Prefer plain ASCII in source code and documentation; only use Unicode when necessary for languages that require characters outside the ASCII range (for example, Chinese). Some editors or tools may not assume UTF-8 and can render or save these characters incorrectly.
 - **Do not use `#region`**: Avoid `#region`/`#endregion` blocks; keep code organized via clear structure and namespaces
 - **Do not suppress warnings with pragmas**: Never disable warnings using preprocessor directives (e.g., `#pragma warning disable`). Fix the underlying issue instead.
 - **Async usage restrictions**:

@@ -18,6 +18,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     private readonly GeneralRegisters _generalRegisters;
     private readonly GraphicsControllerRegisters _graphicsRegisters;
     private readonly SequencerRegisters _sequencerRegisters;
+    private readonly IVideoState _videoState;
     private bool _attributeDataMode;
 
     /// <summary>
@@ -38,6 +39,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         _crtRegisters = videoState.CrtControllerRegisters;
         _generalRegisters = videoState.GeneralRegisters;
         _dacRegisters = videoState.DacRegisters;
+        _videoState = videoState;
         InitPortHandlers(ioPortDispatcher);
     }
 
@@ -219,6 +221,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
+        _videoState.IsRenderingDirty = true;
         switch (port) {
             case Ports.DacAddressReadIndex:
                 if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -239,13 +242,17 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                     _loggerService.Verbose("[{Port:X4}] Write to DacData: {Value:X2}", port, value);
                 }
                 _dacRegisters.DataRegister = value;
+                if (_dacRegisters.TripletJustCompleted) {
+                    _dacRegisters.RebuildAttributeMap(_attributeRegisters);
+                }
                 break;
 
             case Ports.DacPelMask:
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                     _loggerService.Verbose("[{Port:X4}] Write to DacPelMask: {Value:X2}", port, value);
                 }
-                _dacRegisters.PixelMask = value;
+                _dacRegisters.PixelMask = value;  // setter calls RebuildAllPaletteMap internally
+                _dacRegisters.RebuildAttributeMap(_attributeRegisters);
                 break;
 
             case Ports.GraphicsControllerAddress:
@@ -295,6 +302,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                         _loggerService.Debug("[{Port:X4}] Write to Attribute register {Register}: {Value:X2} {Binary}", port, _attributeRegisters.AddressRegister, value, Convert.ToString(value, 2).PadLeft(8, '0'));
                     }
                     _attributeRegisters.WriteRegister(_attributeRegisters.AddressRegister, value);
+                    _dacRegisters.RebuildAttributeMap(_attributeRegisters);
                 }
 
                 _attributeDataMode = !_attributeDataMode;
@@ -305,6 +313,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                     _loggerService.Debug("[{Port:X4}] Write to Attribute register {Register}: {Value:X2} {Binary}", port, _attributeRegisters.AddressRegister, value, Convert.ToString(value, 2).PadLeft(8, '0'));
                 }
                 _attributeRegisters.WriteRegister(_attributeRegisters.AddressRegister, value);
+                _dacRegisters.RebuildAttributeMap(_attributeRegisters);
                 break;
 
             case Ports.CrtControllerAddress or Ports.CrtControllerAddressAlt or Ports.CrtControllerAddressAltMirror1 or Ports.CrtControllerAddressAltMirror2:

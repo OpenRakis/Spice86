@@ -183,7 +183,7 @@
                     <TextBox IsReadOnly="True" Text="{Binding VideoCard.RendererWidth, StringFormat='Width: {0}'}" TextAlignment="Right" />
                     <TextBox IsReadOnly="True" Text="{Binding VideoCard.RendererHeight, StringFormat='Height: {0}'}" TextAlignment="Right" />
                     <TextBox IsReadOnly="True" Text="{Binding VideoCard.RendererBufferSize, StringFormat='BufferSize: {0}'}" TextAlignment="Right" />
-                    <TextBox IsReadOnly="True" Text="{Binding VideoCard.LastFrameRenderTime, StringFormat='FrameRenderTime: {0}'}" TextAlignment="Right" />
+                    <TextBox IsReadOnly="True" Text="{Binding VideoCard.LastFrameDuration, StringFormat='FrameDuration: {0}'}" TextAlignment="Right" />
                 </WrapPanel>
             </Grid>
         </WrapPanel>

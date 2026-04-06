@@ -10,7 +10,6 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
     IGuiKeyboardEvents, IDisposable {
     private const double ScreenRefreshHz = 60;
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMilliseconds(1000.0 / ScreenRefreshHz);
-    private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
 
     private bool _disposed;
 
@@ -71,18 +70,11 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
 
                 int bufferSize = width * height * 4;
 
-                _drawingSemaphoreSlim?.Wait();
-                try {
-                    if (_pixelBuffer == null || _pixelBuffer.Length != bufferSize) {
-                        _pixelBuffer = new byte[bufferSize];
-                    }
-
-                    Array.Clear(_pixelBuffer, 0, _pixelBuffer.Length);
-                } finally {
-                    if (!_disposed) {
-                        _drawingSemaphoreSlim?.Release();
-                    }
+                if (_pixelBuffer == null || _pixelBuffer.Length != bufferSize) {
+                    _pixelBuffer = new byte[bufferSize];
                 }
+
+                Array.Clear(_pixelBuffer, 0, _pixelBuffer.Length);
             }
         } finally {
             _isSettingResolution = false;
@@ -114,19 +106,12 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
             return;
         }
 
-        _drawingSemaphoreSlim?.Wait();
-        try {
-            fixed (byte* bufferPtr = pixelBuffer) {
-                int rowBytes = Width * 4; // 4 bytes per pixel (BGRA)
-                int length = rowBytes * Height / 4;
+        fixed (byte* bufferPtr = _pixelBuffer) {
+            int rowBytes = Width * 4; // 4 bytes per pixel (BGRA)
+            int length = rowBytes * Height / 4;
 
-                var uiRenderEventArgs = new UIRenderEventArgs((IntPtr)bufferPtr, length);
-                RenderScreen.Invoke(this, uiRenderEventArgs);
-            }
-        } finally {
-            if (!_disposed) {
-                _drawingSemaphoreSlim?.Release();
-            }
+            UIRenderEventArgs uiRenderEventArgs = new UIRenderEventArgs((IntPtr)bufferPtr, length);
+            RenderScreen.Invoke(this, uiRenderEventArgs);
         }
     }
 
@@ -140,21 +125,9 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
             return;
         }
 
-        // Stop the timer first to prevent any new callbacks
+        // Stop the timer to prevent any new callbacks
         _drawTimer?.Dispose();
 
-        // Wait for any ongoing draw operation to complete
-        // This prevents a race condition where the timer callback
-        // is in the middle of rendering when we dispose resources
-        try {
-            if (_drawingSemaphoreSlim?.Wait(TimeSpan.FromMilliseconds(100)) == true) {
-                _drawingSemaphoreSlim?.Release();
-            }
-        } catch (ObjectDisposedException) {
-            // Semaphore was already disposed, which is fine
-        }
-
         _pixelBuffer = null;
-        _drawingSemaphoreSlim?.Dispose();
     }
 }

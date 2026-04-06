@@ -279,4 +279,13 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--McpHttpPort <MCPHTTPPORT>")]
     [DefaultValue(8081)]
     public int McpHttpPort { get; init; }
+
+    /// <summary>
+    /// Selects the VGA rendering mode. Sync fires VGA events on the emulation thread for determinism;
+    /// Async fires them on the UI thread for better performance.
+    /// </summary>
+    [CommandOption("--RenderingMode <RENDERINGMODE>")]
+    [DefaultValue(RenderingMode.Async)]
+    public RenderingMode RenderingMode { get; init; }
+
 }

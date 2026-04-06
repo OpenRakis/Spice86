@@ -9,7 +9,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -24,7 +24,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     private readonly Configuration _configuration;
     private readonly BiosDataArea _biosDataArea;
     private readonly IOPortDispatcher _ioPortDispatcher;
-    private readonly EmulationLoopScheduler _emulationLoopScheduler;
+    private readonly DeviceScheduler _emulationLoopScheduler;
 
     /// <summary>
     /// Initializes a new instance.
@@ -42,7 +42,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     public SystemBiosInt15Handler(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, A20Gate a20Gate, BiosDataArea biosDataArea, EmulationLoopScheduler emulationLoopScheduler,
+        State state, A20Gate a20Gate, BiosDataArea biosDataArea, DeviceScheduler emulationLoopScheduler,
         IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, bool initializeResetVector)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _a20Gate = a20Gate;

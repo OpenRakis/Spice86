@@ -1,30 +1,83 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using System;
+using System.Threading;
+
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
+using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Logging;
 
 using ClockSelect = Registers.General.MiscellaneousOutput.ClockSelectValue;
 
 /// <inheritdoc cref="IVgaRenderer" />
 public class Renderer : IVgaRenderer {
-    private static readonly object RenderLock = new();
     private readonly VideoMemory _memory;
     private readonly IVideoState _state;
-    private readonly IEmulatedClock _clock;
+    private readonly VgaBlinkState _blinkState;
+    private readonly IVgaRenderer256Color _renderer256Color;
+
+    private uint[] _frontBuffer = Array.Empty<uint>();
+    private uint[] _backBuffer = Array.Empty<uint>();
+    private uint[] _renderBuffer = Array.Empty<uint>();
+    // Holds the most recently completed frame. Written only by the renderer
+    // CompleteFrame(), read only by the renderer in InitBackBufferFromFront().
+    // Never touched by the UI-thread buffer rotation, so it is always exactly one frame old.
+    private uint[] _lastPublishedFrame = Array.Empty<uint>();
+    private int _hasPendingFrame;
+    // Guard to prevent re-entrant Render() calls on the UI path.
+    private int _renderInProgress;
+
+    // Dirty-skip state: true if all scanlines should skip pixel drawing this frame.
+    private bool _skipThisFrame;
+    private int _frameOutputRows;
+
+    // Per-frame latched state (set in BeginFrame, constant for the frame).
+    private int _frameSkew;
+    private int _frameCharacterClockMask;
+    private MemoryWidth _frameMemoryWidthMode;
+    private bool _frameScanLineBit0ForAddressBit13;
+    private bool _frameScanLineBit0ForAddressBit14;
+    private int _frameVerticalDisplayEnd;
+    private int _frameTotalHeight;
+    private bool _frameActive;
+
+    // Mutable state (advances per scanline via RenderScanline).
+    private int _frameRowMemoryAddressCounter;
+    private int _frameDestinationAddress;
+    private bool _frameVerticalBlanking;
+    private int _frameLineCounter;
+    private int _frameCharRowScanline;
+    private int _frameDoubleScanIndex;
+    private int _frameDestinationAddressLatch;
+
+    // Per-frame latched pixel panning state.
+    private byte _framePanShift;
+    private bool _framePixelPanningCompatibility;
+    private bool _frameAboveLineCompare;
+    // Scratch row buffer used when horizontal pixel panning is active.
+    private uint[] _rowScratch = Array.Empty<uint>();
+
+    // Per-character-row state (re-read from registers at each row boundary).
+    private int _frameHorizontalDisplayEnd;
+    private int _frameTotalWidth;
+    private bool[] _framePlanesEnabled = Array.Empty<bool>();
+    private byte _frameMaximumScanline;
+    private int _frameDrawLinesPerScanLine;
 
     /// <summary>
     ///     Create a new VGA renderer.
     /// </summary>
     /// <param name="memory">The video memory implementation.</param>
     /// <param name="state">The video state implementation.</param>
-    /// <param name="clock">The emulated clock used to schedule rendering timing.</param>
+    /// <param name="blinkState">Shared blink state for text-mode attribute blinking.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Renderer(IMemory memory, IVideoState state, IEmulatedClock clock, LoggerService loggerService) {
+    /// <param name="renderer256Color">The 256-color scanline renderer selected for the current CPU.</param>
+    public Renderer(IMemory memory, IVideoState state, VgaBlinkState blinkState, LoggerService loggerService, IVgaRenderer256Color renderer256Color) {
         _state = state;
-        _clock = clock;
+        _blinkState = blinkState;
+        _renderer256Color = renderer256Color;
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         _memory = new VideoMemory(_state, loggerService);
         memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
@@ -45,143 +98,219 @@ public class Renderer : IVgaRenderer {
     /// <inheritdoc />
     public int BufferSize { get; private set; }
 
-    /// <inheritdoc />
-    public TimeSpan LastFrameRenderTime { get; private set; }
+    /// <summary>
+    ///     Called by <see cref="VgaTimingEngine"/> at frame start on the emulation thread.
+    ///     Latches per-frame register values and prepares the back buffer for scanline rendering.
+    /// </summary>
+    public void BeginFrame() {
+        bool isDirty = _memory.HasChanged || _state.IsRenderingDirty || _blinkState.HasChanged;
+        _memory.ResetChanged();
+        _state.IsRenderingDirty = false;
+        _blinkState.ResetChanged();
+
+        _skipThisFrame = !isDirty;
+        _frameOutputRows = 0;
+
+        int width = Width;
+        int height = Height;
+        int requiredSize = width * height;
+        if (requiredSize <= 0) {
+            _frameActive = false;
+            return;
+        }
+        if (_backBuffer.Length != requiredSize) {
+            _backBuffer = new uint[requiredSize];
+        }
+        BufferSize = requiredSize;
+        _frameActive = true;
+
+        _frameVerticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
+        _frameTotalHeight = _state.CrtControllerRegisters.VerticalTotalValue + 2;
+        _frameSkew = _state.CrtControllerRegisters.HorizontalBlankingEndRegister.DisplayEnableSkew;
+        _frameCharacterClockMask = _state.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour
+            ? 3
+            : _state.CrtControllerRegisters.CrtModeControlRegister.CountByTwo
+                ? 1
+                : 0;
+        _frameRowMemoryAddressCounter = _state.CrtControllerRegisters.ScreenStartAddress
+            + _state.CrtControllerRegisters.PresetRowScanRegister.BytePanning;
+        _frameMemoryWidthMode = DetermineMemoryWidthMode();
+        _frameScanLineBit0ForAddressBit13 = !_state.CrtControllerRegisters.CrtModeControlRegister.CompatibilityModeSupport;
+        _frameScanLineBit0ForAddressBit14 = !_state.CrtControllerRegisters.CrtModeControlRegister.SelectRowScanCounter;
+
+        _frameDestinationAddress = 0;
+        _frameVerticalBlanking = false;
+        _frameLineCounter = _state.CrtControllerRegisters.PresetRowScanRegister.PresetRowScan;
+        _frameCharRowScanline = 0;
+        _frameDoubleScanIndex = 0;
+        _frameDestinationAddressLatch = 0;
+
+        _framePanShift = _state.AttributeControllerRegisters.HorizontalPixelPanning;
+        _framePixelPanningCompatibility = _state.AttributeControllerRegisters.AttributeControllerModeRegister.PixelPanningCompatibility;
+        _frameAboveLineCompare = true;
+        // Reserve space for up to 2 extra rendered characters (max 9 pixels each in 9-dot text
+        // mode) so the panning copy (scratch[panShift..panShift+Width]) always stays in bounds
+        // for all effective AR13 values: 0-15 in 8/9-dot modes (clamped with & 0x0F), 0-7 in
+        // 256-color modes (×2 pixel units, max horizontal shift 14).
+        const int panningOverhead = 18;
+        int scratchSize = width + panningOverhead;
+        if (_rowScratch.Length < scratchSize) {
+            _rowScratch = new uint[scratchSize];
+        }
+
+        InitCharRow();
+    }
+
+    /// <summary>
+    ///     Called by <see cref="VgaTimingEngine"/> for each physical scanline on the emulation thread.
+    ///     Renders one horizontal line of pixels from VRAM into the back buffer and advances state.
+    /// </summary>
+    public void RenderScanline() {
+        if (!_frameActive || _frameLineCounter >= _frameTotalHeight) {
+            return;
+        }
+
+        if (_skipThisFrame && (_memory.HasChanged || _state.IsRenderingDirty)) {
+            _skipThisFrame = false;
+            InitBackBufferFromFront();
+            _frameDestinationAddressLatch = _frameOutputRows * Width;
+            _frameDestinationAddress = _frameDestinationAddressLatch;
+        }
+
+        Span<uint> frameBuffer = _backBuffer.AsSpan();
+
+        if (_frameDoubleScanIndex == 0) {
+            _frameDestinationAddressLatch = _frameDestinationAddress;
+        }
+
+        int memoryAddressCounter = _frameRowMemoryAddressCounter;
+        _frameDestinationAddress = _frameDestinationAddressLatch;
+
+        if (!_skipThisFrame) {
+            // Hoist per-scanline constants out of the per-character loop to avoid
+            // repeated interface dispatch and property-chain traversals.
+            uint[] paletteMap = _state.DacRegisters.PaletteMap;
+            uint[] attrMap = _state.DacRegisters.AttributeMap;
+            bool in256ColorMode = _state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode;
+            bool inGraphicsMode = _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode;
+            int pixelsPerChar = inGraphicsMode ? 8 : _state.SequencerRegisters.ClockingModeRegister.DotsPerClock;
+
+            VgaAddressMapper addressMapper = new VgaAddressMapper(
+                _frameMemoryWidthMode,
+                _frameScanLineBit0ForAddressBit13,
+                _frameScanLineBit0ForAddressBit14,
+                _frameCharRowScanline & 1);
+
+            int effectivePanShift = ComputeEffectivePanShift(in256ColorMode);
+            int visibleChars = _frameHorizontalDisplayEnd - _frameSkew;
+
+            if (in256ColorMode && !_frameVerticalBlanking) {
+                if (effectivePanShift > 0) {
+                    int scratchDest = 0;
+                    Render256ColorScanline(_rowScratch.AsSpan(), ref scratchDest, paletteMap, addressMapper, memoryAddressCounter, visibleChars + 2);
+                    ApplyPannedRow(frameBuffer, effectivePanShift, scratchDest);
+                } else {
+                    Render256ColorScanline(frameBuffer, ref _frameDestinationAddress, paletteMap, addressMapper, memoryAddressCounter, visibleChars);
+                }
+            } else {
+                if (effectivePanShift > 0 && !_frameVerticalBlanking) {
+                    int scratchDest = 0;
+                    DrawScanline(_rowScratch.AsSpan(), ref scratchDest, attrMap, inGraphicsMode, pixelsPerChar, addressMapper, memoryAddressCounter, _frameHorizontalDisplayEnd + 2);
+                    ApplyPannedRow(frameBuffer, effectivePanShift, scratchDest);
+                } else {
+                    DrawScanline(frameBuffer, ref _frameDestinationAddress, attrMap, inGraphicsMode, pixelsPerChar, addressMapper, memoryAddressCounter, _frameHorizontalDisplayEnd);
+                }
+            }
+        }
+
+        if (_frameLineCounter == _state.CrtControllerRegisters.LineCompareValue) {
+            _frameRowMemoryAddressCounter = 0;
+            _frameAboveLineCompare = false;
+        }
+        if (_frameLineCounter == _frameVerticalDisplayEnd) {
+            _frameVerticalBlanking = true;
+        }
+
+        if (!(_state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved
+              && (_frameCharRowScanline & 1) != 1)) {
+            _frameLineCounter++;
+        }
+
+        _frameDoubleScanIndex++;
+        if (_frameDoubleScanIndex >= _frameDrawLinesPerScanLine) {
+            _frameDoubleScanIndex = 0;
+            if (!_frameVerticalBlanking) {
+                _frameOutputRows++;
+            }
+            _frameCharRowScanline++;
+            if (_frameCharRowScanline > _frameMaximumScanline) {
+                _frameCharRowScanline = 0;
+                _frameRowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
+                if (_frameLineCounter < _frameTotalHeight) {
+                    InitCharRow();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Called by <see cref="VgaTimingEngine"/> at vertical retrace on the emulation thread.
+    ///     Publishes the completed back buffer by swapping it with the front buffer.
+    /// </summary>
+    public void CompleteFrame() {
+        if (!_frameActive) {
+            return;
+        }
+        if (_skipThisFrame) {
+            _frameActive = false;
+            return;
+        }
+        _backBuffer = Interlocked.Exchange(ref _frontBuffer, _backBuffer);
+        // Publish the most recently completed frame with a release store so
+        // readers that observe `_hasPendingFrame` will see the fully-published
+        // buffer contents when they do a Volatile.Read on `_lastPublishedFrame`.
+        Volatile.Write(ref _lastPublishedFrame, Volatile.Read(ref _frontBuffer));
+        Volatile.Write(ref _hasPendingFrame, 1);
+        _frameActive = false;
+    }
 
     /// <inheritdoc />
     public void Render(Span<uint> frameBuffer) {
-        if (!Monitor.TryEnter(RenderLock)) {
-            // We're already rendering. Get out of here.
+        // Prevent re-entrant UI callbacks from overlapping this method.
+        if (Interlocked.CompareExchange(ref _renderInProgress, 1, 0) != 0) {
             return;
         }
+
         try {
-            BufferSize = frameBuffer.Length;
-            if (Width * Height > BufferSize) {
-                // Resolution change hasn't caught up yet. Skip a frame.
+            if (Interlocked.Exchange(ref _hasPendingFrame, 0) == 0) {
                 return;
             }
 
-            // Some timing helpers.
-            double horizontalLineDurationMs = 1000.0 / 31469.0; // Duration of one horizontal line in ms.
-            SpinWait waitSpinner = new SpinWait();
-            double frameStartMs = _clock.ElapsedTimeMs;
+            _renderBuffer = Interlocked.Exchange(ref _frontBuffer, _renderBuffer);
 
-            // I _think_ changes to these are ignored during the frame, so we latch them here.
-            int verticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
-            int totalHeight = _state.CrtControllerRegisters.VerticalTotalValue + 2;
-            int skew = _state.CrtControllerRegisters.HorizontalBlankingEndRegister.DisplayEnableSkew; // Skew controls the delay of enabling the display at the start of the line.
-            int characterClockMask = _state.CrtControllerRegisters.UnderlineRowScanlineRegister.CountByFour
-                ? 3
-                : _state.CrtControllerRegisters.CrtModeControlRegister.CountByTwo
-                    ? 1
-                    : 0;
-            int rowMemoryAddressCounter = _state.CrtControllerRegisters.ScreenStartAddress + _state.CrtControllerRegisters.PresetRowScanRegister.BytePanning;
-
-            // Memory reading parameters.
-            MemoryWidth memoryWidthMode = DetermineMemoryWidthMode();
-            bool scanLineBit0ForAddressBit13 = !_state.CrtControllerRegisters.CrtModeControlRegister.CompatibilityModeSupport;
-            bool scanLineBit0ForAddressBit14 = !_state.CrtControllerRegisters.CrtModeControlRegister.SelectRowScanCounter;
-
-            _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = false;
-            _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
-            int destinationAddress = 0;
-            bool verticalBlanking = false;
-
-            /////////////////////////
-            // Start Vertical loop //
-            /////////////////////////
-            int lineCounter = _state.CrtControllerRegisters.PresetRowScanRegister.PresetRowScan;
-            while (lineCounter < totalHeight) {
-                // These registers can change mid-frame, so we need to check them every scanline.
-                // I _think_ changes to these are ignored during a scanline, so we latch them here. 
-                int horizontalDisplayEnd = _state.CrtControllerRegisters.HorizontalDisplayEnd + 1 + skew;
-                int totalWidth = _state.CrtControllerRegisters.HorizontalTotal + 3;
-                bool[] planesEnabled = _state.AttributeControllerRegisters.ColorPlaneEnableRegister.PlanesEnabled;
-                byte maximumScanline = _state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline;
-                int drawLinesPerScanLine = _state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1;
-
-                // For every row we can have multiple lines. In text-modes this is used for character height, and in graphics
-                // modes this is used for double-scanning.
-                for (int scanline = 0; scanline <= maximumScanline; scanline++) {
-                    // We latch the destination address here, so that the double-scan lines are drawn on top of each other.
-                    int destinationAddressLatch = destinationAddress;
-                    for (int doubleScan = 0; doubleScan < drawLinesPerScanLine; doubleScan++) {
-                        int memoryAddressCounter = rowMemoryAddressCounter;
-                        destinationAddress = destinationAddressLatch;
-
-                        double msAtStartOfRow = _clock.ElapsedTimeMs;
-                        bool horizontalBlanking = true;
-
-                        ///////////////////////////
-                        // Start Horizontal loop //
-                        ///////////////////////////
-                        // We loop through the entire horizontal line, even if we're in blanking. This allows programs
-                        // to detect the brief disabling and enabling of the display during horizontal blanking.
-                        for (int characterCounter = 0; characterCounter < totalWidth; characterCounter++) {
-                            // Skew controls the delay of enabling the display at the start of the line.
-                            if (characterCounter == skew) {
-                                horizontalBlanking = false;
-                            }
-                            // For simplicity we ignore horizontal blanking registers and use the display end register.
-                            if (characterCounter == horizontalDisplayEnd) {
-                                horizontalBlanking = true;
-                            }
-                            if (horizontalBlanking || verticalBlanking) {
-                                _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
-                                // No need to read memory or render pixels.
-                                continue;
-                            }
-
-                            // No blanking, so we're rendering pixels.
-                            _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = false;
-
-                            (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryWidthMode, memoryAddressCounter, scanLineBit0ForAddressBit13, scanline, scanLineBit0ForAddressBit14, planesEnabled);
-
-                            // Convert the 4 bytes into 8 pixels.
-                            if (_state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode) {
-                                Draw256ColorMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
-                            } else if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
-                                DrawGraphicsMode(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
-                            } else {
-                                DrawTextMode(frameBuffer, ref destinationAddress, plane0, plane1, scanline);
-                            }
-                            // This increases the memory address counter after each character, taking count-by-two and count-by-four into account.
-                            memoryAddressCounter += (characterCounter & characterClockMask) == 0 ? 1 : 0;
-                        } // End of horizontal loop
-
-                        // When the LineCompare register value is reached, the video memory address is reset to 0. This allows a split-screen effect.
-                        if (lineCounter == _state.CrtControllerRegisters.LineCompareValue) {
-                            rowMemoryAddressCounter = 0;
-                        }
-                        // To maximize the time spent in vertical retrace, we start it at the end of display.
-                        if (lineCounter == verticalDisplayEnd) {
-                            _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = true;
-                            verticalBlanking = true;
-                        }
-
-                        // We wait at the end of each line to create the correct horizontal timing of 31.46875 kHz
-                        // This allows programs running in the CPU thread to detect the horizontal retrace.
-                        while (!_clock.IsPaused && _clock.ElapsedTimeMs - msAtStartOfRow < horizontalLineDurationMs) {
-                            waitSpinner.SpinOnce(-1);
-                        }
-                        // If the VerticalTiming is halved, we only increase the line counter every other scanline.
-                        if (_state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved && (scanline & 1) != 1) {
-                            continue;
-                        }
-                        lineCounter++;
-                    } // End of doubleScan
-                } // end of scanline loop
-
-                // Rather than simply continuing increasing memory addresses, an offset is added at the end of each line.
-                // This allows creating a "virtual screen" that is larger than the displayed area.
-                rowMemoryAddressCounter += _state.CrtControllerRegisters.Offset << 1;
-            } // End of vertical loop
-
-            LastFrameRenderTime = TimeSpan.FromMilliseconds(_clock.ElapsedTimeMs - frameStartMs);
-        } catch (IndexOutOfRangeException) {
-            // Resolution changed during rendering, discard the rest of this frame.
+            uint[] render = Volatile.Read(ref _renderBuffer);
+            if (render.Length > 0 && render.Length <= frameBuffer.Length) {
+                render.AsSpan().CopyTo(frameBuffer);
+            }
         } finally {
-            Monitor.Exit(RenderLock);
+            Interlocked.Exchange(ref _renderInProgress, 0);
+        }
+    }
+
+    private void InitCharRow() {
+        _frameHorizontalDisplayEnd = _state.CrtControllerRegisters.HorizontalDisplayEnd + 1 + _frameSkew;
+        _frameTotalWidth = _state.CrtControllerRegisters.HorizontalTotal + 3;
+        _framePlanesEnabled = _state.AttributeControllerRegisters.ColorPlaneEnableRegister.PlanesEnabled;
+        _frameMaximumScanline = _state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline;
+        _frameDrawLinesPerScanLine = _state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1;
+    }
+
+    private void InitBackBufferFromFront() {
+        // Use an acquire read to ensure we see the contents published by
+        // `CompleteFrame()` which does a release write.
+        uint[] last = Volatile.Read(ref _lastPublishedFrame);
+        if (last.Length == _backBuffer.Length) {
+            last.AsSpan().CopyTo(_backBuffer.AsSpan());
         }
     }
 
@@ -199,115 +328,272 @@ public class Renderer : IVgaRenderer {
         return memoryWidthMode;
     }
 
-    private (byte plane0, byte plane1, byte plane2, byte plane3) ReadVideoMemory(
-        MemoryWidth memoryWidthMode, int memoryAddressCounter,
-        bool scanLineBit0ForAddressBit13, int scanline,
-        bool scanLineBit0ForAddressBit14, ReadOnlySpan<bool> planesEnabled) {
-        // Convert logical address to physical address.
-        ushort physicalAddress = memoryWidthMode switch {
-            MemoryWidth.Byte => (ushort)memoryAddressCounter,
-            MemoryWidth.Word13 => (ushort)(memoryAddressCounter << 1 | memoryAddressCounter >> 13 & 1),
-            MemoryWidth.Word15 => (ushort)(memoryAddressCounter << 1 | memoryAddressCounter >> 15 & 1),
-            MemoryWidth.DoubleWord => (ushort)((memoryAddressCounter << 2) | ((memoryAddressCounter >> 14) & 3)),
-            _ => throw new InvalidOperationException($"Unsupported memory width: {memoryWidthMode}")
-        };
-        if (scanLineBit0ForAddressBit13) {
-            // Use the scan line counter rather than the memory address counter for bit 13.
-            // In effect this causes all odd scanline reads to be read from memory address + 0x2000.
-            physicalAddress = (ushort)(physicalAddress & ~0x2000 | ((scanline & 1) != 0 ? 0x2000 : 0));
-        }
-        if (scanLineBit0ForAddressBit14) {
-            // Use the scan line counter rather than the memory address counter for bit 14.
-            // In effect this causes all odd scanline reads to be read from memory address + 0x4000.
-            physicalAddress = (ushort)(physicalAddress & ~0x4000 | ((scanline & 1) != 0 ? 0x4000 : 0));
+    private void Render256ColorScanline(Span<uint> target, ref int destAddr, uint[] paletteMap,
+        VgaAddressMapper addressMapper, int memoryAddressCounter, int visibleChars) {
+        if (visibleChars <= 0) {
+            return;
         }
 
-        // Read 4 bytes from the 4 planes.
-        byte plane0 = (byte)(planesEnabled[0] ? _memory.Planes[0, physicalAddress] : 0);
-        byte plane1 = (byte)(planesEnabled[1] ? _memory.Planes[1, physicalAddress] : 0);
-        byte plane2 = (byte)(planesEnabled[2] ? _memory.Planes[2, physicalAddress] : 0);
-        byte plane3 = (byte)(planesEnabled[3] ? _memory.Planes[3, physicalAddress] : 0);
+        // Fast path: when addresses are contiguous (Byte mode, mask == 0),
+        // hand a single VRAM span to the SIMD renderer (zero-copy).
+        if (_frameCharacterClockMask == 0) {
+            ushort startPhysical = addressMapper.ComputeAddress(memoryAddressCounter);
+            bool isContiguous;
+            if (visibleChars <= 1) {
+                isContiguous = true;
+            } else {
+                ushort endPhysical = addressMapper.ComputeAddress(memoryAddressCounter + visibleChars - 1);
+                isContiguous = endPhysical - startPhysical == visibleChars - 1;
+            }
+            if (isContiguous) {
+                RenderContiguous256(target, ref destAddr, paletteMap, startPhysical, visibleChars);
+                return;
+            }
+        }
+
+        // Non-contiguous path: read each character's VRAM data and write
+        // pixels directly to the frame buffer in a single pass.
+        RenderDirect256(target, ref destAddr, paletteMap, addressMapper, memoryAddressCounter, visibleChars);
+    }
+
+    private void RenderContiguous256(Span<uint> target, ref int destAddr, uint[] paletteMap,
+        ushort startPhysical, int visibleChars) {
+        int vramLinearStart = startPhysical * 4;
+        int vramByteCount = visibleChars * 4;
+
+        if (vramLinearStart + vramByteCount > _memory.VRam.Length) {
+            vramByteCount = _memory.VRam.Length - vramLinearStart;
+        }
+        if (vramByteCount <= 0) {
+            return;
+        }
+
+        ReadOnlySpan<byte> vram = _memory.GetLinearSpan(vramLinearStart, vramByteCount);
+
+        int pixelCount = vramByteCount * 2;
+        if (destAddr + pixelCount > target.Length) {
+            pixelCount = target.Length - destAddr;
+        }
+        if (pixelCount <= 0) {
+            return;
+        }
+
+        _renderer256Color.RenderDoubledScanline(target, vram, paletteMap, pixelCount / 2, ref destAddr);
+    }
+
+    private void RenderDirect256(Span<uint> target, ref int destAddr, uint[] paletteMap,
+        VgaAddressMapper addressMapper, int memoryAddressCounter, int visibleChars) {
+        int dest = destAddr;
+        byte[] vram = _memory.VRam;
+        int currCounter = memoryAddressCounter;
+        for (int i = 0; i < visibleChars; i++) {
+            ushort physical = addressMapper.ComputeAddress(currCounter);
+            int baseIdx = physical * 4;
+            if (baseIdx + 4 > vram.Length || dest + 8 > target.Length) {
+                break;
+            }
+            uint c0 = paletteMap[vram[baseIdx]];
+            uint c1 = paletteMap[vram[baseIdx + 1]];
+            uint c2 = paletteMap[vram[baseIdx + 2]];
+            uint c3 = paletteMap[vram[baseIdx + 3]];
+            target[dest] = c0;
+            target[dest + 1] = c0;
+            target[dest + 2] = c1;
+            target[dest + 3] = c1;
+            target[dest + 4] = c2;
+            target[dest + 5] = c2;
+            target[dest + 6] = c3;
+            target[dest + 7] = c3;
+            dest += 8;
+            int characterCounter = _frameSkew + i;
+            currCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
+        }
+        destAddr = dest;
+    }
+
+    /// <summary>
+    ///     Computes the effective pixel-panning shift for the current scanline.
+    ///     In 256-color mode, each AR13 unit represents 2 displayed pixels (pixel-doubling
+    ///     granularity) and the hardware-valid range is 0–7 (3 bits), giving a max of 14 pixels.
+    ///     In all other modes the valid range is 0–15 (4 bits), one unit = one pixel.
+    ///     Returns 0 when below the line-compare boundary and PixelPanningCompatibility is set.
+    /// </summary>
+    private int ComputeEffectivePanShift(bool in256ColorMode) {
+        // In 256-color mode the hardware only honours bits 0-2 of AR13 (matches DOSBox-staging).
+        // In planar/text modes all 4 bits are valid.
+        int panUnits = in256ColorMode ? _framePanShift & 0x07 : _framePanShift & 0x0F;
+        if (panUnits == 0) {
+            return 0;
+        }
+        if (_framePixelPanningCompatibility && !_frameAboveLineCompare) {
+            return 0;
+        }
+        return in256ColorMode ? panUnits * 2 : panUnits;
+    }
+
+    /// <summary>
+    ///     Copies the panned row from <see cref="_rowScratch"/> into <paramref name="frameBuffer"/>,
+    ///     skipping the first <paramref name="panShift"/> pixels, and advances
+    ///     <see cref="_frameDestinationAddress"/> by exactly <see cref="Width"/> pixels.
+    /// </summary>
+    private void ApplyPannedRow(Span<uint> frameBuffer, int panShift, int scratchLength) {
+        int destStart = _frameDestinationAddressLatch;
+        int available = Math.Min(Width, scratchLength - panShift);
+        if (available > 0) {
+            _rowScratch.AsSpan(panShift, available).CopyTo(frameBuffer.Slice(destStart, available));
+        }
+        _frameDestinationAddress = destStart + Width;
+    }
+
+    /// <summary>
+    ///     Renders one scanline of non-256-color pixels (EGA planar, CGA, or text mode)
+    ///     into <paramref name="target"/> starting at <paramref name="destAddr"/>.
+    ///     Processes characters from <see cref="_frameSkew"/> up to <paramref name="visibleEnd"/>.
+    /// </summary>
+    private void DrawScanline(Span<uint> target, ref int destAddr, uint[] attrMap,
+        bool inGraphicsMode, int pixelsPerChar, VgaAddressMapper addressMapper,
+        int memoryAddressCounter, int visibleEnd) {
+        bool horizontalBlanking = true;
+        for (int characterCounter = 0; characterCounter < _frameTotalWidth; characterCounter++) {
+            if (characterCounter == _frameSkew) {
+                horizontalBlanking = false;
+            }
+            if (characterCounter == visibleEnd) {
+                horizontalBlanking = true;
+            }
+            if (horizontalBlanking || _frameVerticalBlanking) {
+                continue;
+            }
+            if (destAddr + pixelsPerChar > target.Length) {
+                break;
+            }
+            (byte plane0, byte plane1, byte plane2, byte plane3) = ReadVideoMemory(memoryAddressCounter, addressMapper);
+            if (inGraphicsMode) {
+                DrawGraphicsMode(target, attrMap, ref destAddr, plane0, plane1, plane2, plane3);
+            } else {
+                DrawTextMode(target, attrMap, ref destAddr, plane0, plane1, _frameCharRowScanline);
+            }
+            memoryAddressCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
+        }
+    }
+
+    private (byte plane0, byte plane1, byte plane2, byte plane3) ReadVideoMemory(int memoryAddressCounter, VgaAddressMapper addressMapper) {
+        ushort physicalAddress = addressMapper.ComputeAddress(memoryAddressCounter);
+        int baseIdx = physicalAddress * 4;
+
+        byte plane0 = (byte)(_framePlanesEnabled[0] ? _memory.VRam[baseIdx] : 0);
+        byte plane1 = (byte)(_framePlanesEnabled[1] ? _memory.VRam[baseIdx + 1] : 0);
+        byte plane2 = (byte)(_framePlanesEnabled[2] ? _memory.VRam[baseIdx + 2] : 0);
+        byte plane3 = (byte)(_framePlanesEnabled[3] ? _memory.VRam[baseIdx + 3] : 0);
 
         return (plane0, plane1, plane2, plane3);
     }
 
-    private void DrawTextMode(Span<uint> frameBuffer, ref int destinationAddress, byte plane0, byte plane1, int scanline) {
+    private readonly struct VgaAddressMapper {
+        private readonly MemoryWidth _mode;
+        private readonly ushort _andMask13;
+        private readonly ushort _orMask13;
+        private readonly ushort _andMask14;
+        private readonly ushort _orMask14;
+
+        public VgaAddressMapper(MemoryWidth mode, bool scanLineBit0ForAddressBit13, bool scanLineBit0ForAddressBit14, int scanlineBit0) {
+            _mode = mode;
+            _andMask13 = scanLineBit0ForAddressBit13 ? (ushort)(~0x2000 & 0xFFFF) : (ushort)0xFFFF;
+            _orMask13 = (scanLineBit0ForAddressBit13 && scanlineBit0 != 0) ? (ushort)0x2000 : (ushort)0;
+            _andMask14 = scanLineBit0ForAddressBit14 ? (ushort)(~0x4000 & 0xFFFF) : (ushort)0xFFFF;
+            _orMask14 = (scanLineBit0ForAddressBit14 && scanlineBit0 != 0) ? (ushort)0x4000 : (ushort)0;
+        }
+
+        public ushort ComputeAddress(int counter) {
+            ushort p = _mode switch {
+                MemoryWidth.Byte => (ushort)counter,
+                MemoryWidth.Word13 => (ushort)((counter << 1) | ((counter >> 13) & 1)),
+                MemoryWidth.Word15 => (ushort)((counter << 1) | ((counter >> 15) & 1)),
+                MemoryWidth.DoubleWord => (ushort)((counter << 2) | ((counter >> 14) & 3)),
+                _ => throw new InvalidOperationException($"Unsupported memory width: {_mode}")
+            };
+            p = (ushort)((p & _andMask13) | _orMask13);
+            p = (ushort)((p & _andMask14) | _orMask14);
+            return p;
+        }
+    }
+
+    private void DrawTextMode(Span<uint> frameBuffer, uint[] attrMap, ref int destinationAddress, byte plane0, byte plane1, int scanline) {
         // Text mode
         // Plane 0 contains the character codes.
         int fontAddress = 32 * plane0; // No idea why this seems to work for all character heights. It shouldn't.
         // The byte in plane 1 contains the foreground and background colors.
-        uint backGroundColor = GetDacPaletteColor(plane1 >> 4 & 0b1111);
+        uint backGroundColor = attrMap[(plane1 >> 4) & 0xF];
         int index;
-        if (_state.SequencerRegisters.MemoryModeRegister.ExtendedMemory) {
+        SequencerRegisters sequencer = _state.SequencerRegisters;
+        if (sequencer.MemoryModeRegister.ExtendedMemory) {
             // Bit 3 controls which font is used.
             if ((plane1 & 0x8) != 0) {
-                fontAddress += _state.SequencerRegisters.CharacterMapSelectRegister.CharacterMapA;
+                fontAddress += sequencer.CharacterMapSelectRegister.CharacterMapA;
             } else {
-                fontAddress += _state.SequencerRegisters.CharacterMapSelectRegister.CharacterMapB;
+                fontAddress += sequencer.CharacterMapSelectRegister.CharacterMapB;
             }
             index = plane1 & 0x7;
         } else {
             // Bit 3 controls color intensity.
             index = plane1 & 0xF;
         }
-        uint foreGroundColor = GetDacPaletteColor(index);
+        uint foreGroundColor = attrMap[index];
         if (_state.AttributeControllerRegisters.AttributeControllerModeRegister.BlinkingEnabled
-            && (plane1 & 0x80) != 0) {
-            double blinkPhaseMs = _clock.ElapsedTimeMs % 1000.0;
-            if (blinkPhaseMs < 500.0) {
-                // Blinking is enabled and the blink bit is set and the current time is in the first half of the second.
-                // Swap the foreground and background colors.
-                (foreGroundColor, backGroundColor) = (backGroundColor & 0x7, foreGroundColor);
-            }
+            && (plane1 & 0x80) != 0
+            && !_blinkState.IsBlinkPhaseHigh) {
+            (foreGroundColor, backGroundColor) = (backGroundColor & 0x7, foreGroundColor);
         }
-             
+
+        int dotsPerClock = sequencer.ClockingModeRegister.DotsPerClock;
         // The 8 pixels to render this line come from the font which is stored in plane 2.
-        byte fontByte = _memory.Planes[2, fontAddress + scanline];
-        for (int x = 0; x < _state.SequencerRegisters.ClockingModeRegister.DotsPerClock; x++) {
-            uint pixel = (fontByte & 0x80 >> x) != 0 ? foreGroundColor : backGroundColor;
+        byte fontByte = _memory.VRam[(fontAddress + scanline) * 4 + 2];
+        byte mask = 0x80;
+        for (int x = 0; x < dotsPerClock; x++, mask >>= 1) {
+            uint pixel = (fontByte & mask) != 0 ? foreGroundColor : backGroundColor;
             frameBuffer[destinationAddress++] = pixel;
         }
     }
 
-    private void DrawGraphicsMode(Span<uint> frameBuffer, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
+    private void DrawGraphicsMode(Span<uint> frameBuffer, uint[] attrMap, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
         // There are 2 graphics modes, Ega compatible and Cga compatible.
         if (_state.GraphicsControllerRegisters.GraphicsModeRegister.ShiftRegisterMode == ShiftRegisterMode.Ega) {
-            DrawEgaModeGraphics(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
+            DrawEgaModeGraphics(frameBuffer, attrMap, ref destinationAddress, plane0, plane1, plane2, plane3);
         } else {
-            DrawCgaModeGraphics(frameBuffer, ref destinationAddress, plane0, plane1, plane2, plane3);
+            DrawCgaModeGraphics(frameBuffer, attrMap, ref destinationAddress, plane0, plane1, plane2, plane3);
         }
     }
 
-    private void DrawCgaModeGraphics(Span<uint> frameBuffer, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
+    private void DrawCgaModeGraphics(Span<uint> frameBuffer, uint[] attrMap, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
         // Cga mode has a different shift register mode, where the bits are interleaved.
         // First 4 pixels are created from planes 0 and 2.
         for (int bitNr = 6; bitNr >= 0; bitNr -= 2) {
             int index = (plane2 >> bitNr & 3) << 2 | plane0 >> bitNr & 3;
-            frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
+            frameBuffer[destinationAddress++] = attrMap[index];
         }
         // Then 4 pixels are created from planes 1 and 3.
         for (int bitNr = 6; bitNr >= 0; bitNr -= 2) {
             int index = (plane3 >> bitNr & 3) << 2 | plane1 >> bitNr & 3;
-            frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
+            frameBuffer[destinationAddress++] = attrMap[index];
         }
     }
 
-    private void DrawEgaModeGraphics(Span<uint> frameBuffer, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
+    private void DrawEgaModeGraphics(Span<uint> frameBuffer, uint[] attrMap, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
         // Loop through those bytes and create an index from the 4 planes for each bit,
         // outputting 8 pixels.
         for (int bitNr = 7; bitNr >= 0; bitNr--) {
             int index = (plane3 >> bitNr & 1) << 3 | (plane2 >> bitNr & 1) << 2 | (plane1 >> bitNr & 1) << 1 | plane0 >> bitNr & 1;
-            frameBuffer[destinationAddress++] = GetDacPaletteColor(index);
+            frameBuffer[destinationAddress++] = attrMap[index];
         }
     }
 
-    private void Draw256ColorMode(Span<uint> frameBuffer, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
+    private void Draw256ColorMode(Span<uint> frameBuffer, uint[] paletteMap, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
         // 256-color mode is simply using the video memory bytes directly.
         // Output 8 pixels by drawing each of the 4 pixels twice.
-        uint pixel12Color = GetDacPaletteColor(plane0);
-        uint pixel34Color = GetDacPaletteColor(plane1);
-        uint pixel56Color = GetDacPaletteColor(plane2);
-        uint pixel78Color = GetDacPaletteColor(plane3);
+        uint pixel12Color = paletteMap[plane0];
+        uint pixel34Color = paletteMap[plane1];
+        uint pixel56Color = paletteMap[plane2];
+        uint pixel78Color = paletteMap[plane3];
         frameBuffer[destinationAddress++] = pixel12Color;
         frameBuffer[destinationAddress++] = pixel12Color;
         frameBuffer[destinationAddress++] = pixel34Color;
@@ -318,23 +604,7 @@ public class Renderer : IVgaRenderer {
         frameBuffer[destinationAddress++] = pixel78Color;
     }
 
-    private uint GetDacPaletteColor(int index) {
-        switch (_state.AttributeControllerRegisters.AttributeControllerModeRegister.PixelWidth8) {
-            case true:
-                return _state.DacRegisters.ArgbPalette[index];
-            default: {
-                int fromPaletteRam6Bits = _state.AttributeControllerRegisters.InternalPalette[index & 0x0F];
-                int bits0To3 = fromPaletteRam6Bits & 0b00001111;
-                int bits4And5 = _state.AttributeControllerRegisters.AttributeControllerModeRegister.VideoOutput45Select
-                    ? _state.AttributeControllerRegisters.ColorSelectRegister.Bits45 << 4
-                    : fromPaletteRam6Bits & 0b00110000;
-                int bits6And7 = _state.AttributeControllerRegisters.ColorSelectRegister.Bits67 << 6;
-                int dacIndex8Bits = bits6And7 | bits4And5 | bits0To3;
-                int paletteIndex = dacIndex8Bits & _state.DacRegisters.PixelMask;
-                return _state.DacRegisters.ArgbPalette[paletteIndex];
-            }
-        }
-    }
+
 }
 
 internal enum MemoryWidth {
