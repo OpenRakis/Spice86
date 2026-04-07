@@ -13,6 +13,7 @@ public record ConstantNode(DataType DataType, ulong Value) : ValueNode(DataType)
             BitWidth.BYTE_8 => (sbyte)Value,
             BitWidth.WORD_16 => (short)Value,
             BitWidth.DWORD_32 => (int)Value,
+            BitWidth.BOOL_1 => (int)Value,
             BitWidth.QWORD_64 => (long)Value,
             _ => throw new InvalidOperationException($"Unsupported bit width {DataType.BitWidth}")
         };
@@ -44,6 +45,7 @@ public record ConstantNode(DataType DataType, ulong Value) : ValueNode(DataType)
             BitWidth.BYTE_8 => 0xFF,
             BitWidth.WORD_16 => 0xFFFF,
             BitWidth.DWORD_32 => 0xFFFFFFFF,
+            BitWidth.BOOL_1 => 0x1,
             BitWidth.QWORD_64 => 0xFFFFFFFFFFFFFFFF,
             _ => throw new InvalidOperationException($"Unsupported bit width {bitWidth}")
         };

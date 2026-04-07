@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
@@ -7,12 +8,13 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.Registers;
 
-public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBuilder instructionField, PointerAstBuilder pointer) {
+public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBuilder instructionField, PointerAstBuilder pointer, ConstantAstBuilder constant) {
     private readonly TypeConversionAstBuilder _typeConversion = new();
 
     public RegisterAstBuilder Register { get; } = register;
     public InstructionFieldAstBuilder InstructionField { get; } = instructionField;
     public PointerAstBuilder Pointer { get; } = pointer;
+    public ConstantAstBuilder Constant { get; } = constant;
 
     public ValueNode RmToNode(DataType targetDataType, ModRmContext modRmContext) {
         if (modRmContext.MemoryAddressType == MemoryAddressType.NONE) {
@@ -36,6 +38,30 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
     }
 
     public ValueNode ToMemoryAddressNode(DataType targetDataType, ModRmContext modRmContext) {
+        ValueNode offset = MemoryOffsetToNode(modRmContext);
+        return ToSegmentedPointerFromContext(targetDataType, modRmContext, offset);
+    }
+
+    /// <summary>
+    /// Caches the ModRM memory offset in a local variable, then builds a segmented pointer using that cached offset.
+    /// Returns both the variable declaration (to include in the block) and the resulting pointer node.
+    /// </summary>
+    public (VariableDeclarationNode CachedOffset, ValueNode Pointer) ToMemoryAddressNodeWithCachedOffset(
+        DataType targetDataType, DataType addressType, ModRmContext modRmContext, string variableName) {
+        ValueNode offsetExpr = MemoryOffsetToNode(modRmContext);
+        VariableDeclarationNode cachedOffset = new(addressType, variableName, offsetExpr);
+        ValueNode pointer = ToSegmentedPointerFromContext(targetDataType, modRmContext, cachedOffset.Reference);
+        return (cachedOffset, pointer);
+    }
+
+    /// <summary>
+    /// Builds a segmented pointer using the ModRM context's segment registers with a caller-provided offset.
+    /// </summary>
+    public ValueNode ToMemoryAddressNodeWithCustomOffset(DataType targetDataType, ModRmContext modRmContext, ValueNode offset) {
+        return ToSegmentedPointerFromContext(targetDataType, modRmContext, offset);
+    }
+
+    private ValueNode ToSegmentedPointerFromContext(DataType targetDataType, ModRmContext modRmContext, ValueNode offset) {
         if (modRmContext.MemoryAddressType == MemoryAddressType.NONE) {
             throw new ArgumentException(
                 $"MemoryAddressType is {modRmContext.MemoryAddressType} which should never happen when computing addresses.");
@@ -47,7 +73,6 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
 
         ValueNode defaultSegment = new SegmentRegisterNode(modRmContext.DefaultSegmentIndex.Value);
         ValueNode segment = new SegmentRegisterNode(modRmContext.SegmentIndex.Value);
-        ValueNode offset = MemoryOffsetToNode(modRmContext);
         return Pointer.ToSegmentedPointer(targetDataType, segment, defaultSegment, offset);
     }
 
@@ -57,11 +82,12 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
                 $"MemoryOffsetType is {modRmContext.MemoryOffsetType} which should never happen when computing offsets.");
         }
 
+        DataType addressType = new DataType(modRmContext.AddressSize, false);
         ValueNode? displacement = ModRmDisplacementToNode(modRmContext);
         ValueNode? offset = ModRmOffsetToNode(modRmContext);
-        ValueNode? result = BiOperationWithResultNode(new DataType(modRmContext.AddressSize, false), offset, BinaryOperation.PLUS,
+        ValueNode? result = BiOperationWithResultNode(addressType, offset, BinaryOperation.PLUS,
             displacement);
-        return result ?? new ConstantNode(new DataType(modRmContext.AddressSize, false), 0);
+        return result ?? new ConstantNode(addressType, 0);
     }
 
     /// <summary>
@@ -71,6 +97,20 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
     public ValueNode ToMemoryAddressNodeWithOffsetAdjustment(DataType targetDataType, ModRmContext modRmContext, ValueNode offsetAdjustment) {
         ValueNode basePointer = ToMemoryAddressNode(targetDataType, modRmContext);
         return Pointer.WithOffsetAdjustment((SegmentedPointerNode)basePointer, offsetAdjustment);
+    }
+
+    /// <summary>
+    /// Reads a segmented address (offset then segment) from the memory location pointed to by ModRM.
+    /// </summary>
+    public SegmentedAddressNode ToSegmentedAddressNode(int operandSize, ModRmContext modRmContext) {
+        DataType offsetType = operandSize == 16 ? DataType.UINT16 : DataType.UINT32;
+        ValueNode ipNode = ToMemoryAddressNode(offsetType, modRmContext);
+        if (operandSize == 32) {
+            ipNode = _typeConversion.Convert(DataType.UINT16, ipNode);
+        }
+        ValueNode csNode = ToMemoryAddressNodeWithOffsetAdjustment(
+            DataType.UINT16, modRmContext, Constant.ToNode((ushort)(operandSize / 8)));
+        return new SegmentedAddressNode(csNode, ipNode);
     }
 
     private ValueNode? ModRmDisplacementToNode(ModRmContext modRmContext) {
@@ -115,10 +155,12 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
     private ValueNode? SibValueToNode(SibContext sibContext) {
         ValueNode? baseNode = SibBaseToNode(sibContext);
         ValueNode? indexNode = SibIndexToNode(sibContext);
-        // base + scale * index
-        ValueNode scaleNode = new ConstantNode(DataType.UINT8, sibContext.Scale);
-        ValueNode? indexExpression =
-            BiOperationWithResultNode(DataType.UINT32, scaleNode, BinaryOperation.MULTIPLY, indexNode);
+        // base + scale * index (when index is null/zero, skip the scale*index term entirely)
+        ValueNode? indexExpression = null;
+        if (indexNode != null) {
+            ValueNode scaleNode = new ConstantNode(DataType.UINT32, sibContext.Scale);
+            indexExpression = BiOperationWithResultNode(DataType.UINT32, scaleNode, BinaryOperation.MULTIPLY, indexNode);
+        }
         return BiOperationWithResultNode(DataType.UINT32, baseNode, BinaryOperation.PLUS, indexExpression);
     }
 

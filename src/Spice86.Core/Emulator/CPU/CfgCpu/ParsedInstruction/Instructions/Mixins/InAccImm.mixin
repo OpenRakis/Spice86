@@ -5,12 +5,14 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithValueField<byte> {
     public {{ moxy.Class.Name }}(SegmentedAddress address,
@@ -18,13 +20,22 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<byte> {
         InstructionField<byte> valueField) : base(address, opcodeField, prefixes, valueField, 1) {
     }
     
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.IN, builder.Register.Accumulator(builder.UType({{Size}})), builder.InstructionField.ToNode(ValueField));
+    }
+
     public override void Execute(InstructionExecutionHelper helper) {
         byte port = helper.InstructionFieldValueRetriever.GetFieldValue(ValueField);
         helper.State.{{Accumulator}} = helper.In{{Size}}(port);
         helper.MoveIpToEndOfInstruction(this);
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.IN, builder.Register.Accumulator(builder.UType({{Size}})), builder.InstructionField.ToNode(ValueField));
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        // ACC = In{{Size}}((ushort)imm8)
+        DataType dataType = builder.UType({{Size}});
+        ValueNode portNode = builder.InstructionField.ToNode(ValueField);
+        MethodCallValueNode ioRead = builder.Io.IoRead(dataType, portNode);
+        ValueNode accumulator = builder.Register.Accumulator(dataType);
+        return builder.WithIpAdvancement(this, builder.Assign(dataType, accumulator, ioRead));
     }
 }

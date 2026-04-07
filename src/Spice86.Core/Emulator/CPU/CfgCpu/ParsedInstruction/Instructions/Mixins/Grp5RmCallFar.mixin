@@ -7,16 +7,22 @@ namespace {{ moxy.Class.Namespace }};
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithModRm, ICallInstruction {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes, ModRmContext modRmContext) : base(address, opcodeField, prefixes,
         modRmContext, null) {
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.CALL_FAR, builder.ModRm.ToMemoryAddressNode(DataType.UINT32, ModRmContext));
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
@@ -26,7 +32,8 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm, ICallInstruct
         helper.FarCallWithReturnIpNextInstruction{{OperandSize}}(this, targetAddress);
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.CALL_FAR, builder.ModRm.ToMemoryAddressNode(DataType.UINT32, ModRmContext));
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        SegmentedAddressNode targetAddress = builder.ModRm.ToSegmentedAddressNode({{OperandSize}}, ModRmContext);
+        return new CallFarNode(this, targetAddress, {{OperandSize}});
     }
 }

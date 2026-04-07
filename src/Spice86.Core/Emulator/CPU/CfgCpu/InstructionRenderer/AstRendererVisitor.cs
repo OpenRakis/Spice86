@@ -101,6 +101,7 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
             BitWidth.BYTE_8 => $"{value:X2}",
             BitWidth.WORD_16 => $"{value:X4}",
             BitWidth.DWORD_32 => $"{value:X8}",
+            BitWidth.BOOL_1 => $"{value:X8}",
             BitWidth.QWORD_64 => $"{value:X16}",
             _ => throw new InvalidOperationException($"Unsupported bit width {node.DataType.BitWidth}")
         };
@@ -124,10 +125,6 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
         return _outputRenderer.Concat(
             _outputRenderer.FunctionAddress(_outputRenderer.ToPlainText(address)),
             _outputRenderer.Text(deltaString));
-    }
-
-    public TOutput VisitSegmentedAddressConstantNode(SegmentedAddressConstantNode node) {
-        return _outputRenderer.FunctionAddress(node.Value.ToString());
     }
 
     public TOutput VisitBinaryOperationNode(BinaryOperationNode node) {
@@ -202,6 +199,7 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
             BitWidth.BYTE_8 => node.DataType.Signed ? "(sbyte)" : "(byte)",
             BitWidth.WORD_16 => node.DataType.Signed ? "(short)" : "(ushort)",
             BitWidth.DWORD_32 => node.DataType.Signed ? "(int)" : "(uint)",
+            BitWidth.BOOL_1 => node.DataType.Signed ? "(int)" : "(uint)",
             BitWidth.QWORD_64 => node.DataType.Signed ? "(long)" : "(ulong)",
             _ => throw new InvalidOperationException($"Unsupported bit width {node.DataType.BitWidth}")
         };
@@ -284,6 +282,7 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
         return dataType.BitWidth switch {
             BitWidth.BYTE_8 => "byte ptr",
             BitWidth.WORD_16 => "word ptr",
+            BitWidth.BOOL_1 => "dword ptr",
             BitWidth.DWORD_32 => "dword ptr",
             BitWidth.QWORD_64 => "qword ptr",
             _ => throw new InvalidOperationException($"Unsupported bit width {dataType.BitWidth}")
@@ -348,6 +347,49 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
 
     public TOutput VisitReturnInterruptNode(ReturnInterruptNode node) {
         throw CreateUnsupportedNodeException(nameof(ReturnInterruptNode));
+    }
+
+    public TOutput VisitFlagRegisterNode(FlagRegisterNode node) {
+        return _outputRenderer.Register(node.DataType.BitWidth == BitWidth.WORD_16 ? "FLAGS" : "EFLAGS");
+    }
+
+    public TOutput VisitSegmentedAddressNode(SegmentedAddressNode node) {
+        if (node.Segment is ConstantNode segmentConstant && node.Offset is ConstantNode offsetConstant) {
+            SegmentedAddress segmentedAddress = new((ushort)segmentConstant.Value, (ushort)offsetConstant.Value);
+            return _outputRenderer.FunctionAddress(segmentedAddress.ToString());
+        }
+        return _outputRenderer.Concat(
+            node.Segment.Accept(this),
+            _outputRenderer.Punctuation(":"),
+            node.Offset.Accept(this));
+    }
+
+    public TOutput VisitWhileNode(WhileNode node) {
+        throw CreateUnsupportedNodeException(nameof(WhileNode));
+    }
+
+    public TOutput VisitThrowNode(ThrowNode node) {
+        throw CreateUnsupportedNodeException(nameof(ThrowNode));
+    }
+
+    public TOutput VisitHltNode(HltNode node) {
+        throw CreateUnsupportedNodeException(nameof(HltNode));
+    }
+
+    public TOutput VisitCallbackNode(CallbackNode node) {
+        throw CreateUnsupportedNodeException(nameof(CallbackNode));
+    }
+
+    public TOutput VisitSelectorNode(SelectorNode node) {
+        throw CreateUnsupportedNodeException(nameof(SelectorNode));
+    }
+
+    public TOutput VisitInvalidInstructionNode(InvalidInstructionNode node) {
+        throw CreateUnsupportedNodeException(nameof(InvalidInstructionNode));
+    }
+
+    public TOutput VisitCpuidNode(CpuidNode node) {
+        throw CreateUnsupportedNodeException(nameof(CpuidNode));
     }
 
     private static InvalidOperationException CreateUnsupportedNodeException(string nodeName) {

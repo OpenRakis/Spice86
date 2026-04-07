@@ -12,6 +12,7 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.Devices.Cmos;
@@ -86,6 +87,7 @@ public class Spice86DependencyInjection : IDisposable {
 
     private readonly McpHttpHost? _mcpHttpTransport;
     private readonly DeviceSchedulerThread? _vgaTimingThread;
+    private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -275,9 +277,13 @@ public class Spice86DependencyInjection : IDisposable {
             }
         }
 
+        CfgNodeExecutionCompilerMonitor cfgNodeExecutionCompilerMonitor = new(loggerService);
+        CfgNodeExecutionCompiler cfgNodeExecutionCompiler = new(cfgNodeExecutionCompilerMonitor, loggerService);
+        _cfgNodeExecutionCompiler = cfgNodeExecutionCompiler;
+
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, functionCatalogue,
-            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, loggerService, cpuHeavyLogger);
+            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, loggerService, cfgNodeExecutionCompiler, cpuHeavyLogger);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CfgCpu created...");
@@ -855,6 +861,7 @@ public class Spice86DependencyInjection : IDisposable {
         _vgaTimingThread?.Dispose();
         _emulatedClock.Dispose();
         _httpApiServer?.Dispose();
+        _cfgNodeExecutionCompiler.Dispose();
         Machine.Dispose();
     }
 }

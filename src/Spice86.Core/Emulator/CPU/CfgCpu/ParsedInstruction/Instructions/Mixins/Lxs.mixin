@@ -5,18 +5,28 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
          ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext, 1) {
      }
     
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.L{{SegmentRegister}},
+            builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext),
+            builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext));
+    }
+
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         uint memoryAddress = helper.ModRm.MandatoryMemoryAddress;
@@ -27,10 +37,36 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         helper.MoveIpToEndOfInstruction(this);
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.L{{SegmentRegister}},
-            builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext),
-            builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext));
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        // LxS R, RM: R = Memory[address], SegReg = Memory[address + Size/8]
+        // Must cache the offset in a local variable because R may be part of the address computation
+        // (e.g., LFS DI,[BX+DI+disp] would corrupt the address if DI is written first)
+        DataType dataType = builder.UType({{Size}});
+        DataType addrType = builder.AddressType(this);
+
+        // Cache the memory offset before any register writes
+        (VariableDeclarationNode cachedOffset, ValueNode memValue) =
+            builder.ModRm.ToMemoryAddressNodeWithCachedOffset(dataType, addrType, ModRmContext, "lxsOffset");
+
+        // R = Memory[segment:cachedOffset]
+        ValueNode rNode = builder.ModRm.RToNode(dataType, ModRmContext);
+        BinaryOperationNode assignR = builder.Assign(dataType, rNode, memValue);
+
+        // SegReg = Memory[segment:cachedOffset + Size/8] (always 16-bit segment value)
+        ValueNode sizeInBytes = addrType == DataType.UINT16
+            ? builder.Constant.ToNode((ushort)({{Size}} / 8))
+            : builder.Constant.ToNode((uint)({{Size}} / 8));
+        ValueNode adjustedOffset = new BinaryOperationNode(addrType, cachedOffset.Reference, BinaryOperation.PLUS, sizeInBytes);
+        ValueNode segPointer = builder.ModRm.ToMemoryAddressNodeWithCustomOffset(DataType.UINT16, ModRmContext, adjustedOffset);
+        ValueNode segRegNode = builder.Register.SRegByName("{{SegmentRegister}}");
+        BinaryOperationNode assignSeg = builder.Assign(DataType.UINT16, segRegNode, segPointer);
+
+        {{ if SegmentRegister == "SS" }}
+        MethodCallNode setInterruptShadowing = new MethodCallNode(null, "SetInterruptShadowing");
+        return builder.WithIpAdvancement(this, cachedOffset, assignR, assignSeg, setInterruptShadowing);
+        {{ else }}
+        return builder.WithIpAdvancement(this, cachedOffset, assignR, assignSeg);
+        {{ end }}
     }
 }
 

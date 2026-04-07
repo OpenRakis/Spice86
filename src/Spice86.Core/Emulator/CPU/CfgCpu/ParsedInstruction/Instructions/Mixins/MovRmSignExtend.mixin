@@ -7,28 +7,39 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
         ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext, 1) {
     }
     
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.MOVSX,
+            builder.ModRm.RToNode(builder.UType({{DestSize}}), ModRmContext),
+            builder.ModRm.RmToNode(builder.SType({{SourceSize}}), ModRmContext));
+    }
+
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         helper.ModRm.R{{DestSize}} = ({{DestUnsignedType}})({{SourceSignedType}})helper.ModRm.RM{{SourceSize}};
         helper.MoveIpToEndOfInstruction(this);
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.MOVSX,
-            builder.ModRm.RToNode(builder.UType({{DestSize}}), ModRmContext),
-            builder.ModRm.RmToNode(builder.SType({{SourceSize}}), ModRmContext));
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        // R = SignExtendToUnsigned(RM, {{SourceSize}}, {{DestSize}})
+        ValueNode rNode = builder.ModRm.RToNode(builder.UType({{DestSize}}), ModRmContext);
+        ValueNode rmNode = builder.ModRm.RmToNode(builder.UType({{SourceSize}}), ModRmContext);
+        ValueNode signExtended = builder.SignExtendToUnsigned(rmNode, {{SourceSize}}, {{DestSize}});
+        return builder.WithIpAdvancement(this, builder.Assign(builder.UType({{DestSize}}), rNode, signExtended));
     }
 }
 

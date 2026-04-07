@@ -37,6 +37,7 @@ public class TypeConversionAstBuilder {
             BitWidth.BYTE_8 => DataType.INT8,
             BitWidth.WORD_16 => DataType.INT16,
             BitWidth.DWORD_32 => DataType.INT32,
+            BitWidth.BOOL_1 => DataType.INT32,
             BitWidth.QWORD_64 => DataType.INT64,
             _ => throw new ArgumentException($"Unsupported bit width: {value.DataType.BitWidth}")
         };
@@ -55,6 +56,7 @@ public class TypeConversionAstBuilder {
             BitWidth.BYTE_8 => DataType.UINT8,
             BitWidth.WORD_16 => DataType.UINT16,
             BitWidth.DWORD_32 => DataType.UINT32,
+            BitWidth.BOOL_1 => DataType.UINT32,
             BitWidth.QWORD_64 => DataType.UINT64,
             _ => throw new ArgumentException($"Unsupported bit width: {value.DataType.BitWidth}")
         };

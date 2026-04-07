@@ -9,20 +9,42 @@ namespace {{ moxy.Class.Namespace }};
 
 using System;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, ModRmContext modRmContext) :
         base(address, opcodeField, prefixes, modRmContext, 1) {
+        if (ModRmContext.MemoryAddressType == MemoryAddressType.NONE) {
+            throw new CpuInvalidOpcodeException("BOUND requires a memory operand.");
+        }
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        ValueNode indexNode = builder.ModRm.RToNode(builder.SType({{Size}}), ModRmContext);
+        ValueNode lowerPointer = builder.ModRm.ToMemoryAddressNode(builder.SType({{Size}}), ModRmContext);
+        if (ModRmContext.SegmentIndex == null) {
+            throw new InvalidOperationException("Segment index must be set for BOUND memory operand.");
+        }
+
+        ValueNode offset = builder.ModRm.MemoryOffsetToNode(ModRmContext);
+        ValueNode upperOffset = builder.Constant.AddConstant(builder.AddressType(this), offset, {{ElementSize}});
+        ValueNode upperPointer = builder.Pointer.ToSegmentedPointer(builder.SType({{Size}}), (SegmentRegisterIndex)ModRmContext.SegmentIndex.Value, upperOffset);
+
+        return new InstructionNode(
+            InstructionOperation.BOUND,
+            indexNode,
+            lowerPointer,
+            upperPointer);
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
@@ -44,22 +66,27 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         helper.MoveIpToEndOfInstruction(this);
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        ValueNode indexNode = builder.ModRm.RToNode(builder.SType({{Size}}), ModRmContext);
-        ValueNode lowerPointer = builder.ModRm.ToMemoryAddressNode(builder.SType({{Size}}), ModRmContext);
-        if (ModRmContext.SegmentIndex == null) {
-            throw new InvalidOperationException("Segment index must be set for BOUND memory operand.");
-        }
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        // BOUND index, [lower, upper]: throw CpuBoundRangeExceededException if index not in [lower, upper]
+        DataType signedType = builder.SType({{Size}});
+        DataType addrType = builder.AddressType(this);
 
-        ValueNode offset = builder.ModRm.MemoryOffsetToNode(ModRmContext);
-        ValueNode increment = builder.Constant.ToNode({{ if Size == 16 }}(ushort){{ElementSize}}{{ else }}(uint){{ElementSize}}{{ end }});
-        ValueNode upperOffset = new BinaryOperationNode(builder.AddressType(this), offset, BinaryOperation.PLUS, increment);
-        ValueNode upperPointer = builder.Pointer.ToSegmentedPointer(builder.SType({{Size}}), (SegmentRegisterIndex)ModRmContext.SegmentIndex.Value, upperOffset);
+        // index = (signed)R
+        ValueNode indexNode = builder.TypeConversion.Convert(signedType,
+            builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext));
 
-        return new InstructionNode(
-            InstructionOperation.BOUND,
-            indexNode,
-            lowerPointer,
-            upperPointer);
+        // lower = signed memory read at address
+        ValueNode lowerPtr = builder.ModRm.ToMemoryAddressNode(signedType, ModRmContext);
+
+        // upper = signed memory read at address + ElementSize
+        ValueNode sizeNode = addrType == DataType.UINT16
+            ? builder.Constant.ToNode((ushort){{ElementSize}})
+            : builder.Constant.ToNode((uint){{ElementSize}});
+        ValueNode upperPtr = builder.ModRm.ToMemoryAddressNodeWithOffsetAdjustment(signedType, ModRmContext, sizeNode);
+
+        // CheckBound(index, lower, upper) - throws if out of range
+        MethodCallNode checkBound = new MethodCallNode(null, "CheckBound", indexNode, lowerPtr, upperPtr);
+
+        return builder.WithIpAdvancement(this, checkBound);
     }
 }

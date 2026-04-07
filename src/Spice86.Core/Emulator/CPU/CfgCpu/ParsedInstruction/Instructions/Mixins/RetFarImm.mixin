@@ -4,13 +4,16 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 #nullable enable
 public partial class {{ moxy.Class.Name }} : InstructionWithValueField<ushort>, IReturnInstruction {
@@ -24,11 +27,17 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<ushort>, 
 
     public CfgInstruction? CurrentCorrespondingCallInstruction { get; set; }
 
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.RET_FAR, builder.InstructionField.ToNode(ValueField)!);
+    }
+
     public override void Execute(InstructionExecutionHelper helper) {
         helper.HandleFarRet{{OperandSize}}(this, helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.RET_FAR, builder.InstructionField.ToNode(ValueField)!);
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        ValueNode bytesToPop = builder.InstructionField.ToNode(ValueField) ??
+            throw new InvalidOperationException("RET far immediate value field cannot be null.");
+        return new ReturnFarNode(this, bytesToPop, {{OperandSize}});
     }
 }

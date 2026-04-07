@@ -5,13 +5,16 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
@@ -21,6 +24,11 @@ public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
             throw new ArgumentException("Register CS is not allowed");
         }
 {{ end }}
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.POP,
+        builder.Register.{{ if IsSegment }}SReg({{else}}Reg(builder.UType({{Size}}), {{end}}RegisterIndex));
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
@@ -33,8 +41,11 @@ public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
         helper.MoveIpToEndOfInstruction(this);
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.POP,
-        builder.Register.{{ if IsSegment }}SReg({{else}}Reg(builder.UType({{Size}}), {{end}}RegisterIndex));
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        // POP R/SREG: R/SREG = [SS:SP], SP += size
+        ValueNode popValue = builder.Stack.Pop{{Size}}();
+        ValueNode regNode = builder.Register.{{ if IsSegment }}SReg({{else}}Reg(builder.UType({{Size}}), {{end}}RegisterIndex);
+        BinaryOperationNode assign = new BinaryOperationNode(builder.UType({{Size}}), regNode, BinaryOperation.ASSIGN, popValue);
+        return builder.WithIpAdvancement(this, assign);
     }
 }

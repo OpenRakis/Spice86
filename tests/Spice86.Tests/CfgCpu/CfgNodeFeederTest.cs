@@ -17,12 +17,13 @@ using Xunit;
 namespace Spice86.Tests.CfgCpu;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
-public class CfgNodeFeederTest {
+public class CfgNodeFeederTest : IDisposable {
     private const int AxIndex = 0;
     private const int BxIndex = 3;
     private const int CxIndex = 1;
@@ -34,6 +35,7 @@ public class CfgNodeFeederTest {
 
     private Memory _memory = new(new(), new Ram(64), new A20Gate());
     private State _state = new(CpuModel.INTEL_80286);
+    private CfgNodeExecutionCompiler? _compiler;
 
     private (CfgNodeFeeder, ExecutionContext) CreateCfgNodeFeeder() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
@@ -43,8 +45,11 @@ public class CfgNodeFeederTest {
         _state = new State(CpuModel.INTEL_80286);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(new PauseHandler(loggerService), _state, _memory, memoryBreakpoints, ioBreakpoints);
         InstructionReplacerRegistry replacerRegistry = new();
-        CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, replacerRegistry);
-        ExecutionContextManager executionContextManager = new(_memory, _state, cfgNodeFeeder, replacerRegistry, new(), false, loggerService);
+        _compiler?.Dispose();
+        _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService);
+        CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, replacerRegistry,
+            _compiler);
+        ExecutionContextManager executionContextManager = new(_memory, _state, cfgNodeFeeder, replacerRegistry, new(), false, loggerService, null);
         ExecutionContext executionContext = executionContextManager.CurrentExecutionContext;
         return (cfgNodeFeeder, executionContext);
     }
@@ -279,5 +284,9 @@ public class CfgNodeFeederTest {
         Assert.False(movAx1RegImm16.ValueField.UseValue);
         Assert.Null(movAx1RegImm16.ValueField.SignatureValue[0]);
         Assert.Null(movAx1RegImm16.ValueField.SignatureValue[1]);
+    }
+
+    public void Dispose() {
+        _compiler?.Dispose();
     }
 }
