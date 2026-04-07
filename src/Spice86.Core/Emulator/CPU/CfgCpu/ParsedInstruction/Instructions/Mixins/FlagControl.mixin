@@ -1,13 +1,15 @@
-﻿@moxy
+@moxy
 @attribute required string FlagName
 @attribute required string FlagValue
 @attribute required string Mnemonic
 @moxy
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : CfgInstruction {
@@ -15,19 +17,25 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction {
         base(address, opcodeField, 1) {
     }
 
-    public override void Execute(InstructionExecutionHelper helper) {
-{{ if Mnemonic == "STI" }}
-        // Intel® 64 and IA-32 Architectures Software Developer’s Manual: Execution of STI with RFLAGS.IF = 0
-        // blocks maskable interrupts on the instruction boundary following its execution
-        if(!helper.State.InterruptFlag) {
-            helper.State.InterruptShadowing = true;
-        }
-{{ end }}    
-        helper.State.{{FlagName}} = {{FlagValue}};
-        helper.MoveIpToEndOfInstruction(this);
-    }
-
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.{{Mnemonic}});
+    }
+
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        CpuFlagNode flagNode = builder.Flag.{{ FlagName | string.replace "Flag" "" }}();
+{{ if FlagValue == "!helper.State.CarryFlag" }}
+        UnaryOperationNode notFlag = new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, flagNode);
+        BinaryOperationNode flagAssignment = builder.Assign(DataType.BOOL, flagNode, notFlag);
+{{ else if FlagValue == "true" }}
+        BinaryOperationNode flagAssignment = builder.Assign(DataType.BOOL, flagNode, builder.Constant.ToNode(DataType.BOOL, 1UL));
+{{ else }}
+        BinaryOperationNode flagAssignment = builder.Assign(DataType.BOOL, flagNode, builder.Constant.ToNode(DataType.BOOL, 0UL));
+{{ end }}
+{{ if Mnemonic == "STI" }}
+        MethodCallNode setInterruptShadowing = new MethodCallNode(null, "SetInterruptShadowingIfInterruptDisabled");
+        return builder.WithIpAdvancement(this, setInterruptShadowing, flagAssignment);
+{{ else }}
+        return builder.WithIpAdvancement(this, flagAssignment);
+{{ end }}
     }
 }

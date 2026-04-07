@@ -23,6 +23,7 @@ public class DosFcbManagerTests : IDisposable {
     }
 
     public void Dispose() {
+        _fixture.Dispose();
         if (Directory.Exists(_mountPoint)) {
             Directory.Delete(_mountPoint, recursive: true);
         }

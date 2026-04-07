@@ -186,6 +186,15 @@ public class InstructionParser : BaseInstructionParser {
         List<InstructionPrefix> prefixes = ParsePrefixes();
         InstructionField<ushort> opcodeField = ReadOpcode();
         ParsingContext context = new(address, opcodeField, prefixes);
+        CfgInstruction instruction = ParseInstructionCore(address, opcodeField, prefixes, context);
+        return instruction;
+    }
+
+    private CfgInstruction ParseInstructionCore(
+        SegmentedAddress address,
+        InstructionField<ushort> opcodeField,
+        List<InstructionPrefix> prefixes,
+        ParsingContext context) {
         try {
             return ParseCfgInstruction(context);
         } catch (CpuInvalidOpcodeException e) {

@@ -1,16 +1,15 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
 public class JumpFarNode : CfgInstructionNode {
-    public JumpFarNode(CfgInstruction instruction, IVisitableAstNode segment, IVisitableAstNode offset) :
+    public JumpFarNode(CfgInstruction instruction, SegmentedAddressValueNode targetAddress) :
         base(instruction) {
-        Segment = segment;
-        Offset = offset;
+        TargetAddress = targetAddress;
     }
 
-    public IVisitableAstNode Segment { get; }
-    public IVisitableAstNode Offset { get; }
+    public SegmentedAddressValueNode TargetAddress { get; }
 
     public override T Accept<T>(IAstVisitor<T> astVisitor) {
         return astVisitor.VisitJumpFarNode(this);

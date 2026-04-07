@@ -5,10 +5,11 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -27,11 +28,12 @@ public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{Signed
         _targetIp = (ushort)(NextInMemoryAddress.Offset + offsetField.Value);
     }
 
-    public override void Execute(InstructionExecutionHelper helper) {
-        helper.NearCallWithReturnIpNextInstruction{{OperandSize}}(this, _targetIp);
-    }
-
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.CALL_NEAR, builder.Constant.ToNearAddressNode(_targetIp, NextInMemoryAddress));
+    }
+
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        ValueNode targetIp = builder.Constant.ToNearAddressNode(_targetIp, NextInMemoryAddress);
+        return new CallNearNode(this, targetIp, {{OperandSize}});
     }
 }

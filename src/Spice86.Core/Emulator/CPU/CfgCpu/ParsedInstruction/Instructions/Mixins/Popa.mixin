@@ -5,9 +5,11 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -17,20 +19,42 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction {
         base(address, opcodeField, prefixes, 1) {
     }
 
-    public override void Execute(InstructionExecutionHelper helper) {
-        helper.State.{{RegisterPrefix}}DI = helper.Stack.Pop{{Size}}();
-        helper.State.{{RegisterPrefix}}SI = helper.Stack.Pop{{Size}}();
-        helper.State.{{RegisterPrefix}}BP = helper.Stack.Pop{{Size}}();
-        // not restoring {{RegisterPrefix}}SP
-        helper.Stack.Pop{{Size}}();
-        helper.State.{{RegisterPrefix}}BX = helper.Stack.Pop{{Size}}();
-        helper.State.{{RegisterPrefix}}DX = helper.Stack.Pop{{Size}}();
-        helper.State.{{RegisterPrefix}}CX = helper.Stack.Pop{{Size}}();
-        helper.State.{{RegisterPrefix}}AX = helper.Stack.Pop{{Size}}();
-        helper.MoveIpToEndOfInstruction(this);
-    }
-
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.POPA{{ if Size == 32 }}D{{ end }});
+    }
+
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        // POPA/POPAD: Pop all 8 registers in reverse order from PUSHA
+        // Order: DI, SI, BP, (skip SP), BX, DX, CX, AX
+        DataType dataType = builder.UType({{Size}});
+        
+        List<IVisitableAstNode> statements = new();
+        
+        // Pop in reverse order, SP is skipped
+        ValueNode diNode = builder.Register.RegByName("{{RegisterPrefix}}DI");
+        statements.Add(new BinaryOperationNode(dataType, diNode, BinaryOperation.ASSIGN, builder.Stack.Pop{{Size}}()));
+        
+        ValueNode siNode = builder.Register.RegByName("{{RegisterPrefix}}SI");
+        statements.Add(new BinaryOperationNode(dataType, siNode, BinaryOperation.ASSIGN, builder.Stack.Pop{{Size}}()));
+        
+        ValueNode bpNode = builder.Register.RegByName("{{RegisterPrefix}}BP");
+        statements.Add(new BinaryOperationNode(dataType, bpNode, BinaryOperation.ASSIGN, builder.Stack.Pop{{Size}}()));
+        
+        // Skip SP - pop but discard
+        statements.Add(builder.Stack.Pop{{Size}}());
+        
+        ValueNode bxNode = builder.Register.RegByName("{{RegisterPrefix}}BX");
+        statements.Add(new BinaryOperationNode(dataType, bxNode, BinaryOperation.ASSIGN, builder.Stack.Pop{{Size}}()));
+        
+        ValueNode dxNode = builder.Register.RegByName("{{RegisterPrefix}}DX");
+        statements.Add(new BinaryOperationNode(dataType, dxNode, BinaryOperation.ASSIGN, builder.Stack.Pop{{Size}}()));
+        
+        ValueNode cxNode = builder.Register.RegByName("{{RegisterPrefix}}CX");
+        statements.Add(new BinaryOperationNode(dataType, cxNode, BinaryOperation.ASSIGN, builder.Stack.Pop{{Size}}()));
+        
+        ValueNode axNode = builder.Register.RegByName("{{RegisterPrefix}}AX");
+        statements.Add(new BinaryOperationNode(dataType, axNode, BinaryOperation.ASSIGN, builder.Stack.Pop{{Size}}()));
+        
+        return builder.WithIpAdvancement(this, statements.ToArray());
     }
 }

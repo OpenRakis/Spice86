@@ -1,7 +1,9 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -19,12 +21,11 @@ public class InvalidInstruction : CfgInstruction {
         List<InstructionPrefix> prefixes, CpuException cpuException) : base(address, opcodeField, prefixes, null) {
         _cpuException = cpuException;
     }
-
-    public override void Execute(InstructionExecutionHelper helper) {
-        helper.HandleCpuException(this, _cpuException);
-    }
-
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.INVALID);
+    }
+
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        return new InvalidInstructionNode(this, _cpuException);
     }
 }

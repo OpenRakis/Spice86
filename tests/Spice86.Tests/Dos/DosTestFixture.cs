@@ -4,6 +4,7 @@ using Spice86.Audio.Filters;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
@@ -30,12 +31,13 @@ using Spice86.Shared.Interfaces;
 /// Shared test fixture for DOS components (FileManager, FcbManager, etc.)
 /// Provides a fully wired DOS environment for testing.
 /// </summary>
-public class DosTestFixture {
+public class DosTestFixture : IDisposable {
     public DosFileManager DosFileManager { get; }
     public DosFcbManager DosFcbManager { get; }
     public Memory Memory { get; }
     public ILoggerService LoggerService { get; }
     public Dos Dos { get; }
+    private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
 
     public DosTestFixture(string mountPoint) {
         Configuration configuration = new Configuration() {
@@ -70,9 +72,11 @@ public class DosTestFixture {
         Stack stack = new(Memory, state);
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
 
+        _cfgNodeExecutionCompiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(LoggerService), LoggerService);
         CfgCpu cfgCpu = new(Memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, functionCatalogue,
-            false, true, LoggerService);
+            false, true, LoggerService,
+            _cfgNodeExecutionCompiler);
 
         SoftwareMixer softwareMixer = new(configuration.AudioEngine, pauseHandler);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, LoggerService, emulationLoopScheduler, emulatedClock,
@@ -108,5 +112,10 @@ public class DosTestFixture {
 
         DosFileManager = Dos.FileManager;
         DosFcbManager = Dos.FcbManager;
+    }
+
+    /// <inheritdoc />
+    public void Dispose() {
+        _cfgNodeExecutionCompiler.Dispose();
     }
 }

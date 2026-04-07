@@ -46,7 +46,7 @@ public class DosFileManagerTests {
     [InlineData(@"C:\", "")]
     public void AbsolutePaths(string dosPath, string expected) {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        using DosTestFixture fixture = new(MountPoint);
 
         // Act
         fixture.DosFileManager.SetCurrentDir(dosPath);
@@ -60,7 +60,7 @@ public class DosFileManagerTests {
     [Fact]
     public void CanOpenFileBeginningWithC() {
         // Arrange
-        DosTestFixture fixture = new(@$"{MountPoint}\foo\bar");
+        using DosTestFixture fixture = new(@$"{MountPoint}\foo\bar");
 
         // Act
         DosFileOperationResult result = fixture.DosFileManager.OpenFileOrDevice("C.txt", FileAccessMode.ReadOnly);
@@ -84,7 +84,7 @@ public class DosFileManagerTests {
     [InlineData(@"./FOO/BAR", @"FOO\BAR")]
     public void RelativePaths(string dosPath, string expected) {
         // Arrange
-        DosTestFixture fixture = new(MountPoint);
+        using DosTestFixture fixture = new(MountPoint);
 
         // Act
         fixture.DosFileManager.SetCurrentDir(dosPath);
@@ -97,7 +97,7 @@ public class DosFileManagerTests {
 
     [Fact]
     public void OpenFile_ComputesDeviceInfoAndSupportsRelativeSeek() {
-        DosTestFixture fixture = new(MountPoint);
+        using DosTestFixture fixture = new(MountPoint);
         ushort? handle = null;
 
         const string fileName = "seektest.bin";

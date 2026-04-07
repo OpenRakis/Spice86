@@ -4,6 +4,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -36,7 +37,8 @@ public class InstructionsFeederTest {
         _instructionReplacer = new();
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(new PauseHandler(loggerService), state, _memory, memoryBreakpoints, ioBreakpoints);
         
-        return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer);
+        return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer,
+            new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService));
     }
 
     private void WriteJumpNear(SegmentedAddress address) {

@@ -2,7 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 
 using Spice86.Shared.Emulator.Memory;
 
-public class DataType(BitWidth bitWidth, bool signed) {
+public class DataType(BitWidth bitWidth, bool signed) : IEquatable<DataType> {
     public static DataType UINT4 { get; } = new(BitWidth.NIBBLE_4, false);
     public static DataType INT4 { get; } = new(BitWidth.NIBBLE_4, true);
     public static DataType UINT5 { get; } = new(BitWidth.QUIBBLE_5, false);
@@ -19,4 +19,22 @@ public class DataType(BitWidth bitWidth, bool signed) {
 
     public BitWidth BitWidth { get; } = bitWidth;
     public bool Signed { get; } = signed;
+
+    public bool Equals(DataType? other) {
+        if (other is null) {
+            return false;
+        }
+        if (ReferenceEquals(this, other)) {
+            return true;
+        }
+        return BitWidth == other.BitWidth && Signed == other.Signed;
+    }
+
+    public override bool Equals(object? obj) {
+        return Equals(obj as DataType);
+    }
+
+    public override int GetHashCode() {
+        return HashCode.Combine(BitWidth, Signed);
+    }
 }

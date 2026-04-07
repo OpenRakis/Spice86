@@ -4,9 +4,11 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -16,16 +18,17 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext, 1) {
     }
     
-    public override void Execute(InstructionExecutionHelper helper) {
-        helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
-        helper.ModRm.RM{{Size}} = helper.State.SegmentRegisters.UInt16[ModRmContext.RegisterIndex];
-        helper.MoveIpToEndOfInstruction(this);
-    }
-
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.MOV,
             builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
             builder.Register.SReg(ModRmContext.RegisterIndex));
+    }
+
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        // RM = SREG
+        ValueNode rmNode = builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext);
+        ValueNode sregNode = builder.Register.SReg(ModRmContext.RegisterIndex);
+        return builder.WithIpAdvancement(this, builder.Assign(builder.UType({{Size}}), rmNode, sregNode));
     }
 }
 

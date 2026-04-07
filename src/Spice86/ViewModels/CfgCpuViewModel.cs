@@ -38,7 +38,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
     // Collection of searchable nodes for AutoCompleteBox
     private readonly Dictionary<string, ICfgNode> _searchableNodes = new();
 
-    [ObservableProperty] private int _maxNodesToDisplay = 200;
+    [ObservableProperty] private int _maxNodesToDisplay = 20;
 
     [ObservableProperty] private Graph? _graph;
 

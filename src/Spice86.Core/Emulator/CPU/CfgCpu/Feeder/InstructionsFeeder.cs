@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.Memory;
@@ -18,10 +19,12 @@ using System.Runtime.CompilerServices;
 public class InstructionsFeeder : IClearable {
     private readonly InstructionParser _instructionParser;
     private readonly SignatureReducer _signatureReducer;
+    private readonly CfgNodeExecutionCompiler _executionCompiler;
 
     public InstructionsFeeder(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State cpuState,
-        InstructionReplacerRegistry replacerRegistry) {
+        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler) {
         _instructionParser = new(memory, cpuState);
+        _executionCompiler = executionCompiler;
         CurrentInstructions = new(memory, emulatorBreakpointsManager, replacerRegistry);
         PreviousInstructions = new(memory, replacerRegistry);
         _signatureReducer = new(replacerRegistry);
@@ -60,6 +63,8 @@ public class InstructionsFeeder : IClearable {
     }
     private CfgInstruction ParseAndSetAsCurrent(SegmentedAddress address) {
         CfgInstruction parsed = ParseEnsuringUnique(address);
+        // Recompile instruction
+        _executionCompiler.Compile(parsed);
         CurrentInstructions.SetAsCurrent(parsed);
         PreviousInstructions.AddInstructionInPrevious(parsed);
         return parsed;

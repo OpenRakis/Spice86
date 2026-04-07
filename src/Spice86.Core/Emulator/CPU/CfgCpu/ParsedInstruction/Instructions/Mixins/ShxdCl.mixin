@@ -6,9 +6,10 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.Registers;
@@ -19,17 +20,20 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
          ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext, 1) {
      }
     
-    public override void Execute(InstructionExecutionHelper helper) {
-        helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
-        helper.ModRm.RM{{Size}} = helper.Alu{{Size}}.{{Operation}}(helper.ModRm.RM{{Size}}, helper.ModRm.R{{Size}}, helper.State.CL);
-        helper.MoveIpToEndOfInstruction(this);
-    }
-
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.{{if Mnemonic}}{{Mnemonic | string.upcase}}{{else}}{{Operation | string.upcase}}{{end}},
         builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
         builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext),
         builder.Register.Reg8(RegisterIndex.CxIndex));
+    }
+
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        // RM = {{Operation}}(RM, R, CL)
+        var (rNode, rmNode) = builder.ModRmOperands(builder.UType({{Size}}), ModRmContext);
+        ValueNode clNode = builder.Register.Reg8(RegisterIndex.CxIndex);
+        MethodCallValueNode shiftCall = builder.AluCall(builder.UType({{Size}}), {{Size}}, "{{Operation}}", rmNode, rNode, clNode);
+        IVisitableAstNode instructionLogic = builder.Assign(builder.UType({{Size}}), rmNode, shiftCall);
+        return builder.WithIpAdvancement(this, instructionLogic);
     }
 }
 
