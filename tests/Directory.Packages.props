@@ -1,28 +1,28 @@
 <Project>
-  <PropertyGroup>
-    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageVersion Include="coverlet.collector" Version="8.0.0" />
-    <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
-    <PackageVersion Include="FluentAssertions" Version="8.8.0" />
-    <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
-    <PackageVersion Include="NSubstitute" Version="5.3.0" />
-    <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="SingleStepTests.Intel80386.00-65" Version="2025.11.5" />
-    <PackageVersion Include="SingleStepTests.Intel80386.66-66" Version="2025.11.5" />
-    <PackageVersion Include="SingleStepTests.Intel80386.67.00-67.7F" Version="2025.11.5" />
-    <PackageVersion Include="SingleStepTests.Intel80386.67.80-67.FF" Version="2025.11.5" />
-    <PackageVersion Include="SingleStepTests.Intel80386.68-FF" Version="2025.11.5" />
-    <PackageVersion Include="System.Text.Json" Version="10.0.0" />
-    <PackageVersion Include="Avalonia.Headless" Version="11.3.12" />
-    <PackageVersion Include="Avalonia.Headless.XUnit" Version="11.3.12" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageVersion Include="Xunit.SkippableFact" Version="1.4.8" />
-  </ItemGroup>
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageVersion Include="coverlet.collector" Version="8.0.1" />
+		<PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
+		<PackageVersion Include="FluentAssertions" Version="8.8.0" />
+		<PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
+		<PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
+		<PackageVersion Include="NSubstitute" Version="5.3.0" />
+		<PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
+		<PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
+		<PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.15.0" />
+		<PackageVersion Include="SingleStepTests.Intel80386.00-65" Version="2025.11.5" />
+		<PackageVersion Include="SingleStepTests.Intel80386.66-66" Version="2025.11.5" />
+		<PackageVersion Include="SingleStepTests.Intel80386.67.00-67.7F" Version="2025.11.5" />
+		<PackageVersion Include="SingleStepTests.Intel80386.67.80-67.FF" Version="2025.11.5" />
+		<PackageVersion Include="SingleStepTests.Intel80386.68-FF" Version="2025.11.5" />
+		<PackageVersion Include="System.Text.Json" Version="10.0.0" />
+		<PackageVersion Include="Avalonia.Headless" Version="11.3.13" />
+		<PackageVersion Include="Avalonia.Headless.XUnit" Version="11.3.13" />
+		<PackageVersion Include="xunit" Version="2.9.3" />
+		<PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+		<PackageVersion Include="Xunit.SkippableFact" Version="1.5.61" />
+	</ItemGroup>
 </Project>
