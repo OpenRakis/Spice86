@@ -241,7 +241,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Segmented addressing**: Use `SegmentedAddress` not raw offsets; linear address = segment * 16 + offset
 - **A20 Gate**: Memory wrapping at 1MB boundary controlled by `A20Gate` (toggle via `--A20Gate` flag)
 - **EMS/XMS**: Enabled by default; disable with `--Xms false` / `--Ems false`
-- **Time handling**: Real-time vs instruction-based via `--InstructionsPerSecond` or `--TimeMultiplier`
+- **Time handling**: Real-time vs instruction-based via `--InstructionTimeScale` or `--TimeMultiplier`
 - **Internal visibility**: `Spice86.Tests` has `InternalsVisibleTo` for testing internal APIs
 
 ## Reference Examples

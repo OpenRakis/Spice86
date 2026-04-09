@@ -193,9 +193,9 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS data area created...");
         }
 
-        _emulatedClock = configuration.InstructionsPerSecond != null
-            ? new CyclesClock(state, configuration.InstructionsPerSecond.Value)
-            : new EmulatedClock();
+        _emulatedClock = configuration.InstructionTimeScale != null
+            ? new CyclesClock(state, configuration.InstructionTimeScale.Value, configuration.ClockJitterSeed)
+            : new EmulatedClock(configuration.ClockJitterSeed);
         // Register clock and limiter to pause/resume events
         pauseHandler.Pausing += () => _emulatedClock.OnPause();
         pauseHandler.Resumed += () => _emulatedClock.OnResume();

@@ -8,10 +8,9 @@ using System.Diagnostics;
 public class EmulatedClock : ClockBase {
     private int _ticks;
     private readonly Stopwatch _stopwatch = new();
-    private double _cachedTime;
 
-    public EmulatedClock(DateTime? startTime = null) {
-        StartTime = startTime ?? DateTime.UtcNow;
+    public EmulatedClock(int? jitterSeed)
+        : base(ClockJitter.Create(jitterSeed)) {
         _stopwatch.Start();
     }
 
@@ -20,11 +19,10 @@ public class EmulatedClock : ClockBase {
         get {
             // Stopwatch.GetTimestamp can be slow, so we only query it periodically.
             if (_ticks++ % 100 != 0) {
-                return _cachedTime;
+                return field;
             }
-
-            _cachedTime = _stopwatch.Elapsed.TotalMilliseconds;
-            return _cachedTime;
+            field = _stopwatch.Elapsed.TotalMilliseconds + _jitter.Advance();
+            return field;
         }
     }
 

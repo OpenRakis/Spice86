@@ -57,7 +57,7 @@ public sealed class PitTimerTests {
             Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false);
             DualPic = new DualPic(Dispatcher, State, Logger, false);
             Speaker = new StubPitSpeaker();
-            var emulatedClock = new EmulatedClock();
+            var emulatedClock = new EmulatedClock(null);
             var emulationLoopScheduler = new DeviceScheduler(emulatedClock, Logger, "Emulation loop");
             PitTimer = new PitTimer(Dispatcher, State, DualPic, Speaker, emulationLoopScheduler, emulatedClock, Logger, false);
         }

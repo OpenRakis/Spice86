@@ -21,7 +21,7 @@ public sealed class DeviceSchedulerTests {
         _logger = Substitute.For<ILoggerService>();
         _state = new State(CpuModel.INTEL_8086);
         // 1000 cycles = 1 second for simplicity in tests
-        _cyclesClock = new CyclesClock(_state, 1000);
+        _cyclesClock = new CyclesClock(_state, 1000, null);
         _scheduler = new DeviceScheduler(_cyclesClock, _logger, "Emulation loop");
     }
 
