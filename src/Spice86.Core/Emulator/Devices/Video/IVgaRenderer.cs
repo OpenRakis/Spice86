@@ -24,4 +24,12 @@ public interface IVgaRenderer {
     /// </summary>
     /// <param name="buffer">The framebuffer used by the VGA card to draw the image on screen.</param>
     void Render(Span<uint> buffer);
+
+    /// <summary>
+    ///     Copy the last published frame without consuming the pending-frame flag.
+    ///     Use this for non-destructive reads (e.g. MCP screenshots) that must not
+    ///     interfere with the normal UI render loop.
+    /// </summary>
+    /// <param name="buffer">Destination buffer (must be at least <see cref="BufferSize"/> elements).</param>
+    void CopyLastFrame(Span<uint> buffer);
 }

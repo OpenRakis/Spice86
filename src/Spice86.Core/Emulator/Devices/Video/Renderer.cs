@@ -297,6 +297,14 @@ public class Renderer : IVgaRenderer {
         }
     }
 
+    /// <inheritdoc />
+    public void CopyLastFrame(Span<uint> buffer) {
+        uint[] lastFrame = Volatile.Read(ref _lastPublishedFrame);
+        if (lastFrame.Length > 0 && lastFrame.Length <= buffer.Length) {
+            lastFrame.AsSpan().CopyTo(buffer);
+        }
+    }
+
     private void InitCharRow() {
         _frameHorizontalDisplayEnd = _state.CrtControllerRegisters.HorizontalDisplayEnd + 1 + _frameSkew;
         _frameTotalWidth = _state.CrtControllerRegisters.HorizontalTotal + 3;

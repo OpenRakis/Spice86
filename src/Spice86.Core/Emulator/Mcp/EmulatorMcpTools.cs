@@ -1221,7 +1221,8 @@ internal sealed class EmulatorMcpTools {
                 int width = _services.VgaRenderer.Width;
                 int height = _services.VgaRenderer.Height;
                 uint[] buffer = new uint[width * height];
-                _services.VgaRenderer.Render(buffer);
+
+                _services.VgaRenderer.CopyLastFrame(buffer);
 
                 byte[] bytes = new byte[buffer.Length * 4];
                 Buffer.BlockCopy(buffer, 0, bytes, 0, bytes.Length);
