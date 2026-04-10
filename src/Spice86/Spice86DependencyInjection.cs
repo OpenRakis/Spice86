@@ -510,6 +510,7 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.Intel8042Controller = intel8042Controller;
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
+        emulatorMcpServices.BiosKeyboardBuffer = biosKeyboardBuffer;
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
             stack, state, cfgCpu, dualPic, systemBiosInt15Handler,
             intel8042Controller, biosKeyboardBuffer, loggerService);

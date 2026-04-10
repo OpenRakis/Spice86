@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -94,6 +95,11 @@ public sealed class EmulatorMcpServices(
     /// Gets or sets the BIOS data area accessor used by BIOS and video MCP tools.
     /// </summary>
     public BiosDataArea? BiosDataArea { get; set; }
+
+    /// <summary>
+    /// Gets or sets the BIOS keyboard buffer for direct key injection.
+    /// </summary>
+    public BiosKeyboardBuffer? BiosKeyboardBuffer { get; set; }
 
     /// <summary>
     /// Gets or sets the interrupt vector table used by BIOS and DOS MCP tools.
