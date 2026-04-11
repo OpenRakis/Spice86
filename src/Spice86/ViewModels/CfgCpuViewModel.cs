@@ -36,7 +36,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private readonly AstBuilder _astBuilder = new();
 
     // Collection of searchable nodes for AutoCompleteBox
-    private readonly Dictionary<string, ICfgNode> _searchableNodes = new();
+    private Dictionary<string, ICfgNode> _searchableNodes = new();
 
     [ObservableProperty] private int _maxNodesToDisplay = 200;
 
@@ -251,10 +251,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
 
                 await _uiDispatcher.InvokeAsync(() => {
-                    _searchableNodes.Clear();
-                    foreach (KeyValuePair<string, ICfgNode> kvp in localSearchableNodes) {
-                        _searchableNodes[kvp.Key] = kvp.Value;
-                    }
+                    _searchableNodes = new Dictionary<string, ICfgNode>(localSearchableNodes);
 
                     _tableNodesList.Clear();
                     _tableNodesList.AddRange(localTableNodesList);
