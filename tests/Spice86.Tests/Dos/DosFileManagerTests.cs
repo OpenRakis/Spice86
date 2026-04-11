@@ -157,7 +157,7 @@ public class DosFileManagerTests {
     }
 
     [Fact]
-    public void FindFirstMatchingFile_FcbFormat_WritesSpacePaddedNameAtOffset0x01() {
+    public void FcbFindFirstMatchingFile_WritesSpacePaddedNameAtOffset0x01() {
         // Arrange
         string mountPoint = Path.Join(Path.GetTempPath(), $"Spice86_FM_Tests_{Guid.NewGuid()}");
         Directory.CreateDirectory(mountPoint);
@@ -165,8 +165,8 @@ public class DosFileManagerTests {
             File.WriteAllText(Path.Join(mountPoint, "HELLO.TXT"), "content");
             DosTestFixture fixture = new(mountPoint);
 
-            // Act: FCB find (isFcbSearch: true)
-            DosFileOperationResult result = fixture.DosFileManager.FindFirstMatchingFile("HELLO.TXT", 0, isFcbSearch: true);
+            // Act
+            DosFileOperationResult result = fixture.DosFileManager.FcbFindFirstMatchingFile("HELLO.TXT", 0);
 
             // Assert
             result.IsError.Should().BeFalse();

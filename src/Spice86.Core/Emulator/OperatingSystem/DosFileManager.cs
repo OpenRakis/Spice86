@@ -261,15 +261,30 @@ public class DosFileManager {
     }
 
     /// <summary>
-    /// Returns the first matching file in the DTA, according to the <paramref name="fileSpec"/>
+    /// Returns the first matching file in the DTA using the extended format (ASCIIZ 8.3 filename at offset 0x1E),
+    /// according to the <paramref name="fileSpec"/>. Used by INT 21h AH=4Eh.
     /// </summary>
     /// <param name="fileSpec">a filename with ? when any character can match or * when multiple characters can match.
     /// Case is insensitive</param>
     /// <param name="searchAttributes">The MS-DOS file attributes, such as Directory.</param>
-    /// <param name="isFcbSearch">When true, the DTA is populated in FCB format (drive + 8.3 space-padded name).
-    /// When false, the DTA uses the extended format (ASCIIZ 8.3 filename at offset 0x1E).</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult FindFirstMatchingFile(string fileSpec, ushort searchAttributes, bool isFcbSearch = false) {
+    public DosFileOperationResult FindFirstMatchingFile(string fileSpec, ushort searchAttributes) {
+        return FindFirstMatchingFileInternal(fileSpec, searchAttributes, isFcbSearch: false);
+    }
+
+    /// <summary>
+    /// Returns the first matching file in the DTA using FCB format (drive + 8.3 space-padded name),
+    /// according to the <paramref name="fileSpec"/>. Used by INT 21h AH=11h.
+    /// </summary>
+    /// <param name="fileSpec">a filename with ? when any character can match or * when multiple characters can match.
+    /// Case is insensitive</param>
+    /// <param name="searchAttributes">The MS-DOS file attributes, such as Directory.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    public DosFileOperationResult FcbFindFirstMatchingFile(string fileSpec, ushort searchAttributes) {
+        return FindFirstMatchingFileInternal(fileSpec, searchAttributes, isFcbSearch: true);
+    }
+
+    private DosFileOperationResult FindFirstMatchingFileInternal(string fileSpec, ushort searchAttributes, bool isFcbSearch) {
         if (string.IsNullOrWhiteSpace(fileSpec)) {
             return PathNotFoundError(fileSpec);
         }

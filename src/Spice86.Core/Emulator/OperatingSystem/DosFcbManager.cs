@@ -1046,7 +1046,7 @@ public class DosFcbManager {
     public FcbStatus FindFirst(uint fcbAddress) {
         DosFileControlBlock fcb = GetFcb(fcbAddress, out byte attribute);
         string pattern = fcb.FullFileName;
-        DosFileOperationResult result = _dosFileManager.FindFirstMatchingFile(pattern, attribute, isFcbSearch: true);
+        DosFileOperationResult result = _dosFileManager.FcbFindFirstMatchingFile(pattern, attribute);
         FcbStatus status = result.IsError ? FcbStatus.Error : FcbStatus.Success;
         LogFcbDebug("FIND FIRST", fcb.BaseAddress, pattern, status);
         return status;
