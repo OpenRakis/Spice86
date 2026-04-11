@@ -193,9 +193,6 @@ public partial class CfgCpuViewModel : ViewModelBase {
             IsLoading = true;
             StatusMessage = "Generating graph...";
 
-            _searchableNodes.Clear();
-            _tableNodesList.Clear();
-
             await Task.Run(async () => {
                 long localNumberOfNodes = 0;
                 Graph currentGraph = new();
@@ -204,6 +201,8 @@ public partial class CfgCpuViewModel : ViewModelBase {
                 HashSet<ICfgNode> visitedNodes = new();
                 HashSet<(int, int)> existingEdges = new();
                 Dictionary<int, CfgGraphNode> graphNodeCache = new();
+                Dictionary<string, ICfgNode> localSearchableNodes = new();
+                List<NodeTableEntry> localTableNodesList = new();
 
                 while (queue.Count > 0 && localNumberOfNodes < MaxNodesToDisplay) {
                     ICfgNode node = queue.Dequeue();
@@ -219,9 +218,9 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
                     string searchableText =
                         $"{_nodeToString.ToHeaderString(node)} - {_nodeToString.ToAssemblyString(node)}";
-                    _searchableNodes[searchableText] = node;
+                    localSearchableNodes[searchableText] = node;
 
-                    _tableNodesList.Add(CreateTableEntry(node));
+                    localTableNodesList.Add(CreateTableEntry(node));
 
                     foreach (ICfgNode successor in node.Successors) {
                         (int, int) edgeKey = GenerateEdgeKey(node, successor);
@@ -252,6 +251,14 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
 
                 await _uiDispatcher.InvokeAsync(() => {
+                    _searchableNodes.Clear();
+                    foreach (KeyValuePair<string, ICfgNode> kvp in localSearchableNodes) {
+                        _searchableNodes[kvp.Key] = kvp.Value;
+                    }
+
+                    _tableNodesList.Clear();
+                    _tableNodesList.AddRange(localTableNodesList);
+
                     Graph = currentGraph;
                     IsLoading = false;
                     NumberOfNodes = localNumberOfNodes;
