@@ -902,6 +902,11 @@ public class DosFileManager {
         dta.FileName = DosPathResolver.GetShortFileName(Path.GetFileName(matchingFileSystemEntry), searchFolder);
     }
 
+    /// <summary>
+    /// Extracts the drive letter from a DOS file specification and returns the corresponding
+    /// <see cref="VirtualDrive"/>. Falls back to <see cref="DosDriveManager.CurrentDrive"/>
+    /// if no drive letter is present or the specified drive is not mounted.
+    /// </summary>
     private VirtualDrive ResolveDriveFromFileSpec(string fileSpec) {
         if (fileSpec.Length >= 2 && fileSpec[1] == DosPathResolver.VolumeSeparatorChar) {
             char driveLetter = char.ToUpperInvariant(fileSpec[0]);
@@ -926,6 +931,10 @@ public class DosFileManager {
         return DosFileOperationResult.NoValue();
     }
 
+    /// <summary>
+    /// Writes a volume label to the DTA in FCB format using the specified zero-based drive index.
+    /// The drive index is converted to a one-based drive number for the FCB structure (0=A: becomes 1).
+    /// </summary>
     private static void WriteFcbVolumeLabelToDta(DosDiskTransferArea dta, string driveLabel, byte driveIndex) {
         SplitLabelToFcbFields(driveLabel, out string name, out string ext);
         byte driveNumber = (byte)(driveIndex + 1);
