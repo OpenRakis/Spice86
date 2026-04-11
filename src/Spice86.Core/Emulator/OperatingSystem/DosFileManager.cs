@@ -962,6 +962,8 @@ public class DosFileManager {
         resultFcb.DriveNumber = driveNumber;
         resultFcb.FileName = fileName.ToUpperInvariant().PadRight(DosFileControlBlock.FileNameSize);
         resultFcb.FileExtension = fileExtension.ToUpperInvariant().PadRight(DosFileControlBlock.FileExtensionSize);
+        // FCB search results are unopened FCBs: CurrentBlock and RecordSize are zero
+        // because the file has not been opened for I/O yet.
         resultFcb.CurrentBlock = 0;
         resultFcb.RecordSize = 0;
         resultFcb.FileSize = fileSize;
