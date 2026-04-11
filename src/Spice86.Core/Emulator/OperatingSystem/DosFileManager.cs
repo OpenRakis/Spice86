@@ -906,19 +906,27 @@ public class DosFileManager {
         ushort searchAttributes, bool isFcbSearch) {
         string driveLabel = _dosDriveManager.CurrentDrive.Label.ToUpperInvariant();
         if (isFcbSearch) {
-            SplitLabelToFcbFields(driveLabel, out string name, out string ext);
-            byte driveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
-            UpdateDosTransferAreaWithFcbResult(dta, name, ext,
-                (byte)DosFileAttributes.VolumeId, 0, 0, 0, driveNumber);
+            WriteFcbVolumeLabelToDta(dta, driveLabel);
         } else {
-            dta.FileAttributes = (byte)DosFileAttributes.VolumeId;
-            dta.FileDate = 0;
-            dta.FileTime = 0;
-            dta.FileSize = 0;
-            dta.FileName = PackNameFromLabel(driveLabel);
+            WriteExtendedVolumeLabelToDta(dta, driveLabel);
         }
         _activeFileSearches.Add(dta.SearchId, new(fileSpec, 0, searchAttributes, isFcbSearch));
         return DosFileOperationResult.NoValue();
+    }
+
+    private void WriteFcbVolumeLabelToDta(DosDiskTransferArea dta, string driveLabel) {
+        SplitLabelToFcbFields(driveLabel, out string name, out string ext);
+        byte driveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
+        UpdateDosTransferAreaWithFcbResult(dta, name, ext,
+            (byte)DosFileAttributes.VolumeId, 0, 0, 0, driveNumber);
+    }
+
+    private static void WriteExtendedVolumeLabelToDta(DosDiskTransferArea dta, string driveLabel) {
+        dta.FileAttributes = (byte)DosFileAttributes.VolumeId;
+        dta.FileDate = 0;
+        dta.FileTime = 0;
+        dta.FileSize = 0;
+        dta.FileName = PackNameFromLabel(driveLabel);
     }
 
     /// <summary>
@@ -952,24 +960,15 @@ public class DosFileManager {
             _loggerService.Verbose("FCB: Found matching file {MatchingFileSystemEntry}", matchingFileSystemEntry);
         }
 
-        FileSystemInfo entryInfo = Directory.Exists(matchingFileSystemEntry) ?
-            new DirectoryInfo(matchingFileSystemEntry) : new FileInfo(matchingFileSystemEntry);
-        DateTime creationZonedDateTime = entryInfo.CreationTimeUtc;
-        DateTime creationLocalDate = creationZonedDateTime.ToLocalTime();
-        DosFileAttributes dosAttributes = (DosFileAttributes)entryInfo.Attributes;
+        DosFileEntryInfo entryInfo = _dosPathResolver.GetDosFileEntryInfo(matchingFileSystemEntry, searchFolder);
+        DateTime creationLocalDate = entryInfo.CreationTimeUtc.ToLocalTime();
 
-        string shortName = DosPathResolver.GetShortFileName(Path.GetFileName(matchingFileSystemEntry), searchFolder);
-        string nameOnly = Path.GetFileNameWithoutExtension(shortName);
-        string extOnly = Path.GetExtension(shortName).TrimStart('.');
-
-        uint fileSize = 0;
-        if (entryInfo is FileInfo fileInfo) {
-            fileSize = (uint)fileInfo.Length;
-        }
+        string nameOnly = Path.GetFileNameWithoutExtension(entryInfo.ShortName);
+        string extOnly = Path.GetExtension(entryInfo.ShortName).TrimStart('.');
 
         byte driveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
-        UpdateDosTransferAreaWithFcbResult(dta, nameOnly, extOnly, (byte)dosAttributes,
-            ToDosDate(creationLocalDate), ToDosTime(creationLocalDate), fileSize, driveNumber);
+        UpdateDosTransferAreaWithFcbResult(dta, nameOnly, extOnly, (byte)entryInfo.Attributes,
+            ToDosDate(creationLocalDate), ToDosTime(creationLocalDate), entryInfo.FileSize, driveNumber);
     }
 
     private static void UpdateDosTransferAreaWithFcbResult(DosDiskTransferArea dta,

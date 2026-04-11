@@ -328,6 +328,22 @@ internal class DosPathResolver {
     }
 
 
+    /// <summary>
+    /// Resolves the DOS file entry metadata for a host file system path.
+    /// </summary>
+    /// <param name="hostPath">The full host file system path.</param>
+    /// <param name="searchFolder">The host folder used for short name generation.</param>
+    /// <returns>A <see cref="DosFileEntryInfo"/> containing the resolved metadata.</returns>
+    internal DosFileEntryInfo GetDosFileEntryInfo(string hostPath, string searchFolder) {
+        FileSystemInfo entryInfo = Directory.Exists(hostPath)
+            ? new DirectoryInfo(hostPath)
+            : new FileInfo(hostPath);
+        DosFileAttributes dosAttributes = (DosFileAttributes)entryInfo.Attributes;
+        uint fileSize = entryInfo is FileInfo fi ? (uint)fi.Length : 0;
+        string shortName = GetShortFileName(Path.GetFileName(hostPath), searchFolder);
+        return new DosFileEntryInfo(dosAttributes, fileSize, entryInfo.CreationTimeUtc, shortName);
+    }
+
     public IEnumerable<string> FindFilesUsingWildCmp(string searchFolder, string searchPattern,
         EnumerationOptions enumerationOptions) {
         return Directory.EnumerateFileSystemEntries(searchFolder, "*", enumerationOptions)
