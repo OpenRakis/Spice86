@@ -684,7 +684,7 @@ public class DosFcbManagerTests : IDisposable {
     public void FindFirst_WriteDtaInFcbFormat_DriveAndSpacePaddedName() {
         // Arrange
         CreateTestFile("HELLO.TXT", "content");
-        DosFileControlBlock fcb = CreateFcb("HELLO", "TXT");
+        CreateFcb("HELLO", "TXT");
 
         // Act
         FcbStatus result = _fixture.DosFcbManager.FindFirst(FcbAddr);
@@ -705,7 +705,7 @@ public class DosFcbManagerTests : IDisposable {
         // Arrange: The extended DTA format writes ASCIIZ filename at offset 0x1E.
         // FCB format should NOT use that layout.
         CreateTestFile("CHECK.DAT", "data");
-        DosFileControlBlock fcb = CreateFcb("CHECK", "DAT");
+        CreateFcb("CHECK", "DAT");
 
         // Act
         FcbStatus result = _fixture.DosFcbManager.FindFirst(FcbAddr);

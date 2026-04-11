@@ -443,6 +443,8 @@ public class DosFileManager {
 
         DosFileAttributes dosSearchAttributes = (DosFileAttributes)search.SearchAttributes;
         if (dosSearchAttributes.HasFlag(DosFileAttributes.VolumeId)) {
+            _activeFileSearches.Remove(key);
+            dta.SearchId = 0;
             return DosFileOperationResult.Error(DosErrorCode.NoMoreFiles);
         }
 
