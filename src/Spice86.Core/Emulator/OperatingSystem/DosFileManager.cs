@@ -331,7 +331,7 @@ public class DosFileManager {
             }
 
             if (isFcbSearch) {
-                UpdateDosTransferAreaWithFcbFileMatch(dta, matchingPaths[0], searchFolder);
+                UpdateDosTransferAreaWithFcbFileMatch(dta, matchingPaths[0], searchFolder, fileSpec);
             } else if (!TryUpdateDosTransferAreaWithFileMatch(dta, fileSpec, matchingPaths[0], searchFolder,
                 out DosFileOperationResult status)) {
                 return status;
@@ -467,7 +467,7 @@ public class DosFileManager {
         search.Index++;
 
         if (search.IsFcbSearch) {
-            UpdateDosTransferAreaWithFcbFileMatch(dta, fileMatch, searchFolder);
+            UpdateDosTransferAreaWithFcbFileMatch(dta, fileMatch, searchFolder, search.FileSpec);
         } else if (!TryUpdateDosTransferAreaWithFileMatch(dta, search.FileSpec,
             fileMatch, searchFolder, out _)) {
             return FileOperationErrorWithLog("Error when getting file system entry attributes of FindNext match.",
@@ -902,11 +902,23 @@ public class DosFileManager {
         dta.FileName = DosPathResolver.GetShortFileName(Path.GetFileName(matchingFileSystemEntry), searchFolder);
     }
 
+    private VirtualDrive ResolveDriveFromFileSpec(string fileSpec) {
+        if (fileSpec.Length >= 2 && fileSpec[1] == DosPathResolver.VolumeSeparatorChar) {
+            char driveLetter = char.ToUpperInvariant(fileSpec[0]);
+            if (_dosDriveManager.TryGetValue(driveLetter, out VirtualDrive? drive)) {
+                return drive;
+            }
+        }
+        return _dosDriveManager.CurrentDrive;
+    }
+
     private DosFileOperationResult FindVolumeLabel(DosDiskTransferArea dta, string fileSpec,
         ushort searchAttributes, bool isFcbSearch) {
-        string driveLabel = _dosDriveManager.CurrentDrive.Label.ToUpperInvariant();
+        VirtualDrive targetDrive = ResolveDriveFromFileSpec(fileSpec);
+        string driveLabel = targetDrive.Label.ToUpperInvariant();
         if (isFcbSearch) {
-            WriteFcbVolumeLabelToDta(dta, driveLabel);
+            byte driveIndex = DosDriveManager.DriveLetters[targetDrive.DriveLetter];
+            WriteFcbVolumeLabelToDta(dta, driveLabel, driveIndex);
         } else {
             WriteExtendedVolumeLabelToDta(dta, driveLabel);
         }
@@ -914,9 +926,9 @@ public class DosFileManager {
         return DosFileOperationResult.NoValue();
     }
 
-    private void WriteFcbVolumeLabelToDta(DosDiskTransferArea dta, string driveLabel) {
+    private static void WriteFcbVolumeLabelToDta(DosDiskTransferArea dta, string driveLabel, byte driveIndex) {
         SplitLabelToFcbFields(driveLabel, out string name, out string ext);
-        byte driveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
+        byte driveNumber = (byte)(driveIndex + 1);
         UpdateDosTransferAreaWithFcbResult(dta, name, ext,
             (byte)DosFileAttributes.VolumeId, 0, 0, 0, driveNumber);
     }
@@ -955,7 +967,7 @@ public class DosFileManager {
     }
 
     private void UpdateDosTransferAreaWithFcbFileMatch(DosDiskTransferArea dta,
-        string matchingFileSystemEntry, string searchFolder) {
+        string matchingFileSystemEntry, string searchFolder, string fileSpec) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("FCB: Found matching file {MatchingFileSystemEntry}", matchingFileSystemEntry);
         }
@@ -966,7 +978,8 @@ public class DosFileManager {
         string nameOnly = Path.GetFileNameWithoutExtension(entryInfo.ShortName);
         string extOnly = Path.GetExtension(entryInfo.ShortName).TrimStart('.');
 
-        byte driveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
+        VirtualDrive targetDrive = ResolveDriveFromFileSpec(fileSpec);
+        byte driveNumber = (byte)(DosDriveManager.DriveLetters[targetDrive.DriveLetter] + 1);
         UpdateDosTransferAreaWithFcbResult(dta, nameOnly, extOnly, (byte)entryInfo.Attributes,
             ToDosDate(creationLocalDate), ToDosTime(creationLocalDate), entryInfo.FileSize, driveNumber);
     }
