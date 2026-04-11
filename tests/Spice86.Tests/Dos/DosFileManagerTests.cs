@@ -133,4 +133,124 @@ public class DosFileManagerTests {
             }
         }
     }
+
+    [Fact]
+    public void FindFirstMatchingFile_ExtendedFormat_WritesAsciizFilenameAtOffset0x1E() {
+        // Arrange
+        string mountPoint = Path.Join(Path.GetTempPath(), $"Spice86_FM_Tests_{Guid.NewGuid()}");
+        Directory.CreateDirectory(mountPoint);
+        try {
+            File.WriteAllText(Path.Join(mountPoint, "HELLO.TXT"), "content");
+            DosTestFixture fixture = new(mountPoint);
+
+            // Act: Extended find (isFcbSearch: false is default)
+            DosFileOperationResult result = fixture.DosFileManager.FindFirstMatchingFile("HELLO.TXT", 0);
+
+            // Assert
+            result.IsError.Should().BeFalse();
+            DosDiskTransferArea dta = fixture.DosFileManager.DiskTransferArea;
+            dta.FileName.Should().Be("HELLO.TXT", "Extended FindFirst should write ASCIIZ 8.3 filename at offset 0x1E");
+            dta.FileSize.Should().Be(7);
+        } finally {
+            Directory.Delete(mountPoint, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void FindFirstMatchingFile_FcbFormat_WritesSpacePaddedNameAtOffset0x01() {
+        // Arrange
+        string mountPoint = Path.Join(Path.GetTempPath(), $"Spice86_FM_Tests_{Guid.NewGuid()}");
+        Directory.CreateDirectory(mountPoint);
+        try {
+            File.WriteAllText(Path.Join(mountPoint, "HELLO.TXT"), "content");
+            DosTestFixture fixture = new(mountPoint);
+
+            // Act: FCB find (isFcbSearch: true)
+            DosFileOperationResult result = fixture.DosFileManager.FindFirstMatchingFile("HELLO.TXT", 0, isFcbSearch: true);
+
+            // Assert
+            result.IsError.Should().BeFalse();
+            uint dtaAddr = fixture.DosFileManager.GetDiskTransferAreaPhysicalAddress();
+            DosFileControlBlock dtaFcb = new DosFileControlBlock(fixture.Memory, dtaAddr);
+            dtaFcb.FileName.Should().Be("HELLO   ", "FCB FindFirst should write 8-char space-padded name at offset 0x01");
+            dtaFcb.FileExtension.Should().Be("TXT", "FCB FindFirst should write 3-char space-padded extension at offset 0x09");
+            dtaFcb.FileSize.Should().Be(7);
+        } finally {
+            Directory.Delete(mountPoint, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void FindFirstMatchingFile_VolumeLabel_ExtendedFormat_Returns83FormattedLabel() {
+        // Arrange
+        string mountPoint = Path.Join(Path.GetTempPath(), $"Spice86_FM_Tests_{Guid.NewGuid()}");
+        Directory.CreateDirectory(mountPoint);
+        try {
+            DosTestFixture fixture = new(mountPoint);
+            fixture.Dos.DosDriveManager.CurrentDrive.Label = "MYVOLUMEID";
+
+            // Act: Extended search for volume label
+            DosFileOperationResult result = fixture.DosFileManager.FindFirstMatchingFile(
+                @"C:\*.*", (ushort)DosFileAttributes.VolumeId);
+
+            // Assert
+            result.IsError.Should().BeFalse();
+            DosDiskTransferArea dta = fixture.DosFileManager.DiskTransferArea;
+            dta.FileAttributes.Should().Be((byte)DosFileAttributes.VolumeId);
+            // PackName formats "MYVOLUMEID " as "MYVOLUME.ID" (8.3 with dot)
+            dta.FileName.Should().Be("MYVOLUME.ID",
+                "Extended FindFirst should format volume label in 8.3 with dot via PackName");
+        } finally {
+            Directory.Delete(mountPoint, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void FindFirstMatchingFile_VolumeLabel_ShortLabel_NoDot() {
+        // Arrange
+        string mountPoint = Path.Join(Path.GetTempPath(), $"Spice86_FM_Tests_{Guid.NewGuid()}");
+        Directory.CreateDirectory(mountPoint);
+        try {
+            DosTestFixture fixture = new(mountPoint);
+            fixture.Dos.DosDriveManager.CurrentDrive.Label = "MYLABEL";
+
+            // Act: Extended search for volume label
+            DosFileOperationResult result = fixture.DosFileManager.FindFirstMatchingFile(
+                @"C:\*.*", (ushort)DosFileAttributes.VolumeId);
+
+            // Assert
+            result.IsError.Should().BeFalse();
+            DosDiskTransferArea dta = fixture.DosFileManager.DiskTransferArea;
+            // "MYLABEL" is 7 chars, fits in 8-byte name portion, extension is all spaces
+            // PackName: no dot since extension is all spaces
+            dta.FileName.Should().Be("MYLABEL",
+                "Short volume labels should have no dot in 8.3 format");
+        } finally {
+            Directory.Delete(mountPoint, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void FindNextMatchingFile_VolumeLabel_ReturnsNoMoreFiles() {
+        // Arrange: Volume label searches return exactly one result (the drive label).
+        // FindNext should immediately return "no more files".
+        string mountPoint = Path.Join(Path.GetTempPath(), $"Spice86_FM_Tests_{Guid.NewGuid()}");
+        Directory.CreateDirectory(mountPoint);
+        try {
+            DosTestFixture fixture = new(mountPoint);
+
+            // First call to establish the search
+            DosFileOperationResult firstResult = fixture.DosFileManager.FindFirstMatchingFile(
+                @"C:\*.*", (ushort)DosFileAttributes.VolumeId);
+            firstResult.IsError.Should().BeFalse();
+
+            // Act
+            DosFileOperationResult nextResult = fixture.DosFileManager.FindNextMatchingFile();
+
+            // Assert
+            nextResult.IsError.Should().BeTrue("Volume label search should have only one result");
+        } finally {
+            Directory.Delete(mountPoint, recursive: true);
+        }
+    }
 }

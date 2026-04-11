@@ -679,4 +679,97 @@ public class DosFcbManagerTests : IDisposable {
         // Assert
         result.Should().Be(FcbStatus.Error);
     }
+
+    [Fact]
+    public void FindFirst_WriteDtaInFcbFormat_DriveAndSpacePaddedName() {
+        // Arrange
+        CreateTestFile("HELLO.TXT", "content");
+        DosFileControlBlock fcb = CreateFcb("HELLO", "TXT");
+
+        // Act
+        FcbStatus result = _fixture.DosFcbManager.FindFirst(FcbAddr);
+
+        // Assert
+        result.Should().Be(FcbStatus.Success);
+
+        uint dtaAddr = _fixture.DosFileManager.GetDiskTransferAreaPhysicalAddress();
+        DosFileControlBlock dtaFcb = new DosFileControlBlock(_fixture.Memory, dtaAddr);
+        dtaFcb.DriveNumber.Should().NotBe(0, "FCB result should have a non-zero drive number");
+        dtaFcb.FileName.Should().Be("HELLO   ", "FCB filename must be 8 chars space-padded");
+        dtaFcb.FileExtension.Should().Be("TXT", "FCB extension must be 3 chars space-padded");
+        dtaFcb.FileSize.Should().Be(7, "file contains 'content' (7 bytes)");
+    }
+
+    [Fact]
+    public void FindFirst_FcbFormatDoesNotWriteAsciizAt0x1E() {
+        // Arrange: The extended DTA format writes ASCIIZ filename at offset 0x1E.
+        // FCB format should NOT use that layout.
+        CreateTestFile("CHECK.DAT", "data");
+        DosFileControlBlock fcb = CreateFcb("CHECK", "DAT");
+
+        // Act
+        FcbStatus result = _fixture.DosFcbManager.FindFirst(FcbAddr);
+
+        // Assert
+        result.Should().Be(FcbStatus.Success);
+
+        uint dtaAddr = _fixture.DosFileManager.GetDiskTransferAreaPhysicalAddress();
+
+        // In FCB format, offset 0x01 should be the filename.
+        // In extended format, offset 0x1E is the filename. Verify that offset 0x01
+        // actually contains our file name (FCB format) rather than garbage.
+        DosFileControlBlock dtaFcb = new DosFileControlBlock(_fixture.Memory, dtaAddr);
+        string dtaName = dtaFcb.FileName.TrimEnd();
+        dtaName.Should().Be("CHECK", "FCB FindFirst should write filename at FCB offset 0x01, not at extended offset 0x1E");
+    }
+
+    [Fact]
+    public void FindFirst_VolumeLabel_ReturnsDriveLabelInFcbFormat() {
+        // Arrange: Create an Extended FCB with VolumeId attribute (0x08)
+        // to search for volume labels.
+        DosExtendedFileControlBlock xfcb = new DosExtendedFileControlBlock(_fixture.Memory, FcbAddr);
+        xfcb.Flag = 0xFF;
+        xfcb.Attribute = (byte)DosFileAttributes.VolumeId;
+        xfcb.DriveNumber = 0;
+        xfcb.FileName = "????????";
+        xfcb.FileExtension = "???";
+
+        // Act
+        FcbStatus result = _fixture.DosFcbManager.FindFirst(FcbAddr);
+
+        // Assert
+        result.Should().Be(FcbStatus.Success);
+
+        uint dtaAddr = _fixture.DosFileManager.GetDiskTransferAreaPhysicalAddress();
+        DosFileControlBlock dtaFcb = new DosFileControlBlock(_fixture.Memory, dtaAddr);
+
+        // The default drive label is "Spice86" -> "SPICE86 " (8 chars) + "   " (3 chars)
+        string fullLabel = (dtaFcb.FileName + dtaFcb.FileExtension);
+        fullLabel.TrimEnd().Should().Be("SPICE86", "FCB volume label should be the raw 11-byte label in FCB fields");
+    }
+
+    [Fact]
+    public void FindFirst_VolumeLabel_LongLabel_SplitsAcrossNameAndExtension() {
+        // Arrange: Set a label longer than 8 chars to verify it spans name+extension fields
+        _fixture.Dos.DosDriveManager.CurrentDrive.Label = "MYVOLUMEID";
+        DosExtendedFileControlBlock xfcb = new DosExtendedFileControlBlock(_fixture.Memory, FcbAddr);
+        xfcb.Flag = 0xFF;
+        xfcb.Attribute = (byte)DosFileAttributes.VolumeId;
+        xfcb.DriveNumber = 0;
+        xfcb.FileName = "????????";
+        xfcb.FileExtension = "???";
+
+        // Act
+        FcbStatus result = _fixture.DosFcbManager.FindFirst(FcbAddr);
+
+        // Assert
+        result.Should().Be(FcbStatus.Success);
+
+        uint dtaAddr = _fixture.DosFileManager.GetDiskTransferAreaPhysicalAddress();
+        DosFileControlBlock dtaFcb = new DosFileControlBlock(_fixture.Memory, dtaAddr);
+
+        // "MYVOLUMEID" -> 11 bytes padded: "MYVOLUME" + "ID "
+        dtaFcb.FileName.Should().Be("MYVOLUME", "First 8 chars of volume label in name field");
+        dtaFcb.FileExtension.Should().Be("ID ", "Remaining chars of volume label in extension field");
+    }
 }

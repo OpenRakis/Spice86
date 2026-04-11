@@ -40,10 +40,11 @@ public class DosFileManager {
     private readonly DosPathResolver _dosPathResolver;
 
     private class FileSearchPrivateData {
-        public FileSearchPrivateData(string fileSpec, int index, ushort searchAttributes) {
+        public FileSearchPrivateData(string fileSpec, int index, ushort searchAttributes, bool isFcbSearch) {
             FileSpec = fileSpec;
             Index = index;
             SearchAttributes = searchAttributes;
+            IsFcbSearch = isFcbSearch;
         }
 
         public string FileSpec { get; set; }
@@ -51,6 +52,8 @@ public class DosFileManager {
         public int Index { get; set; }
 
         public ushort SearchAttributes { get; init; }
+
+        public bool IsFcbSearch { get; init; }
     }
 
     private readonly Dictionary<uint, FileSearchPrivateData> _activeFileSearches = new();
@@ -263,8 +266,10 @@ public class DosFileManager {
     /// <param name="fileSpec">a filename with ? when any character can match or * when multiple characters can match.
     /// Case is insensitive</param>
     /// <param name="searchAttributes">The MS-DOS file attributes, such as Directory.</param>
+    /// <param name="isFcbSearch">When true, the DTA is populated in FCB format (drive + 8.3 space-padded name).
+    /// When false, the DTA uses the extended format (ASCIIZ 8.3 filename at offset 0x1E).</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult FindFirstMatchingFile(string fileSpec, ushort searchAttributes) {
+    public DosFileOperationResult FindFirstMatchingFile(string fileSpec, ushort searchAttributes, bool isFcbSearch = false) {
         if (string.IsNullOrWhiteSpace(fileSpec)) {
             return PathNotFoundError(fileSpec);
         }
@@ -272,15 +277,22 @@ public class DosFileManager {
         DosDiskTransferArea dta = GetDosDiskTransferArea();
         dta.SearchId = GenerateNewKey();
 
+        DosFileAttributes dosSearchAttributes = (DosFileAttributes)searchAttributes;
+        if (dosSearchAttributes.HasFlag(DosFileAttributes.VolumeId)) {
+            return FindVolumeLabel(dta, fileSpec, searchAttributes, isFcbSearch);
+        }
+
         if (_dosVirtualDevices.OfType<CharacterDevice>().SingleOrDefault(
             x => x.IsName(fileSpec)) is { } characterDevice) {
-            if (!TryUpdateDosTransferAreaWithFileMatch(dta, fileSpec,
+            if (isFcbSearch) {
+                UpdateDosTransferAreaWithFcbResult(dta, characterDevice.Name, 0, 0, 0, 0);
+            } else if (!TryUpdateDosTransferAreaWithFileMatch(dta, fileSpec,
                 characterDevice.Name, string.Empty,
                 out DosFileOperationResult status)) {
                 return status;
             }
             _activeFileSearches.Add(dta.SearchId, new
-                (characterDevice.Name, 0, searchAttributes));
+                (characterDevice.Name, 0, searchAttributes, isFcbSearch));
             return DosFileOperationResult.NoValue();
         }
 
@@ -303,12 +315,14 @@ public class DosFileManager {
                 return DosFileOperationResult.Error(DosErrorCode.NoMoreFiles);
             }
 
-            if (!TryUpdateDosTransferAreaWithFileMatch(dta, fileSpec, matchingPaths[0], searchFolder,
+            if (isFcbSearch) {
+                UpdateDosTransferAreaWithFcbFileMatch(dta, matchingPaths[0], searchFolder);
+            } else if (!TryUpdateDosTransferAreaWithFileMatch(dta, fileSpec, matchingPaths[0], searchFolder,
                 out DosFileOperationResult status)) {
                 return status;
             }
 
-            _activeFileSearches.Add(dta.SearchId, new(fileSpec, 0, searchAttributes));
+            _activeFileSearches.Add(dta.SearchId, new(fileSpec, 0, searchAttributes, isFcbSearch));
             return DosFileOperationResult.NoValue();
 
         } catch (Exception e) when (e is UnauthorizedAccessException or
@@ -412,6 +426,11 @@ public class DosFileManager {
                 DosErrorCode.NoMoreFiles);
         }
 
+        DosFileAttributes dosSearchAttributes = (DosFileAttributes)search.SearchAttributes;
+        if (dosSearchAttributes.HasFlag(DosFileAttributes.VolumeId)) {
+            return DosFileOperationResult.Error(DosErrorCode.NoMoreFiles);
+        }
+
         if (!GetSearchFolder(search.FileSpec, out string? searchFolder)) {
             return FileOperationErrorWithLog("Search in an invalid folder",
                 DosErrorCode.NoMoreFiles);
@@ -430,7 +449,9 @@ public class DosFileManager {
 
         search.Index++;
 
-        if (!TryUpdateDosTransferAreaWithFileMatch(dta, search.FileSpec,
+        if (search.IsFcbSearch) {
+            UpdateDosTransferAreaWithFcbFileMatch(dta, fileMatch, searchFolder);
+        } else if (!TryUpdateDosTransferAreaWithFileMatch(dta, search.FileSpec,
             fileMatch, searchFolder, out _)) {
             return FileOperationErrorWithLog("Error when getting file system entry attributes of FindNext match.",
                 DosErrorCode.NoMoreFiles);
@@ -862,6 +883,100 @@ public class DosFileManager {
             dta.FileSize = 4096;
         }
         dta.FileName = DosPathResolver.GetShortFileName(Path.GetFileName(matchingFileSystemEntry), searchFolder);
+    }
+
+    private DosFileOperationResult FindVolumeLabel(DosDiskTransferArea dta, string fileSpec,
+        ushort searchAttributes, bool isFcbSearch) {
+        string driveLabel = _dosDriveManager.CurrentDrive.Label.ToUpperInvariant();
+        if (isFcbSearch) {
+            SplitLabelToFcbFields(driveLabel, out string name, out string ext);
+            byte driveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
+            UpdateDosTransferAreaWithFcbResult(dta, name, ext,
+                (byte)DosFileAttributes.VolumeId, 0, 0, 0, driveNumber);
+        } else {
+            dta.FileAttributes = (byte)DosFileAttributes.VolumeId;
+            dta.FileDate = 0;
+            dta.FileTime = 0;
+            dta.FileSize = 0;
+            dta.FileName = PackNameFromLabel(driveLabel);
+        }
+        _activeFileSearches.Add(dta.SearchId, new(fileSpec, 0, searchAttributes, isFcbSearch));
+        return DosFileOperationResult.NoValue();
+    }
+
+    /// <summary>
+    /// Formats a volume label into 8.3 ASCIIZ format using the same PackName logic
+    /// as MS-DOS uses for extended find (AH=4Eh). The first 8 bytes are treated as
+    /// the filename portion and bytes 8-10 as the extension portion.
+    /// </summary>
+    internal static string PackNameFromLabel(string label) {
+        string padded = label.PadRight(11);
+        string namePart = padded[..8].TrimEnd();
+        string extPart = padded[8..11].TrimEnd();
+        if (extPart.Length > 0) {
+            return $"{namePart}.{extPart}";
+        }
+        return namePart;
+    }
+
+    /// <summary>
+    /// Splits a volume label into FCB name (8 chars) and extension (3 chars) fields,
+    /// both space-padded. The first 8 characters become the name, the rest become the extension.
+    /// </summary>
+    internal static void SplitLabelToFcbFields(string label, out string name, out string ext) {
+        string padded = label.PadRight(11);
+        name = padded[..8];
+        ext = padded[8..11];
+    }
+
+    private void UpdateDosTransferAreaWithFcbFileMatch(DosDiskTransferArea dta,
+        string matchingFileSystemEntry, string searchFolder) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("FCB: Found matching file {MatchingFileSystemEntry}", matchingFileSystemEntry);
+        }
+
+        FileSystemInfo entryInfo = Directory.Exists(matchingFileSystemEntry) ?
+            new DirectoryInfo(matchingFileSystemEntry) : new FileInfo(matchingFileSystemEntry);
+        DateTime creationZonedDateTime = entryInfo.CreationTimeUtc;
+        DateTime creationLocalDate = creationZonedDateTime.ToLocalTime();
+        DosFileAttributes dosAttributes = (DosFileAttributes)entryInfo.Attributes;
+
+        string shortName = DosPathResolver.GetShortFileName(Path.GetFileName(matchingFileSystemEntry), searchFolder);
+        string nameOnly = Path.GetFileNameWithoutExtension(shortName);
+        string extOnly = Path.GetExtension(shortName).TrimStart('.');
+
+        uint fileSize = 0;
+        if (entryInfo is FileInfo fileInfo) {
+            fileSize = (uint)fileInfo.Length;
+        }
+
+        byte driveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
+        UpdateDosTransferAreaWithFcbResult(dta, nameOnly, extOnly, (byte)dosAttributes,
+            ToDosDate(creationLocalDate), ToDosTime(creationLocalDate), fileSize, driveNumber);
+    }
+
+    private static void UpdateDosTransferAreaWithFcbResult(DosDiskTransferArea dta,
+        string fileName, string fileExtension, byte attributes,
+        ushort dosDate, ushort dosTime, uint fileSize, byte driveNumber) {
+        DosFileControlBlock resultFcb = new(dta.ByteReaderWriter, dta.BaseAddress);
+        resultFcb.DriveNumber = driveNumber;
+        resultFcb.FileName = fileName.ToUpperInvariant().PadRight(DosFileControlBlock.FileNameSize);
+        resultFcb.FileExtension = fileExtension.ToUpperInvariant().PadRight(DosFileControlBlock.FileExtensionSize);
+        resultFcb.CurrentBlock = 0;
+        resultFcb.RecordSize = 0;
+        resultFcb.FileSize = fileSize;
+        resultFcb.Date = dosDate;
+        resultFcb.Time = dosTime;
+    }
+
+    /// <summary>
+    /// Populates the DTA with an FCB result using only the filename (convenience overload for character devices).
+    /// </summary>
+    private static void UpdateDosTransferAreaWithFcbResult(DosDiskTransferArea dta,
+        string dosFileName, byte attributes, ushort dosDate, ushort dosTime, uint fileSize) {
+        string nameOnly = Path.GetFileNameWithoutExtension(dosFileName);
+        string extOnly = Path.GetExtension(dosFileName).TrimStart('.');
+        UpdateDosTransferAreaWithFcbResult(dta, nameOnly, extOnly, attributes, dosDate, dosTime, fileSize, 0);
     }
 
     private DosDiskTransferArea GetDosDiskTransferArea() {
