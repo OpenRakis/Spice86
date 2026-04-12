@@ -638,6 +638,7 @@ Spice86 -e game.exe</code></pre>
           <tr><td><code>--Cycles</code></td><td>—</td><td>Target CPU cycles per ms (unset = no limit). Overrides <code>--InstructionTimeScale</code> when set.</td></tr>
           <tr><td><code>-i, --InstructionTimeScale</code></td><td>—</td><td>Instruction-based timer; blank = real-time timer</td></tr>
           <tr><td><code>--ClockJitterSeed</code></td><td>—</td><td>Optional integer seed enabling small deterministic clock jitter (±0.01 ms). Omit to disable.</td></tr>
+          <tr><td><code>--ClockStartTime</code></td><td>—</td><td>Optional UTC start date/time for the emulated clock (parseable by <code>DateTime.Parse</code>, e.g. <code>1993-06-01T00:00:00Z</code>). When omitted defaults to current UTC time.</td></tr>
           <tr><td><code>-t, --TimeMultiplier</code></td><td>1</td><td>Real-time speed multiplier (&gt;1 faster, &lt;1 slower)</td></tr>
         </tbody>
       </table>

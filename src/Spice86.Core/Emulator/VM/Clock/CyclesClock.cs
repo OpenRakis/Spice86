@@ -8,8 +8,8 @@ using Spice86.Core.Emulator.CPU;
 public class CyclesClock : ClockBase {
     private readonly State _cpuState;
 
-    public CyclesClock(State cpuState, long cyclesPerSecond, int? jitterSeed)
-        : base(ClockJitter.Create(jitterSeed)) {
+    public CyclesClock(State cpuState, long cyclesPerSecond, int? jitterSeed, DateTimeOffset startTime)
+        : base(ClockJitter.Create(jitterSeed), startTime) {
         _cpuState = cpuState;
         CyclesPerSecond = cyclesPerSecond;
     }

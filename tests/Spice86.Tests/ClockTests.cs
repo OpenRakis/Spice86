@@ -18,33 +18,31 @@ public class ClockTests {
     public void CyclesClock_CurrentDateTime_ShouldReflectStartTimePlusElapsed() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        CyclesClock clock = new CyclesClock(state, 1000, null); // 1000 cycles per second
-        DateTime startTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-        clock.StartTime = startTime;
+        DateTimeOffset startTime = new DateTimeOffset(2000, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        CyclesClock clock = new CyclesClock(state, 1000, null, startTime); // 1000 cycles per second
 
         // Act - simulate 2000 cycles (2 seconds)
         for (int i = 0; i < 2000; i++) {
             state.IncCycles();
         }
-        DateTime currentDateTime = clock.CurrentDateTime;
+        DateTimeOffset currentDateTime = clock.CurrentDateTime;
 
         // Assert
-        DateTime expectedDateTime = startTime.AddSeconds(2);
+        DateTimeOffset expectedDateTime = startTime.AddSeconds(2);
         currentDateTime.Should().BeCloseTo(expectedDateTime, TimeSpan.FromMilliseconds(100));
     }
 
     /// <summary>
-    /// Tests that EmulatedClock StartTime can be set and CurrentDateTime is calculated correctly.
+    /// Tests that EmulatedClock constructed with a start time correctly reports CurrentDateTime.
     /// </summary>
     [Fact]
     public void EmulatedClock_StartTime_CanBeSetAndCurrentDateTimeCalculated() {
         // Arrange
-        DateTime startTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-        EmulatedClock clock = new EmulatedClock(null);
+        DateTimeOffset startTime = new DateTimeOffset(2000, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        EmulatedClock clock = new EmulatedClock(null, startTime);
         
         // Act
-        clock.StartTime = startTime;
-        DateTime currentDateTime = clock.CurrentDateTime;
+        DateTimeOffset currentDateTime = clock.CurrentDateTime;
 
         // Assert - CurrentDateTime should be StartTime plus elapsed time
         // Since the stopwatch has been running, it should be after StartTime
@@ -52,18 +50,17 @@ public class ClockTests {
     }
 
     /// <summary>
-    /// Tests that StartTime can be set and retrieved correctly.
+    /// Tests that CyclesClock constructed with a start time stores and retrieves it correctly.
     /// </summary>
     [Fact]
     public void Clock_StartTime_CanBeSetAndRetrieved() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        CyclesClock clock = new CyclesClock(state, 1000, null);
-        DateTime expectedStartTime = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        DateTimeOffset expectedStartTime = new DateTimeOffset(2000, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        CyclesClock clock = new CyclesClock(state, 1000, null, expectedStartTime);
 
         // Act
-        clock.StartTime = expectedStartTime;
-        DateTime actualStartTime = clock.StartTime;
+        DateTimeOffset actualStartTime = clock.StartTime;
 
         // Assert
         actualStartTime.Should().Be(expectedStartTime);
@@ -76,7 +73,7 @@ public class ClockTests {
     public void Clock_OnPauseAndOnResume_ShouldNotThrow() {
         // Arrange
         State state = new State(CpuModel.INTEL_80286);
-        CyclesClock clock = new CyclesClock(state, 1000, null);
+        CyclesClock clock = new CyclesClock(state, 1000, null, DateTimeOffset.UnixEpoch);
 
         // Act
         Action act = () => {
@@ -94,7 +91,7 @@ public class ClockTests {
     [Fact]
     public void CyclesClock_WithNullSeed_ReturnsExactBaselineTime() {
         State state = new State(CpuModel.INTEL_80286);
-        CyclesClock clock = new CyclesClock(state, 1000, null);
+        CyclesClock clock = new CyclesClock(state, 1000, null, DateTimeOffset.UnixEpoch);
         for (int i = 0; i < 1000; i++) {
             state.IncCycles();
         }
@@ -110,8 +107,8 @@ public class ClockTests {
     public void CyclesClock_WithSeed_AddsBoundedJitterToBaselineTime() {
         State stateBase = new State(CpuModel.INTEL_80286);
         State stateJitter = new State(CpuModel.INTEL_80286);
-        CyclesClock clockBase = new CyclesClock(stateBase, 1000, null);
-        CyclesClock clockJitter = new CyclesClock(stateJitter, 1000, 42);
+        CyclesClock clockBase = new CyclesClock(stateBase, 1000, null, DateTimeOffset.UnixEpoch);
+        CyclesClock clockJitter = new CyclesClock(stateJitter, 1000, 42, DateTimeOffset.UnixEpoch);
 
         for (int i = 0; i < 1000; i++) {
             stateBase.IncCycles();
@@ -130,14 +127,14 @@ public class ClockTests {
     [Fact]
     public void CyclesClock_WithSameSeed_ProducesReproducibleJitter() {
         State state1 = new State(CpuModel.INTEL_80286);
-        CyclesClock clock1 = new CyclesClock(state1, 1000, 12345);
+        CyclesClock clock1 = new CyclesClock(state1, 1000, 12345, DateTimeOffset.UnixEpoch);
         for (int i = 0; i < 1000; i++) {
             state1.IncCycles();
         }
         double time1 = clock1.ElapsedTimeMs;
 
         State state2 = new State(CpuModel.INTEL_80286);
-        CyclesClock clock2 = new CyclesClock(state2, 1000, 12345);
+        CyclesClock clock2 = new CyclesClock(state2, 1000, 12345, DateTimeOffset.UnixEpoch);
         for (int i = 0; i < 1000; i++) {
             state2.IncCycles();
         }
@@ -154,9 +151,9 @@ public class ClockTests {
         State baseState = new State(CpuModel.INTEL_80286);
         State state1 = new State(CpuModel.INTEL_80286);
         State state2 = new State(CpuModel.INTEL_80286);
-        CyclesClock baseClock = new CyclesClock(baseState, 1000, null);
-        CyclesClock clock1 = new CyclesClock(state1, 1000, 1);
-        CyclesClock clock2 = new CyclesClock(state2, 1000, 2);
+        CyclesClock baseClock = new CyclesClock(baseState, 1000, null, DateTimeOffset.UnixEpoch);
+        CyclesClock clock1 = new CyclesClock(state1, 1000, 1, DateTimeOffset.UnixEpoch);
+        CyclesClock clock2 = new CyclesClock(state2, 1000, 2, DateTimeOffset.UnixEpoch);
 
         for (int i = 0; i < 1000; i++) {
             baseState.IncCycles();
@@ -176,7 +173,7 @@ public class ClockTests {
     /// </summary>
     [Fact]
     public void EmulatedClock_WithSeed_ElapsedTimeMsIsNonNegative() {
-        EmulatedClock clock = new EmulatedClock(99);
+        EmulatedClock clock = new EmulatedClock(99, DateTimeOffset.UnixEpoch);
 
         // Force multiple cache refreshes to exercise the jitter code path.
         for (int i = 0; i < 300; i++) {

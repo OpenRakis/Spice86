@@ -212,7 +212,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             return 0xFF;
         }
 
-        DateTime now = _clock.CurrentDateTime;
+        DateTimeOffset now = _clock.CurrentDateTime;
         switch (reg) {
             case CmosRegisterAddresses.Seconds: return EncodeTimeComponent(now.Second);
             case CmosRegisterAddresses.Minutes: return EncodeTimeComponent(now.Minute);
@@ -387,7 +387,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// within 2ms of the next second boundary.
     /// </para>
     /// </summary>
-    private bool IsUpdateInProgress(DateTime now) {
+    private bool IsUpdateInProgress(DateTimeOffset now) {
         double msInSecond = now.TimeOfDay.TotalMilliseconds % 1000.0;
         return msInSecond >= 998.0 || msInSecond < 2.0;
     }

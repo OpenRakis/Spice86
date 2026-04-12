@@ -11,22 +11,21 @@ public abstract class ClockBase : IEmulatedClock {
     private protected readonly ClockJitter _jitter;
 
     /// <summary>
-    /// Initialises the clock with the given jitter source and sets <see cref="StartTime"/> to
-    /// <see cref="DateTime.UtcNow"/>.
+    /// Initialises the clock with the given jitter source and start time.
     /// </summary>
-    private protected ClockBase(ClockJitter jitter) {
+    private protected ClockBase(ClockJitter jitter, DateTimeOffset startTime) {
         _jitter = jitter;
-        StartTime = DateTime.UtcNow;
+        StartTime = startTime;
     }
 
     /// <inheritdoc/>
     public abstract double ElapsedTimeMs { get; }
 
     /// <inheritdoc/>
-    public DateTime StartTime { get; set; }
+    public DateTimeOffset StartTime { get; set; }
 
     /// <inheritdoc/>
-    public DateTime CurrentDateTime => StartTime.AddMilliseconds(ElapsedTimeMs);
+    public DateTimeOffset CurrentDateTime => StartTime.AddMilliseconds(ElapsedTimeMs);
 
     /// <inheritdoc/>
     public bool IsPaused => _isPaused || _isDisposed;
