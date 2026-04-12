@@ -53,6 +53,14 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
         }
     }
 
+    /// <summary>
+    /// Thread-safe hook for non-UI producers (e.g. the MCP server) that need to
+    /// mutate emulator input state. The action is enqueued under the same lock
+    /// as UI events and will run on the emulator thread the next time
+    /// <see cref="ProcessAllPendingInputEvents"/> is pumped.
+    /// </summary>
+    public void PostToEmulatorThread(Action action) => Enqueue(action);
+
     private void OnMouseMoved(object? sender, MouseMoveEventArgs e) =>
         Enqueue(() => MouseMoved?.Invoke(sender, e));
 
