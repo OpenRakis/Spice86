@@ -113,8 +113,16 @@ public sealed class Configuration : CommandSettings {
     /// <summary>
     /// Only for <see cref="PitTimer"/>
     /// </summary>
-    [CommandOption("-i|--InstructionsPerSecond <INSTRUCTIONSPERSECOND>")]
-    public long? InstructionsPerSecond { get; set; }
+    [CommandOption("-i|--InstructionTimeScale <INSTRUCTIONTIMESCALE>")]
+    public long? InstructionTimeScale { get; set; }
+
+    /// <summary>
+    /// Optional seed for deterministic clock jitter. When set, both the cycles-driven clock and the
+    /// real-time stopwatch clock add a small, reproducible signed offset (bounded to ±0.01 ms) to
+    /// <c>ElapsedTimeMs</c>. When <c>null</c> (the default), clocks behave exactly as before.
+    /// </summary>
+    [CommandOption("--ClockJitterSeed <CLOCKJITTERSEED>")]
+    public int? ClockJitterSeed { get; init; }
 
     /// <summary>
     /// The time multiplier used for speeding up or slowing down the execution of the program.

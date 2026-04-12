@@ -111,7 +111,8 @@ Spice86 -e program.exe --CpuHeavyLog --CpuHeavyLogDumpFile "C:\logs\cpu.log"
   -o, --OverrideSupplierClassName    Name of a class that will generate the initial function information. See documentation for more information.
   -p, --ProgramEntryPointSegment     (Default: 4096) Segment where to load the program. DOS PSP and MCB will be created before it.
   -u, --UseCodeOverride              (Default: true) <true or false> if false it will use the names provided by overrideSupplierClassName but not the code
-  -i, --InstructionsPerSecond        <number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.
+  -i, --InstructionTimeScale        <number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.
+  --ClockJitterSeed <CLOCKJITTERSEED> Optional integer seed enabling small deterministic clock jitter (±0.01 ms). Omit to disable.
   -t, --TimeMultiplier               (Default: 1) <time multiplier> if >1 will go faster, if <1 will go slower.
   -h, --HeadlessMode [Mode]          (Default: false) Headless mode. The mode 'Minimal' does not use any UI components, 'Avalonia' uses the full UI and consumes a bit more memory.
   -l, --VerboseLogs                  (Default: false) Enable verbose level logs
@@ -280,7 +281,7 @@ Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
 |---------|---------|
 | **C Drive** | Configurable with `--CDrive`, defaults to current folder |
 | **Program Arguments** | Pass up to 127 chars with `--ExeArgs` |
-| **Time Handling** | Real elapsed time (adjustable with `--TimeMultiplier`) or instruction-based timing with `--InstructionsPerSecond` |
+| **Time Handling** | Real elapsed time (adjustable with `--TimeMultiplier`) or instruction-based timing with `--InstructionTimeScale` |
 | **Screen Refresh** | 30 FPS and on VGA retrace wait detection |
 | **Structure Viewer** | Requires C header file (`--StructureFile`) to display memory structures |
 
@@ -439,7 +440,7 @@ You can pass arguments (max 127 chars!) to the emulated program with the option 
 The emulated Timer hardware of the PC (Intel 8259) supports measuring time from either:
 
 - The real elapsed time. Speed can be altered with parameter **--TimeMultiplier**.
-- The number of instructions the emulated CPU executed. This is the behaviour that is activated with parameter **--InstructionsPerSecond** and is forced when in GDB mode so that you can debug with peace of mind without the timer triggering.
+- The number of instructions the emulated CPU executed. This is the behaviour that is activated with parameter **--InstructionTimeScale** and is forced when in GDB mode so that you can debug with peace of mind without the timer triggering.
 
 Compatibility list available [here](COMPATIBILITY.md).
 

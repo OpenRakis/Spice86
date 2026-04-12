@@ -76,7 +76,7 @@ public class CommandLineParserTests {
             [
                 "-e", executablePath,
                 "--Cycles", "123",
-                "--InstructionsPerSecond", "456",
+                "--InstructionTimeScale", "456",
                 "--CpuHeavyLogDumpFile", "cpu-heavy.log"
             ];
 
@@ -87,7 +87,7 @@ public class CommandLineParserTests {
             configuration.Should().NotBeNull();
             Configuration nonNullConfiguration = configuration ?? throw new InvalidOperationException("Configuration should not be null.");
             nonNullConfiguration.Cycles.Should().Be(123);
-            nonNullConfiguration.InstructionsPerSecond.Should().BeNull();
+            nonNullConfiguration.InstructionTimeScale.Should().BeNull();
             nonNullConfiguration.CpuHeavyLog.Should().BeTrue();
             nonNullConfiguration.CpuHeavyLogDumpFile.Should().Be("cpu-heavy.log");
         } finally {
