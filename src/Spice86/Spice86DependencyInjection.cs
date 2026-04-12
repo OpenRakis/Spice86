@@ -584,6 +584,7 @@ public class Spice86DependencyInjection : IDisposable {
             xms);
 
         emulatorMcpServices.Intel8042Controller = intel8042Controller;
+        emulatorMcpServices.InputEventHub = inputEventHub;
         emulatorMcpServices.SoundBlaster = soundBlaster;
         emulatorMcpServices.Opl3Fm = opl;
         emulatorMcpServices.PcSpeaker = pcSpeaker;
