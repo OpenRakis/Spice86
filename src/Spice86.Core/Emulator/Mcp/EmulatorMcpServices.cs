@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -66,6 +67,13 @@ public sealed class EmulatorMcpServices(
     public Intel8042Controller? Intel8042Controller { get; set; }
 
     /// <summary>
+    /// Gets or sets the input event hub. MCP tools must post keyboard/mouse
+    /// mutations through this hub so they run on the emulator thread, matching
+    /// how Avalonia UI input is delivered.
+    /// </summary>
+    public InputEventHub? InputEventHub { get; set; }
+
+    /// <summary>
     /// Gets or sets the Sound Blaster device used by medium-level MCP sound tools.
     /// </summary>
     public SoundBlaster? SoundBlaster { get; set; }
@@ -94,6 +102,11 @@ public sealed class EmulatorMcpServices(
     /// Gets or sets the BIOS data area accessor used by BIOS and video MCP tools.
     /// </summary>
     public BiosDataArea? BiosDataArea { get; set; }
+
+    /// <summary>
+    /// Gets or sets the BIOS keyboard buffer for direct key injection.
+    /// </summary>
+    public BiosKeyboardBuffer? BiosKeyboardBuffer { get; set; }
 
     /// <summary>
     /// Gets or sets the interrupt vector table used by BIOS and DOS MCP tools.

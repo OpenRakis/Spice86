@@ -16,6 +16,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Timer;
@@ -31,7 +32,9 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
@@ -579,19 +582,39 @@ internal sealed class EmulatorMcpTools {
     public CallToolResult SendKeyboardKey(string key, bool isPressed) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
-                Intel8042Controller? controller = _services.Intel8042Controller;
-                if (controller == null) {
-                    throw new InvalidOperationException("PS/2 controller is not available");
-                }
-
                 if (!Enum.TryParse(key, true, out PcKeyboardKey parsedKey)) {
                     throw new ArgumentException($"Invalid PcKeyboardKey: '{key}'");
                 }
 
-                controller.KeyboardDevice.EnqueueKeyEvent(parsedKey, isPressed);
+                PhysicalKey physicalKey = KeyboardScancodeConverter.ConvertToPhysicalKey(parsedKey);
+                if (physicalKey == PhysicalKey.None) {
+                    throw new ArgumentException($"PcKeyboardKey '{key}' has no corresponding physical key mapping");
+                }
+
+                KeyboardEventArgs args = new(physicalKey, isPressed);
+                string action = isPressed ? "down" : "up";
+
+                if (_services.PauseHandler.IsPaused) {
+                    InputEventHub? pausedHub = _services.InputEventHub;
+                    if (pausedHub == null) {
+                        throw new InvalidOperationException("InputEventHub is not wired");
+                    }
+                    pausedHub.PostKeyboardEvent(args);
+                    return new EmulatorControlResponse {
+                        Success = true,
+                        Message = $"Keyboard event enqueued while paused: {parsedKey} {action}"
+                    };
+                }
+
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+
+                hub.PostKeyboardEvent(args);
                 return new EmulatorControlResponse {
                     Success = true,
-                    Message = $"Keyboard event sent: {parsedKey} {(isPressed ? "down" : "up")}"
+                    Message = $"Keyboard event sent: {parsedKey} {action}"
                 };
             }
         });
@@ -618,6 +641,49 @@ internal sealed class EmulatorMcpTools {
                 return new EmulatorControlResponse {
                     Success = true,
                     Message = $"Mouse packet sent ({bytes.Length} byte(s))"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "send_mouse_move", UseStructuredContent = true), Description("Move the mouse to a normalized position on screen. x and y are in the range [0.0, 1.0] relative to the emulated display: (0,0) is top-left, (1,1) is bottom-right.")]
+    public CallToolResult SendMouseMove(double x, double y) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+
+                double clampedX = Math.Clamp(x, 0.0, 1.0);
+                double clampedY = Math.Clamp(y, 0.0, 1.0);
+                hub.PostMouseMoveEvent(new MouseMoveEventArgs(clampedX, clampedY));
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Mouse moved to ({clampedX:F3}, {clampedY:F3})"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "send_mouse_button", UseStructuredContent = true), Description("Send a mouse button press or release event. button is one of: Left, Right, Middle. isPressed=true for press, false for release.")]
+    public CallToolResult SendMouseButton(string button, bool isPressed) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                if (!Enum.TryParse(button, true, out MouseButton parsedButton) || parsedButton == MouseButton.None) {
+                    throw new ArgumentException($"Invalid MouseButton: '{button}'. Use Left, Right, or Middle.");
+                }
+
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+
+                hub.PostMouseButtonEvent(new MouseButtonEventArgs(parsedButton, isPressed));
+                string action = isPressed ? "pressed" : "released";
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Mouse button {parsedButton} {action}"
                 };
             }
         });
@@ -1215,7 +1281,20 @@ internal sealed class EmulatorMcpTools {
                 int width = _services.VgaRenderer.Width;
                 int height = _services.VgaRenderer.Height;
                 uint[] buffer = new uint[width * height];
-                _services.VgaRenderer.Render(buffer);
+
+                _services.VgaRenderer.CopyLastFrame(buffer);
+
+                bool hasVisiblePixelData = false;
+                for (int i = 0; i < buffer.Length; i++) {
+                    if (buffer[i] != 0) {
+                        hasVisiblePixelData = true;
+                        break;
+                    }
+                }
+
+                if (!hasVisiblePixelData) {
+                    return Error("No video frame is available for screenshot capture.");
+                }
 
                 byte[] bytes = new byte[buffer.Length * 4];
                 Buffer.BlockCopy(buffer, 0, bytes, 0, bytes.Length);
