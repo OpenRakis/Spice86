@@ -9,8 +9,8 @@ public class EmulatedClock : ClockBase {
     private int _ticks;
     private readonly Stopwatch _stopwatch = new();
 
-    public EmulatedClock(int? jitterSeed)
-        : base(ClockJitter.Create(jitterSeed)) {
+    public EmulatedClock(int? jitterSeed, DateTimeOffset startTime)
+        : base(ClockJitter.Create(jitterSeed), startTime) {
         _stopwatch.Start();
     }
 

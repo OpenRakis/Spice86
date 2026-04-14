@@ -32,7 +32,7 @@ public class Pit8254Tests {
         State state = new(CpuModel.INTEL_80286);
         _ioPortDispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
         var pic = new DualPic(_ioPortDispatcher, state, logger, false);
-        var emulatedClock = new EmulatedClock(null);
+        EmulatedClock emulatedClock = new EmulatedClock(null, DateTimeOffset.UnixEpoch);
         var emulationLoopScheduler = new DeviceScheduler(emulatedClock, logger, "Emulation loop");
         _pit = new PitTimer(_ioPortDispatcher, state, pic, _speaker, emulationLoopScheduler, emulatedClock, logger, false);
     }

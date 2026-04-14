@@ -125,6 +125,15 @@ public sealed class Configuration : CommandSettings {
     public int? ClockJitterSeed { get; init; }
 
     /// <summary>
+    /// Optional fixed start date/time for the emulated clock. Accepts any value parseable by
+    /// <see cref="DateTimeOffset.Parse(string)"/> (e.g. an ISO 8601 string like
+    /// <c>1993-06-01T00:00:00Z</c>). When <c>null</c> (the default), the emulated clock starts
+    /// from <see cref="DateTimeOffset.UtcNow"/> at launch time.
+    /// </summary>
+    [CommandOption("--ClockStartTime <CLOCKSTARTTIME>")]
+    public DateTimeOffset? ClockStartTime { get; init; }
+
+    /// <summary>
     /// The time multiplier used for speeding up or slowing down the execution of the program.
     /// </summary>
     [CommandOption("-t|--TimeMultiplier <TIMEMULTIPLIER>")]
