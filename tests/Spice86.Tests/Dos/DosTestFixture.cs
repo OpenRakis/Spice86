@@ -56,7 +56,7 @@ public class DosTestFixture {
         A20Gate a20Gate = new(configuration.A20Gate);
         Memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
-        IEmulatedClock emulatedClock = new EmulatedClock();
+        IEmulatedClock emulatedClock = new EmulatedClock(null, DateTimeOffset.UnixEpoch);
         DeviceScheduler emulationLoopScheduler = new(emulatedClock, LoggerService, "Emulation loop");
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, Memory, memoryBreakpoints, ioBreakpoints);
 

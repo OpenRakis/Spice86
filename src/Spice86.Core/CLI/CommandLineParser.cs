@@ -43,7 +43,7 @@ public class CommandLineParser {
         initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClassName);
         initialConfig.ExeArgs = exeArgs;
         if (initialConfig.Cycles != null) {
-            initialConfig.InstructionsPerSecond = null;
+            initialConfig.InstructionTimeScale = null;
         }
         if (initialConfig.CpuHeavyLogDumpFile != null) {
             initialConfig.CpuHeavyLog = true;

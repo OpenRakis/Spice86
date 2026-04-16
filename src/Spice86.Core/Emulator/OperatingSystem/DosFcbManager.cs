@@ -1039,16 +1039,16 @@ public class DosFcbManager {
 
     /// <summary>
     /// INT 21h AH=11h FCB Find First using the FCB filename pattern.
+    /// Populates the DTA in FCB format (drive + 8-byte name + 3-byte ext + metadata).
     /// </summary>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus FindFirst(uint fcbAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
-        DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
+        DosFileControlBlock fcb = GetFcb(fcbAddress, out byte attribute);
         string pattern = fcb.FullFileName;
-        DosFileOperationResult result = _dosFileManager.FindFirstMatchingFile(pattern, 0);
+        DosFileOperationResult result = _dosFileManager.FcbFindFirstMatchingFile(pattern, attribute);
         FcbStatus status = result.IsError ? FcbStatus.Error : FcbStatus.Success;
-        LogFcbDebug("FIND FIRST", baseAddr, pattern, status);
+        LogFcbDebug("FIND FIRST", fcb.BaseAddress, pattern, status);
         return status;
     }
 

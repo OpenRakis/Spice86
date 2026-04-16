@@ -76,7 +76,7 @@ public class CommandLineParserTests {
             [
                 "-e", executablePath,
                 "--Cycles", "123",
-                "--InstructionsPerSecond", "456",
+                "--InstructionTimeScale", "456",
                 "--CpuHeavyLogDumpFile", "cpu-heavy.log"
             ];
 
@@ -87,7 +87,7 @@ public class CommandLineParserTests {
             configuration.Should().NotBeNull();
             Configuration nonNullConfiguration = configuration ?? throw new InvalidOperationException("Configuration should not be null.");
             nonNullConfiguration.Cycles.Should().Be(123);
-            nonNullConfiguration.InstructionsPerSecond.Should().BeNull();
+            nonNullConfiguration.InstructionTimeScale.Should().BeNull();
             nonNullConfiguration.CpuHeavyLog.Should().BeTrue();
             nonNullConfiguration.CpuHeavyLogDumpFile.Should().Be("cpu-heavy.log");
         } finally {
@@ -105,6 +105,31 @@ public class CommandLineParserTests {
 
         // Assert
         configuration.Should().BeNull();
+    }
+
+    [Fact]
+    public void ParseCommandLine_ClockStartTime_IsoUtcString_ParsedAsUtcOffset() {
+        // Arrange
+        string executablePath = CreateTemporaryExecutablePath();
+        try {
+            string[] args =
+            [
+                "-e", executablePath,
+                "--ClockStartTime", "1993-06-01T00:00:00Z"
+            ];
+
+            // Act
+            Configuration? configuration = Parse(args);
+
+            // Assert
+            configuration.Should().NotBeNull();
+            Configuration nonNullConfiguration = configuration ?? throw new InvalidOperationException("Configuration should not be null.");
+            nonNullConfiguration.ClockStartTime.Should().NotBeNull();
+            DateTimeOffset clockStartTime = nonNullConfiguration.ClockStartTime ?? throw new InvalidOperationException("ClockStartTime should not be null.");
+            clockStartTime.Should().Be(new DateTimeOffset(1993, 6, 1, 0, 0, 0, TimeSpan.Zero));
+        } finally {
+            File.Delete(executablePath);
+        }
     }
 
     private static Configuration? Parse(string[] args) {

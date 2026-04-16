@@ -13,12 +13,12 @@ public interface IEmulatedClock : IDisposable {
     /// Gets or sets the start time for the emulated clock.
     /// This represents the initial date/time from which CurrentDateTime is calculated.
     /// </summary>
-    DateTime StartTime { get; set; }
+    DateTimeOffset StartTime { get; set; }
 
     /// <summary>
     /// Gets the current date and time, calculated as StartTime + TimeSpan.FromMilliseconds(ElapsedTimeMs).
     /// </summary>
-    DateTime CurrentDateTime { get; }
+    DateTimeOffset CurrentDateTime { get; }
 
     /// <summary>
     /// Gets a value indicating whether the clock is currently paused or has been disposed.

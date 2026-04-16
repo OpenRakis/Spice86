@@ -7,14 +7,25 @@ public abstract class ClockBase : IEmulatedClock {
     private volatile bool _isPaused;
     private volatile bool _isDisposed;
 
+    /// <summary>The jitter source for this clock instance.</summary>
+    private protected readonly ClockJitter _jitter;
+
+    /// <summary>
+    /// Initialises the clock with the given jitter source and start time.
+    /// </summary>
+    private protected ClockBase(ClockJitter jitter, DateTimeOffset startTime) {
+        _jitter = jitter;
+        StartTime = startTime;
+    }
+
     /// <inheritdoc/>
     public abstract double ElapsedTimeMs { get; }
 
     /// <inheritdoc/>
-    public DateTime StartTime { get; set; }
+    public DateTimeOffset StartTime { get; set; }
 
     /// <inheritdoc/>
-    public DateTime CurrentDateTime => StartTime.AddMilliseconds(ElapsedTimeMs);
+    public DateTimeOffset CurrentDateTime => StartTime.AddMilliseconds(ElapsedTimeMs);
 
     /// <inheritdoc/>
     public bool IsPaused => _isPaused || _isDisposed;

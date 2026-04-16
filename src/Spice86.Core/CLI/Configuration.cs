@@ -113,8 +113,25 @@ public sealed class Configuration : CommandSettings {
     /// <summary>
     /// Only for <see cref="PitTimer"/>
     /// </summary>
-    [CommandOption("-i|--InstructionsPerSecond <INSTRUCTIONSPERSECOND>")]
-    public long? InstructionsPerSecond { get; set; }
+    [CommandOption("-i|--InstructionTimeScale <INSTRUCTIONTIMESCALE>")]
+    public long? InstructionTimeScale { get; set; }
+
+    /// <summary>
+    /// Optional seed for deterministic clock jitter. When set, both the cycles-driven clock and the
+    /// real-time stopwatch clock add a small, reproducible signed offset (bounded to ±0.01 ms) to
+    /// <c>ElapsedTimeMs</c>. When <c>null</c> (the default), clocks behave exactly as before.
+    /// </summary>
+    [CommandOption("--ClockJitterSeed <CLOCKJITTERSEED>")]
+    public int? ClockJitterSeed { get; init; }
+
+    /// <summary>
+    /// Optional fixed start date/time for the emulated clock. Accepts any value parseable by
+    /// <see cref="DateTimeOffset.Parse(string)"/> (e.g. an ISO 8601 string like
+    /// <c>1993-06-01T00:00:00Z</c>). When <c>null</c> (the default), the emulated clock starts
+    /// from <see cref="DateTimeOffset.UtcNow"/> at launch time.
+    /// </summary>
+    [CommandOption("--ClockStartTime <CLOCKSTARTTIME>")]
+    public DateTimeOffset? ClockStartTime { get; init; }
 
     /// <summary>
     /// The time multiplier used for speeding up or slowing down the execution of the program.
