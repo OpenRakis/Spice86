@@ -131,7 +131,7 @@ public class ConsoleDevice : CharacterDevice {
                     readCount++;
 
                     //It's only expanded if there is room for it
-                    if (index > buffer.Length) {
+                    if (index < buffer.Length) {
                         buffer[index++] = (byte)AsciiControlCodes.LineFeed;
                         readCount++;
                     }
@@ -139,8 +139,8 @@ public class ConsoleDevice : CharacterDevice {
                     if (Echo) {
                         // Maybe don't do this (no need for it actually)
                         // (but it's compatible)
-                        OutputWithNoAttributes(AsciiControlCodes.LineFeed);
                         OutputWithNoAttributes(AsciiControlCodes.CarriageReturn);
+                        OutputWithNoAttributes(AsciiControlCodes.LineFeed);
                     }
                     break;
                 case (byte)AsciiControlCodes.Backspace:
@@ -431,7 +431,7 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case 'D': // Cursor backward
                     col = (byte)_vgaFunctionality.GetCursorPosition(page).X;
-                    row = (byte)_vgaFunctionality.GetCursorPosition(page).X;
+                    row = (byte)_vgaFunctionality.GetCursorPosition(page).Y;
                     tempdata = (ushort)(_ansi.Data[0] > 0 ? _ansi.Data[0] : 1);
                     if (tempdata > col) {
                         col = 0;
