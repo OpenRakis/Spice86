@@ -479,6 +479,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         const byte MshercGetVideoAdapterTypeAndMode = 0xEF;
+        const byte UnsupportedButCommonCompatibilityCall = 0xFE;
         if (operation == MshercGetVideoAdapterTypeAndMode) {
             // operation installed by Microsoft MSHERC.COM/QBHERC.COM-TSRs (Hercules compatibility)
             // Ralph Browns interrupt list: https://mirror.math.princeton.edu/pub/oldlinux/Linux.old/docs/interrupts/int-html/rb-0549.htm
@@ -488,6 +489,15 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             // Gunboat ~1990 needs it
             if (_logger.IsEnabled(LogEventLevel.Warning)) {
                 _logger.Warning("INT10H: Ignored VgaBios function number in AH register: {OperationNumber}", State.AH);
+            }
+            return;
+        }
+
+        if (operation == UnsupportedButCommonCompatibilityCall) {
+            // Some DOS programs probe INT10 AH=FEh as a compatibility check.
+            // dosbox-staging treats unknown INT10 calls as non-fatal, so ignore this call.
+            if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                _logger.Warning("INT10H: Ignored compatibility VgaBios function number in AH register: {OperationNumber}", State.AH);
             }
             return;
         }
