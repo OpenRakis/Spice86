@@ -70,6 +70,12 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly LoggerService _loggerService;
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
+
+    /// <summary>
+    /// Gets the headless GUI instance when running in headless mode, or <c>null</c> in UI mode.
+    /// </summary>
+    public HeadlessGui? HeadlessGui => _gui as HeadlessGui;
+
     private readonly IGuiVideoPresentation? _gui;
     private readonly IEmulatedClock _emulatedClock;
     private readonly Spice86HttpApiServer? _httpApiServer;
