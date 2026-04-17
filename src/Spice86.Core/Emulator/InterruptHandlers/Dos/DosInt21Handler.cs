@@ -93,6 +93,11 @@ public class DosInt21Handler : InterruptHandler {
     internal DosProcessManager ProcessManager => _dosProcessManager;
 
     /// <summary>
+    /// Gets the DOS file manager for the <see cref="DosProgramLoader"/>
+    /// </summary>
+    internal DosFileManager FileManager => _dosFileManager;
+
+    /// <summary>
     /// Register the handlers for the DOS INT21H services that we support.
     /// </summary>
     private void FillDispatchTable() {
