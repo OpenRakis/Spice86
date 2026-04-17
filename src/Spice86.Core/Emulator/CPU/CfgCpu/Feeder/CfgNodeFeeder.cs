@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
@@ -20,10 +21,10 @@ public class CfgNodeFeeder {
     private readonly NodeLinker _nodeLinker;
 
     public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        InstructionReplacerRegistry replacerRegistry) {
+        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler) {
         _state = state;
-        InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry);
-        _nodeLinker = new(replacerRegistry);
+        InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler);
+        _nodeLinker = new(replacerRegistry, executionCompiler);
     }
 
     public InstructionsFeeder InstructionsFeeder { get; }

@@ -14,7 +14,8 @@ public class AsmRenderingConfig(
     bool showDefaultSegment,
     bool showAllFlags,
     bool showAllSegmentRegisters,
-    int addressAndInstructionRightPadding) {
+    int addressAndInstructionRightPadding,
+    bool logContextSwitches) {
     public bool UpperCase { get; } = upperCase;
     public bool ExplicitPointerType { get; } = explicitPointerType;
     public bool PrefixHexWith0X { get; } = prefixHexWith0X;
@@ -27,19 +28,20 @@ public class AsmRenderingConfig(
     public bool ShowAllFlags { get; } = showAllFlags;
     public bool ShowAllSegmentRegisters { get; } = showAllSegmentRegisters;
     public int AddressAndInstructionRightPadding { get; } = addressAndInstructionRightPadding;
+    public bool LogContextSwitches { get; } = logContextSwitches;
 
     public static AsmRenderingConfig CreateSpice86Style() {
         return new AsmRenderingConfig(upperCase: true, explicitPointerType: true, prefixHexWith0X: true,
             hideJumpLength: false, conditionalJumpStyle: ConditionalJumpStyle.INTEL, dwordJumpOffset: false,
             mnemonicRightPadding: null, addressRightSpaces: 0, showDefaultSegment: true, showAllFlags: true,
-            showAllSegmentRegisters: true, addressAndInstructionRightPadding: 42);
+            showAllSegmentRegisters: true, addressAndInstructionRightPadding: 42, logContextSwitches: true);
     }
 
     private static AsmRenderingConfig CreateDosBoxStyle() {
         return new AsmRenderingConfig(upperCase: false, explicitPointerType: false, prefixHexWith0X: false,
             hideJumpLength: true, conditionalJumpStyle: ConditionalJumpStyle.GNU, dwordJumpOffset: true,
             mnemonicRightPadding: 4, addressRightSpaces: 1, showDefaultSegment: false, showAllFlags: false,
-            showAllSegmentRegisters: false, addressAndInstructionRightPadding: 42);
+            showAllSegmentRegisters: false, addressAndInstructionRightPadding: 42, logContextSwitches: false);
     }
 
     public static AsmRenderingConfig Create(AsmRenderingStyle style) {

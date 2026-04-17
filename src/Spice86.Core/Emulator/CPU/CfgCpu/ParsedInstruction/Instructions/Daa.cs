@@ -1,13 +1,21 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 public class Daa : CfgInstruction {
     public Daa(SegmentedAddress address, InstructionField<ushort> opcodeField) :
         base(address, opcodeField, 1) {
+    }
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.DAA);
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
@@ -34,7 +42,48 @@ public class Daa : CfgInstruction {
         helper.MoveIpToEndOfInstruction(this);
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.DAA);
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        ValueNode al = builder.Register.Reg8(RegisterIndex.AxIndex);
+        VariableDeclarationNode initialAlDeclaration = builder.DeclareVariable(DataType.UINT8, "initialAl", al);
+        VariableDeclarationNode initialCfDeclaration = builder.DeclareVariable(DataType.BOOL, "initialCf", builder.Flag.Carry());
+        VariableDeclarationNode finalAuxDeclaration = builder.DeclareVariable(DataType.BOOL, "finalAuxiliaryFlag", builder.Constant.ToNode(false));
+        VariableDeclarationNode finalCarryDeclaration = builder.DeclareVariable(DataType.BOOL, "finalCarryFlag", builder.Constant.ToNode(false));
+
+        ValueNode lowNibble = new BinaryOperationNode(DataType.UINT8, al, BinaryOperation.BITWISE_AND, builder.Constant.ToNode((byte)0x0F));
+        ValueNode lowNibbleGreaterThan9 = new BinaryOperationNode(DataType.BOOL, lowNibble, BinaryOperation.GREATER_THAN, builder.Constant.ToNode((byte)9));
+        ValueNode adjustLowCondition = new BinaryOperationNode(DataType.BOOL, lowNibbleGreaterThan9, BinaryOperation.LOGICAL_OR, builder.Flag.Auxiliary());
+
+        BlockNode adjustLowTrueCase = new BlockNode(
+            builder.Assign(DataType.UINT8, al, new BinaryOperationNode(DataType.UINT8, al, BinaryOperation.PLUS, builder.Constant.ToNode((byte)6))),
+            builder.Assign(DataType.BOOL, finalAuxDeclaration.Reference, builder.Constant.ToNode(true)));
+        IfElseNode adjustLowIf = new IfElseNode(adjustLowCondition, adjustLowTrueCase, new BlockNode());
+
+        ValueNode adjustCarryCondition = new BinaryOperationNode(
+            DataType.BOOL,
+            new BinaryOperationNode(DataType.BOOL, initialAlDeclaration.Reference, BinaryOperation.GREATER_THAN, builder.Constant.ToNode((byte)0x99)),
+            BinaryOperation.LOGICAL_OR,
+            initialCfDeclaration.Reference);
+
+        BlockNode adjustCarryTrueCase = new BlockNode(
+            builder.Assign(DataType.UINT8, al, new BinaryOperationNode(DataType.UINT8, al, BinaryOperation.PLUS, builder.Constant.ToNode((byte)0x60))),
+            builder.Assign(DataType.BOOL, finalCarryDeclaration.Reference, builder.Constant.ToNode(true)));
+        BlockNode adjustCarryFalseCase = new BlockNode(
+            builder.Assign(DataType.BOOL, finalCarryDeclaration.Reference, builder.Constant.ToNode(false)));
+        IfElseNode adjustCarryIf = new IfElseNode(adjustCarryCondition, adjustCarryTrueCase, adjustCarryFalseCase);
+
+        MethodCallNode updateFlags = new MethodCallNode("Alu8", "UpdateFlags", al);
+
+        return builder.WithIpAdvancement(
+            this,
+            initialAlDeclaration,
+            initialCfDeclaration,
+            finalAuxDeclaration,
+            finalCarryDeclaration,
+            adjustLowIf,
+            adjustCarryIf,
+            // Undocumented behaviour
+            updateFlags,
+            builder.Assign(DataType.BOOL, builder.Flag.Auxiliary(), finalAuxDeclaration.Reference),
+            builder.Assign(DataType.BOOL, builder.Flag.Carry(), finalCarryDeclaration.Reference));
     }
 }

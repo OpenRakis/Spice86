@@ -39,4 +39,5 @@ public record MethodCallNode : IVisitableAstNode {
     public T Accept<T>(IAstVisitor<T> astVisitor) {
         return astVisitor.VisitMethodCallNode(this);
     }
+    
 }

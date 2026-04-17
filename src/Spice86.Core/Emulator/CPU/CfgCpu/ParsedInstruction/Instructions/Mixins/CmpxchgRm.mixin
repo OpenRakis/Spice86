@@ -5,16 +5,26 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
 
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext, 1) {
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.CMPXCHG,
+            builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
+            builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext)
+        );
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
@@ -29,11 +39,29 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         helper.MoveIpToEndOfInstruction(this);
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.CMPXCHG,
-            builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
-            builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext)
-        );
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        // CMPXCHG RM, R: if RM == ACC then ZF=1, RM=R; else ZF=0, ACC=RM
+        DataType dataType = builder.UType({{Size}});
+        ValueNode rmNode = builder.ModRm.RmToNode(dataType, ModRmContext);
+        ValueNode rNode = builder.ModRm.RToNode(dataType, ModRmContext);
+        ValueNode accNode = builder.Register.Accumulator(dataType);
+        ValueNode zfNode = builder.Flag.Zero();
+
+        // Condition: RM == ACC
+        BinaryOperationNode condition = new BinaryOperationNode(DataType.BOOL, rmNode, BinaryOperation.EQUAL, accNode);
+
+        // True branch: ZF = 1, RM = R
+        BinaryOperationNode assignZfTrue = builder.Assign(DataType.BOOL, zfNode, builder.Constant.ToNode(DataType.BOOL, 1UL));
+        BinaryOperationNode assignRm = builder.Assign(dataType, rmNode, rNode);
+        BlockNode trueBlock = new BlockNode(assignZfTrue, assignRm);
+
+        // False branch: ZF = 0, ACC = RM
+        BinaryOperationNode assignZfFalse = builder.Assign(DataType.BOOL, zfNode, builder.Constant.ToNode(DataType.BOOL, 0UL));
+        BinaryOperationNode assignAcc = builder.Assign(dataType, accNode, rmNode);
+        BlockNode falseBlock = new BlockNode(assignZfFalse, assignAcc);
+
+        IfElseNode ifElse = new IfElseNode(condition, trueBlock, falseBlock);
+        return builder.WithIpAdvancement(this, ifElse);
     }
 }
 

@@ -126,7 +126,7 @@ public class Flags {
     /// <summary>
     /// Gets the 16-bit value of the flags register.
     /// </summary>
-    public ushort FlagRegister16 { get => (ushort)FlagRegister; }
+    public ushort FlagRegister16 { get => (ushort)FlagRegister; set => FlagRegister = (FlagRegister & 0xFFFF0000) | (uint)value; }
 
     /// <summary>
     /// Gets the 32-bit value of the flags register.

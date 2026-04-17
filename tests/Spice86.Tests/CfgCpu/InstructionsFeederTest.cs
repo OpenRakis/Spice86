@@ -4,6 +4,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -19,13 +20,14 @@ using System.Reflection;
 
 using Xunit;
 
-public class InstructionsFeederTest {
+public class InstructionsFeederTest : IDisposable {
     private static readonly SegmentedAddress ZeroAddress = new(0, 0);
     private static readonly SegmentedAddress TwoAddress = new(0, 2);
     private static readonly SegmentedAddress SixteenAddressViaOffset = new(0, 16);
     private static readonly SegmentedAddress SixteenAddressViaSegment = new(1, 0);
     private Memory _memory = new(new(), new Ram(64), new A20Gate());
     private InstructionReplacerRegistry _instructionReplacer = new();
+    private CfgNodeExecutionCompiler? _compiler;
 
     private InstructionsFeeder CreateInstructionsFeeder() {
         ILoggerService loggerService = Substitute.For<LoggerService>();
@@ -35,8 +37,11 @@ public class InstructionsFeederTest {
         _memory = new(memoryBreakpoints, new Ram(64), new A20Gate());
         _instructionReplacer = new();
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(new PauseHandler(loggerService), state, _memory, memoryBreakpoints, ioBreakpoints);
+        _compiler?.Dispose();
+        _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService);
         
-        return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer);
+        return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer,
+            _compiler);
     }
 
     private void WriteJumpNear(SegmentedAddress address) {
@@ -266,5 +271,9 @@ public class InstructionsFeederTest {
 
         // Assert
         Assert.NotEqual(instruction1, instruction2);
+    }
+
+    public void Dispose() {
+        _compiler?.Dispose();
     }
 }

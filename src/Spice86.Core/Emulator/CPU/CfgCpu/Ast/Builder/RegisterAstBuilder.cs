@@ -58,6 +58,22 @@ public class RegisterAstBuilder {
         return new RegisterNode(dataType, (int)RegisterIndex.AxIndex);
     }
 
+    /// <summary>
+    /// Gets the stack pointer register node for the given address type.
+    /// For 16-bit addressing, returns SP (16-bit register).
+    /// For 32-bit addressing, returns ESP (32-bit register).
+    /// </summary>
+    public ValueNode StackPointer(DataType addressType) {
+        return addressType == DataType.UINT16 ? Reg16(RegisterIndex.SpIndex) : Reg32(RegisterIndex.SpIndex);
+    }
+
+    /// <summary>
+    /// Gets a segment register node for the given segment register index.
+    /// </summary>
+    public ValueNode SegmentRegister(SegmentRegisterIndex registerIndex) {
+        return SReg(registerIndex);
+    }
+
     public ValueNode Reg(DataType dataType, RegisterIndex registerIndex) {
         return Reg(dataType, (int)registerIndex);
     }
@@ -105,6 +121,22 @@ public class RegisterAstBuilder {
             "EDI" => Reg32(RegisterIndex.DiIndex),
 
             _ => throw new ArgumentException($"Unknown register name: {registerName}", nameof(registerName))
+        };
+    }
+
+    /// <summary>
+    /// Gets a segment register node by segment register name (e.g., "ES", "DS", "SS", "FS", "GS").
+    /// Used by mixin templates to convert segment register name parameters to AST nodes.
+    /// </summary>
+    public ValueNode SRegByName(string segmentRegisterName) {
+        return segmentRegisterName switch {
+            "ES" => SReg(SegmentRegisterIndex.EsIndex),
+            "CS" => SReg(SegmentRegisterIndex.CsIndex),
+            "SS" => SReg(SegmentRegisterIndex.SsIndex),
+            "DS" => SReg(SegmentRegisterIndex.DsIndex),
+            "FS" => SReg(SegmentRegisterIndex.FsIndex),
+            "GS" => SReg(SegmentRegisterIndex.GsIndex),
+            _ => throw new ArgumentException($"Unknown segment register name: {segmentRegisterName}", nameof(segmentRegisterName))
         };
     }
 }

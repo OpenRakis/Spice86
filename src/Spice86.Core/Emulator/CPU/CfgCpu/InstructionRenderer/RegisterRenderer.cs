@@ -50,6 +50,7 @@ public class RegisterRenderer {
         return UpperOrLower(bitWidth switch {
             BitWidth.BYTE_8=> Reg8Name(registerIndex),
             BitWidth.WORD_16 => Reg16Name(registerIndex),
+            BitWidth.BOOL_1 => Reg32Name(registerIndex),
             BitWidth.DWORD_32 => Reg32Name(registerIndex),
             _ => throw new ArgumentOutOfRangeException(nameof(bitWidth), bitWidth, null)
         });

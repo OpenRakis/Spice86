@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.StateSerialization;
+using Spice86.Shared.Emulator.Memory;
 
 using System.IO;
 
@@ -60,6 +61,28 @@ public sealed class CpuHeavyLogger : IDisposable {
         string addressAndInstruction = _nodeToString.ToAssemblyStringWithAddress(node).PadRight(_config.AddressAndInstructionRightPadding);
         string registersAndFlags = GenerateRegistersAndFlagsString();
         _writer.WriteLine($"{addressAndInstruction}{registersAndFlags}");
+    }
+    
+    /// <summary>
+    /// Logs that a HW interrupt is entering a new execution context.
+    /// Only written when <see cref="AsmRenderingConfig.LogContextSwitches"/> is enabled.
+    /// </summary>
+    public void LogEnteringContext(int depth, SegmentedAddress returnAddress) {
+        if (_disposed || !_config.LogContextSwitches) {
+            return;
+        }
+        _writer.WriteLine($"HW interrupt entering new context at depth {depth} will be restored when {returnAddress} is reached");
+    }
+
+    /// <summary>
+    /// Logs that a HW interrupt is leaving an execution context.
+    /// Only written when <see cref="AsmRenderingConfig.LogContextSwitches"/> is enabled.
+    /// </summary>
+    public void LogLeavingContext(int depth, SegmentedAddress returnAddress) {
+        if (_disposed || !_config.LogContextSwitches) {
+            return;
+        }
+        _writer.WriteLine($"HW interrupt leaving context at depth {depth}, returning to address {returnAddress}");
     }
 
     /// <summary>

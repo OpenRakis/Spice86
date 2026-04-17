@@ -1,17 +1,15 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
 public class CallFarNode : CfgInstructionNode {
-    public CallFarNode(CfgInstruction instruction, IVisitableAstNode targetSegment, IVisitableAstNode targetOffset,
-        int callSize) : base(instruction) {
-        TargetSegment = targetSegment;
-        TargetOffset = targetOffset;
+    public CallFarNode(CfgInstruction instruction, SegmentedAddressNode targetAddress, int callSize) : base(instruction) {
+        TargetAddress = targetAddress;
         CallSize = callSize;
     }
 
-    public IVisitableAstNode TargetSegment { get; }
-    public IVisitableAstNode TargetOffset { get; }
+    public SegmentedAddressNode TargetAddress { get; }
     public int CallSize { get; }
 
     public override T Accept<T>(IAstVisitor<T> astVisitor) {

@@ -4,13 +4,15 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 #nullable enable
 public partial class {{ moxy.Class.Name }} : CfgInstruction, IReturnInstruction {
@@ -23,11 +25,15 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction, IReturnInstruction 
 
     public CfgInstruction? CurrentCorrespondingCallInstruction { get; set; }
 
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.RET_NEAR);
+    }
+
     public override void Execute(InstructionExecutionHelper helper) {
         helper.HandleNearRet{{OperandSize}}(this, 0);
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.RET_NEAR);
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        return new ReturnNearNode(this, builder.Constant.ToNode((ushort)0), {{OperandSize}});
     }
 }

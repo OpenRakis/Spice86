@@ -189,7 +189,6 @@ public class InstructionParser : BaseInstructionParser {
         try {
             return ParseCfgInstruction(context);
         } catch (CpuInvalidOpcodeException e) {
-            // Still create a node in the graph so that it is known that this place generated such exception
             return new InvalidInstruction(address, opcodeField, prefixes, e);
         }
     }
