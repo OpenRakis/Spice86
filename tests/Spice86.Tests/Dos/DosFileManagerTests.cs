@@ -2,6 +2,7 @@ namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
+using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
@@ -231,5 +232,50 @@ public class DosFileManagerTests {
         } finally {
             Directory.Delete(mountPoint, recursive: true);
         }
+    }
+
+    [Fact]
+    public void TryGetStandardInput_WithConsoleDevice_ReturnsTrueAndDevice() {
+        // Arrange
+        using DosTestFixture fixture = new(MountPoint);
+
+        // Act
+        bool found = fixture.DosFileManager.TryGetStandardInput(out CharacterDevice? device);
+
+        // Assert
+        found.Should().BeTrue("CON device has CurrentStdin attribute");
+        device.Should().NotBeNull();
+        device.Should().BeOfType<ConsoleDevice>();
+    }
+
+    [Fact]
+    public void TryGetStandardOutput_WithConsoleDevice_ReturnsTrueAndDevice() {
+        // Arrange
+        using DosTestFixture fixture = new(MountPoint);
+
+        // Act
+        bool found = fixture.DosFileManager.TryGetStandardOutput(out CharacterDevice? device);
+
+        // Assert
+        found.Should().BeTrue("CON device has CurrentStdout attribute");
+        device.Should().NotBeNull();
+        device.Should().BeOfType<ConsoleDevice>();
+    }
+
+    [Fact]
+    public void TryGetStandardInput_WhenNoDeviceHasAttribute_ReturnsFalse() {
+        // Arrange
+        using DosTestFixture fixture = new(MountPoint);
+        // Clear all open files to remove the CON device
+        for (int i = 0; i < fixture.DosFileManager.OpenFiles.Length; i++) {
+            fixture.DosFileManager.OpenFiles[i] = null;
+        }
+
+        // Act
+        bool found = fixture.DosFileManager.TryGetStandardInput(out CharacterDevice? device);
+
+        // Assert
+        found.Should().BeFalse("no device with CurrentStdin attribute should be found");
+        device.Should().BeNull();
     }
 }

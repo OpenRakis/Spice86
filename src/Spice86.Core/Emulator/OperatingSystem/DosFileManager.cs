@@ -117,19 +117,19 @@ public class DosFileManager {
     /// <summary>
     /// Gets the standard input, which is the first open character device with the <see cref="DeviceAttributes.CurrentStdin"/> attribute.
     /// </summary>
-    /// <returns>The standard input device, or <c>null</c> if not found.</returns>
+    /// <param name="device">When this method returns <c>true</c>, contains the standard input device; otherwise <c>null</c>.</param>
+    /// <returns><c>true</c> if a character device with the <see cref="DeviceAttributes.CurrentStdin"/> attribute was found; otherwise <c>false</c>.</returns>
     public bool TryGetStandardInput([NotNullWhen(true)] out CharacterDevice? device) {
-        bool result = TryGetOpenDeviceWithAttributes<CharacterDevice>(DeviceAttributes.CurrentStdin, out device);
-        return result;
+        return TryGetOpenDeviceWithAttributes<CharacterDevice>(DeviceAttributes.CurrentStdin, out device);
     }
 
     /// <summary>
     /// Gets the standard output, which is the first open character device with the <see cref="DeviceAttributes.CurrentStdout"/> attribute.
     /// </summary>
-    /// <returns>The standard output device, or <c>null</c> if not found.</returns>
+    /// <param name="device">When this method returns <c>true</c>, contains the standard output device; otherwise <c>null</c>.</param>
+    /// <returns><c>true</c> if a character device with the <see cref="DeviceAttributes.CurrentStdout"/> attribute was found; otherwise <c>false</c>.</returns>
     public bool TryGetStandardOutput([NotNullWhen(true)] out CharacterDevice? device) {
-        bool result = TryGetOpenDeviceWithAttributes<CharacterDevice>(DeviceAttributes.CurrentStdout, out device);
-        return result;
+        return TryGetOpenDeviceWithAttributes<CharacterDevice>(DeviceAttributes.CurrentStdout, out device);
     }
 
     /// <summary>
