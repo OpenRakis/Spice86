@@ -6,12 +6,17 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
+using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
@@ -53,7 +58,7 @@ public class DosProcessManagerTests {
         DosProgramSegmentPrefix rootPsp = GetRootPsp(context);
         rootPsp.NNFlags = 0xABCD;
 
-        string comFilePath = Path.Combine(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
+        string comFilePath = Path.Join(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
         try {
             File.WriteAllBytes(comFilePath, new byte[] { 0xC3 });
             DosExecParameterBlock parameterBlock = CreateParameterBlock();
@@ -333,7 +338,7 @@ public class DosProcessManagerTests {
         const ushort relocationInitialValue = 0x0042;
         byte[] overlayBytes = BuildOverlayExeImageWithRelocation(relocationTargetOffset, relocationInitialValue);
 
-        string overlayFilePath = Path.Combine(Path.GetTempPath(), $"dos_overlay_{Guid.NewGuid():N}.exe");
+        string overlayFilePath = Path.Join(Path.GetTempPath(), $"dos_overlay_{Guid.NewGuid():N}.exe");
         try {
             File.WriteAllBytes(overlayFilePath, overlayBytes);
 
@@ -388,10 +393,12 @@ public class DosProcessManagerTests {
 
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
+        AddressReadWriteBreakpoints ioPortBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
         State state = new(CpuModel.INTEL_80386);
         Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
         Stack stack = new(memory, state);
+        IOPortDispatcher ioPortDispatcher = new(ioPortBreakpoints, state, loggerService, false);
 
         Configuration configuration = programEntryPointSegment.HasValue
             ? new Configuration { ProgramEntryPointSegment = programEntryPointSegment.Value, HttpApiPort = 0 }
@@ -401,10 +408,15 @@ public class DosProcessManagerTests {
         ushort initialPspSegment = (ushort)(configuration.ProgramEntryPointSegment - 0x10);
         DosSwappableDataArea sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         sda.CurrentProgramSegmentPrefix = initialPspSegment;
+        BiosDataArea biosDataArea = new(memory, 640);
+        InterruptVectorTable interruptVectorTable = new(memory);
+        VgaRom vgaRom = new();
+        VgaFunctionality vgaFunctionality = new(memory, interruptVectorTable, ioPortDispatcher, biosDataArea, vgaRom, true);
 
         DosDriveManager driveManager = new(loggerService, null, null);
         DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state), driveManager, loggerService, new List<IVirtualDevice>());
+        IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
 
         DosProcessManager processManager = new(
             memory,
@@ -413,6 +425,7 @@ public class DosProcessManagerTests {
             memoryManager,
             fileManager,
             driveManager,
+            batchDisplayCommandHandler,
             new Dictionary<string, string>(),
             loggerService);
 
@@ -438,7 +451,7 @@ public class DosProcessManagerTests {
             payloadLength = 1;
         }
 
-        string comFilePath = Path.Combine(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
+        string comFilePath = Path.Join(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
         byte[] bytes = new byte[payloadLength];
         for (int i = 0; i < payloadLength - 1; i++) {
             bytes[i] = 0x90;
@@ -453,7 +466,7 @@ public class DosProcessManagerTests {
     }
 
     private static string CreateTemporaryExeFile(ushort minExtraParagraphs, ushort maxExtraParagraphs) {
-        string exeFilePath = Path.Combine(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.exe");
+        string exeFilePath = Path.Join(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.exe");
         byte[] exeBytes = BuildExeImage(minExtraParagraphs, maxExtraParagraphs);
         File.WriteAllBytes(exeFilePath, exeBytes);
         return exeFilePath;

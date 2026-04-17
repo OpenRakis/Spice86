@@ -17,7 +17,7 @@ public abstract class DosDriveBase {
     /// <summary>
     /// Gets if the media is read only (ie. CD-ROM)
     /// </summary>
-    public bool IsReadOnlyMedium { get; }
+    public bool IsReadOnlyMedium { get; init; }
 
     /// <summary>
     /// Gets the assigned DOS drive letter.

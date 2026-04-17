@@ -6,6 +6,9 @@ using JetBrains.Annotations;
 
 using Spice86.Core.Emulator.OperatingSystem;
 
+using System;
+using System.IO;
+
 using Xunit;
 
 [TestSubject(typeof(DosPathResolver))]
@@ -126,6 +129,126 @@ public class DosPathResolverTest {
     public void NameDot_Matches_Only_NoExtension() {
         DoCmp("FILE", "FILE.").Should().BeTrue();
         DoCmp("FILE.BIN", "FILE.").Should().BeFalse();
+    }
+
+
+    [Fact]
+    public void GetShortFileName_AlreadyShort_ReturnsUppercased() {
+        using TempDir dir = new();
+        File.Create(Path.Join(dir.Path, "readme.txt")).Dispose();
+
+        string result = DosPathResolver.GetShortFileName("readme.txt", dir.Path);
+
+        result.Should().Be("README.TXT");
+    }
+
+    [Fact]
+    public void GetShortFileName_LongName_TruncatesWithTilde1() {
+        using TempDir dir = new();
+        File.Create(Path.Join(dir.Path, "VeryLongFileName.txt")).Dispose();
+
+        string result = DosPathResolver.GetShortFileName("VeryLongFileName.txt", dir.Path);
+
+        result.Should().Be("VERYLO~1.TXT");
+    }
+
+    [Fact]
+    public void GetShortFileName_TwoLongNames_SameStem_GetTilde1AndTilde2() {
+        using TempDir dir = new();
+        File.Create(Path.Join(dir.Path, "VeryLongFileName1.txt")).Dispose();
+        File.Create(Path.Join(dir.Path, "VeryLongFileName2.txt")).Dispose();
+
+        string first = DosPathResolver.GetShortFileName("VeryLongFileName1.txt", dir.Path);
+        string second = DosPathResolver.GetShortFileName("VeryLongFileName2.txt", dir.Path);
+
+        first.Should().Be("VERYLO~1.TXT");
+        second.Should().Be("VERYLO~2.TXT");
+    }
+
+    [Fact]
+    public void GetShortFileName_ThreeLongNames_SameStem_SequentialTildes() {
+        using TempDir dir = new();
+        File.Create(Path.Join(dir.Path, "LongDocument_Alpha.doc")).Dispose();
+        File.Create(Path.Join(dir.Path, "LongDocument_Beta.doc")).Dispose();
+        File.Create(Path.Join(dir.Path, "LongDocument_Gamma.doc")).Dispose();
+
+        string r1 = DosPathResolver.GetShortFileName("LongDocument_Alpha.doc", dir.Path);
+        string r2 = DosPathResolver.GetShortFileName("LongDocument_Beta.doc", dir.Path);
+        string r3 = DosPathResolver.GetShortFileName("LongDocument_Gamma.doc", dir.Path);
+
+        r1.Should().Be("LONGDO~1.DOC");
+        r2.Should().Be("LONGDO~2.DOC");
+        r3.Should().Be("LONGDO~3.DOC");
+    }
+
+    [Fact]
+    public void GetShortFileName_LongExtension_TruncatesTo3Chars() {
+        using TempDir dir = new();
+        File.Create(Path.Join(dir.Path, "readme.text")).Dispose();
+
+        string result = DosPathResolver.GetShortFileName("readme.text", dir.Path);
+
+        result.Should().Be("README~1.TEX");
+    }
+
+    [Fact]
+    public void GetShortFileName_SpacesInName_StrippedAndTilde() {
+        using TempDir dir = new();
+        File.Create(Path.Join(dir.Path, "My File.txt")).Dispose();
+
+        string result = DosPathResolver.GetShortFileName("My File.txt", dir.Path);
+
+        result.Should().Be("MYFILE~1.TXT");
+    }
+
+    [Fact]
+    public void GetShortFileName_NoExtension_Handled() {
+        using TempDir dir = new();
+        File.Create(Path.Join(dir.Path, "VeryLongFilenameNoExt")).Dispose();
+
+        string result = DosPathResolver.GetShortFileName("VeryLongFilenameNoExt", dir.Path);
+
+        result.Should().Be("VERYLO~1");
+    }
+
+    [Fact]
+    public void GetShortFileName_ExactlyEightChars_NoTilde() {
+        using TempDir dir = new();
+        File.Create(Path.Join(dir.Path, "ABCDEFGH.TXT")).Dispose();
+
+        string result = DosPathResolver.GetShortFileName("ABCDEFGH.TXT", dir.Path);
+
+        result.Should().Be("ABCDEFGH.TXT");
+    }
+
+    [Fact]
+    public void GetShortFileName_NineChars_GetsTilde() {
+        using TempDir dir = new();
+        File.Create(Path.Join(dir.Path, "ABCDEFGHI.TXT")).Dispose();
+
+        string result = DosPathResolver.GetShortFileName("ABCDEFGHI.TXT", dir.Path);
+
+        result.Should().Be("ABCDEF~1.TXT");
+    }
+
+    [Fact]
+    public void GetShortFileName_EmptyDir_StillWorks() {
+        string result = DosPathResolver.GetShortFileName("VeryLongFileName.txt", "");
+
+        result.Should().Be("VERYLO~1.TXT");
+    }
+
+    private sealed class TempDir : IDisposable {
+        public string Path { get; }
+        public TempDir() {
+            Path = System.IO.Path.Join(System.IO.Path.GetTempPath(), $"sfn_test_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(Path);
+        }
+        public void Dispose() {
+            if (Directory.Exists(Path)) {
+                Directory.Delete(Path, true);
+            }
+        }
     }
 
     [Fact]

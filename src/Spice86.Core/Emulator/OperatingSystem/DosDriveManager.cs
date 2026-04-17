@@ -14,6 +14,7 @@ using System.Diagnostics.CodeAnalysis;
 /// </summary>
 public class DosDriveManager : IDictionary<char, VirtualDrive> {
     private readonly SortedDictionary<char, VirtualDrive> _driveMap = new();
+    private readonly Dictionary<char, MemoryDrive> _memoryDriveMap = new();
     private readonly ILoggerService _loggerService;
 
     /// <summary>
@@ -33,7 +34,7 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
         var cDrive = new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath, CurrentDosDirectory = "" };
         _driveMap.Add('C', cDrive);
         CurrentDrive = cDrive;
-        if(loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             loggerService.Verbose("DOS Drives initialized: {@Drives}", _driveMap.Values);
         }
     }
@@ -147,5 +148,23 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
 
     IEnumerator IEnumerable.GetEnumerator() {
         return ((IEnumerable)_driveMap).GetEnumerator();
+    }
+
+    /// <summary>
+    /// Mounts a memory-backed drive (typically Z: for AUTOEXEC.BAT).
+    /// </summary>
+    /// <param name="drive">The memory drive to mount.</param>
+    public void MountMemoryDrive(MemoryDrive drive) {
+        _memoryDriveMap[drive.DriveLetter] = drive;
+    }
+
+    /// <summary>
+    /// Tries to get a mounted memory drive by letter.
+    /// </summary>
+    /// <param name="driveLetter">The drive letter (e.g., 'Z').</param>
+    /// <param name="drive">The memory drive if found; null otherwise.</param>
+    /// <returns>True if memory drive exists; false otherwise.</returns>
+    public bool TryGetMemoryDrive(char driveLetter, [MaybeNullWhen(false)] out MemoryDrive drive) {
+        return _memoryDriveMap.TryGetValue(driveLetter, out drive);
     }
 }

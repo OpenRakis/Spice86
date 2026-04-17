@@ -9,7 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 /// Writes x86 ASM instructions to Memory bus
 /// </summary>
 public class MemoryAsmWriter : MemoryWriter {
-    private readonly CallbackHandler _callbackHandler;
+    private readonly CallbackHandler? _callbackHandler;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MemoryAsmWriter"/> class with the specified memory as a data sink, beginningAddress and callbackHandler to register callbacks.
@@ -22,6 +22,14 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
+    /// Initializes a new instance for writing x86 instructions to a byte array without callback support.
+    /// </summary>
+    /// <param name="memory">Byte-array-backed memory to write instructions into.</param>
+    /// <param name="beginningAddress">Where to start writing (typically 0:0x100 for COM images).</param>
+    public MemoryAsmWriter(IIndexable memory, SegmentedAddress beginningAddress) : base(memory, beginningAddress) {
+    }
+
+    /// <summary>
     /// Registers a new callback that will call the given runnable with the manually defined callback number.<br/>
     /// </summary>
     /// <param name="callbackNumber">Callback index. For manually defined callbacks, cannot exceed 0xFF</param>
@@ -29,18 +37,24 @@ public class MemoryAsmWriter : MemoryWriter {
     public void RegisterAndWriteCallback(byte callbackNumber, Action runnable) {
         RegisterAndWriteCallback((ushort)callbackNumber, runnable);
     }
-    
+
     /// <summary>
     /// Registers a new callback that will call the given runnable.<br/>
     /// Callback number is automatically allocated.
     /// </summary>
     /// <param name="runnable"></param>
     public void RegisterAndWriteCallback(Action runnable) {
+        if (_callbackHandler is null) {
+            throw new UnrecoverableException("Cannot register callbacks without a CallbackHandler.");
+        }
         ushort callbackNumber = _callbackHandler.AllocateNextCallback();
         RegisterAndWriteCallback(callbackNumber, runnable);
     }
-    
+
     private void RegisterAndWriteCallback(ushort callbackNumber, Action runnable) {
+        if (_callbackHandler is null) {
+            throw new UnrecoverableException("Cannot register callbacks without a CallbackHandler.");
+        }
         Callback callback = new Callback(callbackNumber, runnable, CurrentAddress);
         _callbackHandler.AddCallback(callback);
         WriteCallback(callback.Index);
@@ -112,6 +126,13 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
+    /// Writes a STI instruction to memory. Re-enables hardware interrupts (IF=1).
+    /// </summary>
+    public void WriteSti() {
+        WriteUInt8(0xFB);
+    }
+
+    /// <summary>
     /// Writes a far CALL instruction to the given inMemoryAddressSwitcher default address. <br/>
     /// Throws UnrecoverableException if DefaultAddressValue is not initialized. <br/>
     /// If successful, sets the switcher PhysicalLocation to the location of the far call address, making it possible to change it dynamically.
@@ -142,5 +163,100 @@ public class MemoryAsmWriter : MemoryWriter {
     /// </summary>
     public void WriteFarRet() {
         WriteUInt8(0xCB);
+    }
+
+    /// <summary>
+    /// Writes MOV AH, imm8 instruction to memory.
+    /// </summary>
+    /// <param name="value">Value to move into AH.</param>
+    public void WriteMovAh(byte value) {
+        WriteUInt8(0xB4);
+        WriteUInt8(value);
+    }
+
+    /// <summary>
+    /// Writes MOV AX, imm16 instruction to memory.
+    /// </summary>
+    /// <param name="value">Value to move into AX.</param>
+    public void WriteMovAx(ushort value) {
+        WriteUInt8(0xB8);
+        WriteUInt16(value);
+    }
+
+    /// <summary>
+    /// Writes MOV DX, imm16 instruction to memory.
+    /// </summary>
+    /// <param name="value">Value to move into DX.</param>
+    public void WriteMovDx(ushort value) {
+        WriteUInt8(0xBA);
+        WriteUInt16(value);
+    }
+
+    /// <summary>
+    /// Writes CMP AL, imm8 instruction to memory.
+    /// </summary>
+    /// <param name="value">Value to compare with AL.</param>
+    public void WriteCmpAl(byte value) {
+        WriteUInt8(0x3C);
+        WriteUInt8(value);
+    }
+
+    /// <summary>
+    /// Writes CMP AH, imm8 instruction to memory.
+    /// </summary>
+    /// <param name="value">Value to compare with AH.</param>
+    public void WriteCmpAh(byte value) {
+        WriteUInt8(0x80);
+        WriteUInt8(0xFC);
+        WriteUInt8(value);
+    }
+
+    /// <summary>
+    /// Writes JA (Jump if Above) instruction to memory.
+    /// </summary>
+    /// <param name="offset">Signed offset for the jump.</param>
+    public void WriteJa(sbyte offset) {
+        WriteUInt8(0x77);
+        WriteInt8(offset);
+    }
+
+    /// <summary>
+    /// Writes JB (Jump if Below) instruction to memory.
+    /// </summary>
+    /// <param name="offset">Signed offset for the jump.</param>
+    public void WriteJb(sbyte offset) {
+        WriteUInt8(0x72);
+        WriteInt8(offset);
+    }
+
+    /// <summary>
+    /// Writes SUB AL, imm8 instruction to memory.
+    /// </summary>
+    /// <param name="value">Value to subtract from AL.</param>
+    public void WriteSubAl(byte value) {
+        WriteUInt8(0x2C);
+        WriteUInt8(value);
+    }
+
+    /// <summary>
+    /// Writes MOV AX, imm16 instruction with AH and AL bytes in sequence.
+    /// Used for setting both AL (exit code) and AH (0x4C for INT 21h terminate).
+    /// </summary>
+    /// <param name="alValue">Value for AL (exit code).</param>
+    /// <param name="ahValue">Value for AH (typically 0x4C for terminate function).</param>
+    public void WriteMovAxSplit(byte alValue, byte ahValue) {
+        WriteUInt8(0xB8);
+        WriteUInt8(alValue);
+        WriteUInt8(ahValue);
+    }
+
+    /// <summary>
+    /// Writes a range of raw bytes to memory.
+    /// </summary>
+    /// <param name="bytes">The bytes to write sequentially.</param>
+    public void WriteBytes(ReadOnlySpan<byte> bytes) {
+        foreach (byte b in bytes) {
+            WriteUInt8(b);
+        }
     }
 }

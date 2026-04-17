@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
@@ -216,7 +217,8 @@ public sealed class Dos {
         MemoryManager = new DosMemoryManager(_memory, initialPspSegment, loggerService);
 
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
-        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, envVars, _loggerService);
+        IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
+        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, batchDisplayCommandHandler, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
@@ -233,6 +235,8 @@ public sealed class Dos {
             functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider,
             stack, state, _loggerService);
+
+        InitializeBootstrapZDrive();
 
         if (configuration.InitializeDOS is false) {
             return;
@@ -254,12 +258,8 @@ public sealed class Dos {
     }
 
     private void OpenDefaultFileHandles(VirtualFileBase[] fileDevices) {
-        // Ensure DOS standard handles map to fixed indices:
-        // 0 -> STDIN (console)
-        // 1 -> STDOUT (console)
-        // 2 -> STDERR (console)
-        // 3 -> STDAUX (aux)
-        // 4 -> STDPRN (printer)
+        // Ensure DOS standard handles map to fixed indices
+        // as defined in DosStandardHandle enum.
 
         // Find devices by name from the Devices list (which contains all added devices)
         VirtualFileBase? console = Devices.OfType<VirtualFileBase>().FirstOrDefault(d => string.Equals(d.Name, "CON", StringComparison.OrdinalIgnoreCase));
@@ -268,21 +268,21 @@ public sealed class Dos {
 
         var opened = new HashSet<VirtualFileBase>();
 
-        // Open console for stdin/stdout/stderr (three handles)
+        // Open console for Stdin/Stdout/Stderr
         if (console != null) {
-            FileManager.OpenDevice(console); // handle 0
+            FileManager.OpenDevice(console); // DosStandardHandle.Stdin
             opened.Add(console);
-            FileManager.OpenDevice(console); // handle 1
-            FileManager.OpenDevice(console); // handle 2
+            FileManager.OpenDevice(console); // DosStandardHandle.Stdout
+            FileManager.OpenDevice(console); // DosStandardHandle.Stderr
         }
 
-        // STDAUX -> AUX device (handle 3)
+        // DosStandardHandle.StdAux -> AUX device
         if (aux != null) {
             FileManager.OpenDevice(aux);
             opened.Add(aux);
         }
 
-        // STDPRN -> LPT1 (handle 4)
+        // DosStandardHandle.StdPrn -> LPT1
         if (prn != null) {
             FileManager.OpenDevice(prn);
             opened.Add(prn);
@@ -361,5 +361,14 @@ public sealed class Dos {
             CurrentClockDevice = (CharacterDevice)device;
         }
         Devices.Add(device);
+    }
+
+    private void InitializeBootstrapZDrive() {
+        MemoryDrive zDrive = new MemoryDrive {
+            DriveLetter = 'Z',
+            Label = "MEMORY",
+            IsReadOnlyMedium = true,
+        };
+        DosDriveManager.MountMemoryDrive(zDrive);
     }
 }
