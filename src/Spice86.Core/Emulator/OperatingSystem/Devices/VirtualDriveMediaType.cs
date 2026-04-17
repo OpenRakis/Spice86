@@ -13,12 +13,6 @@ internal enum VirtualDriveMediaType {
     /// <summary>CD-ROM drive with MSCDEX support (future support).</summary>
     CdRom = 2,
 
-    /// <summary>CD-R (write-once) drive (future support).</summary>
-    CdR = 3,
-
-    /// <summary>CD-RW (rewritable) drive (future support).</summary>
-    CdRw = 4,
-
     /// <summary>Unknown or unspecified drive type.</summary>
     Unknown = 99,
 }
