@@ -9,7 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 /// Writes x86 ASM instructions to Memory bus
 /// </summary>
 public class MemoryAsmWriter : MemoryWriter {
-    private readonly CallbackHandler _callbackHandler;
+    private readonly CallbackHandler? _callbackHandler;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MemoryAsmWriter"/> class with the specified memory as a data sink, beginningAddress and callbackHandler to register callbacks.
@@ -19,6 +19,14 @@ public class MemoryAsmWriter : MemoryWriter {
     /// <param name="callbackHandler">CallbackHandler instance to use to register the callbacks we create</param>
     public MemoryAsmWriter(IIndexable memory, SegmentedAddress beginningAddress, CallbackHandler callbackHandler) : base(memory, beginningAddress) {
         _callbackHandler = callbackHandler;
+    }
+
+    /// <summary>
+    /// Initializes a new instance for writing x86 instructions to a byte array without callback support.
+    /// </summary>
+    /// <param name="memory">Byte-array-backed memory to write instructions into.</param>
+    /// <param name="beginningAddress">Where to start writing (typically 0:0x100 for COM images).</param>
+    public MemoryAsmWriter(IIndexable memory, SegmentedAddress beginningAddress) : base(memory, beginningAddress) {
     }
 
     /// <summary>
@@ -36,11 +44,17 @@ public class MemoryAsmWriter : MemoryWriter {
     /// </summary>
     /// <param name="runnable"></param>
     public void RegisterAndWriteCallback(Action runnable) {
+        if (_callbackHandler is null) {
+            throw new UnrecoverableException("Cannot register callbacks without a CallbackHandler.");
+        }
         ushort callbackNumber = _callbackHandler.AllocateNextCallback();
         RegisterAndWriteCallback(callbackNumber, runnable);
     }
 
     private void RegisterAndWriteCallback(ushort callbackNumber, Action runnable) {
+        if (_callbackHandler is null) {
+            throw new UnrecoverableException("Cannot register callbacks without a CallbackHandler.");
+        }
         Callback callback = new Callback(callbackNumber, runnable, CurrentAddress);
         _callbackHandler.AddCallback(callback);
         WriteCallback(callback.Index);
@@ -234,5 +248,15 @@ public class MemoryAsmWriter : MemoryWriter {
         WriteUInt8(0xB8);
         WriteUInt8(alValue);
         WriteUInt8(ahValue);
+    }
+
+    /// <summary>
+    /// Writes a range of raw bytes to memory.
+    /// </summary>
+    /// <param name="bytes">The bytes to write sequentially.</param>
+    public void WriteBytes(ReadOnlySpan<byte> bytes) {
+        foreach (byte b in bytes) {
+            WriteUInt8(b);
+        }
     }
 }

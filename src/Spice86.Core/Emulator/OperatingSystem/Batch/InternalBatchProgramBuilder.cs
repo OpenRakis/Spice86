@@ -1,33 +1,41 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Batch;
 
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
+using Spice86.Core.Emulator.Memory.Indexable;
+using Spice86.Shared.Emulator.Memory;
 
 using System;
-using System.Collections.Generic;
 using System.Text;
 
 internal static class InternalBatchProgramBuilder {
+    private const ushort ComOrigin = 0x100;
+
     internal static LaunchRequest BuildPauseLaunchRequest(CommandRedirection redirection) {
         byte[] promptBytes = Encoding.ASCII.GetBytes("Press any key to continue . . .\r\n$");
 
-        X86InstructionBuilder code = new();
+        byte[] buffer = new byte[1024];
+        ByteArrayBasedIndexable indexable = new(buffer);
+        MemoryAsmWriter writer = new(indexable, new SegmentedAddress(0, 0));
 
-        code.WriteMovAh(0x09);
-        int dxPatchOffset = code.WriteMovDxWithPlaceholder();
-        code.WriteInt(0x21);
-        code.WriteMovAh(0x08);
-        code.WriteInt(0x21);
-        code.WriteMovAxSplit(0x00, 0x4C);  // Exit with code 0
-        code.WriteInt(0x21);
+        writer.WriteMovAh(0x09);
+        ushort dxPatchOffset = writer.CurrentAddress.Offset;
+        writer.WriteMovDx(0x0000);
+        writer.WriteInt(0x21);
+        writer.WriteMovAh(0x08);
+        writer.WriteInt(0x21);
+        writer.WriteMovAxSplit(0x00, 0x4C);
+        writer.WriteInt(0x21);
 
-        int promptOffset = code.Count;
-        code.AddRange(promptBytes);
+        ushort promptOffset = writer.CurrentAddress.Offset;
+        writer.WriteBytes(promptBytes);
 
-        ushort promptAddr = (ushort)(0x100 + promptOffset);
-        code[dxPatchOffset + 1] = (byte)(promptAddr & 0xFF);
-        code[dxPatchOffset + 2] = (byte)(promptAddr >> 8);
+        ushort promptAddr = (ushort)(ComOrigin + promptOffset);
+        buffer[dxPatchOffset + 1] = (byte)(promptAddr & 0xFF);
+        buffer[dxPatchOffset + 2] = (byte)(promptAddr >> 8);
 
-        return new InternalProgramLaunchRequest(code.ToArray(), redirection);
+        byte[] result = new byte[writer.CurrentAddress.Offset];
+        Array.Copy(buffer, result, result.Length);
+        return new InternalProgramLaunchRequest(result, redirection);
     }
 
     internal static LaunchRequest BuildChoiceLaunchRequest(string arguments, CommandRedirection redirection) {
@@ -202,46 +210,42 @@ internal static class InternalBatchProgramBuilder {
 
     private static byte[] BuildChoiceComStub(string choiceKeys, bool caseSensitive, string prompt,
         byte defaultExitCode) {
-        List<byte> code = new();
+        byte[] buffer = new byte[4096];
+        ByteArrayBasedIndexable indexable = new(buffer);
+        MemoryAsmWriter writer = new(indexable, new SegmentedAddress(0, 0));
+
         byte[] promptBytes = prompt.Length > 0 ? Encoding.ASCII.GetBytes(prompt + "$") : Array.Empty<byte>();
 
         int promptDxPatchOffset = -1;
         if (promptBytes.Length > 0) {
-            EmitMovAh(code, 0x09);
-            promptDxPatchOffset = EmitMovDxWithPlaceholder(code);
-            EmitInt21(code);
+            writer.WriteMovAh(0x09);
+            promptDxPatchOffset = writer.CurrentAddress.Offset;
+            writer.WriteMovDx(0x0000);
+            writer.WriteInt(0x21);
         }
 
         int defaultJePatchOffset = -1;
         if (defaultExitCode > 0) {
-            EmitMovAh(code, 0x0B);
-            EmitInt21(code);
-            // INT 21h / AH=0Bh: AL=FFh if key available, AL=00h if not
-            code.Add(0x3C);   // CMP AL, 0x00  ; no key waiting?
-            code.Add(0x00);   //   imm8 = 0x00
-            defaultJePatchOffset = code.Count;
-            code.Add(0x74);   // JE <use_default>  ; if no key, use default choice (patched later)
-            code.Add(0x00);   //   rel8 placeholder
+            writer.WriteMovAh(0x0B);
+            writer.WriteInt(0x21);
+            writer.WriteCmpAl(0x00);
+            defaultJePatchOffset = writer.CurrentAddress.Offset;
+            writer.WriteJz(0);
         }
 
-        int readLoopOffset = code.Count;
-        EmitMovAh(code, 0x08);
-        EmitInt21(code);
+        int readLoopOffset = writer.CurrentAddress.Offset;
+        writer.WriteMovAh(0x08);
+        writer.WriteInt(0x21);
 
         if (!caseSensitive) {
-            code.Add(0x3C);   // CMP AL, 'a'
-            code.Add(0x61);   //   imm8 = 0x61 ('a')
-            code.Add(0x72);   // JB +6  ; skip if AL < 'a' (not a letter)
-            code.Add(0x06);   //   rel8 = +6
-            code.Add(0x3C);   // CMP AL, 'z'
-            code.Add(0x7A);   //   imm8 = 0x7A ('z')
-            code.Add(0x77);   // JA +2  ; skip if AL > 'z' (not lowercase)
-            code.Add(0x02);   //   rel8 = +2
-            code.Add(0x2C);   // SUB AL, 0x20  ; convert lowercase to uppercase
-            code.Add(0x20);   //   imm8 = 0x20
+            writer.WriteCmpAl(0x61);
+            writer.WriteJb(6);
+            writer.WriteCmpAl(0x7A);
+            writer.WriteJa(2);
+            writer.WriteSubAl(0x20);
         }
 
-        int compareStartOffset = code.Count;
+        int compareStartOffset = writer.CurrentAddress.Offset;
         int compareBlockSize = 4 * choiceKeys.Length + 2;
 
         for (int i = 0; i < choiceKeys.Length; i++) {
@@ -249,66 +253,42 @@ internal static class InternalBatchProgramBuilder {
                 ? (byte)choiceKeys[i]
                 : (byte)char.ToUpperInvariant(choiceKeys[i]);
 
-            code.Add(0x3C);              // CMP AL, keyByte
-            code.Add(keyByte);             //   imm8 = keyByte
+            writer.WriteCmpAl(keyByte);
 
-            int jeInstructionEnd = code.Count + 2;
+            int jeInstructionEnd = writer.CurrentAddress.Offset + 2;
             int foundOffset = compareStartOffset + compareBlockSize + i * 5;
             int relativeJump = foundOffset - jeInstructionEnd;
-            code.Add(0x74);                // JE <found_i>
-            code.Add((byte)relativeJump);  //   rel8
+            writer.WriteJz((sbyte)relativeJump);
         }
 
-        int jmpInstructionEnd = code.Count + 2;
+        int jmpInstructionEnd = writer.CurrentAddress.Offset + 2;
         int backJump = readLoopOffset - jmpInstructionEnd;
-        code.Add(0xEB);                    // JMP SHORT readLoop
-        code.Add((byte)(backJump & 0xFF)); //   rel8
+        writer.WriteJumpShort((sbyte)(backJump & 0xFF));
 
         for (int i = 0; i < choiceKeys.Length; i++) {
             byte errorLevel = (byte)(i + 1);
-            EmitExitWithErrorLevel(code, errorLevel);
+            writer.WriteMovAxSplit(errorLevel, 0x4C);
+            writer.WriteInt(0x21);
         }
 
         if (defaultExitCode > 0 && defaultJePatchOffset >= 0) {
-            int useDefaultOffset = code.Count;
-            EmitExitWithErrorLevel(code, defaultExitCode);
+            int useDefaultOffset = writer.CurrentAddress.Offset;
+            writer.WriteMovAxSplit(defaultExitCode, 0x4C);
+            writer.WriteInt(0x21);
             int jeInstructionEnd = defaultJePatchOffset + 2;
-            code[defaultJePatchOffset + 1] = (byte)(useDefaultOffset - jeInstructionEnd);
+            buffer[defaultJePatchOffset + 1] = (byte)(useDefaultOffset - jeInstructionEnd);
         }
 
         if (promptBytes.Length > 0 && promptDxPatchOffset >= 0) {
-            int promptDataOffset = code.Count;
-            code.AddRange(promptBytes);
-            ushort promptAddr = (ushort)(0x100 + promptDataOffset);
-            code[promptDxPatchOffset + 1] = (byte)(promptAddr & 0xFF);
-            code[promptDxPatchOffset + 2] = (byte)(promptAddr >> 8);
+            int promptDataOffset = writer.CurrentAddress.Offset;
+            writer.WriteBytes(promptBytes);
+            ushort promptAddr = (ushort)(ComOrigin + promptDataOffset);
+            buffer[promptDxPatchOffset + 1] = (byte)(promptAddr & 0xFF);
+            buffer[promptDxPatchOffset + 2] = (byte)(promptAddr >> 8);
         }
 
-        return [.. code];
-    }
-
-    private static void EmitMovAh(List<byte> code, byte value) {
-        code.Add(0xB4);   // MOV AH, imm8
-        code.Add(value);  //   imm8
-    }
-
-    private static int EmitMovDxWithPlaceholder(List<byte> code) {
-        int patchOffset = code.Count;
-        code.Add(0xBA);   // MOV DX, imm16
-        code.Add(0x00);   //   imm16 lo (patched later)
-        code.Add(0x00);   //   imm16 hi (patched later)
-        return patchOffset;
-    }
-
-    private static void EmitInt21(List<byte> code) {
-        code.Add(0xCD);   // INT imm8
-        code.Add(0x21);   //   imm8 = 0x21
-    }
-
-    private static void EmitExitWithErrorLevel(List<byte> code, byte errorLevel) {
-        code.Add(0xB8);        // MOV AX, imm16
-        code.Add(errorLevel);  //   imm16 lo = exit code
-        code.Add(0x4C);        //   imm16 hi = 0x4C (INT 21h fn: terminate with exit code in AL)
-        EmitInt21(code);       // INT 21h
+        byte[] result = new byte[writer.CurrentAddress.Offset];
+        Array.Copy(buffer, result, result.Length);
+        return result;
     }
 }
