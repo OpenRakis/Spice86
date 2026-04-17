@@ -18,6 +18,8 @@ internal class DosPathResolver {
     private const int DosMfnlength = 8;
     private const int DosExtlength = 3;
     private const int LfnNamelength = 255; // for the sanity check only
+    // Match DOS COMMAND.COM batch-first executable lookup order: .BAT is searched before .COM and .EXE.
+    private static readonly string[] ExecutableExtensionLookupOrder = [".BAT", ".COM", ".EXE"];
 
     private readonly DosDriveManager _dosDriveManager;
 
@@ -51,7 +53,7 @@ internal class DosPathResolver {
     }
 
     private static string GetFullCurrentDosPathOnDrive(VirtualDrive virtualDrive) =>
-        Path.Combine($"{virtualDrive.DosVolume}{DirectorySeparatorChar}", virtualDrive.CurrentDosDirectory);
+        Path.Join($"{virtualDrive.DosVolume}{DirectorySeparatorChar}", virtualDrive.CurrentDosDirectory);
 
     internal static string GetExeParentFolder(string? exe) {
         string fallbackValue = ConvertUtils.ToSlashFolderPath(Environment.CurrentDirectory);
@@ -105,7 +107,7 @@ internal class DosPathResolver {
     }
 
     private string GetFullDosPathIncludingRoot(string absoluteOrRelativeDosPath) {
-        if(string.IsNullOrWhiteSpace(absoluteOrRelativeDosPath)) {
+        if (string.IsNullOrWhiteSpace(absoluteOrRelativeDosPath)) {
             return absoluteOrRelativeDosPath;
         }
         StringBuilder normalizedDosPath = new();
@@ -115,10 +117,9 @@ internal class DosPathResolver {
         string driveRoot = $"{GetDosDrivePathFromDosPath(backslashedDosPath)}{DirectorySeparatorChar}";
         normalizedDosPath.Append(driveRoot);
 
-        if(backslashedDosPath.StartsWith(driveRoot)) {
+        if (backslashedDosPath.StartsWith(driveRoot)) {
             backslashedDosPath = backslashedDosPath[3..];
-        }
-        else if (backslashedDosPath.StartsWith(driveRoot[..2])) {
+        } else if (backslashedDosPath.StartsWith(driveRoot[..2])) {
             backslashedDosPath = backslashedDosPath[2..];
         }
 
@@ -128,17 +129,16 @@ internal class DosPathResolver {
         bool appendedFolder = false;
         bool mustPrependDirectorySeparator = false;
         foreach (string pathElement in pathElements) {
-            if(pathElement == ".." && appendedFolder) {
+            if (pathElement == ".." && appendedFolder) {
                 moveNext = true;
-            }
-            else {
-                if(moveNext) {
+            } else {
+                if (moveNext) {
                     moveNext = false;
                     continue;
                 }
-                if(pathElement != "." && pathElement != ".." && !pathElement.Contains(VolumeSeparatorChar)) {
+                if (pathElement != "." && pathElement != ".." && !pathElement.Contains(VolumeSeparatorChar)) {
                     appendedFolder = true;
-                    if(mustPrependDirectorySeparator) {
+                    if (mustPrependDirectorySeparator) {
                         normalizedDosPath.Append(DirectorySeparatorChar);
                     }
                     normalizedDosPath.Append(pathElement.ToUpperInvariant());
@@ -157,7 +157,7 @@ internal class DosPathResolver {
     /// <returns>A string containing the full path to the parent directory in the host file system, or <c>null</c> if nothing was found.</returns>
     public string? GetFullHostParentPathFromDosOrDefault(string dosPath) {
         string? parentPath = Path.GetDirectoryName(dosPath);
-        if(string.IsNullOrWhiteSpace(parentPath)) {
+        if (string.IsNullOrWhiteSpace(parentPath)) {
             parentPath = GetFullCurrentDosPathOnDrive(_dosDriveManager.CurrentDrive);
         }
         string? fullHostPath = GetFullHostPathFromDosOrDefault(parentPath);
@@ -212,7 +212,7 @@ internal class DosPathResolver {
             return ConvertUtils.ToSlashPath(resolvedHostDir);
         }
 
-        var options = new EnumerationOptions {
+        EnumerationOptions options = new EnumerationOptions {
             RecurseSubdirectories = false,
             MatchCasing = MatchCasing.CaseInsensitive,
             ReturnSpecialDirectories = false
@@ -220,6 +220,102 @@ internal class DosPathResolver {
 
         string? firstMatch = FindFilesUsingWildCmp(resolvedHostDir, lastSegment, options).FirstOrDefault();
         return string.IsNullOrWhiteSpace(firstMatch) ? null : ConvertUtils.ToSlashPath(firstMatch);
+    }
+
+    /// <summary>
+    /// Resolves a DOS path to a host path for a file that may not yet exist.
+    /// The parent directory must exist; the filename is appended as-is.
+    /// </summary>
+    /// <param name="dosPath">The DOS path of the new file.</param>
+    /// <returns>A host file path, or <c>null</c> if the parent directory cannot be resolved.</returns>
+    public string? ResolveNewFilePath(string dosPath) {
+        if (string.IsNullOrWhiteSpace(dosPath)) {
+            return null;
+        }
+
+        dosPath = GetFullDosPathIncludingRoot(dosPath);
+        (string hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
+
+        if (string.IsNullOrWhiteSpace(dosRelativePath)) {
+            return null;
+        }
+
+        string slashedRelative = ConvertUtils.ToSlashPath(dosRelativePath);
+        int lastSlash = slashedRelative.LastIndexOf('/');
+        string dirPart = lastSlash >= 0 ? slashedRelative[..lastSlash] : string.Empty;
+        string fileName = lastSlash >= 0 ? slashedRelative[(lastSlash + 1)..] : slashedRelative;
+
+        if (string.IsNullOrWhiteSpace(fileName)) {
+            return null;
+        }
+
+        string? resolvedHostDir = ResolveCaseInsensitiveDirectory(hostPrefix, dirPart);
+        if (string.IsNullOrWhiteSpace(resolvedHostDir)) {
+            return null;
+        }
+
+        return ConvertUtils.ToSlashPath(Path.Join(resolvedHostDir, fileName));
+    }
+
+    /// <summary>
+    /// Converts the DOS path to a full host path, probing for executable extensions (.BAT, .COM, .EXE)
+    /// when the path has no extension. Use this only for execution-related path resolution.
+    /// </summary>
+    /// <param name="dosPath">The DOS path to convert.</param>
+    /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
+    public string? GetFullHostExecutablePathFromDosOrDefault(string dosPath) {
+        if (string.IsNullOrWhiteSpace(dosPath)) {
+            return null;
+        }
+        dosPath = GetFullDosPathIncludingRoot(dosPath);
+
+        (string hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
+
+        if (string.IsNullOrWhiteSpace(dosRelativePath)) {
+            return ConvertUtils.ToSlashPath(hostPrefix);
+        }
+
+        string slashedRelative = ConvertUtils.ToSlashPath(dosRelativePath);
+        int lastSlash = slashedRelative.LastIndexOf('/');
+        string dirPart = lastSlash >= 0 ? slashedRelative[..lastSlash] : string.Empty;
+        string lastSegment = lastSlash >= 0 ? slashedRelative[(lastSlash + 1)..] : slashedRelative;
+
+        string? resolvedHostDir = ResolveCaseInsensitiveDirectory(hostPrefix, dirPart);
+        if (string.IsNullOrWhiteSpace(resolvedHostDir)) {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(lastSegment)) {
+            return ConvertUtils.ToSlashPath(resolvedHostDir);
+        }
+
+        EnumerationOptions options = new EnumerationOptions {
+            RecurseSubdirectories = false,
+            MatchCasing = MatchCasing.CaseInsensitive,
+            ReturnSpecialDirectories = false
+        };
+
+        string? firstMatch = FindFilesUsingWildCmp(resolvedHostDir, lastSegment, options).FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(firstMatch)) {
+            return ConvertUtils.ToSlashPath(firstMatch);
+        }
+
+        string? extensionProbeMatch = TryResolveExecutableWithoutExtension(resolvedHostDir, lastSegment, options);
+        return string.IsNullOrWhiteSpace(extensionProbeMatch) ? null : ConvertUtils.ToSlashPath(extensionProbeMatch);
+    }
+
+    private string? TryResolveExecutableWithoutExtension(string resolvedHostDir, string lastSegment, EnumerationOptions options) {
+        if (string.IsNullOrWhiteSpace(lastSegment)) {
+            return null;
+        }
+
+        if (lastSegment.Contains('*') || lastSegment.Contains('?') || Path.HasExtension(lastSegment)) {
+            return null;
+        }
+
+        return ExecutableExtensionLookupOrder
+            .Select(extension => FindFilesUsingWildCmp(resolvedHostDir, $"{lastSegment}{extension}", options).FirstOrDefault())
+            .FirstOrDefault(match => !string.IsNullOrWhiteSpace(match));
     }
 
     private static string? ResolveCaseInsensitiveDirectory(string hostPrefix, string dirPart) {
@@ -247,43 +343,94 @@ internal class DosPathResolver {
 
         return current;
     }
-    
+
     internal static string GetShortFileName(string hostFileName, string hostDir) {
-        string fileName = Path.GetFileNameWithoutExtension(hostFileName);
-        string extension = Path.GetExtension(hostFileName);
-        // Initialize the StringBuilder for our result
-        StringBuilder shortName = new StringBuilder();
+        string rawName = Path.GetFileNameWithoutExtension(hostFileName);
+        string rawExtension = Path.GetExtension(hostFileName);
 
-        // Count files with similar names for collision detection
-        int count = 1;
-        if (!string.IsNullOrWhiteSpace(hostDir) && Directory.Exists(hostDir)) {
-            count = new DirectoryInfo(hostDir).EnumerateFiles($"{fileName}.*")
-                .TakeWhile(x => x.Name != hostFileName).Count() + 1;
+        // Step 1: Uppercase and strip spaces (DOSBox: upcase + RemoveSpaces)
+        string upperName = rawName.ToUpperInvariant().Replace(" ", "", StringComparison.Ordinal);
+        string upperExtension = rawExtension.ToUpperInvariant().Replace(" ", "", StringComparison.Ordinal);
+
+        // Step 2: Strip leading dots from the name portion
+        int leadingDots = 0;
+        while (leadingDots < upperName.Length && upperName[leadingDots] == '.') {
+            leadingDots++;
+        }
+        if (leadingDots > 0) {
+            upperName = upperName[leadingDots..];
         }
 
-        // Handle filename part (8 characters)
-        if (fileName.Length > 8) {
-            // Need to add tilde notation (~N)
-            int digitsInCount = count.ToString().Length;
-            int charsToKeep = Math.Max(1, 8 - 1 - digitsInCount);
+        // Step 3: Determine if a short name with tilde is needed (DOSBox logic)
+        bool needsShortName = upperName.Length != rawName.Length; // spaces were removed
+        needsShortName = needsShortName || upperName.Length > DosMfnlength; // name > 8 chars
+        needsShortName = needsShortName || rawExtension.Length > DosExtlength + 1; // extension > 3 chars (including dot)
 
-            shortName.Append(fileName.AsSpan(0, charsToKeep));
-            shortName.Append('~');
-            shortName.Append(count);
+        // Step 4: Truncate extension to 3 chars
+        string shortExtension;
+        if (upperExtension.Length > DosExtlength + 1) {
+            shortExtension = upperExtension[..(DosExtlength + 1)]; // ".EXT"
         } else {
-            shortName.Append(fileName);
+            shortExtension = upperExtension;
         }
 
-        if (extension != null) {
-            if (extension.Length > 4) {
-                shortName.Append(extension.AsSpan(0, 4));
-            } else {
-                shortName.Append(extension);
+        if (!needsShortName) {
+            // No tilde needed — return uppercased name + extension
+            return $"{upperName}{shortExtension}";
+        }
+
+        // Step 5: Count collisions with same short-name stem in the directory (DOSBox: CreateShortNameID)
+        int shortNr = ComputeShortNameId(hostFileName, upperName, hostDir);
+
+        // Step 6: Build NAMEXX~N format
+        string shortNrStr = shortNr.ToString();
+        int tildeSize = 1 + shortNrStr.Length; // '~' + digits
+        int charsToKeep = Math.Min(upperName.Length, DosMfnlength - tildeSize);
+        charsToKeep = Math.Max(charsToKeep, 1);
+
+        StringBuilder shortName = new();
+        shortName.Append(upperName.AsSpan(0, charsToKeep));
+        shortName.Append('~');
+        shortName.Append(shortNrStr);
+        shortName.Append(shortExtension);
+
+        return shortName.ToString();
+    }
+
+    private static int ComputeShortNameId(string hostFileName, string upperName, string hostDir) {
+        if (string.IsNullOrWhiteSpace(hostDir) || !Directory.Exists(hostDir)) {
+            return 1;
+        }
+
+        // Build the short-name prefix that this file would get (before the ~N part).
+        int maxStemChars = Math.Min(upperName.Length, DosMfnlength - 2); // leave room for at least ~1
+        maxStemChars = Math.Max(maxStemChars, 1);
+        string stemPrefix = upperName[..maxStemChars];
+
+        // Collect ALL entries whose truncated 8.3 stem prefix matches ours — including
+        // entries that are already valid 8.3 names (e.g. an existing VERYLO~1.TXT
+        // would otherwise be skipped and cause a duplicate short name to be assigned).
+        List<string> colliders = new();
+        foreach (string entry in Directory.EnumerateFileSystemEntries(hostDir)) {
+            string entryFileName = Path.GetFileName(entry);
+            string entryBase = Path.GetFileNameWithoutExtension(entryFileName)
+                .ToUpperInvariant()
+                .Replace(" ", "", StringComparison.Ordinal);
+
+            int entryMaxStem = Math.Min(entryBase.Length, DosMfnlength - 2);
+            entryMaxStem = Math.Max(entryMaxStem, 1);
+            string entryPrefix = entryBase[..entryMaxStem];
+
+            if (string.Equals(stemPrefix, entryPrefix, StringComparison.OrdinalIgnoreCase)) {
+                colliders.Add(entryFileName);
             }
         }
-        return shortName.ToString().ToUpperInvariant();
+
+        colliders.Sort(StringComparer.OrdinalIgnoreCase);
+        int index = colliders.FindIndex(f => string.Equals(f, hostFileName, StringComparison.OrdinalIgnoreCase));
+        return index >= 0 ? index + 1 : colliders.Count + 1;
     }
-    
+
     /// <summary>
     /// Prefixes the given DOS path by either the mapped drive folder or the current host folder depending on whether there is a root in the path.<br/>
     /// Does not convert to a case sensitive path. <br/>
@@ -297,7 +444,7 @@ internal class DosPathResolver {
         }
         dosPath = GetFullDosPathIncludingRoot(dosPath);
         (string HostPrefix, string DosRelativePath) = DeconstructDosPath(dosPath);
-        return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, DosRelativePath));
+        return ConvertUtils.ToSlashPath(Path.Join(HostPrefix, DosRelativePath));
     }
 
     private bool StartsWithDosDriveAndVolumeSeparator(string dosPath) =>
@@ -319,7 +466,8 @@ internal class DosPathResolver {
     /// <param name="hostFolder">The full path to the host folder to look into.</param>
     /// <returns>A boolean value indicating if there is any folder or file with the same name.</returns>
     public bool AnyDosDirectoryOrFileWithTheSameName(string newFileOrDirectoryPath, DirectoryInfo hostFolder) =>
-        GetTopLevelDirsAndFiles(hostFolder.FullName).Any(x => string.Equals(x, newFileOrDirectoryPath, StringComparison.OrdinalIgnoreCase));
+        GetTopLevelDirsAndFiles(hostFolder.FullName).Any(x =>
+            string.Equals(Path.GetFileName(x), Path.GetFileName(newFileOrDirectoryPath), StringComparison.OrdinalIgnoreCase));
 
     private static IEnumerable<string> GetTopLevelDirsAndFiles(string hostPath, string searchPattern = "*") {
         return Directory
@@ -395,7 +543,7 @@ internal class DosPathResolver {
                 return false;
             }
         }
-        
+
         // ---- EXT compare (early '*' accept) ----
         return CompareSegment(fileExt, wildExt, DosExtlength) switch {
             true => true,
