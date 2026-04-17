@@ -1,40 +1,14 @@
-﻿namespace Spice86.Tests.Dos;
+namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
-using NSubstitute;
-
-using Spice86.Audio.Filters;
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.Devices.Input.Keyboard;
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Timer;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InterruptHandlers.Bios;
-using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
-using Spice86.Core.Emulator.InterruptHandlers.VGA;
-using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Core.Emulator.StateSerialization;
-using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.DeviceScheduler;
-using Spice86.Shared.Interfaces;
-using Spice86.Tests.Utility;
 
 using Xunit;
 
 public class DosFileManagerTests {
-    private static readonly string MountPoint = Path.GetFullPath(Path.Combine("Resources", "MountPoint"));
+    private static readonly string MountPoint = Path.GetFullPath(Path.Join("Resources", "MountPoint"));
 
     [Theory]
     [InlineData(@"\FoO", "FOO")]
@@ -151,6 +125,11 @@ public class DosFileManagerTests {
             DosDiskTransferArea dta = fixture.DosFileManager.DiskTransferArea;
             dta.FileName.Should().Be("HELLO.TXT", "Extended FindFirst should write ASCIIZ 8.3 filename at offset 0x1E");
             dta.FileSize.Should().Be(7);
+
+            // Exhaust the search and ensure it is cleaned up.
+            DosFileOperationResult nextResult = fixture.DosFileManager.FindNextMatchingFile();
+            nextResult.IsError.Should().BeTrue();
+            dta.SearchId.Should().Be(0u, "FindNext exhaustion should clear active search state");
         } finally {
             Directory.Delete(mountPoint, recursive: true);
         }
