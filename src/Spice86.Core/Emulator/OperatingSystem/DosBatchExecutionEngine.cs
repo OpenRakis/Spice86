@@ -94,9 +94,9 @@ internal sealed class DosBatchExecutionEngine {
     }
 
     internal void RestoreStandardHandlesAfterLaunch() {
-        RestoreStandardHandle(0, ref _stdinRedirected, ref _savedStandardInput);
-        RestoreStandardHandle(1, ref _stdoutRedirected, ref _savedStandardOutput);
-        RestoreStandardHandle(2, ref _stderrRedirected, ref _savedStandardError);
+        RestoreStandardHandle((ushort)DosStandardHandle.Stdin, ref _stdinRedirected, ref _savedStandardInput);
+        RestoreStandardHandle((ushort)DosStandardHandle.Stdout, ref _stdoutRedirected, ref _savedStandardOutput);
+        RestoreStandardHandle((ushort)DosStandardHandle.Stderr, ref _stderrRedirected, ref _savedStandardError);
     }
 
     private void RestoreStandardHandle(ushort handle, ref bool isRedirected, ref VirtualFileBase? savedHandle) {
@@ -578,7 +578,7 @@ internal sealed class DosBatchExecutionEngine {
     }
 
     private void WriteToStandardOutput(string text) {
-        VirtualFileBase? output = _dosFileManager.OpenFiles[1];
+        VirtualFileBase? output = _dosFileManager.OpenFiles[(ushort)DosStandardHandle.Stdout];
         if (output == null) {
             return;
         }
@@ -606,7 +606,7 @@ internal sealed class DosBatchExecutionEngine {
 
             ushort handle = (ushort)openResult.Value.Value;
             VirtualFileBase? openedFile = _dosFileManager.OpenFiles[handle];
-            VirtualFileBase? stdout = _dosFileManager.OpenFiles[1];
+            VirtualFileBase? stdout = _dosFileManager.OpenFiles[(ushort)DosStandardHandle.Stdout];
             if (openedFile == null || stdout == null) {
                 _dosFileManager.CloseFileOrDevice(handle);
                 return false;
@@ -2396,7 +2396,7 @@ internal sealed class DosBatchExecutionEngine {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("BATCH: Redirecting stdout to {Path} (append={Append})", redirection.OutputPath, redirection.AppendOutput);
             }
-            if (!TryRedirectStandardOutput(redirection.OutputPath, redirection.AppendOutput, 1)) {
+            if (!TryRedirectStandardOutput(redirection.OutputPath, redirection.AppendOutput, (ushort)DosStandardHandle.Stdout)) {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("BATCH: Failed to redirect stdout to {Path}", redirection.OutputPath);
                 }
@@ -2409,7 +2409,7 @@ internal sealed class DosBatchExecutionEngine {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("BATCH: Redirecting stderr to {Path} (append={Append})", redirection.ErrorPath, redirection.AppendError);
             }
-            if (!TryRedirectStandardOutput(redirection.ErrorPath, redirection.AppendError, 2)) {
+            if (!TryRedirectStandardOutput(redirection.ErrorPath, redirection.AppendError, (ushort)DosStandardHandle.Stderr)) {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("BATCH: Failed to redirect stderr to {Path}", redirection.ErrorPath);
                 }
@@ -2427,7 +2427,7 @@ internal sealed class DosBatchExecutionEngine {
             return false;
         }
 
-        return TryMoveHandleToStandard((ushort)openResult.Value.Value, 0);
+        return TryMoveHandleToStandard((ushort)openResult.Value.Value, (ushort)DosStandardHandle.Stdin);
     }
 
     private bool TryRedirectStandardOutput(string dosPath, bool append, ushort standardHandle) {
@@ -2474,22 +2474,22 @@ internal sealed class DosBatchExecutionEngine {
     }
 
     private void TrackOriginalStandardHandle(ushort standardHandle) {
-        switch (standardHandle) {
-            case 0:
+        switch ((DosStandardHandle)standardHandle) {
+            case DosStandardHandle.Stdin:
                 if (!_stdinRedirected) {
-                    _savedStandardInput = _dosFileManager.OpenFiles[0];
+                    _savedStandardInput = _dosFileManager.OpenFiles[(ushort)DosStandardHandle.Stdin];
                     _stdinRedirected = true;
                 }
                 break;
-            case 1:
+            case DosStandardHandle.Stdout:
                 if (!_stdoutRedirected) {
-                    _savedStandardOutput = _dosFileManager.OpenFiles[1];
+                    _savedStandardOutput = _dosFileManager.OpenFiles[(ushort)DosStandardHandle.Stdout];
                     _stdoutRedirected = true;
                 }
                 break;
-            case 2:
+            case DosStandardHandle.Stderr:
                 if (!_stderrRedirected) {
-                    _savedStandardError = _dosFileManager.OpenFiles[2];
+                    _savedStandardError = _dosFileManager.OpenFiles[(ushort)DosStandardHandle.Stderr];
                     _stderrRedirected = true;
                 }
                 break;

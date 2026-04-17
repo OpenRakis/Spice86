@@ -271,8 +271,7 @@ public class DosProcessManager : IDosBatchExecutionHost {
         rootPsp.DosVersionMinor = DefaultDosVersionMinor;
 
         // Initialize standard file handles in the PSP file handle table
-        // Standard handles: 0=stdin, 1=stdout, 2=stderr, 3=stdaux, 4=stdprn
-        // These correspond to the devices opened in Dos.OpenDefaultFileHandles()
+        // (see DosStandardHandle enum for handle assignments)
         for (byte i = 0; i < StandardFileHandleCount; i++) {
             rootPsp.Files[i] = i;
         }
