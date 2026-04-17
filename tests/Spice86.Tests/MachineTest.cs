@@ -204,13 +204,13 @@ public class MachineTest
     public void TestSelfModifyValue()
     {
         byte[] expected = new byte[4];
-        expected[0x00] = 0x01;
+        expected[0x00] = 0x0a;
         expected[0x01] = 0x00;
         expected[0x02] = 0xff;
         expected[0x03] = 0xff;
         Machine machine = TestOneBin("selfmodifyvalue", expected);
         CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
-        CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x00A));
+        CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x00D));
         Assert.NotNull(instruction);
         if (instruction is MovRegImm16 movAxModifiedImm) {
             InstructionField<ushort> immField = movAxModifiedImm.ValueField;
