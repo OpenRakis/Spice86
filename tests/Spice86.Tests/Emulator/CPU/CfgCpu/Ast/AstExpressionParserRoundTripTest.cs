@@ -264,8 +264,8 @@ public class AstExpressionParserRoundTripTest {
     [InlineData("byte ptr [0x1000]", "byte ptr [0x00001000]")]
     [InlineData("word ptr [0x1000]", "word ptr [0x00001000]")]
     [InlineData("dword ptr [0x1000]", "dword ptr [0x00001000]")]
-    [InlineData("byte ptr [ax]", "byte ptr [AX]")]
-    [InlineData("word ptr [bx]", "word ptr [BX]")]
+    [InlineData("byte ptr [ax]", "byte ptr [(uint)AX]")]
+    [InlineData("word ptr [bx]", "word ptr [(uint)BX]")]
     [InlineData("dword ptr [ebx]", "dword ptr [EBX]")]
     [InlineData("byte ptr [ax+bx]", "byte ptr [AX+BX]")]
     [InlineData("word ptr [0x1000+ax]", "word ptr [0x00001000+AX]")]
@@ -274,14 +274,16 @@ public class AstExpressionParserRoundTripTest {
     }
 
     [Theory]
-    [InlineData("byte ptr es:[0x100]", "byte ptr ES:[0x00000100]")]
-    [InlineData("word ptr ds:[0x100]", "word ptr DS:[0x00000100]")]
-    [InlineData("dword ptr fs:[0x100]", "dword ptr FS:[0x00000100]")]
+    [InlineData("byte ptr es:[0x100]", "byte ptr ES:[0x0100]")]
+    [InlineData("word ptr ds:[0x100]", "word ptr DS:[0x0100]")]
+    [InlineData("dword ptr fs:[0x100]", "dword ptr FS:[0x0100]")]
     [InlineData("byte ptr es:[bx]", "byte ptr ES:[BX]")]
     [InlineData("word ptr ds:[si]", "word ptr DS:[SI]")]
-    [InlineData("dword ptr fs:[edi]", "dword ptr FS:[EDI]")]
-    [InlineData("byte ptr es:[bx+si]", "byte ptr ES:[BX+SI]")]
-    [InlineData("word ptr ds:[0x100+ax]", "word ptr DS:[0x00000100+AX]")]
+    [InlineData("dword ptr fs:[edi]", "dword ptr FS:[(ushort)EDI]")]
+    [InlineData("word ptr es:[edi]", "word ptr ES:[(ushort)EDI]")]
+    [InlineData("byte ptr es:[bx+si]", "byte ptr ES:[(ushort)(BX+SI)]")]
+    [InlineData("word ptr ds:[0x100+ax]", "word ptr DS:[(ushort)(0x00000100+AX)]")]
+    [InlineData("word ptr ds:[edi+bx]", "word ptr DS:[(ushort)(EDI+BX)]")]
     public void TestSegmentedPointer(string expression, string? expected = null) {
         AssertRoundTrip(expression, expected);
     }
@@ -309,7 +311,7 @@ public class AstExpressionParserRoundTripTest {
     [InlineData("ax==0x100||(bx==0x200&&cx==0x300)", "(uint)AX==0x00000100||(uint)BX==0x00000200&&(uint)CX==0x00000300")]  // Redundant parentheses removed
     [InlineData("(ax==0x100||bx==0x200)&&cx==0x300", "((uint)AX==0x00000100||(uint)BX==0x00000200)&&(uint)CX==0x00000300")]
     [InlineData("ax+bx>0x100&&cx<0x200", "AX+BX>0x00000100&&(uint)CX<0x00000200")]  // Addition result not wrapped in type conversion
-    [InlineData("byte ptr [ax]==0x42&&bx!=0", "(uint)byte ptr [AX]==0x00000042&&(ushort)BX!=0")]  // Address not type converted
+    [InlineData("byte ptr [ax]==0x42&&bx!=0", "(uint)byte ptr [(uint)AX]==0x00000042&&(ushort)BX!=0")]  // Address not type converted
     [InlineData("word ptr ds:[bx]>0x100||ax==0", "(uint)word ptr DS:[BX]>0x00000100||(ushort)AX==0")]  // Address not type converted
     public void TestComplexExpressions(string expression, string? expected = null) {
         AssertRoundTrip(expression, expected);

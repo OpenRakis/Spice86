@@ -276,7 +276,9 @@ public class Spice86DependencyInjection : IDisposable {
         NodeToString nodeToString = new NodeToString(asmRenderingConfig);
         CpuHeavyLogger? cpuHeavyLogger = null;
         if (configuration.CpuHeavyLog) {
-            cpuHeavyLogger = new CpuHeavyLogger(emulatorStateSerializationFolder, configuration.CpuHeavyLogDumpFile, nodeToString, state, asmRenderingConfig);
+            IReadOnlyList<CompiledLogExpression> compiledLogExpressions = BuildCompiledLogExpressions(
+                configuration, state, memory);
+            cpuHeavyLogger = new CpuHeavyLogger(emulatorStateSerializationFolder, configuration.CpuHeavyLogDumpFile, nodeToString, state, asmRenderingConfig, compiledLogExpressions);
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
                 loggerService.Information("CPU heavy logger created. Logging to: {LogFile}",
                     configuration.CpuHeavyLogDumpFile ?? Path.Join(emulatorStateSerializationFolder.Folder, "cpu_heavy.log"));
@@ -792,6 +794,20 @@ public class Spice86DependencyInjection : IDisposable {
         } else if (configuration.VerboseLogs) {
             loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
         }
+    }
+
+    private static IReadOnlyList<CompiledLogExpression> BuildCompiledLogExpressions(
+        Configuration configuration, State state, IMemory memory) {
+        if (configuration.CpuHeavyLogExpressions == null
+            || configuration.CpuHeavyLogExpressions.Length == 0) {
+            return Array.Empty<CompiledLogExpression>();
+        }
+        LogExpressionCompiler compiler = new(state, memory);
+        List<CompiledLogExpression> result = new(configuration.CpuHeavyLogExpressions.Length);
+        foreach (string namedExpr in configuration.CpuHeavyLogExpressions) {
+            result.Add(compiler.Compile(namedExpr));
+        }
+        return result;
     }
 
     private static Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(

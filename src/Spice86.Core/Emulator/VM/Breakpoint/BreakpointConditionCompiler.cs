@@ -1,8 +1,6 @@
 namespace Spice86.Core.Emulator.VM.Breakpoint;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.Memory;
 using System.Linq.Expressions;
@@ -30,23 +28,10 @@ public class BreakpointConditionCompiler {
     /// <returns>A compiled function that evaluates the condition given a trigger address.</returns>
     /// <exception cref="ArgumentException">Thrown if the expression cannot be parsed or compiled.</exception>
     public Func<long, bool> Compile(string expression) {
-        // Parse the condition string into CfgCpu AST nodes
-        AstExpressionParser parser = new();
-        ValueNode astNode = parser.Parse(expression);
-        
-        // Convert AST to Expression tree and compile to native code
         AstExpressionBuilder builder = new();
-        Expression expressionTree = astNode.Accept(builder);
+        Expression expressionTree = AstExpressionCompilationHelper.BuildExpression(expression, builder);
         Expression<Func<State, Memory, bool>> lambda = builder.ToFuncBool(expressionTree);
         Func<State, Memory, bool> compiledFunc = lambda.Compile();
-        
-        // Return a wrapper that provides the current CPU state and memory
-        return (address) => {
-            // Note: The 'address' parameter is currently not used in the evaluation
-            // because the parser creates nodes that directly access CPU state.
-            // If we need to support the "address" keyword in expressions,
-            // we would need to modify the parser to handle it specially.
-            return compiledFunc(_state, _memory);
-        };
+        return (address) => compiledFunc(_state, _memory);
     }
 }

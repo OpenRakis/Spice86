@@ -71,6 +71,7 @@ For detailed debugging, you can enable CPU heavy logging which records every exe
 |---------|-------------|
 | `--CpuHeavyLog` | Enables CPU heavy logging (default: false) |
 | `--CpuHeavyLogDumpFile` | Custom path for the log file (optional). If set, will enable CpuHeavyLog as well. Default Location: `{DumpDirectory}/cpu_heavy.log` |
+| `--CpuHeavyLogExpressions` | Named expressions appended to every CPU heavy log line. Repeat the option for each expression to append (for example: `--CpuHeavyLogExpressions "life=AX+1" --CpuHeavyLogExpressions "myvalue=word ptr DS:[0x456]"`). Only active when `--CpuHeavyLog` is true. |
 
 **Log Format:** Each line contains: `SegmentedAddress InstructionString`
 
@@ -90,7 +91,13 @@ Spice86 -e program.exe --CpuHeavyLog
 
 # Use custom log file path
 Spice86 -e program.exe --CpuHeavyLog --CpuHeavyLogDumpFile "C:\logs\cpu.log"
+
+# Append named expressions to each log line (example)
+Spice86 -e program.exe --CpuHeavyLog \
+  --CpuHeavyLogExpressions "life=AX+1" \
+  --CpuHeavyLogExpressions "myvalue=word ptr DS:[0x456]"
 ```
+
 
 ## Command line options
 
@@ -122,6 +129,7 @@ Spice86 -e program.exe --CpuHeavyLog --CpuHeavyLogDumpFile "C:\logs\cpu.log"
   -i, --InitializeDOS                (Default: true) Install DOS interrupt vectors or not.
   --CpuHeavyLog                      (Default: false) Enable CPU heavy logging. Logs every executed instruction to a file. Warning: significant performance impact.
   --CpuHeavyLogDumpFile              Custom file path for CPU heavy log output. If not specified, defaults to {DumpDirectory}/cpu_heavy.log
+  --CpuHeavyLogExpressions           (Default: none) Named expressions appended to every CPU heavy log line. Repeat the option for each expression to append (for example: --CpuHeavyLogExpressions "life=AX+1"). Only active when --CpuHeavyLog is true.
   --AsmRenderingStyle                Style of the ASM rendering. Spice86 or DosBox.
   --StructureFile                    Path to a C header file that describes the structures in the application. Works best with exports from IDA or Ghidra
   --mcp-http-port                    (Default: 8081) Port for the MCP HTTP server

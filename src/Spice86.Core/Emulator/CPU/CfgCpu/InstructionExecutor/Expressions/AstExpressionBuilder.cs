@@ -371,7 +371,8 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression<Func<State, Memory, uint>> ToFuncUInt32(Expression expression) {
-        return Expression.Lambda<Func<State, Memory, uint>>(expression, _allParameters);
+        Expression converted = Expression.Convert(expression, typeof(uint));
+        return Expression.Lambda<Func<State, Memory, uint>>(converted, _allParameters);
     }
     
     public Expression<Func<State, Memory, int>> ToFuncInt32(Expression expression) {

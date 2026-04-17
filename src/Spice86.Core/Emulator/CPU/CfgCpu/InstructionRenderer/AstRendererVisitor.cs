@@ -203,7 +203,11 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
             BitWidth.QWORD_64 => node.DataType.Signed ? "(long)" : "(ulong)",
             _ => throw new InvalidOperationException($"Unsupported bit width {node.DataType.BitWidth}")
         };
-        return _outputRenderer.Concat(_outputRenderer.Keyword(typeStr), node.Value.Accept(this));
+        TOutput value = node.Value.Accept(this);
+        if (node.Value is BinaryOperationNode) {
+            value = _outputRenderer.Concat(_outputRenderer.Punctuation("("), value, _outputRenderer.Punctuation(")"));
+        }
+        return _outputRenderer.Concat(_outputRenderer.Keyword(typeStr), value);
     }
 
     private static bool IsZero(ValueNode valueNode) {
