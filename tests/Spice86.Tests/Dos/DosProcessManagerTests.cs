@@ -6,6 +6,7 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
@@ -57,7 +58,7 @@ public class DosProcessManagerTests {
         DosProgramSegmentPrefix rootPsp = GetRootPsp(context);
         rootPsp.NNFlags = 0xABCD;
 
-        string comFilePath = Path.Combine(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
+        string comFilePath = Path.Join(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
         try {
             File.WriteAllBytes(comFilePath, new byte[] { 0xC3 });
             DosExecParameterBlock parameterBlock = CreateParameterBlock();
@@ -337,7 +338,7 @@ public class DosProcessManagerTests {
         const ushort relocationInitialValue = 0x0042;
         byte[] overlayBytes = BuildOverlayExeImageWithRelocation(relocationTargetOffset, relocationInitialValue);
 
-        string overlayFilePath = Path.Combine(Path.GetTempPath(), $"dos_overlay_{Guid.NewGuid():N}.exe");
+        string overlayFilePath = Path.Join(Path.GetTempPath(), $"dos_overlay_{Guid.NewGuid():N}.exe");
         try {
             File.WriteAllBytes(overlayFilePath, overlayBytes);
 
@@ -450,7 +451,7 @@ public class DosProcessManagerTests {
             payloadLength = 1;
         }
 
-        string comFilePath = Path.Combine(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
+        string comFilePath = Path.Join(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
         byte[] bytes = new byte[payloadLength];
         for (int i = 0; i < payloadLength - 1; i++) {
             bytes[i] = 0x90;
@@ -465,7 +466,7 @@ public class DosProcessManagerTests {
     }
 
     private static string CreateTemporaryExeFile(ushort minExtraParagraphs, ushort maxExtraParagraphs) {
-        string exeFilePath = Path.Combine(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.exe");
+        string exeFilePath = Path.Join(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.exe");
         byte[] exeBytes = BuildExeImage(minExtraParagraphs, maxExtraParagraphs);
         File.WriteAllBytes(exeFilePath, exeBytes);
         return exeFilePath;
