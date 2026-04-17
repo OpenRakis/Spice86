@@ -1,112 +1,37 @@
 namespace Spice86.Tests.Dos;
 
-using Spice86.Audio.Filters;
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
-using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.Devices.Input.Keyboard;
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Blaster;
-using Spice86.Core.Emulator.Devices.Timer;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InterruptHandlers.Bios;
-using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
-using Spice86.Core.Emulator.InterruptHandlers.VGA;
-using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Core.Emulator.VM.Clock;
-using Spice86.Core.Emulator.VM.DeviceScheduler;
-using Spice86.Logging;
-using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Shared test fixture for DOS components (FileManager, FcbManager, etc.)
 /// Provides a fully wired DOS environment for testing.
 /// </summary>
-public class DosTestFixture {
-    public DosFileManager DosFileManager { get; }
-    public DosFcbManager DosFcbManager { get; }
-    public Memory Memory { get; }
-    public ILoggerService LoggerService { get; }
-    public Dos Dos { get; }
+public class DosTestFixture : IDisposable {
+    private readonly Spice86DependencyInjection _spice86;
+    private readonly string _tempExeDir;
+
+    public DosFileManager DosFileManager => _spice86.Machine.Dos.FileManager;
+    public DosFcbManager DosFcbManager => _spice86.Machine.Dos.FcbManager;
+    public Dos Dos => _spice86.Machine.Dos;
+    public IMemory Memory => _spice86.Machine.Memory;
 
     public DosTestFixture(string mountPoint) {
-        Configuration configuration = new Configuration() {
-            AudioEngine = AudioEngine.Dummy,
-            CDrive = mountPoint,
-            RecordedDataDirectory = Path.GetTempPath(),
-            HttpApiPort = 0,
-        };
+        _tempExeDir = Path.Join(Path.GetTempPath(), $"DosTestFixture_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempExeDir);
+        string exePath = Path.Join(_tempExeDir, "EXIT.COM");
+        // MOV AX, 4C00h / INT 21h — minimal DOS exit stub
+        File.WriteAllBytes(exePath, new byte[] { 0xB8, 0x00, 0x4C, 0xCD, 0x21 });
+        _spice86 = new Spice86Creator(
+            binName: exePath,
+            installInterruptVectors: true,
+            cDrive: mountPoint).Create();
+    }
 
-        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        LoggerService = new LoggerService();
-        IPauseHandler pauseHandler = new PauseHandler(LoggerService);
-
-        State state = new(CpuModel.INTEL_80286);
-        AddressReadWriteBreakpoints memoryBreakpoints = new();
-        AddressReadWriteBreakpoints ioBreakpoints = new();
-        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, LoggerService, configuration.FailOnUnhandledPort);
-        A20Gate a20Gate = new(configuration.A20Gate);
-        Memory = new(memoryBreakpoints, ram, a20Gate,
-            initializeResetVector: configuration.InitializeDOS is true);
-        IEmulatedClock emulatedClock = new EmulatedClock(null, DateTimeOffset.UnixEpoch);
-        DeviceScheduler emulationLoopScheduler = new(emulatedClock, LoggerService, "Emulation loop");
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, Memory, memoryBreakpoints, ioBreakpoints);
-
-        BiosDataArea biosDataArea =
-            new BiosDataArea(Memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
-
-        DualPic dualPic = new(ioPortDispatcher, state, LoggerService, configuration.FailOnUnhandledPort);
-
-        CallbackHandler callbackHandler = new(state, LoggerService);
-        InterruptVectorTable interruptVectorTable = new(Memory);
-        Stack stack = new(Memory, state);
-        FunctionCatalogue functionCatalogue = new FunctionCatalogue();
-
-        CfgCpu cfgCpu = new(Memory, state, ioPortDispatcher, callbackHandler,
-            dualPic, emulatorBreakpointsManager, functionCatalogue,
-            false, true, LoggerService);
-
-        SoftwareMixer softwareMixer = new(configuration.AudioEngine, pauseHandler);
-        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, LoggerService, emulationLoopScheduler, emulatedClock,
-            configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioPortDispatcher, state, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, LoggerService, configuration.FailOnUnhandledPort);
-
-        pcSpeaker.AttachPitControl(pitTimer);
-
-        VgaRom vgaRom = new();
-        VgaFunctionality vgaFunctionality = new VgaFunctionality(Memory, interruptVectorTable, ioPortDispatcher,
-            biosDataArea, vgaRom,
-            bootUpInTextMode: configuration.InitializeDOS is true);
-
-        InputEventHub inputEventQueue = new();
-        SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, Memory,
-            cfgCpu, stack, state, a20Gate, biosDataArea, emulationLoopScheduler,
-            ioPortDispatcher, LoggerService, configuration.InitializeDOS is not false);
-        Intel8042Controller intel8042Controller = new(
-            state, ioPortDispatcher, a20Gate, dualPic, emulationLoopScheduler,
-            configuration.FailOnUnhandledPort, LoggerService, inputEventQueue);
-        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(Memory, biosDataArea);
-        BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(Memory, biosDataArea,
-            stack, state, cfgCpu, dualPic, systemBiosInt15Handler,
-            intel8042Controller, biosKeyboardBuffer, LoggerService);
-        KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
-            Memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, LoggerService,
-            biosKeyboardInt9Handler.BiosKeyboardBuffer);
-
-        Dos = new Dos(configuration, Memory, cfgCpu, stack, state,
-            biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
-            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", "" } },
-            ioPortDispatcher, LoggerService);
-
-        DosFileManager = Dos.FileManager;
-        DosFcbManager = Dos.FcbManager;
+    public void Dispose() {
+        _spice86.Dispose();
+        if (Directory.Exists(_tempExeDir)) {
+            Directory.Delete(_tempExeDir, true);
+        }
     }
 }
