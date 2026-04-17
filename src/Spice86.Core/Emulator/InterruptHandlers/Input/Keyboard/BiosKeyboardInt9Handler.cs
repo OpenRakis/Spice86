@@ -75,9 +75,16 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         // Disable keyboard first - otherwise Prince of Persia reads it before us!
         _ps2Controller.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.DisablePortKbd);
 
+        byte status = _ps2Controller.ReadByte(KeyboardPorts.StatusRegister);
+        if ((status & 0x01) == 0) {
+            // Nothing pending in the 8042 output buffer: don't consume stale data bytes.
+            _ps2Controller.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.EnableKeyboardPort);
+            _dualPic.AcknowledgeInterrupt(1);
+            return;
+        }
+
         if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
-            byte st = _ps2Controller.ReadByte(KeyboardPorts.StatusRegister);
-            LoggerService.Debug("INT09: entry ST=0x{St:X2}", st);
+            LoggerService.Debug("INT09: entry ST=0x{St:X2}", status);
         }
 
         byte scancode = _ps2Controller.ReadByte(KeyboardPorts.Data);
@@ -409,10 +416,9 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     keyboardState.Flags3 = (byte)(keyboardState.Flags3 & ~0x01);
                     _biosDataArea.KeyboardStatusFlag3 = keyboardState.Flags3;
                     if ((keyboardState.Flags2 & 1) != 0) {
-                        /* Ctrl+Pause (Break), special handling needed:
-                        add zero to the keyboard buffer, call int 0x1b which
-                        sets Ctrl+C flag which calls int 0x23 in certain dos
-                        input/output functions;TODO: not implemented */
+                        /* Ctrl+Pause (Break): enqueue 0x0000 so DOS break-check paths
+                        treat it as Ctrl-Break and route to the same INT 23 termination path. */
+                        BiosKeyboardBuffer.EnqueueKeyCode(0x0000);
                     } else if ((keyboardState.Flags2 & 8) == 0) {
                         /* normal pause key */
                         _biosDataArea.KeyboardStatusFlag2 = (byte)(keyboardState.Flags2 | 8);
@@ -437,9 +443,11 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     keyboardState.Flags2 = (byte)(keyboardState.Flags2 & ~0x20);
                 }
                 break;
-            case (byte)ScanCode1.ScrollLock: keyboardState.Flags2 |= 0x10;
+            case (byte)ScanCode1.ScrollLock:
+                keyboardState.Flags2 |= 0x10;
                 break;
-            case ScrollLockReleased: keyboardState.Flags1 ^= 0x10; keyboardState.Flags2 = (byte)(keyboardState.Flags2 & ~0x10); keyboardState.Leds ^= 0x01;
+            case ScrollLockReleased:
+                keyboardState.Flags1 ^= 0x10; keyboardState.Flags2 = (byte)(keyboardState.Flags2 & ~0x10); keyboardState.Leds ^= 0x01;
                 break;
             case InsertReleased:
                 if ((keyboardState.Flags3 & 0x02) != 0) { /* Maybe honour the insert on keypad as well */

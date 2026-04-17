@@ -48,6 +48,8 @@ public class KeyboardInt16Handler : InterruptHandler {
         AddAction(0x01, () => GetKeystrokeStatus(true));
         AddAction(0x02, GetShiftFlags);
         AddAction(0x03, SetTypematicRateAndDelay);
+        AddAction(0x10, GetEnhancedKeystroke);
+        AddAction(0x11, () => GetEnhancedKeystrokeStatus(true));
         AddAction(0x1D, () => Unsupported(0x1D));
     }
 
@@ -127,24 +129,26 @@ public class KeyboardInt16Handler : InterruptHandler {
     public override byte VectorNumber => 0x16;
 
     /// <summary>
-    ///     Emits a minimal INT 16h handler stub into guest RAM that handles AH=00h (GetKeystroke) in-place
+    ///     Emits a minimal INT 16h handler stub into guest RAM that handles AH=00h and AH=10h (GetKeystroke)
     ///     and dispatches all other AH values back to the C# handler via a callback.
     /// </summary>
     /// <remarks><![CDATA[
     ///     Assembled control flow (labels for readability):
     ///     L_HANDLER:
     ///     cmp ah, 00h
-    ///     jz  L_AH00
+    ///     jz  L_GET_KEY
+    ///     cmp ah, 10h
+    ///     jz  L_GET_KEY
     /// 
     ///     L_DEFAULT:
     ///     int 0A4h   ; DefaultDispatch -> calls C# Run()
     ///     iret
     /// 
-    ///     L_AH00:
+    ///     L_GET_KEY:
     ///     int 0A0h   ; CallbackHasKey -> sets ZF=0 if a key is present
     ///     jnz have_key
     ///     int 09h    ; invoke hardware keyboard ISR (IRQ1) to fetch a key
-    ///     jmp short L_AH00
+    ///     jmp short L_GET_KEY
     /// 
     ///     have_key:
     ///     int 0A1h   ; CallbackDequeueAndSetAx -> AX = (scan<<8 | ascii)
@@ -161,7 +165,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <param name="memoryAsmWriter">Helper used to write machine code and callbacks into guest memory.</param>
     /// <returns>The segment:offset address where the handler stub was emitted.</returns>
     public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
-        // Only AH=00 (GetKeystroke) is implemented in the in-RAM handler.
+        // AH=00 and AH=10 (GetKeystroke variants) are implemented in the in-RAM handler.
         // All other AH values jump to the default C# dispatcher via callback.
 
         SegmentedAddress handlerAddress = memoryAsmWriter.CurrentAddress;
@@ -170,14 +174,21 @@ public class KeyboardInt16Handler : InterruptHandler {
         memoryAsmWriter.WriteUInt8(0x80);
         memoryAsmWriter.WriteUInt8(0xFC);
         memoryAsmWriter.WriteUInt8(0x00);
-        // JZ L_AH00 (+0x05 to skip the default callback and IRET)
+        // JZ L_GET_KEY (+0x0A to skip compare(5) + default callback(4) + IRET(1))
+        memoryAsmWriter.WriteJz(10);
+
+        // CMP AH, 10
+        memoryAsmWriter.WriteUInt8(0x80);
+        memoryAsmWriter.WriteUInt8(0xFC);
+        memoryAsmWriter.WriteUInt8(0x10);
+        // JZ L_GET_KEY (+0x05 to skip the default callback and IRET)
         memoryAsmWriter.WriteJz(4 + 1);
 
         // L_DEFAULT: callback DefaultDispatch then IRET
         memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
         memoryAsmWriter.WriteIret();
 
-        // L_AH00:
+        // L_GET_KEY:
         // callback HasKey (sets ZF=0 when key present)
         memoryAsmWriter.RegisterAndWriteCallback(CallbackHasKey);
         // JNZ have_key (+0x04 to skip INT 09h and the backward jump)
@@ -278,6 +289,23 @@ public class KeyboardInt16Handler : InterruptHandler {
                 State.AX = keyCode.Value;
             }
         }
+    }
+
+    /// <summary>
+    /// INT 16h, AH=10h - Get Enhanced Keystroke (enhanced keyboards).
+    /// Returns key in AX (AH=scan, AL=ascii), dequeuing one key if available.
+    /// </summary>
+    public void GetEnhancedKeystroke() {
+        GetKeystroke();
+    }
+
+    /// <summary>
+    /// INT 16h, AH=11h - Check Enhanced Keystroke Status (enhanced keyboards).
+    /// Returns key in AX without dequeuing and updates ZF like AH=01h.
+    /// </summary>
+    /// <param name="calledFromVm"><c>True</c> if the method was called by internal emulator code, <c>False</c> otherwise.</param>
+    public void GetEnhancedKeystrokeStatus(bool calledFromVm) {
+        GetKeystrokeStatus(calledFromVm);
     }
 
     /// <summary>
