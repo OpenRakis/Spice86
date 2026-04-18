@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
@@ -14,6 +15,7 @@ using System.Globalization;
 /// Supports C-like expression syntax with operators, registers, and memory access.
 /// </summary>
 public class AstExpressionParser {
+    private readonly TypeConversionAstBuilder _typeConversion = new();
     private string _input = string.Empty;
     private int _position;
 
@@ -25,7 +27,12 @@ public class AstExpressionParser {
     public ValueNode Parse(string expression) {
         _input = expression;
         _position = 0;
-        return ParseExpression();
+        ValueNode result = ParseExpression();
+        SkipWhitespace();
+        if (_position < _input.Length) {
+            throw new ExpressionParseException($"Unexpected token '{_input[_position]}': expression was not fully consumed", _input, _position);
+        }
+        return result;
     }
 
     private ValueNode ParseExpression() {
@@ -305,41 +312,60 @@ public class AstExpressionParser {
     private ValueNode ParsePointerNode(DataType dataType) {
         // Parse either absolute pointer [addr] or segmented pointer segment:[offset]
         SkipWhitespace();
-        
-        // Check if it's a segmented register (like ES, CS, DS, etc.)
-        int savedPosition = _position;
-        if (char.IsLetter(CurrentChar())) {
-            ValueNode potentialSegment = ParseIdentifier();
-            SkipWhitespace();
-            if (CurrentChar() == ':') {
-                // It's a segmented pointer: segment:[offset]
-                Advance(); // skip ':'
-                if (CurrentChar() != '[') {
-                    throw new ExpressionParseException("Expected '[' after segment:", _input, _position);
-                }
-                Advance(); // skip '['
-                ValueNode offset = ParseExpression();
-                if (CurrentChar() != ']') {
-                    throw new ExpressionParseException("Expected ']'", _input, _position);
-                }
-                Advance();
-                return new SegmentedPointerNode(dataType, potentialSegment, null, offset);
-            }
-            // Not a segmented pointer, restore position
-            _position = savedPosition;
+        // Support segmented forms such as `ds:[offset]` or `0x1234:[offset]`
+        ValueNode? segmented = TryParseSegmentedPointer(dataType);
+        if (segmented != null) {
+            return segmented;
         }
-        
+
         // Absolute pointer: [address]
         if (CurrentChar() != '[') {
             throw new ExpressionParseException("Expected '[' or segment register for pointer", _input, _position);
         }
         Advance(); // skip '['
-        ValueNode address = ParseExpression();
+        ValueNode address = _typeConversion.Convert(DataType.UINT32, ParseExpression());
         if (CurrentChar() != ']') {
             throw new ExpressionParseException("Expected ']'", _input, _position);
         }
         Advance();
         return new AbsolutePointerNode(dataType, address);
+    }
+    
+    private ValueNode? TryParseSegmentedPointer(DataType dataType) {
+        int savedPosition = _position;
+
+        ValueNode potentialSegment;
+
+        if (char.IsLetter(CurrentChar())) {
+            potentialSegment = ParseIdentifier();
+        } else if (char.IsDigit(CurrentChar()) || (CurrentChar() == '0' && (PeekChar() == 'x' || PeekChar() == 'X'))) {
+            potentialSegment = ParseNumber();
+        } else {
+            _position = savedPosition;
+            return null;
+        }
+
+        SkipWhitespace();
+        if (CurrentChar() != ':') {
+            _position = savedPosition;
+            return null;
+        }
+
+        Advance(); // skip ':'
+        if (CurrentChar() != '[') {
+            throw new ExpressionParseException("Expected '[' after segment:", _input, _position);
+        }
+        Advance(); // skip '['
+
+        ValueNode segment = _typeConversion.Convert(DataType.UINT16, potentialSegment);
+        ValueNode offset = _typeConversion.Convert(DataType.UINT16, ParseExpression());
+
+        if (CurrentChar() != ']') {
+            throw new ExpressionParseException("Expected ']'", _input, _position);
+        }
+        Advance();
+
+        return new SegmentedPointerNode(dataType, segment, null, offset);
     }
     
     private ValueNode EnsureTypeCompatibility(ValueNode left, ValueNode right, out DataType commonType) {

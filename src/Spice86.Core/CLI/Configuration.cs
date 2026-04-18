@@ -278,6 +278,22 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--CpuHeavyLogDumpFile <CPUHEAVYLOGDUMPFILE>")]
     public string? CpuHeavyLogDumpFile { get; init; }
 
+    /// <summary>
+    /// Named expressions appended to every CPU heavy log line.
+    /// Each entry must be in "name=expression" format (e.g. "life=AX+1" or
+    /// "mem=word ptr ds:[0x0100]"). Evaluated per instruction; compiled once at startup.
+    /// Only active when <see cref="CpuHeavyLog"/> is true.
+    ///
+    /// The option is named <c>--CpuHeavyLogExpressions</c> and accepts multiple values.
+    /// Provide each pair as a quoted value when the expression contains spaces.
+    /// Example: <c>--CpuHeavyLogExpressions "life=AX+1" "myvalue=word ptr ds:[0x0456]"</c>
+    ///
+    /// Splitting rule: the string is split on the first '='. For example
+    /// <c>flag=AX==0</c> becomes name <c>flag</c> and expression <c>AX==0</c>.
+    /// </summary>
+    [CommandOption("--CpuHeavyLogExpressions <CPUHEAVYLOGEXPRESSIONS>")]
+    public string[]? CpuHeavyLogExpressions { get; init; }
+
     [CommandOption("--AsmRenderingStyle <ASMRENDERINGSTYLE>")]
     [DefaultValue(AsmRenderingStyle.Spice86)]
     public AsmRenderingStyle AsmRenderingStyle { get; init; }
