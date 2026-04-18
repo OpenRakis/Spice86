@@ -139,7 +139,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// cannot be freed or reallocated.
     /// </remarks>
     private readonly SortedList<int, byte> _xmsHandles = new();
-    private readonly object _xmsStateLock = new();
 
     /// <summary>
     /// The segment of the XMS DOS Device Driver in memory.
@@ -276,17 +275,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// to report the size of the largest available memory block. It's calculated by finding the largest
     /// free block in the XMS memory pool.
     /// </remarks>
-    public uint LargestFreeBlockLength {
-        get {
-            lock (_xmsStateLock) {
-                return _xmsBlocksLinkedList
-                    .Where(static x => x.IsFree)
-                    .Select(static x => x.Length)
-                    .DefaultIfEmpty((uint)0)
-                    .Max();
-            }
-        }
-    }
+    public uint LargestFreeBlockLength => _xmsBlocksLinkedList
+        .Where(static x => x.IsFree)
+        .Select(static x => x.Length)
+        .DefaultIfEmpty((uint)0)
+        .Max();
 
     /// <summary>
     /// Gets the total amount of free memory in bytes.
@@ -296,37 +289,19 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// to report the total free memory available. It's calculated by summing the sizes of all free blocks
     /// in the XMS memory pool.
     /// </remarks>
-    public long TotalFreeMemory {
-        get {
-            lock (_xmsStateLock) {
-                return _xmsBlocksLinkedList
-                    .Where(static x => x.IsFree)
-                    .Sum(static b => b.Length);
-            }
-        }
-    }
+    public long TotalFreeMemory => _xmsBlocksLinkedList
+        .Where(static x => x.IsFree)
+        .Sum(static b => b.Length);
 
     /// <summary>
     /// Gets a snapshot of current XMS blocks (free and allocated).
     /// </summary>
-    public IReadOnlyList<XmsBlock> BlocksSnapshot {
-        get {
-            lock (_xmsStateLock) {
-                return _xmsBlocksLinkedList.ToList();
-            }
-        }
-    }
+    public IReadOnlyList<XmsBlock> BlocksSnapshot => _xmsBlocksLinkedList.ToList();
 
     /// <summary>
     /// Gets a snapshot of allocated handles and their lock counts.
     /// </summary>
-    public IReadOnlyList<KeyValuePair<int, byte>> HandlesSnapshot {
-        get {
-            lock (_xmsStateLock) {
-                return _xmsHandles.ToList();
-            }
-        }
-    }
+    public IReadOnlyList<KeyValuePair<int, byte>> HandlesSnapshot => _xmsHandles.ToList();
 
     /// <summary>
     /// Gets a value indicating whether the HMA is currently claimed by a DOS application.
@@ -371,110 +346,108 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void RunMultiplex() {
-        lock (_xmsStateLock) {
-            XmsSubFunctionsCodes operation = (XmsSubFunctionsCodes)_state.AH;
+        XmsSubFunctionsCodes operation = (XmsSubFunctionsCodes)_state.AH;
 
-            switch (operation) {
-                case XmsSubFunctionsCodes.GetVersionNumber:
-                    GetVersionNumber();
-                    break;
+        switch (operation) {
+            case XmsSubFunctionsCodes.GetVersionNumber:
+                GetVersionNumber();
+                break;
 
-                case XmsSubFunctionsCodes.RequestHighMemoryArea:
-                    RequestHighMemoryArea();
-                    break;
+            case XmsSubFunctionsCodes.RequestHighMemoryArea:
+                RequestHighMemoryArea();
+                break;
 
-                case XmsSubFunctionsCodes.ReleaseHighMemoryArea:
-                    ReleaseHighMemoryArea();
-                    break;
+            case XmsSubFunctionsCodes.ReleaseHighMemoryArea:
+                ReleaseHighMemoryArea();
+                break;
 
-                case XmsSubFunctionsCodes.GlobalEnableA20:
-                    GlobalEnableA20();
-                    break;
+            case XmsSubFunctionsCodes.GlobalEnableA20:
+                GlobalEnableA20();
+                break;
 
-                case XmsSubFunctionsCodes.GlobalDisableA20:
-                    GlobalDisableA20();
-                    break;
+            case XmsSubFunctionsCodes.GlobalDisableA20:
+                GlobalDisableA20();
+                break;
 
-                case XmsSubFunctionsCodes.LocalEnableA20:
-                    EnableLocalA20();
-                    break;
+            case XmsSubFunctionsCodes.LocalEnableA20:
+                EnableLocalA20();
+                break;
 
-                case XmsSubFunctionsCodes.LocalDisableA20:
-                    DisableLocalA20();
-                    break;
+            case XmsSubFunctionsCodes.LocalDisableA20:
+                DisableLocalA20();
+                break;
 
-                case XmsSubFunctionsCodes.QueryA20:
-                    QueryA20();
-                    break;
+            case XmsSubFunctionsCodes.QueryA20:
+                QueryA20();
+                break;
 
-                case XmsSubFunctionsCodes.QueryFreeExtendedMemory:
-                    QueryFreeExtendedMemory();
-                    break;
+            case XmsSubFunctionsCodes.QueryFreeExtendedMemory:
+                QueryFreeExtendedMemory();
+                break;
 
-                case XmsSubFunctionsCodes.AllocateExtendedMemoryBlock:
-                    AllocateExtendedMemoryBlock();
-                    break;
+            case XmsSubFunctionsCodes.AllocateExtendedMemoryBlock:
+                AllocateExtendedMemoryBlock();
+                break;
 
-                case XmsSubFunctionsCodes.ReallocateExtendedMemoryBlock:
-                    ReallocateExtendedMemoryBlock();
-                    break;
+            case XmsSubFunctionsCodes.ReallocateExtendedMemoryBlock:
+                ReallocateExtendedMemoryBlock();
+                break;
 
-                case XmsSubFunctionsCodes.FreeExtendedMemoryBlock:
-                    FreeExtendedMemoryBlock();
-                    break;
+            case XmsSubFunctionsCodes.FreeExtendedMemoryBlock:
+                FreeExtendedMemoryBlock();
+                break;
 
-                case XmsSubFunctionsCodes.MoveExtendedMemoryBlock:
-                    MoveExtendedMemoryBlock();
-                    break;
+            case XmsSubFunctionsCodes.MoveExtendedMemoryBlock:
+                MoveExtendedMemoryBlock();
+                break;
 
-                case XmsSubFunctionsCodes.LockExtendedMemoryBlock:
-                    LockExtendedMemoryBlock();
-                    break;
+            case XmsSubFunctionsCodes.LockExtendedMemoryBlock:
+                LockExtendedMemoryBlock();
+                break;
 
-                case XmsSubFunctionsCodes.UnlockExtendedMemoryBlock:
-                    UnlockExtendedMemoryBlock();
-                    break;
+            case XmsSubFunctionsCodes.UnlockExtendedMemoryBlock:
+                UnlockExtendedMemoryBlock();
+                break;
 
-                case XmsSubFunctionsCodes.GetHandleInformation:
-                    GetEmbHandleInformation();
-                    break;
+            case XmsSubFunctionsCodes.GetHandleInformation:
+                GetEmbHandleInformation();
+                break;
 
-                case XmsSubFunctionsCodes.RequestUpperMemoryBlock:
-                    RequestUpperMemoryBlock();
-                    break;
+            case XmsSubFunctionsCodes.RequestUpperMemoryBlock:
+                RequestUpperMemoryBlock();
+                break;
 
-                case XmsSubFunctionsCodes.ReleaseUpperMemoryBlock:
-                    ReleaseUpperMemoryBlock();
-                    break;
+            case XmsSubFunctionsCodes.ReleaseUpperMemoryBlock:
+                ReleaseUpperMemoryBlock();
+                break;
 
-                case XmsSubFunctionsCodes.ReallocateUpperMemoryBlock:
-                    ReallocateUpperMemoryBlock();
-                    break;
+            case XmsSubFunctionsCodes.ReallocateUpperMemoryBlock:
+                ReallocateUpperMemoryBlock();
+                break;
 
-                case XmsSubFunctionsCodes.QueryAnyFreeExtendedMemory:
-                    QueryAnyFreeExtendedMemory();
-                    break;
+            case XmsSubFunctionsCodes.QueryAnyFreeExtendedMemory:
+                QueryAnyFreeExtendedMemory();
+                break;
 
-                case XmsSubFunctionsCodes.AllocateAnyExtendedMemory:
-                    AllocateAnyExtendedMemory();
-                    break;
+            case XmsSubFunctionsCodes.AllocateAnyExtendedMemory:
+                AllocateAnyExtendedMemory();
+                break;
 
-                case XmsSubFunctionsCodes.GetExtendedEmbHandle:
-                    GetExtendedEmbHandle();
-                    break;
+            case XmsSubFunctionsCodes.GetExtendedEmbHandle:
+                GetExtendedEmbHandle();
+                break;
 
-                case XmsSubFunctionsCodes.ReallocateAnyExtendedMemory:
-                    ReallocateAnyExtendedMemory();
-                    break;
+            case XmsSubFunctionsCodes.ReallocateAnyExtendedMemory:
+                ReallocateAnyExtendedMemory();
+                break;
 
-                default:
-                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                        _loggerService.Error("Call for XMS function not known to anyone! {FunctionNumber:X2}", _state.AH);
-                    }
-                    _state.AX = 1;
-                    _state.BL = (byte)XmsErrorCodes.NotImplemented;
-                    break;
-            }
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("Call for XMS function not known to anyone! {FunctionNumber:X2}", _state.AH);
+                }
+                _state.AX = 1;
+                _state.BL = (byte)XmsErrorCodes.NotImplemented;
+                break;
         }
     }
 
