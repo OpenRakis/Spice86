@@ -25,9 +25,9 @@
             <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
         </ResourceDictionary>
     </UserControl.Resources>
-	<UserControl.Styles>
-    	<StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
-	</UserControl.Styles>
+    <UserControl.Styles>
+        <StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+    </UserControl.Styles>
     <Grid RowDefinitions="Auto,*">
         <!-- Top toolbar -->
         <Grid Grid.Row="0" IsEnabled="{Binding IsPaused}" Margin="4" ColumnDefinitions="Auto,Auto,Auto,*,Auto">
@@ -56,14 +56,14 @@
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0" IsVisible="{Binding IsFunctionInformationProvided}">
                 <TextBlock VerticalAlignment="Center" Text="Function:" />
                 <AutoCompleteBox
-                    ItemsSource="{Binding Functions}"
-                    SelectedItem="{Binding SelectedFunction}"
-                    ItemFilter="{Binding FunctionFilter}"
-                    Watermark="Type to select function"
-                    ItemSelector="{Binding FunctionItemSelector}"
-                    GotFocus="OnFunctionSelectionFocus"
-                    KeyDown="OnFunctionSelectionKeyDown"
-                    MinWidth="200">
+                ItemsSource="{Binding Functions}"
+                SelectedItem="{Binding SelectedFunction}"
+                ItemFilter="{Binding FunctionFilter}"
+                Watermark="Type to select function"
+                ItemSelector="{Binding FunctionItemSelector}"
+                GotFocus="OnFunctionSelectionFocus"
+                KeyDown="OnFunctionSelectionKeyDown"
+                MinWidth="200">
                     <AutoCompleteBox.ItemTemplate>
                         <DataTemplate DataType="debugging:FunctionInfo">
                             <StackPanel Orientation="Horizontal">
@@ -86,21 +86,21 @@
             <!-- View management-->
             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
                 <ToggleButton
-                    IsChecked="{Binding ShowJumpLines}"
-                    ToolTip.Tip="Toggle jump indicator lines">
+                IsChecked="{Binding ShowJumpLines}"
+                ToolTip.Tip="Toggle jump indicator lines">
                     <fluent:SymbolIcon Symbol="BranchFork" Width="20" Height="20" />
                 </ToggleButton>
                 <Button
-                    HotKey="Ctrl+F4"
-                    ToolTip.Tip="Close view (Ctrl-F4)"
-                    Command="{Binding CloseTabCommand}"
-                    IsEnabled="{Binding CanCloseTab}">
+                HotKey="Ctrl+F4"
+                ToolTip.Tip="Close view (Ctrl-F4)"
+                Command="{Binding CloseTabCommand}"
+                IsEnabled="{Binding CanCloseTab}">
                     <fluent:SymbolIcon Symbol="DocumentDismiss" Width="20" Height="20" />
                 </Button>
                 <Button
-                    HotKey="Ctrl+N"
-                    ToolTip.Tip="New view (Ctrl-n)"
-                    Command="{Binding NewDisassemblyViewCommand}">
+                HotKey="Ctrl+N"
+                ToolTip.Tip="New view (Ctrl-n)"
+                Command="{Binding NewDisassemblyViewCommand}">
                     <fluent:SymbolIcon Symbol="DocumentAdd" Width="20" Height="20" />
                 </Button>
             </StackPanel>
@@ -129,6 +129,7 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
                      ScrollViewer.VerticalScrollBarVisibility="Visible"
                      SelectedItem="{Binding SelectedDebuggerLine}"
+                     Grid.IsSharedSizeScope="True"
                      behaviors:DisassemblyScrollBehavior.IsEnabled="True"
                      behaviors:DisassemblyScrollBehavior.TargetAddress="{Binding CurrentInstructionAddress}">
                 <ListBox.ContextMenu>
@@ -185,7 +186,17 @@
                                 </Style>
                             </ContentControl.Styles>
 
-                            <Grid ColumnDefinitions="Auto, Auto, Auto, *,4*,Auto,2*" Margin="0">
+                            <Grid Margin="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Breakpoint" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="JumpLines" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Address" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Bytes" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="EvalOperands" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="BranchTarget" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Function" />
+                                </Grid.ColumnDefinitions>
                                 <!-- Breakpoint indicator -->
                                 <Border Grid.Column="0"
                                         MinWidth="16"
@@ -196,19 +207,19 @@
                                     <ToolTip.Tip>
                                         <StackPanel IsVisible="{Binding Breakpoint, Converter={x:Static ObjectConverters.IsNotNull}}">
                                             <TextBlock Text="Breakpoint" FontWeight="Bold" />
-                                            <TextBlock Text="{Binding Breakpoint.ConditionExpression, StringFormat='Condition: {0}'}" 
+                                            <TextBlock Text="{Binding Breakpoint.ConditionExpression, StringFormat='Condition: {0}'}"
                                                        IsVisible="{Binding Breakpoint.ConditionExpression, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                                            <TextBlock Text="No condition" 
+                                            <TextBlock Text="No condition"
                                                        IsVisible="{Binding Breakpoint.ConditionExpression, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
                                         </StackPanel>
                                     </ToolTip.Tip>
                                     <Ellipse
-                                        MinWidth="12"
-                                        MinHeight="12"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Fill="{Binding Breakpoint.IsEnabled, FallbackValue=Transparent, Converter={StaticResource BreakpointColorConverter}}"
-                                        Margin="0,0,4,0" />
+                                    MinWidth="12"
+                                    MinHeight="12"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Fill="{Binding Breakpoint.IsEnabled, FallbackValue=Transparent, Converter={StaticResource BreakpointColorConverter}}"
+                                    Margin="0,0,4,0" />
                                 </Border>
 
                                 <!-- Jump lines -->
@@ -233,7 +244,6 @@
                                                      Foreground="{DynamicResource DisassemblyNumberBrush}"
                                                      FontFamily="Consolas,Menlo,Monaco,monospace"
                                                      FontSize="11"
-                                                     MinWidth="110"
                                                      Margin="6,0,0,0" />
 
                                 <!-- Instruction -->
@@ -241,8 +251,15 @@
                                                      Inlines="{Binding DisassemblyTextOffsets, Converter={StaticResource FormattedTextOffsetsConverter}}"
                                                      Margin="12,0,0,0" />
 
+                                <!-- Evaluated operands (live values when paused) -->
+                                <SelectableTextBlock Grid.Column="5"
+                                                     Inlines="{Binding EvaluatedOperands, Converter={StaticResource FormattedTextOffsetsConverter}}"
+                                                     FontSize="11"
+                                                     IsVisible="{Binding EvaluatedOperands, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                     Margin="8,0,0,0" />
+
                                 <!-- Branch target indicator -->
-                                <TextBlock Grid.Column="5"
+                                <TextBlock Grid.Column="6"
                                            Text="{Binding BranchTargetText}"
                                            Foreground="{DynamicResource DisassemblyBranchTargetBrush}"
                                            FontSize="11"
@@ -256,7 +273,7 @@
                                 </TextBlock>
 
                                 <!-- Function Name -->
-                                <SelectableTextBlock Grid.Column="6"
+                                <SelectableTextBlock Grid.Column="7"
                                                      Text="{Binding Function.Name, FallbackValue=''}"
                                                      Foreground="{DynamicResource DisassemblyFunctionBrush}"
                                                      Margin="12,0,0,0" />
@@ -276,46 +293,46 @@
                 <views:RegistersView DataContext="{Binding Registers}" />
             </Border>
         </Grid>
-        
+
         <!-- Breakpoint creation dialog overlay -->
         <Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
                    IsVisible="{Binding IsCreatingBreakpoint}"/>
         <dialogHost:DialogHost
-            Grid.Row="0" Grid.RowSpan="2"
-            Background="{Binding $parent[Window].Background}"
-            CloseOnClickAway="False"
-            IsOpen="{Binding IsCreatingBreakpoint}">
+        Grid.Row="0" Grid.RowSpan="2"
+        Background="{Binding $parent[Window].Background}"
+        CloseOnClickAway="False"
+        IsOpen="{Binding IsCreatingBreakpoint}">
             <dialogHost:DialogHost.DialogContent>
                 <Grid RowDefinitions="Auto,*,Auto" MinWidth="320" MinHeight="150">
                     <Label
-                        Grid.Row="0"
-                        HorizontalAlignment="Center"
-                        Content="Create Breakpoint"
-                        FontWeight="Bold" />
+                    Grid.Row="0"
+                    HorizontalAlignment="Center"
+                    Content="Create Breakpoint"
+                    FontWeight="Bold" />
                     <StackPanel Grid.Row="1" Spacing="12" Margin="16">
                         <controls:GroupBox Header="Address">
                             <TextBox Text="{Binding BreakpointAddress}" IsReadOnly="True" />
                         </controls:GroupBox>
                         <controls:GroupBox Header="Condition (optional)">
                             <TextBox
-                                Text="{Binding BreakpointCondition, Mode=TwoWay}"
-                                Watermark="e.g., ax == 0x1234" />
+                            Text="{Binding BreakpointCondition, Mode=TwoWay}"
+                            Watermark="e.g., ax == 0x1234" />
                         </controls:GroupBox>
                     </StackPanel>
                     <StackPanel
-                        Grid.Row="2"
-                        HorizontalAlignment="Right"
-                        Orientation="Horizontal"
-                        Margin="16">
+                    Grid.Row="2"
+                    HorizontalAlignment="Right"
+                    Orientation="Horizontal"
+                    Margin="16">
                         <Button
-                            Command="{Binding ConfirmBreakpointCreationCommand}"
-                            Content="OK"
-                            IsDefault="True"
-                            Margin="0,0,8,0" />
+                        Command="{Binding ConfirmBreakpointCreationCommand}"
+                        Content="OK"
+                        IsDefault="True"
+                        Margin="0,0,8,0" />
                         <Button
-                            Command="{Binding CancelBreakpointCreationCommand}"
-                            Content="Cancel"
-                            IsCancel="True" />
+                        Command="{Binding CancelBreakpointCreationCommand}"
+                        Content="Cancel"
+                        IsCancel="True" />
                     </StackPanel>
                 </Grid>
             </dialogHost:DialogHost.DialogContent>

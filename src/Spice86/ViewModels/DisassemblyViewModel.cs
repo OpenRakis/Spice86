@@ -32,6 +32,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly BreakpointConditionService _conditionService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+    private readonly ExpressionEvaluationService _evaluationService;
     private readonly IDictionary<SegmentedAddress, FunctionInformation> _functionsInformation;
     private readonly InstructionsDecoder _instructionsDecoder;
     private readonly ILoggerService _logger;
@@ -48,6 +49,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     private SegmentedAddress? _previousInstructionAddress;
     // Flag to track if the view is active/visible
     private bool _isActive;
+    // Track the visible range of lines in the UI
+    private int _firstVisibleIndex = -1;
+    private int _lastVisibleIndex = -1;
 
     [ObservableProperty]
     private string? _breakpointAddress;
@@ -134,6 +138,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         _state = state;
         _pauseHandler = pauseHandler;
         _conditionService = new BreakpointConditionService(state, memory);
+        _evaluationService = new ExpressionEvaluationService(state, memory);
         _instructionsDecoder = new InstructionsDecoder(memory, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
         _canCloseTab = canCloseTab;
@@ -326,6 +331,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
             if (_pauseHandler.IsPaused) {
                 return;
             }
+            ClearEvaluatedOperands();
             IsPaused = false;
         });
     }
@@ -361,8 +367,46 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         // Update the registers view model
         Registers.Update();
 
+        // Evaluate operands for visible debugger lines
+        EvaluateOperands();
+
         // Set the paused state last to ensure all updates are complete
         IsPaused = true;
+    }
+
+    private void EvaluateOperands() {
+        int first = _firstVisibleIndex;
+        int last = _lastVisibleIndex;
+        ObservableCollection<DebuggerLineViewModel> sortedLines = SortedDebuggerLinesView;
+        int count = sortedLines.Count;
+        if (count == 0) {
+            return;
+        }
+        if (first < 0 || last < 0) {
+            first = 0;
+            last = count - 1;
+        }
+        int clampedFirst = Math.Max(0, first);
+        int clampedLast = Math.Min(last, count - 1);
+        for (int i = clampedFirst; i <= clampedLast; i++) {
+            DebuggerLineViewModel line = sortedLines[i];
+            line.EvaluatedOperands = _evaluationService.FormatOperandValues(line.InstructionInfo);
+        }
+    }
+
+    /// <inheritdoc/>
+    public void OnVisibleRangeChanged(int firstVisibleIndex, int lastVisibleIndex) {
+        _firstVisibleIndex = firstVisibleIndex;
+        _lastVisibleIndex = lastVisibleIndex;
+        if (_pauseHandler.IsPaused) {
+            EvaluateOperands();
+        }
+    }
+
+    private void ClearEvaluatedOperands() {
+        foreach (DebuggerLineViewModel line in DebuggerLines.Values) {
+            line.EvaluatedOperands = null;
+        }
     }
 
     private DebuggerLineViewModel EnsureAddressIsLoaded(SegmentedAddress address) {
