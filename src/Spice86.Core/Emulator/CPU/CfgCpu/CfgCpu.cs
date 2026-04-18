@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -29,14 +30,14 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
         FunctionCatalogue functionCatalogue,
-        bool useCodeOverride, bool failOnInvalidOpcode, ILoggerService loggerService, CpuHeavyLogger? cpuHeavyLogger = null) {
+        bool useCodeOverride, bool failOnInvalidOpcode, ILoggerService loggerService, CfgNodeExecutionCompiler executionCompiler, CpuHeavyLogger? cpuHeavyLogger = null) {
         _loggerService = loggerService;
         _state = state;
         _dualPic = dualPic;
         _cpuHeavyLogger = cpuHeavyLogger;
 
-        CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
-        _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService);
+        CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler);
+        _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService, cpuHeavyLogger);
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, loggerService);
     }
     
@@ -70,6 +71,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
             // Log instruction before execution if CPU heavy logging is enabled
             _cpuHeavyLogger?.LogInstruction(toExecute);
             toExecute.Execute(_instructionExecutionHelper);
+            //toExecute.CompiledExecution(_instructionExecutionHelper);            
         } catch (CpuException e) {
             if(toExecute is CfgInstruction cfgInstruction) {
                 _instructionExecutionHelper.HandleCpuException(cfgInstruction, e);

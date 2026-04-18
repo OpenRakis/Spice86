@@ -152,7 +152,7 @@ public sealed class ProgramExecutor : IDisposable {
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
         string upperCaseExtension = Path.GetExtension(executableFileName.ToUpperInvariant());
-        bool isDosProgram = upperCaseExtension is ".EXE" or ".COM";
+        bool isDosProgram = upperCaseExtension is ".EXE" or ".COM" or ".BAT";
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Preparing initial load for {FileName} (DOS program: {IsDosProgram})", executableFileName, isDosProgram);
@@ -161,7 +161,9 @@ public sealed class ProgramExecutor : IDisposable {
         ExecutableFileLoader loader;
 
         if (isDosProgram) {
-            loader = new DosProgramLoader(configuration, memory, state, int21Handler, _loggerService);
+            loader = upperCaseExtension == ".BAT"
+                ? new DosBatchProgramLoader(configuration, memory, state, int21Handler, _loggerService)
+                : new DosProgramLoader(configuration, memory, state, int21Handler, _loggerService);
         } else {
             loader = new BiosLoader(memory, state, _loggerService);
         }

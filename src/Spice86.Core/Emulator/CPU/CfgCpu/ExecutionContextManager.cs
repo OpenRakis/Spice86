@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
+using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
@@ -15,10 +16,10 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
     private readonly CfgNodeFeeder _cfgNodeFeeder;
     private readonly IMemory _memory;
     private readonly State _state;
-    private int _currentDepth;
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly bool _useCodeOverride;
     private readonly ExecutionContextReturns _executionContextReturns = new();
+    private readonly CpuHeavyLogger? _cpuHeavyLogger;
 
     public ExecutionContextManager(IMemory memory,
         State state,
@@ -26,21 +27,23 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         InstructionReplacerRegistry replacerRegistry,
         FunctionCatalogue functionCatalogue,
         bool useCodeOverride,
-        ILoggerService loggerService) : base(replacerRegistry) {
+        ILoggerService loggerService,
+        CpuHeavyLogger? cpuHeavyLogger) : base(replacerRegistry) {
         _loggerService = loggerService;
         _cfgNodeFeeder = cfgNodeFeeder;
         _memory = memory;
         _state = state;
         _functionCatalogue = functionCatalogue;
         _useCodeOverride = useCodeOverride;
+        _cpuHeavyLogger = cpuHeavyLogger;
         // Initial fake but non-null context at init
         CurrentExecutionContext = NewExecutionContext(SegmentedAddress.ZERO);
     }
 
     private int CurrentDepth {
-        get => _currentDepth;
+        get;
         set {
-            _currentDepth = value;
+            field = value;
             _loggerService.LoggerPropertyBag.ContextIndex = value;
         }
     }
@@ -70,6 +73,7 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         CurrentDepth++;
         CurrentExecutionContext = NewExecutionContext(entryAddress);
         RegisterCurrentInstructionAsEntryPoint(entryAddress);
+        _cpuHeavyLogger?.LogEnteringContext(CurrentDepth, expectedReturnAddress);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("New execution context created for depth {Depth}. Will be destroyed when {Address} is reached", CurrentDepth, expectedReturnAddress);
         }
@@ -81,11 +85,12 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose(@"Reached {Address}, restoring {Depth}", returnAddress, previousExecutionContext.Depth);
             }
-            RestoreExecutionContext(previousExecutionContext);
+            RestoreExecutionContext(previousExecutionContext, returnAddress);
         }
     }
 
-    private void RestoreExecutionContext(ExecutionContext previousExecutionContext) {
+    private void RestoreExecutionContext(ExecutionContext previousExecutionContext, SegmentedAddress returnAddress) {
+        _cpuHeavyLogger?.LogLeavingContext(CurrentDepth, returnAddress);
         // Restore previous execution context and depth
         CurrentExecutionContext = previousExecutionContext;
         CurrentDepth--;

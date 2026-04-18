@@ -23,4 +23,5 @@ public record BlockNode : IVisitableAstNode {
     public T Accept<T>(IAstVisitor<T> astVisitor) {
         return astVisitor.VisitBlockNode(this);
     }
+    
 }

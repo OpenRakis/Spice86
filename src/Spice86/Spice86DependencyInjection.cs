@@ -12,6 +12,7 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.Devices.Cmos;
@@ -70,6 +71,12 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly LoggerService _loggerService;
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
+
+    /// <summary>
+    /// Gets the headless GUI instance when running in headless mode, or <c>null</c> in UI mode.
+    /// </summary>
+    public HeadlessGui? HeadlessGui => _gui as HeadlessGui;
+
     private readonly IGuiVideoPresentation? _gui;
     private readonly IEmulatedClock _emulatedClock;
     private readonly Spice86HttpApiServer? _httpApiServer;
@@ -86,6 +93,7 @@ public class Spice86DependencyInjection : IDisposable {
 
     private readonly McpHttpHost? _mcpHttpTransport;
     private readonly DeviceSchedulerThread? _vgaTimingThread;
+    private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -268,16 +276,22 @@ public class Spice86DependencyInjection : IDisposable {
         NodeToString nodeToString = new NodeToString(asmRenderingConfig);
         CpuHeavyLogger? cpuHeavyLogger = null;
         if (configuration.CpuHeavyLog) {
-            cpuHeavyLogger = new CpuHeavyLogger(emulatorStateSerializationFolder, configuration.CpuHeavyLogDumpFile, nodeToString, state, asmRenderingConfig);
+            IReadOnlyList<CompiledLogExpression> compiledLogExpressions = BuildCompiledLogExpressions(
+                configuration, state, memory);
+            cpuHeavyLogger = new CpuHeavyLogger(emulatorStateSerializationFolder, configuration.CpuHeavyLogDumpFile, nodeToString, state, asmRenderingConfig, compiledLogExpressions);
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
                 loggerService.Information("CPU heavy logger created. Logging to: {LogFile}",
                     configuration.CpuHeavyLogDumpFile ?? Path.Join(emulatorStateSerializationFolder.Folder, "cpu_heavy.log"));
             }
         }
 
+        CfgNodeExecutionCompilerMonitor cfgNodeExecutionCompilerMonitor = new(loggerService);
+        CfgNodeExecutionCompiler cfgNodeExecutionCompiler = new(cfgNodeExecutionCompilerMonitor, loggerService);
+        _cfgNodeExecutionCompiler = cfgNodeExecutionCompiler;
+
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, functionCatalogue,
-            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, loggerService, cpuHeavyLogger);
+            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, loggerService, cfgNodeExecutionCompiler, cpuHeavyLogger);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CfgCpu created...");
@@ -783,6 +797,20 @@ public class Spice86DependencyInjection : IDisposable {
         }
     }
 
+    private static IReadOnlyList<CompiledLogExpression> BuildCompiledLogExpressions(
+        Configuration configuration, State state, IMemory memory) {
+        if (configuration.CpuHeavyLogExpressions == null
+            || configuration.CpuHeavyLogExpressions.Length == 0) {
+            return Array.Empty<CompiledLogExpression>();
+        }
+        LogExpressionCompiler compiler = new(state, memory);
+        List<CompiledLogExpression> result = new(configuration.CpuHeavyLogExpressions.Length);
+        foreach (string namedExpr in configuration.CpuHeavyLogExpressions) {
+            result.Add(compiler.Compile(namedExpr));
+        }
+        return result;
+    }
+
     private static Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
         ILoggerService loggerService, Configuration configuration, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
@@ -856,6 +884,7 @@ public class Spice86DependencyInjection : IDisposable {
         _vgaTimingThread?.Dispose();
         _emulatedClock.Dispose();
         _httpApiServer?.Dispose();
+        _cfgNodeExecutionCompiler.Dispose();
         Machine.Dispose();
     }
 }

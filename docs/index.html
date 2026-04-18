@@ -655,6 +655,7 @@ Spice86 -e game.exe</code></pre>
           <tr><td><code>-g, --GdbPort</code></td><td>10000</td><td>GDB remote port; 0 disables the GDB server</td></tr>
           <tr><td><code>--CpuHeavyLog</code></td><td>false</td><td>Log every executed instruction to a file (significant perf impact)</td></tr>
           <tr><td><code>--CpuHeavyLogDumpFile</code></td><td><code>{DumpDirectory}/cpu_heavy.log</code></td><td>Override the CPU log file path</td></tr>
+          <tr><td><code>--CpuHeavyLogExpressions</code></td><td>—</td><td>Named expressions appended to each CPU heavy log line. Repeat the option for each expression to append (e.g. <code>--CpuHeavyLogExpressions "life=AX+1"</code>). Only active when <code>--CpuHeavyLog</code> is enabled.</td></tr>
           <tr><td><code>--AsmRenderingStyle</code></td><td>Spice86</td><td>Assembly syntax: <code>Spice86</code> or <code>DosBox</code></td></tr>
           <tr><td><code>--StructureFile</code></td><td>—</td><td>C header file describing memory structures (IDA/Ghidra export)</td></tr>
           <tr><td><code>-f, --FailOnUnhandledPort</code></td><td>false</td><td>Fail on unimplemented I/O port access</td></tr>

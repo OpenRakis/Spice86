@@ -4,8 +4,11 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.StateSerialization;
+using Spice86.Shared.Emulator.Memory;
 
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 /// <summary>
 /// Logs every encountered CPU instruction to a file for debugging purposes with registers values before instruction
@@ -17,6 +20,7 @@ public sealed class CpuHeavyLogger : IDisposable {
     private readonly NodeToString _nodeToString;
     private readonly State _state;
     private readonly AsmRenderingConfig _config;
+    private readonly IReadOnlyList<CompiledLogExpression> _logExpressions;
     private bool _disposed;
 
     /// <summary>
@@ -27,10 +31,12 @@ public sealed class CpuHeavyLogger : IDisposable {
     /// <param name="nodeToString">The node renderer to use.</param>
     /// <param name="state">The CPU state to access registers and flags.</param>
     /// <param name="config">The ASM rendering config to control formatting options.</param>
-    public CpuHeavyLogger(EmulatorStateSerializationFolder emulatorStateSerializationFolder, string? customFilePath, NodeToString nodeToString, State state, AsmRenderingConfig config) {
+    /// <param name="logExpressions">Named expressions evaluated and appended to every log line.</param>
+    public CpuHeavyLogger(EmulatorStateSerializationFolder emulatorStateSerializationFolder, string? customFilePath, NodeToString nodeToString, State state, AsmRenderingConfig config, IReadOnlyList<CompiledLogExpression> logExpressions) {
         _nodeToString = nodeToString;
         _state = state;
         _config = config;
+        _logExpressions = logExpressions;
         string logFilePath = customFilePath ?? Path.Join(emulatorStateSerializationFolder.Folder, "cpu_heavy.log");
         
         // Ensure directory exists
@@ -41,7 +47,7 @@ public sealed class CpuHeavyLogger : IDisposable {
 
         // Create StreamWriter with buffering for performance
         // AutoFlush is set to true to ensure data is written even if the program crashes
-        _writer = new StreamWriter(logFilePath, append: false, System.Text.Encoding.UTF8, bufferSize: 65536) {
+        _writer = new StreamWriter(logFilePath, append: false, Encoding.UTF8, bufferSize: 65536) {
             AutoFlush = true,
             NewLine = "\n"
         };
@@ -60,6 +66,28 @@ public sealed class CpuHeavyLogger : IDisposable {
         string addressAndInstruction = _nodeToString.ToAssemblyStringWithAddress(node).PadRight(_config.AddressAndInstructionRightPadding);
         string registersAndFlags = GenerateRegistersAndFlagsString();
         _writer.WriteLine($"{addressAndInstruction}{registersAndFlags}");
+    }
+    
+    /// <summary>
+    /// Logs that a HW interrupt is entering a new execution context.
+    /// Only written when <see cref="AsmRenderingConfig.LogContextSwitches"/> is enabled.
+    /// </summary>
+    public void LogEnteringContext(int depth, SegmentedAddress returnAddress) {
+        if (_disposed || !_config.LogContextSwitches) {
+            return;
+        }
+        _writer.WriteLine($"HW interrupt entering new context at depth {depth} will be restored when {returnAddress} is reached");
+    }
+
+    /// <summary>
+    /// Logs that a HW interrupt is leaving an execution context.
+    /// Only written when <see cref="AsmRenderingConfig.LogContextSwitches"/> is enabled.
+    /// </summary>
+    public void LogLeavingContext(int depth, SegmentedAddress returnAddress) {
+        if (_disposed || !_config.LogContextSwitches) {
+            return;
+        }
+        _writer.WriteLine($"HW interrupt leaving context at depth {depth}, returning to address {returnAddress}");
     }
 
     /// <summary>
@@ -87,7 +115,16 @@ public sealed class CpuHeavyLogger : IDisposable {
               $"ES:{_state.ES:X4} " +
               $"SS:{_state.SS:X4}";
         
-        return  $"{registers} {segmentRegisters} {GenerateFlags()}";
+        string result = $"{registers} {segmentRegisters} {GenerateFlags()}";
+        if (_logExpressions.Count == 0) {
+            return result;
+        }
+        StringBuilder sb = new(result);
+        foreach (CompiledLogExpression expr in _logExpressions) {
+            uint value = expr.Evaluate();
+            sb.Append($" {expr.Name}:{value:X8}");
+        }
+        return sb.ToString();
     }
 
     /// <summary>

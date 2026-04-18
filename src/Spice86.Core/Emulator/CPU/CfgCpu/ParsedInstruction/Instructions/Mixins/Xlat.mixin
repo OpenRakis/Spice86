@@ -9,22 +9,17 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes, int segmentRegisterIndex, int defaultSegmentRegisterIndex) 
         : base(address, opcodeField, prefixes, segmentRegisterIndex, defaultSegmentRegisterIndex, 1) {
-    }
-
-    public override void Execute(InstructionExecutionHelper helper) {
-        uint address = helper.PhysicalAddress(this, helper.State.{{LookupRegister}}) + helper.State.AL;
-        helper.State.AL = helper.Memory.UInt8[address];
-        helper.MoveIpToEndOfInstruction(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
@@ -39,5 +34,27 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
                 )
             )
         );
+    }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        uint address = helper.PhysicalAddress(this, helper.State.{{LookupRegister}}) + helper.State.AL;
+        helper.State.AL = helper.Memory.UInt8[address];
+        helper.MoveIpToEndOfInstruction(this);
+    }
+
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        // XLAT: AL = Memory[BX + AL] (using segment override if present)
+        DataType addrType = builder.AddressType(this);
+        ValueNode bxNode = builder.Register.Reg(addrType, RegisterIndex.BxIndex);
+        ValueNode alNode = builder.Register.Accumulator(DataType.UINT8);
+
+        // Widen AL to address type for offset arithmetic
+        ValueNode alWidened = builder.TypeConversion.Convert(addrType, alNode);
+        BinaryOperationNode offset = new BinaryOperationNode(addrType, bxNode, BinaryOperation.PLUS, alWidened);
+
+        ValueNode memPointer = builder.Pointer.ToSegmentedPointer(
+            DataType.UINT8, SegmentRegisterIndex, DefaultSegmentRegisterIndex, offset);
+
+        return builder.WithIpAdvancement(this, builder.Assign(DataType.UINT8, alNode, memPointer));
     }
 }

@@ -5,25 +5,36 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 public partial class {{ moxy.Class.Name }} : CfgInstruction {
     public {{ moxy.Class.Name }}(SegmentedAddress address,
         InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes) : base(address, opcodeField, prefixes, 1) {
     }
     
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.IN, builder.Register.Reg16(RegisterIndex.DxIndex), builder.Register.Accumulator(builder.UType({{Size}})));
+    }
+
     public override void Execute(InstructionExecutionHelper helper) {
         helper.State.{{Accumulator}} = helper.In{{Size}}(helper.State.DX);
         helper.MoveIpToEndOfInstruction(this);
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.IN, builder.Register.Reg16(RegisterIndex.DxIndex), builder.Register.Accumulator(builder.UType({{Size}})));
+    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
+        // ACC = In{{Size}}(DX)
+        DataType dataType = builder.UType({{Size}});
+        ValueNode dx = builder.Register.Reg16(RegisterIndex.DxIndex);
+        MethodCallValueNode ioRead = builder.Io.IoRead(dataType, dx);
+        ValueNode accumulator = builder.Register.Accumulator(dataType);
+        return builder.WithIpAdvancement(this, builder.Assign(dataType, accumulator, ioRead));
     }
 }

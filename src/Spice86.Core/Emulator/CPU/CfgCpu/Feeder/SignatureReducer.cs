@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
 using System.Linq;
@@ -68,6 +69,8 @@ public class SignatureReducer {
         // We keep the first one and get rid of the other, and we determine in the one we keep which fields are changing.
         CfgInstruction res = instructions.First();
         ReduceNonFinalFields(res, instructions);
+        // Invalidate cached AST since field properties changed
+        res.InvalidateExecutionAstCache();
         // unlink other instructions and make the graph point to new instruction. Make sure other instructions are not in the caches.
         ReplaceWithReference(res, instructions);
         return res;

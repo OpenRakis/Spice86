@@ -4,6 +4,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
@@ -14,8 +15,9 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 
-public class SingleStepTestMinimalMachine {
+public class SingleStepTestMinimalMachine : IDisposable {
     private readonly IList<uint> _modifiedAddresses = new List<uint>();
+    private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
     public SingleStepTestMinimalMachine(CpuModel cpuModel) {
 
         State state = new State(cpuModel);
@@ -39,8 +41,11 @@ public class SingleStepTestMinimalMachine {
         CallbackHandler callbackHandler = new(state, loggerService);
         DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
         FunctionCatalogue functionCatalogue = new();
+        CfgNodeExecutionCompiler executionCompiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService);
+        _cfgNodeExecutionCompiler = executionCompiler;
         Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic,
-            emulatorBreakpointsManager, functionCatalogue, false, false, loggerService);
+            emulatorBreakpointsManager, functionCatalogue, false, false, loggerService,
+            executionCompiler);
     }
 
     public void RestoreMemoryAfterTest() {
@@ -48,6 +53,11 @@ public class SingleStepTestMinimalMachine {
             Memory.SneakilyWrite(address, 0);
         }
         _modifiedAddresses.Clear();
+    }
+
+    /// <inheritdoc />
+    public void Dispose() {
+        _cfgNodeExecutionCompiler.Dispose();
     }
     
     public CfgCpu Cpu { get; }

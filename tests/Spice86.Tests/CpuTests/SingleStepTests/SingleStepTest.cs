@@ -10,7 +10,7 @@ using Xunit;
 /// <summary>
 /// Executes tests from https://github.com/SingleStepTests/
 /// </summary>
-public class SingleStepTest {
+public class SingleStepTest : IDisposable {
     private SingleStepTestMinimalMachine _singleStepTestMinimalMachine = new(CpuModel.INTEL_80386);
     private readonly RevocationListHelper _revocationListHelper;
     private readonly CpuTestRunner _testRunner;
@@ -46,6 +46,7 @@ public class SingleStepTest {
     [InlineData(CpuModel.INTEL_80386, "67.80-67.FF", 2)]
     [InlineData(CpuModel.INTEL_80386, "68-FF", 2)]
     public void TestCpu(CpuModel cpuModel, string range, int maxCycles) {
+        _singleStepTestMinimalMachine.Dispose();
         _singleStepTestMinimalMachine = new(cpuModel);
         string cpuModelString = FromCpuModel(cpuModel);
         string fileName = $"{cpuModelString}.{range}.zip";
@@ -141,5 +142,10 @@ public class SingleStepTest {
         } catch(InvalidTestException) {
             return null;
         }
+    }
+
+    /// <inheritdoc />
+    public void Dispose() {
+        _singleStepTestMinimalMachine.Dispose();
     }
 }

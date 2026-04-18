@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
+using System.Numerics;
+
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
@@ -153,7 +155,7 @@ public class InstructionExecutionHelper {
     /// <param name="instruction"></param>
     /// <param name="vectorNumber"></param>
     public void HandleInterruptInstruction(CfgInstruction instruction, byte vectorNumber) {
-        // Trigger breakpoint before modifying State.IP
+        // Trigger breakpoint before modifying State.IP.
         // The UI's breakpoint action calls WaitIfPaused() to block until user resumes
         // This ensures the debugger sees State.IP pointing to the INT instruction
         _emulatorBreakpointsManager.InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
@@ -220,6 +222,11 @@ public class InstructionExecutionHelper {
 
     public void MoveIpToEndOfInstruction(CfgInstruction instruction) {
         State.IP = instruction.NextInMemoryAddress.Offset;
+    }
+
+    public void ExecuteHlt(CfgInstruction instruction) {
+        State.IsRunning = false;
+        MoveIpToEndOfInstruction(instruction);
     }
 
     public byte In8(ushort port) {
@@ -298,6 +305,102 @@ public class InstructionExecutionHelper {
                 }
             }
             State.CX = cx;
+        }
+    }
+
+    /// <summary>
+    /// Finds the index of the first set bit from the right (least significant bit).
+    /// Used for BSF (Bit Scan Forward) instruction.
+    /// </summary>
+    /// <param name="value">The value to scan (16-bit).</param>
+    /// <returns>The bit index (0-15) of the first set bit from the right.</returns>
+    public ushort BitScanForward16(ushort value) {
+        return (ushort)BitOperations.TrailingZeroCount(value);
+    }
+
+    /// <summary>
+    /// Finds the index of the first set bit from the right (least significant bit).
+    /// Used for BSF (Bit Scan Forward) instruction.
+    /// </summary>
+    /// <param name="value">The value to scan (32-bit).</param>
+    /// <returns>The bit index (0-31) of the first set bit from the right.</returns>
+    public uint BitScanForward32(uint value) {
+        return (uint)BitOperations.TrailingZeroCount(value);
+    }
+
+    /// <summary>
+    /// Finds the index of the first set bit from the left (most significant bit).
+    /// Used for BSR (Bit Scan Reverse) instruction.
+    /// </summary>
+    /// <param name="value">The value to scan (16-bit).</param>
+    /// <returns>The bit index (0-15) of the first set bit from the left.</returns>
+    public ushort BitScanReverse16(ushort value) {
+        return (ushort)BitOperations.Log2(value);
+    }
+
+    /// <summary>
+    /// Finds the index of the first set bit from the left (most significant bit).
+    /// Used for BSR (Bit Scan Reverse) instruction.
+    /// </summary>
+    /// <param name="value">The value to scan (32-bit).</param>
+    /// <returns>The bit index (0-31) of the first set bit from the left.</returns>
+    public uint BitScanReverse32(uint value) {
+        return (uint)BitOperations.Log2(value);
+    }
+
+    /// <summary>
+    /// Sets the InterruptShadowing flag on State, preventing interrupts for one instruction cycle.
+    /// Used by instructions that load SS (e.g., LSS) to ensure SP is also updated safely.
+    /// </summary>
+    public void SetInterruptShadowing() {
+        State.InterruptShadowing = true;
+    }
+
+    public void ExecuteCpuid(CfgInstruction instruction) {
+        throw new CpuInvalidOpcodeException("Attempted to call CPUID, which is unsupported on CPUs < 486");
+    }
+
+    /// <summary>
+    /// Executes a callback by number, then advances IP if the callback did not perform a jump.
+    /// </summary>
+    /// <param name="instruction">The instruction being executed (for IP comparison and advancement).</param>
+    /// <param name="callbackNumber">The callback number to dispatch.</param>
+    public void ExecuteCallback(CfgInstruction instruction, ushort callbackNumber) {
+        CallbackHandler.Run(callbackNumber);
+        if (State.IpSegmentedAddress == instruction.Address) {
+            MoveIpToEndOfInstruction(instruction);
+        }
+    }
+
+    /// <summary>
+    /// Conditionally sets InterruptShadowing when interrupts are currently disabled.
+    /// Per the Intel spec, executing STI when IF=0 blocks maskable interrupts for one additional instruction cycle.
+    /// </summary>
+    public void SetInterruptShadowingIfInterruptDisabled() {
+        if (!State.InterruptFlag) {
+            State.InterruptShadowing = true;
+        }
+    }
+
+    /// <summary>
+    /// Checks that a 16-bit signed index lies within [lower, upper] (inclusive).
+    /// Throws <see cref="CpuBoundRangeExceededException"/> if the check fails.
+    /// </summary>
+    public void CheckBound(short index, short lower, short upper) {
+        if (index < lower || index > upper) {
+            throw new CpuBoundRangeExceededException(
+                $"BOUND check failed: index={index}, lower={lower}, upper={upper}.");
+        }
+    }
+
+    /// <summary>
+    /// Checks that a 32-bit signed index lies within [lower, upper] (inclusive).
+    /// Throws <see cref="CpuBoundRangeExceededException"/> if the check fails.
+    /// </summary>
+    public void CheckBound(int index, int lower, int upper) {
+        if (index < lower || index > upper) {
+            throw new CpuBoundRangeExceededException(
+                $"BOUND check failed: index={index}, lower={lower}, upper={upper}.");
         }
     }
 }

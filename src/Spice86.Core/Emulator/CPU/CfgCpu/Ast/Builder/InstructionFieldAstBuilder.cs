@@ -5,9 +5,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Shared.Emulator.Memory;
 
-public class InstructionFieldAstBuilder(ConstantAstBuilder constant, PointerAstBuilder pointer) {
+public class InstructionFieldAstBuilder(ConstantAstBuilder constant, PointerAstBuilder pointer, SegmentedAddressAstBuilder segmentedAddress) {
     public ConstantAstBuilder Constant { get; } = constant;
     public PointerAstBuilder Pointer { get; } = pointer;
+    public SegmentedAddressAstBuilder SegmentedAddress { get; } = segmentedAddress;
 
 
     public ValueNode? ToNode(InstructionField<byte> field, bool nullIfZero = false) {
@@ -44,12 +45,8 @@ public class InstructionFieldAstBuilder(ConstantAstBuilder constant, PointerAstB
         return Pointer.ToAbsolutePointer(type, physicalAddress);
     }
 
-    public ValueNode ToNode(InstructionField<SegmentedAddress> field) {
-        if (field.UseValue) {
-            return Constant.ToNode(field.Value);
-        }
-
-        return Pointer.ToAbsolutePointer(DataType.UINT32, field.PhysicalAddress);
+    public SegmentedAddressNode ToNode(InstructionField<SegmentedAddress> field) {
+        return SegmentedAddress.ToNode(field);
     }
     
     public DataType ToType(InstructionField<byte> field) {
