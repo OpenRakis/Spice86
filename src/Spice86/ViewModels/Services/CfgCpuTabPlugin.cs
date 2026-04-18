@@ -23,7 +23,7 @@ internal sealed class CfgCpuTabPlugin : IDebuggerTabPlugin {
     }
 
     public void Register(IDebuggerTabRegistry registry) {
-        registry.Add(DebuggerTabIds.CfgCpu,
+        registry.Add(DebuggerTabId.CfgCpu,
             new CfgCpuViewModel(_uiDispatcher, _executionContextManager, _pauseHandler, _nodeToString, _asmRenderingConfig));
     }
 }

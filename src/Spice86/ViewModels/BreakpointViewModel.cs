@@ -22,7 +22,6 @@ public partial class BreakpointViewModel : ViewModelBase {
         bool isRemovedOnTrigger,
         Action onReached,
         Func<long, bool>? additionalTriggerCondition,
-        string comment,
         string? conditionExpression) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         Address = trigger;
@@ -36,7 +35,6 @@ public partial class BreakpointViewModel : ViewModelBase {
         } else {
             _onReached = onReached;
         }
-        Comment = comment;
         Parameter = $"0x{trigger:X2}";
         EndAddress = endAddress;
         _conditionExpression = conditionExpression;
@@ -86,8 +84,14 @@ public partial class BreakpointViewModel : ViewModelBase {
         }
     }
 
-    [ObservableProperty]
-    private string? _comment;
+    public string Comment => Type switch {
+        BreakPointType.CPU_EXECUTION_ADDRESS => "Execution breakpoint",
+        BreakPointType.CPU_CYCLES => "Cycles breakpoint",
+        BreakPointType.CPU_INTERRUPT => "Interrupt breakpoint",
+        BreakPointType.IO_ACCESS or BreakPointType.IO_READ or BreakPointType.IO_WRITE => "I/O Port breakpoint",
+        BreakPointType.MEMORY_ACCESS or BreakPointType.MEMORY_READ or BreakPointType.MEMORY_WRITE => "Memory range breakpoint",
+        _ => Type.ToString()
+    };
 
     /// <summary>
     /// Gets the condition expression for this breakpoint, if any.

@@ -710,7 +710,7 @@ public class Spice86DependencyInjection : IDisposable {
                 emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);
             breakpointsTabPlugin.Register(debuggerTabRegistry);
 
-            BreakpointsViewModel breakpointsViewModel = debuggerTabRegistry.Get<BreakpointsViewModel>(DebuggerTabIds.Breakpoints);
+            BreakpointsViewModel breakpointsViewModel = debuggerTabRegistry.Get<BreakpointsViewModel>(DebuggerTabId.Breakpoints);
             breakpointsViewModel.RestoreBreakpoints(deserializedUserBreakpoints);
 
             DisassemblyTabPlugin disassemblyTabPlugin = new(emulatorBreakpointsManager, memory,

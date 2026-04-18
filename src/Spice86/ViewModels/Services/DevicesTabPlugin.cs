@@ -29,11 +29,11 @@ internal sealed class DevicesTabPlugin : IDebuggerTabPlugin {
         PaletteViewModel paletteViewModel = new(_argbPalette, _uiDispatcher);
         MidiViewModel midiViewModel = new(_midi);
 
-        registry.AddSubTab(DebuggerTabIds.DevicesGroup,
-            new DebuggerSubTabViewModel(DebuggerTabIds.DeviceVideoCard, "Video Card", videoCardViewModel));
-        registry.AddSubTab(DebuggerTabIds.DevicesGroup,
-            new DebuggerSubTabViewModel(DebuggerTabIds.DevicePalette, "Color Palette", paletteViewModel));
-        registry.AddSubTab(DebuggerTabIds.DevicesGroup,
-            new DebuggerSubTabViewModel(DebuggerTabIds.DeviceMidi, "General MIDI / MT-32", midiViewModel));
+        registry.AddSubTab(DebuggerTabId.DevicesGroup,
+            new DebuggerSubTabViewModel(DebuggerTabId.DeviceVideoCard, "Video Card", videoCardViewModel));
+        registry.AddSubTab(DebuggerTabId.DevicesGroup,
+            new DebuggerSubTabViewModel(DebuggerTabId.DevicePalette, "Color Palette", paletteViewModel));
+        registry.AddSubTab(DebuggerTabId.DevicesGroup,
+            new DebuggerSubTabViewModel(DebuggerTabId.DeviceMidi, "General MIDI / MT-32", midiViewModel));
     }
 }

@@ -30,7 +30,7 @@ public sealed class BreakpointsTabPlugin : IDebuggerTabPlugin {
     }
 
     public void Register(IDebuggerTabRegistry registry) {
-        registry.Add(DebuggerTabIds.Breakpoints,
+        registry.Add(DebuggerTabId.Breakpoints,
             CreateViewModel(_state, _pauseHandler, _messenger, _emulatorBreakpointsManager, _uiDispatcher, _textClipboard, _memory));
     }
 

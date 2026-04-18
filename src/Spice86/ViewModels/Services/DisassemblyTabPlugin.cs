@@ -46,6 +46,6 @@ internal sealed class DisassemblyTabPlugin : IDebuggerTabPlugin {
             _emulatorBreakpointsManager, _memory, _state, _functionsInformation,
             _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger,
             _textClipboard, _loggerService, canCloseTab: false);
-        registry.Add(DebuggerTabIds.Disassembly, disassemblyViewModel);
+        registry.Add(DebuggerTabId.Disassembly, disassemblyViewModel);
     }
 }

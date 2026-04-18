@@ -58,19 +58,19 @@ public partial class DebugWindowViewModel : ViewModelBase,
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         _messenger = messenger;
         _uiDispatcher = uiDispatcher;
-        BreakpointsViewModel = tabRegistry.Get<BreakpointsViewModel>(DebuggerTabIds.Breakpoints);
+        BreakpointsViewModel = tabRegistry.Get<BreakpointsViewModel>(DebuggerTabId.Breakpoints);
         StatusMessageViewModel = new(_uiDispatcher, _messenger);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Paused += () => uiDispatcher.Post(() => IsPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
-        DisassemblyViewModel disassemblyVm = tabRegistry.Get<DisassemblyViewModel>(DebuggerTabIds.Disassembly);
+        DisassemblyViewModel disassemblyVm = tabRegistry.Get<DisassemblyViewModel>(DebuggerTabId.Disassembly);
         DisassemblyViewModels.Add(disassemblyVm);
-        CpuViewModel = tabRegistry.Get<CpuViewModel>(DebuggerTabIds.Cpu);
-        MemoryViews.AddRange(tabRegistry.Get<IReadOnlyList<IDebuggerTabContentViewModel>>(DebuggerTabIds.MemoryViews));
+        CpuViewModel = tabRegistry.Get<CpuViewModel>(DebuggerTabId.Cpu);
+        MemoryViews.AddRange(tabRegistry.Get<IReadOnlyList<IDebuggerTabContentViewModel>>(DebuggerTabId.MemoryViews));
         SelectedMemoryView = MemoryViews.FirstOrDefault();
-        CfgCpuViewModel = tabRegistry.Get<CfgCpuViewModel>(DebuggerTabIds.CfgCpu);
-        DeviceSubTabs.AddRange(tabRegistry.GetSubTabs(DebuggerTabIds.DevicesGroup));
+        CfgCpuViewModel = tabRegistry.Get<CfgCpuViewModel>(DebuggerTabId.CfgCpu);
+        DeviceSubTabs.AddRange(tabRegistry.GetSubTabs(DebuggerTabId.DevicesGroup));
         SelectedDeviceSubTab = DeviceSubTabs.FirstOrDefault();
     }
 
