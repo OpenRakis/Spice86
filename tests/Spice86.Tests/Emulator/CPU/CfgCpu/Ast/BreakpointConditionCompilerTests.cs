@@ -659,4 +659,130 @@ public class BreakpointConditionCompilerTests {
         // Assert
         ast.Should().NotBeNull();
     }
+
+    [Fact]
+    public void CompileValue_8BitRegister_ReturnsCorrectValue() {
+        // Arrange
+        State state = CreateTestState();
+        Memory memory = CreateTestMemory();
+        state.AX = 0x1234; // AL = 0x34
+
+        BreakpointConditionCompiler compiler = new(state, memory);
+
+        // Act
+        Func<uint> func = compiler.CompileValue("al");
+        uint result = func();
+
+        // Assert
+        result.Should().Be(0x34);
+    }
+
+    [Fact]
+    public void CompileValue_16BitRegister_ReturnsCorrectValue() {
+        // Arrange
+        State state = CreateTestState();
+        Memory memory = CreateTestMemory();
+        state.BX = 0xABCD;
+
+        BreakpointConditionCompiler compiler = new(state, memory);
+
+        // Act
+        Func<uint> func = compiler.CompileValue("bx");
+        uint result = func();
+
+        // Assert
+        result.Should().Be(0xABCD);
+    }
+
+    [Fact]
+    public void CompileValue_32BitRegister_ReturnsCorrectValue() {
+        // Arrange
+        State state = CreateTestState();
+        Memory memory = CreateTestMemory();
+        state.EAX = 0xDEADBEEF;
+
+        BreakpointConditionCompiler compiler = new(state, memory);
+
+        // Act
+        Func<uint> func = compiler.CompileValue("eax");
+        uint result = func();
+
+        // Assert
+        result.Should().Be(0xDEADBEEF);
+    }
+
+    [Fact]
+    public void CompileValue_SegmentRegister_ReturnsCorrectValue() {
+        // Arrange
+        State state = CreateTestState();
+        Memory memory = CreateTestMemory();
+        state.DS = 0x2000;
+
+        BreakpointConditionCompiler compiler = new(state, memory);
+
+        // Act
+        Func<uint> func = compiler.CompileValue("ds");
+        uint result = func();
+
+        // Assert
+        result.Should().Be(0x2000);
+    }
+
+    [Fact]
+    public void CompileValue_MemoryWord_ReturnsCorrectValue() {
+        // Arrange
+        State state = CreateTestState();
+        Memory memory = CreateTestMemory();
+        state.DS = 0x0000;
+        state.BX = 0x0200;
+        // Memory at 0x200 was set to 0x1234 in CreateTestMemory
+
+        BreakpointConditionCompiler compiler = new(state, memory);
+
+        // Act
+        Func<uint> func = compiler.CompileValue("word ptr ds:[bx]");
+        uint result = func();
+
+        // Assert
+        result.Should().Be(0x1234);
+    }
+
+    [Fact]
+    public void CompileValue_MemoryByte_ReturnsCorrectValue() {
+        // Arrange
+        State state = CreateTestState();
+        Memory memory = CreateTestMemory();
+        state.DS = 0x0000;
+        state.BX = 0x0100;
+        // Memory at 0x100 was set to 0x42 in CreateTestMemory
+
+        BreakpointConditionCompiler compiler = new(state, memory);
+
+        // Act
+        Func<uint> func = compiler.CompileValue("byte ptr ds:[bx]");
+        uint result = func();
+
+        // Assert
+        result.Should().Be(0x42);
+    }
+
+    [Fact]
+    public void CompileValue_ReflectsStateChanges() {
+        // Arrange
+        State state = CreateTestState();
+        Memory memory = CreateTestMemory();
+        state.AX = 0x1111;
+
+        BreakpointConditionCompiler compiler = new(state, memory);
+        Func<uint> func = compiler.CompileValue("ax");
+
+        // Act - value changes after compilation
+        uint firstResult = func();
+        state.AX = 0x2222;
+        uint secondResult = func();
+
+        // Assert
+        firstResult.Should().Be(0x1111);
+        secondResult.Should().Be(0x2222);
+    }
 }

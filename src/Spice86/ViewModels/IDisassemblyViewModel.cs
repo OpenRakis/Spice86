@@ -108,17 +108,17 @@ public interface IDisassemblyViewModel : INotifyPropertyChanged, IDisassemblyCom
     /// This should be called when the view is hidden.
     /// </summary>
     void Deactivate();
-    
+
     /// <summary>
     /// Indicates whether the breakpoint creation dialog is visible.
     /// </summary>
     bool IsCreatingBreakpoint { get; set; }
-    
+
     /// <summary>
     /// The address for the breakpoint being created.
     /// </summary>
     string? BreakpointAddress { get; }
-    
+
     /// <summary>
     /// The condition expression for the breakpoint being created.
     /// </summary>
@@ -128,4 +128,12 @@ public interface IDisassemblyViewModel : INotifyPropertyChanged, IDisassemblyCom
     /// Whether jump indicator lines are displayed in the disassembly view.
     /// </summary>
     bool ShowJumpLines { get; set; }
+
+    /// <summary>
+    /// Notifies the view model that the visible range of lines in the ListBox has changed.
+    /// When paused, this triggers re-evaluation of operands for the visible lines.
+    /// </summary>
+    /// <param name="firstVisibleIndex">The index of the first visible line in <see cref="SortedDebuggerLinesView"/>.</param>
+    /// <param name="lastVisibleIndex">The index of the last visible line in <see cref="SortedDebuggerLinesView"/>.</param>
+    void OnVisibleRangeChanged(int firstVisibleIndex, int lastVisibleIndex);
 }

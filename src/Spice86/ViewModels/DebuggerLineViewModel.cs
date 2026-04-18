@@ -37,6 +37,9 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     private bool _isSelected;
 
     [ObservableProperty]
+    private List<FormattedTextToken>? _evaluatedOperands;
+
+    [ObservableProperty]
     private List<JumpArcSegment> _jumpArcSegments = [];
 
     [ObservableProperty]
@@ -70,6 +73,11 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     public string ByteString { get; }
     public FunctionInformation? Function { get; }
     public SegmentedAddress SegmentedAddress { get; }
+
+    /// <summary>
+    ///     Exposes the Iced.Intel instruction for operand evaluation.
+    /// </summary>
+    public Instruction InstructionInfo => _info;
 
     /// <summary>
     ///     The physical address of this instruction in memory.

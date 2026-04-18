@@ -3,10 +3,12 @@ namespace Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.Memory;
+
 using System.Linq.Expressions;
 
 /// <summary>
 /// Compiles breakpoint condition expressions into executable functions using Expression trees.
+/// Also supports compiling value-returning expressions for operand evaluation.
 /// This class is shared across different parts of the codebase (GDB, UI, serialization)
 /// to provide consistent condition evaluation with high performance via compiled native code.
 /// </summary>
@@ -33,5 +35,18 @@ public class BreakpointConditionCompiler {
         Expression<Func<State, Memory, bool>> lambda = builder.ToFuncBool(expressionTree);
         Func<State, Memory, bool> compiledFunc = lambda.Compile();
         return (address) => compiledFunc(_state, _memory);
+    }
+
+    /// <summary>
+    /// Compiles an expression string into a function that returns its numeric value as a uint.
+    /// Uses the same parsing and building infrastructure as <see cref="Compile"/>,
+    /// </summary>
+    /// <param name="expression">The expression (e.g., "ax", "word ptr ds:[bx + 0x10]").</param>
+    /// <returns>A function that evaluates the expression and returns the value.</returns>
+    public Func<uint> CompileValue(string expression) {
+        AstExpressionBuilder builder = new();
+        Expression expressionTree = AstExpressionCompilationHelper.BuildExpression(expression, builder);
+        Func<State, Memory, uint> compiledFunc = builder.ToFuncUInt32(expressionTree).Compile();
+        return () => compiledFunc(_state, _memory);
     }
 }
