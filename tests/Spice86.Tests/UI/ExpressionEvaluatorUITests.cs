@@ -266,4 +266,78 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
         // Effective address = BX + SI = 0x0030 + 0x0010 = 0x0040
         text.Should().Contain("0x0040");
     }
+
+    /// <summary>
+    /// Verifies that LDS evaluates the far pointer memory operand (dword containing offset:segment).
+    /// ASM: lds si, ss:[bp+0x10] (opcode C5 76 10) — should show the dword value at memory.
+    /// </summary>
+    [AvaloniaFact]
+    public void EvaluateOperands_LdsSiBpPlus10_ShowsFarPointerValue() {
+        // Arrange
+        State state = CreateState();
+        (Memory memory, _, _) = CreateMemory();
+
+        state.SI = 0x0000;
+        state.BP = 0x0984;
+        state.SS = 0x2F23;
+        state.DS = 0x261F;
+
+        // Write a far pointer (offset:segment) at SS:BP+0x10
+        uint physicalAddress = (uint)(state.SS * 16 + state.BP + 0x10);
+        memory.UInt16[physicalAddress] = 0x1234;       // offset
+        memory.UInt16[physicalAddress + 2] = 0x5678;   // segment
+
+        // x86 16-bit encoding: lds si, [bp+0x10] → C5 76 10
+        byte[] machineCode = [0xC5, 0x76, 0x10];
+        SegmentedAddress address = new(0x1000, 0x0100);
+        DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
+
+        ExpressionEvaluationService service = new(state, memory);
+
+        // Act
+        List<FormattedTextToken>? evaluated = service.FormatOperandValues(line.InstructionInfo);
+
+        // Assert
+        evaluated.Should().NotBeNullOrEmpty();
+        string text = SegmentsToText(evaluated!);
+        // Should show the dword value read from memory (segment:offset packed as dword)
+        text.Should().Contain("0x56781234");
+        // SI register value should also be shown
+        text.Should().Contain("SI=0x0000");
+    }
+
+    /// <summary>
+    /// Verifies that CALL dword ptr [mem] evaluates the far pointer memory operand.
+    /// ASM: call dword ptr ss:[bp-4] (opcode FF 5E FC) — should show the target address.
+    /// </summary>
+    [AvaloniaFact]
+    public void EvaluateOperands_CallFarPtrBpMinus4_ShowsFarPointerValue() {
+        // Arrange
+        State state = CreateState();
+        (Memory memory, _, _) = CreateMemory();
+
+        state.BP = 0x0984;
+        state.SS = 0x2F23;
+
+        // Write a far pointer (offset:segment) at SS:BP-4
+        uint physicalAddress = (uint)(state.SS * 16 + state.BP - 4);
+        memory.UInt16[physicalAddress] = 0xABCD;       // offset
+        memory.UInt16[physicalAddress + 2] = 0x1234;   // segment
+
+        // x86 16-bit encoding: call dword ptr [bp-4] → FF 5E FC
+        byte[] machineCode = [0xFF, 0x5E, 0xFC];
+        SegmentedAddress address = new(0x1000, 0x0100);
+        DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
+
+        ExpressionEvaluationService service = new(state, memory);
+
+        // Act
+        List<FormattedTextToken>? evaluated = service.FormatOperandValues(line.InstructionInfo);
+
+        // Assert
+        evaluated.Should().NotBeNullOrEmpty();
+        string text = SegmentsToText(evaluated!);
+        // Should show the dword value read from memory
+        text.Should().Contain("0x1234ABCD");
+    }
 }

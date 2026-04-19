@@ -178,7 +178,7 @@ public class ExpressionEvaluationService {
         return size switch {
             MemorySize.UInt8 or MemorySize.Int8 => "byte",
             MemorySize.UInt16 or MemorySize.Int16 => "word",
-            MemorySize.UInt32 or MemorySize.Int32 => "dword",
+            MemorySize.UInt32 or MemorySize.Int32 or MemorySize.SegPtr16 => "dword",
             _ => null
         };
     }
@@ -187,7 +187,7 @@ public class ExpressionEvaluationService {
         return size switch {
             MemorySize.UInt8 or MemorySize.Int8 => 8,
             MemorySize.UInt16 or MemorySize.Int16 => 16,
-            MemorySize.UInt32 or MemorySize.Int32 => 32,
+            MemorySize.UInt32 or MemorySize.Int32 or MemorySize.SegPtr16 => 32,
             _ => 16
         };
     }
