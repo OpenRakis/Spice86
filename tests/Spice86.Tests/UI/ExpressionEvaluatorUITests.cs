@@ -68,7 +68,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
         state.AX = 0x1234;
         state.BX = 0x5678;
 
-        // x86 16-bit encoding: mov ax, bx → 89 D8
+        // x86 16-bit encoding: mov ax, bx -> 89 D8
         byte[] machineCode = [0x89, 0xD8];
         SegmentedAddress address = new(0x1000, 0x0100);
         DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
@@ -80,7 +80,8 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextToken> evaluatedTokens = evaluated ?? [];
+        string text = SegmentsToText(evaluatedTokens);
         text.Should().Contain("AX=0x1234");
         text.Should().Contain("BX=0x5678");
 
@@ -107,7 +108,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
         // Write 0xABCD at physical address DS*16 + BX = 0x20000 + 0x50 = 0x20050
         memory.UInt16[0x20050] = 0xABCD;
 
-        // x86 16-bit encoding: mov ax, word ptr [bx] → 8B 07
+        // x86 16-bit encoding: mov ax, word ptr [bx] -> 8B 07
         byte[] machineCode = [0x8B, 0x07];
         SegmentedAddress address = new(0x1000, 0x0100);
         DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
@@ -119,7 +120,8 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextToken> evaluatedTokens = evaluated ?? [];
+        string text = SegmentsToText(evaluatedTokens);
         text.Should().Contain("AX=0x0000");
         text.Should().Contain("0xABCD");
 
@@ -130,7 +132,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
     /// <summary>
     /// Verifies that immediates are NOT evaluated (they are already visible in disassembly text).
-    /// ASM: mov ax, 0x1234 (opcode B8 34 12) — only AX should appear in evaluation.
+    /// ASM: mov ax, 0x1234 (opcode B8 34 12) - only AX should appear in evaluation.
     /// </summary>
     [AvaloniaFact]
     public void EvaluateOperands_MovAxImm_OnlyShowsDestRegister() {
@@ -140,7 +142,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
         state.AX = 0x5555;
 
-        // x86 16-bit encoding: mov ax, 0x1234 → B8 34 12
+        // x86 16-bit encoding: mov ax, 0x1234 -> B8 34 12
         byte[] machineCode = [0xB8, 0x34, 0x12];
         SegmentedAddress address = new(0x1000, 0x0100);
         DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
@@ -152,7 +154,8 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextToken> evaluatedTokens = evaluated ?? [];
+        string text = SegmentsToText(evaluatedTokens);
         text.Should().Contain("AX=0x5555");
         // The immediate value 0x1234 should NOT appear in evaluation
         text.Should().NotContain("=0x1234");
@@ -175,7 +178,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
         // Write 0xBEEF at physical address DS*16 + BX + 0x10 = 0x20000 + 0x50 + 0x10 = 0x20060
         memory.UInt16[0x20060] = 0xBEEF;
 
-        // x86 16-bit encoding: mov ax, word ptr [bx+0x10] → 8B 47 10
+        // x86 16-bit encoding: mov ax, word ptr [bx+0x10] -> 8B 47 10
         byte[] machineCode = [0x8B, 0x47, 0x10];
         SegmentedAddress address = new(0x1000, 0x0100);
         DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
@@ -187,7 +190,8 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextToken> evaluatedTokens = evaluated ?? [];
+        string text = SegmentsToText(evaluatedTokens);
         text.Should().Contain("AX=0x0000");
         text.Should().Contain("0xBEEF");
 
@@ -197,7 +201,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
     /// <summary>
     /// Verifies that LEA computes the effective address instead of reading memory.
-    /// ASM: lea ax, [bp-8] (opcode 8D 46 F8) — should show computed address, not memory contents.
+    /// ASM: lea ax, [bp-8] (opcode 8D 46 F8) - should show computed address, not memory contents.
     /// </summary>
     [AvaloniaFact]
     public void EvaluateOperands_LeaAxBpMinus8_ShowsEffectiveAddress() {
@@ -209,11 +213,11 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
         state.BP = 0x0100;
         state.SS = 0x2000;
 
-        // Write decoy data at effective address — LEA must NOT read this
+        // Write decoy data at effective address - LEA must NOT read this
         uint physicalAddress = (uint)(state.SS * 16 + state.BP - 8);
         memory.UInt16[physicalAddress] = 0xDEAD;
 
-        // x86 16-bit encoding: lea ax, [bp-8] → 8D 46 F8
+        // x86 16-bit encoding: lea ax, [bp-8] -> 8D 46 F8
         byte[] machineCode = [0x8D, 0x46, 0xF8];
         SegmentedAddress address = new(0x1000, 0x0100);
         DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
@@ -225,7 +229,8 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextToken> evaluatedTokens = evaluated ?? [];
+        string text = SegmentsToText(evaluatedTokens);
 
         // LEA should show effective address = BP - 8 = 0x0100 - 8 = 0x00F8
         text.Should().Contain("0x00F8");
@@ -250,7 +255,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
         state.SI = 0x0010;
         state.DS = 0x2000;
 
-        // x86 16-bit encoding: lea ax, [bx+si] → 8D 00
+        // x86 16-bit encoding: lea ax, [bx+si] -> 8D 00
         byte[] machineCode = [0x8D, 0x00];
         SegmentedAddress address = new(0x1000, 0x0100);
         DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
@@ -262,14 +267,15 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextToken> evaluatedTokens = evaluated ?? [];
+        string text = SegmentsToText(evaluatedTokens);
         // Effective address = BX + SI = 0x0030 + 0x0010 = 0x0040
         text.Should().Contain("0x0040");
     }
 
     /// <summary>
     /// Verifies that LDS evaluates the far pointer memory operand (dword containing offset:segment).
-    /// ASM: lds si, ss:[bp+0x10] (opcode C5 76 10) — should show the dword value at memory.
+    /// ASM: lds si, ss:[bp+0x10] (opcode C5 76 10) - should show the dword value at memory.
     /// </summary>
     [AvaloniaFact]
     public void EvaluateOperands_LdsSiBpPlus10_ShowsFarPointerValue() {
@@ -287,7 +293,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
         memory.UInt16[physicalAddress] = 0x1234;       // offset
         memory.UInt16[physicalAddress + 2] = 0x5678;   // segment
 
-        // x86 16-bit encoding: lds si, [bp+0x10] → C5 76 10
+        // x86 16-bit encoding: lds si, [bp+0x10] -> C5 76 10
         byte[] machineCode = [0xC5, 0x76, 0x10];
         SegmentedAddress address = new(0x1000, 0x0100);
         DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
@@ -299,7 +305,8 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextToken> evaluatedTokens = evaluated ?? [];
+        string text = SegmentsToText(evaluatedTokens);
         // Should show the dword value read from memory (segment:offset packed as dword)
         text.Should().Contain("0x56781234");
         // SI register value should also be shown
@@ -308,7 +315,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
     /// <summary>
     /// Verifies that CALL dword ptr [mem] evaluates the far pointer memory operand.
-    /// ASM: call dword ptr ss:[bp-4] (opcode FF 5E FC) — should show the target address.
+    /// ASM: call dword ptr ss:[bp-4] (opcode FF 5E FC) - should show the target address.
     /// </summary>
     [AvaloniaFact]
     public void EvaluateOperands_CallFarPtrBpMinus4_ShowsFarPointerValue() {
@@ -324,7 +331,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
         memory.UInt16[physicalAddress] = 0xABCD;       // offset
         memory.UInt16[physicalAddress + 2] = 0x1234;   // segment
 
-        // x86 16-bit encoding: call dword ptr [bp-4] → FF 5E FC
+        // x86 16-bit encoding: call dword ptr [bp-4] -> FF 5E FC
         byte[] machineCode = [0xFF, 0x5E, 0xFC];
         SegmentedAddress address = new(0x1000, 0x0100);
         DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
@@ -336,7 +343,8 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
 
         // Assert
         evaluated.Should().NotBeNullOrEmpty();
-        string text = SegmentsToText(evaluated!);
+        List<FormattedTextToken> evaluatedTokens = evaluated ?? [];
+        string text = SegmentsToText(evaluatedTokens);
         // Should show the dword value read from memory
         text.Should().Contain("0x1234ABCD");
     }

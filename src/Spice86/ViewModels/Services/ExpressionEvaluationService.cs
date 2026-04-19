@@ -55,7 +55,7 @@ public class ExpressionEvaluationService {
                         if (segments.Count > 0) {
                             AddSeparator(segments);
                         }
-                        AddAddressValue(segments, instruction, value, GetRegisterBitWidth(instruction.GetOpRegister(0)));
+                        AddAddressValue(segments, value, GetRegisterBitWidth(instruction.GetOpRegister(0)));
                     }
                 } else {
                     string? expr = BuildMemoryExpression(instruction);
@@ -84,7 +84,7 @@ public class ExpressionEvaluationService {
         segments.Add(new FormattedTextToken { Text = FormatHex(value, bitWidth), Kind = FormatterTextKind.Number });
     }
 
-    private static void AddAddressValue(List<FormattedTextToken> segments, Instruction instruction, long value, int bitWidth) {
+    private static void AddAddressValue(List<FormattedTextToken> segments, long value, int bitWidth) {
         segments.Add(new FormattedTextToken { Text = "addr", Kind = FormatterTextKind.Keyword });
         segments.Add(new FormattedTextToken { Text = "=", Kind = FormatterTextKind.Punctuation });
         segments.Add(new FormattedTextToken { Text = FormatHex(value, bitWidth), Kind = FormatterTextKind.Number });
