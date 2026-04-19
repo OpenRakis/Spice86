@@ -64,7 +64,7 @@ public class InstructionsFeeder : IClearable {
     private CfgInstruction ParseAndSetAsCurrent(SegmentedAddress address) {
         CfgInstruction parsed = ParseEnsuringUnique(address);
         // Recompile instruction
-        //_executionCompiler.Compile(parsed);
+        _executionCompiler.Compile(parsed);
         CurrentInstructions.SetAsCurrent(parsed);
         PreviousInstructions.AddInstructionInPrevious(parsed);
         return parsed;

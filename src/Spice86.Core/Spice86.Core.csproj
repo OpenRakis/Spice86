@@ -27,11 +27,11 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance" />
-        <PackageReference Include="FastExpressionCompiler" />
         <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.Sinks.File" />
 		<PackageReference Include="Spectre.Console.Cli" />
+        <PackageReference Include="FastExpressionCompiler" />
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
         <PackageReference Include="Swashbuckle.AspNetCore" />
