@@ -355,8 +355,22 @@ public sealed class AnsiSequenceHandler {
     private void SetResetMode(char command) {
         int mode = Param(0, 0);
         bool isSet = command == 'h';
+        if (mode == 99) {
+            // NANSI mode 99 toggles pseudo cursor behavior.
+            _vga.CursorEmulation(isSet);
+            return;
+        }
         if (mode == 7) {
             _state.WrapFlag = isSet;
+            return;
+        }
+        if (mode == 43) {
+            // NANSI mode 43: reinitialize current text mode, then load 8x8 font
+            // to reach the 80x43 text layout when supported.
+            _vga.VgaSetMode(_biosDataArea.VideoMode, ModeFlags.Legacy);
+            _vga.LoadRom8X8Font(3, 0);
+            _vga.SetCursorShape(0x0707);
+            _vga.SetCursorPosition(new CursorPosition(0, 0, Page));
             return;
         }
         if (mode <= 0) {
