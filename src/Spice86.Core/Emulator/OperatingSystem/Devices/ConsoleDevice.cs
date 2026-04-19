@@ -167,8 +167,12 @@ public class ConsoleDevice : CharacterDevice {
             // Drain stuffahead buffer (DSR responses, key reassignment) first.
             // NANSI: searchbuf checks fnkey/cprseq/brkkey/xlatseq before keyboard.
             if (_stuffAheadBuffer.Count > 0) {
-                buffer[index++] = _stuffAheadBuffer.Dequeue();
+                byte stuffedByte = _stuffAheadBuffer.Dequeue();
+                buffer[index++] = stuffedByte;
                 bytesRead++;
+                if (Echo) {
+                    EchoCharacter(stuffedByte);
+                }
                 continue;
             }
 
@@ -198,7 +202,7 @@ public class ConsoleDevice : CharacterDevice {
                     bytesRead = HandleExtendedKey(buffer, ref index, bytesRead, scanCode);
                     continue;
                 case (byte)AsciiControlCodes.Extended:
-                    bytesRead = HandleExtendedKey0xE0(buffer, ref index, bytesRead, asciiCode, scanCode);
+                    bytesRead = HandleExtendedKey0xE0(buffer, ref index, bytesRead, scanCode);
                     continue;
                 default:
                     buffer[index++] = asciiCode;
@@ -218,9 +222,6 @@ public class ConsoleDevice : CharacterDevice {
             return bytesRead;
         }
         buffer[index++] = _extendedKeyScanCodeCache;
-        if (Echo) {
-            EchoCharacter(_extendedKeyScanCodeCache);
-        }
         _extendedKeyScanCodeCache = 0;
         return bytesRead + 1;
     }
@@ -244,8 +245,9 @@ public class ConsoleDevice : CharacterDevice {
             buffer[index++] = (byte)AsciiControlCodes.Backspace;
             return bytesRead + 1;
         }
-        if (index > 0) {
-            buffer[index--] = 0;
+        if (bytesRead > 0) {
+            index--;
+            buffer[index] = 0;
             bytesRead--;
             if (Echo) {
                 EchoCharacter((byte)AsciiControlCodes.Backspace);
@@ -269,7 +271,7 @@ public class ConsoleDevice : CharacterDevice {
     }
 
     private int HandleExtendedKey0xE0(byte[] buffer, ref int index, int bytesRead,
-        byte asciiCode, byte scanCode) {
+        byte scanCode) {
         // NANSI keyE0fixup: AL=0xE0 is normalized to 0x00, making enhanced
         // keyboard extended keys behave identically to standard function keys.
         // When scanCode != 0 this is an extended key (e.g. enhanced arrow keys),

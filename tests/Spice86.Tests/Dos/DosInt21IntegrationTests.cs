@@ -1560,11 +1560,10 @@ public class DosInt21IntegrationTests {
 
     /// <summary>
     /// Tests that ESC[0p (keyboard reassignment reset) installs the NANSI default
-    /// mapping of Ctrl+PrintScreen (scan code 0x72, AL=0) → Ctrl+P (0x10).
-    /// The program sends ESC[0p via INT 21h AH=02h, then writes ESC[0;114;16p
-    /// to verify the mapping is already present (no-op), and reads the mapping back
-    /// by injecting a Ctrl+PrintScreen keystroke (AX=0x7200) into the BIOS keyboard
-    /// buffer and reading it via INT 21h AH=08h. The read should return 0x10 (Ctrl+P).
+    /// mapping of Ctrl+PrintScreen (scan code 0x72, AL=0) to Ctrl+P (0x10).
+    /// The program sends ESC[0p via INT 21h AH=02h, then injects a Ctrl+PrintScreen
+    /// keystroke (AX=0x7200) into the BIOS keyboard buffer and reads it via
+    /// INT 21h AH=08h. The read should return 0x10 (Ctrl+P).
     /// </summary>
     [Fact]
     public void KeyboardReassignmentReset_InstallsCtrlPrintScreenDefault() {
@@ -1615,11 +1614,10 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
-    /// Tests that DOS function 0Ch (flush + read) clears the stuffahead buffer.
+    /// Tests that DOS function 0Ch clears the stuffahead buffer before the next read.
     /// The program sends ESC[6n to inject a DSR response into the stuffahead buffer,
-    /// then calls INT 21h AH=0Ch with AL=08h to flush input (clearing both stuffahead
-    /// and BIOS keyboard buffers), stuffs a 'Z' keystroke into the keyboard buffer
-    /// after the flush, and reads. The read should return 'Z', not any DSR bytes.
+    /// then calls INT 21h AH=0Ch with AL=01h, stuffs a 'Z' keystroke into the keyboard
+    /// buffer after the flush, and reads. The read should return 'Z', not any DSR bytes.
     /// </summary>
     [Fact]
     public void FlushInput_ClearsStuffaheadBuffer() {
