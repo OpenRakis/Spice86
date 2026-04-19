@@ -4,7 +4,6 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Shared.Interfaces;
@@ -20,18 +19,28 @@ public sealed class AnsiSequenceHandler {
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vga;
     private readonly AnsiState _state;
-    private readonly BiosKeyboardBuffer _keyboardBuffer;
+    private readonly Queue<byte> _stuffAheadBuffer;
 
     /// <summary>
     /// Creates a handler that applies ANSI commands to the given VGA subsystem.
     /// </summary>
+    /// <param name="loggerService">Logger for ANSI diagnostics and warnings.</param>
+    /// <param name="biosDataArea">BIOS data area for screen dimensions and cursor positions.</param>
+    /// <param name="vga">VGA BIOS interface for cursor movement, scrolling, and character output.</param>
+    /// <param name="state">Shared ANSI parser state (attribute, parameters, wrap flag, etc.).</param>
+    /// <param name="stuffAheadBuffer">
+    /// Device-level stuffahead buffer for injecting synthesized characters (e.g. DSR responses).
+    /// NANSI uses a priority-ordered set of stuffahead buffers (fnkey, cprseq, brkkey, xlatseq)
+    /// that are drained before polling the BIOS keyboard. This queue serves the same purpose,
+    /// ensuring DSR responses bypass the key reassignment lookup in the Read path.
+    /// </param>
     public AnsiSequenceHandler(ILoggerService loggerService, BiosDataArea biosDataArea,
-        IVgaFunctionality vga, AnsiState state, BiosKeyboardBuffer keyboardBuffer) {
+        IVgaFunctionality vga, AnsiState state, Queue<byte> stuffAheadBuffer) {
         _loggerService = loggerService;
         _biosDataArea = biosDataArea;
         _vga = vga;
         _state = state;
-        _keyboardBuffer = keyboardBuffer;
+        _stuffAheadBuffer = stuffAheadBuffer;
     }
 
     /// <summary>
@@ -360,14 +369,16 @@ public sealed class AnsiSequenceHandler {
 
     /// <summary>
     /// ESC[6n — Report cursor position. NANSI: dsr.
-    /// Injects ESC[row;colR followed by CR into the keyboard buffer.
+    /// Injects ESC[row;colR followed by CR into the stuffahead buffer.
+    /// NANSI stores this in the cprseq buffer which has higher priority than
+    /// the keyboard and bypasses key reassignment lookup.
     /// Coordinates are 1-based.
     /// </summary>
     private void DeviceStatusReport() {
         CursorPosition pos = _vga.GetCursorPosition(Page);
         string response = $"\x1B[{pos.Y + 1};{pos.X + 1}R\r";
         foreach (char c in response) {
-            _keyboardBuffer.EnqueueKeyCode((byte)c);
+            _stuffAheadBuffer.Enqueue((byte)c);
         }
     }
 
@@ -437,7 +448,10 @@ public sealed class AnsiSequenceHandler {
     private void KeyboardReassignment() {
         int totalBytes = _state.ParameterCount + 1;
         if (totalBytes == 1 && _state.Parameters[0] == 0) {
+            // NANSI key_init: reset to defaults, which includes one default
+            // mapping of Ctrl+PrintScreen (0x7200) → Ctrl+P (0x10).
             _state.KeyRedefinitions.Clear();
+            _state.KeyRedefinitions[0x7200] = new byte[] { 0x10 };
             return;
         }
         int dataStart;

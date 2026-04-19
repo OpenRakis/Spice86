@@ -88,7 +88,7 @@ public class ConsoleDevice : CharacterDevice {
         _vga = vgaFunctionality;
         _currentMode = vgaFunctionality.GetCurrentMode();
         vgaFunctionality.VideoModeChanged += OnVideoModeChanged;
-        _ansiHandler = new AnsiSequenceHandler(loggerService, biosDataArea, vgaFunctionality, _ansiState, biosKeyboardBuffer);
+        _ansiHandler = new AnsiSequenceHandler(loggerService, biosDataArea, vgaFunctionality, _ansiState, _stuffAheadBuffer);
     }
 
     private void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
@@ -127,6 +127,10 @@ public class ConsoleDevice : CharacterDevice {
 
     /// <inheritdoc />
     public override void Flush() {
+        // NANSI dosfn7: clears all stuffahead buffers + BIOS keyboard buffer.
+        _stuffAheadBuffer.Clear();
+        _extendedKeyScanCodeCache = 0;
+        _biosKeyboardBuffer.Flush();
     }
 
     /// <inheritdoc />
@@ -186,16 +190,16 @@ public class ConsoleDevice : CharacterDevice {
             switch (asciiCode) {
                 case (byte)AsciiControlCodes.CarriageReturn:
                     bytesRead = HandleCarriageReturn(buffer, ref index, bytesRead);
-                    break;
+                    continue;
                 case (byte)AsciiControlCodes.Backspace:
                     bytesRead = HandleBackspace(buffer, ref index, bytesRead);
                     continue;
                 case (byte)AsciiControlCodes.Null:
                     bytesRead = HandleExtendedKey(buffer, ref index, bytesRead, scanCode);
-                    break;
+                    continue;
                 case (byte)AsciiControlCodes.Extended:
                     bytesRead = HandleExtendedKey0xE0(buffer, ref index, bytesRead, asciiCode, scanCode);
-                    break;
+                    continue;
                 default:
                     buffer[index++] = asciiCode;
                     bytesRead++;
@@ -243,8 +247,11 @@ public class ConsoleDevice : CharacterDevice {
         if (index > 0) {
             buffer[index--] = 0;
             bytesRead--;
-            EchoCharacter((byte)AsciiControlCodes.Backspace);
-            EchoCharacter((byte)' ');
+            if (Echo) {
+                EchoCharacter((byte)AsciiControlCodes.Backspace);
+                EchoCharacter((byte)' ');
+                EchoCharacter((byte)AsciiControlCodes.Backspace);
+            }
         }
         return bytesRead;
     }
@@ -263,9 +270,12 @@ public class ConsoleDevice : CharacterDevice {
 
     private int HandleExtendedKey0xE0(byte[] buffer, ref int index, int bytesRead,
         byte asciiCode, byte scanCode) {
+        // NANSI keyE0fixup: AL=0xE0 is normalized to 0x00, making enhanced
+        // keyboard extended keys behave identically to standard function keys.
+        // When scanCode != 0 this is an extended key (e.g. enhanced arrow keys),
+        // returned as the two-byte pair (0x00, scanCode).
         if (scanCode != 0) {
-            buffer[index++] = asciiCode;
-            return bytesRead + 1;
+            return HandleExtendedKey(buffer, ref index, bytesRead, scanCode);
         }
         buffer[index++] = 0;
         bytesRead++;

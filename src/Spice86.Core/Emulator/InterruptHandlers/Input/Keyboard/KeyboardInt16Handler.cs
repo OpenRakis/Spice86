@@ -48,6 +48,7 @@ public class KeyboardInt16Handler : InterruptHandler {
         AddAction(0x01, () => GetKeystrokeStatus(true));
         AddAction(0x02, GetShiftFlags);
         AddAction(0x03, SetTypematicRateAndDelay);
+        AddAction(0x05, StoreKeystroke);
         AddAction(0x10, GetEnhancedKeystroke);
         AddAction(0x11, () => GetEnhancedKeystrokeStatus(true));
         AddAction(0x1D, () => Unsupported(0x1D));
@@ -241,6 +242,20 @@ public class KeyboardInt16Handler : InterruptHandler {
             LoggerService.Verbose("GET SHIFT FLAGS");
         }
         State.AL = _biosDataArea.KeyboardStatusFlag;
+    }
+
+    /// <summary>
+    /// INT 16h, AH=05h - Store Keystroke in keyboard buffer.
+    /// Writes the key code in CX (CH=scan code, CL=ASCII character) into the
+    /// BIOS keyboard buffer. On success AL=0; if the buffer is full, AL=1.
+    /// </summary>
+    public void StoreKeystroke() {
+        ushort keyCode = State.CX;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("STORE KEYSTROKE {KeyCode}", keyCode);
+        }
+        bool enqueued = _biosKeyboardBuffer.EnqueueKeyCode(keyCode);
+        State.AL = enqueued ? (byte)0 : (byte)1;
     }
 
     /// <summary>
