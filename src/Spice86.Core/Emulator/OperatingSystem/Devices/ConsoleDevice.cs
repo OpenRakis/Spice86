@@ -376,13 +376,11 @@ public class ConsoleDevice : CharacterDevice {
             return;
         }
         // '=' and '?' only accepted as first char after '[' (NANSI: f_get_args one-shot).
-        if (chr == '=' || chr == '?') {
-            if (_ansiState.PrefixAllowed) {
-                _ansiState.PrefixAllowed = false;
-                return;
-            }
-            // Fall through to syntax error.
+        if ((chr == '=' || chr == '?') && _ansiState.PrefixAllowed) {
+            _ansiState.PrefixAllowed = false;
+            return;
         }
+        // Fall through to syntax error when '=' or '?' appears after prefix is no longer allowed.
         _ansiState.PrefixAllowed = false;
         // Quoted strings for keyboard reassignment (NANSI: f_get_string).
         if (chr == '"' || chr == '\'') {
