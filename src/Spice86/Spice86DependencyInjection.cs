@@ -286,7 +286,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         CfgNodeExecutionCompilerMonitor cfgNodeExecutionCompilerMonitor = new(loggerService);
-        CfgNodeExecutionCompiler cfgNodeExecutionCompiler = new(cfgNodeExecutionCompilerMonitor, loggerService);
+        CfgNodeExecutionCompiler cfgNodeExecutionCompiler = new(cfgNodeExecutionCompilerMonitor, loggerService, configuration.JitMode);
         _cfgNodeExecutionCompiler = cfgNodeExecutionCompiler;
 
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,

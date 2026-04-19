@@ -1,0 +1,16 @@
+F000:0000 cli
+F000:0001 xor AX,AX
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0xFFFE
+F000:000A mov BP,0x0100
+F000:000D mov word ptr SS:[BP-14],0xE4C3
+F000:0012 mov AX,0
+F000:0015 mov DX,0x8000
+F000:0018 div word ptr SS:[BP-14]
+F000:001B mov word ptr DS:[0],AX
+F000:001E mov word ptr DS:[2],DX
+F000:0022 mov CX,word ptr SS:[BP-14]
+F000:0025 mov word ptr DS:[4],CX
+F000:0029 hlt
+F000:FFF0 jmp short 0

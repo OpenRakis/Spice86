@@ -16,6 +16,7 @@ using Xunit;
 
 namespace Spice86.Tests.CfgCpu;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
@@ -46,7 +47,7 @@ public class CfgNodeFeederTest : IDisposable {
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(new PauseHandler(loggerService), _state, _memory, memoryBreakpoints, ioBreakpoints);
         InstructionReplacerRegistry replacerRegistry = new();
         _compiler?.Dispose();
-        _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService);
+        _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedThenCompiled);
         CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, replacerRegistry,
             _compiler);
         ExecutionContextManager executionContextManager = new(_memory, _state, cfgNodeFeeder, replacerRegistry, new(), false, loggerService, null);

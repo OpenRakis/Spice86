@@ -6,6 +6,7 @@ using JetBrains.Annotations;
 
 using Serilog;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
@@ -27,6 +28,8 @@ using Xunit;
 
 public class MachineTest
 {
+    public static IEnumerable<object[]> JitModes => [[JitMode.InterpretedOnly], [JitMode.CompiledOnly]];
+
     private readonly ListingExtractor _dumper = new(new(AsmRenderingConfig.CreateSpice86Style()));
 
     static MachineTest()
@@ -37,20 +40,23 @@ public class MachineTest
             .CreateLogger();
     }
 
-    [Fact]
-    public void TestAdd()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestAdd(JitMode jitMode)
     {
-        TestOneBin("add");
+        TestOneBin("add", jitMode);
     }
 
-    [Fact]
-    public void TestBcdcnv()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestBcdcnv(JitMode jitMode)
     {
-        TestOneBin("bcdcnv");
+        TestOneBin("bcdcnv", jitMode);
     }
 
-    [Fact]
-    public void TestBitwise()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestBitwise(JitMode jitMode)
     {
         byte[] expected = GetExpected("bitwise");
         // dosbox values
@@ -58,68 +64,91 @@ public class MachineTest
         expected[0x9D] = 0x12;
         expected[0x9B] = 0x12;
         expected[0x99] = 0x12;
-        TestOneBin("bitwise", expected);
+        TestOneBin("bitwise", expected, jitMode);
     }
 
-    [Fact]
-    public void TestCmpneg()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestCmpneg(JitMode jitMode)
     {
-        TestOneBin("cmpneg");
+        TestOneBin("cmpneg", jitMode);
     }
 
-    [Fact]
-    public void TestControl()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestControl(JitMode jitMode)
     {
         byte[] expected = GetExpected("control");
         // dosbox values
         expected[0x1] = 0x78;
-        TestOneBin("control", expected);
+        TestOneBin("control", expected, jitMode);
     }
 
-    [Fact]
-    public void TestDatatrnf()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestDatatrnf(JitMode jitMode)
     {
-        TestOneBin("datatrnf");
+        TestOneBin("datatrnf", jitMode);
     }
 
-    [Fact]
-    public void TestDiv()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestDiv(JitMode jitMode)
     {
-        TestOneBin("div");
+        TestOneBin("div", jitMode);
     }
 
-    [Fact]
-    public void TestInterrupt()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestDiv2(JitMode jitMode)
     {
-        TestOneBin("interrupt");
+        byte[] expected = new byte[6];
+        expected[0x00] = 0x3D; // quotient low  (AX = 0x8F3D)
+        expected[0x01] = 0x8F; // quotient high
+        expected[0x02] = 0x89; // remainder low (DX = 0x9089)
+        expected[0x03] = 0x90; // remainder high
+        expected[0x04] = 0xC3; // divisor low   (CX = 0xE4C3)
+        expected[0x05] = 0xE4; // divisor high
+        TestOneBin("div2", expected, jitMode);
     }
 
-    [Fact]
-    public void TestJump1()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestInterrupt(JitMode jitMode)
     {
-        TestOneBin("jump1");
+        TestOneBin("interrupt", jitMode);
     }
 
-    [Fact]
-    public void TestJump2()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestJump1(JitMode jitMode)
     {
-        TestOneBin("jump2");
+        TestOneBin("jump1", jitMode);
     }
 
-    [Fact]
-    public void TestJmpmov()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestJump2(JitMode jitMode)
+    {
+        TestOneBin("jump2", jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestJmpmov(JitMode jitMode)
     {
         // 0x4001 in little endian
         byte[] expected = new byte[] { 0x01, 0x40 };
-        Machine emulator = TestOneBin("jmpmov", expected);
+        Machine emulator = TestOneBin("jmpmov", expected, jitMode);
         State state = emulator.CpuState;
         uint endAddress = MemoryUtils.ToPhysicalAddress(state.CS, state.IP);
         // Last instruction HLT is one byte long and is at 0xF400C
         Assert.Equal((uint)0xF400D, endAddress);
     }
 
-    [Fact]
-    public void TestMul()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestMul(JitMode jitMode)
     {
         byte[] expected = GetExpected("mul");
         // dosbox values
@@ -138,25 +167,28 @@ public class MachineTest
         expected[0xB4] = 0x3;
         expected[0xB6] = 0x42;
         expected[0xBA] = 0x2;
-        TestOneBin("mul", expected);
+        TestOneBin("mul", expected, jitMode);
     }
 
-    [Fact]
-    public void TestRep()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestRep(JitMode jitMode)
     {
-        TestOneBin("rep");
+        TestOneBin("rep", jitMode);
     }
 
-    [Fact]
-    public void TestRotate()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestRotate(JitMode jitMode)
     {
-        TestOneBin("rotate");
+        TestOneBin("rotate", jitMode);
     }
 
-    [Fact]
-    public void TestSegpr()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSegpr(JitMode jitMode)
     {
-        Machine machine = TestOneBin("segpr");
+        Machine machine = TestOneBin("segpr", jitMode);
         // Here, a division by 0 occurred causing a CPU fault. It is handled by an interrupt handler.
         CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
         CfgInstruction? divBy0 = currentInstructions.GetAtAddress(new(0xF000, 0x005F));
@@ -179,36 +211,40 @@ public class MachineTest
         Assert.Contains(divBy0NextInstruction, divBy0HandlerIret.SuccessorsPerType[InstructionSuccessorType.Normal]);
     }
 
-    [Fact]
-    public void TestShifts()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestShifts(JitMode jitMode)
     {
         byte[] expected = GetExpected("shifts");
         expected[0x6F] = 0x08;
         expected[0x79] = 0x08;
-        TestOneBin("shifts", expected);
+        TestOneBin("shifts", expected, jitMode);
     }
 
-    [Fact]
-    public void TestStrings()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestStrings(JitMode jitMode)
     {
-        TestOneBin("strings");
+        TestOneBin("strings", jitMode);
     }
 
-    [Fact]
-    public void TestSub()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSub(JitMode jitMode)
     {
-        TestOneBin("sub");
+        TestOneBin("sub", jitMode);
     }
 
-    [Fact]
-    public void TestSelfModifyValue()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSelfModifyValue(JitMode jitMode)
     {
         byte[] expected = new byte[4];
         expected[0x00] = 0x0a;
         expected[0x01] = 0x00;
         expected[0x02] = 0xff;
         expected[0x03] = 0xff;
-        Machine machine = TestOneBin("selfmodifyvalue", expected);
+        Machine machine = TestOneBin("selfmodifyvalue", expected, jitMode);
         CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
         CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x00D));
         Assert.NotNull(instruction);
@@ -222,8 +258,9 @@ public class MachineTest
         }
     }
 
-    [Fact]
-    public void TestSelfModifyInstructions()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSelfModifyInstructions(JitMode jitMode)
     {
         byte[] expected = new byte[6];
         expected[0x00] = 0x03;
@@ -232,36 +269,40 @@ public class MachineTest
         expected[0x03] = 0x00;
         expected[0x04] = 0x01;
         expected[0x05] = 0x00;
-        TestOneBin("selfmodifyinstructions", expected);
+        TestOneBin("selfmodifyinstructions", expected, jitMode);
     }
 
-    [Fact]
-    public void TestSelfModifyCall()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSelfModifyCall(JitMode jitMode)
     {
-        TestOneBin("selfmodifycall", []);
+        TestOneBin("selfmodifycall", [], jitMode);
     }
 
-    [Fact]
-    public void TestExternalInt()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestExternalInt(JitMode jitMode)
     {
         byte[] expected = new byte[6];
         expected[0x00] = 0x01;
-        TestOneBin("externalint", expected, 0xFFFFFFF, true);
+        TestOneBin("externalint", expected, jitMode, 0xFFFFFFF, true);
     }
 
-    [Fact]
-    public void TestLinearAddressSameButSegmentedDifferent()
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestLinearAddressSameButSegmentedDifferent(JitMode jitMode)
     {
         byte[] expected = new byte[2];
         expected[0x00] = 0x02;
         expected[0x01] = 0x00;
-        TestOneBin("linearsamesegmenteddifferent", expected, enableA20Gate:true);
+        TestOneBin("linearsamesegmenteddifferent", expected, jitMode, enableA20Gate:true);
     }
 
-    [Fact]
-    public void TestCallbacks() {
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestCallbacks(JitMode jitMode) {
         string comFileName = Path.GetFullPath("Resources/cpuTests/intchain.com");
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: comFileName, maxCycles: 1000, enablePit: false, installInterruptVectors: true, enableA20Gate: false).Create();
+        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: comFileName, maxCycles: 1000, enablePit: false, installInterruptVectors: true, enableA20Gate: false, jitMode: jitMode).Create();
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
         SegmentedAddress entryPoint = machine.CpuState.IpSegmentedAddress;
@@ -331,16 +372,16 @@ public class MachineTest
     }
 
     [AssertionMethod]
-    private Machine TestOneBin(string binName)
+    private Machine TestOneBin(string binName, JitMode jitMode)
     {
         byte[] expected = GetExpected(binName);
-        return TestOneBin(binName, expected);
+        return TestOneBin(binName, expected, jitMode);
     }
 
     [AssertionMethod]
-    private Machine TestOneBin(string binName, byte[] expected, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false)
+    private Machine TestOneBin(string binName, byte[] expected, JitMode jitMode, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false)
     {
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: binName, maxCycles: maxCycles, enablePit: enablePit, enableA20Gate: enableA20Gate).Create();
+        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: binName, maxCycles: maxCycles, enablePit: enablePit, enableA20Gate: enableA20Gate, jitMode: jitMode).Create();
         spice86DependencyInjection.ProgramExecutor.Run();
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
@@ -367,14 +408,15 @@ public class MachineTest
     /// with the CPU reset address 0xfffffff0, which will transfer control to f000:0045.<br/><br/>
     /// All memory accesses will remain within the first 1MB.
     /// </remarks>
-    [Fact]
-    public void Test386ButNotProtectedMode() {
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void Test386ButNotProtectedMode(JitMode jitMode) {
         //Arrange
         string binName = "test386";
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: binName,
             enablePit: false, maxCycles: long.MaxValue,
-            failOnUnhandledPort: true).Create();
+            failOnUnhandledPort: true, jitMode: jitMode).Create();
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
         Test386ButNotProtectedModeHandler debugPortsHandler = new Test386ButNotProtectedModeHandler(machine.CpuState, new LoggerService(), machine.IoPortDispatcher);
