@@ -724,6 +724,8 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Debug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", operation);
         }
         _keyboardInt16Handler.FlushKeyboardBuffer();
+        // NANSI dosfn7: also clears all device-level stuffahead buffers.
+        _dosFileManager.Stdin?.Flush();
         if (operation is not 0x0 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
             return;
         }

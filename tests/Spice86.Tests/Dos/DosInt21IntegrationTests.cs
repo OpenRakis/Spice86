@@ -1558,6 +1558,188 @@ public class DosInt21IntegrationTests {
     /// </summary>
     private const long KeyboardTestInstructionsPerSecond = 1000;
 
+    /// <summary>
+    /// Tests that ESC[0p (keyboard reassignment reset) installs the NANSI default
+    /// mapping of Ctrl+PrintScreen (scan code 0x72, AL=0) to Ctrl+P (0x10).
+    /// The program sends ESC[0p via INT 21h AH=02h, then injects a Ctrl+PrintScreen
+    /// keystroke (AX=0x7200) into the BIOS keyboard buffer and reads it via
+    /// INT 21h AH=08h. The read should return 0x10 (Ctrl+P).
+    /// </summary>
+    [Fact]
+    public void KeyboardReassignmentReset_InstallsCtrlPrintScreenDefault() {
+        byte[] program = new byte[] {
+            // Write ESC[0p to reset key redefinitions (installs Ctrl+PrtSc→Ctrl+P)
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x1B,             // mov dl, 1Bh   ; ESC
+            0xCD, 0x21,             // int 21h
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x5B,             // mov dl, '['
+            0xCD, 0x21,             // int 21h
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x30,             // mov dl, '0'
+            0xCD, 0x21,             // int 21h
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x70,             // mov dl, 'p'
+            0xCD, 0x21,             // int 21h
+
+            // Stuff Ctrl+PrintScreen (AH=72h, AL=00h) into BIOS keyboard buffer
+            // via INT 16h AH=05h
+            0xB4, 0x05,             // mov ah, 05h   ; stuff keystroke
+            0xB9, 0x00, 0x72,       // mov cx, 7200h ; CH=72h (scan), CL=00h (ASCII)
+            0xCD, 0x16,             // int 16h
+
+            // Read the keystroke via INT 21h AH=08h — should return Ctrl+P (0x10)
+            0xB4, 0x08,             // mov ah, 08h   ; read without echo
+            0xCD, 0x21,             // int 21h       ; AL = character
+
+            // Send result to DetailsPort
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort (0x998)
+            0xEE,                   // out dx, al
+
+            // Success
+            0xB0, 0x00,             // mov al, 00h   ; TestResult.Success
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort (0x999)
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success,
+            "program should complete without hanging");
+        testHandler.Details.Should().HaveCount(1,
+            "should read exactly one character from Ctrl+PrintScreen");
+        testHandler.Details[0].Should().Be(0x10,
+            "Ctrl+PrintScreen should be translated to Ctrl+P (0x10) by default key mapping");
+    }
+
+    /// <summary>
+    /// Tests that DOS function 0Ch clears the stuffahead buffer before the next read.
+    /// The program sends ESC[6n to inject a DSR response into the stuffahead buffer,
+    /// then calls INT 21h AH=0Ch with AL=01h, stuffs a 'Z' keystroke into the keyboard
+    /// buffer after the flush, and reads. The read should return 'Z', not any DSR bytes.
+    /// </summary>
+    [Fact]
+    public void FlushInput_ClearsStuffaheadBuffer() {
+        byte[] program = new byte[] {
+            // Position cursor at row 2, col 3 via INT 10h AH=02h
+            0xB4, 0x02,             // mov ah, 02h
+            0xB7, 0x00,             // mov bh, 00h   ; page 0
+            0xB6, 0x02,             // mov dh, 02h   ; row 2
+            0xB2, 0x03,             // mov dl, 03h   ; col 3
+            0xCD, 0x10,             // int 10h
+
+            // Write ESC[6n via INT 21h AH=02h — injects DSR response into stuffahead
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x1B,             // mov dl, 1Bh   ; ESC
+            0xCD, 0x21,             // int 21h
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x5B,             // mov dl, '['
+            0xCD, 0x21,             // int 21h
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x36,             // mov dl, '6'
+            0xCD, 0x21,             // int 21h
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x6E,             // mov dl, 'n'
+            0xCD, 0x21,             // int 21h
+
+            // INT 21h AH=0Ch, AL=01h — flush input buffers only (AL=01 is not in the
+            // allowed follow-up set so the handler returns after flushing)
+            0xB4, 0x0C,             // mov ah, 0Ch   ; flush + read
+            0xB0, 0x01,             // mov al, 01h   ; not a valid follow-up → flush only
+            0xCD, 0x21,             // int 21h
+
+            // NOW stuff 'Z' (AH=2Ch, AL=5Ah) into BIOS keyboard buffer after flush
+            0xB4, 0x05,             // mov ah, 05h   ; stuff keystroke
+            0xB9, 0x5A, 0x2C,       // mov cx, 2C5Ah ; CH=2Ch (scan), CL=5Ah ('Z')
+            0xCD, 0x16,             // int 16h
+
+            // Read via INT 21h AH=08h — should get 'Z', not DSR leftovers
+            0xB4, 0x08,             // mov ah, 08h   ; read without echo
+            0xCD, 0x21,             // int 21h       ; AL = character
+
+            // Send result to DetailsPort — should be 'Z', not ESC from DSR
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort (0x998)
+            0xEE,                   // out dx, al
+
+            // Success
+            0xB0, 0x00,             // mov al, 00h
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort (0x999)
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success,
+            "program should complete without hanging");
+        testHandler.Details.Should().HaveCount(1,
+            "should read exactly one character after flush");
+        testHandler.Details[0].Should().Be((byte)'Z',
+            "flush should have discarded the DSR response; next read should get 'Z' from keyboard");
+    }
+
+    /// <summary>
+    /// Tests that ESC[6n (Device Status Report) returns the correct cursor position
+    /// response through the stuffahead buffer, bypassing key reassignment.
+    /// The program positions the cursor at row 4, col 9 (0-based) via INT 10h,
+    /// then writes ESC[6n via INT 21h AH=02h, reads back each character of the
+    /// expected response "ESC[5;10R\r" (1-based) via INT 21h AH=08h, and validates.
+    /// </summary>
+    [Fact]
+    public void DeviceStatusReport_ReturnsCorrectCursorPosition() {
+        // Expected response: ESC [ 5 ; 1 0 R CR (8 bytes)
+        // Row 5 (1-based for row 4), Col 10 (1-based for col 9)
+        byte[] expectedResponse = { 0x1B, (byte)'[', (byte)'5', (byte)';', (byte)'1', (byte)'0', (byte)'R', 0x0D };
+
+        byte[] program = new byte[] {
+            // Position cursor at row 4, col 9 via INT 10h AH=02h
+            0xB4, 0x02,             // mov ah, 02h   ; set cursor position
+            0xB7, 0x00,             // mov bh, 00h   ; page 0
+            0xB6, 0x04,             // mov dh, 04h   ; row 4 (0-based)
+            0xB2, 0x09,             // mov dl, 09h   ; col 9 (0-based)
+            0xCD, 0x10,             // int 10h
+
+            // Write ESC[6n via INT 21h AH=02h (4 chars)
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x1B,             // mov dl, 1Bh   ; ESC
+            0xCD, 0x21,             // int 21h
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x5B,             // mov dl, '['
+            0xCD, 0x21,             // int 21h
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x36,             // mov dl, '6'
+            0xCD, 0x21,             // int 21h
+            0xB4, 0x02,             // mov ah, 02h
+            0xB2, 0x6E,             // mov dl, 'n'
+            0xCD, 0x21,             // int 21h
+
+            // Read 8 response bytes via INT 21h AH=08h and send each to DetailsPort
+            0xB9, 0x08, 0x00,       // mov cx, 8     ; 8 bytes to read
+            // read_loop:
+            0xB4, 0x08,             // mov ah, 08h   ; read without echo
+            0xCD, 0x21,             // int 21h       ; AL = character
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort (0x998)
+            0xEE,                   // out dx, al    ; send to details port
+            0xE2, 0xF6,             // loop read_loop (-10 bytes)
+
+            // Success
+            0xB0, 0x00,             // mov al, 00h   ; TestResult.Success
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort (0x999)
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success,
+            "program should complete without hanging");
+        testHandler.Details.Should().HaveCount(expectedResponse.Length,
+            "DSR response should be exactly 8 bytes");
+        testHandler.Details.Should().Equal(expectedResponse,
+            "DSR response should be ESC[5;10R\\r for cursor at row 4, col 9");
+    }
+
     private DosTestHandler RunDosTest(byte[] program,
         Action<HeadlessGui>? keyInjectionAction = null,
         Action<Spice86DependencyInjection>? preRunSetup = null,
