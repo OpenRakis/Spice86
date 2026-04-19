@@ -40,7 +40,7 @@ public class ExpressionEvaluationService {
                 Register reg = instruction.GetOpRegister(i);
                 string? expr = RegisterToExpression(reg);
                 if (expr != null) {
-                    long value = _compiler.CompileValue(expr)();
+                    uint value = _compiler.CompileValue(expr)();
                     if (segments.Count > 0) {
                         AddSeparator(segments);
                     }
@@ -51,7 +51,7 @@ public class ExpressionEvaluationService {
                 if (isLea) {
                     string? addressExpr = BuildAddressExpression(instruction);
                     if (addressExpr != null) {
-                        long value = _compiler.CompileValue(addressExpr)();
+                        uint value = _compiler.CompileValue(addressExpr)();
                         if (segments.Count > 0) {
                             AddSeparator(segments);
                         }
@@ -60,7 +60,7 @@ public class ExpressionEvaluationService {
                 } else {
                     string? expr = BuildMemoryExpression(instruction);
                     if (expr != null) {
-                        long value = _compiler.CompileValue(expr)();
+                        uint value = _compiler.CompileValue(expr)();
                         if (segments.Count > 0) {
                             AddSeparator(segments);
                         }
