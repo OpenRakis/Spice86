@@ -194,4 +194,76 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
         // Verify displacement operator is syntax-colored
         evaluated.Should().Contain(s => s.Text == "+" && s.Kind == FormatterTextKind.Operator);
     }
+
+    /// <summary>
+    /// Verifies that LEA computes the effective address instead of reading memory.
+    /// ASM: lea ax, [bp-8] (opcode 8D 46 F8) — should show computed address, not memory contents.
+    /// </summary>
+    [AvaloniaFact]
+    public void EvaluateOperands_LeaAxBpMinus8_ShowsEffectiveAddress() {
+        // Arrange
+        State state = CreateState();
+        (Memory memory, _, _) = CreateMemory();
+
+        state.AX = 0x1111;
+        state.BP = 0x0100;
+        state.SS = 0x2000;
+
+        // Write decoy data at effective address — LEA must NOT read this
+        uint physicalAddress = (uint)(state.SS * 16 + state.BP - 8);
+        memory.UInt16[physicalAddress] = 0xDEAD;
+
+        // x86 16-bit encoding: lea ax, [bp-8] → 8D 46 F8
+        byte[] machineCode = [0x8D, 0x46, 0xF8];
+        SegmentedAddress address = new(0x1000, 0x0100);
+        DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
+
+        ExpressionEvaluationService service = new(state, memory);
+
+        // Act
+        List<FormattedTextToken>? evaluated = service.FormatOperandValues(line.InstructionInfo);
+
+        // Assert
+        evaluated.Should().NotBeNullOrEmpty();
+        string text = SegmentsToText(evaluated!);
+
+        // LEA should show effective address = BP - 8 = 0x0100 - 8 = 0x00F8
+        text.Should().Contain("0x00F8");
+        // LEA must NOT show the memory contents 0xDEAD
+        text.Should().NotContain("DEAD");
+        // AX register value should still be shown
+        text.Should().Contain("AX=0x1111");
+    }
+
+    /// <summary>
+    /// Verifies LEA with base+index computes the effective address.
+    /// ASM: lea ax, [bx+si] (opcode 8D 00)
+    /// </summary>
+    [AvaloniaFact]
+    public void EvaluateOperands_LeaAxBxSi_ShowsEffectiveAddress() {
+        // Arrange
+        State state = CreateState();
+        (Memory memory, _, _) = CreateMemory();
+
+        state.AX = 0x0000;
+        state.BX = 0x0030;
+        state.SI = 0x0010;
+        state.DS = 0x2000;
+
+        // x86 16-bit encoding: lea ax, [bx+si] → 8D 00
+        byte[] machineCode = [0x8D, 0x00];
+        SegmentedAddress address = new(0x1000, 0x0100);
+        DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
+
+        ExpressionEvaluationService service = new(state, memory);
+
+        // Act
+        List<FormattedTextToken>? evaluated = service.FormatOperandValues(line.InstructionInfo);
+
+        // Assert
+        evaluated.Should().NotBeNullOrEmpty();
+        string text = SegmentsToText(evaluated!);
+        // Effective address = BX + SI = 0x0030 + 0x0010 = 0x0040
+        text.Should().Contain("0x0040");
+    }
 }

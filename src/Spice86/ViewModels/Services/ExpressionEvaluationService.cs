@@ -47,13 +47,25 @@ public class ExpressionEvaluationService {
                     AddRegisterValue(segments, expr.ToUpperInvariant(), value, GetRegisterBitWidth(reg));
                 }
             } else if (kind == OpKind.Memory) {
-                string? expr = BuildMemoryExpression(instruction);
-                if (expr != null) {
-                    long value = _compiler.CompileValue(expr)();
-                    if (segments.Count > 0) {
-                        AddSeparator(segments);
+                bool isLea = instruction.Mnemonic == Mnemonic.Lea;
+                if (isLea) {
+                    string? addressExpr = BuildAddressExpression(instruction);
+                    if (addressExpr != null) {
+                        long value = _compiler.CompileValue(addressExpr)();
+                        if (segments.Count > 0) {
+                            AddSeparator(segments);
+                        }
+                        AddAddressValue(segments, instruction, value, GetRegisterBitWidth(instruction.GetOpRegister(0)));
                     }
-                    AddMemoryValue(segments, instruction, value, GetMemorySizeBitWidth(instruction.MemorySize));
+                } else {
+                    string? expr = BuildMemoryExpression(instruction);
+                    if (expr != null) {
+                        long value = _compiler.CompileValue(expr)();
+                        if (segments.Count > 0) {
+                            AddSeparator(segments);
+                        }
+                        AddMemoryValue(segments, instruction, value, GetMemorySizeBitWidth(instruction.MemorySize));
+                    }
                 }
             }
             // Immediate and branch operands are skipped (already visible in disassembly text)
@@ -68,6 +80,12 @@ public class ExpressionEvaluationService {
 
     private static void AddRegisterValue(List<FormattedTextToken> segments, string name, long value, int bitWidth) {
         segments.Add(new FormattedTextToken { Text = name, Kind = FormatterTextKind.Register });
+        segments.Add(new FormattedTextToken { Text = "=", Kind = FormatterTextKind.Punctuation });
+        segments.Add(new FormattedTextToken { Text = FormatHex(value, bitWidth), Kind = FormatterTextKind.Number });
+    }
+
+    private static void AddAddressValue(List<FormattedTextToken> segments, Instruction instruction, long value, int bitWidth) {
+        segments.Add(new FormattedTextToken { Text = "addr", Kind = FormatterTextKind.Keyword });
         segments.Add(new FormattedTextToken { Text = "=", Kind = FormatterTextKind.Punctuation });
         segments.Add(new FormattedTextToken { Text = FormatHex(value, bitWidth), Kind = FormatterTextKind.Number });
     }
@@ -112,14 +130,36 @@ public class ExpressionEvaluationService {
 
     private static string? RegisterToExpression(Register register) {
         return register switch {
-            Register.AL => "al", Register.CL => "cl", Register.DL => "dl", Register.BL => "bl",
-            Register.AH => "ah", Register.CH => "ch", Register.DH => "dh", Register.BH => "bh",
-            Register.AX => "ax", Register.CX => "cx", Register.DX => "dx", Register.BX => "bx",
-            Register.SP => "sp", Register.BP => "bp", Register.SI => "si", Register.DI => "di",
-            Register.EAX => "eax", Register.ECX => "ecx", Register.EDX => "edx", Register.EBX => "ebx",
-            Register.ESP => "esp", Register.EBP => "ebp", Register.ESI => "esi", Register.EDI => "edi",
-            Register.ES => "es", Register.CS => "cs", Register.SS => "ss", Register.DS => "ds",
-            Register.FS => "fs", Register.GS => "gs",
+            Register.AL => "al",
+            Register.CL => "cl",
+            Register.DL => "dl",
+            Register.BL => "bl",
+            Register.AH => "ah",
+            Register.CH => "ch",
+            Register.DH => "dh",
+            Register.BH => "bh",
+            Register.AX => "ax",
+            Register.CX => "cx",
+            Register.DX => "dx",
+            Register.BX => "bx",
+            Register.SP => "sp",
+            Register.BP => "bp",
+            Register.SI => "si",
+            Register.DI => "di",
+            Register.EAX => "eax",
+            Register.ECX => "ecx",
+            Register.EDX => "edx",
+            Register.EBX => "ebx",
+            Register.ESP => "esp",
+            Register.EBP => "ebp",
+            Register.ESI => "esi",
+            Register.EDI => "edi",
+            Register.ES => "es",
+            Register.CS => "cs",
+            Register.SS => "ss",
+            Register.DS => "ds",
+            Register.FS => "fs",
+            Register.GS => "gs",
             _ => null
         };
     }
@@ -158,7 +198,23 @@ public class ExpressionEvaluationService {
             return null;
         }
 
+        string addressExpr = BuildAddressExpressionCore(instruction);
+
         string? segment = RegisterToExpression(instruction.MemorySegment);
+        return segment != null
+            ? $"{sizePrefix} ptr {segment}:[{addressExpr}]"
+            : $"{sizePrefix} ptr [{addressExpr}]";
+    }
+
+    /// <summary>
+    /// Builds an arithmetic expression for the effective address (offset only, no memory dereference).
+    /// Used by LEA to compute the address without reading memory.
+    /// </summary>
+    private static string? BuildAddressExpression(Instruction instruction) {
+        return BuildAddressExpressionCore(instruction);
+    }
+
+    private static string BuildAddressExpressionCore(Instruction instruction) {
 
         List<string> addressParts = new();
 
@@ -179,9 +235,7 @@ public class ExpressionEvaluationService {
 
         string addressExpr = string.Join(" + ", addressParts);
 
-        return segment != null
-            ? $"{sizePrefix} ptr {segment}:[{addressExpr}]"
-            : $"{sizePrefix} ptr [{addressExpr}]";
+        return addressExpr;
     }
 
     private static string FormatHex(long value, int bitWidth) {
