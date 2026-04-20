@@ -314,6 +314,48 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
     }
 
     /// <summary>
+    /// Verifies that a negative displacement is displayed with a minus sign, not as a large positive hex offset.
+    /// ASM: div word [bp-0xE] (opcode F7 76 F2) with SS=0, BP=0x0100 and divisor 0xE4C3 at SS:BP-0xE.
+    /// The display label must show BP-0xE, not BP+0xFFF2.
+    /// </summary>
+    [AvaloniaFact]
+    public void EvaluateOperands_DivWordBpMinusE_ShowsNegativeDisplacementAndCorrectValue() {
+        // Arrange
+        State state = CreateState();
+        (Memory memory, _, _) = CreateMemory();
+
+        state.BP = 0x0100;
+        state.SS = 0x0000;
+
+        // Place divisor 0xE4C3 at physical SS*16 + BP - 14 = 0 + 0x0100 - 14 = 0x00F2
+        uint physicalAddress = (uint)(state.SS * 16 + state.BP - 14);
+        memory.UInt16[physicalAddress] = 0xE4C3;
+
+        // x86 16-bit encoding: div word ptr [bp-0xE] -> F7 76 F2
+        byte[] machineCode = [0xF7, 0x76, 0xF2];
+        SegmentedAddress address = new(0x0000, 0x0018);
+        DebuggerLineViewModel line = CreateDebuggerLine(machineCode, address);
+
+        ExpressionEvaluationService service = new(state, memory);
+
+        // Act
+        List<FormattedTextToken>? evaluated = service.FormatOperandValues(line.InstructionInfo);
+
+        // Assert
+        evaluated.Should().NotBeNullOrEmpty();
+        List<FormattedTextToken> evaluatedTokens = evaluated ?? [];
+        string text = SegmentsToText(evaluatedTokens);
+
+        // The display must use a minus operator with the absolute offset, not +0xFFF2
+        evaluated.Should().Contain(s => s.Text == "-" && s.Kind == FormatterTextKind.Operator);
+        evaluated.Should().Contain(s => s.Text == "0xE" && s.Kind == FormatterTextKind.Number);
+        evaluated.Should().NotContain(s => s.Text == "0xFFF2");
+
+        // The memory value must be read correctly
+        text.Should().Contain("0xE4C3");
+    }
+
+    /// <summary>
     /// Verifies that CALL dword ptr [mem] evaluates the far pointer memory operand.
     /// ASM: call dword ptr ss:[bp-4] (opcode FF 5E FC) - should show the target address.
     /// </summary>
