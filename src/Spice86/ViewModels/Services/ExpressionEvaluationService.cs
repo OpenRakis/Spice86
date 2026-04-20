@@ -304,10 +304,13 @@ public class ExpressionEvaluationService {
 
     private static int GetSignedDisplacement(Instruction instruction) {
         uint displacement = instruction.MemoryDisplacement32;
-        if (instruction.CodeSize == CodeSize.Code16) {
-            return (short)(ushort)displacement;
-        }
-        return (int)displacement;
+        return instruction.MemoryDisplSize switch {
+            0 => 0,
+            1 => (sbyte)(byte)displacement,
+            2 => (short)(ushort)displacement,
+            4 => (int)displacement,
+            _ => (int)displacement
+        };
     }
 
     private static string FormatHex(long value, int bitWidth) {
