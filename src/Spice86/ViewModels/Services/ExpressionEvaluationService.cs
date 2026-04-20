@@ -115,12 +115,17 @@ public class ExpressionEvaluationService {
             firstPart = false;
         }
 
-        uint disp = instruction.MemoryDisplacement32;
-        if (disp != 0 || firstPart) {
+        int signedDisp = GetSignedDisplacement(instruction);
+        if (signedDisp != 0 || firstPart) {
             if (!firstPart) {
-                segments.Add(new FormattedTextToken { Text = "+", Kind = FormatterTextKind.Operator });
+                string op = signedDisp < 0 ? "-" : "+";
+                segments.Add(new FormattedTextToken { Text = op, Kind = FormatterTextKind.Operator });
+                uint absDisp = signedDisp < 0 ? (uint)(-signedDisp) : (uint)signedDisp;
+                segments.Add(new FormattedTextToken { Text = $"0x{absDisp:X}", Kind = FormatterTextKind.Number });
+            } else {
+                // No base or index register: show the displacement as an unsigned hex address.
+                segments.Add(new FormattedTextToken { Text = $"0x{instruction.MemoryDisplacement32:X}", Kind = FormatterTextKind.Number });
             }
-            segments.Add(new FormattedTextToken { Text = $"0x{disp:X}", Kind = FormatterTextKind.Number });
         }
 
         segments.Add(new FormattedTextToken { Text = "]", Kind = FormatterTextKind.Punctuation });
@@ -228,14 +233,27 @@ public class ExpressionEvaluationService {
             addressParts.Add(indexReg);
         }
 
-        uint disp = instruction.MemoryDisplacement32;
-        if (disp != 0 || addressParts.Count == 0) {
-            addressParts.Add($"0x{disp:X}");
+        int signedDisp = GetSignedDisplacement(instruction);
+        bool hasRegisters = addressParts.Count > 0;
+
+        if (signedDisp == 0 && hasRegisters) {
+            return string.Join(" + ", addressParts);
         }
 
-        string addressExpr = string.Join(" + ", addressParts);
+        if (signedDisp < 0 && hasRegisters) {
+            return string.Join(" + ", addressParts) + $" - 0x{(uint)(-signedDisp):X}";
+        }
 
-        return addressExpr;
+        addressParts.Add($"0x{instruction.MemoryDisplacement32:X}");
+        return string.Join(" + ", addressParts);
+    }
+
+    private static int GetSignedDisplacement(Instruction instruction) {
+        uint disp = instruction.MemoryDisplacement32;
+        if (instruction.CodeSize == CodeSize.Code16) {
+            return (short)(ushort)disp;
+        }
+        return (int)disp;
     }
 
     private static string FormatHex(long value, int bitWidth) {
