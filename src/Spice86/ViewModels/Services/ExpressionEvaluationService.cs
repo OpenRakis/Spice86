@@ -169,7 +169,7 @@ public class ExpressionEvaluationService {
 
         if (displacement < 0) {
             segments.Add(new FormattedTextToken { Text = "-", Kind = FormatterTextKind.Operator });
-            uint absoluteDisplacement = (uint)(-displacement);
+            uint absoluteDisplacement = (uint)(-(long)displacement);
             segments.Add(new FormattedTextToken { Text = $"0x{absoluteDisplacement:X}", Kind = FormatterTextKind.Number });
         } else {
             segments.Add(new FormattedTextToken { Text = "+", Kind = FormatterTextKind.Operator });
@@ -255,14 +255,6 @@ public class ExpressionEvaluationService {
         return $"{sizePrefix} ptr [{addressExpression}]";
     }
 
-    /// <summary>
-    /// Builds an arithmetic expression for the effective address (offset only, no memory dereference).
-    /// Used by LEA to compute the address without reading memory.
-    /// </summary>
-    private static string BuildAddressExpression(Instruction instruction) {
-        return BuildAddressExpressionCore(instruction);
-    }
-
     private static string BuildAddressExpressionCore(Instruction instruction) {
         StringBuilder expression = new();
 
@@ -291,7 +283,8 @@ public class ExpressionEvaluationService {
         }
 
         if (displacement < 0 && hasRegisterComponents) {
-            expression.Append($" - 0x{(uint)(-displacement):X}");
+            long displacementMagnitude = -(long)displacement;
+            expression.Append($" - 0x{displacementMagnitude:X}");
             return expression.ToString();
         }
 
