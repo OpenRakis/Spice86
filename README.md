@@ -42,6 +42,7 @@ General process:
 |---------|-------------|
 | `Spice86 -e file.exe` | Run the specified executable |
 | `Spice86 -e file.com` | Run a COM file |
+| `Spice86 -e file.bat` | Run a DOS batch file |
 | `Spice86 -e file.bin` | Run a BIOS file |
 
 ## Dumping data
