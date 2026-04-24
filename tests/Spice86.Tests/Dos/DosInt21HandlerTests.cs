@@ -68,6 +68,10 @@ public class DosInt21HandlerTests {
             envVars,
             logger);
 
+        var configuration = new Configuration();
+        var nulDevice = new NullDevice(logger, memory, 0xF8000);
+        var dosSysVars = new DosSysVars(configuration, nulDevice, memory, 0x700);
+
         var handler = new DosInt21Handler(
             memory,
             functionHandlerProvider,
@@ -82,6 +86,7 @@ public class DosInt21HandlerTests {
             dosProcessManager,
             ioPortDispatcher,
             dosTables,
+            dosSysVars,
             logger,
             dosFcbManager);
 

@@ -40,6 +40,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosTables _dosTables;
     private readonly DosSwappableDataArea _sda;
     private readonly DosFcbManager _dosFcbManager;
+    private readonly DosSysVars _dosSysVars;
     private uint _stdinReadyFlagLinearAddress;
     private bool _isCtrlCFlag;
 
@@ -70,7 +71,7 @@ public class DosInt21Handler : InterruptHandler {
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         DosProcessManager dosProcessManager,
-        IOPortDispatcher ioPortDispatcher, DosTables dosTables, ILoggerService loggerService, DosFcbManager dosFcbManager)
+        IOPortDispatcher ioPortDispatcher, DosTables dosTables, DosSysVars dosSysVars, ILoggerService loggerService, DosFcbManager dosFcbManager)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _countryInfo = countryInfo;
@@ -82,6 +83,7 @@ public class DosInt21Handler : InterruptHandler {
         _dosProcessManager = dosProcessManager;
         _ioPortDispatcher = ioPortDispatcher;
         _dosTables = dosTables;
+        _dosSysVars = dosSysVars;
         _interruptVectorTable = new InterruptVectorTable(memory);
         _dosFcbManager = dosFcbManager;
         FillDispatchTable();
@@ -1295,26 +1297,38 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Gets or sets the Ctrl-C flag. AL: 0 = get, 1 or 2 = set it from DL.
+    /// Gets or sets the Ctrl-C flag and other DOS variables (INT 21h AH=33h, "DosVars").
     /// </summary>
-    /// <returns>
-    /// The Ctrl-C flag in DL if AL is 0. <br/>
-    /// </returns>
-    /// <exception cref="UnhandledOperationException">If the operation in AL is not supported.</exception>
     public void GetSetControlBreak() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET/SET CTRL-C FLAG");
+            LoggerService.Verbose("GET/SET CTRL-C FLAG / DOSVARS");
         }
-        byte op = State.AL;
-        if (op == 0) {
-            // GET
-            State.DL = _isCtrlCFlag ? (byte)1 : (byte)0;
-        } else if (op is 1 or 2) {
-            // SET
-            _isCtrlCFlag = State.DL == 1;
-        } else {
-            throw new UnhandledOperationException(State,
-                "Ctrl-C get/set operation unhandled: " + op);
+        byte subfunction = State.AL;
+        switch (subfunction) {
+            case 0x00: // Get Ctrl-C flag
+                State.DL = _isCtrlCFlag ? (byte)1 : (byte)0;
+                break;
+            case 0x01: // Set Ctrl-C flag
+                _isCtrlCFlag = (State.DL & 1) == 1;
+                State.DL = _isCtrlCFlag ? (byte)1 : (byte)0;
+                break;
+            case 0x02: // Get/Set extended control break
+                byte tmp = _isCtrlCFlag ? (byte)1 : (byte)0;
+                _isCtrlCFlag = (State.DL & 1) == 1;
+                State.DL = tmp;
+                break;
+            case 0x05: // Get Boot Drive
+                State.DL = _dosSysVars.BootDrive;
+                break;
+            case 0x06: // Get (real) DOS version
+                State.BL = 0x05; // Major version (example: 5)
+                State.BH = 0x00; // Minor version (example: 0)
+                State.DL = 0x00; // Revision (lower 3 bits), rest 0
+                State.DH = 0x00; // Version flags (bit3: ROM, bit4: HMA)
+                break;
+            default:
+                State.AL = 0xFF; // Error, do NOT set carry
+                break;
         }
     }
 
