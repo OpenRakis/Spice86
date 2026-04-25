@@ -43,7 +43,7 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <PackageReference Include="Serilog.Extensions.Hosting" />
         <PackageReference Include="SkiaSharp" />
-		<PackageReference Include="ModelContextProtocol.Core"/>
+		<PackageReference Include="ModelContextProtocol.Core" />
         <PackageReference Include="ModelContextProtocol.AspNetCore" />
 	</ItemGroup>
     <ItemGroup>
@@ -72,5 +72,13 @@
             <Link>2MGM.sf2</Link>
             <CopyToOutputDirectory>Never</CopyToOutputDirectory>
         </EmbeddedResource>
+    </ItemGroup>
+    <ItemGroup>
+      <Reference Include="FastExpressionCompiler">
+        <HintPath>..\..\3rdparty\FastExpressionCompiler.dll</HintPath>
+      </Reference>
+      <Reference Include="FastExpressionCompiler.LightExpression">
+        <HintPath>..\..\3rdparty\FastExpressionCompiler.LightExpression.dll</HintPath>
+      </Reference>
     </ItemGroup>
 </Project>

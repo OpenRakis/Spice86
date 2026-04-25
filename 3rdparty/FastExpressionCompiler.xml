@@ -1,0 +1,1389 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>FastExpressionCompiler</name>
+    </assembly>
+    <members>
+        <member name="T:FastExpressionCompiler.CompilerFlags">
+            <summary>The flags for the compiler</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CompilerFlags.Default">
+            <summary>The default flags: Invocation lambda is inlined, no debug info</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CompilerFlags.NoInvocationLambdaInlining">
+            <summary>Prevents the inlining of the lambda in the Invocation expression to optimize for the multiple same lambda compiled once</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CompilerFlags.EnableDelegateDebugInfo">
+            <summary>Adds the Expression, ExpressionString, and CSharpString to the delegate closure for the debugging inspection</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CompilerFlags.ThrowOnNotSupportedExpression">
+            <summary>When the flag is set then instead of the returning `null` the specific exception is thrown*346</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CompilerFlags.DisableInterpreter">
+            <summary>Will try to Interpret arithmetic, logical, comparison expressions for the primitive types,
+            and emit the IL the result only instead of the whole computation.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.NotSupportedExpressionException">
+            <summary>FEC Not Supported exception</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.NotSupportedExpressionException.Reason">
+            <summary>The reason</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.NotSupportedExpressionException.#ctor(FastExpressionCompiler.ExpressionCompiler.Result)">
+            <summary>Constructor</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.NotSupportedExpressionException.#ctor(FastExpressionCompiler.ExpressionCompiler.Result,System.String)">
+            <summary>Constructor</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.IDelegateDebugInfo">
+            <summary>The interface is implemented by the compiled delegate Target if `CompilerFlags.EnableDelegateDebugInfo` is set.</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.IDelegateDebugInfo.Expression">
+            <summary>The lambda expression object that was compiled to the delegate</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.IDelegateDebugInfo.ILInstructions">
+            <summary>Delegate IL op-codes</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.IDelegateDebugInfo.EnumerateNestedLambdas">
+            <summary>Enumerate any nested lambdas in the delegate</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ExpressionCompiler">
+            <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.
+            Partial to extend with your things when used as source file.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``1(System.Linq.Expressions.LambdaExpression,System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFastToIL(System.Linq.Expressions.LambdaExpression,System.Reflection.Emit.ILGenerator,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles a static method to the passed IL Generator.
+            Could be used as alternative for `CompileToMethod` like this <code><![CDATA[funcExpr.CompileFastToIL(methodBuilder.GetILGenerator())]]></code>.
+            Check `IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod.cs` for example.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast(System.Linq.Expressions.LambdaExpression,System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.FromSysExpression``1(System.Linq.Expressions.Expression{``0})">
+            <summary>Returns the System expression itself or convert the System expression into Light Expression</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.FromSysExpression(System.Linq.Expressions.LambdaExpression)">
+            <summary>Returns the System expression itself or convert the System expression into Light Expression</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileSys``1(System.Linq.Expressions.Expression{``0})">
+            <summary>Unifies Compile for System.Linq.Expressions and FEC.LightExpression</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileSys(System.Linq.Expressions.LambdaExpression)">
+            <summary>Unifies Compile for System.Linq.Expressions and FEC.LightExpression</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``1(System.Linq.Expressions.Expression{``0},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``1(System.Linq.Expressions.Expression{System.Func{``0}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``2(System.Linq.Expressions.Expression{System.Func{``0,``1}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``3(System.Linq.Expressions.Expression{System.Func{``0,``1,``2}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``4(System.Linq.Expressions.Expression{System.Func{``0,``1,``2,``3}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``5(System.Linq.Expressions.Expression{System.Func{``0,``1,``2,``3,``4}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``6(System.Linq.Expressions.Expression{System.Func{``0,``1,``2,``3,``4,``5}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``7(System.Linq.Expressions.Expression{System.Func{``0,``1,``2,``3,``4,``5,``6}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast(System.Linq.Expressions.Expression{System.Action},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``1(System.Linq.Expressions.Expression{System.Action{``0}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``2(System.Linq.Expressions.Expression{System.Action{``0,``1}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``3(System.Linq.Expressions.Expression{System.Action{``0,``1,``2}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``4(System.Linq.Expressions.Expression{System.Action{``0,``1,``2,``3}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``5(System.Linq.Expressions.Expression{System.Action{``0,``1,``2,``3,``4}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompileFast``6(System.Linq.Expressions.Expression{System.Action{``0,``1,``2,``3,``4,``5}},System.Boolean,FastExpressionCompiler.CompilerFlags)">
+            <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.TryCompile``1(System.Linq.Expressions.LambdaExpression,FastExpressionCompiler.CompilerFlags)">
+            <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/></summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.TryCompileWithPreCreatedClosure``1(System.Linq.Expressions.LambdaExpression,System.Linq.Expressions.ConstantExpression[])">
+            <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>
+            with the provided closure object and constant expressions (or lack there of) -
+            Constant expression should be the in order of Fields in closure object!
+            Note 1: Use it on your own risk - FEC won't verify the expression is compile-able with passed closure, it is up to you!
+            Note 2: The expression with NESTED LAMBDA IS NOT SUPPORTED!
+            Note 3: `Label` and `GoTo` are not supported in this case, because they need first round to collect out-of-order labels</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.TryCompileWithPreCreatedClosure``1(System.Linq.Expressions.LambdaExpression,System.Linq.Expressions.ConstantExpression[],FastExpressionCompiler.CompilerFlags)">
+            <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>
+            with the provided closure object and constant expressions (or lack there of)</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.TryCompileWithoutClosure``1(System.Linq.Expressions.LambdaExpression,FastExpressionCompiler.CompilerFlags)">
+            <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.RentPooledOrNewParamTypes(System.Type)">
+            <summary>Renting the array of the passed parameter types</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.RentPooledOrNewParamTypes(System.Type,System.Type)">
+            <summary>Renting the array of the passed parameter types</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.RentPooledOrNewParamTypes(System.Type,System.Type,System.Type)">
+            <summary>Renting the array of the passed parameter types</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.RentPooledOrNewParamTypes(System.Type,System.Type,System.Type,System.Type)">
+            <summary>Renting the array of the passed parameter types</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.RentPooledOrNewParamTypes(System.Type,System.Type,System.Type,System.Type,System.Type)">
+            <summary>Renting the array of the passed parameter types</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.FreePooledClosureTypeAndParamTypes(System.Type[])">
+            <summary>Freeing to the pool the array of types of closure + plus the passed parameter types</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.FreePooledParamTypes(System.Type[])">
+            <summary>Freeing to the pool the array of the passed parameter types</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo">
+            <summary>Collects the lambda info for the compilation</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo.Lambda">
+            <summary>Compiled lambda</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo.NestedLambdas">
+            <summary>The nested lambdas and their info</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo.LambdaExpression">
+            <summary>The lambda expression</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo.NonPassedParameters">
+            <summary>Parameters not passed through lambda parameter list But used inside lambda body.
+            The top expression should Not contain not passed parameters.</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo.NonPassedParamMutatedIndexBits">
+            <summary>If the N's bit is set, it means the parameter is mutated (assigned or passed by-ref),
+            where N is the index of the param in `NonPassedParameters`</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo.LambdaVarIndex">
+            <summary>Index of the compiled lambda in the parent lambda closure array</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo.NonPassedParamsVarIndex">
+            <summary>Index of the variable which store the non-passed variables array before passing it to the closure constructor.
+            It used to assign the closed variables from the outside of the nested lambda</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo.HasTheSameLambdaExpression(System.Linq.Expressions.LambdaExpression)">
+            <summary>Compares 2 lambda expressions for equality</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ExpressionCompiler.CompilerContext">
+            <summary>Track the info required to build a closure object + some context information not directly related to closure.</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.LastEmitIsAddress">
+            <summary>Tracks that the last emit was an address</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext._varInBlock">
+            <summary>Tracks the use of the variables in the blocks stack per variable,
+            (uint) contains (ushort) BlockIndex in the upper bits and (ushort) VarIndex in the lower bits.
+            to determine if variable is the local variable and in what block it's defined</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.InlinedLambdaInvocation">
+            The map of inlined invocations collected in TryCollect and then used in TryEmit
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.ArgsContainingComplexExpression">
+            New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.LambdaInvokeStackLabels">
+            The stack for the lambda invocation and the labels bound to them
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.TargetToGotosAndLabels">
+            Tracks of how many gotos, labels referencing the specific target, they may be the same gotos expression,
+            because the gotos may be reused multiple times in the big expression
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.CurrentInlinedLambdaInvokeIndex">
+            This is required because we have the return from the nested lambda expression,
+            and when inlined in the parent lambda it is no longer the return but just a jump to the label.
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.Constants">
+            Constant expressions to find an index (by reference) of constant expression from compiled expression.
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.ConstantUsageThenVarIndex">
+            Constant usage count and variable index.
+            It is a separate collection from the Constants because we directly convert later into the closure array
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.NonPassedParameters">
+            <summary>Parameters not passed through lambda parameter list But used inside lambda body.
+            The top expression should Not contain not passed parameters.</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.NestedLambdas">
+            <summary>The nested lambdas and their info</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.ParamExprs">
+            <summary>Track compiled lambda parameters</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.CompilerContext.CompilerFlags">
+            <summary>Compiler flags</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompilerContext.#ctor(FastExpressionCompiler.ExpressionCompiler.ClosureStatus,System.Collections.Generic.IReadOnlyList{System.Linq.Expressions.ParameterExpression},FastExpressionCompiler.CompilerFlags)">
+            <summary>Populates the info</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompilerContext.#ctor(FastExpressionCompiler.ExpressionCompiler.ClosureStatus,System.Object[],System.Collections.Generic.IReadOnlyList{System.Linq.Expressions.ParameterExpression},FastExpressionCompiler.CompilerFlags)">
+            <summary>Populates info directly with provided closure object and constants.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.CompilerContext.PushBlockWithVars(System.Linq.Expressions.ParameterExpression)">
+            Local variable index is not known in the collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EnumerateNestedLambdas(System.Delegate)">
+            <summary>Enumerate any nested lambdas in the delegate compiled with CompilerFlags.EnableDelegateDebugInfo flag</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.IsClosureBoundConstant(System.Object,System.Type)">
+            Helps to identify constants as the one to be put into the Closure
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Result.NotSupported_NewArrayInit_MultidimensionalArray">
+            <summary>Multi-dimensional array initializer is not supported</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Result.NotSupported_Quote">
+            <summary>Quote is not supported</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Result.NotSupported_Dynamic">
+            <summary>Dynamic is not supported</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Result.NotSupported_RuntimeVariables">
+            <summary>RuntimeVariables is not supported</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Result.NotSupported_MemberInit_MemberBinding">
+            <summary>MemberInit MemberBinding is not supported</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Result.NotSupported_MemberInit_ListBinding">
+            <summary>MemberInit ListBinding is not supported</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Result.NotSupported_Try_GotoReturnToTheFollowupLabel">
+            <summary>Goto of the Return kind from the TryCatch is not supported</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Result.NotSupported_Assign_Target">
+            <summary>Not supported assignment target</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Result.NotSupported_TypeEqual">
+            <summary>TypeEqual is not supported </summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Result.NotSupported_ExceptionCatchFilter">
+            <summary>`when` in catch is not supported yet</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.NotSupportedCase``1(FastExpressionCompiler.ExpressionCompiler.Result)">
+            <summary>Return value is ignored</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.TryCollectBoundConstants(FastExpressionCompiler.ExpressionCompiler.CompilerContext@,System.Linq.Expressions.Expression,FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo,FastExpressionCompiler.ImTools.SmallList{FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo}@)">
+            <summary>Wraps the call to `TryCollectInfo` for the compatibility and provide the root place to check the returned error code.
+            Important: The method collects the info from the nested lambdas up-front and de-duplicates the lambdas as well.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.TryCollectInfo(FastExpressionCompiler.ExpressionCompiler.CompilerContext@,System.Linq.Expressions.Expression,FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo,FastExpressionCompiler.ImTools.SmallList{FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo}@)">
+            <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
+            Returns `OK` result if everything is fine and other result for error.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.TryGetDebugInfo``1(``0)">
+            <summary>Return IDelegateDebugInfo if the delegate is fast compiled with `CompilerFlags.EnableDelegateDebugInfo` flag</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ExpressionCompiler.ParentFlags">
+            The minimal context-aware flags set by parent
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.Empty">
+            Default is no flags
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.IgnoreResult">
+            The result of expression is ignored and maybe popped out
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.Call">
+            Some parent is the call expression
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.MemberAccess">
+            Any Parent Expression is a MemberExpression
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.Arithmetic">
+            Some arithmetic operation
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.Coalesce">
+            Subject
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.InstanceAccess">
+            Expression with instance object (method call or member access or array access)
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.DupIt">
+            Subject
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.TryCatch">
+            Subject
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.InstanceCall">
+            Combination`of InstanceAccess and Call
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.Ctor">
+            Constructor
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.CtorCall">
+            Constructor call
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.IndexAccess">
+            Indexer
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.InlinedLambdaInvoke">
+            Invoking the inlined lambda (the default System.Expression behavior)
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.AssignmentLeftValue">
+            <summary>Indicate if the part AT LEAST participates in the assignment on the left side,
+            it may also participate in the right side, e.g. ++x.Bar</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.AssignmentRightValue">
+            <summary>Indicates the ONLY right value of assignment, e.g. `p` in `foo.Bar += p` </summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.AssignmentByRef">
+            <summary>Assigning the ref of the right value to the left, e.g. in `var a = ref b[1]` we are passing this flag for the `ref b[1]`</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.LambdaCall">
+            <summary>Indicates the root lambda call</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.ReturnByRef">
+            <summary>ReturnByRef</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.ParentFlags.BlockResult">
+            <summary>The block result</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor">
+            <summary>Supports emitting of selected expressions, e.g. lambdaExpr are not supported yet.
+            When emitter find not supported expression it will return false from <see cref="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.TryEmit(System.Linq.Expressions.Expression,System.Reflection.Emit.ILGenerator,FastExpressionCompiler.ExpressionCompiler.CompilerContext@,FastExpressionCompiler.ExpressionCompiler.ParentFlags,System.Int32)"/>, so I could fallback
+            to normal and slow Expression.Compile.</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.GetTypeFromHandleMethod">
+            <summary>Get a type from handle</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.EmitDefault(System.Reflection.Emit.ILGenerator,System.Type)">
+            <summary>Emit default op code for the type</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.TryEmitPrimitiveOrEnumOrDecimalConstant(System.Reflection.Emit.ILGenerator,System.Object,System.Type)">
+            <summary>Emit the IL for the value of the primitive type.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.EmitMethodCallOrVirtualCall(System.Reflection.Emit.ILGenerator,System.Reflection.MethodInfo)">
+            Get the advantage of the optimized specialized EmitCall method
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.EmitMethodCallCheckForNull(System.Reflection.Emit.ILGenerator,System.Reflection.MethodInfo)">
+            Same as EmitMethodCall which checks the method for null first, and returns false if it is null.
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.EmitMethodCallOrVirtualCallCheckForNull(System.Reflection.Emit.ILGenerator,System.Reflection.MethodInfo)">
+            Same as EmitMethodCallOrVirtualCall which checks the method for null first, and returns false if it is null.
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.EmitLoadConstantInt(System.Reflection.Emit.ILGenerator,System.Int32)">
+            Efficiently emit the int constant
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.EmitLoadConstantLong(System.Reflection.Emit.ILGenerator,System.Int64)">
+            Efficiently emit the long constant based on its value as int or long
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(System.Reflection.Emit.ILGenerator,System.Int32)">
+            <summary>Load local variable on stack</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(System.Reflection.Emit.ILGenerator,System.Int32)">
+            <summary>Store the variable location on stack</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(System.Reflection.Emit.ILGenerator,System.Type)">
+            <summary>Get and store the variable of the type on stack</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(System.Reflection.Emit.ILGenerator,System.Int32)">
+            <summary>Stores and loads the variable</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(System.Reflection.Emit.ILGenerator,System.Type)">
+            <summary>Stores and loads the variable, and returns it</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.EmittingVisitor.TryInterpretAndEmitResult(System.Linq.Expressions.Expression,System.Reflection.Emit.ILGenerator,FastExpressionCompiler.ExpressionCompiler.ParentFlags,FastExpressionCompiler.CompilerFlags)">
+            <summary>Tries to interpret and emit the result IL
+            In case of exception return false, to allow FEC emit normally and throw in the invocation phase</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ExpressionCompiler.Interpreter">
+            <summary>Interpreter</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Interpreter.TrueFunc">
+            <summary>Always returns true</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ExpressionCompiler.Interpreter.FalseFunc">
+            <summary>Always returns false</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.UnreachableCase``1(``0,System.String,System.Int32)">
+            <summary>Return value should be ignored</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.UnreachableCase``2(``0,``1,System.String,System.Int32)">
+            <summary>Return value should be ignored</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.IsComparison(System.Linq.Expressions.ExpressionType)">
+            <summary>Operation accepting IComparable inputs and producing bool output</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.IsArithmeticBinary(System.Linq.Expressions.ExpressionType)">
+            <summary>Operation accepting the same primitive type inputs (or of the coalescing types) and producing the "same" primitive type output</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.ConvertValueObjectToLong(System.Object)">
+            <summary>Converts an integer/enum/char boxed value to <c>long</c> for uniform comparison.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.DoArithmeticForPrimitiveValues(FastExpressionCompiler.ExpressionCompiler.Interpreter.PValue@,FastExpressionCompiler.ExpressionCompiler.Interpreter.PValue@,System.TypeCode,System.Linq.Expressions.ExpressionType)">
+            <summary>Puts the result to the `left` para meter</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.IsCandidateForInterpretation(System.Linq.Expressions.Expression)">
+            <summary>Fast, mostly negative check to skip or proceed with interpretation.
+            Depending on the context you may avoid calling it because you know the interpreted expression beforehand,</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.TryInterpretBool(System.Boolean@,System.Linq.Expressions.Expression,FastExpressionCompiler.CompilerFlags)">
+            <summary>Wraps `TryInterpretPrimitive` in the try catch block.
+            In case of exception FEC will emit the whole computation to throw exception in the invocation phase</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.TryFindSwitchBranch(System.Linq.Expressions.SwitchExpression,FastExpressionCompiler.CompilerFlags,System.Linq.Expressions.Expression@)">
+            <summary>
+            Tries to determine at compile time which branch a switch expression will take.
+            Works for integer/enum and string switch values with no custom equality method.
+            Returns true when the switch value is deterministic; <paramref name="matchedBody"/> is set to
+            the branch body to emit (null means use default body which may itself be null).
+            </summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.PValueToLong(FastExpressionCompiler.ExpressionCompiler.Interpreter.PValue@,System.TypeCode)">
+            <summary>Converts a <see cref="T:FastExpressionCompiler.ExpressionCompiler.Interpreter.PValue"/> union to a <c>long</c> for integer/char comparison.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.TryInterpretBool(System.Boolean@,System.Linq.Expressions.Expression,System.Linq.Expressions.ExpressionType)">
+            <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.TryInterpretDecimal(System.Decimal@,System.Linq.Expressions.Expression,System.Linq.Expressions.ExpressionType)">
+            <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.TryInterpretInt(System.Int32@,System.Linq.Expressions.Expression,System.Linq.Expressions.ExpressionType)">
+            <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.
+            Returns `false` if it failed to do so.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionCompiler.Interpreter.TryInterpretPrimitiveValue(FastExpressionCompiler.ExpressionCompiler.Interpreter.PValue@,System.Linq.Expressions.Expression,System.TypeCode,System.Linq.Expressions.ExpressionType)">
+            <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.
+            Returns `false` if it is failed to do so.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.Tools">
+            <summary>
+            Helpers targeting the performance. Extensions method names may be a bit funny (non standard),
+            in order to prevent conflicts with YOUR helpers with standard names
+            </summary>
+        </member>
+        <member name="M:FastExpressionCompiler.Tools.IsCompilerGenerated(System.Type)">
+            <summary>Returns true if class is compiler generated. Checking for CompilerGeneratedAttribute
+            is not enough, because this attribute is not applied for classes generated from "async/await".</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.Tools.FindConvertOperator(System.Type,System.Type,System.Type)">
+            <summary>Finds the implicit or explicit conversion operator inType from the sourceType to targetType,
+            otherwise returns null</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ILGeneratorTools.DisableILGeneratorPooling">
+            <summary>Configuration option to disable the pooling</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ILGeneratorTools.DisableDemit">
+            <summary>Configuration option to disable the ILGenerator Emit debug output</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.DynamicMethodHacks">
+            <summary>Reflecting the internal methods to access the more performant for defining the local variable</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.DynamicMethodHacks.RentPooledOrNewILGenerator(System.Reflection.Emit.DynamicMethod,System.Type,System.Type[],System.Int32)">
+            <summary>Get new or pool and configure existing DynamicILGenerator</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.DynamicMethodHacks.FreePooledILGenerator(System.Reflection.Emit.DynamicMethod,System.Reflection.Emit.ILGenerator)">
+            <summary>Should be called only after call to DynamicMethod.CreateDelegate</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.DynamicMethodHacks.GetNextLocalVarIndex(System.Reflection.Emit.ILGenerator,System.Type)">
+            <summary>Efficiently returns the next variable index, hopefully without unnecessary allocations.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.DynamicMethodHacks.GetMLocalSignature(System.Object)">
+            <summary>Gets a ref to the <c>m_localSignature</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.DynamicMethodHacks.GetMLocalCount(System.Object)">
+            <summary>Gets a ref to the <c>m_localCount</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.DynamicMethodHacks.GetMLength(System.Object)">
+            <summary>Gets a ref to the <c>m_length</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.DynamicMethodHacks.GetMILStream(System.Object)">
+            <summary>Gets a ref to the <c>m_ILStream</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.DynamicMethodHacks.UpdateStackSize(System.Object,System.Reflection.Emit.OpCode,System.Int32)">
+            <summary>Calls the internal <c>UpdateStackSize</c> method on the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.DynamicMethodHacks.GetMTokens(System.Object)">
+            <summary>Gets a ref to the <c>m_tokens</c> field on a DynamicScope instance (internal type).</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ToExpressionPrinter.ToExpressionString(System.Linq.Expressions.Expression,FastExpressionCompiler.CodePrinter.ObjectToCode)">
+            <summary>
+            Prints the expression in its constructing syntax -
+            helpful to get the expression from the debug session and put into it the code for the test.
+            </summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ToExpressionPrinter.ToExpressionString(System.Linq.Expressions.Expression,System.Collections.Generic.List{System.Linq.Expressions.ParameterExpression}@,System.Collections.Generic.List{System.Linq.Expressions.Expression}@,System.Collections.Generic.List{System.Linq.Expressions.LabelTarget}@,System.Boolean,System.Func{System.Type,System.String,System.String},System.Int32,FastExpressionCompiler.CodePrinter.ObjectToCode)">
+            <summary>
+            Prints the expression in its constructing syntax -
+            helpful to get the expression from the debug session and put into it the code for the test.
+            In addition, returns the gathered expressions, parameters ad labels.
+            </summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ExpressionEqualityComparer">
+            <summary>Provides structural equality comparison for expression trees (both LightExpression and System.Linq.Expressions).
+            Use the static <see cref="M:FastExpressionCompiler.ExpressionEqualityComparer.EqualsTo(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)"/> method as the primary entry point — it creates a temporary struct on the stack with no heap allocation.
+            Parameters are matched by their position within their enclosing lambda or block, and label targets by identity pairing.
+            Up to 8 lambda parameters and label targets are stored on the stack; larger numbers spill to a heap array.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionEqualityComparer.EqualsTo(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+            <summary>Structurally compares two expressions. Primary entry point — no heap allocation for the comparer.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionEqualityComparer.GetHashCode(System.Linq.Expressions.Expression)">
+            <summary>Computes a content-addressable hash for the expression tree.
+            Bound lambda and block parameters are hashed by their position index so that structurally
+            equal lambdas with differently-named parameters produce the same hash.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionEqualityComparer.System#Collections#Generic#IEqualityComparer{System#Linq#Expressions#Expression}#Equals(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+            <summary>IEqualityComparer&lt;Expression&gt; implementation — delegates to the static <see cref="M:FastExpressionCompiler.ExpressionEqualityComparer.EqualsTo(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)"/> for a fresh context per call.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionEqualityComparer.System#Collections#Generic#IEqualityComparer{System#Linq#Expressions#Expression}#GetHashCode(System.Linq.Expressions.Expression)">
+            <summary>IEqualityComparer&lt;Expression&gt; implementation — delegates to the static <see cref="M:FastExpressionCompiler.ExpressionEqualityComparer.GetHashCode(System.Linq.Expressions.Expression)"/>.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionEqualityComparer.System#Collections#IEqualityComparer#Equals(System.Object,System.Object)">
+            <summary>Non-generic IEqualityComparer implementation — delegates to the static methods for use with legacy BCL APIs.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionEqualityComparer.System#Collections#IEqualityComparer#GetHashCode(System.Object)">
+            <summary>Non-generic IEqualityComparer implementation — delegates to the static <see cref="M:FastExpressionCompiler.ExpressionEqualityComparer.GetHashCode(System.Linq.Expressions.Expression)"/>.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionEqualityComparer.Eq(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+            <summary>Structurally compares two expressions, using the current parameter/label context for identity mapping.
+            For top-level comparisons, prefer the static <see cref="M:FastExpressionCompiler.ExpressionEqualityComparer.EqualsTo(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)"/>.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ExpressionEqualityComparerExtensions">
+            <summary>Extension method for structural equality via <see cref="M:FastExpressionCompiler.ExpressionEqualityComparer.EqualsTo(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)"/>.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ExpressionEqualityComparerExtensions.EqualsTo(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+            <summary>Structurally compares two expressions. Calls the static <see cref="M:FastExpressionCompiler.ExpressionEqualityComparer.EqualsTo(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)"/> directly for best performance.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ToCSharpPrinter">
+            <summary>Converts the expression into the valid C# code representation</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ToCSharpPrinter.ToCSharpString(System.Linq.Expressions.Expression,FastExpressionCompiler.ToCSharpPrinter.EnclosedIn)">
+            <summary>Tries hard to convert the expression into the valid C# code. Avoids parens by default for the root expr.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ToCSharpPrinter.ToCSharpString(System.Linq.Expressions.Expression,FastExpressionCompiler.CodePrinter.ObjectToCode,FastExpressionCompiler.ToCSharpPrinter.EnclosedIn)">
+            <summary>Tries hard to convert the expression into the valid C# code. Avoids parens by default for the root expr.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ToCSharpPrinter.ToCSharpString(System.Linq.Expressions.Expression,System.Text.StringBuilder,FastExpressionCompiler.ToCSharpPrinter.EnclosedIn,System.Int32,System.Boolean,System.Func{System.Type,System.String,System.String},System.Int32,FastExpressionCompiler.CodePrinter.ObjectToCode)">
+            <summary>Tries hard to convert the expression into the valid C# code</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ToCSharpPrinter.EnclosedIn">
+            <summary>Indicates the expression container</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ToCSharpPrinter.EnclosedIn.ParensByDefault">
+            <summary>Prefers the parens by default</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ToCSharpPrinter.EnclosedIn.IfTest">
+            <summary>The test part of the If expression</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ToCSharpPrinter.EnclosedIn.Block">
+            <summary>The `if (test)` part</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ToCSharpPrinter.EnclosedIn.LambdaBody">
+            <summary>The lambda</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ToCSharpPrinter.EnclosedIn.Return">
+            <summary>Return expression</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ToCSharpPrinter.EnclosedIn.AvoidParens">
+            <summary>Instructs the client code to avoid parenthesis for the generated C# code, e.g. if we have as single argument in a method</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ToCSharpPrinter.EnclosedIn.Instance">
+            <summary>The instance when calling the instance method or accessing the instance member</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.CodePrinter.NameUsage">
+            <summary>Name usage</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CodePrinter.NameUsage.Whatever">
+            <summary>Whatever</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CodePrinter.NameUsage.GotoLabel">
+            <summary>Used in goto</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CodePrinter.NameUsage.MarkLabel">
+            <summary>Used in mark</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.CodePrinter.NameIndex">
+            <summary>Named with index indeed</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CodePrinter.NameIndex.Obj">
+            <summary>Object to name</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CodePrinter.NameIndex.Index">
+            <summary>Provides an unique suffix for the same named objects</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CodePrinter.NameIndex.Usage">
+            <summary>Usage context</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.CodePrinter.LambdaPars">
+            <summary>Contains the lambda with its paramete infos info. 
+            Used to search for parameter expression related props/attrs in the respective Parameterinfo</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CodePrinter.LambdaPars.Exprs">
+            <summary>The parameter expressions</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CodePrinter.LambdaPars.Infos">
+            <summary>The corresponding parameter infos</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.CodePrinter.PrintContext">
+            <summary>The context propagated through the CSharp to string methods</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CodePrinter.PrintContext.SameNamed">
+            <summary>Used to generated the unique names for the variables/parameters</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CodePrinter.PrintContext.LambdaPars">
+            <summary>Use to find additional info about the parameter, like IsOut, which is available in ParameterInfo and not in parameter expression</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.CodePrinter.GetPrimitiveTypeNameAliasOrNull(System.Type)">
+            <summary>Returns the standard name (alias) for the well-known primitive type, e.g. Int16 -> short</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.CodePrinter.ToCode(System.Type,System.Boolean,System.Func{System.Type,System.String,System.String},System.Boolean)">
+            <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.CodePrinter.ToCode(System.Boolean)">
+            <summary>Prints valid C# Boolean</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.CodePrinter.ToCode(System.String)">
+            <summary>Prints valid C# String escaping the things</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.CodePrinter.ToEnumValueCode(System.Type,System.Object,System.Boolean,System.Func{System.Type,System.String,System.String})">
+            <summary>Prints valid C# Enum literal</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.CodePrinter.ObjectToCode">
+            <summary>Custom handler for output the object in valid C#.
+            Note, the `printGenericTypeArgs` is excluded because it cannot be a open-generic object.
+            This handler is also used to allow user to fully control a Constant expression output</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.CodePrinter.DefaultNotRecognizedToCode">
+            <summary>Outputs the `default(Type)` for the unknown constant with the comment message</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.CodePrinter.ToCommaSeparatedCode(System.Collections.IEnumerable,FastExpressionCompiler.CodePrinter.ObjectToCode,System.Boolean,System.Func{System.Type,System.String,System.String})">
+            <summary>Prints many code items as the array initializer.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.CodePrinter.ToArrayInitializerCode(System.Collections.IEnumerable,System.Type,FastExpressionCompiler.CodePrinter.ObjectToCode,System.Boolean,System.Func{System.Type,System.String,System.String})">
+            <summary>Prints many code items as array initializer.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.CodePrinter.ToCode``1(``0,FastExpressionCompiler.CodePrinter.ObjectToCode,System.Boolean,System.Func{System.Type,System.String,System.String})">
+            <summary>
+            Prints a valid C# for known <paramref name="x"/>,
+            otherwise uses passed <paramref name="notRecognizedToCode"/> or falls back to `ToString()`.
+            </summary>
+        </member>
+        <member name="M:FastExpressionCompiler.CodePrinter.CountLambdas(System.String)">
+            <summary>Helper method to find the number of lambdas in the C# code string</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ILDecoder.ILFormat">
+            <summary>AssertOpCodes outputs just the OpCodes.FooBar for copy pasting into AssertOpCodes method</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ILDecoder.ILFormat.SkipNop">
+            <summary>Exclude NOP opcodes from the output</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ILDecoder.InlineNoneInstruction">
+            <summary>Data-oriented structure SOA of IL instructions.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.RefTools`1">
+            <summary>Helpers and polyfills for the missing things in the old .NET versions</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.RefTools`1.GetNullRef">
+            <summary>Polyfill for the missing returning the `ref` in the failed search scenario.
+            Note that the result is the `null` even for the struct `T`, so avoid the accessing its members without the check</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallList`1">
+            <summary>Wrapper for the array of the specific capacity and a separate count less or equal to this capacity </summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallList`1.Items">
+            <summary>Array of items</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallList`1.Count">
+            <summary>The count of used items</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`1.GetSurePresentRef(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallList`1.Item(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`1.#ctor(`0[],System.Int32)">
+            <summary>Creating this stuff</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`1.#ctor(`0[])">
+            <summary>Creates the wrapper out of the items</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`1.Pop">
+            <summary>Popping candy</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallList">
+            <summary>SmallList module he-he</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.AddDefaultToNotNullItemsAndGetRef``1(``0[]@,System.Int32)">
+            <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`! 
+            `items` should be not null</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.AddDefaultAndGetRef``1(``0[]@,System.Int32,System.Int32)">
+            <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`, `items` may be null</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.AddDefaultAndGetRef``2(``0[]@,``1@,System.Int32,System.Int32)">
+            <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`, `items` may be null</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.GetSurePresentFirstRef``1(``0[])">
+            <summary>Returns surely present item ref by its index without boundary checks</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.GetSurePresentRef``1(``0[],System.Int32)">
+            <summary>Returns surely present item ref by its index without boundary checks</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.GetSurePresentRef``1(``0@,System.Int32)">
+            <summary>Get the item by-ref without bounds check</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.GetSurePresent``1(``0@,System.Int32)">
+            <summary>Get the item without bounds check</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.AddDefaultAndGetRef``1(FastExpressionCompiler.ImTools.SmallList{``0}@,System.Int32)">
+            <summary>Appends the new default item to the list and returns ref to it for write or read</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.Add``1(FastExpressionCompiler.ImTools.SmallList{``0}@,``0@,System.Int32)">
+            <summary>Appends the new item to the list</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.TryGetIndex``2(``0[],``0@,System.Int32,System.Int32,``1,System.Int32)">
+            <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.TryGetIndex``2(FastExpressionCompiler.ImTools.SmallList{``0}@,``0,``1)">
+            <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList.GetIndexOrAdd``2(FastExpressionCompiler.ImTools.SmallList{``0}@,``0@,``1)">
+            <summary>Returns the index of the found item or appends the item to the end of the list, and returns its index</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Stack">
+            <summary>Utilities for Stack4, Stack8, etc.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.IIndexed`1">
+            <summary>Abstracts over collection of the items on stack of the fixed Capacity,
+            to be used as a part of the hybrid data structures which grow from stack to heap</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.IIndexed`1.Count">
+            <summary>Count of items to be indexed</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.IIndexed`1.GetSurePresentRef(System.Int32)">
+            <summary>Returns the item by ref to read and write the item value,
+            but does not check the index bounds comparing to the `this[index]`</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.IIndexed`1.Item(System.Int32)">
+            <summary>Indexer returning the item by ref to read and write the item value</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.IStack`2">
+            <summary>Stack with the Size information to check it at compile time</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.IStack`2.Capacity">
+            <summary>Maximum count of items hold in stack</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.IStack`2.AsSpan">
+            <summary>Creates a span over the stack items</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.IStack`3">
+            <summary>Stack with the Size information to check it at compile time</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.ISize">
+            <summary>Base marker for collection or container holding some number of items</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.ISize.Size">
+            <summary>Returns the size of the collection or container</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.ISize2Plus">
+            <summary>Marker for collection or container holding 2 or items</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.ISize4Plus">
+            <summary>Marker for collection or container holding 4 or more items</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.ISize8Plus">
+            <summary>Marker for collection or container holding 8 or more items</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.ISize16Plus">
+            <summary>Marker for collection or container holding 16 or more items</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Size0">
+            <summary>Marker for collection or container holding 0 items</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Size0.Size">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Size2">
+            <summary>Marker for collection or container holding 4 items</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Size2.Size">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Size4">
+            <summary>Marker for collection or container holding 4 items</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Size4.Size">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Size8">
+            <summary>Marker for collection or container holding 8 items</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Size8.Size">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Size16">
+            <summary>Marker for collection or container holding 16 items</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Size16.Size">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Stack2`1">
+            <summary>Implementation of `IStack` for 2 items on stack</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Stack2`1.Capacity">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.Stack2`1.#ctor(`0,`0)">
+            <summary>2 item constructor</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.Stack2`1.GetSurePresentRef(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Stack2`1.Item(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.Stack2`1.AsSpan">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Stack4`1">
+            <summary>Implementation of `IStack` for 4 items on stack</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Stack4`1.Capacity">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.Stack4`1.GetSurePresentRef(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Stack4`1.Item(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.Stack4`1.AsSpan">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Stack8`1">
+            <summary>Implementation of `IStack` for 8 items on stack</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Stack8`1.Capacity">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.Stack8`1.GetSurePresentRef(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Stack8`1.Item(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.Stack8`1.AsSpan">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Stack16`1">
+            <summary>Implementation of `IStack` for 16 items on stack</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Stack16`1.Capacity">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.Stack16`1.GetSurePresentRef(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.Stack16`1.Item(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.Stack16`1.AsSpan">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.ISmallArrayPool`1">
+            <summary>Abstraction over the small array pool to rent and return the arrays of small sizes, from 1 to N</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.ISmallArrayPool`1.MaxArrayLength">
+            <summary>Gets the maximum array length that can be rented from the pool.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ISmallArrayPool`1.RentExactOrNew(System.Int32)">
+            <summary>Rents an array from the pool or creates a new one if none is available.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ISmallArrayPool`1.RentMinOrNew(System.Int32)">
+            <summary>Rent at least minLength of larger array</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ISmallArrayPool`1.ReuseIfPossible(`0[])">
+            <summary>Returns an array to the pool if it is fits the `MaxArrayLength`.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.NoArrayPool`1">
+            <summary>Implementation of `ISmallArrayPool` which does not pool anything, just creates new arrays</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.NoArrayPool`1.MaxArrayLength">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.NoArrayPool`1.RentExactOrNew(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.NoArrayPool`1.RentMinOrNew(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.NoArrayPool`1.ReuseIfPossible(`0[])">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.IClearItems`1">
+            <summary>Abstraction over how the array is cleared before putting it back to the pool</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.IClearItems`1.Clear(`0[],System.Int32,System.Int32)">
+            <summary>Clears the items in the array from `startIndex` for `length` items</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.ClearItemsNo`1">
+            <summary>Does not clear anything</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ClearItemsNo`1.Clear(`0[],System.Int32,System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.ClearItemsFast`1">
+            <summary>Clears the items using `Array.Clear`</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ClearItemsFast`1.Clear(`0[],System.Int32,System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.ProvidedArrayPool`2">
+            <summary>Implementation of `ISmallArrayPool` which provides a pool of arrays.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ProvidedArrayPool`2.#ctor(`0[][],System.Int32)">
+            <summary>Inits the pool with some shared array pool</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ProvidedArrayPool`2.Init(`0[][],System.Int32)">
+            <summary>Inits the pool with some shared array pool</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ProvidedArrayPool`2.MergeInto(`0[][]@)">
+            <summary>Adds the arrays from the shared pool to the target, making the target at least as large as the shared pool.</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.ProvidedArrayPool`2.MaxArrayLength">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ProvidedArrayPool`2.RentExactOrNew(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ProvidedArrayPool`2.RentMinOrNew(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ProvidedArrayPool`2.ReuseIfPossible(`0[])">
+            <inheritdoc/>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.ISmallList`1">
+            <summary>Abstraction over the small list which keeps some items on stack and grows to heap when needed</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ISmallList`1.AddDefaultAndGetRef">
+            <summary>Adds a default item to the list and returns a reference to it. Basically it just ensure that list contains the slot for the new item</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ISmallList`1.Add(`0@)">
+            <summary>Adds the item to the end of the list aka the Stack.Push. Returns the index of the added item.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ISmallList`1.TryGetIndex``1(`0@,``0)">
+            <summary>Returns the index of the found item or -1 for the absent item</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ISmallList`1.RemoveLastSurePresent">
+            <summary>Removes the last item from the list. List should not be empty.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ISmallList`1.Clear">
+            <summary>Clears the list.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.ISmallList`1.CopyToArray(`0[],System.Int32)">
+            <summary>Copies the contents of the list to the passed array.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallList`3">
+            <summary>Generic version of SmallList abstracted for how much items are on the stack</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallList`3.Count">
+            <summary>Let's enable access to the Count, so you can Pop the item by --list.Count. Just don't forget to nullify the popped item if needed</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallList`3.Pool">
+            <summary>Exposes the pool to rent and return the arrays</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallList`3.Stack">
+            <summary>Let's enable access to the stack, just know what's you doing</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallList`3.Rest">
+            <summary>Exposes the rest on the heap</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.InitCount(System.Int32)">
+            <summary>Ensures that the list has allocated space to hold `count` of items</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.GetSurePresentRef(System.Int32)">
+            <summary>Returns a surely present item ref by its index</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallList`3.Item(System.Int32)">
+            <summary>Returns surely present item by ref</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.AddDefaultAndGetRef">
+            <summary>Appends the default item to the end of the list and returns the reference to it.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.Add(`0@)">
+            <summary>Adds the item to the end of the list aka the Stack.Push. Returns the index of the added item.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.TryGetIndex``1(`0@,``0)">
+            <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.GetIndexOrAdd``1(`0@,``0)">
+            <summary>Returns the index of the found item or appends the item to the end of the list, and returns its index</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.Clear">
+            <summary>Clears the list, but keeps the already allocated array on heap to reuse in the future</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.FreePooled">
+            <summary>Returns the Rest of the items to the pool</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.GetLastSurePresentRef">
+            <summary>Returns last present item ref, assumes that the list is not empty!</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.RemoveLastSurePresent">
+            <summary>Removes the last item from the list aka the Stack Pop. Assumes that the list is not empty!</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.TryRemoveLastNoDrop">
+            <summary>Just adjusts Count-1, without clearing/dropping anything</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.CopyToArray(`0[],System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallList`3.GetEnumerator">
+            <summary>Returns an enumerator struct</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallListEnumerator`2">
+            <summary>Enumerator on stack, without allocations</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallListEnumerator`2.Current">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallListEnumerator`2.MoveNext">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallListEnumerator`2.Reset">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallListEnumerator`2.Dispose">
+            <inheritdoc />
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.IPrintable">
+            <summary>Printable thing via provided printer </summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.IPrintable.Print(System.Text.StringBuilder,System.Func{System.Text.StringBuilder,System.Object,System.Text.StringBuilder})">
+            <summary>Print to the provided string builder via the provided printer.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Hasher">
+            <summary>Produces good enough hash codes for the fields</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.Hasher.Combine``2(``0,``1)">
+            <summary>Combines hashes of two fields</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.Hasher.Combine(System.Int32,System.Int32)">
+            <summary>Inspired by System.Tuple.CombineHashCodes</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.IEq`1">
+            <summary>Configures removed key tombstone, equality and hash function for the SmallMap and friends</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.IEq`1.GetTombstone">
+            <summary>Defines the value of the key indicating the removed entry</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.DefaultEq`1">
+            <summary>Default comparer using the `object.GetHashCode` and `object.Equals` overloads</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.DefaultEq`1.GetTombstone">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.DefaultEq`1.Equals(`0,`0)">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.DefaultEq`1.GetHashCode(`0)">
+            <inheritdoc />
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.IntEq">
+            <summary>Uses the integer itself as hash code and `==` for equality</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.IntEq.GetTombstone">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.IntEq.Equals(System.Int32,System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.IntEq.GetHashCode(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.RefEq">
+            <summary>Instances of the RefEq for the often used K</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.RefEq.OfObject">
+            <summary>RefEq for object, possibly the only thing you need</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.RefEq`1">
+            <summary>Uses the `object.GetHashCode` and `object.ReferenceEquals`</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.RefEq`1.GetTombstone">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.RefEq`1.Equals(`0,`0)">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.RefEq`1.GetHashCode(`0)">
+            <inheritdoc />
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.RefEq`2">
+            <summary>Compares via `ReferenceEquals` and gets the hash faster via `RuntimeHelpers.GetHashCode`</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.RefEq`2.GetTombstone">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.RefEq`2.Equals(System.ValueTuple{`0,`1},System.ValueTuple{`0,`1})">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.RefEq`2.GetHashCode(System.ValueTuple{`0,`1})">
+            <inheritdoc />
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.RefEq`3">
+            <summary>Compares via `ReferenceEquals` and gets the hash faster via `RuntimeHelpers.GetHashCode`</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.RefEq`3.GetTombstone">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.RefEq`3.Equals(System.ValueTuple{`0,`1,`2},System.ValueTuple{`0,`1,`2})">
+            <inheritdoc />
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.RefEq`3.GetHashCode(System.ValueTuple{`0,`1,`2})">
+            <inheritdoc />
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.Use`1">
+            <summary>Add the Use parameter to `T Method{T}(..., Use{T} _)` to enable type inference for T,
+            by calling it as `var t = Method(..., default(Use{T}))`</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallMap">
+            <summary>Configuration and the tools for the SmallMap and friends</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallMap.ProbeBits">
+            <summary>Upper hash bits spent on storing the probes, e.g. 5 bits mean 31 probes max.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallMap.IEntry`1">
+            <summary>Represent a keyed entry stored in the SmallMap.
+            Its implementation struct may include the additional Value for the Map or just the Key for the Set.
+            The implementation may also decide to make Value readonly or writable for the in-place update</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallMap.IEntry`1.Key">
+            <summary>Returns the key of the payload</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallMap.Entry`2">
+            <summary>Holds a single entry consisting of key and value. 
+            Value may be set or changed but the key is set in stone (by construction).</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallMap.Entry`2.Key">
+            <summary>The readonly key</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallMap.Entry`2.Value">
+            <summary>The mutable value</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.Entry`2.#ctor(`0)">
+            <summary>Construct with the key and default value</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.Entry`2.#ctor(`0,`1)">
+            <summary>Construct with the key and value</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallMap.Entry`1">
+            <summary>The entry with just a key.
+            When used with the SmallMap it may represent a Set without wasting the space for the absent value</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallMap.Entry`1.Key">
+            <summary>The readonly key</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.Entry`1.#ctor(`0)">
+            <summary>Construct with the key and default value</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.ToB(System.Int32)">
+            <summary>Binary representation of the `int`</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallMap.IEntries`3">
+            <summary>Abstraction to configure your own entries data structure. Check the derived types for the examples</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.IEntries`3.Init(System.Int32)">
+            <summary>Initializes the entries storage to the specified capacity</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.IEntries`3.GetSurePresentEntryRef(System.Int32)">
+            <summary>Returns the reference to entry by its index, index should map to the present/non-removed entry</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.IEntries`3.AddKeyAndGetEntryRef(`0,System.Int32)">
+            <summary>Adds the key at the "end" of entries - so the order of addition is preserved.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallMap.NoValue">
+            <summary>For now to use in the Set as a value</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallMap.SingleArrayEntries`3">
+            <summary>Stores the entries in a single dynamically reallocated growing array</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.SingleArrayEntries`3.Init(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.SingleArrayEntries`3.GetSurePresentEntryRef(System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.SingleArrayEntries`3.AddKeyAndGetEntryRef(`0,System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.TryGetEntryRef``6(``5@,``4@,System.Int32,``0,System.Boolean@,``2,``3,FastExpressionCompiler.ImTools.Use{``1})">
+            <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.AddOrGetValueRef``7(FastExpressionCompiler.ImTools.SmallMap{``0,FastExpressionCompiler.ImTools.SmallMap.Entry{``0,``1},``2,``3,``4,``5,``6}@,``0,System.Boolean@)">
+            <summary>Gets the ref to the existing entry.Value by the provided key (found == true),
+            or adds a new entry (found == false) and returns it.Value by ref. 
+            So the method always return a non-null ref to the value, either existing or added</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.AddSureAbsentDefaultAndGetRef``7(FastExpressionCompiler.ImTools.SmallMap{``0,FastExpressionCompiler.ImTools.SmallMap.Entry{``0,``1},``2,``3,``4,``5,``6}@,``0)">
+            <summary>Adds an entry for sure absent key.
+            Provides the performance in scenarios where you look for the present key, and using it, and if ABSENT then add the new one.
+            So this method optimized NOT to look for the present item for the second time</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap.TryGetValueRef``7(FastExpressionCompiler.ImTools.SmallMap{``0,FastExpressionCompiler.ImTools.SmallMap.Entry{``0,``1},``2,``3,``4,``5,``6}@,``0,System.Boolean@)">
+            <summary>Lookups for the stored entry by key. Returns the ref to the found entry.Value or the null ref</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallMap`7">
+            <summary>
+            Fast and less-allocating hash map without thread safety nets. Please measure it in your own use case before use.
+            It is configurable in regard of hash calculation/equality via `TEq` type parameter and 
+            in regard of key-value storage via `TEntries` type parameter.
+            
+            Details:
+            - Implemented as a struct so that the empty/default map does not allocate on heap
+            - Hashes and key-values are the separate collections enabling better cash locality and faster performance (data-oriented design)
+            - No SIMD for now to avoid complexity and costs for the smaller maps, so the map is more fit for the smaller sizes.
+            - Provides the "stable" enumeration of the entries in the added order
+            - The TryRemove method removes the hash but replaces the key-value entry with the tombstone key and the default value.
+            For instance, for the `RefEq` the tombstone is <see langword="null"/>. You may redefine it in the `IEq{K}.GetTombstone()` implementation.
+            
+            </summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallMap`7.CapacityBitShift">
+            <summary>Capacity bits</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallMap`7.PackedHashesAndIndexes">
+            <summary>Access to the hashes and indexes</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallMap`7.Count">
+            <summary>Number of entries in the map</summary>
+        </member>
+        <member name="P:FastExpressionCompiler.ImTools.SmallMap`7.Entries">
+            <summary>Access to the key-value entries</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap`7.#ctor(System.Byte)">
+            <summary>Capacity calculates as `1 leftShift capacityBitShift`</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap`7.GetSurePresentEntryRef(System.Int32)">
+            <summary>Get the value ref by the entry index. Also the index corresponds to entry adding order.
+             Important: it does not check the index bounds, so you need to check that the index is from 0 to map.Count-1</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap`7.AddOrGetEntryRef(`0,System.Boolean@)">
+            <summary>Gets the ref to the existing entry by the provided key (found == true),
+            or adds a new entry (found == false) and returns it by ref</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap`7.AddSureAbsentDefaultEntryAndGetRef(`0)">
+            <summary>Adds an entry for sure absent key.
+            Provides the performance in scenarios where you look for the present key, and using it, and if ABSENT then add the new one.
+            So this method optimized NOT to look for the present item for the second time</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap`7.ContainsKey(`0)">
+            <summary>Lookups for the stored key. If found true, otherwise false</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap`7.TryGetEntryRef(`0,System.Boolean@)">
+            <summary>Lookup for the stored entry by key. Returns the ref to the found entry or the null ref</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallMap4`3">
+            <summary>Holds the Map with 4 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap4`3.#ctor">
+            <summary>Holds the Map with 4 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallMap4`3.Map">
+            <summary>Map with 4 elements on stack and entries baked by the single array</summary> 
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallMap8`3">
+            <summary>Holds the Map with 8 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap8`3.#ctor">
+            <summary>Holds the Map with 8 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallMap8`3.Map">
+            <summary>Map with 8 elements on stack and entries baked by the single array</summary> 
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallMap16`3">
+            <summary>Holds the Map with 16 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallMap16`3.#ctor">
+            <summary>Holds the Map with 16 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallMap16`3.Map">
+            <summary>Map with 16 elements on stack and entries baked by the single array</summary> 
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallSet4`2">
+            <summary>Holds the Set with 4 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallSet4`2.#ctor">
+            <summary>Holds the Set with 4 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallSet4`2.Set">
+            <summary>Set with 4 keys on stack and entries baked by the single array</summary> 
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallSet8`2">
+            <summary>Holds the Set with 8 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallSet8`2.#ctor">
+            <summary>Holds the Set with 8 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallSet8`2.Set">
+            <summary>Set with 8 keys on stack and entries baked by the single array</summary> 
+        </member>
+        <member name="T:FastExpressionCompiler.ImTools.SmallSet16`2">
+            <summary>Holds the Set with 16 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.ImTools.SmallSet16`2.#ctor">
+            <summary>Holds the Set with 16 items on stack. Minimizes the number of type arguments required to be specified</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.ImTools.SmallSet16`2.Set">
+            <summary>Set with 16 keys on stack and entries baked by the single array</summary> 
+        </member>
+        <member name="M:FastExpressionCompiler.TestTools.PrintCSharp(FastExpressionCompiler.IDelegateDebugInfo,System.Boolean,System.Boolean,System.String,System.String)">
+            <summary>The method outputs the whole code of the expression including the code of the nested lambdas.
+            In case of nested lambda represented in the expression of the Constant Delegate, 
+            and the Delegate.Target being IDelegateDebugInfo, you may call `IDelegateDebugInfo.EnumerateNestedLambdas()`
+            and output C# for each nested lambda</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.TestTools.PrintIL(FastExpressionCompiler.IDelegateDebugInfo,System.String,FastExpressionCompiler.ILDecoder.ILFormat)">
+            <summary>Prints the IL instructions of the delegate debug info, including nested lambdas.</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.Asserts.AreEqual``1(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0},System.String,System.String)">
+            <summary>Should cover the case with the `expected` to be an array as well.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.TestContext">
+            <summary>Wrapper for the context per test method</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.TestContext.Fail(System.String,System.String,System.Int32)">
+            <summary>Always fails with the provided message</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.TestContext.IsTrue(System.Boolean,System.String,System.String,System.Int32)">
+            <summary>Checks if `actual is true`. Method returns `bool` so the latter test logic may depend on it, e.g. to return early</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.TestContext.AreEqual``1(System.Collections.Generic.IEnumerable{``0},System.Collections.Generic.IEnumerable{``0},System.String,System.String,System.String,System.Int32)">
+            <summary>Should cover the case with the `expected` to be an array as well.</summary>
+        </member>
+        <member name="T:FastExpressionCompiler.TestRun">
+            <summary>Per-thread context, accumulating the stats and failures in its Run method.</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.TestRun.TotalTestCount">
+            <summary>Total number of tests, including both succeeded and failed</summary>
+        </member>
+        <member name="F:FastExpressionCompiler.TestRun.FailedTestCount">
+            <summary>Number of the failed tests, note that each failed test may have multiple failures (assertions + exception)</summary>
+        </member>
+        <member name="M:FastExpressionCompiler.TestRun.Run``1(``0,FastExpressionCompiler.TestFlags)">
+            <summary>Will output the failures while running</summary>
+        </member>
+    </members>
+</doc>

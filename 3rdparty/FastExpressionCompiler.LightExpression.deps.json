@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "FastExpressionCompiler.LightExpression/5.4.1": {
+        "runtime": {
+          "FastExpressionCompiler.LightExpression.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "FastExpressionCompiler.LightExpression/5.4.1": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "FastExpressionCompiler/5.4.1": {
+        "runtime": {
+          "FastExpressionCompiler.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "FastExpressionCompiler/5.4.1": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
