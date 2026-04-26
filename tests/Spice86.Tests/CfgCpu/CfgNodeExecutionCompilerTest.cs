@@ -4,6 +4,7 @@ using FluentAssertions;
 
 using NSubstitute;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
@@ -24,7 +25,7 @@ public class CfgNodeExecutionCompilerTest {
     private static CfgNodeExecutionCompiler CreateCompiler() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         CfgNodeExecutionCompilerMonitor monitor = new(loggerService);
-        return new CfgNodeExecutionCompiler(monitor, loggerService);
+        return new CfgNodeExecutionCompiler(monitor, loggerService, JitMode.InterpretedThenCompiled);
     }
 
     /// <summary>

@@ -321,4 +321,16 @@ public sealed class Configuration : CommandSettings {
     [DefaultValue(RenderingMode.Async)]
     public RenderingMode RenderingMode { get; init; }
 
+    /// <summary>
+    /// Controls how the JIT compiler handles instruction execution delegates.
+    /// <list type="bullet">
+    ///   <item><term>InterpretedThenCompiled</term><description>Default. Assigns an interpreted delegate immediately, then swaps in an optimized compiled delegate in the background.</description></item>
+    ///   <item><term>InterpretedOnly</term><description>Only uses interpreted delegates. No background compilation threads are started.</description></item>
+    ///   <item><term>CompiledOnly</term><description>Compiles each instruction synchronously on first encounter, skipping the interpreted phase.</description></item>
+    /// </list>
+    /// </summary>
+    [CommandOption("--JitMode <JITMODE>")]
+    [DefaultValue(JitMode.InterpretedThenCompiled)]
+    public JitMode JitMode { get; init; }
+
 }

@@ -34,6 +34,9 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+# Keep in-tree 3rdparty binaries despite the rules above
+!3rdparty/Debug/
+!3rdparty/Release/
 x64/
 x86/
 [Aa][Rr][Mm]/
@@ -87,6 +90,8 @@ StyleCopReport.xml
 *.iobj
 *.pch
 *.pdb
+# Keep 3rdparty PDBs despite the rule above
+!3rdparty/**/*.pdb
 *.ipdb
 *.pgc
 *.pgd

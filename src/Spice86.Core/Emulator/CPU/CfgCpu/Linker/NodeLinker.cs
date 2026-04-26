@@ -97,7 +97,7 @@ public class NodeLinker : InstructionReplacer {
     /// </summary>
     public SelectorNode CreateSelectorNodeBetween(CfgInstruction instruction1, CfgInstruction instruction2) {
         SelectorNode selectorNode = new SelectorNode(instruction1.Address);
-        //_executionCompiler.Compile(selectorNode);
+        _executionCompiler.Compile(selectorNode);
         InsertIntermediatePredecessor(instruction1, selectorNode);
         InsertIntermediatePredecessor(instruction2, selectorNode);
         return selectorNode;
