@@ -529,16 +529,22 @@ public class DosMemoryManager {
     }
 
     /// <summary>
-    /// Split the block:
-    /// <ul>
-    /// <li>If size is more than the block size => error, returns false</li>
-    /// <li>If size matches the block size => nothing to do</li>
-    /// <li>If size is less the block size => splits the block by creating a new free mcb at the end of the block</li>
-    /// </ul>
+    /// Splits the block as follows:
+    /// <list type="bullet">
+    ///   <item>
+    ///     <description>If <paramref name="size"/> is greater than the block size, the operation fails and returns <c>false</c>.</description>
+    ///   </item>
+    ///   <item>
+    ///     <description>If <paramref name="size"/> matches the block size, nothing is done and the operation returns <c>true</c>.</description>
+    ///   </item>
+    ///   <item>
+    ///     <description>If <paramref name="size"/> is less than the block size, the block is split by creating a new free MCB at the end, and the operation returns <c>true</c>.</description>
+    ///   </item>
+    /// </list>
     /// </summary>
-    /// <param name="block">The block to split up.</param>
+    /// <param name="block">The block to split.</param>
     /// <param name="size">The new size for the block.</param>
-    /// <returns>Whether the operation was successful.</returns>
+    /// <returns><c>true</c> if the operation was successful; otherwise, <c>false</c>.</returns>
     private bool SplitBlock(DosMemoryControlBlock block, ushort size) {
         ushort blockSize = block.Size;
         if (blockSize == size) {
