@@ -6,7 +6,6 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Memory;
@@ -160,7 +159,7 @@ public class FunctionHandler {
     /// <param name="returnCallType">The calling convention.</param>
     /// <param name="ret">The instruction that initiated this return.</param>
     /// <returns>A value indicating whether the return was successful.</returns>
-    public void Ret(CallType returnCallType, IReturnInstruction? ret) {
+    public void Ret(CallType returnCallType, CfgInstruction? ret) {
         if (_callerStack.TryPop(out FunctionCall currentFunctionCall) == false) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Returning but no call was done before!!. Instruction is {Instruction}", ret);
@@ -173,7 +172,7 @@ public class FunctionHandler {
             }
             return;
         }
-        if (ret != null) {
+        if (ret is not null && ret.IsReturn) {
             // Register the call instruction that probably caused this return
             ret.CurrentCorrespondingCallInstruction = currentFunctionCall.Initiator;
         }

@@ -258,7 +258,14 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         Expression index = node.AbsoluteAddress.Accept(this);
         return ToMemoryIndexer(node.DataType, index);
     }
-    
+
+    public Expression VisitInstructionFieldNode(InstructionFieldNode node) {
+        // SignatureReducer.ReduceNonFinalFields can set UseValue = false after compilation.
+        // The caller must recompile the node whenever UseValue changes; if only compiled
+        // nodes are passed to SignatureReducer, it will throw because it cannot reduce them.
+        return node.ResolvedNode.Accept(this);
+    }
+
     public Expression VisitCpuFlagNode(CpuFlagNode node) {
         string flagPropertyName = node.FlagMask switch {
             Flags.Carry => nameof(State.CarryFlag),
@@ -538,7 +545,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
 
     public Expression VisitCallNearNode(CallNearNode node) {
         // helper.NearCallWithReturnIpNextInstructionXX(instruction, targetIp)
-        string methodName = node.CallSize == 16 
+        string methodName = node.CallBitWidth == BitWidth.WORD_16 
             ? nameof(InstructionExecutionHelper.NearCallWithReturnIpNextInstruction16) 
             : nameof(InstructionExecutionHelper.NearCallWithReturnIpNextInstruction32);
 
@@ -549,7 +556,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     public Expression VisitCallFarNode(CallFarNode node) {
         Expression targetAddress = node.TargetAddress.Accept(this);
 
-        string methodName = node.CallSize == 16 
+        string methodName = node.CallBitWidth == BitWidth.WORD_16 
             ? nameof(InstructionExecutionHelper.FarCallWithReturnIpNextInstruction16) 
             : nameof(InstructionExecutionHelper.FarCallWithReturnIpNextInstruction32);
 
@@ -558,7 +565,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression VisitReturnNearNode(ReturnNearNode node) {
-        string methodName = node.RetSize == 16
+        string methodName = node.RetBitWidth == BitWidth.WORD_16
             ? nameof(InstructionExecutionHelper.HandleNearRet16)
             : nameof(InstructionExecutionHelper.HandleNearRet32);
             
@@ -567,7 +574,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression VisitReturnFarNode(ReturnFarNode node) {
-        string methodName = node.RetSize == 16
+        string methodName = node.RetBitWidth == BitWidth.WORD_16
             ? nameof(InstructionExecutionHelper.HandleFarRet16)
             : nameof(InstructionExecutionHelper.HandleFarRet32);
             

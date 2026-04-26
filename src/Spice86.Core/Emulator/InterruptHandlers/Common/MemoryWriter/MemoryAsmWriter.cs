@@ -184,6 +184,33 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
+    /// Writes MOV CX, imm16 instruction to memory.
+    /// </summary>
+    /// <param name="value">Value to move into CX.</param>
+    public void WriteMovCx(ushort value) {
+        WriteUInt8(0xB9);
+        WriteUInt16(value);
+    }
+
+    /// <summary>
+    /// Writes MOV BX, imm16 instruction to memory.
+    /// </summary>
+    /// <param name="value">Value to move into BX.</param>
+    public void WriteMovBx(ushort value) {
+        WriteUInt8(0xBB);
+        WriteUInt16(value);
+    }
+
+    /// <summary>
+    /// Writes LOOP rel8 instruction to memory.
+    /// </summary>
+    /// <param name="offset">Signed relative offset for the loop target.</param>
+    public void WriteLoop(sbyte offset) {
+        WriteUInt8(0xE2);
+        WriteInt8(offset);
+    }
+
+    /// <summary>
     /// Writes MOV DX, imm16 instruction to memory.
     /// </summary>
     /// <param name="value">Value to move into DX.</param>

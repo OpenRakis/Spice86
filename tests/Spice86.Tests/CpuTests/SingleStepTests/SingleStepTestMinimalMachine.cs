@@ -42,7 +42,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         CallbackHandler callbackHandler = new(state, loggerService);
         DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
         FunctionCatalogue functionCatalogue = new();
-        CfgNodeExecutionCompiler executionCompiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedThenCompiled);
+        CfgNodeExecutionCompiler executionCompiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly);
         _cfgNodeExecutionCompiler = executionCompiler;
         Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic,
             emulatorBreakpointsManager, functionCatalogue, false, false, loggerService,

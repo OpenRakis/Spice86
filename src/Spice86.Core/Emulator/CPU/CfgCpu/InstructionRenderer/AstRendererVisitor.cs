@@ -128,11 +128,16 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
     }
 
     public TOutput VisitBinaryOperationNode(BinaryOperationNode node) {
-        TOutput left = RenderOperand(node.Left, node.BinaryOperation, isLeftOperand: true);
-        if (IsZero(node.Right) && node.BinaryOperation == BinaryOperation.PLUS) {
-            return left;
+        if (node.BinaryOperation == BinaryOperation.PLUS) {
+            if (IsZero(node.Left)) {
+                return RenderOperand(node.Right, node.BinaryOperation, isLeftOperand: false);
+            }
+            if (IsZero(node.Right)) {
+                return RenderOperand(node.Left, node.BinaryOperation, isLeftOperand: true);
+            }
         }
 
+        TOutput left = RenderOperand(node.Left, node.BinaryOperation, isLeftOperand: true);
         TOutput right = RenderOperand(node.Right, node.BinaryOperation, isLeftOperand: false);
         if (IsNegative(node.Right) && node.BinaryOperation == BinaryOperation.PLUS) {
             return _outputRenderer.Concat(left, right);
@@ -193,7 +198,14 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
         return _outputRenderer.Concat(_outputRenderer.Operator(UnaryOperationToString(node.UnaryOperation)), value);
     }
 
+    public TOutput VisitInstructionFieldNode(InstructionFieldNode node) {
+        return node.ResolvedNode.Accept(this);
+    }
+
     public TOutput VisitTypeConversionNode(TypeConversionNode node) {
+        if (TryEvaluateConstant(node, out ulong folded)) {
+            return VisitConstantNode(new ConstantNode(node.DataType, folded));
+        }
         string typeStr = node.DataType.BitWidth switch {
             BitWidth.NIBBLE_4 => node.DataType.Signed ? "(sbyte)" : "(byte)",
             BitWidth.BYTE_8 => node.DataType.Signed ? "(sbyte)" : "(byte)",
@@ -210,12 +222,35 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
         return _outputRenderer.Concat(_outputRenderer.Keyword(typeStr), value);
     }
 
-    private static bool IsZero(ValueNode valueNode) {
-        return valueNode is ConstantNode constantNode && constantNode.Value == 0;
+    private static bool IsZero(ValueNode node) {
+        return TryEvaluateConstant(node, out ulong value) && value == 0;
     }
 
-    private static bool IsNegative(ValueNode valueNode) {
-        return valueNode is ConstantNode { IsNegative: true };
+    private static bool IsNegative(ValueNode node) {
+        return TryEvaluateConstant(node, out ulong value)
+            && node.DataType.Signed
+            && new ConstantNode(node.DataType, value).IsNegative;
+    }
+
+    /// <summary>
+    /// Tries to statically evaluate a ValueNode subtree to a constant.
+    /// Succeeds when all leaves are ConstantNode or InstructionFieldNode with UseValue == true,
+    /// and all interior nodes are TypeConversionNode.
+    /// </summary>
+    private static bool TryEvaluateConstant(ValueNode node, out ulong value) {
+        switch (node) {
+            case ConstantNode c:
+                value = c.Value;
+                return true;
+            case InstructionFieldNode ifn:
+                return TryEvaluateConstant(ifn.ResolvedNode, out value);
+            case TypeConversionNode tc when TryEvaluateConstant(tc.Value, out ulong inner):
+                value = new ConstantNode(tc.Value.DataType, inner).Convert(tc.DataType);
+                return true;
+            default:
+                value = 0;
+                return false;
+        }
     }
 
     public TOutput VisitInstructionNode(InstructionNode node) {

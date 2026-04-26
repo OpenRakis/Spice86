@@ -14,14 +14,7 @@
     <PropertyGroup>
         <PackageId>Spice86.Core</PackageId>
     </PropertyGroup>
-    <!-- Moxy configuration -->
-    <PropertyGroup>
-        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-    </PropertyGroup>
-    <ItemGroup>
-        <AdditionalFiles Include="Emulator/CPU/CfgCpu/ParsedInstruction/Instructions/Mixins/*.mixin" />
-        <AdditionalFiles Include="Emulator/CPU/CfgCpu/Parser/SpecificParsers/Mixin/*.mixin" />
-    </ItemGroup>
+
     <ItemGroup>
         <None Remove="Resources\2MGM.sf2" />
     </ItemGroup>
@@ -38,7 +31,6 @@
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
         <PackageReference Include="Swashbuckle.AspNetCore" />
-        <PackageReference Include="Morris.Moxy" />
         <PackageReference Include="NukedOPL3Sharp" />
         <PackageReference Include="Spice86.Audio" />
         <!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->

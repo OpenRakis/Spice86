@@ -37,6 +37,7 @@ public class MnemonicRenderer(AsmRenderingConfig config) {
         InstructionOperation.JBE_SHORT,
         InstructionOperation.JCXZ_NEAR,
         InstructionOperation.JCXZ_SHORT,
+        InstructionOperation.JECXZ_SHORT,
         InstructionOperation.JE_NEAR,
         InstructionOperation.JE_SHORT,
         InstructionOperation.JG_NEAR,

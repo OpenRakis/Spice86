@@ -8,14 +8,12 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Collections.Generic;
-using System.Collections.Immutable;
 
 using Xunit;
 
@@ -24,6 +22,7 @@ public class CpuHeavyLoggerTests : IDisposable {
     private readonly List<string> _filesToCleanup = new();
     private readonly State _state = new(CpuModel.INTEL_8086);
     private readonly Memory _memory = new(new AddressReadWriteBreakpoints(), new Ram(0x100000), new A20Gate());
+    private readonly TestInstructionHelper _instructionHelper = new();
 
     private CpuHeavyLogger Create(string? logPath, AsmRenderingStyle style,
         IReadOnlyList<CompiledLogExpression>? logExpressions = null) {
@@ -97,7 +96,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _state.AuxiliaryFlag = false;
         _state.ParityFlag = false;
 
-        Nop nop = CreateNop(new SegmentedAddress(0x01DD, 0x0100));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0x01DD, 0x0100));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox)) {
             logger.LogInstruction(nop);
@@ -118,7 +117,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _state.EAX = 0x0041;
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression expr = compiler.Compile("life=AX+1");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -135,7 +134,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _state.EBX = 0xDEADBEEF;
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression expr = compiler.Compile("raw=EBX");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -152,7 +151,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _state.DS = 0x01DD;
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression expr = compiler.Compile("seg=DS");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -170,7 +169,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _state.EBX = 5;
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression expr = compiler.Compile("sum=AX+BX");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -187,7 +186,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _state.EAX = 0x0001;
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression expr = compiler.Compile("shifted=AX<<2");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -204,7 +203,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _state.EAX = 0xDEADBEEF;
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression expr = compiler.Compile("masked=EAX&0xFF");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -221,7 +220,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _state.EAX = 0;
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression expr = compiler.Compile("flag=AX==0");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -238,7 +237,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _state.EAX = 1;
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression expr = compiler.Compile("flag=AX==0");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -255,7 +254,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _memory.UInt8[0x1234] = 0xAB;
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression expr = compiler.Compile("b=byte ptr [0x1234]");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -272,7 +271,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _memory.UInt16[0x1000] = 0x1234;
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression expr = compiler.Compile("w=word ptr [0x1000]");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -289,7 +288,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         _memory.UInt32[0x2000] = 0x12345678;
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression expr = compiler.Compile("d=dword ptr [0x2000]");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -309,7 +308,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         LogExpressionCompiler compiler = new(_state, _memory);
         // Parser numeric-segment syntax: "segment:[offset]" (e.g. 0x01DD:[0x0100])
         CompiledLogExpression expr = compiler.Compile("sb=byte ptr 0x01DD:[0x0100]");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -329,7 +328,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         LogExpressionCompiler compiler = new(_state, _memory);
         // Parser syntax for segmented pointers with register segment: "ds:[offset]"
         CompiledLogExpression expr = compiler.Compile("sw=word ptr ds:[0x0200]");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -348,7 +347,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         LogExpressionCompiler compiler = new(_state, _memory);
         CompiledLogExpression exprA = compiler.Compile("a=AX");
         CompiledLogExpression exprB = compiler.Compile("b=BX");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { exprA, exprB })) {
             logger.LogInstruction(nop);
@@ -366,7 +365,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         string logPathNoExpr = GetUniqueLogPath();
         string logPathEmpty = GetUniqueLogPath();
         _state.EAX = 0xAABBCCDD;
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPathNoExpr, AsmRenderingStyle.DosBox)) {
             logger.LogInstruction(nop);
@@ -409,7 +408,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         LogExpressionCompiler compiler = new(_state, _memory);
         // "flag=AX==0" => name "flag", expression "AX==0"
         CompiledLogExpression expr = compiler.Compile("flag=AX==0");
-        Nop nop = CreateNop(new SegmentedAddress(0, 0));
+        CfgInstruction nop = CreateNop(new SegmentedAddress(0, 0));
         // Act
         using (CpuHeavyLogger logger = Create(logPath, AsmRenderingStyle.DosBox, new[] { expr })) {
             logger.LogInstruction(nop);
@@ -419,8 +418,7 @@ public class CpuHeavyLoggerTests : IDisposable {
         line.Should().EndWith("flag:00000001");
     }
 
-    private Nop CreateNop(SegmentedAddress address) {
-        InstructionField<ushort> opcodeField = new(0, 1, address.Linear, 0xEB, ImmutableList.Create<byte?>(0x90), true);
-        return new(address, opcodeField);
+    private CfgInstruction CreateNop(SegmentedAddress address) {
+        return _instructionHelper.WriteAndParse(address, w => w.WriteNop());
     }
 }

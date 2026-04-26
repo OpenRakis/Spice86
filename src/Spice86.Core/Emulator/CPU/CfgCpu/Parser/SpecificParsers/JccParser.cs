@@ -1,40 +1,77 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Shared.Emulator.Memory;
 
 public class JccParser : BaseInstructionParser {
-    private readonly Jcc8SpecificParser _jcc8SpecificParser;
-    private readonly Jcc16SpecificParser _jcc16SpecificParser;
-    private readonly Jcc32SpecificParser _jcc32SpecificParser;
+    private static readonly InstructionOperation[] ShortDisplayOps = {
+        InstructionOperation.JO_SHORT,
+        InstructionOperation.JNO_SHORT,
+        InstructionOperation.JB_SHORT,
+        InstructionOperation.JAE_SHORT,
+        InstructionOperation.JE_SHORT,
+        InstructionOperation.JNE_SHORT,
+        InstructionOperation.JBE_SHORT,
+        InstructionOperation.JA_SHORT,
+        InstructionOperation.JS_SHORT,
+        InstructionOperation.JNS_SHORT,
+        InstructionOperation.JP_SHORT,
+        InstructionOperation.JNP_SHORT,
+        InstructionOperation.JL_SHORT,
+        InstructionOperation.JGE_SHORT,
+        InstructionOperation.JLE_SHORT,
+        InstructionOperation.JG_SHORT,
+    };
 
-    public JccParser(BaseInstructionParser other) : base(other) {
-        _jcc8SpecificParser = new Jcc8SpecificParser(this);
-        _jcc16SpecificParser = new Jcc16SpecificParser(this);
-        _jcc32SpecificParser = new Jcc32SpecificParser(this);
+    private static readonly InstructionOperation[] NearDisplayOps = {
+        InstructionOperation.JO_NEAR,
+        InstructionOperation.JNO_NEAR,
+        InstructionOperation.JB_NEAR,
+        InstructionOperation.JAE_NEAR,
+        InstructionOperation.JE_NEAR,
+        InstructionOperation.JNE_NEAR,
+        InstructionOperation.JBE_NEAR,
+        InstructionOperation.JA_NEAR,
+        InstructionOperation.JS_NEAR,
+        InstructionOperation.JNS_NEAR,
+        InstructionOperation.JP_NEAR,
+        InstructionOperation.JNP_NEAR,
+        InstructionOperation.JL_NEAR,
+        InstructionOperation.JGE_NEAR,
+        InstructionOperation.JLE_NEAR,
+        InstructionOperation.JG_NEAR,
+    };
+
+    public JccParser(ParsingTools parsingTools) : base(parsingTools) {
     }
 
-    public CfgInstruction Parse(ParsingContext context) {
+    public CfgInstruction Parse(ParsingContext context, int conditionCode) {
         bool is8 = context.OpcodeField.Value <= 0xFF;
-        // For near Jcc (0F 80..0F 8F), the displacement width is selected by operand-size (66h),
-        // not address-size (67h). Short Jcc (70..7F) always uses 8-bit displacement.
-        BitWidth width = GetBitWidth(is8, context.HasOperandSize32);
-        // Take the lowest 4 bits
-        int condition = context.OpcodeField.Value & 0xF;
-        return width switch {
-            BitWidth.BYTE_8 => _jcc8SpecificParser.Parse(context, condition),
-            BitWidth.WORD_16 => _jcc16SpecificParser.Parse(context, condition),
-            BitWidth.DWORD_32 => _jcc32SpecificParser.Parse(context, condition),
-            _ => throw CreateUnsupportedBitWidthException(width)
-        };
+        BitWidth offsetWidth = GetBitWidth(is8, context.HasOperandSize32);
+        return ParseJcc(context, conditionCode, offsetWidth);
+    }
+
+    private CfgInstruction ParseJcc(ParsingContext context, int conditionCode, BitWidth offsetWidth) {
+        bool isShort = offsetWidth == BitWidth.BYTE_8;
+        InstructionOperation[] displayOps = isShort ? ShortDisplayOps : NearDisplayOps;
+
+        (int offsetValue, FieldWithValue offsetField) = ReadSignedOffset(offsetWidth);
+
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        instr.AddField(offsetField);
+        instr.MaxSuccessorsCount = 2;
+        ushort targetIp = (ushort)(instr.NextInMemoryAddress.Offset + offsetValue);
+        ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress);
+        ValueNode conditionNode = _astBuilder.Flag.BuildSetCondition(conditionCode);
+        InstructionNode displayAst = new InstructionNode(displayOps[conditionCode], targetIpNode);
+        IfElseNode execAst = _astBuilder.ControlFlow.ConditionalNearJump(instr, conditionNode, targetIpNode);
+        instr.AttachAsts(displayAst, execAst);
+        return instr;
     }
 }
-
-[JccSpecificParser(8, "sbyte")]
-public partial class Jcc8SpecificParser;
-
-[JccSpecificParser(16, "short")]
-public partial class Jcc16SpecificParser;
-
-[JccSpecificParser(32, "int")]
-public partial class Jcc32SpecificParser;

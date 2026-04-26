@@ -1,10 +1,12 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 
 public abstract class BaseGrpOperationParser : BaseInstructionParser {
-    public BaseGrpOperationParser(BaseInstructionParser instructionParser) : base(instructionParser) {
+    public BaseGrpOperationParser(ParsingTools parsingTools) : base(parsingTools) {
     }
 
     public CfgInstruction Parse(ParsingContext context) {

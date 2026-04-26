@@ -24,7 +24,7 @@ public class Spice86Creator {
         SbType sbType = SbType.None, OplMode oplMode = OplMode.None,
         ushort sbBase = 0x220, byte sbIrq = 7, byte sbDma = 1, byte sbHdma = 5,
         string? exeArgs = null, long? instructionTimeScale = null,
-        JitMode jitMode = JitMode.InterpretedOnly) {
+        JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
@@ -67,6 +67,7 @@ public class Spice86Creator {
             HttpApiPort = 0,
             InstructionTimeScale = instructionTimeScale,
             JitMode = jitMode,
+            FailOnInvalidOpcode = failOnInvalidOpcode,
         };
 
         _maxCycles = maxCycles;

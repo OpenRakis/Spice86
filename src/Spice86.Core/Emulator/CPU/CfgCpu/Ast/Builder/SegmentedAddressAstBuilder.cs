@@ -25,22 +25,22 @@ public class SegmentedAddressAstBuilder(ConstantAstBuilder constant, TypeConvers
         }
 
         ValueNode memoryAddress = Constant.ToNode(field.PhysicalAddress);
-        return FromMemory(memoryAddress, 16);
+        return FromMemory(memoryAddress, BitWidth.WORD_16);
     }
 
-    public SegmentedAddressNode FromMemory(ValueNode memoryAddress, int operandSize) {
+    public SegmentedAddressNode FromMemory(ValueNode memoryAddress, BitWidth operandBitWidth) {
         ValueNode targetOffset;
         ValueNode segmentAddress;
 
-        if (operandSize == 16) {
+        if (operandBitWidth == BitWidth.WORD_16) {
             targetOffset = new AbsolutePointerNode(DataType.UINT16, memoryAddress);
             segmentAddress = Constant.AddConstant(memoryAddress, 2);
-        } else if (operandSize == 32) {
+        } else if (operandBitWidth == BitWidth.DWORD_32) {
             ValueNode targetOffset32 = new AbsolutePointerNode(DataType.UINT32, memoryAddress);
             targetOffset = TypeConversion.Convert(DataType.UINT16, targetOffset32);
             segmentAddress = Constant.AddConstant(memoryAddress, 4);
         } else {
-            throw new ArgumentOutOfRangeException(nameof(operandSize), operandSize, "Operand size must be 16 or 32.");
+            throw new ArgumentOutOfRangeException(nameof(operandBitWidth), operandBitWidth, "Operand bit width must be WORD_16 or DWORD_32.");
         }
 
         ValueNode targetSegment = new AbsolutePointerNode(DataType.UINT16, segmentAddress);

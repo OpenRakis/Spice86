@@ -19,7 +19,7 @@ public class SingleStepTest : IDisposable {
     /// Set to true to generate a revocation list file instead of failing tests.
     /// The file will contain hashes of failing tests and statistics.
     /// </summary>
-    private const bool GenerateRevocationList = false;
+    private const bool GenerateRevocationList = true;
 
     /// <summary>
     /// Fix mode: When set to a specific opcode (e.g., "00", "66", "67.00"), the revocation list

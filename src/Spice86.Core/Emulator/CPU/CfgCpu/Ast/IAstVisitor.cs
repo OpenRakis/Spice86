@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 
 public interface IAstVisitor<T> {
+    public T VisitInstructionFieldNode(InstructionFieldNode node);
     public T VisitSegmentRegisterNode(SegmentRegisterNode node);
     public T VisitSegmentedPointer(SegmentedPointerNode node);
     public T VisitRegisterNode(RegisterNode node);

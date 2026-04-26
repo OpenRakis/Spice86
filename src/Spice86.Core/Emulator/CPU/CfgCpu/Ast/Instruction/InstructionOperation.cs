@@ -61,6 +61,7 @@ public enum InstructionOperation {
     JBE_SHORT,
     JCXZ_NEAR,
     JCXZ_SHORT,
+    JECXZ_SHORT,
     JE_NEAR,
     JE_SHORT,
     JG_NEAR,

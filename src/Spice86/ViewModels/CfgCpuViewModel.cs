@@ -13,12 +13,10 @@ using Iced.Intel;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
@@ -33,7 +31,6 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private readonly ExecutionContextManager _executionContextManager;
     private readonly NodeToString _nodeToString;
     private readonly AstFormattedTextTokensRenderer _textOffsetsRenderer;
-    private readonly AstBuilder _astBuilder = new();
 
     // Collection of searchable nodes for AutoCompleteBox
     private Dictionary<string, ICfgNode> _searchableNodes = new();
@@ -344,12 +341,22 @@ public partial class CfgCpuViewModel : ViewModelBase {
         return new Edge(nodeGraphNode, successorGraphNode, edgeLabel);
     }
 
-    private static CfgEdgeType DetermineEdgeType(ICfgNode node) {
+    private static CfgNodeType ClassifyNodeType(ICfgNode node) {
         return node switch {
-            IJumpInstruction => CfgEdgeType.Jump,
-            ICallInstruction => CfgEdgeType.Call,
-            IReturnInstruction => CfgEdgeType.Return,
-            SelectorNode => CfgEdgeType.Selector,
+            CfgInstruction instr when instr.IsJump => CfgNodeType.Jump,
+            CfgInstruction instr when instr.IsCall => CfgNodeType.Call,
+            CfgInstruction instr when instr.IsReturn => CfgNodeType.Return,
+            SelectorNode => CfgNodeType.Selector,
+            _ => CfgNodeType.Instruction
+        };
+    }
+
+    private static CfgEdgeType DetermineEdgeType(ICfgNode node) {
+        return ClassifyNodeType(node) switch {
+            CfgNodeType.Jump => CfgEdgeType.Jump,
+            CfgNodeType.Call => CfgEdgeType.Call,
+            CfgNodeType.Return => CfgEdgeType.Return,
+            CfgNodeType.Selector => CfgEdgeType.Selector,
             _ => CfgEdgeType.Normal
         };
     }
@@ -373,19 +380,20 @@ public partial class CfgCpuViewModel : ViewModelBase {
             textOffsets.Add(new() { Text = "🔴 last run ", Kind = FormatterTextKind.Text });
         }
 
-        CfgNodeType nodeType = CfgNodeType.Instruction;
-        if (node is IJumpInstruction) {
-            textOffsets.Add(new() { Text = "→ jump ", Kind = FormatterTextKind.Mnemonic });
-            nodeType = CfgNodeType.Jump;
-        } else if (node is ICallInstruction) {
-            textOffsets.Add(new() { Text = "⟱ call ", Kind = FormatterTextKind.Mnemonic });
-            nodeType = CfgNodeType.Call;
-        } else if (node is IReturnInstruction) {
-            textOffsets.Add(new() { Text = "⟰ return ", Kind = FormatterTextKind.Mnemonic });
-            nodeType = CfgNodeType.Return;
-        } else if (node is SelectorNode) {
-            textOffsets.Add(new() { Text = "☰ selector ", Kind = FormatterTextKind.Keyword });
-            nodeType = CfgNodeType.Selector;
+        CfgNodeType nodeType = ClassifyNodeType(node);
+        switch (nodeType) {
+            case CfgNodeType.Jump:
+                textOffsets.Add(new() { Text = "\u2192 jump ", Kind = FormatterTextKind.Mnemonic });
+                break;
+            case CfgNodeType.Call:
+                textOffsets.Add(new() { Text = "\u27b1 call ", Kind = FormatterTextKind.Mnemonic });
+                break;
+            case CfgNodeType.Return:
+                textOffsets.Add(new() { Text = "\u27f0 return ", Kind = FormatterTextKind.Mnemonic });
+                break;
+            case CfgNodeType.Selector:
+                textOffsets.Add(new() { Text = "\u2630 selector ", Kind = FormatterTextKind.Keyword });
+                break;
         }
 
         // Header: address / id
@@ -395,7 +403,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
         textOffsets.Add(new() { Text = Environment.NewLine, Kind = FormatterTextKind.Text });
 
         // Assembly instruction (syntax-highlighted via AST renderer)
-        InstructionNode ast = node.ToInstructionAst(_astBuilder);
+        InstructionNode ast = node.DisplayAst;
         textOffsets.AddRange(ast.Accept(_textOffsetsRenderer));
 
         return new CfgGraphNode {
@@ -416,14 +424,19 @@ public partial class CfgCpuViewModel : ViewModelBase {
             prefix += "🔴 last run ";
         }
 
-        if (node is IJumpInstruction) {
-            prefix += "→ jump ";
-        } else if (node is ICallInstruction) {
-            prefix += "⟱ call ";
-        } else if (node is IReturnInstruction) {
-            prefix += "⟰ return ";
-        } else if (node is SelectorNode) {
-            prefix += "☰ selector ";
+        switch (ClassifyNodeType(node)) {
+            case CfgNodeType.Jump:
+                prefix += "\u2192 jump ";
+                break;
+            case CfgNodeType.Call:
+                prefix += "\u27b1 call ";
+                break;
+            case CfgNodeType.Return:
+                prefix += "\u27f0 return ";
+                break;
+            case CfgNodeType.Selector:
+                prefix += "\u2630 selector ";
+                break;
         }
 
         return $"{prefix}{headerText}{Environment.NewLine}{assemblyText}";
@@ -433,16 +446,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
         => (node.Id, successor.Id);
 
     private NodeTableEntry CreateTableEntry(ICfgNode node) {
-        string nodeType = "Instruction";
-        if (node is IJumpInstruction) {
-            nodeType = "Jump";
-        } else if (node is ICallInstruction) {
-            nodeType = "Call";
-        } else if (node is IReturnInstruction) {
-            nodeType = "Return";
-        } else if (node is SelectorNode) {
-            nodeType = "Selector";
-        }
+        string nodeType = ClassifyNodeType(node).ToString();
 
         bool isLastExecuted = node.Id == _executionContextManager.CurrentExecutionContext?.LastExecuted?.Id;
 
