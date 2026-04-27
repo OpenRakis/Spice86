@@ -178,6 +178,12 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     }
 
     private byte PortRead(ushort port) {
+        // Some tests revealed it taking 1.5us to read an AdLib port.
+        // Expected by a lot of OPL music drivers in their startup routine, such as the one from 'Day of the Tentacle'
+        // Without this the driver decides the OPL can't be used and no music is played.
+        // Unlike the SB DSP reset delay which produces another (expected) response in SB port read path in the mean time,
+        // this wait is blocking.
+        _clock.Delay(TimeSpan.FromMicroseconds(1.5));
         switch (_mode) {
             case OplMode.Opl2:
                 // We allocated 4 ports, so just return -1 for the higher ones.

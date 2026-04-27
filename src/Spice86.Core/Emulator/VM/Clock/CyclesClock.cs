@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU;
 /// </summary>
 public class CyclesClock : ClockBase {
     private readonly State _cpuState;
+    private TimeSpan _delay;
 
     public CyclesClock(State cpuState, long cyclesPerSecond, int? jitterSeed, DateTimeOffset startTime)
         : base(ClockJitter.Create(jitterSeed), startTime) {
@@ -19,5 +20,10 @@ public class CyclesClock : ClockBase {
 
     /// <inheritdoc/>
     public override double ElapsedTimeMs =>
-        (double)_cpuState.Cycles * 1000 / CyclesPerSecond + _jitter.Advance();
+        (double)_cpuState.Cycles * 1000 / CyclesPerSecond + _jitter.Advance() + _delay.Microseconds;
+
+    /// <inheritdoc/>
+    public override void Delay(TimeSpan timeSpan) {
+        _delay += timeSpan;
+    }
 }
