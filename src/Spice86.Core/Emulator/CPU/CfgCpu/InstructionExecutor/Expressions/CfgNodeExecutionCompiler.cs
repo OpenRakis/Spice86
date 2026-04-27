@@ -4,7 +4,6 @@ using FastExpressionCompiler;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
@@ -29,7 +28,6 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class CfgNodeExecutionCompiler : IDisposable {
     private readonly JitMode _jitMode;
-    private readonly int _backgroundCompilerThreadCount;
 
     private readonly BlockingCollection<(Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> Expression,
         TaskCompletionSource<CfgNodeExecutionAction<InstructionExecutionHelper>> Tcs)> _compilationQueue = new();
@@ -49,12 +47,12 @@ public class CfgNodeExecutionCompiler : IDisposable {
         _jitMode = jitMode;
 
         if (_jitMode == JitMode.InterpretedThenCompiled) {
-            _backgroundCompilerThreadCount = Math.Max(1, Environment.ProcessorCount - 2);
+            int backgroundCompilerThreadCount = Math.Max(1, Environment.ProcessorCount - 2);
             _logger.Information("CfgNodeExecutionCompiler: starting {ThreadCount} background compiler threads",
-                _backgroundCompilerThreadCount);
+                backgroundCompilerThreadCount);
             CancellationToken token = _cts.Token;
-            _backgroundThreads = new Thread[_backgroundCompilerThreadCount];
-            for (int i = 0; i < _backgroundCompilerThreadCount; i++) {
+            _backgroundThreads = new Thread[backgroundCompilerThreadCount];
+            for (int i = 0; i < backgroundCompilerThreadCount; i++) {
                 Thread thread = new Thread(() => RunBackgroundCompiler(token)) {
                     IsBackground = true,
                     Name = $"CfgNodeBackgroundCompiler-{i}",
@@ -64,7 +62,6 @@ public class CfgNodeExecutionCompiler : IDisposable {
                 thread.Start();
             }
         } else {
-            _backgroundCompilerThreadCount = 0;
             _backgroundThreads = Array.Empty<Thread>();
             _logger.Information("CfgNodeExecutionCompiler: JitMode={JitMode}; no background compiler threads started", _jitMode);
         }
@@ -113,8 +110,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
     /// configured <see cref="JitMode"/>. Compiled delegates are not shared; each AST produces its own task.
     /// </summary>
     public void Compile(ICfgNode node) {
-        AstBuilder astBuilder = new();
-        IVisitableAstNode executionAst = node.GenerateExecutionAst(astBuilder);
+        IVisitableAstNode executionAst = node.ExecutionAst;
         AstExpressionBuilder expressionBuilder = new();
         Expression expression = executionAst.Accept(expressionBuilder);
         Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> exprWithHelper =
@@ -129,23 +125,27 @@ public class CfgNodeExecutionCompiler : IDisposable {
         }
     }
 
-    private void CompileInterpreted(ICfgNode node,
+    private long CompileInterpreted(ICfgNode node,
         Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> exprWithHelper) {
         CfgNodeExecutionAction<InstructionExecutionHelper> interpreted =
             exprWithHelper.Compile(preferInterpretation: true);
+        long generation = node.IncrementCompilationGeneration();
         AssignExecution(node, interpreted);
+        return generation;
     }
 
     private void CompileNow(ICfgNode node,
         Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> exprWithHelper) {
         CfgNodeExecutionAction<InstructionExecutionHelper> compiled = CompileExpression(exprWithHelper);
+        node.IncrementCompilationGeneration();
         AssignExecution(node, compiled);
     }
 
     private void CompileInterpretedThenBackground(ICfgNode node,
         Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> exprWithHelper) {
         // Assign interpreted delegate immediately for low-latency first execution.
-        CompileInterpreted(node, exprWithHelper);
+        // The returned generation is used below to detect stale background compilations.
+        long generation = CompileInterpreted(node, exprWithHelper);
         _monitor.RecordInterpreted();
         _monitor.RecordQueuePushed();
         TaskCompletionSource<CfgNodeExecutionAction<InstructionExecutionHelper>> tcs = new(
@@ -153,9 +153,11 @@ public class CfgNodeExecutionCompiler : IDisposable {
         _compilationQueue.TryAdd((exprWithHelper, tcs));
         Task<CfgNodeExecutionAction<InstructionExecutionHelper>> task = tcs.Task;
 
-        // When the compiled delegate is ready, swap it onto the node.
+        // When the compiled delegate is ready, swap it onto the node only if no newer
+        // Compile() call has been made in the meantime.
         task.ContinueWith(completedTask => {
-            if (completedTask.IsCompletedSuccessfully) {
+            if (completedTask.IsCompletedSuccessfully
+                && node.CompilationGeneration == generation) {
                 AssignExecution(node, completedTask.Result);
                 _monitor.RecordSwapped();
             }

@@ -20,14 +20,13 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
 public class CfgNodeFeederTest : IDisposable {
-    private const int AxIndex = 0;
-    private const int BxIndex = 3;
-    private const int CxIndex = 1;
+    private const ushort MovAxOpcode = 0xB8;
+    private const ushort MovCxOpcode = 0xB9;
+    private const ushort MovBxOpcode = 0xBB;
     private const ushort DefaultValue = 0xFFFF;
     private const ushort NewValue = 0x1234;
     private const int MovRegImm16Length = 3;
@@ -47,7 +46,7 @@ public class CfgNodeFeederTest : IDisposable {
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(new PauseHandler(loggerService), _state, _memory, memoryBreakpoints, ioBreakpoints);
         InstructionReplacerRegistry replacerRegistry = new();
         _compiler?.Dispose();
-        _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedThenCompiled);
+        _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly);
         CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, replacerRegistry,
             _compiler);
         ExecutionContextManager executionContextManager = new(_memory, _state, cfgNodeFeeder, replacerRegistry, new(), false, loggerService, null);
@@ -97,7 +96,7 @@ public class CfgNodeFeederTest : IDisposable {
         ICfgNode movAx = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
 
         // Assert
-        MovRegImm16 movAxRegImm16 = AssertIsMovAx(movAx);
+        CfgInstruction movAxRegImm16 = AssertIsMovWithOpcode(movAx, MovAxOpcode);
         AssertUsesValue(movAxRegImm16, DefaultValue);
     }
 
@@ -113,8 +112,8 @@ public class CfgNodeFeederTest : IDisposable {
         ICfgNode movBx = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
 
         // Assert
-        MovRegImm16 movAxRegImm16 = AssertIsMovAx(movAx);
-        MovRegImm16 movBxRegImm16 = AssertIsMovBx(movBx);
+        CfgInstruction movAxRegImm16 = AssertIsMovWithOpcode(movAx, MovAxOpcode);
+        CfgInstruction movBxRegImm16 = AssertIsMovWithOpcode(movBx, MovBxOpcode);
         AssertUsesValue(movBxRegImm16, DefaultValue);
         AssertSuccessorAtAddress(movAxRegImm16, EndOfMov0Address, movBx);
     }
@@ -142,8 +141,8 @@ public class CfgNodeFeederTest : IDisposable {
         AssertLinksTo(movAx0, selectorNode);
         // Check selector node also contains Mov BX
         ICfgNode movBx = selectorNode.Successors.First(node => !ReferenceEquals(node, movAx1));
-        MovRegImm16 movBxRegImm16 = AssertIsMovBx(movBx);
-        MovRegImm16 movAx1RegImm16 = AssertIsMovAx(movAx1);
+        CfgInstruction movBxRegImm16 = AssertIsMovWithOpcode(movBx, MovBxOpcode);
+        CfgInstruction movAx1RegImm16 = AssertIsMovWithOpcode(movAx1, MovAxOpcode);
         AssertUsesValue(movBxRegImm16, DefaultValue);
         AssertSuccessorAtSignature(selectorNode, movBxRegImm16);
         AssertSuccessorAtSignature(selectorNode, movAx1RegImm16);
@@ -190,7 +189,7 @@ public class CfgNodeFeederTest : IDisposable {
 
         // Assert
         SelectorNode selectorNode = AssertIsSelectorNode(selector);
-        MovRegImm16 movCxRegImm16 = AssertIsMovCx(movCx);
+        CfgInstruction movCxRegImm16 = AssertIsMovWithOpcode(movCx, MovCxOpcode);
         AssertSuccessorAtSignature(selectorNode, movCxRegImm16);
     }
 
@@ -248,31 +247,17 @@ public class CfgNodeFeederTest : IDisposable {
         return (SelectorNode)selector;
     }
 
-    private static void AssertUsesValue(MovRegImm16 node, ushort expectedValue) {
-        Assert.True(node.ValueField.UseValue);
-        Assert.Equal(expectedValue, node.ValueField.Value);
+    private static void AssertUsesValue(CfgInstruction node, ushort expectedValue) {
+        InstructionField<ushort> valueField = (InstructionField<ushort>)node.FieldsInOrder[^1];
+        Assert.True(valueField.UseValue);
+        Assert.Equal(expectedValue, valueField.Value);
     }
 
     [AssertionMethod]
-    private static MovRegImm16 AssertIsMovAx(ICfgNode node) {
-        return AssertIsMovRegImm16(node, AxIndex);
-    }
-
-    [AssertionMethod]
-    private static MovRegImm16 AssertIsMovBx(ICfgNode node) {
-        return AssertIsMovRegImm16(node, BxIndex);
-    }
-
-    [AssertionMethod]
-    private static MovRegImm16 AssertIsMovCx(ICfgNode node) {
-        return AssertIsMovRegImm16(node, CxIndex);
-    }
-
-    [AssertionMethod]
-    private static MovRegImm16 AssertIsMovRegImm16(ICfgNode node, int expectedRegIndex) {
-        Assert.Equal(typeof(MovRegImm16), node.GetType());
-        Assert.Equal(expectedRegIndex, ((MovRegImm16)node).RegisterIndex);
-        return (MovRegImm16)node;
+    private static CfgInstruction AssertIsMovWithOpcode(ICfgNode node, ushort expectedOpcode) {
+        CfgInstruction instruction = Assert.IsAssignableFrom<CfgInstruction>(node);
+        Assert.Equal(expectedOpcode, instruction.OpcodeField.Value);
+        return instruction;
     }
 
     [AssertionMethod]
@@ -280,11 +265,12 @@ public class CfgNodeFeederTest : IDisposable {
         // Instructions instances are not necessarily the same. However, their types and addresses should be the same.
         // The value of the new instruction should be read from memory.
         Assert.Equal(movAx1.Address, movAx1WithNullSignature.Address);
-        MovRegImm16 movAx1RegImm16 = AssertIsMovAx(movAx1WithNullSignature);
+        CfgInstruction movAx1RegImm16 = AssertIsMovWithOpcode(movAx1WithNullSignature, MovAxOpcode);
         // Since value has been overwritten use value should be false. Value need to be read from ram
-        Assert.False(movAx1RegImm16.ValueField.UseValue);
-        Assert.Null(movAx1RegImm16.ValueField.SignatureValue[0]);
-        Assert.Null(movAx1RegImm16.ValueField.SignatureValue[1]);
+        InstructionField<ushort> valueField = (InstructionField<ushort>)movAx1RegImm16.FieldsInOrder[^1];
+        Assert.False(valueField.UseValue);
+        Assert.Null(valueField.SignatureValue[0]);
+        Assert.Null(valueField.SignatureValue[1]);
     }
 
     public void Dispose() {

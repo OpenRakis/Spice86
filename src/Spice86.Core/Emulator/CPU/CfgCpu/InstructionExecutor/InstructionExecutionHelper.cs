@@ -7,8 +7,6 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
@@ -52,8 +50,6 @@ public class InstructionExecutionHelper {
         _executionContextManager = executionContextManager;
         _failOnInvalidOpcode = failOnInvalidOpcode;
         _returnOperationsHelper = new (state, Stack);
-        InstructionFieldValueRetriever = new(memory);
-        ModRm = new(state, memory, InstructionFieldValueRetriever);
     }
     public State State { get; }
     public IMemory Memory{ get; }
@@ -61,8 +57,6 @@ public class InstructionExecutionHelper {
     public Stack Stack { get; }
     public IOPortDispatcher IoPortDispatcher { get; }
     public CallbackHandler CallbackHandler { get; }
-    public InstructionFieldValueRetriever InstructionFieldValueRetriever { get; }
-    public ModRmExecutor ModRm { get; }
     public Alu8 Alu8 { get; }
     public Alu16 Alu16 { get; }
     public Alu32 Alu32 { get; }
@@ -71,34 +65,6 @@ public class InstructionExecutionHelper {
     public UInt16RegistersIndexer SegmentRegisters => State.SegmentRegisters.UInt16;
     private FunctionHandler CurrentFunctionHandler => _executionContextManager.CurrentExecutionContext.FunctionHandler;
     private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ushort SegmentValue(IInstructionWithSegmentRegisterIndex instruction) {
-        return State.SegmentRegisters.UInt16[instruction.SegmentRegisterIndex];
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public uint PhysicalAddress(IInstructionWithSegmentRegisterIndex instruction, ushort offset) {
-        return MemoryUtils.ToPhysicalAddress(SegmentValue(instruction), offset);
-    }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public uint PhysicalAddress(IInstructionWithSegmentRegisterIndex instruction, uint offset) {
-        if (offset > 0xFFFF) {
-            throw new CpuGeneralProtectionFaultException("Offset overflows 16 bits");
-        }
-        return MemoryUtils.ToPhysicalAddress(SegmentValue(instruction), (ushort)offset);
-    }
-
-    public ushort UShortOffsetValue(IInstructionWithOffsetField<ushort> instruction) {
-        return InstructionFieldValueRetriever.GetFieldValue(instruction.OffsetField);
-    }
-
-    public SegmentedAddress GetSegmentedAddress(InstructionWithSegmentRegisterIndexAndOffsetField<ushort> instruction) {
-        ushort segment = SegmentValue(instruction);
-        ushort offset = UShortOffsetValue(instruction);
-        return new SegmentedAddress(segment, offset);
-    }
 
     public void JumpFar(CfgInstruction instruction, ushort cs, ushort ip) {
         State.CS = cs;
@@ -191,31 +157,31 @@ public class InstructionExecutionHelper {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HandleInterruptRet<T>(T instruction) where T : CfgInstruction, IReturnInstruction {
+    public void HandleInterruptRet(CfgInstruction instruction) {
         CurrentFunctionHandler.Ret(CallType.INTERRUPT, instruction);
         _returnOperationsHelper.InterruptRet();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HandleNearRet16<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
+    public void HandleNearRet16(CfgInstruction instruction, ushort numberOfBytesToPop = 0) {
         CurrentFunctionHandler.Ret(CallType.NEAR16, instruction);
         _returnOperationsHelper.NearRet16(numberOfBytesToPop);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HandleNearRet32<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
+    public void HandleNearRet32(CfgInstruction instruction, ushort numberOfBytesToPop = 0) {
         CurrentFunctionHandler.Ret(CallType.NEAR32, instruction);
         _returnOperationsHelper.NearRet32(numberOfBytesToPop);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HandleFarRet16<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
+    public void HandleFarRet16(CfgInstruction instruction, ushort numberOfBytesToPop = 0) {
         CurrentFunctionHandler.Ret(CallType.FAR16, instruction);
         _returnOperationsHelper.FarRet16(numberOfBytesToPop);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HandleFarRet32<T>(T instruction, ushort numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
+    public void HandleFarRet32(CfgInstruction instruction, ushort numberOfBytesToPop = 0) {
         CurrentFunctionHandler.Ret(CallType.FAR32, instruction);
         _returnOperationsHelper.FarRet32(numberOfBytesToPop);
     }
@@ -249,11 +215,6 @@ public class InstructionExecutionHelper {
     
     public uint MemoryAddressEsDi => MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public uint GetMemoryAddressOverridableDsSi(IInstructionWithSegmentRegisterIndex instruction) {
-        return PhysicalAddress(instruction, State.SI);
-    }
-    
     public void AdvanceSI(short diff) {
         State.SI = (ushort)(State.SI + diff);
     }
@@ -285,26 +246,6 @@ public class InstructionExecutionHelper {
             CurrentExecutionContext.CpuFault = true;
         } catch (UnhandledOperationException e) {
             throw new AggregateException(cpuException, e);
-        }
-    }
-
-    public void ExecuteStringOperation(StringInstruction instruction) {
-        RepPrefix? repPrefix = instruction.RepPrefix;
-        if (repPrefix == null) {
-            instruction.ExecuteStringOperation(this);
-        } else {
-            // For some instructions, zero flag is not to be checked
-            bool checkZeroFlag = instruction.ChangesFlags;
-            ushort cx = State.CX;
-            while (cx != 0) {
-                instruction.ExecuteStringOperation(this);
-                cx--;
-                // Not all the string operations require checking the zero flag...
-                if (checkZeroFlag && State.ZeroFlag != repPrefix.ContinueZeroFlagValue) {
-                    break;
-                }
-            }
-            State.CX = cx;
         }
     }
 

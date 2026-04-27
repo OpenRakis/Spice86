@@ -1,15 +1,16 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Shared.Emulator.Memory;
 
 public class ReturnNearNode : CfgInstructionNode {
-    public ReturnNearNode(CfgInstruction instruction, IVisitableAstNode bytesToPop, int retSize) : base(instruction) {
+    public ReturnNearNode(CfgInstruction instruction, IVisitableAstNode bytesToPop, BitWidth retBitWidth) : base(instruction) {
         BytesToPop = bytesToPop;
-        RetSize = retSize;
+        RetBitWidth = retBitWidth;
     }
 
     public IVisitableAstNode BytesToPop { get; }
-    public int RetSize { get; }
+    public BitWidth RetBitWidth { get; }
 
     public override T Accept<T>(IAstVisitor<T> astVisitor) {
         return astVisitor.VisitReturnNearNode(this);

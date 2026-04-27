@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -211,6 +210,34 @@ public class MachineTest
         Assert.Contains(divBy0NextInstruction, divBy0HandlerIret.SuccessorsPerType[InstructionSuccessorType.Normal]);
     }
 
+    /// <summary>
+    /// Tests that the LOCK prefix validation logic correctly fires INT 6 (#UD) for
+    /// architecturally invalid uses of LOCK and does NOT fire it for valid uses.
+    ///
+    /// Three valid cases (FASM assembles them directly, no INT 6 expected):
+    ///   LOCK ADD [mem], ax   -- ADD with memory destination
+    ///   LOCK INC word [mem]  -- INC with memory destination
+    ///   LOCK DEC word [mem]  -- DEC with memory destination
+    ///
+    /// Three invalid cases (raw bytes, FASM refuses to assemble them, INT 6 expected):
+    ///   LOCK MOV [mem], ax   -- MOV is not in the LOCK-allowed instruction set
+    ///   LOCK ADD ax, bx      -- ADD allowed but destination is a register, not memory
+    ///   LOCK INC ax          -- INC allowed but destination is a register, not memory
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestLockPrefixValidation(JitMode jitMode) {
+        IMemory memory = TestOneBin("lockprefix", [], jitMode).Memory;
+
+        // [0x0000] = invalid_lock_count: LOCK MOV [mem], LOCK ADD reg, LOCK INC reg
+        ushort invalidCount = memory.UInt16[0, 0x0000];
+        // [0x0002] = valid_lock_count: set to 3 after the three valid tests complete
+        ushort validCount = memory.UInt16[0, 0x0002];
+
+        invalidCount.Should().Be(3, "three invalid LOCK uses should each trigger INT 6");
+        validCount.Should().Be(3, "three valid LOCK uses should complete without triggering INT 6");
+    }
+
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestShifts(JitMode jitMode)
@@ -248,14 +275,11 @@ public class MachineTest
         CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
         CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x00D));
         Assert.NotNull(instruction);
-        if (instruction is MovRegImm16 movAxModifiedImm) {
-            InstructionField<ushort> immField = movAxModifiedImm.ValueField;
-            // Code should have been modified so instruction should use memory and not stored value
-            Assert.False(immField.UseValue);
-            Assert.Equal(instruction.Address.Linear + 1, immField.PhysicalAddress);
-        } else {
-            Assert.Fail("Should have been MOV AX, xxx");
-        }
+        // The immediate value field is the last field in a MOV reg, imm16 instruction
+        InstructionField<ushort> immField = (InstructionField<ushort>)instruction.FieldsInOrder[^1];
+        // Code should have been modified so instruction should use memory and not stored value
+        Assert.False(immField.UseValue);
+        Assert.Equal(instruction.Address.Linear + 1, immField.PhysicalAddress);
     }
 
     [Theory]
@@ -391,9 +415,9 @@ public class MachineTest
     }
 
     private void CompareListingWithExpected(string binName, Machine machine) {
-        List<string> expectedLines = GetExpectedListing(binName);
         List<string> actualLines = _dumper.ToAssemblyListing(machine.CfgCpu);
         //WriteExpectedListing(binName, actualLines);
+        List<string> expectedLines = GetExpectedListing(binName);
         Assert.Equal(expectedLines, actualLines);
     }
 

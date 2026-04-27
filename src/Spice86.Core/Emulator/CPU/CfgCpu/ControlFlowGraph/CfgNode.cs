@@ -1,12 +1,13 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Shared.Emulator.Memory;
+
+using System.Threading;
 
 public abstract class CfgNode : ICfgNode {
     private static int _nextId;
@@ -23,6 +24,14 @@ public abstract class CfgNode : ICfgNode {
     public SegmentedAddress Address { get; }
     public virtual bool CanCauseContextRestore => false;
 
+    private long _compilationGeneration;
+
+    /// <inheritdoc />
+    public long CompilationGeneration => Interlocked.Read(ref _compilationGeneration);
+
+    /// <inheritdoc />
+    public long IncrementCompilationGeneration() => Interlocked.Increment(ref _compilationGeneration);
+
     private volatile CfgNodeExecutionAction<InstructionExecutionHelper> _compiledExecution;
 
     public CfgNodeExecutionAction<InstructionExecutionHelper> CompiledExecution {
@@ -30,36 +39,20 @@ public abstract class CfgNode : ICfgNode {
         set => _compiledExecution = value;
     }
 
-    public abstract void Execute(InstructionExecutionHelper helper);
-   
     public abstract bool IsLive { get; }
     
     public abstract void UpdateSuccessorCache();
     public abstract ICfgNode? GetNextSuccessor(InstructionExecutionHelper helper);
 
-    public abstract InstructionNode ToInstructionAst(AstBuilder builder);
-
-    private IVisitableAstNode? _cachedExecutionAst;
+    /// <summary>
+    /// Pre-built Abstract Syntax Tree representing the grammar of the assembly instruction (for display).
+    /// </summary>
+    public abstract InstructionNode DisplayAst { get; }
 
     /// <summary>
-    /// Returns the cached execution AST, building it on first call.
+    /// Pre-built Abstract Syntax Tree representing the execution logic of this node.
     /// </summary>
-    public IVisitableAstNode GenerateExecutionAst(AstBuilder builder) {
-        return _cachedExecutionAst ??= BuildExecutionAst(builder);
-    }
-
-    /// <summary>
-    /// Clears the cached execution AST so the next <see cref="GenerateExecutionAst"/> call rebuilds it.
-    /// Thread-safe and idempotent.
-    /// </summary>
-    public void InvalidateExecutionAstCache() {
-        Interlocked.Exchange(ref _cachedExecutionAst, null);
-    }
-
-    /// <summary>
-    /// Template method for subclasses to build the execution AST.
-    /// </summary>
-    protected abstract IVisitableAstNode BuildExecutionAst(AstBuilder builder);
+    public abstract IVisitableAstNode ExecutionAst { get; }
 
     public int? MaxSuccessorsCount { get; set; }
 

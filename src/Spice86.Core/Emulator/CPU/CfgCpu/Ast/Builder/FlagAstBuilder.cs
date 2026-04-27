@@ -1,13 +1,20 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 
 /// <summary>
 /// Helper class for creating CPU flag nodes in the AST.
 /// </summary>
 public class FlagAstBuilder {
+    private readonly ControlFlowAstBuilder _controlFlow;
+
+    public FlagAstBuilder(ControlFlowAstBuilder controlFlow) {
+        _controlFlow = controlFlow;
+    }
     /// <summary>
     /// Creates a CpuFlagNode for the Carry flag.
     /// </summary>
@@ -96,5 +103,24 @@ public class FlagAstBuilder {
                 new BinaryOperationNode(DataType.BOOL, Sign(), BinaryOperation.EQUAL, Overflow())),  // G/NLE
             _ => throw new ArgumentException($"conditionCode {conditionCode} is invalid.")
         };
+    }
+
+    /// <summary>
+    /// Creates an assignment node that sets State.InterruptShadowing to true.
+    /// </summary>
+    public BinaryOperationNode SetInterruptShadowing() {
+        MethodCallValueNode shadowingNode = new MethodCallValueNode(DataType.BOOL, nameof(State), nameof(State.InterruptShadowing));
+        return new BinaryOperationNode(DataType.BOOL, shadowingNode, BinaryOperation.ASSIGN, new ConstantNode(DataType.BOOL, 1UL));
+    }
+
+    /// <summary>
+    /// Creates an AST if-block that sets State.InterruptShadowing to true only when State.InterruptFlag is false.
+    /// Equivalent to: if (!State.InterruptFlag) { State.InterruptShadowing = true; }
+    /// </summary>
+    public IfElseNode SetInterruptShadowingIfInterruptDisabled() {
+        MethodCallValueNode shadowingNode = new MethodCallValueNode(DataType.BOOL, nameof(State), nameof(State.InterruptShadowing));
+        BinaryOperationNode assignment = new BinaryOperationNode(DataType.BOOL, shadowingNode, BinaryOperation.ASSIGN, new ConstantNode(DataType.BOOL, 1UL));
+        UnaryOperationNode condition = new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, Interrupt());
+        return _controlFlow.If(condition, assignment);
     }
 }

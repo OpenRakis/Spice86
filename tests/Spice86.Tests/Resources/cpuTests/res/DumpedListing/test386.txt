@@ -86,9 +86,9 @@ F000:0104 mov ECX,1
 F000:010A jcxz short 0x0122
 F000:010C mov ECX,0x00010000
 F000:0112 jcxz short 0x012D
-F000:0114 jcxz short 0x0122
+F000:0114 jecxz short 0x0122
 F000:0117 mov ECX,0
-F000:011D jcxz short 0x012F
+F000:011D jecxz short 0x012F
 F000:0120 jmp short 0x0132
 F000:0123 jo short 0x00F1
 F000:0125 jge short 0x00F6
@@ -96,7 +96,7 @@ F000:0127 jg short 0x00FB
 F000:0129 jl short 0x0101
 F000:012B jle short 0x0104
 F000:012D jcxz short 0x0114
-F000:012F jcxz short 0x0120
+F000:012F jecxz short 0x0120
 F000:0132 mov AH,1
 F000:0134 sahf
 F000:0135 jae near 0x01F0

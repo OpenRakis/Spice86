@@ -40,10 +40,6 @@ public class ModRmHelper {
         InstructionReader instructionReader = new(Memory);
         return new(instructionReader, State);
     }
-    
-    public (ModRmParser, ModRmExecutor) Create() {
-        return (CreateModRmParser(), new ModRmExecutor(State, Memory, InstructionFieldValueRetriever));
-    }
 
     public int BytesLength(List<FieldWithValue> fields) {
         return fields.Sum(field => field.Length);

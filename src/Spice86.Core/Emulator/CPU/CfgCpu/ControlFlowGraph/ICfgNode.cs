@@ -1,7 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
@@ -50,15 +49,20 @@ public interface ICfgNode {
     
 
     /// <summary>
-    /// Compiled execution delegate generated from <see cref="GenerateExecutionAst"/>.
+    /// Monotonically increasing counter incremented each time <see cref="CompiledExecution"/> is recompiled.
+    /// Used by the background compiler to discard stale compiled delegates when a newer compilation has been requested.
     /// </summary>
-    CfgNodeExecutionAction<InstructionExecutionHelper> CompiledExecution { get; set; }
+    long CompilationGeneration { get; }
 
     /// <summary>
-    /// Execute this node.
+    /// Atomically increments <see cref="CompilationGeneration"/> and returns the new value.
     /// </summary>
-    /// <param name="helper">InstructionExecutionHelper instance providing access to the outside</param>
-    void Execute(InstructionExecutionHelper helper);
+    long IncrementCompilationGeneration();
+
+    /// <summary>
+    /// Compiled execution delegate generated from <see cref="ExecutionAst"/>.
+    /// </summary>
+    CfgNodeExecutionAction<InstructionExecutionHelper> CompiledExecution { get; set; }
 
     /// <summary>
     /// Determines the next successor node to execute based on current CPU / Memory state.
@@ -68,19 +72,15 @@ public interface ICfgNode {
     ICfgNode? GetNextSuccessor(InstructionExecutionHelper helper);
 
     /// <summary>
-    /// Builds an Abstract Syntax Tree representing the grammar of the assembly instruction
+    /// Pre-built Abstract Syntax Tree representing the grammar of the assembly instruction (for display).
     /// </summary>
-    /// <param name="builder"></param>
-    /// <returns></returns>
-    InstructionNode ToInstructionAst(AstBuilder builder);
+    InstructionNode DisplayAst { get; }
 
     /// <summary>
-    /// Builds an Abstract Syntax Tree representing the execution logic of this node.
+    /// Pre-built Abstract Syntax Tree representing the execution logic of this node.
     /// This AST contains granular microcode-like operations that can be compiled to executable code.
     /// </summary>
-    /// <param name="builder">The AST builder to use for constructing the AST.</param>
-    /// <returns>An AST node representing the execution logic.</returns>
-    IVisitableAstNode GenerateExecutionAst(AstBuilder builder);
+    IVisitableAstNode ExecutionAst { get; }
 
     /// <summary>
     /// Max successors this node can be expected to have.

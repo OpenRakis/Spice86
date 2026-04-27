@@ -8,6 +8,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.Registers;
 
+using Spice86.Shared.Emulator.Memory;
+
 public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBuilder instructionField, PointerAstBuilder pointer, ConstantAstBuilder constant) {
     private readonly TypeConversionAstBuilder _typeConversion = new();
 
@@ -102,14 +104,14 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
     /// <summary>
     /// Reads a segmented address (offset then segment) from the memory location pointed to by ModRM.
     /// </summary>
-    public SegmentedAddressNode ToSegmentedAddressNode(int operandSize, ModRmContext modRmContext) {
-        DataType offsetType = operandSize == 16 ? DataType.UINT16 : DataType.UINT32;
+    public SegmentedAddressNode ToSegmentedAddressNode(BitWidth operandBitWidth, ModRmContext modRmContext) {
+        DataType offsetType = DataType.UnsignedFromBitWidth(operandBitWidth);
         ValueNode ipNode = ToMemoryAddressNode(offsetType, modRmContext);
-        if (operandSize == 32) {
+        if (operandBitWidth == BitWidth.DWORD_32) {
             ipNode = _typeConversion.Convert(DataType.UINT16, ipNode);
         }
         ValueNode csNode = ToMemoryAddressNodeWithOffsetAdjustment(
-            DataType.UINT16, modRmContext, Constant.ToNode((ushort)(operandSize / 8)));
+            DataType.UINT16, modRmContext, Constant.ToNode((ushort)operandBitWidth.ToBytes()));
         return new SegmentedAddressNode(csNode, ipNode);
     }
 
@@ -135,7 +137,7 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
             ModRmOffsetType.BP_PLUS_DI => PlusRegs16(RegisterIndex.BpIndex, RegisterIndex.DiIndex),
             ModRmOffsetType.SI => Register.Reg16(RegisterIndex.SiIndex),
             ModRmOffsetType.DI => Register.Reg16(RegisterIndex.DiIndex),
-            ModRmOffsetType.OFFSET_FIELD_16 => InstructionField.ToNode(EnsureNonNull(modRmContext.ModRmOffsetField), true),
+            ModRmOffsetType.OFFSET_FIELD_16 => InstructionField.ToNode(EnsureNonNull(modRmContext.ModRmOffsetField)),
             ModRmOffsetType.BP => Register.Reg16(RegisterIndex.BpIndex),
             ModRmOffsetType.BX => Register.Reg16(RegisterIndex.BxIndex),
             ModRmOffsetType.EAX => Register.Reg32(RegisterIndex.AxIndex),
@@ -171,7 +173,7 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
             SibBase.EDX => Register.Reg32(RegisterIndex.DxIndex),
             SibBase.EBX => Register.Reg32(RegisterIndex.BxIndex),
             SibBase.ESP => Register.Reg32(RegisterIndex.SpIndex),
-            SibBase.BASE_FIELD_32 => InstructionField.ToNode(EnsureNonNull(sibContext.BaseField), true),
+            SibBase.BASE_FIELD_32 => InstructionField.ToNode(EnsureNonNull(sibContext.BaseField)),
             SibBase.EBP => Register.Reg32(RegisterIndex.BpIndex),
             SibBase.ESI => Register.Reg32(RegisterIndex.SiIndex),
             SibBase.EDI => Register.Reg32(RegisterIndex.DiIndex),

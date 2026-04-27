@@ -6,9 +6,8 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -16,16 +15,16 @@ using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-using System.Collections.Immutable;
-using System.Reflection;
-
 using Xunit;
 
 public class InstructionsFeederTest : IDisposable {
+    private const ushort MovRegImm16OpcodeAx = 0xB8;
     private static readonly SegmentedAddress ZeroAddress = new(0, 0);
     private static readonly SegmentedAddress TwoAddress = new(0, 2);
     private static readonly SegmentedAddress SixteenAddressViaOffset = new(0, 16);
     private static readonly SegmentedAddress SixteenAddressViaSegment = new(1, 0);
+    private readonly TestInstructionHelper _helper = new();
+    private readonly AstInstructionRenderer _renderer = new(AsmRenderingConfig.CreateSpice86Style());
     private Memory _memory = new(new(), new Ram(64), new A20Gate());
     private InstructionReplacerRegistry _instructionReplacer = new();
     private CfgNodeExecutionCompiler? _compiler;
@@ -39,7 +38,7 @@ public class InstructionsFeederTest : IDisposable {
         _instructionReplacer = new();
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(new PauseHandler(loggerService), state, _memory, memoryBreakpoints, ioBreakpoints);
         _compiler?.Dispose();
-        _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedThenCompiled);
+        _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly);
         
         return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer,
             _compiler);
@@ -60,19 +59,16 @@ public class InstructionsFeederTest : IDisposable {
         _memory.Int8[address + 1] = relativeOffset;
     }
 
-    private JmpNearImm8 CreateReplacementInstruction() {
-        var opcodeField = new InstructionField<ushort>(0, 1, 0, 0xEB, ImmutableList.Create<byte?>(0xEB), true);
-        // Replacement has a null signature byte for offset field -> will not be taken into account when comparing with ram
-        var offsetField = new InstructionField<sbyte>(1, 1, 1, -2, ImmutableList.Create((byte?)null), false);
-        JmpNearImm8 res = new JmpNearImm8(ZeroAddress, opcodeField, new List<InstructionPrefix>(), offsetField);
-        return res;
+    private CfgInstruction CreateReplacementInstruction() {
+        CfgInstruction instruction = _helper.WriteAndParse(ZeroAddress, w => w.WriteJumpShort(-2));
+        // Mark offset field as non-signature for replacement semantics
+        FieldWithValue offsetField = instruction.FieldsInOrder[^1];
+        offsetField.NullifySignature();
+        return instruction;
     }
 
-    private static readonly FieldInfo TargetIpField =
-        typeof(JmpNearImm8).GetField("_targetIp", BindingFlags.Instance | BindingFlags.NonPublic)!;
-
-    private static ushort GetLoopTarget(JmpNearImm8 loopInstruction) {
-        return (ushort)TargetIpField.GetValue(loopInstruction)!;
+    private string RenderDisplayAst(CfgInstruction instruction) {
+        return instruction.DisplayAst.Accept(_renderer);
     }
 
     private static ushort ExpectedLoopTarget(CfgInstruction instruction, sbyte relativeOffset) {
@@ -92,7 +88,8 @@ public class InstructionsFeederTest : IDisposable {
         CfgInstruction instruction = instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
 
         // Assert
-        Assert.Equal(typeof(JmpNearImm8), instruction.GetType());
+        Assert.Equal(typeof(CfgInstruction), instruction.GetType());
+        Assert.True(instruction.IsJump);
     }
 
     [Fact]
@@ -125,7 +122,7 @@ public class InstructionsFeederTest : IDisposable {
 
 
         // Assert
-        Assert.Equal(typeof(MovRegImm16), instruction2.GetType());
+        Assert.Equal(MovRegImm16OpcodeAx, instruction2.OpcodeField.Value);
     }
 
     [Fact]
@@ -168,7 +165,7 @@ public class InstructionsFeederTest : IDisposable {
         CfgInstruction instruction2 = instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
 
         // Assert
-        Assert.Equal(typeof(MovRegImm16), instruction2.GetType());
+        Assert.Equal(MovRegImm16OpcodeAx, instruction2.OpcodeField.Value);
     }
 
     [Fact]
@@ -178,16 +175,19 @@ public class InstructionsFeederTest : IDisposable {
         WriteLoop(ZeroAddress, -2);
 
         // Act
-        var initialLoop = (Loop16)instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
+        CfgInstruction initialLoop = instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
         WriteLoop(ZeroAddress, -4);
-        var afterFirstModification = (Loop16)instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
+        CfgInstruction afterFirstModification = instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
         WriteLoop(ZeroAddress, -6);
-        var afterSecondModification = (Loop16)instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
+        CfgInstruction afterSecondModification = instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
 
-        // Assert
-        Assert.Equal(ExpectedLoopTarget(initialLoop, -2), GetLoopTarget(initialLoop));
-        Assert.Equal(ExpectedLoopTarget(afterFirstModification, -4), GetLoopTarget(afterFirstModification));
-        Assert.Equal(ExpectedLoopTarget(afterSecondModification, -6), GetLoopTarget(afterSecondModification));
+        // Assert — each parsed loop should have the correct offset field value
+        InstructionField<sbyte> initialOffset = (InstructionField<sbyte>)initialLoop.FieldsInOrder[^1];
+        Assert.Equal((sbyte)-2, initialOffset.Value);
+        InstructionField<sbyte> firstOffset = (InstructionField<sbyte>)afterFirstModification.FieldsInOrder[^1];
+        Assert.Equal((sbyte)-4, firstOffset.Value);
+        InstructionField<sbyte> secondOffset = (InstructionField<sbyte>)afterSecondModification.FieldsInOrder[^1];
+        Assert.Equal((sbyte)-6, secondOffset.Value);
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public class InstructionsFeederTest : IDisposable {
         CfgInstruction instruction = instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
 
         // Assert
-        Assert.Equal(typeof(MovRegImm16), instruction.GetType());
+        Assert.Equal(MovRegImm16OpcodeAx, instruction.OpcodeField.Value);
     }
 
     [Fact]
@@ -255,7 +255,8 @@ public class InstructionsFeederTest : IDisposable {
 
 
         // Assert
-        Assert.Equal(typeof(JmpNearImm8), instructionAddress2.GetType());
+        Assert.Equal(typeof(CfgInstruction), instructionAddress2.GetType());
+        Assert.True(instructionAddress2.IsJump);
         Assert.NotEqual(instructionAddress0, instructionAddress2);
     }
 
