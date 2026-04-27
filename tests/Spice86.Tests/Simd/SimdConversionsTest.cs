@@ -1,8 +1,8 @@
-﻿using static Spice86.Shared.Utils.SimdConversions;
-
-namespace Spice86.Tests.Utility;
+﻿namespace Spice86.Tests.Simd;
 
 using JetBrains.Annotations;
+
+using static Spice86.Shared.Utils.SimdConversions;
 
 using Spice86.Shared.Utils;
 

@@ -690,9 +690,10 @@ internal static class BatchTestHelpers {
         return existingPath;
     }
 
+    private static string SingleTempPath => Path.GetTempPath();
 
     internal static void WithTempDirectory(string prefix, Action<string> test) {
-        string tempDir = Path.Join(Path.GetTempPath(), $"{prefix}_{Guid.NewGuid():N}");
+        string tempDir = Path.Join(SingleTempPath, $"{prefix}_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
         try {
             test(tempDir);
