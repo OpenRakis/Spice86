@@ -8,6 +8,7 @@ using System.Diagnostics;
 public class EmulatedClock : ClockBase {
     private int _ticks;
     private readonly Stopwatch _stopwatch = new();
+    private TimeSpan _delay;
 
     public EmulatedClock(int? jitterSeed, DateTimeOffset startTime)
         : base(ClockJitter.Create(jitterSeed), startTime) {
@@ -21,7 +22,7 @@ public class EmulatedClock : ClockBase {
             if (_ticks++ % 100 != 0) {
                 return field;
             }
-            field = _stopwatch.Elapsed.TotalMilliseconds + _jitter.Advance();
+            field = _stopwatch.Elapsed.TotalMilliseconds + _jitter.Advance() + _delay.Microseconds;
             return field;
         }
     }
@@ -34,4 +35,9 @@ public class EmulatedClock : ClockBase {
 
     /// <inheritdoc/>
     protected override void OnDisposeCore() => _stopwatch.Stop();
+
+    /// <inheritdoc/>
+    public override void Delay(TimeSpan timeSpan) {
+        _delay += timeSpan;
+    }
 }
