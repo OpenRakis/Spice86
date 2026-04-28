@@ -133,6 +133,28 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
+    /// Writes an instruction to push the BP register onto the CPU stack.
+    /// </summary>
+    public void WritePushBp() {
+        WriteUInt8(0x55);
+    }
+
+    /// <summary>
+    /// Writes an instruction to clear the BP register.
+    /// </summary>
+    public void WriteXorBpBp() {
+        WriteUInt8(0x31);
+        WriteUInt8(0xed);
+    }
+
+    /// <summary>
+    /// Writes an instruction to pop the BP register value from the stack.
+    /// </summary>
+    public void WritePopBp() {
+        WriteUInt8(0x5d);
+    }
+
+    /// <summary>
     /// Writes a far CALL instruction to the given inMemoryAddressSwitcher default address. <br/>
     /// Throws UnrecoverableException if DefaultAddressValue is not initialized. <br/>
     /// If successful, sets the switcher PhysicalLocation to the location of the far call address, making it possible to change it dynamically.
