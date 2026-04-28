@@ -25,7 +25,7 @@
         <PackageReference Include="Serilog.Sinks.File" />
 		<PackageReference Include="Spectre.Console.Cli" />
         <Reference Include="FastExpressionCompiler">
-          <HintPath>..\..\3rdparty\$(Configuration)\FastExpressionCompiler.dll</HintPath>
+          <HintPath>..\..\3rdparty\Release\FastExpressionCompiler.dll</HintPath>
           <Private>true</Private>
         </Reference>
         <PackageReference Include="MeltySynth" />
