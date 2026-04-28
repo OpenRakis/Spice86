@@ -27,8 +27,11 @@ public sealed class TimerInt8Handler : IInterruptHandler {
         SegmentedAddress interruptHandlerAddress = memoryAsmWriter.CurrentAddress;
         // Increment BIOS tick counter
         memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, IncTickCounterValue);
+        memoryAsmWriter.WritePushBp();
+        memoryAsmWriter.WriteXorBpBp();
         // Call user timer hook
         memoryAsmWriter.WriteInt(0x1C);
+        memoryAsmWriter.WritePopBp();
         // EOI to PIC after handler execution
         memoryAsmWriter.RegisterAndWriteCallback(AfterInt8Execution);
         memoryAsmWriter.WriteIret();
