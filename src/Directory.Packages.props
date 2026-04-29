@@ -4,11 +4,11 @@
 		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageVersion Include="Avalonia" Version="11.3.14" />
+		<PackageVersion Include="Avalonia" Version="12.0.2" />
 		<PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
 		<PackageVersion Include="Avalonia.Desktop" Version="11.3.14" />
 		<PackageVersion Include="Avalonia.Diagnostics" Version="11.3.14" />
-		<PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.14" />
+		<PackageVersion Include="Avalonia.Fonts.Inter" Version="12.0.2" />
 		<PackageVersion Include="Avalonia.Headless" Version="11.3.14" />
 		<PackageVersion Include="AvaloniaGraphControl" Version="0.7.0" />
 		<PackageVersion Include="AvaloniaHex" Version="0.1.12" />
