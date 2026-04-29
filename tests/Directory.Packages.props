@@ -4,7 +4,7 @@
 		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageVersion Include="coverlet.collector" Version="8.0.1" />
+		<PackageVersion Include="coverlet.collector" Version="10.0.0" />
 		<PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
 		<PackageVersion Include="FluentAssertions" Version="8.8.0" />
 		<PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
