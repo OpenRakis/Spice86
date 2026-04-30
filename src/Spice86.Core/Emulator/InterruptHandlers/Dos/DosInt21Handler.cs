@@ -1175,9 +1175,14 @@ public class DosInt21Handler : InterruptHandler {
                 returnCode, paragraphsToKeep, currentPspSegment);
         }
 
+        DosMemoryControlBlock currentBlock = _dosMemoryManager.GetDosMemoryControlBlockFromSegment((ushort)(currentPspSegment - 1));
+        ushort keep = Math.Min(currentBlock.Size, paragraphsToKeep);
+        const ushort MinParagraphs = 6;
+        keep = Math.Max(MinParagraphs, keep);
+
         DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(
             currentPspSegment,
-            paragraphsToKeep,
+            keep,
             out DosMemoryControlBlock resizedBlock);
 
         if (errorCode == DosErrorCode.NoError) {
