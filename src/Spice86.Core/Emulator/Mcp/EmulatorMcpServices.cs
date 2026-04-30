@@ -66,6 +66,13 @@ public sealed class EmulatorMcpServices(
     public Intel8042Controller? Intel8042Controller { get; set; }
 
     /// <summary>
+    /// Gets or sets the input event hub. MCP tools must post keyboard/mouse
+    /// mutations through this hub so they run on the emulator thread, matching
+    /// how Avalonia UI input is delivered.
+    /// </summary>
+    public InputEventHub? InputEventHub { get; set; }
+
+    /// <summary>
     /// Gets or sets the Sound Blaster device used by medium-level MCP sound tools.
     /// </summary>
     public SoundBlaster? SoundBlaster { get; set; }

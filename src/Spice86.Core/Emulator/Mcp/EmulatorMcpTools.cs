@@ -31,6 +31,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
@@ -584,11 +585,16 @@ internal sealed class EmulatorMcpTools {
                     throw new InvalidOperationException("PS/2 controller is not available");
                 }
 
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+
                 if (!Enum.TryParse(key, true, out PcKeyboardKey parsedKey)) {
                     throw new ArgumentException($"Invalid PcKeyboardKey: '{key}'");
                 }
 
-                controller.KeyboardDevice.EnqueueKeyEvent(parsedKey, isPressed);
+                hub.PostToEmulatorThread(() => controller.KeyboardDevice.EnqueueKeyEvent(parsedKey, isPressed));
                 return new EmulatorControlResponse {
                     Success = true,
                     Message = $"Keyboard event sent: {parsedKey} {(isPressed ? "down" : "up")}"
@@ -1215,7 +1221,8 @@ internal sealed class EmulatorMcpTools {
                 int width = _services.VgaRenderer.Width;
                 int height = _services.VgaRenderer.Height;
                 uint[] buffer = new uint[width * height];
-                _services.VgaRenderer.Render(buffer);
+
+                _services.VgaRenderer.CopyLastFrame(buffer);
 
                 byte[] bytes = new byte[buffer.Length * 4];
                 Buffer.BlockCopy(buffer, 0, bytes, 0, bytes.Length);

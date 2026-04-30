@@ -397,3 +397,6 @@ spice86dump*.json
 spice86dump*.bin
 spice86dump*.asm
 spice86dump*.txt
+
+#Native libs
+lib/
