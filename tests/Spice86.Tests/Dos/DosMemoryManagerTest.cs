@@ -6,6 +6,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
@@ -49,7 +50,7 @@ public class DosMemoryManagerTests {
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
         _memory = new Memory(memoryBreakpoints, ram, a20Gate,
-            initializeResetVector: true);
+            new RealModeMmu386(), true);
 
         // Calculate the initial PSP segment based on the configuration.
         // We can effectively start it wherever we want for testing.

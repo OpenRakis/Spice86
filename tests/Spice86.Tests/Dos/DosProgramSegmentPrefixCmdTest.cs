@@ -3,6 +3,7 @@ namespace Spice86.Tests.Dos;
 using FluentAssertions;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
@@ -41,7 +42,7 @@ public class DosProgramSegmentPrefixCmdTests {
 
         AddressReadWriteBreakpoints memoryReadWriteBreakpoints = new();
         Memory memory = new(memoryReadWriteBreakpoints,
-            ram, a20Gate);
+            ram, a20Gate, new RealModeMmu386(), false);
 
         _psp = new(memory, 12345);
     }

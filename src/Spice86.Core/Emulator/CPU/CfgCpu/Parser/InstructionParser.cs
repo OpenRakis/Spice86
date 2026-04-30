@@ -173,7 +173,7 @@ public class InstructionParser {
             CfgInstruction parsed = ParseCfgInstruction(context);
             ValidateLockPrefix(parsed, prefixes);
             return parsed;
-        } catch (CpuInvalidOpcodeException e) {
+        } catch (CpuException e) {
             CfgInstruction instruction = new(address, opcodeField, prefixes, null) {
                 Kind = InstructionKind.Invalid
             };
@@ -446,6 +446,8 @@ public class InstructionParser {
     }
 
     private void Populate0FHandlers() {
+        _handlers0F[0x06] = _simpleInstructionParser.ParseClts;
+
         // Jcc near: 16 condition codes (same encoding as Jcc short)
         for (int cc = 0; cc < 16; cc++) {
             int capturedCc = cc;

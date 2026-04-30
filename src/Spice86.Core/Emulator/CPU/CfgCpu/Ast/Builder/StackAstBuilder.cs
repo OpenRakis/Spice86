@@ -1,9 +1,11 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 
 using System.Collections.Generic;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -33,6 +35,27 @@ public class StackAstBuilder {
     public MethodCallValueNode Pop(BitWidth bitWidth) {
         DataType dataType = DataType.UnsignedFromBitWidth(bitWidth);
         return new MethodCallValueNode(dataType, "Stack", $"Pop{(int)bitWidth}");
+    }
+
+    public MethodCallValueNode Peek(BitWidth bitWidth) {
+        DataType dataType = DataType.UnsignedFromBitWidth(bitWidth);
+        return new MethodCallValueNode(dataType, "Stack", $"Peek{(int)bitWidth}", new ConstantNode(DataType.UINT32, 0));
+    }
+
+    /// <summary>
+    /// Creates an AST node for 32-bit LEAVE stack semantics.
+    /// </summary>
+    /// <returns>MethodCallNode representing 32-bit LEAVE.</returns>
+    public MethodCallNode Leave32() {
+        return new MethodCallNode("Stack", nameof(Stack.Leave32));
+    }
+
+    /// <summary>
+    /// Creates an AST node for 16-bit LEAVE stack semantics.
+    /// </summary>
+    /// <returns>MethodCallNode representing 16-bit LEAVE.</returns>
+    public MethodCallNode Leave16() {
+        return new MethodCallNode("Stack", nameof(Stack.Leave16));
     }
 
     /// <summary>
@@ -76,5 +99,16 @@ public class StackAstBuilder {
                 statements.Add(new BinaryOperationNode(dataType, dest, BinaryOperation.ASSIGN, popCall));
             }
         }
+    }
+
+    /// <summary>
+    /// Dispatcher method for LEAVE stack semantics based on bit width.
+    /// For 16-bit, calls Leave16.
+    /// For 32-bit, calls Leave32.
+    /// </summary>
+    /// <param name="bitWidth">The bit width determining which LEAVE to use</param>
+    /// <returns>MethodCallNode representing the appropriate Stack.LeaveN method</returns>
+    public MethodCallNode Leave(BitWidth bitWidth) {
+        return bitWidth == BitWidth.DWORD_32 ? Leave32() : Leave16();
     }
 }

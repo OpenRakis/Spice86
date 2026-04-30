@@ -3,9 +3,9 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 
 using System.Collections.Immutable;
-using System.Linq;
 
 public abstract class InstructionFieldReader<T> {
     protected IIndexable Memory { get; }
@@ -20,8 +20,29 @@ public abstract class InstructionFieldReader<T> {
 
     protected SegmentedAddress CurrentAddress => AddressSource.CurrentAddress;
 
+    protected uint CurrentPhysicalAddress => MemoryUtils.ToPhysicalAddress(CurrentAddress.Segment, CurrentAddress.Offset);
+
     protected abstract int FieldSize();
+
     public abstract T PeekValue();
+
+    protected byte PeekUInt8(int offset) {
+        SegmentedAddress address = CurrentAddress;
+        uint effectiveOffset = (uint)(address.Offset + offset);
+        return Memory.UInt8[address.Segment, effectiveOffset];
+    }
+
+    protected ushort PeekUInt16(int offset) {
+        SegmentedAddress address = CurrentAddress;
+        uint effectiveOffset = (uint)(address.Offset + offset);
+        return Memory.UInt16[address.Segment, effectiveOffset];
+    }
+
+    protected uint PeekUInt32(int offset) {
+        SegmentedAddress address = CurrentAddress;
+        uint effectiveOffset = (uint)(address.Offset + offset);
+        return Memory.UInt32[address.Segment, effectiveOffset];
+    }
 
     public void Advance() {
         AddressSource.IndexInInstruction += FieldSize();
@@ -39,7 +60,7 @@ public abstract class InstructionFieldReader<T> {
         T value = PeekValue();
         ImmutableList<byte?> bytes = PeekData(FieldSize());
         return new InstructionField<T>(AddressSource.IndexInInstruction, FieldSize(),
-            CurrentAddress.Linear, value, bytes, finalValue);
+            CurrentPhysicalAddress, value, bytes, finalValue);
     }
 
     /// <summary>
@@ -54,9 +75,10 @@ public abstract class InstructionFieldReader<T> {
     }
 
     private ImmutableList<byte?> PeekData(int size) {
-        byte[] data = Memory.GetData(CurrentAddress.Linear, (uint)size);
-        return data.
-            Select(b => (byte?)b).
-            ToImmutableList();
+        ImmutableList<byte?>.Builder builder = ImmutableList.CreateBuilder<byte?>();
+        for (int i = 0; i < size; i++) {
+            builder.Add(PeekUInt8(i));
+        }
+        return builder.ToImmutable();
     }
 }

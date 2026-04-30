@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
@@ -21,7 +22,7 @@ public class CpuHeavyLoggerTests : IDisposable {
     private readonly EmulatorStateSerializationFolder _emulatorStateSerializationFolder = new(Path.GetTempPath());
     private readonly List<string> _filesToCleanup = new();
     private readonly State _state = new(CpuModel.INTEL_8086);
-    private readonly Memory _memory = new(new AddressReadWriteBreakpoints(), new Ram(0x100000), new A20Gate());
+    private readonly Memory _memory = new(new AddressReadWriteBreakpoints(), new Ram(0x100000), new A20Gate(), new RealModeMmu386(), false);
     private readonly TestInstructionHelper _instructionHelper = new();
 
     private CpuHeavyLogger Create(string? logPath, AsmRenderingStyle style,

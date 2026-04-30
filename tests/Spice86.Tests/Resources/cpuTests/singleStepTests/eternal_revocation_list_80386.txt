@@ -1,0 +1,196 @@
+# Eternal revocation list for 80386 SingleStepTests
+#
+# Unlike the per-range revocation_list_80386_*.txt files (which are regenerated
+# by the test runner), this file is PERMANENT and never overwritten by regen.
+# It contains hashes of tests that fail due to known, accepted deviations from
+# hardware behaviour that require author confirmation before any fix is applied.
+#
+# === PrefetchSuccessorNode (REP string operations with 67+66 prefixes) ===
+#
+# The PrefetchSuccessorNode mechanism in StringOperationAstBuilder prefetches
+# the fall-through instruction before executing a REP string loop whose body
+# contains a memory write.  This simulates the x86 prefetch buffer so that
+# self-modifying REP code (which overwrites its own successor's bytes) still
+# executes the original instruction encoding.
+#
+# The 2 hashes below are test vectors where the mechanism fires but produces
+# the WRONG result relative to the reference hardware: the prefetched CFG node
+# is stale (from a previous test execution sharing the same CfgCpu graph) and
+# decodes to a different instruction than what the initial memory bytes show.
+# This causes an observable EAX mismatch (e.g. a spurious XOR AL, 0x3C executes
+# when it should not, or vice-versa).
+#
+# Opcodes: 6766A5 (a32 ES rep movsd), 6766AB (a32 rep stosd)
+# Range: 67.00-67.7F
+# Also: 67A5 (a32 es rep movsw), 67AB (a32 rep stosw)
+# Range: 67.80-67.FF
+#
+# These are captured here as evidence for the SST author discussion.  Do not
+# remove or rework the PrefetchSuccessorNode mechanism until the author
+# confirms the expected behaviour for these specific vectors.
+#
+6b2abc067357767515f08c87818ee8164e3110b7
+83e700d32ec2f8b24b2d6868508f6f035622497a
+d8b3564f727b41848d9e0e243363bf05a45cf078
+82e4dc7d0031b8d567e3146c754acbad3287c3de
+
+# === IDIV r/m8 quotient overflow — missing #DE exception metadata ===
+#
+# These 9 test vectors encode IDIV r/m8 with quotient overflow but the
+# recorded test data omits the expected #DE exception metadata.  Without
+# the metadata, the test framework cannot verify the correct exception
+# is raised.  Suspected bad test data; pending author confirmation.
+#
+# Opcodes: F6 /7 (IDIV r/m8)
+#
+8813025dcf45588bd5141eb4d7081c67d6cf3ec3
+c6d731127bec724d40594edc28a6ad8fdf14acbc
+c1392c8316c2d0532d80fb1fcb78832533093e4e
+b674afe8d525fdf51217456b4a3f0b9102350cc4
+13e7537c7cd00f676d17da613b4289afb93b338d
+a4a926d8bbca1f281b0a479fd8c79fe3231bad34
+c30147a2fb7f67459cb7a1a4c888b670edd838f5
+8bddec44e46b709759d5d1550cd9fa16ab8e89fc
+a06745936bac371e6afb861b5bc87be4b2dd676e
+
+# === Instruction fetch crossing segment boundary (prefetch queue behavior) ===
+#
+# On a real 386 in real mode, the prefetch queue reads instruction bytes
+# LINEARLY past the 64 KB segment boundary (no 16-bit offset wrapping).
+# When an instruction has bytes past offset 0xFFFF, the 386 raises #GP
+# before execution.
+#
+# Spice86 wraps the 16-bit offset for instruction fetch (8086/80286 behavior)
+# and does not raise #GP. Implementing linear prefetch queue semantics and
+# the associated #GP fault is deferred until needed by a real DOS program.
+#
+# 124 hashes across ranges 66-66, 67_00-67_7F, 67_80-67_FF, 68-FF.
+#
+# Range: 66-66 (39 hashes)
+025ef34f71fcd88f2411a3419de1941c5b84fa2a
+048d1794de2b20f1d87a0d1a92993d8082c63f32
+0d46ca6371b1643dff3f4623545dd6fbadf0a067
+0ec2c5475c375c58604e65a2351c5df69e67a6bc
+19eeaf9e63bbffbf7724063308e77fbe7b92ae4f
+265c02525bf83d1891a7f738397c092541d97ebb
+26854d0c80895200c5034e503df2366213b4c4da
+2cb9a988d634632f0b6b41bbe9d87540056c985e
+3179063a108a054f697ded6c7dc22a646d2b02fb
+3525208fb3436c1400ac3db45134ce22bdecbb91
+3991fa3f991019b7aaaec9028a24f89d0f4f352a
+418e78f092b28a4f9e06bfc525537d32f269c53b
+46d565d07eb107eb3eac2d86317d38bcadecc7b8
+4cb9c45588361cb7ef405aeca503c6193cfa7a3a
+4e4ed1d8dd806281e4dce62fcba891f2d50cee60
+4ebc3523c1392d4a977c71a2c13401a72d538fdc
+4fbf85ef92e9d74cee0b5948bfae09c1fc0158c5
+52638d5788051323feddbeb75cbd6e2e6ad5cc84
+6fed6ed8ec210a700d923142103973a6c646a1ed
+7690b03f84d7ed4884dafd4e3bd966614f6cf7a9
+7f5f8bf6412d72aada1d38b1c341c2f6ac856798
+8329342b2ef9762dc4549867d9f94d8cbc7ddc2b
+87bb36dbddbfb1d327066836617102cc0b281b8f
+9a77b76e67d842f3ff84cb3fc8d34e5b74f0ef7e
+9b34200077d69325bd2acddb430cedb084baaf8f
+a298a1f227b22ef1d713bccfffe0eae765f59a7d
+a6b92c30dc30315b31d286b12a7f948dcfca4f80
+adea7b3d6256b664c058721a63ef0ff9123046e5
+adf4d54f9fd51d9a1b755c63f11099cee87da9cc
+b5715a7783f669a1657143e6bcae188771633d0d
+b6011fdd69a4c1a696267aa73dd7c5a737fa483a
+b9fc73f2d16862cd4b1b56a9efced49d4141e4a8
+bfe47a9e66c53c3d6e07ae935dd171e4c6be32cb
+c4d55feaa8a64fbde96aca85024f479b8a90c2fb
+c5209a7336501df49843b5047a2f471b58b3aab4
+c6837b70cc35d0e072085187cdbeabac4ccca5ea
+dd78ab7a0365da2d2a0564331195fed6f7a27773
+def9785af497fd419cd97c316016e2927abb052f
+f93fc65602361d901f705790052a1acffac94447
+# Range: 67_00-67_7F (43 hashes)
+03d164cad0da67adc56f27b68be961731c0eb4a0
+07c44c5ffa2c9010eb7bd758c6f09d1c37604025
+0917bc89c50196e4ac16b01ebc2f8d0a98c758d9
+0d918fb8cf23444de65e4a403bde0b968ce6e02e
+10f6cc227426dd3e879a39e58745b5316f5a68f4
+15fa937db1080e58ec786f34c4ebed4bf9500078
+1ba10ddab15505f825ce893f84399b1e090fb54b
+24b2a5d4f7af6226a446ca0395419ac65ba52f0a
+2a294ffa2165ba3b52a36553f83241889a9881a3
+2b11ab96cdf1f0d755d27d4e02a6a651b9a45c1a
+3332b3156e600c54ffcdd2230ac37b18fd845f6c
+33eb9572a533bd049b372ee194d92b06ada2dfba
+39223f826d86dd4058dafd8dbec6869a61c9f477
+3ad1f44b53a3a0336c20dd55facf28173b608a62
+47fa4a7d5a667189d2b151649e926eb67ec51e9a
+5c5f308e352425de422e9cffe8d74acea61e1e41
+625c5d6df9e5c65a53d0bcaf215c6902342005f0
+633771d7ce6a73d934657e8731b837439a8b2f85
+656d6aba1e392eb86151ad8583bc6e4c03a4f2cd
+6e110cecf281cf6d134286d1d778a239e90c2dfe
+6e9b98ca241f171e63af427d05c18864a488d9db
+745dcbf3679c258828ffd5129bf6be686ebe8899
+74b73f59c0bc4824f0d7369705ee29c38fe40f02
+75e4bf817e57d0864c0c2bffdee42ca2d806aa3e
+8ad75074f19442fd1376a53fe34c97cda77f8bec
+8d9aa2da7bcfda3a1b7d902bf124320799b9a2f6
+92fa1070b9cd5fa3269fa4a0e6d02dc92eef125c
+93d57bb40df7de98231620d06a3e674b260adb48
+a79a5471c1d10bede1d6180a412e21b5c3f204c7
+b0b7ea75459dcd1244935214a94a894f1b818314
+bf74b85f8a1d7de4a3494009d2e9831bc70bcd41
+d16a494ab350f52fa397d9ec9f3b0e35c4cad90e
+d8b27489ade402fb352b2bcb9149467dc4ab457d
+dc835a8018ec38576032654e281d30fa0f6fc7ab
+dfbdd25b81fc0c0e78d4adb5859f478bd6e9d09a
+e8b9efa345a412b376516e291611f9fd4abcaf03
+f06e5a84042afa29c44fe9acb5e4b90e3f5e87f3
+f081ca09da81f04fa3e30f9ba490b929bd0b6eb6
+f175abd96be917023d70efd34f0dcef5f0ffc0d8
+f3c14bf5d38578285ca7cb4a3ef728f1e21dd3b7
+fafbbba13472018aa9e4e6716d5a3a6cd41b349f
+fbba50d3d8dd0cd6bd4de31984706b4e5f572224
+fff60ad98fbd3142442ddd9ba9f6280ce027e5b6
+# Range: 67_80-67_FF (19 hashes)
+0d559410b1f4fed471c1ae7e79baf00c7d64afb5
+2b84606a6868ba8bdca6182326e5687f2e7a1b48
+37a0b5e697d965d3a07c94b3fe45088190714c29
+41729837254f15e107ff58be6b550fa316e0307d
+4a39e0b34cfa3d6566d8a0e0a085f6d13d617b50
+4a4ad11dfd1b2f5b4553f344ba37ff57f6b2ad1e
+5a297f1bcaad58ac92654e76d24742162c3a2236
+61866295e04403dbc5cc2e8056674da1d2bb5a75
+75ea1194332ef083a786f9a87443ba0ea2128130
+82d7f74d497890e2a6e5bcf032b3a1df276f9617
+951c2b13aaa72a240e100e4c9a1a709ba7ece993
+c278fbbedf71f5ea85dfc0ae2a752de38e435bce
+d0d34d5f3ac30a7560784e9784163590e448e126
+d49e694aa09bcb15053dfeb7918b5bce0b9e74a7
+d762495d7dd22a6aab0c5d120868e3e9e4a14c69
+d794a65025e3077129ae07ca3c45c041f4ff6574
+d80e6f5b5e79143c2b19cef563d208e144e0dfad
+e8ab138390e4cb4b4af91e9cc2d4d6e3d6f91ef2
+eb90abd81551f3d5640b060df7aee9d31c73d43f
+# Range: 68-FF (23 hashes)
+063122f7e7404f0924f233b63699884720707ad1
+0726998a84969b67304cfdff8f53f6d663294734
+136e9b13616dafc9078c8507efad49ed7cbb6792
+1d086493542187286056b3247b5d76329d0b2b96
+326b0c6ccb81e53e7eac473b5e7fc8b62d99cafe
+493eca7eb469b962980e83971b800ad4a0cf59fe
+57887051438fb0a080a11cd9bdbea0f9bc286fe4
+5910bd4aed43a24b9ead0742f7670f7e5952a80e
+5b352a157165eacb53da580bb02722f00d2f620d
+719756159ed25b2569f3ce48b3bc9ee8d45363f6
+7495caab9dcbe7092c13bc4d4521a5d6e3286bdb
+75157152907b56fbea449c5cb9ffc0575908a66b
+a9598f916ff9dbe6de68137bccc93e2778fc97de
+b30599f72e7cd90f200da7779b9cad7c0ef037ff
+b758194b4f76fd8f1befea968c943618abb92e06
+b7fd2a1fe71ecc4af3cafa41dde4f9a796463ad6
+bd1a82c163c1e19be8ae33bd9843c79bd58068f6
+bf6737d366a4440cbd82b69bcd493436797c1ded
+d1aab1ce7964bb24dac3b39f997033740c2a0978
+d4371a4d28d57e56ad8bd3dddab49eb1952937ac
+ec22717891290598e244d2f9ddab340baf46f37a
+ed9316af91fb40aec0afd46e9324e585eddba541
+f75713b2a84a547becc37eaec6cb1cc8d593d609

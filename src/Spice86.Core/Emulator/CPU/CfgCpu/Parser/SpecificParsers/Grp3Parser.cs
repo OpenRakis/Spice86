@@ -25,6 +25,9 @@ public class Grp3Parser : BaseGrpOperationParser {
         DataType dataType = _astBuilder.UType(bitWidth);
         return groupIndex switch {
             0 => ParseTest(context, modRmContext, bitWidth, dataType),
+            // groupIndex 1 is an undocumented alias of TEST imm,r/m (groupIndex 0)
+            // on 80186/286/386. The real CPU executes it identically.
+            1 => ParseTest(context, modRmContext, bitWidth, dataType),
             2 => ParseNot(context, modRmContext, bitWidth, dataType),
             3 => ParseNeg(context, modRmContext, bitWidth, dataType),
             4 => ParseMulImul(context, modRmContext, bitWidth, dataType, "Mul", InstructionOperation.MUL, false),

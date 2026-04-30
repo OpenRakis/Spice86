@@ -16,7 +16,7 @@ public class AluTests {
     [InlineData(0b1000000000000000, 0b0000000000000001, 5, 0b0000000000000000, false, true)] // last shifted bit is 0 and sign changed  
     [InlineData(0b1111110000000000, 0b1000000000000001, 6, 0b0000000000100000, true, true)] // last shifted bit is 1 and sign changed 
     [InlineData(0b0011110000000000, 0b0010000000000001, 16, 0b0010000000000001, false, false)] // complete shift
-    [InlineData(0b0011110000000000, 0b0010000000000001, 17, 0b0100000000000010, true, true)] // count > size is undefined
+    [InlineData(0b0011110000000000, 0b0010000000000001, 17, 0b0100000000000010, false, false)] // count > size: real 386 behaves as ROL16(source, count - 16); destination is fully shifted out
     public void TestShld16(ushort destination, ushort source, byte count, ushort expected, bool cf, bool of) {
         // Arrange
         var state = new State(CpuModel.INTEL_80286) {
@@ -79,8 +79,8 @@ public class AluTests {
         true)] // last shifted bit is 1 and sign changed (0 -> 1)
     [InlineData(0b0011110000000000, 0b0010000000000001, 16, 0b0010000000000001, false,
         false)] // complete shift: result == source
-    [InlineData(0b0011110000000000, 0b0010000000000001, 17, 0b0001000000000000, true,
-        false)] // count > size is undefined; lowest 5 bits used (17); verify CF and sign
+    [InlineData(0b0011110000000000, 0b0010000000000001, 17, 0b1001000000000000, true,
+        true)] // count > size: real 386 behaves as ROR16(source, count - 16); destination is fully shifted out
     public void TestShrd16(ushort destination, ushort source, byte count, ushort expected, bool cf, bool of) {
         // Arrange
         var state = new State(CpuModel.INTEL_80286) {
@@ -188,6 +188,11 @@ public class AluTests {
         bool initialOverflow, byte count) {
         int masked = count & 0x1F;
         int effective = masked % 17;
+        if (masked != 0 && effective == 0) {
+            bool fullCycleOverflow = initialCarry ^ ((value & 0x8000) != 0);
+            return (value, initialCarry, fullCycleOverflow);
+        }
+
         if (effective == 0) {
             return (value, initialCarry, initialOverflow);
         }
@@ -291,11 +296,11 @@ public class AluTests {
 
     [Fact]
     public void TestRcl8UsesNewCarryForOverflowComputation() {
-        var state = new State(CpuModel.INTEL_80286) {
+        State state = new(CpuModel.INTEL_80286) {
             CarryFlag = true,
             OverflowFlag = true
         };
-        var alu = new Alu8(state);
+        Alu8 alu = new(state);
 
         byte result = alu.Rcl(0x00, 1);
 
@@ -306,16 +311,76 @@ public class AluTests {
     }
 
     [Fact]
+    public void TestRcl8FullCycleCountUpdatesOverflow() {
+        State state = new(CpuModel.INTEL_80286) {
+            CarryFlag = false,
+            OverflowFlag = false
+        };
+        Alu8 alu = new(state);
+
+        byte result = alu.Rcl(0x80, 9);
+
+        Assert.Equal(0x80, result);
+        Assert.False(state.CarryFlag);
+        Assert.True(state.OverflowFlag);
+    }
+
+    [Fact]
+    public void TestRcl16FullCycleCountUpdatesOverflow() {
+        State state = new(CpuModel.INTEL_80286) {
+            CarryFlag = false,
+            OverflowFlag = true
+        };
+        Alu16 alu = new(state);
+
+        ushort result = alu.Rcl(0x511C, 17);
+
+        Assert.Equal(0x511C, result);
+        Assert.False(state.CarryFlag);
+        Assert.False(state.OverflowFlag);
+    }
+
+    [Fact]
     public void TestRcr8RotatesThroughCarry() {
-        var state = new State(CpuModel.INTEL_80286) {
+        State state = new(CpuModel.INTEL_80286) {
             CarryFlag = true
         };
-        var alu = new Alu8(state);
+        Alu8 alu = new(state);
 
         byte result = alu.Rcr(0x02, 1);
 
         Assert.Equal(0x81, result);
         Assert.False(state.CarryFlag);
+    }
+
+    [Fact]
+    public void TestRcr8FullCycleCountUpdatesOverflow() {
+        State state = new(CpuModel.INTEL_80286) {
+            CarryFlag = true,
+            OverflowFlag = true
+        };
+        Alu8 alu = new(state);
+
+        byte result = alu.Rcr(0x16, 9);
+
+        Assert.Equal(0x16, result);
+        Assert.True(state.CarryFlag);
+        Assert.False(state.OverflowFlag);
+    }
+
+    [Fact]
+    public void TestRcr16FullCycleCountUpdatesOverflow() {
+        State state = new(CpuModel.INTEL_80286) {
+            CarryFlag = false,
+            OverflowFlag = false
+        };
+        Alu16 alu = new(state);
+
+        ushort result = alu.Rcr(0x8000, 17);
+
+        Assert.Equal(0x8000, result);
+        Assert.False(state.CarryFlag);
+        Assert.True(state.OverflowFlag);
     }
 
     [Fact]

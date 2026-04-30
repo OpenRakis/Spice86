@@ -2,20 +2,79 @@ namespace Spice86.Core.Emulator.Memory.Indexer;
 
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
+using Spice86.Core.Emulator.Memory.Mmu;
 
 using System.Collections;
 
 public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
-    
+    private readonly uint _accessSize;
+
+    /// <summary>
+    /// The MMU used for segmented access checks and address translation.
+    /// </summary>
+    protected IMmu Mmu { get; }
+
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="mmu">The MMU for segmented access checks.</param>
+    /// <param name="accessSize">The byte size of the data type for segmented access validation.</param>
+    protected MemoryIndexer(IMmu mmu, uint accessSize) {
+        Mmu = mmu;
+        _accessSize = accessSize;
+    }
+
     /// <summary>
     /// Gets or sets the data at the specified segment and offset in the memory.
     /// </summary>
     /// <param name="segment">The segment of the element to get or set.</param>
     /// <param name="offset">The offset of the element to get or set.</param>
-    public abstract T this[ushort segment, ushort offset] {
-        get;
-        set;
+    public T this[ushort segment, uint offset] {
+        get => this[segment, offset, SegmentAccessKind.Data];
+        set => this[segment, offset, SegmentAccessKind.Data] = value;
     }
+
+    /// <summary>
+    /// Gets or sets the data at the specified segment and offset in the memory.
+    /// </summary>
+    /// <param name="segment">The segment of the element to get or set.</param>
+    /// <param name="offset">The offset of the element to get or set.</param>
+    public virtual T this[ushort segment, ushort offset] {
+        get => this[segment, (uint)offset];
+        set => this[segment, (uint)offset] = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the data at the specified segment and offset in the memory.
+    /// Performs an MMU access check for the full data size, then delegates to
+    /// <see cref="ReadSegmented"/>/<see cref="WriteSegmented"/> for translation and I/O.
+    /// Composite indexers may override to perform multiple checks matching hardware access patterns.
+    /// </summary>
+    /// <param name="segment">The segment of the element to get or set.</param>
+    /// <param name="offset">The offset of the element to get or set.</param>
+    /// <param name="accessKind">The semantic access kind.</param>
+    public virtual T this[ushort segment, uint offset, SegmentAccessKind accessKind] {
+        get {
+            Mmu.CheckAccess(segment, offset, _accessSize, accessKind);
+            return ReadSegmented(segment, offset);
+        }
+        set {
+            Mmu.CheckAccess(segment, offset, _accessSize, accessKind);
+            WriteSegmented(segment, offset, value);
+        }
+    }
+
+    /// <summary>
+    /// Translates the segment:offset pair and reads a value without an MMU access check.
+    /// Used by composite indexers that perform their own check for the full access range.
+    /// </summary>
+    internal abstract T ReadSegmented(ushort segment, uint offset);
+
+    /// <summary>
+    /// Translates the segment:offset pair and writes a value without an MMU access check.
+    /// Used by composite indexers that perform their own check for the full access range.
+    /// </summary>
+    internal abstract void WriteSegmented(ushort segment, uint offset, T value);
 
     /// <summary>
     /// Gets or sets the data at the specified segmented address and offset in the memory.

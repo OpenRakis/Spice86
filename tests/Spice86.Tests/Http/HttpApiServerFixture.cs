@@ -5,6 +5,7 @@ using NSubstitute;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Logging;
@@ -28,7 +29,7 @@ public sealed class HttpApiServerFixture : IDisposable {
         AddressReadWriteBreakpoints breakpoints = new();
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
         A20Gate a20Gate = new(true);
-        Memory memory = new(breakpoints, ram, a20Gate);
+        Memory memory = new(breakpoints, ram, a20Gate, new RealModeMmu386(), false);
         memory[0x40] = 0x12;
         memory[0x41] = 0x34;
         memory[0x42] = 0x56;

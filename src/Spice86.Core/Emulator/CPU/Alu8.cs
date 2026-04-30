@@ -34,6 +34,8 @@ public class Alu8 : Alu<byte, sbyte, ushort, short> {
         UpdateFlags(res);
         _state.CarryFlag = false;
         _state.OverflowFlag = false;
+        // Undocumented: real CPUs clear AF for logical operations
+        _state.AuxiliaryFlag = false;
         return res;
     }
 
@@ -70,6 +72,8 @@ public class Alu8 : Alu<byte, sbyte, ushort, short> {
         bool doesNotFitInByte = res != (sbyte)res;
         _state.OverflowFlag = doesNotFitInByte;
         _state.CarryFlag = doesNotFitInByte;
+        UpdateFlags((byte)res);
+        _state.AuxiliaryFlag = false;
         return (short)res;
     }
 
@@ -94,8 +98,14 @@ public class Alu8 : Alu<byte, sbyte, ushort, short> {
     }
 
     public override byte Rcl(byte value, byte count) {
-        count = (byte)((count & ShiftCountMask) % 9);
+        int maskedCount = count & ShiftCountMask;
+        if (maskedCount == 0) {
+            return value;
+        }
+
+        count = (byte)(maskedCount % 9);
         if (count == 0) {
+            _state.OverflowFlag = _state.CarryFlag ^ ((value & MsbMask) != 0);
             return value;
         }
 
@@ -115,8 +125,14 @@ public class Alu8 : Alu<byte, sbyte, ushort, short> {
     }
 
     public override byte Rcr(byte value, int count) {
-        count = (count & ShiftCountMask) % 9;
+        int maskedCount = count & ShiftCountMask;
+        if (maskedCount == 0) {
+            return value;
+        }
+
+        count = maskedCount % 9;
         if (count == 0) {
+            SetOverflowForRigthRotate8(value);
             return value;
         }
 
@@ -135,14 +151,15 @@ public class Alu8 : Alu<byte, sbyte, ushort, short> {
     }
 
     public override byte Rol(byte value, byte count) {
-        count = (byte)((count & ShiftCountMask) % 8);
-        if (count == 0) {
+        int maskedCount = count & ShiftCountMask;
+        if (maskedCount == 0) {
             return value;
         }
-
-        int carry = value >> 8 - count & 0x1;
-        byte res = (byte)(value << count);
-        res = (byte)(res | value >> 8 - count);
+        int effective = maskedCount % 8;
+        byte res = effective == 0
+            ? value
+            : (byte)((value << effective) | (value >> 8 - effective));
+        int carry = res & 0x1;
         _state.CarryFlag = carry != 0;
         bool msb = (res & MsbMask) != 0;
         bool lsb = (res & 0x01) != 0;
@@ -151,15 +168,15 @@ public class Alu8 : Alu<byte, sbyte, ushort, short> {
     }
 
     public override byte Ror(byte value, int count) {
-        count = (count & ShiftCountMask) % 8;
-        if (count == 0) {
+        int maskedCount = count & ShiftCountMask;
+        if (maskedCount == 0) {
             return value;
         }
-
-        int carry = value >> count - 1 & 0x1;
-        int mask = (1 << 8 - count) - 1;
-        byte res = (byte)(value >> count & mask);
-        res = (byte)(res | value << 8 - count);
+        int effective = maskedCount % 8;
+        byte res = effective == 0
+            ? value
+            : (byte)((value >> effective) | (value << 8 - effective));
+        int carry = (res & MsbMask) != 0 ? 1 : 0;
         _state.CarryFlag = carry != 0;
         SetOverflowForRigthRotate8(res);
         return res;
@@ -185,11 +202,25 @@ public class Alu8 : Alu<byte, sbyte, ushort, short> {
             return value;
         }
 
-        int msbBefore = value << count - 1 & MsbMask;
-        _state.CarryFlag = msbBefore != 0;
-        byte res = (byte)(value << count);
+        byte res;
+        bool carry;
+        if (count <= 8) {
+            int msbBefore = value << count - 1 & MsbMask;
+            carry = msbBefore != 0;
+            res = (byte)(value << count);
+        } else {
+            // Real 80386 byte SHL behavior for masked counts > 8: result is 0,
+            // CF cycles back to bit 0 of the original at multiples of 8 (count
+            // 16, 24); for non-multiples of 8 above 8 the carry is 0.
+            res = 0;
+            carry = (count & 7) == 0 && (value & 0x01) != 0;
+        }
+        _state.CarryFlag = carry;
         UpdateFlags(res);
-        _state.OverflowFlag = ((res ^ value) & MsbMask) != 0;
+        // Real 386 SHL/SAL leaves OF documented "undefined" for count != 1
+        // but in practice always computes OF = MSB(result) XOR CF. The
+        // SingleStepTests reference vectors capture this exact behavior.
+        _state.OverflowFlag = ((res & MsbMask) != 0) ^ _state.CarryFlag;
         return res;
     }
 
@@ -208,8 +239,19 @@ public class Alu8 : Alu<byte, sbyte, ushort, short> {
         }
 
         int msb = value & MsbMask;
-        SetCarryFlagForRightShifts(value, count);
-        byte res = (byte)(value >> count);
+        byte res;
+        bool carry;
+        if (count <= 8) {
+            carry = ((value >> count - 1) & 0x1) == 1;
+            res = (byte)(value >> count);
+        } else {
+            // Real 80386 byte SHR behavior for masked counts > 8: result is 0,
+            // CF cycles back to MSB of the original at multiples of 8 (count
+            // 16, 24); for non-multiples of 8 above 8 the carry is 0.
+            res = 0;
+            carry = (count & 7) == 0 && (value & MsbMask) != 0;
+        }
+        _state.CarryFlag = carry;
         UpdateFlags(res);
         _state.OverflowFlag = count == 1 && msb != 0;
         return res;
@@ -232,6 +274,8 @@ public class Alu8 : Alu<byte, sbyte, ushort, short> {
         UpdateFlags(res);
         _state.CarryFlag = false;
         _state.OverflowFlag = false;
+        // Undocumented: real CPUs clear AF for logical operations
+        _state.AuxiliaryFlag = false;
         return res;
     }
 

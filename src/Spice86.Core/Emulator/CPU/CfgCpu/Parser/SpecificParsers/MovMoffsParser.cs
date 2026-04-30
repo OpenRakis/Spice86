@@ -18,11 +18,9 @@ public class MovMoffsParser : BaseInstructionParser {
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
         int segmentRegisterIndex = GetSegmentRegisterOverrideOrDs(context);
-        InstructionField<ushort> offsetField = _instructionReader.UInt16.NextField(false);
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
-        instr.AddField(offsetField);
+        ValueNode offsetNode = ReadUnsignedImmediate(instr, context.AddressWidthFromPrefixes);
         ValueNode accNode = _astBuilder.Register.Accumulator(dataType);
-        ValueNode offsetNode = _astBuilder.InstructionField.ToNode(offsetField);
         ValueNode memoryPointer = _astBuilder.Pointer.ToSegmentedPointer(dataType, segmentRegisterIndex, offsetNode);
         ValueNode displayPointer = _astBuilder.Pointer.ToSegmentedPointer(dataType,
             segmentRegisterIndex, (int)Spice86.Core.Emulator.CPU.Registers.SegmentRegisterIndex.DsIndex,

@@ -13,6 +13,8 @@ public class SegmentedAddress16InstructionFieldReader : InstructionFieldReader<S
     }
 
     public override SegmentedAddress PeekValue() {
-        return Memory.SegmentedAddress16[CurrentAddress];
+        ushort offset = PeekUInt16(0);
+        ushort segment = PeekUInt16(2);
+        return new SegmentedAddress(segment, offset);
     }
 }

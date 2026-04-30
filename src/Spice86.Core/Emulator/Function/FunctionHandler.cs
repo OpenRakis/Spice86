@@ -136,8 +136,7 @@ public class FunctionHandler {
             CallType.NEAR16 => new SegmentedAddress(_state.CS, memory.UInt16[stackPhysicalAddress]),
             CallType.NEAR32 => new SegmentedAddress(_state.CS, (ushort)memory.UInt32[stackPhysicalAddress]),
             CallType.FAR16 or CallType.INTERRUPT or CallType.EXTERNAL_INTERRUPT => memory.SegmentedAddress16[stackPhysicalAddress],
-            // +2 for CS padding
-            CallType.FAR32 => memory.SegmentedAddress32[stackPhysicalAddress + 2],
+            CallType.FAR32 => memory.SegmentedAddress32[stackPhysicalAddress].ToSegmentedAddress(),
             CallType.MACHINE => null,
             _ => null
         };

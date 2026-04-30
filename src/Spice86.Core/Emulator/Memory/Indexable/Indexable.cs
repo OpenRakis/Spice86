@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Memory.Indexable;
 
 using Spice86.Core.Emulator.Memory.Indexer;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Shared.Emulator.Errors;
 
@@ -73,16 +74,16 @@ public abstract class Indexable : IIndexable {
     }
     
     internal static (UInt8Indexer, UInt16Indexer, UInt16BigEndianIndexer, UInt32Indexer, Int8Indexer, Int16Indexer, Int32Indexer, SegmentedAddress16Indexer, SegmentedAddress32Indexer) InstantiateIndexersFromByteReaderWriter(
-            IByteReaderWriter byteReaderWriter) {
-        UInt8Indexer uInt8 = new UInt8Indexer(byteReaderWriter);
-        UInt16Indexer uInt16 = new UInt16Indexer(byteReaderWriter);
-        UInt16BigEndianIndexer uInt16BigEndian = new UInt16BigEndianIndexer(byteReaderWriter);
-        UInt32Indexer uInt32 = new UInt32Indexer(byteReaderWriter);
-        Int8Indexer int8 = new Int8Indexer(uInt8);
-        Int16Indexer int16 = new Int16Indexer(uInt16);
-        Int32Indexer int32 = new Int32Indexer(uInt32);
-        SegmentedAddress16Indexer segmentedAddress16Indexer = new SegmentedAddress16Indexer(uInt16);
-        SegmentedAddress32Indexer segmentedAddress32Indexer = new(uInt16, uInt32);
+            IByteReaderWriter byteReaderWriter, IMmu mmu) {
+        UInt8Indexer uInt8 = new UInt8Indexer(byteReaderWriter, mmu);
+        UInt16Indexer uInt16 = new UInt16Indexer(byteReaderWriter, mmu);
+        UInt16BigEndianIndexer uInt16BigEndian = new UInt16BigEndianIndexer(byteReaderWriter, mmu);
+        UInt32Indexer uInt32 = new UInt32Indexer(byteReaderWriter, mmu);
+        Int8Indexer int8 = new Int8Indexer(uInt8, mmu);
+        Int16Indexer int16 = new Int16Indexer(uInt16, mmu);
+        Int32Indexer int32 = new Int32Indexer(uInt32, mmu);
+        SegmentedAddress16Indexer segmentedAddress16Indexer = new SegmentedAddress16Indexer(uInt16, mmu);
+        SegmentedAddress32Indexer segmentedAddress32Indexer = new(uInt16, uInt32, mmu);
         return (uInt8, uInt16, uInt16BigEndian, uInt32, int8, int16, int32, segmentedAddress16Indexer, segmentedAddress32Indexer);
     }
 

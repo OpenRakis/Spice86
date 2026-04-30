@@ -12,6 +12,6 @@ public class Int32FieldReader : InstructionFieldReader<int> {
     }
 
     public override int PeekValue() {
-        return Memory.Int32[CurrentAddress];
+        return (int)PeekUInt32(0);
     }
 }

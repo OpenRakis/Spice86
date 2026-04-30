@@ -25,6 +25,7 @@ public enum InstructionOperation {
     CLC,
     CLD,
     CLI,
+    CLTS,
     CMC,
     CMP,
     CMPS,
