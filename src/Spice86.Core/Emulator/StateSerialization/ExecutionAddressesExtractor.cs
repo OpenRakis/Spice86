@@ -61,7 +61,7 @@ public class ExecutionAddressesExtractor(CfgCpu cfgCpu, ExecutionAddresses previ
             return successors;
         }
 
-        SegmentedAddress next = instruction.NextInMemoryAddress;
+        SegmentedAddress next = instruction.NextInMemoryAddress32.ToSegmentedAddress();
         return successors.Where(i => i.Address != next).ToHashSet();
     }
 }

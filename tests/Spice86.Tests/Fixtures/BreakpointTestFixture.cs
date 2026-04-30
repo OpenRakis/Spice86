@@ -4,6 +4,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
@@ -63,7 +64,7 @@ public class BreakpointTestFixture : IDisposable {
         MemoryBreakpoints = new AddressReadWriteBreakpoints();
         IoBreakpoints = new AddressReadWriteBreakpoints();
         A20Gate a20Gate = new(enabled: false);
-        Memory = new Memory(MemoryBreakpoints, ram, a20Gate, initializeResetVector: true);
+        Memory = new Memory(MemoryBreakpoints, ram, a20Gate, new RealModeMmu386(), true);
         
         // Only ILoggerService is mocked
         LoggerService = Substitute.For<ILoggerService>();

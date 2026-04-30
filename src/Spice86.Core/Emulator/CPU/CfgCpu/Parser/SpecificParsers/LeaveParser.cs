@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
@@ -17,18 +18,9 @@ public class LeaveParser : BaseInstructionParser {
 
     public CfgInstruction Parse(ParsingContext context) {
         BitWidth bitWidth = GetBitWidth(false, context.HasOperandSize32);
-        DataType stackDataType = _astBuilder.UType(bitWidth);
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
-        BinaryOperationNode restoreStackPointer = _astBuilder.Assign(
-            stackDataType,
-            _astBuilder.Register.Reg(stackDataType, RegisterIndex.SpIndex),
-            _astBuilder.Register.Reg(stackDataType, RegisterIndex.BpIndex));
-        BinaryOperationNode popBasePointer = _astBuilder.Assign(
-            stackDataType,
-            _astBuilder.Register.Reg(stackDataType, RegisterIndex.BpIndex),
-            _astBuilder.Stack.Pop(bitWidth));
+        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, _astBuilder.Stack.Leave(bitWidth));
         InstructionNode displayAst = new InstructionNode(bitWidth == BitWidth.DWORD_32 ? InstructionOperation.LEAVEW : InstructionOperation.LEAVE);
-        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, restoreStackPointer, popBasePointer);
         instr.AttachAsts(displayAst, execAst);
         return instr;
     }

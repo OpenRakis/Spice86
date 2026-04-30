@@ -26,8 +26,11 @@ public class CpuTestRunner {
     /// <param name="fileName">The test file name</param>
     /// <param name="machine">The minimal machine to run the test on</param>
     /// <param name="maxCycles">Maximum number of instruction cycles to execute</param>
+    /// <param name="flagsMask">Bitmask applied when comparing EFLAGS. Bits set
+    /// to 1 are compared, bits set to 0 are ignored (used to skip flag bits that
+    /// are documented as undefined for the executed opcode).</param>
     /// <exception cref="Exception">Thrown when the test fails with detailed error information</exception>
-    public void RunTest(CpuTest cpuTest, int index, string fileName, SingleStepTestMinimalMachine machine, int maxCycles) {
+    public void RunTest(CpuTest cpuTest, int index, string fileName, SingleStepTestMinimalMachine machine, int maxCycles, uint flagsMask) {
         List<ICfgNode> nodesEncountered = new();
         try {
             InitializeMemory(cpuTest.Initial.Ram, machine.Memory);
@@ -38,10 +41,13 @@ public class CpuTestRunner {
             for (int i = 0; i < maxCycles; i++) {
                 nodesEncountered.Add(cfgCpu.ToExecute());
                 cfgCpu.ExecuteNext();
+                if (!machine.State.IsRunning) {
+                    break;
+                }
             }
 
-            _testAsserter.AssertRegistersMatch(cpuTest.Final.Registers, machine.State);
-            _testAsserter.AssertMemoryMatches(cpuTest.Final.Ram, machine.Memory);
+            _testAsserter.AssertRegistersMatch(cpuTest.Final.Registers, machine.State, flagsMask);
+            _testAsserter.AssertMemoryMatches(cpuTest.Final.Ram, machine.Memory, cpuTest.Exception, flagsMask);
         } catch (Exception e) {
             throw new Exception(GenerateErrorMessage(cpuTest, index, fileName, machine, e.Message, nodesEncountered), e);
         } finally {
@@ -97,6 +103,7 @@ Error:
         state.IP = registers.EIP;
         state.Flags.FlagRegister = registers.EFlags;
         state.Cycles = 0;
+        state.IsRunning = true;
     }
 
     private static void InitializeMemory(RamEntry[] ram, Memory memory) {

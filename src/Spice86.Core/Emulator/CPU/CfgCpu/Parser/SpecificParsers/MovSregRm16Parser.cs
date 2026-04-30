@@ -19,6 +19,9 @@ public class MovSregRm16Parser : BaseInstructionParser {
 
     public CfgInstruction Parse(ParsingContext context) {
         (CfgInstruction instr, ModRmContext modRmContext) = ParseModRmBase(context, 1);
+        if (modRmContext.RegisterIndex > (int)SegmentRegisterIndex.GsIndex) {
+            throw new CpuInvalidOpcodeException($"Invalid segment register index {modRmContext.RegisterIndex} for MOV Sreg,r/m16");
+        }
         if (modRmContext.RegisterIndex == (uint)SegmentRegisterIndex.CsIndex) {
             throw new CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
         }

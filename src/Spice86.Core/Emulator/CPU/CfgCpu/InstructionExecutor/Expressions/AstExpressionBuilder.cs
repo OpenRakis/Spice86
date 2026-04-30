@@ -11,8 +11,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexer;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.CPU.Registers;
 
 using System.Linq;
 using System.Linq.Expressions;
@@ -189,25 +191,11 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     private PropertyInfo FindSingleParameterIndexer(Type type) {
-        PropertyInfo[] propertyInfos = type.GetProperties();
-        foreach (PropertyInfo propertyInfo in propertyInfos) {
-            ParameterInfo[] indexParameters = propertyInfo.GetIndexParameters();
-            if (indexParameters.Length == 1 && indexParameters[0].ParameterType == typeof(uint)) {
-                return propertyInfo;
-            }
-        }
-        throw new ArgumentException($"Couldn't find a property named Item with 1 parameter for type {type}");
+        return EnsureNonNull(type.GetProperty("Item", [typeof(uint)]));
     }
     
-    private PropertyInfo FindDualParameterIndexer(Type type) {
-        PropertyInfo[] propertyInfos = type.GetProperties();
-        foreach (PropertyInfo propertyInfo in propertyInfos) {
-            ParameterInfo[] indexParameters = propertyInfo.GetIndexParameters();
-            if (indexParameters.Length == 2 && indexParameters[0].ParameterType == typeof(ushort) && indexParameters[1].ParameterType == typeof(ushort)) {
-                return propertyInfo;
-            }
-        }
-        throw new ArgumentException($"Couldn't find a property named Item with 2 parameters for type {type}");
+    private PropertyInfo FindSegmentedIndexer(Type type) {
+        return EnsureNonNull(type.GetProperty("Item", [typeof(ushort), typeof(uint), typeof(SegmentAccessKind)]));
     }
 
     private MemberExpression ToMemoryIndexerProperty(DataType dataType) {
@@ -222,16 +210,17 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         return Expression.Property(indexerProperty, indexer, indexExpression);
     }
     
-    private IndexExpression ToMemoryIndexer(DataType dataType, Expression segmentExpression, Expression offsetExpression ) {
+    private IndexExpression ToMemoryIndexer(DataType dataType, Expression segmentExpression, Expression offsetExpression, bool isStackSegment) {
         if (segmentExpression.Type != typeof(ushort)) {
             segmentExpression = Expression.Convert(segmentExpression, typeof(ushort));
         }
-        if (offsetExpression.Type != typeof(ushort)) {
-            offsetExpression = Expression.Convert(offsetExpression, typeof(ushort));
+        if (offsetExpression.Type != typeof(uint)) {
+            offsetExpression = Expression.Convert(offsetExpression, typeof(uint));
         }
         MemberExpression indexerProperty = ToMemoryIndexerProperty(dataType);
-        PropertyInfo indexer = FindDualParameterIndexer(ToMemoryIndexerType(dataType));
-        return Expression.Property(indexerProperty, indexer, segmentExpression, offsetExpression);
+        PropertyInfo indexer = FindSegmentedIndexer(ToMemoryIndexerType(dataType));
+        SegmentAccessKind accessKind = isStackSegment ? SegmentAccessKind.Stack : SegmentAccessKind.Data;
+        return Expression.Property(indexerProperty, indexer, segmentExpression, offsetExpression, Expression.Constant(accessKind));
     }
     
     private MemberExpression ToRegisterProperty(int registerIndex, DataType dataType, bool isSegmentRegister) {
@@ -247,7 +236,9 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     public Expression VisitSegmentedPointer(SegmentedPointerNode node) {
         Expression segmentExpression = node.Segment.Accept(this);
         Expression offsetExpression = node.Offset.Accept(this);
-        return ToMemoryIndexer(node.DataType, segmentExpression, offsetExpression);
+        bool isStackSegment = node.Segment is SegmentRegisterNode segReg
+            && segReg.RegisterIndex == (int)SegmentRegisterIndex.SsIndex;
+        return ToMemoryIndexer(node.DataType, segmentExpression, offsetExpression, isStackSegment);
     }
 
     public Expression VisitRegisterNode(RegisterNode node) {
@@ -299,6 +290,11 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     public Expression VisitSegmentedAddressNode(SegmentedAddressNode node) {
         Expression segment = node.Segment.Accept(this);
         Expression offset = node.Offset.Accept(this);
+
+        if (node.Offset.DataType == DataType.UINT32) {
+            ConstructorInfo ctor32 = EnsureNonNull(typeof(SegmentedAddress32).GetConstructor([typeof(ushort), typeof(uint)]));
+            return Expression.New(ctor32, segment, offset);
+        }
 
         ConstructorInfo constructorInfo = EnsureNonNull(typeof(SegmentedAddress).GetConstructor([typeof(ushort), typeof(ushort)]));
         return Expression.New(constructorInfo, segment, offset);
@@ -535,12 +531,31 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression VisitMoveIpNextNode(MoveIpNextNode node) {
-        // State.IP = NextIp
+        // State.IP = (ushort)NextIp
         PropertyInfo ipProperty = EnsureNonNull(typeof(State).GetProperty(nameof(State.IP)));
         Expression ipExpression = Expression.Property(_stateParameter, ipProperty);
         Expression nextIpValue = node.NextIp.Accept(this);
-        
-        return Expression.Assign(ipExpression, nextIpValue);
+        Expression truncatedIp = nextIpValue.Type == typeof(ushort)
+            ? nextIpValue
+            : Expression.Convert(nextIpValue, typeof(ushort));
+        Expression assignIp = Expression.Assign(ipExpression, truncatedIp);
+
+        // memory.Mmu.CheckAccess(state.CS, nextIp, 1, SegmentAccessKind.Data)
+        PropertyInfo mmuProperty = EnsureNonNull(typeof(Memory).GetProperty(nameof(Memory.Mmu)));
+        Expression mmuExpression = Expression.Property(_memoryParameter, mmuProperty);
+        PropertyInfo csProperty = EnsureNonNull(typeof(State).GetProperty(nameof(State.CS)));
+        Expression csExpression = Expression.Property(_stateParameter, csProperty);
+        Expression nextIpAsUint = nextIpValue.Type == typeof(uint)
+            ? nextIpValue
+            : Expression.Convert(nextIpValue, typeof(uint));
+        MethodInfo checkAccessMethod = EnsureNonNull(typeof(IMmu).GetMethod(nameof(IMmu.CheckAccess)));
+        Expression checkAccess = Expression.Call(mmuExpression, checkAccessMethod,
+            csExpression,
+            nextIpAsUint,
+            Expression.Constant(1u),
+            Expression.Constant(SegmentAccessKind.Data));
+
+        return Expression.Block(assignIp, checkAccess);
     }
 
     public Expression VisitCallNearNode(CallNearNode node) {
@@ -604,7 +619,10 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression VisitReturnInterruptNode(ReturnInterruptNode node) {
-        return CallHelperMethodWithInstruction(nameof(InstructionExecutionHelper.HandleInterruptRet), node);
+        string method = node.OperandSize == BitWidth.DWORD_32
+            ? nameof(InstructionExecutionHelper.HandleInterruptRet32)
+            : nameof(InstructionExecutionHelper.HandleInterruptRet);
+        return CallHelperMethodWithInstruction(method, node);
     }
 
     public Expression VisitCallbackNode(CallbackNode node) {

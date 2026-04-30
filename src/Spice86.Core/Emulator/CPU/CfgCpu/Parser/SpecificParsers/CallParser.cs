@@ -17,16 +17,24 @@ public class CallParser : BaseInstructionParser {
 
     public CfgInstruction ParseCallFarImm(ParsingContext context) {
         BitWidth operandBitWidth = context.DefaultWordOperandBitWidth;
-        InstructionField<SegmentedAddress> addrField = context.HasOperandSize32
-            ? _instructionReader.SegmentedAddress32.NextField(true)
-            : _instructionReader.SegmentedAddress16.NextField(true);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
-        instr.AddField(addrField);
-        SegmentedAddressNode targetAddress = _astBuilder.SegmentedAddressBuilder.ToNode(addrField);
-        InstructionNode displayAst = new InstructionNode(InstructionOperation.CALL_FAR, _astBuilder.InstructionField.ToNode(addrField));
-        IVisitableAstNode execAst = new CallFarNode(instr, targetAddress, operandBitWidth);
-        instr.AttachAsts(displayAst, execAst);
-        return instr;
+        if (context.HasOperandSize32) {
+            InstructionField<SegmentedAddress32> addrField32 = _instructionReader.SegmentedAddress32.NextField(true);
+            CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
+            instr.AddField(addrField32);
+            SegmentedAddressNode targetAddress = _astBuilder.SegmentedAddressBuilder.ToNode(addrField32);
+            InstructionNode displayAst = new InstructionNode(InstructionOperation.CALL_FAR, _astBuilder.InstructionField.ToNode(addrField32));
+            IVisitableAstNode execAst = new CallFarNode(instr, targetAddress, operandBitWidth);
+            instr.AttachAsts(displayAst, execAst);
+            return instr;
+        }
+        InstructionField<SegmentedAddress> addrField = _instructionReader.SegmentedAddress16.NextField(true);
+        CfgInstruction instr16 = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
+        instr16.AddField(addrField);
+        SegmentedAddressNode targetAddress16 = _astBuilder.SegmentedAddressBuilder.ToNode(addrField);
+        InstructionNode displayAst16 = new InstructionNode(InstructionOperation.CALL_FAR, _astBuilder.InstructionField.ToNode(addrField));
+        IVisitableAstNode execAst16 = new CallFarNode(instr16, targetAddress16, operandBitWidth);
+        instr16.AttachAsts(displayAst16, execAst16);
+        return instr16;
     }
 
     public CfgInstruction ParseCallNearImm(ParsingContext context) {
@@ -35,8 +43,8 @@ public class CallParser : BaseInstructionParser {
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
         (int offsetValue, FieldWithValue offsetField) = ReadSignedOffset(offsetWidth);
         instr.AddField(offsetField);
-        ushort targetIp = (ushort)(instr.NextInMemoryAddress.Offset + offsetValue);
-        ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress);
+        ushort targetIp = (ushort)(instr.NextInMemoryAddress32.Offset + offsetValue);
+        ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress32.ToSegmentedAddress());
         instr.AttachAsts(
             new InstructionNode(InstructionOperation.CALL_NEAR, targetIpNode),
             new CallNearNode(instr, targetIpNode, operandBitWidth));

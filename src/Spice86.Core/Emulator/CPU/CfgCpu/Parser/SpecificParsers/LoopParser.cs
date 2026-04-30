@@ -38,8 +38,8 @@ public class LoopParser(ParsingTools parsingTools) : BaseInstructionParser(parsi
         DataType counterType = _astBuilder.UType(addressWidth);
         ValueNode counter = _astBuilder.Register.Reg(counterType, RegisterIndex.CxIndex);
 
-        ushort targetIp = (ushort)(instr.NextInMemoryAddress.Offset + offsetValue);
-        ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress);
+        ushort targetIp = (ushort)(instr.NextInMemoryAddress32.Offset + offsetValue);
+        ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress32.ToSegmentedAddress());
 
         BinaryOperationNode decrementCounter = _astBuilder.Assign(
             counter.DataType,

@@ -28,6 +28,8 @@ public class Alu32(State state) : Alu<uint, int, ulong, long>(state) {
         UpdateFlags(res);
         _state.CarryFlag = false;
         _state.OverflowFlag = false;
+        // Undocumented: real CPUs clear AF for logical operations
+        _state.AuxiliaryFlag = false;
         return res;
     }
 
@@ -64,6 +66,8 @@ public class Alu32(State state) : Alu<uint, int, ulong, long>(state) {
         bool doesNotFitInDWord = res != (int)res;
         _state.OverflowFlag = doesNotFitInDWord;
         _state.CarryFlag = doesNotFitInDWord;
+        UpdateFlags((uint)res);
+        _state.AuxiliaryFlag = false;
         return res;
     }
 
@@ -93,17 +97,17 @@ public class Alu32(State state) : Alu<uint, int, ulong, long>(state) {
         }
 
         bool oldCarry = _state.CarryFlag;
-        uint carry = (value >> (32 - count)) & 0x1;
-        uint res = value << count;
-        uint mask = (1u << (count - 1)) - 1u;
-        res |= (value >> (33 - count)) & mask;
-        if (oldCarry) {
-            res |= 1u << (count - 1);
-        }
+        // Build a 33-bit value [carry][value] and rotate left by count.
+        // Using ulong avoids the C# 32-bit shift mask that would otherwise
+        // turn `value << 32` into `value << 0` for count==1 etc.
+        ulong v = ((oldCarry ? 1UL : 0UL) << 32) | value;
+        ulong rotated = ((v << count) | (v >> (33 - count))) & ((1UL << 33) - 1UL);
+        uint res = (uint)rotated;
+        bool newCarry = (rotated & (1UL << 32)) != 0;
 
-        _state.CarryFlag = carry != 0;
+        _state.CarryFlag = newCarry;
         bool msb = (res & MsbMask) != 0;
-        _state.OverflowFlag = _state.CarryFlag ^ msb;
+        _state.OverflowFlag = newCarry ^ msb;
         return res;
     }
 
@@ -114,15 +118,13 @@ public class Alu32(State state) : Alu<uint, int, ulong, long>(state) {
         }
 
         bool oldCarry = _state.CarryFlag;
-        uint carry = (value >> (count - 1)) & 0x1;
-        uint mask = (1u << (32 - count)) - 1u;
-        uint res = (value >> count) & mask;
-        res |= value << (33 - count);
-        if (oldCarry) {
-            res |= 1u << (32 - count);
-        }
+        // Build a 33-bit value [carry][value] and rotate right by count.
+        ulong v = ((oldCarry ? 1UL : 0UL) << 32) | value;
+        ulong rotated = ((v >> count) | (v << (33 - count))) & ((1UL << 33) - 1UL);
+        uint res = (uint)rotated;
+        bool newCarry = (rotated & (1UL << 32)) != 0;
 
-        _state.CarryFlag = carry != 0;
+        _state.CarryFlag = newCarry;
         SetOverflowForRigthRotate32(res);
         return res;
     }
@@ -182,7 +184,8 @@ public class Alu32(State state) : Alu<uint, int, ulong, long>(state) {
         _state.CarryFlag = msbBefore != 0;
         uint res = value << count;
         UpdateFlags(res);
-        _state.OverflowFlag = ((res ^ value) & MsbMask) != 0;
+        // See Alu8.Shl for the OF derivation rationale.
+        _state.OverflowFlag = ((res & MsbMask) != 0) ^ _state.CarryFlag;
         return res;
     }
 
@@ -248,6 +251,8 @@ public class Alu32(State state) : Alu<uint, int, ulong, long>(state) {
         UpdateFlags(res);
         _state.CarryFlag = false;
         _state.OverflowFlag = false;
+        // Undocumented: real CPUs clear AF for logical operations
+        _state.AuxiliaryFlag = false;
         return res;
     }
 

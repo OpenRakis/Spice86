@@ -13,6 +13,7 @@ public class CpuTest {
     public byte[] Bytes { get; set; } = [];
     public CpuTestState Initial { get; set; } = new();
     public CpuTestState Final { get; set; } = new();
+    public CpuTestException? Exception { get; set; }
     public string Hash { get; set; } = string.Empty;
 
     /// <summary>
@@ -27,6 +28,7 @@ public class CpuTest {
             Name = dto.Name,
             Bytes = dto.Bytes.Select(i => (byte)i).ToArray(),
             Initial = ToInitialModel(dto.Initial),
+            Exception = ToExceptionModel(dto.Exception),
             Hash = dto.Hash
         };
 
@@ -41,6 +43,13 @@ public class CpuTest {
             Registers = ToInitialModel(dto.Registers),
             Ram = ValidateRam(dto.Ram ?? [])
         };
+    }
+
+    private static CpuTestException? ToExceptionModel(CpuTestExceptionDto? dto) {
+        if (dto is null || !dto.Number.HasValue || !dto.FlagAddress.HasValue) {
+            return null;
+        }
+        return new CpuTestException((int)dto.Number.Value, dto.FlagAddress.Value);
     }
 
     private static CpuTestState ToFinalModel(CpuTestStateDto dto, CpuRegisters initialRegisters) {
@@ -137,7 +146,13 @@ public class CpuTest {
         [JsonPropertyName("bytes")] public uint[] Bytes { get; set; } = Array.Empty<uint>();
         [JsonPropertyName("initial")] public CpuTestStateDto Initial { get; set; } = new();
         [JsonPropertyName("final")] public CpuTestStateDto Final { get; set; } = new();
+        [JsonPropertyName("exception")] public CpuTestExceptionDto? Exception { get; set; }
         [JsonPropertyName("hash")] public string Hash { get; set; } = string.Empty;
+    }
+
+    private class CpuTestExceptionDto {
+        [JsonPropertyName("number")] public uint? Number { get; set; }
+        [JsonPropertyName("flag_address")] public uint? FlagAddress { get; set; }
     }
 
     private class CpuTestStateDto {

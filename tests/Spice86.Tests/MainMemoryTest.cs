@@ -1,6 +1,8 @@
 ﻿namespace Spice86.Tests;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Shared.Emulator.Memory;
 
 using System;
@@ -8,7 +10,52 @@ using System;
 using Xunit;
 
 public class MainMemoryTest {
-    private readonly Memory _memory = new(new(), new Ram(64 * 1024), new A20Gate());
+    private readonly Memory _memory = new(new(), new Ram(64 * 1024), new A20Gate(), new RealModeMmu8086(), false);
+
+    [Fact]
+    public void StrictMemoryShouldAllowByteAtSegmentLimit() {
+        // Arrange
+        Memory memory = CreateMemory(new RealModeMmu386());
+
+        // Act
+        memory.UInt8[0, 0xFFFFu] = 0x12;
+
+        // Assert
+        Assert.Equal(0x12, memory.UInt8[0xFFFF]);
+    }
+
+    [Theory]
+    [InlineData(0xFFFFu)]
+    [InlineData(0x10000u)]
+    public void StrictMemoryDataWordOutsideSegmentShouldRaiseGeneralProtectionFault(uint offset) {
+        // Arrange
+        Memory memory = CreateMemory(new RealModeMmu386());
+
+        // Act & Assert
+        Assert.Throws<CpuGeneralProtectionFaultException>(() => memory.UInt16[0, offset] = 0x1234);
+    }
+
+    [Fact]
+    public void StrictMemoryStackWordOutsideSegmentShouldRaiseStackSegmentFault() {
+        // Arrange
+        Memory memory = CreateMemory(new RealModeMmu386());
+
+        // Act & Assert
+        Assert.Throws<CpuStackSegmentFaultException>(() => memory.UInt16[0, 0xFFFFu, SegmentAccessKind.Stack] = 0x1234);
+    }
+
+    [Fact]
+    public void WrapMemoryShouldAllowOffsetAboveSegmentLimit() {
+        // Arrange
+        Memory memory = CreateMemory(new RealModeMmu8086());
+
+        // Act
+        memory.UInt16[0, 0x10000u] = 0x1234;
+
+        // Assert
+        Assert.Equal(0x34, memory.UInt8[0]);
+        Assert.Equal(0x12, memory.UInt8[1]);
+    }
 
     [Fact]
     public void EnabledA20Gate_Should_ThrowExceptionAbove1MB() {
@@ -642,5 +689,9 @@ public class MainMemoryTest {
         // Assert
         Assert.Equal(0x0102, addr.Segment);
         Assert.Equal(0x0304, addr.Offset);
+    }
+
+    private static Memory CreateMemory(IMmu mmu) {
+        return new Memory(new(), new Ram(64 * 1024), new A20Gate(), mmu, false);
     }
 }

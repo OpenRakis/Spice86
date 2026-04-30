@@ -110,6 +110,8 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 
 ### Critical AI Agent Guidelines
 - **This is a C# project** - never suggest Python solutions
+- **No scripts outside the project** - do NOT create temporary scripts (Python, Bash, PowerShell, Node, etc.) anywhere on the filesystem, including `/tmp`, the user's home directory, or any location outside the workspace. Do not create throwaway helper scripts inside the workspace either. Use the available tools (file editing, grep, search, terminal one-liners) directly. If a multi-step computation is truly needed, run it as an inline shell one-liner in the terminal without writing a file.
+- **Use `tmp/` for temporary files** - if a temporary file must be written (e.g., captured command output, intermediate data), place it inside the `tmp/` folder at the root of the repository. Never write to `/tmp` or any path outside the workspace.
 - **Avoid complexity** - keep cyclomatic complexity low, prefer simple, linear code over nested conditionals
 - **No optional parameters** - avoid nullable or optional parameters in new code
 - **Minimal comments** - write self-documenting code with clear names; avoid obvious comments

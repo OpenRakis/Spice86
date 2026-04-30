@@ -28,6 +28,7 @@ public class InstructionExecutionHelper {
     private readonly ExecutionContextManager _executionContextManager;
     private readonly ReturnOperationsHelper _returnOperationsHelper;
     private readonly bool _failOnInvalidOpcode;
+    private readonly bool _allowIvtAddress0;
     public InstructionExecutionHelper(State state,
         IMemory memory,
         IOPortDispatcher ioPortDispatcher,
@@ -35,6 +36,7 @@ public class InstructionExecutionHelper {
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         ExecutionContextManager executionContextManager,
         bool failOnInvalidOpcode,
+        bool allowIvtAddress0,
         ILoggerService loggerService) {
         _loggerService = loggerService;
         State = state;
@@ -49,6 +51,7 @@ public class InstructionExecutionHelper {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _executionContextManager = executionContextManager;
         _failOnInvalidOpcode = failOnInvalidOpcode;
+        _allowIvtAddress0 = allowIvtAddress0;
         _returnOperationsHelper = new (state, Stack);
     }
     public State State { get; }
@@ -66,6 +69,7 @@ public class InstructionExecutionHelper {
     private FunctionHandler CurrentFunctionHandler => _executionContextManager.CurrentExecutionContext.FunctionHandler;
     private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
 
+    // Real mode: jump targets are already truncated to 16-bit IP by the parser/AST
     public void JumpFar(CfgInstruction instruction, ushort cs, ushort ip) {
         State.CS = cs;
         State.IP = ip;
@@ -91,18 +95,15 @@ public class InstructionExecutionHelper {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void FarCallWithReturnIpNextInstruction16(CfgInstruction instruction, SegmentedAddress target) {
-        SegmentedAddress returnAddress = instruction.NextInMemoryAddress;
+        SegmentedAddress returnAddress = instruction.NextInMemoryAddress32.ToSegmentedAddress();
         Stack.PushSegmentedAddress(returnAddress);
         HandleCall(instruction, CallType.FAR16, returnAddress, target);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void FarCallWithReturnIpNextInstruction32(CfgInstruction instruction, SegmentedAddress target) {
-        SegmentedAddress returnAddress = instruction.NextInMemoryAddress;
-        // CS padding
-        Stack.Push16(0);
-        Stack.PushSegmentedAddress32(returnAddress);
-        HandleCall(instruction, CallType.FAR32, returnAddress, target);
+    public void FarCallWithReturnIpNextInstruction32(CfgInstruction instruction, SegmentedAddress32 target) {
+        Stack.PushFarPointer32(instruction.NextInMemoryAddress32);
+        HandleCall(instruction, CallType.FAR32, instruction.NextInMemoryAddress32.ToSegmentedAddress(), target.ToSegmentedAddress());
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -143,9 +144,9 @@ public class InstructionExecutionHelper {
 
     private (SegmentedAddress, SegmentedAddress) DoInterruptWithoutBreakpoint(byte vectorNumber) {
         SegmentedAddress target = InterruptVectorTable[vectorNumber];
-        if (target.Segment == 0 && target.Offset == 0) {
+        if (target.Segment == 0 && target.Offset == 0 && !_allowIvtAddress0) {
             throw new UnhandledOperationException(State,
-                $"Int was called but vector was not initialized for vectorNumber={ConvertUtils.ToHex(vectorNumber)}");
+                $"Interrupt vector 0x{vectorNumber:X2} points to 0:0 (uninitialized). Use --AllowIvtAddress0 to permit this.");
         }
         SegmentedAddress expectedReturn = State.IpSegmentedAddress;
         Stack.Push16(State.Flags.FlagRegister16);
@@ -160,6 +161,12 @@ public class InstructionExecutionHelper {
     public void HandleInterruptRet(CfgInstruction instruction) {
         CurrentFunctionHandler.Ret(CallType.INTERRUPT, instruction);
         _returnOperationsHelper.InterruptRet();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void HandleInterruptRet32(CfgInstruction instruction) {
+        CurrentFunctionHandler.Ret(CallType.INTERRUPT, instruction);
+        _returnOperationsHelper.InterruptRet32();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -187,7 +194,7 @@ public class InstructionExecutionHelper {
     }
 
     public void MoveIpToEndOfInstruction(CfgInstruction instruction) {
-        State.IP = instruction.NextInMemoryAddress.Offset;
+        State.IP = (ushort)instruction.NextInMemoryAddress32.Offset;
     }
 
     public void ExecuteHlt(CfgInstruction instruction) {
@@ -212,21 +219,7 @@ public class InstructionExecutionHelper {
     public void Out16(ushort port, ushort val) => IoPortDispatcher.WriteWord(port, val);
 
     public void Out32(ushort port, uint val) => IoPortDispatcher.WriteDWord(port, val);
-    
-    public uint MemoryAddressEsDi => MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
 
-    public void AdvanceSI(short diff) {
-        State.SI = (ushort)(State.SI + diff);
-    }
-
-    public void AdvanceDI(short diff) {
-        State.DI = (ushort)(State.DI + diff);
-    }
-    public void AdvanceSIDI(short diff) {
-        AdvanceSI(diff);
-        AdvanceDI(diff);
-    }
-    
     public void HandleCpuException(CfgInstruction instruction, CpuException cpuException) {
         // Check if this is an invalid opcode exception and we should fail the emulator
         if (_failOnInvalidOpcode && cpuException is CpuInvalidOpcodeException) {
@@ -236,9 +229,9 @@ public class InstructionExecutionHelper {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug(cpuException,"{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
         }
-        if (cpuException.ErrorCode != null) {
-            Stack.Push16(cpuException.ErrorCode.Value);
-        }
+        // Real-mode interrupts do NOT push an error code on the stack — that is a
+        // protected-mode behavior. Spice86 is real-mode only, so any error code
+        // carried by the exception object is informational and must not be pushed.
         try {
             // Link to the interrupt handler will likely need to be added
             instruction.IncreaseMaxSuccessorsCount(InterruptVectorTable[cpuException.InterruptVector]);

@@ -333,4 +333,12 @@ public sealed class Configuration : CommandSettings {
     [DefaultValue(JitMode.InterpretedThenCompiled)]
     public JitMode JitMode { get; init; }
 
+    /// <summary>
+    /// Controls whether an INT instruction whose IVT entry is 0:0 is treated as valid.
+    /// When true, execution continues at physical address 0. When false (default), a fatal exception is raised
+    /// to catch uninitialized IVT entries.
+    /// </summary>
+    [CommandOption("--AllowIvtAddress0")]
+    public bool AllowIvtAddress0 { get; init; }
+
 }

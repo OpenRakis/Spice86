@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Memory.Indexable;
 
 using Spice86.Core.Emulator.Memory.Indexer;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
@@ -54,6 +55,6 @@ public class ByteArrayBasedIndexable : Indexable {
     /// <param name="array">The byte array used as RAM storage.</param>
     public ByteArrayBasedIndexable(byte[] array) {
         ReaderWriter = new ByteArrayReaderWriter(array);
-        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) = InstantiateIndexersFromByteReaderWriter(ReaderWriter);
+        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) = InstantiateIndexersFromByteReaderWriter(ReaderWriter, new RealModeMmu8086());
     }
 }

@@ -5,11 +5,14 @@ namespace Spice86.Tests.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq.Expressions;
@@ -17,7 +20,7 @@ using System.Linq.Expressions;
 using Xunit;
 
 public class AstExpressionBuilderTest {
-    private readonly Memory _memory = new(new(), new Ram(64), new());
+    private readonly Memory _memory = new(new(), new Ram(64), new(), new RealModeMmu386(), false);
     private readonly State _state = new(CpuModel.INTEL_80286);
     private readonly AstExpressionBuilder _astExpressionBuilder = new();
 
@@ -78,6 +81,33 @@ public class AstExpressionBuilderTest {
 
         // Assert
         Assert.Equal(0xAB, _memory.UInt8[1, 2]);
+    }
+
+    [Fact]
+    public void TestSegmentedPointerWithStrictMemoryPreservesWidenedOffset() {
+        // Arrange
+        Memory memory = new(new(), new Ram(64 * 1024), new(), new RealModeMmu386(), false);
+        ConstantNode segment = new(DataType.UINT16, 0);
+        ConstantNode offset = new(DataType.UINT32, 0x10000);
+        SegmentedPointerNode pointerNode = new(DataType.UINT16, segment, null, offset);
+
+        // Act & Assert
+        Assert.Throws<CpuGeneralProtectionFaultException>(() => ExecuteAssignment(memory, pointerNode, 0x1234));
+    }
+
+    [Fact]
+    public void TestStackSegmentedPointerWithStrictMemoryRaisesStackSegmentFault() {
+        // Arrange
+        Memory memory = new(new(), new Ram(64 * 1024), new(), new RealModeMmu386(), false);
+        _state.SS = 0;
+        ConstantNode value = new(DataType.UINT16, 0x1234);
+        ConstantNode offset = new(DataType.UINT32, 0xFFFF);
+        SegmentRegisterNode stackSegment = new((int)SegmentRegisterIndex.SsIndex);
+        SegmentedPointerNode pointerNode = new(DataType.UINT16, stackSegment, null, offset);
+        BinaryOperationNode operation = new(DataType.UINT16, pointerNode, BinaryOperation.ASSIGN, value);
+
+        // Act & Assert
+        Assert.Throws<CpuStackSegmentFaultException>(() => Execute(memory, operation));
     }
 
     // ── Register tests ──
@@ -731,6 +761,37 @@ public class AstExpressionBuilderTest {
         Assert.Equal(5, _state.AX);
     }
 
+    // ── MoveIpNextNode tests ──
+
+    [Fact]
+    public void MoveIpNextNodeAtSegmentBoundaryShouldThrowGeneralProtectionFault() {
+        // Arrange: nextIp = 0x10000 (past 0xFFFF segment limit) with 386 MMU
+        Memory memory = new(new(), new Ram(64 * 1024), new(), new RealModeMmu386(), false);
+        State state = new(CpuModel.INTEL_80386);
+        state.CS = 0;
+        ConstantNode nextIp = new(DataType.UINT32, 0x10000);
+        MoveIpNextNode moveIpNode = new(nextIp);
+
+        // Act & Assert
+        AstExpressionBuilder builder = new();
+        Expression expression = moveIpNode.Accept(builder);
+        Action<State, Memory> action = builder.ToAction(expression).Compile();
+        Assert.Throws<CpuGeneralProtectionFaultException>(() => action(state, memory));
+    }
+
+    [Fact]
+    public void MoveIpNextNodeWithinSegmentShouldSetIpCorrectly() {
+        // Arrange: nextIp = 0x1234 (well within segment limit)
+        ConstantNode nextIp = new(DataType.UINT32, 0x1234);
+        MoveIpNextNode moveIpNode = new(nextIp);
+
+        // Act
+        Execute(moveIpNode);
+
+        // Assert: IP should be set to (ushort)0x1234
+        Assert.Equal((ushort)0x1234, _state.IP);
+    }
+
     // ── Helpers ──
 
     private ParameterExpression[] GetParameters() {
@@ -753,9 +814,13 @@ public class AstExpressionBuilderTest {
     }
 
     private void Execute(IVisitableAstNode node) {
+        Execute(_memory, node);
+    }
+
+    private void Execute(Memory memory, IVisitableAstNode node) {
         Expression expression = node.Accept(_astExpressionBuilder);
         Action<State, Memory> func = _astExpressionBuilder.ToAction(expression).Compile();
-        func(_state, _memory);
+        func(_state, memory);
     }
 
     private void ExecuteAssignment(ValueNode destination, byte value) {
@@ -764,5 +829,12 @@ public class AstExpressionBuilderTest {
         
         // Act
         Execute(operation);
+    }
+
+    private void ExecuteAssignment(Memory memory, ValueNode destination, ushort value) {
+        ConstantNode valueNode = new(destination.DataType, value);
+        BinaryOperationNode operation = new(destination.DataType, destination, BinaryOperation.ASSIGN, valueNode);
+
+        Execute(memory, operation);
     }
 }

@@ -43,6 +43,7 @@ using Spice86.Core.Emulator.Http;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Mcp;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.StateSerialization;
@@ -178,8 +179,11 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("A20 gate created...");
         }
 
+        IMmu mmu = RealModeMmuFactory.FromCpuModel(configuration.CpuModel);
+
         Memory memory = new(memoryReadWriteBreakpoints,
             ram, a20Gate,
+            mmu,
             initializeResetVector: configuration.InitializeDOS is true);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -291,7 +295,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, functionCatalogue,
-            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, loggerService, cfgNodeExecutionCompiler, cpuHeavyLogger);
+            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, loggerService, cfgNodeExecutionCompiler, cpuHeavyLogger);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CfgCpu created...");

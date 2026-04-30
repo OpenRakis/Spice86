@@ -8,9 +8,11 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using Xunit;
 
@@ -33,7 +35,7 @@ public class CfgNodeFeederTest : IDisposable {
     private static readonly SegmentedAddress ZeroAddress = SegmentedAddress.ZERO;
     private static readonly SegmentedAddress EndOfMov0Address = new(0, MovRegImm16Length);
 
-    private Memory _memory = new(new(), new Ram(64), new A20Gate());
+    private Memory _memory = new(new(), new Ram(64), new A20Gate(), new RealModeMmu386(), false);
     private State _state = new(CpuModel.INTEL_80286);
     private CfgNodeExecutionCompiler? _compiler;
 
@@ -41,7 +43,7 @@ public class CfgNodeFeederTest : IDisposable {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
-        _memory = new(memoryBreakpoints, new Ram(64), new A20Gate());
+        _memory = new(memoryBreakpoints, new Ram(64), new A20Gate(), new RealModeMmu386(), false);
         _state = new State(CpuModel.INTEL_80286);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(new PauseHandler(loggerService), _state, _memory, memoryBreakpoints, ioBreakpoints);
         InstructionReplacerRegistry replacerRegistry = new();
@@ -55,8 +57,12 @@ public class CfgNodeFeederTest : IDisposable {
     }
 
     private void WriteMovReg16(SegmentedAddress address, byte opcode, ushort value) {
-        _memory.UInt8[address] = opcode;
-        _memory.UInt16[address + 1] = value;
+        _memory.UInt8[ToPhysicalAddress(address)] = opcode;
+        _memory.UInt16[ToPhysicalAddress(address + 1)] = value;
+    }
+
+    private static uint ToPhysicalAddress(SegmentedAddress address) {
+        return MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset);
     }
 
     private void WriteMovAx(SegmentedAddress address, ushort value) {

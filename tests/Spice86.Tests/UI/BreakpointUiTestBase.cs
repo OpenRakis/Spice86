@@ -11,6 +11,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Logging;
@@ -57,7 +58,7 @@ public abstract class BreakpointUiTestBase : IDisposable {
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
-        Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
+        Memory memory = new(memoryBreakpoints, ram, a20Gate, new RealModeMmu386(), true);
         return (memory, memoryBreakpoints, ioBreakpoints);
     }
 

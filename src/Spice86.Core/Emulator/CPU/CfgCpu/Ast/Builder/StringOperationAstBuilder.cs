@@ -68,7 +68,7 @@ public class StringOperationAstBuilder {
 
             BlockNode loopBody = new BlockNode(coreOperation, decrementCx, updateContinue);
             WhileNode whileLoop = builder.ControlFlow.While(combinedCondition, loopBody);
-            return builder.WithIpAdvancement(instruction, new BlockNode(shouldContinue, whileLoop));
+            return builder.WithIpAdvancement(instruction, shouldContinue, whileLoop);
         } else {
             // For REP or instructions that don't change flags, no flag check needed
             BlockNode loopBody = new BlockNode(coreOperation, decrementCx);

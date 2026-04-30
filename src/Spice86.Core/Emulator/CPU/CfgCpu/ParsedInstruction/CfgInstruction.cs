@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Shared.Emulator.Memory;
 
 using InstructionNode = Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.InstructionNode;
@@ -96,7 +97,7 @@ public sealed class CfgInstruction : CfgNode {
     /// </summary>
     private void UpdateLength() {
         Length = (byte)FieldsInOrder.Sum(field => field.Length);
-        NextInMemoryAddress = new(Address.Segment, (ushort)(Address.Offset + Length));
+        NextInMemoryAddress32 = new(Address.Segment, (uint)Address.Offset + Length);
     }
 
     /// <summary>
@@ -142,7 +143,12 @@ public sealed class CfgInstruction : CfgNode {
     public LockPrefix? LockPrefix { get; }
     public byte Length { get; private set; }
 
-    public SegmentedAddress NextInMemoryAddress { get; private set; }
+    /// <summary>The 32-bit segmented address of the instruction that follows this one in memory.
+    /// The offset is the raw sum of the instruction's offset and its length, and may exceed 0xFFFF
+    /// for instructions that cross the 64 KB real-mode segment boundary.
+    /// Callers that need a real-mode IP value must cast the offset to <see cref="ushort"/>.
+    /// </summary>
+    public SegmentedAddress32 NextInMemoryAddress32 { get; private set; }
 
     public List<InstructionPrefix> InstructionPrefixes { get; }
 

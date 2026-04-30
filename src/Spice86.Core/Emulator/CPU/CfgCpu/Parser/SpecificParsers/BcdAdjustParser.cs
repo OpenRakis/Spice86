@@ -18,7 +18,7 @@ public class BcdAdjustParser : BaseInstructionParser {
 
     public CfgInstruction ParseDecimalAdjust(ParsingContext context, BinaryOperation adjustOp, InstructionOperation displayOp) {
         bool isSubtract = adjustOp == BinaryOperation.MINUS;
-        CfgInstruction instr = new(context.Address, context.OpcodeField, 1);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode al = _astBuilder.Register.Reg8(RegisterIndex.AxIndex);
         VariableDeclarationNode initialAlDeclaration = _astBuilder.DeclareVariable(DataType.UINT8, "initialAl", al);
         VariableDeclarationNode initialCfDeclaration = _astBuilder.DeclareVariable(DataType.BOOL, "initialCf", _astBuilder.Flag.Carry());
@@ -31,8 +31,13 @@ public class BcdAdjustParser : BaseInstructionParser {
             _astBuilder.Assign(DataType.UINT8, al, new BinaryOperationNode(DataType.UINT8, al, adjustOp, _astBuilder.Constant.ToNode((byte)6)))
         };
         if (isSubtract) {
+            // Borrow occurs when initialAl < 6. Final CF = old_CF OR borrow.
+            ValueNode borrow = new BinaryOperationNode(DataType.BOOL,
+                initialAlDeclaration.Reference,
+                BinaryOperation.LESS_THAN,
+                _astBuilder.Constant.ToNode((byte)6));
             lowTrueStatements.Add(_astBuilder.Assign(DataType.BOOL, finalCarryDeclaration.Reference,
-                new BinaryOperationNode(DataType.BOOL, _astBuilder.Flag.Carry(), BinaryOperation.LOGICAL_OR, initialCfDeclaration.Reference)));
+                new BinaryOperationNode(DataType.BOOL, borrow, BinaryOperation.LOGICAL_OR, initialCfDeclaration.Reference)));
         }
         lowTrueStatements.Add(_astBuilder.Assign(DataType.BOOL, finalAuxDeclaration.Reference, _astBuilder.Constant.ToNode(true)));
         BlockNode adjustLowTrueCase = new BlockNode(lowTrueStatements.ToArray());
@@ -65,13 +70,14 @@ public class BcdAdjustParser : BaseInstructionParser {
         execStatements.Add(updateFlags);
         execStatements.Add(_astBuilder.Assign(DataType.BOOL, _astBuilder.Flag.Auxiliary(), finalAuxDeclaration.Reference));
         execStatements.Add(_astBuilder.Assign(DataType.BOOL, _astBuilder.Flag.Carry(), finalCarryDeclaration.Reference));
+        execStatements.Add(_astBuilder.Assign(DataType.BOOL, _astBuilder.Flag.Overflow(), _astBuilder.Constant.ToNode(false)));
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, execStatements.ToArray());
         instr.AttachAsts(displayAstNode, execAst);
         return instr;
     }
 
     public CfgInstruction ParseAsciiAdjust(ParsingContext context, BinaryOperation adjustOp, InstructionOperation displayOp) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, 1);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode al = _astBuilder.Register.Reg8(RegisterIndex.AxIndex);
         ValueNode ax = _astBuilder.Register.Reg16(RegisterIndex.AxIndex);
         VariableDeclarationNode finalAuxDeclaration = _astBuilder.DeclareVariable(DataType.BOOL, "finalAuxiliaryFlag", _astBuilder.Constant.ToNode(false));
@@ -101,16 +107,17 @@ public class BcdAdjustParser : BaseInstructionParser {
             finalAuxDeclaration,
             finalCarryDeclaration,
             adjustIf,
-            _astBuilder.Assign(DataType.UINT8, al, new BinaryOperationNode(DataType.UINT8, al, BinaryOperation.BITWISE_AND, _astBuilder.Constant.ToNode((byte)0x0F))),
             updateFlags,
+            _astBuilder.Assign(DataType.UINT8, al, new BinaryOperationNode(DataType.UINT8, al, BinaryOperation.BITWISE_AND, _astBuilder.Constant.ToNode((byte)0x0F))),
             _astBuilder.Assign(DataType.BOOL, _astBuilder.Flag.Auxiliary(), finalAuxDeclaration.Reference),
-            _astBuilder.Assign(DataType.BOOL, _astBuilder.Flag.Carry(), finalCarryDeclaration.Reference));
+            _astBuilder.Assign(DataType.BOOL, _astBuilder.Flag.Carry(), finalCarryDeclaration.Reference),
+            _astBuilder.Assign(DataType.BOOL, _astBuilder.Flag.Overflow(), _astBuilder.Constant.ToNode(false)));
         instr.AttachAsts(displayAstNode, execAst);
         return instr;
     }
 
     public CfgInstruction ParseAam(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, 1);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         InstructionField<byte> valueField = _instructionReader.UInt8.NextField(false);
         instr.AddField(valueField);
         ValueNode valueNode = _astBuilder.InstructionField.ToNode(valueField);
@@ -123,6 +130,8 @@ public class BcdAdjustParser : BaseInstructionParser {
             "result",
             new BinaryOperationNode(DataType.UINT8, alDeclaration.Reference, BinaryOperation.MODULO, valueDeclaration.Reference));
         MethodCallNode updateFlags = new MethodCallNode("Alu8", "UpdateFlags", resultDeclaration.Reference);
+        ValueNode preFaultFlagsValue = new BinaryOperationNode(DataType.UINT8, alDeclaration.Reference, BinaryOperation.RIGHT_SHIFT, _astBuilder.Constant.ToNode((byte)1));
+        MethodCallNode preFaultUpdateFlags = new MethodCallNode("Alu8", "UpdateFlags", preFaultFlagsValue);
         ValueNode isZeroCondition = new BinaryOperationNode(DataType.BOOL, valueDeclaration.Reference, BinaryOperation.EQUAL, _astBuilder.Constant.ToNode((byte)0));
         IfElseNode divisionCheck = _astBuilder.ControlFlow.ThrowIf<CpuDivisionErrorException>(isZeroCondition, "Division by zero");
         InstructionNode displayAst = new InstructionNode(InstructionOperation.AAM);
@@ -130,6 +139,7 @@ public class BcdAdjustParser : BaseInstructionParser {
             instr,
             valueDeclaration,
             alDeclaration,
+            preFaultUpdateFlags,
             divisionCheck,
             resultDeclaration,
             _astBuilder.Assign(DataType.UINT8, ah, new BinaryOperationNode(DataType.UINT8, alDeclaration.Reference, BinaryOperation.DIVIDE, valueDeclaration.Reference)),
@@ -140,7 +150,7 @@ public class BcdAdjustParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseAad(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, 1);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         InstructionField<byte> valueField = _instructionReader.UInt8.NextField(false);
         instr.AddField(valueField);
         ValueNode valueNode = _astBuilder.InstructionField.ToNode(valueField);

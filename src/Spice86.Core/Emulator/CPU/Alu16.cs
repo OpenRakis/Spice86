@@ -34,6 +34,8 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         UpdateFlags(res);
         _state.CarryFlag = false;
         _state.OverflowFlag = false;
+        // Undocumented: real CPUs clear AF for logical operations
+        _state.AuxiliaryFlag = false;
         return res;
     }
     
@@ -71,6 +73,8 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         bool doesNotFitInWord = res != (short)res;
         _state.OverflowFlag = doesNotFitInWord;
         _state.CarryFlag = doesNotFitInWord;
+        UpdateFlags((ushort)res);
+        _state.AuxiliaryFlag = false;
         return res;
     }
 
@@ -94,8 +98,14 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
     }
 
     public override ushort Rcl(ushort value, byte count) {
-        count = (byte) ((count & ShiftCountMask) % 17);
+        int maskedCount = count & ShiftCountMask;
+        if (maskedCount == 0) {
+            return value;
+        }
+
+        count = (byte)(maskedCount % 17);
         if (count == 0) {
+            _state.OverflowFlag = _state.CarryFlag ^ ((value & MsbMask) != 0);
             return value;
         }
 
@@ -115,8 +125,14 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
     }
 
     public override ushort Rcr(ushort value, int count) {
-        count = (count & ShiftCountMask) % 17;
+        int maskedCount = count & ShiftCountMask;
+        if (maskedCount == 0) {
+            return value;
+        }
+
+        count = maskedCount % 17;
         if (count == 0) {
+            SetOverflowForRigthRotate16(value);
             return value;
         }
 
@@ -135,31 +151,30 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
     }
 
     public override ushort Rol(ushort value, byte count) {
-        count = (byte) ((count & ShiftCountMask) % 16);
-        if (count == 0) {
+        int maskedCount = count & ShiftCountMask;
+        if (maskedCount == 0) {
             return value;
         }
-
-        int carry = value >> 16 - count & 0x1;
-        ushort res = (ushort)(value << count);
-        res = (ushort)(res | value >> 16 - count);
-        _state.CarryFlag = carry != 0;
+        int effective = maskedCount % 16;
+        ushort res = effective == 0
+            ? value
+            : (ushort)((value << effective) | (value >> 16 - effective));
+        _state.CarryFlag = (res & 0x1) != 0;
         bool msb = (res & MsbMask) != 0;
         bool lsb = (res & 0x01) != 0;
         _state.OverflowFlag = msb ^ lsb;
         return res;
     }
     public override ushort Ror(ushort value, int count) {
-        count = (count & ShiftCountMask) % 16;
-        if (count == 0) {
+        int maskedCount = count & ShiftCountMask;
+        if (maskedCount == 0) {
             return value;
         }
-
-        int carry = value >> count - 1 & 0x1;
-        int mask = (1 << 16 - count) - 1;
-        ushort res = (ushort)(value >> count & mask);
-        res = (ushort)(res | value << 16 - count);
-        _state.CarryFlag = carry != 0;
+        int effective = maskedCount % 16;
+        ushort res = effective == 0
+            ? value
+            : (ushort)((value >> effective) | (value << 16 - effective));
+        _state.CarryFlag = (res & MsbMask) != 0;
         SetOverflowForRigthRotate16(res);
         return res;
     }
@@ -188,23 +203,28 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.CarryFlag = msbBefore != 0;
         ushort res = (ushort)(value << count);
         UpdateFlags(res);
-        _state.OverflowFlag = ((res ^ value) & MsbMask) != 0;
+        // See Alu8.Shl for the OF derivation rationale.
+        _state.OverflowFlag = ((res & MsbMask) != 0) ^ _state.CarryFlag;
         return res;
     }
 
     public override ushort Shld(ushort destination, ushort source, byte count) {
         count &= ShiftCountMask;
-        switch (count) {
-            case 0:
-                return destination;
-            case > 16:
-                // Undefined. We shift the source in again.
-                return (ushort)(source << (count - 16));
+        if (count == 0) {
+            return destination;
         }
 
+        // Real 386 behavior: for count <= 16 the documented SHLD formula applies;
+        // for count > 16 (the 5-bit mask allows up to 31) the destination is fully
+        // shifted out and the result equals ROL16(source, count - 16). Both branches
+        // are expressed as a 32-bit ROL on a paired value, taking the upper 16 bits.
+        uint combined = count > 16
+            ? ((uint)source << 16) | source
+            : ((uint)destination << 16) | source;
+        uint rotated = (combined << count) | (combined >> (32 - count));
         ushort msbBefore = (ushort)(destination & MsbMask);
-        _state.CarryFlag = (destination >> (16 - count) & 1) != 0;
-        ushort res = (ushort)((destination << count) | (source >> (16 - count)));
+        _state.CarryFlag = ((combined >> (32 - count)) & 1) != 0;
+        ushort res = (ushort)(rotated >> 16);
         UpdateFlags(res);
         ushort msb = (ushort)(res & MsbMask);
         _state.OverflowFlag = msb != msbBefore;
@@ -217,22 +237,16 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
             return destination;
         }
 
+        // Mirror of SHLD: for count > 16 the destination is fully shifted out and
+        // the result equals ROR16(source, count - 16). Expressed as a 32-bit ROR
+        // on a paired value, taking the lower 16 bits.
+        uint combined = count > 16
+            ? ((uint)source << 16) | source
+            : ((uint)source << 16) | destination;
+        uint rotated = (combined >> count) | (combined << (32 - count));
         ushort msbBefore = (ushort)(destination & MsbMask);
-        ushort res;
-
-        if (count > 16) {
-            // Undefined. We shift the source in again (opposite direction of SHLD).
-            int shiftFromSource = count - 16;
-            res = (ushort)(source >> shiftFromSource);
-
-            // Carry flag is the last bit shifted out of the 32-bit concatenation.
-            // For count > 16, this is bit (count - 17) of the source.
-            _state.CarryFlag = ((source >> (count - 17)) & 1) != 0;
-        } else {
-            _state.CarryFlag = ((destination >> (count - 1)) & 1) != 0;
-            res = (ushort)((destination >> count) | (source << (16 - count)));
-        }
-
+        _state.CarryFlag = ((combined >> (count - 1)) & 1) != 0;
+        ushort res = (ushort)rotated;
         UpdateFlags(res);
         ushort msb = (ushort)(res & MsbMask);
         _state.OverflowFlag = msb != msbBefore;
@@ -270,6 +284,8 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         UpdateFlags(res);
         _state.CarryFlag = false;
         _state.OverflowFlag = false;
+        // Undocumented: real CPUs clear AF for logical operations
+        _state.AuxiliaryFlag = false;
         return res;
     }
 

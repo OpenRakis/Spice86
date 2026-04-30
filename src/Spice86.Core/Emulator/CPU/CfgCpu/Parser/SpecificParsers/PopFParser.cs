@@ -26,4 +26,5 @@ public class PopFParser : BaseInstructionParser {
         instr.AttachAsts(displayAst, execAst);
         return instr;
     }
+
 }

@@ -38,6 +38,10 @@ public class InstructionFieldAstBuilder(ConstantAstBuilder constant, PointerAstB
         return SegmentedAddress.ToNode(field);
     }
 
+    public SegmentedAddressNode ToNode(InstructionField<SegmentedAddress32> field) {
+        return SegmentedAddress.ToNode(field);
+    }
+
     public DataType ToType(InstructionField<byte> field) {
         return DataType.UINT8;
     }
