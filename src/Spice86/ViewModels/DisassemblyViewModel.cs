@@ -525,7 +525,6 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
                 Pause(message);
             },
             condition,
-            message,
             conditionExpression);
     }
 

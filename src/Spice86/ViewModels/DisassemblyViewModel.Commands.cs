@@ -88,7 +88,7 @@ public partial class DisassemblyViewModel {
             string message = $"Execution breakpoint was reached at address {debuggerLine.SegmentedAddress}.";
             _breakpointsViewModel.AddAddressBreakpoint(debuggerLine.Address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
                 Pause(message);
-            }, null, message, null);
+            }, null, null);
         }
     }
 
@@ -153,7 +153,7 @@ public partial class DisassemblyViewModel {
             string message = $"Execution breakpoint was reached at address {debuggerLine.SegmentedAddress}.";
             _breakpointsViewModel.AddAddressBreakpoint(debuggerLine.Address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
                 Pause(message);
-            }, null, message, null);
+            }, null, null);
         }
     }
 

@@ -20,8 +20,7 @@ using Spice86.ViewModels.Services;
 using System.Collections.ObjectModel;
 
 public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBreakpoints {
-    private const string ExecutionBreakpoint = "Execution breakpoint";
-    private const string MemoryRangeBreakpoint = "Memory range breakpoint";
+
     private readonly BreakpointConditionService _conditionService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
@@ -58,20 +57,20 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                     ExecutionAddressValue = ConvertUtils.ToHex32((uint)
                         SelectedBreakpoint.Address);
                     ExecutionConditionExpression = SelectedBreakpoint.ConditionExpression;
-                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Execution");
+                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.TabType == BreakpointTabType.Execution);
                     break;
                 case BreakPointType.CPU_CYCLES:
                     CyclesValue = SelectedBreakpoint.Address;
-                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Cycles");
+                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.TabType == BreakpointTabType.Cycles);
                     break;
                 case BreakPointType.CPU_INTERRUPT:
 
                     InterruptNumber = ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
-                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Interrupt");
+                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.TabType == BreakpointTabType.Interrupt);
                     break;
                 case BreakPointType.IO_ACCESS:
                     IoPortNumber = ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
-                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "I/O Port");
+                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.TabType == BreakpointTabType.IoPort);
                     break;
                 case BreakPointType.MEMORY_ACCESS:
                 case BreakPointType.MEMORY_READ:
@@ -81,7 +80,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                     SelectedMemoryBreakpointType = SelectedBreakpoint.Type;
                     // Note: Value condition cannot be recovered from the breakpoint function, so it's cleared when editing
                     MemoryBreakpointValueCondition = null;
-                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Memory");
+                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.TabType == BreakpointTabType.Memory);
                     break;
             }
             CreatingBreakpoint = true;
@@ -92,11 +91,11 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
 
     public AvaloniaList<BreakpointTypeTabItemViewModel> BreakpointTabs { get; } = new AvaloniaList<BreakpointTypeTabItemViewModel>
     {
-        new BreakpointTypeTabItemViewModel { Header = "Cycles", IsSelected = false },
-        new BreakpointTypeTabItemViewModel { Header = "Memory", IsSelected = false },
-        new BreakpointTypeTabItemViewModel { Header = "Execution", IsSelected = false },
-        new BreakpointTypeTabItemViewModel { Header = "Interrupt", IsSelected = false },
-        new BreakpointTypeTabItemViewModel { Header = "I/O Port", IsSelected = false }
+        new BreakpointTypeTabItemViewModel { TabType = BreakpointTabType.Cycles, IsSelected = false },
+        new BreakpointTypeTabItemViewModel { TabType = BreakpointTabType.Memory, IsSelected = false },
+        new BreakpointTypeTabItemViewModel { TabType = BreakpointTabType.Execution, IsSelected = false },
+        new BreakpointTypeTabItemViewModel { TabType = BreakpointTabType.Interrupt, IsSelected = false },
+        new BreakpointTypeTabItemViewModel { TabType = BreakpointTabType.IoPort, IsSelected = false }
     };
 
     private BreakpointTypeTabItemViewModel? _selectedBreakpointTypeTab;
@@ -124,15 +123,15 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
 
     public State State => _state;
 
-    public bool IsExecutionBreakpointSelected => BreakpointTabs.Any(x => x.Header == "Execution" && x.IsSelected);
+    public bool IsExecutionBreakpointSelected => BreakpointTabs.Any(x => x.TabType == BreakpointTabType.Execution && x.IsSelected);
 
-    public bool IsMemoryBreakpointSelected => BreakpointTabs.Any(x => x.Header == "Memory" && x.IsSelected);
+    public bool IsMemoryBreakpointSelected => BreakpointTabs.Any(x => x.TabType == BreakpointTabType.Memory && x.IsSelected);
 
-    public bool IsCyclesBreakpointSelected => BreakpointTabs.Any(x => x.Header == "Cycles" && x.IsSelected);
+    public bool IsCyclesBreakpointSelected => BreakpointTabs.Any(x => x.TabType == BreakpointTabType.Cycles && x.IsSelected);
 
-    public bool IsInterruptBreakpointSelected => BreakpointTabs.Any(x => x.Header == "Interrupt" && x.IsSelected);
+    public bool IsInterruptBreakpointSelected => BreakpointTabs.Any(x => x.TabType == BreakpointTabType.Interrupt && x.IsSelected);
 
-    public bool IsIoPortBreakpointSelected => BreakpointTabs.Any(x => x.Header == "I/O Port" && x.IsSelected);
+    public bool IsIoPortBreakpointSelected => BreakpointTabs.Any(x => x.TabType == BreakpointTabType.IoPort && x.IsSelected);
 
     [ObservableProperty]
     private bool _creatingBreakpoint;
@@ -214,7 +213,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                 () => {
                     PauseAndReportAddress(
                     ExecutionAddressValue);
-                }, condition, ExecutionBreakpoint, conditionExpression);
+                }, condition, conditionExpression);
             BreakpointCreated?.Invoke(executionVm);
         } else if (IsMemoryBreakpointSelected) {
             TryCreateMemoryBreakpointFromForm(CreateMemoryBreakpointAtAddress);
@@ -229,7 +228,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                 false,
                 () => {
                     PauseAndReportCycles(CyclesValue.Value);
-                }, null, "Cycles breakpoint", null);
+                }, null, null);
             BreakpointCreated?.Invoke(cyclesVm);
         } else if (IsInterruptBreakpointSelected) {
             if (!AddressAndValueParser.TryParseAddressString(InterruptNumber, _state, out uint? interruptNumber)) {
@@ -241,7 +240,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                 false,
                 () => {
                     PauseAndReportInterrupt(interruptNumber.Value);
-                }, null, "Interrupt breakpoint", null);
+                }, null, null);
             BreakpointCreated?.Invoke(interruptVm);
         } else if (IsIoPortBreakpointSelected) {
             if (!AddressAndValueParser.TryParseAddressString(IoPortNumber, _state, out uint? ioPortNumber)) {
@@ -253,7 +252,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                 false,
                 () => {
                     PauseAndReportIoPort((ushort)ioPortNumber.Value);
-                }, null, "I/O Port breakpoint", null);
+                }, null, null);
             BreakpointCreated?.Invoke(ioPortVm);
         }
         CreatingBreakpoint = false;
@@ -267,7 +266,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             false,
             () => {
                 PauseAndReportAddressRange(MemoryBreakpointStartAddress, MemoryBreakpointEndAddress);
-            }, additionalTriggerCondition, MemoryRangeBreakpoint, null);
+            }, additionalTriggerCondition, null);
         BreakpointCreated?.Invoke(breakpointVm);
     }
 
@@ -376,10 +375,9 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             bool isRemovedOnTrigger,
             Action onReached,
             Func<long, bool>? additionalTriggerCondition,
-            string comment,
             string? conditionExpression) {
         return AddAddressRangeBreakpoint(trigger, trigger, type, isRemovedOnTrigger, onReached,
-            additionalTriggerCondition, comment, conditionExpression);
+            additionalTriggerCondition, conditionExpression);
     }
 
     public BreakpointViewModel AddAddressRangeBreakpoint(
@@ -389,13 +387,12 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             bool isRemovedOnTrigger,
             Action onReached,
             Func<long, bool>? additionalTriggerCondition,
-            string comment,
             string? conditionExpression) {
         RemoveFirstIfEdited();
         var breakpointViewModel = new BreakpointViewModel(
                     this,
                     _emulatorBreakpointsManager,
-                    trigger, endTrigger, type, isRemovedOnTrigger, onReached, additionalTriggerCondition, comment, conditionExpression);
+                    trigger, endTrigger, type, isRemovedOnTrigger, onReached, additionalTriggerCondition, conditionExpression);
         AddBreakpointInternal(breakpointViewModel);
         return breakpointViewModel;
     }
@@ -503,7 +500,6 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             false,
             onReached,
             condition,
-            ExecutionBreakpoint,
             conditionExpression);
 
         if (!breakpointData.IsEnabled) {
