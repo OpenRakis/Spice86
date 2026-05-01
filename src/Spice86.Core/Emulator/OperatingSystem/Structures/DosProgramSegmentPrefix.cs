@@ -26,7 +26,6 @@ public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     public const ushort PspSizeInParagraphs = 0x10;
 
     public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
-        CurrentSize = DosMemoryManager.LastFreeSegment;
     }
 
     /// <summary>

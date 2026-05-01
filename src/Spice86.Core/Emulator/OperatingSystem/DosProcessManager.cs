@@ -242,7 +242,13 @@ public class DosProcessManager : IDosBatchExecutionHost {
 
         rootPsp.Exit[0] = IntOpcode;
         rootPsp.Exit[1] = Int20TerminateNumber;
-        rootPsp.CurrentSize = DosMemoryManager.LastFreeSegment;
+        // CurrentSize reflects only the PSP itself (16 paragraphs), not all of conventional memory.
+        // Programs that read the parent (COMMAND.COM) PSP[0x02] to compute their TSR resident
+        // size (DX for INT 21h/31h) must receive a realistic small value, not LastFreeSegment
+        // (0x9FFF). Using 0x9FFF caused games like Maupiti Island to pass ~40959 paragraphs
+        // as DX, which made TryModifyBlock fail after expanding the block to maximum, leaving
+        // all conventional memory consumed and subsequent allocations impossible.
+        rootPsp.CurrentSize = (ushort)(CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
 
         // Root PSP: parent points to itself
         rootPsp.ParentProgramSegmentPrefix = CommandComSegment;
