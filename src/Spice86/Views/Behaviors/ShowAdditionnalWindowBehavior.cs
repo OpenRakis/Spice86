@@ -3,6 +3,7 @@ namespace Spice86.Views.Behaviors;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using Avalonia.Xaml.Interactivity;
 
 using Spice86.ViewModels;
@@ -16,6 +17,11 @@ internal class ShowAdditionnalWindowBehavior : Behavior<Control> {
         if (AssociatedObject is null) {
             return;
         }
+        if (AssociatedObject is MenuItem menuItem) {
+            menuItem.Click += OnMenuItemClick;
+            return;
+        }
+
         AssociatedObject.PointerPressed += OnPointerPressed;
     }
 
@@ -24,6 +30,12 @@ internal class ShowAdditionnalWindowBehavior : Behavior<Control> {
         if (AssociatedObject is null) {
             return;
         }
+
+        if (AssociatedObject is MenuItem menuItem) {
+            menuItem.Click -= OnMenuItemClick;
+            return;
+        }
+
         AssociatedObject.PointerPressed -= OnPointerPressed;
     }
 
@@ -79,6 +91,11 @@ internal class ShowAdditionnalWindowBehavior : Behavior<Control> {
 
     private void OnPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e) {
         ShowInternalDebugger();
+    }
+
+    private void OnMenuItemClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) {
+        // Defer window creation until menu popups are fully closed.
+        Dispatcher.UIThread.Post(ShowInternalDebugger, DispatcherPriority.Background);
     }
 
     private static bool TryShowRegisteredWindow<T>(IReadOnlyList<Window> windows, [NotNullWhen(true)] out T? debugWindow) where T : Window {

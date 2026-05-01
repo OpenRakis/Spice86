@@ -1,25 +1,25 @@
 <Window
-	x:Class="Spice86.Views.MixerView"
-	xmlns="https://github.com/avaloniaui"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	xmlns:vm="using:Spice86.ViewModels"
-	xmlns:local="using:Spice86.Views.Converters"
-	xmlns:controls="using:Spice86.Views.Controls"
-	xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
-	x:CompileBindings="True"
-	x:DataType="vm:SoftwareMixerViewModel"
-	WindowStartupLocation="CenterOwner"
-	ShowInTaskbar="True"
-	CanResize="True"
-	MinWidth="800"
-	MinHeight="600"
-	Width="800"
-	Height="600"
-	Title="Audio Mixer"
-	Icon="/Views/Assets/Spice86.ico"
-	mc:Ignorable="d">
+x:Class="Spice86.Views.MixerView"
+xmlns="https://github.com/avaloniaui"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+xmlns:vm="using:Spice86.ViewModels"
+xmlns:local="using:Spice86.Views.Converters"
+xmlns:controls="using:Spice86.Views.Controls"
+xmlns:fluent="clr-namespace:FluentIcons.Avalonia;assembly=FluentIcons.Avalonia"
+x:CompileBindings="True"
+x:DataType="vm:SoftwareMixerViewModel"
+WindowStartupLocation="CenterOwner"
+ShowInTaskbar="True"
+CanResize="True"
+MinWidth="800"
+MinHeight="600"
+Width="800"
+Height="600"
+Title="Audio Mixer"
+Icon="/Views/Assets/Spice86.ico"
+mc:Ignorable="d">
 	<Design.DataContext>
 		<vm:SoftwareMixerViewModel />
 	</Design.DataContext>
@@ -49,8 +49,8 @@
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
 								<Border Margin="5" Padding="10" BorderBrush="Gray" BorderThickness="1" CornerRadius="5">
-										<Viewbox Stretch="Uniform" StretchDirection="Both">
-											<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" Width="200">
+									<Viewbox Stretch="Uniform" StretchDirection="Both">
+										<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" Width="200">
 											<TextBlock
 											Grid.Row="0"
 											HorizontalAlignment="Center"
@@ -145,9 +145,9 @@
 												Content="{Binding IsMuted, Converter={StaticResource MutedToTextConverter}}"
 												ToolTip.Tip="Mute or unmute this channel" />
 											</StackPanel>
-													</Grid>
-												</Viewbox>
-											</Border>
+										</Grid>
+									</Viewbox>
+								</Border>
 							</DataTemplate>
 						</ItemsControl.ItemTemplate>
 					</ItemsControl>

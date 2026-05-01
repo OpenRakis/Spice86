@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 
 namespace Spice86.Views.Behaviors;
 
@@ -18,36 +20,39 @@ public class UseParentListBoxContextMenuBehavior {
     }
 
     private static void OnContextRequested(object? sender, ContextRequestedEventArgs e) {
-        if (sender is Control control) {
-            e.Handled = true;
-
-            // Find parent ListBox and the associated ListBoxItem
-            Control? parent = control;
-            ListBox? listBox = null;
-            ListBoxItem? listBoxItem = null;
-
-            while (parent != null) {
-                if (parent is ListBoxItem lbi) {
-                    listBoxItem = lbi;
-                }
-
-                if (parent is ListBox lb) {
-                    listBox = lb;
-
-                    break;
-                }
-
-                parent = parent.Parent as Control;
-            }
-
-            if (listBox?.ContextMenu != null && listBoxItem != null) {
-                // Important: Select the item we right-clicked on
-                listBox.SelectedItem = listBoxItem.DataContext;
-
-                // Open the context menu
-                listBox.ContextMenu.Open(listBox);
-            }
+        if (sender is not Control control) {
+            return;
         }
+
+        e.Handled = true;
+
+        // Find parent ListBox and the associated ListBoxItem.
+        Control? parent = control;
+        ListBox? listBox = null;
+        ListBoxItem? listBoxItem = null;
+
+        while (parent != null) {
+            if (parent is ListBoxItem lbi) {
+                listBoxItem = lbi;
+            }
+
+            if (parent is ListBox lb) {
+                listBox = lb;
+                break;
+            }
+
+            parent = parent.Parent as Control;
+        }
+
+        if (listBox?.ContextMenu == null || listBoxItem == null) {
+            return;
+        }
+
+        // Open on the next dispatcher cycle to avoid pointer/menu interaction races.
+        Dispatcher.UIThread.Post(() => {
+            listBox.SelectedItem = listBoxItem.DataContext;
+            listBox.ContextMenu.Open(listBoxItem);
+        }, DispatcherPriority.Normal);
     }
 
     public static void SetUseParentContextMenu(Control element, bool value) {

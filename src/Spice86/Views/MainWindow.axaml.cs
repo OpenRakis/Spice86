@@ -39,14 +39,14 @@ internal partial class MainWindow : Window {
     }
 
 
-    private void OnMenuGotFocus(object? sender, GotFocusEventArgs e) {
+    private void OnMenuGotFocus(object? sender, FocusChangedEventArgs e) {
         FocusOnVideoBuffer();
         e.Handled = true;
     }
 
     private void OnMenuKeyUp(object? sender, KeyEventArgs e) {
-          (DataContext as MainWindowViewModel)?.OnKeyUp(e);
-          e.Handled = true;
+        (DataContext as MainWindowViewModel)?.OnKeyUp(e);
+        e.Handled = true;
     }
 
     private void OnMenuKeyDown(object? sender, KeyEventArgs e) {

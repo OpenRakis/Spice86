@@ -6,7 +6,7 @@
              xmlns:viewModels="clr-namespace:Spice86.ViewModels"
              xmlns:converters="clr-namespace:Spice86.Views.Converters"
              xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
-             xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+             xmlns:fluent="clr-namespace:FluentIcons.Avalonia;assembly=FluentIcons.Avalonia"
              xmlns:views="clr-namespace:Spice86.Views"
              xmlns:debugging="clr-namespace:Spice86.ViewModels.ValueViewModels.Debugging"
              xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
@@ -59,7 +59,7 @@
                 ItemsSource="{Binding Functions}"
                 SelectedItem="{Binding SelectedFunction}"
                 ItemFilter="{Binding FunctionFilter}"
-                Watermark="Type to select function"
+                PlaceholderText="Type to select function"
                 ItemSelector="{Binding FunctionItemSelector}"
                 GotFocus="OnFunctionSelectionFocus"
                 KeyDown="OnFunctionSelectionKeyDown"
@@ -316,7 +316,7 @@
                         <controls:GroupBox Header="Condition (optional)">
                             <TextBox
                             Text="{Binding BreakpointCondition, Mode=TwoWay}"
-                            Watermark="e.g., ax == 0x1234" />
+                            PlaceholderText="e.g., ax == 0x1234" />
                         </controls:GroupBox>
                     </StackPanel>
                     <StackPanel

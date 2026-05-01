@@ -1,23 +1,23 @@
 <Window
-    x:Class="Spice86.Views.McpToolsView"
-    xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:vm="using:Spice86.ViewModels"
-    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
-    x:CompileBindings="True"
-    x:DataType="vm:McpStatusViewModel"
-    WindowStartupLocation="CenterOwner"
-    ShowInTaskbar="True"
-    CanResize="True"
-    MinWidth="980"
-    MinHeight="660"
-    Width="1160"
-    Height="760"
-    Title="MCP Control Center"
-    Icon="/Views/Assets/Spice86.ico"
-    mc:Ignorable="d">
+x:Class="Spice86.Views.McpToolsView"
+xmlns="https://github.com/avaloniaui"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+xmlns:vm="using:Spice86.ViewModels"
+xmlns:fluent="clr-namespace:FluentIcons.Avalonia;assembly=FluentIcons.Avalonia"
+x:CompileBindings="True"
+x:DataType="vm:McpStatusViewModel"
+WindowStartupLocation="CenterOwner"
+ShowInTaskbar="True"
+CanResize="True"
+MinWidth="980"
+MinHeight="660"
+Width="1160"
+Height="760"
+Title="MCP Control Center"
+Icon="/Views/Assets/Spice86.ico"
+mc:Ignorable="d">
     <Grid RowDefinitions="Auto,*" RowSpacing="12" Margin="14" ClipToBounds="True">
         <Border CornerRadius="2"
                 Padding="18"
@@ -35,7 +35,7 @@
 
                 <Border Grid.Column="1"
                         Padding="12,8"
-                    CornerRadius="2"
+                        CornerRadius="2"
                         Background="{DynamicResource SystemControlBackgroundAltMediumHighBrush}"
                         BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                         BorderThickness="1"
@@ -58,12 +58,12 @@
 
         <Grid Grid.Row="1" ColumnDefinitions="360,12,*" ColumnSpacing="0" ClipToBounds="True">
             <Border Grid.Column="0"
-                CornerRadius="2"
+                    CornerRadius="2"
                     Padding="14"
                     Background="{DynamicResource SystemControlBackgroundAltMediumHighBrush}"
                     BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                BorderThickness="1"
-                ClipToBounds="True">
+                    BorderThickness="1"
+                    ClipToBounds="True">
                 <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <StackPanel>
@@ -82,7 +82,7 @@
                     </Grid>
 
                     <TextBox Grid.Row="1"
-                             Watermark="Filter by tool name or description"
+                             PlaceholderText="Filter by tool name or description"
                              Text="{Binding ToolFilter, UpdateSourceTrigger=PropertyChanged}" />
 
                     <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="8">
@@ -143,8 +143,8 @@
                         Padding="16"
                         Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                         BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                    BorderThickness="1"
-                    ClipToBounds="True">
+                        BorderThickness="1"
+                        ClipToBounds="True">
                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="8">
                         <StackPanel>
                             <TextBlock Text="{Binding SelectedTool.Name, FallbackValue='Manual Tool Runner'}" FontSize="24" FontWeight="Bold" />
@@ -178,12 +178,12 @@
                 </Border>
 
                 <Border Grid.Row="1"
-                    CornerRadius="2"
+                        CornerRadius="2"
                         Padding="16"
                         Background="{DynamicResource SystemControlBackgroundAltMediumHighBrush}"
                         BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                    BorderThickness="1"
-                    ClipToBounds="True">
+                        BorderThickness="1"
+                        ClipToBounds="True">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                         <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding NetworkStatusColor}" />
                         <StackPanel Grid.Column="1">
@@ -194,7 +194,7 @@
                 </Border>
 
                 <Border Grid.Row="2"
-                    CornerRadius="2"
+                        CornerRadius="2"
                         Padding="14"
                         Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
                         BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"

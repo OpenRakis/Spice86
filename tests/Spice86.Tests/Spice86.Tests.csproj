@@ -1,14 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <WarningsAsErrors>nullable</WarningsAsErrors>
-        <IsPackable>false</IsPackable>
-    </PropertyGroup>
-    <ItemGroup>
-		<PackageReference Include="Avalonia.Headless"/>
-		<PackageReference Include="Avalonia.Headless.XUnit"/>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<WarningsAsErrors>nullable</WarningsAsErrors>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+	<ItemGroup>
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -46,39 +44,43 @@
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
+		<Compile Remove="UI\**\*.cs" />
+		<AvaloniaXaml Remove="UI\**\*.axaml" />
+	</ItemGroup>
+	<ItemGroup>
 		<ProjectReference Include="..\..\src\Spice86.Core\Spice86.Core.csproj"/>
 		<ProjectReference Include="..\..\src\Spice86.Shared\Spice86.Shared.csproj"/>
 		<ProjectReference Include="..\..\src\Spice86\Spice86.csproj"/>
-    </ItemGroup>
-    <ItemGroup>
-        <None Update="Resources\**">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-    </ItemGroup>
-    <ItemGroup>
-        <Content Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.00-65/2025.11.5/content/tests/80386.00-65.zip">
-            <Link>80386.00-65.zip</Link>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="Resources\**">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+	<ItemGroup>
+		<Content Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.00-65/2025.11.5/content/tests/80386.00-65.zip">
+			<Link>80386.00-65.zip</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 
-        <Content Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.66-66/2025.11.5/content/tests/80386.66-66.zip">
-            <Link>80386.66-66.zip</Link>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
+		<Content Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.66-66/2025.11.5/content/tests/80386.66-66.zip">
+			<Link>80386.66-66.zip</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 
-        <Content Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.67.00-67.7f/2025.11.5/content/tests/80386.67.00-67.7F.zip">
-            <Link>80386.67.00-67.7F.zip</Link>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
+		<Content Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.67.00-67.7f/2025.11.5/content/tests/80386.67.00-67.7F.zip">
+			<Link>80386.67.00-67.7F.zip</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 
-        <Content Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.67.80-67.ff/2025.11.5/content/tests/80386.67.80-67.FF.zip">
-            <Link>80386.67.80-67.FF.zip</Link>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
+		<Content Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.67.80-67.ff/2025.11.5/content/tests/80386.67.80-67.FF.zip">
+			<Link>80386.67.80-67.FF.zip</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 
-        <Content Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.68-ff/2025.11.5/content/tests/80386.68-FF.zip">
-            <Link>80386.68-FF.zip</Link>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-    </ItemGroup>
+		<Content Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80386.68-ff/2025.11.5/content/tests/80386.68-FF.zip">
+			<Link>80386.68-FF.zip</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 </Project>

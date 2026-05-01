@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <!-- Vendored from https://github.com/irihitech/Semi.Avalonia commit d57c843 -->
+    <PropertyGroup>
+        <Nullable>enable</Nullable>
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+        <WarningsAsErrors />
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Avalonia.Controls.DataGrid\Avalonia.Controls.DataGrid.csproj" />
+    </ItemGroup>
+</Project>

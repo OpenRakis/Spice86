@@ -5,6 +5,7 @@ using System.Diagnostics;
 
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Input.Platform;
 
 using Spice86.ViewModels;
 

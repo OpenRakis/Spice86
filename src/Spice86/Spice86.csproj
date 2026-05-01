@@ -12,17 +12,15 @@
         <PackageId>Spice86</PackageId>
     </PropertyGroup>
     <PropertyGroup>
-        <EnvironmentVariables>
-            AVALONIA_TELEMETRY_OPTOUT=1
+        <EnvironmentVariables> AVALONIA_TELEMETRY_OPTOUT=1
         </EnvironmentVariables>
     </PropertyGroup>
     <!-- Package references -->
     <ItemGroup>
         <PackageReference Include="Avalonia" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" />
         <PackageReference Include="Avalonia.Desktop" />
-        <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" />
+        <!--Condition below is needed to remove developer tools support from build output in Release configuration.-->
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="AvaloniaUI.DiagnosticsSupport" />
         <PackageReference Include="Avalonia.Fonts.Inter" />
         <PackageReference Include="Avalonia.Headless" />
         <PackageReference Include="Dock.Avalonia" />
@@ -37,13 +35,11 @@
         <PackageReference Include="CommunityToolkit.Mvvm" />
         <PackageReference Include="Deadpikle.AvaloniaProgressRing" />
         <PackageReference Include="DialogHost.Avalonia" />
-        <PackageReference Include="FluentIcons.Avalonia.Fluent" />
+        <PackageReference Include="FluentIcons.Avalonia" />
         <PackageReference Include="Iced" />
         <PackageReference Include="JvE.Structurizer" />
         <PackageReference Include="Semi.Avalonia" />
-        <PackageReference Include="Semi.Avalonia.DataGrid" />
         <PackageReference Include="Semi.Avalonia.Dock" />
-        <PackageReference Include="Semi.Avalonia.TreeDataGrid" />
         <PackageReference Include="Xaml.Behaviors.Avalonia" />
     </ItemGroup>
     <ItemGroup>
@@ -53,6 +49,8 @@
         <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
         <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+        <ProjectReference Include="..\Vendor\Avalonia.Controls.DataGrid\Avalonia.Controls.DataGrid.csproj" />
+        <ProjectReference Include="..\Vendor\Semi.Avalonia.DataGrid\Semi.Avalonia.DataGrid.csproj" />
     </ItemGroup>
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
