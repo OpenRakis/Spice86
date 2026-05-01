@@ -69,78 +69,49 @@ public class TsrIntegrationTests {
     /// </summary>
     [Fact]
     public void TerminateAndStayResident_UsingParentPspCurrentSize_LeavesConventionalMemoryFree() {
+        // Arrange
+        const ushort MinExpectedFreeParagraphs = 0x8000; // at least 512 KB must remain free
+        Spice86DependencyInjection spice86 = CreateSpice86ForTsrTest("tsr_parent_psp_size.com");
+
+        // Act
+        spice86.ProgramExecutor.Run();
+
+        // Assert
+        Dos? dos = spice86.McpServices.Dos;
+        if (dos is null) {
+            throw new InvalidOperationException("DOS subsystem was not initialised");
+        }
+        DosMemoryControlBlock largestFree = dos.MemoryManager.FindLargestFree();
+        largestFree.IsFree.Should().BeTrue(
+            "after a TSR that uses parent PSP[0x02] as DX, conventional memory must have a large free block");
+        largestFree.Size.Should().BeGreaterThan(MinExpectedFreeParagraphs,
+            "after TSR the bulk of conventional memory must still be free;" +
+            " if only 2 paragraphs (the env block) are free the bug is still present");
+    }
+
+    private static Spice86DependencyInjection CreateSpice86ForTsrTest(string testFileName) {
         string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosTsrTests");
         string tempDir = Path.Join(Path.GetTempPath(), $"dos_tsr_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
-        string source = Path.Join(resourceDir, "tsr_parent_psp_size.com");
-        string target = Path.Join(tempDir, "tsr_parent_psp_size.com");
-        File.Copy(source, target, overwrite: true);
-
-        try {
-            Spice86DependencyInjection spice86 = new Spice86Creator(
-                binName: target,
-                enablePit: false,
-                maxCycles: 200000L,
-                installInterruptVectors: true,
-                enableA20Gate: true
-            ).Create();
-
-            spice86.ProgramExecutor.Run();
-
-            // The bulk of conventional memory must remain free after the TSR.
-            // With the bug (COMMAND.COM PSP[0x02] = 0x9FFF), TryModifyBlock fails and
-            // leaves the entire program block (≈0x9E8D paragraphs) allocated.
-            // Only the tiny env block (2 paragraphs) is freed, so the largest free block
-            // is just 2 paragraphs.
-            // After the fix (COMMAND.COM PSP[0x02] = 0x70), TryModifyBlock succeeds,
-            // trims the block to 0x70 paragraphs, and the remainder (≈0x981C) is freed.
-            const ushort MinExpectedFreeParagraphs = 0x8000; // at least 512 KB must remain free
-            Dos? dos = spice86.McpServices.Dos;
-            if (dos is null) {
-                throw new InvalidOperationException("DOS subsystem was not initialised");
-            }
-            DosMemoryManager memoryManager = dos.MemoryManager;
-            DosMemoryControlBlock largestFree = memoryManager.FindLargestFree();
-            largestFree.IsFree.Should().BeTrue(
-                "after a TSR that uses parent PSP[0x02] as DX, conventional memory must have a large free block");
-            largestFree.Size.Should().BeGreaterThan(MinExpectedFreeParagraphs,
-                "after TSR the bulk of conventional memory must still be free;" +
-                " if only 2 paragraphs (the env block) are free the bug is still present");
-        } finally {
-            TryDeleteDirectory(tempDir);
-        }
+        string target = Path.Join(tempDir, testFileName);
+        File.Copy(Path.Join(resourceDir, testFileName), target, overwrite: true);
+        return new Spice86Creator(
+            binName: target,
+            enablePit: false,
+            maxCycles: 200000L,
+            installInterruptVectors: true,
+            enableA20Gate: true
+        ).Create();
     }
 
     private static void RunTsrTest(string testFileName, byte expectedExitCode) {
-        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosTsrTests");
-        string tempDir = Path.Join(Path.GetTempPath(), $"dos_tsr_{Guid.NewGuid()}");
-        Directory.CreateDirectory(tempDir);
+        // Arrange
+        Spice86DependencyInjection spice86 = CreateSpice86ForTsrTest(testFileName);
 
-        string source = Path.Join(resourceDir, testFileName);
-        string target = Path.Join(tempDir, testFileName);
-        File.Copy(source, target, overwrite: true);
+        // Act
+        spice86.ProgramExecutor.Run();
 
-        try {
-            Spice86DependencyInjection spice86 = new Spice86Creator(
-                binName: target,
-                enablePit: false,
-                maxCycles: 200000L,
-                installInterruptVectors: true,
-                enableA20Gate: true
-            ).Create();
-
-            spice86.ProgramExecutor.Run();
-
-            spice86.Machine.CpuState.AX.Should().Be(expectedExitCode);
-        } finally {
-            TryDeleteDirectory(tempDir);
-        }
-    }
-
-    private static void TryDeleteDirectory(string directoryPath) {
-        if (!Directory.Exists(directoryPath)) {
-            return;
-        }
-        Directory.Delete(directoryPath, true);
+        // Assert
+        spice86.Machine.CpuState.AX.Should().Be(expectedExitCode);
     }
 }
