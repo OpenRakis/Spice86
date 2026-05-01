@@ -11,6 +11,8 @@ using System.IO;
 using Xunit;
 
 public class TsrIntegrationTests {
+    private static readonly string ResourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosTsrTests");
+
     [Fact]
     public void TerminateAndStayResident_WithDynamicMemoryAllocationAndPspCreation_Succeeds() {
         RunTsrTest("tsr22h.com", expectedExitCode: 0);
@@ -50,8 +52,7 @@ public class TsrIntegrationTests {
     public void TerminateAndStayResident_BatchContinuesAfterTsr_NextCommandExecutes() {
         BatchTestHelpers.WithTempDirectory("tsr_batch", tempDir => {
             // Arrange: copy a TSR COM from resources and create a video writer COM
-            string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosTsrTests");
-            File.Copy(Path.Join(resourceDir, "tsr_basic.com"), Path.Join(tempDir, "TSR_BASIC.COM"));
+            File.Copy(Path.Join(ResourceDir, "tsr_basic.com"), Path.Join(tempDir, "TSR_BASIC.COM"));
             BatchTestHelpers.CreateBinaryFile(tempDir, "WRITER.COM", BatchTestHelpers.BuildVideoWriterCom('Z', 0));
 
             // Act & Assert: batch should continue to WRITER.COM after TSR terminates
@@ -90,11 +91,10 @@ public class TsrIntegrationTests {
     }
 
     private static Spice86DependencyInjection CreateSpice86ForTsrTest(string testFileName) {
-        string resourceDir = Path.Join(AppContext.BaseDirectory, "Resources", "DosTsrTests");
         string tempDir = Path.Join(Path.GetTempPath(), $"dos_tsr_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
         string target = Path.Join(tempDir, testFileName);
-        File.Copy(Path.Join(resourceDir, testFileName), target, overwrite: true);
+        File.Copy(Path.Join(ResourceDir, testFileName), target, overwrite: true);
         return new Spice86Creator(
             binName: target,
             enablePit: false,
