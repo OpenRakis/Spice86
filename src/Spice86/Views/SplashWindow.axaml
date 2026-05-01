@@ -1,28 +1,28 @@
 <Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:viewModels="clr-namespace:Spice86.ViewModels;assembly=Spice86"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="Spice86.Views.SplashWindow"
+		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+		x:Class="Spice86.Views.SplashWindow"
 		WindowStartupLocation="CenterScreen"
 		CanResize="False"
 		CornerRadius="4"
 		Width="150"
 		Height="100"
-		SystemDecorations="None">
+		WindowDecorations="None">
 	<DockPanel>
 		<Label DockPanel.Dock="Bottom"
-			FontWeight="SemiBold"
-			HorizontalAlignment="Center"
-			Content="Loading Spice86..." />
+			   FontWeight="SemiBold"
+			   HorizontalAlignment="Center"
+			   Content="Loading Spice86..." />
 		<ProgressBar DockPanel.Dock="Top"
-			IsIndeterminate="True"
-			HorizontalAlignment="Stretch"
-			VerticalAlignment="Center" />
+					 IsIndeterminate="True"
+					 HorizontalAlignment="Stretch"
+					 VerticalAlignment="Center" />
 		<Image Source="avares://Spice86/Views/Assets/Spice86.ico"
-			HorizontalAlignment="Center"
-			VerticalAlignment="Center"
-			Width="32" Height="32" />
+			   HorizontalAlignment="Center"
+			   VerticalAlignment="Center"
+			   Width="32" Height="32" />
 	</DockPanel>
 </Window>

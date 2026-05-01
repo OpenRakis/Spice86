@@ -1,0 +1,31 @@
+<UserControl
+    x:Class="Spice86.Views.Controls.StructureHierarchyGrid"
+    x:Name="Root"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:dataModels="clr-namespace:Spice86.ViewModels.DataModels">
+    <DockPanel>
+        <!-- Column header row -->
+        <Grid DockPanel.Dock="Top"
+              ColumnDefinitions="180,80,50,*"
+              Background="{DynamicResource DataGridColumnHeaderBackgroundBrush}"
+              Margin="0,0,0,1">
+            <TextBlock Grid.Column="0" Text="Name" Margin="4,2" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="1" Text="Type" Margin="4,2" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="2" Text="Size" Margin="4,2" FontWeight="SemiBold" TextAlignment="Right" />
+            <TextBlock Grid.Column="3" Text="Value" Margin="4,2" FontWeight="SemiBold" TextAlignment="Right" />
+        </Grid>
+        <TreeView ItemsSource="{Binding Items, ElementName=Root}">
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate DataType="dataModels:StructureMemberNode" ItemsSource="{Binding Children}">
+                    <Grid ColumnDefinitions="180,80,50,*">
+                        <TextBlock Grid.Column="0" Text="{Binding Name}" Margin="2,1" />
+                        <TextBlock Grid.Column="1" Text="{Binding TypeName}" Margin="2,1" />
+                        <TextBlock Grid.Column="2" Text="{Binding Size}" Margin="2,1" TextAlignment="Right" />
+                        <TextBlock Grid.Column="3" Text="{Binding Value}" Margin="2,1" TextAlignment="Right" />
+                    </Grid>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </DockPanel>
+</UserControl>

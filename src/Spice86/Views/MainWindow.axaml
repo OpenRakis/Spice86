@@ -7,8 +7,8 @@
 		xmlns:local="clr-namespace:Spice86.Views;assembly=Spice86"
 		xmlns:b="clr-namespace:Spice86.Views.Behaviors"
 		xmlns:userControls="clr-namespace:Spice86.Views.UserControls"
-	    xmlns:factory="clr-namespace:Spice86.Views.Factory"
-		xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+		xmlns:factory="clr-namespace:Spice86.Views.Factory"
+		xmlns:fluent="clr-namespace:FluentIcons.Avalonia;assembly=FluentIcons.Avalonia"
 		xmlns:controls="clr-namespace:Spice86.Views.Controls"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
@@ -26,7 +26,7 @@
 	</Window.DataTemplates>
 	<Window.Resources>
 		<converters:NullableToBooleanConverter x:Key="NullableToBooleanConverter" />
-        <b:ShowAdditionnalWindowBehavior x:Key="ShowAdditionnalWindowBehavior" />
+		<b:ShowAdditionnalWindowBehavior x:Key="ShowAdditionnalWindowBehavior" />
 	</Window.Resources>
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
@@ -62,8 +62,8 @@
 						<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
 					</MenuItem>
 					<MenuItem
-						HotKey="Ctrl+Alt+D" ToolTip.Tip="Ctrl+Alt+D"
-						IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding DumpEmulatorStateToFileCommand}">
+					HotKey="Ctrl+Alt+D" ToolTip.Tip="Ctrl+Alt+D"
+					IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding DumpEmulatorStateToFileCommand}">
 						<MenuItem.Header>
 							<StackPanel Orientation="Horizontal">
 								<fluent:SymbolIcon Symbol="Document" />
@@ -151,15 +151,15 @@
 						<!-- Dynamic aspect ratio correction based on current video mode -->
 						<ScaleTransform ScaleX="1" ScaleY="{Binding AspectRatioCorrectionFactor}" />
 						<ScaleTransform
-							ScaleX="{Binding Scale}"
-							ScaleY="{Binding Scale}">
+						ScaleX="{Binding Scale}"
+						ScaleY="{Binding Scale}">
 						</ScaleTransform>
 					</TransformGroup>
 				</LayoutTransformControl.LayoutTransform>
 				<Image x:Name="Image"
-					RenderOptions.BitmapInterpolationMode="None"
-					Cursor="{Binding Cursor}"
-					Source="{Binding Bitmap}" />
+					   RenderOptions.BitmapInterpolationMode="None"
+					   Cursor="{Binding Cursor}"
+					   Source="{Binding Bitmap}" />
 			</LayoutTransformControl>
 		</Viewbox>
 		<controls:StatusBar IsTabStop="False" Focusable="False" VerticalAlignment="Bottom" Grid.Row="2">
@@ -173,17 +173,17 @@
 			<Separator />
 			<controls:StatusBarItem>
 				<TextBlock Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}"
-				           IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource NullableToBooleanConverter}}" />
+						   IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource NullableToBooleanConverter}}" />
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem>
 				<TextBlock Text="{Binding HttpApiPort, StringFormat='HTTP port: {0}'}"
-				           IsVisible="{Binding HttpApiPort, Converter={StaticResource NullableToBooleanConverter}}" />
+						   IsVisible="{Binding HttpApiPort, Converter={StaticResource NullableToBooleanConverter}}" />
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem>
-				<TextBlock Text="{Binding EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />	
-			</controls:StatusBarItem>
+				<TextBlock Text="{Binding EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />
+		</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem>
 				<StackPanel Orientation="Horizontal" Spacing="6">
@@ -202,12 +202,12 @@
 			<Separator />
 			<controls:StatusBarItem HorizontalAlignment="Right" HorizontalContentAlignment="Right">
 				<ContentPresenter
-					Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
+				Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
 			</controls:StatusBarItem>
 		</controls:StatusBar>
 		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3"
-		        IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
-				<userControls:ErrorModalDialogUserControl x:Name="ErrorDialog" />
+				   IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
+			<userControls:ErrorModalDialogUserControl x:Name="ErrorDialog" />
 		</WrapPanel>
 	</Grid>
 </Window>

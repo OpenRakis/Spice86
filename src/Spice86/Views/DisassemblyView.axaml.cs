@@ -145,7 +145,7 @@ public partial class DisassemblyView : UserControl {
     /// </summary>
     /// <param name="sender">The sender object.</param>
     /// <param name="e">The focus event arguments.</param>
-    private void OnFunctionSelectionFocus(object? sender, GotFocusEventArgs e) {
+    private void OnFunctionSelectionFocus(object? sender, FocusChangedEventArgs e) {
         if (sender is AutoCompleteBox autoCompleteBox) {
             // Clear the text when the AutoCompleteBox gets focus
             autoCompleteBox.Text = string.Empty;

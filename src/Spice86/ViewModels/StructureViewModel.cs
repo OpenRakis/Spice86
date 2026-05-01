@@ -2,8 +2,6 @@ namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
 using Avalonia.Controls;
-using Avalonia.Controls.Models.TreeDataGrid;
-using Avalonia.Media;
 
 using AvaloniaHex.Document;
 
@@ -49,7 +47,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     private StructType? _selectedStructure;
 
     [ObservableProperty]
-    private AvaloniaList<StructureMember> _structureMembers = new() { ResetBehavior = ResetBehavior.Remove };
+    private AvaloniaList<StructureMemberNode> _structureMembers = new() { ResetBehavior = ResetBehavior.Remove };
 
     [ObservableProperty]
     private IBinaryDocument _structureMemory;
@@ -75,15 +73,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
         _isAddressableMemory = data is DataMemoryDocument;
         _pauseHandler = pauseHandler;
         _pauseHandler.Paused += OnPaused;
-        Source = InitializeSource();
     }
-
-    /// <summary>
-    /// Gets or sets the <see cref="HierarchicalTreeDataGridSource{T}" /> for the structure members.
-    /// This source is used to populate the hierarchical tree data grid in the UI, allowing for the
-    /// display and interaction with the structure members.
-    /// </summary>
-    public HierarchicalTreeDataGridSource<StructureMember> Source { get; set; }
 
     /// <summary>
     /// Create the text that is displayed in the textbox when a structure is selected.
@@ -122,21 +112,6 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
         }
         AvailableStructures = new AvaloniaList<StructType>(_structureInformation.Structs.Values);
         SelectedStructure = AvailableStructures.FirstOrDefault(structType => structType.Name.Equals(SelectedStructure?.Name));
-    }
-
-    private HierarchicalTreeDataGridSource<StructureMember> InitializeSource() {
-        var nameColumn = new TextColumn<StructureMember, string>("Name", structureMember => structureMember.Name);
-
-        return new HierarchicalTreeDataGridSource<StructureMember>(StructureMembers) {
-            Columns = {
-                new HierarchicalExpanderColumn<StructureMember>(nameColumn, structureMember => structureMember.Members),
-                new TextColumn<StructureMember, string>("Type", x => x.Type.Type),
-                new TextColumn<StructureMember, int>("Size", x => x.Size, null, new TextColumnOptions<StructureMember> {
-                    TextAlignment = TextAlignment.Right
-                }),
-                new TemplateColumn<StructureMember>("Value", StructureDataTemplateProvider.StructureMemberValueTemplate)
-            }
-        };
     }
 
     partial void OnSelectedStructureChanged(StructType? value) {
@@ -184,7 +159,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
         _originalMemory.ReadBytes(offset, data);
 
         List<StructureMember> members = PopulateMembers(SelectedStructure.Members, data);
-        StructureMembers.AddRange(members);
+        StructureMembers.AddRange(members.Select(m => new StructureMemberNode(m)));
 
         // This "zooms" the hex view to the selected structure data.
         StructureMemory = new MemoryBinaryDocument(data);
@@ -208,7 +183,6 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     /// </summary>
     public void Dispose() {
         _pauseHandler.Paused -= OnPaused;
-        Source.Dispose();
         GC.SuppressFinalize(this);
     }
 }
