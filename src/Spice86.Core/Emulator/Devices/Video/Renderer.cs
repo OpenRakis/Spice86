@@ -300,9 +300,13 @@ public class Renderer : IVgaRenderer {
     /// <inheritdoc />
     public void CopyLastFrame(Span<uint> buffer) {
         uint[] lastFrame = Volatile.Read(ref _lastPublishedFrame);
-        if (lastFrame.Length > 0 && lastFrame.Length <= buffer.Length) {
-            lastFrame.AsSpan().CopyTo(buffer);
+        if (lastFrame.Length == 0) {
+            return;
         }
+        if (buffer.Length < lastFrame.Length) {
+            throw new ArgumentException("Destination buffer is smaller than the last published frame.", nameof(buffer));
+        }
+        lastFrame.AsSpan().CopyTo(buffer);
     }
 
     private void InitCharRow() {

@@ -585,19 +585,28 @@ internal sealed class EmulatorMcpTools {
                     throw new InvalidOperationException("PS/2 controller is not available");
                 }
 
+                if (!Enum.TryParse(key, true, out PcKeyboardKey parsedKey)) {
+                    throw new ArgumentException($"Invalid PcKeyboardKey: '{key}'");
+                }
+
+                string action = isPressed ? "down" : "up";
+                if (_services.PauseHandler.IsPaused) {
+                    controller.KeyboardDevice.EnqueueKeyEvent(parsedKey, isPressed);
+                    return new EmulatorControlResponse {
+                        Success = true,
+                        Message = $"Keyboard event applied immediately while paused: {parsedKey} {action}"
+                    };
+                }
+
                 InputEventHub? hub = _services.InputEventHub;
                 if (hub == null) {
                     throw new InvalidOperationException("InputEventHub is not wired");
                 }
 
-                if (!Enum.TryParse(key, true, out PcKeyboardKey parsedKey)) {
-                    throw new ArgumentException($"Invalid PcKeyboardKey: '{key}'");
-                }
-
                 hub.PostToEmulatorThread(() => controller.KeyboardDevice.EnqueueKeyEvent(parsedKey, isPressed));
                 return new EmulatorControlResponse {
                     Success = true,
-                    Message = $"Keyboard event sent: {parsedKey} {(isPressed ? "down" : "up")}"
+                    Message = $"Keyboard event sent: {parsedKey} {action}"
                 };
             }
         });
@@ -1223,6 +1232,18 @@ internal sealed class EmulatorMcpTools {
                 uint[] buffer = new uint[width * height];
 
                 _services.VgaRenderer.CopyLastFrame(buffer);
+
+                bool hasVisiblePixelData = false;
+                for (int i = 0; i < buffer.Length; i++) {
+                    if (buffer[i] != 0) {
+                        hasVisiblePixelData = true;
+                        break;
+                    }
+                }
+
+                if (!hasVisiblePixelData) {
+                    return Error("No video frame is available for screenshot capture.");
+                }
 
                 byte[] bytes = new byte[buffer.Length * 4];
                 Buffer.BlockCopy(buffer, 0, bytes, 0, bytes.Length);

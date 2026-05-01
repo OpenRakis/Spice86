@@ -29,7 +29,11 @@ public interface IVgaRenderer {
     ///     Copy the last published frame without consuming the pending-frame flag.
     ///     Use this for non-destructive reads (e.g. MCP screenshots) that must not
     ///     interfere with the normal UI render loop.
+    ///     Does nothing when no frame has been published yet.
     /// </summary>
     /// <param name="buffer">Destination buffer (must be at least <see cref="BufferSize"/> elements).</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when <paramref name="buffer"/> is smaller than the last published frame.
+    /// </exception>
     void CopyLastFrame(Span<uint> buffer);
 }
