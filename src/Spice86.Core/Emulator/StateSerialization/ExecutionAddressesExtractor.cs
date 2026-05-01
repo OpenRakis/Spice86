@@ -3,7 +3,6 @@ namespace Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
@@ -13,19 +12,15 @@ public class ExecutionAddressesExtractor(CfgCpu cfgCpu, ExecutionAddresses previ
         // List all instructions currently in memory. Those info are meant to go along with the memory dump.
         IEnumerable<CfgInstruction> all = cfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions.GetAll();
         foreach (CfgInstruction instruction in all) {
-            switch (instruction) {
-                case IJumpInstruction:
-                    FillResultWithSuccessorsOfType(InstructionSuccessorType.Normal, instruction, true,
-                        previousAddresses.JumpsFromTo);
-                    break;
-                case ICallInstruction:
-                    FillResultWithSuccessorsOfType(InstructionSuccessorType.Normal, instruction, false,
-                        previousAddresses.CallsFromTo);
-                    break;
-                case IReturnInstruction:
-                    FillResultWithSuccessorsOfType(InstructionSuccessorType.Normal, instruction, false,
-                        previousAddresses.RetsFromTo);
-                    break;
+            if (instruction.IsJump) {
+                FillResultWithSuccessorsOfType(InstructionSuccessorType.Normal, instruction, true,
+                    previousAddresses.JumpsFromTo);
+            } else if (instruction.IsCall) {
+                FillResultWithSuccessorsOfType(InstructionSuccessorType.Normal, instruction, false,
+                    previousAddresses.CallsFromTo);
+            } else if (instruction.IsReturn) {
+                FillResultWithSuccessorsOfType(InstructionSuccessorType.Normal, instruction, false,
+                    previousAddresses.RetsFromTo);
             }
 
             FillResultWithSuccessorsOfType(InstructionSuccessorType.CpuFault, instruction, false,

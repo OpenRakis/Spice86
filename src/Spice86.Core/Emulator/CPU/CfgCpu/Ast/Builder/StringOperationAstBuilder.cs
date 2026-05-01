@@ -6,32 +6,35 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.Registers;
 
 /// <summary>
 /// Builder for creating string operation AST nodes, handling REP prefix logic.
 /// </summary>
 public class StringOperationAstBuilder {
-    private readonly AstBuilder _astBuilder;
+    private readonly ControlFlowAstBuilder _controlFlow;
+    private readonly PointerAstBuilder _pointer;
+    private readonly RegisterAstBuilder _register;
+    private readonly TypeConversionAstBuilder _typeConversion;
 
-    public StringOperationAstBuilder(AstBuilder astBuilder) {
-        _astBuilder = astBuilder;
+    public StringOperationAstBuilder(ControlFlowAstBuilder controlFlow, PointerAstBuilder pointer, RegisterAstBuilder register, TypeConversionAstBuilder typeConversion) {
+        _controlFlow = controlFlow;
+        _pointer = pointer;
+        _register = register;
+        _typeConversion = typeConversion;
     }
 
     /// <summary>
-    /// Generates the execution AST for a string instruction, including REP prefix handling.
+    /// Generates the execution AST for a flat <see cref="CfgInstruction"/> string operation,
+    /// including REP prefix handling.  Used by parsers that build the core operation inline.
     /// </summary>
-    /// <param name="instruction">The string instruction</param>
-    /// <param name="builder">The AST builder</param>
-    /// <returns>The AST node for execution</returns>
-    public IVisitableAstNode GenerateExecutionAst(StringInstruction instruction, AstBuilder builder) {
-        BlockNode coreOperation = instruction.CreateStringOperationBlock(builder);
+    public IVisitableAstNode GenerateExecutionAst(CfgInstruction instruction, bool changesFlags,
+        BlockNode coreOperation, AstBuilder builder) {
+        RepPrefix? repPrefix = builder.Rep(instruction.RepPrefix, changesFlags);
 
-        RepPrefix? repPrefix = builder.Rep(instruction);
         if (repPrefix == null) {
             // No REP prefix, execute once
-            return builder.WithIpAdvancement((CfgInstruction)instruction, coreOperation);
+            return builder.WithIpAdvancement(instruction, coreOperation);
         }
         // REP prefix, create while loop
         ValueNode cxCondition = new BinaryOperationNode(
@@ -47,7 +50,7 @@ public class StringOperationAstBuilder {
             builder.Constant.AddConstant(builder.Register.Reg16(RegisterIndex.CxIndex), -1));
 
         // Check if we need flag-based continuation for REPE/REPNE
-        if (instruction.ChangesFlags && repPrefix != RepPrefix.REP) {
+        if (repPrefix != RepPrefix.REP) {
             // For REPE/REPNE: the flag condition is checked AFTER each iteration, not before.
             // Structure: while (CX != 0 && shouldContinue) { op; CX--; shouldContinue = flagCondition; }
             ValueNode flagCondition = CreateFlagCondition(builder, repPrefix.Value);
@@ -65,12 +68,12 @@ public class StringOperationAstBuilder {
 
             BlockNode loopBody = new BlockNode(coreOperation, decrementCx, updateContinue);
             WhileNode whileLoop = builder.ControlFlow.While(combinedCondition, loopBody);
-            return builder.WithIpAdvancement((CfgInstruction)instruction, new BlockNode(shouldContinue, whileLoop));
+            return builder.WithIpAdvancement(instruction, new BlockNode(shouldContinue, whileLoop));
         } else {
             // For REP or instructions that don't change flags, no flag check needed
             BlockNode loopBody = new BlockNode(coreOperation, decrementCx);
             WhileNode whileLoop = builder.ControlFlow.While(cxCondition, loopBody);
-            return builder.WithIpAdvancement((CfgInstruction)instruction, whileLoop);
+            return builder.WithIpAdvancement(instruction, whileLoop);
         }
     }
 
@@ -78,34 +81,34 @@ public class StringOperationAstBuilder {
     /// Creates a segmented pointer to DS:SI (with optional segment override) for string source operand.
     /// </summary>
     public ValueNode SourcePointerSi(DataType dataType, DataType addressType, int segmentRegisterIndex, int? defaultSegmentRegisterIndex) {
-        return _astBuilder.Pointer.ToSegmentedPointer(
+        return _pointer.ToSegmentedPointer(
             dataType,
             segmentRegisterIndex,
             defaultSegmentRegisterIndex,
-            _astBuilder.Register.Reg(addressType, RegisterIndex.SiIndex));
+            _register.Reg(addressType, RegisterIndex.SiIndex));
     }
 
     /// <summary>
     /// Creates a segmented pointer to ES:DI for string destination operand.
     /// </summary>
     public ValueNode DestPointerDi(DataType dataType, DataType addressType) {
-        return _astBuilder.Pointer.ToSegmentedPointer(
+        return _pointer.ToSegmentedPointer(
             dataType,
             SegmentRegisterIndex.EsIndex,
-            _astBuilder.Register.Reg(addressType, RegisterIndex.DiIndex));
+            _register.Reg(addressType, RegisterIndex.DiIndex));
     }
 
     /// <summary>
     /// Creates an assignment that advances SI by the direction step for the given data size.
     /// </summary>
     public BinaryOperationNode AdvanceSi(DataType addressType, int dataSize) {
-        ValueNode direction = _astBuilder.TypeConversion.Convert(addressType, DirectionNode(dataSize));
-        return _astBuilder.Assign(
+        ValueNode direction = _typeConversion.Convert(addressType, DirectionNode(dataSize));
+        return _controlFlow.Assign(
             addressType,
-            _astBuilder.Register.Reg(addressType, RegisterIndex.SiIndex),
+            _register.Reg(addressType, RegisterIndex.SiIndex),
             new BinaryOperationNode(
                 addressType,
-                _astBuilder.Register.Reg(addressType, RegisterIndex.SiIndex),
+                _register.Reg(addressType, RegisterIndex.SiIndex),
                 BinaryOperation.PLUS,
                 direction));
     }
@@ -114,13 +117,13 @@ public class StringOperationAstBuilder {
     /// Creates an assignment that advances DI by the direction step for the given data size.
     /// </summary>
     public BinaryOperationNode AdvanceDi(DataType addressType, int dataSize) {
-        ValueNode direction = _astBuilder.TypeConversion.Convert(addressType, DirectionNode(dataSize));
-        return _astBuilder.Assign(
+        ValueNode direction = _typeConversion.Convert(addressType, DirectionNode(dataSize));
+        return _controlFlow.Assign(
             addressType,
-            _astBuilder.Register.Reg(addressType, RegisterIndex.DiIndex),
+            _register.Reg(addressType, RegisterIndex.DiIndex),
             new BinaryOperationNode(
                 addressType,
-                _astBuilder.Register.Reg(addressType, RegisterIndex.DiIndex),
+                _register.Reg(addressType, RegisterIndex.DiIndex),
                 BinaryOperation.PLUS,
                 direction));
     }

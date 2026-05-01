@@ -5,7 +5,6 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Shared.Emulator.Memory;
 
@@ -29,11 +28,11 @@ public class NodeLinker : InstructionReplacer {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ICfgNode Link(InstructionSuccessorType linkToNextType, ICfgNode current, ICfgNode next) {
         switch (current) {
-            case IReturnInstruction retInstruction:
+            case CfgInstruction cfgInstr when cfgInstr.IsReturn:
                 // Special cases for ret.
                 // We not only attach next but also the return target to the list of next for the corresponding call.
                 // This involves recording data via the Call Flow Handler and linking it in a special way here.
-                return LinkRetInstruction(linkToNextType, retInstruction, next);
+                return LinkRetInstruction(linkToNextType, cfgInstr, next);
             case CfgInstruction currentCfgInstruction:
                 return LinkCfgInstructionWithType(linkToNextType, currentCfgInstruction, next);
             case SelectorNode selectorNode:
@@ -45,7 +44,7 @@ public class NodeLinker : InstructionReplacer {
         }
     }
 
-    private ICfgNode LinkRetInstruction(InstructionSuccessorType linkToNextType, IReturnInstruction returnInstruction, ICfgNode next) {
+    private ICfgNode LinkRetInstruction(InstructionSuccessorType linkToNextType, CfgInstruction returnInstruction, ICfgNode next) {
         ICfgNode resolvedForRet = LinkCfgInstructionWithType(linkToNextType, returnInstruction, next);
         // Need to link the call instruction now that ret is known 
         CfgInstruction? callInstruction = returnInstruction.CurrentCorrespondingCallInstruction;
@@ -61,7 +60,7 @@ public class NodeLinker : InstructionReplacer {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ICfgNode LinkCfgInstructionWithType(InstructionSuccessorType linkToNextType, ICfgInstruction current, ICfgNode next) {
+    private ICfgNode LinkCfgInstructionWithType(InstructionSuccessorType linkToNextType, CfgInstruction current, ICfgNode next) {
         Dictionary<SegmentedAddress, ICfgNode> successors = current.SuccessorsPerAddress;
         if (!successors.TryGetValue(next.Address, out ICfgNode? shouldBeNext)) {
             // New link found
@@ -75,7 +74,7 @@ public class NodeLinker : InstructionReplacer {
         return next;
     }
 
-    private void AttachNewLink(InstructionSuccessorType linkToNextType, ICfgInstruction current, ICfgNode next) {
+    private void AttachNewLink(InstructionSuccessorType linkToNextType, CfgInstruction current, ICfgNode next) {
         AttachToNext(current, next);
         if (!current.SuccessorsPerType.TryGetValue(linkToNextType, out ISet<ICfgNode>? successorsForType)) {
             successorsForType = new HashSet<ICfgNode>();
@@ -84,7 +83,7 @@ public class NodeLinker : InstructionReplacer {
         successorsForType.Add(next);
     }
 
-    private ICfgNode ResolveSuccessorConflict(ICfgInstruction current, ICfgNode next, ICfgNode shouldBeNext) {
+    private ICfgNode ResolveSuccessorConflict(CfgInstruction current, ICfgNode next, ICfgNode shouldBeNext) {
         if (shouldBeNext is SelectorNode selectorNode) {
             LinkSelectorNode(selectorNode, next);
             return selectorNode;
@@ -97,7 +96,7 @@ public class NodeLinker : InstructionReplacer {
     /// </summary>
     public SelectorNode CreateSelectorNodeBetween(CfgInstruction instruction1, CfgInstruction instruction2) {
         SelectorNode selectorNode = new SelectorNode(instruction1.Address);
-        //_executionCompiler.Compile(selectorNode);
+        _executionCompiler.Compile(selectorNode);
         InsertIntermediatePredecessor(instruction1, selectorNode);
         InsertIntermediatePredecessor(instruction2, selectorNode);
         return selectorNode;

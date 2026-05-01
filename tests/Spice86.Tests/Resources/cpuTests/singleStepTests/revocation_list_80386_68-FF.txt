@@ -1,7 +1,7 @@
 # Revocation list generated for 80386 range 68-FF
 # Total tests: 379300
-# Passing: 281643 (74.25%)
-# Failing: 97657 (25.75%)
+# Passing: 281774 (74.29%)
+# Failing: 97526 (25.71%)
 #
 # Per-opcode statistics:
 # 68: 966/1000 passing (96.60%), 34/1000 failing (3.40%)
@@ -132,7 +132,7 @@
 # C1.5: 1264/2500 passing (50.56%), 1236/2500 failing (49.44%)
 # C1.6: 0/2500 passing (0.00%), 2500/2500 failing (100.00%)
 # C1.7: 1264/2500 passing (50.56%), 1236/2500 failing (49.44%)
-# C4: 2420/2500 passing (96.80%), 80/2500 failing (3.20%)
+# C4: 2421/2500 passing (96.84%), 79/2500 failing (3.16%)
 # C5: 2421/2500 passing (96.84%), 79/2500 failing (3.16%)
 # C6: 2351/2500 passing (94.04%), 149/2500 failing (5.96%)
 # C7: 2338/2500 passing (93.52%), 162/2500 failing (6.48%)
@@ -176,7 +176,7 @@
 # D4: 325/2500 passing (13.00%), 2175/2500 failing (87.00%)
 # D5: 725/2500 passing (29.00%), 1775/2500 failing (71.00%)
 # D6: 99/100 passing (99.00%), 1/100 failing (1.00%)
-# D7: 2305/2500 passing (92.20%), 195/2500 failing (7.80%)
+# D7: 2435/2500 passing (97.40%), 65/2500 failing (2.60%)
 # E0: 500/500 passing (100.00%), 0/500 failing (0.00%)
 # E1: 500/500 passing (100.00%), 0/500 failing (0.00%)
 # E2: 500/500 passing (100.00%), 0/500 failing (0.00%)

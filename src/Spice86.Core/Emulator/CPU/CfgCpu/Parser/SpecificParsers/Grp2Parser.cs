@@ -1,108 +1,77 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
 
+/// <summary>
+/// Parser for GRP2 instructions: shift/rotate operations with ModRM.
+/// 7 operations: Rol, Ror, Rcl, Rcr, Shl, Shr, Sar.
+/// 3 forms: count=1, count=CL, count=IMM8.
+/// </summary>
 public class Grp2Parser : BaseGrpOperationParser {
-    public Grp2Parser(BaseInstructionParser instructionParser) : base(instructionParser) {
+    private static readonly (string Operation, InstructionOperation DisplayOp)[] Operations = {
+        ("Rol", InstructionOperation.ROL),
+        ("Ror", InstructionOperation.ROR),
+        ("Rcl", InstructionOperation.RCL),
+        ("Rcr", InstructionOperation.RCR),
+        ("Shl", InstructionOperation.SHL),
+        ("Shr", InstructionOperation.SHR),
+        ("", InstructionOperation.NOP),  // groupIndex 6 is invalid
+        ("Sar", InstructionOperation.SAR),
+    };
+
+    private readonly Grp2CountSource _countSource;
+
+    public Grp2Parser(ParsingTools parsingTools, Grp2CountSource countSource) : base(parsingTools) {
+        _countSource = countSource;
     }
 
     protected override CfgInstruction Parse(ParsingContext context, ModRmContext modRmContext, int groupIndex) {
-        ushort opcode = context.OpcodeField.Value;
-        bool useImm = !BitIsTrue(opcode, 4);
+        if (groupIndex == 6 || groupIndex > 7) {
+            throw new InvalidGroupIndexException(_state, groupIndex);
+        }
+        (string operation, InstructionOperation displayOp) = Operations[groupIndex];
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
-        if (useImm) {
-            return GetOperationRmImmFactory(groupIndex).Parse(context, modRmContext, bitWidth);
+        DataType dataType = _astBuilder.UType(bitWidth);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        RegisterModRmFields(instr, modRmContext);
+        ValueNode countNode;
+        ValueNode displayCountNode;
+        switch (_countSource) {
+            case Grp2CountSource.Immediate: {
+                InstructionField<byte> immField = _instructionReader.UInt8.NextField(false);
+                instr.AddField(immField);
+                ValueNode immNode = _astBuilder.InstructionField.ToNode(immField);
+                countNode = immNode;
+                displayCountNode = immNode;
+                break;
+            }
+            case Grp2CountSource.Cl: {
+                ValueNode clNode = _astBuilder.Register.Reg8(RegisterIndex.CxIndex);
+                countNode = clNode;
+                displayCountNode = clNode;
+                break;
+            }
+            default: {
+                countNode = _astBuilder.Constant.ToNode(1);
+                displayCountNode = _astBuilder.Constant.ToNode(_astBuilder.UType(BitWidth.QUIBBLE_5), 1UL);
+                break;
+            }
         }
-        bool useCl = BitIsTrue(opcode, 1);
-        if (useCl) {
-            return GetOperationClFactory(groupIndex).Parse(context, modRmContext, bitWidth);
-        }
-
-        return GetOperationOneFactory(groupIndex).Parse(context, modRmContext, bitWidth);
-    }
-    
-    protected BaseOperationModRmFactory GetOperationOneFactory(int groupIndex) {
-        return groupIndex switch {
-            0 => new Grp2RolOneRmOperationFactory(this),
-            1 => new Grp2RorOneRmOperationFactory(this),
-            2 => new Grp2RclOneRmOperationFactory(this),
-            3 => new Grp2RcrOneRmOperationFactory(this),
-            4 => new Grp2ShlOneRmOperationFactory(this),
-            5 => new Grp2ShrOneRmOperationFactory(this),
-            7 => new Grp2SarOneRmOperationFactory(this),
-            _ => throw new InvalidGroupIndexException(_state, groupIndex)
-        };
-    }
-    protected BaseOperationModRmFactory GetOperationClFactory(int groupIndex) {
-        return groupIndex switch {
-            0 => new Grp2RolClRmOperationFactory(this),
-            1 => new Grp2RorClRmOperationFactory(this),
-            2 => new Grp2RclClRmOperationFactory(this),
-            3 => new Grp2RcrClRmOperationFactory(this),
-            4 => new Grp2ShlClRmOperationFactory(this),
-            5 => new Grp2ShrClRmOperationFactory(this),
-            7 => new Grp2SarClRmOperationFactory(this),
-            _ => throw new InvalidGroupIndexException(_state, groupIndex)
-        };
-    }
-
-    protected BaseOperationModRmFactory GetOperationRmImmFactory(int groupIndex) {
-        return groupIndex switch {
-            0 => new Grp2RolRmImmOperationFactory(this),
-            1 => new Grp2RorRmImmOperationFactory(this),
-            2 => new Grp2RclRmImmOperationFactory(this),
-            3 => new Grp2RcrRmImmOperationFactory(this),
-            4 => new Grp2ShlRmImmOperationFactory(this),
-            5 => new Grp2ShrRmImmOperationFactory(this),
-            7 => new Grp2SarRmImmOperationFactory(this),
-            _ => throw new InvalidGroupIndexException(_state, groupIndex)
-        };
+        ValueNode rmNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
+        MethodCallValueNode shiftCall = _astBuilder.AluCall(dataType, bitWidth, operation, rmNode, countNode);
+        InstructionNode displayAst = new InstructionNode(displayOp, rmNode, displayCountNode);
+        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr,
+            _astBuilder.Assign(dataType, rmNode, shiftCall));
+        instr.AttachAsts(displayAst, execAst);
+        return instr;
     }
 }
-
-[OperationModRmFactory("Grp2RolOneRm")]
-public partial class Grp2RolOneRmOperationFactory;
-[OperationModRmFactory("Grp2RorOneRm")]
-public partial class Grp2RorOneRmOperationFactory;
-[OperationModRmFactory("Grp2RclOneRm")]
-public partial class Grp2RclOneRmOperationFactory;
-[OperationModRmFactory("Grp2RcrOneRm")]
-public partial class Grp2RcrOneRmOperationFactory;
-[OperationModRmFactory("Grp2ShlOneRm")]
-public partial class Grp2ShlOneRmOperationFactory;
-[OperationModRmFactory("Grp2ShrOneRm")]
-public partial class Grp2ShrOneRmOperationFactory;
-[OperationModRmFactory("Grp2SarOneRm")]
-public partial class Grp2SarOneRmOperationFactory;
-
-[OperationModRmFactory("Grp2RolClRm")]
-public partial class Grp2RolClRmOperationFactory;
-[OperationModRmFactory("Grp2RorClRm")]
-public partial class Grp2RorClRmOperationFactory;
-[OperationModRmFactory("Grp2RclClRm")]
-public partial class Grp2RclClRmOperationFactory;
-[OperationModRmFactory("Grp2RcrClRm")]
-public partial class Grp2RcrClRmOperationFactory;
-[OperationModRmFactory("Grp2ShlClRm")]
-public partial class Grp2ShlClRmOperationFactory;
-[OperationModRmFactory("Grp2ShrClRm")]
-public partial class Grp2ShrClRmOperationFactory;
-[OperationModRmFactory("Grp2SarClRm")]
-public partial class Grp2SarClRmOperationFactory;
-
-[OperationModRmImmFactory("Grp2RolRmImm", true)]
-public partial class Grp2RolRmImmOperationFactory;
-[OperationModRmImmFactory("Grp2RorRmImm", true)]
-public partial class Grp2RorRmImmOperationFactory;
-[OperationModRmImmFactory("Grp2RclRmImm", true)]
-public partial class Grp2RclRmImmOperationFactory;
-[OperationModRmImmFactory("Grp2RcrRmImm", true)]
-public partial class Grp2RcrRmImmOperationFactory;
-[OperationModRmImmFactory("Grp2ShlRmImm", true)]
-public partial class Grp2ShlRmImmOperationFactory;
-[OperationModRmImmFactory("Grp2ShrRmImm", true)]
-public partial class Grp2ShrRmImmOperationFactory;
-[OperationModRmImmFactory("Grp2SarRmImm", true)]
-public partial class Grp2SarRmImmOperationFactory;

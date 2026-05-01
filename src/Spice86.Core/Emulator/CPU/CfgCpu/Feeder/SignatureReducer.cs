@@ -1,6 +1,5 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
 using System.Linq;
@@ -12,15 +11,6 @@ public class SignatureReducer {
         _replacerRegistry = replacerRegistry;
     }
 
-    private static Dictionary<Type, List<CfgInstruction>> GroupByType(List<CfgInstruction> instructions) {
-        IEnumerable<IGrouping<Type, CfgInstruction>> grouped =
-            instructions.GroupBy(i => i.GetType());
-        return grouped.ToDictionary(
-            g => g.Key,
-            g => g.ToList()
-        );
-    }
-
     public CfgInstruction? ReduceToOne(CfgInstruction instruction1, CfgInstruction instruction2) {
         IList<CfgInstruction> reducedInstructions = ReduceAll([instruction1, instruction2]);
         if (reducedInstructions.Count == 1) {
@@ -30,17 +20,6 @@ public class SignatureReducer {
     }
 
     public IList<CfgInstruction> ReduceAll(List<CfgInstruction> instructions) {
-        IDictionary<Type, List<CfgInstruction>> groupByType =
-            GroupByType(instructions);
-        List<CfgInstruction> res = new();
-        foreach (KeyValuePair<Type, List<CfgInstruction>> entry in groupByType) {
-            res.AddRange(ReduceAllWithSameType(entry.Value));
-        }
-
-        return res;
-    }
-
-    private List<CfgInstruction> ReduceAllWithSameType(IList<CfgInstruction> instructions) {
         // Group by a signature composed of only final fields.
         // Each list here is reducible since diverging fields are non final.
         IDictionary<Signature, List<CfgInstruction>> groupedBySignatureFinal =
@@ -64,13 +43,20 @@ public class SignatureReducer {
     }
 
     private CfgInstruction ReduceAllWithSameSignatureFinal(IList<CfgInstruction> instructions) {
+        // A single-element group requires no cross-instruction reduction: return it as-is.
+        if (instructions.Count == 1) {
+            return instructions[0];
+        }
         // The instructions in input all have the final fields and the same grammar
         // So they are all functionally the same except for some value fields that are changing.
-        // We keep the first one and get rid of the other, and we determine in the one we keep which fields are changing.
-        CfgInstruction res = instructions.First();
+        // We determine which fields are changing on the survivor, and replace all others with it.
+        // We choose an uncompiled instruction so that compiler will process it next.
+        CfgInstruction res = instructions.FirstOrDefault(i => i.CompilationGeneration == 0)
+            ?? throw new InvalidOperationException(
+                $"All instructions in reduction set have been compiled. " +
+                $"At least one uncompiled instruction is required. " +
+                $"Instructions: [{string.Join(", ", instructions.Select(i => $"{i.Address} (gen={i.CompilationGeneration})"))}]");
         ReduceNonFinalFields(res, instructions);
-        // Invalidate cached AST since field properties changed
-        res.InvalidateExecutionAstCache();
         // unlink other instructions and make the graph point to new instruction. Make sure other instructions are not in the caches.
         ReplaceWithReference(res, instructions);
         return res;

@@ -10,7 +10,6 @@ public class ModRmParser {
     private readonly InstructionReader _instructionReader;
     private readonly State _state;
 
-
     public ModRmParser(InstructionReader instructionReader, State state) {
         _instructionReader = instructionReader;
         _state = state;
@@ -19,9 +18,9 @@ public class ModRmParser {
     public ModRmContext ParseNext(ModRmParsingContext context) {
         InstructionField<byte> modRmByteField = _instructionReader.UInt8.NextField(true);
         byte modRmByte = modRmByteField.Value;
-        uint mode = (uint)(modRmByte >> 6 & 0b11);
-        int registerIndex = modRmByte >> 3 & 0b111;
-        int registerMemoryIndex = modRmByte & 0b111;
+        uint mode = X86OctalParser.Hi2(modRmByte);
+        int registerIndex = X86OctalParser.Mid3(modRmByte);
+        int registerMemoryIndex = X86OctalParser.Lo3(modRmByte);
         MemoryOffsetType memoryOffsetType;
         MemoryAddressType memoryAddressType;
         if (mode == 3) {
@@ -69,9 +68,9 @@ public class ModRmParser {
     private SibContext ParseSibContext(uint mode) {
         InstructionField<byte> sibByteField = _instructionReader.UInt8.NextField(true);
         byte sibByte = sibByteField.Value;
-        byte scale = (byte)(1 << (sibByte >> 6 & 0b11));
-        int indexRegister = sibByte >> 3 & 0b111;
-        int baseRegister = sibByte & 0b111;
+        byte scale = (byte)(1 << (int)X86OctalParser.Hi2(sibByte));
+        int indexRegister = X86OctalParser.Mid3(sibByte);
+        int baseRegister = X86OctalParser.Lo3(sibByte);
         SibBase sibBase = ComputeSibBase(baseRegister, mode);
         InstructionField<uint>? baseField = null;
         if (sibBase == SibBase.BASE_FIELD_32) {

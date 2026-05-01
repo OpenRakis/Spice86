@@ -1,98 +1,54 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Shared.Emulator.Memory;
 
+/// <summary>
+/// Parser for GRP1 instructions (opcodes 80-83): ALU operations with ModRM + immediate.
+/// 8 operations: Add, Or, Adc, Sbb, And, Sub, Xor, Cmp.
+/// </summary>
 public class Grp1Parser : BaseGrpOperationParser {
-    public Grp1Parser(BaseInstructionParser instructionParser) : base(instructionParser) {
+    private static readonly (string Operation, InstructionOperation DisplayOp, bool Assign)[] Operations =
+        AluOperationTable.Operations;
+
+    public Grp1Parser(ParsingTools parsingTools) : base(parsingTools) {
     }
 
     protected override CfgInstruction Parse(ParsingContext context, ModRmContext modRmContext, int groupIndex) {
+        if (groupIndex > 7) {
+            throw new InvalidGroupIndexException(_state, groupIndex);
+        }
+        (string operation, InstructionOperation displayOp, bool assign) = Operations[groupIndex];
         ushort opCode = context.OpcodeField.Value;
         bool signExtendOp2 = opCode is 0x83;
-
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
-        Grp1OperationParser operationParser = GetOperationParser(groupIndex);
-        return operationParser.Parse(context, modRmContext, bitWidth, signExtendOp2);
+        DataType dataType = _astBuilder.UType(bitWidth);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        RegisterModRmFields(instr, modRmContext);
+        ValueNode displayImmNode;
+        ValueNode execImmNode;
+        if (signExtendOp2) {
+            ValueNode rawNode = ReadSignedImmediate(instr, BitWidth.BYTE_8);
+            displayImmNode = _astBuilder.TypeConversion.Convert(_astBuilder.SType(bitWidth), rawNode);
+            execImmNode = _astBuilder.SignExtendToUnsigned(rawNode, BitWidth.BYTE_8, bitWidth);
+        } else {
+            displayImmNode = execImmNode = ReadUnsignedImmediate(instr, bitWidth);
+        }
+        ValueNode rmNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
+        MethodCallValueNode aluCall = _astBuilder.AluCall(dataType, bitWidth, operation, rmNode, execImmNode);
+        InstructionNode displayAst = new InstructionNode(displayOp, rmNode, displayImmNode);
+        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr,
+            _astBuilder.ConditionalAssign(dataType, rmNode, aluCall, assign));
+        instr.AttachAsts(displayAst, execAst);
+        return instr;
     }
 
-    private Grp1OperationParser GetOperationParser(int groupIndex) {
-        return groupIndex switch {
-            0 => new Grp1AddOperationParser(this),
-            1 => new Grp1OrOperationParser(this),
-            2 => new Grp1AdcOperationParser(this),
-            3 => new Grp1SbbOperationParser(this),
-            4 => new Grp1AndOperationParser(this),
-            5 => new Grp1SubOperationParser(this),
-            6 => new Grp1XorOperationParser(this),
-            7 => new Grp1CmpOperationParser(this),
-            _ => throw new InvalidGroupIndexException(_state, groupIndex)
-        };
-    }
+
 }
-
-/// <summary>
-/// Internal base class for generated code that will instantiate one of the grp1 operation in 8,16,32 bits mode, signed / unsigned
-/// </summary>
-public abstract class Grp1OperationParser : BaseInstructionParser {
-    protected Grp1OperationParser(BaseInstructionParser other) : base(other) {
-    }
-
-    public CfgInstruction Parse(ParsingContext context, ModRmContext modRmContext, BitWidth bitWidth, bool signExtendOp2) {
-        return bitWidth switch {
-            BitWidth.BYTE_8 => BuildOperandSize8(context, modRmContext,
-                _instructionReader.UInt8.NextField(false)),
-            BitWidth.WORD_16 => signExtendOp2
-                ? BuildOperandSizeSigned16(context, modRmContext,
-                    _instructionReader.Int8.NextField(false))
-                : BuildOperandSizeUnsigned16(context, modRmContext,
-                    _instructionReader.UInt16.NextField(false)),
-            BitWidth.DWORD_32 => signExtendOp2
-                ? BuildOperandSizeSigned32(context, modRmContext,
-                    _instructionReader.Int8.NextField(false))
-                : BuildOperandSizeUnsigned32(context, modRmContext,
-                    _instructionReader.UInt32.NextField(false)),
-            _ => throw CreateUnsupportedBitWidthException(bitWidth)
-        };
-    }
-
-
-    protected abstract CfgInstruction BuildOperandSize8(ParsingContext context, ModRmContext modRmContext, InstructionField<byte> valueField);
-
-    protected abstract CfgInstruction BuildOperandSizeSigned16(ParsingContext context, ModRmContext modRmContext,
-        InstructionField<sbyte> valueField);
-
-    protected abstract CfgInstruction BuildOperandSizeUnsigned16(ParsingContext context, ModRmContext modRmContext,
-        InstructionField<ushort> valueField);
-
-    protected abstract CfgInstruction BuildOperandSizeSigned32(ParsingContext context, ModRmContext modRmContext,
-        InstructionField<sbyte> valueField);
-
-    protected abstract CfgInstruction BuildOperandSizeUnsigned32(ParsingContext context, ModRmContext modRmContext,
-        InstructionField<uint> valueField);
-}
-
-[Grp1OperationParser("Add")]
-public partial class Grp1AddOperationParser;
-
-[Grp1OperationParser("Or")]
-public partial class Grp1OrOperationParser;
-
-[Grp1OperationParser("Adc")]
-public partial class Grp1AdcOperationParser;
-
-[Grp1OperationParser("Sbb")]
-public partial class Grp1SbbOperationParser;
-
-[Grp1OperationParser("And")]
-public partial class Grp1AndOperationParser;
-
-[Grp1OperationParser("Sub")]
-public partial class Grp1SubOperationParser;
-
-[Grp1OperationParser("Xor")]
-public partial class Grp1XorOperationParser;
-
-[Grp1OperationParser("Cmp")]
-public partial class Grp1CmpOperationParser;

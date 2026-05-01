@@ -19,7 +19,7 @@ Base class for all graph nodes. Each node tracks its predecessors, successors, a
 
 ### CfgInstruction
 
-A parsed x86 instruction. Beyond the base node properties:
+A parsed x86 instruction. `CfgInstruction` is a flat data carrier - the parser determines semantics at parse time and stores pre-built ASTs directly on it. Beyond the base node properties:
 
 | Property | Purpose |
 |---|---|
@@ -29,6 +29,9 @@ A parsed x86 instruction. Beyond the base node properties:
 | `SuccessorsPerAddress` | Maps target `SegmentedAddress` to its successor node |
 | `SuccessorsPerType` | Maps `InstructionSuccessorType` to a set of successors |
 | `Length` / `NextInMemoryAddress` | Instruction size and fall-through address |
+| `DisplayAst` | Pre-built `InstructionNode` for display (mnemonic + operands) |
+| `ExecutionAst` | Pre-built `IVisitableAstNode` compiled into an executable delegate |
+| `Kind` | `InstructionKind` flags: `Call`, `Jump`, `Return`, `Invalid` |
 
 ### SelectorNode
 
@@ -59,9 +62,13 @@ The final vs. non-final distinction is what makes variant merging possible.
 
 ### InstructionParser
 
-Turns memory into instruction nodes. Each instruction variant is its own C# type, and many are generated from templates via [Morris.Moxy](https://github.com/mrpmorris/Morris.Moxy). An instruction is a list of fields where:
+Turns memory into `CfgInstruction` nodes. The parser is the single source of truth: it reads bytes, determines semantics, builds both ASTs (display and execution) using `AstBuilder`, and attaches them to a flat `CfgInstruction` via `AttachAsts()`. Construction follows a two-phase pattern: fields are registered first (so `NextInMemoryAddress` is computed), then ASTs are built using the complete instruction.
+
+Each instruction is a list of fields where:
 - Final fields always use the parsed value.
 - Non-final fields use the parsed value initially, but switch to reading from memory once a post-parse modification is detected.
+
+Non-final fields are represented in the AST as `InstructionFieldNode`, which defers the constant-vs-memory-read decision to visit time based on `UseValue`. This means ASTs are structurally stable and never need rebuilding when `SignatureReducer` marks a field for live reads.
 
 ## Graph Construction
 
@@ -115,7 +122,7 @@ How linking resolves, depending on node types:
 
 - **CfgInstruction → CfgInstruction** - look up `SuccessorsPerAddress[next.Address]`. Missing? Create the link. Present but a different object? That's a successor conflict (see below).
 - **SelectorNode → CfgInstruction** - look up `SuccessorsPerSignature[next.Signature]`. Missing? Create the link. Present but a different object? Throw.
-- **IReturnInstruction** - also links the original call instruction to the return target (`CallToReturn` or `CallToMisalignedReturn`). Only the ret→next resolution is returned; the call→next link is bookkeeping.
+- **Return instruction** (`IsReturn` flag) - also links the original call instruction to the return target (`CallToReturn` or `CallToMisalignedReturn`). Only the ret→next resolution is returned; the call→next link is bookkeeping.
 
 Links are only created within the same execution context. When a hardware interrupt fires (timer, keyboard, DMA, ...), a new context starts from the interrupt handler's entry point. The graph is never threaded across that boundary, so it can be disconnected - multiple islands are normal.
 
@@ -208,13 +215,13 @@ flowchart LR
 
 `NodeLinker.CreateSelectorNodeBetween(instruction1, instruction2)` creates a `SelectorNode` at the shared address and calls `InsertIntermediatePredecessor` for both instructions, rewiring all their predecessors to go through the selector.
 
-At runtime, `SelectorNode.Execute()` is a no-op. `GetNextSuccessor()` iterates `SuccessorsPerSignature`, reads the corresponding bytes from memory, and returns the first matching variant - or `null` if nothing matches, triggering a fresh parse.
+At runtime, `GetNextSuccessor()` iterates `SuccessorsPerSignature`, reads the corresponding bytes from memory, and returns the first matching variant - or `null` if nothing matches, triggering a fresh parse.
 
 ## Variant Merging (SignatureReducer)
 
-When two `CfgInstruction` objects at the same address share the same `SignatureFinal` - same type, same opcodes, same structure, differing only in non-final fields - they can be merged into one node:
+When two `CfgInstruction` objects at the same address share the same `SignatureFinal` - same opcodes, same structure, differing only in non-final fields - they can be merged into one node:
 
-1. Group instructions by C# type, then by `SignatureFinal`.
+1. Group instructions by `SignatureFinal`.
 2. Pick the first instruction in each group as the reference.
 3. Compare field values across all instructions in the group.
 4. Where a field differs: set `UseValue = false` and `NullifySignature()` on the reference's field, turning it into a wildcard that reads from memory at execution time.
@@ -242,7 +249,7 @@ At each step:
 1. `CfgNodeFeeder` picks the next node to execute.
 2. If the node might be stale, it's checked against memory.
 3. The node is linked to the previously executed one (if the predecessor still has room).
-4. The node executes.
+4. The node's compiled execution delegate runs (compiled from the pre-built `ExecutionAst` by `CfgNodeExecutionCompiler`).
 5. Graph state is updated.
 6. If a hardware interrupt arrived, context is switched.
 

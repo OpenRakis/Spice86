@@ -11,10 +11,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 /// Builder for creating control flow structures in the AST, such as conditional assignments and if/else nodes.
 /// </summary>
 public class ControlFlowAstBuilder {
-    private readonly AstBuilder _astBuilder;
+    private readonly ConstantAstBuilder _constant;
 
-    public ControlFlowAstBuilder(AstBuilder astBuilder) {
-        _astBuilder = astBuilder;
+    public ControlFlowAstBuilder(ConstantAstBuilder constant) {
+        _constant = constant;
     }
 
     /// <summary>
@@ -28,10 +28,10 @@ public class ControlFlowAstBuilder {
     /// <param name="falseValue">The value to assign if the condition is false</param>
     /// <returns>An IfElseNode representing the conditional assignment</returns>
     public IfElseNode TernaryAssign(DataType dataType, ValueNode destination, ValueNode condition, ValueNode trueValue, ValueNode falseValue) {
-        BinaryOperationNode assignTrue = _astBuilder.Assign(dataType, destination, trueValue);
+        BinaryOperationNode assignTrue = Assign(dataType, destination, trueValue);
         BlockNode trueCase = new BlockNode(assignTrue);
         
-        BinaryOperationNode assignFalse = _astBuilder.Assign(dataType, destination, falseValue);
+        BinaryOperationNode assignFalse = Assign(dataType, destination, falseValue);
         BlockNode falseCase = new BlockNode(assignFalse);
         
         return new IfElseNode(condition, trueCase, falseCase);
@@ -78,7 +78,7 @@ public class ControlFlowAstBuilder {
     /// <returns>An IfElseNode representing jump-or-fallthrough behavior.</returns>
     public IfElseNode ConditionalNearJump(CfgInstruction instruction, ValueNode condition, ValueNode targetIp) {
         JumpNearNode jumpNode = new JumpNearNode(instruction, targetIp);
-        MoveIpNextNode fallthroughNode = new MoveIpNextNode(_astBuilder.Constant.ToNode(instruction.NextInMemoryAddress.Offset));
+        MoveIpNextNode fallthroughNode = new MoveIpNextNode(_constant.ToNode(instruction.NextInMemoryAddress.Offset));
         return new IfElseNode(condition, jumpNode, fallthroughNode);
     }
 
@@ -92,8 +92,18 @@ public class ControlFlowAstBuilder {
     /// <returns>An IfElseNode representing interrupt-or-fallthrough behavior.</returns>
     public IfElseNode ConditionalInterrupt(CfgInstruction instruction, ValueNode condition, ValueNode vectorNumber) {
         InterruptCallNode interruptNode = new InterruptCallNode(instruction, vectorNumber);
-        MoveIpNextNode fallthroughNode = new MoveIpNextNode(_astBuilder.Constant.ToNode(instruction.NextInMemoryAddress.Offset));
+        MoveIpNextNode fallthroughNode = new MoveIpNextNode(_constant.ToNode(instruction.NextInMemoryAddress.Offset));
         return new IfElseNode(condition, interruptNode, fallthroughNode);
+    }
+
+    /// <summary>
+    /// Creates an if node with no else branch. The false case is an empty block.
+    /// </summary>
+    /// <param name="condition">The boolean condition to evaluate.</param>
+    /// <param name="trueCase">The statement to execute when the condition is true.</param>
+    /// <returns>An IfElseNode whose true branch is <paramref name="trueCase"/> and whose false branch is empty.</returns>
+    public IfElseNode If(ValueNode condition, IVisitableAstNode trueCase) {
+        return new IfElseNode(condition, trueCase, new BlockNode());
     }
 
     /// <summary>
@@ -105,8 +115,17 @@ public class ControlFlowAstBuilder {
     /// <returns>An IfElseNode whose true branch throws the exception and whose false branch is empty.</returns>
     public IfElseNode ThrowIf<TException>(ValueNode condition, string message) where TException : Exception {
         ThrowNode throwNode = new ThrowNode(typeof(TException), message);
-        BlockNode trueCase = new BlockNode(throwNode);
-        BlockNode falseCase = new BlockNode();
-        return new IfElseNode(condition, trueCase, falseCase);
+        return If(condition, new BlockNode(throwNode));
+    }
+
+    /// <summary>
+    /// Creates an assignment node: destination = source
+    /// </summary>
+    /// <param name="dataType">The data type for the assignment</param>
+    /// <param name="destination">The destination (left-hand side)</param>
+    /// <param name="source">The source value (right-hand side)</param>
+    /// <returns>BinaryOperationNode representing the assignment</returns>
+    public BinaryOperationNode Assign(DataType dataType, ValueNode destination, ValueNode source) {
+        return new BinaryOperationNode(dataType, destination, BinaryOperation.ASSIGN, source);
     }
 }

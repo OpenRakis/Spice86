@@ -1,7 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using AstSelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow.SelectorNode;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
@@ -37,16 +36,9 @@ public class SelectorNode(SegmentedAddress address) : CfgNode(address, null) {
         return null;
     }
 
-    public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.SELECTOR);
-    }
+    public override InstructionNode DisplayAst =>
+        new InstructionNode(InstructionOperation.SELECTOR);
 
-    public override void Execute(InstructionExecutionHelper helper) {
-        // SelectorNode doesn't execute any instruction semantics
-        // It only determines which successor to use based on memory
-    }
-
-    protected override IVisitableAstNode BuildExecutionAst(AstBuilder builder) {
-        return new AstSelectorNode();
-    }
+    public override IVisitableAstNode ExecutionAst =>
+        new AstSelectorNode();
 }

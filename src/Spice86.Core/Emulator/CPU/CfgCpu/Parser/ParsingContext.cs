@@ -16,6 +16,9 @@ public class ParsingContext : ModRmParsingContext {
     public int? SegmentOverrideFromPrefixes { get; }
     public bool HasOperandSize32 { get; }
 
+    /// <summary>Returns <see cref="BitWidth.DWORD_32"/> when operand-size prefix is active, <see cref="BitWidth.WORD_16"/> otherwise.</summary>
+    public BitWidth DefaultWordOperandBitWidth { get; }
+
     public ParsingContext(SegmentedAddress address, InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes) {
         Address = address;
@@ -24,6 +27,7 @@ public class ParsingContext : ModRmParsingContext {
         AddressWidthFromPrefixes = ComputeAddressSize(prefixes);
         SegmentOverrideFromPrefixes = ComputeSegmentOverrideIndex(prefixes);
         HasOperandSize32 = ComputeHasOperandSize32(prefixes);
+        DefaultWordOperandBitWidth = HasOperandSize32 ? BitWidth.DWORD_32 : BitWidth.WORD_16;
     }
 
     private static int? ComputeSegmentOverrideIndex(List<InstructionPrefix> prefixes) {

@@ -51,8 +51,9 @@ public sealed partial class HttpApiGeneratedClientIntegrationTests {
     }
 
     private static TestWorkspace CreateTestWorkspace(string extension) {
-        string rootPath = Path.Join(Path.GetTempPath(), "Spice86.Tests", "HttpApiGeneratedClient", Guid.NewGuid().ToString("N"));
-        string toolPath = Path.Join(Path.GetTempPath(), "Spice86.Tests", "Tools", "Kiota");
+        string baseTempPath = Path.GetTempPath();
+        string rootPath = Path.Join(baseTempPath, "Spice86.Tests", "HttpApiGeneratedClient", Guid.NewGuid().ToString("N"));
+        string toolPath = Path.Join(baseTempPath, "Spice86.Tests", "Tools", "Kiota");
         Directory.CreateDirectory(rootPath);
         Directory.CreateDirectory(toolPath);
         return new TestWorkspace(

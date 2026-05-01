@@ -14,28 +14,23 @@
     <PropertyGroup>
         <PackageId>Spice86.Core</PackageId>
     </PropertyGroup>
-    <!-- Moxy configuration -->
-    <PropertyGroup>
-        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-    </PropertyGroup>
-    <ItemGroup>
-        <AdditionalFiles Include="Emulator/CPU/CfgCpu/ParsedInstruction/Instructions/Mixins/*.mixin" />
-        <AdditionalFiles Include="Emulator/CPU/CfgCpu/Parser/SpecificParsers/Mixin/*.mixin" />
-    </ItemGroup>
+
     <ItemGroup>
         <None Remove="Resources\2MGM.sf2" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance" />
-        <PackageReference Include="FastExpressionCompiler" />
         <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.Sinks.File" />
 		<PackageReference Include="Spectre.Console.Cli" />
+        <Reference Include="FastExpressionCompiler">
+          <HintPath>..\..\3rdparty\Release\FastExpressionCompiler.dll</HintPath>
+          <Private>true</Private>
+        </Reference>
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
         <PackageReference Include="Swashbuckle.AspNetCore" />
-        <PackageReference Include="Morris.Moxy" />
         <PackageReference Include="NukedOPL3Sharp" />
         <PackageReference Include="Spice86.Audio" />
         <!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->

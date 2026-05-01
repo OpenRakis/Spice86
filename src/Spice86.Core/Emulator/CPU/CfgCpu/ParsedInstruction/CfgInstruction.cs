@@ -1,10 +1,12 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
+
+using InstructionNode = Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.InstructionNode;
 
 using System.Collections.Immutable;
 using System.Linq;
@@ -12,17 +14,60 @@ using System.Linq;
 /// <summary>
 /// Base of all the instructions: Prefixes (optional) and an opcode that can be either one or 2 bytes.
 /// </summary>
-public abstract class CfgInstruction : CfgNode, ICfgInstruction {
+public sealed class CfgInstruction : CfgNode {
+    /// <summary>
+    /// Classifies the control-flow role of this instruction.
+    /// </summary>
+    public InstructionKind Kind { get; init; } = InstructionKind.None;
+
+    /// <summary>True when this instruction is a RET or IRET.</summary>
+    public bool IsReturn => Kind.HasFlag(InstructionKind.Return);
+
+    /// <summary>True when this instruction is a CALL.</summary>
+    public bool IsCall => Kind.HasFlag(InstructionKind.Call);
+
+    /// <summary>True when this instruction is a JMP (any form).</summary>
+    public bool IsJump => Kind.HasFlag(InstructionKind.Jump);
+
+    /// <summary>True when this instruction represents an invalid opcode.</summary>
+    public bool IsInvalid => Kind.HasFlag(InstructionKind.Invalid);
+
+    private bool _canCauseContextRestore;
+
+    /// <inheritdoc />
+    public override bool CanCauseContextRestore => _canCauseContextRestore;
+
+    /// <summary>Marks this instruction as one that can restore execution context (e.g., IRET).</summary>
+    internal void EnableCanCauseContextRestore() => _canCauseContextRestore = true;
+
+    /// <summary>
+    /// The call instruction that corresponds to this return instruction.
+    /// Only meaningful when <see cref="IsReturn"/> is <c>true</c>.
+    /// </summary>
+    public CfgInstruction? CurrentCorrespondingCallInstruction { get; set; }
+
+    private InstructionNode? _instructionAst;
+    private IVisitableAstNode? _executionAst;
+
+    /// <summary>
+    /// Attaches pre-built ASTs produced by the parser.
+    /// Must be called exactly once per instruction, immediately after all fields are registered.
+    /// </summary>
+    internal void AttachAsts(InstructionNode instructionAst, IVisitableAstNode executionAst) {
+        _instructionAst = instructionAst;
+        _executionAst = executionAst;
+    }
+
     /// <summary>
     /// Instructions are born live.
     /// </summary>
     private bool _isLive = true;
 
-    protected CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField, int? maxSuccessorsCount) : this(address,
+    public CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField, int? maxSuccessorsCount) : this(address,
         opcodeField, new List<InstructionPrefix>(), maxSuccessorsCount) {
     }
 
-    protected CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField,
+    public CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes, int? maxSuccessorsCount)
         : base(address, maxSuccessorsCount) {
         InstructionPrefixes = prefixes;
@@ -80,12 +125,12 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
 
     public List<FieldWithValue> FieldsInOrder { get; } = new();
 
-    protected void AddField(FieldWithValue fieldWithValue) {
+    internal void AddField(FieldWithValue fieldWithValue) {
         FieldsInOrder.Add(fieldWithValue);
         UpdateLength();
     }
-    
-    protected void AddFields(IEnumerable<FieldWithValue> fieldWithValues) {
+
+    internal void AddFields(IEnumerable<FieldWithValue> fieldWithValues) {
         fieldWithValues.ToList().ForEach(AddField);
     }
 
@@ -142,6 +187,32 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     
     public void SetLive(bool isLive) {
         _isLive = isLive;
+    }
+
+    /// <summary>
+    /// Returns the pre-built display AST set by <see cref="AttachAsts"/>.
+    /// </summary>
+    public override InstructionNode DisplayAst {
+        get {
+            if (_instructionAst is not null) {
+                return _instructionAst;
+            }
+            throw new InvalidOperationException(
+                $"AttachAsts must be called before accessing DisplayAst for {GetType().Name} at {Address}");
+        }
+    }
+
+    /// <summary>
+    /// Returns the pre-built execution AST set by <see cref="AttachAsts"/>.
+    /// </summary>
+    public override IVisitableAstNode ExecutionAst {
+        get {
+            if (_executionAst is not null) {
+                return _executionAst;
+            }
+            throw new InvalidOperationException(
+                $"AttachAsts must be called before accessing ExecutionAst for {GetType().Name} at {Address}");
+        }
     }
 
     public void IncreaseMaxSuccessorsCount(SegmentedAddress target) {

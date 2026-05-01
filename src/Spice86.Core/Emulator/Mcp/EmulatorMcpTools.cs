@@ -7,7 +7,6 @@ using SkiaSharp;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
@@ -250,7 +249,6 @@ internal sealed class EmulatorMcpTools {
                 }
 
                 InstructionParser parser = new(_services.Memory, _services.State);
-                AstBuilder astBuilder = new();
                 AstInstructionRenderer renderer = new(AsmRenderingConfig.CreateSpice86Style());
                 List<DisassemblyLine> lines = new();
                 SegmentedAddress current = new(segment, offset);
@@ -271,7 +269,7 @@ internal sealed class EmulatorMcpTools {
                         break;
                     }
 
-                    InstructionNode ast = instruction.ToInstructionAst(astBuilder);
+                    InstructionNode ast = instruction.DisplayAst;
                     string assembly = ast.Accept(renderer);
                     byte[] bytes = _services.Memory.ReadRam(instruction.Length, physicalAddress);
                     lines.Add(new DisassemblyLine {

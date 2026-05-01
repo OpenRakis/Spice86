@@ -10,61 +10,50 @@ public class InstructionFieldAstBuilder(ConstantAstBuilder constant, PointerAstB
     public PointerAstBuilder Pointer { get; } = pointer;
     public SegmentedAddressAstBuilder SegmentedAddress { get; } = segmentedAddress;
 
-
-    public ValueNode? ToNode(InstructionField<byte> field, bool nullIfZero = false) {
-        return ToNode(ToType(field), field.Value, field.UseValue, field.PhysicalAddress, nullIfZero);
+    public InstructionFieldNode ToNode(InstructionField<byte> field) {
+        return new InstructionFieldNode(ToType(field), field, field.Value);
     }
 
-    public ValueNode? ToNode(InstructionField<ushort> field, bool nullIfZero = false) {
-        return ToNode(ToType(field), field.Value, field.UseValue, field.PhysicalAddress, nullIfZero);
+    public InstructionFieldNode ToNode(InstructionField<ushort> field) {
+        return new InstructionFieldNode(ToType(field), field, field.Value);
     }
 
-    public ValueNode? ToNode(InstructionField<uint> field, bool nullIfZero = false) {
-        return ToNode(ToType(field), field.Value, field.UseValue, field.PhysicalAddress, nullIfZero);
+    public InstructionFieldNode ToNode(InstructionField<uint> field) {
+        return new InstructionFieldNode(ToType(field), field, field.Value);
     }
 
-    public ValueNode? ToNode(InstructionField<sbyte> field, bool nullIfZero = false) {
-        return ToNode(ToType(field), (uint)field.Value, field.UseValue, field.PhysicalAddress, nullIfZero);
+    public InstructionFieldNode ToNode(InstructionField<sbyte> field) {
+        return new InstructionFieldNode(ToType(field), field, (ulong)(uint)field.Value);
     }
 
-    public ValueNode? ToNode(InstructionField<short> field, bool nullIfZero = false) {
-        return ToNode(ToType(field), (uint)field.Value, field.UseValue, field.PhysicalAddress, nullIfZero);
+    public InstructionFieldNode ToNode(InstructionField<short> field) {
+        return new InstructionFieldNode(ToType(field), field, (ulong)(uint)field.Value);
     }
 
-    public ValueNode? ToNode(InstructionField<int> field, bool nullIfZero = false) {
-        return ToNode(ToType(field), (uint)field.Value, field.UseValue, field.PhysicalAddress, nullIfZero);
-    }
-    
-    public ValueNode? ToNode(DataType type, uint value, bool useValue, uint physicalAddress, bool nullIfZero) {
-        if (useValue) {
-            if (value == 0 && nullIfZero) {
-                return null;
-            }
-            return new ConstantNode(type, value);
-        }
-        return Pointer.ToAbsolutePointer(type, physicalAddress);
+    public InstructionFieldNode ToNode(InstructionField<int> field) {
+        return new InstructionFieldNode(ToType(field), field, (ulong)(uint)field.Value);
     }
 
     public SegmentedAddressNode ToNode(InstructionField<SegmentedAddress> field) {
         return SegmentedAddress.ToNode(field);
     }
-    
+
     public DataType ToType(InstructionField<byte> field) {
         return DataType.UINT8;
     }
-    
+
     public DataType ToType(InstructionField<ushort> field) {
         return DataType.UINT16;
     }
-    
+
     public DataType ToType(InstructionField<uint> field) {
         return DataType.UINT32;
     }
-    
+
     public DataType ToType(InstructionField<sbyte> field) {
         return DataType.INT8;
     }
-    
+
     public DataType ToType(InstructionField<short> field) {
         return DataType.INT16;
     }

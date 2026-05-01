@@ -1,11 +1,10 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 
-using System;
 using System.Collections.Generic;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
-using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Helper class for creating stack operation nodes in the AST.
@@ -15,41 +14,25 @@ using Spice86.Core.Emulator.CPU.Registers;
 /// </summary>
 public class StackAstBuilder {
     /// <summary>
-    /// Creates an AST node for pushing a value onto the stack (16-bit).
-    /// Generates a call to Stack.Push16(value) which atomically decrements SP and stores the value.
+    /// Creates an AST node for pushing a value onto the stack.
+    /// Generates a call to Stack.Push16/Push32(value) which atomically decrements SP and stores the value.
     /// </summary>
-    /// <param name="valueNode">The 16-bit value to push</param>
-    /// <returns>MethodCallNode representing Stack.Push16(value)</returns>
-    public MethodCallNode Push16(ValueNode valueNode) {
-        return new MethodCallNode("Stack", "Push16", valueNode);
+    /// <param name="bitWidth">The bit width determining which push to use</param>
+    /// <param name="valueNode">The value to push</param>
+    /// <returns>MethodCallNode representing Stack.PushN(value)</returns>
+    public MethodCallNode Push(BitWidth bitWidth, ValueNode valueNode) {
+        return new MethodCallNode("Stack", $"Push{(int)bitWidth}", valueNode);
     }
 
     /// <summary>
-    /// Creates an AST node for pushing a value onto the stack (32-bit).
-    /// Generates a call to Stack.Push32(value) which atomically decrements SP and stores the value.
+    /// Creates an AST node for popping a value from the stack.
+    /// Generates a call to Stack.Pop16/Pop32() which atomically loads the value and increments SP.
     /// </summary>
-    /// <param name="valueNode">The 32-bit value to push</param>
-    /// <returns>MethodCallNode representing Stack.Push32(value)</returns>
-    public MethodCallNode Push32(ValueNode valueNode) {
-        return new MethodCallNode("Stack", "Push32", valueNode);
-    }
-
-    /// <summary>
-    /// Creates an AST node for popping a value from the stack (16-bit).
-    /// Generates a call to Stack.Pop16() which atomically loads the value and increments SP.
-    /// </summary>
-    /// <returns>MethodCallValueNode representing the result of Stack.Pop16()</returns>
-    public MethodCallValueNode Pop16() {
-        return new MethodCallValueNode(DataType.UINT16, "Stack", "Pop16");
-    }
-
-    /// <summary>
-    /// Creates an AST node for popping a value from the stack (32-bit).
-    /// Generates a call to Stack.Pop32() which atomically loads the value and increments SP.
-    /// </summary>
-    /// <returns>MethodCallValueNode representing the result of Stack.Pop32()</returns>
-    public MethodCallValueNode Pop32() {
-        return new MethodCallValueNode(DataType.UINT32, "Stack", "Pop32");
+    /// <param name="bitWidth">The bit width determining which pop to use</param>
+    /// <returns>MethodCallValueNode representing the pop result</returns>
+    public MethodCallValueNode Pop(BitWidth bitWidth) {
+        DataType dataType = DataType.UnsignedFromBitWidth(bitWidth);
+        return new MethodCallValueNode(dataType, "Stack", $"Pop{(int)bitWidth}");
     }
 
     /// <summary>
@@ -61,12 +44,7 @@ public class StackAstBuilder {
     /// <param name="valueNode">The value to push</param>
     /// <returns>MethodCallNode for the appropriate Stack.PushN method</returns>
     public MethodCallNode Push(DataType dataType, ValueNode valueNode) {
-        if (dataType == DataType.UINT16 || dataType == DataType.INT16) {
-            return Push16(valueNode);
-        } else if (dataType == DataType.UINT32 || dataType == DataType.INT32) {
-            return Push32(valueNode);
-        }
-        throw new ArgumentException($"Unsupported data type for push: {dataType}");
+        return Push(dataType.BitWidth, valueNode);
     }
 
     /// <summary>
@@ -91,11 +69,10 @@ public class StackAstBuilder {
     /// <param name="destinations">Destination value nodes (null means discard)</param>
     public void PopValues(List<IVisitableAstNode> statements, DataType dataType, params ValueNode?[] destinations) {
         foreach (ValueNode? dest in destinations) {
+            MethodCallValueNode popCall = Pop(dataType.BitWidth);
             if (dest is null) {
-                // discard popped value
-                statements.Add(dataType == DataType.UINT16 || dataType == DataType.INT16 ? (IVisitableAstNode)Pop16() : Pop32());
+                statements.Add(popCall);
             } else {
-                MethodCallValueNode popCall = dataType == DataType.UINT16 || dataType == DataType.INT16 ? Pop16() : Pop32();
                 statements.Add(new BinaryOperationNode(dataType, dest, BinaryOperation.ASSIGN, popCall));
             }
         }

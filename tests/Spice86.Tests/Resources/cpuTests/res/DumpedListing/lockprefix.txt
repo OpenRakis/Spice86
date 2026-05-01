@@ -1,0 +1,28 @@
+F000:0000 xor AX,AX
+F000:0002 mov DS,AX
+F000:0004 mov SS,AX
+F000:0006 mov SP,0x8000
+F000:0009 mov word ptr DS:[0x0018],0x005A
+F000:000F mov word ptr DS:[0x001A],CS
+F000:0013 mov word ptr DS:[0],0
+F000:0019 mov word ptr DS:[2],0
+F000:001F mov word ptr DS:[0x0010],1
+F000:0025 add word ptr DS:[0x0010],AX
+F000:002A inc word ptr DS:[0x0010]
+F000:002F dec word ptr DS:[0x0010]
+F000:0034 mov word ptr DS:[2],3
+F000:003A mov word ptr DS:[4],0x0045
+F000:0040 invalid
+F000:0045 mov word ptr DS:[4],0x004E
+F000:004B invalid
+F000:004E mov word ptr DS:[4],0x0057
+F000:0054 invalid
+F000:0057 hlt
+F000:005A push BP
+F000:005B mov BP,SP
+F000:005D mov AX,word ptr DS:[4]
+F000:0060 mov word ptr SS:[BP+2],AX
+F000:0063 pop BP
+F000:0064 inc word ptr DS:[0]
+F000:0068 iret
+F000:FFF0 jmp short 0

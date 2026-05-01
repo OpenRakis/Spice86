@@ -2,6 +2,7 @@ namespace Spice86.Tests.CpuTests.SingleStepTests;
 
 using NSubstitute;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
@@ -41,7 +42,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         CallbackHandler callbackHandler = new(state, loggerService);
         DualPic dualPic = new(ioPortDispatcher, state, loggerService, false);
         FunctionCatalogue functionCatalogue = new();
-        CfgNodeExecutionCompiler executionCompiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService);
+        CfgNodeExecutionCompiler executionCompiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly);
         _cfgNodeExecutionCompiler = executionCompiler;
         Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic,
             emulatorBreakpointsManager, functionCatalogue, false, false, loggerService,

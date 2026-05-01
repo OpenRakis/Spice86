@@ -4,12 +4,12 @@
 		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageVersion Include="Avalonia" Version="11.3.13" />
+		<PackageVersion Include="Avalonia" Version="11.3.14" />
 		<PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
-		<PackageVersion Include="Avalonia.Desktop" Version="11.3.13" />
-		<PackageVersion Include="Avalonia.Diagnostics" Version="11.3.13" />
-		<PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.13" />
-		<PackageVersion Include="Avalonia.Headless" Version="11.3.13" />
+		<PackageVersion Include="Avalonia.Desktop" Version="11.3.14" />
+		<PackageVersion Include="Avalonia.Diagnostics" Version="11.3.14" />
+		<PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.14" />
+		<PackageVersion Include="Avalonia.Headless" Version="11.3.14" />
 		<PackageVersion Include="AvaloniaGraphControl" Version="0.7.0" />
 		<PackageVersion Include="AvaloniaHex" Version="0.1.12" />
 		<PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
@@ -26,7 +26,6 @@
 		<PackageVersion Include="Dock.Model.Avalonia" Version="11.3.12" />
 		<PackageVersion Include="Dock.Model.Mvvm" Version="11.3.12" />
 		<PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
-		<PackageVersion Include="FastExpressionCompiler" Version="5.4.0" />
 		<PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="2.0.320" />
 		<PackageVersion Include="Iced" Version="1.21.0" />
 		<PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
@@ -35,7 +34,6 @@
 		<PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.8.0-preview.1" />
 		<PackageVersion Include="ModelContextProtocol.Core" Version="0.8.0-preview.1" />
 		<PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
-		<PackageVersion Include="Morris.Moxy" Version="1.10" />
 		<PackageVersion Include="Mt32emu.net" Version="1.0.0-rc.1" />
 		<PackageVersion Include="NSubstitute" Version="5.3.0" />
 		<PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
@@ -61,6 +59,7 @@
 		<PackageVersion Include="System.Text.Json" Version="10.0.0" />
 		<PackageVersion Include="Xaml.Behaviors.Avalonia" Version="11.3.9.5" />
 		<PackageVersion Include="Spice86.Audio" Version="11.4.0" />
+		<PackageVersion Include="FastExpressionCompiler" Version="5.4.1" />
 		<PackageVersion Include="Tmds.DBus.Protocol" Version="0.21.3" />
 	</ItemGroup>
 </Project>

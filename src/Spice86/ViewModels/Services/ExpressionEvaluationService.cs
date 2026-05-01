@@ -7,6 +7,8 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.ViewModels.TextPresentation;
 
+using System.Text;
+
 /// <summary>
 /// Service for evaluating instruction operands against the current CPU state and memory.
 /// Extracts register and memory operands from Iced.Intel instructions, compiles them
@@ -37,41 +39,59 @@ public class ExpressionEvaluationService {
             OpKind kind = instruction.GetOpKind(i);
 
             if (kind == OpKind.Register) {
-                Register reg = instruction.GetOpRegister(i);
-                string? expr = RegisterToExpression(reg);
-                if (expr != null) {
-                    uint value = _compiler.CompileValue(expr)();
-                    if (segments.Count > 0) {
-                        AddSeparator(segments);
-                    }
-                    AddRegisterValue(segments, expr.ToUpperInvariant(), value, GetRegisterBitWidth(reg));
-                }
+                EvaluateRegisterOperand(segments, instruction, i);
             } else if (kind == OpKind.Memory) {
-                bool isLea = instruction.Mnemonic == Mnemonic.Lea;
-                if (isLea) {
-                    string? addressExpr = BuildAddressExpression(instruction);
-                    if (addressExpr != null) {
-                        uint value = _compiler.CompileValue(addressExpr)();
-                        if (segments.Count > 0) {
-                            AddSeparator(segments);
-                        }
-                        AddAddressValue(segments, value, GetRegisterBitWidth(instruction.GetOpRegister(0)));
-                    }
-                } else {
-                    string? expr = BuildMemoryExpression(instruction);
-                    if (expr != null) {
-                        uint value = _compiler.CompileValue(expr)();
-                        if (segments.Count > 0) {
-                            AddSeparator(segments);
-                        }
-                        AddMemoryValue(segments, instruction, value, GetMemorySizeBitWidth(instruction.MemorySize));
-                    }
-                }
+                EvaluateMemoryOperand(segments, instruction);
             }
             // Immediate and branch operands are skipped (already visible in disassembly text)
         }
 
-        return segments.Count > 0 ? segments : null;
+        if (segments.Count > 0) {
+            return segments;
+        }
+        return null;
+    }
+
+    private void EvaluateRegisterOperand(List<FormattedTextToken> segments, Instruction instruction, int operandIndex) {
+        Register reg = instruction.GetOpRegister(operandIndex);
+        string? expression = RegisterToExpression(reg);
+        if (expression == null) {
+            return;
+        }
+        uint value = _compiler.CompileValue(expression)();
+        if (segments.Count > 0) {
+            AddSeparator(segments);
+        }
+        AddRegisterValue(segments, expression.ToUpperInvariant(), value, GetRegisterBitWidth(reg));
+    }
+
+    private void EvaluateMemoryOperand(List<FormattedTextToken> segments, Instruction instruction) {
+        if (instruction.Mnemonic == Mnemonic.Lea) {
+            EvaluateLeaOperand(segments, instruction);
+        } else {
+            EvaluateIndirectMemoryOperand(segments, instruction);
+        }
+    }
+
+    private void EvaluateLeaOperand(List<FormattedTextToken> segments, Instruction instruction) {
+        string addressExpression = BuildAddressExpressionCore(instruction);
+        uint value = _compiler.CompileValue(addressExpression)();
+        if (segments.Count > 0) {
+            AddSeparator(segments);
+        }
+        AddAddressValue(segments, value, GetRegisterBitWidth(instruction.GetOpRegister(0)));
+    }
+
+    private void EvaluateIndirectMemoryOperand(List<FormattedTextToken> segments, Instruction instruction) {
+        string? memoryExpression = BuildMemoryExpression(instruction);
+        if (memoryExpression == null) {
+            return;
+        }
+        uint value = _compiler.CompileValue(memoryExpression)();
+        if (segments.Count > 0) {
+            AddSeparator(segments);
+        }
+        AddMemoryValue(segments, instruction, value, GetMemorySizeBitWidth(instruction.MemorySize));
     }
 
     private static void AddSeparator(List<FormattedTextToken> segments) {
@@ -92,40 +112,69 @@ public class ExpressionEvaluationService {
 
     private static void AddMemoryValue(List<FormattedTextToken> segments, Instruction instruction, long value, int bitWidth) {
         segments.Add(new FormattedTextToken { Text = "[", Kind = FormatterTextKind.Punctuation });
-
-        string? segment = RegisterToExpression(instruction.MemorySegment)?.ToUpperInvariant();
-        if (segment != null) {
-            segments.Add(new FormattedTextToken { Text = segment, Kind = FormatterTextKind.Register });
-            segments.Add(new FormattedTextToken { Text = ":", Kind = FormatterTextKind.Punctuation });
-        }
-
-        bool firstPart = true;
-        string? baseReg = instruction.MemoryBase != Register.None ? RegisterToExpression(instruction.MemoryBase)?.ToUpperInvariant() : null;
-        if (baseReg != null) {
-            segments.Add(new FormattedTextToken { Text = baseReg, Kind = FormatterTextKind.Register });
-            firstPart = false;
-        }
-
-        string? indexReg = instruction.MemoryIndex != Register.None ? RegisterToExpression(instruction.MemoryIndex)?.ToUpperInvariant() : null;
-        if (indexReg != null) {
-            if (!firstPart) {
-                segments.Add(new FormattedTextToken { Text = "+", Kind = FormatterTextKind.Operator });
-            }
-            segments.Add(new FormattedTextToken { Text = indexReg, Kind = FormatterTextKind.Register });
-            firstPart = false;
-        }
-
-        uint disp = instruction.MemoryDisplacement32;
-        if (disp != 0 || firstPart) {
-            if (!firstPart) {
-                segments.Add(new FormattedTextToken { Text = "+", Kind = FormatterTextKind.Operator });
-            }
-            segments.Add(new FormattedTextToken { Text = $"0x{disp:X}", Kind = FormatterTextKind.Number });
-        }
-
+        AddMemorySegmentPrefix(segments, instruction);
+        bool hasRegisterComponents = AddMemoryRegisterComponents(segments, instruction);
+        AddMemoryDisplacementSuffix(segments, instruction, hasRegisterComponents);
         segments.Add(new FormattedTextToken { Text = "]", Kind = FormatterTextKind.Punctuation });
         segments.Add(new FormattedTextToken { Text = "=", Kind = FormatterTextKind.Punctuation });
         segments.Add(new FormattedTextToken { Text = FormatHex(value, bitWidth), Kind = FormatterTextKind.Number });
+    }
+
+    private static void AddMemorySegmentPrefix(List<FormattedTextToken> segments, Instruction instruction) {
+        string? segmentName = RegisterToExpression(instruction.MemorySegment)?.ToUpperInvariant();
+        if (segmentName == null) {
+            return;
+        }
+        segments.Add(new FormattedTextToken { Text = segmentName, Kind = FormatterTextKind.Register });
+        segments.Add(new FormattedTextToken { Text = ":", Kind = FormatterTextKind.Punctuation });
+    }
+
+    private static bool AddMemoryRegisterComponents(List<FormattedTextToken> segments, Instruction instruction) {
+        bool hasRegisterComponents = false;
+
+        if (instruction.MemoryBase != Register.None) {
+            string? baseRegExpression = RegisterToExpression(instruction.MemoryBase)?.ToUpperInvariant();
+            if (baseRegExpression != null) {
+                segments.Add(new FormattedTextToken { Text = baseRegExpression, Kind = FormatterTextKind.Register });
+                hasRegisterComponents = true;
+            }
+        }
+
+        if (instruction.MemoryIndex != Register.None) {
+            string? indexRegExpression = RegisterToExpression(instruction.MemoryIndex)?.ToUpperInvariant();
+            if (indexRegExpression != null) {
+                if (hasRegisterComponents) {
+                    segments.Add(new FormattedTextToken { Text = "+", Kind = FormatterTextKind.Operator });
+                }
+                segments.Add(new FormattedTextToken { Text = indexRegExpression, Kind = FormatterTextKind.Register });
+                hasRegisterComponents = true;
+            }
+        }
+
+        return hasRegisterComponents;
+    }
+
+    private static void AddMemoryDisplacementSuffix(List<FormattedTextToken> segments, Instruction instruction, bool hasRegisterComponents) {
+        int displacement = GetSignedDisplacement(instruction);
+
+        if (displacement == 0 && hasRegisterComponents) {
+            return;
+        }
+
+        if (!hasRegisterComponents) {
+            // No registers: show raw unsigned hex absolute address
+            segments.Add(new FormattedTextToken { Text = $"0x{instruction.MemoryDisplacement32:X}", Kind = FormatterTextKind.Number });
+            return;
+        }
+
+        if (displacement < 0) {
+            segments.Add(new FormattedTextToken { Text = "-", Kind = FormatterTextKind.Operator });
+            uint absoluteDisplacement = (uint)(-(long)displacement);
+            segments.Add(new FormattedTextToken { Text = $"0x{absoluteDisplacement:X}", Kind = FormatterTextKind.Number });
+        } else {
+            segments.Add(new FormattedTextToken { Text = "+", Kind = FormatterTextKind.Operator });
+            segments.Add(new FormattedTextToken { Text = $"0x{displacement:X}", Kind = FormatterTextKind.Number });
+        }
     }
 
     private static string? RegisterToExpression(Register register) {
@@ -198,44 +247,63 @@ public class ExpressionEvaluationService {
             return null;
         }
 
-        string addressExpr = BuildAddressExpressionCore(instruction);
-
-        string? segment = RegisterToExpression(instruction.MemorySegment);
-        return segment != null
-            ? $"{sizePrefix} ptr {segment}:[{addressExpr}]"
-            : $"{sizePrefix} ptr [{addressExpr}]";
-    }
-
-    /// <summary>
-    /// Builds an arithmetic expression for the effective address (offset only, no memory dereference).
-    /// Used by LEA to compute the address without reading memory.
-    /// </summary>
-    private static string? BuildAddressExpression(Instruction instruction) {
-        return BuildAddressExpressionCore(instruction);
+        string addressExpression = BuildAddressExpressionCore(instruction);
+        string? segmentExpression = RegisterToExpression(instruction.MemorySegment);
+        if (segmentExpression != null) {
+            return $"{sizePrefix} ptr {segmentExpression}:[{addressExpression}]";
+        }
+        return $"{sizePrefix} ptr [{addressExpression}]";
     }
 
     private static string BuildAddressExpressionCore(Instruction instruction) {
+        StringBuilder expression = new();
 
-        List<string> addressParts = new();
-
-        string? baseReg = instruction.MemoryBase != Register.None ? RegisterToExpression(instruction.MemoryBase) : null;
-        if (baseReg != null) {
-            addressParts.Add(baseReg);
+        if (instruction.MemoryBase != Register.None) {
+            string? baseRegExpression = RegisterToExpression(instruction.MemoryBase);
+            if (baseRegExpression != null) {
+                expression.Append(baseRegExpression);
+            }
         }
 
-        string? indexReg = instruction.MemoryIndex != Register.None ? RegisterToExpression(instruction.MemoryIndex) : null;
-        if (indexReg != null) {
-            addressParts.Add(indexReg);
+        if (instruction.MemoryIndex != Register.None) {
+            string? indexRegExpression = RegisterToExpression(instruction.MemoryIndex);
+            if (indexRegExpression != null) {
+                if (expression.Length > 0) {
+                    expression.Append(" + ");
+                }
+                expression.Append(indexRegExpression);
+            }
         }
 
-        uint disp = instruction.MemoryDisplacement32;
-        if (disp != 0 || addressParts.Count == 0) {
-            addressParts.Add($"0x{disp:X}");
+        int displacement = GetSignedDisplacement(instruction);
+        bool hasRegisterComponents = expression.Length > 0;
+
+        if (displacement == 0 && hasRegisterComponents) {
+            return expression.ToString();
         }
 
-        string addressExpr = string.Join(" + ", addressParts);
+        if (displacement < 0 && hasRegisterComponents) {
+            long displacementMagnitude = -(long)displacement;
+            expression.Append($" - 0x{displacementMagnitude:X}");
+            return expression.ToString();
+        }
 
-        return addressExpr;
+        if (expression.Length > 0) {
+            expression.Append(" + ");
+        }
+        expression.Append($"0x{instruction.MemoryDisplacement32:X}");
+        return expression.ToString();
+    }
+
+    private static int GetSignedDisplacement(Instruction instruction) {
+        uint displacement = instruction.MemoryDisplacement32;
+        return instruction.MemoryDisplSize switch {
+            0 => 0,
+            1 => (sbyte)(byte)displacement,
+            2 => (short)(ushort)displacement,
+            4 => (int)displacement,
+            _ => (int)displacement
+        };
     }
 
     private static string FormatHex(long value, int bitWidth) {
