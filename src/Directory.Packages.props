@@ -1,62 +1,63 @@
 <Project>
-	<PropertyGroup>
-		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-	</PropertyGroup>
-	<ItemGroup>
-		<PackageVersion Include="Avalonia" Version="12.0.2" />
-		<PackageVersion Include="Avalonia.Desktop" Version="12.0.2" />
-		<PackageVersion Include="Avalonia.Fonts.Inter" Version="12.0.2" />
-		<PackageVersion Include="Avalonia.Headless" Version="12.0.2" />
-		<PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1" />
-		<PackageVersion Include="AvaloniaGraphControl" Version="0.8.0" />
-		<PackageVersion Include="AvaloniaHex" Version="0.1.13" />
-		<PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
-		<PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="12.0.0" />
-		<PackageVersion Include="bodong.PropertyModels" Version="12.0.0" />
-		<PackageVersion Include="Spectre.Console.Cli" Version="0.49.1" />
-		<PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.2" />
-		<PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-		<PackageVersion Include="coverlet.collector" Version="6.0.2" />
-		<PackageVersion Include="Deadpikle.AvaloniaProgressRing" Version="0.11.0" />
-		<PackageVersion Include="DialogHost.Avalonia" Version="0.12.1" />
-		<PackageVersion Include="Dock.Avalonia" Version="12.0.0.2" />
-		<PackageVersion Include="Dock.Avalonia.Themes.Fluent" Version="12.0.0.2" />
-		<PackageVersion Include="Dock.Model.Avalonia" Version="12.0.0.2" />
-		<PackageVersion Include="Dock.Model.Mvvm" Version="12.0.0.2" />
-		<PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
-		<PackageVersion Include="FluentIcons.Avalonia" Version="2.1.325" />
-		<PackageVersion Include="Iced" Version="1.21.0" />
-		<PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
-		<PackageVersion Include="JvE.Structurizer" Version="1.2.0" />
-		<PackageVersion Include="MeltySynth" Version="2.4.1" />
-		<PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.8.0-preview.1" />
-		<PackageVersion Include="ModelContextProtocol.Core" Version="0.8.0-preview.1" />
-		<PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
-		<PackageVersion Include="Mt32emu.net" Version="1.0.0-rc.1" />
-		<PackageVersion Include="NSubstitute" Version="5.3.0" />
-		<PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
-		<PackageVersion Include="NukedOPL3Sharp" Version="1.1.0" />
-		<PackageVersion Include="PanAndZoom" Version="12.0.0.1" />
-		<PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-		<PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.15.0" />
-		<PackageVersion Include="Semi.Avalonia" Version="12.0.1" />
-		<PackageVersion Include="Semi.Avalonia.Dock" Version="12.0.0" />
-		<PackageVersion Include="Serilog" Version="4.3.1" />
-		<PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
-		<PackageVersion Include="Serilog.Sinks.Async" Version="2.1.0" />
-		<PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
-		<PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
-		<PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
-		<PackageVersion Include="Swashbuckle.AspNetCore" Version="7.2.0" />
-		<PackageVersion Include="SkiaSharp" Version="3.119.4-preview.1.1" />
-		<PackageVersion Include="System.Buffers" Version="4.6.1" />
-		<PackageVersion Include="System.Memory" Version="4.6.3" />
-		<PackageVersion Include="System.Text.Encoding.CodePages" Version="10.0.0" />
-		<PackageVersion Include="System.Text.Json" Version="10.0.0" />
-		<PackageVersion Include="Xaml.Behaviors.Avalonia" Version="12.0.0" />
-		<PackageVersion Include="Spice86.Audio" Version="11.4.0" />
-		<PackageVersion Include="FastExpressionCompiler" Version="5.4.1" />
-		<PackageVersion Include="Tmds.DBus.Protocol" Version="0.92.0" />
-	</ItemGroup>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Avalonia" Version="12.0.2" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.0.2" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.0.2" />
+    <PackageVersion Include="Avalonia.Headless" Version="12.0.2" />
+    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1" />
+    <PackageVersion Include="AvaloniaGraphControl" Version="0.8.0" />
+    <PackageVersion Include="AvaloniaHex" Version="0.1.13" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="12.0.0" />
+    <PackageVersion Include="bodong.PropertyModels" Version="12.0.0" />
+    <PackageVersion Include="Spectre.Console.Cli" Version="0.49.1" />
+    <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.2" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+    <PackageVersion Include="Deadpikle.AvaloniaProgressRing" Version="0.11.0" />
+    <PackageVersion Include="DialogHost.Avalonia" Version="0.12.1" />
+    <PackageVersion Include="Dock.Avalonia" Version="12.0.0.2" />
+    <PackageVersion Include="Dock.Avalonia.Themes.Fluent" Version="12.0.0.2" />
+    <PackageVersion Include="Dock.Model.Avalonia" Version="12.0.0.2" />
+    <PackageVersion Include="Dock.Model.Mvvm" Version="12.0.0.2" />
+    <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
+    <PackageVersion Include="FluentIcons.Avalonia" Version="2.1.325" />
+    <PackageVersion Include="Iced" Version="1.21.0" />
+    <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
+    <PackageVersion Include="JvE.Structurizer" Version="1.2.0" />
+    <PackageVersion Include="MeltySynth" Version="2.4.1" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.8.0-preview.1" />
+    <PackageVersion Include="ModelContextProtocol.Core" Version="0.8.0-preview.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
+    <PackageVersion Include="Mt32emu.net" Version="1.0.0-rc.1" />
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
+    <PackageVersion Include="NukedOPL3Sharp" Version="1.1.0" />
+    <PackageVersion Include="PanAndZoom" Version="12.0.0.1" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
+    <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.15.0" />
+    <PackageVersion Include="Semi.Avalonia" Version="12.0.1" />
+    <PackageVersion Include="Semi.Avalonia.Dock" Version="12.0.0" />
+    <PackageVersion Include="Spice86.DataGrid" Version="0.1.0" />
+    <PackageVersion Include="Serilog" Version="4.3.1" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Async" Version="2.1.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+    <PackageVersion Include="SkiaSharp" Version="3.119.4-preview.1.1" />
+    <PackageVersion Include="System.Buffers" Version="4.6.1" />
+    <PackageVersion Include="System.Memory" Version="4.6.3" />
+    <PackageVersion Include="System.Text.Encoding.CodePages" Version="10.0.0" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.0" />
+    <PackageVersion Include="Xaml.Behaviors.Avalonia" Version="12.0.0" />
+    <PackageVersion Include="Spice86.Audio" Version="11.4.0" />
+    <PackageVersion Include="FastExpressionCompiler" Version="5.4.1" />
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.92.0" />
+  </ItemGroup>
 </Project>

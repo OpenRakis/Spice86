@@ -20,7 +20,7 @@
         <FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
     </Window.Resources>
     <Window.Styles>
-        <StyleInclude Source="avares://Semi.Avalonia.DataGrid/Index.axaml" />
+        <StyleInclude Source="avares://Spice86.DataGrid/Index.axaml" />
         <StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
     </Window.Styles>
     <DockPanel Margin="10">

@@ -38,7 +38,7 @@ mc:Ignorable="d">
 	<Window.Styles>
 		<!-- conflicts with semi theme for the same library, makes the docks headers only visible on mouse hover -->
 		<!--<StyleInclude Source="avares://Dock.Avalonia.Themes.Fluent/DockFluentTheme.axaml" />-->
-		<StyleInclude Source="avares://Semi.Avalonia.DataGrid/Index.axaml" />
+		<StyleInclude Source="avares://Spice86.DataGrid/Index.axaml" />
 		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
 	</Window.Styles>
 	<Grid RowDefinitions="Auto,*,Auto">
