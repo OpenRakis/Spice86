@@ -95,7 +95,11 @@ public class TsrIntegrationTests {
             // After the fix (COMMAND.COM PSP[0x02] = 0x70), TryModifyBlock succeeds,
             // trims the block to 0x70 paragraphs, and the remainder (≈0x981C) is freed.
             const ushort MinExpectedFreeParagraphs = 0x8000; // at least 512 KB must remain free
-            DosMemoryManager memoryManager = spice86.McpServices.Dos!.MemoryManager;
+            Dos? dos = spice86.McpServices.Dos;
+            if (dos is null) {
+                throw new InvalidOperationException("DOS subsystem was not initialised");
+            }
+            DosMemoryManager memoryManager = dos.MemoryManager;
             DosMemoryControlBlock largestFree = memoryManager.FindLargestFree();
             largestFree.IsFree.Should().BeTrue(
                 "after a TSR that uses parent PSP[0x02] as DX, conventional memory must have a large free block");
