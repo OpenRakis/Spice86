@@ -15,7 +15,6 @@ using System.Diagnostics.CodeAnalysis;
 public class DosDriveManager : IDictionary<char, VirtualDrive> {
     private readonly SortedDictionary<char, VirtualDrive> _driveMap = new();
     private readonly Dictionary<char, MemoryDrive> _memoryDriveMap = new();
-    private readonly ILoggerService _loggerService;
     private readonly DosMediaIdTable _mediaIdTable;
 
     /// <summary>
@@ -30,7 +29,6 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
         if (string.IsNullOrWhiteSpace(cDriveFolderPath)) {
             cDriveFolderPath = DosPathResolver.GetExeParentFolder(executablePath);
         }
-        _loggerService = loggerService;
         cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
         _driveMap.Add('A', new() { DriveLetter = 'A', CurrentDosDirectory = "", MountedHostDirectory = "" });
         _driveMap.Add('B', new() { DriveLetter = 'B', CurrentDosDirectory = "", MountedHostDirectory = "" });
