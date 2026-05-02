@@ -20,7 +20,8 @@ public class InterruptInstaller : AssemblyRoutineInstaller {
     /// <param name="interruptVectorTable">The interrupt vector table</param>
     /// <param name="memoryAsmWriter">The class that writes machine code for interrupt handlers</param>
     /// <param name="functionCatalogue">List of all functions.</param>
-    public InterruptInstaller(InterruptVectorTable interruptVectorTable, MemoryAsmWriter memoryAsmWriter, FunctionCatalogue functionCatalogue) : base(memoryAsmWriter, functionCatalogue) {
+    /// <param name="emulatorProvidedCodeRegistry">Registry that records every routine installed by the emulator so the debugger UI can mark it visually.</param>
+    public InterruptInstaller(InterruptVectorTable interruptVectorTable, MemoryAsmWriter memoryAsmWriter, FunctionCatalogue functionCatalogue, EmulatorProvidedCodeRegistry emulatorProvidedCodeRegistry) : base(memoryAsmWriter, functionCatalogue, emulatorProvidedCodeRegistry) {
         _interruptVectorTable = interruptVectorTable;
     }
 
@@ -31,8 +32,9 @@ public class InterruptInstaller : AssemblyRoutineInstaller {
     /// <param name="interruptHandler">The class that implements the interrupt handling with C# functions.</param>
     /// <returns>Address of the handler ASM code</returns>
     public SegmentedAddress InstallInterruptHandler(IInterruptHandler interruptHandler) {
-        SegmentedAddress handlerAddress = InstallAssemblyRoutine(interruptHandler,
-            $"provided_interrupt_handler_{interruptHandler.VectorNumber:X}");
+        string name = $"provided_interrupt_handler_{interruptHandler.VectorNumber:X}";
+        string subsystem = $"Interrupt {interruptHandler.VectorNumber:X2}h";
+        SegmentedAddress handlerAddress = InstallAssemblyRoutine(interruptHandler, name, subsystem);
 
         // Define ASM in vector table
         _interruptVectorTable[interruptHandler.VectorNumber] = new(handlerAddress.Segment, handlerAddress.Offset);
