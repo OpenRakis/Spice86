@@ -20,7 +20,7 @@ public class DosPathResolverIntegrationTests {
 
         try {
             ILoggerService loggerService = Substitute.For<ILoggerService>();
-            DosDriveManager dosDriveManager = new DosDriveManager(loggerService, tempDir, null);
+            DosDriveManager dosDriveManager = DosTestHelpers.CreateDriveManager(loggerService, tempDir);
             DosPathResolver dosPathResolver = new DosPathResolver(dosDriveManager);
 
             string batPath = Path.Join(tempDir, "TOOL.BAT");

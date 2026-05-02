@@ -182,16 +182,16 @@ public sealed class Dos {
         _biosDataArea = biosDataArea;
         _vgaFunctionality = vgaFunctionality;
 
-        DosDriveManager = new(_loggerService, configuration.CDrive, configuration.Exe);
+        DosTables = new DosTables(memory);
+        ushort mediaIdSegment = DosTables.ReserveDosPrivateSegment((ushort)DosMediaIdTable.TableSizeInParagraphs);
+        DosMediaIdTable mediaIdTable = new(memory, MemoryUtils.ToPhysicalAddress(mediaIdSegment, 0), mediaIdSegment);
+        DosDriveManager = new(_loggerService, configuration.CDrive, configuration.Exe, mediaIdTable);
 
         VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
         DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0x0));
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
-
-        DosTables = new DosTables(memory);
-
         DosSysVars.CurrentDirectoryStructureListPointer = DosTables.CurrentDirectoryStructure.BaseAddress;
         DosSysVars.CurrentDirectoryStructureCount = 26;
 

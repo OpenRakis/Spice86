@@ -49,11 +49,6 @@ public class DosInt21Handler : InterruptHandler {
     private const ushort DefaultBytesPerSector = 0x200;
     private const byte DefaultSectorsPerCluster = 0x20;
     private const ushort DefaultTotalClusters = 0x7FFD;
-    private const ushort DosMediaIdTableSegment = 0x8010;
-    private const ushort DosMediaIdTableOffset = 0x0000;
-    private const byte DosMediaIdEntrySize = 0x09;
-    private const byte FloppyMediaDescriptor = 0xF0;
-    private const byte FixedDiskMediaDescriptor = 0xF8;
 
     /// <summary>
     /// Initializes a new instance.
@@ -99,12 +94,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     private void InitializeMediaIdTable() {
-        uint mediaIdTableAddress = MemoryUtils.ToPhysicalAddress(DosMediaIdTableSegment, DosMediaIdTableOffset);
-        for (byte driveIndex = 0; driveIndex < DosDriveManager.MaxDriveCount; driveIndex++) {
-            uint entryAddress = mediaIdTableAddress + (uint)(driveIndex * DosMediaIdEntrySize);
-            byte mediaDescriptor = driveIndex <= 1 ? FloppyMediaDescriptor : FixedDiskMediaDescriptor;
-            Memory[entryAddress] = mediaDescriptor;
-        }
+        _dosDriveManager.InitializeMediaDescriptors();
     }
 
     /// <summary>
@@ -699,8 +689,8 @@ public class DosInt21Handler : InterruptHandler {
         State.AL = DefaultSectorsPerCluster;
         State.AH = 0;
         State.DX = DefaultTotalClusters;
-        State.DS = DosMediaIdTableSegment;
-        State.BX = (ushort)(DosMediaIdTableOffset + driveIndex * DosMediaIdEntrySize);
+        State.DS = _dosDriveManager.MediaIdTableSegment;
+        State.BX = _dosDriveManager.MediaIdEntryOffset(driveIndex);
 
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose(

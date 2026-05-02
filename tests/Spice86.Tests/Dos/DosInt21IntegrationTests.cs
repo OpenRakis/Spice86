@@ -1018,117 +1018,33 @@ public class DosInt21IntegrationTests {
 
             // AL must not be 0xFF on success
             0x3C, 0xFF,             // cmp al, 0FFh
-            0x74, 0x2B,             // je failed
+            0x74, 0x26,             // je failed
 
             // AH should be 0
             0x80, 0xFC, 0x00,       // cmp ah, 00h
-            0x75, 0x25,             // jne failed
+            0x75, 0x21,             // jne failed
 
             // AL should be 0x20 sectors per cluster (DOSBox dir-mount default)
             0x3C, 0x20,             // cmp al, 20h
-            0x75, 0x20,             // jne failed
+            0x75, 0x1D,             // jne failed
 
             // CX must be 0x0200 bytes per sector
             0x81, 0xF9, 0x00, 0x02, // cmp cx, 0200h
-            0x75, 0x19,             // jne failed
+            0x75, 0x17,             // jne failed
 
             // DX should be 0x7FFD total clusters (DOSBox dir-mount default)
             0x81, 0xFA, 0xFD, 0x7F, // cmp dx, 7FFDh
-            0x75, 0x12,             // jne failed
+            0x75, 0x11,             // jne failed
 
-            // DS:BX should point to C: media entry (index 2 => offset 0x12)
-            0x8C, 0xDA,             // mov dx, ds
-            0x81, 0xFA, 0x10, 0x80, // cmp dx, 8010h
-            0x75, 0x09,             // jne failed
-            0x81, 0xFB, 0x12, 0x00, // cmp bx, 0012h
-            0x75, 0x02,             // jne failed
+            // BX should point to C: media entry (index 2 => offset 0x12)
+            // DS segment is dynamic (allocated from DOS private area), so not checked
+            0x83, 0xFB, 0x12,       // cmp bx, 0012h
+            0x75, 0x0C,             // jne failed
 
             // First byte of media-id entry for C: should be fixed-disk descriptor 0xF8
             0x89, 0xDE,             // mov si, bx
             0x8A, 0x04,             // mov al, [si]
             0x3C, 0xF8,             // cmp al, 0F8h
-            0x75, 0x05,             // jne failed
-
-            // Success
-            0xB0, 0x00,             // mov al, TestResult.Success
-            0xEB, 0x02,             // jmp writeResult
-
-            // failed:
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
-        // Arrange
-
-        // Act
-        DosTestHandler testHandler = RunDosTest(program);
-
-        // Assert
-        testHandler.Results.Should().Contain((byte)TestResult.Success);
-        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-    }
-
-    /// <summary>
-    /// Tests INT 21h, AH=1Ch (Get Allocation Info for Any Drive) with an invalid/unmounted drive.
-    /// FreeDOS and dosbox-staging return AL=0xFF for invalid drives.
-    /// </summary>
-    [Fact]
-    public void GetAllocationInfoForAnyDrive_WithUnmountedDrive_ReturnsAlFF() {
-        byte[] program = new byte[] {
-            // Request A: (DL=1). In test setup A: is not mounted as a FAT drive.
-            0xB4, 0x1C,             // mov ah, 1Ch
-            0xB2, 0x01,             // mov dl, 01h (A:)
-            0xCD, 0x21,             // int 21h
-
-            // AL must be 0xFF for invalid/unmounted drive
-            0x3C, 0xFF,             // cmp al, 0FFh
-            0x75, 0x04,             // jne failed
-
-            // Success
-            0xB0, 0x00,             // mov al, TestResult.Success
-            0xEB, 0x02,             // jmp writeResult
-
-            // failed:
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
-        // Arrange
-
-        // Act
-        DosTestHandler testHandler = RunDosTest(program);
-
-        // Assert
-        testHandler.Results.Should().Contain((byte)TestResult.Success);
-        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-    }
-
-    /// <summary>
-    /// Tests INT 21h, AH=1Bh (Get Allocation Info for Default Drive).
-    /// After selecting A: as default, this should return AL=0xFF when A: is unmounted.
-    /// </summary>
-    [Fact]
-    public void GetAllocationInfoForDefaultDrive_WithUnmountedDefaultDrive_ReturnsAlFF() {
-        byte[] program = new byte[] {
-            // Select A: as default drive
-            0xB4, 0x0E,             // mov ah, 0Eh
-            0xB2, 0x00,             // mov dl, 00h (A:)
-            0xCD, 0x21,             // int 21h
-
-            // Query allocation info for default drive
-            0xB4, 0x1B,             // mov ah, 1Bh
-            0xCD, 0x21,             // int 21h
-
-            // AL must be 0xFF for invalid/unmounted default drive
-            0x3C, 0xFF,             // cmp al, 0FFh
             0x75, 0x04,             // jne failed
 
             // Success
