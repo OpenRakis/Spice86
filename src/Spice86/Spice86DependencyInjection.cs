@@ -55,6 +55,7 @@ using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.DebuggerKnowledgeBase;
 using Spice86.DebuggerKnowledgeBase.Bios;
 using Spice86.DebuggerKnowledgeBase.Dos;
+using Spice86.DebuggerKnowledgeBase.Ems;
 using Spice86.DebuggerKnowledgeBase.Registries;
 using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
@@ -644,6 +645,7 @@ public class Spice86DependencyInjection : IDisposable {
         AsmRoutineDecoderRegistry asmRoutineDecoderRegistry = new AsmRoutineDecoderRegistry();
         DosDecoderRegistration.RegisterAll(interruptDecoderRegistry);
         BiosDecoderRegistration.RegisterAll(interruptDecoderRegistry);
+        EmsDecoderRegistration.RegisterAll(interruptDecoderRegistry);
         DebuggerDecoderService debuggerDecoderService = new DebuggerDecoderService(
             interruptDecoderRegistry,
             ioPortDecoderRegistry,
