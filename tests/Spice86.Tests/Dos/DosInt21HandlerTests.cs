@@ -43,8 +43,7 @@ public class DosInt21HandlerTests {
         dosFileManager.OpenFiles[fileHandle] = recordingFile;
         var ioPortBreakpoints = new Spice86.Core.Emulator.VM.Breakpoint.AddressReadWriteBreakpoints();
         var ioPortDispatcher = new IOPortDispatcher(ioPortBreakpoints, state, logger, false);
-        var dosTables = new DosTables();
-        dosTables.Initialize(memory);
+        var dosTables = new DosTables(memory);
         var biosDataArea = new BiosDataArea(memory, 640);
         InterruptVectorTable interruptVectorTable = new(memory);
         VgaRom vgaRom = new();

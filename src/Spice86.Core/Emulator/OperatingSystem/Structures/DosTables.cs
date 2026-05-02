@@ -35,7 +35,7 @@ public class DosTables {
     /// Initializes the DOS table structures in memory.
     /// </summary>
     /// <param name="memory">The memory interface to write structures to.</param>
-    public void Initialize(IByteReaderWriter memory) {
+    public DosTables(IByteReaderWriter memory) {
         uint cdsAddress = MemoryUtils.ToPhysicalAddress(MemoryMap.DosCdsSegment, 0);
         CurrentDirectoryStructure = new CurrentDirectoryStructure(memory, cdsAddress);
 

@@ -190,8 +190,7 @@ public sealed class Dos {
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
 
-        DosTables = new DosTables();
-        DosTables.Initialize(memory);
+        DosTables = new DosTables(memory);
 
         DosSysVars.CurrentDirectoryStructureListPointer = DosTables.CurrentDirectoryStructure.BaseAddress;
         DosSysVars.CurrentDirectoryStructureCount = 26;
