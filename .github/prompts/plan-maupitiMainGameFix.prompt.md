@@ -37,6 +37,64 @@ narrowed to the DOS memory allocation subsystem and the MCB arena state at the p
 4. Do not skip the MCB arena audit — it is the prerequisite for any allocation analysis.
 5. The active PR (`fix: correct COMMAND.COM PSP[0x02] to prevent memory exhaustion from incorrect TerminateAndStayResident call`) may already be relevant. Read its diff before assuming we need a new fix.
 
+## Cloud Continuation Bootstrap (Mandatory)
+
+The cloud agent must not restart from the old root cause. This investigation continues from the
+current branch state where TSR/PSP baseline fixes and MCP memory diagnostics are already in place.
+
+### Branch Pinning (Do First)
+
+Cloud often defaults to `master`; that is wrong for this investigation.
+
+1. Ensure repository is on branch `copilot/fix-dx-calculation-issue`.
+2. Pull latest remote for this branch before any run or analysis.
+3. Confirm commits include:
+    - `fix: correct COMMAND.COM PSP[0x02] to prevent memory exhaustion from incorrect TerminateAndStayResident call`
+    - `feat(mcp): add tools to read DOS MCB chain, PSP chain, and memory map for diagnostics`
+
+### Game Artifact Source (Cloud-Available)
+
+Preferred source in repo: `tests/testdata/maupiti.zip`.
+
+Issue reference (historical, possibly outdated metadata but valid attachment source):
+`https://github.com/OpenRakis/Spice86/issues/2137`
+attachment: `https://github.com/user-attachments/files/27274701/maupiti.zip`
+
+Extraction target in cloud runner:
+
+1. Extract zip into a working folder, for example `<workspace>/tmp/maupiti`.
+2. Use executable `MAUPITI.BAT` from extracted files.
+3. Keep extracted hash directory `D0288AAE38E0F90C92A32A50B1233CD3A457B1268A87B6E01B95C7B2452BF01B/` intact for breakpoint file placement.
+
+### Required Launch Mode In Cloud
+
+Always launch headless with dummy audio and MCP enabled:
+
+```powershell
+dotnet run --project src/Spice86 -- --Debug \
+   -c "<extracted_game_parent_dir>" \
+   -e "<extracted_game_dir>\\MAUPITI.BAT" \
+   -r "runs\\maupiti-alloc-investigation" \
+   --HeadlessMode Minimal \
+   --AudioEngine Dummy \
+   --McpHttpPort 8083 \
+   --VerboseLogs
+```
+
+### Breakpoints.json Requirement
+
+Before launch, write breakpoints to:
+
+`runs/maupiti-alloc-investigation/D0288AAE38E0F90C92A32A50B1233CD3A457B1268A87B6E01B95C7B2452BF01B/Breakpoints.json`
+
+Minimum required breakpoints:
+
+- `CPU_INTERRUPT 0x21` with condition `ah == 0x48`
+- `CPU_INTERRUPT 0x21` with condition `ah == 0x31`
+
+If the runtime does not auto-load all triggers from file, re-add missing ones (such as
+`MACHINE_STOP`) through MCP immediately after startup.
+
 ## Known Evidence (Do Not Rediscover)
 
 - TSR entry `126E:0000` runs correctly; `INT 21h/AH=31h` keep call is real with `DX=0x17C7`.
