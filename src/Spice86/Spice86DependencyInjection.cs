@@ -51,6 +51,8 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
+using Spice86.DebuggerKnowledgeBase;
+using Spice86.DebuggerKnowledgeBase.Registries;
 using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
@@ -90,6 +92,12 @@ public class Spice86DependencyInjection : IDisposable {
     /// Gets the function catalogue that tracks function calls and provides information for debugging.
     /// </summary>
     public FunctionCatalogue FunctionCatalogue { get; }
+
+    /// <summary>
+    /// Gets the high-level decoder service the debugger UI can use to produce parameter
+    /// decoding tooltips for interrupts, I/O ports and emulator-installed ASM routines.
+    /// </summary>
+    public DebuggerDecoderService DebuggerDecoderService { get; }
 
     private readonly McpHttpHost? _mcpHttpTransport;
     private readonly DeviceSchedulerThread? _vgaTimingThread;
@@ -550,10 +558,11 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Emulation loop created...");
         }
 
+        EmulatorProvidedCodeRegistry emulatorProvidedCodeRegistry = new EmulatorProvidedCodeRegistry();
         InterruptInstaller interruptInstaller =
-            new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue);
+            new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue, emulatorProvidedCodeRegistry);
         AssemblyRoutineInstaller assemblyRoutineInstaller =
-            new AssemblyRoutineInstaller(memoryAsmWriter, functionCatalogue);
+            new AssemblyRoutineInstaller(memoryAsmWriter, functionCatalogue, emulatorProvidedCodeRegistry);
 
         var dummyInt1CHandler = new DummyInt1CHandler();
 
@@ -614,13 +623,26 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(mouseInt33Handler);
 
             SegmentedAddress mouseDriverAddress =
-                assemblyRoutineInstaller.InstallAssemblyRoutine(mouseDriver, "provided_mouse_driver");
+                assemblyRoutineInstaller.InstallAssemblyRoutine(mouseDriver, "provided_mouse_driver", "Mouse driver");
             mouseIrq12Handler?.SetMouseDriverAddress(mouseDriverAddress);
         }
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Disk operating system created...");
         }
+
+        InterruptDecoderRegistry interruptDecoderRegistry = new InterruptDecoderRegistry();
+        IoPortDecoderRegistry ioPortDecoderRegistry = new IoPortDecoderRegistry();
+        AsmRoutineDecoderRegistry asmRoutineDecoderRegistry = new AsmRoutineDecoderRegistry();
+        DebuggerDecoderService debuggerDecoderService = new DebuggerDecoderService(
+            interruptDecoderRegistry,
+            ioPortDecoderRegistry,
+            asmRoutineDecoderRegistry,
+            emulatorProvidedCodeRegistry,
+            state,
+            memory,
+            ioPortDispatcher);
+        DebuggerDecoderService = debuggerDecoderService;
 
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler,
             biosKeyboardInt9Handler,
