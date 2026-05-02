@@ -56,6 +56,7 @@ using Spice86.DebuggerKnowledgeBase.Bios;
 using Spice86.DebuggerKnowledgeBase.Dos;
 using Spice86.DebuggerKnowledgeBase.Ems;
 using Spice86.DebuggerKnowledgeBase.Registries;
+using Spice86.DebuggerKnowledgeBase.Mpu401;
 using Spice86.DebuggerKnowledgeBase.Sb;
 using Spice86.DebuggerKnowledgeBase.Video;
 using Spice86.Logging;
@@ -644,6 +645,7 @@ public class Spice86DependencyInjection : IDisposable {
         EmsDecoderRegistration.RegisterAll(interruptDecoderRegistry);
         VideoDecoderRegistration.RegisterAll(ioPortDecoderRegistry);
         SbDecoderRegistration.RegisterAll(ioPortDecoderRegistry);
+        Mpu401DecoderRegistration.RegisterAll(ioPortDecoderRegistry);
         DebuggerDecoderService debuggerDecoderService = new DebuggerDecoderService(
             interruptDecoderRegistry,
             ioPortDecoderRegistry,
