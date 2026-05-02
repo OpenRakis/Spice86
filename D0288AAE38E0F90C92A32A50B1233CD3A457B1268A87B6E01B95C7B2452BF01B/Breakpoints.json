@@ -1,0 +1,16 @@
+{
+  "Breakpoints": [
+    {
+      "Trigger": 33,
+      "Type": "CPU_INTERRUPT",
+      "IsEnabled": true,
+      "ConditionExpression": "ah == 0x48"
+    },
+    {
+      "Trigger": 33,
+      "Type": "CPU_INTERRUPT",
+      "IsEnabled": true,
+      "ConditionExpression": "ah == 0x31"
+    }
+  ]
+}

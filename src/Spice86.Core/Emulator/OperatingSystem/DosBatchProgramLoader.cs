@@ -18,11 +18,11 @@ internal sealed class DosBatchProgramLoader : DosProgramLoader {
     protected override DosExecResult LoadLaunchRequest(LaunchRequest launchRequest,
         DosExecParameterBlock paramBlock) {
         if (launchRequest is InternalProgramLaunchRequest internalProgramLaunchRequest) {
-            return _processManager.LoadInitialProgramFromBytes(internalProgramLaunchRequest.ComProgramBytes);
+            return _processManager.LoadInternalProgram(internalProgramLaunchRequest.ComProgramBytes);
         }
 
         if (launchRequest is ProgramLaunchRequest programLaunchRequest) {
-            return _processManager.LoadInitialProgram(programLaunchRequest.ProgramName, paramBlock,
+            return _processManager.LoadExternalProgram(programLaunchRequest.ProgramName, paramBlock,
                 programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment);
         }
 

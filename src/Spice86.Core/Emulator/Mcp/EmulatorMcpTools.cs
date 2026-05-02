@@ -16,6 +16,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Timer;
@@ -31,7 +32,9 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
@@ -579,19 +582,39 @@ internal sealed class EmulatorMcpTools {
     public CallToolResult SendKeyboardKey(string key, bool isPressed) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
-                Intel8042Controller? controller = _services.Intel8042Controller;
-                if (controller == null) {
-                    throw new InvalidOperationException("PS/2 controller is not available");
-                }
-
                 if (!Enum.TryParse(key, true, out PcKeyboardKey parsedKey)) {
                     throw new ArgumentException($"Invalid PcKeyboardKey: '{key}'");
                 }
 
-                controller.KeyboardDevice.EnqueueKeyEvent(parsedKey, isPressed);
+                PhysicalKey physicalKey = KeyboardScancodeConverter.ConvertToPhysicalKey(parsedKey);
+                if (physicalKey == PhysicalKey.None) {
+                    throw new ArgumentException($"PcKeyboardKey '{key}' has no corresponding physical key mapping");
+                }
+
+                KeyboardEventArgs args = new(physicalKey, isPressed);
+                string action = isPressed ? "down" : "up";
+
+                if (_services.PauseHandler.IsPaused) {
+                    InputEventHub? pausedHub = _services.InputEventHub;
+                    if (pausedHub == null) {
+                        throw new InvalidOperationException("InputEventHub is not wired");
+                    }
+                    pausedHub.PostKeyboardEvent(args);
+                    return new EmulatorControlResponse {
+                        Success = true,
+                        Message = $"Keyboard event enqueued while paused: {parsedKey} {action}"
+                    };
+                }
+
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+
+                hub.PostKeyboardEvent(args);
                 return new EmulatorControlResponse {
                     Success = true,
-                    Message = $"Keyboard event sent: {parsedKey} {(isPressed ? "down" : "up")}"
+                    Message = $"Keyboard event sent: {parsedKey} {action}"
                 };
             }
         });
@@ -618,6 +641,49 @@ internal sealed class EmulatorMcpTools {
                 return new EmulatorControlResponse {
                     Success = true,
                     Message = $"Mouse packet sent ({bytes.Length} byte(s))"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "send_mouse_move", UseStructuredContent = true), Description("Move the mouse to a normalized position on screen. x and y are in the range [0.0, 1.0] relative to the emulated display: (0,0) is top-left, (1,1) is bottom-right.")]
+    public CallToolResult SendMouseMove(double x, double y) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+
+                double clampedX = Math.Clamp(x, 0.0, 1.0);
+                double clampedY = Math.Clamp(y, 0.0, 1.0);
+                hub.PostMouseMoveEvent(new MouseMoveEventArgs(clampedX, clampedY));
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Mouse moved to ({clampedX:F3}, {clampedY:F3})"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "send_mouse_button", UseStructuredContent = true), Description("Send a mouse button press or release event. button is one of: Left, Right, Middle. isPressed=true for press, false for release.")]
+    public CallToolResult SendMouseButton(string button, bool isPressed) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                if (!Enum.TryParse(button, true, out MouseButton parsedButton) || parsedButton == MouseButton.None) {
+                    throw new ArgumentException($"Invalid MouseButton: '{button}'. Use Left, Right, or Middle.");
+                }
+
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+
+                hub.PostMouseButtonEvent(new MouseButtonEventArgs(parsedButton, isPressed));
+                string action = isPressed ? "pressed" : "released";
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Mouse button {parsedButton} {action}"
                 };
             }
         });
@@ -1215,7 +1281,20 @@ internal sealed class EmulatorMcpTools {
                 int width = _services.VgaRenderer.Width;
                 int height = _services.VgaRenderer.Height;
                 uint[] buffer = new uint[width * height];
-                _services.VgaRenderer.Render(buffer);
+
+                _services.VgaRenderer.CopyLastFrame(buffer);
+
+                bool hasVisiblePixelData = false;
+                for (int i = 0; i < buffer.Length; i++) {
+                    if (buffer[i] != 0) {
+                        hasVisiblePixelData = true;
+                        break;
+                    }
+                }
+
+                if (!hasVisiblePixelData) {
+                    return Error("No video frame is available for screenshot capture.");
+                }
 
                 byte[] bytes = new byte[buffer.Length * 4];
                 Buffer.BlockCopy(buffer, 0, bytes, 0, bytes.Length);
@@ -1935,5 +2014,195 @@ internal sealed class EmulatorMcpTools {
                 return new EmulatorControlResponse { Success = true, Message = $"{count} breakpoints removed." };
             }
         });
+    }
+
+    [McpServerTool(Name = "read_dos_mcb_chain", UseStructuredContent = true), Description("Walk the DOS Memory Control Block (MCB) chain and return each block's segment, type, owner PSP, size in paragraphs, size in bytes, whether it is free, and whether it is valid. Also returns the largest free block size and total free paragraphs. Useful for diagnosing INT 21h/AH=48h allocation failures.")]
+    public CallToolResult ReadDosMcbChain() {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                Dos dos = GetDos();
+                DosMemoryManager memoryManager = dos.MemoryManager;
+
+                List<object> blocks = new();
+                int totalFreeParagraphs = 0;
+                ushort largestFreeParagraphs = 0;
+
+                foreach (DosMemoryControlBlock block in WalkMcbChain(memoryManager)) {
+                    bool isFree = block.IsFree;
+                    ushort size = block.Size;
+                    if (isFree) {
+                        totalFreeParagraphs += size;
+                        if (size > largestFreeParagraphs) {
+                            largestFreeParagraphs = size;
+                        }
+                    }
+
+                    string ownerName = string.Empty;
+                    if (!isFree && block.IsValid) {
+                        ownerName = block.Owner;
+                    }
+
+                    blocks.Add(new {
+                        McbSegment = MemoryUtils.ToSegment(block.BaseAddress),
+                        DataSegment = block.DataBlockSegment,
+                        Type = block.IsLast ? "Last" : block.IsNonLast ? "NonLast" : "Invalid",
+                        OwnerPsp = (int)block.PspSegment,
+                        OwnerName = ownerName,
+                        SizeParagraphs = (int)size,
+                        SizeBytes = (int)block.AllocationSizeInBytes,
+                        IsFree = isFree,
+                        IsValid = block.IsValid
+                    });
+
+                    if (block.IsLast) {
+                        break;
+                    }
+                }
+
+                return new {
+                    Blocks = blocks,
+                    TotalFreeParagraphs = totalFreeParagraphs,
+                    TotalFreeBytes = totalFreeParagraphs * 16,
+                    LargestFreeParagraphs = (int)largestFreeParagraphs,
+                    LargestFreeBytes = (int)largestFreeParagraphs * 16
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "read_dos_psp_chain", UseStructuredContent = true), Description("Walk the PSP parent chain starting from the current program's PSP back to COMMAND.COM. For each entry returns: segment, parent segment, environment segment, current-size paragraphs (PSP[0x02]), stack pointer (SS:SP from PSP[0x2E]), terminate/break/critical-error addresses, max open files, DOS version, and command tail. Use this to trace process hierarchy and diagnose TSR keep-size vs. available memory.")]
+    public CallToolResult ReadDosPspChain() {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                Dos dos = GetDos();
+                ushort currentSegment = dos.DosSwappableDataArea.CurrentProgramSegmentPrefix;
+                List<object> chain = new();
+                HashSet<ushort> visited = new();
+
+                while (!visited.Contains(currentSegment)) {
+                    visited.Add(currentSegment);
+                    DosProgramSegmentPrefix psp = new(_services.Memory,
+                        MemoryUtils.ToPhysicalAddress(currentSegment, 0));
+
+                    uint termAddr = psp.TerminateAddress;
+                    uint breakAddr = psp.BreakAddress;
+                    uint critAddr = psp.CriticalErrorAddress;
+                    uint stackPtr = psp.StackPointer;
+
+                    chain.Add(new {
+                        Segment = (int)currentSegment,
+                        ParentSegment = (int)psp.ParentProgramSegmentPrefix,
+                        EnvironmentSegment = (int)psp.EnvironmentTableSegment,
+                        CurrentSizeParagraphs = (int)psp.CurrentSize,
+                        CurrentSizeBytes = psp.CurrentSize * 16,
+                        StackSS = (int)(stackPtr >> 16),
+                        StackSP = (int)(stackPtr & 0xFFFF),
+                        TerminateAddress = $"{termAddr >> 16:X4}:{termAddr & 0xFFFF:X4}",
+                        BreakAddress = $"{breakAddr >> 16:X4}:{breakAddr & 0xFFFF:X4}",
+                        CriticalErrorAddress = $"{critAddr >> 16:X4}:{critAddr & 0xFFFF:X4}",
+                        MaxOpenFiles = (int)psp.MaximumOpenFiles,
+                        DosVersionMajor = (int)psp.DosVersionMajor,
+                        DosVersionMinor = (int)psp.DosVersionMinor,
+                        CommandTail = psp.DosCommandTail.Command
+                    });
+
+                    ushort parent = psp.ParentProgramSegmentPrefix;
+                    if (parent == currentSegment) {
+                        break;
+                    }
+                    currentSegment = parent;
+                }
+
+                return new { PspChain = chain };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "read_dos_memory_map", UseStructuredContent = true), Description("Return an ASCII memory map and structured summary of the DOS conventional memory arena. Shows each MCB as a bar proportional to its size, with owner name and PSP. Also returns the PSP chain for context. Essential for diagnosing AH=48h allocation failures.")]
+    public CallToolResult ReadDosMemoryMap() {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                Dos dos = GetDos();
+                DosMemoryManager memoryManager = dos.MemoryManager;
+
+                List<DosMemoryControlBlock> allBlocks = WalkMcbChain(memoryManager).ToList();
+                if (allBlocks.Count == 0) {
+                    return new { Map = "(empty)", Blocks = Array.Empty<object>() };
+                }
+
+                int totalParagraphs = allBlocks.Sum(static b => b.Size + 1); // +1 for each MCB header
+                const int mapWidth = 80;
+
+                System.Text.StringBuilder sb = new();
+                sb.AppendLine($"DOS Conventional Memory Map  (1 char = ~{totalParagraphs / mapWidth} paragraphs)");
+                sb.AppendLine(new string('-', mapWidth));
+
+                List<object> summaryBlocks = new();
+                int totalFreeParagraphs = 0;
+                ushort largestFreeParagraphs = 0;
+
+                foreach (DosMemoryControlBlock block in allBlocks) {
+                    bool isFree = block.IsFree;
+                    ushort size = block.Size;
+                    string owner = isFree ? "FREE" : (block.IsValid ? block.Owner : "????");
+                    if (string.IsNullOrWhiteSpace(owner)) {
+                        owner = isFree ? "FREE" : $"PSP:{block.PspSegment:X4}";
+                    }
+
+                    int barLen = Math.Max(1, (int)Math.Round((double)size / totalParagraphs * mapWidth));
+                    char fill = isFree ? '.' : '#';
+                    string label = $"{block.DataBlockSegment:X4} {owner} ({size}p)";
+                    string bar = (fill == '.')
+                        ? new string('.', barLen)
+                        : (label.Length <= barLen
+                            ? label.PadRight(barLen, '#')
+                            : new string('#', barLen));
+                    sb.AppendLine($"|{bar}");
+
+                    if (isFree) {
+                        totalFreeParagraphs += size;
+                        if (size > largestFreeParagraphs) {
+                            largestFreeParagraphs = size;
+                        }
+                    }
+
+                    summaryBlocks.Add(new {
+                        McbSegment = MemoryUtils.ToSegment(block.BaseAddress),
+                        DataSegment = block.DataBlockSegment,
+                        OwnerPsp = (int)block.PspSegment,
+                        OwnerName = owner,
+                        SizeParagraphs = (int)size,
+                        IsFree = isFree,
+                        IsLast = block.IsLast
+                    });
+
+                    if (block.IsLast) {
+                        break;
+                    }
+                }
+
+                sb.AppendLine(new string('-', mapWidth));
+                sb.AppendLine($"Total free: {totalFreeParagraphs} paragraphs ({totalFreeParagraphs * 16} bytes)");
+                sb.AppendLine($"Largest free block: {largestFreeParagraphs} paragraphs ({largestFreeParagraphs * 16} bytes)");
+
+                return new {
+                    Map = sb.ToString(),
+                    Blocks = summaryBlocks,
+                    TotalFreeParagraphs = totalFreeParagraphs,
+                    LargestFreeParagraphs = (int)largestFreeParagraphs
+                };
+            }
+        });
+    }
+
+    private static IEnumerable<DosMemoryControlBlock> WalkMcbChain(DosMemoryManager memoryManager) {
+        DosMemoryControlBlock? current = memoryManager.FirstMcb;
+        while (current != null) {
+            yield return current;
+            if (!current.IsValid || current.IsLast) {
+                break;
+            }
+            current = current.GetNextOrDefault();
+        }
     }
 }

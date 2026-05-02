@@ -37,7 +37,8 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         DosProgramSegmentPrefix rootPsp = GetRootPsp(context);
-        rootPsp.CurrentSize.Should().Be(DosMemoryManager.LastFreeSegment);
+        rootPsp.CurrentSize.Should().Be(
+            (ushort)(DosProcessManager.CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs));
         rootPsp.EnvironmentTableSegment.Should().Be((ushort)(DosProcessManager.CommandComSegment + 8));
     }
 

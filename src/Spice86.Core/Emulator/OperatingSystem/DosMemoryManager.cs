@@ -27,6 +27,11 @@ public class DosMemoryManager {
     private readonly IMemory _memory;
     private readonly DosMemoryControlBlock _start;
 
+    /// <summary>
+    /// Gets the first MCB in the chain. Used for diagnostic walks (e.g. MCP read_dos_mcb_chain).
+    /// </summary>
+    public DosMemoryControlBlock FirstMcb => _start;
+
     private readonly DosSwappableDataArea _sda;
 
     /// <summary>
