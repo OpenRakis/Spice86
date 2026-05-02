@@ -61,6 +61,7 @@ using Spice86.DebuggerKnowledgeBase.Opl;
 using Spice86.DebuggerKnowledgeBase.Sb;
 using Spice86.DebuggerKnowledgeBase.Video;
 using Spice86.DebuggerKnowledgeBase.Gus;
+using Spice86.DebuggerKnowledgeBase.Joystick;
 using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
@@ -650,6 +651,7 @@ public class Spice86DependencyInjection : IDisposable {
         Mpu401DecoderRegistration.RegisterAll(ioPortDecoderRegistry);
         OplDecoderRegistration.RegisterAll(ioPortDecoderRegistry);
         GusDecoderRegistration.RegisterAll(ioPortDecoderRegistry);
+        JoystickDecoderRegistration.RegisterAll(ioPortDecoderRegistry);
         DebuggerDecoderService debuggerDecoderService = new DebuggerDecoderService(
             interruptDecoderRegistry,
             ioPortDecoderRegistry,
