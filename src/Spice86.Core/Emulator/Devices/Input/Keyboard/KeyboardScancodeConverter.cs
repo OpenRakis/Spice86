@@ -4,6 +4,7 @@ using Spice86.Shared.Emulator.Keyboard;
 
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
 /// Converts UI PhysicalKey to internal PcKeyboardKey and ultimately returns the corresponding
@@ -75,6 +76,11 @@ public class KeyboardScancodeConverter {
         { PhysicalKey.NumPadEnter, PcKeyboardKey.KpEnter }, { PhysicalKey.NumPadDecimal, PcKeyboardKey.KpPeriod }
     }.ToFrozenDictionary();
 
+    private static readonly FrozenDictionary<PcKeyboardKey, PhysicalKey> _kbdKeyToPhysical =
+        _keyToKbdKey
+            .GroupBy(kv => kv.Value)
+            .ToFrozenDictionary(g => g.Key, g => g.First().Key);
+
     /// <summary>
     /// Converts a specified physical key to its corresponding PC keyboard key value.
     /// </summary>
@@ -83,6 +89,16 @@ public class KeyboardScancodeConverter {
     /// cref="PcKeyboardKey.None"/>.</returns>
     public PcKeyboardKey ConvertToKbdKey(PhysicalKey key) {
         return _keyToKbdKey.TryGetValue(key, out PcKeyboardKey kbdKey) ? kbdKey : PcKeyboardKey.None;
+    }
+
+    /// <summary>
+    /// Converts a PC keyboard key to its corresponding physical key value.
+    /// </summary>
+    /// <param name="key">The PC keyboard key to convert.</param>
+    /// <returns>The corresponding <see cref="PhysicalKey"/> value if the mapping exists; otherwise, <see
+    /// cref="PhysicalKey.None"/>.</returns>
+    public static PhysicalKey ConvertToPhysicalKey(PcKeyboardKey key) {
+        return _kbdKeyToPhysical.TryGetValue(key, out PhysicalKey physical) ? physical : PhysicalKey.None;
     }
 
     /// <summary>

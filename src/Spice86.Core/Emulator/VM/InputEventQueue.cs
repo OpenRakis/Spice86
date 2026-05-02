@@ -61,6 +61,37 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
     /// </summary>
     public void PostToEmulatorThread(Action action) => Enqueue(action);
 
+    /// <summary>
+    /// Enqueues a keyboard event to be fired on the emulator thread, following
+    /// the same path as UI keyboard events (PhysicalKey → PS2Keyboard scancode pipeline).
+    /// </summary>
+    public void PostKeyboardEvent(KeyboardEventArgs e) {
+        if (e.IsPressed) {
+            Enqueue(() => KeyDown?.Invoke(null, e));
+        } else {
+            Enqueue(() => KeyUp?.Invoke(null, e));
+        }
+    }
+
+    /// <summary>
+    /// Enqueues a mouse move event to be fired on the emulator thread, following the same
+    /// path as UI pointer events. Coordinates are normalized (0.0–1.0 relative to the screen).
+    /// </summary>
+    public void PostMouseMoveEvent(MouseMoveEventArgs e) =>
+        Enqueue(() => MouseMoved?.Invoke(null, e));
+
+    /// <summary>
+    /// Enqueues a mouse button event to be fired on the emulator thread, following the same
+    /// path as UI pointer events.
+    /// </summary>
+    public void PostMouseButtonEvent(MouseButtonEventArgs e) {
+        if (e.ButtonDown) {
+            Enqueue(() => MouseButtonDown?.Invoke(null, e));
+        } else {
+            Enqueue(() => MouseButtonUp?.Invoke(null, e));
+        }
+    }
+
     private void OnMouseMoved(object? sender, MouseMoveEventArgs e) =>
         Enqueue(() => MouseMoved?.Invoke(sender, e));
 
@@ -89,11 +120,13 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
 
     public double MouseX {
         get => _mouseEvents?.MouseX ?? 0;
-        set { if (_mouseEvents is not null) { _mouseEvents.MouseX = value; } } }
+        set { if (_mouseEvents is not null) { _mouseEvents.MouseX = value; } }
+    }
 
     public double MouseY {
         get => _mouseEvents?.MouseY ?? 0;
-        set { if (_mouseEvents is not null) { _mouseEvents.MouseY = value; } } }
+        set { if (_mouseEvents is not null) { _mouseEvents.MouseY = value; } }
+    }
 
     public void HideMouseCursor() => _mouseEvents?.HideMouseCursor();
 
