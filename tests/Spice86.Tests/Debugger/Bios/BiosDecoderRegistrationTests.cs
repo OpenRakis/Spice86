@@ -26,6 +26,7 @@ public class BiosDecoderRegistrationTests {
     [InlineData((byte)0x1C, "BIOS INT 1Ch")]
     [InlineData((byte)0x33, "Mouse INT 33h")]
     [InlineData((byte)0x70, "BIOS INT 70h")]
+    [InlineData((byte)0x74, "BIOS INT 74h")]
     public void RegisterAll_RegistersDecoderForVector(byte vector, string expectedSubsystem) {
         InterruptDecoderRegistry registry = new InterruptDecoderRegistry();
         BiosDecoderRegistration.RegisterAll(registry);

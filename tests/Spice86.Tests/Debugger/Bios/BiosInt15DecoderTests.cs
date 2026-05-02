@@ -52,4 +52,59 @@ public class BiosInt15DecoderTests {
         call.FunctionName.Should().Contain("Extended Memory Size");
         call.Parameters.Should().BeEmpty();
     }
+
+    [Fact]
+    public void Decode_PointingDevice_EnableDisable_DecodesBhAction() {
+        _state.AH = 0xC2;
+        _state.AL = 0x00;
+        _state.BH = 0x01;
+
+        DecodedCall call = _decoder.Decode(0x15, _state, _memory);
+
+        call.FunctionName.Should().Contain("Pointing Device Interface");
+        call.Parameters.Should().HaveCount(2);
+        call.Parameters[0].FormattedValue.Should().Contain("Enable/Disable");
+        call.Parameters[1].Source.Should().Be("BH");
+        call.Parameters[1].FormattedValue.Should().Contain("enable");
+    }
+
+    [Fact]
+    public void Decode_PointingDevice_Reset_DecodesAlOnly() {
+        _state.AH = 0xC2;
+        _state.AL = 0x01;
+
+        DecodedCall call = _decoder.Decode(0x15, _state, _memory);
+
+        call.Parameters.Should().HaveCount(1);
+        call.Parameters[0].FormattedValue.Should().Contain("Reset Pointing Device");
+    }
+
+    [Fact]
+    public void Decode_PointingDevice_SetSampleRate_DecodesBhArgument() {
+        _state.AH = 0xC2;
+        _state.AL = 0x02;
+        _state.BH = 0x06;
+
+        DecodedCall call = _decoder.Decode(0x15, _state, _memory);
+
+        call.Parameters.Should().HaveCount(2);
+        call.Parameters[0].FormattedValue.Should().Contain("Set Sample Rate");
+        call.Parameters[1].Source.Should().Be("BH");
+        call.Parameters[1].RawValue.Should().Be(0x06);
+    }
+
+    [Fact]
+    public void Decode_PointingDevice_SetHandler_DecodesEsBxFarPointer() {
+        _state.AH = 0xC2;
+        _state.AL = 0x07;
+        _state.ES = 0x1234;
+        _state.BX = 0x5678;
+
+        DecodedCall call = _decoder.Decode(0x15, _state, _memory);
+
+        call.Parameters.Should().HaveCount(2);
+        call.Parameters[0].FormattedValue.Should().Contain("Device Handler");
+        call.Parameters[1].Source.Should().Be("ES:BX");
+        call.Parameters[1].FormattedValue.Should().Be("1234:5678");
+    }
 }
