@@ -324,7 +324,7 @@ public class DosProcessManager : IDosBatchExecutionHost {
     /// <param name="commandTail">The command tail passed to the child process.</param>
     /// <param name="environmentSegment">Optional environment block to inherit; 0 clones the parent's environment.</param>
     /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
-    internal DosExecResult LoadInitialProgram(string programName, DosExecParameterBlock paramBlock,
+    internal DosExecResult LoadExternalProgram(string programName, DosExecParameterBlock paramBlock,
         string commandTail, ushort environmentSegment) {
         // Initial program has no caller - use 0:0 as placeholder. Parent is root COMMAND.COM so we halt on terminate anyway.
         return LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, DosExecLoadType.LoadAndExecute, environmentSegment, 0, 0);
@@ -336,7 +336,7 @@ public class DosProcessManager : IDosBatchExecutionHost {
     /// </summary>
     /// <param name="comBytes">Raw COM program bytes to load at PSP+100h.</param>
     /// <returns>EXEC result metadata indicating success or failure.</returns>
-    internal DosExecResult LoadInitialProgramFromBytes(byte[] comBytes) {
+    internal DosExecResult LoadInternalProgram(byte[] comBytes) {
         DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
         return HandleComFileLoading(paramBlock, string.Empty, DosExecLoadType.LoadAndExecute,
             0, 0, 0, _sda.CurrentProgramSegmentPrefix,
@@ -695,12 +695,12 @@ public class DosProcessManager : IDosBatchExecutionHost {
 
     private DosExecResult LoadBatchLaunchRequest(LaunchRequest launchRequest) {
         if (launchRequest is InternalProgramLaunchRequest internalProgramLaunchRequest) {
-            return LoadInitialProgramFromBytes(internalProgramLaunchRequest.ComProgramBytes);
+            return LoadInternalProgram(internalProgramLaunchRequest.ComProgramBytes);
         }
 
         if (launchRequest is ProgramLaunchRequest programLaunchRequest) {
             DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
-            return LoadInitialProgram(programLaunchRequest.ProgramName, paramBlock,
+            return LoadExternalProgram(programLaunchRequest.ProgramName, paramBlock,
                 programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment);
         }
 

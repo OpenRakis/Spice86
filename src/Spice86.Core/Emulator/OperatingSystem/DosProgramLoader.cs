@@ -82,7 +82,7 @@ internal class DosProgramLoader : DosFileLoader {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }
 
-        return _processManager.LoadInitialProgram(programLaunchRequest.ProgramName, paramBlock,
+        return _processManager.LoadExternalProgram(programLaunchRequest.ProgramName, paramBlock,
             programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment);
     }
 
