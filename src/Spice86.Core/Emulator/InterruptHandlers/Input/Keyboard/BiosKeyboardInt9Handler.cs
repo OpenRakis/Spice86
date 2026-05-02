@@ -75,9 +75,18 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         // Disable keyboard first - otherwise Prince of Persia reads it before us!
         _ps2Controller.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.DisablePortKbd);
 
+        byte statusBeforeRead = _ps2Controller.ReadByte(KeyboardPorts.StatusRegister);
+        bool hasPendingOutputByte = (statusBeforeRead & (byte)Intel8042Controller.StatusBits.OutputBufferFull) != 0;
+
         if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
-            byte st = _ps2Controller.ReadByte(KeyboardPorts.StatusRegister);
-            LoggerService.Debug("INT09: entry ST=0x{St:X2}", st);
+            LoggerService.Debug("INT09: entry ST=0x{St:X2}", statusBeforeRead);
+        }
+
+        if (!hasPendingOutputByte) {
+            // Spurious IRQ1: do not consume stale port 0x60 value when output buffer is empty.
+            _ps2Controller.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.EnableKeyboardPort);
+            _dualPic.AcknowledgeInterrupt(1);
+            return;
         }
 
         byte scancode = _ps2Controller.ReadByte(KeyboardPorts.Data);
