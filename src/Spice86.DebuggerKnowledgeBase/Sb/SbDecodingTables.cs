@@ -1,0 +1,145 @@
+namespace Spice86.DebuggerKnowledgeBase.Sb;
+
+using System.Collections.Generic;
+
+/// <summary>
+/// Static lookup tables for the Sound Blaster knowledge base. Names mirror the canonical
+/// Creative documentation as used by dosbox-staging's <c>soundblaster.cpp</c> and by the
+/// Spice86 enums in <c>SoundBlaster.Definitions.cs</c>.
+/// </summary>
+internal static class SbDecodingTables {
+    /// <summary>DSP command codes written through DSP write port (base + 0x0C).</summary>
+    public static readonly IReadOnlyDictionary<byte, string> DspCommands = new Dictionary<byte, string> {
+        [0x04] = "DSP Status (SB2/Pro) / ASP Set Mode (SB16)",
+        [0x05] = "ASP Set Codec Parameter (SB16)",
+        [0x08] = "ASP Get Version (SB16)",
+        [0x0E] = "ASP Set Register (SB16)",
+        [0x0F] = "ASP Get Register (SB16)",
+        [0x10] = "Direct DAC, 8-bit",
+        [0x14] = "DMA DAC, 8-bit, single-cycle",
+        [0x15] = "DMA DAC, 8-bit, single-cycle (Wari hack)",
+        [0x16] = "DMA DAC, 2-bit ADPCM, single-cycle",
+        [0x17] = "DMA DAC, 2-bit ADPCM, single-cycle (with reference byte)",
+        [0x1C] = "Auto-Init DMA DAC, 8-bit",
+        [0x1F] = "Auto-Init DMA DAC, 2-bit ADPCM (with reference byte) [unimplemented]",
+        [0x20] = "Direct ADC, 8-bit (Creative Parrot, fake silent input)",
+        [0x24] = "DMA ADC, 8-bit, single-cycle",
+        [0x2C] = "Auto-Init DMA ADC, 8-bit [unimplemented]",
+        [0x30] = "MIDI Read Polling [unimplemented]",
+        [0x31] = "MIDI Read Interrupt [unimplemented]",
+        [0x34] = "MIDI Read Poll + Write Poll (UART) [unimplemented]",
+        [0x35] = "MIDI Read Interrupt + Write Poll (UART) [unimplemented]",
+        [0x36] = "MIDI Read Timestamp Poll + Write Poll (UART) [unimplemented]",
+        [0x37] = "MIDI Read Timestamp Interrupt + Write Poll (UART) [unimplemented]",
+        [0x38] = "MIDI Write Poll",
+        [0x40] = "Set Time Constant (sample rate)",
+        [0x41] = "Set Output Sample Rate (SB16)",
+        [0x42] = "Set Input Sample Rate (SB16)",
+        [0x48] = "Set DMA Block Size",
+        [0x74] = "DMA DAC, 4-bit ADPCM, single-cycle",
+        [0x75] = "DMA DAC, 4-bit ADPCM, single-cycle (with reference byte)",
+        [0x76] = "DMA DAC, 2.6-bit (3-bit) ADPCM, single-cycle",
+        [0x77] = "DMA DAC, 2.6-bit (3-bit) ADPCM, single-cycle (with reference byte)",
+        [0x7D] = "Auto-Init DMA DAC, 4-bit ADPCM (with reference byte)",
+        [0x7F] = "Auto-Init DMA DAC, 3-bit ADPCM (with reference byte) [unimplemented]",
+        [0x80] = "Silence DAC",
+        [0x90] = "Auto-Init DMA DAC, 8-bit, high-speed (DSP 2.x/3.x)",
+        [0x91] = "DMA DAC, 8-bit, high-speed, single-cycle (DSP 2.x/3.x)",
+        [0x98] = "Auto-Init DMA ADC, 8-bit, high-speed [unimplemented]",
+        [0x99] = "DMA ADC, 8-bit, high-speed, single-cycle [unimplemented]",
+        [0xA0] = "Set Input Mode: Mono [unimplemented]",
+        [0xA8] = "Set Input Mode: Stereo (DSP 3.x) [unimplemented]",
+        [0xB0] = "Generic 16-bit DMA, mode B0 (SB16)",
+        [0xB1] = "Generic 16-bit DMA, mode B1 (SB16)",
+        [0xB2] = "Generic 16-bit DMA, mode B2 (SB16)",
+        [0xB3] = "Generic 16-bit DMA, mode B3 (SB16)",
+        [0xB4] = "Generic 16-bit DMA, mode B4 (SB16)",
+        [0xB5] = "Generic 16-bit DMA, mode B5 (SB16)",
+        [0xB6] = "Generic 16-bit DMA, mode B6 (SB16)",
+        [0xB7] = "Generic 16-bit DMA, mode B7 (SB16)",
+        [0xB8] = "Generic 16-bit DMA, mode B8 (SB16)",
+        [0xB9] = "Generic 16-bit DMA, mode B9 (SB16)",
+        [0xBA] = "Generic 16-bit DMA, mode BA (SB16)",
+        [0xBB] = "Generic 16-bit DMA, mode BB (SB16)",
+        [0xBC] = "Generic 16-bit DMA, mode BC (SB16)",
+        [0xBD] = "Generic 16-bit DMA, mode BD (SB16)",
+        [0xBE] = "Generic 16-bit DMA, mode BE (SB16)",
+        [0xBF] = "Generic 16-bit DMA, mode BF (SB16)",
+        [0xC0] = "Generic 8-bit DMA, mode C0 (SB16)",
+        [0xC1] = "Generic 8-bit DMA, mode C1 (SB16)",
+        [0xC2] = "Generic 8-bit DMA, mode C2 (SB16)",
+        [0xC3] = "Generic 8-bit DMA, mode C3 (SB16)",
+        [0xC4] = "Generic 8-bit DMA, mode C4 (SB16)",
+        [0xC5] = "Generic 8-bit DMA, mode C5 (SB16)",
+        [0xC6] = "Generic 8-bit DMA, mode C6 (SB16)",
+        [0xC7] = "Generic 8-bit DMA, mode C7 (SB16)",
+        [0xC8] = "Generic 8-bit DMA, mode C8 (SB16)",
+        [0xC9] = "Generic 8-bit DMA, mode C9 (SB16)",
+        [0xCA] = "Generic 8-bit DMA, mode CA (SB16)",
+        [0xCB] = "Generic 8-bit DMA, mode CB (SB16)",
+        [0xCC] = "Generic 8-bit DMA, mode CC (SB16)",
+        [0xCD] = "Generic 8-bit DMA, mode CD (SB16)",
+        [0xCE] = "Generic 8-bit DMA, mode CE (SB16)",
+        [0xCF] = "Generic 8-bit DMA, mode CF (SB16)",
+        [0xD0] = "Halt 8-bit DMA",
+        [0xD1] = "Enable Speaker",
+        [0xD3] = "Disable Speaker",
+        [0xD4] = "Continue 8-bit DMA",
+        [0xD5] = "Halt 16-bit DMA (SB16)",
+        [0xD6] = "Continue 16-bit DMA (SB16)",
+        [0xD8] = "Get Speaker Status",
+        [0xD9] = "Exit Auto-Init 16-bit DMA (SB16)",
+        [0xDA] = "Exit Auto-Init 8-bit DMA",
+        [0xE0] = "DSP Identification (SB2.0+)",
+        [0xE1] = "Get DSP Version",
+        [0xE2] = "DMA Identification Write",
+        [0xE3] = "Get DSP Copyright String",
+        [0xE4] = "Write Test Register",
+        [0xE7] = "ESS Detect / Read Config",
+        [0xE8] = "Read Test Register",
+        [0xF2] = "Trigger 8-bit IRQ",
+        [0xF3] = "Trigger 16-bit IRQ (SB16)",
+        [0xF8] = "Undocumented (pre-SB16)",
+        [0xF9] = "ASP Unknown Function (SB16)"
+    };
+
+    /// <summary>Sound Blaster mixer register indices selected via base + 0x04 / read-write through base + 0x05.</summary>
+    public static readonly IReadOnlyDictionary<byte, string> MixerRegisters = new Dictionary<byte, string> {
+        [0x00] = "Reset Mixer",
+        [0x02] = "Master Volume (SB2)",
+        [0x04] = "DAC Volume (SB Pro)",
+        [0x06] = "FM Output Selection",
+        [0x08] = "CD Audio Volume (SB2)",
+        [0x0A] = "Mic Level (SB Pro) / DAC Volume (SB2)",
+        [0x0E] = "Output / Stereo Select / Filter Enable",
+        [0x14] = "Audio 1 Play Volume (ESS)",
+        [0x22] = "Master Volume (SB Pro)",
+        [0x26] = "FM Volume (SB Pro)",
+        [0x28] = "CD Audio Volume (SB Pro)",
+        [0x2E] = "Line-In Volume (SB Pro)",
+        [0x30] = "Master Volume Left (SB16)",
+        [0x31] = "Master Volume Right (SB16)",
+        [0x32] = "DAC Volume Left (SB16) / Master Volume (ESS)",
+        [0x33] = "DAC Volume Right (SB16)",
+        [0x34] = "FM Volume Left (SB16)",
+        [0x35] = "FM Volume Right (SB16)",
+        [0x36] = "CD Audio Volume Left (SB16) / FM Volume (ESS)",
+        [0x37] = "CD Audio Volume Right (SB16)",
+        [0x38] = "Line-In Volume Left (SB16) / CD Audio Volume (ESS)",
+        [0x39] = "Line-In Volume Right (SB16)",
+        [0x3A] = "Mic Volume (SB16)",
+        [0x3E] = "Line Volume (ESS)",
+        [0x40] = "ESS Identification (ES1488+)",
+        [0x80] = "IRQ Select",
+        [0x81] = "DMA Select",
+        [0x82] = "IRQ Status"
+    };
+
+    /// <summary>Returns the entry for the index, or "Unknown" when not in the table.</summary>
+    public static string Lookup(IReadOnlyDictionary<byte, string> table, byte index) {
+        if (table.TryGetValue(index, out string? name)) {
+            return name;
+        }
+        return "Unknown";
+    }
+}
