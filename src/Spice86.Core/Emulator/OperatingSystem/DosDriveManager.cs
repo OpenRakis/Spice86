@@ -37,6 +37,7 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
         var cDrive = new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath, CurrentDosDirectory = "" };
         _driveMap.Add('C', cDrive);
         CurrentDrive = cDrive;
+        InitializeMediaDescriptors();
         if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             loggerService.Verbose("DOS Drives initialized: {@Drives}", _driveMap.Values);
         }
@@ -89,6 +90,9 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
         return true;
     }
 
+    /// <suummary>
+    /// Gets the number of DOS drive letters assigned.
+    /// </summary>
     public byte NumberOfPotentiallyValidDriveLetters {
         get {
             // At least A: and B:
@@ -113,7 +117,7 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
     private const byte FixedDiskMediaDescriptor = 0xF8;
 
     /// <summary>Writes the FAT media descriptor byte for every drive into the media ID table.</summary>
-    public void InitializeMediaDescriptors() {
+    private void InitializeMediaDescriptors() {
         for (byte driveIndex = 0; driveIndex < MaxDriveCount; driveIndex++) {
             _mediaIdTable[driveIndex] = MediaDescriptor(driveIndex);
         }
