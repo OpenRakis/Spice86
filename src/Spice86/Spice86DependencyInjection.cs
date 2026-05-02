@@ -567,11 +567,10 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Emulation loop created...");
         }
 
-        EmulatorProvidedCodeRegistry emulatorProvidedCodeRegistry = new EmulatorProvidedCodeRegistry();
         InterruptInstaller interruptInstaller =
-            new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue, emulatorProvidedCodeRegistry);
+            new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue);
         AssemblyRoutineInstaller assemblyRoutineInstaller =
-            new AssemblyRoutineInstaller(memoryAsmWriter, functionCatalogue, emulatorProvidedCodeRegistry);
+            new AssemblyRoutineInstaller(memoryAsmWriter, functionCatalogue);
 
         var dummyInt1CHandler = new DummyInt1CHandler();
 
@@ -632,7 +631,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(mouseInt33Handler);
 
             SegmentedAddress mouseDriverAddress =
-                assemblyRoutineInstaller.InstallAssemblyRoutine(mouseDriver, "provided_mouse_driver", "Mouse driver");
+                assemblyRoutineInstaller.InstallAssemblyRoutine(mouseDriver, "provided_mouse_driver");
             mouseIrq12Handler?.SetMouseDriverAddress(mouseDriverAddress);
         }
 
@@ -656,7 +655,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptDecoderRegistry,
             ioPortDecoderRegistry,
             asmRoutineDecoderRegistry,
-            emulatorProvidedCodeRegistry,
+            functionCatalogue,
             state,
             memory,
             ioPortDispatcher);
