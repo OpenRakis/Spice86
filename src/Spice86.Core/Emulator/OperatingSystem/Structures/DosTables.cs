@@ -24,12 +24,12 @@ public class DosTables {
     /// <summary>
     /// Gets the Current Directory Structure (CDS) for DOS drives.
     /// </summary>
-    public CurrentDirectoryStructure CurrentDirectoryStructure { get; private set; } = default!;
+    public CurrentDirectoryStructure CurrentDirectoryStructure { get; private set; }
 
     /// <summary>
     /// Gets the Double Byte Character Set (DBCS) lead-byte table.
     /// </summary>
-    public DosDoubleByteCharacterSet DoubleByteCharacterSet { get; private set; } = default!;
+    public DosDoubleByteCharacterSet DoubleByteCharacterSet { get; private set; }
 
     /// <summary>
     /// Initializes the DOS table structures in memory.
