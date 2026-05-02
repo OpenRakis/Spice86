@@ -3,7 +3,7 @@ namespace Spice86.DebuggerKnowledgeBase;
 using System.Diagnostics.CodeAnalysis;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.DebuggerKnowledgeBase.Decoding;
@@ -21,10 +21,16 @@ using Spice86.Shared.Emulator.Memory;
 /// the UI thread while the emulator is paused.
 /// </remarks>
 public sealed class DebuggerDecoderService {
+    /// <summary>
+    /// Prefix used for function names installed by the emulator itself (interrupt handlers,
+    /// the mouse driver, and any other "trampoline" produced via <c>MemoryAsmWriter</c>).
+    /// </summary>
+    public const string EmulatorProvidedFunctionNamePrefix = "provided_";
+
     private readonly InterruptDecoderRegistry _interruptDecoders;
     private readonly IoPortDecoderRegistry _ioPortDecoders;
     private readonly AsmRoutineDecoderRegistry _asmRoutineDecoders;
-    private readonly EmulatorProvidedCodeRegistry _emulatorProvidedCode;
+    private readonly FunctionCatalogue _functionCatalogue;
     private readonly XmsCallDecoder _xmsCallDecoder;
     private readonly State _state;
     private readonly IMemory _memory;
@@ -36,7 +42,7 @@ public sealed class DebuggerDecoderService {
     /// <param name="interruptDecoders">Registry of interrupt decoders.</param>
     /// <param name="ioPortDecoders">Registry of I/O port decoders.</param>
     /// <param name="asmRoutineDecoders">Registry of ASM routine decoders.</param>
-    /// <param name="emulatorProvidedCode">Registry of emulator-installed routines.</param>
+    /// <param name="functionCatalogue">Catalogue of all known functions, used to identify emulator-installed routines by name prefix.</param>
     /// <param name="state">Current CPU state (snapshotted on each call).</param>
     /// <param name="memory">Emulated memory bus.</param>
     /// <param name="ioPortDispatcher">I/O port dispatcher (used to read last port access).</param>
@@ -44,14 +50,14 @@ public sealed class DebuggerDecoderService {
         InterruptDecoderRegistry interruptDecoders,
         IoPortDecoderRegistry ioPortDecoders,
         AsmRoutineDecoderRegistry asmRoutineDecoders,
-        EmulatorProvidedCodeRegistry emulatorProvidedCode,
+        FunctionCatalogue functionCatalogue,
         State state,
         IMemory memory,
         IOPortDispatcher ioPortDispatcher) {
         _interruptDecoders = interruptDecoders;
         _ioPortDecoders = ioPortDecoders;
         _asmRoutineDecoders = asmRoutineDecoders;
-        _emulatorProvidedCode = emulatorProvidedCode;
+        _functionCatalogue = functionCatalogue;
         _xmsCallDecoder = XmsDecoderRegistration.CreateDecoder();
         _state = state;
         _memory = memory;
@@ -99,20 +105,29 @@ public sealed class DebuggerDecoderService {
     }
 
     /// <summary>
-    /// Returns true when the given address falls inside an emulator-installed ASM routine.
+    /// Returns true when the given address is the entry point of a function the emulator
+    /// itself installed (its name starts with <see cref="EmulatorProvidedFunctionNamePrefix"/>).
     /// </summary>
     /// <param name="address">Address to test.</param>
-    public bool IsEmulatorProvided(SegmentedAddress address) {
-        return _emulatorProvidedCode.IsEmulatorProvided(address);
+    public bool IsEmulatorProvidedEntryPoint(SegmentedAddress address) {
+        return TryGetEmulatorProvidedFunction(address, out _);
     }
 
     /// <summary>
-    /// Returns metadata about the emulator-installed routine the given address belongs to, if any.
+    /// Returns the <see cref="FunctionInformation"/> registered at <paramref name="address"/> when
+    /// it corresponds to a function installed by the emulator itself, identified by the
+    /// <see cref="EmulatorProvidedFunctionNamePrefix"/> name prefix.
     /// </summary>
     /// <param name="address">Address to test.</param>
-    /// <param name="info">Routine metadata when the method returns true; null otherwise.</param>
-    public bool TryGetEmulatorProvidedRoutine(SegmentedAddress address, [NotNullWhen(true)] out ProvidedRoutineInfo? info) {
-        return _emulatorProvidedCode.TryGet(address, out info);
+    /// <param name="info">Function information when the method returns true; null otherwise.</param>
+    public bool TryGetEmulatorProvidedFunction(SegmentedAddress address, [NotNullWhen(true)] out FunctionInformation? info) {
+        if (_functionCatalogue.FunctionInformations.TryGetValue(address, out FunctionInformation? candidate)
+            && candidate.Name.StartsWith(EmulatorProvidedFunctionNamePrefix, System.StringComparison.Ordinal)) {
+            info = candidate;
+            return true;
+        }
+        info = null;
+        return false;
     }
 
     /// <summary>
