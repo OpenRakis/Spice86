@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.DebuggerKnowledgeBase.Decoding;
 using Spice86.DebuggerKnowledgeBase.Registries;
+using Spice86.DebuggerKnowledgeBase.Xms;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -24,6 +25,7 @@ public sealed class DebuggerDecoderService {
     private readonly IoPortDecoderRegistry _ioPortDecoders;
     private readonly AsmRoutineDecoderRegistry _asmRoutineDecoders;
     private readonly EmulatorProvidedCodeRegistry _emulatorProvidedCode;
+    private readonly XmsCallDecoder _xmsCallDecoder;
     private readonly State _state;
     private readonly IMemory _memory;
     private readonly IOPortDispatcher _ioPortDispatcher;
@@ -50,6 +52,7 @@ public sealed class DebuggerDecoderService {
         _ioPortDecoders = ioPortDecoders;
         _asmRoutineDecoders = asmRoutineDecoders;
         _emulatorProvidedCode = emulatorProvidedCode;
+        _xmsCallDecoder = XmsDecoderRegistration.CreateDecoder();
         _state = state;
         _memory = memory;
         _ioPortDispatcher = ioPortDispatcher;
@@ -110,6 +113,16 @@ public sealed class DebuggerDecoderService {
     /// <param name="info">Routine metadata when the method returns true; null otherwise.</param>
     public bool TryGetEmulatorProvidedRoutine(SegmentedAddress address, [NotNullWhen(true)] out ProvidedRoutineInfo? info) {
         return _emulatorProvidedCode.TryGet(address, out info);
+    }
+
+    /// <summary>
+    /// Decodes the XMS call currently set up in the CPU state. XMS is invoked by far call to
+    /// the address returned by INT 2Fh AX=4310h, so this entry point is not dispatched through
+    /// the interrupt registry; the UI / debugger calls it directly when the program is at the
+    /// XMS callback entry point.
+    /// </summary>
+    public DecodedCall DecodeXmsCall() {
+        return _xmsCallDecoder.Decode(_state, _memory);
     }
 
     /// <summary>
