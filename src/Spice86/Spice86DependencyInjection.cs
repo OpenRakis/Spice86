@@ -525,6 +525,7 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.Intel8042Controller = intel8042Controller;
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
+        emulatorMcpServices.BiosKeyboardBuffer = biosKeyboardBuffer;
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
             stack, state, cfgCpu, dualPic, systemBiosInt15Handler,
             intel8042Controller, biosKeyboardBuffer, loggerService);
@@ -584,6 +585,7 @@ public class Spice86DependencyInjection : IDisposable {
             xms);
 
         emulatorMcpServices.Intel8042Controller = intel8042Controller;
+        emulatorMcpServices.InputEventHub = inputEventHub;
         emulatorMcpServices.SoundBlaster = soundBlaster;
         emulatorMcpServices.Opl3Fm = opl;
         emulatorMcpServices.PcSpeaker = pcSpeaker;

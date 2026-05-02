@@ -31,6 +31,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
@@ -588,10 +589,24 @@ internal sealed class EmulatorMcpTools {
                     throw new ArgumentException($"Invalid PcKeyboardKey: '{key}'");
                 }
 
-                controller.KeyboardDevice.EnqueueKeyEvent(parsedKey, isPressed);
+                string action = isPressed ? "down" : "up";
+                if (_services.PauseHandler.IsPaused) {
+                    controller.KeyboardDevice.EnqueueKeyEvent(parsedKey, isPressed);
+                    return new EmulatorControlResponse {
+                        Success = true,
+                        Message = $"Keyboard event applied immediately while paused: {parsedKey} {action}"
+                    };
+                }
+
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+
+                hub.PostToEmulatorThread(() => controller.KeyboardDevice.EnqueueKeyEvent(parsedKey, isPressed));
                 return new EmulatorControlResponse {
                     Success = true,
-                    Message = $"Keyboard event sent: {parsedKey} {(isPressed ? "down" : "up")}"
+                    Message = $"Keyboard event sent: {parsedKey} {action}"
                 };
             }
         });
@@ -1215,7 +1230,20 @@ internal sealed class EmulatorMcpTools {
                 int width = _services.VgaRenderer.Width;
                 int height = _services.VgaRenderer.Height;
                 uint[] buffer = new uint[width * height];
-                _services.VgaRenderer.Render(buffer);
+
+                _services.VgaRenderer.CopyLastFrame(buffer);
+
+                bool hasVisiblePixelData = false;
+                for (int i = 0; i < buffer.Length; i++) {
+                    if (buffer[i] != 0) {
+                        hasVisiblePixelData = true;
+                        break;
+                    }
+                }
+
+                if (!hasVisiblePixelData) {
+                    return Error("No video frame is available for screenshot capture.");
+                }
 
                 byte[] bytes = new byte[buffer.Length * 4];
                 Buffer.BlockCopy(buffer, 0, bytes, 0, bytes.Length);
