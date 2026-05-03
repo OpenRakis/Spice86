@@ -137,9 +137,54 @@
                                             CornerRadius="4"
                                             Padding="10,6"
                                             behaviors:CfgNodeThemeBehavior.EnableTheming="True">
-                                                <TextBlock
-                                                FontSize="14"
-                                                FontFamily="Cascadia Mono, Consolas, Courier New, monospace" />
+                                                <!-- Tooltip for decoded call -->
+                                                <ToolTip.Tip>
+                                                    <StackPanel IsVisible="{Binding DecodedCall, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                        <TextBlock Text="{Binding DecodedCall.Subsystem}" FontWeight="Bold" />
+                                                        <TextBlock Text="{Binding DecodedCall.FunctionName}" FontWeight="SemiBold" Margin="0,2,0,0" />
+                                                        <TextBlock Text="{Binding DecodedCall.ShortDescription}" TextWrapping="Wrap" MaxWidth="400" Margin="0,4,0,0" />
+                                                        <ItemsControl ItemsSource="{Binding DecodedCall.Parameters}" Margin="0,8,0,0">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <StackPanel Margin="0,2,0,0">
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                                            <TextBlock Text=" (" Margin="4,0,0,0" />
+                                                                            <TextBlock Text="{Binding Source}" />
+                                                                            <TextBlock Text=") = " />
+                                                                            <TextBlock Text="{Binding FormattedValue}" FontFamily="Consolas,Menlo,Monaco,monospace" />
+                                                                        </StackPanel>
+                                                                        <TextBlock Text="{Binding Notes}" FontSize="11" Opacity="0.8" Margin="16,2,0,0"
+                                                                                   IsVisible="{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </ToolTip.Tip>
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="*" />
+                                                    </Grid.RowDefinitions>
+                                                    <!-- EMU Badge -->
+                                                    <Border Grid.Row="0"
+                                                            IsVisible="{Binding IsEmulatorProvided}"
+                                                            Background="{DynamicResource SystemControlHighlightAccentBrush}"
+                                                            CornerRadius="3"
+                                                            Padding="4,2"
+                                                            HorizontalAlignment="Right"
+                                                            Margin="0,0,0,4">
+                                                        <TextBlock Text="EMU"
+                                                                   FontSize="10"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="White" />
+                                                    </Border>
+                                                    <!-- Node text -->
+                                                    <TextBlock Grid.Row="1"
+                                                    FontSize="14"
+                                                    FontFamily="Cascadia Mono, Consolas, Courier New, monospace" />
+                                                </Grid>
                                             </Border>
                                         </DataTemplate>
                                         <!-- Colored edge label -->
