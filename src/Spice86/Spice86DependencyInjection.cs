@@ -752,7 +752,7 @@ public class Spice86DependencyInjection : IDisposable {
             DisassemblyViewModel disassemblyViewModel = new(
                 emulatorBreakpointsManager, memory, state, functionCatalogue.FunctionInformations,
                 breakpointsViewModel, pauseHandler, uiDispatcher, messenger, textClipboard, loggerService,
-                debuggerDecoderService, canCloseTab: false);
+                debuggerDecoderService, false);
 
             PaletteViewModel paletteViewModel = new(videoState.DacRegisters.ArgbPalette,
                 uiDispatcher);
