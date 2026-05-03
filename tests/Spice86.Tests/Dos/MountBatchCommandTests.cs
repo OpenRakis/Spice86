@@ -153,6 +153,75 @@ public class MountBatchCommandTests : IDisposable {
         floppy!.HasImage.Should().BeTrue();
     }
 
+    [Fact]
+    public void TryHandleMount_WithRelativePath_ResolvedAgainstCwd() {
+        // Arrange — create a subfolder inside _tempDir
+        string subFolder = Path.Combine(_tempDir, "reltest");
+        Directory.CreateDirectory(subFolder);
+
+        // Compute a relative path from the process CWD to the subfolder
+        string relativePath = Path.GetRelativePath(Environment.CurrentDirectory, subFolder);
+
+        // Act
+        _accessor.TryHandleMount($"A {relativePath}");
+
+        // Assert — the drive should be mounted even though the path was relative
+        _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
+        _output.ToString().Should().NotContain("path not found");
+    }
+
+    [Fact]
+    public void TryHandleMount_WithQuotedAbsolutePathContainingSpaces_MountsDrive() {
+        // Arrange — create a subfolder whose name contains a space
+        string spacyFolder = Path.Combine(_tempDir, "my games");
+        Directory.CreateDirectory(spacyFolder);
+
+        // Act — pass the path surrounded by double-quotes
+        _accessor.TryHandleMount($"A \"{spacyFolder}\"");
+
+        // Assert
+        _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
+        _output.ToString().Should().NotContain("path not found");
+    }
+
+    [Fact]
+    public void TryHandleImgMount_WithRelativePath_MountsImage() {
+        // Arrange
+        byte[] imageBytes = new Fat12ImageBuilder().Build();
+        string imagePath = Path.Combine(_tempDir, "rel.img");
+        File.WriteAllBytes(imagePath, imageBytes);
+
+        // Compute a relative path from the process CWD to the image file
+        string relativePath = Path.GetRelativePath(Environment.CurrentDirectory, imagePath);
+
+        // Act
+        _accessor.TryHandleImgMount($"A {relativePath} -t floppy", _mscdex);
+
+        // Assert
+        bool mounted = _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
+        mounted.Should().BeTrue();
+        floppy!.HasImage.Should().BeTrue();
+        _output.ToString().Should().NotContain("not found");
+    }
+
+    [Fact]
+    public void TryHandleImgMount_WithQuotedPathContainingSpaces_MountsImage() {
+        // Arrange — image file whose directory contains a space
+        string spacyDir = Path.Combine(_tempDir, "my discs");
+        Directory.CreateDirectory(spacyDir);
+        byte[] imageBytes = new Fat12ImageBuilder().Build();
+        string imagePath = Path.Combine(spacyDir, "disk.img");
+        File.WriteAllBytes(imagePath, imageBytes);
+
+        // Act — pass the path surrounded by double-quotes
+        _accessor.TryHandleImgMount($"A \"{imagePath}\" -t floppy", _mscdex);
+
+        // Assert
+        bool mounted = _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
+        mounted.Should().BeTrue();
+        floppy!.HasImage.Should().BeTrue();
+    }
+
     // ---------- test-only helper that replicates the batch command logic ----------
 
     /// <summary>
@@ -175,14 +244,14 @@ public class MountBatchCommandTests : IDisposable {
                 return;
             }
 
-            string[] parts = trimmed.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = SplitArgumentsWithQuotes(trimmed);
             if (parts.Length < 2) {
                 _output.Append("MOUNT: missing path argument\r\n");
                 return;
             }
 
             char driveLetter = char.ToUpperInvariant(parts[0][0]);
-            string hostPath = parts[1];
+            string hostPath = Path.GetFullPath(parts[1]);
 
             string driveType = "hdd";
             for (int i = 2; i < parts.Length - 1; i++) {
@@ -213,25 +282,35 @@ public class MountBatchCommandTests : IDisposable {
                 return;
             }
 
-            string[] parts = trimmed.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = SplitArgumentsWithQuotes(trimmed);
             if (parts.Length < 2) {
                 _output.Append("IMGMOUNT: missing image path\r\n");
                 return;
             }
 
             char driveLetter = char.ToUpperInvariant(parts[0][0]);
-            string imagePath = parts[1];
 
             string imageType = string.Empty;
-            for (int i = 2; i < parts.Length - 1; i++) {
+            List<string> imagePaths = new();
+            for (int i = 1; i < parts.Length; i++) {
                 if (parts[i].Equals("-t", StringComparison.OrdinalIgnoreCase)) {
-                    imageType = parts[i + 1].ToLowerInvariant();
+                    if (i + 1 < parts.Length) {
+                        imageType = parts[i + 1].ToLowerInvariant();
+                    }
                     break;
                 }
+                imagePaths.Add(Path.GetFullPath(parts[i]));
             }
 
+            if (imagePaths.Count == 0) {
+                _output.Append("IMGMOUNT: missing image path\r\n");
+                return;
+            }
+
+            string firstPath = imagePaths[0];
+
             if (string.IsNullOrEmpty(imageType)) {
-                string ext = Path.GetExtension(imagePath).ToLowerInvariant();
+                string ext = Path.GetExtension(firstPath).ToLowerInvariant();
                 if (ext == ".img" || ext == ".ima" || ext == ".vfd") {
                     imageType = "floppy";
                 } else if (ext == ".iso") {
@@ -239,23 +318,45 @@ public class MountBatchCommandTests : IDisposable {
                 } else if (ext == ".cue") {
                     imageType = "cue";
                 } else {
-                    _output.Append($"IMGMOUNT: cannot detect image type for '{imagePath}'. Use -t floppy|iso|cue.\r\n");
+                    _output.Append($"IMGMOUNT: cannot detect image type for '{firstPath}'. Use -t floppy|iso|cue.\r\n");
                     return;
                 }
             }
 
-            if (!File.Exists(imagePath)) {
-                _output.Append($"IMGMOUNT: image file not found: {imagePath}\r\n");
+            if (!File.Exists(firstPath)) {
+                _output.Append($"IMGMOUNT: image file not found: {firstPath}\r\n");
                 return;
             }
 
             if (imageType == "floppy") {
-                byte[] imageData = File.ReadAllBytes(imagePath);
-                _driveManager.MountFloppyImage(driveLetter, imageData, imagePath);
-                _output.Append($"Drive {driveLetter}: mounted as floppy image {imagePath}\r\n");
+                byte[] imageData = File.ReadAllBytes(firstPath);
+                _driveManager.MountFloppyImage(driveLetter, imageData, firstPath);
+                _output.Append($"Drive {driveLetter}: mounted as floppy image {firstPath}\r\n");
             } else {
                 _output.Append($"IMGMOUNT: unsupported image type '{imageType}'\r\n");
             }
+        }
+
+        private static string[] SplitArgumentsWithQuotes(string input) {
+            List<string> parts = new();
+            bool inQuotes = false;
+            System.Text.StringBuilder current = new();
+            foreach (char c in input) {
+                if (c == '"') {
+                    inQuotes = !inQuotes;
+                } else if ((c == ' ' || c == '\t') && !inQuotes) {
+                    if (current.Length > 0) {
+                        parts.Add(current.ToString());
+                        current.Clear();
+                    }
+                } else {
+                    current.Append(c);
+                }
+            }
+            if (current.Length > 0) {
+                parts.Add(current.ToString());
+            }
+            return parts.ToArray();
         }
     }
 }

@@ -516,7 +516,11 @@ Both commands are implemented as batch command handlers in
 MOUNT <drive> <path> [-t cdrom|floppy|hdd]
 ```
 
-- Resolves `<path>` relative to the working directory.
+- `<path>` may be an **absolute** host path or a **relative** path.
+  Relative paths are resolved against `Environment.CurrentDirectory`
+  (the directory from which Spice86 was launched) via `Path.GetFullPath`.
+- Paths that contain spaces must be surrounded by **double-quotes**:
+  `MOUNT D "C:\Program Files\games"`.
 - `-t cdrom` → creates an `IsoImage` from an `.iso` or a folder; registers
   a `MscdexDriveEntry`.
 - `-t floppy` → calls `DosDriveManager.MountFloppyFolder`.
@@ -525,9 +529,12 @@ MOUNT <drive> <path> [-t cdrom|floppy|hdd]
 ### IMGMOUNT
 
 ```
-IMGMOUNT <drive> <image1> [<image2> …] -t floppy|iso|cue
+IMGMOUNT <drive> <image1> [<image2> …] [-t floppy|iso|cue]
 ```
 
+- Each image path may be **absolute** or **relative** (resolved via
+  `Path.GetFullPath` against the process working directory).
+- Paths that contain spaces must be surrounded by **double-quotes**.
 - Multiple image paths mount all images to the same drive for disc
   switching; the first image becomes active.
 - `-t floppy` → first image → `MountFloppyImage`; further images →
@@ -535,7 +542,18 @@ IMGMOUNT <drive> <image1> [<image2> …] -t floppy|iso|cue
 - `-t iso` → `IsoImage` → `MscdexService.AddDrive`.
 - `-t cue` → `CueBinImage` → `MscdexService.AddDrive`.
 - Extension auto-detection: `.iso` → iso mode; `.cue` → cue mode;
-  `.img` → floppy mode.
+  `.img` / `.ima` / `.vfd` → floppy mode.
+
+### Argument parsing
+
+Both commands use `SplitArgumentsWithQuotes`, a private static helper in
+`DosBatchExecutionEngine.CommandHandlers.cs`, which honours double-quoted
+tokens exactly like DOSBox Staging's shell tokeniser:
+
+```
+Input: A "C:\my games\disc 1.img" -t floppy
+Parts: ["A", "C:\\my games\\disc 1.img", "-t", "floppy"]
+```
 
 ---
 
@@ -600,11 +618,11 @@ The key ordering constraint: `SystemBiosInt13Handler` must be constructed
 | `VirtualIsoImageTests`             | 9      | ICdRomImage; PVD; directory records; file data sector reads |
 | `DosDriveManagerFloppyTests`       | 14     | Mount/add/swap images; TryGetGeometry; TryRead/TryWrite     |
 | `CdRomDriveDiscSwapTests`          | 8      | Single/multi-image; swap cycling; audio stop on swap        |
-| `MountBatchCommandTests`           | 8      | MOUNT/IMGMOUNT parsing; multi-image; extension detection    |
+| `MountBatchCommandTests`           | 12     | MOUNT/IMGMOUNT: absolute paths, relative paths, quoted paths with spaces, multi-image, extension detection |
 | `MscdexDeviceDriverRequestTests`   | (existing) | IOCTL sub-commands; audio commands                      |
 | `CdAudioPlayerTests`               | (existing) | Play/stop/pause/resume state machine                    |
 
-Full test suite: **1863 tests pass**, 1 skipped (pre-existing), 0 failures.
+Full test suite: **1867 tests pass**, 1 skipped (pre-existing), 0 failures.
 
 ---
 

@@ -1146,6 +1146,8 @@ internal sealed partial class DosBatchExecutionEngine {
     /// <summary>
     /// Handles the MOUNT command which mounts a host folder as a DOS drive.
     /// Syntax: MOUNT &lt;driveLetter&gt; &lt;hostPath&gt; [-t cdrom|floppy|hdd]
+    /// The host path may be absolute or relative (resolved against the process working directory).
+    /// Paths that contain spaces must be surrounded by double-quotes.
     /// </summary>
     internal bool TryHandleMount(string arguments) {
         string trimmed = arguments.Trim();
@@ -1154,7 +1156,7 @@ internal sealed partial class DosBatchExecutionEngine {
             return false;
         }
 
-        string[] parts = trimmed.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        string[] parts = SplitArgumentsWithQuotes(trimmed);
         if (parts.Length < 2) {
             WriteToStandardOutput("MOUNT: missing path argument\r\n");
             return false;
@@ -1167,7 +1169,7 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         char driveLetter = char.ToUpperInvariant(driveSpec[0]);
-        string hostPath = parts[1];
+        string hostPath = Path.GetFullPath(parts[1]);
 
         // Parse optional -t type flag
         string driveType = "hdd";
@@ -1199,6 +1201,8 @@ internal sealed partial class DosBatchExecutionEngine {
     /// <summary>
     /// Handles the IMGMOUNT command which mounts one or more disk image files as a DOS drive.
     /// Syntax: IMGMOUNT &lt;driveLetter&gt; &lt;image1&gt; [&lt;image2&gt; ...] [-t floppy|iso|cue]
+    /// Image paths may be absolute or relative (resolved against the process working directory).
+    /// Paths that contain spaces must be surrounded by double-quotes.
     /// Multiple images enable Ctrl-F4 disc switching.
     /// </summary>
     internal bool TryHandleImgMount(string arguments) {
@@ -1208,7 +1212,7 @@ internal sealed partial class DosBatchExecutionEngine {
             return false;
         }
 
-        string[] parts = trimmed.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        string[] parts = SplitArgumentsWithQuotes(trimmed);
         if (parts.Length < 2) {
             WriteToStandardOutput("IMGMOUNT: missing image path\r\n");
             return false;
@@ -1232,7 +1236,7 @@ internal sealed partial class DosBatchExecutionEngine {
                 }
                 break;
             }
-            imagePaths.Add(parts[i]);
+            imagePaths.Add(Path.GetFullPath(parts[i]));
         }
 
         if (imagePaths.Count == 0) {
@@ -1315,6 +1319,33 @@ internal sealed partial class DosBatchExecutionEngine {
         } catch (IOException ex) {
             WriteToStandardOutput($"IMGMOUNT: failed to open image: {ex.Message}\r\n");
         }
+    }
+
+    /// <summary>
+    /// Splits a command argument string respecting double-quoted tokens.
+    /// A token enclosed in double-quotes is returned as a single element with the quotes stripped.
+    /// Matches the behaviour of DOSBox Staging's shell argument tokeniser.
+    /// </summary>
+    private static string[] SplitArgumentsWithQuotes(string input) {
+        List<string> parts = new();
+        bool inQuotes = false;
+        StringBuilder current = new();
+        foreach (char c in input) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if ((c == ' ' || c == '\t') && !inQuotes) {
+                if (current.Length > 0) {
+                    parts.Add(current.ToString());
+                    current.Clear();
+                }
+            } else {
+                current.Append(c);
+            }
+        }
+        if (current.Length > 0) {
+            parts.Add(current.ToString());
+        }
+        return parts.ToArray();
     }
 }
 
