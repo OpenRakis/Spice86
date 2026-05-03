@@ -7,8 +7,7 @@ using System.IO;
 
 /// <summary>
 /// SDL2-based mouse capture backend for non-Windows platforms.
-/// Uses <c>SDL_SetRelativeMouseMode</c> to hide the cursor and report relative mouse deltas,
-/// analogous to the approach used in dosbox-staging.
+/// Uses <c>SDL_SetRelativeMouseMode</c> to hide the cursor and report relative mouse deltas.
 /// Precompiled SDL2 native libraries are bundled via Silk.NET.SDL (Ultz.Native.SDL),
 /// covering macOS (universal) and Linux (x64/arm64/arm).
 /// </summary>
