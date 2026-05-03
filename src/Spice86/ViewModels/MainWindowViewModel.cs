@@ -68,6 +68,14 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         set => SetProperty(ref _discSwapper, value);
     }
 
+    private DrivesMenuViewModel? _drivesMenuViewModel;
+
+    /// <summary>Gets or sets the drives menu view model for disc switching and drive mounting.</summary>
+    public DrivesMenuViewModel? DrivesMenuViewModel {
+        get => _drivesMenuViewModel;
+        set => SetProperty(ref _drivesMenuViewModel, value);
+    }
+
     private int? _targetCyclesPerMs;
 
     public int? TargetCyclesPerMs {

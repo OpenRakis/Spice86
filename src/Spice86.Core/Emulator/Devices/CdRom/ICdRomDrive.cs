@@ -21,6 +21,9 @@ public interface ICdRomDrive {
     /// </summary>
     int ImageCount { get; }
 
+    /// <summary>Gets the file-system paths of all registered disc images in order.</summary>
+    IReadOnlyList<string> AllImagePaths { get; }
+
     /// <summary>Adds an additional disc image to this drive's image list for disc switching.</summary>
     /// <param name="image">The image to append to the list.</param>
     void AddImage(ICdRomImage image);
@@ -30,6 +33,10 @@ public interface ICdRomDrive {
     /// Has no effect when only one image is registered.
     /// </summary>
     void SwapToNextDisc();
+
+    /// <summary>Switches to the image at the specified zero-based index. Has no effect if the index is out of range.</summary>
+    /// <param name="index">Zero-based index of the target image.</param>
+    void SwapToIndex(int index);
 
     /// <summary>Reads sector data from the disc starting at the given logical block address.</summary>
     /// <param name="lba">Logical block address of the first sector to read.</param>

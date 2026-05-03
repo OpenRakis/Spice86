@@ -269,6 +269,17 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
         }
     }
 
+    /// <summary>Switches the floppy drive at <paramref name="letter"/> to the image at <paramref name="index"/>.</summary>
+    /// <param name="letter">The floppy drive letter.</param>
+    /// <param name="index">Zero-based index of the target image.</param>
+    public void SwapFloppyToIndex(char letter, int index) {
+        char upper = char.ToUpperInvariant(letter);
+        if (!_floppyDriveMap.TryGetValue(upper, out FloppyDiskDrive? drive)) {
+            return;
+        }
+        drive.SwapToIndex(index);
+    }
+
     /// <summary>
     /// Mounts a host folder as a folder-backed floppy drive (A: or B:).
     /// </summary>

@@ -117,6 +117,21 @@
 						</MenuItem.Header>
 					</MenuItem>
 				</MenuItem>
+				<MenuItem Header="Drives"
+				          IsEnabled="{Binding IsEmulatorRunning}"
+				          IsVisible="{Binding DrivesMenuViewModel, Converter={StaticResource NullableToBooleanConverter}}"
+				          ItemsSource="{Binding DrivesMenuViewModel.AllDrives}">
+					<MenuItem.ItemTemplate>
+						<DataTemplate DataType="vm:DriveMenuItemViewModel">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<TextBlock Text="{Binding DriveLetter, StringFormat={}{0}:}" VerticalAlignment="Center" />
+								<ComboBox ItemsSource="{Binding ComboboxOptions}"
+								          SelectedItem="{Binding SelectedOption}"
+								          MinWidth="160" />
+							</StackPanel>
+						</DataTemplate>
+					</MenuItem.ItemTemplate>
+				</MenuItem>
 			</Menu>
 			<StackPanel Grid.Column="1" Focusable="False" IsTabStop="False" IsEnabled="{Binding IsEmulatorRunning}" Grid.Row="0" Margin="160,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
 				<Label IsVisible="{Binding ShowCyclesLimitingUI}" Focusable="False" IsTabStop="False" VerticalAlignment="Center" Content="Cycles/ms:" />

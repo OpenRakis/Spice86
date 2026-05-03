@@ -26,6 +26,9 @@ public sealed class CdRomDrive : ICdRomDrive {
     /// <inheritdoc/>
     public int ImageCount => _images.Count;
 
+    /// <inheritdoc/>
+    public IReadOnlyList<string> AllImagePaths => _images.Select(i => i.ImagePath).ToList();
+
     /// <summary>Initialises a new <see cref="CdRomDrive"/> with the given image mounted.</summary>
     /// <param name="image">The CD-ROM image to mount initially.</param>
     public CdRomDrive(ICdRomImage image) {
@@ -58,6 +61,20 @@ public sealed class CdRomDrive : ICdRomDrive {
             return;
         }
         _currentIndex = (_currentIndex + 1) % _images.Count;
+        MediaState.IsDoorOpen = true;
+        MediaState.NotifyMediaChanged();
+        _image = _images[_currentIndex];
+        MediaState.IsDoorOpen = false;
+        MediaState.NotifyMediaChanged();
+        StopAudio();
+    }
+
+    /// <inheritdoc/>
+    public void SwapToIndex(int index) {
+        if (index < 0 || index >= _images.Count) {
+            return;
+        }
+        _currentIndex = index;
         MediaState.IsDoorOpen = true;
         MediaState.NotifyMediaChanged();
         _image = _images[_currentIndex];

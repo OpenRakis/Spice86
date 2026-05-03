@@ -10,4 +10,12 @@ public interface IDiscSwapper {
     /// cycling back to the first image after the last one has been played.
     /// </summary>
     void SwapDiscImages();
+
+    /// <summary>
+    /// Advances the specified drive to the image at the given zero-based index.
+    /// Has no effect if the drive is not found or the index is out of range.
+    /// </summary>
+    /// <param name="driveLetter">The drive letter to target.</param>
+    /// <param name="imageIndex">The zero-based index of the image to switch to.</param>
+    void SwapToImageIndex(char driveLetter, int imageIndex);
 }

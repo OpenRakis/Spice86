@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.OperatingSystem.FileSystem;
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 /// <summary>
 /// Represents a floppy disk drive (A: or B:), optionally backed by one or more FAT12 disk images.
@@ -34,6 +35,9 @@ public class FloppyDiskDrive : DosDriveBase {
     /// A value greater than 1 means Ctrl-F4 disc switching is available.
     /// </summary>
     public int ImageCount => _images.Count;
+
+    /// <summary>Gets the file-system paths of all registered disc images in order.</summary>
+    public IReadOnlyList<string> AllImagePaths => _images.Select(i => i.Path).ToList();
 
     /// <summary>Initialises a new empty (no media) floppy drive.</summary>
     public FloppyDiskDrive() {
@@ -100,6 +104,16 @@ public class FloppyDiskDrive : DosDriveBase {
             return;
         }
         _currentIndex = (_currentIndex + 1) % _images.Count;
+        ApplyCurrentImage();
+    }
+
+    /// <summary>Switches to the image at the specified zero-based index. Has no effect if the index is out of range.</summary>
+    /// <param name="index">Zero-based index of the target image.</param>
+    public void SwapToIndex(int index) {
+        if (index < 0 || index >= _images.Count) {
+            return;
+        }
+        _currentIndex = index;
         ApplyCurrentImage();
     }
 

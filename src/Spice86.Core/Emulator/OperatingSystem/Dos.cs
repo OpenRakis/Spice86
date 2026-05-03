@@ -17,6 +17,8 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.Devices.CdRom;
+using Spice86.Core.Emulator.Devices.CdRom.Image;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.Storage;
@@ -24,13 +26,14 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
 /// <summary>
 /// Represents the DOS kernel.
 /// </summary>
-public sealed class Dos : IDriveStatusProvider, IDiscSwapper {
+public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService {
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
@@ -407,7 +410,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper {
                     floppy.DriveLetter, DosVirtualDriveType.Floppy,
                     hasMedia: true, floppy.Label,
                     currentImagePath: floppy.ImagePath,
-                    imageCount: floppy.ImageCount));
+                    imageCount: floppy.ImageCount,
+                    allImagePaths: floppy.AllImagePaths));
                 continue;
             }
 
@@ -427,7 +431,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper {
             statuses.Add(new DosVirtualDriveStatus(
                 cdrom.DriveLetter, DosVirtualDriveType.CdRom, hasCdMedia, volumeLabel,
                 currentImagePath: imagePath,
-                imageCount: cdrom.Drive.ImageCount));
+                imageCount: cdrom.Drive.ImageCount,
+                allImagePaths: cdrom.Drive.AllImagePaths));
         }
 
         return statuses.OrderBy(s => s.DriveLetter).ToList();
@@ -439,5 +444,52 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper {
         foreach (MscdexDriveEntry entry in _mscdex.Drives) {
             entry.Drive.SwapToNextDisc();
         }
+    }
+
+    /// <inheritdoc/>
+    public void SwapToImageIndex(char driveLetter, int imageIndex) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (DosDriveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy)) {
+            floppy.SwapToIndex(imageIndex);
+            return;
+        }
+        foreach (MscdexDriveEntry entry in _mscdex.Drives) {
+            if (char.ToUpperInvariant(entry.DriveLetter) == upper) {
+                entry.Drive.SwapToIndex(imageIndex);
+                return;
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public void MountFolderAsFloppy(char driveLetter, string hostPath) {
+        DosDriveManager.MountFloppyFolder(driveLetter, hostPath);
+    }
+
+    /// <inheritdoc/>
+    public void MountImageAsFloppy(char driveLetter, string imagePath) {
+        byte[] imageData = File.ReadAllBytes(imagePath);
+        DosDriveManager.MountFloppyImage(driveLetter, imageData, imagePath);
+    }
+
+    /// <inheritdoc/>
+    public void MountFolderAsCdRom(char driveLetter, string hostPath) {
+        string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
+        CdRomDrive drive = new CdRomDrive(image);
+        char upper = char.ToUpperInvariant(driveLetter);
+        byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
+        MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
+        _mscdex.AddDrive(entry);
+    }
+
+    /// <inheritdoc/>
+    public void MountImageAsCdRom(char driveLetter, string imagePath) {
+        ICdRomImage image = CdRomImageFactory.Open(imagePath);
+        CdRomDrive drive = new CdRomDrive(image);
+        char upper = char.ToUpperInvariant(driveLetter);
+        byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
+        MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
+        _mscdex.AddDrive(entry);
     }
 }

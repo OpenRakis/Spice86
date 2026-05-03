@@ -51,6 +51,8 @@ public sealed partial class DriveStatusViewModel : ViewModelBase {
             foreach (DosVirtualDriveStatus status in current) {
                 DriveStatuses.Add(status);
             }
+            OnPropertyChanged(nameof(SummaryColor));
+            OnPropertyChanged(nameof(DriveCountText));
         }
     }
 
@@ -72,4 +74,19 @@ public sealed partial class DriveStatusViewModel : ViewModelBase {
         }
         return false;
     }
+
+    /// <summary>Gets the indicator color: green if any drive has media, grey otherwise.</summary>
+    public string SummaryColor {
+        get {
+            foreach (DosVirtualDriveStatus status in DriveStatuses) {
+                if (status.HasMedia) {
+                    return "#2ecc71";
+                }
+            }
+            return "#888888";
+        }
+    }
+
+    /// <summary>Gets a short text showing the number of drives.</summary>
+    public string DriveCountText => $"Drives ({DriveStatuses.Count})";
 }
