@@ -53,14 +53,16 @@ public sealed class CueBinImage : ICdRomImage {
             string fileName = string.Empty;
             string trackMode = string.Empty;
 
-            foreach (CueEntry e in entries) {
-                fileName = e.FileName;
-                trackMode = e.TrackMode;
-                pregap = e.Pregap;
-                postgap = e.Postgap;
-                if (e.IndexNumber == 1) {
-                    index01Frames = e.IndexMsf;
-                }
+            // All entries for this track share the same file name, mode, pregap and postgap.
+            CueEntry firstEntry = entries[0];
+            fileName = firstEntry.FileName;
+            trackMode = firstEntry.TrackMode;
+            pregap = firstEntry.Pregap;
+            postgap = firstEntry.Postgap;
+            // Explicitly filter for the INDEX 01 entry which carries the track start position.
+            CueEntry? idx01Entry = entries.FirstOrDefault(e => e.IndexNumber == 1);
+            if (idx01Entry != null) {
+                index01Frames = idx01Entry.IndexMsf;
             }
 
             trackMeta.Add((trackNum, index01Frames, pregap, postgap, fileName, trackMode));
@@ -202,15 +204,7 @@ public sealed class CueBinImage : ICdRomImage {
     public IReadOnlyList<CdTrack> Tracks => _tracks;
 
     /// <inheritdoc/>
-    public int TotalSectors {
-        get {
-            int total = 0;
-            foreach (CdTrack t in _tracks) {
-                total += t.LengthSectors;
-            }
-            return total;
-        }
-    }
+    public int TotalSectors => _tracks.Sum(t => t.LengthSectors);
 
     /// <inheritdoc/>
     public IsoVolumeDescriptor PrimaryVolume { get; }
