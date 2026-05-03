@@ -79,6 +79,11 @@ public class FunctionHandler {
     /// <param name="name">Name to give to the function.</param>
     public void Call(CallType callType, SegmentedAddress entryAddress, SegmentedAddress? expectedReturnAddress, CfgInstruction? call, string? name) {
         FunctionInformation currentFunction = _functionCatalogue.GetOrCreateFunctionInformation(entryAddress, name);
+        if (UseCodeOverride && currentFunction.HasOverride) {
+            currentFunction.CallOverride();
+            // No need to register the function call, no associated ret was executed.
+            return;
+        }
         FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, CurrentStackAddress, call);
         _callerStack.Push(currentFunctionCall);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -88,10 +93,6 @@ public class FunctionHandler {
 
         FunctionInformation? callerInfo = _functionCatalogue.GetFunctionInformation(CurrentFunctionCall);
         currentFunction.Enter(callerInfo);
-
-        if (UseCodeOverride) {
-            currentFunction.CallOverride();
-        }
     }
 
     /// <summary>
