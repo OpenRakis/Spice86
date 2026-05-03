@@ -64,7 +64,9 @@ public sealed partial class DriveStatusViewModel : ViewModelBase {
             if (a.DriveLetter != b.DriveLetter ||
                 a.DriveType != b.DriveType ||
                 a.HasMedia != b.HasMedia ||
-                !string.Equals(a.VolumeLabel, b.VolumeLabel, StringComparison.Ordinal)) {
+                !string.Equals(a.VolumeLabel, b.VolumeLabel, StringComparison.Ordinal) ||
+                !string.Equals(a.CurrentImagePath, b.CurrentImagePath, StringComparison.Ordinal) ||
+                a.ImageCount != b.ImageCount) {
                 return true;
             }
         }

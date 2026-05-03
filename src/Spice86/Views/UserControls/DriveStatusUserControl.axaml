@@ -6,7 +6,7 @@
     xmlns:vm="using:Spice86.ViewModels"
     xmlns:storage="using:Spice86.Shared.Emulator.Storage"
     xmlns:converters="using:Spice86.Views.Converters"
-    mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="24"
+    mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="24"
     x:Class="Spice86.Views.UserControls.DriveStatusUserControl"
     x:CompileBindings="True" x:DataType="vm:DriveStatusViewModel">
 
@@ -31,6 +31,13 @@
                                    Text="{Binding DriveLetter, StringFormat={}{0}:}" />
                         <TextBlock FontSize="10"
                                    Text="{Binding DriveType}" Opacity="0.7" />
+                        <TextBlock FontSize="10" FontFamily="Monospace"
+                                   IsVisible="{Binding HasMedia}"
+                                   Text="{Binding VolumeLabel}" Opacity="0.85" />
+                        <TextBlock FontSize="9" FontFamily="Monospace"
+                                   IsVisible="{Binding HasMultipleImages}"
+                                   Text="{Binding CurrentImageFileName}"
+                                   Opacity="0.65" />
                     </StackPanel>
                 </Border>
             </DataTemplate>

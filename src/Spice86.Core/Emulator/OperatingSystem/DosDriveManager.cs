@@ -229,10 +229,39 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
     /// </summary>
     /// <param name="driveLetter">The target drive letter ('A' or 'B').</param>
     /// <param name="imageData">The raw bytes of the floppy disk image.</param>
-    public void MountFloppyImage(char driveLetter, byte[] imageData) {
+    /// <param name="imagePath">The host file-system path of the image (used for display).</param>
+    public void MountFloppyImage(char driveLetter, byte[] imageData, string imagePath) {
         FloppyDiskDrive floppy = new() { DriveLetter = driveLetter };
-        floppy.MountImage(imageData);
+        floppy.MountImage(imageData, imagePath);
         _floppyDriveMap[char.ToUpperInvariant(driveLetter)] = floppy;
+    }
+
+    /// <summary>
+    /// Adds an additional floppy disk image to an already-mounted floppy drive,
+    /// making it available for Ctrl-F4 disc switching.
+    /// If no floppy drive is currently mounted on the letter, a new drive is created with this as the first image.
+    /// </summary>
+    /// <param name="driveLetter">The target drive letter ('A' or 'B').</param>
+    /// <param name="imageData">The raw bytes of the floppy disk image.</param>
+    /// <param name="imagePath">The host file-system path of the image (used for display).</param>
+    public void AddFloppyImage(char driveLetter, byte[] imageData, string imagePath) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (!_floppyDriveMap.TryGetValue(upper, out FloppyDiskDrive? floppy)) {
+            floppy = new FloppyDiskDrive { DriveLetter = upper };
+            floppy.MountImage(imageData, imagePath);
+            _floppyDriveMap[upper] = floppy;
+        } else {
+            floppy.AddImage(imageData, imagePath);
+        }
+    }
+
+    /// <summary>
+    /// Advances every floppy drive that has more than one image to the next image in its list.
+    /// </summary>
+    public void SwapFloppyDiscs() {
+        foreach (FloppyDiskDrive floppy in _floppyDriveMap.Values) {
+            floppy.SwapToNextImage();
+        }
     }
 
     /// <summary>

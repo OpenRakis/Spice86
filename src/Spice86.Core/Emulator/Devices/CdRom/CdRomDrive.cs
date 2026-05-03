@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -7,6 +8,8 @@ namespace Spice86.Core.Emulator.Devices.CdRom;
 
 /// <summary>Engine layer for a CD-ROM drive, delegating raw I/O to an <see cref="ICdRomImage"/>.</summary>
 public sealed class CdRomDrive : ICdRomDrive {
+    private readonly List<ICdRomImage> _images = new();
+    private int _currentIndex;
     private ICdRomImage _image;
     private CdAudioPlayback? _audioPlayback;
 
@@ -19,11 +22,47 @@ public sealed class CdRomDrive : ICdRomDrive {
     /// <inheritdoc/>
     public bool IsAudioPlaying => _audioPlayback?.Status == CdAudioStatus.Playing;
 
+    /// <inheritdoc/>
+    public int ImageCount => _images.Count;
+
     /// <summary>Initialises a new <see cref="CdRomDrive"/> with the given image mounted.</summary>
     /// <param name="image">The CD-ROM image to mount initially.</param>
     public CdRomDrive(ICdRomImage image) {
         _image = image;
+        _images.Add(image);
+        _currentIndex = 0;
         MediaState = new CdRomMediaState();
+    }
+
+    /// <summary>Initialises a new <see cref="CdRomDrive"/> with a list of images.</summary>
+    /// <param name="images">Ordered list of images; the first image is mounted initially.</param>
+    public CdRomDrive(IReadOnlyList<ICdRomImage> images) {
+        if (images.Count == 0) {
+            throw new ArgumentException("At least one CD-ROM image is required.", nameof(images));
+        }
+        _images.AddRange(images);
+        _currentIndex = 0;
+        _image = _images[0];
+        MediaState = new CdRomMediaState();
+    }
+
+    /// <inheritdoc/>
+    public void AddImage(ICdRomImage image) {
+        _images.Add(image);
+    }
+
+    /// <inheritdoc/>
+    public void SwapToNextDisc() {
+        if (_images.Count <= 1) {
+            return;
+        }
+        _currentIndex = (_currentIndex + 1) % _images.Count;
+        MediaState.IsDoorOpen = true;
+        MediaState.NotifyMediaChanged();
+        _image = _images[_currentIndex];
+        MediaState.IsDoorOpen = false;
+        MediaState.NotifyMediaChanged();
+        StopAudio();
     }
 
     /// <inheritdoc/>
@@ -112,6 +151,9 @@ public sealed class CdRomDrive : ICdRomDrive {
 
     /// <inheritdoc/>
     public void Insert(ICdRomImage image) {
+        _images.Clear();
+        _images.Add(image);
+        _currentIndex = 0;
         _image = image;
         MediaState.IsDoorOpen = false;
         MediaState.NotifyMediaChanged();

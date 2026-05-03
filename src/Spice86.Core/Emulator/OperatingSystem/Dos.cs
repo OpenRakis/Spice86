@@ -29,7 +29,7 @@ using System.Text;
 /// <summary>
 /// Represents the DOS kernel.
 /// </summary>
-public sealed class Dos : IDriveStatusProvider {
+public sealed class Dos : IDriveStatusProvider, IDiscSwapper {
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
@@ -400,7 +400,11 @@ public sealed class Dos : IDriveStatusProvider {
 
             // An image-backed floppy drive overrides the folder-backed status.
             if (DosDriveManager.TryGetFloppyDrive(vd.DriveLetter, out FloppyDiskDrive? floppy)) {
-                statuses.Add(new DosVirtualDriveStatus(floppy.DriveLetter, DosVirtualDriveType.Floppy, hasMedia: true, floppy.Label));
+                statuses.Add(new DosVirtualDriveStatus(
+                    floppy.DriveLetter, DosVirtualDriveType.Floppy,
+                    hasMedia: true, floppy.Label,
+                    currentImagePath: floppy.ImagePath,
+                    imageCount: floppy.ImageCount));
                 continue;
             }
 
@@ -416,9 +420,21 @@ public sealed class Dos : IDriveStatusProvider {
         foreach (MscdexDriveEntry cdrom in _mscdex.Drives) {
             bool hasCdMedia = !cdrom.Drive.MediaState.IsDoorOpen;
             string volumeLabel = hasCdMedia ? (cdrom.Drive.Image.PrimaryVolume.VolumeIdentifier ?? string.Empty) : string.Empty;
-            statuses.Add(new DosVirtualDriveStatus(cdrom.DriveLetter, DosVirtualDriveType.CdRom, hasCdMedia, volumeLabel));
+            string imagePath = hasCdMedia ? cdrom.Drive.Image.ImagePath : string.Empty;
+            statuses.Add(new DosVirtualDriveStatus(
+                cdrom.DriveLetter, DosVirtualDriveType.CdRom, hasCdMedia, volumeLabel,
+                currentImagePath: imagePath,
+                imageCount: cdrom.Drive.ImageCount));
         }
 
         return statuses.OrderBy(s => s.DriveLetter).ToList();
+    }
+
+    /// <inheritdoc/>
+    public void SwapDiscImages() {
+        DosDriveManager.SwapFloppyDiscs();
+        foreach (MscdexDriveEntry entry in _mscdex.Drives) {
+            entry.Drive.SwapToNextDisc();
+        }
     }
 }

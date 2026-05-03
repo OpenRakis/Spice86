@@ -15,6 +15,22 @@ public interface ICdRomDrive {
     /// <summary>Gets a value indicating whether audio is currently playing.</summary>
     bool IsAudioPlaying { get; }
 
+    /// <summary>
+    /// Gets the total number of disc images registered for this drive.
+    /// A value greater than 1 means Ctrl-F4 disc switching is available.
+    /// </summary>
+    int ImageCount { get; }
+
+    /// <summary>Adds an additional disc image to this drive's image list for disc switching.</summary>
+    /// <param name="image">The image to append to the list.</param>
+    void AddImage(ICdRomImage image);
+
+    /// <summary>
+    /// Advances to the next disc image in the list, cycling back to the first after the last.
+    /// Has no effect when only one image is registered.
+    /// </summary>
+    void SwapToNextDisc();
+
     /// <summary>Reads sector data from the disc starting at the given logical block address.</summary>
     /// <param name="lba">Logical block address of the first sector to read.</param>
     /// <param name="sectorCount">Number of sectors to read.</param>

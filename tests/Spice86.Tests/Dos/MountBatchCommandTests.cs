@@ -251,7 +251,7 @@ public class MountBatchCommandTests : IDisposable {
 
             if (imageType == "floppy") {
                 byte[] imageData = File.ReadAllBytes(imagePath);
-                _driveManager.MountFloppyImage(driveLetter, imageData);
+                _driveManager.MountFloppyImage(driveLetter, imageData, imagePath);
                 _output.Append($"Drive {driveLetter}: mounted as floppy image {imagePath}\r\n");
             } else {
                 _output.Append($"IMGMOUNT: unsupported image type '{imageType}'\r\n");

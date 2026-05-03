@@ -597,6 +597,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         if (mainWindowViewModel != null) {
             mainWindowViewModel.DriveStatusViewModel = new ViewModels.DriveStatusViewModel(dos);
+            mainWindowViewModel.DiscSwapper = dos;
         }
 
         if (configuration.InitializeDOS is not false) {
