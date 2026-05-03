@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -16,6 +17,7 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class DosInt2fHandler : InterruptHandler {
     private readonly ExtendedMemoryManager? _xms;
+    private readonly MscdexService? _mscdexService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DosInt2fHandler"/> class.
@@ -26,11 +28,14 @@ public class DosInt2fHandler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="xms">The extended memory manager. Can be <c>null</c> if XMS was not enabled.</param>
+    /// <param name="mscdexService">The MSCDEX service. Can be <c>null</c> if no CD-ROM drives are configured.</param>
     public DosInt2fHandler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, ILoggerService loggerService, ExtendedMemoryManager? xms = null)
+        State state, ILoggerService loggerService, ExtendedMemoryManager? xms = null,
+        MscdexService? mscdexService = null)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _xms = xms;
+        _mscdexService = mscdexService;
         FillDispatchTable();
     }
 
@@ -150,10 +155,15 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     /// <summary>
-    /// Sends a DOS device driver request to MSCDEX. Always fails.
-    /// TODO: Implement MSCDEX.
+    /// Handles MSCDEX INT 2Fh AH=15h subfunctions. Delegates to <see cref="MscdexService"/> when
+    /// one is configured; otherwise returns an "invalid drive" error stub.
     /// </summary>
     public void MscdexServices(bool calledFromVm) {
+        if (_mscdexService != null) {
+            _mscdexService.Dispatch();
+            return;
+        }
+
         ushort drive = State.CX;
         uint deviceDriverRequestHeaderAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
         if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
