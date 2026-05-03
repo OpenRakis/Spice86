@@ -23,6 +23,7 @@
             <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
             <converters:FormattedTextOffsetsConverter x:Key="FormattedTextOffsetsConverter" />
             <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
+            <converters:InstructionCategoryToSymbolConverter x:Key="InstructionCategoryToSymbolConverter" />
         </ResourceDictionary>
     </UserControl.Resources>
     <UserControl.Styles>
@@ -252,6 +253,7 @@
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="JumpLines" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Address" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Bytes" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CategoryIcon" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="EvalOperands" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="BranchTarget" />
@@ -307,20 +309,33 @@
                                                      FontSize="11"
                                                      Margin="6,0,0,0" />
 
+                                <!-- Category icon column -->
+                                <fluent:SymbolIcon Grid.Column="4"
+                                                   Symbol="{Binding InstructionCategory, Converter={StaticResource InstructionCategoryToSymbolConverter}}"
+                                                   IsVisible="{Binding HasInstructionCategory}"
+                                                   Width="14"
+                                                   Height="14"
+                                                   VerticalAlignment="Center"
+                                                   Margin="6,0,2,0">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="{Binding InstructionCategory}" />
+                                    </ToolTip.Tip>
+                                </fluent:SymbolIcon>
+
                                 <!-- Instruction -->
-                                <SelectableTextBlock Grid.Column="4"
+                                <SelectableTextBlock Grid.Column="5"
                                                      Inlines="{Binding DisassemblyTextOffsets, Converter={StaticResource FormattedTextOffsetsConverter}}"
-                                                     Margin="12,0,0,0" />
+                                                     Margin="6,0,0,0" />
 
                                 <!-- Evaluated operands (live values when paused) -->
-                                <SelectableTextBlock Grid.Column="5"
+                                <SelectableTextBlock Grid.Column="6"
                                                      Inlines="{Binding EvaluatedOperands, Converter={StaticResource FormattedTextOffsetsConverter}}"
                                                      FontSize="11"
                                                      IsVisible="{Binding EvaluatedOperands, Converter={x:Static ObjectConverters.IsNotNull}}"
                                                      Margin="8,0,0,0" />
 
                                 <!-- Branch target indicator -->
-                                <TextBlock Grid.Column="6"
+                                <TextBlock Grid.Column="7"
                                            Text="{Binding BranchTargetText}"
                                            Foreground="{DynamicResource DisassemblyBranchTargetBrush}"
                                            FontSize="11"
@@ -334,7 +349,7 @@
                                 </TextBlock>
 
                                 <!-- EMU Badge for emulator-provided code -->
-                                <Border Grid.Column="7"
+                                <Border Grid.Column="8"
                                         IsVisible="{Binding IsEmulatorProvided}"
                                         Background="{DynamicResource SystemControlHighlightAccentBrush}"
                                         CornerRadius="3"
@@ -353,7 +368,7 @@
                                 </Border>
 
                                 <!-- Function Name -->
-                                <SelectableTextBlock Grid.Column="8"
+                                <SelectableTextBlock Grid.Column="9"
                                                      Text="{Binding Function.Name, FallbackValue=''}"
                                                      Foreground="{DynamicResource DisassemblyFunctionBrush}"
                                                      Margin="12,0,0,0" />

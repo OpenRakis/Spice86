@@ -212,6 +212,91 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     public bool ShowMnemonicReminder => DecodedCall == null && MnemonicInfo != null;
 
     /// <summary>
+    /// Category of the instruction, used to pick the icon shown in the icon column
+    /// before the disassembly text.
+    /// </summary>
+    public InstructionCategory InstructionCategory => ComputeInstructionCategory();
+
+    /// <summary>
+    /// True when <see cref="InstructionCategory"/> is not <see cref="InstructionCategory.None"/>
+    /// and an icon should be displayed in the icon column.
+    /// </summary>
+    public bool HasInstructionCategory => InstructionCategory != InstructionCategory.None;
+
+    private InstructionCategory ComputeInstructionCategory() {
+        if (DecodedCall != null) {
+            return CategoryFromSubsystem(DecodedCall.Subsystem);
+        }
+        return CategoryFromMnemonic();
+    }
+
+    private static InstructionCategory CategoryFromSubsystem(string subsystem) {
+        if (subsystem.StartsWith("DOS", StringComparison.OrdinalIgnoreCase)) {
+            return InstructionCategory.Dos;
+        }
+        if (subsystem.StartsWith("BIOS", StringComparison.OrdinalIgnoreCase)) {
+            return InstructionCategory.Bios;
+        }
+        if (subsystem.StartsWith("Mouse", StringComparison.OrdinalIgnoreCase)) {
+            return InstructionCategory.Mouse;
+        }
+        if (subsystem.Contains("EMS", StringComparison.OrdinalIgnoreCase)
+            || subsystem.Contains("XMS", StringComparison.OrdinalIgnoreCase)) {
+            return InstructionCategory.Memory;
+        }
+        if (subsystem.Contains("Sound Blaster", StringComparison.OrdinalIgnoreCase)
+            || subsystem.Contains("OPL", StringComparison.OrdinalIgnoreCase)
+            || subsystem.Contains("MPU-401", StringComparison.OrdinalIgnoreCase)
+            || subsystem.Contains("Gravis", StringComparison.OrdinalIgnoreCase)) {
+            return InstructionCategory.Sound;
+        }
+        if (subsystem.Contains("VGA", StringComparison.OrdinalIgnoreCase)) {
+            return InstructionCategory.Video;
+        }
+        if (subsystem.Contains("Joystick", StringComparison.OrdinalIgnoreCase)) {
+            return InstructionCategory.IoPort;
+        }
+        return InstructionCategory.Cpu;
+    }
+
+    private InstructionCategory CategoryFromMnemonic() {
+        switch (_info.FlowControl) {
+            case FlowControl.Call:
+            case FlowControl.IndirectCall:
+            case FlowControl.ConditionalBranch:
+            case FlowControl.UnconditionalBranch:
+            case FlowControl.IndirectBranch:
+            case FlowControl.Return:
+            case FlowControl.XbeginXabortXend:
+            case FlowControl.Interrupt:
+                return InstructionCategory.Flow;
+            default:
+                break;
+        }
+        Mnemonic mnemonic = _info.Mnemonic;
+        if (mnemonic is Mnemonic.In or Mnemonic.Insb or Mnemonic.Insw or Mnemonic.Insd
+            or Mnemonic.Out or Mnemonic.Outsb or Mnemonic.Outsw or Mnemonic.Outsd) {
+            return InstructionCategory.IoPort;
+        }
+        if (HasMemoryOperand()) {
+            return InstructionCategory.Memory;
+        }
+        return InstructionCategory.Cpu;
+    }
+
+    private bool HasMemoryOperand() {
+        for (int i = 0; i < _info.OpCount; i++) {
+            OpKind kind = _info.GetOpKind(i);
+            if (kind is OpKind.Memory or OpKind.MemorySegSI or OpKind.MemorySegESI
+                or OpKind.MemorySegDI or OpKind.MemorySegEDI
+                or OpKind.MemoryESDI or OpKind.MemoryESEDI) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Computes decoded call info and emulator-provided status for this instruction.
     /// </summary>
     private (DecodedCall? decodedCall, bool isEmulatorProvided, string? emulatorProvidedFunctionName) ComputeDecodedInfo() {

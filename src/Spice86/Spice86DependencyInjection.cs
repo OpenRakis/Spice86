@@ -745,7 +745,8 @@ public class Spice86DependencyInjection : IDisposable {
             IMessenger messenger = WeakReferenceMessenger.Default;
 
             BreakpointsViewModel breakpointsViewModel = new(
-                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);
+                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard, memory,
+                debuggerDecoderService);
 
             breakpointsViewModel.RestoreBreakpoints(deserializedUserBreakpoints);
 
