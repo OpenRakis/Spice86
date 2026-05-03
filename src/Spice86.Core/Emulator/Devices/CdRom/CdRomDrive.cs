@@ -12,6 +12,7 @@ public sealed class CdRomDrive : ICdRomDrive {
     private int _currentIndex;
     private ICdRomImage _image;
     private CdAudioPlayback? _audioPlayback;
+    private CdAudioPlayer? _audioPlayer;
 
     /// <inheritdoc/>
     public ICdRomImage Image => _image;
@@ -106,6 +107,7 @@ public sealed class CdRomDrive : ICdRomDrive {
         _audioPlayback = new CdAudioPlayback(startLba, startLba + sectorCount) {
             Status = CdAudioStatus.Playing,
         };
+        _audioPlayer?.StartPlayback();
     }
 
     /// <inheritdoc/>
@@ -113,6 +115,7 @@ public sealed class CdRomDrive : ICdRomDrive {
         if (_audioPlayback != null) {
             _audioPlayback.Status = CdAudioStatus.Stopped;
         }
+        _audioPlayer?.StopPlayback();
     }
 
     /// <inheritdoc/>
@@ -125,7 +128,22 @@ public sealed class CdRomDrive : ICdRomDrive {
         }
         if (_audioPlayback.Status == CdAudioStatus.Paused) {
             _audioPlayback.Status = CdAudioStatus.Playing;
+            _audioPlayer?.ResumePlayback();
         }
+    }
+
+    /// <inheritdoc/>
+    public void PauseAudio() {
+        if (_audioPlayback != null && _audioPlayback.Status == CdAudioStatus.Playing) {
+            _audioPlayback.Status = CdAudioStatus.Paused;
+            _audioPlayer?.PausePlayback();
+        }
+    }
+
+    /// <summary>Registers the <see cref="CdAudioPlayer"/> used to stream audio through the mixer.</summary>
+    /// <param name="audioPlayer">The player to associate with this drive.</param>
+    public void SetAudioPlayer(CdAudioPlayer audioPlayer) {
+        _audioPlayer = audioPlayer;
     }
 
     /// <inheritdoc/>

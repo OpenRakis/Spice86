@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.CdRom;
 using Spice86.Core.Emulator.Devices.CdRom.Image;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -34,6 +35,44 @@ public sealed class MscdexService {
 
     /// <summary>Number of bytes written per drive entry in the device-list buffer (subunit byte + 4-byte far pointer).</summary>
     private const uint DeviceListEntrySize = 5;
+
+    // Device driver request header field offsets
+    private const uint RequestSubunitOffset = 1;
+    private const uint RequestCommandOffset = 2;
+    private const uint RequestStatusOffset = 3;
+    private const uint RequestDataOffset = 13;
+
+    // IOCTL input buffer pointer is at RequestDataOffset
+    private const uint IoctlBufferPtrOffset = RequestDataOffset;
+
+    // Play Audio command data offsets (relative to request base)
+    private const uint PlayAudioStartLbaOffset = RequestDataOffset;
+    private const uint PlayAudioSectorCountOffset = RequestDataOffset + 4;
+
+    // Device driver command codes
+    private const byte CommandIoctlInput = 0x03;
+    private const byte CommandPlayAudio = 0x84;
+    private const byte CommandStopAudio = 0x85;
+    private const byte CommandResumeAudio = 0x88;
+
+    // IOCTL sub-command control codes
+    private const byte IoctlDeviceStatus = 0x00;
+    private const byte IoctlSectorSize = 0x01;
+    private const byte IoctlVolumeSize = 0x02;
+    private const byte IoctlMediaChanged = 0x03;
+    private const byte IoctlAudioDiskInfo = 0x04;
+    private const byte IoctlAudioTrackInfo = 0x05;
+    private const byte IoctlAudioSubchannel = 0x06;
+    private const byte IoctlAudioStatus = 0x0E;
+
+    // Request status word values
+    private const ushort StatusDone = 0x0100;
+    private const ushort StatusError = 0x8000;
+
+    // Device status word bits
+    private const uint DeviceStatusDoorOpen = 0x0001;
+    private const uint DeviceStatusDoorLocked = 0x0002;
+    private const uint DeviceStatusAudioPlaying = 0x0200;
 
     private readonly List<MscdexDriveEntry> _drives = new();
     private readonly State _state;
@@ -263,10 +302,155 @@ public sealed class MscdexService {
     }
 
     /// <summary>
-    /// AL=0x10: Send Device Driver Request — returns success without forwarding.
+    /// AL=0x10: Send Device Driver Request — dispatches the request packet to the appropriate CD-ROM drive.
+    /// ES:BX points to the DOS device driver request header.
     /// </summary>
     private void SendDeviceDriverRequest() {
-        _state.CarryFlag = false;
+        uint requestBase = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
+        byte subunit = _memory.UInt8[requestBase + RequestSubunitOffset];
+        byte command = _memory.UInt8[requestBase + RequestCommandOffset];
+
+        if (!TryGetDriveBySubUnit(subunit, out MscdexDriveEntry? driveEntry)) {
+            _memory.UInt16[requestBase + RequestStatusOffset] = StatusError | (ushort)MscdexErrorCode.InvalidDrive;
+            return;
+        }
+
+        switch (command) {
+            case CommandIoctlInput:
+                HandleIoctlInput(requestBase, driveEntry.Drive);
+                break;
+            case CommandPlayAudio:
+                HandlePlayAudio(requestBase, driveEntry.Drive);
+                break;
+            case CommandStopAudio:
+                driveEntry.Drive.StopAudio();
+                _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
+                break;
+            case CommandResumeAudio:
+                driveEntry.Drive.ResumeAudio();
+                _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("MSCDEX SendDeviceDriverRequest: unknown command 0x{Command:X2}", command);
+                }
+                _memory.UInt16[requestBase + RequestStatusOffset] = StatusError | (ushort)MscdexErrorCode.InvalidFunction;
+                break;
+        }
+    }
+
+    private void HandlePlayAudio(uint requestBase, ICdRomDrive drive) {
+        uint startLba = _memory.UInt32[requestBase + PlayAudioStartLbaOffset];
+        uint sectorCount = _memory.UInt32[requestBase + PlayAudioSectorCountOffset];
+        drive.PlayAudio((int)startLba, (int)sectorCount);
+        _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
+    }
+
+    private void HandleIoctlInput(uint requestBase, ICdRomDrive drive) {
+        ushort bufferOffset = _memory.UInt16[requestBase + IoctlBufferPtrOffset];
+        ushort bufferSegment = _memory.UInt16[requestBase + IoctlBufferPtrOffset + 2];
+        uint bufferAddress = MemoryUtils.ToPhysicalAddress(bufferSegment, bufferOffset);
+        byte controlCode = _memory.UInt8[bufferAddress];
+
+        switch (controlCode) {
+            case IoctlDeviceStatus:
+                WriteDeviceStatus(bufferAddress, drive);
+                break;
+            case IoctlSectorSize:
+                _memory.UInt8[bufferAddress + 1] = 0;
+                _memory.UInt16[bufferAddress + 2] = CookedSectorSize;
+                break;
+            case IoctlVolumeSize:
+                _memory.UInt32[bufferAddress + 1] = (uint)drive.GetDiscInfo().TotalSectors;
+                break;
+            case IoctlMediaChanged:
+                _memory.UInt8[bufferAddress + 1] = drive.MediaState.ReadAndClearMediaChanged() ? (byte)1 : (byte)0;
+                break;
+            case IoctlAudioDiskInfo:
+                WriteAudioDiskInfo(bufferAddress, drive);
+                break;
+            case IoctlAudioTrackInfo:
+                WriteAudioTrackInfo(bufferAddress, drive);
+                break;
+            case IoctlAudioSubchannel:
+                WriteAudioSubchannel(bufferAddress, drive);
+                break;
+            case IoctlAudioStatus:
+                WriteAudioStatus(bufferAddress, drive);
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("MSCDEX IOCTL Input: unknown control code 0x{Code:X2}", controlCode);
+                }
+                _memory.UInt16[requestBase + RequestStatusOffset] = StatusError | (ushort)MscdexErrorCode.InvalidFunction;
+                return;
+        }
+        _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
+    }
+
+    private void WriteDeviceStatus(uint bufferAddress, ICdRomDrive drive) {
+        uint status = 0;
+        if (drive.MediaState.IsDoorOpen) {
+            status |= DeviceStatusDoorOpen;
+        }
+        if (drive.MediaState.IsLocked) {
+            status |= DeviceStatusDoorLocked;
+        }
+        if (drive.IsAudioPlaying) {
+            status |= DeviceStatusAudioPlaying;
+        }
+        _memory.UInt32[bufferAddress + 1] = status;
+    }
+
+    private void WriteAudioDiskInfo(uint bufferAddress, ICdRomDrive drive) {
+        DiscInfo info = drive.GetDiscInfo();
+        _memory.UInt8[bufferAddress + 1] = (byte)info.FirstTrack;
+        _memory.UInt8[bufferAddress + 2] = (byte)info.LastTrack;
+        _memory.UInt32[bufferAddress + 3] = (uint)info.LeadOutLba;
+    }
+
+    private void WriteAudioTrackInfo(uint bufferAddress, ICdRomDrive drive) {
+        byte trackNumber = _memory.UInt8[bufferAddress + 1];
+        TableOfContentsEntry? entry = drive.GetTrackInfo(trackNumber);
+        if (entry == null) {
+            _memory.UInt32[bufferAddress + 2] = 0;
+            _memory.UInt8[bufferAddress + 6] = 0;
+            return;
+        }
+        _memory.UInt32[bufferAddress + 2] = (uint)entry.Lba;
+        _memory.UInt8[bufferAddress + 6] = entry.Control;
+    }
+
+    private void WriteAudioSubchannel(uint bufferAddress, ICdRomDrive drive) {
+        CdAudioPlayback audioStatus = drive.GetAudioStatus();
+        _memory.UInt8[bufferAddress + 1] = 0;
+        _memory.UInt8[bufferAddress + 2] = 0;
+        _memory.UInt8[bufferAddress + 3] = 0;
+        _memory.UInt32[bufferAddress + 4] = 0;
+        _memory.UInt32[bufferAddress + 8] = (uint)audioStatus.CurrentLba;
+    }
+
+    private void WriteAudioStatus(uint bufferAddress, ICdRomDrive drive) {
+        CdAudioPlayback audioStatus = drive.GetAudioStatus();
+        bool isPaused = audioStatus.Status == CdAudioStatus.Paused;
+        _memory.UInt16[bufferAddress + 1] = isPaused ? (ushort)1 : (ushort)0;
+        _memory.UInt32[bufferAddress + 3] = (uint)audioStatus.StartLba;
+        _memory.UInt32[bufferAddress + 7] = (uint)audioStatus.EndLba;
+    }
+
+    /// <summary>
+    /// Finds the drive at position <paramref name="subunit"/> in the <see cref="_drives"/> list.
+    /// </summary>
+    /// <param name="subunit">Zero-based index into the drives list.</param>
+    /// <param name="drive">The matching entry, or <see langword="null"/> when not found.</param>
+    /// <returns><see langword="true"/> if a drive at that position exists; otherwise <see langword="false"/>.</returns>
+    private bool TryGetDriveBySubUnit(int subunit, [NotNullWhen(true)] out MscdexDriveEntry? drive) {
+        if (subunit < 0 || subunit >= _drives.Count) {
+            drive = null;
+            return false;
+        }
+        drive = _drives[subunit];
+        return true;
     }
 
     /// <summary>

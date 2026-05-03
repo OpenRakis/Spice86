@@ -62,6 +62,9 @@ public interface ICdRomDrive {
     /// <summary>Resumes audio playback if it was paused.</summary>
     void ResumeAudio();
 
+    /// <summary>Pauses audio playback without resetting the playback position.</summary>
+    void PauseAudio();
+
     /// <summary>Returns the current audio playback state.</summary>
     /// <returns>A <see cref="CdAudioPlayback"/> describing the current or last playback.</returns>
     CdAudioPlayback GetAudioStatus();

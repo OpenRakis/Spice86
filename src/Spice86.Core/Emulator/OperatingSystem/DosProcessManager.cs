@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
@@ -109,6 +110,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <param name="dosFileManager">Resolves DOS paths and manages open file tables shared across processes.</param>
     /// <param name="dosDriveManager">Provides drive metadata and current drive context for path resolution.</param>
     /// <param name="mscdex">The MSCDEX CD-ROM handler owned by the DOS kernel, used for IMGMOUNT batch commands.</param>
+    /// <param name="mixer">The software audio mixer, used to stream CD audio when an image is mounted.</param>
     /// <param name="batchDisplayCommandHandler">Batch-specific display command handler used by screen-related builtins such as CLS.</param>
     /// <param name="envVars">The initial host environment variables to seed the master environment block.</param>
     /// <param name="loggerService">Logger for emitting diagnostic information during process lifecycle changes.</param>
@@ -116,6 +118,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         MscdexService mscdex,
+        SoftwareMixer? mixer,
         IBatchDisplayCommandHandler batchDisplayCommandHandler,
         IDictionary<string, string> envVars, ILoggerService loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
@@ -129,6 +132,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _batchExecutionEngine = new DosBatchExecutionEngine(_fileManager,
             _driveManager,
             mscdex,
+            mixer,
             batchDisplayCommandHandler,
             this,
             _loggerService);

@@ -1302,6 +1302,11 @@ internal sealed partial class DosBatchExecutionEngine {
                 images.Add(image);
             }
             CdRomDrive drive = new CdRomDrive(images);
+            if (_mixer != null) {
+                CdAudioPlayer audioPlayer = new CdAudioPlayer(_mixer);
+                audioPlayer.SetDrive(drive);
+                drive.SetAudioPlayer(audioPlayer);
+            }
             byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(driveLetter, out byte idx) ? idx : (byte)3;
             MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
             _mscdex.AddDrive(entry);

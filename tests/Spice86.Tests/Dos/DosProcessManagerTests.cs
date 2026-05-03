@@ -429,6 +429,7 @@ public class DosProcessManagerTests {
             fileManager,
             driveManager,
             mscdex,
+            null,
             batchDisplayCommandHandler,
             new Dictionary<string, string>(),
             loggerService);
