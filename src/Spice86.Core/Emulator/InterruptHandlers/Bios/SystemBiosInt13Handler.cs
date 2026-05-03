@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Storage;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
@@ -26,6 +27,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     private const byte FloppyType144MB = 0x04;
 
     private readonly IFloppyDriveAccess? _floppyAccess;
+    private readonly FloppySoundEmulator? _floppySound;
 
     // Tracks the last operation status per BIOS drive number (index 0=A:, 1=B:)
     private readonly byte[] _lastStatus = new byte[2];
@@ -42,7 +44,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state,
         ILoggerService loggerService)
-        : this(memory, functionHandlerProvider, stack, state, null, loggerService) {
+        : this(memory, functionHandlerProvider, stack, state, null, null, loggerService) {
     }
 
     /// <summary>
@@ -59,8 +61,28 @@ public class SystemBiosInt13Handler : InterruptHandler {
         Stack stack, State state,
         IFloppyDriveAccess? floppyAccess,
         ILoggerService loggerService)
+        : this(memory, functionHandlerProvider, stack, state, floppyAccess, null, loggerService) {
+    }
+
+    /// <summary>
+    /// Initializes a new instance with floppy sector access and sound emulation.
+    /// </summary>
+    /// <param name="memory">The emulated memory bus.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="floppyAccess">Low-level floppy read/write/geometry provider (may be null when no floppy images are used).</param>
+    /// <param name="floppySound">Floppy sound synthesizer (may be null to disable sound).</param>
+    /// <param name="loggerService">The logging service implementation.</param>
+    public SystemBiosInt13Handler(
+        IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
+        Stack stack, State state,
+        IFloppyDriveAccess? floppyAccess,
+        FloppySoundEmulator? floppySound,
+        ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _floppyAccess = floppyAccess;
+        _floppySound = floppySound;
         FillDispatchTable();
     }
 
@@ -150,6 +172,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
+        _floppySound?.PlaySeek();
         Memory.LoadData(destAddress, transferBuffer);
 
         State.AH = ErrorNone;
@@ -192,6 +215,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
+        _floppySound?.PlaySeek();
         State.AH = ErrorNone;
         State.AL = (byte)sectorCount;
         RecordSuccess(driveNumber);
