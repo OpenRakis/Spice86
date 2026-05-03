@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.OperatingSystem.FileSystem;
 
 using System.Collections.Generic;
+using System.IO;
 
 /// <summary>
 /// Represents a floppy disk drive (A: or B:), optionally backed by one or more FAT12 disk images.
@@ -37,6 +38,35 @@ public class FloppyDiskDrive : DosDriveBase {
     /// <summary>Initialises a new empty (no media) floppy drive.</summary>
     public FloppyDiskDrive() {
         IsRemovable = true;
+    }
+
+    private bool _isDirty;
+
+    /// <summary>Gets a value indicating whether the floppy image has been modified since the last flush.</summary>
+    public bool IsDirty => _isDirty;
+
+    /// <summary>Marks the current image as modified so that <see cref="FlushToDisk"/> will persist it.</summary>
+    public void MarkDirty() {
+        _isDirty = true;
+    }
+
+    /// <summary>
+    /// Writes the current image data back to <see cref="ImagePath"/> when the image is dirty.
+    /// Does nothing when the image is clean or when no image path is set.
+    /// </summary>
+    public void FlushToDisk() {
+        if (!_isDirty) {
+            return;
+        }
+        if (string.IsNullOrEmpty(ImagePath)) {
+            return;
+        }
+        byte[]? data = GetCurrentImageData();
+        if (data == null) {
+            return;
+        }
+        File.WriteAllBytes(ImagePath, data);
+        _isDirty = false;
     }
 
     /// <summary>

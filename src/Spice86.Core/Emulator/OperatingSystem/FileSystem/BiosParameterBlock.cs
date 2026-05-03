@@ -47,6 +47,18 @@ public sealed class BiosParameterBlock {
     /// <summary>Gets the volume label from the extended BPB (may be empty if not present).</summary>
     public string VolumeLabel { get; }
 
+    /// <summary>Gets the number of sectors occupied by one FAT on FAT32 volumes (0 for FAT12/FAT16).</summary>
+    public uint SectorsPerFat32 { get; }
+
+    /// <summary>Gets the first cluster of the root directory on FAT32 volumes (0 for FAT12/FAT16).</summary>
+    public uint RootCluster { get; }
+
+    /// <summary>
+    /// Gets the effective sectors-per-FAT value, preferring <see cref="SectorsPerFat32"/> when
+    /// <see cref="SectorsPerFat"/> is zero (FAT32 volumes).
+    /// </summary>
+    public uint SectorsPerFatEffective => SectorsPerFat != 0 ? SectorsPerFat : SectorsPerFat32;
+
     /// <summary>Gets the total number of sectors on the volume.</summary>
     public int TotalSectors => TotalSectors16 > 0 ? TotalSectors16 : (int)TotalSectors32;
 
@@ -71,7 +83,8 @@ public sealed class BiosParameterBlock {
         ushort bytesPerSector, byte sectorsPerCluster, ushort reservedSectors,
         byte numberOfFats, ushort rootDirEntries, ushort totalSectors16,
         byte mediaDescriptor, ushort sectorsPerFat, ushort sectorsPerTrack,
-        ushort numberOfHeads, uint hiddenSectors, uint totalSectors32, string volumeLabel) {
+        ushort numberOfHeads, uint hiddenSectors, uint totalSectors32,
+        string volumeLabel, uint sectorsPerFat32, uint rootCluster) {
         BytesPerSector = bytesPerSector;
         SectorsPerCluster = sectorsPerCluster;
         ReservedSectors = reservedSectors;
@@ -85,6 +98,8 @@ public sealed class BiosParameterBlock {
         HiddenSectors = hiddenSectors;
         TotalSectors32 = totalSectors32;
         VolumeLabel = volumeLabel;
+        SectorsPerFat32 = sectorsPerFat32;
+        RootCluster = rootCluster;
     }
 
     /// <summary>
@@ -115,16 +130,31 @@ public sealed class BiosParameterBlock {
         uint hiddenSectors = BitConverter.ToUInt32(bootSector.Slice(28, 4));
         uint totalSectors32 = BitConverter.ToUInt32(bootSector.Slice(32, 4));
 
-        // Extended BPB volume label (offset 43, 11 bytes) — present when drive number is at offset 36.
+        // Extended BPB volume label — location depends on FAT type (FAT32 uses different offsets).
         string volumeLabel = string.Empty;
-        if (bootSector.Length >= 54 && bootSector[38] == 0x29) {
-            volumeLabel = Encoding.ASCII.GetString(bootSector.Slice(43, 11)).TrimEnd();
+        uint sectorsPerFat32 = 0;
+        uint rootCluster = 0;
+
+        if (sectorsPerFat == 0) {
+            // FAT32 extended BPB: requires at least 82 bytes for all extended fields.
+            if (bootSector.Length >= 82) {
+                sectorsPerFat32 = BitConverter.ToUInt32(bootSector.Slice(36, 4));
+                rootCluster = BitConverter.ToUInt32(bootSector.Slice(44, 4));
+                if (bootSector[66] == 0x29) {
+                    volumeLabel = Encoding.ASCII.GetString(bootSector.Slice(71, 11)).TrimEnd();
+                }
+            }
+        } else {
+            // FAT12/FAT16 extended BPB: boot signature at offset 38, volume label at offset 43.
+            if (bootSector.Length >= 54 && bootSector[38] == 0x29) {
+                volumeLabel = Encoding.ASCII.GetString(bootSector.Slice(43, 11)).TrimEnd();
+            }
         }
 
         return new BiosParameterBlock(
             bytesPerSector, sectorsPerCluster, reservedSectors,
             numberOfFats, rootDirEntries, totalSectors16,
             mediaDescriptor, sectorsPerFat, sectorsPerTrack,
-            numberOfHeads, hiddenSectors, totalSectors32, volumeLabel);
+            numberOfHeads, hiddenSectors, totalSectors32, volumeLabel, sectorsPerFat32, rootCluster);
     }
 }

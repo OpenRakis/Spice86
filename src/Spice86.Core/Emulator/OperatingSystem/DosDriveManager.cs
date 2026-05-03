@@ -343,13 +343,16 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
 
     /// <inheritdoc/>
     public bool TryWrite(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset, int byteCount) {
-        if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
+        if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData)) {
             return false;
         }
         if (imageByteOffset < 0 || imageByteOffset + byteCount > imageData!.Length) {
             return false;
         }
         source.AsSpan(srcOffset, byteCount).CopyTo(imageData.AsSpan(imageByteOffset));
+        if (floppy != null) {
+            floppy.MarkDirty();
+        }
         return true;
     }
 
