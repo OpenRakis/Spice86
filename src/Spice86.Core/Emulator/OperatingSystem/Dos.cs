@@ -222,7 +222,8 @@ public sealed class Dos : IDriveStatusProvider {
 
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
-        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, batchDisplayCommandHandler, envVars, _loggerService);
+        _mscdex = new MscdexService(state, memory, loggerService);
+        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _mscdex, batchDisplayCommandHandler, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
@@ -232,7 +233,6 @@ public sealed class Dos : IDriveStatusProvider {
         DosInt24Handler = new DosInt24Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
         DosInt2aHandler = new DosInt2aHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
-        _mscdex = new MscdexService(state, memory, loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
             functionHandlerProvider, stack, state, _loggerService, xms, _mscdex);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,

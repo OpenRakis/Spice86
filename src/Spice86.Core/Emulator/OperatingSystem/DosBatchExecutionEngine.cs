@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.OperatingSystem.Batch;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -21,6 +22,7 @@ internal sealed partial class DosBatchExecutionEngine {
     private readonly IDosBatchExecutionHost _host;
     private readonly ILoggerService _loggerService;
     private readonly DosDriveManager _driveManager;
+    private readonly MscdexService _mscdex;
     private readonly Stack<BatchFileContext> _batchFileContexts = new();
     private readonly Dictionary<string, string[]> _zDriveFiles = new(StringComparer.OrdinalIgnoreCase);
     private VirtualFileBase? _savedStandardInput;
@@ -37,11 +39,13 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal DosBatchExecutionEngine(DosFileManager dosFileManager,
         DosDriveManager driveManager,
+        MscdexService mscdex,
         IBatchDisplayCommandHandler displayCommandHandler,
         IDosBatchExecutionHost host,
         ILoggerService loggerService) {
         _dosFileManager = dosFileManager;
         _driveManager = driveManager;
+        _mscdex = mscdex;
         _displayCommandHandler = displayCommandHandler;
         _host = host;
         _loggerService = loggerService;

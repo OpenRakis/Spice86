@@ -32,7 +32,9 @@ internal static class BatchCommandHandlers {
             new VerCommandHandler(),
             new VolCommandHandler(),
             new LoadHighCommandHandler(),
-            new EchoDotCommandHandler()
+            new EchoDotCommandHandler(),
+            new MountCommandHandler(),
+            new ImgMountCommandHandler()
         };
     }
 
@@ -386,6 +388,28 @@ internal static class BatchCommandHandlers {
             string echoArguments = context.PreprocessedLine.TrimStart()[4..];
             return engine.TryExecuteInternalCommandWithRedirection(context.Redirection,
                 () => engine.TryHandleEcho(echoArguments));
+        }
+    }
+
+    private sealed class MountCommandHandler : ExactTokenBatchCommandHandler {
+        internal MountCommandHandler() : base("MOUNT") {
+        }
+
+        protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
+            out LaunchRequest launchRequest) {
+            launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
+            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleMount);
+        }
+    }
+
+    private sealed class ImgMountCommandHandler : ExactTokenBatchCommandHandler {
+        internal ImgMountCommandHandler() : base("IMGMOUNT") {
+        }
+
+        protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
+            out LaunchRequest launchRequest) {
+            launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
+            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleImgMount);
         }
     }
 }

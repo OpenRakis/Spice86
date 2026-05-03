@@ -2,6 +2,9 @@ namespace Spice86.Core.Emulator.OperatingSystem.Batch;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.Devices.CdRom;
+using Spice86.Core.Emulator.Devices.CdRom.Image;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
@@ -1139,4 +1142,146 @@ internal sealed partial class DosBatchExecutionEngine {
         WriteToStandardOutput($" Volume in drive {driveLetter} is {label}\r\n");
         return false;
     }
+
+    /// <summary>
+    /// Handles the MOUNT command which mounts a host folder as a DOS drive.
+    /// Syntax: MOUNT &lt;driveLetter&gt; &lt;hostPath&gt; [-t cdrom|floppy|hdd]
+    /// </summary>
+    internal bool TryHandleMount(string arguments) {
+        string trimmed = arguments.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)) {
+            WriteToStandardOutput("Usage: MOUNT <drive> <path> [-t cdrom|floppy|hdd]\r\n");
+            return false;
+        }
+
+        string[] parts = trimmed.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2) {
+            WriteToStandardOutput("MOUNT: missing path argument\r\n");
+            return false;
+        }
+
+        string driveSpec = parts[0];
+        if (driveSpec.Length < 1 || !char.IsLetter(driveSpec[0])) {
+            WriteToStandardOutput($"MOUNT: invalid drive letter '{driveSpec}'\r\n");
+            return false;
+        }
+
+        char driveLetter = char.ToUpperInvariant(driveSpec[0]);
+        string hostPath = parts[1];
+
+        // Parse optional -t type flag
+        string driveType = "hdd";
+        for (int i = 2; i < parts.Length - 1; i++) {
+            if (parts[i].Equals("-t", StringComparison.OrdinalIgnoreCase)) {
+                driveType = parts[i + 1].ToLowerInvariant();
+                break;
+            }
+        }
+
+        if (!Directory.Exists(hostPath)) {
+            WriteToStandardOutput($"MOUNT: path not found: {hostPath}\r\n");
+            return false;
+        }
+
+        if (driveType == "floppy") {
+            _driveManager.MountFloppyFolder(driveLetter, hostPath);
+        } else {
+            _driveManager.MountFolderDrive(driveLetter, hostPath);
+        }
+
+        WriteToStandardOutput($"Drive {driveLetter}: mounted as {hostPath}\r\n");
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("BATCH: MOUNT {Drive}: = {Path} (type={Type})", driveLetter, hostPath, driveType);
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Handles the IMGMOUNT command which mounts a disk image file as a DOS drive.
+    /// Syntax: IMGMOUNT &lt;driveLetter&gt; &lt;imagePath&gt; -t floppy|iso|cue
+    /// </summary>
+    internal bool TryHandleImgMount(string arguments) {
+        string trimmed = arguments.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)) {
+            WriteToStandardOutput("Usage: IMGMOUNT <drive> <image> -t floppy|iso|cue\r\n");
+            return false;
+        }
+
+        string[] parts = trimmed.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2) {
+            WriteToStandardOutput("IMGMOUNT: missing image path\r\n");
+            return false;
+        }
+
+        string driveSpec = parts[0];
+        if (driveSpec.Length < 1 || !char.IsLetter(driveSpec[0])) {
+            WriteToStandardOutput($"IMGMOUNT: invalid drive letter '{driveSpec}'\r\n");
+            return false;
+        }
+
+        char driveLetter = char.ToUpperInvariant(driveSpec[0]);
+        string imagePath = parts[1];
+
+        // Parse optional -t type flag (default: auto-detect from extension)
+        string imageType = string.Empty;
+        for (int i = 2; i < parts.Length - 1; i++) {
+            if (parts[i].Equals("-t", StringComparison.OrdinalIgnoreCase)) {
+                imageType = parts[i + 1].ToLowerInvariant();
+                break;
+            }
+        }
+
+        if (string.IsNullOrEmpty(imageType)) {
+            string ext = Path.GetExtension(imagePath).ToLowerInvariant();
+            if (ext == ".img" || ext == ".ima" || ext == ".vfd") {
+                imageType = "floppy";
+            } else if (ext == ".iso") {
+                imageType = "iso";
+            } else if (ext == ".cue") {
+                imageType = "cue";
+            } else {
+                WriteToStandardOutput($"IMGMOUNT: cannot detect image type for '{imagePath}'. Use -t floppy|iso|cue.\r\n");
+                return false;
+            }
+        }
+
+        if (!File.Exists(imagePath)) {
+            WriteToStandardOutput($"IMGMOUNT: image file not found: {imagePath}\r\n");
+            return false;
+        }
+
+        if (imageType == "floppy") {
+            byte[] imageData = File.ReadAllBytes(imagePath);
+            _driveManager.MountFloppyImage(driveLetter, imageData);
+            WriteToStandardOutput($"Drive {driveLetter}: mounted as floppy image {imagePath}\r\n");
+        } else if (imageType == "iso" || imageType == "cue") {
+            MountCdRomImage(driveLetter, imagePath, imageType);
+        } else {
+            WriteToStandardOutput($"IMGMOUNT: unsupported image type '{imageType}'\r\n");
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("BATCH: IMGMOUNT {Drive}: = {Path} (type={Type})", driveLetter, imagePath, imageType);
+        }
+        return false;
+    }
+
+    private void MountCdRomImage(char driveLetter, string imagePath, string imageType) {
+        try {
+            ICdRomImage image;
+            if (imageType == "cue") {
+                image = new CueBinImage(imagePath);
+            } else {
+                image = new IsoImage(imagePath);
+            }
+            CdRomDrive drive = new CdRomDrive(image);
+            byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(driveLetter, out byte idx) ? idx : (byte)3;
+            MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
+            _mscdex.AddDrive(entry);
+            WriteToStandardOutput($"Drive {driveLetter}: mounted as CD-ROM image {imagePath}\r\n");
+        } catch (IOException ex) {
+            WriteToStandardOutput($"IMGMOUNT: failed to open image: {ex.Message}\r\n");
+        }
+    }
 }
+

@@ -190,6 +190,21 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
     }
 
     /// <summary>
+    /// Mounts a host folder as a DOS fixed drive (C:, D:, E:, …).
+    /// Adds the drive if it does not already exist, or updates the existing entry.
+    /// </summary>
+    /// <param name="driveLetter">The target drive letter (must not be 'A', 'B', or 'Z').</param>
+    /// <param name="hostFolderPath">The absolute path to the host folder to mount.</param>
+    public void MountFolderDrive(char driveLetter, string hostFolderPath) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        _driveMap[upper] = new VirtualDrive {
+            DriveLetter = upper,
+            MountedHostDirectory = ConvertUtils.ToSlashFolderPath(hostFolderPath),
+            CurrentDosDirectory = "",
+        };
+    }
+
+    /// <summary>
     /// Gets a read-only view of all mounted memory drives, keyed by drive letter.
     /// </summary>
     public IReadOnlyDictionary<char, MemoryDrive> MemoryDrives => _memoryDriveMap;
@@ -225,16 +240,27 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
     /// </summary>
     /// <param name="driveLetter">The target drive letter ('A' or 'B').</param>
     /// <param name="hostFolderPath">The absolute path to the host folder to use as the floppy root.</param>
+    /// <remarks>
+    /// If an image-backed floppy drive was previously mounted on this letter it is unmounted before the folder
+    /// is registered, so the drive reverts to host-filesystem path resolution.
+    /// </remarks>
     public void MountFloppyFolder(char driveLetter, string hostFolderPath) {
         char upper = char.ToUpperInvariant(driveLetter);
-        // Remove any image-backed floppy drive on this letter.
-        _floppyDriveMap.Remove(upper);
+        if (_floppyDriveMap.ContainsKey(upper)) {
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+                _loggerService.Debug("DosDriveManager: unmounting floppy image from {Drive}: before mounting folder", upper);
+            }
+            _floppyDriveMap.Remove(upper);
+        }
         // Update the VirtualDrive entry so DosPathResolver can resolve paths normally.
         _driveMap[upper] = new VirtualDrive {
             DriveLetter = upper,
             MountedHostDirectory = ConvertUtils.ToSlashFolderPath(hostFolderPath),
             CurrentDosDirectory = "",
         };
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("DosDriveManager: mounted folder {Path} as {Drive}:", hostFolderPath, upper);
+        }
     }
 
     /// <summary>

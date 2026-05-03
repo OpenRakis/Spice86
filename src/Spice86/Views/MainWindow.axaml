@@ -188,6 +188,10 @@
 				</StackPanel>
 			</controls:StatusBarItem>
 			<Separator />
+			<controls:StatusBarItem IsVisible="{Binding DriveStatusViewModel, Converter={StaticResource NullableToBooleanConverter}}">
+				<userControls:DriveStatusUserControl DataContext="{Binding DriveStatusViewModel}" />
+			</controls:StatusBarItem>
+			<Separator />
 			<controls:StatusBarItem HorizontalAlignment="Right" HorizontalContentAlignment="Right">
 				<ContentPresenter
 				Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />

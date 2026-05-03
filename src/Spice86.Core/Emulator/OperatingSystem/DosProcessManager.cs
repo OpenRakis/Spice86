@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
@@ -107,12 +108,14 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <param name="dosMemoryManager">Allocates and frees DOS memory control blocks for PSPs and environments.</param>
     /// <param name="dosFileManager">Resolves DOS paths and manages open file tables shared across processes.</param>
     /// <param name="dosDriveManager">Provides drive metadata and current drive context for path resolution.</param>
+    /// <param name="mscdex">The MSCDEX CD-ROM handler owned by the DOS kernel, used for IMGMOUNT batch commands.</param>
     /// <param name="batchDisplayCommandHandler">Batch-specific display command handler used by screen-related builtins such as CLS.</param>
     /// <param name="envVars">The initial host environment variables to seed the master environment block.</param>
     /// <param name="loggerService">Logger for emitting diagnostic information during process lifecycle changes.</param>
     public DosProcessManager(IMemory memory, Stack stack, State state,
         DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
+        MscdexService mscdex,
         IBatchDisplayCommandHandler batchDisplayCommandHandler,
         IDictionary<string, string> envVars, ILoggerService loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
@@ -125,6 +128,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _loggerService = loggerService;
         _batchExecutionEngine = new DosBatchExecutionEngine(_fileManager,
             _driveManager,
+            mscdex,
             batchDisplayCommandHandler,
             this,
             _loggerService);

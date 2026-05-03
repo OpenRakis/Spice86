@@ -116,7 +116,7 @@ internal sealed class Fat12ImageBuilder {
             throw new InvalidOperationException("No free directory entry slots.");
         }
 
-        string[] parts = name.Contains('.') ? name.Split('.') : [name, ""];
+        string[] parts = name.Contains('.') ? name.Split('.') : new[] { name, string.Empty };
         string baseName = parts[0].PadRight(8);
         string ext = parts.Length > 1 ? parts[1].PadRight(3) : "   ";
 

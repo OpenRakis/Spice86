@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Batch;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -418,6 +419,7 @@ public class DosProcessManagerTests {
         DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state), driveManager, loggerService, new List<IVirtualDevice>());
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
+        MscdexService mscdex = new(state, memory, loggerService);
 
         DosProcessManager processManager = new(
             memory,
@@ -426,6 +428,7 @@ public class DosProcessManagerTests {
             memoryManager,
             fileManager,
             driveManager,
+            mscdex,
             batchDisplayCommandHandler,
             new Dictionary<string, string>(),
             loggerService);

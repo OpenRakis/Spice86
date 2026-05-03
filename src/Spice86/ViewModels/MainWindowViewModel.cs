@@ -48,6 +48,16 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         set => SetProperty(ref _mcpStatusViewModel, value);
     }
 
+    private DriveStatusViewModel? _driveStatusViewModel;
+
+    /// <summary>
+    /// Gets or sets the drive-status polling view model shown in the status bar.
+    /// </summary>
+    public DriveStatusViewModel? DriveStatusViewModel {
+        get => _driveStatusViewModel;
+        set => SetProperty(ref _driveStatusViewModel, value);
+    }
+
     private int? _targetCyclesPerMs;
 
     public int? TargetCyclesPerMs {
@@ -109,6 +119,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         public required EmulatorMcpServices McpServices { get; init; }
         public required int McpPort { get; init; }
         public required ICurrentProcessNameProvider CurrentProcessNameProvider { get; init; }
+        public IDriveStatusProvider? DriveStatusProvider { get; set; }
     }
 
     public MainWindowViewModel(MainWindowViewModelDependencies dependencies)
@@ -134,6 +145,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         ShowCyclesLimitingUI = _cyclesLimiter.TargetCpuCyclesPerMs is not 0;
         McpStatusViewModel = new McpStatusViewModel(dependencies.McpServices, dependencies.McpPort);
         McpStatusViewModel.StartNetworkMonitoring();
+        if (dependencies.DriveStatusProvider != null) {
+            DriveStatusViewModel = new DriveStatusViewModel(dependencies.DriveStatusProvider);
+        }
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1),
             DispatcherPriority.Background,
             (_, _) => RefreshMainTitleWithInstructionsPerMs());
