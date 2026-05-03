@@ -10,11 +10,7 @@ public sealed class FileBackedDataSource : IDataSource, IDisposable {
     /// <param name="filePath">Absolute or relative path to the file.</param>
     /// <exception cref="IOException">Thrown when the file cannot be opened.</exception>
     public FileBackedDataSource(string filePath) {
-        try {
-            _stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        } catch (IOException) {
-            throw;
-        }
+        _stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
     }
 
     /// <inheritdoc/>

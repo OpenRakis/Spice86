@@ -76,8 +76,6 @@ public sealed class CueBinImage : ICdRomImage {
             } else {
                 FileBackedDataSource measureSource = OpenSource(fileName);
                 int sizeForMeasure = MapSectorSize(trackMode);
-                nextStartLba = startLba + (int)(measureSource.LengthBytes / sizeForMeasure) - startLba;
-                // Use total file sectors as the length for the last track.
                 nextStartLba = (int)(measureSource.LengthBytes / sizeForMeasure);
             }
 
