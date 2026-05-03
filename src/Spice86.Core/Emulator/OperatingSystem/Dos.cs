@@ -124,12 +124,6 @@ public sealed class Dos {
     public DosProcessManager ProcessManager { get; }
 
     /// <summary>
-    /// Gets the file name of the DOS program currently executing, or an empty string at the root shell or when no
-    /// DOS program is running. Safe to read from the UI thread.
-    /// </summary>
-    public string CurrentProgramName => ProcessManager.CurrentProgramName;
-
-    /// <summary>
     /// Gets the global DOS region settings structure.
     /// </summary>
     public CountryInfo CountryInfo { get; }
