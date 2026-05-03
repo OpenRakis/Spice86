@@ -71,10 +71,82 @@ public class Instruction386KnowledgeBaseTests {
         info.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("AAA", "ASCII Adjust After Addition")]
+    [InlineData("AAS", "ASCII Adjust After Subtraction")]
+    [InlineData("AAM", "ASCII Adjust After Multiplication")]
+    [InlineData("AAD", "ASCII Adjust Before Division")]
+    [InlineData("DAA", "Decimal Adjust After Addition")]
+    [InlineData("DAS", "Decimal Adjust After Subtraction")]
+    [InlineData("BOUND", "Check Array Index Against Bounds")]
+    public void TryGet_BcdAndBounds_AreCovered(string mnemonic, string expectedName) {
+        bool found = Instruction386KnowledgeBase.TryGet(mnemonic, out InstructionInfo? info);
+        found.Should().BeTrue();
+        info!.Name.Should().Be(expectedName);
+    }
+
+    [Theory]
+    [InlineData("LGDT")]
+    [InlineData("SGDT")]
+    [InlineData("LIDT")]
+    [InlineData("SIDT")]
+    [InlineData("LLDT")]
+    [InlineData("SLDT")]
+    [InlineData("LTR")]
+    [InlineData("STR")]
+    [InlineData("LMSW")]
+    [InlineData("SMSW")]
+    [InlineData("ARPL")]
+    [InlineData("CLTS")]
+    [InlineData("LAR")]
+    [InlineData("LSL")]
+    [InlineData("VERR")]
+    [InlineData("VERW")]
+    public void TryGet_ProtectedModeSystemInstructions_AreCovered(string mnemonic) {
+        bool found = Instruction386KnowledgeBase.TryGet(mnemonic, out InstructionInfo? info);
+        found.Should().BeTrue();
+        info!.Summary.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Theory]
+    [InlineData("FLD", "Load Floating-Point Value")]
+    [InlineData("FST", "Store Floating-Point Value")]
+    [InlineData("FSTP", "Store Floating-Point and Pop")]
+    [InlineData("FILD", "Load Integer")]
+    [InlineData("FISTP", "Store Integer and Pop")]
+    [InlineData("FADD", "Floating-Point Add")]
+    [InlineData("FADDP", "Floating-Point Add and Pop")]
+    [InlineData("FSUB", "Floating-Point Subtract")]
+    [InlineData("FMUL", "Floating-Point Multiply")]
+    [InlineData("FDIV", "Floating-Point Divide")]
+    [InlineData("FDIVR", "Floating-Point Reverse Divide")]
+    [InlineData("FCHS", "Floating-Point Change Sign")]
+    [InlineData("FABS", "Floating-Point Absolute Value")]
+    [InlineData("FSQRT", "Floating-Point Square Root")]
+    [InlineData("FCOM", "Floating-Point Compare")]
+    [InlineData("FCOMPP", "Floating-Point Compare and Pop Twice")]
+    [InlineData("FSIN", "Floating-Point Sine")]
+    [InlineData("FCOS", "Floating-Point Cosine")]
+    [InlineData("FPATAN", "Partial Arctangent")]
+    [InlineData("F2XM1", "2^x - 1")]
+    [InlineData("FYL2X", "ST(1) * log2(ST(0))")]
+    [InlineData("FLDPI", "Load Pi")]
+    [InlineData("FLDZ", "Load +0.0")]
+    [InlineData("FLD1", "Load +1.0")]
+    [InlineData("FNSTSW", "Store Status Word")]
+    [InlineData("FLDCW", "Load Control Word")]
+    [InlineData("FNINIT", "Initialize FPU")]
+    [InlineData("FNCLEX", "Clear FPU Exceptions")]
+    public void TryGet_FpuInstructions_AreCovered(string mnemonic, string expectedName) {
+        bool found = Instruction386KnowledgeBase.TryGet(mnemonic, out InstructionInfo? info);
+        found.Should().BeTrue();
+        info!.Name.Should().Be(expectedName);
+    }
+
     [Fact]
-    public void Count_IsAtLeastReasonableSize() {
-        // Sanity check: the knowledge base must cover a meaningful portion of the 386 ISA.
-        Instruction386KnowledgeBase.Count.Should().BeGreaterThan(80,
-            "the base knowledge set must include the most common 386 mnemonics + their aliases");
+    public void Count_CoversFull386PlusFpu() {
+        // The full-386-expert pass covers integer + 186/286/386 system + 387 FPU.
+        Instruction386KnowledgeBase.Count.Should().BeGreaterThan(180,
+            "the expanded knowledge base must include the BCD/system/FPU additions on top of the integer base set");
     }
 }
