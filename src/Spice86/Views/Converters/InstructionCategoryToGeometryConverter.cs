@@ -16,20 +16,18 @@ using System.Globalization;
 /// </summary>
 /// <remarks>
 /// Each category maps to a small custom path designed to be distinctive and meaningful
-/// for the DOS/BIOS/hardware debugging context (e.g. floppy disk for DOS, IC chip for BIOS,
-/// speaker for Sound, CRT monitor for Video, RAM module for Memory, processor die for CPU,
-/// D-sub connector for I/O port, decision diamond for control flow).
+/// for the DOS/BIOS/hardware debugging context (e.g. MS-DOS command-prompt chevron for DOS,
+/// IC chip for BIOS, speaker for Sound, CRT monitor for Video, RAM module for Memory,
+/// processor die for CPU, bidirectional arrows for I/O port, decision diamond for control flow).
 /// </remarks>
 internal sealed class InstructionCategoryToGeometryConverter : IValueConverter {
     private static readonly Dictionary<InstructionCategory, Geometry> _geometries = BuildGeometries();
 
     private static Dictionary<InstructionCategory, Geometry> BuildGeometries() {
         Dictionary<InstructionCategory, string> paths = new() {
-            // DOS — floppy disk: rectangular body + label area + disk window
+            // DOS — MS-DOS command-prompt ">" chevron: the universally-recognised DOS prompt symbol
             [InstructionCategory.Dos] =
-                "M 1,1 L 13,1 L 13,13 L 1,13 Z " +
-                "M 2,2 L 8,2 L 8,5 L 2,5 Z " +
-                "M 3,7 L 11,7 L 11,12 L 3,12 Z",
+                "M 1,1 L 9,7 L 1,13 L 4,13 L 7,7 L 4,1 Z",
 
             // BIOS — IC chip: rectangle body + 2 pins each side
             [InstructionCategory.Bios] =
@@ -66,10 +64,10 @@ internal sealed class InstructionCategoryToGeometryConverter : IValueConverter {
                 "M 2,5 L 4,5 M 2,7 L 4,7 M 2,9 L 4,9 " +
                 "M 10,5 L 12,5 M 10,7 L 12,7 M 10,9 L 12,9",
 
-            // IoPort — D-sub connector housing + 3 contact pins
+            // IoPort — bidirectional arrows: right arrow (output) on top, left arrow (input) below
             [InstructionCategory.IoPort] =
-                "M 1,4 L 13,4 L 13,10 L 1,10 Z " +
-                "M 3,6 L 3,8 M 7,5 L 7,9 M 11,6 L 11,8",
+                "M 1,2 L 9,2 L 9,1 L 13,5 L 9,8 L 9,7 L 1,7 Z " +
+                "M 13,7 L 5,7 L 5,6 L 1,10 L 5,13 L 5,12 L 13,12 Z",
 
             // Flow — decision diamond
             [InstructionCategory.Flow] =
