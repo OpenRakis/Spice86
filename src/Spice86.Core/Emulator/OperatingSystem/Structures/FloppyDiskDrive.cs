@@ -73,6 +73,18 @@ public class FloppyDiskDrive : DosDriveBase {
         ApplyCurrentImage();
     }
 
+    /// <summary>
+    /// Returns the raw byte array for the currently active floppy image,
+    /// or <see langword="null"/> when no image is mounted.
+    /// The returned array is the live storage — writes to it are reflected in the mounted image.
+    /// </summary>
+    public byte[]? GetCurrentImageData() {
+        if (_images.Count == 0) {
+            return null;
+        }
+        return _images[_currentIndex].Data;
+    }
+
     private void ApplyCurrentImage() {
         (byte[] data, string _) = _images[_currentIndex];
         Image = new Fat12FileSystem(data);
