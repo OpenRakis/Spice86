@@ -53,6 +53,9 @@ public sealed class CueBinImage : ICdRomImage {
             string fileName = string.Empty;
             string trackMode = string.Empty;
 
+            if (entries.Count == 0) {
+                continue;
+            }
             // All entries for this track share the same file name, mode, pregap and postgap.
             CueEntry firstEntry = entries[0];
             fileName = firstEntry.FileName;
