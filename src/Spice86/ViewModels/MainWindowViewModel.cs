@@ -199,16 +199,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
-    private double? _scale = 1;
-
-    public double? Scale {
-        get => _scale;
-        set {
-            ValidateRequiredPropertyIsNotNull(value);
-            SetProperty(ref _scale, Math.Max(value ?? 0, 1));
-        }
-    }
-
     /// <summary>
     /// The aspect ratio correction factor for the current video mode.
     /// Controls vertical scaling: 1.0 = square pixels, 1.2 = DOS VGA correction.
@@ -284,10 +274,24 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         UpdateShownEmulatorMouseCursorPosition();
     }
 
+    /// <summary>
+    /// Called by the SDL capture backend when in relative mouse mode.
+    /// Accepts pre-normalised coordinates (0..1 range) instead of Avalonia pointer event data.
+    /// </summary>
+    internal void OnMouseMovedNormalized(double x, double y) {
+        if (_pauseHandler.IsPaused) {
+            return;
+        }
+
+        MouseX = x;
+        MouseY = y;
+        MouseMoved?.Invoke(this, new MouseMoveEventArgs(x, y));
+        UpdateShownEmulatorMouseCursorPosition();
+    }
+
     public void SetResolution(int width, int height) {
         _uiDispatcher.Post(() => {
             _isSettingResolution = true;
-            Scale = 1;
             if (Width != width || Height != height) {
                 Width = width;
                 Height = height;
@@ -345,13 +349,27 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private void SetMainTitle(double instructionsPerMillisecond) {
         string currentProgramName = _currentProcessNameProvider.CurrentProgramName;
         if (string.IsNullOrEmpty(currentProgramName)) {
-            MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}";
+            MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}{MouseCaptureHint}";
         } else {
-            MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - {currentProgramName} - cycles/ms: {instructionsPerMillisecond,7:N0}";
+            MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - {currentProgramName} - cycles/ms: {instructionsPerMillisecond,7:N0}{MouseCaptureHint}";
         }
     }
 
     [ObservableProperty] private string? _mainTitle;
+
+    [ObservableProperty] private bool _isMouseCaptured;
+
+    [ObservableProperty] private string _mouseCaptureHint = string.Empty;
+
+    internal void UpdateMouseCaptureHint(bool isCaptured) {
+        IsMouseCaptured = isCaptured;
+        if (isCaptured) {
+            MouseCaptureHint = " | Mouse captured (middle click to release)";
+        } else {
+            MouseCaptureHint = " | Mouse free (middle click to capture)";
+        }
+        RefreshMainTitleWithInstructionsPerMs();
+    }
 
     private double? _timeMultiplier = 1;
 

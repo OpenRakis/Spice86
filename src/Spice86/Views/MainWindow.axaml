@@ -32,7 +32,7 @@
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
 	<Grid RowDefinitions="Auto,*,Auto">
-		<Grid IsTabStop="False" Focusable="False" Grid.ColumnDefinitions="Auto,Auto" Grid.Row="0">
+		<Grid x:Name="TopBar" IsTabStop="False" Focusable="False" Grid.ColumnDefinitions="Auto,Auto" Grid.Row="0">
 			<Menu Grid.Column="0" Name="Menu" Focusable="False" IsTabStop="False" IsVisible="{Binding !IsDialogVisible}">
 				<MenuItem Header="Debug">
 					<MenuItem HotKey="Ctrl+Alt+F2" ToolTip.Tip="Ctrl+Alt+F2" IsEnabled="{Binding IsEmulatorRunning}">
@@ -95,14 +95,6 @@
 				<MenuItem Header="Video" IsEnabled="{Binding IsEmulatorRunning}">
 					<MenuItem>
 						<MenuItem.Header>
-							<StackPanel Orientation="Horizontal">
-								<Label Content="Scale" VerticalAlignment="Center" HorizontalContentAlignment="Center" />
-								<NumericUpDown Text="{Binding Scale}" FormatString="0" Minimum="0" Margin="5,0,0,0" />
-							</StackPanel>
-						</MenuItem.Header>
-					</MenuItem>
-					<MenuItem>
-						<MenuItem.Header>
 							<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
 						</MenuItem.Header>
 					</MenuItem>
@@ -129,7 +121,7 @@
 			<StackPanel Grid.Column="1" Focusable="False" IsTabStop="False" IsEnabled="{Binding IsEmulatorRunning}" Grid.Row="0" Margin="160,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
 				<Label IsVisible="{Binding ShowCyclesLimitingUI}" Focusable="False" IsTabStop="False" VerticalAlignment="Center" Content="Cycles/ms:" />
 				<Button IsVisible="{Binding ShowCyclesLimitingUI}" Margin="10,0,5,0" HotKey="Ctrl+F11" Focusable="False" IsTabStop="False" IsEnabled="{Binding !IsPaused}" Command="{Binding DecreaseTargetCyclesCommand}" Content="-" />
-				<NumericUpDown IsVisible="{Binding ShowCyclesLimitingUI}" Focusable="False" IsTabStop="False" FormatString="0" IsReadOnly="True" IsEnabled="{Binding !IsPaused}" Text="{Binding TargetCyclesPerMs, FallbackValue=1}" Minimum="100" Maximum="60000" />
+				<NumericUpDown x:Name="CyclesLimitingNumericUpDown" IsVisible="{Binding ShowCyclesLimitingUI}" Focusable="False" IsTabStop="False" FormatString="0" IsReadOnly="True" IsEnabled="{Binding !IsPaused}" Text="{Binding TargetCyclesPerMs, FallbackValue=1}" Minimum="100" Maximum="60000" />
 				<Button IsVisible="{Binding ShowCyclesLimitingUI}" Margin="5,0,10,0" HotKey="Ctrl+F12" Focusable="False" IsTabStop="False" IsEnabled="{Binding !IsPaused}" Command="{Binding IncreaseTargetCyclesCommand}" Content="+" />
 				<Button Focusable="False" IsTabStop="False" Command="{Binding PauseCommand}" Margin="5,0,5,0" ToolTip.Tip="Pause (Ctrl+Shift+F5)" HotKey="Ctrl+Shift+F5" IsVisible="{Binding !IsPaused}">
 					<fluent:SymbolIcon Symbol="Pause" />
@@ -138,22 +130,18 @@
 					<fluent:SymbolIcon Symbol="Play" />
 				</Button>
 				<Label Focusable="False" IsTabStop="False" VerticalAlignment="Center" Content="Time Modifier:" />
-				<NumericUpDown FormatString="0" Focusable="False" IsTabStop="False" Margin="5,0,5,0" Value="{Binding TimeMultiplier, FallbackValue=1}" Minimum="1" />
+				<NumericUpDown x:Name="TimeMultiplierNumericUpDown" FormatString="0" Focusable="False" IsTabStop="False" Margin="5,0,5,0" Value="{Binding TimeMultiplier, FallbackValue=1}" Minimum="1" />
 				<Button Focusable="False" IsTabStop="False" Margin="2,0,5,0" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}">
 					<fluent:SymbolIcon Symbol="ArrowReset" />
 				</Button>
 			</StackPanel>
 		</Grid>
-		<Viewbox Grid.Row="1">
+		<Viewbox Name="ScreenView" Grid.Row="1">
 			<LayoutTransformControl>
 				<LayoutTransformControl.LayoutTransform>
 					<TransformGroup>
 						<!-- Dynamic aspect ratio correction based on current video mode -->
 						<ScaleTransform ScaleX="1" ScaleY="{Binding AspectRatioCorrectionFactor}" />
-						<ScaleTransform
-						ScaleX="{Binding Scale}"
-						ScaleY="{Binding Scale}">
-						</ScaleTransform>
 					</TransformGroup>
 				</LayoutTransformControl.LayoutTransform>
 				<Image x:Name="Image"
@@ -162,7 +150,7 @@
 					   Source="{Binding Bitmap}" />
 			</LayoutTransformControl>
 		</Viewbox>
-		<controls:StatusBar IsTabStop="False" Focusable="False" VerticalAlignment="Bottom" Grid.Row="2">
+		<controls:StatusBar x:Name="BottomBar" IsTabStop="False" Focusable="False" VerticalAlignment="Bottom" Grid.Row="2">
 			<controls:StatusBarItem>
 				<TextBlock Text="{Binding StatusMessage}" />
 			</controls:StatusBarItem>
@@ -183,7 +171,7 @@
 			<Separator />
 			<controls:StatusBarItem>
 				<TextBlock Text="{Binding EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />
-		</controls:StatusBarItem>
+			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem>
 				<StackPanel Orientation="Horizontal" Spacing="6">
