@@ -185,31 +185,6 @@
                                     <Setter Property="behaviors:UseParentListBoxContextMenuBehavior.UseParentContextMenu" Value="True" />
                                 </Style>
                             </ContentControl.Styles>
-                            <!-- Tooltip for decoded high-level call info -->
-                            <ToolTip.Tip>
-                                <StackPanel IsVisible="{Binding DecodedCall, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                    <TextBlock Text="{Binding DecodedCall.Subsystem}" FontWeight="Bold" />
-                                    <TextBlock Text="{Binding DecodedCall.FunctionName}" FontWeight="SemiBold" Margin="0,2,0,0" />
-                                    <TextBlock Text="{Binding DecodedCall.ShortDescription}" TextWrapping="Wrap" MaxWidth="400" Margin="0,4,0,0" />
-                                    <ItemsControl ItemsSource="{Binding DecodedCall.Parameters}" Margin="0,8,0,0">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Margin="0,2,0,0">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                                        <TextBlock Text=" (" Margin="4,0,0,0" />
-                                                        <TextBlock Text="{Binding Source}" />
-                                                        <TextBlock Text=") = " />
-                                                        <TextBlock Text="{Binding FormattedValue}" FontFamily="Consolas,Menlo,Monaco,monospace" />
-                                                    </StackPanel>
-                                                    <TextBlock Text="{Binding Notes}" FontSize="11" Opacity="0.8" Margin="16,2,0,0"
-                                                               IsVisible="{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </ToolTip.Tip>
 
                             <Grid Margin="0">
                                 <Grid.ColumnDefinitions>
@@ -222,6 +197,7 @@
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="BranchTarget" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="EmuBadge" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Function" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Annotation" />
                                 </Grid.ColumnDefinitions>
                                 <!-- Breakpoint indicator -->
                                 <Border Grid.Column="0"
@@ -322,6 +298,74 @@
                                                      Text="{Binding Function.Name, FallbackValue=''}"
                                                      Foreground="{DynamicResource DisassemblyFunctionBrush}"
                                                      Margin="12,0,0,0" />
+
+                                <!-- OllyDbg-style inline annotation panel:
+                                     Decoded high-level call (subsystem / function / parameters) and/or
+                                     a generic 386 mnemonic reminder. Visible only when there is something
+                                     to show. -->
+                                <Border Grid.Column="9"
+                                        IsVisible="{Binding HasAnnotation}"
+                                        BorderBrush="{DynamicResource DisassemblyFunctionBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="6,3"
+                                        Margin="16,1,4,1"
+                                        MaxWidth="420">
+                                    <StackPanel>
+                                        <!-- Decoded call block -->
+                                        <StackPanel IsVisible="{Binding DecodedCall, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                            <TextBlock Text="{Binding DecodedCall.FunctionName}"
+                                                       FontWeight="Bold"
+                                                       Foreground="{DynamicResource DisassemblyFunctionBrush}" />
+                                            <TextBlock Text="{Binding DecodedCall.Subsystem, StringFormat='[{0}]'}"
+                                                       FontSize="10"
+                                                       Opacity="0.7" />
+                                            <TextBlock Text="{Binding DecodedCall.ShortDescription}"
+                                                       FontSize="11"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,2,0,0"
+                                                       IsVisible="{Binding DecodedCall.ShortDescription, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <ItemsControl ItemsSource="{Binding DecodedCall.Parameters}" Margin="0,4,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Margin="0,1,0,0">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Name}" FontSize="11" />
+                                                                <TextBlock Text=" => " FontSize="11" Opacity="0.7" />
+                                                                <TextBlock Text="{Binding FormattedValue}"
+                                                                           FontSize="11"
+                                                                           FontFamily="Consolas,Menlo,Monaco,monospace" />
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding Notes}" FontSize="10" Opacity="0.7" Margin="12,0,0,0"
+                                                                       IsVisible="{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <!-- Mnemonic reminder block (shown when no DecodedCall is available) -->
+                                        <StackPanel IsVisible="{Binding ShowMnemonicReminder}">
+                                            <TextBlock FontWeight="Bold" Foreground="{DynamicResource DisassemblyFunctionBrush}">
+                                                <Run Text="{Binding MnemonicInfo.Mnemonic}" />
+                                                <Run Text=" — " />
+                                                <Run Text="{Binding MnemonicInfo.Name}" />
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding MnemonicInfo.Summary}"
+                                                       FontSize="11"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,2,0,0" />
+                                            <TextBlock FontSize="10" Opacity="0.8" TextWrapping="Wrap" Margin="0,2,0,0">
+                                                <Run Text="Uses: " FontWeight="SemiBold" />
+                                                <Run Text="{Binding MnemonicInfo.Uses}" />
+                                            </TextBlock>
+                                            <TextBlock FontSize="10" Opacity="0.8" TextWrapping="Wrap" Margin="0,2,0,0">
+                                                <Run Text="Why: " FontWeight="SemiBold" />
+                                                <Run Text="{Binding MnemonicInfo.Purpose}" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
                             </Grid>
                         </ContentControl>
                     </DataTemplate>

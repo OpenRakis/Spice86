@@ -18,10 +18,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
-using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
-using Spice86.DebuggerKnowledgeBase;
-using Spice86.DebuggerKnowledgeBase.Decoding;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels.Services;
 using Spice86.ViewModels.TextPresentation;
@@ -32,7 +29,6 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private readonly List<NodeTableEntry> _tableNodesList = new();
     private readonly IUIDispatcher _uiDispatcher;
     private readonly ExecutionContextManager _executionContextManager;
-    private readonly DebuggerDecoderService _debuggerDecoderService;
     private readonly NodeToString _nodeToString;
     private readonly AstFormattedTextTokensRenderer _textOffsetsRenderer;
 
@@ -69,10 +65,8 @@ public partial class CfgCpuViewModel : ViewModelBase {
         ExecutionContextManager executionContextManager,
         IPauseHandler pauseHandler,
         NodeToString nodeToString,
-        AsmRenderingConfig asmRenderingConfig,
-        DebuggerDecoderService debuggerDecoderService) {
+        AsmRenderingConfig asmRenderingConfig) {
         _nodeToString = nodeToString;
-        _debuggerDecoderService = debuggerDecoderService;
         _textOffsetsRenderer = new AstFormattedTextTokensRenderer(asmRenderingConfig);
         _uiDispatcher = uiDispatcher;
         _executionContextManager = executionContextManager;
@@ -412,38 +406,12 @@ public partial class CfgCpuViewModel : ViewModelBase {
         InstructionNode ast = node.DisplayAst;
         textOffsets.AddRange(ast.Accept(_textOffsetsRenderer));
 
-        // Try to decode high-level call info and emulator-provided status
-        (DecodedCall? decodedCall, bool isEmulatorProvided, string? emulatorProvidedFunctionName) = ComputeDecodedInfoForNode(node);
-
         return new CfgGraphNode {
             NodeId = node.Id,
             TextOffsets = textOffsets,
             IsLastExecuted = isLastExecuted,
-            NodeType = nodeType,
-            DecodedCall = decodedCall,
-            IsEmulatorProvided = isEmulatorProvided,
-            EmulatorProvidedFunctionName = emulatorProvidedFunctionName
+            NodeType = nodeType
         };
-    }
-
-    /// <summary>
-    /// Computes decoded call info and emulator-provided status for a CFG node.
-    /// </summary>
-    private (DecodedCall? decodedCall, bool isEmulatorProvided, string? emulatorProvidedFunctionName) ComputeDecodedInfoForNode(ICfgNode node) {
-        SegmentedAddress address = node.Address;
-        DecodedCall? decoded = null;
-
-        // Try decoding emulator-provided routine entry points
-        _debuggerDecoderService.TryDecodeAsmRoutine(address, out decoded);
-
-        // Check if this is an emulator-provided function entry point
-        bool isEmulatorProvided = _debuggerDecoderService.IsEmulatorProvidedEntryPoint(address);
-        string? functionName = null;
-        if (isEmulatorProvided && _debuggerDecoderService.TryGetEmulatorProvidedFunction(address, out FunctionInformation? info)) {
-            functionName = info.Name;
-        }
-
-        return (decoded, isEmulatorProvided, functionName);
     }
 
     private string FormatNodeText(ICfgNode node, bool isLastExecuted) {

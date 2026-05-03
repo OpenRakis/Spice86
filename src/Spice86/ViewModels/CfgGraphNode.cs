@@ -1,6 +1,5 @@
 namespace Spice86.ViewModels;
 
-using Spice86.DebuggerKnowledgeBase.Decoding;
 using Spice86.ViewModels.TextPresentation;
 
 /// <summary>
@@ -27,23 +26,6 @@ public sealed class CfgGraphNode : IEquatable<CfgGraphNode> {
     /// The type of instruction this node represents, used for visual differentiation.
     /// </summary>
     public CfgNodeType NodeType { get; init; }
-
-    /// <summary>
-    /// Decoded high-level call information when this node represents a decodable instruction
-    /// (INT, emulator-provided routine entry). Null for plain instructions.
-    /// </summary>
-    public DecodedCall? DecodedCall { get; init; }
-
-    /// <summary>
-    /// True when this node's address is the entry point of an emulator-provided function
-    /// (name starts with <c>provided_</c>).
-    /// </summary>
-    public bool IsEmulatorProvided { get; init; }
-
-    /// <summary>
-    /// Function name when <see cref="IsEmulatorProvided"/> is true; null otherwise.
-    /// </summary>
-    public string? EmulatorProvidedFunctionName { get; init; }
 
     public override bool Equals(object? obj) => obj is CfgGraphNode other && NodeId == other.NodeId;
     public bool Equals(CfgGraphNode? other) => other is not null && NodeId == other.NodeId;
