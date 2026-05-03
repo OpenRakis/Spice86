@@ -15,6 +15,8 @@ using System.Diagnostics.CodeAnalysis;
 public class DosDriveManager : IDictionary<char, VirtualDrive> {
     private readonly SortedDictionary<char, VirtualDrive> _driveMap = new();
     private readonly Dictionary<char, MemoryDrive> _memoryDriveMap = new();
+    private readonly Dictionary<char, FloppyDiskDrive> _floppyDriveMap = new();
+    private readonly ILoggerService _loggerService;
     private readonly DosMediaIdTable _mediaIdTable;
 
     /// <summary>
@@ -25,6 +27,7 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="mediaIdTable">The DOS private-segment media ID table owned by this manager.</param>
     public DosDriveManager(ILoggerService loggerService, string? cDriveFolderPath, string? executablePath, DosMediaIdTable mediaIdTable) {
+        _loggerService = loggerService;
         _mediaIdTable = mediaIdTable;
         if (string.IsNullOrWhiteSpace(cDriveFolderPath)) {
             cDriveFolderPath = DosPathResolver.GetExeParentFolder(executablePath);
@@ -187,6 +190,11 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
     }
 
     /// <summary>
+    /// Gets a read-only view of all mounted memory drives, keyed by drive letter.
+    /// </summary>
+    public IReadOnlyDictionary<char, MemoryDrive> MemoryDrives => _memoryDriveMap;
+
+    /// <summary>
     /// Tries to get a mounted memory drive by letter.
     /// </summary>
     /// <param name="driveLetter">The drive letter (e.g., 'Z').</param>
@@ -194,5 +202,48 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
     /// <returns>True if memory drive exists; false otherwise.</returns>
     public bool TryGetMemoryDrive(char driveLetter, [MaybeNullWhen(false)] out MemoryDrive drive) {
         return _memoryDriveMap.TryGetValue(driveLetter, out drive);
+    }
+
+    /// <summary>
+    /// Gets a read-only view of all floppy drives with an image mounted, keyed by drive letter.
+    /// </summary>
+    public IReadOnlyDictionary<char, FloppyDiskDrive> FloppyDrives => _floppyDriveMap;
+
+    /// <summary>
+    /// Mounts a floppy disk image (raw FAT12 bytes) to the specified drive letter (A: or B:).
+    /// </summary>
+    /// <param name="driveLetter">The target drive letter ('A' or 'B').</param>
+    /// <param name="imageData">The raw bytes of the floppy disk image.</param>
+    public void MountFloppyImage(char driveLetter, byte[] imageData) {
+        FloppyDiskDrive floppy = new() { DriveLetter = driveLetter };
+        floppy.MountImage(imageData);
+        _floppyDriveMap[char.ToUpperInvariant(driveLetter)] = floppy;
+    }
+
+    /// <summary>
+    /// Mounts a host folder as a folder-backed floppy drive (A: or B:).
+    /// </summary>
+    /// <param name="driveLetter">The target drive letter ('A' or 'B').</param>
+    /// <param name="hostFolderPath">The absolute path to the host folder to use as the floppy root.</param>
+    public void MountFloppyFolder(char driveLetter, string hostFolderPath) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        // Remove any image-backed floppy drive on this letter.
+        _floppyDriveMap.Remove(upper);
+        // Update the VirtualDrive entry so DosPathResolver can resolve paths normally.
+        _driveMap[upper] = new VirtualDrive {
+            DriveLetter = upper,
+            MountedHostDirectory = ConvertUtils.ToSlashFolderPath(hostFolderPath),
+            CurrentDosDirectory = "",
+        };
+    }
+
+    /// <summary>
+    /// Tries to get a floppy drive by letter, returning <see langword="true"/> only when an image is mounted.
+    /// </summary>
+    /// <param name="driveLetter">The drive letter to look up.</param>
+    /// <param name="drive">The floppy drive if found; null otherwise.</param>
+    /// <returns>True if a floppy image is mounted on the specified letter; false otherwise.</returns>
+    public bool TryGetFloppyDrive(char driveLetter, [MaybeNullWhen(false)] out FloppyDiskDrive drive) {
+        return _floppyDriveMap.TryGetValue(char.ToUpperInvariant(driveLetter), out drive);
     }
 }

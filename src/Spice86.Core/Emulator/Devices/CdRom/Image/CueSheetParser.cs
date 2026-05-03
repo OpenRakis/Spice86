@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Spice86.Core.Emulator.Devices.CdRom.Image;
@@ -23,9 +24,7 @@ public sealed class CueSheetParser {
         int currentPregap = 0;
         int currentPostgap = 0;
 
-        foreach (string rawLine in lines) {
-            string line = rawLine.Trim();
-
+        foreach (string line in lines.Select(l => l.Trim())) {
             if (line.StartsWith("CATALOG ", StringComparison.OrdinalIgnoreCase)) {
                 catalog = line.Substring("CATALOG ".Length).Trim();
             } else if (line.StartsWith("FILE ", StringComparison.OrdinalIgnoreCase)) {
@@ -55,7 +54,10 @@ public sealed class CueSheetParser {
         if (Path.IsPathRooted(raw)) {
             return raw;
         }
-        return Path.Combine(cueDir, raw);
+        if (string.IsNullOrEmpty(cueDir)) {
+            return raw;
+        }
+        return Path.GetFullPath(raw, cueDir);
     }
 
     private static int ParseTrackNumber(string line) {

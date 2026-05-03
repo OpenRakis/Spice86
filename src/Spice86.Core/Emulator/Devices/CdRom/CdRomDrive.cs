@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 using Spice86.Core.Emulator.Devices.CdRom.Image;
 
@@ -49,12 +50,7 @@ public sealed class CdRomDrive : ICdRomDrive {
     /// <inheritdoc/>
     public TableOfContentsEntry? GetTrackInfo(int trackNumber) {
         IReadOnlyList<TableOfContentsEntry> toc = GetTableOfContents();
-        foreach (TableOfContentsEntry entry in toc) {
-            if (entry.TrackNumber == trackNumber) {
-                return entry;
-            }
-        }
-        return null;
+        return toc.FirstOrDefault(e => e.TrackNumber == trackNumber);
     }
 
     /// <inheritdoc/>

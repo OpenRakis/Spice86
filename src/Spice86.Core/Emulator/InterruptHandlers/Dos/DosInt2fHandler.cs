@@ -28,7 +28,7 @@ public class DosInt2fHandler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="xms">The extended memory manager. Can be <c>null</c> if XMS was not enabled.</param>
-    /// <param name="mscdexService">The MSCDEX service. Can be <c>null</c> if no CD-ROM drives are configured.</param>
+    /// <param name="mscdexService">The MSCDEX handler owned by the <c>Dos</c> class. Can be <c>null</c> if no CD-ROM support is needed.</param>
     public DosInt2fHandler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
         State state, ILoggerService loggerService, ExtendedMemoryManager? xms = null,

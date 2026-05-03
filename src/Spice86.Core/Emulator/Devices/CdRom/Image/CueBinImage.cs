@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace Spice86.Core.Emulator.Devices.CdRom.Image;
@@ -194,12 +195,7 @@ public sealed class CueBinImage : ICdRomImage {
     }
 
     private CdTrack? FindFirstDataTrack() {
-        foreach (CdTrack t in _tracks) {
-            if (!t.IsAudio) {
-                return t;
-            }
-        }
-        return null;
+        return _tracks.FirstOrDefault(t => !t.IsAudio);
     }
 
     /// <inheritdoc/>
@@ -247,12 +243,7 @@ public sealed class CueBinImage : ICdRomImage {
     }
 
     private CdTrack? FindTrack(int lba) {
-        foreach (CdTrack t in _tracks) {
-            if (lba >= t.StartLba && lba < t.StartLba + t.LengthSectors) {
-                return t;
-            }
-        }
-        return null;
+        return _tracks.FirstOrDefault(t => lba >= t.StartLba && lba < t.StartLba + t.LengthSectors);
     }
 
     /// <inheritdoc/>

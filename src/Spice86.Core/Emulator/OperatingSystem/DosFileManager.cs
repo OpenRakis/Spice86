@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.FileSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
@@ -13,6 +14,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -566,6 +568,14 @@ public class DosFileManager {
             return OpenDevice(device);
         }
 
+        // Check whether the target drive is an image-backed floppy drive.
+        char? floppyLetter = ExtractDriveLetter(fileName);
+        if (floppyLetter.HasValue &&
+            _dosDriveManager.TryGetFloppyDrive(floppyLetter.Value, out FloppyDiskDrive? floppyDrive) &&
+            floppyDrive.HasImage) {
+            return OpenFloppyImageFile(fileName, floppyDrive, accessMode);
+        }
+
         string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -874,6 +884,58 @@ public class DosFileManager {
         }
 
         return info;
+    }
+
+    private static char? ExtractDriveLetter(string dosPath) {
+        if (dosPath.Length >= 2 && dosPath[1] == DosPathResolver.VolumeSeparatorChar) {
+            return char.ToUpperInvariant(dosPath[0]);
+        }
+        return null;
+    }
+
+    private DosFileOperationResult OpenFloppyImageFile(string dosFileName, FloppyDiskDrive floppyDrive, FileAccessMode accessMode) {
+        if (floppyDrive.Image == null) {
+            return FileNotFoundError(dosFileName);
+        }
+
+        string pathInImage = ExtractPathInImage(dosFileName);
+        if (!floppyDrive.Image.TryGetEntry(pathInImage, out FileSystem.FatDirectoryEntry? entry) || entry == null) {
+            return FileNotFoundError(dosFileName);
+        }
+
+        if (entry.IsDirectory) {
+            return FileNotFoundError(dosFileName);
+        }
+
+        if (accessMode != FileAccessMode.ReadOnly) {
+            return FileAccessDeniedError(dosFileName);
+        }
+
+        int? freeIndex = FindNextFreeFileIndex();
+        if (freeIndex == null) {
+            return NoFreeHandleError();
+        }
+
+        ushort dosIndex = (ushort)freeIndex.Value;
+        byte[] fileData = floppyDrive.Image.ReadFile(entry);
+        DosFile dosFile = new(dosFileName, dosIndex, new System.IO.MemoryStream(fileData, writable: false)) {
+            Drive = _dosDriveManager.CurrentDriveIndex
+        };
+        dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
+        SetOpenFile(dosIndex, dosFile);
+
+        return DosFileOperationResult.Value16(dosIndex);
+    }
+
+    private static string ExtractPathInImage(string dosPath) {
+        // Strip the drive prefix (e.g. "A:\DIR\FILE.TXT" → "DIR\FILE.TXT").
+        if (dosPath.Length >= 3 && dosPath[1] == DosPathResolver.VolumeSeparatorChar) {
+            return dosPath.Substring(3);
+        }
+        if (dosPath.Length >= 2 && dosPath[1] == DosPathResolver.VolumeSeparatorChar) {
+            return dosPath.Substring(2);
+        }
+        return dosPath;
     }
 
     private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, FileAccessMode openMode) {

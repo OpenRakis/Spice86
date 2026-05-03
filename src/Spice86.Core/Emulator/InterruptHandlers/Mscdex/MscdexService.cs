@@ -10,9 +10,11 @@ using Spice86.Shared.Utils;
 
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 
 /// <summary>
 /// Handles MSCDEX INT 2Fh AH=15h subfunctions, dispatching on the AL register.
+/// This handler is owned by the <c>Dos</c> class and must not be treated as a standalone service.
 /// </summary>
 public sealed class MscdexService {
     private const ushort MscdexVersionMajor = 2;
@@ -33,24 +35,35 @@ public sealed class MscdexService {
     /// <summary>Number of bytes written per drive entry in the device-list buffer (subunit byte + 4-byte far pointer).</summary>
     private const uint DeviceListEntrySize = 5;
 
-    private readonly IReadOnlyList<MscdexDriveEntry> _drives;
+    private readonly List<MscdexDriveEntry> _drives = new();
     private readonly State _state;
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
 
+    /// <summary>Gets the registered CD-ROM drives.</summary>
+    public IReadOnlyList<MscdexDriveEntry> Drives => _drives;
+
     /// <summary>
-    /// Initialises a new <see cref="MscdexService"/>.
+    /// Initialises a new <see cref="MscdexService"/> with no registered drives.
+    /// Call <see cref="AddDrive"/> to register CD-ROM drives after construction.
     /// </summary>
-    /// <param name="drives">Ordered list of registered CD-ROM drives.</param>
     /// <param name="state">The CPU register state.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service.</param>
-    public MscdexService(IReadOnlyList<MscdexDriveEntry> drives, State state, IMemory memory, ILoggerService loggerService) {
-        _drives = drives;
+    public MscdexService(State state, IMemory memory, ILoggerService loggerService) {
         _state = state;
         _memory = memory;
         _loggerService = loggerService;
     }
+
+    /// <summary>
+    /// Registers a CD-ROM drive with MSCDEX.
+    /// </summary>
+    /// <param name="drive">The drive entry to register.</param>
+    public void AddDrive(MscdexDriveEntry drive) {
+        _drives.Add(drive);
+    }
+
 
     /// <summary>
     /// Reads <see cref="State.AL"/> and dispatches to the appropriate MSCDEX subfunction.
@@ -106,10 +119,9 @@ public sealed class MscdexService {
     /// </summary>
     private void GetNumberOfCdRomDrives() {
         _state.BX = (ushort)_drives.Count;
+        _state.CX = 0;
         if (_drives.Count > 0) {
             _state.CX = _drives[0].DriveIndex;
-        } else {
-            _state.CX = 0;
         }
     }
 
@@ -275,14 +287,8 @@ public sealed class MscdexService {
     /// <param name="drive">The matching entry, or <see langword="null"/> when not found.</param>
     /// <returns><see langword="true"/> if a matching drive was found; otherwise <see langword="false"/>.</returns>
     private bool TryGetDrive(int driveIndex, [NotNullWhen(true)] out MscdexDriveEntry? drive) {
-        foreach (MscdexDriveEntry entry in _drives) {
-            if (entry.DriveIndex == driveIndex) {
-                drive = entry;
-                return true;
-            }
-        }
-        drive = null;
-        return false;
+        drive = _drives.FirstOrDefault(e => e.DriveIndex == driveIndex);
+        return drive != null;
     }
 
     /// <summary>
@@ -292,13 +298,7 @@ public sealed class MscdexService {
     /// <param name="drive">The matching entry, or <see langword="null"/> when not found.</param>
     /// <returns><see langword="true"/> if a matching drive was found; otherwise <see langword="false"/>.</returns>
     private bool TryGetDriveByLetter(char letter, [NotNullWhen(true)] out MscdexDriveEntry? drive) {
-        foreach (MscdexDriveEntry entry in _drives) {
-            if (entry.DriveLetter == letter) {
-                drive = entry;
-                return true;
-            }
-        }
-        drive = null;
-        return false;
+        drive = _drives.FirstOrDefault(e => e.DriveLetter == letter);
+        return drive != null;
     }
 }

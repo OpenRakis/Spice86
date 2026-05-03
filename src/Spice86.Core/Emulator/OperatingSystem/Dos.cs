@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -17,21 +18,24 @@ using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 /// <summary>
 /// Represents the DOS kernel.
 /// </summary>
-public sealed class Dos {
+public sealed class Dos : IDriveStatusProvider {
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
+    private readonly MscdexService _mscdex;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -228,8 +232,9 @@ public sealed class Dos {
         DosInt24Handler = new DosInt24Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
         DosInt2aHandler = new DosInt2aHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
+        _mscdex = new MscdexService(state, memory, loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
-            functionHandlerProvider, stack, state, _loggerService, xms);
+            functionHandlerProvider, stack, state, _loggerService, xms, _mscdex);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
             functionHandlerProvider, stack, state, _loggerService);
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager,
@@ -371,5 +376,49 @@ public sealed class Dos {
             IsReadOnlyMedium = true,
         };
         DosDriveManager.MountMemoryDrive(zDrive);
+    }
+
+    /// <summary>
+    /// Gets the MSCDEX CD-ROM handler owned by this DOS kernel.
+    /// Use <see cref="MscdexService.AddDrive"/> to register CD-ROM drives at runtime (e.g. from IMGMOUNT).
+    /// </summary>
+    public MscdexService Mscdex => _mscdex;
+
+    /// <inheritdoc/>
+    public IReadOnlyList<DosVirtualDriveStatus> GetDriveStatuses() {
+        List<DosVirtualDriveStatus> statuses = new();
+
+        foreach (KeyValuePair<char, VirtualDrive> kvp in DosDriveManager) {
+            VirtualDrive vd = kvp.Value;
+            // By DOS convention A: and B: are always floppy drives.
+            DosVirtualDriveType driveType;
+            if (vd.DriveLetter == 'A' || vd.DriveLetter == 'B') {
+                driveType = DosVirtualDriveType.Floppy;
+            } else {
+                driveType = DosVirtualDriveType.Fixed;
+            }
+
+            // An image-backed floppy drive overrides the folder-backed status.
+            if (DosDriveManager.TryGetFloppyDrive(vd.DriveLetter, out FloppyDiskDrive? floppy)) {
+                statuses.Add(new DosVirtualDriveStatus(floppy.DriveLetter, DosVirtualDriveType.Floppy, hasMedia: true, floppy.Label));
+                continue;
+            }
+
+            bool hasMedia = !string.IsNullOrEmpty(vd.MountedHostDirectory);
+            statuses.Add(new DosVirtualDriveStatus(vd.DriveLetter, driveType, hasMedia, vd.Label));
+        }
+
+        foreach (KeyValuePair<char, MemoryDrive> kvp in DosDriveManager.MemoryDrives) {
+            MemoryDrive md = kvp.Value;
+            statuses.Add(new DosVirtualDriveStatus(md.DriveLetter, DosVirtualDriveType.Memory, hasMedia: true, md.Label));
+        }
+
+        foreach (MscdexDriveEntry cdrom in _mscdex.Drives) {
+            bool hasCdMedia = !cdrom.Drive.MediaState.IsDoorOpen;
+            string volumeLabel = hasCdMedia ? (cdrom.Drive.Image.PrimaryVolume.VolumeIdentifier ?? string.Empty) : string.Empty;
+            statuses.Add(new DosVirtualDriveStatus(cdrom.DriveLetter, DosVirtualDriveType.CdRom, hasCdMedia, volumeLabel));
+        }
+
+        return statuses.OrderBy(s => s.DriveLetter).ToList();
     }
 }
