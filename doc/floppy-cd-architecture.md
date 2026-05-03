@@ -1,9 +1,8 @@
-# Floppy, CD-ROM, FAT12, and Disc-Switching Architecture
+# Floppy, CD-ROM, FAT12/16/32, FDC, and Disc-Switching Architecture
 
 _This document reviews every subsystem introduced or reworked by the
-`implement-mscdex-support` branch. It covers the implemented components,
-the architectural decisions behind them, known limitations, and the tests
-that validate each area._
+`implement-mscdex-support` branch. It covers all implemented components
+and the architectural decisions behind them._
 
 ---
 
@@ -12,16 +11,18 @@ that validate each area._
 1. [Layer model](#1-layer-model)
 2. [IFloppyDriveAccess — BIOS/DOS inversion](#2-ifloppydriveaccess--bios--dos-inversion)
 3. [INT 13h floppy handler](#3-int-13h-floppy-handler)
-4. [FAT12 file-system parsing](#4-fat12-file-system-parsing)
-5. [FloppyDiskDrive and DosDriveManager](#5-floppydiskdrive-and-dosdrivemanager)
-6. [CD-ROM image layer](#6-cd-rom-image-layer)
-7. [MSCDEX (INT 2Fh AH=15h)](#7-mscdex-int-2fh-ah15h)
-8. [Multi-image disc switching and Ctrl-F4](#8-multi-image-disc-switching-and-ctrl-f4)
-9. [MOUNT / IMGMOUNT batch commands](#9-mount--imgmount-batch-commands)
-10. [UI drive-status indicators](#10-ui-drive-status-indicators)
-11. [Dependency-injection wiring](#11-dependency-injection-wiring)
-12. [Test coverage](#12-test-coverage)
-13. [Known limitations and pending work](#13-known-limitations-and-pending-work)
+4. [Intel 8272A FDC hardware emulation](#4-intel-8272a-fdc-hardware-emulation)
+5. [FAT12/16/32 file-system parsing](#5-fat121632-file-system-parsing)
+6. [Virtual disk images (FloppyImage, IsoImage)](#6-virtual-disk-images)
+7. [Floppy write-back](#7-floppy-write-back)
+8. [FloppyDiskDrive and DosDriveManager](#8-floppydiskdrive-and-dosdrivemanager)
+9. [CD-ROM image layer](#9-cd-rom-image-layer)
+10. [MSCDEX (INT 2Fh AH=15h)](#10-mscdex-int-2fh-ah15h)
+11. [Multi-image disc switching and Ctrl-F4](#11-multi-image-disc-switching-and-ctrl-f4)
+12. [MOUNT / IMGMOUNT batch commands](#12-mount--imgmount-batch-commands)
+13. [UI drive-status indicators](#13-ui-drive-status-indicators)
+14. [Dependency-injection wiring](#14-dependency-injection-wiring)
+15. [Test coverage](#15-test-coverage)
 
 ---
 
@@ -112,49 +113,123 @@ handler returns a generic hard-disk response for those.
 
 ---
 
-## 4. FAT12 file-system parsing
+## 4. Intel 8272A FDC hardware emulation
+
+`FloppyDiskController` in `Spice86.Core.Emulator.Devices.ExternalInput` emulates
+the Intel 82077AA / NEC µPD765 floppy disk controller at I/O ports 0x3F2–0x3F5.
+
+### I/O port map
+
+| Port | Direction | Name                     | Description                          |
+|------|-----------|--------------------------|--------------------------------------|
+| 0x3F2 | Write    | Digital Output Register  | Motor enable (bits 4-7), drive select (bits 0-1), reset (bit 2) |
+| 0x3F4 | Read     | Main Status Register     | MRQ, DIO, CB, FDD busy flags         |
+| 0x3F5 | R/W      | Data FIFO                | Command bytes in, result bytes out   |
+
+### Main Status Register bits
+
+| Bit | Name | Meaning                        |
+|-----|------|--------------------------------|
+| 7   | MRQ  | 1 = data register ready        |
+| 6   | DIO  | 1 = FDC→CPU; 0 = CPU→FDC      |
+| 4   | CB   | FDC busy executing command     |
+| 0-3 | FDD  | FDD 0-3 in seek                |
+
+### Supported commands
+
+| Command byte | Name                   | Params | Result bytes |
+|--------------|------------------------|--------|--------------|
+| 0x03         | SPECIFY                | 2      | 0            |
+| 0x04         | SENSE DRIVE STATUS     | 1      | 1 (ST3)      |
+| 0x07         | RECALIBRATE            | 1      | 0 + IRQ6     |
+| 0x08         | SENSE INTERRUPT STATUS | 0      | 2 (ST0, PCN) |
+| 0x0F         | SEEK                   | 2      | 0 + IRQ6     |
+| 0xE6         | READ DATA              | 8      | 7 + IRQ6 + DMA |
+| 0xC5         | WRITE DATA             | 8      | 7 + IRQ6 + DMA |
+| 0x4A         | READ ID                | 1      | 7 + IRQ6     |
+| 0x4D         | FORMAT TRACK           | 5      | 7 + IRQ6     |
+
+### DMA and IRQ integration
+
+```
+FloppyDiskController
+├── _dmaChannel (DmaChannel 2, 8-bit, from DmaBus)
+│     └── used for READ DATA / WRITE DATA transfers
+│           read:  FDC reads sector, writes bytes to DMA buffer
+│           write: FDC reads bytes from DMA buffer, writes sector
+└── _raiseIrq (Action<byte> delegate)
+      └── called after seek/recalibrate/read/write completes
+            → raises IRQ 6 via Intel8259Pic
+```
+
+---
+
+## 5. FAT12/16/32 file-system parsing
 
 ```
 Spice86.Core.Emulator.OperatingSystem.FileSystem
-├── BiosParameterBlock        (parses boot sector bytes 0x00–0x23)
+├── BiosParameterBlock        (parses boot sector bytes 0x00–0x23 + FAT32 extension)
 ├── FatDirectoryEntry         (parses 32-byte directory entries)
-└── Fat12FileSystem           (cluster-chain traversal, file/dir read)
+├── FatType                   (enum: Fat12, Fat16, Fat32)
+├── FatFileSystem             (unified FAT12/16/32 cluster-chain traversal)
+└── Fat12FileSystem           (backward-compatible alias for FAT12 images)
 ```
 
 ### BiosParameterBlock fields
 
-| Field              | Offset | Width | Description                         |
-|--------------------|--------|-------|-------------------------------------|
-| BytesPerSector     | 0x0B   | 2     | Normally 512                        |
-| SectorsPerCluster  | 0x0D   | 1     | Power of 2                          |
-| ReservedSectors    | 0x0E   | 2     | Sectors before FAT1                 |
-| NumberOfFats       | 0x10   | 1     | Normally 2                          |
-| RootEntryCount     | 0x11   | 2     | Max root-directory entries          |
-| TotalSectors16     | 0x13   | 2     | 0 if > 65535 sectors                |
-| SectorsPerFat      | 0x16   | 2     | Size of one FAT                     |
-| SectorsPerTrack    | 0x18   | 2     | Used by INT 13h geometry            |
-| NumberOfHeads      | 0x1A   | 2     | Used by INT 13h geometry            |
+| Field              | Offset | Width | Description                                    |
+|--------------------|--------|-------|------------------------------------------------|
+| BytesPerSector     | 0x0B   | 2     | Normally 512                                   |
+| SectorsPerCluster  | 0x0D   | 1     | Power of 2                                     |
+| ReservedSectorCount| 0x0E   | 2     | Sectors before FAT1                            |
+| NumberOfFats       | 0x10   | 1     | Normally 2                                     |
+| RootEntryCount     | 0x11   | 2     | Max root-directory entries (0 for FAT32)       |
+| TotalSectors16     | 0x13   | 2     | 0 if > 65535 sectors                           |
+| SectorsPerFat16    | 0x16   | 2     | FAT12/16 size; 0 for FAT32                     |
+| SectorsPerTrack    | 0x18   | 2     | Used by INT 13h geometry                       |
+| NumberOfHeads      | 0x1A   | 2     | Used by INT 13h geometry                       |
+| TotalSectors32     | 0x20   | 4     | Used when TotalSectors16 == 0                  |
+| SectorsPerFat32    | 0x24   | 4     | FAT32 only (BPB extended)                      |
+| RootCluster        | 0x2C   | 4     | FAT32 only: cluster number of root directory   |
 
-### Derived offsets
+### FAT type detection (Microsoft specification)
 
 ```
-FAT1 start    = ReservedSectors
-FAT2 start    = FAT1 start + SectorsPerFat
-Root dir start = FAT2 start + SectorsPerFat
-Data area start = Root dir start + ceil(RootEntryCount * 32 / BytesPerSector)
-Cluster N start = Data area start + (N - 2) * SectorsPerCluster
+rootDirSectors = ceil(RootEntryCount * 32 / BytesPerSector)
+fatSz          = SectorsPerFat16 != 0 ? SectorsPerFat16 : SectorsPerFat32
+totalSectors   = TotalSectors16 != 0  ? TotalSectors16  : TotalSectors32
+dataSectors    = totalSectors - (ReservedSectorCount + NumberOfFats * fatSz + rootDirSectors)
+clusterCount   = dataSectors / SectorsPerCluster
+
+clusterCount <  4085  → FAT12
+clusterCount < 65525  → FAT16
+else                  → FAT32
 ```
 
-### FAT12 cluster-chain resolution
+### FAT cluster-chain resolution
 
-Each FAT12 entry is 12 bits, packed in pairs over 3 bytes:
+| FAT type | Entry width | End-of-chain    | Bad cluster |
+|----------|-------------|-----------------|-------------|
+| FAT12    | 12 bits     | ≥ 0xFF8         | 0xFF7       |
+| FAT16    | 16 bits     | ≥ 0xFFF8        | 0xFFF7      |
+| FAT32    | 28 bits     | ≥ 0x0FFFFFF8    | 0x0FFFFFF7  |
 
+FAT12 entry packing:
 ```
 Even cluster N:  value = (byte[N*3/2]) | ((byte[N*3/2+1] & 0x0F) << 8)
 Odd  cluster N:  value = (byte[N*3/2] >> 4) | (byte[N*3/2+1] << 4)
 ```
 
-End-of-chain: value ≥ 0xFF8. Bad cluster: 0xFF7.
+### Derived sector offsets
+
+```
+FAT1 start     = ReservedSectorCount
+Data area start = ReservedSectorCount + NumberOfFats * fatSz + rootDirSectors
+Cluster N start = DataAreaStart + (N - 2) * SectorsPerCluster
+
+FAT12/16 root  = FAT1 start + NumberOfFats * fatSz  (fixed region)
+FAT32 root     = cluster chain starting at RootCluster
+```
 
 ### FatDirectoryEntry
 
@@ -165,7 +240,8 @@ Each 32-byte entry:
 | 0      | 8     | Name (padded)|
 | 8      | 3     | Extension    |
 | 11     | 1     | Attributes   |
-| 26     | 2     | First cluster|
+| 26     | 2     | First cluster (low word) |
+| 20     | 2     | First cluster (high word, FAT32) |
 | 28     | 4     | File size    |
 
 Attribute flags: `0x10` = directory, `0x08` = volume label, `0x0F` = LFN
@@ -173,7 +249,79 @@ Attribute flags: `0x10` = directory, `0x08` = volume label, `0x0F` = LFN
 
 ---
 
-## 5. FloppyDiskDrive and DosDriveManager
+## 6. Virtual disk images
+
+### VirtualFloppyImage
+
+`VirtualFloppyImage` builds a 1.44 MB FAT12 floppy image in memory from a
+host directory. The resulting `byte[]` can be passed to
+`FloppyDiskDrive.MountImage()` and supports disc switching.
+
+```
+VirtualFloppyImage.Build(sourceDir, logger) → byte[1,474,560]
+  1. Write BPB in boot sector (sector 0)
+  2. Zero FAT1 and FAT2 (sectors 1–18), write media descriptor 0xF0
+  3. For each file in sourceDir (and one level of subdirs):
+       a. Allocate clusters for file data
+       b. Write FAT chain entries
+       c. Write directory entries in root dir region
+       d. Write file data in data clusters
+  4. Files that would exceed available clusters → skip + log warning
+```
+
+Layout of a 1.44 MB FAT12 image:
+
+```
+Sector 0        : Boot sector / BPB
+Sectors 1-9     : FAT1 (9 sectors)
+Sectors 10-18   : FAT2 (copy)
+Sectors 19-32   : Root directory (14 sectors, 224 entries)
+Sectors 33-2879 : Data area (clusters 2-2848)
+```
+
+### VirtualIsoImage
+
+`VirtualIsoImage` implements `ICdRomImage` and builds a minimal ISO 9660
+image in memory from root-level files in a host directory.
+
+```
+VirtualIsoImage(sourceDir, volumeLabel) → ICdRomImage
+  1. Write system area (sectors 0-15) as zeroes
+  2. Sector 16: Primary Volume Descriptor
+  3. Sector 17: Volume Descriptor Set Terminator
+  4. Sector 18: Path table (LE)
+  5. Sector 19: Path table (BE)
+  6. Sector 20: Root directory records
+  7. Sectors 21+: File data (one file per sector sequence)
+```
+
+Both `VirtualFloppyImage` and `VirtualIsoImage` enable disc switching for
+folder mounts: each folder is converted to an in-memory image that can be
+loaded into `FloppyDiskDrive` or `CdRomDrive` just like a `.img`/`.iso` file.
+
+---
+
+## 7. Floppy write-back
+
+`FloppyDiskDrive` tracks whether its in-memory image has been modified and can
+flush the changes back to the original file:
+
+```
+FloppyDiskDrive
+├── bool IsDirty           (true after any successful TryWrite)
+├── MarkDirty()            (called by DosDriveManager.TryWrite)
+└── FlushToDisk()          (writes _images[_currentIndex].Data to Path)
+```
+
+`DosDriveManager.TryWrite` calls `MarkDirty()` on the relevant
+`FloppyDiskDrive` after every successful write, so games that save to floppy
+and re-read the data see consistent in-memory state. Calling `FlushToDisk()`
+(e.g. before swapping images or on clean exit) persists the changes to the
+host `.img` file.
+
+---
+
+## 8. FloppyDiskDrive and DosDriveManager
 
 ### FloppyDiskDrive
 
@@ -213,7 +361,7 @@ Key methods added in this PR:
 
 ---
 
-## 6. CD-ROM image layer
+## 9. CD-ROM image layer
 
 ```
 Spice86.Core.Emulator.Devices.CdRom.Image
@@ -255,7 +403,7 @@ leading separator.
 
 ---
 
-## 7. MSCDEX (INT 2Fh AH=15h)
+## 10. MSCDEX (INT 2Fh AH=15h)
 
 `MscdexService` is owned by the `Dos` class — created before `ProcessManager`
 so it is always available when INT 2Fh is handled.
@@ -304,7 +452,7 @@ MscdexDriveEntry
 
 ---
 
-## 8. Multi-image disc switching and Ctrl-F4
+## 11. Multi-image disc switching and Ctrl-F4
 
 ```
 IDiscSwapper (Spice86.Shared.Interfaces)
@@ -357,7 +505,7 @@ DosVirtualDriveStatus
 
 ---
 
-## 9. MOUNT / IMGMOUNT batch commands
+## 12. MOUNT / IMGMOUNT batch commands
 
 Both commands are implemented as batch command handlers in
 `DosBatchExecutionEngine.CommandHandlers.cs`.
@@ -391,7 +539,7 @@ IMGMOUNT <drive> <image1> [<image2> …] -t floppy|iso|cue
 
 ---
 
-## 10. UI drive-status indicators
+## 13. UI drive-status indicators
 
 ```
 Spice86.ViewModels.DriveStatusViewModel
@@ -416,7 +564,7 @@ MainWindow.axaml
 
 ---
 
-## 11. Dependency-injection wiring
+## 14. Dependency-injection wiring
 
 ```
 Spice86DependencyInjection (construction order for new components)
@@ -437,69 +585,26 @@ The key ordering constraint: `SystemBiosInt13Handler` must be constructed
 
 ---
 
-## 12. Test coverage
+## 15. Test coverage
 
-| Test class                   | Count | What it covers                                           |
-|------------------------------|-------|----------------------------------------------------------|
-| `Int13FloppyTests`           | 9     | AH=0x00/01/02/03/08/15; error paths; boundary checks     |
-| `BiosParameterBlockTests`    | 8     | Parse from raw bytes; various floppy geometries          |
-| `FatDirectoryEntryTests`     | 7     | Attribute flags; deleted/LFN skip; name parsing          |
-| `Fat12FileSystemTests`       | 12    | Root dir listing; cluster chain; file read; volume label |
-| `DosDriveManagerFloppyTests` | 14    | Mount/add/swap images; TryGetGeometry; TryRead/TryWrite  |
-| `CdRomDriveDiscSwapTests`    | 8     | Single/multi-image; swap cycling; audio stop on swap     |
-| `MountBatchCommandTests`     | 8     | MOUNT/IMGMOUNT parsing; multi-image; extension detection |
-| `MscdexDeviceDriverRequestTests` | (existing) | IOCTL sub-commands; audio commands          |
-| `CdAudioPlayerTests`         | (existing) | Play/stop/pause/resume state machine             |
+| Test class                         | Count  | What it covers                                              |
+|------------------------------------|--------|-------------------------------------------------------------|
+| `Int13FloppyTests`                 | 9      | AH=0x00/01/02/03/08/15; error paths; boundary checks        |
+| `BiosParameterBlockTests`          | 8      | Parse from raw bytes; various floppy geometries             |
+| `FatDirectoryEntryTests`           | 7      | Attribute flags; deleted/LFN skip; name parsing             |
+| `Fat12FileSystemTests`             | 12     | Root dir listing; cluster chain; file read; volume label    |
+| `FatFileSystemTests`               | 12     | FAT12/16/32 type detection; cluster chain; volume label     |
+| `FloppyDiskControllerTests`        | 10     | SPECIFY/RECALIBRATE/SEEK/READ/WRITE; MSR state machine      |
+| `FloppyWriteBackTests`             | 5      | IsDirty; MarkDirty; FlushToDisk round-trip                  |
+| `VirtualFloppyImageTests`          | 8      | Build from directory; FAT12 parseable; files readable       |
+| `VirtualIsoImageTests`             | 9      | ICdRomImage; PVD; directory records; file data sector reads |
+| `DosDriveManagerFloppyTests`       | 14     | Mount/add/swap images; TryGetGeometry; TryRead/TryWrite     |
+| `CdRomDriveDiscSwapTests`          | 8      | Single/multi-image; swap cycling; audio stop on swap        |
+| `MountBatchCommandTests`           | 8      | MOUNT/IMGMOUNT parsing; multi-image; extension detection    |
+| `MscdexDeviceDriverRequestTests`   | (existing) | IOCTL sub-commands; audio commands                      |
+| `CdAudioPlayerTests`               | (existing) | Play/stop/pause/resume state machine                    |
 
-Total new tests: **66+** across the branch; full suite ≥ 1838 tests, 0
-failures.
-
----
-
-## 13. Known limitations and pending work
-
-The following features were intentionally deferred to separate PRs due to
-scope. Each requires significant standalone work.
-
-### 13.1 Intel 8272A FDC (low-level floppy controller)
-
-DOSBox Staging emulates the full NEC µPD765 / Intel 8272A FDC at I/O ports
-0x3F0–0x3F7, with DMA channel 2 (8237 DMA controller), IRQ 6, and all
-FDC command byte sequences (read/write/format/seek/recalibrate/sense
-interrupt). This is approximately 2 000 lines and a separate subsystem.
-
-The current implementation provides INT 13h BIOS-level floppy access
-(which is sufficient for most DOS games); low-level direct-port FDC access
-is not yet emulated.
-
-### 13.2 Red Book CDDA audio
-
-Reading audio sectors from CUE/BIN images, mixing them through the
-`SoundChannel` feed loop, and supporting the MSCDEX `PlayAudio` IOCTL
-subcommand with correct sample-rate conversion requires ~1 000 lines and
-integration with the Bufdio audio layer. The architecture stubs
-(`CdAudioPlayer`, `CdAudioPlayback`, `PlayAudio` / `StopAudio` / `ResumeAudio`
-on `CdRomDrive`) are in place; the sample-streaming pipeline is pending.
-
-### 13.3 Folder-as-image disc switching
-
-Switching between multiple host-folder mounts (e.g. game disc 1 at
-`C:\game\disc1\` and disc 2 at `C:\game\disc2\`) requires a virtual
-ISO 9660 builder that constructs an in-memory image from a directory tree
-at mount time. This is non-trivial and deferred.
-
-### 13.4 FAT16/FAT32 floppy images
-
-`Fat12FileSystem` supports FAT12 only (the correct choice for all standard
-floppy sizes ≤ 2.88 MB). FAT16/FAT32 detection and parsing would be needed
-only for large removable media, which is rare in DOS-era software.
-
-### 13.5 Write-back to host file
-
-`FloppyDiskDrive` stores image data as an in-memory `byte[]`. Writes via
-INT 13h AH=0x03 update the in-memory bytes but do not flush back to the
-original `.img` file on disk. A flush/sync method would be needed for games
-that save to floppy and expect the change to persist across sessions.
+Full test suite: **1863 tests pass**, 1 skipped (pre-existing), 0 failures.
 
 ---
 
