@@ -546,14 +546,35 @@ IMGMOUNT <drive> <image1> [<image2> …] [-t floppy|iso|cue]
 
 ### Argument parsing
 
-Both commands use `SplitArgumentsWithQuotes`, a private static helper in
-`DosBatchExecutionEngine.CommandHandlers.cs`, which honours double-quoted
-tokens exactly like DOSBox Staging's shell tokeniser:
+Both commands use `BatchArgumentParser.SplitWithQuotes` (in
+`BatchArgumentParser.cs`), which honours double-quoted tokens exactly like
+DOSBox Staging's shell tokeniser:
 
 ```
 Input: A "C:\my games\disc 1.img" -t floppy
 Parts: ["A", "C:\\my games\\disc 1.img", "-t", "floppy"]
 ```
+
+### Path resolution
+
+Both commands use `HostPathResolver.Resolve` (in `HostPathResolver.cs`) to
+translate raw path tokens into absolute host paths.  Resolution priority
+matches DOSBox Staging:
+
+| Priority | Path form | Example | Resolution |
+|----------|-----------|---------|------------|
+| 1 | DOS drive letter mapping | `C:\games\disc.iso` | Look up `C:` in drive table; combine host dir + `games\disc.iso` |
+| 2 | Absolute host path | `/home/user/disc.iso` | `Path.GetFullPath` |
+| 3 | Relative path | `games\disc.iso` | Combine current DOS drive's `MountedHostDirectory` + `CurrentDosDirectory` + token |
+| 4 | Fallback | any | `Path.GetFullPath` against process CWD |
+
+This means after `MOUNT C /home/user/games`, switching to DOS drive C:, and
+then typing `IMGMOUNT D disc.iso -t iso`, the relative token `disc.iso` is
+resolved to `/home/user/games/disc.iso` via the DOS current-directory mapping.
+
+`Path.GetFullPath` failures (`ArgumentException`, `NotSupportedException`,
+`PathTooLongException`) are caught and reported as user-readable error
+messages.
 
 ---
 
@@ -618,11 +639,11 @@ The key ordering constraint: `SystemBiosInt13Handler` must be constructed
 | `VirtualIsoImageTests`             | 9      | ICdRomImage; PVD; directory records; file data sector reads |
 | `DosDriveManagerFloppyTests`       | 14     | Mount/add/swap images; TryGetGeometry; TryRead/TryWrite     |
 | `CdRomDriveDiscSwapTests`          | 8      | Single/multi-image; swap cycling; audio stop on swap        |
-| `MountBatchCommandTests`           | 12     | MOUNT/IMGMOUNT: absolute paths, relative paths, quoted paths with spaces, multi-image, extension detection |
+| `MountBatchCommandTests`           | 16     | MOUNT/IMGMOUNT: absolute, relative, and DOS-drive paths; quoted paths with spaces; multi-image; extension detection; path resolution via drive table and current DOS directory |
 | `MscdexDeviceDriverRequestTests`   | (existing) | IOCTL sub-commands; audio commands                      |
 | `CdAudioPlayerTests`               | (existing) | Play/stop/pause/resume state machine                    |
 
-Full test suite: **1867 tests pass**, 1 skipped (pre-existing), 0 failures.
+Full test suite: **1871 tests pass**, 1 skipped (pre-existing), 0 failures.
 
 ---
 

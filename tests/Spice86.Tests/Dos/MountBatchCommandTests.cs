@@ -222,11 +222,80 @@ public class MountBatchCommandTests : IDisposable {
         floppy!.HasImage.Should().BeTrue();
     }
 
-    // ---------- test-only helper that replicates the batch command logic ----------
+    [Fact]
+    public void TryHandleMount_WithDosDrivePath_MountsDrive() {
+        // Arrange — C: is already mounted to _tempDir; create a subdirectory inside it
+        string subFolder = Path.Combine(_tempDir, "dossubdir");
+        Directory.CreateDirectory(subFolder);
+
+        // Act — pass the path using the DOS C: drive letter
+        _accessor.TryHandleMount("A C:\\dossubdir");
+
+        // Assert — A: should be mounted to the host path under _tempDir
+        _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
+        _output.ToString().Should().NotContain("path not found");
+    }
+
+    [Fact]
+    public void TryHandleMount_RelativePathResolvesAgainstCurrentDosDirectory() {
+        // Arrange — C: is already mounted to _tempDir
+        // Simulate "CD games" by updating the current DOS directory on C:
+        string gamesFolder = Path.Combine(_tempDir, "games");
+        Directory.CreateDirectory(gamesFolder);
+        string musicFolder = Path.Combine(gamesFolder, "music");
+        Directory.CreateDirectory(musicFolder);
+        _driveManager['C'].CurrentDosDirectory = "games";
+
+        // Act — relative path "music" should resolve to _tempDir/games/music
+        _accessor.TryHandleMount("A music");
+
+        // Assert
+        _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
+        _output.ToString().Should().NotContain("path not found");
+    }
+
+    [Fact]
+    public void TryHandleImgMount_WithDosDrivePath_MountsImage() {
+        // Arrange — C: is already mounted to _tempDir; place a floppy image there
+        byte[] imageBytes = new Fat12ImageBuilder().Build();
+        string imagePath = Path.Combine(_tempDir, "dos_drive.img");
+        File.WriteAllBytes(imagePath, imageBytes);
+
+        // Act — pass the path using the DOS C: drive letter
+        _accessor.TryHandleImgMount("A C:\\dos_drive.img -t floppy", _mscdex);
+
+        // Assert
+        bool mounted = _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
+        mounted.Should().BeTrue();
+        floppy!.HasImage.Should().BeTrue();
+        _output.ToString().Should().NotContain("not found");
+    }
+
+    [Fact]
+    public void TryHandleImgMount_RelativePathResolvesAgainstCurrentDosDirectory() {
+        // Arrange — C: mounted to _tempDir; simulate "CD discs"
+        string discsFolder = Path.Combine(_tempDir, "discs");
+        Directory.CreateDirectory(discsFolder);
+        byte[] imageBytes = new Fat12ImageBuilder().Build();
+        string imagePath = Path.Combine(discsFolder, "game.img");
+        File.WriteAllBytes(imagePath, imageBytes);
+        _driveManager['C'].CurrentDosDirectory = "discs";
+
+        // Act — relative path "game.img" should resolve to _tempDir/discs/game.img
+        _accessor.TryHandleImgMount("A game.img -t floppy", _mscdex);
+
+        // Assert
+        bool mounted = _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
+        mounted.Should().BeTrue();
+        floppy!.HasImage.Should().BeTrue();
+    }
+
+    // ---------- test-only helper that drives the batch command logic ----------
 
     /// <summary>
-    /// Test helper that replicates the <c>TryHandleMount</c> and <c>TryHandleImgMount</c>
-    /// batch command logic without requiring a full machine context.
+    /// Test helper that exercises the MOUNT / IMGMOUNT path-resolution logic using
+    /// <see cref="BatchArgumentParser"/> and <see cref="HostPathResolver"/> from production code,
+    /// without requiring a full machine context.
     /// </summary>
     private sealed class DosBatchExecutionEngineAccessor {
         private readonly DosDriveManager _driveManager;
@@ -244,14 +313,26 @@ public class MountBatchCommandTests : IDisposable {
                 return;
             }
 
-            string[] parts = SplitArgumentsWithQuotes(trimmed);
+            string[] parts = BatchArgumentParser.SplitWithQuotes(trimmed);
             if (parts.Length < 2) {
                 _output.Append("MOUNT: missing path argument\r\n");
                 return;
             }
 
             char driveLetter = char.ToUpperInvariant(parts[0][0]);
-            string hostPath = Path.GetFullPath(parts[1]);
+            string hostPath;
+            try {
+                hostPath = HostPathResolver.Resolve(parts[1], _driveManager);
+            } catch (ArgumentException ex) {
+                _output.Append($"MOUNT: invalid path '{parts[1]}': {ex.Message}\r\n");
+                return;
+            } catch (NotSupportedException ex) {
+                _output.Append($"MOUNT: invalid path format '{parts[1]}': {ex.Message}\r\n");
+                return;
+            } catch (PathTooLongException ex) {
+                _output.Append($"MOUNT: path too long '{parts[1]}': {ex.Message}\r\n");
+                return;
+            }
 
             string driveType = "hdd";
             for (int i = 2; i < parts.Length - 1; i++) {
@@ -282,7 +363,7 @@ public class MountBatchCommandTests : IDisposable {
                 return;
             }
 
-            string[] parts = SplitArgumentsWithQuotes(trimmed);
+            string[] parts = BatchArgumentParser.SplitWithQuotes(trimmed);
             if (parts.Length < 2) {
                 _output.Append("IMGMOUNT: missing image path\r\n");
                 return;
@@ -299,7 +380,20 @@ public class MountBatchCommandTests : IDisposable {
                     }
                     break;
                 }
-                imagePaths.Add(Path.GetFullPath(parts[i]));
+                string resolved;
+                try {
+                    resolved = HostPathResolver.Resolve(parts[i], _driveManager);
+                } catch (ArgumentException ex) {
+                    _output.Append($"IMGMOUNT: invalid path '{parts[i]}': {ex.Message}\r\n");
+                    return;
+                } catch (NotSupportedException ex) {
+                    _output.Append($"IMGMOUNT: invalid path format '{parts[i]}': {ex.Message}\r\n");
+                    return;
+                } catch (PathTooLongException ex) {
+                    _output.Append($"IMGMOUNT: path too long '{parts[i]}': {ex.Message}\r\n");
+                    return;
+                }
+                imagePaths.Add(resolved);
             }
 
             if (imagePaths.Count == 0) {
@@ -335,28 +429,6 @@ public class MountBatchCommandTests : IDisposable {
             } else {
                 _output.Append($"IMGMOUNT: unsupported image type '{imageType}'\r\n");
             }
-        }
-
-        private static string[] SplitArgumentsWithQuotes(string input) {
-            List<string> parts = new();
-            bool inQuotes = false;
-            System.Text.StringBuilder current = new();
-            foreach (char c in input) {
-                if (c == '"') {
-                    inQuotes = !inQuotes;
-                } else if ((c == ' ' || c == '\t') && !inQuotes) {
-                    if (current.Length > 0) {
-                        parts.Add(current.ToString());
-                        current.Clear();
-                    }
-                } else {
-                    current.Append(c);
-                }
-            }
-            if (current.Length > 0) {
-                parts.Add(current.ToString());
-            }
-            return parts.ToArray();
         }
     }
 }
