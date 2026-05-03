@@ -15,7 +15,7 @@ using System.Diagnostics.CodeAnalysis;
 public class DosDriveManager : IDictionary<char, VirtualDrive> {
     private readonly SortedDictionary<char, VirtualDrive> _driveMap = new();
     private readonly Dictionary<char, MemoryDrive> _memoryDriveMap = new();
-    private readonly ILoggerService _loggerService;
+    private readonly DosMediaIdTable _mediaIdTable;
 
     /// <summary>
     /// Initializes a new instance.
@@ -23,17 +23,19 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
     /// <param name="loggerService">The service used to log messages.</param>
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
-    public DosDriveManager(ILoggerService loggerService, string? cDriveFolderPath, string? executablePath) {
+    /// <param name="mediaIdTable">The DOS private-segment media ID table owned by this manager.</param>
+    public DosDriveManager(ILoggerService loggerService, string? cDriveFolderPath, string? executablePath, DosMediaIdTable mediaIdTable) {
+        _mediaIdTable = mediaIdTable;
         if (string.IsNullOrWhiteSpace(cDriveFolderPath)) {
             cDriveFolderPath = DosPathResolver.GetExeParentFolder(executablePath);
         }
-        _loggerService = loggerService;
         cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
         _driveMap.Add('A', new() { DriveLetter = 'A', CurrentDosDirectory = "", MountedHostDirectory = "" });
         _driveMap.Add('B', new() { DriveLetter = 'B', CurrentDosDirectory = "", MountedHostDirectory = "" });
         var cDrive = new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath, CurrentDosDirectory = "" };
         _driveMap.Add('C', cDrive);
         CurrentDrive = cDrive;
+        InitializeMediaDescriptors();
         if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             loggerService.Verbose("DOS Drives initialized: {@Drives}", _driveMap.Values);
         }
@@ -86,6 +88,9 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
         return true;
     }
 
+    /// <suummary>
+    /// Gets the number of DOS drive letters assigned.
+    /// </summary>
     public byte NumberOfPotentiallyValidDriveLetters {
         get {
             // At least A: and B:
@@ -105,6 +110,29 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
 
 
     public const int MaxDriveCount = 26;
+
+    private const byte FloppyMediaDescriptor = 0xF0;
+    private const byte FixedDiskMediaDescriptor = 0xF8;
+
+    /// <summary>Writes the FAT media descriptor byte for every drive into the media ID table.</summary>
+    private void InitializeMediaDescriptors() {
+        for (byte driveIndex = 0; driveIndex < MaxDriveCount; driveIndex++) {
+            _mediaIdTable[driveIndex] = MediaDescriptor(driveIndex);
+        }
+    }
+
+    /// <summary>The segment of the media ID table, used as DS in AH=1Bh/1Ch returns.</summary>
+    public ushort MediaIdTableSegment => _mediaIdTable.Segment;
+
+    /// <summary>In-segment offset of the given drive's entry, used as BX in AH=1Bh/1Ch returns.</summary>
+    public ushort MediaIdEntryOffset(byte driveIndex) => _mediaIdTable.EntryOffset(driveIndex);
+
+    private byte MediaDescriptor(byte driveIndex) {
+        if (driveIndex <= 1) {
+            return FloppyMediaDescriptor;
+        }
+        return FixedDiskMediaDescriptor;
+    }
 
     public void Add(char key, VirtualDrive value) {
         ((IDictionary<char, VirtualDrive>)_driveMap).Add(key, value);

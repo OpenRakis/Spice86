@@ -126,7 +126,7 @@ public class DriveAbstractionTests {
         // Arrange
         ILoggerService logger = Substitute.For<ILoggerService>();
         string tempCDir = System.IO.Path.GetTempPath();
-        DosDriveManager manager = new DosDriveManager(logger, tempCDir, null);
+        DosDriveManager manager = DosTestHelpers.CreateDriveManager(logger, tempCDir);
 
         MemoryDrive zDrive = new MemoryDrive {
             DriveLetter = 'Z',

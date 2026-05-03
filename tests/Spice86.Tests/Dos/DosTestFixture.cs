@@ -1,5 +1,7 @@
 namespace Spice86.Tests.Dos;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 
@@ -15,6 +17,8 @@ public class DosTestFixture : IDisposable {
     public DosFcbManager DosFcbManager => _spice86.Machine.Dos.FcbManager;
     public Dos Dos => _spice86.Machine.Dos;
     public IMemory Memory => _spice86.Machine.Memory;
+    public State CpuState => _spice86.Machine.CpuState;
+    public DosInt21Handler DosInt21Handler => _spice86.Machine.Dos.DosInt21Handler;
 
     public DosTestFixture(string mountPoint) {
         _tempExeDir = Path.Join(Path.GetTempPath(), $"DosTestFixture_{Guid.NewGuid():N}");

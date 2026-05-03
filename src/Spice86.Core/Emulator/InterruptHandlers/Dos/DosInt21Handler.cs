@@ -46,6 +46,9 @@ public class DosInt21Handler : InterruptHandler {
 
     private const ushort OffsetMask = 0x0F;
     private const byte ExpectedValueOfALInCreateChildPsp = 0xF0;
+    private const ushort DefaultBytesPerSector = 0x200;
+    private const byte DefaultSectorsPerCluster = 0x20;
+    private const ushort DefaultTotalClusters = 0x7FFD;
 
     /// <summary>
     /// Initializes a new instance.
@@ -621,35 +624,74 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Returns the bytes per sector (in CX), sectors per cluster (in AX), total clusters (in DX), media id (in DS), <br/>
-    /// and drive parameter block address for the default drive (in BX). <br/>
-    /// Sets the AH register to 0.
+    /// INT 21h, AH=1Ch - Get allocation info for a specific drive.
+    /// Returns AL=0xFF if the drive is invalid or not mounted as a block drive.
     /// </summary>
-    /// <remarks>
-    /// TODO: Implement it for real. This is just a stub that returns the same information<br/>
-    /// as <see cref="GetAllocationInfoForDefaultDrive"/> as we can only mount C: !
-    /// </remarks>
     public void GetAllocationInfoForAnyDrive() {
-        GetAllocationInfoForDefaultDrive();
+        if (!TryGetAllocationInfoDrive(State.DL, out byte driveIndex, out _)) {
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("INT 21h AH=1Ch invalid/unmounted drive request DL={DriveRequest:X2}", State.DL);
+            }
+            State.AL = 0xFF;
+            return;
+        }
+        SetAllocationInfoRegisters(driveIndex);
     }
 
     /// <summary>
-    /// Returns the bytes per sector (in CX), sectors per cluster (in AX), total clusters (in DX), media id (in DS),<br/>
-    /// and drive parameter block address for the default drive (in BX). <br/>
-    /// Sets the AH register to 0. <br/>
-    /// Notes: always returns the same values.
+    /// INT 21h, AH=1Bh - Get allocation info for the default drive.
+    /// Returns AL=0xFF if the current default drive is invalid for FAT allocation queries.
     /// </summary>
     public void GetAllocationInfoForDefaultDrive() {
-        // Bytes per sector
-        State.CX = 0x200;
-        // Sectors per cluster
-        State.AX = 1;
-        // Total clusters
-        State.DX = 0xEA0;
-        // Media Id
-        State.DS = 0x8010;
-        State.BX = (ushort)(0x8010 + _dosDriveManager.CurrentDriveIndex * 9);
+        if (!TryGetAllocationInfoDrive(0, out byte driveIndex, out _)) {
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("INT 21h AH=1Bh default drive invalid/unmounted (CurrentDriveIndex={DriveIndex})",
+                    _dosDriveManager.CurrentDriveIndex);
+            }
+            State.AL = 0xFF;
+            return;
+        }
+        SetAllocationInfoRegisters(driveIndex);
+    }
+
+    private bool TryGetAllocationInfoDrive(byte driveRequest, out byte driveIndex, out string mountedHostDirectory) {
+        mountedHostDirectory = string.Empty;
+        if (driveRequest == 0) {
+            driveIndex = _dosDriveManager.CurrentDriveIndex;
+        } else {
+            driveIndex = (byte)(driveRequest - 1);
+        }
+
+        if (driveIndex >= DosDriveManager.MaxDriveCount) {
+            return false;
+        }
+
+        char driveLetter = (char)('A' + driveIndex);
+        if (!_dosDriveManager.TryGetValue(driveLetter, out VirtualDrive? resolvedDrive) || resolvedDrive == null) {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(resolvedDrive.MountedHostDirectory)) {
+            return false;
+        }
+
+        mountedHostDirectory = resolvedDrive.MountedHostDirectory;
+        return true;
+    }
+
+    private void SetAllocationInfoRegisters(byte driveIndex) {
+        State.CX = DefaultBytesPerSector;
+        State.AL = DefaultSectorsPerCluster;
         State.AH = 0;
+        State.DX = DefaultTotalClusters;
+        State.DS = _dosDriveManager.MediaIdTableSegment;
+        State.BX = _dosDriveManager.MediaIdEntryOffset(driveIndex);
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose(
+                "INT 21h AH=1Bh/1Ch allocation info drive={DriveLetter}: AL(spc)={SectorsPerCluster:X2} CX(bps)={BytesPerSector:X4} DX(totalClusters)={TotalClusters:X4} DS:BX={Segment:X4}:{Offset:X4}",
+                (char)('A' + driveIndex), State.AL, State.CX, State.DX, State.DS, State.BX);
+        }
     }
 
     /// <summary>

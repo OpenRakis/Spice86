@@ -356,7 +356,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         ExtendedMemoryManager? xms = null;
 
-        DosTables dosTables = new();
+        DosTables dosTables = new(memory);
 
         SharedMouseData sharedMouseData = new();
 
