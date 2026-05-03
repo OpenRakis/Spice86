@@ -16,9 +16,12 @@ using Spice86.Shared.Emulator.Memory;
 /// produce high-level <see cref="DecodedCall"/> values for what the program is doing.
 /// </summary>
 /// <remarks>
-/// This service is purely read-only: every method takes a snapshot of CPU/memory state and
-/// returns a decoded view. It never mutates emulator state. It is therefore safe to call from
-/// the UI thread while the emulator is paused.
+/// This service is purely read-only: every method reads the current live CPU and memory
+/// state at call time (no snapshot or clone is taken) and returns a decoded view. It never
+/// mutates emulator state. Because it observes live state directly, callers must ensure the
+/// emulator is paused (or otherwise quiesced) for the duration of the call so that registers
+/// and memory cannot change underneath the decoders. In practice, the debugger UI invokes
+/// this service from the UI thread only while the emulator is paused.
 /// </remarks>
 public sealed class DebuggerDecoderService {
     /// <summary>
@@ -43,7 +46,7 @@ public sealed class DebuggerDecoderService {
     /// <param name="ioPortDecoders">Registry of I/O port decoders.</param>
     /// <param name="asmRoutineDecoders">Registry of ASM routine decoders.</param>
     /// <param name="functionCatalogue">Catalogue of all known functions, used to identify emulator-installed routines by name prefix.</param>
-    /// <param name="state">Current CPU state (snapshotted on each call).</param>
+    /// <param name="state">Live CPU state, read at call time on each decode.</param>
     /// <param name="memory">Emulated memory bus.</param>
     /// <param name="ioPortDispatcher">I/O port dispatcher (used to read last port access).</param>
     public DebuggerDecoderService(
