@@ -8,15 +8,18 @@ using System.Collections.Generic;
 /// x86 / 386 instructions, keyed by canonical mnemonic name (case-insensitive).
 /// </summary>
 /// <remarks>
-/// Coverage is intentionally focused on the instructions that appear most often in
-/// real-mode DOS programs (data movement, arithmetic, logic, control flow, string
-/// ops, stack, flags, segment loads, system / I/O). The full 386 ISA can be added
-/// incrementally; lookups for unknown mnemonics return <c>false</c> from
-/// <see cref="TryGet"/> so callers can degrade gracefully.
+/// Coverage now spans the full 386 integer ISA plus the 80186/80286 additions and the
+/// 80387 FPU instructions that real-mode DOS programs rely on (data movement, arithmetic,
+/// logic, control flow, string ops, stack, flags, segment loads, BCD adjust, array
+/// bounds, the 286/386 protected-mode system instructions - LGDT/SGDT/LIDT/SIDT/LMSW/
+/// SMSW/LLDT/SLDT/LTR/STR/ARPL/CLTS/LAR/LSL/VERR/VERW - and the 387 FPU's load/store/
+/// arithmetic/transcendental/control instructions). 486+/Pentium-only mnemonics
+/// (CPUID, RDTSC, CMPXCHG, ...) are intentionally out of scope; lookups for unknown
+/// mnemonics return <c>false</c> from <see cref="TryGet"/> so callers degrade gracefully.
 ///
 /// Mnemonic names follow the Intel/MASM convention without a leading dot. Multiple
-/// aliases (e.g. JE/JZ, JA/JNBE) are registered for the same instruction so callers
-/// can pass whichever form their disassembler emits.
+/// aliases (e.g. JE/JZ, JA/JNBE, FCLEX/FNCLEX) are registered for the same instruction
+/// so callers can pass whichever form their disassembler emits.
 /// </remarks>
 public static class Instruction386KnowledgeBase {
     private static readonly IReadOnlyDictionary<string, InstructionInfo> Entries = Build();
@@ -532,6 +535,428 @@ public static class Instruction386KnowledgeBase {
             "Reads DS:[(E)BX + AL]; writes AL. Flags unaffected.",
             "Single-instruction byte lookup table - used for character translation, code-page conversion, encoding tables.",
             "XLAT", "XLATB");
+
+        // ---------- BCD / decimal adjust (8086) ----------
+        Add(map, "ASCII Adjust After Addition",
+            "Adjusts AL after an unpacked-BCD addition: if the low nibble > 9 or AF=1, adds 6, propagates a carry into AH and sets AF/CF.",
+            "Reads/writes AL, AH, AF, CF. OF/SF/ZF/PF undefined.",
+            "Implement unpacked-BCD addition (one decimal digit per byte) - used by old COBOL/BASIC arithmetic on the 8086.",
+            "AAA");
+        Add(map, "ASCII Adjust After Subtraction",
+            "Adjusts AL after an unpacked-BCD subtraction: if the low nibble > 9 or AF=1, subtracts 6 and propagates a borrow into AH.",
+            "Reads/writes AL, AH, AF, CF. OF/SF/ZF/PF undefined.",
+            "Implement unpacked-BCD subtraction.",
+            "AAS");
+        Add(map, "ASCII Adjust After Multiplication",
+            "After MUL of two unpacked-BCD digits, divides AL by an immediate base (default 10): AH = AL / base, AL = AL % base.",
+            "Reads AL and the immediate base; writes AL, AH, SF, ZF, PF. AF/CF/OF undefined.",
+            "Convert a binary product into two unpacked-BCD digits - typical after MUL of two single-digit values.",
+            "AAM");
+        Add(map, "ASCII Adjust Before Division",
+            "Combines AH:AL into a single binary value for an upcoming DIV: AL = AH*base + AL, AH = 0 (default base 10).",
+            "Reads AH/AL and the immediate base; writes AL, AH, SF, ZF, PF. AF/CF/OF undefined.",
+            "Pre-process a two-digit unpacked-BCD value (one digit per byte) so DIV can produce a digit and a remainder.",
+            "AAD");
+        Add(map, "Decimal Adjust After Addition",
+            "Adjusts AL after a packed-BCD addition: corrects each nibble that overflowed past 9, updating AF and CF.",
+            "Reads/writes AL, AF, CF, SF, ZF, PF. OF undefined.",
+            "Implement packed-BCD addition (two decimal digits per byte) - widely used by mainframe-era code.",
+            "DAA");
+        Add(map, "Decimal Adjust After Subtraction",
+            "Adjusts AL after a packed-BCD subtraction by undoing nibble underflows, updating AF and CF.",
+            "Reads/writes AL, AF, CF, SF, ZF, PF. OF undefined.",
+            "Implement packed-BCD subtraction.",
+            "DAS");
+
+        // ---------- 80186 array bounds ----------
+        Add(map, "Check Array Index Against Bounds",
+            "Compares the signed register operand against a [lower, upper] pair in memory; raises INT 5 if out of range.",
+            "Reads register and the bounds pair from memory; on failure pushes flags/CS/IP and dispatches INT 5.",
+            "Cheap range check - emitted by Pascal/Modula range-check code and 80186-targeted compilers.",
+            "BOUND");
+
+        // ---------- 80286 / 80386 protected-mode system ----------
+        Add(map, "Adjust Requested Privilege Level",
+            "Forces the RPL field of the destination selector to be at least as large as the RPL of the source selector; sets ZF if the destination changed.",
+            "Reads source and destination selector RPL fields; writes destination RPL and ZF.",
+            "OS kernel sanitizing a user-supplied selector before using it on the user's behalf, so a low-privilege caller cannot spoof a high-privilege selector.",
+            "ARPL");
+        Add(map, "Clear Task-Switched Flag",
+            "Clears CR0.TS so subsequent x87/SSE instructions do not raise #NM.",
+            "Reads/writes CR0 (TS bit). CPL=0 instruction.",
+            "Run inside an FPU context-switch handler (#NM) once the kernel has restored or determined it does not need to restore the FPU state.",
+            "CLTS");
+        Add(map, "Load Access Rights Byte",
+            "Loads the access-rights field of the descriptor referenced by the source selector into the destination register, masked appropriately; sets ZF on success.",
+            "Reads GDT/LDT through the source selector; writes destination register and ZF. CPL- and DPL-checked.",
+            "OS code or a debugger validating a selector and inspecting its descriptor's type/DPL/granularity bits.",
+            "LAR");
+        Add(map, "Load Segment Limit",
+            "Loads the (scaled) segment limit of the descriptor referenced by the source selector into the destination register; sets ZF on success.",
+            "Reads GDT/LDT through the source selector; writes destination register and ZF. CPL- and DPL-checked.",
+            "Bounds-check a pointer against the actual segment limit at runtime without trusting the selector's RPL alone.",
+            "LSL");
+        Add(map, "Verify Segment for Reading",
+            "Sets ZF=1 if the segment referenced by the source selector is readable from the current CPL, else ZF=0.",
+            "Reads GDT/LDT and CPL; writes ZF.",
+            "OS / loader validates a user-supplied selector before issuing a read through it.",
+            "VERR");
+        Add(map, "Verify Segment for Writing",
+            "Sets ZF=1 if the segment referenced by the source selector is writable from the current CPL, else ZF=0.",
+            "Reads GDT/LDT and CPL; writes ZF.",
+            "OS / loader validates a user-supplied selector before issuing a write through it.",
+            "VERW");
+        Add(map, "Load Global Descriptor Table Register",
+            "Loads the 6-byte GDT pseudo-descriptor (limit + base) from memory into GDTR.",
+            "Reads memory; writes GDTR. CPL=0 instruction.",
+            "Set up the GDT during boot or a kernel mode switch (real <-> protected).",
+            "LGDT");
+        Add(map, "Store Global Descriptor Table Register",
+            "Stores the contents of GDTR into a 6-byte memory operand.",
+            "Reads GDTR; writes memory.",
+            "Snapshot the GDTR for later restore (rarely needed - mostly a hypervisor / debugger probe).",
+            "SGDT");
+        Add(map, "Load Interrupt Descriptor Table Register",
+            "Loads the 6-byte IDT pseudo-descriptor (limit + base) from memory into IDTR.",
+            "Reads memory; writes IDTR. CPL=0 instruction.",
+            "Install or replace the protected-mode IDT (e.g. when entering protected mode from a DOS-extender).",
+            "LIDT");
+        Add(map, "Store Interrupt Descriptor Table Register",
+            "Stores the contents of IDTR into a 6-byte memory operand.",
+            "Reads IDTR; writes memory.",
+            "Snapshot the IDTR for later restore - or for hypervisor/debugger detection (Red Pill technique).",
+            "SIDT");
+        Add(map, "Load Local Descriptor Table Register",
+            "Loads LDTR with the selector for the current task's LDT (or the null selector to disable the LDT).",
+            "Reads source selector and the GDT entry it points to; writes LDTR. CPL=0 instruction.",
+            "Switch the per-task LDT during a task switch in segmented protected-mode kernels.",
+            "LLDT");
+        Add(map, "Store Local Descriptor Table Register",
+            "Stores the LDTR selector value into the destination operand.",
+            "Reads LDTR; writes destination.",
+            "Save the current LDT selector before switching it (kernel task switch / debugger).",
+            "SLDT");
+        Add(map, "Load Task Register",
+            "Loads TR with the selector of a TSS descriptor and marks that descriptor busy.",
+            "Reads source selector and the TSS descriptor in the GDT; writes TR and the descriptor's busy bit. CPL=0 instruction.",
+            "Establish the current task's TSS - required before the CPU can do hardware task switches or use the IO permission bitmap.",
+            "LTR");
+        Add(map, "Store Task Register",
+            "Stores the TR selector value into the destination operand.",
+            "Reads TR; writes destination.",
+            "Save the current TSS selector (kernel task switch / debugger probe).",
+            "STR");
+        Add(map, "Load Machine Status Word",
+            "Loads the lower 16 bits of CR0 (PE, MP, EM, TS, ET) from a register or memory.",
+            "Reads source; writes CR0[15:0]. CPL=0 instruction.",
+            "Legacy 286 way to enter protected mode (set PE=1) without touching the high bits of CR0; preserved for backward compatibility on the 386.",
+            "LMSW");
+        Add(map, "Store Machine Status Word",
+            "Stores the lower 16 bits of CR0 into the destination operand.",
+            "Reads CR0[15:0]; writes destination.",
+            "Read PE/MP/EM/TS without needing CPL=0 (SMSW is unprivileged) - older code uses this to detect protected mode.",
+            "SMSW");
+
+        // ---------- 80387 FPU - data transfer ----------
+        Add(map, "Load Floating-Point Value",
+            "Pushes the source (memory float / register ST(i)) onto the x87 stack as ST(0).",
+            "Reads source; writes ST(0); decrements TOP. May set C1.",
+            "Bring an operand onto the FPU stack before any arithmetic - the FPU is stack-based, so almost every FP routine starts with FLD.",
+            "FLD");
+        Add(map, "Store Floating-Point Value",
+            "Stores ST(0) to the destination (memory float or ST(i)) without popping the stack.",
+            "Reads ST(0); writes destination.",
+            "Save an intermediate FP result while keeping it available on the FPU stack for further use.",
+            "FST");
+        Add(map, "Store Floating-Point and Pop",
+            "Stores ST(0) to the destination, then pops the FPU stack.",
+            "Reads ST(0); writes destination; increments TOP.",
+            "Final write of an FP result back to memory - the typical end of an FP expression.",
+            "FSTP");
+        Add(map, "Load Integer",
+            "Converts a signed integer in memory to extended-precision float and pushes it onto the FPU stack.",
+            "Reads memory; writes ST(0); decrements TOP.",
+            "Bring an integer (16/32/64-bit) onto the FPU stack to mix with floating-point math (e.g. C 'double f(int x)').",
+            "FILD");
+        Add(map, "Store Integer",
+            "Rounds ST(0) to an integer (per current rounding mode) and stores it to memory; ST(0) is preserved.",
+            "Reads ST(0); writes memory.",
+            "Convert a floating-point intermediate to integer without consuming the value on the FPU stack.",
+            "FIST");
+        Add(map, "Store Integer and Pop",
+            "Rounds ST(0) to an integer and stores it to memory; pops the FPU stack.",
+            "Reads ST(0); writes memory; increments TOP.",
+            "Final FP-to-int conversion at the end of an expression - typical for C '(int)x'.",
+            "FISTP");
+        Add(map, "Load BCD",
+            "Loads a 10-byte packed-BCD integer from memory and pushes it onto the FPU stack.",
+            "Reads memory; writes ST(0); decrements TOP.",
+            "Read a packed-BCD constant (e.g. for old database/financial code) into the FPU.",
+            "FBLD");
+        Add(map, "Store BCD and Pop",
+            "Stores ST(0) to memory as a 10-byte packed-BCD integer; pops the FPU stack.",
+            "Reads ST(0); writes memory; increments TOP.",
+            "Output a BCD-formatted result for legacy printing or financial code.",
+            "FBSTP");
+        Add(map, "Exchange Floating-Point Registers",
+            "Exchanges ST(0) with ST(i) (default ST(1)).",
+            "Reads/writes ST(0) and ST(i).",
+            "Reorder operands on the FPU stack so the next instruction operates on the right value (the stack-based FPU forces lots of FXCH).",
+            "FXCH");
+        Add(map, "Free Floating-Point Register",
+            "Marks ST(i) as empty in the FPU tag word without changing TOP.",
+            "Writes the tag-word entry for ST(i).",
+            "Discard a stack slot the compiler knows is dead, avoiding a stack-overflow exception on the next push.",
+            "FFREE");
+        Add(map, "Decrement Stack-Top Pointer",
+            "Decrements TOP without reading or writing any data.",
+            "Writes TOP and C1.",
+            "Manipulate the FPU stack pointer manually - rare, used by some hand-written FP libraries.",
+            "FDECSTP");
+        Add(map, "Increment Stack-Top Pointer",
+            "Increments TOP without freeing the popped slot.",
+            "Writes TOP and C1.",
+            "Manipulate the FPU stack pointer manually - rare, used by some hand-written FP libraries.",
+            "FINCSTP");
+
+        // ---------- 80387 FPU - constants ----------
+        Add(map, "Load +0.0", "Pushes +0.0 onto the FPU stack.", "Writes ST(0); decrements TOP.",
+            "Initialize an FP accumulator without a memory load.", "FLDZ");
+        Add(map, "Load +1.0", "Pushes +1.0 onto the FPU stack.", "Writes ST(0); decrements TOP.",
+            "Initialize an FP product accumulator or supply 1.0 for transcendental sequences.", "FLD1");
+        Add(map, "Load Pi", "Pushes the constant pi onto the FPU stack.", "Writes ST(0); decrements TOP.",
+            "Built-in pi for trig argument reduction or angle conversion.", "FLDPI");
+        Add(map, "Load log2(e)", "Pushes log2(e) onto the FPU stack.", "Writes ST(0); decrements TOP.",
+            "Helper constant for computing exp(x) via 2^(x*log2(e)) with F2XM1.", "FLDL2E");
+        Add(map, "Load log2(10)", "Pushes log2(10) onto the FPU stack.", "Writes ST(0); decrements TOP.",
+            "Helper constant for computing 10^x via 2^(x*log2(10)).", "FLDL2T");
+        Add(map, "Load ln(2)", "Pushes ln(2) onto the FPU stack.", "Writes ST(0); decrements TOP.",
+            "Helper constant for natural-logarithm scaling alongside FYL2X.", "FLDLN2");
+        Add(map, "Load log10(2)", "Pushes log10(2) onto the FPU stack.", "Writes ST(0); decrements TOP.",
+            "Helper constant for base-10 logarithm scaling alongside FYL2X.", "FLDLG2");
+
+        // ---------- 80387 FPU - arithmetic ----------
+        Add(map, "Floating-Point Add",
+            "Adds the source to the destination FPU register (default ST(0) += source).",
+            "Reads two FPU values; writes the destination FPU register.",
+            "Floating-point addition - the basic FP arithmetic primitive.",
+            "FADD", "FIADD");
+        Add(map, "Floating-Point Add and Pop",
+            "Adds ST(0) to ST(i), stores the result in ST(i), then pops the stack.",
+            "Reads ST(0) and ST(i); writes ST(i); increments TOP.",
+            "End an FP add expression by collapsing two stack slots into one.",
+            "FADDP");
+        Add(map, "Floating-Point Subtract",
+            "Subtracts the source from the destination FPU register.",
+            "Reads two FPU values; writes destination.",
+            "Floating-point subtraction.",
+            "FSUB", "FISUB");
+        Add(map, "Floating-Point Reverse Subtract",
+            "Subtracts the destination from the source: dest = source - dest.",
+            "Reads two FPU values; writes destination.",
+            "Compute (memory - ST(0)) without an extra FXCH - emitted often by C compilers.",
+            "FSUBR", "FISUBR");
+        Add(map, "Floating-Point Subtract and Pop",
+            "Computes ST(i) - ST(0), stores into ST(i), pops the stack.",
+            "Reads ST(0)/ST(i); writes ST(i); increments TOP.",
+            "End an FP subtract expression.",
+            "FSUBP");
+        Add(map, "Floating-Point Reverse Subtract and Pop",
+            "Computes ST(0) - ST(i), stores into ST(i), pops the stack.",
+            "Reads ST(0)/ST(i); writes ST(i); increments TOP.",
+            "End a reversed FP subtract expression.",
+            "FSUBRP");
+        Add(map, "Floating-Point Multiply",
+            "Multiplies the destination FPU register by the source.",
+            "Reads two FPU values; writes destination.",
+            "Floating-point multiplication.",
+            "FMUL", "FIMUL");
+        Add(map, "Floating-Point Multiply and Pop",
+            "Multiplies ST(i) by ST(0), stores into ST(i), pops the stack.",
+            "Reads ST(0)/ST(i); writes ST(i); increments TOP.",
+            "End an FP multiply expression.",
+            "FMULP");
+        Add(map, "Floating-Point Divide",
+            "Divides the destination FPU register by the source.",
+            "Reads two FPU values; writes destination. May raise #Z on divide-by-zero.",
+            "Floating-point division.",
+            "FDIV", "FIDIV");
+        Add(map, "Floating-Point Reverse Divide",
+            "Computes source / destination and stores it in destination.",
+            "Reads two FPU values; writes destination. May raise #Z.",
+            "Compute (memory / ST(0)) without an extra FXCH.",
+            "FDIVR", "FIDIVR");
+        Add(map, "Floating-Point Divide and Pop",
+            "Divides ST(i) by ST(0), stores into ST(i), pops the stack.",
+            "Reads ST(0)/ST(i); writes ST(i); increments TOP.",
+            "End an FP divide expression.",
+            "FDIVP");
+        Add(map, "Floating-Point Reverse Divide and Pop",
+            "Computes ST(0) / ST(i), stores into ST(i), pops the stack.",
+            "Reads ST(0)/ST(i); writes ST(i); increments TOP.",
+            "End a reversed FP divide expression.",
+            "FDIVRP");
+        Add(map, "Floating-Point Change Sign",
+            "Negates ST(0) by flipping its sign bit.",
+            "Writes ST(0) sign and C1.",
+            "Implement unary minus on a floating-point value.",
+            "FCHS");
+        Add(map, "Floating-Point Absolute Value",
+            "Clears the sign bit of ST(0).",
+            "Writes ST(0) sign and C1.",
+            "Implement fabs() in one instruction.",
+            "FABS");
+        Add(map, "Floating-Point Square Root",
+            "Replaces ST(0) with sqrt(ST(0)).",
+            "Reads/writes ST(0); may raise invalid-operation for negative input.",
+            "Hardware sqrt - faster and more accurate than a software approximation.",
+            "FSQRT");
+        Add(map, "Floating-Point Round to Integer",
+            "Rounds ST(0) to an integer value (still in FP format) according to the current rounding mode.",
+            "Reads/writes ST(0); reads RC field of control word.",
+            "Implement floor/ceil/trunc/round depending on the rounding mode setup.",
+            "FRNDINT");
+        Add(map, "Floating-Point Scale",
+            "Multiplies ST(0) by 2^trunc(ST(1)) (binary scale).",
+            "Reads ST(0)/ST(1); writes ST(0).",
+            "Adjust the exponent of an FP value by an integer power of two - used inside transcendental implementations.",
+            "FSCALE");
+        Add(map, "Floating-Point Extract Exponent and Significand",
+            "Splits ST(0) into its (unbiased) exponent in ST(1) and significand in ST(0).",
+            "Reads ST(0); writes ST(0)/ST(1); decrements TOP.",
+            "Implementation block for log/exp/frexp library routines.",
+            "FXTRACT");
+        Add(map, "Floating-Point Partial Remainder (8087)",
+            "Computes the IEEE-style partial remainder ST(0) mod ST(1) - may need to be repeated until C2=0.",
+            "Reads ST(0)/ST(1); writes ST(0), C0/C1/C2/C3.",
+            "Argument reduction (mod 2*pi) inside trig - used for the older 8087-style remainder.",
+            "FPREM");
+        Add(map, "Floating-Point Partial Remainder (IEEE)",
+            "IEEE-754 conforming partial remainder of ST(0) and ST(1).",
+            "Reads ST(0)/ST(1); writes ST(0), C0/C1/C2/C3.",
+            "IEEE-conforming argument reduction - preferred over FPREM on the 387.",
+            "FPREM1");
+
+        // ---------- 80387 FPU - compare ----------
+        Add(map, "Floating-Point Compare",
+            "Compares ST(0) to the source FPU value, setting C0/C1/C2/C3 in the FPU status word.",
+            "Reads ST(0) and source; writes status-word condition codes.",
+            "FP comparison - usually followed by FNSTSW AX + SAHF + Jcc to branch on the result.",
+            "FCOM", "FICOM");
+        Add(map, "Floating-Point Compare and Pop",
+            "Compares ST(0) to source, then pops the stack.",
+            "Reads ST(0)/source; writes status-word condition codes; increments TOP.",
+            "Compare and discard the top operand in one go.",
+            "FCOMP", "FICOMP");
+        Add(map, "Floating-Point Compare and Pop Twice",
+            "Compares ST(0) to ST(1), then pops the stack twice.",
+            "Reads ST(0)/ST(1); writes condition codes; increments TOP twice.",
+            "Compare two values that are both already on the FPU stack and discard them.",
+            "FCOMPP");
+        Add(map, "Floating-Point Test Against Zero",
+            "Compares ST(0) to +0.0, setting condition codes.",
+            "Reads ST(0); writes condition codes.",
+            "Sign / zero test on an FP value before a branch.",
+            "FTST");
+        Add(map, "Floating-Point Examine",
+            "Classifies ST(0) (zero, normal, denormal, NaN, infinity, empty) into C0/C2/C3.",
+            "Reads ST(0); writes C0/C1/C2/C3.",
+            "Implement isnan / isinf / fpclassify without taking exceptions.",
+            "FXAM");
+
+        // ---------- 80387 FPU - transcendental ----------
+        Add(map, "2^x - 1",
+            "Computes 2^ST(0) - 1, with ST(0) in [-1.0, +1.0]; result replaces ST(0).",
+            "Reads/writes ST(0); writes C1.",
+            "Building block for exp() and pow() implementations.",
+            "F2XM1");
+        Add(map, "ST(1) * log2(ST(0))",
+            "Replaces ST(1) with ST(1) * log2(ST(0)) and pops the stack.",
+            "Reads ST(0)/ST(1); writes ST(1); pops; writes C1.",
+            "Building block for log/log2/log10 - paired with FLDLN2 / FLDLG2 to scale to other bases.",
+            "FYL2X");
+        Add(map, "ST(1) * log2(ST(0)+1)",
+            "Replaces ST(1) with ST(1) * log2(ST(0)+1), with ST(0) close to 0; pops the stack.",
+            "Reads ST(0)/ST(1); writes ST(1); pops; writes C1.",
+            "More accurate near 1 than FYL2X for log1p().",
+            "FYL2XP1");
+        Add(map, "Floating-Point Sine",
+            "Replaces ST(0) with sin(ST(0)) (radians).",
+            "Reads/writes ST(0); writes C2 if argument out of range.",
+            "Hardware sine - faster and more accurate than a CORDIC software implementation.",
+            "FSIN");
+        Add(map, "Floating-Point Cosine",
+            "Replaces ST(0) with cos(ST(0)) (radians).",
+            "Reads/writes ST(0); writes C2 if argument out of range.",
+            "Hardware cosine.",
+            "FCOS");
+        Add(map, "Sine and Cosine",
+            "Computes sin(ST(0)) into ST(0) and pushes cos of the original onto the FPU stack.",
+            "Reads/writes ST(0); pushes ST; writes C2.",
+            "Compute both sin and cos in one shot - typical inside 2D/3D rotation matrices.",
+            "FSINCOS");
+        Add(map, "Partial Tangent",
+            "Computes tan(ST(0)) into ST(0) and pushes 1.0 (so a divide isn't immediately needed).",
+            "Reads/writes ST(0); pushes ST; writes C2.",
+            "Hardware tangent - the trailing 1.0 is a quirk of the 8087 ISA.",
+            "FPTAN");
+        Add(map, "Partial Arctangent",
+            "Replaces ST(1) with atan2(ST(1), ST(0)) and pops the stack.",
+            "Reads ST(0)/ST(1); writes ST(1); pops.",
+            "Two-argument arctangent for converting (x,y) to angle - the standard atan2() primitive.",
+            "FPATAN");
+
+        // ---------- 80387 FPU - control ----------
+        Add(map, "Initialize FPU",
+            "Resets the x87 FPU to its power-on state (control word 037Fh, all registers empty).",
+            "Writes the entire FPU state.",
+            "Reset the FPU at program startup or after an FP error - the 'wait' form (FINIT) checks for pending exceptions first.",
+            "FINIT", "FNINIT");
+        Add(map, "Clear FPU Exceptions",
+            "Clears the FPU exception flags in the status word.",
+            "Writes status-word exception bits.",
+            "Acknowledge handled FP exceptions before continuing - paired with FNSTSW for software exception handling.",
+            "FCLEX", "FNCLEX");
+        Add(map, "Store Control Word",
+            "Stores the FPU control word to a 16-bit memory operand.",
+            "Reads the FPU control word; writes memory.",
+            "Save the rounding/precision/exception-mask configuration so a callee can change it and restore it.",
+            "FSTCW", "FNSTCW");
+        Add(map, "Load Control Word",
+            "Loads a 16-bit value from memory into the FPU control word.",
+            "Reads memory; writes the FPU control word.",
+            "Switch FPU rounding mode (e.g. truncate vs round-to-nearest) for a (int) cast or for a numeric library.",
+            "FLDCW");
+        Add(map, "Store Status Word",
+            "Stores the FPU status word to a 16-bit memory or to AX.",
+            "Reads the FPU status word; writes memory or AX.",
+            "Inspect FP condition codes after FCOM - typical pattern: FNSTSW AX, SAHF, Jcc.",
+            "FSTSW", "FNSTSW");
+        Add(map, "Store Environment",
+            "Stores the FPU environment (control/status/tag words and pointers) to memory.",
+            "Reads FPU environment; writes a 14- or 28-byte block.",
+            "Save FPU state on a context switch or signal entry without saving the data registers.",
+            "FSTENV", "FNSTENV");
+        Add(map, "Load Environment",
+            "Restores the FPU environment from memory (control/status/tag words and pointers).",
+            "Reads memory; writes FPU environment.",
+            "Restore the FPU control state previously saved with FSTENV.",
+            "FLDENV");
+        Add(map, "Save FPU State",
+            "Saves the full FPU state (environment + 8 data registers) to a 94/108-byte memory block; reinitializes the FPU.",
+            "Reads FPU state; writes memory; resets FPU.",
+            "Save FPU state on a heavy context switch.",
+            "FSAVE", "FNSAVE");
+        Add(map, "Restore FPU State",
+            "Restores the full FPU state (environment + 8 data registers) from memory.",
+            "Reads memory; writes FPU state.",
+            "Restore FPU state previously saved with FSAVE on a context switch.",
+            "FRSTOR");
+        Add(map, "FPU No Operation",
+            "FPU-level no-op.",
+            "No reads/writes.",
+            "Padding inside FPU code.",
+            "FNOP");
 
         return map;
     }
