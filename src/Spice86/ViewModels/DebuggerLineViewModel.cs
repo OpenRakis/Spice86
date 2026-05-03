@@ -5,6 +5,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Iced.Intel;
 
 using Spice86.Core.Emulator.Function;
+using Spice86.DebuggerKnowledgeBase;
+using Spice86.DebuggerKnowledgeBase.Decoding;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
@@ -16,6 +18,7 @@ using Spice86.ViewModels.ValueViewModels.Debugging;
 /// </summary>
 public partial class DebuggerLineViewModel : ViewModelBase {
     private readonly BreakpointsViewModel? _breakpointsViewModel;
+    private readonly DebuggerDecoderService? _debuggerDecoderService;
 
     private readonly Formatter _formatter = new MasmFormatter(new FormatterOptions {
         AddLeadingZeroToHexNumbers = false,
@@ -48,9 +51,10 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     [ObservableProperty]
     private bool? _willJump;
 
-    public DebuggerLineViewModel(EnrichedInstruction instruction, BreakpointsViewModel? breakpointsViewModel = null) {
+    public DebuggerLineViewModel(EnrichedInstruction instruction, BreakpointsViewModel? breakpointsViewModel = null, DebuggerDecoderService? debuggerDecoderService = null) {
         _info = instruction.Instruction;
         _breakpointsViewModel = breakpointsViewModel;
+        _debuggerDecoderService = debuggerDecoderService;
         ByteString = string.Join(' ', instruction.Bytes.Select(b => b.ToString("X2")));
         Function = instruction.Function;
         SegmentedAddress = instruction.SegmentedAddress;
@@ -68,6 +72,9 @@ public partial class DebuggerLineViewModel : ViewModelBase {
 
         // Generate the formatted disassembly text
         GenerateFormattedDisassembly();
+
+        // Decode high-level call info and emulator-provided status
+        (DecodedCall, IsEmulatorProvided, EmulatorProvidedFunctionName) = ComputeDecodedInfo();
     }
 
     public string ByteString { get; }
@@ -163,6 +170,52 @@ public partial class DebuggerLineViewModel : ViewModelBase {
         if (_breakpointsViewModel != null) {
             Breakpoint = _breakpointsViewModel.GetExecutionBreakPointsAtAddress(Address).FirstOrDefault();
         }
+    }
+
+    /// <summary>
+    /// Decoded high-level call information when this instruction is decodable (INT, routine entry).
+    /// Null for plain instructions.
+    /// </summary>
+    public DecodedCall? DecodedCall { get; }
+
+    /// <summary>
+    /// True when this instruction's address is the entry point of an emulator-provided function.
+    /// </summary>
+    public bool IsEmulatorProvided { get; }
+
+    /// <summary>
+    /// Function name when <see cref="IsEmulatorProvided"/> is true; null otherwise.
+    /// </summary>
+    public string? EmulatorProvidedFunctionName { get; }
+
+    /// <summary>
+    /// Computes decoded call info and emulator-provided status for this instruction.
+    /// </summary>
+    private (DecodedCall? decodedCall, bool isEmulatorProvided, string? emulatorProvidedFunctionName) ComputeDecodedInfo() {
+        if (_debuggerDecoderService == null) {
+            return (null, false, null);
+        }
+
+        DecodedCall? decoded = null;
+
+        // Try decoding INT instructions
+        if (_info.Mnemonic == Mnemonic.Int && _info.Immediate8 is byte vector) {
+            _debuggerDecoderService.TryDecodeInterrupt(vector, out decoded);
+        }
+
+        // Try decoding emulator-provided routine entry points
+        if (decoded == null) {
+            _debuggerDecoderService.TryDecodeAsmRoutine(SegmentedAddress, out decoded);
+        }
+
+        // Check if this is an emulator-provided function entry point
+        bool isEmulatorProvided = _debuggerDecoderService.IsEmulatorProvidedEntryPoint(SegmentedAddress);
+        string? functionName = null;
+        if (isEmulatorProvided && _debuggerDecoderService.TryGetEmulatorProvidedFunction(SegmentedAddress, out FunctionInformation? info)) {
+            functionName = info.Name;
+        }
+
+        return (decoded, isEmulatorProvided, functionName);
     }
 
     public override string ToString() {
