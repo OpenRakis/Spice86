@@ -578,7 +578,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "send_keyboard_key", UseStructuredContent = true), Description("Send a single keyboard key event. Parameters: key (string, PcKeyboardKey enum name like 'Enter' or 'Escape'), isPressed (bool, true=key down, false=key up). For a full keypress, call twice: once with isPressed=true, then with isPressed=false. Use PcKeyboardKey enum names: Escape, Enter, A-Z, Up, Down, Left, Right, F1-F12, Space, Tab, etc.")]
+    [McpServerTool(Name = "send_keyboard_key", UseStructuredContent = true), Description("Send a single keyboard key event. Parameters: key (string, case-insensitive PcKeyboardKey name) and isPressed (bool, true=key down, false=key up). For a full keypress, call twice: first with isPressed=true, then with isPressed=false. Common key names: A-Z, D0-D9, NumPad0-NumPad9, Escape, Enter, Space, Tab, Backspace, Insert, Delete, Home, End, PageUp, PageDown, Up, Down, Left, Right, F1-F12, LeftShift/RightShift, LeftCtrl/RightCtrl, LeftAlt/RightAlt. Invalid names return an argument error.")]
     public CallToolResult SendKeyboardKey(string key, bool isPressed) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -620,7 +620,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "send_mouse_packet", UseStructuredContent = true), Description("Send a raw PS/2 mouse packet (3 hex bytes) through the controller AUX port. Format: SSXXYY where SS=status, XX=X delta, YY=Y delta. Example: 080000 (no movement, no button).")]
+    [McpServerTool(Name = "send_mouse_packet", UseStructuredContent = true), Description("Send raw PS/2 AUX bytes to the mouse controller as a hex string (1-8 bytes, no separators). For a standard 3-byte packet, use SSXXYY: SS=status byte, XX=X delta, YY=Y delta. Status byte bit layout: bit0=left button, bit1=right button, bit2=middle button, bit3=always 1 for a normal packet header, bit4=X sign, bit5=Y sign, bit6=X overflow, bit7=Y overflow. XX and YY are signed 8-bit deltas (two's complement). Examples: 080000 (no movement, no button), 090100 (left button + X=+1), 08FF00 (X=-1).")]
     public CallToolResult SendMousePacket([StringSyntax("Hexadecimal")] string packetData) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
