@@ -66,7 +66,7 @@ public sealed class BiosParameterBlock {
     public int FatStartSector => ReservedSectors;
 
     /// <summary>Gets the logical sector number of the root directory.</summary>
-    public int RootDirStartSector => ReservedSectors + NumberOfFats * SectorsPerFat;
+    public int RootDirStartSector => ReservedSectors + NumberOfFats * (int)SectorsPerFatEffective;
 
     /// <summary>Gets the logical sector number of the first data cluster (cluster 2).</summary>
     public int DataStartSector {

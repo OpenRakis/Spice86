@@ -267,7 +267,7 @@ public sealed class VirtualIsoImage : ICdRomImage {
     }
 
     private static void WriteRecordingDate(Span<byte> target) {
-        // Year since 1900; use 2000 (100), month 1, day 1
+        // Years since 1900; 100 represents the year 2000.
         target[0] = 100;
         target[1] = 1;
         target[2] = 1;

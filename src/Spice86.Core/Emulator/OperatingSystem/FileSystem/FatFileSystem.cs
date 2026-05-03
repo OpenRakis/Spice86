@@ -256,6 +256,9 @@ public sealed class FatFileSystem {
     }
 
     private int ClusterToSector(uint cluster) {
+        if (cluster < 2) {
+            return GetDataStartSector();
+        }
         return GetDataStartSector() + (int)(cluster - 2) * _bpb.SectorsPerCluster;
     }
 

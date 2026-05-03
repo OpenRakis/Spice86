@@ -350,8 +350,8 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
             return false;
         }
         source.AsSpan(srcOffset, byteCount).CopyTo(imageData.AsSpan(imageByteOffset));
-        if (floppy != null) {
-            floppy.MarkDirty();
+        if (floppy is FloppyDiskDrive dirtyFloppy) {
+            dirtyFloppy.MarkDirty();
         }
         return true;
     }
