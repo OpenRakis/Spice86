@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
+using Spice86.Shared.Emulator.Dos;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -28,7 +29,7 @@ using Stack = CPU.Stack;
 /// COM), cloning and terminating processes, and managing process-specific resources such as file handles and
 /// environment blocks. It emulates key DOS process management interrupts (such as INT 21h AH=4Bh, 26h, 55h) and ensures
 /// correct parent-child relationships, memory allocation, and file handles cleanup.</remarks>
-public class DosProcessManager : IDosBatchExecutionHost {
+public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProvider {
     private const byte FarCallOpcode = 0x9A;
     private const byte IntOpcode = 0xCD;
     private const byte Int21Number = 0x21;
@@ -82,6 +83,7 @@ public class DosProcessManager : IDosBatchExecutionHost {
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly Stack _stack;
     private readonly DosSwappableDataArea _sda;
+    private volatile string _currentProgramName = string.Empty;
     // In FreeDOS this is 18 (sizeof(iregs) = 9 GP registers pushed by PUSH$ALL).
     // Spice86's CfgCpu INT only pushes FLAGS+CS+IP (6 bytes) with no GP register frame,
     // so no subtraction is needed. A non-zero value corrupts the parent's saved SP,
@@ -140,6 +142,20 @@ public class DosProcessManager : IDosBatchExecutionHost {
 
     private DosProgramSegmentPrefix GetCurrentPsp() =>
         new(_memory, MemoryUtils.ToPhysicalAddress(_sda.CurrentProgramSegmentPrefix, 0));
+
+    /// <inheritdoc />
+    public string CurrentProgramName => _currentProgramName;
+
+    private string GetProgramNameFromEnvironment(ushort pspSegment, ushort environmentSegment) {
+        if (pspSegment == CommandComSegment) {
+            return string.Empty;
+        }
+        string programPath = ReadEnvironmentProgramPath(environmentSegment);
+        if (string.IsNullOrEmpty(programPath)) {
+            return string.Empty;
+        }
+        return Path.GetFileName(programPath).ToUpperInvariant();
+    }
 
     public void TrackResidentBlock(DosMemoryControlBlock block) {
         ushort mcbSegment = (ushort)(block.DataBlockSegment - 1);
@@ -535,6 +551,8 @@ public class DosProcessManager : IDosBatchExecutionHost {
         if (loadType == DosExecLoadType.LoadOnly) {
             // LoadOnly: restore parent PSP as current
             _sda.CurrentProgramSegmentPrefix = parentPspSegment;
+            DosProgramSegmentPrefix parentPsp = GetCurrentPsp();
+            _currentProgramName = GetProgramNameFromEnvironment(parentPspSegment, parentPsp.EnvironmentTableSegment);
         }
     }
 
@@ -635,6 +653,7 @@ public class DosProcessManager : IDosBatchExecutionHost {
         _sda.CurrentProgramSegmentPrefix = parentPspSegment;
 
         DosProgramSegmentPrefix parentPsp = GetCurrentPsp();
+        _currentProgramName = GetProgramNameFromEnvironment(parentPspSegment, parentPsp.EnvironmentTableSegment);
 
         if (residentNextSegment.HasValue) {
             parentPsp.CurrentSize = residentNextSegment.Value;
@@ -962,6 +981,7 @@ public class DosProcessManager : IDosBatchExecutionHost {
         ClearPspMemory(pspSegment);
         // Establish parent-child PSP relationship and set as current PSP
         _sda.CurrentProgramSegmentPrefix = pspSegment;
+        _currentProgramName = Path.GetFileName(programHostPath).ToUpperInvariant();
         DosProgramSegmentPrefix psp = GetCurrentPsp();
 
         psp.Exit[0] = IntOpcode;

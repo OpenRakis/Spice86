@@ -18,6 +18,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
+using Spice86.Shared.Emulator.Dos;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
@@ -38,6 +39,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly PerformanceViewModel _performanceViewModel;
     private readonly IExceptionHandler _exceptionHandler;
+    private readonly ICurrentProcessNameProvider _currentProcessNameProvider;
 
     private McpStatusViewModel? _mcpStatusViewModel;
 
@@ -106,6 +108,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         public required ICyclesLimiter CyclesLimiter { get; init; }
         public required EmulatorMcpServices McpServices { get; init; }
         public required int McpPort { get; init; }
+        public required ICurrentProcessNameProvider CurrentProcessNameProvider { get; init; }
     }
 
     public MainWindowViewModel(MainWindowViewModelDependencies dependencies)
@@ -118,6 +121,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _loggerService = dependencies.LoggerService;
         _hostStorageProvider = dependencies.HostStorageProvider;
         _cyclesLimiter = dependencies.CyclesLimiter;
+        _currentProcessNameProvider = dependencies.CurrentProcessNameProvider;
         TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
         _pauseHandler = dependencies.PauseHandler;
         IsPaused = _pauseHandler.IsPaused;
@@ -339,7 +343,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public void Pause() => _pauseHandler.RequestPause("Pause button pressed in main window");
 
     private void SetMainTitle(double instructionsPerMillisecond) {
-        MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}";
+        string currentProgramName = _currentProcessNameProvider.CurrentProgramName;
+        if (string.IsNullOrEmpty(currentProgramName)) {
+            MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}";
+        } else {
+            MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - {currentProgramName} - cycles/ms: {instructionsPerMillisecond,7:N0}";
+        }
     }
 
     [ObservableProperty] private string? _mainTitle;
