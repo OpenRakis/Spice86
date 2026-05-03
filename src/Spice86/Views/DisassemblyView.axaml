@@ -23,7 +23,8 @@
             <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
             <converters:FormattedTextOffsetsConverter x:Key="FormattedTextOffsetsConverter" />
             <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
-            <converters:InstructionCategoryToSymbolConverter x:Key="InstructionCategoryToSymbolConverter" />
+            <converters:InstructionCategoryToGeometryConverter x:Key="InstructionCategoryToGeometryConverter" />
+            <converters:InstructionCategoryToFillConverter x:Key="InstructionCategoryToFillConverter" />
         </ResourceDictionary>
     </UserControl.Resources>
     <UserControl.Styles>
@@ -309,18 +310,25 @@
                                                      FontSize="11"
                                                      Margin="6,0,0,0" />
 
-                                <!-- Category icon column -->
-                                <fluent:SymbolIcon Grid.Column="4"
-                                                   Symbol="{Binding InstructionCategory, Converter={StaticResource InstructionCategoryToSymbolConverter}}"
-                                                   IsVisible="{Binding HasInstructionCategory}"
-                                                   Width="14"
-                                                   Height="14"
-                                                   VerticalAlignment="Center"
-                                                   Margin="6,0,2,0">
+                                <!-- Category icon column — custom vector icons.
+                                     Stroke uses the same converter as Fill because the icon geometry contains
+                                     a mix of closed shapes (filled) and open subpaths such as chip pins and
+                                     sound waves; open subpaths are only visible via the Stroke property. -->
+                                <Path Grid.Column="4"
+                                      Data="{Binding InstructionCategory, Converter={StaticResource InstructionCategoryToGeometryConverter}}"
+                                      Fill="{Binding InstructionCategory, Converter={StaticResource InstructionCategoryToFillConverter}}"
+                                      Stroke="{Binding InstructionCategory, Converter={StaticResource InstructionCategoryToFillConverter}}"
+                                      StrokeThickness="0.7"
+                                      Width="14"
+                                      Height="14"
+                                      Stretch="Uniform"
+                                      IsVisible="{Binding HasInstructionCategory}"
+                                      VerticalAlignment="Center"
+                                      Margin="6,0,2,0">
                                     <ToolTip.Tip>
                                         <TextBlock Text="{Binding InstructionCategory}" />
                                     </ToolTip.Tip>
-                                </fluent:SymbolIcon>
+                                </Path>
 
                                 <!-- Instruction -->
                                 <SelectableTextBlock Grid.Column="5"
