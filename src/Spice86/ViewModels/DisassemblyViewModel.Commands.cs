@@ -95,7 +95,7 @@ public partial class DisassemblyViewModel {
     [RelayCommand]
     private void NewDisassemblyView() {
         DisassemblyViewModel disassemblyViewModel = new(
-            _emulatorBreakpointsManager, _memory, State, _functionsInformation, _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger, _textClipboard, _logger, true) {
+            _emulatorBreakpointsManager, _memory, State, _functionsInformation, _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger, _textClipboard, _logger, _debuggerDecoderService, canCloseTab: true) {
             IsPaused = IsPaused
         };
         _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(disassemblyViewModel));

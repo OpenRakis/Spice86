@@ -758,7 +758,7 @@ public class Spice86DependencyInjection : IDisposable {
             DisassemblyViewModel disassemblyViewModel = new(
                 emulatorBreakpointsManager, memory, state, functionCatalogue.FunctionInformations,
                 breakpointsViewModel, pauseHandler, uiDispatcher, messenger, textClipboard, loggerService,
-                canCloseTab: false);
+                debuggerDecoderService, canCloseTab: false);
 
             PaletteViewModel paletteViewModel = new(videoState.DacRegisters.ArgbPalette,
                 uiDispatcher);
@@ -770,7 +770,7 @@ public class Spice86DependencyInjection : IDisposable {
             MidiViewModel midiViewModel = new(midiDevice);
 
             CfgCpuViewModel cfgCpuViewModel = new(uiDispatcher,
-                cfgCpu.ExecutionContextManager, pauseHandler, nodeToString, asmRenderingConfig);
+                cfgCpu.ExecutionContextManager, pauseHandler, nodeToString, asmRenderingConfig, debuggerDecoderService);
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
                 state, loggerService, pauseHandler);
