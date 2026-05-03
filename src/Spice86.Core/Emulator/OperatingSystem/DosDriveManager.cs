@@ -1,9 +1,12 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Spice86.Core.Emulator.Devices.Storage;
+using Spice86.Core.Emulator.OperatingSystem.FileSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -11,8 +14,10 @@ using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// The class responsible for centralizing all the mounted DOS drives.
+/// Implements <see cref="IFloppyDriveAccess"/> so the BIOS INT 13h handler can perform
+/// low-level sector reads/writes without depending on any DOS-layer types.
 /// </summary>
-public class DosDriveManager : IDictionary<char, VirtualDrive> {
+public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAccess {
     private readonly SortedDictionary<char, VirtualDrive> _driveMap = new();
     private readonly Dictionary<char, MemoryDrive> _memoryDriveMap = new();
     private readonly Dictionary<char, FloppyDiskDrive> _floppyDriveMap = new();
@@ -300,5 +305,69 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
     /// <returns>True if a floppy image is mounted on the specified letter; false otherwise.</returns>
     public bool TryGetFloppyDrive(char driveLetter, [MaybeNullWhen(false)] out FloppyDiskDrive drive) {
         return _floppyDriveMap.TryGetValue(char.ToUpperInvariant(driveLetter), out drive);
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetGeometry(byte driveNumber, out int totalCylinders, out int headsPerCylinder, out int sectorsPerTrack, out int bytesPerSector) {
+        totalCylinders = 0;
+        headsPerCylinder = 0;
+        sectorsPerTrack = 0;
+        bytesPerSector = 0;
+
+        if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
+            return false;
+        }
+
+        FileSystem.BiosParameterBlock bpb = ParseBpb(imageData!);
+        bytesPerSector = bpb.BytesPerSector;
+        sectorsPerTrack = bpb.SectorsPerTrack;
+        headsPerCylinder = bpb.NumberOfHeads;
+        int totalSectors = bpb.TotalSectors;
+        if (sectorsPerTrack > 0 && headsPerCylinder > 0) {
+            totalCylinders = totalSectors / (sectorsPerTrack * headsPerCylinder);
+        }
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool TryRead(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset, int byteCount) {
+        if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
+            return false;
+        }
+        if (imageByteOffset < 0 || imageByteOffset + byteCount > imageData!.Length) {
+            return false;
+        }
+        imageData.AsSpan(imageByteOffset, byteCount).CopyTo(destination.AsSpan(destOffset));
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool TryWrite(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset, int byteCount) {
+        if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
+            return false;
+        }
+        if (imageByteOffset < 0 || imageByteOffset + byteCount > imageData!.Length) {
+            return false;
+        }
+        source.AsSpan(srcOffset, byteCount).CopyTo(imageData.AsSpan(imageByteOffset));
+        return true;
+    }
+
+    private bool TryResolveFloppyImage(byte driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData) {
+        floppy = null;
+        imageData = null;
+        char driveLetter = driveNumber == 0 ? 'A' : 'B';
+        if (!TryGetFloppyDrive(driveLetter, out floppy)) {
+            return false;
+        }
+        if (floppy.Image == null) {
+            return false;
+        }
+        imageData = floppy.GetCurrentImageData();
+        return imageData != null;
+    }
+
+    private static FileSystem.BiosParameterBlock ParseBpb(byte[] imageData) {
+        return FileSystem.BiosParameterBlock.Parse(imageData.AsSpan(0, Math.Min(512, imageData.Length)));
     }
 }
