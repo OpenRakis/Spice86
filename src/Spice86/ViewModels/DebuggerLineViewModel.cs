@@ -7,6 +7,7 @@ using Iced.Intel;
 using Spice86.Core.Emulator.Function;
 using Spice86.DebuggerKnowledgeBase;
 using Spice86.DebuggerKnowledgeBase.Decoding;
+using MnemonicInstructionInfo = Spice86.DebuggerKnowledgeBase.Instructions.InstructionInfo;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
@@ -73,8 +74,9 @@ public partial class DebuggerLineViewModel : ViewModelBase {
         // Generate the formatted disassembly text
         GenerateFormattedDisassembly();
 
-        // Decode high-level call info and emulator-provided status
+        // Decode high-level call info, emulator-provided status, and 386 mnemonic info
         (DecodedCall, IsEmulatorProvided, EmulatorProvidedFunctionName) = ComputeDecodedInfo();
+        MnemonicInfo = _debuggerDecoderService?.GetInstructionInfo(_info.Mnemonic.ToString());
     }
 
     public string ByteString { get; }
@@ -187,6 +189,27 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     /// Function name when <see cref="IsEmulatorProvided"/> is true; null otherwise.
     /// </summary>
     public string? EmulatorProvidedFunctionName { get; }
+
+    /// <summary>
+    /// Generic high-level reminder for the instruction's mnemonic (name, summary, what it
+    /// uses, and why it is typically emitted), or null if the mnemonic is not in the
+    /// 386 knowledge base. Independent of <see cref="DecodedCall"/>.
+    /// </summary>
+    public MnemonicInstructionInfo? MnemonicInfo { get; }
+
+    /// <summary>
+    /// True when the inline annotation panel has anything to display (a decoded call,
+    /// or the generic 386 mnemonic reminder).
+    /// </summary>
+    public bool HasAnnotation => DecodedCall != null || MnemonicInfo != null;
+
+    /// <summary>
+    /// True when the inline annotation panel should display the generic 386 mnemonic
+    /// reminder. The reminder is shown only when no specific <see cref="DecodedCall"/>
+    /// is available — we do not want to repeat low-level reminders next to a fully
+    /// decoded high-level call.
+    /// </summary>
+    public bool ShowMnemonicReminder => DecodedCall == null && MnemonicInfo != null;
 
     /// <summary>
     /// Computes decoded call info and emulator-provided status for this instruction.

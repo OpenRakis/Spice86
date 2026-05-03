@@ -34,14 +34,14 @@ using Xunit;
 using System.Collections.Immutable;
 
 /// <summary>
-/// UI tests for DisassemblyView tooltips and emulator-provided code markers.
-/// These tests verify that hovering decoded instructions shows high-level call info
-/// and that emulator-provided code rows are visually distinguished.
+/// UI tests for DisassemblyView OllyDbg-style inline annotations and emulator-provided code markers.
+/// These tests verify that decoded high-level call info, generic 386 mnemonic reminders, and the
+/// EMU badge are exposed via the DebuggerLineViewModel and rendered inline in the disassembly row.
 /// </summary>
 public class DisassemblyViewUiTests : BreakpointUiTestBase {
     /// <summary>
-    /// Verifies that hovering a row representing an INT 21h instruction shows a tooltip
-    /// with decoded subsystem, function name, short description, and parameters.
+    /// Verifies that an INT 21h row exposes the DecodedCall property used by the inline
+    /// annotation panel.
     /// </summary>
     [AvaloniaFact]
     public void DisassemblyView_IntInstructionRow_HasDecodedCallProperty() {
@@ -113,10 +113,11 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
     }
 
     /// <summary>
-    /// Verifies that rows for plain non-decoded instructions show NO tooltip.
+    /// Verifies that rows for plain non-decoded instructions surface the generic 386 mnemonic
+    /// reminder (used by the inline OllyDbg-style annotation panel) instead of a DecodedCall.
     /// </summary>
     [AvaloniaFact]
-    public void DisassemblyView_PlainInstructionRow_ShowsNoTooltip() {
+    public void DisassemblyView_PlainInstructionRow_ExposesMnemonicReminder() {
         // Arrange
         DebuggerDecoderService decoderService = CreateMockDecoderService(out _);
         DisassemblyViewModel viewModel = CreateDisassemblyViewModel(decoderService);
@@ -124,7 +125,7 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
         Window window = new() { Content = view };
         ShowWindowAndWait(window);
 
-        // Create a plain MOV instruction (not decodable)
+        // Create a plain MOV instruction (not decodable as a high-level call)
         SegmentedAddress movAddress = new(0x1000, 0x0200);
         Instruction movInstruction = CreateMovInstruction();
         EnrichedInstruction enriched = new(movInstruction) {
@@ -133,14 +134,43 @@ public class DisassemblyViewUiTests : BreakpointUiTestBase {
         };
         DebuggerLineViewModel lineViewModel = new(enriched, null, decoderService);
 
-        // Act - Check if there's a decoded call
-        DecodedCall? decoded = lineViewModel.DecodedCall;
-
-        // Assert - Should be null for non-decodable instructions
-        decoded.Should().BeNull("Plain instructions should not decode");
+        // Assert - No DecodedCall, but the mnemonic reminder is available and HasAnnotation is true
+        lineViewModel.DecodedCall.Should().BeNull("Plain instructions should not decode as a high-level call");
+        lineViewModel.MnemonicInfo.Should().NotBeNull("Plain MOV is in the 386 knowledge base");
+        lineViewModel.MnemonicInfo!.Mnemonic.Should().Be("MOV");
+        lineViewModel.HasAnnotation.Should().BeTrue("Inline annotation panel must be visible for known mnemonics");
+        lineViewModel.ShowMnemonicReminder.Should().BeTrue("With no DecodedCall, the generic mnemonic reminder is shown");
 
         // Cleanup
         window.Close();
+    }
+
+    /// <summary>
+    /// Verifies that an unknown / unmodeled mnemonic produces no annotation at all
+    /// (no DecodedCall, no MnemonicInfo, HasAnnotation = false).
+    /// </summary>
+    [AvaloniaFact]
+    public void DisassemblyView_UnknownMnemonicRow_ShowsNoAnnotation() {
+        // Arrange
+        DebuggerDecoderService decoderService = CreateMockDecoderService(out _);
+
+        // CPUID (0F A2) is intentionally NOT in the 386 base knowledge set
+        SegmentedAddress address = new(0x1000, 0x0300);
+        byte[] bytes = [0x0F, 0xA2];
+        Decoder decoder = Decoder.Create(16, bytes);
+        decoder.Decode(out Instruction cpuid);
+        EnrichedInstruction enriched = new(cpuid) {
+            SegmentedAddress = address,
+            Bytes = bytes
+        };
+
+        // Act
+        DebuggerLineViewModel lineViewModel = new(enriched, null, decoderService);
+
+        // Assert
+        lineViewModel.DecodedCall.Should().BeNull();
+        lineViewModel.MnemonicInfo.Should().BeNull("CPUID is not yet in the 386 knowledge base");
+        lineViewModel.HasAnnotation.Should().BeFalse("Inline annotation panel must be hidden when nothing to show");
     }
 
     private static DebuggerDecoderService CreateMockDecoderService(out FunctionCatalogue functionCatalogue) {

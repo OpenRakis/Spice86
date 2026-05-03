@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.DebuggerKnowledgeBase.Decoding;
+using Spice86.DebuggerKnowledgeBase.Instructions;
 using Spice86.DebuggerKnowledgeBase.Registries;
 using Spice86.DebuggerKnowledgeBase.Xms;
 using Spice86.Shared.Emulator.Memory;
@@ -158,4 +159,15 @@ public sealed class DebuggerDecoderService {
     /// Returns the value of the last port write.
     /// </summary>
     public uint LastPortWrittenValue => _ioPortDispatcher.LastPortWrittenValue;
+
+    /// <summary>
+    /// Returns a high-level reminder for the given mnemonic from the static 386
+    /// instruction knowledge base, or null when the mnemonic is not yet covered.
+    /// Lookup is case-insensitive and accepts common aliases (JE/JZ, RET/RETN, ...).
+    /// </summary>
+    /// <param name="mnemonic">Canonical mnemonic, e.g. "MOV", "JE", "CALL".</param>
+    public InstructionInfo? GetInstructionInfo(string mnemonic) {
+        Instruction386KnowledgeBase.TryGet(mnemonic, out InstructionInfo? info);
+        return info;
+    }
 }
