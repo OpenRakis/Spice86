@@ -593,6 +593,10 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.InterruptVectorTable = interruptVectorTable;
         emulatorMcpServices.Dos = dos;
 
+        if (mainWindowViewModel is not null && configuration.InitializeDOS is not false) {
+            mainWindowViewModel.Dos = dos;
+        }
+
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers
             interruptInstaller.InstallInterruptHandler(dos.DosInt22Handler);

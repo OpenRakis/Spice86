@@ -16,6 +16,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Mcp;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.Keyboard;
@@ -339,8 +340,19 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public void Pause() => _pauseHandler.RequestPause("Pause button pressed in main window");
 
     private void SetMainTitle(double instructionsPerMillisecond) {
-        MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}";
+        string? currentProgramName = Dos?.CurrentProgramName;
+        if (string.IsNullOrEmpty(currentProgramName)) {
+            MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}";
+        } else {
+            MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - {currentProgramName} - cycles/ms: {instructionsPerMillisecond,7:N0}";
+        }
     }
+
+    /// <summary>
+    /// The DOS kernel. When set, the main window title is updated with the name of the currently-executing DOS
+    /// program. Polled from the UI thread to avoid coupling DOS to the UI layer.
+    /// </summary>
+    internal Dos? Dos { get; set; }
 
     [ObservableProperty] private string? _mainTitle;
 
