@@ -46,9 +46,9 @@ public class JoystickTests {
     private sealed class TestClock : IEmulatedClock {
         public double ElapsedTimeMs { get; set; }
 
-        public DateTime StartTime { get; set; } = DateTime.UtcNow;
+        public DateTimeOffset StartTime { get; set; } = DateTime.UtcNow;
 
-        public DateTime CurrentDateTime => StartTime + TimeSpan.FromMilliseconds(ElapsedTimeMs);
+        public DateTimeOffset CurrentDateTime => StartTime + TimeSpan.FromMilliseconds(ElapsedTimeMs);
 
         public bool IsPaused => false;
 
