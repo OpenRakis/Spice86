@@ -234,7 +234,7 @@ public sealed class Dos : IDriveStatusProvider {
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
         DosInt2aHandler = new DosInt2aHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
-            functionHandlerProvider, stack, state, _loggerService, xms, _mscdex);
+            functionHandlerProvider, stack, state, _loggerService, _mscdex, xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
             functionHandlerProvider, stack, state, _loggerService);
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager,

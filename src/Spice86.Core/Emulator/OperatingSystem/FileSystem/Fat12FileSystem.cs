@@ -132,8 +132,6 @@ public sealed class Fat12FileSystem {
         return TryGetEntry(dosPath, out _);
     }
 
-    // ---------- internals ----------
-
     private ushort[] ReadFat() {
         int fatByteOffset = _bpb.FatStartSector * _bpb.BytesPerSector;
         int fatByteLength = _bpb.SectorsPerFat * _bpb.BytesPerSector;
