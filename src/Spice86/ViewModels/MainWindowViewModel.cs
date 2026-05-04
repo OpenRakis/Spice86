@@ -18,6 +18,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
+using Spice86.Shared.Emulator.Dos;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
@@ -38,6 +39,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly PerformanceViewModel _performanceViewModel;
     private readonly IExceptionHandler _exceptionHandler;
+    private readonly ICurrentProcessNameProvider _currentProcessNameProvider;
 
     private McpStatusViewModel? _mcpStatusViewModel;
 
@@ -106,6 +108,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         public required ICyclesLimiter CyclesLimiter { get; init; }
         public required EmulatorMcpServices McpServices { get; init; }
         public required int McpPort { get; init; }
+        public required ICurrentProcessNameProvider CurrentProcessNameProvider { get; init; }
     }
 
     public MainWindowViewModel(MainWindowViewModelDependencies dependencies)
@@ -118,6 +121,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _loggerService = dependencies.LoggerService;
         _hostStorageProvider = dependencies.HostStorageProvider;
         _cyclesLimiter = dependencies.CyclesLimiter;
+        _currentProcessNameProvider = dependencies.CurrentProcessNameProvider;
         TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
         _pauseHandler = dependencies.PauseHandler;
         IsPaused = _pauseHandler.IsPaused;
@@ -192,16 +196,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 Cursor?.Dispose();
                 Cursor = new Cursor(StandardCursorType.None);
             }
-        }
-    }
-
-    private double? _scale = 1;
-
-    public double? Scale {
-        get => _scale;
-        set {
-            ValidateRequiredPropertyIsNotNull(value);
-            SetProperty(ref _scale, Math.Max(value ?? 0, 1));
         }
     }
 
@@ -280,10 +274,24 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         UpdateShownEmulatorMouseCursorPosition();
     }
 
+    /// <summary>
+    /// Called by the SDL capture backend when in relative mouse mode.
+    /// Accepts pre-normalised coordinates (0..1 range) instead of Avalonia pointer event data.
+    /// </summary>
+    internal void OnMouseMovedNormalized(double x, double y) {
+        if (_pauseHandler.IsPaused) {
+            return;
+        }
+
+        MouseX = x;
+        MouseY = y;
+        MouseMoved?.Invoke(this, new MouseMoveEventArgs(x, y));
+        UpdateShownEmulatorMouseCursorPosition();
+    }
+
     public void SetResolution(int width, int height) {
         _uiDispatcher.Post(() => {
             _isSettingResolution = true;
-            Scale = 1;
             if (Width != width || Height != height) {
                 Width = width;
                 Height = height;
@@ -339,10 +347,29 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public void Pause() => _pauseHandler.RequestPause("Pause button pressed in main window");
 
     private void SetMainTitle(double instructionsPerMillisecond) {
-        MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}";
+        string currentProgramName = _currentProcessNameProvider.CurrentProgramName;
+        if (string.IsNullOrEmpty(currentProgramName)) {
+            MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}{MouseCaptureHint}";
+        } else {
+            MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - {currentProgramName} - cycles/ms: {instructionsPerMillisecond,7:N0}{MouseCaptureHint}";
+        }
     }
 
     [ObservableProperty] private string? _mainTitle;
+
+    [ObservableProperty] private bool _isMouseCaptured;
+
+    [ObservableProperty] private string _mouseCaptureHint = string.Empty;
+
+    internal void UpdateMouseCaptureHint(bool isCaptured) {
+        IsMouseCaptured = isCaptured;
+        if (isCaptured) {
+            MouseCaptureHint = " | Mouse captured (middle click to release)";
+        } else {
+            MouseCaptureHint = " | Mouse free (middle click to capture)";
+        }
+        RefreshMainTitleWithInstructionsPerMs();
+    }
 
     private double? _timeMultiplier = 1;
 

@@ -40,6 +40,7 @@
         <PackageReference Include="JvE.Structurizer" />
         <PackageReference Include="Semi.Avalonia" />
         <PackageReference Include="Semi.Avalonia.Dock" />
+        <PackageReference Include="Silk.NET.SDL" />
         <PackageReference Include="Spice86.DataGrid" />
         <PackageReference Include="Xaml.Behaviors.Avalonia" />
     </ItemGroup>
@@ -55,6 +56,9 @@
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
             <_Parameter1>Spice86.Tests</_Parameter1>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+            <_Parameter1>Spice86.Tests.UI</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>
 </Project>

@@ -35,7 +35,7 @@ public class Xms32BitFunctionsTests {
         _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), _a20Gate);
         _loggerService = Substitute.For<ILoggerService>();
         _callbackHandler = new CallbackHandler(_state, _loggerService);
-        _dosTables = new DosTables();
+        _dosTables = new DosTables(_memory);
         _asmWriter = new MemoryAsmWriter(_memory, new(0, 0), _callbackHandler);
 
         // Create XMS manager

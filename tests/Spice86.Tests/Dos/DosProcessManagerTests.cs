@@ -37,7 +37,8 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         DosProgramSegmentPrefix rootPsp = GetRootPsp(context);
-        rootPsp.CurrentSize.Should().Be(DosMemoryManager.LastFreeSegment);
+        rootPsp.CurrentSize.Should().Be(
+            (ushort)(DosProcessManager.CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs));
         rootPsp.EnvironmentTableSegment.Should().Be((ushort)(DosProcessManager.CommandComSegment + 8));
     }
 
@@ -413,7 +414,7 @@ public class DosProcessManagerTests {
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new(memory, interruptVectorTable, ioPortDispatcher, biosDataArea, vgaRom, true);
 
-        DosDriveManager driveManager = new(loggerService, null, null);
+        DosDriveManager driveManager = DosTestHelpers.CreateDriveManager(loggerService, null);
         DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state), driveManager, loggerService, new List<IVirtualDevice>());
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);

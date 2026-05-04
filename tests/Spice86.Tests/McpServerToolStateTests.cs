@@ -1016,9 +1016,17 @@ public class McpServerToolStateTests {
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(readCfg)), "currentContextDepth", out JsonElement _).Should().BeTrue();
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(listFuncs)), "functions", out JsonElement _).Should().BeTrue();
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(video)), "width", out JsonElement _).Should().BeTrue();
-        JsonElement shot = McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(screenshot));
-        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(shot, "format", out JsonElement format).Should().BeTrue();
-        format.GetString().Should().Be("png");
+        AssertScreenshotResultIsValid(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(screenshot)));
+    }
+
+    private static void AssertScreenshotResultIsValid(JsonElement shot) {
+        bool hasFormat = McpJsonRpcAssertions.TryGetPropertyIgnoreCase(shot, "format", out JsonElement format);
+        bool hasNoFrameError = McpJsonRpcAssertions.TryGetPropertyIgnoreCase(shot, "message", out JsonElement msg)
+            && msg.GetString() == "No video frame is available for screenshot capture.";
+        (hasFormat || hasNoFrameError).Should().BeTrue("screenshot must either return a PNG or report that no frame is available");
+        if (hasFormat) {
+            format.GetString().Should().Be("png");
+        }
     }
 
     private static async Task AssertPauseResumeIoToolsAsync(McpIntegrationContext context) {

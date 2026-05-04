@@ -96,6 +96,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
 
         // Always assign optional devices, regardless of EMS/XMS enablement
         services.Intel8042Controller = spice86.McpServices.Intel8042Controller;
+        services.InputEventHub = spice86.McpServices.InputEventHub;
         services.SoundBlaster = spice86.McpServices.SoundBlaster;
         services.Opl3Fm = spice86.McpServices.Opl3Fm;
         services.PcSpeaker = spice86.McpServices.PcSpeaker;

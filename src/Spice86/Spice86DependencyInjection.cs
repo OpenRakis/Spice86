@@ -373,7 +373,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         ExtendedMemoryManager? xms = null;
 
-        DosTables dosTables = new();
+        DosTables dosTables = new(memory);
 
         SharedMouseData sharedMouseData = new();
 
@@ -467,6 +467,18 @@ public class Spice86DependencyInjection : IDisposable {
             ioPortDispatcher, vgaRenderer, pauseHandler, mcpEmsManager, xms,
             emulatorBreakpointsManager, loggerService);
 
+        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
+        KeyboardInt16Handler keyboardInt16Handler = new(
+            memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, loggerService,
+            biosKeyboardBuffer);
+
+        Dos dos = new Dos(configuration, memory, cfgCpu, stack,
+            state, biosKeyboardBuffer,
+            keyboardInt16Handler, biosDataArea, vgaFunctionality,
+            new Dictionary<string, string> {
+                { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
+            xms);
+
         MainWindowViewModel? mainWindowViewModel = null;
         UIDispatcher? uiDispatcher = null;
         HostStorageProvider? hostStorageProvider = null;
@@ -504,7 +516,8 @@ public class Spice86DependencyInjection : IDisposable {
                 ExceptionHandler = exceptionHandler,
                 CyclesLimiter = cyclesLimiter,
                 McpServices = emulatorMcpServices,
-                McpPort = configuration.McpHttpPort
+                McpPort = configuration.McpHttpPort,
+                CurrentProcessNameProvider = dos.ProcessManager
             };
             mainWindowViewModel = new MainWindowViewModel(mainWindowDependencies);
 
@@ -540,8 +553,7 @@ public class Spice86DependencyInjection : IDisposable {
             state, ioPortDispatcher, a20Gate, dualPic, emulationLoopScheduler,
             configuration.FailOnUnhandledPort, loggerService, inputEventHub);
         emulatorMcpServices.Intel8042Controller = intel8042Controller;
-
-        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
+        emulatorMcpServices.BiosKeyboardBuffer = biosKeyboardBuffer;
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
             stack, state, cfgCpu, dualPic, systemBiosInt15Handler,
             intel8042Controller, biosKeyboardBuffer, loggerService);
@@ -551,10 +563,6 @@ public class Spice86DependencyInjection : IDisposable {
         MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse,
             vgaFunctionality, loggerService,
             _gui as IGuiMouseEvents);
-
-        KeyboardInt16Handler keyboardInt16Handler = new(
-            memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, loggerService,
-            biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
         Joystick joystick = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
@@ -593,14 +601,8 @@ public class Spice86DependencyInjection : IDisposable {
             InstallDefaultInterruptHandlers(interruptInstaller, dualPic, biosDataArea, loggerService);
         }
 
-        Dos dos = new Dos(configuration, memory, cfgCpu, stack,
-            state, biosKeyboardBuffer,
-            keyboardInt16Handler, biosDataArea, vgaFunctionality,
-            new Dictionary<string, string> {
-                { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
-            xms);
-
         emulatorMcpServices.Intel8042Controller = intel8042Controller;
+        emulatorMcpServices.InputEventHub = inputEventHub;
         emulatorMcpServices.SoundBlaster = soundBlaster;
         emulatorMcpServices.Opl3Fm = opl;
         emulatorMcpServices.PcSpeaker = pcSpeaker;

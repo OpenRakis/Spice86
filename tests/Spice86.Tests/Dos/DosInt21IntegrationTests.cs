@@ -1005,6 +1005,72 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
+    /// Tests INT 21h, AH=1Ch (Get Allocation Info for Any Drive) on a valid drive.
+    /// Verifies AL/CX/DX return allocation info and DS:BX points to media id table entry.
+    /// </summary>
+    [Fact]
+    public void GetAllocationInfoForAnyDrive_WithDefaultDrive_ReturnsAllocationInfoAndMediaIdPointer() {
+        byte[] program = new byte[] {
+            // Request drive 0 (default drive, expected C:)
+            0xB4, 0x1C,             // mov ah, 1Ch
+            0xB2, 0x00,             // mov dl, 00h
+            0xCD, 0x21,             // int 21h
+
+            // AL must not be 0xFF on success
+            0x3C, 0xFF,             // cmp al, 0FFh
+            0x74, 0x26,             // je failed
+
+            // AH should be 0
+            0x80, 0xFC, 0x00,       // cmp ah, 00h
+            0x75, 0x21,             // jne failed
+
+            // AL should be 0x20 sectors per cluster (DOSBox dir-mount default)
+            0x3C, 0x20,             // cmp al, 20h
+            0x75, 0x1D,             // jne failed
+
+            // CX must be 0x0200 bytes per sector
+            0x81, 0xF9, 0x00, 0x02, // cmp cx, 0200h
+            0x75, 0x17,             // jne failed
+
+            // DX should be 0x7FFD total clusters (DOSBox dir-mount default)
+            0x81, 0xFA, 0xFD, 0x7F, // cmp dx, 7FFDh
+            0x75, 0x11,             // jne failed
+
+            // BX should point to C: media entry (index 2 => offset 0x12)
+            // DS segment is dynamic (allocated from DOS private area), so not checked
+            0x83, 0xFB, 0x12,       // cmp bx, 0012h
+            0x75, 0x0C,             // jne failed
+
+            // First byte of media-id entry for C: should be fixed-disk descriptor 0xF8
+            0x89, 0xDE,             // mov si, bx
+            0x8A, 0x04,             // mov al, [si]
+            0x3C, 0xF8,             // cmp al, 0F8h
+            0x75, 0x04,             // jne failed
+
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        // Arrange
+
+        // Act
+        DosTestHandler testHandler = RunDosTest(program);
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Tests INT 21h AH=43h AL=0 (Get File Attributes).
     /// A file with ReadOnly attribute must return CX with the ReadOnly bit (0x01) set.
     /// On Windows, the Archive bit (0x20) is also expected since the FAT Archive attribute persists;
