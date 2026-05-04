@@ -93,7 +93,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     public DosInt28Handler DosInt28Handler { get; }
 
     /// <summary>
-    /// The class that handles DOS drives, as a sorted dictionnary.
+    /// The class that handles DOS drives, as a sorted dictionary.
     /// </summary>
     public DosDriveManager DosDriveManager { get; }
 
@@ -527,26 +527,24 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         } catch (ArgumentException ex) {
             _loggerService.Error("IMGMOUNT: Unsupported CD image format for {Path}: {Message}", imagePath, ex.Message);
             return false;
+        } catch (InvalidDataException ex) {
+            _loggerService.Error("IMGMOUNT: CD image {Path} is not a valid disc image: {Message}", imagePath, ex.Message);
+            return false;
         } catch (IOException ex) {
             _loggerService.Error("IMGMOUNT: Could not read CD image {Path}: {Message}", imagePath, ex.Message);
             return false;
         }
-        try {
-            CdRomDrive drive = new CdRomDrive(image);
-            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
-            audioPlayer.SetDrive(drive);
-            drive.SetAudioPlayer(audioPlayer);
-            char upper = char.ToUpperInvariant(driveLetter);
-            byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
-            MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
-            _mscdex.AddDrive(entry);
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
-            }
-            return true;
-        } catch (InvalidDataException ex) {
-            _loggerService.Error("IMGMOUNT: CD image {Path} is not a valid disc image: {Message}", imagePath, ex.Message);
-            return false;
+        CdRomDrive drive = new CdRomDrive(image);
+        CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
+        audioPlayer.SetDrive(drive);
+        drive.SetAudioPlayer(audioPlayer);
+        char upper = char.ToUpperInvariant(driveLetter);
+        byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
+        MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
+        _mscdex.AddDrive(entry);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
         }
+        return true;
     }
 }
