@@ -41,7 +41,7 @@ public sealed class AbsoluteDiskReadTests {
             IFunctionHandlerProvider fhp = Substitute.For<IFunctionHandlerProvider>();
             fhp.FunctionHandlerInUse.Returns(fh);
 
-            DriveManager = DosTestHelpers.CreateDriveManager(logger, null);
+            DriveManager = DosTestHelpers.CreateDriveManager(logger, null, null);
             DriveManager.MountFloppyImage('A', image, "test.img");
 
             Handler = new DosDiskInt25Handler(Memory, DriveManager, fhp, stack, State, logger);

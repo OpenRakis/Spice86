@@ -55,7 +55,7 @@ public sealed class Int13FloppyTests {
             IFunctionHandlerProvider functionHandlerProvider = Substitute.For<IFunctionHandlerProvider>();
             functionHandlerProvider.FunctionHandlerInUse.Returns(functionHandler);
 
-            DosDriveManager driveManager = DosTestHelpers.CreateDriveManager(logger, null);
+            DosDriveManager driveManager = DosTestHelpers.CreateDriveManager(logger, null, null);
             driveManager.MountFloppyImage('A', floppyImage, "test.img");
             FloppyAccess = driveManager;
 

@@ -19,7 +19,7 @@ public class DosDriveManagerFloppyTests {
 
     public DosDriveManagerFloppyTests() {
         ILoggerService logger = Substitute.For<ILoggerService>();
-        _driveManager = DosTestHelpers.CreateDriveManager(logger, "/tmp/test-c-drive");
+        _driveManager = DosTestHelpers.CreateDriveManager(logger, "/tmp/test-c-drive", null);
     }
 
     [Fact]

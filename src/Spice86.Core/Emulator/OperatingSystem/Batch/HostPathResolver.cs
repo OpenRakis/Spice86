@@ -36,12 +36,15 @@ internal static class HostPathResolver {
             return path;
         }
 
-        // Explicit DOS drive letter (e.g. C:\games\disc.iso or C:disc.iso)
+        // Explicit DOS drive letter (e.g. C:\games\disc.iso or C:disc.iso).
+        // We try this first, but only commit to the result when the resolved host path
+        // actually exists. On Windows a token like "C:\Users\..." will look like a DOS
+        // drive prefix yet really be a host path; in that case the DOS-resolved path will
+        // not exist and we fall through to host/absolute-path handling below.
         if (path.Length >= 2 && char.IsLetter(path[0]) && path[1] == ':') {
             char driveLetter = char.ToUpperInvariant(path[0]);
             if (driveManager.TryGetValue(driveLetter, out VirtualDrive? drive)
                 && !string.IsNullOrEmpty(drive.MountedHostDirectory)) {
-                // Strip "X:" and an optional leading backslash/forward-slash
                 string dosRelative = path.Length >= 3 && (path[2] == '\\' || path[2] == '/')
                     ? path.Substring(3)
                     : (path.Length > 2 ? path.Substring(2) : string.Empty);
@@ -52,16 +55,23 @@ internal static class HostPathResolver {
                 string combined = string.IsNullOrEmpty(dosRelative)
                     ? hostBase
                     : Path.Combine(hostBase, dosRelative);
-                return Path.GetFullPath(combined);
+                string dosResolved = Path.GetFullPath(combined);
+                if (Directory.Exists(dosResolved) || File.Exists(dosResolved)) {
+                    return dosResolved;
+                }
+                // Not a real DOS-drive path; fall through to host interpretation.
             }
         }
 
-        // Absolute host path (no matching DOS drive found above, or no drive prefix)
+        // Absolute host path (e.g. "C:\Users\..." on Windows or "/home/..." on Unix).
         if (Path.IsPathRooted(path)) {
             return Path.GetFullPath(path);
         }
 
-        // Relative path — resolve against the current DOS directory's host equivalent
+        // Relative path — resolve against the current DOS directory's host equivalent.
+        // If that resolution does not point to an existing file or directory, fall back
+        // to the process working directory (which is what the user typed at the prompt
+        // before launching the emulator).
         VirtualDrive currentDrive = driveManager.CurrentDrive;
         if (!string.IsNullOrEmpty(currentDrive.MountedHostDirectory)) {
             string hostBase = currentDrive.MountedHostDirectory.TrimEnd(
@@ -75,7 +85,15 @@ internal static class HostPathResolver {
             }
             string relPath = path.Replace('\\', Path.DirectorySeparatorChar)
                                  .Replace('/', Path.DirectorySeparatorChar);
-            return Path.GetFullPath(Path.Combine(hostBase, relPath));
+            string dosRelativeResolved = Path.GetFullPath(Path.Combine(hostBase, relPath));
+            if (Directory.Exists(dosRelativeResolved) || File.Exists(dosRelativeResolved)) {
+                return dosRelativeResolved;
+            }
+            string cwdResolved = Path.GetFullPath(path);
+            if (Directory.Exists(cwdResolved) || File.Exists(cwdResolved)) {
+                return cwdResolved;
+            }
+            return dosRelativeResolved;
         }
 
         // Fallback: process working directory
