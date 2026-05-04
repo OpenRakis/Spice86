@@ -195,14 +195,9 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
     }
 
     /// <summary>
-    /// Mounts a host folder as a DOS fixed drive (C:, D:, E:, …).
-    /// Adds the drive if it does not already exist, or updates the existing entry.
-    /// </summary>
-    /// <param name="driveLetter">The target drive letter (must not be 'A', 'B', or 'Z').</param>
-    /// <param name="hostFolderPath">The absolute path to the host folder to mount.</param>
-    /// <summary>
     /// Mounts a host folder as a regular (HDD-style) DOS drive.
-    /// If the mounted drive is the currently active drive, <see cref="CurrentDrive"/> is updated.
+    /// Adds the drive if it does not already exist, or updates the existing entry.
+    /// If the mounted drive is the currently active drive, <see cref="CurrentDrive"/> is also updated.
     /// </summary>
     /// <param name="driveLetter">The target drive letter (must not be 'A', 'B', or 'Z').</param>
     /// <param name="hostFolderPath">The absolute path to the host folder to mount.</param>
