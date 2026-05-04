@@ -7,6 +7,7 @@ using NSubstitute;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
+using Spice86.Tests.Dos;
 
 using Xunit;
 
@@ -18,7 +19,7 @@ public class DosDriveManagerFloppyTests {
 
     public DosDriveManagerFloppyTests() {
         ILoggerService logger = Substitute.For<ILoggerService>();
-        _driveManager = new DosDriveManager(logger, "/tmp/test-c-drive", null);
+        _driveManager = DosTestHelpers.CreateDriveManager(logger, "/tmp/test-c-drive");
     }
 
     [Fact]

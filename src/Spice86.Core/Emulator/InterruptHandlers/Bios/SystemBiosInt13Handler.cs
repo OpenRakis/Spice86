@@ -110,8 +110,16 @@ public class SystemBiosInt13Handler : InterruptHandler {
         AddAction(0x02, () => ReadSectors(true));
         AddAction(0x03, () => WriteSectors(true));
         AddAction(0x04, () => VerifySectors(true));
+        AddAction(0x05, () => FormatTrack(true));
         AddAction(0x08, () => GetDriveParameters(true));
+        AddAction(0x0C, () => SeekToCylinder(true));
+        AddAction(0x0D, () => ResetHardDiskController(true));
+        AddAction(0x10, () => TestDriveReady(true));
+        AddAction(0x11, () => Recalibrate(true));
         AddAction(0x15, () => GetDisketteOrHddType(true));
+        AddAction(0x16, () => GetDiskChangeLineStatus(true));
+        AddAction(0x17, () => SetDasdTypeForFormat(true));
+        AddAction(0x18, () => SetMediaTypeForFormat(true));
     }
 
     /// <summary>
@@ -307,6 +315,129 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
         State.AH = ErrorSenseFailed;
         SetCarryFlag(true, calledFromVm);
+    }
+
+    /// <summary>
+    /// Format Track (AH=0x05). Zeros all sectors in the specified track on floppy.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    public void FormatTrack(bool calledFromVm) {
+        byte driveNumber = State.DL;
+        if (_floppyAccess == null || !IsFloppyDrive(driveNumber)) {
+            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            return;
+        }
+        if (!_floppyAccess.TryGetGeometry(driveNumber, out int _, out int heads, out int sectorsPerTrack, out int bytesPerSector)) {
+            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            return;
+        }
+        (int cylinder, int head, int _) = DecodeChs();
+        int lbaStart = ChsToLba(cylinder, head, 1, sectorsPerTrack, heads);
+        int byteOffset = lbaStart * bytesPerSector;
+        int byteCount = sectorsPerTrack * bytesPerSector;
+        byte[] zeros = new byte[byteCount];
+        if (!_floppyAccess.TryWrite(driveNumber, byteOffset, zeros, 0, byteCount)) {
+            SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
+            return;
+        }
+        _floppySound?.PlaySeek();
+        State.AH = ErrorNone;
+        State.AL = (byte)sectorsPerTrack;
+        RecordSuccess(driveNumber);
+        SetCarryFlag(false, calledFromVm);
+    }
+
+    /// <summary>
+    /// Seek to Cylinder (AH=0x0C). Positions the read/write head.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    public void SeekToCylinder(bool calledFromVm) {
+        byte driveNumber = State.DL;
+        if (IsFloppyDrive(driveNumber)) {
+            if (_floppyAccess == null || !_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+                SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+                return;
+            }
+            _floppySound?.PlaySeek();
+            RecordSuccess(driveNumber);
+        }
+        State.AH = ErrorNone;
+        SetCarryFlag(false, calledFromVm);
+    }
+
+    /// <summary>
+    /// Reset Hard Disk Controller (AH=0x0D). Equivalent to AH=0x00.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    public void ResetHardDiskController(bool calledFromVm) {
+        ResetDiskSystem(calledFromVm);
+    }
+
+    /// <summary>
+    /// Test Drive Ready (AH=0x10). Returns success when the specified floppy drive has media.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    public void TestDriveReady(bool calledFromVm) {
+        byte driveNumber = State.DL;
+        if (_floppyAccess != null && IsFloppyDrive(driveNumber)
+            && _floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+            State.AH = ErrorNone;
+            RecordSuccess(driveNumber);
+            SetCarryFlag(false, calledFromVm);
+        } else {
+            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+        }
+    }
+
+    /// <summary>
+    /// Recalibrate (AH=0x11). Moves the head to cylinder 0.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    public void Recalibrate(bool calledFromVm) {
+        byte driveNumber = State.DL;
+        if (IsFloppyDrive(driveNumber) && _floppyAccess != null) {
+            _floppySound?.PlaySeek();
+        }
+        State.AH = ErrorNone;
+        SetCarryFlag(false, calledFromVm);
+    }
+
+    /// <summary>
+    /// Get Disk Change Line Status (AH=0x16). Reports whether media has changed since the last I/O.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    public void GetDiskChangeLineStatus(bool calledFromVm) {
+        byte driveNumber = State.DL;
+        if (!IsFloppyDrive(driveNumber)) {
+            State.AH = ErrorNone;
+            SetCarryFlag(false, calledFromVm);
+            return;
+        }
+        if (_floppyAccess == null || !_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            return;
+        }
+        State.AH = ErrorNone;
+        RecordSuccess(driveNumber);
+        SetCarryFlag(false, calledFromVm);
+    }
+
+    /// <summary>
+    /// Set DASD Type for Format (AH=0x17). Accepts disk type in AL, always succeeds.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    public void SetDasdTypeForFormat(bool calledFromVm) {
+        State.AH = ErrorNone;
+        SetCarryFlag(false, calledFromVm);
+    }
+
+    /// <summary>
+    /// Set Media Type for Format (AH=0x18). Accepts geometry in CH/CL/DL, always succeeds.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    public void SetMediaTypeForFormat(bool calledFromVm) {
+        State.AH = ErrorNone;
+        SetCarryFlag(false, calledFromVm);
     }
 
     private (int Cylinder, int Head, int Sector) DecodeChs() {

@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+using Spice86.Tests.Dos;
 using Spice86.Tests.Dos.FileSystem;
 
 using Xunit;
@@ -54,7 +55,7 @@ public sealed class Int13FloppyTests {
             IFunctionHandlerProvider functionHandlerProvider = Substitute.For<IFunctionHandlerProvider>();
             functionHandlerProvider.FunctionHandlerInUse.Returns(functionHandler);
 
-            DosDriveManager driveManager = new(logger, null, null);
+            DosDriveManager driveManager = DosTestHelpers.CreateDriveManager(logger, null);
             driveManager.MountFloppyImage('A', floppyImage, "test.img");
             FloppyAccess = driveManager;
 
@@ -258,5 +259,145 @@ public sealed class Int13FloppyTests {
 
         // Assert
         ctx.State.AH.Should().NotBe(0x00, "last error code should be non-zero after failed read");
+    }
+
+    [Fact]
+    public void FormatTrack_FloppyA_ZerosOutTrack() {
+        // Arrange — mark some bytes in track 1 (cylinder 0, head 1, sectors 1-18)
+        byte[] image = new Fat12ImageBuilder().Build();
+        int trackStart = TestContext.ChsToByteOffset(cylinder: 0, head: 1, sector: 1);
+        for (int i = 0; i < 512; i++) { image[trackStart + i] = 0xAA; }
+
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x05;
+        ctx.SetupChsRegisters(cylinder: 0, head: 1, sector: 1, driveNumber: DriveA, sectorCount: 0);
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert
+        ctx.State.AH.Should().Be(0x00);
+        ctx.State.CarryFlag.Should().BeFalse();
+        byte[] readback = new byte[512];
+        ctx.FloppyAccess.TryRead(DriveA, trackStart, readback, 0, 512).Should().BeTrue();
+        readback.Should().AllBeEquivalentTo(0x00, "format track must zero the sector data");
+    }
+
+    [Fact]
+    public void SeekToCylinder_FloppyA_Succeeds() {
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x0C;
+        ctx.SetupChsRegisters(cylinder: 5, head: 0, sector: 1, driveNumber: DriveA, sectorCount: 0);
+
+        ctx.Handler.Run();
+
+        ctx.State.AH.Should().Be(0x00);
+        ctx.State.CarryFlag.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ResetHardDiskController_Succeeds() {
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x0D;
+        ctx.State.DL = 0x80; // hard disk
+
+        ctx.Handler.Run();
+
+        ctx.State.CarryFlag.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TestDriveReady_MountedFloppyA_ReturnsSuccess() {
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x10;
+        ctx.State.DL = DriveA;
+
+        ctx.Handler.Run();
+
+        ctx.State.AH.Should().Be(0x00);
+        ctx.State.CarryFlag.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TestDriveReady_UnmountedDriveB_ReturnsError() {
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image); // only A: is mounted
+        ctx.State.AH = 0x10;
+        ctx.State.DL = 0x01; // drive B
+
+        ctx.Handler.Run();
+
+        ctx.State.CarryFlag.Should().BeTrue();
+        ctx.State.AH.Should().NotBe(0x00);
+    }
+
+    [Fact]
+    public void Recalibrate_FloppyA_Succeeds() {
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x11;
+        ctx.State.DL = DriveA;
+
+        ctx.Handler.Run();
+
+        ctx.State.AH.Should().Be(0x00);
+        ctx.State.CarryFlag.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetDiskChangeLineStatus_MountedFloppyA_ReportsNoChange() {
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x16;
+        ctx.State.DL = DriveA;
+
+        ctx.Handler.Run();
+
+        ctx.State.AH.Should().Be(0x00);
+        ctx.State.CarryFlag.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetDiskChangeLineStatus_UnmountedDriveB_ReturnsError() {
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x16;
+        ctx.State.DL = 0x01; // drive B not mounted
+
+        ctx.Handler.Run();
+
+        ctx.State.CarryFlag.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SetDasdTypeForFormat_AlwaysSucceeds() {
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x17;
+        ctx.State.AL = 0x04; // 3.5" 1.44 MB
+        ctx.State.DL = DriveA;
+
+        ctx.Handler.Run();
+
+        ctx.State.AH.Should().Be(0x00);
+        ctx.State.CarryFlag.Should().BeFalse();
+    }
+
+    [Fact]
+    public void SetMediaTypeForFormat_AlwaysSucceeds() {
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x18;
+        ctx.State.CH = 79; // max cylinder index
+        ctx.State.CL = 18; // sectors per track
+        ctx.State.DL = DriveA;
+
+        ctx.Handler.Run();
+
+        ctx.State.AH.Should().Be(0x00);
+        ctx.State.CarryFlag.Should().BeFalse();
     }
 }

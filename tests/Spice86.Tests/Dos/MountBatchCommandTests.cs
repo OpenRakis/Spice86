@@ -35,7 +35,7 @@ public class MountBatchCommandTests : IDisposable {
         Directory.CreateDirectory(_tempDir);
 
         ILoggerService logger = Substitute.For<ILoggerService>();
-        _driveManager = new DosDriveManager(logger, _tempDir, null);
+        _driveManager = DosTestHelpers.CreateDriveManager(logger, _tempDir);
         _output = new StringBuilder();
         _accessor = new DosBatchExecutionEngineAccessor(_driveManager, _output);
 
