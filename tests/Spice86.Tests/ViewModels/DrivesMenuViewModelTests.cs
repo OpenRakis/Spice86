@@ -30,10 +30,10 @@ public class DrivesMenuViewModelTests {
     }
 
     /// <summary>
-    /// DriveMenuItemViewModel combobox should list all image file names plus the "..." option.
+    /// DriveMenuItemViewModel combobox should list all image file names (no "..." option).
     /// </summary>
     [Fact]
-    public void DriveMenuItemViewModel_ComboboxOptions_ContainsAllImagesAndEllipsis() {
+    public void DriveMenuItemViewModel_ComboboxOptions_ContainsAllImages() {
         // Arrange
         IReadOnlyList<string> imagePaths = new List<string> { "/images/disk1.img", "/images/disk2.img" };
 
@@ -42,11 +42,10 @@ public class DrivesMenuViewModelTests {
             'A', DosVirtualDriveType.Floppy, imagePaths, "/images/disk1.img", "FLOPPY",
             CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
 
-        // Assert
-        vm.ComboboxOptions.Should().HaveCount(3);
+        // Assert — two images, no "..." entry (replaced by dedicated mount buttons)
+        vm.ComboboxOptions.Should().HaveCount(2);
         vm.ComboboxOptions[0].Should().Be("disk1.img");
         vm.ComboboxOptions[1].Should().Be("disk2.img");
-        vm.ComboboxOptions[2].Should().Be("...");
     }
 
     /// <summary>
@@ -86,7 +85,7 @@ public class DrivesMenuViewModelTests {
     }
 
     /// <summary>
-    /// UpdateFromStatus with new image paths should rebuild the combobox options.
+    /// UpdateFromStatus with new image paths should rebuild the combobox options (no "...").
     /// </summary>
     [Fact]
     public void DriveMenuItemViewModel_UpdateFromStatus_WithNewPaths_RebuildsOptions() {
@@ -104,16 +103,36 @@ public class DrivesMenuViewModelTests {
         // Act
         vm.UpdateFromStatus(newStatus);
 
-        // Assert
-        vm.ComboboxOptions.Should().HaveCount(3, "two images plus '...'");
+        // Assert — exactly two image entries, no "..."
+        vm.ComboboxOptions.Should().HaveCount(2, "two images, mount buttons are separate");
         vm.ComboboxOptions[1].Should().Be("disk3.img");
     }
 
     /// <summary>
-    /// DrivesMenuViewModel.Refresh should only show floppy and CD-ROM drives in AllDrives.
+    /// HDD drive entry should report IsHdd true and the combobox should be disabled.
     /// </summary>
     [Fact]
-    public void DrivesMenuViewModel_AllDrives_OnlyContainsFloppyAndCdRom() {
+    public void DriveMenuItemViewModel_HddDrive_IsHddTrue() {
+        // Arrange
+        IReadOnlyList<string> emptyPaths = new List<string>();
+
+        // Act
+        DriveMenuItemViewModel vm = new DriveMenuItemViewModel(
+            'C', DosVirtualDriveType.Fixed, emptyPaths, string.Empty, "HARDDISK",
+            CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
+
+        // Assert
+        vm.IsHdd.Should().BeTrue();
+        vm.IsFloppy.Should().BeFalse();
+        vm.IsCdRom.Should().BeFalse();
+        vm.ComboboxOptions.Should().BeEmpty("HDD drives have no switchable images");
+    }
+
+    /// <summary>
+    /// DrivesMenuViewModel.Refresh should show floppy, CD-ROM, and HDD drives in AllDrives.
+    /// </summary>
+    [Fact]
+    public void DrivesMenuViewModel_AllDrives_ContainsFloppyCdRomAndHdd() {
         // Arrange
         IReadOnlyList<string> emptyPaths = new List<string>();
         List<DosVirtualDriveStatus> statuses = new List<DosVirtualDriveStatus> {
@@ -127,10 +146,11 @@ public class DrivesMenuViewModelTests {
         DrivesMenuViewModel vm = new DrivesMenuViewModel(
             provider, CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
 
-        // Assert
-        vm.AllDrives.Should().HaveCount(2, "only floppy and CD-ROM drives should appear");
+        // Assert — all three drive types are shown; Memory/virtual drives are excluded
+        vm.AllDrives.Should().HaveCount(3, "floppy, HDD and CD-ROM drives all appear");
         vm.AllDrives[0].DriveLetter.Should().Be('A');
-        vm.AllDrives[1].DriveLetter.Should().Be('D');
+        vm.AllDrives[1].DriveLetter.Should().Be('C');
+        vm.AllDrives[2].DriveLetter.Should().Be('D');
     }
 
     /// <summary>
@@ -160,7 +180,7 @@ public class DrivesMenuViewModelTests {
 
         // Assert - A: floppy is updated + placeholder D: CD-ROM is always present
         DriveMenuItemViewModel floppyEntry = vm.AllDrives.First(d => d.DriveLetter == 'A');
-        floppyEntry.ComboboxOptions.Should().HaveCount(3, "two images plus '...'");
+        floppyEntry.ComboboxOptions.Should().HaveCount(2, "two images, no '...' entry");
         vm.AllDrives.Should().Contain(d => d.DriveLetter == 'D' && d.IsCdRom,
             "placeholder D: CD-ROM should remain present even after a floppy-only status update");
     }

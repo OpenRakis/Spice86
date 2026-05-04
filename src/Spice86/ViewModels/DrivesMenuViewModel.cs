@@ -66,6 +66,8 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
             } else if (s.DriveType == DosVirtualDriveType.CdRom) {
                 relevant.Add(s);
                 hasCdDrive = true;
+            } else if (s.DriveType == DosVirtualDriveType.Fixed) {
+                relevant.Add(s);
             }
         }
         if (!hasCdDrive) {

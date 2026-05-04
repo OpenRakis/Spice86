@@ -4,6 +4,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
@@ -12,9 +13,11 @@ using Spice86.ViewModels.Services;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Threading.Tasks;
 
 /// <summary>
-/// View model for a single drive entry in the Drives menu, exposing a combobox with available images.
+/// View model for a single drive entry in the Drives menu, exposing a combobox with available images
+/// and buttons to mount a folder or image file.
 /// </summary>
 public sealed partial class DriveMenuItemViewModel : ObservableObject {
     private readonly IDiscSwapper _discSwapper;
@@ -34,6 +37,9 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     /// <summary>Gets whether this drive is a CD-ROM drive (for icon visibility binding).</summary>
     public bool IsCdRom => DriveType == DosVirtualDriveType.CdRom;
 
+    /// <summary>Gets whether this drive is a hard disk drive (combobox disabled, no mount buttons).</summary>
+    public bool IsHdd => DriveType == DosVirtualDriveType.Fixed;
+
     /// <summary>Gets the volume label of the currently active media, or empty when no media is present.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TooltipText))]
@@ -42,16 +48,23 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     /// <summary>Gets a human-readable tooltip summarising this drive's current state.</summary>
     public string TooltipText {
         get {
-            string typeName = DriveType == DosVirtualDriveType.Floppy ? "Floppy" : "CD-ROM";
+            string typeName;
+            if (DriveType == DosVirtualDriveType.Floppy) {
+                typeName = "Floppy";
+            } else if (DriveType == DosVirtualDriveType.CdRom) {
+                typeName = "CD-ROM";
+            } else {
+                typeName = "Hard Disk";
+            }
             string label = string.IsNullOrEmpty(VolumeLabel) ? "(no label)" : VolumeLabel;
-            if (string.IsNullOrEmpty(SelectedOption) || string.Equals(SelectedOption, "...", StringComparison.Ordinal)) {
+            if (string.IsNullOrEmpty(SelectedOption)) {
                 return $"{DriveLetter}: {typeName} — {label} — no media";
             }
             return $"{DriveLetter}: {typeName} — {label} — {SelectedOption}";
         }
     }
 
-    /// <summary>Gets the options shown in the combobox (image file names plus "...").</summary>
+    /// <summary>Gets the options shown in the combobox (image file names for floppy/CD drives).</summary>
     public ObservableCollection<string> ComboboxOptions { get; } = new();
 
     [ObservableProperty]
@@ -95,7 +108,6 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         foreach (string path in _allImagePaths) {
             ComboboxOptions.Add(Path.GetFileName(path));
         }
-        ComboboxOptions.Add("...");
         string currentFileName;
         if (string.IsNullOrEmpty(currentImagePath)) {
             currentFileName = string.Empty;
@@ -104,7 +116,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         }
         if (ComboboxOptions.Contains(currentFileName)) {
             SelectedOption = currentFileName;
-        } else if (ComboboxOptions.Count > 1) {
+        } else if (ComboboxOptions.Count > 0) {
             SelectedOption = ComboboxOptions[0];
         } else {
             SelectedOption = string.Empty;
@@ -144,20 +156,42 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         if (string.IsNullOrEmpty(value)) {
             return;
         }
-        if (string.Equals(value, "...", StringComparison.Ordinal)) {
-            OpenMountDialog();
-            return;
-        }
         int index = ComboboxOptions.IndexOf(value);
         if (index >= 0 && index < _allImagePaths.Count) {
             _discSwapper.SwapToImageIndex(DriveLetter, index);
         }
     }
 
-    private async void OpenMountDialog() {
+    /// <summary>Opens a folder picker so the user can mount a host folder into this drive.</summary>
+    [RelayCommand]
+    private async Task MountFolder() {
+        FolderPickerOpenOptions options = new() {
+            Title = $"Select folder to mount on drive {DriveLetter}:",
+            AllowMultiple = false,
+        };
+        IReadOnlyList<IStorageFolder> folders = await _hostStorageProvider.OpenFolderPickerAsync(options);
+        if (folders.Count == 0) {
+            return;
+        }
+        string? path = folders[0].TryGetLocalPath();
+        if (string.IsNullOrEmpty(path)) {
+            return;
+        }
+        if (DriveType == DosVirtualDriveType.Floppy) {
+            _mountService.MountFolderAsFloppy(DriveLetter, path);
+        } else {
+            _mountService.MountFolderAsCdRom(DriveLetter, path);
+        }
+    }
+
+    /// <summary>Opens a file picker so the user can mount a disk image into this drive.</summary>
+    [RelayCommand]
+    private async Task MountImage() {
+        FilePickerFileType[] fileTypes = BuildImageFileTypes();
         FilePickerOpenOptions options = new() {
             Title = $"Select image for drive {DriveLetter}:",
             AllowMultiple = false,
+            FileTypeFilter = fileTypes,
         };
         IReadOnlyList<IStorageFile> files = await _hostStorageProvider.OpenFilePickerAsync(options);
         if (files.Count == 0) {
@@ -172,5 +206,22 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         } else {
             _mountService.MountImageAsCdRom(DriveLetter, path);
         }
+    }
+
+    private FilePickerFileType[] BuildImageFileTypes() {
+        if (DriveType == DosVirtualDriveType.Floppy) {
+            return new[] {
+                new FilePickerFileType("Floppy Images") {
+                    Patterns = new[] { "*.img", "*.ima", "*.bin", "*.vhd" }
+                },
+                FilePickerFileTypes.All,
+            };
+        }
+        return new[] {
+            new FilePickerFileType("CD-ROM Images") {
+                Patterns = new[] { "*.iso", "*.cue", "*.bin" }
+            },
+            FilePickerFileTypes.All,
+        };
     }
 }
