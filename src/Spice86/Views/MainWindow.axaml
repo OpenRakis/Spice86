@@ -10,6 +10,7 @@
 		xmlns:factory="clr-namespace:Spice86.Views.Factory"
 		xmlns:fluent="clr-namespace:FluentIcons.Avalonia;assembly=FluentIcons.Avalonia"
 		xmlns:controls="clr-namespace:Spice86.Views.Controls"
+		xmlns:storage="using:Spice86.Shared.Emulator.Storage"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Views/Assets/Spice86.ico"
@@ -124,6 +125,13 @@
 					<MenuItem.ItemTemplate>
 						<DataTemplate DataType="vm:DriveMenuItemViewModel">
 							<StackPanel Orientation="Horizontal" Spacing="6">
+								<ToolTip.Tip>
+									<TextBlock Text="{Binding TooltipText}" />
+								</ToolTip.Tip>
+								<fluent:SymbolIcon Symbol="Save" IsVisible="{Binding IsFloppy}"
+								                  Width="16" Height="16" VerticalAlignment="Center" />
+								<fluent:SymbolIcon Symbol="ArrowEject" IsVisible="{Binding IsCdRom}"
+								                  Width="16" Height="16" VerticalAlignment="Center" />
 								<TextBlock Text="{Binding DriveLetter, StringFormat={}{0}:}" VerticalAlignment="Center" />
 								<ComboBox ItemsSource="{Binding ComboboxOptions}"
 								          SelectedItem="{Binding SelectedOption}"
@@ -204,7 +212,26 @@
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem IsVisible="{Binding DriveStatusViewModel, Converter={StaticResource NullableToBooleanConverter}}">
-				<userControls:DriveStatusUserControl DataContext="{Binding DriveStatusViewModel}" />
+				<StackPanel Orientation="Horizontal" Spacing="4">
+					<ToolTip.Tip>
+						<ItemsControl ItemsSource="{Binding DriveStatusViewModel.DriveStatuses}">
+							<ItemsControl.ItemTemplate>
+								<DataTemplate DataType="storage:DosVirtualDriveStatus">
+									<StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
+										<TextBlock FontFamily="Monospace" FontSize="11"
+										           Text="{Binding DriveLetter, StringFormat={}{0}:}" MinWidth="20" />
+										<TextBlock FontSize="10" Text="{Binding DriveType}" Opacity="0.7" MinWidth="48" />
+										<TextBlock FontSize="10" Text="{Binding VolumeLabel}" MinWidth="60" />
+										<TextBlock FontSize="10" FontFamily="Monospace"
+										           Text="{Binding CurrentImageFileName}" Opacity="0.7" />
+									</StackPanel>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</ToolTip.Tip>
+					<Ellipse Width="10" Height="10" VerticalAlignment="Center"
+					         Fill="{Binding DriveStatusViewModel.ActivityColor}" />
+				</StackPanel>
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem HorizontalAlignment="Right" HorizontalContentAlignment="Right">

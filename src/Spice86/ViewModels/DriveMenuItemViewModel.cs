@@ -28,6 +28,27 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     /// <summary>Gets the drive type for this entry.</summary>
     public DosVirtualDriveType DriveType { get; }
 
+    /// <summary>Gets whether this drive is a floppy drive (for icon visibility binding).</summary>
+    public bool IsFloppy => DriveType == DosVirtualDriveType.Floppy;
+
+    /// <summary>Gets whether this drive is a CD-ROM drive (for icon visibility binding).</summary>
+    public bool IsCdRom => DriveType == DosVirtualDriveType.CdRom;
+
+    /// <summary>Gets the volume label of the currently active media, or empty when no media is present.</summary>
+    public string VolumeLabel { get; private set; } = string.Empty;
+
+    /// <summary>Gets a human-readable tooltip summarising this drive's current state.</summary>
+    public string TooltipText {
+        get {
+            string typeName = DriveType == DosVirtualDriveType.Floppy ? "Floppy" : "CD-ROM";
+            string label = string.IsNullOrEmpty(VolumeLabel) ? "(no label)" : VolumeLabel;
+            if (string.IsNullOrEmpty(SelectedOption) || string.Equals(SelectedOption, "...", StringComparison.Ordinal)) {
+                return $"{DriveLetter}: {typeName} — {label} — no media";
+            }
+            return $"{DriveLetter}: {typeName} — {label} — {SelectedOption}";
+        }
+    }
+
     /// <summary>Gets the options shown in the combobox (image file names plus "...").</summary>
     public ObservableCollection<string> ComboboxOptions { get; } = new();
 
@@ -43,6 +64,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     /// <param name="driveType">The drive type.</param>
     /// <param name="allImagePaths">All registered image paths for this drive.</param>
     /// <param name="currentImagePath">The currently active image path.</param>
+    /// <param name="volumeLabel">The volume label of the mounted media.</param>
     /// <param name="discSwapper">The disc swapper service.</param>
     /// <param name="mountService">The drive mount service.</param>
     /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
@@ -51,11 +73,13 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         DosVirtualDriveType driveType,
         IReadOnlyList<string> allImagePaths,
         string currentImagePath,
+        string volumeLabel,
         IDiscSwapper discSwapper,
         IDriveMountService mountService,
         IHostStorageProvider hostStorageProvider) {
         DriveLetter = driveLetter;
         DriveType = driveType;
+        VolumeLabel = volumeLabel;
         _discSwapper = discSwapper;
         _mountService = mountService;
         _hostStorageProvider = hostStorageProvider;
@@ -84,6 +108,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
             SelectedOption = string.Empty;
         }
         _suppressSelectionHandling = false;
+        OnPropertyChanged(nameof(TooltipText));
     }
 
     /// <summary>Updates the drive data from a new status snapshot.</summary>
@@ -103,6 +128,10 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
             foreach (string path in status.AllImagePaths) {
                 _allImagePaths.Add(path);
             }
+        }
+        if (!string.Equals(VolumeLabel, status.VolumeLabel, StringComparison.Ordinal)) {
+            VolumeLabel = status.VolumeLabel;
+            OnPropertyChanged(nameof(TooltipText));
         }
         RebuildOptions(status.CurrentImagePath);
     }

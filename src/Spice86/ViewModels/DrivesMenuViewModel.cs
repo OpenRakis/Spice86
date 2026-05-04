@@ -59,10 +59,17 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
     public void Refresh() {
         IReadOnlyList<DosVirtualDriveStatus> statuses = _driveStatusProvider.GetDriveStatuses();
         List<DosVirtualDriveStatus> relevant = new();
+        bool hasCdDrive = false;
         foreach (DosVirtualDriveStatus s in statuses) {
             if (s.DriveType == DosVirtualDriveType.Floppy || s.DriveType == DosVirtualDriveType.CdRom) {
                 relevant.Add(s);
             }
+            if (s.DriveType == DosVirtualDriveType.CdRom) {
+                hasCdDrive = true;
+            }
+        }
+        if (!hasCdDrive) {
+            relevant.Add(new DosVirtualDriveStatus('D', DosVirtualDriveType.CdRom, false, string.Empty));
         }
 
         int i = 0;
@@ -79,6 +86,7 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
                         status.DriveType,
                         status.AllImagePaths,
                         status.CurrentImagePath,
+                        status.VolumeLabel,
                         _discSwapper,
                         _mountService,
                         _hostStorageProvider);

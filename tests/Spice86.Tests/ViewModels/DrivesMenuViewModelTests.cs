@@ -10,6 +10,7 @@ using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 
 using System.Collections.Generic;
+using System.Linq;
 
 using Xunit;
 
@@ -38,7 +39,7 @@ public class DrivesMenuViewModelTests {
 
         // Act
         DriveMenuItemViewModel vm = new DriveMenuItemViewModel(
-            'A', DosVirtualDriveType.Floppy, imagePaths, "/images/disk1.img",
+            'A', DosVirtualDriveType.Floppy, imagePaths, "/images/disk1.img", "FLOPPY",
             CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
 
         // Assert
@@ -58,7 +59,7 @@ public class DrivesMenuViewModelTests {
 
         // Act
         DriveMenuItemViewModel vm = new DriveMenuItemViewModel(
-            'A', DosVirtualDriveType.Floppy, imagePaths, "/images/disk2.img",
+            'A', DosVirtualDriveType.Floppy, imagePaths, "/images/disk2.img", "FLOPPY",
             CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
 
         // Assert
@@ -74,7 +75,7 @@ public class DrivesMenuViewModelTests {
         IReadOnlyList<string> imagePaths = new List<string> { "/images/disk1.img", "/images/disk2.img" };
         IDiscSwapper discSwapper = CreateDiscSwapper();
         DriveMenuItemViewModel vm = new DriveMenuItemViewModel(
-            'A', DosVirtualDriveType.Floppy, imagePaths, "/images/disk1.img",
+            'A', DosVirtualDriveType.Floppy, imagePaths, "/images/disk1.img", "FLOPPY",
             discSwapper, CreateMountService(), CreateStorageProvider());
 
         // Act - select the second image
@@ -92,7 +93,7 @@ public class DrivesMenuViewModelTests {
         // Arrange
         IReadOnlyList<string> initialPaths = new List<string> { "/images/disk1.img" };
         DriveMenuItemViewModel vm = new DriveMenuItemViewModel(
-            'A', DosVirtualDriveType.Floppy, initialPaths, "/images/disk1.img",
+            'A', DosVirtualDriveType.Floppy, initialPaths, "/images/disk1.img", "FLOPPY",
             CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
 
         IReadOnlyList<string> newPaths = new List<string> { "/images/disk1.img", "/images/disk3.img" };
@@ -157,8 +158,31 @@ public class DrivesMenuViewModelTests {
         // Act
         vm.Refresh();
 
-        // Assert
-        vm.AllDrives.Should().HaveCount(1);
-        vm.AllDrives[0].ComboboxOptions.Should().HaveCount(3, "two images plus '...'");
+        // Assert - A: floppy is updated + placeholder D: CD-ROM is always present
+        DriveMenuItemViewModel floppyEntry = vm.AllDrives.First(d => d.DriveLetter == 'A');
+        floppyEntry.ComboboxOptions.Should().HaveCount(3, "two images plus '...'");
+    }
+
+    /// <summary>
+    /// DrivesMenuViewModel should always include a placeholder D: CD-ROM entry when no CD drives exist,
+    /// matching the convention that A: and B: floppy slots are always visible.
+    /// </summary>
+    [Fact]
+    public void DrivesMenuViewModel_NoCdDriveInStatus_ShowsPlaceholderCdSlot() {
+        // Arrange — only floppy drives, no CD drives
+        IReadOnlyList<string> emptyPaths = new List<string>();
+        List<DosVirtualDriveStatus> statuses = new List<DosVirtualDriveStatus> {
+            new DosVirtualDriveStatus('A', DosVirtualDriveType.Floppy, hasMedia: false, volumeLabel: "", allImagePaths: emptyPaths),
+            new DosVirtualDriveStatus('B', DosVirtualDriveType.Floppy, hasMedia: false, volumeLabel: "", allImagePaths: emptyPaths),
+        };
+        IDriveStatusProvider provider = CreateStatusProvider(statuses);
+
+        // Act
+        DrivesMenuViewModel vm = new DrivesMenuViewModel(
+            provider, CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
+
+        // Assert — placeholder D: CD drive should be automatically injected
+        vm.AllDrives.Should().Contain(d => d.DriveLetter == 'D' && d.IsCdRom,
+            "a placeholder CD-ROM slot should always appear so the user can mount an image");
     }
 }
