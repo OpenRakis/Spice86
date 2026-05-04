@@ -606,7 +606,7 @@ public class Spice86DependencyInjection : IDisposable {
             mainWindowViewModel.DriveStatusViewModel = new ViewModels.DriveStatusViewModel(dos);
             mainWindowViewModel.DiscSwapper = dos;
             if (hostStorageProvider != null) {
-                ViewModels.DrivesMenuViewModel drivesMenuViewModel = new ViewModels.DrivesMenuViewModel(dos, dos, dos, hostStorageProvider);
+                ViewModels.DrivesMenuViewModel drivesMenuViewModel = new ViewModels.DrivesMenuViewModel(dos, dos, dos, hostStorageProvider, new NullDriveEventNotifier());
                 drivesMenuViewModel.StartPolling();
                 mainWindowViewModel.DrivesMenuViewModel = drivesMenuViewModel;
             }

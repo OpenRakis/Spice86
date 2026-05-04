@@ -101,6 +101,9 @@ public sealed class MscdexService {
     /// <param name="drive">The drive entry to register.</param>
     public void AddDrive(MscdexDriveEntry drive) {
         _drives.Add(drive);
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("MSCDEX: Registered drive {Drive}: (index {Index})", drive.DriveLetter, drive.DriveIndex);
+        }
     }
 
 

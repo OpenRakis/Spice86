@@ -22,6 +22,7 @@ public class DrivesMenuViewModelTests {
     private static IDiscSwapper CreateDiscSwapper() => Substitute.For<IDiscSwapper>();
     private static IDriveMountService CreateMountService() => Substitute.For<IDriveMountService>();
     private static IHostStorageProvider CreateStorageProvider() => Substitute.For<IHostStorageProvider>();
+    private static IDriveEventNotifier CreateNotifier() => new NullDriveEventNotifier();
 
     private static IDriveStatusProvider CreateStatusProvider(IReadOnlyList<DosVirtualDriveStatus> statuses) {
         IDriveStatusProvider provider = Substitute.For<IDriveStatusProvider>();
@@ -144,9 +145,7 @@ public class DrivesMenuViewModelTests {
 
         // Act - constructor calls Refresh() synchronously (no timer)
         DrivesMenuViewModel vm = new DrivesMenuViewModel(
-            provider, CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
-
-        // Assert — all three drive types are shown; Memory/virtual drives are excluded
+            provider, CreateDiscSwapper(), CreateMountService(), CreateStorageProvider(), CreateNotifier());
         vm.AllDrives.Should().HaveCount(3, "floppy, HDD and CD-ROM drives all appear");
         vm.AllDrives[0].DriveLetter.Should().Be('A');
         vm.AllDrives[1].DriveLetter.Should().Be('C');
@@ -166,7 +165,7 @@ public class DrivesMenuViewModelTests {
         };
         IDriveStatusProvider provider = CreateStatusProvider(statuses);
         DrivesMenuViewModel vm = new DrivesMenuViewModel(
-            provider, CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
+            provider, CreateDiscSwapper(), CreateMountService(), CreateStorageProvider(), CreateNotifier());
 
         IReadOnlyList<string> newPaths = new List<string> { "/images/disk1.img", "/images/disk2.img" };
         List<DosVirtualDriveStatus> updatedStatuses = new List<DosVirtualDriveStatus> {
@@ -201,10 +200,77 @@ public class DrivesMenuViewModelTests {
 
         // Act
         DrivesMenuViewModel vm = new DrivesMenuViewModel(
-            provider, CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
+            provider, CreateDiscSwapper(), CreateMountService(), CreateStorageProvider(), CreateNotifier());
 
         // Assert — placeholder D: CD drive should be automatically injected
         vm.AllDrives.Should().Contain(d => d.DriveLetter == 'D' && d.IsCdRom,
             "a placeholder CD-ROM slot should always appear so the user can mount an image");
+    }
+
+    /// <summary>
+    /// DrivesMenuViewModel should fire a toast notification when a drive's image path changes (disc swap).
+    /// </summary>
+    [Fact]
+    public void DrivesMenuViewModel_DiscSwap_FiresNotification() {
+        // Arrange — start with one image on A:
+        IReadOnlyList<string> paths = new List<string> { "/images/disk1.img", "/images/disk2.img" };
+        List<DosVirtualDriveStatus> statuses = new List<DosVirtualDriveStatus> {
+            new DosVirtualDriveStatus('A', DosVirtualDriveType.Floppy, hasMedia: true,
+                volumeLabel: "DISK1", currentImagePath: "/images/disk1.img", imageCount: 2, allImagePaths: paths),
+        };
+        IDriveStatusProvider provider = CreateStatusProvider(statuses);
+        List<string> capturedTitles = new();
+        IDriveEventNotifier notifier = Substitute.For<IDriveEventNotifier>();
+        notifier.When(n => n.Notify(Arg.Any<string>(), Arg.Any<string>()))
+            .Do(ci => capturedTitles.Add((string)ci[0]));
+
+        DrivesMenuViewModel vm = new DrivesMenuViewModel(
+            provider, CreateDiscSwapper(), CreateMountService(), CreateStorageProvider(), notifier);
+
+        // Simulate the image path changing (disc swap)
+        List<DosVirtualDriveStatus> swappedStatuses = new List<DosVirtualDriveStatus> {
+            new DosVirtualDriveStatus('A', DosVirtualDriveType.Floppy, hasMedia: true,
+                volumeLabel: "DISK2", currentImagePath: "/images/disk2.img", imageCount: 2, allImagePaths: paths),
+        };
+        provider.GetDriveStatuses().Returns(swappedStatuses);
+
+        // Act
+        vm.Refresh();
+
+        // Assert — a "disc swapped" notification is fired
+        capturedTitles.Should().Contain(t => t.Contains("swapped"), "disc swap should produce a notification");
+    }
+
+    /// <summary>
+    /// DrivesMenuViewModel should fire a "mounted" notification the first time a drive gets an image.
+    /// </summary>
+    [Fact]
+    public void DrivesMenuViewModel_InitialMount_FiresNotification() {
+        // Arrange — drive A: starts empty
+        IReadOnlyList<string> emptyPaths = new List<string>();
+        List<DosVirtualDriveStatus> statuses = new List<DosVirtualDriveStatus> {
+            new DosVirtualDriveStatus('A', DosVirtualDriveType.Floppy, hasMedia: false, volumeLabel: "", allImagePaths: emptyPaths),
+        };
+        IDriveStatusProvider provider = CreateStatusProvider(statuses);
+        List<string> capturedTitles = new();
+        IDriveEventNotifier notifier = Substitute.For<IDriveEventNotifier>();
+        notifier.When(n => n.Notify(Arg.Any<string>(), Arg.Any<string>()))
+            .Do(ci => capturedTitles.Add((string)ci[0]));
+
+        DrivesMenuViewModel vm = new DrivesMenuViewModel(
+            provider, CreateDiscSwapper(), CreateMountService(), CreateStorageProvider(), notifier);
+
+        // Simulate image mount
+        IReadOnlyList<string> paths = new List<string> { "/images/disk1.img" };
+        provider.GetDriveStatuses().Returns(new List<DosVirtualDriveStatus> {
+            new DosVirtualDriveStatus('A', DosVirtualDriveType.Floppy, hasMedia: true,
+                volumeLabel: "DISK1", currentImagePath: "/images/disk1.img", imageCount: 1, allImagePaths: paths),
+        });
+
+        // Act
+        vm.Refresh();
+
+        // Assert
+        capturedTitles.Should().Contain(t => t.Contains("mounted"), "first image mount should produce a 'mounted' notification");
     }
 }

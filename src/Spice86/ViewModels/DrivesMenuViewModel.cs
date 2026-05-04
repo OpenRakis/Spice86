@@ -20,6 +20,8 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
     private readonly IDiscSwapper _discSwapper;
     private readonly IDriveMountService _mountService;
     private readonly IHostStorageProvider _hostStorageProvider;
+    private IDriveEventNotifier _driveEventNotifier;
+    private readonly Dictionary<char, string> _lastKnownImagePath = new();
 
     /// <summary>Gets all drive entries (floppy and CD-ROM) available in the menu.</summary>
     public ObservableCollection<DriveMenuItemViewModel> AllDrives { get; } = new();
@@ -31,16 +33,30 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
     /// <param name="discSwapper">The disc swapper service.</param>
     /// <param name="mountService">The drive mount service.</param>
     /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
+    /// <param name="driveEventNotifier">The notifier used to show toast notifications for drive events.</param>
     public DrivesMenuViewModel(
         IDriveStatusProvider driveStatusProvider,
         IDiscSwapper discSwapper,
         IDriveMountService mountService,
-        IHostStorageProvider hostStorageProvider) {
+        IHostStorageProvider hostStorageProvider,
+        IDriveEventNotifier driveEventNotifier) {
         _driveStatusProvider = driveStatusProvider;
         _discSwapper = discSwapper;
         _mountService = mountService;
         _hostStorageProvider = hostStorageProvider;
+        _driveEventNotifier = driveEventNotifier;
         Refresh();
+    }
+
+    /// <summary>
+    /// Replaces the notification back-end with a real window-based notifier.
+    /// Call this from the view code-behind once the <see cref="Avalonia.Controls.Window"/> is loaded.
+    /// Clears the tracked state so previously visible drives do not emit spurious toasts.
+    /// </summary>
+    /// <param name="notifier">The notifier to use from this point on.</param>
+    public void AttachNotifier(IDriveEventNotifier notifier) {
+        _lastKnownImagePath.Clear();
+        _driveEventNotifier = notifier;
     }
 
     /// <summary>Starts a background timer that polls drive statuses every second.</summary>
@@ -76,6 +92,7 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
 
         int i = 0;
         foreach (DosVirtualDriveStatus status in relevant) {
+            NotifyIfChanged(status);
             if (i < AllDrives.Count && AllDrives[i].DriveLetter == status.DriveLetter) {
                 AllDrives[i].UpdateFromStatus(status);
             } else {
@@ -99,6 +116,30 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
         }
         while (AllDrives.Count > relevant.Count) {
             AllDrives.RemoveAt(AllDrives.Count - 1);
+        }
+    }
+
+    private void NotifyIfChanged(DosVirtualDriveStatus status) {
+        string newPath = status.CurrentImagePath;
+        if (!_lastKnownImagePath.TryGetValue(status.DriveLetter, out string? previousPath)) {
+            _lastKnownImagePath[status.DriveLetter] = newPath;
+            if (!string.IsNullOrEmpty(newPath)) {
+                string label = string.IsNullOrEmpty(status.VolumeLabel) ? $"{status.DriveLetter}:" : status.VolumeLabel;
+                _driveEventNotifier.Notify($"Drive {status.DriveLetter}: mounted", $"{label} \u2014 {System.IO.Path.GetFileName(newPath)}");
+            }
+            return;
+        }
+        if (!string.Equals(previousPath, newPath, StringComparison.Ordinal)) {
+            _lastKnownImagePath[status.DriveLetter] = newPath;
+            if (string.IsNullOrEmpty(newPath)) {
+                _driveEventNotifier.Notify($"Drive {status.DriveLetter}: ejected", $"No media in drive {status.DriveLetter}:");
+            } else if (string.IsNullOrEmpty(previousPath)) {
+                string label = string.IsNullOrEmpty(status.VolumeLabel) ? $"{status.DriveLetter}:" : status.VolumeLabel;
+                _driveEventNotifier.Notify($"Drive {status.DriveLetter}: mounted", $"{label} \u2014 {System.IO.Path.GetFileName(newPath)}");
+            } else {
+                string label = string.IsNullOrEmpty(status.VolumeLabel) ? $"{status.DriveLetter}:" : status.VolumeLabel;
+                _driveEventNotifier.Notify($"Drive {status.DriveLetter}: disc swapped", $"{label} \u2014 {System.IO.Path.GetFileName(newPath)}");
+            }
         }
     }
 }

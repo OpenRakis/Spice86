@@ -207,6 +207,9 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
             MountedHostDirectory = ConvertUtils.ToSlashFolderPath(hostFolderPath),
             CurrentDosDirectory = "",
         };
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostFolderPath);
+        }
     }
 
     /// <summary>
@@ -239,6 +242,9 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
         FloppyDiskDrive floppy = new() { DriveLetter = driveLetter };
         floppy.MountImage(imageData, imagePath);
         _floppyDriveMap[char.ToUpperInvariant(driveLetter)] = floppy;
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, char.ToUpperInvariant(driveLetter));
+        }
     }
 
     /// <summary>
@@ -258,6 +264,9 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
         } else {
             floppy.AddImage(imageData, imagePath);
         }
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("IMGMOUNT: Added image {Image} to drive {Drive}: ({Count} total)", imagePath, upper, _floppyDriveMap[upper].ImageCount);
+        }
     }
 
     /// <summary>
@@ -266,6 +275,9 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
     public void SwapFloppyDiscs() {
         foreach (FloppyDiskDrive floppy in _floppyDriveMap.Values) {
             floppy.SwapToNextImage();
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("MOUNT: Swapping drive {Drive}: to image {Image}", floppy.DriveLetter, floppy.ImagePath);
+            }
         }
     }
 
@@ -278,6 +290,9 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
             return;
         }
         drive.SwapToIndex(index);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("MOUNT: Drive {Drive}: switched to image {Image}", upper, drive.ImagePath);
+        }
     }
 
     /// <summary>

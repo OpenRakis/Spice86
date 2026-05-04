@@ -443,6 +443,9 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         DosDriveManager.SwapFloppyDiscs();
         foreach (MscdexDriveEntry entry in _mscdex.Drives) {
             entry.Drive.SwapToNextDisc();
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("MOUNT: Swapping drive {Drive}: to image {Image}", entry.DriveLetter, entry.Drive.Image.ImagePath);
+            }
         }
     }
 
@@ -451,11 +454,17 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         char upper = char.ToUpperInvariant(driveLetter);
         if (DosDriveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy)) {
             floppy.SwapToIndex(imageIndex);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("MOUNT: Drive {Drive}: switched to image {Image}", upper, floppy.ImagePath);
+            }
             return;
         }
         foreach (MscdexDriveEntry entry in _mscdex.Drives) {
             if (char.ToUpperInvariant(entry.DriveLetter) == upper) {
                 entry.Drive.SwapToIndex(imageIndex);
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information("MOUNT: Drive {Drive}: switched to image {Image}", upper, entry.Drive.Image.ImagePath);
+                }
                 return;
             }
         }
@@ -481,6 +490,9 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
         MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
         _mscdex.AddDrive(entry);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostPath);
+        }
     }
 
     /// <inheritdoc/>
@@ -491,5 +503,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
         MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
         _mscdex.AddDrive(entry);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
+        }
     }
 }

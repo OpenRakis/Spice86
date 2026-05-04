@@ -3,12 +3,14 @@ namespace Spice86;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Notifications;
 using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Threading;
 
 using Spice86.Core.CLI;
 using Spice86.ViewModels;
+using Spice86.ViewModels.Services;
 using Spice86.Views;
 
 using System;
@@ -54,10 +56,22 @@ internal partial class App : Application {
         Spice86DependencyInjection dependencyInjection = new(configuration, mainWindow);
         if (mainWindow.DataContext is MainWindowViewModel mainVm) {
             mainVm.Disposing += dependencyInjection.Dispose;
+            mainWindow.Loaded += (_, _) => AttachDriveNotifications(mainWindow, mainVm);
         }
         desktop.MainWindow = mainWindow;
         mainWindow.Show();
         splashWindow.Close();
+    }
+
+    private static void AttachDriveNotifications(MainWindow mainWindow, MainWindowViewModel mainVm) {
+        if (mainVm.DrivesMenuViewModel == null) {
+            return;
+        }
+        WindowNotificationManager notificationManager = new WindowNotificationManager(mainWindow) {
+            Position = NotificationPosition.BottomRight,
+            MaxItems = 3,
+        };
+        mainVm.DrivesMenuViewModel.AttachNotifier(new WindowDriveEventNotifier(notificationManager));
     }
 
     private static void LoadAppResources() {
