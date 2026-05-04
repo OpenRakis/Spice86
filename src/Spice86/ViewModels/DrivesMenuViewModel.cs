@@ -109,7 +109,8 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
                         status.VolumeLabel,
                         _discSwapper,
                         _mountService,
-                        _hostStorageProvider);
+                        _hostStorageProvider,
+                        _driveEventNotifier);
                     AllDrives.Insert(i, item);
                 }
             }

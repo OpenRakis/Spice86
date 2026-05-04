@@ -41,7 +41,7 @@ public class DrivesMenuViewModelTests {
         // Act
         DriveMenuItemViewModel vm = new DriveMenuItemViewModel(
             'A', DosVirtualDriveType.Floppy, imagePaths, "/images/disk1.img", "FLOPPY",
-            CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
+            CreateDiscSwapper(), CreateMountService(), CreateStorageProvider(), CreateNotifier());
 
         // Assert — two images, no "..." entry (replaced by dedicated mount buttons)
         vm.ComboboxOptions.Should().HaveCount(2);
@@ -60,7 +60,7 @@ public class DrivesMenuViewModelTests {
         // Act
         DriveMenuItemViewModel vm = new DriveMenuItemViewModel(
             'A', DosVirtualDriveType.Floppy, imagePaths, "/images/disk2.img", "FLOPPY",
-            CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
+            CreateDiscSwapper(), CreateMountService(), CreateStorageProvider(), CreateNotifier());
 
         // Assert
         vm.SelectedOption.Should().Be("disk2.img");
@@ -76,7 +76,7 @@ public class DrivesMenuViewModelTests {
         IDiscSwapper discSwapper = CreateDiscSwapper();
         DriveMenuItemViewModel vm = new DriveMenuItemViewModel(
             'A', DosVirtualDriveType.Floppy, imagePaths, "/images/disk1.img", "FLOPPY",
-            discSwapper, CreateMountService(), CreateStorageProvider());
+            discSwapper, CreateMountService(), CreateStorageProvider(), CreateNotifier());
 
         // Act - select the second image
         vm.SelectedOption = "disk2.img";
@@ -94,7 +94,7 @@ public class DrivesMenuViewModelTests {
         IReadOnlyList<string> initialPaths = new List<string> { "/images/disk1.img" };
         DriveMenuItemViewModel vm = new DriveMenuItemViewModel(
             'A', DosVirtualDriveType.Floppy, initialPaths, "/images/disk1.img", "FLOPPY",
-            CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
+            CreateDiscSwapper(), CreateMountService(), CreateStorageProvider(), CreateNotifier());
 
         IReadOnlyList<string> newPaths = new List<string> { "/images/disk1.img", "/images/disk3.img" };
         DosVirtualDriveStatus newStatus = new DosVirtualDriveStatus(
@@ -120,7 +120,7 @@ public class DrivesMenuViewModelTests {
         // Act
         DriveMenuItemViewModel vm = new DriveMenuItemViewModel(
             'C', DosVirtualDriveType.Fixed, emptyPaths, string.Empty, "HARDDISK",
-            CreateDiscSwapper(), CreateMountService(), CreateStorageProvider());
+            CreateDiscSwapper(), CreateMountService(), CreateStorageProvider(), CreateNotifier());
 
         // Assert
         vm.IsHdd.Should().BeTrue();

@@ -130,7 +130,7 @@
 								</ToolTip.Tip>
 								<fluent:SymbolIcon Symbol="Save" IsVisible="{Binding IsFloppy}"
 								                  Width="16" Height="16" VerticalAlignment="Center" />
-								<fluent:SymbolIcon Symbol="ArrowEject" IsVisible="{Binding IsCdRom}"
+								<fluent:SymbolIcon Symbol="Record" IsVisible="{Binding IsCdRom}"
 								                  Width="16" Height="16" VerticalAlignment="Center" />
 								<fluent:SymbolIcon Symbol="Storage" IsVisible="{Binding IsHdd}"
 								                  Width="16" Height="16" VerticalAlignment="Center" />

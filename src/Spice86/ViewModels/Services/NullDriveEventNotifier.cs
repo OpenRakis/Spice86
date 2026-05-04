@@ -9,4 +9,9 @@ public sealed class NullDriveEventNotifier : IDriveEventNotifier {
     public void Notify(string title, string message) {
         // Intentionally empty — notifications are disabled.
     }
+
+    /// <inheritdoc/>
+    public void NotifyError(string title, string message) {
+        // Intentionally empty — notifications are disabled.
+    }
 }

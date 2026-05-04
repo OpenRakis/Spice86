@@ -21,4 +21,9 @@ public sealed class WindowDriveEventNotifier : IDriveEventNotifier {
     public void Notify(string title, string message) {
         _notificationManager.Show(new Notification(title, message, NotificationType.Information));
     }
+
+    /// <inheritdoc/>
+    public void NotifyError(string title, string message) {
+        _notificationManager.Show(new Notification(title, message, NotificationType.Error));
+    }
 }

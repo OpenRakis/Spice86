@@ -23,6 +23,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     private readonly IDiscSwapper _discSwapper;
     private readonly IDriveMountService _mountService;
     private readonly IHostStorageProvider _hostStorageProvider;
+    private readonly IDriveEventNotifier _driveEventNotifier;
     private readonly List<string> _allImagePaths;
 
     /// <summary>Gets the drive letter for this entry.</summary>
@@ -83,6 +84,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     /// <param name="discSwapper">The disc swapper service.</param>
     /// <param name="mountService">The drive mount service.</param>
     /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
+    /// <param name="driveEventNotifier">The notifier used to surface mount errors as toast notifications.</param>
     public DriveMenuItemViewModel(
         char driveLetter,
         DosVirtualDriveType driveType,
@@ -91,13 +93,15 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         string volumeLabel,
         IDiscSwapper discSwapper,
         IDriveMountService mountService,
-        IHostStorageProvider hostStorageProvider) {
+        IHostStorageProvider hostStorageProvider,
+        IDriveEventNotifier driveEventNotifier) {
         DriveLetter = driveLetter;
         DriveType = driveType;
         _volumeLabel = volumeLabel;
         _discSwapper = discSwapper;
         _mountService = mountService;
         _hostStorageProvider = hostStorageProvider;
+        _driveEventNotifier = driveEventNotifier;
         _allImagePaths = new List<string>(allImagePaths);
         RebuildOptions(currentImagePath);
     }
@@ -186,10 +190,14 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         if (string.IsNullOrEmpty(path)) {
             return;
         }
+        bool success;
         if (DriveType == DosVirtualDriveType.Floppy) {
-            _mountService.MountFolderAsFloppy(DriveLetter, path);
+            success = _mountService.MountFolderAsFloppy(DriveLetter, path);
         } else {
-            _mountService.MountFolderAsCdRom(DriveLetter, path);
+            success = _mountService.MountFolderAsCdRom(DriveLetter, path);
+        }
+        if (!success) {
+            _driveEventNotifier.NotifyError($"Drive {DriveLetter}: mount failed", $"Could not mount folder: {Path.GetFileName(path)}");
         }
     }
 
@@ -210,10 +218,14 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         if (string.IsNullOrEmpty(path)) {
             return;
         }
+        bool success;
         if (DriveType == DosVirtualDriveType.Floppy) {
-            _mountService.MountImageAsFloppy(DriveLetter, path);
+            success = _mountService.MountImageAsFloppy(DriveLetter, path);
         } else {
-            _mountService.MountImageAsCdRom(DriveLetter, path);
+            success = _mountService.MountImageAsCdRom(DriveLetter, path);
+        }
+        if (!success) {
+            _driveEventNotifier.NotifyError($"Drive {DriveLetter}: mount failed", $"Could not mount image: {Path.GetFileName(path)}");
         }
     }
 

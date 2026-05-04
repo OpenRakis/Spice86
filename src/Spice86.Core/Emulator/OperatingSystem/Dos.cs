@@ -473,57 +473,80 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     }
 
     /// <inheritdoc/>
-    public void MountFolderAsFloppy(char driveLetter, string hostPath) {
+    public bool MountFolderAsFloppy(char driveLetter, string hostPath) {
         DosDriveManager.MountFloppyFolder(driveLetter, hostPath);
+        return true;
     }
 
     /// <inheritdoc/>
-    public void MountImageAsFloppy(char driveLetter, string imagePath) {
+    public bool MountImageAsFloppy(char driveLetter, string imagePath) {
         byte[] imageData;
         try {
             imageData = File.ReadAllBytes(imagePath);
         } catch (IOException ex) {
             _loggerService.Error("IMGMOUNT: Could not read image file {Path}: {Message}", imagePath, ex.Message);
-            return;
+            return false;
         }
         try {
             DosDriveManager.MountFloppyImage(driveLetter, imageData, imagePath);
         } catch (InvalidDataException ex) {
             _loggerService.Error("IMGMOUNT: Image {Path} is not a valid FAT disk image: {Message}", imagePath, ex.Message);
-            return;
+            return false;
+        }
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool MountFolderAsCdRom(char driveLetter, string hostPath) {
+        try {
+            string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
+            CdRomDrive drive = new CdRomDrive(image);
+            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
+            audioPlayer.SetDrive(drive);
+            drive.SetAudioPlayer(audioPlayer);
+            char upper = char.ToUpperInvariant(driveLetter);
+            byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
+            MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
+            _mscdex.AddDrive(entry);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostPath);
+            }
+            return true;
+        } catch (IOException ex) {
+            _loggerService.Error("MOUNT: Could not mount folder {Path} as CD-ROM: {Message}", hostPath, ex.Message);
+            return false;
         }
     }
 
     /// <inheritdoc/>
-    public void MountFolderAsCdRom(char driveLetter, string hostPath) {
-        string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-        VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
-        CdRomDrive drive = new CdRomDrive(image);
-        CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
-        audioPlayer.SetDrive(drive);
-        drive.SetAudioPlayer(audioPlayer);
-        char upper = char.ToUpperInvariant(driveLetter);
-        byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
-        MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
-        _mscdex.AddDrive(entry);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostPath);
+    public bool MountImageAsCdRom(char driveLetter, string imagePath) {
+        ICdRomImage image;
+        try {
+            image = CdRomImageFactory.Open(imagePath);
+        } catch (ArgumentException ex) {
+            _loggerService.Error("IMGMOUNT: Unsupported CD image format for {Path}: {Message}", imagePath, ex.Message);
+            return false;
+        } catch (IOException ex) {
+            _loggerService.Error("IMGMOUNT: Could not read CD image {Path}: {Message}", imagePath, ex.Message);
+            return false;
         }
-    }
-
-    /// <inheritdoc/>
-    public void MountImageAsCdRom(char driveLetter, string imagePath) {
-        ICdRomImage image = CdRomImageFactory.Open(imagePath);
-        CdRomDrive drive = new CdRomDrive(image);
-        CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
-        audioPlayer.SetDrive(drive);
-        drive.SetAudioPlayer(audioPlayer);
-        char upper = char.ToUpperInvariant(driveLetter);
-        byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
-        MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
-        _mscdex.AddDrive(entry);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
+        try {
+            CdRomDrive drive = new CdRomDrive(image);
+            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
+            audioPlayer.SetDrive(drive);
+            drive.SetAudioPlayer(audioPlayer);
+            char upper = char.ToUpperInvariant(driveLetter);
+            byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
+            MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
+            _mscdex.AddDrive(entry);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
+            }
+            return true;
+        } catch (InvalidDataException ex) {
+            _loggerService.Error("IMGMOUNT: CD image {Path} is not a valid disc image: {Message}", imagePath, ex.Message);
+            return false;
         }
     }
 }
