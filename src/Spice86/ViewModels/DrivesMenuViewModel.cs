@@ -61,10 +61,10 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
         List<DosVirtualDriveStatus> relevant = new();
         bool hasCdDrive = false;
         foreach (DosVirtualDriveStatus s in statuses) {
-            if (s.DriveType == DosVirtualDriveType.Floppy || s.DriveType == DosVirtualDriveType.CdRom) {
+            if (s.DriveType == DosVirtualDriveType.Floppy) {
                 relevant.Add(s);
-            }
-            if (s.DriveType == DosVirtualDriveType.CdRom) {
+            } else if (s.DriveType == DosVirtualDriveType.CdRom) {
+                relevant.Add(s);
                 hasCdDrive = true;
             }
         }

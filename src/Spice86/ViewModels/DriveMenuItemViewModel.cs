@@ -35,7 +35,9 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     public bool IsCdRom => DriveType == DosVirtualDriveType.CdRom;
 
     /// <summary>Gets the volume label of the currently active media, or empty when no media is present.</summary>
-    public string VolumeLabel { get; private set; } = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TooltipText))]
+    private string _volumeLabel = string.Empty;
 
     /// <summary>Gets a human-readable tooltip summarising this drive's current state.</summary>
     public string TooltipText {
@@ -79,7 +81,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         IHostStorageProvider hostStorageProvider) {
         DriveLetter = driveLetter;
         DriveType = driveType;
-        VolumeLabel = volumeLabel;
+        _volumeLabel = volumeLabel;
         _discSwapper = discSwapper;
         _mountService = mountService;
         _hostStorageProvider = hostStorageProvider;
@@ -131,7 +133,6 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         }
         if (!string.Equals(VolumeLabel, status.VolumeLabel, StringComparison.Ordinal)) {
             VolumeLabel = status.VolumeLabel;
-            OnPropertyChanged(nameof(TooltipText));
         }
         RebuildOptions(status.CurrentImagePath);
     }

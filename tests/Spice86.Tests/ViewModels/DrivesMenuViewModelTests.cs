@@ -161,6 +161,8 @@ public class DrivesMenuViewModelTests {
         // Assert - A: floppy is updated + placeholder D: CD-ROM is always present
         DriveMenuItemViewModel floppyEntry = vm.AllDrives.First(d => d.DriveLetter == 'A');
         floppyEntry.ComboboxOptions.Should().HaveCount(3, "two images plus '...'");
+        vm.AllDrives.Should().Contain(d => d.DriveLetter == 'D' && d.IsCdRom,
+            "placeholder D: CD-ROM should remain present even after a floppy-only status update");
     }
 
     /// <summary>
