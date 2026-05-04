@@ -15,9 +15,10 @@ public class FloppyDiskDrive : DosDriveBase {
     private int _currentIndex;
 
     /// <summary>
-    /// Gets the FAT12 filesystem for the mounted floppy image, or <see langword="null"/> when no image is mounted.
+    /// Gets the FAT filesystem for the mounted floppy image, or <see langword="null"/> when no image is mounted.
+    /// Supports FAT12, FAT16, and FAT32 images.
     /// </summary>
-    public Fat12FileSystem? Image { get; private set; }
+    public FatFileSystem? Image { get; private set; }
 
     /// <summary>
     /// Gets <see langword="true"/> when a floppy image is currently mounted in this drive.
@@ -131,7 +132,7 @@ public class FloppyDiskDrive : DosDriveBase {
 
     private void ApplyCurrentImage() {
         (byte[] data, string _) = _images[_currentIndex];
-        Image = new Fat12FileSystem(data);
+        Image = new FatFileSystem(data);
         Label = Image.VolumeLabel;
     }
 }

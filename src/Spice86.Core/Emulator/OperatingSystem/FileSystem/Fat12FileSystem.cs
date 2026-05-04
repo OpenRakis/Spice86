@@ -138,8 +138,14 @@ public sealed class Fat12FileSystem {
 
         // Total FAT12 entries = number of clusters + 2 (cluster 0 and 1 are reserved).
         int dataSectors = _bpb.TotalSectors - _bpb.DataStartSector;
+        if (dataSectors <= 0 || _bpb.SectorsPerCluster == 0) {
+            return Array.Empty<ushort>();
+        }
         int clusterCount = dataSectors / _bpb.SectorsPerCluster;
         int entryCount = clusterCount + 2;
+        if (entryCount <= 0) {
+            return Array.Empty<ushort>();
+        }
 
         ushort[] table = new ushort[entryCount];
 

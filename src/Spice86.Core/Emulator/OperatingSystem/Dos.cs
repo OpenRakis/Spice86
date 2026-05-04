@@ -477,8 +477,19 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
 
     /// <inheritdoc/>
     public void MountImageAsFloppy(char driveLetter, string imagePath) {
-        byte[] imageData = File.ReadAllBytes(imagePath);
-        DosDriveManager.MountFloppyImage(driveLetter, imageData, imagePath);
+        byte[] imageData;
+        try {
+            imageData = File.ReadAllBytes(imagePath);
+        } catch (IOException ex) {
+            _loggerService.Error("IMGMOUNT: Could not read image file {Path}: {Message}", imagePath, ex.Message);
+            return;
+        }
+        try {
+            DosDriveManager.MountFloppyImage(driveLetter, imageData, imagePath);
+        } catch (InvalidDataException ex) {
+            _loggerService.Error("IMGMOUNT: Image {Path} is not a valid FAT disk image: {Message}", imagePath, ex.Message);
+            return;
+        }
     }
 
     /// <inheritdoc/>

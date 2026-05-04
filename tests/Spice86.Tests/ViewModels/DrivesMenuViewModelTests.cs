@@ -110,7 +110,7 @@ public class DrivesMenuViewModelTests {
     }
 
     /// <summary>
-    /// HDD drive entry should report IsHdd true and the combobox should be disabled.
+    /// HDD drive entry should report IsHdd true and the combobox should show the volume label.
     /// </summary>
     [Fact]
     public void DriveMenuItemViewModel_HddDrive_IsHddTrue() {
@@ -126,7 +126,8 @@ public class DrivesMenuViewModelTests {
         vm.IsHdd.Should().BeTrue();
         vm.IsFloppy.Should().BeFalse();
         vm.IsCdRom.Should().BeFalse();
-        vm.ComboboxOptions.Should().BeEmpty("HDD drives have no switchable images");
+        vm.ComboboxOptions.Should().ContainSingle("HDD drives show their volume label in the disabled combobox")
+            .Which.Should().Be("HARDDISK");
     }
 
     /// <summary>

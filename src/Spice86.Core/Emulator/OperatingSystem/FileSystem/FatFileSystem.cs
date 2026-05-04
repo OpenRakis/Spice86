@@ -147,8 +147,14 @@ public sealed class FatFileSystem {
     }
 
     private FatType DetectFatType() {
+        if (_bpb.SectorsPerCluster == 0) {
+            return FatType.Fat12;
+        }
         int dataStartSector = GetDataStartSector();
         uint totalSectors = _bpb.TotalSectors16 != 0 ? _bpb.TotalSectors16 : _bpb.TotalSectors32;
+        if (totalSectors == 0 || (uint)dataStartSector >= totalSectors) {
+            return FatType.Fat12;
+        }
         uint dataSectors = totalSectors - (uint)dataStartSector;
         uint clusterCount = dataSectors / _bpb.SectorsPerCluster;
         if (clusterCount < 4085) {
@@ -161,12 +167,21 @@ public sealed class FatFileSystem {
     }
 
     private uint[] ReadFat() {
+        if (_bpb.SectorsPerCluster == 0) {
+            return Array.Empty<uint>();
+        }
         int fatByteOffset = _bpb.FatStartSector * _bpb.BytesPerSector;
         int fatByteLength = (int)(_bpb.SectorsPerFatEffective * _bpb.BytesPerSector);
         int dataStartSector = GetDataStartSector();
         int dataSectors = _bpb.TotalSectors - dataStartSector;
+        if (dataSectors <= 0) {
+            return Array.Empty<uint>();
+        }
         int clusterCount = dataSectors / _bpb.SectorsPerCluster;
         int entryCount = clusterCount + 2;
+        if (entryCount <= 0) {
+            return Array.Empty<uint>();
+        }
         uint[] table = new uint[entryCount];
 
         if (FatType == FatType.Fat12) {
