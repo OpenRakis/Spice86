@@ -105,21 +105,27 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     private void RebuildOptions(string currentImagePath) {
         _suppressSelectionHandling = true;
         ComboboxOptions.Clear();
-        foreach (string path in _allImagePaths) {
-            ComboboxOptions.Add(Path.GetFileName(path));
-        }
-        string currentFileName;
-        if (string.IsNullOrEmpty(currentImagePath)) {
-            currentFileName = string.Empty;
+        if (IsHdd) {
+            string label = string.IsNullOrEmpty(VolumeLabel) ? $"{DriveLetter}:" : VolumeLabel;
+            ComboboxOptions.Add(label);
+            SelectedOption = label;
         } else {
-            currentFileName = Path.GetFileName(currentImagePath);
-        }
-        if (ComboboxOptions.Contains(currentFileName)) {
-            SelectedOption = currentFileName;
-        } else if (ComboboxOptions.Count > 0) {
-            SelectedOption = ComboboxOptions[0];
-        } else {
-            SelectedOption = string.Empty;
+            foreach (string path in _allImagePaths) {
+                ComboboxOptions.Add(Path.GetFileName(path));
+            }
+            string currentFileName;
+            if (string.IsNullOrEmpty(currentImagePath)) {
+                currentFileName = string.Empty;
+            } else {
+                currentFileName = Path.GetFileName(currentImagePath);
+            }
+            if (ComboboxOptions.Contains(currentFileName)) {
+                SelectedOption = currentFileName;
+            } else if (ComboboxOptions.Count > 0) {
+                SelectedOption = ComboboxOptions[0];
+            } else {
+                SelectedOption = string.Empty;
+            }
         }
         _suppressSelectionHandling = false;
         OnPropertyChanged(nameof(TooltipText));
@@ -151,6 +157,9 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
 
     partial void OnSelectedOptionChanged(string value) {
         if (_suppressSelectionHandling) {
+            return;
+        }
+        if (IsHdd) {
             return;
         }
         if (string.IsNullOrEmpty(value)) {
