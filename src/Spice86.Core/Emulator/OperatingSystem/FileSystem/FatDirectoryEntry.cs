@@ -77,13 +77,14 @@ public sealed class FatDirectoryEntry {
 
     /// <summary>
     /// Parses a <see cref="FatDirectoryEntry"/> from a 32-byte span.
+    /// Only the first 32 bytes are used; larger spans are accepted.
     /// </summary>
-    /// <param name="data">Exactly 32 bytes of raw directory-entry data.</param>
+    /// <param name="data">At least 32 bytes of raw directory-entry data.</param>
     /// <returns>The parsed entry.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="data"/> is not exactly 32 bytes.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="data"/> is shorter than 32 bytes.</exception>
     public static FatDirectoryEntry Parse(ReadOnlySpan<byte> data) {
         if (data.Length < EntrySize) {
-            throw new ArgumentException($"Directory entry must be {EntrySize} bytes (got {data.Length}).", nameof(data));
+            throw new ArgumentException($"Directory entry must be at least {EntrySize} bytes (got {data.Length}).", nameof(data));
         }
 
         byte firstByte = data[0];

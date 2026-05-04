@@ -1335,11 +1335,9 @@ internal sealed partial class DosBatchExecutionEngine {
                 images.Add(image);
             }
             CdRomDrive drive = new CdRomDrive(images);
-            if (_mixer != null) {
-                CdAudioPlayer audioPlayer = new CdAudioPlayer(_mixer);
-                audioPlayer.SetDrive(drive);
-                drive.SetAudioPlayer(audioPlayer);
-            }
+            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
+            audioPlayer.SetDrive(drive);
+            drive.SetAudioPlayer(audioPlayer);
             byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(driveLetter, out byte idx) ? idx : (byte)3;
             MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
             _mscdex.AddDrive(entry);
@@ -1349,5 +1347,21 @@ internal sealed partial class DosBatchExecutionEngine {
             WriteToStandardOutput($"IMGMOUNT: failed to open image: {ex.Message}\r\n");
         }
     }
-}
 
+    /// <summary>
+    /// Changes the current DOS drive to the specified letter.
+    /// Mirrors COMMAND.COM's internal drive-change handling in DOSBox Staging:
+    /// typing <c>X:</c> at a prompt (or in a batch file) switches the default drive.
+    /// </summary>
+    /// <param name="driveLetter">The upper-case drive letter to select.</param>
+    internal void TryChangeDrive(char driveLetter) {
+        if (_driveManager.TryGetValue(driveLetter, out VirtualDrive? drive)) {
+            _driveManager.CurrentDrive = drive;
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("BATCH: Changed drive to {Drive}:", driveLetter);
+            }
+        } else {
+            WriteToStandardOutput($"Invalid drive specification\r\n");
+        }
+    }
+}

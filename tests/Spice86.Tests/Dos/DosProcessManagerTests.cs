@@ -5,6 +5,7 @@ using FluentAssertions;
 using NSubstitute;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Memory;
@@ -421,6 +422,10 @@ public class DosProcessManagerTests {
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
         MscdexService mscdex = new(state, memory, loggerService);
 
+        ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
+        channelCreator.AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
+            .Returns(callInfo => new SoundChannel((Action<int>)callInfo[0], (string)callInfo[2], (HashSet<ChannelFeature>)callInfo[3]));
+
         DosProcessManager processManager = new(
             memory,
             stack,
@@ -429,7 +434,7 @@ public class DosProcessManagerTests {
             fileManager,
             driveManager,
             mscdex,
-            null,
+            channelCreator,
             batchDisplayCommandHandler,
             new Dictionary<string, string>(),
             loggerService);

@@ -19,9 +19,9 @@ public sealed class CdAudioPlayer {
     internal SoundChannel Channel => _soundChannel;
 
     /// <summary>Initialises a new <see cref="CdAudioPlayer"/> and registers a channel with the mixer.</summary>
-    /// <param name="mixer">The software mixer to register the CD audio channel with.</param>
-    public CdAudioPlayer(SoftwareMixer mixer) {
-        _soundChannel = mixer.AddChannel(AudioCallback, CdAudioSampleRateHz, "CD Audio",
+    /// <param name="channelCreator">The sound channel creator used to register the CD audio channel.</param>
+    public CdAudioPlayer(ISoundChannelCreator channelCreator) {
+        _soundChannel = channelCreator.AddChannel(AudioCallback, CdAudioSampleRateHz, "CD Audio",
             new HashSet<ChannelFeature> { ChannelFeature.DigitalAudio, ChannelFeature.Stereo, ChannelFeature.ReverbSend });
         _soundChannel.Enable(false);
     }

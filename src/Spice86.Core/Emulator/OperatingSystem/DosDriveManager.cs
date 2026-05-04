@@ -200,13 +200,23 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
     /// </summary>
     /// <param name="driveLetter">The target drive letter (must not be 'A', 'B', or 'Z').</param>
     /// <param name="hostFolderPath">The absolute path to the host folder to mount.</param>
+    /// <summary>
+    /// Mounts a host folder as a regular (HDD-style) DOS drive.
+    /// If the mounted drive is the currently active drive, <see cref="CurrentDrive"/> is updated.
+    /// </summary>
+    /// <param name="driveLetter">The target drive letter (must not be 'A', 'B', or 'Z').</param>
+    /// <param name="hostFolderPath">The absolute path to the host folder to mount.</param>
     public void MountFolderDrive(char driveLetter, string hostFolderPath) {
         char upper = char.ToUpperInvariant(driveLetter);
-        _driveMap[upper] = new VirtualDrive {
+        VirtualDrive newDrive = new VirtualDrive {
             DriveLetter = upper,
             MountedHostDirectory = ConvertUtils.ToSlashFolderPath(hostFolderPath),
             CurrentDosDirectory = "",
         };
+        _driveMap[upper] = newDrive;
+        if (CurrentDrive.DriveLetter == upper) {
+            CurrentDrive = newDrive;
+        }
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostFolderPath);
         }

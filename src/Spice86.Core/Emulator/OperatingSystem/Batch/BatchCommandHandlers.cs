@@ -34,7 +34,8 @@ internal static class BatchCommandHandlers {
             new LoadHighCommandHandler(),
             new EchoDotCommandHandler(),
             new MountCommandHandler(),
-            new ImgMountCommandHandler()
+            new ImgMountCommandHandler(),
+            new DriveChangeCommandHandler()
         };
     }
 
@@ -410,6 +411,26 @@ internal static class BatchCommandHandlers {
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
             return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleImgMount);
+        }
+    }
+
+    /// <summary>
+    /// Handles bare drive-change commands such as <c>C:</c>, <c>D:</c>, etc.
+    /// In real DOS / DOSBox Staging, typing a drive letter followed by a colon at
+    /// the prompt (or in a batch file) switches the current default drive.
+    /// </summary>
+    private sealed class DriveChangeCommandHandler : BatchCommandHandlerBase {
+        protected override bool IsMatch(DosBatchExecutionEngine engine, CommandExecutionContext context) {
+            string token = context.ResolvedCommandToken;
+            return token.Length == 2 && char.IsLetter(token[0]) && token[1] == ':';
+        }
+
+        protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
+            out LaunchRequest launchRequest) {
+            launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
+            char driveLetter = char.ToUpperInvariant(context.ResolvedCommandToken[0]);
+            engine.TryChangeDrive(driveLetter);
+            return false;
         }
     }
 }

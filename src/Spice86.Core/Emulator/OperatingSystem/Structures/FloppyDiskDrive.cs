@@ -11,7 +11,7 @@ using System.Linq;
 /// When more than one image is registered, Ctrl-F4 disc switching cycles through them.
 /// </summary>
 public class FloppyDiskDrive : DosDriveBase {
-    private readonly List<(byte[] Data, string Path)> _images = new();
+    private readonly List<(byte[] Data, string Path, bool IsDirty)> _images = new();
     private int _currentIndex;
 
     /// <summary>
@@ -25,8 +25,7 @@ public class FloppyDiskDrive : DosDriveBase {
     /// </summary>
     public bool HasImage => Image != null;
 
-    /// <summary>
-    /// Gets the file-system path of the currently active disc image,
+    /// <summary>Gets the file-system path of the currently active disc image,
     /// or an empty string when the drive has no image mounted.
     /// </summary>
     public string ImagePath => _images.Count > 0 ? _images[_currentIndex].Path : string.Empty;
@@ -45,14 +44,16 @@ public class FloppyDiskDrive : DosDriveBase {
         IsRemovable = true;
     }
 
-    private bool _isDirty;
-
-    /// <summary>Gets a value indicating whether the floppy image has been modified since the last flush.</summary>
-    public bool IsDirty => _isDirty;
+    /// <summary>Gets a value indicating whether the current image has been modified since the last flush.</summary>
+    public bool IsDirty => _images.Count > 0 && _images[_currentIndex].IsDirty;
 
     /// <summary>Marks the current image as modified so that <see cref="FlushToDisk"/> will persist it.</summary>
     public void MarkDirty() {
-        _isDirty = true;
+        if (_images.Count == 0) {
+            return;
+        }
+        (byte[] data, string path, bool _) = _images[_currentIndex];
+        _images[_currentIndex] = (data, path, true);
     }
 
     /// <summary>
@@ -60,7 +61,7 @@ public class FloppyDiskDrive : DosDriveBase {
     /// Does nothing when the image is clean or when no image path is set.
     /// </summary>
     public void FlushToDisk() {
-        if (!_isDirty) {
+        if (!IsDirty) {
             return;
         }
         if (string.IsNullOrEmpty(ImagePath)) {
@@ -71,7 +72,8 @@ public class FloppyDiskDrive : DosDriveBase {
             return;
         }
         File.WriteAllBytes(ImagePath, data);
-        _isDirty = false;
+        (byte[] d, string p, bool _) = _images[_currentIndex];
+        _images[_currentIndex] = (d, p, false);
     }
 
     /// <summary>
@@ -81,7 +83,7 @@ public class FloppyDiskDrive : DosDriveBase {
     /// <param name="imageData">The raw bytes of the .img floppy disk image.</param>
     /// <param name="imagePath">The host file-system path of the image (used for display).</param>
     public void MountImage(byte[] imageData, string imagePath) {
-        _images.Add((imageData, imagePath));
+        _images.Add((imageData, imagePath, false));
         _currentIndex = _images.Count - 1;
         ApplyCurrentImage();
     }
@@ -93,7 +95,7 @@ public class FloppyDiskDrive : DosDriveBase {
     /// <param name="imageData">The raw bytes of the .img floppy disk image.</param>
     /// <param name="imagePath">The host file-system path of the image (used for display).</param>
     public void AddImage(byte[] imageData, string imagePath) {
-        _images.Add((imageData, imagePath));
+        _images.Add((imageData, imagePath, false));
     }
 
     /// <summary>
@@ -131,7 +133,7 @@ public class FloppyDiskDrive : DosDriveBase {
     }
 
     private void ApplyCurrentImage() {
-        (byte[] data, string _) = _images[_currentIndex];
+        (byte[] data, string _, bool _) = _images[_currentIndex];
         Image = new FatFileSystem(data);
         Label = Image.VolumeLabel;
     }

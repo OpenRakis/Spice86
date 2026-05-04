@@ -52,23 +52,23 @@ public sealed class FloppySoundEmulator {
     /// (<see cref="FloppyDiskNoiseMode.On"/>) and no user-specified samples directory.
     /// Sample files are resolved automatically via the standard search paths.
     /// </summary>
-    /// <param name="mixer">The software mixer to register the floppy channel with.</param>
-    public FloppySoundEmulator(SoftwareMixer mixer)
-        : this(mixer, FloppyDiskNoiseMode.On, samplesDirectory: null) {
+    /// <param name="channelCreator">The sound channel creator to register the floppy channel with.</param>
+    public FloppySoundEmulator(ISoundChannelCreator channelCreator)
+        : this(channelCreator, FloppyDiskNoiseMode.On, samplesDirectory: null) {
     }
 
     /// <summary>
     /// Initialises the emulator with an explicit noise mode and optional
     /// user-supplied samples directory.
     /// </summary>
-    /// <param name="mixer">The software mixer to register the floppy channel with.</param>
+    /// <param name="channelCreator">The sound channel creator to register the floppy channel with.</param>
     /// <param name="mode">The floppy noise emulation level.</param>
     /// <param name="samplesDirectory">
     /// Optional path to a directory containing the WAV sample files.
     /// Pass <see langword="null"/> or empty to rely on the automatic search.
     /// </param>
-    public FloppySoundEmulator(SoftwareMixer mixer, FloppyDiskNoiseMode mode, string? samplesDirectory) {
-        _channel = mixer.AddChannel(AudioCallback, SampleRateHz, "Floppy",
+    public FloppySoundEmulator(ISoundChannelCreator channelCreator, FloppyDiskNoiseMode mode, string? samplesDirectory) {
+        _channel = channelCreator.AddChannel(AudioCallback, SampleRateHz, "Floppy",
             new HashSet<ChannelFeature> { ChannelFeature.DigitalAudio });
         _channel.Enable(false);
 
@@ -135,7 +135,7 @@ public sealed class FloppySoundEmulator {
             _channel.Enable(false);
         }
 
-        _channel.AddSamplesFloat(framesRequested, buf.AsSpan());
+        _channel.AddSamplesNormalized(framesRequested, buf.AsSpan());
     }
 
     private void UpdateChannelEnable() {

@@ -57,7 +57,7 @@ public sealed class VirtualIsoImageTests : IDisposable {
     }
 
     [Fact]
-    public void TotalSectors_EmptyDirectory_AtLeast22() {
+    public void TotalSectors_EmptyDirectory_AtLeast21() {
         // Arrange & Act
         VirtualIsoImage iso = new(_testDir, "DISC");
 

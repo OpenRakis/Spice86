@@ -97,10 +97,22 @@ public sealed class MscdexService {
 
     /// <summary>
     /// Registers a CD-ROM drive with MSCDEX.
+    /// If a drive with the same drive letter is already registered, it is replaced.
     /// </summary>
     /// <param name="drive">The drive entry to register.</param>
     public void AddDrive(MscdexDriveEntry drive) {
-        _drives.Add(drive);
+        int existingIndex = -1;
+        for (int i = 0; i < _drives.Count; i++) {
+            if (_drives[i].DriveLetter == drive.DriveLetter) {
+                existingIndex = i;
+                break;
+            }
+        }
+        if (existingIndex >= 0) {
+            _drives[existingIndex] = drive;
+        } else {
+            _drives.Add(drive);
+        }
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("MSCDEX: Registered drive {Drive}: (index {Index})", drive.DriveLetter, drive.DriveIndex);
         }

@@ -292,6 +292,34 @@ public class MountBatchCommandTests : IDisposable {
 
     // ---------- test-only helper that drives the batch command logic ----------
 
+    [Fact]
+    public void MountFolderDrive_WhenRemountingCurrentDrive_UpdatesCurrentDrive() {
+        // Arrange — the drive manager starts with C: as the current drive
+        string newPath = Path.Combine(_tempDir, "newC");
+        Directory.CreateDirectory(newPath);
+        _driveManager.CurrentDrive.DriveLetter.Should().Be('C');
+
+        // Act
+        _driveManager.MountFolderDrive('C', newPath);
+
+        // Assert — CurrentDrive must point to the newly mounted entry
+        _driveManager.CurrentDrive.MountedHostDirectory.Should().Contain("newC");
+    }
+
+    [Fact]
+    public void MountFolderDrive_WhenRemountingNonCurrentDrive_DoesNotChangeCurrentDrive() {
+        // Arrange
+        string newPath = Path.Combine(_tempDir, "newD");
+        Directory.CreateDirectory(newPath);
+        char originalCurrentLetter = _driveManager.CurrentDrive.DriveLetter;
+
+        // Act — mount D: (which is NOT the current drive)
+        _driveManager.MountFolderDrive('D', newPath);
+
+        // Assert — current drive letter is unchanged
+        _driveManager.CurrentDrive.DriveLetter.Should().Be(originalCurrentLetter);
+    }
+
     /// <summary>
     /// Test helper that exercises the MOUNT / IMGMOUNT path-resolution logic using
     /// <see cref="BatchArgumentParser"/> and <see cref="HostPathResolver"/> from production code,

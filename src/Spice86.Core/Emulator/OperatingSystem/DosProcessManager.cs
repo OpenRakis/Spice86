@@ -118,7 +118,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         MscdexService mscdex,
-        SoftwareMixer? mixer,
+        ISoundChannelCreator channelCreator,
         IBatchDisplayCommandHandler batchDisplayCommandHandler,
         IDictionary<string, string> envVars, ILoggerService loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
@@ -132,7 +132,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _batchExecutionEngine = new DosBatchExecutionEngine(_fileManager,
             _driveManager,
             mscdex,
-            mixer,
+            channelCreator,
             batchDisplayCommandHandler,
             this,
             _loggerService);

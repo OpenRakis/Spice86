@@ -40,6 +40,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
     private readonly MscdexService _mscdex;
+    private readonly ISoundChannelCreator _channelCreator;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -176,16 +177,17 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="mixer">The software audio mixer, used to stream CD audio when an image is mounted.</param>
+    /// <param name="channelCreator">The sound channel creator, used to stream CD audio when an image is mounted.</param>
     /// <param name="xms">Optional XMS manager to expose through DOS.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
-        SoftwareMixer? mixer,
+        ISoundChannelCreator channelCreator,
         ExtendedMemoryManager? xms = null) {
         _loggerService = loggerService;
+        _channelCreator = channelCreator;
         Xms = xms;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
@@ -229,7 +231,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
         _mscdex = new MscdexService(state, memory, loggerService);
-        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _mscdex, mixer, batchDisplayCommandHandler, envVars, _loggerService);
+        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _mscdex, channelCreator, batchDisplayCommandHandler, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
@@ -497,6 +499,9 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
         CdRomDrive drive = new CdRomDrive(image);
+        CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
+        audioPlayer.SetDrive(drive);
+        drive.SetAudioPlayer(audioPlayer);
         char upper = char.ToUpperInvariant(driveLetter);
         byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
         MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
@@ -510,6 +515,9 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     public void MountImageAsCdRom(char driveLetter, string imagePath) {
         ICdRomImage image = CdRomImageFactory.Open(imagePath);
         CdRomDrive drive = new CdRomDrive(image);
+        CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
+        audioPlayer.SetDrive(drive);
+        drive.SetAudioPlayer(audioPlayer);
         char upper = char.ToUpperInvariant(driveLetter);
         byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
         MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);

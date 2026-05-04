@@ -24,7 +24,7 @@ internal sealed partial class DosBatchExecutionEngine {
     private readonly ILoggerService _loggerService;
     private readonly DosDriveManager _driveManager;
     private readonly MscdexService _mscdex;
-    private readonly SoftwareMixer? _mixer;
+    private readonly ISoundChannelCreator _channelCreator;
     private readonly Stack<BatchFileContext> _batchFileContexts = new();
     private readonly Dictionary<string, string[]> _zDriveFiles = new(StringComparer.OrdinalIgnoreCase);
     private VirtualFileBase? _savedStandardInput;
@@ -42,14 +42,14 @@ internal sealed partial class DosBatchExecutionEngine {
     internal DosBatchExecutionEngine(DosFileManager dosFileManager,
         DosDriveManager driveManager,
         MscdexService mscdex,
-        SoftwareMixer? mixer,
+        ISoundChannelCreator channelCreator,
         IBatchDisplayCommandHandler displayCommandHandler,
         IDosBatchExecutionHost host,
         ILoggerService loggerService) {
         _dosFileManager = dosFileManager;
         _driveManager = driveManager;
         _mscdex = mscdex;
-        _mixer = mixer;
+        _channelCreator = channelCreator;
         _displayCommandHandler = displayCommandHandler;
         _host = host;
         _loggerService = loggerService;
