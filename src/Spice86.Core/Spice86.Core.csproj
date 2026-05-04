@@ -46,6 +46,7 @@
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
     </ItemGroup>
     <ItemGroup>
+        <None Include="..\..\3rdparty\Release\FastExpressionCompiler.dll" Pack="true" PackagePath="lib\$(TargetFramework)\" Visible="false" />
         <None Update="Resources\2MGM.license">
             <Link>2MGM.license</Link>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
