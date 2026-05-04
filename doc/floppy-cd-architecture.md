@@ -1,649 +1,938 @@
-# Floppy, CD-ROM, FAT12/16/32, FDC, and Disc-Switching Architecture
+# Floppy / CD-ROM Subsystem — Architecture Reference
 
-_This document reviews every subsystem introduced or reworked by the
-`implement-mscdex-support` branch. It covers all implemented components
-and the architectural decisions behind them._
+_Spice86 branch: `implement-mscdex-support`_
+
+This document describes the **architecture** of the floppy and CD-ROM subsystem:
+the compile-time dependency graph, runtime data flows, interface contracts, and
+the design rationale behind each decision. It is written for contributors who
+need to understand or modify the subsystem.
 
 ---
 
 ## Table of Contents
 
-1. [Layer model](#1-layer-model)
-2. [IFloppyDriveAccess — BIOS/DOS inversion](#2-ifloppydriveaccess--bios--dos-inversion)
-3. [INT 13h floppy handler](#3-int-13h-floppy-handler)
-4. [Intel 8272A FDC hardware emulation](#4-intel-8272a-fdc-hardware-emulation)
-5. [FAT12/16/32 file-system parsing](#5-fat121632-file-system-parsing)
-6. [Virtual disk images (FloppyImage, IsoImage)](#6-virtual-disk-images)
-7. [Floppy write-back](#7-floppy-write-back)
-8. [FloppyDiskDrive and DosDriveManager](#8-floppydiskdrive-and-dosdrivemanager)
-9. [CD-ROM image layer](#9-cd-rom-image-layer)
-10. [MSCDEX (INT 2Fh AH=15h)](#10-mscdex-int-2fh-ah15h)
+1. [Dependency graph and layer contracts](#1-dependency-graph-and-layer-contracts)
+2. [IFloppyDriveAccess — the BIOS/DOS boundary](#2-ifloppydriveaccess--the-biosdos-boundary)
+3. [INT 13h handler — sector access and CHS arithmetic](#3-int-13h-handler--sector-access-and-chs-arithmetic)
+4. [INT 25h / INT 26h — absolute disk I/O](#4-int-25h--int-26h--absolute-disk-io)
+5. [Intel 8272A FDC emulation](#5-intel-8272a-fdc-emulation)
+6. [FAT12/16/32 parsing and type detection](#6-fat121632-parsing-and-type-detection)
+7. [Floppy image lifecycle: mount, write, flush](#7-floppy-image-lifecycle-mount-write-flush)
+8. [Virtual disk images from host directories](#8-virtual-disk-images-from-host-directories)
+9. [CD-ROM image layer: IsoImage and CueBinImage](#9-cd-rom-image-layer-isoimage-and-cuebinimage)
+10. [MSCDEX (INT 2Fh AH=15h) architecture](#10-mscdex-int-2fh-ah15h-architecture)
 11. [Multi-image disc switching and Ctrl-F4](#11-multi-image-disc-switching-and-ctrl-f4)
-12. [MOUNT / IMGMOUNT batch commands](#12-mount--imgmount-batch-commands)
-13. [UI drive-status indicators](#13-ui-drive-status-indicators)
-14. [Dependency-injection wiring](#14-dependency-injection-wiring)
-15. [Test coverage](#15-test-coverage)
+12. [MOUNT / IMGMOUNT batch commands and path resolution](#12-mount--imgmount-batch-commands-and-path-resolution)
+13. [Floppy sound emulation (DOSBox Staging port)](#13-floppy-sound-emulation-dosbox-staging-port)
+14. [UI layer: polling, notifications, and drive menu](#14-ui-layer-polling-notifications-and-drive-menu)
+15. [Dependency-injection wiring and construction order](#15-dependency-injection-wiring-and-construction-order)
+16. [Logging strategy (DOSBox Staging parity)](#16-logging-strategy-dosbox-staging-parity)
+17. [Test coverage matrix](#17-test-coverage-matrix)
 
 ---
 
-## 1. Layer model
+## 1. Dependency graph and layer contracts
 
-Real DOS ran on top of BIOS services; BIOS had no knowledge of DOS. The
-dependency hierarchy is:
+### Compile-time dependency graph
 
 ```
-┌─────────────────────────────────────────────┐
-│  DOS programs / COMMAND.COM                 │
-├─────────────────────────────────────────────┤
-│  DOS kernel  (INT 21h, INT 2Fh/MSCDEX)      │
-│  DosDriveManager  ←implements→              │
-│       IFloppyDriveAccess                    │
-├─────────────────────────────────────────────┤
-│  BIOS  (INT 13h)                            │
-│  SystemBiosInt13Handler uses only           │
-│       IFloppyDriveAccess                    │
-├─────────────────────────────────────────────┤
-│  Hardware abstraction                       │
-│  FloppyDiskDrive  /  CdRomDrive             │
-│  Fat12FileSystem  /  CueBinImage / IsoImage │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  Spice86 (UI)                                                        │
+│  MainWindowViewModel  DrivesMenuViewModel  DriveStatusViewModel      │
+│        │                    │                      │                 │
+│        │ IDiscSwapper        │ IDriveStatusProvider  │ IDriveEventNotifier │
+└────────┼────────────────────┼──────────────────────┼─────────────────┘
+         │                    │                      │
+┌────────▼────────────────────▼──────────────────────▼─────────────────┐
+│  Spice86.Core — DOS layer (Spice86.Core.Emulator.OperatingSystem)    │
+│  Dos  ←→  DosDriveManager  MscdexService  DosProcessManager          │
+│           │  implements                                               │
+│           ▼                                                           │
+│  IFloppyDriveAccess  (Spice86.Core.Emulator.Devices.Storage)        │
+└───────────────────────────────────┬──────────────────────────────────┘
+                                    │  consumed by
+┌───────────────────────────────────▼──────────────────────────────────┐
+│  Spice86.Core — BIOS layer (Spice86.Core.Emulator.InterruptHandlers) │
+│  SystemBiosInt13Handler                                               │
+│  (zero imports from OperatingSystem namespace)                       │
+└───────────────────────────────────┬──────────────────────────────────┘
+                                    │  uses
+┌───────────────────────────────────▼──────────────────────────────────┐
+│  Spice86.Core — Hardware abstraction                                  │
+│  FloppyDiskDrive   CdRomDrive   FloppyDiskController (8272A FDC)     │
+│  FatFileSystem     CueBinImage  IsoImage  VirtualFloppyImage          │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-`IFloppyDriveAccess` lives in `Spice86.Core.Emulator.Devices.Storage`
-(a neutral hardware namespace). `SystemBiosInt13Handler` depends only on
-that interface, never on any `Spice86.Core.Emulator.OperatingSystem` type.
-`DosDriveManager` implements the interface, so the compile-time dependency
-arrow runs **DOS → hardware contract ← BIOS**, not BIOS → DOS.
+**Arrows point towards dependencies.** The critical inversion is:
+`DosDriveManager` (DOS layer) _implements_ `IFloppyDriveAccess` (hardware
+namespace), so the DOS layer depends on the hardware contract, not the other
+way around. The BIOS layer (`SystemBiosInt13Handler`) depends only on
+`IFloppyDriveAccess` — it never imports any `OperatingSystem` type.
 
-This mirrors how DOSBox Staging works: `bios_disk.cpp` operates on a
-`DriveGeometry` struct and a raw byte buffer taken from the DOS-maintained
-`imageDiskList[]` array, never calling into `DOS_Drive` directly.
+This mirrors DOSBox Staging's design: `bios_disk.cpp` reads from an
+`imageDiskList[]` array that DOS fills, operating only on geometry and raw
+byte buffers, with no `DOS_Drive` pointers visible to the BIOS code.
+
+### Interface contracts between layers
+
+| Interface | Defined in | Implemented by | Consumed by |
+|-----------|------------|----------------|-------------|
+| `IFloppyDriveAccess` | `Devices.Storage` | `DosDriveManager` | `SystemBiosInt13Handler`, `DosInt25Handler`, `DosInt26Handler` |
+| `IDiscSwapper` | `Spice86.Shared` | `Dos` | `MainWindowViewModel` |
+| `IDriveStatusProvider` | `Spice86.Shared` | `Dos` | `DriveStatusViewModel`, `DrivesMenuViewModel` |
+| `IDriveEventNotifier` | `Spice86.ViewModels.Services` | `WindowDriveEventNotifier`, `NullDriveEventNotifier` | `DrivesMenuViewModel` |
+| `IDriveMountService` | `Spice86.Shared` | `Dos` | `DrivesMenuViewModel` |
+| `ICdRomImage` | `Devices.CdRom.Image` | `IsoImage`, `CueBinImage`, `VirtualIsoImage` | `CdRomDrive`, `MscdexService` |
 
 ---
 
-## 2. IFloppyDriveAccess — BIOS / DOS inversion
+## 2. IFloppyDriveAccess — the BIOS/DOS boundary
+
+`IFloppyDriveAccess` is the only channel through which the BIOS layer touches
+floppy media. It exposes raw sector access and geometry without any DOS concept
+leaking across the boundary.
 
 ```
-Spice86.Core.Emulator.Devices.Storage
-└── IFloppyDriveAccess
-      ├── TryGetGeometry(driveNumber, out cylinders, out heads,
-      │                  out sectorsPerTrack, out bytesPerSector)
-      ├── TryRead(driveNumber, imageByteOffset, destination[], …)
-      └── TryWrite(driveNumber, imageByteOffset, source[], …)
+namespace Spice86.Core.Emulator.Devices.Storage;
+
+interface IFloppyDriveAccess {
+    bool TryGetGeometry(byte driveNumber,
+        out int totalCylinders,
+        out int headsPerCylinder,
+        out int sectorsPerTrack,
+        out int bytesPerSector);
+
+    bool TryRead (byte driveNumber, int imageByteOffset,
+        byte[] destination, int destOffset, int byteCount);
+
+    bool TryWrite(byte driveNumber, int imageByteOffset,
+        byte[] source,      int srcOffset,  int byteCount);
+}
 ```
 
-**Implementor:** `DosDriveManager`
+`driveNumber` is the BIOS numbering: `0` = A:, `1` = B:, `0x80+` = hard disks
+(hard disks are not handled by this interface — callers check the drive number
+first).
+
+### DosDriveManager implementation path
 
 ```
-DosDriveManager.TryGetGeometry
-  └── TryResolveFloppyImage(driveNumber)
-        ├── maps driveNumber 0 → 'A', 1 → 'B'
-        ├── looks up _floppyDriveMap[driveLetter]
-        └── calls BiosParameterBlock.Parse on image sector 0
+DosDriveManager.TryGetGeometry(driveNumber, ...)
+  1. Map driveNumber → driveLetter  (0→'A', 1→'B')
+  2. _floppyDriveMap.TryGetValue(driveLetter, out FloppyDiskDrive fdd)
+  3. byte[] raw = fdd.GetCurrentImageData()
+  4. BiosParameterBlock bpb = BiosParameterBlock.Parse(raw)
+  5. Fill out-params from bpb.SectorsPerTrack, NumberOfHeads, TotalSectors...
+  6. totalCylinders = TotalSectors / (heads * sectorsPerTrack)
+
+DosDriveManager.TryRead(driveNumber, imageByteOffset, ...)
+  1-2. same drive lookup
+  3. Array.Copy(raw, imageByteOffset, destination, destOffset, byteCount)
+
+DosDriveManager.TryWrite(driveNumber, imageByteOffset, ...)
+  1-2. same drive lookup
+  3. Array.Copy(source, srcOffset, raw, imageByteOffset, byteCount)
+  4. fdd.MarkDirty()   ← write-back tracking
 ```
 
-`TryRead` and `TryWrite` operate directly on the live `byte[]` returned by
-`FloppyDiskDrive.GetCurrentImageData()`, so writes are immediately
-reflected in the in-memory floppy image (no separate write-back step).
+The in-memory `byte[]` that both read and write operate on is the same array
+that `FatFileSystem` traverses. Writes are immediately visible to the FAT
+parser — no coherency problem.
 
 ---
 
-## 3. INT 13h floppy handler
+## 3. INT 13h handler — sector access and CHS arithmetic
 
-`SystemBiosInt13Handler` handles the following subfunctions:
+`SystemBiosInt13Handler` translates BIOS CHS addresses to flat byte offsets and
+delegates all I/O through `IFloppyDriveAccess`.
 
-| AH   | Name                  | Notes                                          |
-|------|-----------------------|------------------------------------------------|
-| 0x00 | Reset Disk System     | Always succeeds; CF cleared                   |
-| 0x01 | Get Last Status       | Returns per-drive error code from `_lastStatus`|
-| 0x02 | Read Sectors          | CHS → LBA, reads from `IFloppyDriveAccess`     |
-| 0x03 | Write Sectors         | CHS → LBA, writes to `IFloppyDriveAccess`      |
-| 0x04 | Verify Sectors        | Stub; succeeds when AL > 0                    |
-| 0x08 | Get Drive Parameters  | Returns BPB-derived geometry; BL=0x04 (1.44MB)|
-| 0x15 | Get Drive/Diskette Type | AH=0x02 (floppy) or 0x03 (HDD at 0x80)     |
+### CHS → LBA → byte-offset formula
 
-CHS → LBA formula (1-based sector, standard BIOS):
 ```
-LBA = (cylinder * heads + head) * sectorsPerTrack + (sector - 1)
+// CHS registers from CPU state (BIOS convention, 1-based sector)
+cylinder = (CH & 0xFF) | ((CL >> 6) << 8)
+head     = DH
+sector   = CL & 0x3F                        // 1-based
+
+LBA = (cylinder * headsPerCylinder + head) * sectorsPerTrack + (sector - 1)
+byteOffset = LBA * bytesPerSector
 ```
 
-Error codes are stored per BIOS drive number in `_lastStatus[0..1]` and
-returned by AH=0x01. Drive numbers ≥ 0x80 are treated as hard disks; the
-handler returns a generic hard-disk response for those.
+### Subfunction dispatch table (AH value)
+
+| AH | Name | BIOS action | Implementation |
+|----|------|-------------|----------------|
+| 0x00 | Reset Disk System | Always succeeds | Clear CF; AH=0 |
+| 0x01 | Get Last Drive Status | Per-drive error byte | Return `_lastStatus[driveNumber]` |
+| 0x02 | Read Sectors | CHS→offset, `IFloppyDriveAccess.TryRead` | Writes to ES:BX |
+| 0x03 | Write Sectors | CHS→offset, `IFloppyDriveAccess.TryWrite` | Reads from ES:BX |
+| 0x04 | Verify Sectors | Stub | Succeeds when AL > 0 |
+| 0x05 | Format Track | Zero all sectors in CHS track | `TryWrite` each sector with zeroes |
+| 0x08 | Get Drive Parameters | BPB geometry + BL=0x04 (1.44 MB) | `TryGetGeometry`; CX/DX encoding |
+| 0x0C | Seek | Cylinder seek | Verify ready; play seek sound |
+| 0x0D | Reset HDD Controller | Same as AH=0x00 | Delegates to Reset |
+| 0x10 | Test Drive Ready | Check for media | `TryGetGeometry`; AH=0 on success |
+| 0x11 | Recalibrate | Head-0 seek | Play seek sound; always succeeds |
+| 0x15 | Get Drive Type | AH=0x02 (floppy) / 0x03 (HDD ≥ 0x80) | Drive-number range check |
+| 0x16 | Change Line Status | Disc-change detection | No-change for mounted; error if not |
+| 0x17 | Set DASD Type for Format | Stub | Always succeeds |
+| 0x18 | Set Media Type for Format | Stub | Always succeeds |
+
+### Error propagation
+
+On failure, `SystemBiosInt13Handler`:
+1. Sets `AH` to the BIOS error code (e.g. `0x80` = drive not ready).
+2. Sets Carry Flag (CF = 1).
+3. Stores the same code in `_lastStatus[driveNumber]` (returned by AH=0x01).
+
+On success: `AH = 0`, CF = 0, `_lastStatus[driveNumber] = 0`.
 
 ---
 
-## 4. Intel 8272A FDC hardware emulation
+## 4. INT 25h / INT 26h — absolute disk I/O
 
-`FloppyDiskController` in `Spice86.Core.Emulator.Devices.ExternalInput` emulates
-the Intel 82077AA / NEC µPD765 floppy disk controller at I/O ports 0x3F2–0x3F5.
+INT 25h (Absolute Disk Read) and INT 26h (Absolute Disk Write) provide a
+DOS-level interface to raw sectors, bypassing the FAT file system.
+
+### Standard mode (CX ≠ 0xFFFF)
+
+```
+AL = drive (0=A:, 1=B:, 2=C:, ...)
+CX = sector count
+DX = starting logical sector (LBA)
+DS:BX = transfer buffer
+```
+
+### Extended mode (CX = 0xFFFF, DOS 3.31+)
+
+```
+AL = drive
+DS:BX → { DWORD start_sector; WORD sector_count; DWORD far_ptr_buffer }
+```
+
+Both handlers implement dual-mode dispatch:
+
+```
+DosInt25Handler.Run()
+  1. if (AL > 1) → HDD stub (return success)
+  2. if (CX == 0xFFFF) → read extended packet from DS:BX
+     else              → use CX/DX directly
+  3. byteOffset = startSector * 512
+  4. _floppyAccess.TryRead(AL, byteOffset, buffer, ...)
+  5. CF=0 on success; CF=1 + error code on failure
+
+DosInt26Handler.Run()
+  same structure, but calls TryWrite and marks image dirty
+```
+
+---
+
+## 5. Intel 8272A FDC emulation
+
+`FloppyDiskController` emulates the Intel 82077AA (NEC µPD765) floppy disk
+controller chip, which is the hardware interface between the CPU and the physical
+floppy drive mechanism.
 
 ### I/O port map
 
-| Port | Direction | Name                     | Description                          |
-|------|-----------|--------------------------|--------------------------------------|
-| 0x3F2 | Write    | Digital Output Register  | Motor enable (bits 4-7), drive select (bits 0-1), reset (bit 2) |
-| 0x3F4 | Read     | Main Status Register     | MRQ, DIO, CB, FDD busy flags         |
-| 0x3F5 | R/W      | Data FIFO                | Command bytes in, result bytes out   |
+| Port | R/W | Register | Function |
+|------|-----|----------|----------|
+| 0x3F2 | W | Digital Output Register | Motor control (bits 4-7), drive select (bits 0-1), reset (bit 2), DMA enable (bit 3) |
+| 0x3F4 | R | Main Status Register | Controller readiness flags |
+| 0x3F5 | R/W | Data FIFO | Command bytes in; result bytes out |
 
-### Main Status Register bits
+### Main Status Register bit encoding
 
-| Bit | Name | Meaning                        |
-|-----|------|--------------------------------|
-| 7   | MRQ  | 1 = data register ready        |
-| 6   | DIO  | 1 = FDC→CPU; 0 = CPU→FDC      |
-| 4   | CB   | FDC busy executing command     |
-| 0-3 | FDD  | FDD 0-3 in seek                |
+```
+Bit 7: MRQ  (1 = data register ready for transfer)
+Bit 6: DIO  (1 = FDC→CPU; 0 = CPU→FDC)
+Bit 5: NDM  (1 = non-DMA mode)
+Bit 4: CB   (1 = command in progress)
+Bit 3-0: FDD busy flags (drives 3-0 seeking)
+```
 
-### Supported commands
+### Command state machine
 
-| Command byte | Name                   | Params | Result bytes |
-|--------------|------------------------|--------|--------------|
-| 0x03         | SPECIFY                | 2      | 0            |
-| 0x04         | SENSE DRIVE STATUS     | 1      | 1 (ST3)      |
-| 0x07         | RECALIBRATE            | 1      | 0 + IRQ6     |
-| 0x08         | SENSE INTERRUPT STATUS | 0      | 2 (ST0, PCN) |
-| 0x0F         | SEEK                   | 2      | 0 + IRQ6     |
-| 0xE6         | READ DATA              | 8      | 7 + IRQ6 + DMA |
-| 0xC5         | WRITE DATA             | 8      | 7 + IRQ6 + DMA |
-| 0x4A         | READ ID                | 1      | 7 + IRQ6     |
-| 0x4D         | FORMAT TRACK           | 5      | 7 + IRQ6     |
+The FDC protocol is phase-driven: command bytes arrive via sequential writes to
+port 0x3F5, then the controller executes, then result bytes are read back.
+
+```
+IDLE ──write─→ COMMAND_RECEIVE ──execute─→ RESULT_READY ──read─→ IDLE
+```
+
+State transitions for READ DATA (command byte 0xE6):
+
+```
+State: IDLE
+  CPU writes 0xE6 → COMMAND_RECEIVE  (expecting 8 more bytes)
+  CPU writes MT, MFM, SK flags (byte 1)
+  CPU writes HD/DS (byte 2)
+  CPU writes C, H, R, N, EOT, GPL, DTL (bytes 3-8)
+State: COMMAND_RECEIVE → EXECUTE
+  FDC computes sector LBA from C/H/R/N
+  DMA channel 2 transfers sector bytes to RAM
+  IRQ 6 raised
+State: RESULT_READY
+  CPU reads ST0, ST1, ST2, C, H, R, N (7 result bytes)
+State: IDLE
+```
+
+### Supported command set
+
+| Command byte | Mnemonic | Phases | Notes |
+|---|---|---|---|
+| 0x03 | SPECIFY | 2 cmd / 0 result | Sets step rate, head load/unload times |
+| 0x04 | SENSE DRIVE STATUS | 1 cmd / 1 result | Returns ST3 |
+| 0x07 | RECALIBRATE | 1 cmd / 0 result + IRQ6 | Seek to track 0 |
+| 0x08 | SENSE INTERRUPT STATUS | 0 cmd / 2 result | Clears interrupt, returns ST0+PCN |
+| 0x0F | SEEK | 2 cmd / 0 result + IRQ6 | Seek to cylinder |
+| 0xE6 | READ DATA | 8 cmd / 7 result + IRQ6 + DMA | Data transfer via DMA ch.2 |
+| 0xC5 | WRITE DATA | 8 cmd / 7 result + IRQ6 + DMA | Data transfer via DMA ch.2 |
+| 0x4A | READ ID | 1 cmd / 7 result + IRQ6 | Returns C/H/R/N of current position |
+| 0x4D | FORMAT TRACK | 5 cmd / 7 result + IRQ6 | Writes format patterns |
 
 ### DMA and IRQ integration
 
 ```
 FloppyDiskController
-├── _dmaChannel (DmaChannel 2, 8-bit, from DmaBus)
-│     └── used for READ DATA / WRITE DATA transfers
-│           read:  FDC reads sector, writes bytes to DMA buffer
-│           write: FDC reads bytes from DMA buffer, writes sector
-└── _raiseIrq (Action<byte> delegate)
-      └── called after seek/recalibrate/read/write completes
-            → raises IRQ 6 via Intel8259Pic
+├── DmaChannel channel2   ← injected from DmaBus
+│     READ DATA:  FDC reads sector bytes → writes to DMA transfer buffer
+│     WRITE DATA: FDC reads from DMA buffer → writes sector bytes
+└── Action<byte> _raiseIrq6  ← delegate to Intel8259Pic
+      called at end of: RECALIBRATE, SEEK, READ DATA, WRITE DATA, READ ID,
+                        FORMAT TRACK
 ```
+
+The 8272A FDC and DMA channel 2 form a hardware data path that the CPU
+programs but does not execute directly, matching the behaviour seen in
+real DOS programs that issue FDC commands and then wait for IRQ 6.
 
 ---
 
-## 5. FAT12/16/32 file-system parsing
+## 6. FAT12/16/32 parsing and type detection
+
+### Class hierarchy
 
 ```
 Spice86.Core.Emulator.OperatingSystem.FileSystem
-├── BiosParameterBlock        (parses boot sector bytes 0x00–0x23 + FAT32 extension)
-├── FatDirectoryEntry         (parses 32-byte directory entries)
-├── FatType                   (enum: Fat12, Fat16, Fat32)
-├── FatFileSystem             (unified FAT12/16/32 cluster-chain traversal)
-└── Fat12FileSystem           (backward-compatible alias for FAT12 images)
+├── BiosParameterBlock          ← parse boot sector, detect FAT type
+├── FatType                     ← enum { Fat12, Fat16, Fat32 }
+├── FatDirectoryEntry           ← parse 32-byte directory records
+├── FatFileSystem               ← unified traversal for all three FAT variants
+└── Fat12FileSystem             ← backward-compatible type alias (= FatFileSystem)
 ```
 
-### BiosParameterBlock fields
-
-| Field              | Offset | Width | Description                                    |
-|--------------------|--------|-------|------------------------------------------------|
-| BytesPerSector     | 0x0B   | 2     | Normally 512                                   |
-| SectorsPerCluster  | 0x0D   | 1     | Power of 2                                     |
-| ReservedSectorCount| 0x0E   | 2     | Sectors before FAT1                            |
-| NumberOfFats       | 0x10   | 1     | Normally 2                                     |
-| RootEntryCount     | 0x11   | 2     | Max root-directory entries (0 for FAT32)       |
-| TotalSectors16     | 0x13   | 2     | 0 if > 65535 sectors                           |
-| SectorsPerFat16    | 0x16   | 2     | FAT12/16 size; 0 for FAT32                     |
-| SectorsPerTrack    | 0x18   | 2     | Used by INT 13h geometry                       |
-| NumberOfHeads      | 0x1A   | 2     | Used by INT 13h geometry                       |
-| TotalSectors32     | 0x20   | 4     | Used when TotalSectors16 == 0                  |
-| SectorsPerFat32    | 0x24   | 4     | FAT32 only (BPB extended)                      |
-| RootCluster        | 0x2C   | 4     | FAT32 only: cluster number of root directory   |
-
-### FAT type detection (Microsoft specification)
+### BiosParameterBlock boot sector layout
 
 ```
-rootDirSectors = ceil(RootEntryCount * 32 / BytesPerSector)
-fatSz          = SectorsPerFat16 != 0 ? SectorsPerFat16 : SectorsPerFat32
-totalSectors   = TotalSectors16 != 0  ? TotalSectors16  : TotalSectors32
-dataSectors    = totalSectors - (ReservedSectorCount + NumberOfFats * fatSz + rootDirSectors)
-clusterCount   = dataSectors / SectorsPerCluster
-
-clusterCount <  4085  → FAT12
-clusterCount < 65525  → FAT16
-else                  → FAT32
+Byte offset  Width  Field
+0x00         3      JmpBoot + OEM name (0x0B onwards is the BPB proper)
+0x0B         2      BytesPerSector         (normally 512)
+0x0D         1      SectorsPerCluster      (power of 2, 1..128)
+0x0E         2      ReservedSectorCount    (sectors before FAT region)
+0x10         1      NumberOfFats           (normally 2)
+0x11         2      RootEntryCount         (max root-dir entries; 0 for FAT32)
+0x13         2      TotalSectors16         (0 when > 65535 sectors)
+0x15         1      MediaDescriptor        (0xF0 = removable)
+0x16         2      SectorsPerFat16        (0 for FAT32)
+0x18         2      SectorsPerTrack        (geometry, used by INT 13h)
+0x1A         2      NumberOfHeads          (geometry, used by INT 13h)
+0x1C         4      HiddenSectors
+0x20         4      TotalSectors32         (used when TotalSectors16 == 0)
+── FAT32 extended BPB (present when SectorsPerFat16 == 0) ──────────────
+0x24         4      SectorsPerFat32
+0x2C         4      RootCluster            (root dir cluster, normally 2)
 ```
 
-### FAT cluster-chain resolution
+### FAT type detection algorithm (Microsoft specification)
 
-| FAT type | Entry width | End-of-chain    | Bad cluster |
-|----------|-------------|-----------------|-------------|
-| FAT12    | 12 bits     | ≥ 0xFF8         | 0xFF7       |
-| FAT16    | 16 bits     | ≥ 0xFFF8        | 0xFFF7      |
-| FAT32    | 28 bits     | ≥ 0x0FFFFFF8    | 0x0FFFFFF7  |
+The FAT variant is determined **solely** from the cluster count, not from the
+`FileSystemType` string in the BPB (which is informational only):
 
-FAT12 entry packing:
-```
-Even cluster N:  value = (byte[N*3/2]) | ((byte[N*3/2+1] & 0x0F) << 8)
-Odd  cluster N:  value = (byte[N*3/2] >> 4) | (byte[N*3/2+1] << 4)
-```
+```csharp
+int rootDirSectors = (RootEntryCount * 32 + BytesPerSector - 1) / BytesPerSector;
+int fatSize   = SectorsPerFat16 != 0 ? SectorsPerFat16 : SectorsPerFat32;
+int totalSec  = TotalSectors16  != 0 ? TotalSectors16  : TotalSectors32;
+int dataSec   = totalSec - ReservedSectorCount - NumberOfFats * fatSize - rootDirSectors;
+int clusterCount = dataSec / SectorsPerCluster;
 
-### Derived sector offsets
-
-```
-FAT1 start     = ReservedSectorCount
-Data area start = ReservedSectorCount + NumberOfFats * fatSz + rootDirSectors
-Cluster N start = DataAreaStart + (N - 2) * SectorsPerCluster
-
-FAT12/16 root  = FAT1 start + NumberOfFats * fatSz  (fixed region)
-FAT32 root     = cluster chain starting at RootCluster
+FatType = clusterCount < 4085  ? FatType.Fat12
+        : clusterCount < 65525 ? FatType.Fat16
+        :                        FatType.Fat32;
 ```
 
-### FatDirectoryEntry
+### FAT entry width and cluster-chain reading
 
-Each 32-byte entry:
+```
+FAT12: read 12-bit entries (packed pairs, byte-boundary handling required)
+       entry = (clusterNumber % 2 == 0)
+             ? (fat[offset]     | (fat[offset + 1] << 8)) & 0x0FFF
+             : (fat[offset] >> 4 | (fat[offset + 1] << 4)) & 0x0FFF
+       EOC sentinel: value >= 0xFF8
 
-| Offset | Width | Field        |
-|--------|-------|--------------|
-| 0      | 8     | Name (padded)|
-| 8      | 3     | Extension    |
-| 11     | 1     | Attributes   |
-| 26     | 2     | First cluster (low word) |
-| 20     | 2     | First cluster (high word, FAT32) |
-| 28     | 4     | File size    |
+FAT16: read 16-bit LE values; EOC >= 0xFFF8
+FAT32: read 32-bit LE values masked to 28 bits; EOC >= 0x0FFFFFF8
+```
 
-Attribute flags: `0x10` = directory, `0x08` = volume label, `0x0F` = LFN
-(skipped), `0xE5` first byte = deleted entry (skipped).
+### Root directory region
+
+```
+FAT12/16: fixed region after FATs
+           rootDirOffset = (ReservedSectorCount + NumberOfFats * fatSize) * BytesPerSector
+           rootDirSize   = RootEntryCount * 32 bytes
+
+FAT32:     root dir is a normal cluster chain starting at RootCluster
+           traversed identically to any other directory
+```
+
+### FatDirectoryEntry parsing
+
+Each entry is 32 bytes. The parser skips:
+- entries where `Name[0] == 0xE5` (deleted)
+- entries where `Name[0] == 0x00` (end of directory)
+- entries where `Attributes == 0x0F` (Long File Name entry)
 
 ---
 
-## 6. Virtual disk images
+## 7. Floppy image lifecycle: mount, write, flush
 
-### VirtualFloppyImage
-
-`VirtualFloppyImage` builds a 1.44 MB FAT12 floppy image in memory from a
-host directory. The resulting `byte[]` can be passed to
-`FloppyDiskDrive.MountImage()` and supports disc switching.
+### State transitions in FloppyDiskDrive
 
 ```
-VirtualFloppyImage.Build(sourceDir, logger) → byte[1,474,560]
-  1. Write BPB in boot sector (sector 0)
-  2. Zero FAT1 and FAT2 (sectors 1–18), write media descriptor 0xF0
-  3. For each file in sourceDir (and one level of subdirs):
-       a. Allocate clusters for file data
-       b. Write FAT chain entries
-       c. Write directory entries in root dir region
-       d. Write file data in data clusters
-  4. Files that would exceed available clusters → skip + log warning
+Empty drive (no images)
+  │
+  ├─MountImage(data, path)──→  Single-image mode  (Image = FatFileSystem(data))
+  │                                    │
+  │                                    ├─AddImage(data2, path2)──→  Multi-image mode
+  │                                    │     _images = [(data,path),(data2,path2)]
+  │                                    │     _currentIndex = 0
+  │                                    │
+  │                                    └─SwapToNextImage()──→  next image active
+  │                                          _currentIndex++
+  │                                          Image rebuilt from new data
+  │
+  └─MountFloppyFolder(path)──→  Folder mode (Image = null, no raw sector access)
 ```
 
-Layout of a 1.44 MB FAT12 image:
+### Write-back mechanism
 
 ```
-Sector 0        : Boot sector / BPB
-Sectors 1-9     : FAT1 (9 sectors)
-Sectors 10-18   : FAT2 (copy)
-Sectors 19-32   : Root directory (14 sectors, 224 entries)
-Sectors 33-2879 : Data area (clusters 2-2848)
+Guest writes a sector:
+  DosDriveManager.TryWrite(driveNumber, byteOffset, src, ...)
+    ├── Array.Copy into fdd.GetCurrentImageData()  (in-place mutation)
+    └── fdd.MarkDirty()                            (set IsDirty = true)
+
+Before disc swap / clean exit:
+  fdd.FlushToDisk()
+    ├── if (!IsDirty) return
+    ├── File.WriteAllBytes(ImagePath, GetCurrentImageData())
+    └── IsDirty = false
 ```
 
-### VirtualIsoImage
-
-`VirtualIsoImage` implements `ICdRomImage` and builds a minimal ISO 9660
-image in memory from root-level files in a host directory.
-
-```
-VirtualIsoImage(sourceDir, volumeLabel) → ICdRomImage
-  1. Write system area (sectors 0-15) as zeroes
-  2. Sector 16: Primary Volume Descriptor
-  3. Sector 17: Volume Descriptor Set Terminator
-  4. Sector 18: Path table (LE)
-  5. Sector 19: Path table (BE)
-  6. Sector 20: Root directory records
-  7. Sectors 21+: File data (one file per sector sequence)
-```
-
-Both `VirtualFloppyImage` and `VirtualIsoImage` enable disc switching for
-folder mounts: each folder is converted to an in-memory image that can be
-loaded into `FloppyDiskDrive` or `CdRomDrive` just like a `.img`/`.iso` file.
+Writes are immediately visible to the in-memory `FatFileSystem` because both
+the INT 13h path and the FAT parser operate on the same `byte[]` reference.
 
 ---
 
-## 7. Floppy write-back
+## 8. Virtual disk images from host directories
 
-`FloppyDiskDrive` tracks whether its in-memory image has been modified and can
-flush the changes back to the original file:
+Both `VirtualFloppyImage` and `VirtualIsoImage` construct in-memory disk images
+from host file system trees, enabling disc switching for folder mounts.
+
+### VirtualFloppyImage — 1.44 MB FAT12 builder
 
 ```
-FloppyDiskDrive
-├── bool IsDirty           (true after any successful TryWrite)
-├── MarkDirty()            (called by DosDriveManager.TryWrite)
-└── FlushToDisk()          (writes _images[_currentIndex].Data to Path)
+VirtualFloppyImage.Build(hostDirectory, logger) : byte[1,474,560]
+
+Memory layout:
+  Sector 0          Boot sector / BPB
+                      BytesPerSector = 512
+                      SectorsPerCluster = 1
+                      ReservedSectorCount = 1
+                      NumberOfFats = 2
+                      RootEntryCount = 224
+                      TotalSectors16 = 2880
+                      MediaDescriptor = 0xF0
+                      SectorsPerFat = 9
+                      SectorsPerTrack = 18
+                      NumberOfHeads = 2
+
+  Sectors 1-9       FAT1 (9 sectors, 0xF0 0xFF 0xFF at start)
+  Sectors 10-18     FAT2 (mirror of FAT1)
+  Sectors 19-32     Root directory (14 sectors, 224 × 32-byte entries)
+  Sectors 33-2879   Data clusters 2-2848 (files and subdirectory data)
+
+Algorithm:
+  1. Allocate FAT chain for each file in source directory (and one subdirectory level)
+  2. Write 32-byte directory entries for each file (name, size, first cluster)
+  3. Pack file data into consecutive clusters in the data area
+  4. Files that would overflow available clusters are skipped with a warning log
 ```
 
-`DosDriveManager.TryWrite` calls `MarkDirty()` on the relevant
-`FloppyDiskDrive` after every successful write, so games that save to floppy
-and re-read the data see consistent in-memory state. Calling `FlushToDisk()`
-(e.g. before swapping images or on clean exit) persists the changes to the
-host `.img` file.
+### VirtualIsoImage — ISO 9660 builder
+
+```
+VirtualIsoImage(hostDirectory, volumeLabel) : ICdRomImage
+
+Memory layout (2048-byte sectors):
+  Sector 0-15       System area (zeroed)
+  Sector 16         Primary Volume Descriptor
+                      TypeCode = 0x01
+                      StandardIdentifier = "CD001"
+                      VolumeSpaceSize = total_sector_count
+                      LogicalBlockSize = 2048
+                      RootDirectoryRecord pointing to sector 20
+  Sector 17         Volume Descriptor Set Terminator (TypeCode = 0xFF)
+  Sector 18         Path Table (LE byte order)
+  Sector 19         Path Table (BE byte order)
+  Sector 20         Root directory records (2048 bytes, all files)
+  Sectors 21+       File data (one contiguous region per file)
+
+ISO 9660 Directory Record structure (variable length):
+  Byte  0: LEN_DR (record length, including padding to even boundary)
+  Byte  1: Extended attribute record length (0)
+  Bytes 2-9:  Location of Extent (LE DWORD + BE DWORD)
+  Bytes 10-17: Data Length (LE DWORD + BE DWORD)
+  Bytes 18-24: Recording Date and Time (7 bytes)
+  Byte 25: File Flags (0x02 = directory, 0x00 = file)
+  Byte 32+: File Identifier (ASCII, no version number for simplicity)
+```
 
 ---
 
-## 8. FloppyDiskDrive and DosDriveManager
+## 9. CD-ROM image layer: IsoImage and CueBinImage
 
-### FloppyDiskDrive
-
-```
-FloppyDiskDrive
-├── List<(byte[] Data, string Path)> _images
-├── int _currentIndex
-├── Fat12FileSystem? Image          (FAT12 view of current image)
-├── MountImage(imageData, path)     (add + switch to new image)
-├── AddImage(imageData, path)       (add without switching)
-├── SwapToNextImage()               (cycle index, rebuild FAT12 view)
-└── GetCurrentImageData() → byte[]? (raw bytes of current image)
-```
-
-`ApplyCurrentImage()` creates a `Fat12FileSystem` from the raw bytes and
-updates `Label` from `Image.VolumeLabel`.
-
-### DosDriveManager — drive maps
+### ICdRomImage contract
 
 ```
-DosDriveManager
-├── SortedDictionary<char, VirtualDrive>     _driveMap    (A–Z)
-├── Dictionary<char, MemoryDrive>           _memoryDriveMap (Z: for AUTOEXEC)
-└── Dictionary<char, FloppyDiskDrive>       _floppyDriveMap (A:, B:)
+interface ICdRomImage {
+    IReadOnlyList<CdTrack> Tracks { get; }
+    int TotalSectors { get; }
+    PrimaryVolumeDescriptor? PrimaryVolume { get; }
+    void Read(byte[] buffer, int lba, int sectorCount);
+    void Dispose();
+}
 ```
 
-Key methods added in this PR:
+### IsoImage
 
-| Method                                | Purpose                                  |
-|---------------------------------------|------------------------------------------|
-| `MountFloppyImage(letter, data, path)`| Creates a new `FloppyDiskDrive`, mounts  |
-| `AddFloppyImage(letter, data, path)`  | Appends an image for disc switching      |
-| `SwapFloppyDiscs()`                   | Calls `SwapToNextImage()` on all drives  |
-| `MountFloppyFolder(letter, path)`     | Host-folder floppy; removes image entry  |
-| `TryGetFloppyDrive(letter, out drive)`| Looks up `_floppyDriveMap`               |
-| `MountFolderDrive(letter, path)`      | Mounts a host folder as a fixed drive    |
+`IsoImage` wraps a flat `.iso` file (Mode 1, 2048 bytes/sector). All reads are
+`File.Read` at offset `lba * 2048`. `PrimaryVolume` is parsed from sector 16.
 
----
-
-## 9. CD-ROM image layer
+### CueBinImage — multi-track BIN/CUE
 
 ```
-Spice86.Core.Emulator.Devices.CdRom.Image
-├── ICdRomImage          (Tracks, TotalSectors, PrimaryVolume, Read, Dispose)
-├── IsoImage             (flat ISO 9660 single-track)
-└── CueBinImage          (multi-track BIN/CUE, audio + data)
-      ├── CueSheetParser → CueSheet → List<CueEntry>
-      ├── CdTrack        (Number, StartLba, LengthSectors, SectorSize, Mode)
-      ├── FileBackedDataSource  (lazy-opened BIN file handle)
-      └── SectorFraming  (cooked/raw/mode2form1 extraction helpers)
-```
+CUE parsing pipeline:
+  CueSheetParser.Parse(cueFile) → CueSheet → List<CueEntry>
+    CueEntry: {FileName, TrackNumber, TrackMode, IndexNumber, Pregap, Postgap, MSF}
 
-### CueBinImage track building
-
-```
-CUE file → CueSheetParser.Parse() → CueSheet
 CueBinImage.BuildTracks(sheet):
-  1. Group INDEX entries by TrackNumber
-  2. For each track:
-       a. Take file/mode/pregap/postgap from first INDEX entry
-       b. Find INDEX 01 entry → startLba
-  3. Derive length from next track's start (or file size for last track)
-  4. Accumulate sector-size per BIN file (handle multi-file CUEs)
-  5. Create CdTrack objects with pre-computed FileOffset
+  1. Group CueEntries by TrackNumber (dictionary)
+  2. For each track group (sorted):
+       a. Entries[0]: file, mode, pregap/postgap
+       b. FirstOrDefault(e => e.IndexNumber == 1): start MSF → LBA
+  3. Track length:
+       nextTrack.StartLba - thisTrack.StartLba (for intermediate tracks)
+       (binFileSize / sectorSize) - thisTrack.StartLba (for last track)
+  4. FileOffset = StartLba * SectorSize (per-track, handles multi-file CUEs)
 ```
 
-`ParseFileName` uses `Path.GetFullPath(raw, cueDir)` to safely combine the
-CUE directory with the BIN filename, preventing `Path.Combine` from
-silently dropping the directory when BIN paths contain a drive letter or
-leading separator.
+### Sector framing modes
 
-### Sector modes
+| CdSectorMode | Bytes/sector | Header | Data region |
+|---|---|---|---|
+| `CookedData2048` | 2048 | none | entire sector |
+| `Raw2352` | 2352 | 16-byte sync + header | bytes 16-2063 |
+| `Mode2Form1` | 2352 | 24-byte XA header | bytes 24-2071 |
 
-| CdSectorMode    | Sector size | Description                       |
-|-----------------|-------------|-----------------------------------|
-| CookedData2048  | 2048        | Data only (ISO standard)          |
-| Raw2352         | 2352        | Raw with 16-byte header           |
-| Mode2Form1      | 2352        | XA Mode 2 Form 1 (24-byte header) |
+`CueBinImage.Read` extracts only the 2048-byte data payload from raw/Mode 2
+sectors, presenting a uniform interface to callers regardless of physical
+sector format.
+
+### Path resolution for multi-file CUEs
+
+`ParseFileName` uses `Path.GetFullPath(rawBinName, cueDirectory)` rather than
+`Path.Combine`. This is important: `Path.Combine` silently drops the base
+directory when `rawBinName` starts with a drive letter or path separator,
+which breaks multi-file CUEs where BIN filenames may be absolute.
 
 ---
 
-## 10. MSCDEX (INT 2Fh AH=15h)
+## 10. MSCDEX (INT 2Fh AH=15h) architecture
 
-`MscdexService` is owned by the `Dos` class — created before `ProcessManager`
-so it is always available when INT 2Fh is handled.
+### Ownership and construction
 
 ```
 Dos constructor
-  └── new MscdexService(state, memory, loggerService)
-        ↓ passed to
-  DosProcessManager → DosBatchExecutionEngine (IMGMOUNT registration)
-        ↓
-  DosInt2fHandler.Dispatch() calls mscdex.Dispatch()
+  └── _mscdexService = new MscdexService(state, memory, loggerService)
+        ↓ stored in Dos (never passed to DI from outside)
+  ↓ passed to:
+  DosProcessManager(mscdex, ...) → DosBatchExecutionEngine (IMGMOUNT cmd handler)
+  DosInt2fHandler.Dispatch() calls _mscdexService.Dispatch()
 ```
 
-### Implemented subfunctions
+`MscdexService` is constructed _before_ `ProcessManager` so it is always
+present when INT 2Fh fires. This matches DOSBox Staging, where MSCDEX is
+installed at DOS boot time, independent of what programs are run.
 
-| AL   | Name                           |
-|------|--------------------------------|
-| 0x00 | Get number of CD-ROM drives    |
-| 0x01 | Get CD-ROM drive device list   |
-| 0x02–04 | File name info (stub)       |
-| 0x05 | Read volume descriptor (VTOC)  |
-| 0x08 | Absolute disk read             |
-| 0x09 | Absolute disk write (error)    |
-| 0x0B | CD-ROM drive check             |
-| 0x0C | Get MSCDEX version (2.23)      |
-| 0x0D | Get CD-ROM drive letters       |
-| 0x0E | Get/Set volume descriptor pref |
-| 0x0F | Get directory entry (not impl) |
-| 0x10 | Send device driver request     |
-
-The `SendDeviceDriverRequest` (AL=0x10) dispatcher supports IOCTL input
-(device status, sector size, volume size, media changed, audio info) and
-audio control commands (play, stop, resume).
-
-### MscdexDriveEntry
+### Drive registry
 
 ```
-MscdexDriveEntry
-├── ICdRomDrive Drive
-├── byte DriveIndex   (0-based, A=0)
-└── char DriveLetter
+MscdexService
+├── List<MscdexDriveEntry> _drives
+│     MscdexDriveEntry { ICdRomDrive Drive, byte DriveIndex, char DriveLetter }
+│
+├── AddDrive(letter, drive)      → append + log
+├── TryGetDrive(index, out drv)  → _drives[index] (O(1))
+├── TryGetDriveByLetter(ch, ...) → FirstOrDefault(d => d.DriveLetter == ch)
+└── TryGetDriveBySubUnit(n, ...) → _drives[n] (same as index)
 ```
 
-`TryGetDrive` and `TryGetDriveByLetter` use `FirstOrDefault` on `_drives`.
-`TryGetDriveBySubUnit` is an O(1) index lookup (subunit = position in list).
+### Implemented IOCTL sub-commands (AL=0x10 SendDeviceDriverRequest)
+
+```
+IOCTL Input commands:
+  0x00  Device status        → status DWORD (bit 11 = door open, bit 0 = door closed)
+  0x01  Sector size          → 2048 (always)
+  0x02  Volume size          → ICdRomImage.TotalSectors
+  0x06  Device status (alt)  → same as 0x00
+  0x09  Media changed        → ICdRomDrive.MediaState.HasChanged
+  0x0B  Audio channel info   → L/R volume mapping
+
+Audio control commands:
+  0x80  Stop audio           → ICdRomDrive.StopAudio()
+  0x81  Resume audio         → ICdRomDrive.ResumeAudio()
+  0x84  Play audio (MSF/LBA) → ICdRomDrive.PlayAudio(start, end)
+```
 
 ---
 
 ## 11. Multi-image disc switching and Ctrl-F4
 
-```
-IDiscSwapper (Spice86.Shared.Interfaces)
-  └── SwapDiscImages()
-
-Dos implements IDiscSwapper:
-  SwapDiscImages()
-    ├── MscdexService: foreach drive → drive.Drive.SwapToNextDisc()
-    └── DosDriveManager.SwapFloppyDiscs()
-          └── foreach floppy → floppy.SwapToNextImage()
-
-MainWindowViewModel.OnKeyDown
-  ├── if Ctrl+F4 → _discSwapper.SwapDiscImages() ; return (do not emit key)
-  └── else → emit keyboard event to emulator
-```
-
-### CdRomDrive disc switching
+### Data structures
 
 ```
+FloppyDiskDrive
+├── List<(byte[] Data, string Path)> _images  ← in order of addition
+├── int _currentIndex                          ← wraps around on swap
+└── SwapToNextImage()
+      _currentIndex = (_currentIndex + 1) % _images.Count
+      ApplyCurrentImage()  → rebuild FatFileSystem, update Label
+
 CdRomDrive
 ├── List<ICdRomImage> _images
 ├── int _currentIndex
 └── SwapToNextDisc()
-      ├── MediaState.IsDoorOpen = true  (notify media change)
-      ├── _currentIndex = (_currentIndex + 1) % _images.Count
-      ├── _image = _images[_currentIndex]
-      ├── MediaState.IsDoorOpen = false (notify media re-inserted)
-      └── StopAudio()
+      MediaState.IsDoorOpen = true           ← signals media change to MSCDEX
+      _currentIndex = (_currentIndex + 1) % _images.Count
+      _image = _images[_currentIndex]
+      MediaState.IsDoorOpen = false          ← re-insert
+      StopAudio()
 ```
 
-### UI polling
-
-The drive-status bar polls `IDriveStatusProvider.GetDriveStatuses()` every
-second (via a Dispatcher timer in `DriveStatusViewModel`). `Dos` implements
-this interface by iterating `DosDriveManager.FloppyDrives` and
-`MscdexService.Drives`.
-
-`DosVirtualDriveStatus` carries:
+### Control flow for Ctrl-F4
 
 ```
-DosVirtualDriveStatus
-├── DriveLetter
-├── Type (Floppy / CdRom / HardDisk / Ram)
-├── IsMediaPresent
-├── CurrentImagePath
-├── ImageCount
-├── CurrentImageFileName    (for status-bar display)
-└── HasMultipleImages       (enables Ctrl-F4 hint in tooltip)
+MainWindowViewModel.OnKeyDown(e)
+  ├── if (e.Key == Key.F4 && e.KeyModifiers == KeyModifiers.Control)
+  │     _discSwapper.SwapDiscImages()         ← does NOT forward to emulator
+  │     e.Handled = true
+  │     return
+  └── else → emit keyboard event to emulated CPU
+
+Dos.SwapDiscImages()   (implements IDiscSwapper)
+  ├── foreach (MscdexDriveEntry e in _mscdexService.Drives)
+  │     e.Drive.SwapToNextDisc()
+  └── _driveManager.SwapFloppyDiscs()
+        └── foreach (FloppyDiskDrive fdd in _floppyDriveMap.Values)
+              fdd.SwapToNextImage()
 ```
+
+### MSCDEX media-change detection after disc swap
+
+When a guest program calls `IOCTL 0x09 MediaChanged`, `MscdexService` queries
+`ICdRomDrive.MediaState.HasChanged`. `SwapToNextDisc` sets `IsDoorOpen = true`
+then `false`, which the `MediaState` object translates into `HasChanged = true`.
+The next `MediaChanged` query returns `0xFF` (changed) and resets the flag.
 
 ---
 
-## 12. MOUNT / IMGMOUNT batch commands
+## 12. MOUNT / IMGMOUNT batch commands and path resolution
 
-Both commands are implemented as batch command handlers in
-`DosBatchExecutionEngine.CommandHandlers.cs`.
+### BatchArgumentParser.SplitWithQuotes
 
-### MOUNT
+All command argument strings are tokenised by `BatchArgumentParser.SplitWithQuotes`,
+which handles embedded spaces inside double-quoted tokens — identical to DOSBox
+Staging's shell tokeniser:
+
+```
+Input:  A "C:\my games\disc 1.img" -t floppy
+Output: ["A", @"C:\my games\disc 1.img", "-t", "floppy"]
+```
+
+### HostPathResolver.Resolve — four-priority chain
+
+```
+HostPathResolver.Resolve(rawToken, driveManager)
+
+Priority 1: DOS drive letter prefix
+  if rawToken matches ^([A-Za-z]):[\\/](.*)$
+    letter = group[1].ToUpperInvariant()
+    relativePart = group[2]
+    driveManager.TryGetValue(letter, out VirtualDrive vd)
+    → Path.GetFullPath(relativePart, vd.MountedHostDirectory)
+
+Priority 2: Absolute host path
+  if Path.IsPathRooted(rawToken)
+    → Path.GetFullPath(rawToken)
+
+Priority 3: Relative path against current DOS directory
+  currentDrive = driveManager.CurrentDrive
+  hostBase = currentDrive.MountedHostDirectory
+  dosDir   = currentDrive.CurrentDosDirectory
+  → Path.GetFullPath(rawToken, Path.Combine(hostBase, dosDir))
+
+Priority 4: Fallback (process working directory)
+  → Path.GetFullPath(rawToken)
+```
+
+`Path.GetFullPath` exceptions (`ArgumentException`, `NotSupportedException`,
+`PathTooLongException`) are caught and reported as error log messages with the
+raw token included.
+
+### MOUNT command dispatch
 
 ```
 MOUNT <drive> <path> [-t cdrom|floppy|hdd]
+
+Path resolution: HostPathResolver.Resolve(path, driveManager)
+-t cdrom  → DosDriveManager.MountFolderAsCdRom(letter, hostPath)
+             MscdexService.AddDrive(letter, new CdRomDrive(new VirtualIsoImage(hostPath)))
+-t floppy → DosDriveManager.MountFloppyFolder(letter, hostPath)
+-t hdd    → DosDriveManager.MountFolderDrive(letter, hostPath)
+(default)   same as -t hdd
 ```
 
-- `<path>` may be an **absolute** host path or a **relative** path.
-  Relative paths are resolved against `Environment.CurrentDirectory`
-  (the directory from which Spice86 was launched) via `Path.GetFullPath`.
-- Paths that contain spaces must be surrounded by **double-quotes**:
-  `MOUNT D "C:\Program Files\games"`.
-- `-t cdrom` → creates an `IsoImage` from an `.iso` or a folder; registers
-  a `MscdexDriveEntry`.
-- `-t floppy` → calls `DosDriveManager.MountFloppyFolder`.
-- `-t hdd` (default) → calls `DosDriveManager.MountFolderDrive`.
-
-### IMGMOUNT
+### IMGMOUNT command dispatch
 
 ```
-IMGMOUNT <drive> <image1> [<image2> …] [-t floppy|iso|cue]
+IMGMOUNT <drive> <image1> [<image2>…] [-t floppy|iso|cue]
+
+Each image path resolved via HostPathResolver.Resolve
+-t floppy:
+  first image → DosDriveManager.MountFloppyImage(letter, data, path)
+  subsequent  → DosDriveManager.AddFloppyImage(letter, data, path)
+-t iso:
+  for each image → MscdexService.AddDrive(letter, new CdRomDrive(new IsoImage(path)))
+-t cue:
+  for each image → MscdexService.AddDrive(letter, new CdRomDrive(new CueBinImage(path)))
+auto-detect (no -t):
+  .iso → iso; .cue → cue; .img/.ima/.vfd → floppy
 ```
-
-- Each image path may be **absolute** or **relative** (resolved via
-  `Path.GetFullPath` against the process working directory).
-- Paths that contain spaces must be surrounded by **double-quotes**.
-- Multiple image paths mount all images to the same drive for disc
-  switching; the first image becomes active.
-- `-t floppy` → first image → `MountFloppyImage`; further images →
-  `AddFloppyImage`.
-- `-t iso` → `IsoImage` → `MscdexService.AddDrive`.
-- `-t cue` → `CueBinImage` → `MscdexService.AddDrive`.
-- Extension auto-detection: `.iso` → iso mode; `.cue` → cue mode;
-  `.img` / `.ima` / `.vfd` → floppy mode.
-
-### Argument parsing
-
-Both commands use `BatchArgumentParser.SplitWithQuotes` (in
-`BatchArgumentParser.cs`), which honours double-quoted tokens exactly like
-DOSBox Staging's shell tokeniser:
-
-```
-Input: A "C:\my games\disc 1.img" -t floppy
-Parts: ["A", "C:\\my games\\disc 1.img", "-t", "floppy"]
-```
-
-### Path resolution
-
-Both commands use `HostPathResolver.Resolve` (in `HostPathResolver.cs`) to
-translate raw path tokens into absolute host paths.  Resolution priority
-matches DOSBox Staging:
-
-| Priority | Path form | Example | Resolution |
-|----------|-----------|---------|------------|
-| 1 | DOS drive letter mapping | `C:\games\disc.iso` | Look up `C:` in drive table; combine host dir + `games\disc.iso` |
-| 2 | Absolute host path | `/home/user/disc.iso` | `Path.GetFullPath` |
-| 3 | Relative path | `games\disc.iso` | Combine current DOS drive's `MountedHostDirectory` + `CurrentDosDirectory` + token |
-| 4 | Fallback | any | `Path.GetFullPath` against process CWD |
-
-This means after `MOUNT C /home/user/games`, switching to DOS drive C:, and
-then typing `IMGMOUNT D disc.iso -t iso`, the relative token `disc.iso` is
-resolved to `/home/user/games/disc.iso` via the DOS current-directory mapping.
-
-`Path.GetFullPath` failures (`ArgumentException`, `NotSupportedException`,
-`PathTooLongException`) are caught and reported as user-readable error
-messages.
 
 ---
 
-## 13. UI drive-status indicators
+## 13. Floppy sound emulation (DOSBox Staging port)
+
+`FloppyDiskNoiseDevice` is a faithful port of DOSBox Staging's `DiskNoiseDevice`
+class. The state machine and constants are intentionally matched to staging to
+produce identical audio behaviour.
+
+### State machine
 
 ```
-Spice86.ViewModels.DriveStatusViewModel
-  ├── DispatcherTimer (1 s interval)
-  ├── ObservableCollection<DosVirtualDriveStatus> DriveStatuses
-  └── timer tick → IDriveStatusProvider.GetDriveStatuses()
-                 → compare with previous snapshot
-                 → update collection on change
+States: Off | SpinUp | SpinSustain | Seeking
 
-Spice86.Views.UserControls.DriveStatusUserControl (AXAML)
-  ├── ItemsControl bound to DriveStatuses
-  ├── Each item: pill-shaped badge showing drive letter
-  ├── Background: MediaPresenceBrushConverter (green/grey)
-  └── Tooltip: current image file name (when HasMultipleImages)
+Off ──NotifyAccess()──→ SpinUp
+  Plays fdd_spinup.wav (one-shot)
+  After spinup duration → SpinSustain
 
-MainWindow.axaml
-  └── StatusBar → DriveStatusUserControl
+SpinSustain
+  Plays fdd_spin.wav (non-looping for floppy, unlike HDD which loops)
+  On each NotifyAccess() → Seeking (seek sound interrupts sustain)
+
+Seeking (triggered by SetLastIoPath / NotifyAccess)
+  Sequential access:  ChooseSeekIndex returns index 0 or 1 (80% probability)
+  Random access:      ChooseSeekIndex returns index 2..8 (20% probability)
+  After seek sample completes → SpinSustain (or Off if idle)
 ```
 
-`MediaPresenceBrushConverter` returns `Brushes.MediumSeaGreen` when
-`IsMediaPresent` is true, otherwise `Brushes.DarkGray`.
+### Sample weighting (ChooseSeekIndex)
+
+```csharp
+// Matches DOSBox Staging's ChooseSeekIndex() exactly
+int ChooseSeekIndex(FloppySeekType seekType) {
+    if (seekType == FloppySeekType.Sequential && _random.Next(100) < 80)
+        return _random.Next(2);        // first two samples: frequent short seeks
+    return 2 + _random.Next(7);       // remaining 7 samples: long/varied seeks
+}
+```
+
+### FloppySoundEmulator — sample path resolution
+
+```
+Priority 1: Environment.GetFolderPath(SpecialFolder.UserProfile)/disk_noises/
+Priority 2: <process directory>/resources/disk_noises/
+Priority 3: process working directory
+
+Sample files (WAV, 22050 Hz, mono, 16-bit PCM):
+  fdd_spinup.wav   fdd_spin.wav
+  fdd_seek1.wav .. fdd_seek9.wav
+```
+
+`WavPcmLoader` validates the WAV header (RIFF, fmt chunk, PCM, mono,
+22050 Hz, 16-bit) and rejects stereo or non-PCM files silently, returning an
+empty array so the emulator continues without sound.
 
 ---
 
-## 14. Dependency-injection wiring
+## 14. UI layer: polling, notifications, and drive menu
+
+### Polling architecture
+
+There are no events or push notifications from the emulator thread to the UI.
+All UI updates are driven by a polling timer in the UI thread:
 
 ```
-Spice86DependencyInjection (construction order for new components)
-
-1. Memory, CPU, I/O, BIOS handlers (unchanged)
-2. Dos (creates MscdexService internally)
-     └── DosDriveManager
-3. SystemBiosInt13Handler(…, dos.DosDriveManager, …)
-     ← receives IFloppyDriveAccess; no DOS type visible to BIOS
-4. interruptInstaller.InstallInterruptHandler(int13WithFloppy)
-5. IDiscSwapper → dos (passed to MainWindowViewModel)
-6. IDriveStatusProvider → dos (passed to DriveStatusViewModel)
+DrivesMenuViewModel
+├── DispatcherTimer (1 s, Background priority)
+└── OnTimerTick() → Refresh()
+      IDriveStatusProvider.GetDriveStatuses()    ← cross-thread call into Dos
+        → snapshot of DosVirtualDriveStatus objects
+      NotifyIfChanged(status) per drive
+        → compare status.CurrentImagePath with _lastKnownImagePath[letter]
+        → if changed: IDriveEventNotifier.Notify(title, message)
+      AllDrives collection updated in-place (letter-keyed)
 ```
 
-The key ordering constraint: `SystemBiosInt13Handler` must be constructed
-**after** `Dos` because it receives `DosDriveManager` cast to
-`IFloppyDriveAccess`. Previously INT 13h was constructed before DOS.
+### IDriveEventNotifier — toast notification architecture
+
+```
+IDriveEventNotifier  (interface)
+├── NullDriveEventNotifier   ← no-op; used before window is ready
+└── WindowDriveEventNotifier ← backed by Avalonia WindowNotificationManager
+      WindowNotificationManager(MainWindow, NotificationPosition.BottomRight)
+      MaxItems = 3
+
+Initialisation sequence:
+  DrivesMenuViewModel created with NullDriveEventNotifier
+  MainWindow.Loaded fires
+  App.axaml.cs creates WindowDriveEventNotifier(window)
+  DrivesMenuViewModel.AttachNotifier(notifier) called
+  _lastKnownImagePath cleared (prevents spurious toasts for pre-existing drives)
+```
+
+Toast content:
+- **Mount**: `"Drive A: mounted"` / `"DISK1 — disk1.img"`
+- **Disc swap**: `"Drive A: disc swapped"` / `"DISK2 — disk2.img"`
+- **Eject**: `"Drive A: ejected"` / `"No media in drive A:"`
+
+### DrivesMenuViewModel — AllDrives collection structure
+
+```
+AllDrives : ObservableCollection<DriveMenuItemViewModel>
+  DriveMenuItemViewModel
+    ├── DriveLetter       char
+    ├── DriveType         DosVirtualDriveType
+    ├── IsHdd             bool  (= DriveType == Fixed)
+    ├── IsMediaPresent    bool
+    ├── CurrentImagePath  string
+    ├── AllImages         ObservableCollection<string>
+    ├── SelectedImage     string?  (bound to ComboBox)
+    ├── MountFolderCommand
+    └── MountImageCommand
+```
+
+The `AllDrives` collection always includes A:, B: (floppy) and D: (CD-ROM
+placeholder), plus all mounted drives of any type — so even before mounting,
+the UI exposes the correct controls for each slot.
+
+### Drive menu rows
+
+| Drive type | Icon | ComboBox | Mount Folder | Mount Image | ComboBox enabled |
+|---|---|---|---|---|---|
+| Floppy (A:, B:) | 💾 Save | ✅ | ✅ | ✅ | Yes |
+| CD-ROM | ⏏ ArrowEject | ✅ | ✅ | ✅ | Yes |
+| HDD (C: etc.) | 🗄 Storage | ✅ | Hidden | Hidden | **No** |
 
 ---
 
-## 15. Test coverage
+## 15. Dependency-injection wiring and construction order
 
-| Test class                         | Count  | What it covers                                              |
-|------------------------------------|--------|-------------------------------------------------------------|
-| `Int13FloppyTests`                 | 9      | AH=0x00/01/02/03/08/15; error paths; boundary checks        |
-| `BiosParameterBlockTests`          | 8      | Parse from raw bytes; various floppy geometries             |
-| `FatDirectoryEntryTests`           | 7      | Attribute flags; deleted/LFN skip; name parsing             |
-| `Fat12FileSystemTests`             | 12     | Root dir listing; cluster chain; file read; volume label    |
-| `FatFileSystemTests`               | 12     | FAT12/16/32 type detection; cluster chain; volume label     |
-| `FloppyDiskControllerTests`        | 10     | SPECIFY/RECALIBRATE/SEEK/READ/WRITE; MSR state machine      |
-| `FloppyWriteBackTests`             | 5      | IsDirty; MarkDirty; FlushToDisk round-trip                  |
-| `VirtualFloppyImageTests`          | 8      | Build from directory; FAT12 parseable; files readable       |
-| `VirtualIsoImageTests`             | 9      | ICdRomImage; PVD; directory records; file data sector reads |
-| `DosDriveManagerFloppyTests`       | 14     | Mount/add/swap images; TryGetGeometry; TryRead/TryWrite     |
-| `CdRomDriveDiscSwapTests`          | 8      | Single/multi-image; swap cycling; audio stop on swap        |
-| `MountBatchCommandTests`           | 16     | MOUNT/IMGMOUNT: absolute, relative, and DOS-drive paths; quoted paths with spaces; multi-image; extension detection; path resolution via drive table and current DOS directory |
-| `MscdexDeviceDriverRequestTests`   | (existing) | IOCTL sub-commands; audio commands                      |
-| `CdAudioPlayerTests`               | (existing) | Play/stop/pause/resume state machine                    |
+`Spice86DependencyInjection` is the single composition root. The ordering
+constraint for the floppy subsystem is:
 
-Full test suite: **1871 tests pass**, 1 skipped (pre-existing), 0 failures.
+```
+1. Memory, CPU state, I/O bus  (unchanged from before this PR)
+2. DmaBus, Intel8259Pic        (required by FDC)
+3. FloppyDiskController(state, memory, dmaBus, raiseIrq6)
+4. Dos(memory, state, ..., cDrivePath, execPath)
+     └─ DosDriveManager created inside Dos
+     └─ MscdexService created inside Dos
+5. SystemBiosInt13Handler(memory, stack, state,
+       floppyAccess: dos.DosDriveManager,    ← cast to IFloppyDriveAccess
+       floppySound:  new FloppySoundEmulator(logger))
+6. DosInt25Handler(state, memory, dos.DosDriveManager)
+7. DosInt26Handler(state, memory, dos.DosDriveManager)
+8. interruptInstaller.Install(int13Handler, int25Handler, int26Handler)
+9. MainWindowViewModel(
+       discSwapper: dos,                      ← IDiscSwapper
+       driveStatus: dos,                      ← IDriveStatusProvider
+       mountService: dos)                     ← IDriveMountService
+10. DrivesMenuViewModel(dos, dos, dos, hostStorage,
+        new NullDriveEventNotifier())
+11. MainWindow.Loaded → AttachNotifier(new WindowDriveEventNotifier(window))
+```
+
+The critical constraint: step 5 must follow step 4, because
+`SystemBiosInt13Handler` receives `DosDriveManager` as `IFloppyDriveAccess`.
+The BIOS handler never sees the `DosDriveManager` concrete type.
+
+---
+
+## 16. Logging strategy (DOSBox Staging parity)
+
+All drive-subsystem log messages follow the same prefix/format as DOSBox
+Staging's `dos_programs.cpp` and `bios_disk.cpp`:
+
+| Event | Level | Message format |
+|---|---|---|
+| Folder drive mounted | Information | `MOUNT: Drive {Drive}: is now backed by folder {Path}` |
+| Floppy image mounted | Information | `IMGMOUNT: Mounted image {Image} on drive {Drive}:` |
+| Floppy image added | Information | `IMGMOUNT: Added image {Image} to drive {Drive}: ({Count} total)` |
+| Floppy disc swap | Information | `MOUNT: Swapping drive {Drive}: to image {Image}` |
+| CD-ROM image mounted | Information | `IMGMOUNT: Mounted CD-ROM image {Image} on drive {Drive}:` |
+| CD-ROM disc swap | Information | `MOUNT: Swapping CD-ROM drive {Drive}: to image {Image}` |
+| MSCDEX drive registered | Information | `MSCDEX: Registered drive {Drive}: (index {Index})` |
+| INT 13h read | Debug | (only at Debug level; not emitted at Info) |
+| FDC command | Verbose | (only at Verbose level) |
+
+`ILoggerService.IsEnabled(level)` is always checked before constructing
+expensive interpolated strings — matching the existing project convention.
+
+---
+
+## 17. Test coverage matrix
+
+| Test class | Count | What it validates |
+|---|---|---|
+| `Int13FloppyTests` | 9 | AH subfunctions 0x00/01/02/03/04/05/08/0C/10/11/15/16/17/18; CHS arithmetic; error paths |
+| `BiosParameterBlockTests` | 8 | Boot sector parse; geometry fields; FAT32 extended BPB |
+| `FatDirectoryEntryTests` | 7 | Attribute flags; deleted/LFN skip; volume label recognition |
+| `Fat12FileSystemTests` | 12 | Root dir listing; cluster chain; file read; volume label round-trip |
+| `FatFileSystemTests` | 12 | FAT12/16/32 type detection; cluster-chain traversal; FAT32 root dir |
+| `FloppyDiskControllerTests` | 10 | SPECIFY; RECALIBRATE; SEEK; READ DATA; WRITE DATA; MSR state machine; IRQ6 |
+| `FloppyWriteBackTests` | 5 | IsDirty; MarkDirty; FlushToDisk; round-trip sector write → read |
+| `VirtualFloppyImageTests` | 8 | Build from directory; FAT12 parseable; volume label; file data readable |
+| `VirtualIsoImageTests` | 9 | ICdRomImage contract; PVD at sector 16; directory records; file sector reads |
+| `DosDriveManagerFloppyTests` | 14 | Mount/add/swap; TryGetGeometry; TryRead; TryWrite; dirty flag |
+| `CdRomDriveDiscSwapTests` | 8 | Single/multi-image; swap cycling; MediaState; audio stop on swap |
+| `MountBatchCommandTests` | 16 | MOUNT/IMGMOUNT; absolute/relative/DOS-drive paths; quoted spaces; multi-image; extension auto-detect |
+| `FloppyDiskNoiseDeviceTests` | 9 | State machine; seek-type weighting; spinup/sustain transitions; WavPcmLoader validation |
+| `DrivesMenuViewModelTests` | 2 | Toast notification on initial mount; toast on disc swap |
+
+**Total: 1916 tests pass, 0 failures.**
 
 ---
 
