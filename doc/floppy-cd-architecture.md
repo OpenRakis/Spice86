@@ -40,7 +40,7 @@ need to understand or modify the subsystem.
 │  Spice86 (UI)                                                        │
 │  MainWindowViewModel  DrivesMenuViewModel  DriveStatusViewModel      │
 │        │                    │                      │                 │
-│        │ IDiscSwapper        │ IDriveStatusProvider  │ IDriveEventNotifier │
+│        │ IDiscSwapper        │ IDriveStatusProvider  │ IDriveEventNotifier  │
 └────────┼────────────────────┼──────────────────────┼─────────────────┘
          │                    │                      │
 ┌────────▼────────────────────▼──────────────────────▼─────────────────┐
@@ -366,9 +366,10 @@ FatType = clusterCount < 4085  ? FatType.Fat12
 
 ```
 FAT12: read 12-bit entries (packed pairs, byte-boundary handling required)
-       entry = (clusterNumber % 2 == 0)
-             ? (fat[offset]     | (fat[offset + 1] << 8)) & 0x0FFF
-             : (fat[offset] >> 4 | (fat[offset + 1] << 4)) & 0x0FFF
+       offset = (clusterNumber * 3) / 2      // 1.5 bytes per entry
+       entry  = (clusterNumber % 2 == 0)
+              ? (fat[offset]     | (fat[offset + 1] << 8)) & 0x0FFF
+              : (fat[offset] >> 4 | (fat[offset + 1] << 4)) & 0x0FFF
        EOC sentinel: value >= 0xFF8
 
 FAT16: read 16-bit LE values; EOC >= 0xFFF8
@@ -778,7 +779,8 @@ Priority 3: process working directory
 
 Sample files (WAV, 22050 Hz, mono, 16-bit PCM):
   fdd_spinup.wav   fdd_spin.wav
-  fdd_seek1.wav .. fdd_seek9.wav
+  fdd_seek1.wav  fdd_seek2.wav  fdd_seek3.wav  fdd_seek4.wav  fdd_seek5.wav
+  fdd_seek6.wav  fdd_seek7.wav  fdd_seek8.wav  fdd_seek9.wav
 ```
 
 `WavPcmLoader` validates the WAV header (RIFF, fmt chunk, PCM, mono,
