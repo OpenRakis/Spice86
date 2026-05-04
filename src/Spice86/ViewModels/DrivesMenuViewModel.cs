@@ -11,6 +11,7 @@ using Spice86.ViewModels.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 
 /// <summary>
 /// View model for the Drives menu, exposing floppy and CD-ROM drives with combobox image selectors.
@@ -125,7 +126,7 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
             _lastKnownImagePath[status.DriveLetter] = newPath;
             if (!string.IsNullOrEmpty(newPath)) {
                 string label = string.IsNullOrEmpty(status.VolumeLabel) ? $"{status.DriveLetter}:" : status.VolumeLabel;
-                _driveEventNotifier.Notify($"Drive {status.DriveLetter}: mounted", $"{label} \u2014 {System.IO.Path.GetFileName(newPath)}");
+                _driveEventNotifier.Notify($"Drive {status.DriveLetter}: mounted", $"{label} \u2014 {Path.GetFileName(newPath)}");
             }
             return;
         }
@@ -135,10 +136,10 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
                 _driveEventNotifier.Notify($"Drive {status.DriveLetter}: ejected", $"No media in drive {status.DriveLetter}:");
             } else if (string.IsNullOrEmpty(previousPath)) {
                 string label = string.IsNullOrEmpty(status.VolumeLabel) ? $"{status.DriveLetter}:" : status.VolumeLabel;
-                _driveEventNotifier.Notify($"Drive {status.DriveLetter}: mounted", $"{label} \u2014 {System.IO.Path.GetFileName(newPath)}");
+                _driveEventNotifier.Notify($"Drive {status.DriveLetter}: mounted", $"{label} \u2014 {Path.GetFileName(newPath)}");
             } else {
                 string label = string.IsNullOrEmpty(status.VolumeLabel) ? $"{status.DriveLetter}:" : status.VolumeLabel;
-                _driveEventNotifier.Notify($"Drive {status.DriveLetter}: disc swapped", $"{label} \u2014 {System.IO.Path.GetFileName(newPath)}");
+                _driveEventNotifier.Notify($"Drive {status.DriveLetter}: disc swapped", $"{label} \u2014 {Path.GetFileName(newPath)}");
             }
         }
     }

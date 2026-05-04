@@ -67,9 +67,10 @@ internal partial class App : Application {
         if (mainVm.DrivesMenuViewModel == null) {
             return;
         }
+        const int MaxVisibleNotifications = 3;
         WindowNotificationManager notificationManager = new WindowNotificationManager(mainWindow) {
             Position = NotificationPosition.BottomRight,
-            MaxItems = 3,
+            MaxItems = MaxVisibleNotifications,
         };
         mainVm.DrivesMenuViewModel.AttachNotifier(new WindowDriveEventNotifier(notificationManager));
     }
