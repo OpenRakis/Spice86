@@ -10,6 +10,14 @@ public sealed class CueBinImage : ICdRomImage {
     private const int CookedSectorSize = 2048;
     private const int PvdLba = 16;
 
+    /// <summary>
+    /// Red Book pre-gap offset in frames (2 seconds × 75 frames/second).
+    /// CUE INDEX positions are absolute MSF positions that include this offset;
+    /// subtracting it converts them to logical LBAs, matching DOSBox Staging's
+    /// <c>REDBOOK_FRAME_PADDING = 150</c>.
+    /// </summary>
+    private const int RedbookPreGapFrames = 150;
+
     private readonly List<CdTrack> _tracks = new List<CdTrack>();
     private readonly Dictionary<string, FileBackedDataSource> _sources = new Dictionary<string, FileBackedDataSource>(StringComparer.OrdinalIgnoreCase);
 
@@ -75,10 +83,13 @@ public sealed class CueBinImage : ICdRomImage {
         for (int i = 0; i < trackMeta.Count; i++) {
             (int trackNum, int index01Frames, int pregap, int postgap, string fileName, string trackMode) = trackMeta[i];
 
-            int startLba = index01Frames;
+            // Subtract the Red Book pre-gap (150 frames = 2 seconds) to convert the absolute
+            // CUE MSF position to a logical LBA, matching DOSBox Staging's behaviour:
+            // REDBOOK_FRAME_PADDING = 150; lba = msf_frames - REDBOOK_FRAME_PADDING
+            int startLba = Math.Max(0, index01Frames - RedbookPreGapFrames);
             int nextStartLba;
             if (i + 1 < trackMeta.Count) {
-                nextStartLba = trackMeta[i + 1].Item2;
+                nextStartLba = Math.Max(0, trackMeta[i + 1].Item2 - RedbookPreGapFrames);
             } else {
                 FileBackedDataSource measureSource = OpenSource(fileName);
                 int sizeForMeasure = MapSectorSize(trackMode);

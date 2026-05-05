@@ -104,6 +104,14 @@ public sealed class MscdexService {
     private const uint DeviceStatusDoorLocked = 0x0002;
     private const uint DeviceStatusAudioPlaying = 0x0200;
 
+    /// <summary>
+    /// Red Book pre-gap offset in frames (2 seconds × 75 frames/second).
+    /// LBA 0 on a CD corresponds to absolute frame 150; adding this when converting
+    /// LBA → MSF gives the correct Red Book position for IOCTL audio responses,
+    /// matching DOSBox Staging's <c>REDBOOK_FRAME_PADDING = 150</c>.
+    /// </summary>
+    private const int RedbookPreGapFrames = 150;
+
     private readonly List<MscdexDriveEntry> _drives = new();
     private readonly State _state;
     private readonly IMemory _memory;
@@ -508,28 +516,80 @@ public sealed class MscdexService {
         DiscInfo info = drive.GetDiscInfo();
         _memory.UInt8[bufferAddress + 1] = (byte)info.FirstTrack;
         _memory.UInt8[bufferAddress + 2] = (byte)info.LastTrack;
-        _memory.UInt32[bufferAddress + 3] = (uint)info.LeadOutLba;
+        // Lead-out in Red Book MSF format (3 bytes: min, sec, frame), matching
+        // DOSBox Staging's mscdex.cpp case 0x04 which calls GetAudioTracks and
+        // writes the lead-out as TMSF rather than as a DWORD LBA.
+        (byte min, byte sec, byte fr) = LbaToRedBookMsf(info.LeadOutLba);
+        _memory.UInt8[bufferAddress + 3] = min;
+        _memory.UInt8[bufferAddress + 4] = sec;
+        _memory.UInt8[bufferAddress + 5] = fr;
     }
 
     private void WriteAudioTrackInfo(uint bufferAddress, ICdRomDrive drive) {
         byte trackNumber = _memory.UInt8[bufferAddress + 1];
         TableOfContentsEntry? entry = drive.GetTrackInfo(trackNumber);
         if (entry == null) {
-            _memory.UInt32[bufferAddress + 2] = 0;
-            _memory.UInt8[bufferAddress + 6] = 0;
+            _memory.UInt8[bufferAddress + 2] = 0;
+            _memory.UInt8[bufferAddress + 3] = 0;
+            _memory.UInt8[bufferAddress + 4] = 0;
+            _memory.UInt8[bufferAddress + 5] = 0;
             return;
         }
-        _memory.UInt32[bufferAddress + 2] = (uint)entry.Lba;
-        _memory.UInt8[bufferAddress + 6] = entry.Control;
+        // Track start in Red Book MSF (3 bytes at offsets 2-4), attribute at offset 5,
+        // matching DOSBox Staging's mscdex.cpp case 0x05 which calls GetAudioTrackInfo
+        // and writes TMSF rather than a DWORD LBA.
+        (byte min, byte sec, byte fr) = LbaToRedBookMsf(entry.Lba);
+        _memory.UInt8[bufferAddress + 2] = min;
+        _memory.UInt8[bufferAddress + 3] = sec;
+        _memory.UInt8[bufferAddress + 4] = fr;
+        _memory.UInt8[bufferAddress + 5] = entry.Control;
     }
 
     private void WriteAudioSubchannel(uint bufferAddress, ICdRomDrive drive) {
         CdAudioPlayback audioStatus = drive.GetAudioStatus();
-        _memory.UInt8[bufferAddress + 1] = 0;
-        _memory.UInt8[bufferAddress + 2] = 0;
-        _memory.UInt8[bufferAddress + 3] = 0;
-        _memory.UInt32[bufferAddress + 4] = 0;
-        _memory.UInt32[bufferAddress + 8] = (uint)audioStatus.CurrentLba;
+        int currentLba = audioStatus.CurrentLba;
+
+        // Determine which track the current position belongs to, and compute
+        // relative and absolute MSF positions — matching DOSBox Staging's
+        // mscdex.cpp case 0x06 which calls GetAudioSub(attr, track, index, relPos, absPos).
+        byte attribute = 0;
+        byte trackNumber = 0;
+        const byte IndexNumber = 1;
+
+        IReadOnlyList<TableOfContentsEntry> toc = drive.GetTableOfContents();
+        TableOfContentsEntry? currentTrack = null;
+        for (int i = 0; i < toc.Count - 1; i++) { // exclude lead-out (last entry)
+            TableOfContentsEntry candidate = toc[i];
+            TableOfContentsEntry next = toc[i + 1];
+            if (currentLba >= candidate.Lba && currentLba < next.Lba) {
+                currentTrack = candidate;
+                break;
+            }
+        }
+        if (currentTrack != null) {
+            attribute = currentTrack.Control;
+            trackNumber = (byte)currentTrack.TrackNumber;
+        }
+
+        // Absolute position: LBA → Red Book MSF (includes 150-frame pre-gap offset)
+        (byte absMi, byte absSec, byte absFr) = LbaToRedBookMsf(currentLba);
+
+        // Relative position: offset from track start, converted to MSF without pre-gap offset
+        int relLba = currentTrack != null ? currentLba - currentTrack.Lba : 0;
+        if (relLba < 0) {
+            relLba = 0;
+        }
+        (byte relMin, byte relSec, byte relFr) = LbaToMsf(relLba);
+
+        _memory.UInt8[bufferAddress + 1] = attribute;
+        _memory.UInt8[bufferAddress + 2] = trackNumber;
+        _memory.UInt8[bufferAddress + 3] = IndexNumber;
+        _memory.UInt8[bufferAddress + 4] = relMin;
+        _memory.UInt8[bufferAddress + 5] = relSec;
+        _memory.UInt8[bufferAddress + 6] = relFr;
+        _memory.UInt8[bufferAddress + 7] = absMi;
+        _memory.UInt8[bufferAddress + 8] = absSec;
+        _memory.UInt8[bufferAddress + 9] = absFr;
     }
 
     private void WriteAudioStatus(uint bufferAddress, ICdRomDrive drive) {
@@ -587,5 +647,27 @@ public sealed class MscdexService {
     private bool TryGetDriveByLetter(char letter, [NotNullWhen(true)] out MscdexDriveEntry? drive) {
         drive = _drives.FirstOrDefault(e => e.DriveLetter == letter);
         return drive != null;
+    }
+
+    /// <summary>
+    /// Converts a logical block address to a 3-tuple of (minute, second, frame) in Red Book MSF format.
+    /// The 150-frame pre-gap offset is added before conversion, so LBA 0 maps to MSF 00:02:00,
+    /// matching DOSBox Staging's <c>FRAMES_TO_MSF(lba + REDBOOK_FRAME_PADDING, …)</c> pattern.
+    /// </summary>
+    private static (byte min, byte sec, byte frame) LbaToRedBookMsf(int lba) {
+        return LbaToMsf(lba + RedbookPreGapFrames);
+    }
+
+    /// <summary>
+    /// Converts a frame count to a 3-tuple of (minute, second, frame) without adding any pre-gap offset.
+    /// Used for relative-position reporting (position within the current track) where the pre-gap
+    /// has already been subtracted.
+    /// </summary>
+    private static (byte min, byte sec, byte frame) LbaToMsf(int frames) {
+        byte fr = (byte)(frames % 75);
+        int totalSeconds = frames / 75;
+        byte sec = (byte)(totalSeconds % 60);
+        byte min = (byte)(totalSeconds / 60);
+        return (min, sec, fr);
     }
 }
