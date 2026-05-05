@@ -115,8 +115,8 @@ public sealed class AbsoluteDiskWriteTests {
         uint structAddr = ctx.BufferAddress;
         ctx.Memory.UInt32[structAddr] = 5;           // target sector 5
         ctx.Memory.UInt16[structAddr + 4u] = 1;      // count
-        ctx.Memory.UInt16[structAddr + 6u] = srcSeg; // buffer segment
-        ctx.Memory.UInt16[structAddr + 8u] = 0x0000; // buffer offset
+        ctx.Memory.UInt16[structAddr + 6u] = 0x0000; // buffer offset
+        ctx.Memory.UInt16[structAddr + 8u] = srcSeg; // buffer segment
 
         ctx.State.AL = 0x00;
         ctx.State.CX = 0xFFFF;

@@ -257,9 +257,9 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         byte sector = _commandBuffer[3];
         byte sectorSizeCode = _commandBuffer[4];
         byte lastSector = _commandBuffer[5];
-        byte sectorsPerTrack = 18;
         int bytesPerSector = 128 << sectorSizeCode;
         byte driveNumber = (byte)(driveHead & 0x01);
+        int sectorsPerTrack = GetSectorsPerTrack(driveNumber);
 
         bool success = TransferSectorsViaDma(driveNumber, cylinder, head, sector, lastSector, sectorsPerTrack, bytesPerSector, isRead: true);
         byte st0 = success ? (byte)(driveHead & 0x07) : (byte)(0x40 | (driveHead & 0x07));
@@ -286,9 +286,9 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         byte sector = _commandBuffer[3];
         byte sectorSizeCode = _commandBuffer[4];
         byte lastSector = _commandBuffer[5];
-        byte sectorsPerTrack = 18;
         int bytesPerSector = 128 << sectorSizeCode;
         byte driveNumber = (byte)(driveHead & 0x01);
+        int sectorsPerTrack = GetSectorsPerTrack(driveNumber);
 
         bool success = TransferSectorsViaDma(driveNumber, cylinder, head, sector, lastSector, sectorsPerTrack, bytesPerSector, isRead: false);
         byte st0 = success ? (byte)(driveHead & 0x07) : (byte)(0x40 | (driveHead & 0x07));
@@ -332,7 +332,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         _raiseIrq(6);
     }
 
-    private bool TransferSectorsViaDma(byte driveNumber, byte cylinder, byte head, byte startSector, byte lastSector, byte sectorsPerTrack, int bytesPerSector, bool isRead) {
+    private bool TransferSectorsViaDma(byte driveNumber, byte cylinder, byte head, byte startSector, byte lastSector, int sectorsPerTrack, int bytesPerSector, bool isRead) {
         int sectorCount = lastSector - startSector + 1;
         int lba = cylinder * NumberOfHeads * sectorsPerTrack + head * sectorsPerTrack + (startSector - 1);
         int byteOffset = lba * bytesPerSector;
@@ -353,6 +353,14 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         }
     }
 
+    private int GetSectorsPerTrack(byte driveNumber) {
+        if (_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int sectorsPerTrack, out int _)) {
+            return sectorsPerTrack;
+        }
+        return DefaultSectorsPerTrack;
+    }
+
+    private const int DefaultSectorsPerTrack = 18;
     private const int NumberOfHeads = 2;
 
     private void PushResultByte(byte value) {

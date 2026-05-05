@@ -56,8 +56,8 @@ public class DosDiskInt26Handler : InterruptHandler {
             uint structAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.BX);
             startSector = Memory.UInt32[structAddress];
             sectorCount = Memory.UInt16[structAddress + 4u];
-            ushort bufSeg = Memory.UInt16[structAddress + 6u];
-            ushort bufOff = Memory.UInt16[structAddress + 8u];
+            ushort bufOff = Memory.UInt16[structAddress + 6u];
+            ushort bufSeg = Memory.UInt16[structAddress + 8u];
             bufferAddress = MemoryUtils.ToPhysicalAddress(bufSeg, bufOff);
         } else {
             startSector = State.DX;
