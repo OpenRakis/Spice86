@@ -21,11 +21,11 @@ public sealed class MscdexService {
     private const ushort MscdexVersionMajor = 2;
     private const ushort MscdexVersionMinor = 23;
 
-    /// <summary>Magic value written to CX when a drive is recognised by the drive-check subfunction.</summary>
-    private const ushort DriveCheckMagicCx = 0xADAD;
+    /// <summary>Magic value written to BX for the drive-check subfunction, per DOSBox Staging (always written, even on miss).</summary>
+    private const ushort DriveCheckMagicBx = 0xADAD;
 
-    /// <summary>Magic value written to AX when a drive is recognised by the drive-check subfunction ('CR' in ASCII).</summary>
-    private const ushort DriveCheckMagicAx = 0x5243;
+    /// <summary>Magic value written to AX when the drive-check subfunction finds a CD-ROM drive (DOSBox Staging case 0x150B).</summary>
+    private const ushort DriveCheckMagicAxValid = 0x5AD8;
 
     /// <summary>Number of data bytes per cooked CD-ROM sector.</summary>
     private const int CookedSectorSize = 2048;
@@ -121,8 +121,10 @@ public sealed class MscdexService {
 
     /// <summary>
     /// Reads <see cref="State.AL"/> and dispatches to the appropriate MSCDEX subfunction.
+    /// Clears the carry flag before dispatch, matching DOSBox Staging's CALLBACK_SCF(false).
     /// </summary>
     public void Dispatch() {
+        _state.CarryFlag = false;
         switch (_state.AL) {
             case 0x00:
                 GetNumberOfCdRomDrives();
@@ -170,6 +172,8 @@ public sealed class MscdexService {
 
     /// <summary>
     /// AL=0x00: Returns the number of registered CD-ROM drives and the index of the first one.
+    /// Sets BX = drive count, CX = first drive index (or 0 if none), and AL = 0xFF,
+    /// matching DOSBox Staging's MSCDEX_Handler case 0x1500.
     /// </summary>
     private void GetNumberOfCdRomDrives() {
         _state.BX = (ushort)_drives.Count;
@@ -177,6 +181,7 @@ public sealed class MscdexService {
         if (_drives.Count > 0) {
             _state.CX = _drives[0].DriveIndex;
         }
+        _state.AL = 0xFF;
     }
 
     /// <summary>
@@ -230,24 +235,27 @@ public sealed class MscdexService {
     }
 
     /// <summary>
-    /// AL=0x08: Reads one or more raw sectors from the first CD-ROM drive into the caller's buffer.
-    /// CX = sector count; DX = starting LBA; ES:BX = destination buffer.
+    /// AL=0x08: Reads one or more sectors from the CD-ROM drive into the caller's buffer.
+    /// CX = drive index; SI:DI = 32-bit starting LBA (SI is the high word); DX = sector count; ES:BX = destination buffer.
+    /// Matches DOSBox Staging's case 0x1508 which uses <c>sector = (reg_si &lt;&lt; 16) + reg_di</c>,
+    /// <c>reg_cx</c> for the drive, and <c>reg_dx</c> for the sector count.
     /// </summary>
     private void AbsoluteDiskRead() {
-        if (_drives.Count == 0) {
+        int driveIndex = _state.CX;
+        if (!TryGetDrive(driveIndex, out MscdexDriveEntry? driveEntry)) {
             _state.CarryFlag = true;
             _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
             return;
         }
 
-        MscdexDriveEntry driveEntry = _drives[0];
-        int sectorCount = _state.CX;
-        int startLba = _state.DX;
+        uint startLba = ((uint)_state.SI << 16) | _state.DI;
+        int sectorCount = _state.DX;
         byte[] sectorBuffer = new byte[sectorCount * CookedSectorSize];
-        driveEntry.Drive.Read(startLba, sectorCount, sectorBuffer.AsSpan(), CdSectorMode.CookedData2048);
+        driveEntry.Drive.Read((int)startLba, sectorCount, sectorBuffer.AsSpan(), CdSectorMode.CookedData2048);
 
         uint destAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
         _memory.LoadData(destAddress, sectorBuffer);
+        _state.AX = 0;
         _state.CarryFlag = false;
     }
 
@@ -260,16 +268,17 @@ public sealed class MscdexService {
     }
 
     /// <summary>
-    /// AL=0x0B: Checks whether the drive index in BX corresponds to a known CD-ROM drive.
-    /// Sets CX=0xADAD and AX=0x5243 on match; zeros both on miss.
+    /// AL=0x0B: Checks whether the drive index in CX corresponds to a known CD-ROM drive.
+    /// Writes BX=0xADAD unconditionally; sets AX=0x5AD8 on a match, AX=0x0000 on a miss.
+    /// Matches DOSBox Staging's MSCDEX_Handler case 0x150B:
+    /// <c>reg_ax = IsValidDrive(reg_cx) ? 0x5AD8 : 0x0000; reg_bx = 0xADAD;</c>
     /// </summary>
     private void CdRomDriveCheck() {
-        int driveIndex = _state.BX;
+        int driveIndex = _state.CX;
+        _state.BX = DriveCheckMagicBx;
         if (TryGetDrive(driveIndex, out MscdexDriveEntry? _)) {
-            _state.CX = DriveCheckMagicCx;
-            _state.AX = DriveCheckMagicAx;
+            _state.AX = DriveCheckMagicAxValid;
         } else {
-            _state.CX = 0;
             _state.AX = 0;
         }
     }
