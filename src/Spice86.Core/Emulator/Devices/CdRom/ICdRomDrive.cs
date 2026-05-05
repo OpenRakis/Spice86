@@ -47,7 +47,11 @@ public interface ICdRomDrive {
     int Read(int lba, int sectorCount, Span<byte> destination, CdSectorMode mode);
 
     /// <summary>Returns the full table of contents for the currently mounted disc.</summary>
-    /// <returns>An ordered list of TOC entries including the lead-out.</returns>
+    /// <returns>
+    /// An ordered list of TOC entries.  All data and audio tracks appear first in track-number order,
+    /// followed by a synthetic lead-out entry with track number <c>0xAA</c> as the last element.
+    /// Callers that iterate only over regular tracks must stop before the lead-out entry.
+    /// </returns>
     IReadOnlyList<TableOfContentsEntry> GetTableOfContents();
 
     /// <summary>Returns the TOC entry for the specified track number.</summary>

@@ -112,6 +112,13 @@ public sealed class MscdexService {
     /// </summary>
     private const int RedbookPreGapFrames = 150;
 
+    /// <summary>
+    /// Track number used for the lead-out entry in the table of contents (0xAA per Red Book).
+    /// This sentinel is placed at the end of the TOC list returned by
+    /// <see cref="ICdRomDrive.GetTableOfContents"/> and must not be treated as a playable track.
+    /// </summary>
+    private const int LeadOutTrackNumber = 0xAA;
+
     private readonly List<MscdexDriveEntry> _drives = new();
     private readonly State _state;
     private readonly IMemory _memory;
@@ -558,12 +565,17 @@ public sealed class MscdexService {
 
         IReadOnlyList<TableOfContentsEntry> toc = drive.GetTableOfContents();
         TableOfContentsEntry? currentTrack = null;
-        for (int i = 0; i < toc.Count - 1; i++) { // exclude lead-out (last entry)
+        for (int i = 0; i < toc.Count; i++) {
             TableOfContentsEntry candidate = toc[i];
-            TableOfContentsEntry next = toc[i + 1];
-            if (currentLba >= candidate.Lba && currentLba < next.Lba) {
-                currentTrack = candidate;
-                break;
+            if (candidate.TrackNumber == LeadOutTrackNumber) {
+                break; // do not inspect the lead-out entry
+            }
+            TableOfContentsEntry? next = (i + 1 < toc.Count) ? toc[i + 1] : null;
+            if (next == null || currentLba < next.Lba) {
+                if (currentLba >= candidate.Lba) {
+                    currentTrack = candidate;
+                    break;
+                }
             }
         }
         if (currentTrack != null) {

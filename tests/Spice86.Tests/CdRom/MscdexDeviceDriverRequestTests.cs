@@ -227,14 +227,19 @@ public sealed class MscdexDeviceDriverRequestTests {
 
     /// <summary>
     /// A fake image that exposes two tracks so that MSF-related IOCTL responses can be tested.
-    /// Track 1: audio, startLba=0; Track 2: data, startLba=75; totalSectors=225.
+    /// Track 1: audio, startLba=0, length=75 (covers LBA 0–74 inclusive).
+    /// Track 2: data,  startLba=75, length=150 (covers LBA 75–224 inclusive).
+    /// Total sectors = 225; lead-out at LBA 225.
+    /// Track boundaries are exclusive-end: FindTrack(74)→track1, FindTrack(75)→track2.
     /// </summary>
     private sealed class FakeImageWithTracks : ICdRomImage {
         private readonly List<CdTrack> _tracks;
 
         public FakeImageWithTracks() {
             _tracks = new List<CdTrack> {
-                new CdTrack(1, startLba: 0,  lengthSectors: 75,  2352, CdSectorMode.AudioRaw2352, isAudio: true,  0, 0, new NullDataSource(), 0),
+                // Track 1: audio, LBA [0, 75)
+                new CdTrack(1, startLba: 0,  lengthSectors: 75,  2352, CdSectorMode.AudioRaw2352,   isAudio: true,  0, 0, new NullDataSource(), 0),
+                // Track 2: data,  LBA [75, 225)
                 new CdTrack(2, startLba: 75, lengthSectors: 150, 2048, CdSectorMode.CookedData2048, isAudio: false, 0, 0, new NullDataSource(), 0),
             };
         }
@@ -253,6 +258,7 @@ public sealed class MscdexDeviceDriverRequestTests {
         public void Dispose() { }
     }
 
+    /// <summary>Minimal <see cref="IDataSource"/> stub for test tracks that never have their data read.</summary>
     private sealed class NullDataSource : IDataSource {
         public long LengthBytes => 0;
         public int Read(long byteOffset, Span<byte> buffer) { buffer.Clear(); return buffer.Length; }
