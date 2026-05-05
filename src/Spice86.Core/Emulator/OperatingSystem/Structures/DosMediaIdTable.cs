@@ -13,11 +13,16 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 /// where media IDs are spaced at <c>i*9</c> offsets.
 /// </remarks>
 public class DosMediaIdTable : MemoryBasedDataStructure {
+    /// <summary>
+    /// The in-segment DPB offset where DOS expects the media-id table to start.
+    /// </summary>
+    public const ushort EntryBaseOffsetInSegment = 0x17;
+
     /// <summary>Bytes per drive entry.</summary>
     public const int EntrySize = 9;
 
     /// <summary>Total bytes required for all 26 drive entries.</summary>
-    public const int TableSizeInBytes = 26 * EntrySize;
+    public const int TableSizeInBytes = EntryBaseOffsetInSegment + (26 * EntrySize);
 
     /// <summary>Paragraphs (16-byte blocks) required to hold the full table.</summary>
     public const int TableSizeInParagraphs = (TableSizeInBytes + 15) / 16;
@@ -45,5 +50,5 @@ public class DosMediaIdTable : MemoryBasedDataStructure {
     /// <summary>
     /// Returns the in-segment offset of the given drive's entry, for use as BX in the DS:BX pointer.
     /// </summary>
-    public ushort EntryOffset(byte driveIndex) => (ushort)(driveIndex * EntrySize);
+    public ushort EntryOffset(byte driveIndex) => (ushort)(EntryBaseOffsetInSegment + (driveIndex * EntrySize));
 }
