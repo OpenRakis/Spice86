@@ -27,7 +27,7 @@ public class DosDiskInt25Handler : InterruptHandler {
 
         if (driveNumber >= DosDriveManager.MaxDriveCount || !_dosDriveManager.HasDriveAtIndex(State.AL)) {
             State.AX = 0x8002;
-            State.CarryFlag = true;
+            SetCarryFlag(true, true);
         } else {
             if (sectorToRead == 1 && startingLogicalSector == 0) {
                 if (driveNumber >= 2) {
@@ -37,7 +37,7 @@ public class DosDiskInt25Handler : InterruptHandler {
             } else if(LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 LoggerService.Warning("Interrupt 25 called but not as disk detection, {DriveIndex}", State.AL);
             }
-            State.CarryFlag = false;
+            SetCarryFlag(false, true);
             State.AX = 0;
         }
     }

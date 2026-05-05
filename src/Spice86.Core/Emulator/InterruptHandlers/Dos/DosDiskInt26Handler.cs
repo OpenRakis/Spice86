@@ -23,9 +23,9 @@ public class DosDiskInt26Handler : InterruptHandler {
         }
         if (State.AL >= DosDriveManager.MaxDriveCount || !_dosDriveManager.HasDriveAtIndex(State.AL)) {
             State.AX = 0x8002;
-            State.CarryFlag = true;
+            SetCarryFlag(true, true);
         } else {
-            State.CarryFlag = false;
+            SetCarryFlag(false, true);
             State.AX = 0;
         }
     }
