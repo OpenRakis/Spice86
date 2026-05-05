@@ -203,26 +203,36 @@ public sealed class MscdexService {
     /// <summary>
     /// AL=0x02/0x03/0x04: Returns an empty (null-terminated) string for copyright, abstract,
     /// and bibliographic file names.
+    /// CX = drive index; ES:BX = buffer to receive the filename.
+    /// If the drive is not found, sets carry and AX = <see cref="MscdexErrorCode.InvalidDrive"/>,
+    /// matching DOSBox Staging's check in case 0x1502-0x1504.
     /// </summary>
     private void GetFileNameInfo() {
+        int driveIndex = _state.CX;
+        if (!TryGetDrive(driveIndex, out MscdexDriveEntry? _)) {
+            _state.CarryFlag = true;
+            _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
+            return;
+        }
         uint bufferAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
         _memory.UInt8[bufferAddress] = 0;
     }
 
     /// <summary>
     /// AL=0x05: Reads a volume descriptor sector from the disc and copies it to the caller's buffer.
-    /// BP selects the drive (0-based); CX selects which descriptor to read (0 = PVD).
+    /// CX = drive index (0-based, matches DOSBox Staging <c>reg_cx</c>);
+    /// DX = descriptor index (0 = PVD, matches DOSBox Staging <c>reg_dx</c>).
     /// Returns the descriptor type byte in AL.
     /// </summary>
     private void ReadVolumeTableOfContents() {
-        int driveIndex = _state.BP;
+        int driveIndex = _state.CX;
         if (!TryGetDrive(driveIndex, out MscdexDriveEntry? driveEntry)) {
             _state.CarryFlag = true;
             _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
             return;
         }
 
-        int descriptorIndex = _state.CX;
+        int descriptorIndex = _state.DX;
         int lba = FirstVolumeDescriptorLba + descriptorIndex;
         byte[] sectorBuffer = new byte[CookedSectorSize];
         driveEntry.Drive.Read(lba, sectorCount: 1, sectorBuffer.AsSpan(), CdSectorMode.CookedData2048);

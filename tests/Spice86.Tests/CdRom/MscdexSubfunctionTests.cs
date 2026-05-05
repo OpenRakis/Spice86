@@ -197,4 +197,47 @@ public sealed class MscdexSubfunctionTests {
         // Assert
         ctx.State.CarryFlag.Should().BeFalse("Dispatch() must clear CF before invoking subfunctions");
     }
+
+    /// <summary>
+    /// AL=0x05 (Read VTOC): DOSBox Staging uses CX=drive and DX=volume descriptor index.
+    /// Drive index in CX and descriptor index in DX should select the correct drive and sector.
+    /// </summary>
+    [Fact]
+    public void ReadVolumeTableOfContents_UsesCxAsDriveAndDxAsDescriptorIndex() {
+        // Arrange
+        TestContext ctx = new();
+        ctx.AddDriveAtIndex('D', 3);
+        ctx.State.AL = 0x05;
+        ctx.State.CX = 3;   // drive index for D: (matching DOSBox Staging reg_cx = drive)
+        ctx.State.DX = 0;   // first descriptor (PVD) — DOSBox Staging reg_dx = descriptor index
+        ctx.State.BP = 99;  // BP must NOT be used as drive index
+        ctx.State.ES = BufferSegment;
+        ctx.State.BX = BufferOffset;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeFalse("reading PVD from a valid drive should succeed");
+    }
+
+    /// <summary>
+    /// AL=0x05 (Read VTOC): When drive CX is unknown, carry flag is set and AX contains the error.
+    /// </summary>
+    [Fact]
+    public void ReadVolumeTableOfContents_InvalidDriveInCx_SetsCarryFlag() {
+        // Arrange
+        TestContext ctx = new();
+        ctx.State.AL = 0x05;
+        ctx.State.CX = 7;  // no drive at index 7
+        ctx.State.DX = 0;
+        ctx.State.ES = BufferSegment;
+        ctx.State.BX = BufferOffset;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeTrue("CF set when drive is not found");
+    }
 }
