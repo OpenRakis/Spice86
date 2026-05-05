@@ -258,10 +258,11 @@ public sealed class MscdexService {
             return;
         }
 
-        uint startLba = ((uint)_state.SI << 16) | _state.DI;
+        uint startLbaUint = ((uint)_state.SI << 16) | _state.DI;
+        int startLba = (int)startLbaUint;
         int sectorCount = _state.DX;
         byte[] sectorBuffer = new byte[sectorCount * CookedSectorSize];
-        driveEntry.Drive.Read((int)startLba, sectorCount, sectorBuffer.AsSpan(), CdSectorMode.CookedData2048);
+        driveEntry.Drive.Read(startLba, sectorCount, sectorBuffer.AsSpan(), CdSectorMode.CookedData2048);
 
         uint destAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
         _memory.LoadData(destAddress, sectorBuffer);
