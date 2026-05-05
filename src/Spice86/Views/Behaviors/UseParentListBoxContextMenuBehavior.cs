@@ -51,7 +51,7 @@ public class UseParentListBoxContextMenuBehavior {
         // Open on the next dispatcher cycle to avoid pointer/menu interaction races.
         Dispatcher.UIThread.Post(() => {
             listBox.SelectedItem = listBoxItem.DataContext;
-            listBox.ContextMenu.Open(listBoxItem);
+            listBox.ContextMenu.Open(listBox);
         }, DispatcherPriority.Normal);
     }
 
