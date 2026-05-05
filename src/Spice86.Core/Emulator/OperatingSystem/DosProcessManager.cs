@@ -258,13 +258,13 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         rootPsp.Exit[0] = IntOpcode;
         rootPsp.Exit[1] = Int20TerminateNumber;
-        // CurrentSize reflects only the PSP itself (16 paragraphs), not all of conventional memory.
-        // Programs that read the parent (COMMAND.COM) PSP[0x02] to compute their TSR resident
-        // size (DX for INT 21h/31h) must receive a realistic small value, not LastFreeSegment
-        // (0x9FFF = 40959 decimal). Using 0x9FFF caused games like Maupiti Island to pass 0x9FFF
-        // as DX, which made TryModifyBlock fail after expanding the block to maximum, leaving
-        // all conventional memory consumed and subsequent allocations impossible.
-        rootPsp.CurrentSize = (ushort)(CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
+        // Per FreeDOS kernel and DOSBox-staging, the root PSP[0x02] ("first segment beyond the
+        // allocation") holds the top of conventional memory, i.e. LastFreeSegment.  This is the
+        // value a real MS-DOS or FreeDOS kernel places in the initial environment/shell PSP before
+        // any program is loaded.  Games that read the parent PSP[0x02] to derive a TSR size (DX
+        // for INT 21h/31h) therefore receive the correct top-of-memory sentinel, and
+        // TryModifyBlock caps any resulting oversized DX to the program's own allocated block.
+        rootPsp.CurrentSize = DosMemoryManager.LastFreeSegment;
 
         // Root PSP: parent points to itself
         rootPsp.ParentProgramSegmentPrefix = CommandComSegment;

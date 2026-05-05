@@ -63,10 +63,10 @@ public class TsrIntegrationTests {
     /// <summary>
     /// Reproduces the Maupiti Island bug: the game reads the parent (COMMAND.COM) PSP[0x02]
     /// ("first segment beyond parent's allocation") and uses it directly as the TSR paragraph
-    /// count (DX). In Spice86 the fake COMMAND.COM PSP had CurrentSize set to
-    /// LastFreeSegment (0x9FFF), so DX became 0x9FFF — exhausting all conventional memory.
-    /// After the fix, COMMAND.COM PSP[0x02] = CommandComSegment + PspSizeInParagraphs = 0x70,
-    /// so DX = 0x70, and nearly all of conventional memory remains free afterwards.
+    /// count (DX).  Per FreeDOS kernel and DOSBox-staging, COMMAND.COM PSP[0x02] correctly
+    /// equals LastFreeSegment (0x9FFF = top of conventional memory), so DX will be very large.
+    /// TryModifyBlock must cap that oversized request to the program's own allocated block size
+    /// rather than failing and leaving all conventional memory consumed.
     /// </summary>
     [Fact]
     public void TerminateAndStayResident_UsingParentPspCurrentSize_LeavesConventionalMemoryFree() {
@@ -84,10 +84,11 @@ public class TsrIntegrationTests {
         }
         DosMemoryControlBlock largestFree = dos.MemoryManager.FindLargestFree();
         largestFree.IsFree.Should().BeTrue(
-            "after a TSR that uses parent PSP[0x02] as DX, conventional memory must have a large free block");
+            "after a TSR that passes an oversized DX derived from parent PSP[0x02], " +
+            "TryModifyBlock must cap the request and leave a large free block");
         largestFree.Size.Should().BeGreaterThan(MinExpectedFreeParagraphs,
-            "after TSR the bulk of conventional memory must still be free;" +
-            " if only 2 paragraphs (the env block) are free the bug is still present");
+            "TryModifyBlock must cap the oversized DX to the program's own allocated block; " +
+            "if no free block remains, the cap logic is not working");
     }
 
     private static Spice86DependencyInjection CreateSpice86ForTsrTest(string testFileName) {

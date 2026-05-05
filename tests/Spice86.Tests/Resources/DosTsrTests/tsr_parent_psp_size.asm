@@ -1,10 +1,10 @@
 ; tsr_parent_psp_size.asm
 ; Reproduces the Maupiti Island TSR miscalculation:
 ;   the game reads parent PSP[0x02] ("top of memory") and uses it as DX.
-; In Spice86 the fake COMMAND.COM PSP has CurrentSize = LastFreeSegment (0x9FFF),
-; so DX = 0x9FFF which exhausts all conventional memory.
-; After the fix, COMMAND.COM PSP[0x02] = 0x70 (just the PSP itself),
-; giving DX = 0x70, which leaves nearly all of conventional memory free.
+; Per FreeDOS kernel and DOSBox-staging, COMMAND.COM PSP[0x02] = LastFreeSegment (0x9FFF),
+; so DX will be very large (~0x9F9F).  The correct fix is in TryModifyBlock: cap the
+; oversized DX to the program's own allocated block size rather than failing and leaving
+; all conventional memory consumed.
 ;
 ; build: nasm -f bin tsr_parent_psp_size.asm -o tsr_parent_psp_size.com
 

@@ -196,6 +196,9 @@ public class DosMemoryManager {
             newSizeInParagraphs = DosProgramSegmentPrefix.PspSizeInParagraphs;
         }
 
+        // Save the block's current size before joining so we can cap an oversized request later.
+        ushort sizeBeforeJoin = block.Size;
+
         // Make the block the biggest it can get
         if (!JoinBlocks(block, false)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -205,16 +208,18 @@ public class DosMemoryManager {
         }
 
         if (block.Size < newSizeInParagraphs) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}",
-                    block, newSizeInParagraphs);
-
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose) && !block.IsLast) {
-                    DosMemoryControlBlock? nextBlock = block.GetNextOrDefault();
-                    _loggerService.Verbose("Next MCB is {Block}", nextBlock);
-                }
+            // DOSBox-compatible behaviour: when the requested size exceeds the maximum we can
+            // provide (current block merged with any adjacent free blocks), cap the request to
+            // the block's original size rather than returning an error.  This matches what
+            // DOS_ResizeMemory does in DOSBox-staging and prevents a common TSR pattern —
+            // reading the parent PSP[0x02] field (which holds the top of conventional memory)
+            // and passing it directly as DX — from consuming all available conventional memory.
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(
+                    "MCB {Block} cannot satisfy requested size {RequestedSize}; capping to pre-join size {OriginalSize}",
+                    block, newSizeInParagraphs, sizeBeforeJoin);
             }
-            return DosErrorCode.InsufficientMemory;
+            newSizeInParagraphs = sizeBeforeJoin;
         }
 
         if (block.Size > newSizeInParagraphs) {
