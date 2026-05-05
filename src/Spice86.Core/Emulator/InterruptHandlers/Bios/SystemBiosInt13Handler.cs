@@ -197,10 +197,15 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <summary>
     /// Write Disk Sectors (AH=0x03).
     /// Writes AL sectors from the buffer at ES:BX to CHS (CH/CL/DH) on drive DL.
+    /// Returns an error when AL=0 (zero sectors requested), matching DOSBox Staging behaviour.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void WriteSectors(bool calledFromVm) {
         byte driveNumber = State.DL;
+        if (State.AL == 0) {
+            SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
+            return;
+        }
         if (_floppyAccess == null || !IsFloppyDrive(driveNumber)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;

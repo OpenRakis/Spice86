@@ -259,6 +259,22 @@ public sealed class Int13FloppyTests {
     }
 
     [Fact]
+    public void WriteSectors_ZeroSectorCount_ReturnsError() {
+        // Arrange — DOSBox Staging bios_disk.cpp case 0x03 explicitly rejects AL=0
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x03;
+        ctx.SetupChsRegisters(cylinder: 0, head: 0, sector: 1, driveNumber: DriveA, sectorCount: 0);
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeTrue("AL=0 means zero sectors requested which is invalid");
+        ctx.State.AH.Should().NotBe(0x00, "error code must be set on invalid parameter");
+    }
+
+    [Fact]
     public void ReadSectors_NoDriveImage_ReturnsError() {
         // Arrange — drive B (0x01) is not mounted
         byte[] image = new Fat12ImageBuilder().Build();

@@ -241,6 +241,21 @@ public sealed class FloppyDiskControllerTests {
     }
 
     [Fact]
+    public void SenseDriveStatus_SetsReadyAndTwoSidedBits() {
+        // Arrange — DOSBox Staging fdc.cpp get_ST3() always sets bit 6 (Ready) and bit 3 (Two-sided)
+        FloppyDiskController fdc = CreateFdc(CreateFloppyAccess(), out List<byte> _);
+
+        // Act
+        fdc.WriteByte(PortData, 0x04);  // SENSE DRIVE STATUS
+        fdc.WriteByte(PortData, 0x00);  // drive 0, head 0
+        byte st3 = fdc.ReadByte(PortData);
+
+        // Assert
+        (st3 & 0x40).Should().Be(0x40, "Ready bit (bit 6) must always be set when drive is present");
+        (st3 & 0x08).Should().Be(0x08, "Two-sided bit (bit 3) must always be set for double-sided floppies");
+    }
+
+    [Fact]
     public void SenseDriveStatus_AfterSeekAwayCylinder0_ClearsTrack0Bit() {
         // Arrange — seek to cylinder 5 first
         FloppyDiskController fdc = CreateFdc(CreateFloppyAccess(), out List<byte> _);
