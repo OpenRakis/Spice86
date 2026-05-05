@@ -37,10 +37,10 @@ public class SystemClockInt1AHandler : InterruptHandler {
     private void FillDispatchTable() {
         AddAction(0x00, GetSystemClockCounter);
         AddAction(0x01, SetSystemClockCounter);
-        AddAction(0x02, () => ReadTimeFromRTC(true));
-        AddAction(0x03, () => SetRTCTime(true));
-        AddAction(0x04, () => ReadDateFromRTC(true));
-        AddAction(0x05, () => SetRTCDate(true));
+        AddAction(0x02, ReadTimeFromRTC);
+        AddAction(0x03, SetRTCTime);
+        AddAction(0x04, ReadDateFromRTC);
+        AddAction(0x05, SetRTCDate);
     }
 
     /// <inheritdoc />
@@ -85,8 +85,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// INT 1A, AH=02h - Read Time from RTC.
     /// Returns time in BCD format from the Real-Time Clock.
     /// </summary>
-    /// <param name="calledFromVm">Whether this was invoked by the VM (carry flag must be propagated to interrupt stack).</param>
-    private void ReadTimeFromRTC(bool calledFromVm) {
+    private void ReadTimeFromRTC() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 1A, AH=02h - Read Time from RTC");
         }
@@ -96,29 +95,26 @@ public class SystemClockInt1AHandler : InterruptHandler {
         State.CL = BcdConverter.ToBcd((byte)now.Minute);
         State.DH = BcdConverter.ToBcd((byte)now.Second);
         State.DL = 0; // Standard time (not daylight savings)
-        SetCarryFlag(false, calledFromVm);
+        State.CarryFlag = false;
     }
 
     /// <summary>
     /// INT 1A, AH=03h - Set RTC Time.
-    /// The requested time is silently ignored as modifying the host system time is not permitted.
-    /// Returns CF=0 (success) to match real BIOS behavior, where writes to a read-only RTC succeed
-    /// but have no effect, ensuring DOS programs that check CF do not treat this as an error.
+    /// Returns error as modifying the host system time is not permitted for security and consistency reasons.
+    /// Programs should not rely on being able to set the system time in an emulated environment.
     /// </summary>
-    /// <param name="calledFromVm">Whether this was invoked by the VM (carry flag must be propagated to interrupt stack).</param>
-    private void SetRTCTime(bool calledFromVm) {
+    private void SetRTCTime() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 1A, AH=03h - Set RTC Time (ignored, host time is read-only)");
+            LoggerService.Verbose("INT 1A, AH=03h - Set RTC Time (not permitted, returning error)");
         }
-        SetCarryFlag(false, calledFromVm);
+        State.CarryFlag = true;
     }
 
     /// <summary>
     /// INT 1A, AH=04h - Read Date from RTC.
     /// Returns date in BCD format from the Real-Time Clock.
     /// </summary>
-    /// <param name="calledFromVm">Whether this was invoked by the VM (carry flag must be propagated to interrupt stack).</param>
-    private void ReadDateFromRTC(bool calledFromVm) {
+    private void ReadDateFromRTC() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 1A, AH=04h - Read Date from RTC");
         }
@@ -128,20 +124,18 @@ public class SystemClockInt1AHandler : InterruptHandler {
         State.CL = BcdConverter.ToBcd((byte)(now.Year % 100));
         State.DH = BcdConverter.ToBcd((byte)now.Month);
         State.DL = BcdConverter.ToBcd((byte)now.Day);
-        SetCarryFlag(false, calledFromVm);
+        State.CarryFlag = false;
     }
 
     /// <summary>
     /// INT 1A, AH=05h - Set RTC Date.
-    /// The requested date is silently ignored as modifying the host system date is not permitted.
-    /// Returns CF=0 (success) to match real BIOS behavior, where writes to a read-only RTC succeed
-    /// but have no effect, ensuring DOS programs that check CF do not treat this as an error.
+    /// Returns error as modifying the host system date is not permitted for security and consistency reasons.
+    /// Programs should not rely on being able to set the system date in an emulated environment.
     /// </summary>
-    /// <param name="calledFromVm">Whether this was invoked by the VM (carry flag must be propagated to interrupt stack).</param>
-    private void SetRTCDate(bool calledFromVm) {
+    private void SetRTCDate() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 1A, AH=05h - Set RTC Date (ignored, host date is read-only)");
+            LoggerService.Verbose("INT 1A, AH=05h - Set RTC Date (not permitted, returning error)");
         }
-        SetCarryFlag(false, calledFromVm);
+        State.CarryFlag = true;
     }
 }
