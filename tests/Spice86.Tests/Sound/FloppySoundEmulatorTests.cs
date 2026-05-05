@@ -111,12 +111,13 @@ public sealed class FloppySoundEmulatorTests : IDisposable {
         // Arrange: seek sample with 22050 samples (1 second)
         string seekFile = Path.Combine(_tempDir, "fdd_seek1.wav");
         WriteWav(seekFile, 22050, 1000);
+        float[] seekSamples = WavPcmLoader.TryLoad(seekFile);
 
         FloppyDiskNoiseDevice device = new(
             FloppyDiskNoiseMode.On,
-            spinUpPath: string.Empty,
-            spinPath: string.Empty,
-            seekPaths: new[] { seekFile });
+            spinUpSamples: Array.Empty<float>(),
+            spinSamples: Array.Empty<float>(),
+            seekSamplesList: new[] { seekSamples });
 
         // Start first seek
         device.PlaySeek();
@@ -144,12 +145,13 @@ public sealed class FloppySoundEmulatorTests : IDisposable {
         // Arrange: 1 second spin sample
         string spinFile = Path.Combine(_tempDir, "fdd_spin.wav");
         WriteWav(spinFile, 22050, 500);
+        float[] spinSamples = WavPcmLoader.TryLoad(spinFile);
 
         FloppyDiskNoiseDevice device = new(
             FloppyDiskNoiseMode.On,
-            spinUpPath: string.Empty,
-            spinPath: spinFile,
-            seekPaths: Array.Empty<string>());
+            spinUpSamples: Array.Empty<float>(),
+            spinSamples: spinSamples,
+            seekSamplesList: Array.Empty<float[]>());
 
         device.ActivateSpin();
 
@@ -181,12 +183,13 @@ public sealed class FloppySoundEmulatorTests : IDisposable {
         // Arrange: short 441-sample (20 ms) spin sample
         string spinFile = Path.Combine(_tempDir, "fdd_spin.wav");
         WriteWav(spinFile, 441, 500);
+        float[] spinSamples = WavPcmLoader.TryLoad(spinFile);
 
         FloppyDiskNoiseDevice device = new(
             FloppyDiskNoiseMode.On,
-            spinUpPath: string.Empty,
-            spinPath: spinFile,
-            seekPaths: Array.Empty<string>());
+            spinUpSamples: Array.Empty<float>(),
+            spinSamples: spinSamples,
+            seekSamplesList: Array.Empty<float[]>());
 
         device.ActivateSpin();
 
@@ -268,6 +271,22 @@ public sealed class FloppySoundEmulatorTests : IDisposable {
         for (int i = 0; i < sampleCount * 2; i++) {
             w.Write((short)1000);
         }
+    }
+
+    // ------------------------------------------------------------------ //
+    // Embedded resource fallback
+
+    [Fact]
+    public void EmbeddedResources_AreLoadedWhenNoOnDiskFileExists() {
+        // With no on-disk files and no user directory, the emulator should fall back
+        // to the embedded assembly resources (synthetic WAV files baked into the dll).
+        SoftwareMixer mixer = CreateMixer();
+        FloppySoundEmulator emulator = new(mixer, FloppyDiskNoiseMode.On, samplesDirectory: null);
+
+        // A seek that loads the embedded fdd_seek1.wav should produce non-empty audio
+        // — we just verify it doesn't throw and the channel is in a valid state.
+        emulator.PlaySeek();
+        emulator.Channel.IsEnabled.Should().BeTrue("at least one embedded seek sample should have been loaded");
     }
 
     // ------------------------------------------------------------------ //

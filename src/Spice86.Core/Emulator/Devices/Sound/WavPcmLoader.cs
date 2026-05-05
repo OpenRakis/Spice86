@@ -34,7 +34,8 @@ internal static class WavPcmLoader {
         }
 
         try {
-            return ParseWav(path);
+            using FileStream fs = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return ParseWav(fs);
         } catch (IOException) {
             return Array.Empty<float>();
         } catch (InvalidDataException) {
@@ -42,9 +43,26 @@ internal static class WavPcmLoader {
         }
     }
 
-    private static float[] ParseWav(string path) {
-        using FileStream fs = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        using BinaryReader reader = new(fs);
+    /// <summary>
+    /// Attempts to load a 22 050 Hz mono 16-bit PCM WAVE file from the given stream.
+    /// </summary>
+    /// <param name="stream">A readable stream positioned at the start of a WAVE file.</param>
+    /// <returns>
+    /// Normalised float samples in [-1, 1], or an empty array when the stream
+    /// does not contain a valid WAV in the expected format.
+    /// </returns>
+    internal static float[] TryLoadFromStream(Stream stream) {
+        try {
+            return ParseWav(stream);
+        } catch (IOException) {
+            return Array.Empty<float>();
+        } catch (InvalidDataException) {
+            return Array.Empty<float>();
+        }
+    }
+
+    private static float[] ParseWav(Stream stream) {
+        using BinaryReader reader = new(stream, System.Text.Encoding.ASCII, leaveOpen: true);
 
         // RIFF header
         string riff = ReadFourCC(reader);
@@ -65,10 +83,10 @@ internal static class WavPcmLoader {
         byte[]? pcmData = null;
 
         // Walk sub-chunks until we have both "fmt " and "data"
-        while (fs.Position < fs.Length - 8) {
+        while (stream.Position < stream.Length - 8) {
             string chunkId = ReadFourCC(reader);
             uint chunkSize = reader.ReadUInt32();
-            long nextChunk = fs.Position + chunkSize;
+            long nextChunk = stream.Position + chunkSize;
 
             if (chunkId == "fmt ") {
                 audioFormat = reader.ReadUInt16();
@@ -82,8 +100,8 @@ internal static class WavPcmLoader {
             }
 
             // Skip any remaining bytes in this chunk (handles extended fmt, LIST, etc.)
-            if (fs.Position < nextChunk) {
-                fs.Seek(nextChunk, SeekOrigin.Begin);
+            if (stream.Position < nextChunk) {
+                stream.Seek(nextChunk, SeekOrigin.Begin);
             }
         }
 

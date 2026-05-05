@@ -61,25 +61,24 @@ internal sealed class FloppyDiskNoiseDevice {
     private string _lastWritePath = string.Empty;
 
     /// <summary>
-    /// Initialises the device and loads all audio samples.
+    /// Initialises the device with pre-loaded audio samples.
     /// </summary>
     /// <param name="mode">The noise emulation level.</param>
-    /// <param name="spinUpPath">Path to the spin-up WAV (one-shot, played once when the motor first activates).</param>
-    /// <param name="spinPath">Path to the spin-sustain WAV (played once per motor activation after spin-up).</param>
-    /// <param name="seekPaths">Up to <see cref="MaxSeekSamples"/> paths to seek-noise WAV files.</param>
-    internal FloppyDiskNoiseDevice(FloppyDiskNoiseMode mode, string spinUpPath, string spinPath, IReadOnlyList<string> seekPaths) {
+    /// <param name="spinUpSamples">Spin-up sound samples (one-shot, played once when the motor first activates).</param>
+    /// <param name="spinSamples">Spin-sustain sound samples (played once per motor activation after spin-up).</param>
+    /// <param name="seekSamplesList">Up to <see cref="MaxSeekSamples"/> seek-noise sample arrays.</param>
+    internal FloppyDiskNoiseDevice(FloppyDiskNoiseMode mode, float[] spinUpSamples, float[] spinSamples, IReadOnlyList<float[]> seekSamplesList) {
         _mode = mode;
         if (_mode == FloppyDiskNoiseMode.Off) {
             return;
         }
 
-        _spinUpSamples = WavPcmLoader.TryLoad(spinUpPath);
-        _spinSamples = WavPcmLoader.TryLoad(spinPath);
+        _spinUpSamples = spinUpSamples;
+        _spinSamples = spinSamples;
 
-        int count = Math.Min(seekPaths.Count, MaxSeekSamples);
+        int count = Math.Min(seekSamplesList.Count, MaxSeekSamples);
         for (int i = 0; i < count; i++) {
-            float[] samples = WavPcmLoader.TryLoad(seekPaths[i]);
-            _seekSamples.Add(samples);
+            _seekSamples.Add(seekSamplesList[i]);
         }
 
         ResetIterators();

@@ -17,6 +17,17 @@
 
     <ItemGroup>
         <None Remove="Resources\2MGM.sf2" />
+        <None Remove="Resources\DiskNoises\fdd_spinup.wav" />
+        <None Remove="Resources\DiskNoises\fdd_spin.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek1.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek2.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek3.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek4.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek5.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek6.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek7.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek8.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek9.wav" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance" />
@@ -66,6 +77,50 @@
     <ItemGroup>
         <EmbeddedResource Include="Resources\2MGM.sf2">
             <Link>2MGM.sf2</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_spinup.wav">
+            <Link>DiskNoises\fdd_spinup.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_spin.wav">
+            <Link>DiskNoises\fdd_spin.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek1.wav">
+            <Link>DiskNoises\fdd_seek1.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek2.wav">
+            <Link>DiskNoises\fdd_seek2.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek3.wav">
+            <Link>DiskNoises\fdd_seek3.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek4.wav">
+            <Link>DiskNoises\fdd_seek4.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek5.wav">
+            <Link>DiskNoises\fdd_seek5.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek6.wav">
+            <Link>DiskNoises\fdd_seek6.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek7.wav">
+            <Link>DiskNoises\fdd_seek7.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek8.wav">
+            <Link>DiskNoises\fdd_seek8.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek9.wav">
+            <Link>DiskNoises\fdd_seek9.wav</Link>
             <CopyToOutputDirectory>Never</CopyToOutputDirectory>
         </EmbeddedResource>
     </ItemGroup>
