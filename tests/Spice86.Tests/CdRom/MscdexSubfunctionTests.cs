@@ -251,7 +251,7 @@ public sealed class MscdexSubfunctionTests {
     public void DebuggingOnOff_DoesNothing(byte subfunction) {
         // Arrange
         TestContext ctx = new();
-        ctx.State.AH = 0xBE; // Set AH first to avoid overwriting AL
+        ctx.State.AH = 0xBE; // AH and AL are separate byte registers; set AH to verify it is unchanged after dispatch
         ctx.State.AL = subfunction;
 
         // Act
@@ -269,7 +269,7 @@ public sealed class MscdexSubfunctionTests {
     public void Reserved_0x0A_DoesNothing() {
         // Arrange
         TestContext ctx = new();
-        ctx.State.AH = 0xCA; // Set AH first to avoid overwriting AL
+        ctx.State.AH = 0xCA; // AH and AL are separate byte registers; set AH to verify it is unchanged after dispatch
         ctx.State.AL = 0x0A;
 
         // Act

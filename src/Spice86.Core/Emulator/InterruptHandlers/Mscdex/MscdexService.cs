@@ -39,6 +39,30 @@ public sealed class MscdexService {
     /// <summary>Logical block address of the first volume descriptor on a standard ISO 9660 disc.</summary>
     private const int FirstVolumeDescriptorLba = 16;
 
+    /// <summary>ISO 9660 volume descriptor type byte for the Primary Volume Descriptor.</summary>
+    private const byte VolumeDescriptorTypePrimary = 0x01;
+
+    /// <summary>ISO 9660 volume descriptor type byte for the Volume Descriptor Set Terminator.</summary>
+    private const byte VolumeDescriptorTypeTerminator = 0xFF;
+
+    /// <summary>
+    /// AX error code returned by <see cref="ReadVolumeTableOfContents"/> for a Primary Volume Descriptor,
+    /// matching DOSBox Staging's <c>error = (type == 1) ? 1 : …</c>.
+    /// </summary>
+    private const ushort VolumeDescriptorAxPrimary = 0x0001;
+
+    /// <summary>
+    /// AX error code returned by <see cref="ReadVolumeTableOfContents"/> for a VD Set Terminator,
+    /// matching DOSBox Staging's <c>… : (type == 0xFF) ? 0xFF : 0</c>.
+    /// </summary>
+    private const ushort VolumeDescriptorAxTerminator = 0x00FF;
+
+    /// <summary>
+    /// DX value returned by <see cref="GetSetVolumeDescriptorPreference"/> for a get request (BX=0),
+    /// meaning "prefer Primary Volume Descriptor". Matches DOSBox Staging <c>reg_dx = 0x100</c>.
+    /// </summary>
+    private const ushort VolumeDescriptorPreferencePrimaryValue = 0x0100;
+
     /// <summary>Number of bytes written per drive entry in the device-list buffer (subunit byte + 4-byte far pointer).</summary>
     private const uint DeviceListEntrySize = 5;
 
@@ -257,10 +281,10 @@ public sealed class MscdexService {
         _memory.LoadData(destAddress, sectorBuffer);
 
         byte descriptorType = sectorBuffer[0];
-        if (descriptorType == 0x01) {
-            _state.AX = 0x0001; // Primary Volume Descriptor
-        } else if (descriptorType == 0xFF) {
-            _state.AX = 0x00FF; // VD Set Terminator
+        if (descriptorType == VolumeDescriptorTypePrimary) {
+            _state.AX = VolumeDescriptorAxPrimary;
+        } else if (descriptorType == VolumeDescriptorTypeTerminator) {
+            _state.AX = VolumeDescriptorAxTerminator;
         } else {
             _state.AX = 0x0000; // HSFS or unrecognised
         }
@@ -355,7 +379,7 @@ public sealed class MscdexService {
 
         if (_state.BX == 0) {
             // Get preference — return DX=0x100 (prefer primary volume descriptor)
-            _state.DX = 0x0100;
+            _state.DX = VolumeDescriptorPreferencePrimaryValue;
         } else if (_state.BX == 1) {
             // Set preference — DH must be 1
             if (_state.DH != 1) {
