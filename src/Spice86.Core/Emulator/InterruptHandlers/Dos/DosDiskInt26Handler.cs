@@ -60,10 +60,18 @@ public class DosDiskInt26Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
+        AbsoluteDiskWrite(true);
+    }
+
+    /// <summary>
+    /// Writes one or more sectors from memory to a floppy or hard disk drive.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was invoked by the VM (carry flag must be propagated to interrupt stack).</param>
+    public void AbsoluteDiskWrite(bool calledFromVm) {
         byte driveIndex = State.AL;
         if (driveIndex >= DosDriveManager.MaxDriveCount || !_dosDriveManager.HasDriveAtIndex(driveIndex)) {
             State.AX = ErrorInvalidDrive;
-            SetCarryFlag(true, true);
+            SetCarryFlag(true, calledFromVm);
             return;
         }
 
@@ -85,14 +93,14 @@ public class DosDiskInt26Handler : InterruptHandler {
         }
 
         if (driveIndex >= 2) {
-            SetCarryFlag(false, true);
+            SetCarryFlag(false, calledFromVm);
             State.AX = 0;
             return;
         }
 
         if (!_dosDriveManager.TryGetGeometry(driveIndex, out int _, out int _, out int _, out int bytesPerSector)) {
             State.AX = ErrorInvalidDrive;
-            SetCarryFlag(true, true);
+            SetCarryFlag(true, calledFromVm);
             return;
         }
 
@@ -105,11 +113,11 @@ public class DosDiskInt26Handler : InterruptHandler {
 
         if (!_dosDriveManager.TryWrite(driveIndex, byteOffset, buffer, 0, byteCount)) {
             State.AX = 0x0408;
-            SetCarryFlag(true, true);
+            SetCarryFlag(true, calledFromVm);
             return;
         }
 
-        SetCarryFlag(false, true);
+        SetCarryFlag(false, calledFromVm);
         State.AX = 0;
     }
 }

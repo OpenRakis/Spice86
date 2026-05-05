@@ -158,5 +158,6 @@ public class DosInt2fHandler : InterruptHandler {
     /// </summary>
     public void MscdexServices(bool calledFromVm) {
         _mscdexService.Dispatch();
+        SetCarryFlag(State.CarryFlag, calledFromVm);
     }
 }
