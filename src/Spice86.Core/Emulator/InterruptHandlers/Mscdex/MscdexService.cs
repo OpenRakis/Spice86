@@ -36,6 +36,9 @@ public sealed class MscdexService {
     /// <summary>Number of data bytes per cooked CD-ROM sector.</summary>
     private const int CookedSectorSize = 2048;
 
+    /// <summary>Number of bytes per raw CD-ROM sector (sync + header + data + error correction).</summary>
+    private const int RawSectorSize = 2352;
+
     /// <summary>Logical block address of the first volume descriptor on a standard ISO 9660 disc.</summary>
     private const int FirstVolumeDescriptorLba = 16;
 
@@ -66,34 +69,64 @@ public sealed class MscdexService {
     /// <summary>Number of bytes written per drive entry in the device-list buffer (subunit byte + 4-byte far pointer).</summary>
     private const uint DeviceListEntrySize = 5;
 
-    // Device driver request header field offsets
+    // Device driver request header field offsets (matching DOSBox Staging dos_mscdex.cpp)
     private const uint RequestSubunitOffset = 1;
     private const uint RequestCommandOffset = 2;
     private const uint RequestStatusOffset = 3;
-    private const uint RequestDataOffset = 13;
 
-    // IOCTL input buffer pointer is at RequestDataOffset
-    private const uint IoctlBufferPtrOffset = RequestDataOffset;
+    // Addressing mode byte (HSG=0, Red Book=1) — at offset 0x0D (13) per DOS device driver spec
+    private const uint RequestAddressingModeOffset = 13;
 
-    // Play Audio command data offsets (relative to request base)
-    private const uint PlayAudioStartLbaOffset = RequestDataOffset;
-    private const uint PlayAudioSectorCountOffset = RequestDataOffset + 4;
+    // Transfer buffer pointer: offset word at 0x0E (14), segment word at 0x10 (16)
+    // Matches DOSBox Staging: buffer = PhysicalMake(mem_readw(hdr+0x10), mem_readw(hdr+0x0E))
+    private const uint IoctlBufferPtrOffset = 14;
 
-    // Device driver command codes
+    // Play Audio: start LBA/MSF DWORD at 0x0E (14), sector count DWORD at 0x12 (18)
+    // Matches DOSBox Staging case 0x84: start=readd(hdr+0x0E), len=readd(hdr+0x12)
+    private const uint PlayAudioStartLbaOffset = 14;
+    private const uint PlayAudioSectorCountOffset = 18;
+
+    // Read Long: sector count WORD at 0x12 (18), start DWORD at 0x14 (20), raw flag BYTE at 0x18 (24)
+    // Matches DOSBox Staging case 0x80: len=readw(hdr+0x12), start=readd(hdr+0x14)
+    private const uint ReadLongSectorCountOffset = 18;
+    private const uint ReadLongStartSectorOffset = 20;
+    private const uint ReadLongRawFlagOffset = 24;
+
+    // Device driver command codes (matching DOSBox Staging dos_mscdex.cpp switch on funcNr)
     private const byte CommandIoctlInput = 0x03;
+    private const byte CommandIoctlOutput = 0x0C;
+    private const byte CommandDeviceOpen = 0x0D;
+    private const byte CommandDeviceClose = 0x0E;
+    private const byte CommandReadLong = 0x80;
+    private const byte CommandReadLongPrefetch = 0x82;
+    private const byte CommandSeek = 0x83;
     private const byte CommandPlayAudio = 0x84;
     private const byte CommandStopAudio = 0x85;
     private const byte CommandResumeAudio = 0x88;
 
-    // IOCTL sub-command control codes
-    private const byte IoctlDeviceStatus = 0x00;
-    private const byte IoctlSectorSize = 0x01;
-    private const byte IoctlVolumeSize = 0x02;
-    private const byte IoctlMediaChanged = 0x03;
-    private const byte IoctlAudioDiskInfo = 0x04;
-    private const byte IoctlAudioTrackInfo = 0x05;
-    private const byte IoctlAudioSubchannel = 0x06;
-    private const byte IoctlAudioStatus = 0x0E;
+    // IOCTL Input sub-command control codes — matching DOSBox Staging MSCDEX_IOCTL_Input()
+    private const byte IoctlDeviceHeaderAddress = 0x00;
+    private const byte IoctlCurrentPosition = 0x01;
+    private const byte IoctlChannelControl = 0x04;
+    private const byte IoctlDeviceStatus = 0x06;
+    private const byte IoctlSectorSize = 0x07;
+    private const byte IoctlVolumeSize = 0x08;
+    private const byte IoctlMediaChanged = 0x09;
+    private const byte IoctlAudioDiskInfo = 0x0A;
+    private const byte IoctlAudioTrackInfo = 0x0B;
+    private const byte IoctlAudioSubchannel = 0x0C;
+    private const byte IoctlUpcCode = 0x0E;
+    private const byte IoctlAudioStatus = 0x0F;
+
+    // IOCTL Output sub-command control codes — matching DOSBox Staging MSCDEX_IOCTL_Output()
+    private const byte IoctlOutputEject = 0x00;
+    private const byte IoctlOutputLockDoor = 0x01;
+    private const byte IoctlOutputResetDrive = 0x02;
+    private const byte IoctlOutputChannelControl = 0x03;
+    private const byte IoctlOutputLoadMedia = 0x05;
+
+    // Channel control: 4 channels, each with output-map and volume byte
+    private const int ChannelCount = 4;
 
     // Request status word values
     private const ushort StatusDone = 0x0100;
@@ -123,6 +156,11 @@ public sealed class MscdexService {
     private readonly State _state;
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
+
+    // Audio channel output mapping: channel i routes to channel _channelOutputMap[i]
+    // Initial identity mapping: each channel maps to itself at full volume (255)
+    private readonly byte[] _channelOutputMap = { 0, 1, 2, 3 };
+    private readonly byte[] _channelVolumes = { 255, 255, 255, 255 };
 
     /// <summary>Gets the registered CD-ROM drives.</summary>
     public IReadOnlyList<MscdexDriveEntry> Drives => _drives;
@@ -436,6 +474,22 @@ public sealed class MscdexService {
             case CommandIoctlInput:
                 HandleIoctlInput(requestBase, driveEntry.Drive);
                 break;
+            case CommandIoctlOutput:
+                HandleIoctlOutput(requestBase, driveEntry.Drive);
+                break;
+            case CommandDeviceOpen:
+            case CommandDeviceClose:
+                // Device open/close — no-op, matching DOSBox Staging case 0x0D/0x0E
+                _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
+                break;
+            case CommandReadLong:
+            case CommandReadLongPrefetch:
+                HandleReadLong(requestBase, driveEntry.Drive);
+                break;
+            case CommandSeek:
+                // Seek — no-op for image drives (no physical head to position)
+                _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
+                break;
             case CommandPlayAudio:
                 HandlePlayAudio(requestBase, driveEntry.Drive);
                 break;
@@ -457,9 +511,25 @@ public sealed class MscdexService {
     }
 
     private void HandlePlayAudio(uint requestBase, ICdRomDrive drive) {
-        uint startLba = _memory.UInt32[requestBase + PlayAudioStartLbaOffset];
+        byte addressingMode = _memory.UInt8[requestBase + RequestAddressingModeOffset];
+        uint startRaw = _memory.UInt32[requestBase + PlayAudioStartLbaOffset];
         uint sectorCount = _memory.UInt32[requestBase + PlayAudioSectorCountOffset];
-        drive.PlayAudio((int)startLba, (int)sectorCount);
+        int startLba;
+        if (addressingMode == 0) {
+            // HSG / LBA mode: start is a direct LBA
+            startLba = (int)startRaw;
+        } else {
+            // Red Book MSF mode: start is encoded as (min<<16)|(sec<<8)|fr
+            byte fr = (byte)(startRaw & 0xFF);
+            byte sec = (byte)((startRaw >> 8) & 0xFF);
+            byte min = (byte)((startRaw >> 16) & 0xFF);
+            int totalFrames = min * 60 * 75 + sec * 75 + fr;
+            startLba = totalFrames - RedbookPreGapFrames;
+            if (startLba < 0) {
+                startLba = 0;
+            }
+        }
+        drive.PlayAudio(startLba, (int)sectorCount);
         _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
     }
 
@@ -470,12 +540,26 @@ public sealed class MscdexService {
         byte controlCode = _memory.UInt8[bufferAddress];
 
         switch (controlCode) {
+            case IoctlDeviceHeaderAddress:
+                // 0x00: Return Device Header address — write a zero far pointer (no real driver header installed)
+                _memory.UInt32[bufferAddress + 1] = 0;
+                break;
+            case IoctlCurrentPosition:
+                WriteCurrentPosition(bufferAddress, drive);
+                break;
+            case IoctlChannelControl:
+                WriteChannelControl(bufferAddress);
+                break;
             case IoctlDeviceStatus:
                 WriteDeviceStatus(bufferAddress, drive);
                 break;
             case IoctlSectorSize:
-                _memory.UInt8[bufferAddress + 1] = 0;
-                _memory.UInt16[bufferAddress + 2] = CookedSectorSize;
+                // 0x07: mode byte at buffer+1 (0=cooked 2048, 1=raw 2352); write sector size word at buffer+2
+                if (_memory.UInt8[bufferAddress + 1] == 0) {
+                    _memory.UInt16[bufferAddress + 2] = CookedSectorSize;
+                } else {
+                    _memory.UInt16[bufferAddress + 2] = RawSectorSize;
+                }
                 break;
             case IoctlVolumeSize:
                 _memory.UInt32[bufferAddress + 1] = (uint)drive.GetDiscInfo().TotalSectors;
@@ -492,6 +576,9 @@ public sealed class MscdexService {
             case IoctlAudioSubchannel:
                 WriteAudioSubchannel(bufferAddress, drive);
                 break;
+            case IoctlUpcCode:
+                WriteUpcCode(bufferAddress, drive);
+                break;
             case IoctlAudioStatus:
                 WriteAudioStatus(bufferAddress, drive);
                 break;
@@ -503,6 +590,115 @@ public sealed class MscdexService {
                 return;
         }
         _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
+    }
+
+    private void HandleIoctlOutput(uint requestBase, ICdRomDrive drive) {
+        ushort bufferOffset = _memory.UInt16[requestBase + IoctlBufferPtrOffset];
+        ushort bufferSegment = _memory.UInt16[requestBase + IoctlBufferPtrOffset + 2];
+        uint bufferAddress = MemoryUtils.ToPhysicalAddress(bufferSegment, bufferOffset);
+        byte controlCode = _memory.UInt8[bufferAddress];
+
+        switch (controlCode) {
+            case IoctlOutputEject:
+                drive.Eject();
+                break;
+            case IoctlOutputLockDoor:
+                // Lock/unlock door — no-op (image drives cannot be physically locked)
+                break;
+            case IoctlOutputResetDrive:
+                // Reset drive: stop audio playback, matching DOSBox Staging case 0x02
+                drive.StopAudio();
+                break;
+            case IoctlOutputChannelControl:
+                // Read 4-channel volume/mapping from the IOCTL buffer and store it
+                for (int chan = 0; chan < ChannelCount; chan++) {
+                    _channelOutputMap[chan] = _memory.UInt8[bufferAddress + (uint)(chan * 2 + 1)];
+                    _channelVolumes[chan] = _memory.UInt8[bufferAddress + (uint)(chan * 2 + 2)];
+                }
+                break;
+            case IoctlOutputLoadMedia:
+                // Load media — no-op for image drives (media is always present when an image is mounted)
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("MSCDEX IOCTL Output: unknown control code 0x{Code:X2}", controlCode);
+                }
+                _memory.UInt16[requestBase + RequestStatusOffset] = StatusError | (ushort)MscdexErrorCode.InvalidFunction;
+                return;
+        }
+        _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
+    }
+
+    private void HandleReadLong(uint requestBase, ICdRomDrive drive) {
+        ushort bufferOffset = _memory.UInt16[requestBase + IoctlBufferPtrOffset];
+        ushort bufferSegment = _memory.UInt16[requestBase + IoctlBufferPtrOffset + 2];
+        uint bufferAddress = MemoryUtils.ToPhysicalAddress(bufferSegment, bufferOffset);
+
+        ushort sectorCount = _memory.UInt16[requestBase + ReadLongSectorCountOffset];
+        uint startRaw = _memory.UInt32[requestBase + ReadLongStartSectorOffset];
+        byte rawFlag = _memory.UInt8[requestBase + ReadLongRawFlagOffset];
+        byte addressingMode = _memory.UInt8[requestBase + RequestAddressingModeOffset];
+
+        int startLba;
+        if (addressingMode == 0) {
+            startLba = (int)startRaw;
+        } else {
+            // Red Book MSF: low byte=fr, next=sec, next=min
+            byte fr = (byte)(startRaw & 0xFF);
+            byte sec = (byte)((startRaw >> 8) & 0xFF);
+            byte min = (byte)((startRaw >> 16) & 0xFF);
+            int totalFrames = min * 60 * 75 + sec * 75 + fr;
+            startLba = totalFrames - RedbookPreGapFrames;
+            if (startLba < 0) {
+                startLba = 0;
+            }
+        }
+
+        CdSectorMode sectorMode;
+        int sectorSize;
+        if (rawFlag == 1) {
+            sectorMode = CdSectorMode.Raw2352;
+            sectorSize = RawSectorSize;
+        } else {
+            sectorMode = CdSectorMode.CookedData2048;
+            sectorSize = CookedSectorSize;
+        }
+
+        byte[] sectorBuffer = new byte[sectorCount * sectorSize];
+        drive.Read(startLba, sectorCount, sectorBuffer.AsSpan(), sectorMode);
+        _memory.LoadData(bufferAddress, sectorBuffer);
+        _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
+    }
+
+    private void WriteCurrentPosition(uint bufferAddress, ICdRomDrive drive) {
+        CdAudioPlayback audioStatus = drive.GetAudioStatus();
+        int currentLba = audioStatus.CurrentLba;
+        byte addressMode = _memory.UInt8[bufferAddress + 1];
+        if (addressMode == 0) {
+            // HSG/LBA mode: write 4-byte LBA at buffer+2
+            _memory.UInt32[bufferAddress + 2] = (uint)currentLba;
+        } else {
+            // Red Book MSF mode: write fr, sec, min at buffer+2,3,4; 0x00 at buffer+5
+            // Matches DOSBox Staging IOCTL 0x01 Red Book branch: writeb fr, sec, min, 0x00
+            int totalFrames = currentLba + RedbookPreGapFrames;
+            byte fr = (byte)(totalFrames % 75);
+            int totalSeconds = totalFrames / 75;
+            byte sec = (byte)(totalSeconds % 60);
+            byte min = (byte)(totalSeconds / 60);
+            _memory.UInt8[bufferAddress + 2] = fr;
+            _memory.UInt8[bufferAddress + 3] = sec;
+            _memory.UInt8[bufferAddress + 4] = min;
+            _memory.UInt8[bufferAddress + 5] = 0;
+        }
+    }
+
+    private void WriteChannelControl(uint bufferAddress) {
+        // Write identity channel control (each channel maps to itself at full volume),
+        // matching DOSBox Staging IOCTL 0x04 default state.
+        for (int chan = 0; chan < ChannelCount; chan++) {
+            _memory.UInt8[bufferAddress + (uint)(chan * 2 + 1)] = _channelOutputMap[chan];
+            _memory.UInt8[bufferAddress + (uint)(chan * 2 + 2)] = _channelVolumes[chan];
+        }
     }
 
     private void WriteDeviceStatus(uint bufferAddress, ICdRomDrive drive) {
@@ -523,13 +719,16 @@ public sealed class MscdexService {
         DiscInfo info = drive.GetDiscInfo();
         _memory.UInt8[bufferAddress + 1] = (byte)info.FirstTrack;
         _memory.UInt8[bufferAddress + 2] = (byte)info.LastTrack;
-        // Lead-out in Red Book MSF format (3 bytes: min, sec, frame), matching
-        // DOSBox Staging's mscdex.cpp case 0x04 which calls GetAudioTracks and
-        // writes the lead-out as TMSF rather than as a DWORD LBA.
+        // Lead-out in Red Book MSF layout matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0A:
+        //   writeb(buffer+3, leadOut.fr)   ← frame at lowest address
+        //   writeb(buffer+4, leadOut.sec)
+        //   writeb(buffer+5, leadOut.min)
+        //   writeb(buffer+6, 0x00)
         (byte min, byte sec, byte fr) = LbaToRedBookMsf(info.LeadOutLba);
-        _memory.UInt8[bufferAddress + 3] = min;
+        _memory.UInt8[bufferAddress + 3] = fr;
         _memory.UInt8[bufferAddress + 4] = sec;
-        _memory.UInt8[bufferAddress + 5] = fr;
+        _memory.UInt8[bufferAddress + 5] = min;
+        _memory.UInt8[bufferAddress + 6] = 0;
     }
 
     private void WriteAudioTrackInfo(uint bufferAddress, ICdRomDrive drive) {
@@ -540,25 +739,30 @@ public sealed class MscdexService {
             _memory.UInt8[bufferAddress + 3] = 0;
             _memory.UInt8[bufferAddress + 4] = 0;
             _memory.UInt8[bufferAddress + 5] = 0;
+            _memory.UInt8[bufferAddress + 6] = 0;
             return;
         }
-        // Track start in Red Book MSF (3 bytes at offsets 2-4), attribute at offset 5,
-        // matching DOSBox Staging's mscdex.cpp case 0x05 which calls GetAudioTrackInfo
-        // and writes TMSF rather than a DWORD LBA.
+        // Track start in Red Book MSF, matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0B:
+        //   writeb(buffer+2, start.fr)   ← frame at offset 2
+        //   writeb(buffer+3, start.sec)
+        //   writeb(buffer+4, start.min)
+        //   writeb(buffer+5, 0x00)        ← padding
+        //   writeb(buffer+6, attr)         ← attribute at offset 6
         (byte min, byte sec, byte fr) = LbaToRedBookMsf(entry.Lba);
-        _memory.UInt8[bufferAddress + 2] = min;
+        _memory.UInt8[bufferAddress + 2] = fr;
         _memory.UInt8[bufferAddress + 3] = sec;
-        _memory.UInt8[bufferAddress + 4] = fr;
-        _memory.UInt8[bufferAddress + 5] = entry.Control;
+        _memory.UInt8[bufferAddress + 4] = min;
+        _memory.UInt8[bufferAddress + 5] = 0;
+        _memory.UInt8[bufferAddress + 6] = entry.Control;
     }
 
     private void WriteAudioSubchannel(uint bufferAddress, ICdRomDrive drive) {
         CdAudioPlayback audioStatus = drive.GetAudioStatus();
         int currentLba = audioStatus.CurrentLba;
 
-        // Determine which track the current position belongs to, and compute
-        // relative and absolute MSF positions — matching DOSBox Staging's
-        // mscdex.cpp case 0x06 which calls GetAudioSub(attr, track, index, relPos, absPos).
+        // Determine which track the current position belongs to and compute
+        // relative and absolute MSF — matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0C
+        // which calls GetAudioSub(attr, track, index, relPos, absPos).
         byte attribute = 0;
         byte trackNumber = 0;
         const byte IndexNumber = 1;
@@ -568,7 +772,7 @@ public sealed class MscdexService {
         for (int i = 0; i < toc.Count; i++) {
             TableOfContentsEntry candidate = toc[i];
             if (candidate.TrackNumber == LeadOutTrackNumber) {
-                break; // do not inspect the lead-out entry
+                break;
             }
             TableOfContentsEntry? next = (i + 1 < toc.Count) ? toc[i + 1] : null;
             if (next == null || currentLba < next.Lba) {
@@ -583,33 +787,75 @@ public sealed class MscdexService {
             trackNumber = (byte)currentTrack.TrackNumber;
         }
 
-        // Absolute position: LBA → Red Book MSF (includes 150-frame pre-gap offset)
+        // Absolute position: LBA → Red Book MSF (includes 150-frame pre-gap)
         (byte absMi, byte absSec, byte absFr) = LbaToRedBookMsf(currentLba);
 
-        // Relative position: offset from track start, converted to MSF without pre-gap offset
+        // Relative position: offset from track start (no pre-gap offset)
         int relLba = currentTrack != null ? currentLba - currentTrack.Lba : 0;
         if (relLba < 0) {
             relLba = 0;
         }
         (byte relMin, byte relSec, byte relFr) = LbaToMsf(relLba);
 
+        // Encode track number as BCD, matching DOSBox Staging: ((track/10)<<4)|(track%10)
+        byte trackBcd = (byte)(((trackNumber / 10) << 4) | (trackNumber % 10));
+
+        // Write subchannel response matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0C:
+        //   writeb(buffer+1, attr)
+        //   writeb(buffer+2, track_BCD)
+        //   writeb(buffer+3, index)
+        //   writeb(buffer+4, rel.min)   writeb(buffer+5, rel.sec)   writeb(buffer+6, rel.fr)
+        //   writeb(buffer+7, 0x00)       ← padding between rel and abs
+        //   writeb(buffer+8, abs.min)   writeb(buffer+9, abs.sec)   writeb(buffer+10, abs.fr)
         _memory.UInt8[bufferAddress + 1] = attribute;
-        _memory.UInt8[bufferAddress + 2] = trackNumber;
+        _memory.UInt8[bufferAddress + 2] = trackBcd;
         _memory.UInt8[bufferAddress + 3] = IndexNumber;
         _memory.UInt8[bufferAddress + 4] = relMin;
         _memory.UInt8[bufferAddress + 5] = relSec;
         _memory.UInt8[bufferAddress + 6] = relFr;
-        _memory.UInt8[bufferAddress + 7] = absMi;
-        _memory.UInt8[bufferAddress + 8] = absSec;
-        _memory.UInt8[bufferAddress + 9] = absFr;
+        _memory.UInt8[bufferAddress + 7] = 0;
+        _memory.UInt8[bufferAddress + 8] = absMi;
+        _memory.UInt8[bufferAddress + 9] = absSec;
+        _memory.UInt8[bufferAddress + 10] = absFr;
+    }
+
+    private void WriteUpcCode(uint bufferAddress, ICdRomDrive drive) {
+        string? upc = drive.GetUpc();
+        // Write UPC response matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0E:
+        //   writeb(buffer+1, attr)
+        //   writeb(buffer+2..8, 7 BCD bytes of UPC)
+        //   writeb(buffer+9, 0x00)
+        _memory.UInt8[bufferAddress + 1] = 0; // attr
+        if (!string.IsNullOrEmpty(upc)) {
+            // Convert ASCII UPC digits to packed BCD (2 digits per byte)
+            for (int i = 0; i < 7; i++) {
+                int high = (i * 2 < upc.Length) ? (upc[i * 2] - '0') : 0;
+                int low = (i * 2 + 1 < upc.Length) ? (upc[i * 2 + 1] - '0') : 0;
+                _memory.UInt8[bufferAddress + (uint)(2 + i)] = (byte)((high << 4) | low);
+            }
+        }
+        _memory.UInt8[bufferAddress + 9] = 0;
     }
 
     private void WriteAudioStatus(uint bufferAddress, ICdRomDrive drive) {
         CdAudioPlayback audioStatus = drive.GetAudioStatus();
         bool isPaused = audioStatus.Status == CdAudioStatus.Paused;
-        _memory.UInt16[bufferAddress + 1] = isPaused ? (ushort)1 : (ushort)0;
-        _memory.UInt32[bufferAddress + 3] = (uint)audioStatus.StartLba;
-        _memory.UInt32[bufferAddress + 7] = (uint)audioStatus.EndLba;
+        // Matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0F:
+        //   writeb(buffer+1, pause)          ← single byte, NOT uint16
+        //   (buffer+2 not written)
+        //   writeb(buffer+3..5, start min/sec/fr) + writeb(buffer+6, 0x00)
+        //   writeb(buffer+7..9, end min/sec/fr)   + writeb(buffer+10, 0x00)
+        _memory.UInt8[bufferAddress + 1] = isPaused ? (byte)1 : (byte)0;
+        (byte startMin, byte startSec, byte startFr) = LbaToRedBookMsf(audioStatus.StartLba);
+        _memory.UInt8[bufferAddress + 3] = startMin;
+        _memory.UInt8[bufferAddress + 4] = startSec;
+        _memory.UInt8[bufferAddress + 5] = startFr;
+        _memory.UInt8[bufferAddress + 6] = 0;
+        (byte endMin, byte endSec, byte endFr) = LbaToRedBookMsf(audioStatus.EndLba);
+        _memory.UInt8[bufferAddress + 7] = endMin;
+        _memory.UInt8[bufferAddress + 8] = endSec;
+        _memory.UInt8[bufferAddress + 9] = endFr;
+        _memory.UInt8[bufferAddress + 10] = 0;
     }
 
     /// <summary>
