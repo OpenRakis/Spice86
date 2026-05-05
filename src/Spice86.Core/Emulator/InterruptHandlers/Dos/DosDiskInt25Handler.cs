@@ -3,8 +3,10 @@
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Storage;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -14,6 +16,11 @@ using Spice86.Shared.Utils;
 /// <see cref="IFloppyDriveAccess"/>. Hard disk drives (AL>=2) return success without
 /// transferring data.
 /// </summary>
+/// <remarks>
+/// Per the DOS specification, INT 25h returns via RETF (not IRET), leaving the
+/// FLAGS word pushed by the INT instruction on the stack. Callers are required to
+/// POPF after INT 25h to discard those flags.
+/// </remarks>
 public class DosDiskInt25Handler : InterruptHandler {
     private const ushort ExtendedTransferMagic = 0xFFFF;
     private const ushort ErrorInvalidDrive = 0x8002;
@@ -38,6 +45,18 @@ public class DosDiskInt25Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override byte VectorNumber => 0x25;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// INT 25h/26h use RETF instead of IRET, leaving FLAGS on the stack for the caller to POPF.
+    /// This matches real DOS and DOSBox Staging behaviour.
+    /// </remarks>
+    public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
+        SegmentedAddress handlerAddress = memoryAsmWriter.CurrentAddress;
+        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
+        memoryAsmWriter.WriteFarRet();
+        return handlerAddress;
+    }
 
     /// <inheritdoc />
     public override void Run() {

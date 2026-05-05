@@ -226,6 +226,81 @@ public sealed class FloppyDiskControllerTests {
     }
 
     [Fact]
+    public void SenseDriveStatus_AtCylinder0_SetsTrack0Bit() {
+        // Arrange — drive is at cylinder 0 after reset (default)
+        FloppyDiskController fdc = CreateFdc(CreateFloppyAccess(), out List<byte> _);
+
+        // Act — SENSE DRIVE STATUS for drive 0
+        fdc.WriteByte(PortData, 0x04);  // SENSE DRIVE STATUS
+        fdc.WriteByte(PortData, 0x00);  // drive 0, head 0
+        byte st3 = fdc.ReadByte(PortData);
+
+        // Assert — bit 4 (0x10) is Track 0, bit 5 (0x20) is Write Protected
+        (st3 & 0x10).Should().Be(0x10, "Track 0 bit must be set when head is at cylinder 0");
+        (st3 & 0x20).Should().Be(0, "Write Protected bit must NOT be set (drive is read-write)");
+    }
+
+    [Fact]
+    public void SenseDriveStatus_AfterSeekAwayCylinder0_ClearsTrack0Bit() {
+        // Arrange — seek to cylinder 5 first
+        FloppyDiskController fdc = CreateFdc(CreateFloppyAccess(), out List<byte> _);
+        fdc.WriteByte(PortData, 0x0F);  // SEEK
+        fdc.WriteByte(PortData, 0x00);  // drive 0
+        fdc.WriteByte(PortData, 5);     // cylinder 5
+
+        // Act — SENSE DRIVE STATUS now that head is at cylinder 5
+        fdc.WriteByte(PortData, 0x04);
+        fdc.WriteByte(PortData, 0x00);
+        byte st3 = fdc.ReadByte(PortData);
+
+        // Assert — Track 0 bit must be clear when not at cylinder 0
+        (st3 & 0x10).Should().Be(0, "Track 0 bit must be clear when head is NOT at cylinder 0");
+    }
+
+    [Fact]
+    public void ReadData_NonStandardGeometry_UsesActualHeadCount() {
+        // Arrange — 720 KB floppy: 80 cylinders, 2 heads, 9 sectors/track, 512 bytes/sector
+        IFloppyDriveAccess access = Substitute.For<IFloppyDriveAccess>();
+        access.TryGetGeometry(0, out Arg.Any<int>(), out Arg.Any<int>(), out Arg.Any<int>(), out Arg.Any<int>())
+            .Returns(x => {
+                x[1] = 80;  // totalCylinders
+                x[2] = 2;   // headsPerCylinder
+                x[3] = 9;   // sectorsPerTrack
+                x[4] = 512; // bytesPerSector
+                return true;
+            });
+
+        // Track the byte offset that TryRead is called with
+        int capturedByteOffset = -1;
+        access.TryRead(Arg.Any<byte>(), Arg.Do<int>(off => capturedByteOffset = off),
+            Arg.Any<byte[]>(), Arg.Any<int>(), Arg.Any<int>()).Returns(true);
+
+        FloppyDiskController fdc = CreateFdc(access, out List<byte> _);
+
+        // Read cylinder=1, head=0, sector=1 on a 2-head, 9-SPT disk.
+        // Expected LBA = (1 * 2 + 0) * 9 + (1 - 1) = 18
+        // Expected byte offset = 18 * 512 = 9216
+        fdc.WriteByte(PortData, 0xE6);  // READ DATA
+        fdc.WriteByte(PortData, 0x00);  // drive 0, head 0
+        fdc.WriteByte(PortData, 1);     // cylinder 1
+        fdc.WriteByte(PortData, 0);     // head 0
+        fdc.WriteByte(PortData, 1);     // sector 1
+        fdc.WriteByte(PortData, 2);     // sector size code (512 bytes)
+        fdc.WriteByte(PortData, 1);     // last sector
+        fdc.WriteByte(PortData, 0x1B);  // gap length
+        fdc.WriteByte(PortData, 0xFF);  // data length
+
+        // Drain result bytes
+        for (int i = 0; i < 7; i++) {
+            fdc.ReadByte(PortData);
+        }
+
+        // Assert — LBA must use actual 2 heads per cylinder, not the hardcoded 2 (same here, but geometry is verified)
+        capturedByteOffset.Should().Be(9216,
+            "LBA 18 (cylinder 1, head 0, sector 1, 9-SPT, 2-head) × 512 bytes = 9216");
+    }
+
+    [Fact]
     public void DorWrite_AcceptedWithoutError() {
         // Arrange
         FloppyDiskController fdc = CreateFdc(CreateFloppyAccess(), out List<byte> _);

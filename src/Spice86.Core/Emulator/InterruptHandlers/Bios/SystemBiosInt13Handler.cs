@@ -280,6 +280,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         int maxSector = sectorsPerTrack;
 
         State.AH = ErrorNone;
+        State.AL = 0;
         State.DL = 1;
         State.DH = (byte)maxHead;
         State.CL = (byte)((maxSector & 0x3F) | ((maxCylinder >> 2) & 0xC0));

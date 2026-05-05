@@ -400,4 +400,22 @@ public sealed class Int13FloppyTests {
         ctx.State.AH.Should().Be(0x00);
         ctx.State.CarryFlag.Should().BeFalse();
     }
+
+    [Fact]
+    public void GetDriveParameters_FloppyA_ZerosAlOnSuccess() {
+        // Arrange — AL might be non-zero from a prior call (e.g., a sector-count result)
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x08;
+        ctx.State.DL = DriveA;
+        ctx.State.AL = 0xFF; // simulate stale value from a previous read
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert — DOSBox Staging bios_disk.cpp explicitly zeros AL on AH=08h success
+        ctx.State.AH.Should().Be(0x00);
+        ctx.State.AL.Should().Be(0x00, "AL must be zeroed on GetDriveParameters success");
+        ctx.State.CarryFlag.Should().BeFalse();
+    }
 }

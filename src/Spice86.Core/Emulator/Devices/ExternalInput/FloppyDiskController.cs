@@ -212,8 +212,11 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
 
     private void ExecuteSenseDriveStatus() {
         byte driveSelect = _commandBuffer.Count > 0 ? _commandBuffer[0] : (byte)0;
+        byte drive = (byte)(driveSelect & 0x03);
         byte st3 = (byte)(driveSelect & 0x07);
-        st3 |= 0x20; // track 0 when cylinder == 0
+        if (_currentCylinder[drive] == 0) {
+            st3 |= 0x10; // bit 4: Track 0 signal — asserted only when head is at cylinder 0
+        }
         PushResultByte(st3);
         SetResultPhase();
     }
@@ -334,7 +337,8 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
 
     private bool TransferSectorsViaDma(byte driveNumber, byte cylinder, byte head, byte startSector, byte lastSector, int sectorsPerTrack, int bytesPerSector, bool isRead) {
         int sectorCount = lastSector - startSector + 1;
-        int lba = cylinder * NumberOfHeads * sectorsPerTrack + head * sectorsPerTrack + (startSector - 1);
+        int numberOfHeads = GetNumberOfHeads(driveNumber);
+        int lba = cylinder * numberOfHeads * sectorsPerTrack + head * sectorsPerTrack + (startSector - 1);
         int byteOffset = lba * bytesPerSector;
         int byteCount = sectorCount * bytesPerSector;
         byte[] buffer = new byte[byteCount];
@@ -360,8 +364,15 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         return DefaultSectorsPerTrack;
     }
 
+    private int GetNumberOfHeads(byte driveNumber) {
+        if (_floppyAccess.TryGetGeometry(driveNumber, out int _, out int headsPerCylinder, out int _, out int _)) {
+            return headsPerCylinder;
+        }
+        return DefaultNumberOfHeads;
+    }
+
     private const int DefaultSectorsPerTrack = 18;
-    private const int NumberOfHeads = 2;
+    private const int DefaultNumberOfHeads = 2;
 
     private void PushResultByte(byte value) {
         _resultBuffer.Enqueue(value);
