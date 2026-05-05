@@ -1036,9 +1036,9 @@ public class DosInt21IntegrationTests {
             0x81, 0xFA, 0xFD, 0x7F, // cmp dx, 7FFDh
             0x75, 0x11,             // jne failed
 
-            // BX should point to C: media entry (index 2 => offset 0x12)
+            // BX should point to C: media entry (DPB base 0x17 + index 2 * 9 => offset 0x29)
             // DS segment is dynamic (allocated from DOS private area), so not checked
-            0x83, 0xFB, 0x12,       // cmp bx, 0012h
+            0x83, 0xFB, 0x29,       // cmp bx, 0029h
             0x75, 0x0C,             // jne failed
 
             // First byte of media-id entry for C: should be fixed-disk descriptor 0xF8

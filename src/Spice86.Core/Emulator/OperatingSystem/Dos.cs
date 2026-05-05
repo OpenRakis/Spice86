@@ -184,7 +184,8 @@ public sealed class Dos {
 
         DosTables = new DosTables(memory);
         ushort mediaIdSegment = DosTables.ReserveDosPrivateSegment((ushort)DosMediaIdTable.TableSizeInParagraphs);
-        DosMediaIdTable mediaIdTable = new(memory, MemoryUtils.ToPhysicalAddress(mediaIdSegment, 0), mediaIdSegment);
+        DosMediaIdTable mediaIdTable = new(memory,
+            MemoryUtils.ToPhysicalAddress(mediaIdSegment, DosMediaIdTable.EntryBaseOffsetInSegment), mediaIdSegment);
         DosDriveManager = new(_loggerService, configuration.CDrive, configuration.Exe, mediaIdTable);
 
         VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
