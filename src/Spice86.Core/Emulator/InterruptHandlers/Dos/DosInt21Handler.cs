@@ -456,7 +456,7 @@ public class DosInt21Handler : InterruptHandler {
             State.DS = segment;
             State.SI = offset;
             State.AL = 0;
-            State.CarryFlag = false;
+            SetCarryFlag(false, true);
 
             if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("Returning DBCS table pointer at {Segment:X4}:{Offset:X4}", segment, offset);
