@@ -338,6 +338,30 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
         return _floppyDriveMap.TryGetValue(char.ToUpperInvariant(driveLetter), out drive);
     }
 
+    /// <summary>
+    /// Registers a drive letter in the drive map for a CD-ROM drive so that drive-change
+    /// commands (e.g. <c>D:</c> in a batch file) succeed after an <c>IMGMOUNT</c> or
+    /// <c>MOUNT -t cdrom</c> operation.
+    /// </summary>
+    /// <param name="driveLetter">The drive letter to register (case-insensitive).</param>
+    /// <param name="hostFolderPath">
+    /// The host directory backing this drive.  Pass an empty string for image-backed
+    /// CD-ROM drives (where file access goes through MSCDEX, not the host file system).
+    /// Pass the host folder path for folder-backed CD-ROM drives so that <c>DIR D:</c>
+    /// can fall through to the normal DOS path resolver.
+    /// </param>
+    public void RegisterCdRomDriveLetter(char driveLetter, string hostFolderPath) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        string mountPath = string.IsNullOrEmpty(hostFolderPath)
+            ? string.Empty
+            : ConvertUtils.ToSlashFolderPath(hostFolderPath);
+        _driveMap[upper] = new VirtualDrive {
+            DriveLetter = upper,
+            MountedHostDirectory = mountPath,
+            CurrentDosDirectory = string.Empty,
+        };
+    }
+
     /// <inheritdoc/>
     public bool TryGetGeometry(byte driveNumber, out int totalCylinders, out int headsPerCylinder, out int sectorsPerTrack, out int bytesPerSector) {
         totalCylinders = 0;

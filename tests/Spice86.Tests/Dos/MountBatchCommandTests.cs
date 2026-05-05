@@ -290,6 +290,31 @@ public class MountBatchCommandTests : IDisposable {
         floppy!.HasImage.Should().BeTrue();
     }
 
+    [Fact]
+    public void RegisterCdRomDriveLetter_AfterImgMount_DriveLetterAccessibleForDriveChange() {
+        // Arrange — simulate what IMGMOUNT D disc.iso does: register D: in the drive map
+        // (no host path since the image provides file access via MSCDEX)
+        _driveManager.RegisterCdRomDriveLetter('D', string.Empty);
+
+        // Assert — D: exists in the map so a drive-change command (D:) won't fail
+        bool exists = _driveManager.TryGetValue('D', out _);
+        exists.Should().BeTrue("drive-change commands require the drive letter to exist in the map");
+    }
+
+    [Fact]
+    public void RegisterCdRomDriveLetter_FolderBacked_DriveHasHostDirectory() {
+        // Arrange
+        string cdFolder = Path.Combine(_tempDir, "cdrom");
+        Directory.CreateDirectory(cdFolder);
+
+        // Act — simulate MOUNT D /cdrom -t cdrom
+        _driveManager.RegisterCdRomDriveLetter('D', cdFolder);
+
+        // Assert — the host path is set so normal DOS file access (DIR D:) can work
+        _driveManager.TryGetValue('D', out Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive? drive).Should().BeTrue();
+        drive!.MountedHostDirectory.Should().NotBeNullOrEmpty();
+    }
+
     // ---------- test-only helper that drives the batch command logic ----------
 
     [Fact]

@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.Devices.CdRom;
 using Spice86.Core.Emulator.Devices.CdRom.Image;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.FileSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using System;
@@ -1201,6 +1202,10 @@ internal sealed partial class DosBatchExecutionEngine {
 
         if (driveType == "floppy") {
             _driveManager.MountFloppyFolder(driveLetter, hostPath);
+        } else if (driveType == "cdrom") {
+            if (!MountCdRomFolder(driveLetter, hostPath)) {
+                return false;
+            }
         } else {
             _driveManager.MountFolderDrive(driveLetter, hostPath);
         }
@@ -1341,10 +1346,33 @@ internal sealed partial class DosBatchExecutionEngine {
             byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(driveLetter, out byte idx) ? idx : (byte)3;
             MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
             _mscdex.AddDrive(entry);
+            _driveManager.RegisterCdRomDriveLetter(driveLetter, string.Empty);
             string paths = string.Join(", ", imagePaths);
             WriteToStandardOutput($"Drive {driveLetter}: mounted {imagePaths.Count} CD-ROM image(s): {paths}\r\n");
         } catch (IOException ex) {
             WriteToStandardOutput($"IMGMOUNT: failed to open image: {ex.Message}\r\n");
+        }
+    }
+
+    private bool MountCdRomFolder(char driveLetter, string hostPath) {
+        string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        if (string.IsNullOrEmpty(volumeLabel)) {
+            volumeLabel = driveLetter.ToString();
+        }
+        try {
+            VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
+            CdRomDrive drive = new CdRomDrive(image);
+            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
+            audioPlayer.SetDrive(drive);
+            drive.SetAudioPlayer(audioPlayer);
+            byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(driveLetter, out byte idx) ? idx : (byte)3;
+            MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
+            _mscdex.AddDrive(entry);
+            _driveManager.RegisterCdRomDriveLetter(driveLetter, hostPath);
+            return true;
+        } catch (IOException ex) {
+            WriteToStandardOutput($"MOUNT: failed to create CD-ROM drive from folder: {ex.Message}\r\n");
+            return false;
         }
     }
 
