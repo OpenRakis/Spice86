@@ -59,13 +59,13 @@ public class SystemBiosInt15Handler : InterruptHandler {
     private void FillDispatchTable() {
         AddAction(0x50, () => DosVFontSubsystemAccess(true));
         AddAction(0x24, () => ToggleA20GateOrGetStatus(true));
-        AddAction(0x6, Unsupported);
+        AddAction(0x6, () => Unsupported(true));
         AddAction(0x86, () => BiosWait(true));
         AddAction(0x90, () => DeviceBusy(true));
         AddAction(0x91, () => DevicePost(true));
-        AddAction(0xC0, Unsupported);
-        AddAction(0xC2, Unsupported);
-        AddAction(0xC4, Unsupported);
+        AddAction(0xC0, () => Unsupported(true));
+        AddAction(0xC2, () => Unsupported(true));
+        AddAction(0xC4, () => Unsupported(true));
         AddAction(0x88, () => GetExtendedMemorySize(true));
         AddAction(0x87, () => CopyExtendedMemory(true));
         AddAction(0x83, () => WaitFunction(true));
@@ -317,8 +317,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <summary>
     /// This function tells to the emulated program that we are an IBM PC AT, not a IBM PS/2.
     /// </summary>
-    public void Unsupported() {
-        SetCarryFlag(true, true);
+    /// <param name="calledFromVm">Whether this was called by the CPU or not.</param>
+    public void Unsupported(bool calledFromVm) {
+        SetCarryFlag(true, calledFromVm);
         State.AH = 0x86;
     }
 
