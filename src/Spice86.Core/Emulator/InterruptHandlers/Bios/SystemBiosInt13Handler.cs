@@ -152,10 +152,15 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <summary>
     /// Read Disk Sectors into Memory (AH=0x02).
     /// Reads AL sectors starting at CHS (CH/CL/DH) from drive DL into the buffer at ES:BX.
+    /// Returns an error when AL=0 (zero sectors requested), matching DOSBox Staging behaviour.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void ReadSectors(bool calledFromVm) {
         byte driveNumber = State.DL;
+        if (State.AL == 0) {
+            SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
+            return;
+        }
         if (_floppyAccess == null || !IsFloppyDrive(driveNumber)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
@@ -292,8 +297,9 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
     /// <summary>
     /// Get Diskette Type or Check Hard Drive Installed (AH=0x15).
-    /// Returns AH=0x02 for a mounted floppy, AH=0x03 for the first hard disk,
-    /// or sets CF when the drive is not present.
+    /// Returns AH=0x01 for a mounted floppy (no change-line support, matching DOSBox Staging
+    /// which deliberately avoids returning 0x02 to prevent MS-DOS from polling INT 13h AH=0x16),
+    /// AH=0x03 for the first hard disk, or sets CF when the drive is not present.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void GetDisketteOrHddType(bool calledFromVm) {
@@ -309,7 +315,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
         if (IsFloppyDrive(driveNumber) && _floppyAccess != null &&
             _floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
-            State.AH = 0x02; // floppy with change-line support
+            State.AH = 0x01; // floppy without change-line support (DOSBox Staging parity)
             SetCarryFlag(false, calledFromVm);
             return;
         }

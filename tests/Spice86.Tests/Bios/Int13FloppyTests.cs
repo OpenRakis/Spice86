@@ -226,6 +226,39 @@ public sealed class Int13FloppyTests {
     }
 
     [Fact]
+    public void GetDriveType_FloppyA_ReturnsNoChangeLineSupport() {
+        // Arrange — DOSBox Staging bios_disk.cpp returns 0x01 (no change-line) for floppies to
+        // prevent MS-DOS from polling INT 13h AH=0x16 in a loop; returning 0x02 would enable that.
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x15;
+        ctx.State.DL = DriveA;
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert
+        ctx.State.AH.Should().Be(0x01, "DOSBox Staging returns 0x01 (no change-line) for floppy drives");
+        ctx.State.CarryFlag.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ReadSectors_ZeroSectorCount_ReturnsError() {
+        // Arrange — DOSBox Staging returns 0x01 (invalid parameter) when AL=0
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x02;
+        ctx.SetupChsRegisters(cylinder: 0, head: 0, sector: 1, driveNumber: DriveA, sectorCount: 0);
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeTrue("AL=0 means zero sectors requested which is invalid");
+        ctx.State.AH.Should().NotBe(0x00, "error code must be set on invalid parameter");
+    }
+
+    [Fact]
     public void ReadSectors_NoDriveImage_ReturnsError() {
         // Arrange — drive B (0x01) is not mounted
         byte[] image = new Fat12ImageBuilder().Build();
