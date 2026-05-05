@@ -27,6 +27,12 @@ public sealed class MscdexService {
     /// <summary>Magic value written to AX when the drive-check subfunction finds a CD-ROM drive (DOSBox Staging case 0x150B).</summary>
     private const ushort DriveCheckMagicAxValid = 0x5AD8;
 
+    /// <summary>
+    /// AX value returned for invalid/unsupported operations, matching DOSBox Staging's
+    /// <c>MSCDEX_ERROR_INVALID_FUNCTION = 1</c>.
+    /// </summary>
+    private const ushort MscdexInvalidFunctionError = 1;
+
     /// <summary>Number of data bytes per cooked CD-ROM sector.</summary>
     private const int CookedSectorSize = 2048;
 
@@ -140,11 +146,19 @@ public sealed class MscdexService {
             case 0x05:
                 ReadVolumeTableOfContents();
                 break;
+            case 0x06:
+            case 0x07:
+                // Debugging on/off — not functional in production MSCDEX; do nothing.
+                // Matches DOSBox Staging which silently breaks on these.
+                break;
             case 0x08:
                 AbsoluteDiskRead();
                 break;
             case 0x09:
                 AbsoluteDiskWrite();
+                break;
+            case 0x0A:
+                // Reserved — matches DOSBox Staging case 0x150A which does nothing.
                 break;
             case 0x0B:
                 CdRomDriveCheck();
@@ -222,7 +236,9 @@ public sealed class MscdexService {
     /// AL=0x05: Reads a volume descriptor sector from the disc and copies it to the caller's buffer.
     /// CX = drive index (0-based, matches DOSBox Staging <c>reg_cx</c>);
     /// DX = descriptor index (0 = PVD, matches DOSBox Staging <c>reg_dx</c>).
-    /// Returns the descriptor type byte in AL.
+    /// On success, sets AX = 1 for PVD (type byte 0x01), AX = 0xFF for VD set terminator
+    /// (type byte 0xFF), or AX = 0 for HSFS/unrecognised — matching DOSBox Staging's
+    /// <c>error = (type == 1) ? 1 : (type == 0xFF) ? 0xFF : 0; reg_ax = error;</c>.
     /// </summary>
     private void ReadVolumeTableOfContents() {
         int driveIndex = _state.CX;
@@ -240,7 +256,14 @@ public sealed class MscdexService {
         uint destAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
         _memory.LoadData(destAddress, sectorBuffer);
 
-        _state.AL = sectorBuffer[0];
+        byte descriptorType = sectorBuffer[0];
+        if (descriptorType == 0x01) {
+            _state.AX = 0x0001; // Primary Volume Descriptor
+        } else if (descriptorType == 0xFF) {
+            _state.AX = 0x00FF; // VD Set Terminator
+        } else {
+            _state.AX = 0x0000; // HSFS or unrecognised
+        }
         _state.CarryFlag = false;
     }
 
@@ -272,9 +295,11 @@ public sealed class MscdexService {
 
     /// <summary>
     /// AL=0x09: Absolute disk write — always fails because CD-ROMs are read-only.
+    /// Matches DOSBox Staging <c>case 0x1509</c> which returns AX = MSCDEX_ERROR_INVALID_FUNCTION (1)
+    /// and sets the carry flag.
     /// </summary>
     private void AbsoluteDiskWrite() {
-        _state.AX = (ushort)MscdexErrorCode.WriteProtect;
+        _state.AX = MscdexInvalidFunctionError;
         _state.CarryFlag = true;
     }
 
@@ -315,13 +340,31 @@ public sealed class MscdexService {
 
     /// <summary>
     /// AL=0x0E: Get/Set Volume Descriptor Preference.
-    /// If BX=0 (get), returns BX=1 (prefer primary volume descriptor) and DX=0.
-    /// If BX=1 (set), accepts the preference silently.
+    /// Validates the drive via CX. If BX=0 (get), sets DX=0x100 (prefer PVD).
+    /// If BX=1 (set), validates DH=1; if DH is not 1, returns invalid-function error.
+    /// Any other BX value also returns invalid-function error.
+    /// Matches DOSBox Staging's <c>case 0x150E</c>.
     /// </summary>
     private void GetSetVolumeDescriptorPreference() {
+        int driveIndex = _state.CX;
+        if (!TryGetDrive(driveIndex, out MscdexDriveEntry? _)) {
+            _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
+            _state.CarryFlag = true;
+            return;
+        }
+
         if (_state.BX == 0) {
-            _state.BX = 1;
-            _state.DX = 0;
+            // Get preference — return DX=0x100 (prefer primary volume descriptor)
+            _state.DX = 0x0100;
+        } else if (_state.BX == 1) {
+            // Set preference — DH must be 1
+            if (_state.DH != 1) {
+                _state.AX = MscdexInvalidFunctionError;
+                _state.CarryFlag = true;
+            }
+        } else {
+            _state.AX = MscdexInvalidFunctionError;
+            _state.CarryFlag = true;
         }
     }
 
@@ -490,13 +533,14 @@ public sealed class MscdexService {
 
     /// <summary>
     /// Logs a warning and returns an error for any unrecognised AL subfunction value.
+    /// Matches DOSBox Staging's default case which returns <c>MSCDEX_ERROR_INVALID_FUNCTION = 1</c>.
     /// </summary>
     private void HandleUnknownSubfunction() {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning("MSCDEX: unknown subfunction AL={AL:X2}", _state.AL);
         }
         _state.CarryFlag = true;
-        _state.AX = (ushort)MscdexErrorCode.InvalidFunction;
+        _state.AX = MscdexInvalidFunctionError;
     }
 
     /// <summary>

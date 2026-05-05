@@ -240,4 +240,101 @@ public sealed class MscdexSubfunctionTests {
         // Assert
         ctx.State.CarryFlag.Should().BeTrue("CF set when drive is not found");
     }
+
+    /// <summary>
+    /// AL=0x06/0x07 (debugging on/off): DOSBox Staging does nothing — no carry, no error,
+    /// registers unchanged.
+    /// </summary>
+    [Theory]
+    [InlineData(0x06)]
+    [InlineData(0x07)]
+    public void DebuggingOnOff_DoesNothing(byte subfunction) {
+        // Arrange
+        TestContext ctx = new();
+        ctx.State.AH = 0xBE; // Set AH first to avoid overwriting AL
+        ctx.State.AL = subfunction;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeFalse("no error should be signalled for debugging on/off");
+        ctx.State.AH.Should().Be(0xBE, "AH must not be modified by a no-op");
+    }
+
+    /// <summary>
+    /// AL=0x0A (reserved): DOSBox Staging does nothing — no carry, no error, registers unchanged.
+    /// </summary>
+    [Fact]
+    public void Reserved_0x0A_DoesNothing() {
+        // Arrange
+        TestContext ctx = new();
+        ctx.State.AH = 0xCA; // Set AH first to avoid overwriting AL
+        ctx.State.AL = 0x0A;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeFalse("no error should be signalled for reserved subfunction");
+        ctx.State.AH.Should().Be(0xCA, "AH must not be modified by a no-op");
+    }
+
+    /// <summary>
+    /// AL=0x0E (GetSetVolumeDescriptorPreference) BX=0 (get): DOSBox Staging returns DX=0x100
+    /// without modifying BX, for a valid drive in CX.
+    /// </summary>
+    [Fact]
+    public void GetVolumeDescriptorPreference_ValidDrive_ReturnsDx100() {
+        // Arrange
+        TestContext ctx = new();
+        ctx.AddDriveAtIndex('D', 3);
+        ctx.State.AL = 0x0E;
+        ctx.State.CX = 3;   // valid drive
+        ctx.State.BX = 0;   // get preference
+        ctx.State.DX = 0;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeFalse("get preference on a valid drive should succeed");
+        ctx.State.DX.Should().Be(0x0100, "DX must be 0x100 (prefer PVD) per DOSBox Staging");
+    }
+
+    /// <summary>
+    /// AL=0x0E (GetSetVolumeDescriptorPreference) with invalid drive in CX: carry flag set.
+    /// </summary>
+    [Fact]
+    public void GetVolumeDescriptorPreference_InvalidDrive_SetsCarryFlag() {
+        // Arrange
+        TestContext ctx = new();
+        ctx.State.AL = 0x0E;
+        ctx.State.CX = 7;   // no drive at index 7
+        ctx.State.BX = 0;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeTrue("CF set when drive is not found");
+    }
+
+    /// <summary>
+    /// AL=0x09 (AbsoluteDiskWrite): DOSBox Staging returns AX=1 (MSCDEX_ERROR_INVALID_FUNCTION)
+    /// with carry set since CD-ROMs are read-only.
+    /// </summary>
+    [Fact]
+    public void AbsoluteDiskWrite_ReturnsInvalidFunctionError() {
+        // Arrange
+        TestContext ctx = new();
+        ctx.State.AL = 0x09;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeTrue("CF set since CD-ROM writes are not supported");
+        ctx.State.AX.Should().Be(1, "AX=1 is MSCDEX_ERROR_INVALID_FUNCTION per DOSBox Staging");
+    }
 }
