@@ -36,6 +36,7 @@ internal static class BatchCommandHandlers {
             new MountCommandHandler(),
             new ImgMountCommandHandler(),
             new BootCommandHandler(),
+            new SubstCommandHandler(),
             new DriveChangeCommandHandler()
         };
     }
@@ -428,6 +429,24 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             return engine.TryHandleBoot(context.ArgumentPart, out launchRequest);
+        }
+    }
+
+    /// <summary>
+    /// Handles the <c>SUBST</c> internal command, matching DOSBox Staging's
+    /// <c>SUBST [drive: path]</c> / <c>SUBST drive: /D</c> behaviour.
+    /// Substitutes a drive letter for a host (or DOS-resolvable) path, removes
+    /// an existing SUBST when <c>/D</c> is supplied, or lists active SUBSTs
+    /// when invoked with no arguments.
+    /// </summary>
+    private sealed class SubstCommandHandler : ExactTokenBatchCommandHandler {
+        internal SubstCommandHandler() : base("SUBST") {
+        }
+
+        protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
+            out LaunchRequest launchRequest) {
+            launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
+            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleSubst);
         }
     }
 

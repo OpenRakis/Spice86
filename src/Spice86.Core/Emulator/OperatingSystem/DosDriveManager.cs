@@ -21,6 +21,7 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
     private readonly SortedDictionary<char, VirtualDrive> _driveMap = new();
     private readonly Dictionary<char, MemoryDrive> _memoryDriveMap = new();
     private readonly Dictionary<char, FloppyDiskDrive> _floppyDriveMap = new();
+    private readonly Dictionary<char, string> _substDriveMap = new();
     private readonly ILoggerService _loggerService;
     private readonly DosMediaIdTable _mediaIdTable;
 
@@ -193,6 +194,58 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
     public void MountMemoryDrive(MemoryDrive drive) {
         _memoryDriveMap[drive.DriveLetter] = drive;
     }
+
+    /// <summary>
+    /// Mounts a host folder as a SUBST drive, mirroring DOSBox Staging's
+    /// <c>SUBST</c> command. SUBST drives are functionally identical to a
+    /// regular folder mount but are tracked separately so the SUBST listing
+    /// can enumerate them and <see cref="UnmountSubstDrive"/> rejects
+    /// non-SUBST drive letters.
+    /// </summary>
+    /// <param name="driveLetter">The target drive letter.</param>
+    /// <param name="hostFolderPath">The absolute path to the host folder.</param>
+    /// <param name="originalDosPath">The DOS path argument as typed by the user (for listing).</param>
+    public void MountSubstDrive(char driveLetter, string hostFolderPath, string originalDosPath) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        MountFolderDrive(upper, hostFolderPath);
+        _substDriveMap[upper] = originalDosPath;
+    }
+
+    /// <summary>
+    /// Removes a previously-SUBST'd drive. Has no effect (returns <c>false</c>)
+    /// when the drive letter is not currently SUBST'd.
+    /// </summary>
+    /// <param name="driveLetter">The drive letter to un-SUBST.</param>
+    /// <returns><c>true</c> when a SUBST drive was removed; otherwise <c>false</c>.</returns>
+    public bool UnmountSubstDrive(char driveLetter) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (!_substDriveMap.Remove(upper)) {
+            return false;
+        }
+        if (_driveMap.TryGetValue(upper, out VirtualDrive? drive)) {
+            _driveMap.Remove(upper);
+            if (CurrentDrive.DriveLetter == upper && _driveMap.TryGetValue('C', out VirtualDrive? cDrive)) {
+                CurrentDrive = cDrive;
+            }
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("SUBST: Drive {Drive}: removed (was {Path})", upper, drive.MountedHostDirectory);
+            }
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Gets a read-only snapshot of all SUBST'd drives keyed by drive letter
+    /// with the original DOS path supplied to <see cref="MountSubstDrive"/>.
+    /// </summary>
+    public IReadOnlyDictionary<char, string> SubstDrives => _substDriveMap;
+
+    /// <summary>
+    /// Returns <c>true</c> when <paramref name="driveLetter"/> currently
+    /// refers to a SUBST drive.
+    /// </summary>
+    public bool IsSubstDrive(char driveLetter) =>
+        _substDriveMap.ContainsKey(char.ToUpperInvariant(driveLetter));
 
     /// <summary>
     /// Mounts a host folder as a regular (HDD-style) DOS drive.

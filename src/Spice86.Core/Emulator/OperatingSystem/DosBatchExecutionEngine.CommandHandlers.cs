@@ -1418,6 +1418,100 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     /// <summary>
+    /// Handles the <c>SUBST</c> internal command, matching DOSBox Staging's
+    /// <c>SUBST [drive: path]</c> / <c>SUBST drive: /D</c>:
+    /// <list type="bullet">
+    ///   <item><c>SUBST</c> with no arguments lists active SUBST drives.</item>
+    ///   <item><c>SUBST X: \DOS\PATH</c> creates a virtual drive X: that maps
+    ///     to the specified path. The path is resolved through <see cref="HostPathResolver"/>,
+    ///     so DOS-style paths like <c>C:\GAMES</c> as well as host paths work.</item>
+    ///   <item><c>SUBST X: /D</c> removes a previously-created SUBST drive.</item>
+    /// </list>
+    /// </summary>
+    /// <param name="arguments">Argument tail after the SUBST token.</param>
+    /// <returns><c>false</c> — SUBST never yields a launch request.</returns>
+    internal bool TryHandleSubst(string arguments) {
+        string trimmed = arguments.Trim();
+        if (string.IsNullOrEmpty(trimmed)) {
+            IReadOnlyDictionary<char, string> subst = _driveManager.SubstDrives;
+            if (subst.Count == 0) {
+                WriteToStandardOutput("No SUBSTitutions in effect\r\n");
+                return false;
+            }
+            foreach (KeyValuePair<char, string> entry in subst) {
+                if (_driveManager.TryGetValue(entry.Key, out VirtualDrive? drive)) {
+                    WriteToStandardOutput($"{entry.Key}:\\: => {drive.MountedHostDirectory}\r\n");
+                }
+            }
+            return false;
+        }
+
+        string[] parts = BatchArgumentParser.SplitWithQuotes(trimmed);
+        if (parts.Length < 1) {
+            WriteToStandardOutput("Usage: SUBST drive: path | SUBST drive: /D\r\n");
+            return false;
+        }
+
+        string driveSpec = parts[0];
+        if (driveSpec.Length < 2 || !char.IsLetter(driveSpec[0]) || driveSpec[1] != ':') {
+            WriteToStandardOutput($"SUBST: invalid drive specification '{driveSpec}'\r\n");
+            return false;
+        }
+        char driveLetter = char.ToUpperInvariant(driveSpec[0]);
+
+        if (parts.Length >= 2 && parts[1].Equals("/D", StringComparison.OrdinalIgnoreCase)) {
+            if (!_driveManager.UnmountSubstDrive(driveLetter)) {
+                WriteToStandardOutput($"SUBST: drive {driveLetter}: is not SUBSTed\r\n");
+                return false;
+            }
+            WriteToStandardOutput($"Drive {driveLetter}: un-SUBSTed\r\n");
+            return false;
+        }
+
+        if (parts.Length < 2) {
+            WriteToStandardOutput("Usage: SUBST drive: path | SUBST drive: /D\r\n");
+            return false;
+        }
+
+        if (driveLetter == 'A' || driveLetter == 'B') {
+            WriteToStandardOutput($"SUBST: cannot SUBST a floppy drive ({driveLetter}:)\r\n");
+            return false;
+        }
+        if (_driveManager.TryGetValue(driveLetter, out VirtualDrive? existing)
+            && !_driveManager.IsSubstDrive(driveLetter)
+            && !string.IsNullOrEmpty(existing.MountedHostDirectory)) {
+            WriteToStandardOutput($"SUBST: drive {driveLetter}: is already in use\r\n");
+            return false;
+        }
+
+        string hostPath;
+        try {
+            hostPath = HostPathResolver.Resolve(parts[1], _driveManager);
+        } catch (ArgumentException ex) {
+            WriteToStandardOutput($"SUBST: invalid path '{parts[1]}': {ex.Message}\r\n");
+            return false;
+        } catch (NotSupportedException ex) {
+            WriteToStandardOutput($"SUBST: invalid path format '{parts[1]}': {ex.Message}\r\n");
+            return false;
+        } catch (PathTooLongException ex) {
+            WriteToStandardOutput($"SUBST: path too long '{parts[1]}': {ex.Message}\r\n");
+            return false;
+        }
+
+        if (!Directory.Exists(hostPath)) {
+            WriteToStandardOutput($"SUBST: path not found: {hostPath}\r\n");
+            return false;
+        }
+
+        _driveManager.MountSubstDrive(driveLetter, hostPath, parts[1]);
+        WriteToStandardOutput($"Drive {driveLetter}: SUBSTed to {hostPath}\r\n");
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("BATCH: SUBST {Drive}: = {Path}", driveLetter, hostPath);
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Changes the current DOS drive to the specified letter.
     /// Mirrors COMMAND.COM's internal drive-change handling in DOSBox Staging:
     /// typing <c>X:</c> at a prompt (or in a batch file) switches the default drive.

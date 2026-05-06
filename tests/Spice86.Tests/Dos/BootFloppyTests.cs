@@ -4,6 +4,7 @@ using FluentAssertions;
 
 using NSubstitute;
 
+using Spice86.Core.Emulator.Boot;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
@@ -28,32 +29,23 @@ using Xunit;
 
 /// <summary>
 /// Tests for the BOOT.COM internal batch command and the
-/// <see cref="DosProcessManager.BootFromFloppy"/> CPU/memory setup.
+/// <see cref="FloppyBootService"/> CPU/memory setup.
 ///
 /// Mirrors DOSBox Staging's BOOT command for floppy images: the first
 /// 512-byte sector of the mounted image must be loaded at physical 0x7C00,
 /// and the CPU must be prepared with CS:IP=0000:7C00, SS:SP=0000:7C00 and
-/// DL set to the floppy drive number (0=A, 1=B).
+/// DL set to the floppy drive number (0=A, 1=B). The boot service lives
+/// outside the DOS namespace because PC booters do not use the emulator's
+/// DOS kernel.
 /// </summary>
 public class BootFloppyTests {
     [Fact]
-    public void BootFromFloppy_NoMountedImage_Fails() {
+    public void BootFromFloppy_NoMountedImage_ReturnsFalse() {
         BootContext ctx = BootContext.Create();
 
-        DosExecResult result = ctx.ProcessManager.BootFromFloppy('A');
+        bool ok = ctx.BootService.TryBootFromFloppyImage(null, 0, null);
 
-        result.Success.Should().BeFalse();
-    }
-
-    [Fact]
-    public void BootFromFloppy_HardDiskLetter_Fails() {
-        BootContext ctx = BootContext.Create();
-        byte[] image = new Fat12ImageBuilder().Build();
-        ctx.DriveManager.MountFloppyImage('A', image, "test.img");
-
-        DosExecResult result = ctx.ProcessManager.BootFromFloppy('C');
-
-        result.Success.Should().BeFalse();
+        ok.Should().BeFalse();
     }
 
     [Fact]
@@ -65,11 +57,10 @@ public class BootFloppyTests {
         image[0x41] = 0xAD;
         image[0x42] = 0xBE;
         image[0x43] = 0xEF;
-        ctx.DriveManager.MountFloppyImage('A', image, "test.img");
 
-        DosExecResult result = ctx.ProcessManager.BootFromFloppy('A');
+        bool ok = ctx.BootService.TryBootFromFloppyImage(image, 0, "test.img");
 
-        result.Success.Should().BeTrue();
+        ok.Should().BeTrue();
         ctx.Memory.UInt8[0x7C00 + 0x40].Should().Be(0xDE);
         ctx.Memory.UInt8[0x7C00 + 0x41].Should().Be(0xAD);
         ctx.Memory.UInt8[0x7C00 + 0x42].Should().Be(0xBE);
@@ -82,9 +73,8 @@ public class BootFloppyTests {
     public void BootFromFloppy_DriveA_SetsCpuStateForBiosBootProtocol() {
         BootContext ctx = BootContext.Create();
         byte[] image = new Fat12ImageBuilder().Build();
-        ctx.DriveManager.MountFloppyImage('A', image, "test.img");
 
-        ctx.ProcessManager.BootFromFloppy('A');
+        ctx.BootService.TryBootFromFloppyImage(image, 0, "test.img");
 
         ctx.State.CS.Should().Be(0);
         ctx.State.IP.Should().Be(0x7C00);
@@ -106,24 +96,22 @@ public class BootFloppyTests {
     public void BootFromFloppy_DriveB_SetsDLToOne() {
         BootContext ctx = BootContext.Create();
         byte[] image = new Fat12ImageBuilder().Build();
-        ctx.DriveManager.MountFloppyImage('B', image, "test.img");
 
-        ctx.ProcessManager.BootFromFloppy('B');
+        ctx.BootService.TryBootFromFloppyImage(image, 1, "test.img");
 
         ctx.State.DL.Should().Be(0x01, "DL must be 1 for boot drive B:");
     }
 
     [Fact]
-    public void BootFromFloppy_MissingBootSignature_Fails() {
+    public void BootFromFloppy_MissingBootSignature_ReturnsFalse() {
         BootContext ctx = BootContext.Create();
         byte[] image = new Fat12ImageBuilder().Build();
         image[510] = 0x00;
         image[511] = 0x00;
-        ctx.DriveManager.MountFloppyImage('A', image, "test.img");
 
-        DosExecResult result = ctx.ProcessManager.BootFromFloppy('A');
+        bool ok = ctx.BootService.TryBootFromFloppyImage(image, 0, "test.img");
 
-        result.Success.Should().BeFalse();
+        ok.Should().BeFalse();
     }
 
     [Fact]
@@ -167,6 +155,7 @@ public class BootFloppyTests {
         public required DosProcessManager ProcessManager { get; init; }
         public required State State { get; init; }
         public required DosDriveManager DriveManager { get; init; }
+        public required FloppyBootService BootService { get; init; }
 
         public static BootContext Create() {
             ILoggerService logger = Substitute.For<ILoggerService>();
@@ -199,11 +188,14 @@ public class BootFloppyTests {
                 mscdex, channelCreator, batchDisplayCommandHandler,
                 new Dictionary<string, string>(), logger);
 
+            FloppyBootService bootService = new(memory, state, logger);
+
             return new BootContext {
                 Memory = memory,
                 ProcessManager = processManager,
                 State = state,
                 DriveManager = driveManager,
+                BootService = bootService,
             };
         }
     }
