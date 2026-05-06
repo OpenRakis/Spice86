@@ -396,8 +396,20 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     public IReadOnlyList<DosVirtualDriveStatus> GetDriveStatuses() {
         List<DosVirtualDriveStatus> statuses = new();
 
+        // Drive letters owned by MSCDEX (CD-ROM drives) must not also surface as Fixed
+        // entries via the drive map iteration, otherwise GetDriveStatuses would return
+        // two statuses for the same letter (one Fixed, one CdRom). Each polling tick
+        // would then alternate between them and emit duplicate mount/eject toasts.
+        HashSet<char> cdRomLetters = new();
+        foreach (MscdexDriveEntry cdrom in _mscdex.Drives) {
+            cdRomLetters.Add(char.ToUpperInvariant(cdrom.DriveLetter));
+        }
+
         foreach (KeyValuePair<char, VirtualDrive> kvp in DosDriveManager) {
             VirtualDrive vd = kvp.Value;
+            if (cdRomLetters.Contains(char.ToUpperInvariant(vd.DriveLetter))) {
+                continue;
+            }
             // By DOS convention A: and B: are always floppy drives.
             DosVirtualDriveType driveType;
             if (vd.DriveLetter == 'A' || vd.DriveLetter == 'B') {
