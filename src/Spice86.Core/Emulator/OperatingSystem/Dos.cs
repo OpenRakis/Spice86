@@ -41,6 +41,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     private readonly ILoggerService _loggerService;
     private readonly MscdexService _mscdex;
     private readonly ISoundChannelCreator _channelCreator;
+    private readonly IDriveActivityNotifier? _activityNotifier;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -185,9 +186,41 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
         ISoundChannelCreator channelCreator,
-        ExtendedMemoryManager? xms = null) {
+        ExtendedMemoryManager? xms = null)
+        : this(configuration, memory, functionHandlerProvider, stack, state,
+            biosKeyboardBuffer, keyboardInt16Handler, biosDataArea, vgaFunctionality,
+            envVars, ioPortDispatcher, loggerService, channelCreator, null, xms) {
+    }
+
+    /// <summary>
+    /// Initializes a new instance with an activity notifier that surfaces per-drive read/write activity.
+    /// </summary>
+    /// <param name="configuration">An object that describes what to run and how.</param>
+    /// <param name="memory">The emulator memory.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="biosKeyboardBuffer">The BIOS keyboard buffer structure in emulated memory.</param>
+    /// <param name="keyboardInt16Handler">The BIOS interrupt handler that writes/reads the BIOS Keyboard Buffer.</param>
+    /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
+    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
+    /// <param name="envVars">The DOS environment variables.</param>
+    /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="channelCreator">The sound channel creator, used to stream CD audio when an image is mounted.</param>
+    /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to the UI (may be null).</param>
+    /// <param name="xms">Optional XMS manager to expose through DOS.</param>
+    public Dos(Configuration configuration, IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
+        BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
+        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
+        ISoundChannelCreator channelCreator,
+        IDriveActivityNotifier? activityNotifier,
+        ExtendedMemoryManager? xms) {
         _loggerService = loggerService;
         _channelCreator = channelCreator;
+        _activityNotifier = activityNotifier;
         Xms = xms;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
@@ -215,7 +248,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
 
         CountryInfo = new();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
-            _loggerService, Devices);
+            _loggerService, Devices, _activityNotifier);
 
         // Calculate initial PSP segment from configuration (PSP is 16 paragraphs before entry point)
         ushort initialPspSegment = (ushort)(configuration.ProgramEntryPointSegment - 0x10);
@@ -230,7 +263,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
 
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
-        _mscdex = new MscdexService(state, memory, loggerService);
+        _mscdex = new MscdexService(state, memory, loggerService, _activityNotifier);
         ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _mscdex, channelCreator, batchDisplayCommandHandler, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
@@ -536,8 +569,9 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
             VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
             CdRomDrive drive = new CdRomDrive(image);
-            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
+            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator, _activityNotifier);
             audioPlayer.SetDrive(drive);
+            audioPlayer.SetDriveLetter(char.ToUpperInvariant(driveLetter));
             drive.SetAudioPlayer(audioPlayer);
             char upper = char.ToUpperInvariant(driveLetter);
             byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
@@ -570,8 +604,9 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             return false;
         }
         CdRomDrive drive = new CdRomDrive(image);
-        CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
+        CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator, _activityNotifier);
         audioPlayer.SetDrive(drive);
+        audioPlayer.SetDriveLetter(char.ToUpperInvariant(driveLetter));
         drive.SetAudioPlayer(audioPlayer);
         char upper = char.ToUpperInvariant(driveLetter);
         byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;

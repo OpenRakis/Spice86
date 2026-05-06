@@ -69,6 +69,8 @@ public class DosFileManager {
 
     private readonly IList<IVirtualDevice> _dosVirtualDevices;
 
+    private readonly IDriveActivityNotifier? _activityNotifier;
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -78,13 +80,29 @@ public class DosFileManager {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
     public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
-        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
+        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices)
+        : this(memory, dosStringDecoder, dosDriveManager, loggerService, dosVirtualDevices, null) {
+    }
+
+    /// <summary>
+    /// Initializes a new instance with an activity notifier.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="dosStringDecoder">A helper class to encode/decode DOS strings.</param>
+    /// <param name="dosDriveManager">The class used to manage folders mounted as DOS drives.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
+    /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to the UI (may be null).</param>
+    public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
+        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices,
+        IDriveActivityNotifier? activityNotifier) {
         _loggerService = loggerService;
         _dosStringDecoder = dosStringDecoder;
         _dosPathResolver = new DosPathResolver(dosDriveManager);
         _memory = memory;
         _dosDriveManager = dosDriveManager;
         _dosVirtualDevices = dosVirtualDevices;
+        _activityNotifier = activityNotifier;
     }
 
     /// <summary>
@@ -663,6 +681,7 @@ public class DosFileManager {
             if (file is DosFile actualFile) {
                 actualFile.AddMemoryRange(new MemoryRange(targetAddress,
                     (uint)(targetAddress + actualReadLength - 1), file.Name));
+                NotifyDriveActivity(actualFile.Drive, isWrite: false);
             }
         }
 
@@ -714,11 +733,29 @@ public class DosFileManager {
             }
 
             file.Write(data);
+            if (file is DosFile dosFile) {
+                NotifyDriveActivity(dosFile.Drive, isWrite: true);
+            }
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while writing file", e);
         }
 
         return DosFileOperationResult.Value16(writeLength);
+    }
+
+    private void NotifyDriveActivity(byte driveIndex, bool isWrite) {
+        if (_activityNotifier == null) {
+            return;
+        }
+        if (driveIndex > 25) {
+            return;
+        }
+        char letter = (char)('A' + driveIndex);
+        if (isWrite) {
+            _activityNotifier.NotifyWrite(letter);
+        } else {
+            _activityNotifier.NotifyRead(letter);
+        }
     }
 
     private bool TryUpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta,

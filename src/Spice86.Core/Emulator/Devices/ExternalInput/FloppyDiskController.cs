@@ -35,6 +35,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
     private readonly Action<byte> _raiseIrq;
     private readonly IFloppyDriveAccess _floppyAccess;
     private readonly DmaChannel _dmaChannel;
+    private readonly IDriveActivityNotifier? _activityNotifier;
 
     private readonly List<byte> _commandBuffer = new();
     private readonly Queue<byte> _resultBuffer = new();
@@ -63,10 +64,32 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         Action<byte> raiseIrq,
         IFloppyDriveAccess floppyAccess,
         DmaChannel dmaChannel)
+        : this(state, failOnUnhandledPort, loggerService, raiseIrq, floppyAccess, dmaChannel, null) {
+    }
+
+    /// <summary>
+    /// Initialises a new <see cref="FloppyDiskController"/> with an activity notifier.
+    /// </summary>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="failOnUnhandledPort">Whether to throw on unhandled ports.</param>
+    /// <param name="loggerService">Logger service implementation.</param>
+    /// <param name="raiseIrq">Delegate invoked to raise the FDC interrupt (IRQ 6).</param>
+    /// <param name="floppyAccess">Low-level floppy drive access for sector reads/writes.</param>
+    /// <param name="dmaChannel">DMA channel 2 used for data transfers.</param>
+    /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to the UI (may be null).</param>
+    public FloppyDiskController(
+        State state,
+        bool failOnUnhandledPort,
+        ILoggerService loggerService,
+        Action<byte> raiseIrq,
+        IFloppyDriveAccess floppyAccess,
+        DmaChannel dmaChannel,
+        IDriveActivityNotifier? activityNotifier)
         : base(state, failOnUnhandledPort, loggerService) {
         _raiseIrq = raiseIrq;
         _floppyAccess = floppyAccess;
         _dmaChannel = dmaChannel;
+        _activityNotifier = activityNotifier;
     }
 
     /// <inheritdoc/>
@@ -355,12 +378,17 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
             if (ok) {
                 // Write sector data from disk into DMA-mapped memory.
                 _dmaChannel.Write(byteCount, buffer);
+                _activityNotifier?.NotifyRead((char)('A' + driveNumber));
             }
             return ok;
         } else {
             // Read data from DMA-mapped memory into the transfer buffer.
             _dmaChannel.Read(byteCount, buffer);
-            return _floppyAccess.TryWrite(driveNumber, byteOffset, buffer, 0, byteCount);
+            bool ok = _floppyAccess.TryWrite(driveNumber, byteOffset, buffer, 0, byteCount);
+            if (ok) {
+                _activityNotifier?.NotifyWrite((char)('A' + driveNumber));
+            }
+            return ok;
         }
     }
 

@@ -384,6 +384,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler);
         FloppySoundEmulator floppySoundEmulator = new(mixer);
+        DriveActivityNotifier driveActivityNotifier = new();
         var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
@@ -460,6 +461,7 @@ public class Spice86DependencyInjection : IDisposable {
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             mixer,
+            driveActivityNotifier,
             xms);
 
         MainWindowViewModel? mainWindowViewModel = null;
@@ -586,7 +588,7 @@ public class Spice86DependencyInjection : IDisposable {
         // INT 13h is created after Dos so it can receive DosDriveManager as IFloppyDriveAccess.
         // BIOS does not depend on DOS — the interface keeps the dependency arrow pointing the right way.
         SystemBiosInt13Handler int13WithFloppy = new(memory, cfgCpu, stack, state,
-            dos.DosDriveManager, floppySoundEmulator, loggerService);
+            dos.DosDriveManager, floppySoundEmulator, driveActivityNotifier, loggerService);
         if (configuration.InitializeDOS is not false) {
             interruptInstaller.InstallInterruptHandler(int13WithFloppy);
         }
@@ -605,7 +607,7 @@ public class Spice86DependencyInjection : IDisposable {
         if (mainWindowViewModel != null) {
             mainWindowViewModel.DiscSwapper = dos;
             if (hostStorageProvider != null) {
-                ViewModels.DrivesMenuViewModel drivesMenuViewModel = new ViewModels.DrivesMenuViewModel(dos, dos, dos, hostStorageProvider, new NullDriveEventNotifier());
+                ViewModels.DrivesMenuViewModel drivesMenuViewModel = new ViewModels.DrivesMenuViewModel(dos, dos, dos, hostStorageProvider, new NullDriveEventNotifier(), driveActivityNotifier);
                 drivesMenuViewModel.StartPolling();
                 mainWindowViewModel.DrivesMenuViewModel = drivesMenuViewModel;
             }

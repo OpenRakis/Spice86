@@ -27,6 +27,7 @@
 	</Window.DataTemplates>
 	<Window.Resources>
 		<converters:NullableToBooleanConverter x:Key="NullableToBooleanConverter" />
+		<converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
 		<b:ShowAdditionnalWindowBehavior x:Key="ShowAdditionnalWindowBehavior" />
 	</Window.Resources>
 	<Design.DataContext>
@@ -135,6 +136,12 @@
 								<fluent:SymbolIcon Symbol="Storage" IsVisible="{Binding IsHdd}"
 								                  Width="16" Height="16" VerticalAlignment="Center" />
 								<TextBlock Text="{Binding DriveLetter, StringFormat={}{0}:}" VerticalAlignment="Center" />
+								<Ellipse Width="8" Height="8" Fill="LimeGreen" VerticalAlignment="Center"
+								         ToolTip.Tip="Read activity"
+								         Opacity="{Binding IsReadActive, Converter={StaticResource BoolToOpacityConverter}}" />
+								<Ellipse Width="8" Height="8" Fill="OrangeRed" VerticalAlignment="Center"
+								         ToolTip.Tip="Write activity"
+								         Opacity="{Binding IsWriteActive, Converter={StaticResource BoolToOpacityConverter}}" />
 								<ComboBox ItemsSource="{Binding ComboboxOptions}"
 								          SelectedItem="{Binding SelectedOption}"
 								          IsEnabled="{Binding !IsHdd}"

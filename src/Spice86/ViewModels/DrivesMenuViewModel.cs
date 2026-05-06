@@ -22,6 +22,7 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
     private readonly IDriveMountService _mountService;
     private readonly IHostStorageProvider _hostStorageProvider;
     private IDriveEventNotifier _driveEventNotifier;
+    private readonly IDriveActivityNotifier? _activityNotifier;
     private readonly Dictionary<char, string> _lastKnownImagePath = new();
 
     /// <summary>Gets all drive entries (floppy and CD-ROM) available in the menu.</summary>
@@ -40,12 +41,32 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
         IDiscSwapper discSwapper,
         IDriveMountService mountService,
         IHostStorageProvider hostStorageProvider,
-        IDriveEventNotifier driveEventNotifier) {
+        IDriveEventNotifier driveEventNotifier)
+        : this(driveStatusProvider, discSwapper, mountService, hostStorageProvider, driveEventNotifier, null) {
+    }
+
+    /// <summary>
+    /// Initialises a new <see cref="DrivesMenuViewModel"/> with an activity notifier and starts the polling timer.
+    /// </summary>
+    /// <param name="driveStatusProvider">The provider that returns the current drive snapshot.</param>
+    /// <param name="discSwapper">The disc swapper service.</param>
+    /// <param name="mountService">The drive mount service.</param>
+    /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
+    /// <param name="driveEventNotifier">The notifier used to show toast notifications for drive events.</param>
+    /// <param name="activityNotifier">The notifier used to surface per-drive read/write activity (may be null).</param>
+    public DrivesMenuViewModel(
+        IDriveStatusProvider driveStatusProvider,
+        IDiscSwapper discSwapper,
+        IDriveMountService mountService,
+        IHostStorageProvider hostStorageProvider,
+        IDriveEventNotifier driveEventNotifier,
+        IDriveActivityNotifier? activityNotifier) {
         _driveStatusProvider = driveStatusProvider;
         _discSwapper = discSwapper;
         _mountService = mountService;
         _hostStorageProvider = hostStorageProvider;
         _driveEventNotifier = driveEventNotifier;
+        _activityNotifier = activityNotifier;
         Refresh();
     }
 
@@ -110,7 +131,8 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
                         _discSwapper,
                         _mountService,
                         _hostStorageProvider,
-                        _driveEventNotifier);
+                        _driveEventNotifier,
+                        _activityNotifier);
                     AllDrives.Insert(i, item);
                 }
             }

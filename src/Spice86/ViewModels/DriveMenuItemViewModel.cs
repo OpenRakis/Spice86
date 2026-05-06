@@ -10,6 +10,7 @@ using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
 
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -24,6 +25,9 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     private readonly IDriveMountService _mountService;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IDriveEventNotifier _driveEventNotifier;
+    private readonly IDriveActivityNotifier? _activityNotifier;
+    private readonly DispatcherTimer? _readTimer;
+    private readonly DispatcherTimer? _writeTimer;
     private readonly List<string> _allImagePaths;
 
     /// <summary>Gets the drive letter for this entry.</summary>
@@ -71,6 +75,14 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     [ObservableProperty]
     private string _selectedOption = string.Empty;
 
+    /// <summary>Gets a value flashing on for ~200ms after a read on this drive.</summary>
+    [ObservableProperty]
+    private bool _isReadActive;
+
+    /// <summary>Gets a value flashing on for ~200ms after a write on this drive.</summary>
+    [ObservableProperty]
+    private bool _isWriteActive;
+
     private bool _suppressSelectionHandling;
 
     /// <summary>
@@ -94,7 +106,35 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         IDiscSwapper discSwapper,
         IDriveMountService mountService,
         IHostStorageProvider hostStorageProvider,
-        IDriveEventNotifier driveEventNotifier) {
+        IDriveEventNotifier driveEventNotifier)
+        : this(driveLetter, driveType, allImagePaths, currentImagePath, volumeLabel,
+            discSwapper, mountService, hostStorageProvider, driveEventNotifier, null) {
+    }
+
+    /// <summary>
+    /// Initialises a new <see cref="DriveMenuItemViewModel"/> with an activity notifier.
+    /// </summary>
+    /// <param name="driveLetter">The DOS drive letter.</param>
+    /// <param name="driveType">The drive type.</param>
+    /// <param name="allImagePaths">All registered image paths for this drive.</param>
+    /// <param name="currentImagePath">The currently active image path.</param>
+    /// <param name="volumeLabel">The volume label of the mounted media.</param>
+    /// <param name="discSwapper">The disc swapper service.</param>
+    /// <param name="mountService">The drive mount service.</param>
+    /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
+    /// <param name="driveEventNotifier">The notifier used to surface mount errors as toast notifications.</param>
+    /// <param name="activityNotifier">Optional notifier for per-drive read/write activity flashes.</param>
+    public DriveMenuItemViewModel(
+        char driveLetter,
+        DosVirtualDriveType driveType,
+        IReadOnlyList<string> allImagePaths,
+        string currentImagePath,
+        string volumeLabel,
+        IDiscSwapper discSwapper,
+        IDriveMountService mountService,
+        IHostStorageProvider hostStorageProvider,
+        IDriveEventNotifier driveEventNotifier,
+        IDriveActivityNotifier? activityNotifier) {
         DriveLetter = driveLetter;
         DriveType = driveType;
         _volumeLabel = volumeLabel;
@@ -102,8 +142,51 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         _mountService = mountService;
         _hostStorageProvider = hostStorageProvider;
         _driveEventNotifier = driveEventNotifier;
+        _activityNotifier = activityNotifier;
         _allImagePaths = new List<string>(allImagePaths);
+        if (_activityNotifier != null) {
+            _readTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Background,
+                (_, _) => OnActivityTimerElapsed(isWrite: false));
+            _readTimer.Stop();
+            _writeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Background,
+                (_, _) => OnActivityTimerElapsed(isWrite: true));
+            _writeTimer.Stop();
+            _activityNotifier.Read += OnActivityRead;
+            _activityNotifier.Write += OnActivityWrite;
+        }
         RebuildOptions(currentImagePath);
+    }
+
+    private void OnActivityRead(object? sender, DriveActivityEventArgs e) {
+        if (e.DriveLetter != char.ToUpperInvariant(DriveLetter)) {
+            return;
+        }
+        Dispatcher.UIThread.Post(() => {
+            IsReadActive = true;
+            _readTimer?.Stop();
+            _readTimer?.Start();
+        });
+    }
+
+    private void OnActivityWrite(object? sender, DriveActivityEventArgs e) {
+        if (e.DriveLetter != char.ToUpperInvariant(DriveLetter)) {
+            return;
+        }
+        Dispatcher.UIThread.Post(() => {
+            IsWriteActive = true;
+            _writeTimer?.Stop();
+            _writeTimer?.Start();
+        });
+    }
+
+    private void OnActivityTimerElapsed(bool isWrite) {
+        if (isWrite) {
+            _writeTimer?.Stop();
+            IsWriteActive = false;
+        } else {
+            _readTimer?.Stop();
+            IsReadActive = false;
+        }
     }
 
     private void RebuildOptions(string currentImagePath) {

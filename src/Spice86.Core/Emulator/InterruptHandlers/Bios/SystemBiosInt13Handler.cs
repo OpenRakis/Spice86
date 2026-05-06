@@ -29,6 +29,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
     private readonly IFloppyDriveAccess? _floppyAccess;
     private readonly FloppySoundEmulator? _floppySound;
+    private readonly IDriveActivityNotifier? _activityNotifier;
 
     // Tracks the last operation status per BIOS drive number (index 0=A:, 1=B:)
     private readonly byte[] _lastStatus = new byte[2];
@@ -81,9 +82,31 @@ public class SystemBiosInt13Handler : InterruptHandler {
         IFloppyDriveAccess? floppyAccess,
         FloppySoundEmulator? floppySound,
         ILoggerService loggerService)
+        : this(memory, functionHandlerProvider, stack, state, floppyAccess, floppySound, null, loggerService) {
+    }
+
+    /// <summary>
+    /// Initializes a new instance with floppy sector access, sound emulation and an activity notifier.
+    /// </summary>
+    /// <param name="memory">The emulated memory bus.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="floppyAccess">Low-level floppy read/write/geometry provider (may be null when no floppy images are used).</param>
+    /// <param name="floppySound">Floppy sound synthesizer (may be null to disable sound).</param>
+    /// <param name="activityNotifier">Notifier used to surface per-drive read/write activity to the UI (may be null).</param>
+    /// <param name="loggerService">The logging service implementation.</param>
+    public SystemBiosInt13Handler(
+        IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
+        Stack stack, State state,
+        IFloppyDriveAccess? floppyAccess,
+        FloppySoundEmulator? floppySound,
+        IDriveActivityNotifier? activityNotifier,
+        ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _floppyAccess = floppyAccess;
         _floppySound = floppySound;
+        _activityNotifier = activityNotifier;
         FillDispatchTable();
     }
 
@@ -189,6 +212,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         _floppySound?.PlaySeek();
         Memory.LoadData(destAddress, transferBuffer);
 
+        _activityNotifier?.NotifyRead((char)('A' + driveNumber));
         State.AH = ErrorNone;
         State.AL = (byte)sectorCount;
         RecordSuccess(driveNumber);
@@ -235,6 +259,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         }
 
         _floppySound?.PlaySeek();
+        _activityNotifier?.NotifyWrite((char)('A' + driveNumber));
         State.AH = ErrorNone;
         State.AL = (byte)sectorCount;
         RecordSuccess(driveNumber);

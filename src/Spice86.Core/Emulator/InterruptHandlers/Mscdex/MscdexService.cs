@@ -161,6 +161,7 @@ public sealed class MscdexService {
     private readonly State _state;
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
+    private readonly IDriveActivityNotifier? _activityNotifier;
 
     // Audio channel output mapping: channel i routes to channel _channelOutputMap[i]
     // Initial identity mapping: each channel maps to itself at full volume (255)
@@ -177,10 +178,24 @@ public sealed class MscdexService {
     /// <param name="state">The CPU register state.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service.</param>
-    public MscdexService(State state, IMemory memory, ILoggerService loggerService) {
+    public MscdexService(State state, IMemory memory, ILoggerService loggerService)
+        : this(state, memory, loggerService, null) {
+    }
+
+    /// <summary>
+    /// Initialises a new <see cref="MscdexService"/> with no registered drives and an activity notifier.
+    /// Call <see cref="AddDrive"/> to register CD-ROM drives after construction.
+    /// </summary>
+    /// <param name="state">The CPU register state.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="loggerService">The logger service.</param>
+    /// <param name="activityNotifier">Notifier that surfaces per-drive read activity to the UI (may be null).</param>
+    public MscdexService(State state, IMemory memory, ILoggerService loggerService,
+        IDriveActivityNotifier? activityNotifier) {
         _state = state;
         _memory = memory;
         _loggerService = loggerService;
+        _activityNotifier = activityNotifier;
     }
 
     /// <summary>
@@ -334,6 +349,7 @@ public sealed class MscdexService {
         int lba = FirstVolumeDescriptorLba + descriptorIndex;
         byte[] sectorBuffer = new byte[CookedSectorSize];
         driveEntry.Drive.Read(lba, sectorCount: 1, sectorBuffer.AsSpan(), CdSectorMode.CookedData2048);
+        _activityNotifier?.NotifyRead(driveEntry.DriveLetter);
 
         uint destAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
         _memory.LoadData(destAddress, sectorBuffer);
@@ -368,6 +384,7 @@ public sealed class MscdexService {
         int sectorCount = _state.DX;
         byte[] sectorBuffer = new byte[sectorCount * CookedSectorSize];
         driveEntry.Drive.Read(startLba, sectorCount, sectorBuffer.AsSpan(), CdSectorMode.CookedData2048);
+        _activityNotifier?.NotifyRead(driveEntry.DriveLetter);
 
         uint destAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
         _memory.LoadData(destAddress, sectorBuffer);
@@ -489,7 +506,7 @@ public sealed class MscdexService {
                 break;
             case CommandReadLong:
             case CommandReadLongPrefetch:
-                HandleReadLong(requestBase, driveEntry.Drive);
+                HandleReadLong(requestBase, driveEntry);
                 break;
             case CommandSeek:
                 // Seek — no-op for image drives (no physical head to position)
@@ -643,7 +660,8 @@ public sealed class MscdexService {
         _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
     }
 
-    private void HandleReadLong(uint requestBase, ICdRomDrive drive) {
+    private void HandleReadLong(uint requestBase, MscdexDriveEntry driveEntry) {
+        ICdRomDrive drive = driveEntry.Drive;
         ushort bufferOffset = _memory.UInt16[requestBase + IoctlBufferPtrOffset];
         ushort bufferSegment = _memory.UInt16[requestBase + IoctlBufferPtrOffset + 2];
         uint bufferAddress = MemoryUtils.ToPhysicalAddress(bufferSegment, bufferOffset);
@@ -680,6 +698,7 @@ public sealed class MscdexService {
 
         byte[] sectorBuffer = new byte[sectorCount * sectorSize];
         drive.Read(startLba, sectorCount, sectorBuffer.AsSpan(), sectorMode);
+        _activityNotifier?.NotifyRead(driveEntry.DriveLetter);
         _memory.LoadData(bufferAddress, sectorBuffer);
         _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
     }
