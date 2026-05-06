@@ -439,7 +439,7 @@ public class DosProcessManagerTests {
             new Dictionary<string, string>(),
             loggerService);
 
-        return new DosProcessManagerTestContext(memory, processManager, state, memoryManager, driveManager);
+        return new DosProcessManagerTestContext(memory, processManager, state, memoryManager);
     }
 
     private static DosProgramSegmentPrefix GetRootPsp(DosProcessManagerTestContext context) {
@@ -619,19 +619,17 @@ public class DosProcessManagerTests {
 
     private sealed class DosProcessManagerTestContext {
         public DosProcessManagerTestContext(Memory memory, DosProcessManager processManager,
-            State state, DosMemoryManager memoryManager, DosDriveManager driveManager) {
+            State state, DosMemoryManager memoryManager) {
             Memory = memory;
             ProcessManager = processManager;
             State = state;
             MemoryManager = memoryManager;
-            DriveManager = driveManager;
         }
 
         public Memory Memory { get; }
         public DosProcessManager ProcessManager { get; }
         public State State { get; }
         public DosMemoryManager MemoryManager { get; }
-        public DosDriveManager DriveManager { get; }
 
         /// <summary>
         /// Gets the current PSP segment directly from the DOS SDA.

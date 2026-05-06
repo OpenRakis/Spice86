@@ -179,7 +179,7 @@ public class BootFloppyTests {
             Stack stack = new(memory, state);
             IOPortDispatcher ioPortDispatcher = new(ioPortBreakpoints, state, logger, false);
             BiosDataArea biosDataArea = new(memory, 640);
-            Spice86.Core.Emulator.CPU.InterruptVectorTable interruptVectorTable = new(memory);
+            InterruptVectorTable interruptVectorTable = new(memory);
             VgaRom vgaRom = new();
             VgaFunctionality vgaFunctionality = new(memory, interruptVectorTable, ioPortDispatcher, biosDataArea, vgaRom, true);
 
