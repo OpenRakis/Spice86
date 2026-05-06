@@ -181,7 +181,29 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
     internal DosBatchExecutionEngine BatchExecutionEngine => _batchExecutionEngine;
 
-    internal DosDriveManager DriveManager => _driveManager;
+    /// <summary>
+    /// Resolves a floppy drive letter to its currently mounted image bytes and
+    /// path, used by <see cref="DosProgramLoader"/> when dispatching a
+    /// <see cref="BootFloppyLaunchRequest"/> to the BIOS-level
+    /// <see cref="Boot.FloppyBootService"/>.
+    /// </summary>
+    /// <param name="driveLetter">DOS drive letter (case-insensitive).</param>
+    /// <param name="imageData">Receives the raw image bytes when found.</param>
+    /// <param name="imagePath">Receives the host image path (or empty).</param>
+    /// <returns><c>true</c> when a floppy with image data is mounted; otherwise <c>false</c>.</returns>
+    internal bool TryGetFloppyImageForBoot(char driveLetter,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out byte[]? imageData,
+        out string imagePath) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (_driveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy)) {
+            imageData = floppy.GetCurrentImageData();
+            imagePath = floppy.ImagePath ?? string.Empty;
+            return imageData is not null;
+        }
+        imageData = null;
+        imagePath = string.Empty;
+        return false;
+    }
 
     internal string? TryGetEnvironmentVariable(string variableName) {
         if (string.IsNullOrWhiteSpace(variableName)) {

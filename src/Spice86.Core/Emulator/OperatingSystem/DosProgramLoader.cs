@@ -98,12 +98,11 @@ internal class DosProgramLoader : DosFileLoader {
         if (upper != 'A' && upper != 'B') {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }
-        if (!_processManager.DriveManager.TryGetFloppyDrive(upper, out Structures.FloppyDiskDrive? floppy)) {
+        if (!_processManager.TryGetFloppyImageForBoot(upper, out byte[]? imageData, out string imagePath)) {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }
-        byte[]? imageData = floppy.GetCurrentImageData();
         byte driveNumber = (byte)(upper - 'A');
-        if (!_floppyBootService.TryBootFromFloppyImage(imageData, driveNumber, floppy.ImagePath)) {
+        if (!_floppyBootService.TryBootFromFloppyImage(imageData, driveNumber, imagePath)) {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }
         return DosExecResult.SuccessExecute(_state.CS, _state.IP, _state.SS, _state.SP);
