@@ -23,6 +23,8 @@
             <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
             <converters:FormattedTextOffsetsConverter x:Key="FormattedTextOffsetsConverter" />
             <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
+            <converters:InstructionCategoryToGeometryConverter x:Key="InstructionCategoryToGeometryConverter" />
+            <converters:InstructionCategoryToFillConverter x:Key="InstructionCategoryToFillConverter" />
         </ResourceDictionary>
     </UserControl.Resources>
     <UserControl.Styles>
@@ -186,15 +188,77 @@
                                 </Style>
                             </ContentControl.Styles>
 
-                            <Grid Margin="0">
+                            <Grid Margin="0"
+                                  ToolTip.ShowDelay="400">
+                                <ToolTip.Tip>
+                                    <!-- OllyDbg-inspired tooltip: decoded high-level call info or
+                                         generic 386 mnemonic reminder. Not rendered inline so the
+                                         disassembly density stays compact. The tooltip itself is
+                                         only attached when there is something to show. -->
+                                    <StackPanel IsVisible="{Binding HasAnnotation}" MaxWidth="480">
+                                        <!-- Decoded call block -->
+                                        <StackPanel IsVisible="{Binding DecodedCall, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                            <TextBlock Text="{Binding DecodedCall.FunctionName}"
+                                                       FontWeight="Bold" />
+                                            <TextBlock Text="{Binding DecodedCall.Subsystem, StringFormat='[{0}]'}"
+                                                       FontSize="10"
+                                                       Opacity="0.7" />
+                                            <TextBlock Text="{Binding DecodedCall.ShortDescription}"
+                                                       FontSize="11"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,2,0,0"
+                                                       IsVisible="{Binding DecodedCall.ShortDescription, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <ItemsControl ItemsSource="{Binding DecodedCall.Parameters}" Margin="0,4,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Margin="0,1,0,0">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Name}" FontSize="11" />
+                                                                <TextBlock Text=" =&gt; " FontSize="11" Opacity="0.7" />
+                                                                <TextBlock Text="{Binding FormattedValue}"
+                                                                           FontSize="11"
+                                                                           FontFamily="Consolas,Menlo,Monaco,monospace" />
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding Notes}" FontSize="10" Opacity="0.7" Margin="12,0,0,0"
+                                                                       IsVisible="{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <!-- Mnemonic reminder block (shown when no DecodedCall is available) -->
+                                        <StackPanel IsVisible="{Binding ShowMnemonicReminder}">
+                                            <TextBlock FontWeight="Bold">
+                                                <Run Text="{Binding MnemonicInfo.Mnemonic}" />
+                                                <Run Text=" - " />
+                                                <Run Text="{Binding MnemonicInfo.Name}" />
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding MnemonicInfo.Summary}"
+                                                       FontSize="11"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,2,0,0" />
+                                            <TextBlock FontSize="10" Opacity="0.8" TextWrapping="Wrap" Margin="0,2,0,0">
+                                                <Run Text="Uses: " FontWeight="SemiBold" />
+                                                <Run Text="{Binding MnemonicInfo.Uses}" />
+                                            </TextBlock>
+                                            <TextBlock FontSize="10" Opacity="0.8" TextWrapping="Wrap" Margin="0,2,0,0">
+                                                <Run Text="Why: " FontWeight="SemiBold" />
+                                                <Run Text="{Binding MnemonicInfo.Purpose}" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ToolTip.Tip>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Breakpoint" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="JumpLines" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Address" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Bytes" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CategoryIcon" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="EvalOperands" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="BranchTarget" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="EmuBadge" />
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Function" />
                                 </Grid.ColumnDefinitions>
                                 <!-- Breakpoint indicator -->
@@ -246,20 +310,40 @@
                                                      FontSize="11"
                                                      Margin="6,0,0,0" />
 
+                                <!-- Category icon column — custom vector icons.
+                                     Stroke uses the same converter as Fill because the icon geometry contains
+                                     a mix of closed shapes (filled) and open subpaths such as chip pins and
+                                     sound waves; open subpaths are only visible via the Stroke property. -->
+                                <Path Grid.Column="4"
+                                      Data="{Binding InstructionCategory, Converter={StaticResource InstructionCategoryToGeometryConverter}}"
+                                      Fill="{Binding InstructionCategory, Converter={StaticResource InstructionCategoryToFillConverter}}"
+                                      Stroke="{Binding InstructionCategory, Converter={StaticResource InstructionCategoryToFillConverter}}"
+                                      StrokeThickness="0.7"
+                                      Width="14"
+                                      Height="14"
+                                      Stretch="Uniform"
+                                      IsVisible="{Binding HasInstructionCategory}"
+                                      VerticalAlignment="Center"
+                                      Margin="6,0,2,0">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="{Binding InstructionCategory}" />
+                                    </ToolTip.Tip>
+                                </Path>
+
                                 <!-- Instruction -->
-                                <SelectableTextBlock Grid.Column="4"
+                                <SelectableTextBlock Grid.Column="5"
                                                      Inlines="{Binding DisassemblyTextOffsets, Converter={StaticResource FormattedTextOffsetsConverter}}"
-                                                     Margin="12,0,0,0" />
+                                                     Margin="6,0,0,0" />
 
                                 <!-- Evaluated operands (live values when paused) -->
-                                <SelectableTextBlock Grid.Column="5"
+                                <SelectableTextBlock Grid.Column="6"
                                                      Inlines="{Binding EvaluatedOperands, Converter={StaticResource FormattedTextOffsetsConverter}}"
                                                      FontSize="11"
                                                      IsVisible="{Binding EvaluatedOperands, Converter={x:Static ObjectConverters.IsNotNull}}"
                                                      Margin="8,0,0,0" />
 
                                 <!-- Branch target indicator -->
-                                <TextBlock Grid.Column="6"
+                                <TextBlock Grid.Column="7"
                                            Text="{Binding BranchTargetText}"
                                            Foreground="{DynamicResource DisassemblyBranchTargetBrush}"
                                            FontSize="11"
@@ -272,8 +356,27 @@
                                     </ToolTip.Tip>
                                 </TextBlock>
 
+                                <!-- EMU Badge for emulator-provided code -->
+                                <Border Grid.Column="8"
+                                        IsVisible="{Binding IsEmulatorProvided}"
+                                        Background="{DynamicResource SystemControlHighlightAccentBrush}"
+                                        CornerRadius="3"
+                                        Padding="4,2"
+                                        Margin="8,0,4,0">
+                                    <TextBlock Text="EMU"
+                                               FontSize="10"
+                                               FontWeight="Bold"
+                                               Foreground="White" />
+                                    <ToolTip.Tip>
+                                        <StackPanel>
+                                            <TextBlock Text="Emulator-provided function" FontWeight="Bold" />
+                                            <TextBlock Text="{Binding EmulatorProvidedFunctionName}" Margin="0,4,0,0" />
+                                        </StackPanel>
+                                    </ToolTip.Tip>
+                                </Border>
+
                                 <!-- Function Name -->
-                                <SelectableTextBlock Grid.Column="7"
+                                <SelectableTextBlock Grid.Column="9"
                                                      Text="{Binding Function.Name, FallbackValue=''}"
                                                      Foreground="{DynamicResource DisassemblyFunctionBrush}"
                                                      Margin="12,0,0,0" />

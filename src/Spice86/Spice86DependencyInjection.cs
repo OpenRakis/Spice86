@@ -51,6 +51,17 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
+using Spice86.DebuggerKnowledgeBase;
+using Spice86.DebuggerKnowledgeBase.Bios;
+using Spice86.DebuggerKnowledgeBase.Dos;
+using Spice86.DebuggerKnowledgeBase.Ems;
+using Spice86.DebuggerKnowledgeBase.Registries;
+using Spice86.DebuggerKnowledgeBase.Mpu401;
+using Spice86.DebuggerKnowledgeBase.Opl;
+using Spice86.DebuggerKnowledgeBase.Sb;
+using Spice86.DebuggerKnowledgeBase.Video;
+using Spice86.DebuggerKnowledgeBase.Gus;
+using Spice86.DebuggerKnowledgeBase.Joystick;
 using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
@@ -90,6 +101,12 @@ public class Spice86DependencyInjection : IDisposable {
     /// Gets the function catalogue that tracks function calls and provides information for debugging.
     /// </summary>
     public FunctionCatalogue FunctionCatalogue { get; }
+
+    /// <summary>
+    /// Gets the high-level decoder service the debugger UI can use to produce parameter
+    /// decoding tooltips for interrupts, I/O ports and emulator-installed ASM routines.
+    /// </summary>
+    public DebuggerDecoderService DebuggerDecoderService { get; }
 
     private readonly McpHttpHost? _mcpHttpTransport;
     private readonly DeviceSchedulerThread? _vgaTimingThread;
@@ -624,6 +641,28 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Disk operating system created...");
         }
 
+        InterruptDecoderRegistry interruptDecoderRegistry = new InterruptDecoderRegistry();
+        IoPortDecoderRegistry ioPortDecoderRegistry = new IoPortDecoderRegistry();
+        AsmRoutineDecoderRegistry asmRoutineDecoderRegistry = new AsmRoutineDecoderRegistry();
+        DosDecoderRegistration.RegisterAll(interruptDecoderRegistry);
+        BiosDecoderRegistration.RegisterAll(interruptDecoderRegistry);
+        EmsDecoderRegistration.RegisterAll(interruptDecoderRegistry);
+        VideoDecoderRegistration.RegisterAll(ioPortDecoderRegistry);
+        SbDecoderRegistration.RegisterAll(ioPortDecoderRegistry);
+        Mpu401DecoderRegistration.RegisterAll(ioPortDecoderRegistry);
+        OplDecoderRegistration.RegisterAll(ioPortDecoderRegistry);
+        GusDecoderRegistration.RegisterAll(ioPortDecoderRegistry);
+        JoystickDecoderRegistration.RegisterAll(ioPortDecoderRegistry);
+        DebuggerDecoderService debuggerDecoderService = new DebuggerDecoderService(
+            interruptDecoderRegistry,
+            ioPortDecoderRegistry,
+            asmRoutineDecoderRegistry,
+            functionCatalogue,
+            state,
+            memory,
+            ioPortDispatcher);
+        DebuggerDecoderService = debuggerDecoderService;
+
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler,
             biosKeyboardInt9Handler,
             callbackHandler,
@@ -708,14 +747,15 @@ public class Spice86DependencyInjection : IDisposable {
             IMessenger messenger = WeakReferenceMessenger.Default;
 
             BreakpointsViewModel breakpointsViewModel = new(
-                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);
+                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard, memory,
+                debuggerDecoderService);
 
             breakpointsViewModel.RestoreBreakpoints(deserializedUserBreakpoints);
 
             DisassemblyViewModel disassemblyViewModel = new(
                 emulatorBreakpointsManager, memory, state, functionCatalogue.FunctionInformations,
                 breakpointsViewModel, pauseHandler, uiDispatcher, messenger, textClipboard, loggerService,
-                canCloseTab: false);
+                debuggerDecoderService, false);
 
             PaletteViewModel paletteViewModel = new(videoState.DacRegisters.ArgbPalette,
                 uiDispatcher);
