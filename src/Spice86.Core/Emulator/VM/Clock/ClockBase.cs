@@ -65,4 +65,7 @@ public abstract class ClockBase : IEmulatedClock {
     /// Called by <see cref="Dispose"/> before finalization is suppressed. Override to release additional resources.
     /// </summary>
     protected virtual void OnDisposeCore() { }
+
+    /// <inheritdoc />
+    public abstract void Delay(TimeSpan timeSpan);
 }

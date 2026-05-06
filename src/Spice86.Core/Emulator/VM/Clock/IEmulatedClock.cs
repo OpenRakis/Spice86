@@ -28,6 +28,14 @@ public interface IEmulatedClock : IDisposable {
     bool IsPaused { get; }
 
     /// <summary>
+    /// Advance the clock by the specified amount of time.
+    /// </summary>
+    /// <remarks>
+    /// Used to simulate blocking I/O delays
+    /// </remarks>
+    void Delay(TimeSpan timeSpan);
+
+    /// <summary>
     /// Called when the emulator is paused.
     /// </summary>
     void OnPause();
