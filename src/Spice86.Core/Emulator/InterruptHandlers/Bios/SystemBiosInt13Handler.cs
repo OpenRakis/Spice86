@@ -20,6 +20,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     // BIOS error codes (returned in AH on failure)
     private const byte ErrorNone = 0x00;
     private const byte ErrorInvalidParameter = 0x01;
+    private const byte ErrorSectorNotFound = 0x04;
     private const byte ErrorDriveNotReady = 0x80;
     private const byte ErrorSenseFailed = 0xFF;
 
@@ -181,7 +182,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         byte[] transferBuffer = new byte[byteCount];
 
         if (!_floppyAccess.TryRead(driveNumber, byteOffset, transferBuffer, 0, byteCount)) {
-            SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
+            SetFloppyError(driveNumber, ErrorSectorNotFound, calledFromVm);
             return;
         }
 
@@ -241,7 +242,9 @@ public class SystemBiosInt13Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Verify Disk Sectors (AH=0x04). Stub — always succeeds for non-zero AL.
+    /// Verify Disk Sectors (AH=0x04). On floppy this is a "read without transfer".
+    /// Returns success when the drive is present and AL is non-zero, matching DOSBox Staging
+    /// bios_disk.cpp which validates drive presence before returning success.
     /// </summary>
     /// <remarks>
     /// Shangai II needs this to run.
@@ -251,10 +254,17 @@ public class SystemBiosInt13Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("BIOS INT13H: Verify Sectors AL=0x{AL:X2}", State.AL);
         }
+        byte driveNumber = State.DL;
         if (State.AL == 0) {
-            State.AH = ErrorInvalidParameter;
-            SetCarryFlag(true, calledFromVm);
+            SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
+        }
+        if (IsFloppyDrive(driveNumber)) {
+            if (_floppyAccess == null || !_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+                SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
+                return;
+            }
+            RecordSuccess(driveNumber);
         }
         State.AH = ErrorNone;
         SetCarryFlag(false, calledFromVm);
@@ -291,7 +301,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
         State.AH = ErrorNone;
         State.AL = 0;
-        State.DL = 1;
+        State.DL = (byte)CountMountedFloppyDrives();
         State.DH = (byte)maxHead;
         State.CL = (byte)((maxSector & 0x3F) | ((maxCylinder >> 2) & 0xC0));
         State.CH = (byte)(maxCylinder & 0xFF);
@@ -465,6 +475,19 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
     private static bool IsFloppyDrive(byte driveNumber) {
         return driveNumber < 0x80;
+    }
+
+    private int CountMountedFloppyDrives() {
+        if (_floppyAccess == null) {
+            return 0;
+        }
+        int count = 0;
+        for (byte drive = 0; drive < 2; drive++) {
+            if (_floppyAccess.TryGetGeometry(drive, out int _, out int _, out int _, out int _)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private void SetFloppyError(byte driveNumber, byte errorCode, bool calledFromVm) {

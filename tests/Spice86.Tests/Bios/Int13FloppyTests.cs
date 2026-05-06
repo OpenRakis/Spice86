@@ -36,6 +36,8 @@ public sealed class Int13FloppyTests {
     private const ushort BufferOffset = 0x0000;
 
     private sealed class TestContext {
+        private readonly DosDriveManager _driveManager;
+
         public Memory Memory { get; }
         public State State { get; }
         public SystemBiosInt13Handler Handler { get; }
@@ -58,6 +60,7 @@ public sealed class Int13FloppyTests {
             DosDriveManager driveManager = DosTestHelpers.CreateDriveManager(logger, null, null);
             driveManager.MountFloppyImage('A', floppyImage, "test.img");
             FloppyAccess = driveManager;
+            _driveManager = driveManager;
 
             Handler = new SystemBiosInt13Handler(Memory, functionHandlerProvider, stack, State, FloppyAccess, logger);
 
@@ -79,6 +82,10 @@ public sealed class Int13FloppyTests {
             State.CL = (byte)((sector & 0x3F) | ((cylinder >> 2) & 0xC0));
             State.DH = (byte)head;
             State.AL = sectorCount;
+        }
+
+        public void MountSecondFloppy(byte[] floppyImage) {
+            _driveManager.MountFloppyImage('B', floppyImage, "test_b.img");
         }
     }
 
@@ -447,6 +454,61 @@ public sealed class Int13FloppyTests {
         ctx.Handler.Run();
 
         ctx.State.AH.Should().Be(0x00);
+        ctx.State.CarryFlag.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ReadSectors_OutOfRangeCylinder_ReturnsSectorNotFound() {
+        // Arrange — DOSBox Staging bios_disk.cpp returns 0x04 (sector not found) when a sector
+        // read fails in the disk image. Asking for a cylinder past the end of a 1.44 MB image
+        // (80 cylinders, indices 0..79) is the canonical way to trigger that path.
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.State.AH = 0x02;
+        ctx.SetupChsRegisters(cylinder: 200, head: 0, sector: 1, driveNumber: DriveA, sectorCount: 1);
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeTrue();
+        ctx.State.AH.Should().Be(0x04, "DOSBox Staging returns 0x04 (sector not found) on read failure");
+    }
+
+    [Fact]
+    public void VerifySectors_UnmountedDriveB_ReturnsError() {
+        // Arrange — DOSBox Staging bios_disk.cpp validates the drive in case 0x04 and returns
+        // last_status (non-zero) with CF set when the drive is inactive. We previously returned
+        // success regardless of drive presence.
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image); // only A: is mounted
+        ctx.State.AH = 0x04;
+        ctx.SetupChsRegisters(cylinder: 0, head: 0, sector: 1, driveNumber: 0x01, sectorCount: 1);
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeTrue("drive B is not mounted");
+        ctx.State.AH.Should().NotBe(0x00);
+    }
+
+    [Fact]
+    public void GetDriveParameters_BothFloppiesMounted_ReturnsDLEqualsTwo() {
+        // Arrange — DOSBox Staging bios_disk.cpp case 0x08 returns DL = number of mounted
+        // floppy drives (0..2), not a hardcoded 1.
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        ctx.MountSecondFloppy(image);
+        ctx.State.AH = 0x08;
+        ctx.State.DL = DriveA;
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert
+        ctx.State.AH.Should().Be(0x00);
+        ctx.State.DL.Should().Be(2, "DL must reflect the number of mounted floppy drives");
         ctx.State.CarryFlag.Should().BeFalse();
     }
 
