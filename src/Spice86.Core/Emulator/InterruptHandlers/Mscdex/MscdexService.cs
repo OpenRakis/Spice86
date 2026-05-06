@@ -132,10 +132,15 @@ public sealed class MscdexService {
     private const ushort StatusDone = 0x0100;
     private const ushort StatusError = 0x8000;
 
-    // Device status word bits
-    private const uint DeviceStatusDoorOpen = 0x0001;
-    private const uint DeviceStatusDoorLocked = 0x0002;
-    private const uint DeviceStatusAudioPlaying = 0x0200;
+    // Device status word bits (per DOSBox Staging dos_mscdex.cpp CMscdex::GetDeviceStatus)
+    private const uint DeviceStatusDoorOpen           = 1u << 0;
+    private const uint DeviceStatusDoorLocked         = 1u << 1;
+    private const uint DeviceStatusSupportsRawCooked  = 1u << 2;
+    private const uint DeviceStatusCanReadAudio       = 1u << 4;
+    private const uint DeviceStatusCanControlAudio    = 1u << 8;
+    private const uint DeviceStatusSupportsRedbookHsg = 1u << 9;
+    private const uint DeviceStatusAudioPlaying       = 1u << 10;
+    private const uint DeviceStatusDriveEmpty         = 1u << 11;
 
     /// <summary>
     /// Red Book pre-gap offset in frames (2 seconds × 75 frames/second).
@@ -545,7 +550,10 @@ public sealed class MscdexService {
                 _memory.UInt32[bufferAddress + 1] = 0;
                 break;
             case IoctlCurrentPosition:
-                WriteCurrentPosition(bufferAddress, drive);
+                if (!WriteCurrentPosition(bufferAddress, drive)) {
+                    _memory.UInt16[requestBase + RequestStatusOffset] = StatusError | (ushort)MscdexErrorCode.BadCommand;
+                    return;
+                }
                 break;
             case IoctlChannelControl:
                 WriteChannelControl(bufferAddress);
@@ -554,11 +562,17 @@ public sealed class MscdexService {
                 WriteDeviceStatus(bufferAddress, drive);
                 break;
             case IoctlSectorSize:
-                // 0x07: mode byte at buffer+1 (0=cooked 2048, 1=raw 2352); write sector size word at buffer+2
-                if (_memory.UInt8[bufferAddress + 1] == 0) {
+                // 0x07: mode byte at buffer+1 (0=cooked 2048, 1=raw 2352); write sector size word at buffer+2.
+                // Per DOSBox Staging dos_mscdex.cpp MSCDEX_IOCTL_Input case 0x07, any other mode byte
+                // returns invalid-function (0x03).
+                byte sectorSizeMode = _memory.UInt8[bufferAddress + 1];
+                if (sectorSizeMode == 0) {
                     _memory.UInt16[bufferAddress + 2] = CookedSectorSize;
-                } else {
+                } else if (sectorSizeMode == 1) {
                     _memory.UInt16[bufferAddress + 2] = RawSectorSize;
+                } else {
+                    _memory.UInt16[requestBase + RequestStatusOffset] = StatusError | (ushort)MscdexErrorCode.BadCommand;
+                    return;
                 }
                 break;
             case IoctlVolumeSize:
@@ -670,14 +684,16 @@ public sealed class MscdexService {
         _memory.UInt16[requestBase + RequestStatusOffset] = StatusDone;
     }
 
-    private void WriteCurrentPosition(uint bufferAddress, ICdRomDrive drive) {
+    private bool WriteCurrentPosition(uint bufferAddress, ICdRomDrive drive) {
         CdAudioPlayback audioStatus = drive.GetAudioStatus();
         int currentLba = audioStatus.CurrentLba;
         byte addressMode = _memory.UInt8[bufferAddress + 1];
         if (addressMode == 0) {
             // HSG/LBA mode: write 4-byte LBA at buffer+2
             _memory.UInt32[bufferAddress + 2] = (uint)currentLba;
-        } else {
+            return true;
+        }
+        if (addressMode == 1) {
             // Red Book MSF mode: write fr, sec, min at buffer+2,3,4; 0x00 at buffer+5
             // Matches DOSBox Staging IOCTL 0x01 Red Book branch: writeb fr, sec, min, 0x00
             int totalFrames = currentLba + RedbookPreGapFrames;
@@ -689,7 +705,11 @@ public sealed class MscdexService {
             _memory.UInt8[bufferAddress + 3] = sec;
             _memory.UInt8[bufferAddress + 4] = min;
             _memory.UInt8[bufferAddress + 5] = 0;
+            return true;
         }
+        // Per DOSBox Staging dos_mscdex.cpp MSCDEX_IOCTL_Input case 0x01, an addr_mode
+        // other than 0 (HSG) or 1 (Red Book) returns invalid-function (0x03).
+        return false;
     }
 
     private void WriteChannelControl(uint bufferAddress) {
@@ -702,9 +722,24 @@ public sealed class MscdexService {
     }
 
     private void WriteDeviceStatus(uint bufferAddress, ICdRomDrive drive) {
-        uint status = 0;
+        // Layout matches DOSBox Staging dos_mscdex.cpp CMscdex::GetDeviceStatus:
+        //   bit 0  : tray/door open
+        //   bit 1  : door locked
+        //   bit 2  : supports both raw and cooked sectors (always set)
+        //   bit 4  : can read audio (always set)
+        //   bit 8  : can control audio (always set)
+        //   bit 9  : supports Red Book and HSG addressing (always set)
+        //   bit 10 : audio is currently playing
+        //   bit 11 : drive is empty (no media)
+        // For image-backed drives "no media" is equivalent to the door being open
+        // (Eject() opens the door; Insert() closes it).
+        uint status = DeviceStatusSupportsRawCooked
+                    | DeviceStatusCanReadAudio
+                    | DeviceStatusCanControlAudio
+                    | DeviceStatusSupportsRedbookHsg;
         if (drive.MediaState.IsDoorOpen) {
             status |= DeviceStatusDoorOpen;
+            status |= DeviceStatusDriveEmpty;
         }
         if (drive.MediaState.IsLocked) {
             status |= DeviceStatusDoorLocked;

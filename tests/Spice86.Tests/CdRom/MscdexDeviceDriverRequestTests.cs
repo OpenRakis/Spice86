@@ -414,4 +414,125 @@ public sealed class MscdexDeviceDriverRequestTests {
         ctx.Memory.UInt8[ctx.IoctlBase + 9].Should().Be(3, "absolute sec = 3");
         ctx.Memory.UInt8[ctx.IoctlBase + 10].Should().Be(5, "absolute fr  = 5");
     }
+
+    // IOCTL Input 0x06 (Get Device Status): per DOSBox Staging dos_mscdex.cpp
+    // CMscdex::GetDeviceStatus, the 32-bit status word at buffer+1 always has
+    // capability bits 2/4/8/9 set, with audio-playing at bit 10 and drive-empty at bit 11.
+    private const byte IoctlDeviceStatus = 0x06;
+    private const uint DeviceStatusDoorOpen      = 1u << 0;
+    private const uint DeviceStatusDoorLocked    = 1u << 1;
+    private const uint DeviceStatusRawAndCooked  = 1u << 2;
+    private const uint DeviceStatusCanReadAudio  = 1u << 4;
+    private const uint DeviceStatusCanCtrlAudio  = 1u << 8;
+    private const uint DeviceStatusRedbookHsg    = 1u << 9;
+    private const uint DeviceStatusAudioPlaying  = 1u << 10;
+    private const uint DeviceStatusDriveEmpty    = 1u << 11;
+
+    [Fact]
+    public void IoctlDeviceStatus_AlwaysReportsCapabilityBits() {
+        // Arrange
+        TestContext ctx = new();
+        ctx.SetCommand(CommandIoctlInput);
+        ctx.WriteIoctlBufferPointer();
+        ctx.Memory.UInt8[ctx.IoctlBase] = IoctlDeviceStatus;
+        ctx.State.AL = 0x10;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ctx.ReadStatus().Should().Be(StatusDone);
+        uint status = ctx.Memory.UInt32[ctx.IoctlBase + 1];
+        (status & DeviceStatusRawAndCooked).Should().Be(DeviceStatusRawAndCooked, "bit 2 (raw+cooked) is always set");
+        (status & DeviceStatusCanReadAudio).Should().Be(DeviceStatusCanReadAudio, "bit 4 (can read audio) is always set");
+        (status & DeviceStatusCanCtrlAudio).Should().Be(DeviceStatusCanCtrlAudio, "bit 8 (can control audio) is always set");
+        (status & DeviceStatusRedbookHsg).Should().Be(DeviceStatusRedbookHsg, "bit 9 (Red Book + HSG) is always set");
+    }
+
+    [Fact]
+    public void IoctlDeviceStatus_AudioPlayingBit_IsAtBit10_NotBit9() {
+        // Arrange
+        TestContext ctx = new();
+        ctx.Drive.PlayAudio(0, 50);
+        ctx.SetCommand(CommandIoctlInput);
+        ctx.WriteIoctlBufferPointer();
+        ctx.Memory.UInt8[ctx.IoctlBase] = IoctlDeviceStatus;
+        ctx.State.AL = 0x10;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ctx.ReadStatus().Should().Be(StatusDone);
+        uint status = ctx.Memory.UInt32[ctx.IoctlBase + 1];
+        (status & DeviceStatusAudioPlaying).Should().Be(DeviceStatusAudioPlaying, "bit 10 (audio playing) must be set when audio is playing");
+    }
+
+    [Fact]
+    public void IoctlDeviceStatus_DriveEmptyBit_SetWhenDoorIsOpen() {
+        // Arrange
+        TestContext ctx = new();
+        ctx.Drive.MediaState.IsDoorOpen = true;
+        ctx.SetCommand(CommandIoctlInput);
+        ctx.WriteIoctlBufferPointer();
+        ctx.Memory.UInt8[ctx.IoctlBase] = IoctlDeviceStatus;
+        ctx.State.AL = 0x10;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ctx.ReadStatus().Should().Be(StatusDone);
+        uint status = ctx.Memory.UInt32[ctx.IoctlBase + 1];
+        (status & DeviceStatusDoorOpen).Should().Be(DeviceStatusDoorOpen, "bit 0 (door open)");
+        (status & DeviceStatusDriveEmpty).Should().Be(DeviceStatusDriveEmpty, "bit 11 (drive empty) must be set when no media is loaded (i.e. door open)");
+    }
+
+    // IOCTL Input 0x01 (Get Current Position): per DOSBox Staging, addr_mode != 0 and != 1
+    // must return invalid-function (0x03) error in the request status word.
+    private const byte IoctlCurrentPosition = 0x01;
+    private const ushort StatusErrorBit = 0x8000;
+    private const ushort MscdexInvalidFunctionError = 0x03;
+
+    [Fact]
+    public void IoctlCurrentPosition_InvalidAddressMode_ReturnsInvalidFunctionError() {
+        // Arrange
+        TestContext ctx = new();
+        ctx.SetCommand(CommandIoctlInput);
+        ctx.WriteIoctlBufferPointer();
+        ctx.Memory.UInt8[ctx.IoctlBase] = IoctlCurrentPosition;
+        ctx.Memory.UInt8[ctx.IoctlBase + 1] = 0x77;  // unknown addr_mode (not 0 = HSG, not 1 = Red Book)
+        ctx.State.AL = 0x10;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ushort status = ctx.ReadStatus();
+        (status & StatusErrorBit).Should().Be(StatusErrorBit, "error bit must be set for invalid address mode");
+        (status & 0xFF).Should().Be(MscdexInvalidFunctionError, "status low byte must carry MSCDEX invalid-function error code");
+    }
+
+    // IOCTL Input 0x07 (Get Sector Size): per DOSBox Staging, mode byte != 0 and != 1
+    // must return invalid-function (0x03) error in the request status word.
+    private const byte IoctlSectorSize = 0x07;
+
+    [Fact]
+    public void IoctlSectorSize_InvalidModeByte_ReturnsInvalidFunctionError() {
+        // Arrange
+        TestContext ctx = new();
+        ctx.SetCommand(CommandIoctlInput);
+        ctx.WriteIoctlBufferPointer();
+        ctx.Memory.UInt8[ctx.IoctlBase] = IoctlSectorSize;
+        ctx.Memory.UInt8[ctx.IoctlBase + 1] = 0x99;  // unknown mode (not 0 = cooked, not 1 = raw)
+        ctx.State.AL = 0x10;
+
+        // Act
+        ctx.Mscdex.Dispatch();
+
+        // Assert
+        ushort status = ctx.ReadStatus();
+        (status & StatusErrorBit).Should().Be(StatusErrorBit, "error bit must be set for invalid sector size mode");
+        (status & 0xFF).Should().Be(MscdexInvalidFunctionError, "status low byte must carry MSCDEX invalid-function error code");
+    }
 }
