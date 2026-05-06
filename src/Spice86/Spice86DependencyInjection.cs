@@ -603,7 +603,6 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.Dos = dos;
 
         if (mainWindowViewModel != null) {
-            mainWindowViewModel.DriveStatusViewModel = new ViewModels.DriveStatusViewModel(dos);
             mainWindowViewModel.DiscSwapper = dos;
             if (hostStorageProvider != null) {
                 ViewModels.DrivesMenuViewModel drivesMenuViewModel = new ViewModels.DrivesMenuViewModel(dos, dos, dos, hostStorageProvider, new NullDriveEventNotifier());

@@ -224,29 +224,6 @@
 				</StackPanel>
 			</controls:StatusBarItem>
 			<Separator />
-			<controls:StatusBarItem IsVisible="{Binding DriveStatusViewModel, Converter={StaticResource NullableToBooleanConverter}}">
-				<StackPanel Orientation="Horizontal" Spacing="4">
-					<ToolTip.Tip>
-						<ItemsControl ItemsSource="{Binding DriveStatusViewModel.DriveStatuses}">
-							<ItemsControl.ItemTemplate>
-								<DataTemplate DataType="storage:DosVirtualDriveStatus">
-									<StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
-										<TextBlock FontFamily="Monospace" FontSize="11"
-										           Text="{Binding DriveLetter, StringFormat={}{0}:}" MinWidth="20" />
-										<TextBlock FontSize="10" Text="{Binding DriveType}" Opacity="0.7" MinWidth="48" />
-										<TextBlock FontSize="10" Text="{Binding VolumeLabel}" MinWidth="60" />
-										<TextBlock FontSize="10" FontFamily="Monospace"
-										           Text="{Binding CurrentImageFileName}" Opacity="0.7" />
-									</StackPanel>
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</ToolTip.Tip>
-					<Ellipse Width="10" Height="10" VerticalAlignment="Center"
-					         Fill="{Binding DriveStatusViewModel.ActivityColor}" />
-				</StackPanel>
-			</controls:StatusBarItem>
-			<Separator />
 			<controls:StatusBarItem HorizontalAlignment="Right" HorizontalContentAlignment="Right">
 				<ContentPresenter
 				Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
