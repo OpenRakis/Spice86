@@ -430,7 +430,22 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             }
 
             bool hasMedia = !string.IsNullOrEmpty(vd.MountedHostDirectory);
-            statuses.Add(new DosVirtualDriveStatus(vd.DriveLetter, driveType, hasMedia, vd.Label));
+            // Surface the mounted host folder path as the "current image" for folder-backed
+            // floppy drives so the UI combobox shows the mount and the poll-based notifier
+            // fires a toast when the path transitions from empty to set. The trailing
+            // slash that ConvertUtils.ToSlashFolderPath added is stripped so Path.GetFileName
+            // returns the folder name instead of an empty string.
+            if (hasMedia && driveType == DosVirtualDriveType.Floppy) {
+                string folderPath = vd.MountedHostDirectory.TrimEnd('/', '\\');
+                IReadOnlyList<string> folderPaths = new[] { folderPath };
+                statuses.Add(new DosVirtualDriveStatus(
+                    vd.DriveLetter, driveType, hasMedia, vd.Label,
+                    currentImagePath: folderPath,
+                    imageCount: 1,
+                    allImagePaths: folderPaths));
+            } else {
+                statuses.Add(new DosVirtualDriveStatus(vd.DriveLetter, driveType, hasMedia, vd.Label));
+            }
         }
 
         foreach (KeyValuePair<char, MemoryDrive> kvp in DosDriveManager.MemoryDrives) {
@@ -486,7 +501,14 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
 
     /// <inheritdoc/>
     public bool MountFolderAsFloppy(char driveLetter, string hostPath) {
+        if (string.IsNullOrWhiteSpace(hostPath) || !Directory.Exists(hostPath)) {
+            _loggerService.Error("MOUNT: Could not mount folder {Path} as floppy {Drive}: directory does not exist", hostPath, char.ToUpperInvariant(driveLetter));
+            return false;
+        }
         DosDriveManager.MountFloppyFolder(driveLetter, hostPath);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", char.ToUpperInvariant(driveLetter), hostPath);
+        }
         return true;
     }
 
