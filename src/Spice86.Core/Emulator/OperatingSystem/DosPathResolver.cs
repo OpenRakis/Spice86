@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Utils;
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -106,48 +107,78 @@ internal class DosPathResolver {
         return DosFileOperationResult.NoValue();
     }
 
+    /// <summary>
+    /// Resolves a DOS path (which may be absolute, drive-relative, or relative)
+    /// to its fully-qualified form including drive root, honoring the target drive's
+    /// current directory for non-rooted paths and properly applying '.' and '..' segments.
+    /// </summary>
+    /// <param name="absoluteOrRelativeDosPath">The DOS path to normalize.</param>
+    /// <returns>A fully-qualified DOS path of the form <c>X:\PATH\TO\FILE</c>.</returns>
     private string GetFullDosPathIncludingRoot(string absoluteOrRelativeDosPath) {
         if (string.IsNullOrWhiteSpace(absoluteOrRelativeDosPath)) {
             return absoluteOrRelativeDosPath;
         }
-        StringBuilder normalizedDosPath = new();
 
         string backslashedDosPath = ConvertUtils.ToBackSlashPath(absoluteOrRelativeDosPath);
 
-        string driveRoot = $"{GetDosDrivePathFromDosPath(backslashedDosPath)}{DirectorySeparatorChar}";
-        normalizedDosPath.Append(driveRoot);
-
-        if (backslashedDosPath.StartsWith(driveRoot)) {
-            backslashedDosPath = backslashedDosPath[3..];
-        } else if (backslashedDosPath.StartsWith(driveRoot[..2])) {
-            backslashedDosPath = backslashedDosPath[2..];
+        // Determine the target drive letter and the remaining path after the optional X: prefix.
+        char driveLetter;
+        string remainingPath;
+        if (StartsWithDosDriveAndVolumeSeparator(backslashedDosPath)) {
+            driveLetter = char.ToUpperInvariant(backslashedDosPath[0]);
+            remainingPath = backslashedDosPath[2..];
+        } else {
+            driveLetter = _dosDriveManager.CurrentDrive.DosVolume[0];
+            remainingPath = backslashedDosPath;
         }
 
-        IEnumerable<string> pathElements = backslashedDosPath.Split(DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        bool pathIsRooted = remainingPath.Length > 0 &&
+                            (remainingPath[0] == DirectorySeparatorChar ||
+                             remainingPath[0] == AltDirectorySeparatorChar);
 
-        bool moveNext = false;
-        bool appendedFolder = false;
-        bool mustPrependDirectorySeparator = false;
-        foreach (string pathElement in pathElements) {
-            if (pathElement == ".." && appendedFolder) {
-                moveNext = true;
-            } else {
-                if (moveNext) {
-                    moveNext = false;
-                    continue;
-                }
-                if (pathElement != "." && pathElement != ".." && !pathElement.Contains(VolumeSeparatorChar)) {
-                    appendedFolder = true;
-                    if (mustPrependDirectorySeparator) {
-                        normalizedDosPath.Append(DirectorySeparatorChar);
-                    }
-                    normalizedDosPath.Append(pathElement.ToUpperInvariant());
-                    mustPrependDirectorySeparator = true;
-                }
+        // Seed the segment stack with the drive's current directory for non-rooted paths.
+        List<string> segments = new();
+        if (!pathIsRooted &&
+            _dosDriveManager.TryGetValue(driveLetter, out VirtualDrive? drive) &&
+            !string.IsNullOrEmpty(drive.CurrentDosDirectory)) {
+            foreach (string segment in drive.CurrentDosDirectory.Split(
+                DirectorySeparatorChar,
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) {
+                segments.Add(segment.ToUpperInvariant());
             }
         }
 
-        return ConvertUtils.ToBackSlashPath(normalizedDosPath.ToString());
+        // Apply each path element, popping on '..' and skipping '.'.
+        foreach (string element in remainingPath.Split(
+            DirectorySeparatorChar,
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) {
+            if (element == ".") {
+                continue;
+            }
+            if (element == "..") {
+                if (segments.Count > 0) {
+                    segments.RemoveAt(segments.Count - 1);
+                }
+                continue;
+            }
+            if (element.Contains(VolumeSeparatorChar)) {
+                continue;
+            }
+            segments.Add(element.ToUpperInvariant());
+        }
+
+        StringBuilder normalizedDosPath = new();
+        normalizedDosPath.Append(driveLetter);
+        normalizedDosPath.Append(VolumeSeparatorChar);
+        normalizedDosPath.Append(DirectorySeparatorChar);
+        for (int i = 0; i < segments.Count; i++) {
+            if (i > 0) {
+                normalizedDosPath.Append(DirectorySeparatorChar);
+            }
+            normalizedDosPath.Append(segments[i]);
+        }
+
+        return normalizedDosPath.ToString();
     }
 
     /// <summary>

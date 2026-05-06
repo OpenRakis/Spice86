@@ -373,67 +373,14 @@ internal sealed partial class DosBatchExecutionEngine {
             return false;
         }
 
-        // Resolve relative "." and ".." against the current directory before
-        // passing to SetCurrentDir, because the path resolver skips these
-        // elements when they appear alone without a preceding directory.
-        string resolved = ResolveRelativeDosPath(trimmed);
-        DosFileOperationResult setResult = _dosFileManager.SetCurrentDir(resolved);
+        // The path resolver natively honors the drive's current directory and
+        // applies '.' / '..' segments, so a relative path can be passed through.
+        DosFileOperationResult setResult = _dosFileManager.SetCurrentDir(trimmed);
         if (setResult.IsError) {
             WriteToStandardOutput("Invalid directory\r\n");
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Resolves a relative DOS path (e.g. ".", "..", "..\SUBDIR") against the
-    /// current drive and directory to produce an absolute DOS path.
-    /// </summary>
-    private string ResolveRelativeDosPath(string dosPath) {
-        if (dosPath.Length == 0) {
-            return dosPath;
-        }
-
-        // Already absolute (starts with drive letter or backslash)
-        char first = dosPath[0];
-        if (dosPath.Length >= 2 && dosPath[1] == ':') {
-            return dosPath;
-        }
-        if (first == '\\') {
-            return dosPath;
-        }
-
-        // Build the current directory prefix
-        char driveLetter = _driveManager.CurrentDrive.DriveLetter;
-        DosFileOperationResult result = _dosFileManager.GetCurrentDir(0, out string currentDir);
-        if (result.IsError) {
-            return dosPath;
-        }
-
-        string basePath = string.IsNullOrEmpty(currentDir)
-            ? $"{driveLetter}:\\"
-            : $"{driveLetter}:\\{currentDir}";
-
-        // Split into segments and apply . / .. navigation
-        string combined = $"{basePath}\\{dosPath}";
-        string[] parts = combined.Split(['\\'], StringSplitOptions.RemoveEmptyEntries);
-        List<string> resolved = new();
-
-        for (int i = 0; i < parts.Length; i++) {
-            string part = parts[i];
-            if (part == ".") {
-                continue;
-            }
-            if (part == "..") {
-                if (resolved.Count > 1) {
-                    resolved.RemoveAt(resolved.Count - 1);
-                }
-                continue;
-            }
-            resolved.Add(part);
-        }
-
-        return string.Join("\\", resolved);
     }
 
     internal void HandleExit() {
