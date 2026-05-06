@@ -367,6 +367,68 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             "BATCH$$$.COM", comBytes, null, _state.SS, (ushort)(_state.SP - IregsFrameSize));
     }
 
+    /// <summary>
+    /// Boots from a mounted floppy image, mirroring DOSBox Staging's <c>BOOT</c>
+    /// command. Reads the first 512-byte sector of the floppy image at
+    /// <paramref name="driveLetter"/>, writes it to physical address 0x7C00, and
+    /// initialises CPU registers per the BIOS bootstrap convention:
+    /// <c>CS:IP = 0000:7C00</c>, <c>SS:SP = 0000:7C00</c>, <c>DL</c> = drive id
+    /// (0 for A:, 1 for B:), all other general registers cleared.
+    /// </summary>
+    /// <param name="driveLetter">Floppy drive letter to boot from (A or B).</param>
+    /// <returns>
+    /// A successful <see cref="DosExecResult"/> when the boot sector is loaded
+    /// and CPU state is configured; otherwise <see cref="DosExecResult.Fail"/>.
+    /// </returns>
+    internal DosExecResult BootFromFloppy(char driveLetter) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (upper != 'A' && upper != 'B') {
+            return DosExecResult.Fail(DosErrorCode.InvalidDrive);
+        }
+        if (!_driveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy)) {
+            return DosExecResult.Fail(DosErrorCode.InvalidDrive);
+        }
+        byte[]? imageData = floppy.GetCurrentImageData();
+        if (imageData is null || imageData.Length < BootSectorSize) {
+            return DosExecResult.Fail(DosErrorCode.InvalidDrive);
+        }
+        if (imageData[BootSectorSize - 2] != 0x55 || imageData[BootSectorSize - 1] != 0xAA) {
+            return DosExecResult.Fail(DosErrorCode.InvalidDrive);
+        }
+
+        _memory.LoadData(BootSectorLoadAddress, imageData, BootSectorSize);
+        SetupCpuRegistersForBoot((byte)(upper - 'A'));
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("BOOT: loaded {Bytes} bytes from {Drive}: '{Path}' at 0000:7C00, DL={DL:X2}",
+                BootSectorSize, upper, floppy.ImagePath, _state.DL);
+        }
+        return DosExecResult.SuccessExecute(_state.CS, _state.IP, _state.SS, _state.SP);
+    }
+
+    private void SetupCpuRegistersForBoot(byte driveNumber) {
+        // Match the DOSBox Staging boot.cpp setup so DOS boot sectors that rely on
+        // the well-known IBM PC BIOS convention find expected register values.
+        _state.CS = 0;
+        _state.IP = BootSectorLoadOffset;
+        _state.DS = 0;
+        _state.ES = 0;
+        _state.SS = 0;
+        _state.SP = BootSectorLoadOffset;
+        _state.AX = 0;
+        _state.BX = BootSectorLoadOffset;
+        _state.CX = 1;
+        _state.DX = 0;
+        _state.DL = driveNumber;
+        _state.SI = 0;
+        _state.DI = 0;
+        _state.BP = 0;
+        _state.InterruptFlag = true;
+    }
+
+    private const int BootSectorSize = 512;
+    private const ushort BootSectorLoadOffset = 0x7C00;
+    private const uint BootSectorLoadAddress = BootSectorLoadOffset;
+
     private DosExecResult LoadOrLoadAndExecuteInternal(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment, ushort callerCS, ushort callerIP) {
 

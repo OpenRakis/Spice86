@@ -35,6 +35,7 @@ internal static class BatchCommandHandlers {
             new EchoDotCommandHandler(),
             new MountCommandHandler(),
             new ImgMountCommandHandler(),
+            new BootCommandHandler(),
             new DriveChangeCommandHandler()
         };
     }
@@ -411,6 +412,22 @@ internal static class BatchCommandHandlers {
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
             return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleImgMount);
+        }
+    }
+
+    /// <summary>
+    /// Handles the <c>BOOT</c> internal command. Loads the first sector of the
+    /// floppy image mounted on the requested drive at <c>0000:7C00</c> and
+    /// transfers control there, matching DOSBox Staging's <c>BOOT [-l A|B]</c>
+    /// for floppy images. Hard-disk image booting is not supported.
+    /// </summary>
+    private sealed class BootCommandHandler : ExactTokenBatchCommandHandler {
+        internal BootCommandHandler() : base("BOOT") {
+        }
+
+        protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
+            out LaunchRequest launchRequest) {
+            return engine.TryHandleBoot(context.ArgumentPart, out launchRequest);
         }
     }
 

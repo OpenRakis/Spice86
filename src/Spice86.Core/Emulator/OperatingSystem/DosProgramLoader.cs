@@ -78,6 +78,10 @@ internal class DosProgramLoader : DosFileLoader {
 
     protected virtual DosExecResult LoadLaunchRequest(LaunchRequest launchRequest,
         DosExecParameterBlock paramBlock) {
+        if (launchRequest is BootFloppyLaunchRequest bootFloppy) {
+            return _processManager.BootFromFloppy(bootFloppy.DriveLetter);
+        }
+
         if (launchRequest is not ProgramLaunchRequest programLaunchRequest) {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }

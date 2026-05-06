@@ -1377,6 +1377,100 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     /// <summary>
+    /// Handles the <c>BOOT</c> internal command, matching DOSBox Staging's
+    /// <c>BOOT [image] [-l A|B]</c> for booting from a floppy image. The first
+    /// 512 bytes of the floppy image are loaded at physical 0x7C00 and the CPU
+    /// is set to <c>CS:IP = 0000:7C00</c> with <c>DL</c> = drive number (0 or 1).
+    /// Booting from hard disk drive images is intentionally unsupported.
+    /// </summary>
+    /// <param name="arguments">Argument tail after the BOOT token.</param>
+    /// <param name="launchRequest">Receives a <see cref="BootFloppyLaunchRequest"/> on success or <see cref="ContinueBatchExecutionLaunchRequest.Instance"/> on failure.</param>
+    /// <returns><c>true</c> when boot setup is requested (caller must yield to host); <c>false</c> on parse/validation failure.</returns>
+    internal bool TryHandleBoot(string arguments, out LaunchRequest launchRequest) {
+        launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
+        string trimmed = arguments.Trim();
+        string[] parts = BatchArgumentParser.SplitWithQuotes(trimmed);
+
+        char driveLetter = 'A';
+        bool driveExplicit = false;
+        List<string> imagePaths = new();
+        for (int i = 0; i < parts.Length; i++) {
+            if (parts[i].Equals("-l", StringComparison.OrdinalIgnoreCase)) {
+                if (i + 1 >= parts.Length) {
+                    WriteToStandardOutput("BOOT: missing drive letter after -l\r\n");
+                    return false;
+                }
+                string driveSpec = parts[i + 1];
+                if (driveSpec.Length < 1 || !char.IsLetter(driveSpec[0])) {
+                    WriteToStandardOutput($"BOOT: invalid drive letter '{driveSpec}'\r\n");
+                    return false;
+                }
+                driveLetter = char.ToUpperInvariant(driveSpec[0]);
+                driveExplicit = true;
+                i++;
+                continue;
+            }
+            string resolved;
+            try {
+                resolved = HostPathResolver.Resolve(parts[i], _driveManager);
+            } catch (ArgumentException ex) {
+                WriteToStandardOutput($"BOOT: invalid path '{parts[i]}': {ex.Message}\r\n");
+                return false;
+            } catch (NotSupportedException ex) {
+                WriteToStandardOutput($"BOOT: invalid path format '{parts[i]}': {ex.Message}\r\n");
+                return false;
+            } catch (PathTooLongException ex) {
+                WriteToStandardOutput($"BOOT: path too long '{parts[i]}': {ex.Message}\r\n");
+                return false;
+            }
+            imagePaths.Add(resolved);
+        }
+
+        if (driveLetter != 'A' && driveLetter != 'B') {
+            WriteToStandardOutput($"BOOT: only floppy drives A: and B: are supported (got '{driveLetter}')\r\n");
+            return false;
+        }
+
+        if (imagePaths.Count > 0) {
+            foreach (string path in imagePaths) {
+                if (!File.Exists(path)) {
+                    WriteToStandardOutput($"BOOT: image file not found: {path}\r\n");
+                    return false;
+                }
+            }
+            byte[] firstImageData = File.ReadAllBytes(imagePaths[0]);
+            _driveManager.MountFloppyImage(driveLetter, firstImageData, imagePaths[0]);
+            for (int i = 1; i < imagePaths.Count; i++) {
+                byte[] extra = File.ReadAllBytes(imagePaths[i]);
+                _driveManager.AddFloppyImage(driveLetter, extra, imagePaths[i]);
+            }
+        }
+
+        if (!_driveManager.TryGetFloppyDrive(driveLetter, out FloppyDiskDrive? floppy) ||
+            floppy.GetCurrentImageData() is not byte[] imageData) {
+            WriteToStandardOutput($"BOOT: no floppy image mounted on {driveLetter}:\r\n");
+            return false;
+        }
+
+        if (imageData.Length < 512) {
+            WriteToStandardOutput($"BOOT: image on {driveLetter}: is smaller than one sector\r\n");
+            return false;
+        }
+
+        if (imageData[510] != 0x55 || imageData[511] != 0xAA) {
+            WriteToStandardOutput($"BOOT: image on {driveLetter}: has no valid boot signature (0xAA55)\r\n");
+            return false;
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("BATCH: BOOT from {Drive}: image='{Path}' (explicit={Explicit})",
+                driveLetter, floppy.ImagePath, driveExplicit);
+        }
+        launchRequest = new BootFloppyLaunchRequest(driveLetter, default);
+        return true;
+    }
+
+    /// <summary>
     /// Changes the current DOS drive to the specified letter.
     /// Mirrors COMMAND.COM's internal drive-change handling in DOSBox Staging:
     /// typing <c>X:</c> at a prompt (or in a batch file) switches the default drive.
